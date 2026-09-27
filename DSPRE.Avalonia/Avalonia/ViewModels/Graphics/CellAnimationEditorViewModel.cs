@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// so changing a drawing is offered as "just this frame" by default. And sequences are reached by
     /// number in the games' own code, so they cannot be added, removed or reordered.
     /// </summary>
-    public sealed class CellAnimationEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public sealed class CellAnimationEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)

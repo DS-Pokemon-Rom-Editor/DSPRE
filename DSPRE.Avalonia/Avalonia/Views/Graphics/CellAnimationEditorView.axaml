@@ -34,8 +34,8 @@
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
-          <Button Content="Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}"/>
-          <Button Content="Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}"/>
+          <Button Content="Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+          <Button Content="Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
           <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="10">

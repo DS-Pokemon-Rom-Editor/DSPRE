@@ -13,13 +13,14 @@ namespace DSPRE.Avalonia.Views.Graphics
         private readonly TrainerCardEditorViewModel _vm;
 
         private static readonly FilePickerFileType NclrFilter =
-            new("NCLR Palette") { Patterns = new[] { "*.nclr", "*.bin" } };
+            new("Colours (.nclr)") { Patterns = new[] { "*.nclr", "*.bin" } };
 
         public TrainerCardEditorView()
         {
             AvaloniaXamlLoader.Load(this);
             _vm = new TrainerCardEditorViewModel();
             DataContext = _vm;
+            EditorWindowChrome.Attach(this, _vm);
         }
 
         private async void ImportCardFront_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportCardFront);
@@ -70,7 +71,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Palette",
+                Title = "Import colours",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { NclrFilter, DialogHelper.AllFilter }
             });
@@ -87,7 +88,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export Palette",
+                Title = "Export colours",
                 DefaultExtension = "nclr",
                 SuggestedFileName = "rank_palette.nclr",
                 FileTypeChoices = new List<FilePickerFileType> { NclrFilter }
@@ -114,11 +115,13 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
 
+        private void Save_Click(object sender, RoutedEventArgs e) => _vm.SaveChanges();
+
         private async void RevertChanges_Click(object sender, RoutedEventArgs e)
         {
             bool ok = await DialogHelper.AskYesNo(
-                "Revert all trainer card changes made in this session back to what they were when this editor was opened?",
-                "Revert Changes", this);
+                "Discard the unsaved trainer card changes?",
+                "Discard", this);
             if (!ok) return;
             _vm.RevertChanges();
         }

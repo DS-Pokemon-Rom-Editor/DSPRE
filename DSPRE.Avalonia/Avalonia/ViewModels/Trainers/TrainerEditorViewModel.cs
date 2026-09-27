@@ -280,6 +280,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _classes?.DiscardChanges();
         }
 
+        /// <summary>Reloads the shown trainer from disk; the Classes tab keeps its own edits.</summary>
+        public void DiscardTrainer()
+        {
+            if (_selectedTrainerIndex >= 0) LoadTrainer(_selectedTrainerIndex);
+        }
+
         /// <summary>The Classes tab shares this window, so its unsaved edits are this editor's too.</summary>
         public TrainerClassesViewModel Classes
         {

@@ -43,7 +43,22 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             await SaveCommand();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() => SetDirty(false);
+        public void DiscardChanges()
+        {
+            if (!_dirty) return;
+            // Every edit works on _eggMoveData in place, so read the table again.
+            int keep = _selectedMonIndex;
+            _eggMoveData = new List<EggMoveEntry>();
+            PopulateEggMoveData();
+            RefreshMonList();
+            UpdateEntryCountLabel();
+            UpdateListSizeLabel();
+            _selectedMonIndex = -1;
+            OnPropertyChanged(nameof(SelectedMonIndex));
+            int target = Math.Min(keep, _eggMoveData.Count - 1);
+            if (target >= 0) SelectedMonIndex = target; else OnMonSelected(-1);
+            SetDirty(false);
+        }
 
         // ----------------------------------------------------------------
         // ROM data

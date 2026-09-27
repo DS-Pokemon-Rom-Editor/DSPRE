@@ -253,7 +253,7 @@ namespace DSPRE.Avalonia
                     Target = () => main.FindControl<Control>("ToolsMenu"),
                     Title = "The Tools menu",
                     Body = "Power tools: Validation & Where-Used, the ROM Patch Toolbox, overlays, music " +
-                           "and battle tables, data exports, NARC utilities and Settings.\n\n" +
+                           "and battle tables, data exports, archive tools and Settings.\n\n" +
                            "Tip: press Ctrl+P anywhere and type an editor's name to open it instantly."
                 },
                 new Step

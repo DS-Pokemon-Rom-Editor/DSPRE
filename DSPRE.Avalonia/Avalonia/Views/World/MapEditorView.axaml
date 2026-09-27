@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:world="clr-namespace:DSPRE.Avalonia.Views.World"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
@@ -17,7 +17,7 @@
         <!-- Row 1: selection + file actions -->
         <WrapPanel Classes="toolbar">
           <TextBlock Text="View:" VerticalAlignment="Center"/>
-          <ComboBox Width="110" ItemsSource="{Binding ViewModes}" SelectedIndex="{Binding ViewModeIndex}"/>
+          <ComboBox x:Name="ViewModeBox" Width="110" ItemsSource="{Binding ViewModes}" SelectedIndex="{Binding ViewModeIndex}"/>
           <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
           <controls:FusionAutoCompleteBox Width="140" ItemsSource="{Binding MapNames}" SelectedIndex="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
           <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
@@ -26,14 +26,17 @@
           <TextBlock Text="Header:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
           <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding HeaderNames}" SelectedIndex="{Binding SelectedHeaderIndex}" IsVisible="{Binding IsHeaderView}"
                                           ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
+          <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
+          <ComboBox Width="110" ItemsSource="{Binding HeaderMapNames}" SelectedIndex="{Binding SelectedHeaderMapIndex}" IsVisible="{Binding IsHeaderView}"
+                    ToolTip.Tip="The map to edit. Picking a building or painting a square picks its map."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button Content="▶ Animate" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
                   ToolTip.Tip="Plays the map, with its water moving as it does in game."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <Button Content="✏ Edit map model" Click="EditModel_Click" IsEnabled="{Binding IsSingleMap}"
+          <Button x:Name="EditModelButton" Content="✏ Edit map model" Click="EditModel_Click" IsEnabled="{Binding CanEditModel}"
                   ToolTip.Tip="Build or edit this map from tiles"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <Button Content="💾 Save"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button x:Name="SaveButton" Content="💾 Save"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="📥 Import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="📤 Export"   Click="Export_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="＋ Add map"  Click="AddMap_Click" IsVisible="{Binding IsSingleMap}"/>
@@ -41,13 +44,15 @@
         </WrapPanel>
         <!-- Row 2: textures + overlay -->
         <WrapPanel Classes="toolbar">
-          <TextBlock Text="Map tex:" VerticalAlignment="Center"/>
-          <ComboBox Width="130" ItemsSource="{Binding MapTilesets}" SelectedIndex="{Binding MapTilesetIndex}"/>
-          <TextBlock Text="Bld tex:" VerticalAlignment="Center"/>
-          <ComboBox Width="130" ItemsSource="{Binding BuildingTilesets}" SelectedIndex="{Binding BuildingTilesetIndex}"/>
+          <TextBlock Text="Map textures:" VerticalAlignment="Center"/>
+          <ComboBox Width="130" ItemsSource="{Binding MapTilesets}" SelectedIndex="{Binding MapTilesetIndex}"
+                    ToolTip.Tip="{Binding AreaLabel, StringFormat='Saved to {0}, with the map'}"/>
+          <TextBlock Text="Building textures:" VerticalAlignment="Center"/>
+          <ComboBox Width="130" ItemsSource="{Binding BuildingTilesets}" SelectedIndex="{Binding BuildingTilesetIndex}"
+                    ToolTip.Tip="{Binding AreaLabel, StringFormat='Saved to {0}, with the map'}"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Text="Overlay:" VerticalAlignment="Center"/>
+            <TextBlock Text="Show:" VerticalAlignment="Center"/>
             <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
           </StackPanel>
           <CheckBox Content="Mesh" IsChecked="{Binding OverlayAsMesh}" IsEnabled="{Binding MeshToggleEnabled}" VerticalAlignment="Center"
@@ -97,12 +102,15 @@
       </Border>
 
       <!-- Editing panels (single map + "This header" view; Full matrix is render-only) -->
-      <TabControl Grid.Column="1" Margin="0,4,4,4" IsEnabled="{Binding CanEdit}">
+      <TabControl x:Name="MapTabs" Grid.Column="1" Margin="0,4,4,4" IsEnabled="{Binding CanEdit}">
         <TabItem Header="Permissions">
           <ScrollViewer>
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Spacing="4">
-              <TextBlock Text="Collision painter" FontWeight="Bold"/>
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Collision painter" FontWeight="Bold"/>
+                <controls:HelpTip Text="Click or drag on a grid below to paint. In 'This header' view, use 🖌 Paint in the 3D view instead."/>
+              </StackPanel>
               <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CollisionPainters}" SelectedIndex="{Binding CollisionPainterIndex}" IsEnabled="{Binding !UseRawCollision}"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <CheckBox Content="Raw value" IsChecked="{Binding UseRawCollision}"/>
@@ -115,8 +123,6 @@
                 <NumericUpDown Width="110" Minimum="0" Maximum="255" Value="{Binding RawType}" IsEnabled="{Binding UseRawType}"/>
               </StackPanel>
               <StackPanel Spacing="4" Margin="0,4,0,4">
-                <TextBlock Text="Click/drag a grid to paint." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" IsVisible="{Binding IsSingleMap}"/>
-                <TextBlock Text="Use 🖌 Paint in the 3D view, click any of the header's maps." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" IsVisible="{Binding IsHeaderView}"/>
                 <Button Content="🔎 Scan used types" HorizontalAlignment="Left" Click="ScanTypes_Click"/>
               </StackPanel>
             </StackPanel>
@@ -175,23 +181,43 @@
           </DockPanel>
         </TabItem>
 
+        <TabItem Header="Area" IsEnabled="{Binding HasArea}">
+          <ScrollViewer>
+            <StackPanel Margin="8" Spacing="8">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding AreaLabel}" FontWeight="SemiBold"/>
+                <controls:HelpTip Text="The area a map belongs to picks its textures, terrain animation and light. Every header using the area shares these, and they're saved with the map."/>
+              </StackPanel>
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,6,Auto,6,Auto">
+                <TextBlock Grid.Row="0" Text="Terrain animation" VerticalAlignment="Center" Margin="0,0,10,0" IsVisible="{Binding IsHgssGame}"/>
+                <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding AreaGroundAnimation}" Minimum="0" Maximum="65535" FormatString="0"
+                               Width="120" HorizontalAlignment="Left" IsVisible="{Binding IsHgssGame}"
+                               ToolTip.Tip="Which animated ground set plays; 65535 is none"/>
+                <TextBlock Grid.Row="2" Text="Light" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding AreaLightType}" Minimum="0" Maximum="65535" FormatString="0"
+                               Width="120" HorizontalAlignment="Left"/>
+                <CheckBox Grid.Row="4" Grid.ColumnSpan="2" Content="Indoors" IsChecked="{Binding AreaIndoor}" IsVisible="{Binding IsHgssGame}"/>
+              </Grid>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
         <TabItem Header="Files / I/O" IsEnabled="{Binding IsSingleMap}">
           <ScrollViewer>
             <StackPanel Margin="8" Spacing="10">
               <HeaderedContentControl Header="3D model">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                  <Button Content="📤 Export NSBMD" Click="ExportNsbmd_Click"/>
+                  <Button Content="📤 Export model" Click="ExportNsbmd_Click"/>
                   <Button Content="📤 Export DAE"   Click="ExportDae_Click"/>
                   <Button Content="📤 Export GLB"   Click="ExportGlb_Click"/>
                 </StackPanel>
               </HeaderedContentControl>
-              <HeaderedContentControl Header="Terrain (BDHC)">
+              <HeaderedContentControl Header="Terrain">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <Button Content="📥 Import" Click="ImportTerrain_Click"/>
                   <Button Content="📤 Export" Click="ExportTerrain_Click"/>
                 </StackPanel>
               </HeaderedContentControl>
-              <HeaderedContentControl Header="Sound plates (BGS)">
+              <HeaderedContentControl Header="Sound plates">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <Button Content="📥 Import" Click="ImportSound_Click"/>
                   <Button Content="📤 Export" Click="ExportSound_Click"/>

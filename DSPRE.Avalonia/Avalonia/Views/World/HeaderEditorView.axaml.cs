@@ -47,7 +47,6 @@ namespace DSPRE.Avalonia.Views.World
         private void Paste_Click(object sender, RoutedEventArgs e) => VM?.Paste();
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
-        private void GoTo_Click(object sender, RoutedEventArgs e) => VM?.GoTo();
         private async void AddHeader_Click(object sender, RoutedEventArgs e) => await Safe(VM?.AddHeaderAsync());
         private async void RemoveHeader_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveHeaderAsync());
 

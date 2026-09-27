@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Data
             return raw;
         }
 
-        /// <summary>Keeps every change made so far: Save. Later changes start a new checkpoint.</summary>
+        /// <summary>After a save: the current files become what Discard goes back to.</summary>
         public void AcceptAll() => _backup.Clear();
 
         public void RevertAll()
@@ -220,7 +220,7 @@ namespace DSPRE.Avalonia.Data
             if (!Available) return "Trainer card graphics archive is not available for this ROM.";
             if (nclrBytes == null || nclrBytes.Length < 4 ||
                 nclrBytes[0] != (byte)'R' || nclrBytes[1] != (byte)'L' || nclrBytes[2] != (byte)'C' || nclrBytes[3] != (byte)'N')
-                return "Not a valid NCLR palette file.";
+                return "Not a valid colour file.";
             int id = TrainerCardMembers.rankPalettes[rankIndex];
             GetAndSnapshot(id);
             _narc.Put(id, nclrBytes);

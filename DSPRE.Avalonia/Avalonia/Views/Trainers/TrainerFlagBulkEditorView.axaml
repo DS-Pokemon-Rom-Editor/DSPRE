@@ -18,20 +18,21 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <ToggleButton Content="By Trainer" IsChecked="{Binding IsByTrainerMode, Mode=OneWay}" Click="ByTrainerMode_Click"/>
+        <Button x:Name="SaveButton" Content="Save" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+
+        <ToggleButton Content="By Trainer" Margin="12,0,0,0" IsChecked="{Binding IsByTrainerMode, Mode=OneWay}" Click="ByTrainerMode_Click"/>
         <ToggleButton Content="By Flag" IsChecked="{Binding IsByFlagMode, Mode=OneWay}" Click="ByFlagMode_Click"/>
 
         <TextBlock Text="Flag:" VerticalAlignment="Center" Margin="12,0,0,0" IsVisible="{Binding IsByFlagMode}"/>
         <ComboBox ItemsSource="{Binding FlagNamesList}"
                   SelectedIndex="{Binding CurrentFlagIndex}" Width="220" IsVisible="{Binding IsByFlagMode}"/>
 
-        <Button Content="Save All" Click="SaveAll_Click" Margin="12,0,0,0"/>
-
         <Button Content="{Binding SelectAllLabel}" Click="SelectAll_Click" Margin="12,0,0,0"/>
         <Button Content="{Binding SelectNoneLabel}" Click="SelectNone_Click"/>
 
         <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="12,0,0,0"/>
-        <TextBox Text="{Binding FilterText}" Width="200" PlaceholderText="trainer name…"/>
+        <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="200" PlaceholderText="trainer name…"/>
       </StackPanel>
     </Border>
 
@@ -48,7 +49,7 @@
       </TreeView>
 
       <Grid Grid.Column="1">
-        <ScrollViewer IsVisible="{Binding IsByTrainerMode}">
+        <ScrollViewer x:Name="FlagChecklist" IsVisible="{Binding IsByTrainerMode}">
           <ItemsControl Margin="16" ItemsSource="{Binding FlagChecklist}">
             <ItemsControl.ItemTemplate>
               <DataTemplate DataType="models:FlagChecklistItem">

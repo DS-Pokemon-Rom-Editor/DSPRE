@@ -1032,8 +1032,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string PutFileInHelp => _selected == null
             ? "Pick something first."
             : _cannotImport
-              ?? ("Put a file in place of this one: a finished NSBMD, NSBTX or animation file, or an OBJ "
-                  + "mesh, which is turned into a model as it goes in. Anything already in a Nitro format "
+              ?? ("Put a file in place of this one: a finished model, texture or animation file, or an OBJ "
+                  + "mesh, which is turned into a model as it goes in. Anything already in the game's own format "
                   + "has to be the same kind as what is here now.\n\n" + ModelAssets.CanConvertAMesh);
 
         private string _cannotImport = "Pick something first.";

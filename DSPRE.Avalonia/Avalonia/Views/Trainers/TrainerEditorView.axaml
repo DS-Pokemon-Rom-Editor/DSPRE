@@ -20,7 +20,8 @@
         <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
                 BorderThickness="0,0,0,1" Padding="6,4">
           <WrapPanel x:Name="TrainerToolbar" Classes="toolbar">
-            <Button x:Name="SaveButton" Content="Save Trainer" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Undo (Ctrl+Z)"/>
             <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Redo (Ctrl+Y)"/>
             <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>

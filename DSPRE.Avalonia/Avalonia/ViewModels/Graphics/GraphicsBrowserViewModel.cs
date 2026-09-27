@@ -57,12 +57,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             /// </summary>
             public string Label => Name switch
             {
-                "Colours" => "Colours (NCLR)",
-                "Drawing" => "Picture (NCGR)",
-                "Arrangement" => "Tile map (NSCR)",
-                "As it appears" => "Cell layout (NCER)",
-                "Animation" => "Cell animation (NANR)",
-                "Second picture" => "Second picture (NCGR)",
+                "Colours" => "Colours",
+                "Drawing" => "Picture",
+                "Arrangement" => "Tile map",
+                "As it appears" => "Cell layout",
+                "Animation" => "Cell animation",
+                "Second picture" => "Second picture",
                 _ => Name,
             };
         }

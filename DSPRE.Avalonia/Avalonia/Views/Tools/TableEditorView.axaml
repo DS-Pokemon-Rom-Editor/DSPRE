@@ -1,5 +1,6 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window MinWidth="560" MinHeight="420" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
         x:Class="DSPRE.Avalonia.Views.Tools.TableEditorView"
         x:DataType="vm:TableEditorViewModel"
@@ -20,6 +21,14 @@
                  VerticalAlignment="Center"/>
     </Border>
 
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4" IsVisible="{Binding !NoTablesAvailable}">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      </StackPanel>
+    </Border>
+
     <!-- No tables for this ROM family -->
     <TextBlock DockPanel.Dock="Top" Margin="16"
                IsVisible="{Binding NoTablesAvailable}"
@@ -30,7 +39,7 @@
 
       <!-- ── Conditional Music (HGSS) ───────────────────────────────────────── -->
       <TabItem Header="Conditional Music" IsVisible="{Binding ShowConditionalMusic}">
-        <Grid ColumnDefinitions="*,260" Margin="4">
+        <controls:CappedWidth Cap="900"><Grid ColumnDefinitions="*,260" Margin="4">
           <ListBox Grid.Column="0"
                    ItemsSource="{Binding CondMusicItems}"
                    SelectedIndex="{Binding CondSelectedIndex}"/>
@@ -47,17 +56,15 @@
                       SelectedIndex="{Binding CondMusicComboIndex}"
                       PlaceholderText="Unnamed track"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding CondMusic}"/>
-            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-              <Button Content="Save Table" Click="SaveCondMusic_Click"/>
-              <Button Content="?"          Click="CondMusicHelp_Click" Width="28"/>
-            </StackPanel>
+            <controls:HelpTip Text="For each location in the list, the header's music is replaced by the chosen music while the flag is set."
+                              HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
-        </Grid>
+        </Grid></controls:CappedWidth>
       </TabItem>
 
       <!-- ── Effect Combos (HGSS + Plat) ────────────────────────────────────── -->
       <TabItem Header="Effect Combos" IsVisible="{Binding ShowEffectsCombos}">
-        <Grid ColumnDefinitions="*,260" Margin="4">
+        <controls:CappedWidth Cap="900"><Grid ColumnDefinitions="*,260" Margin="4">
           <ListBox Grid.Column="0"
                    ItemsSource="{Binding ComboItems}"
                    SelectedIndex="{Binding ComboSelectedIndex}"/>
@@ -66,17 +73,15 @@
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding VsAnimation}"/>
             <TextBlock Text="Battle SSEQ (Music)" FontWeight="Bold"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleSseq}"/>
-            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-              <Button Content="Save Combo" Click="SaveEffectCombo_Click"/>
-              <Button Content="?"          Click="EffectComboHelp_Click" Width="28"/>
-            </StackPanel>
+            <controls:HelpTip Text="Each entry pairs a VS. animation with a battle theme. Trainer classes and wild Pokémon pick an entry by number."
+                              HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
-        </Grid>
+        </Grid></controls:CappedWidth>
       </TabItem>
 
       <!-- ── VS Trainer (HGSS) ──────────────────────────────────────────────── -->
       <TabItem Header="VS Trainer" IsVisible="{Binding ShowVsTables}">
-        <Grid ColumnDefinitions="*,260" Margin="4">
+        <controls:CappedWidth Cap="900"><Grid ColumnDefinitions="*,260" Margin="4">
           <ListBox Grid.Column="0"
                    ItemsSource="{Binding VsTrainerItems}"
                    SelectedIndex="{Binding VsTrainerSelectedIndex}"/>
@@ -99,23 +104,21 @@
                                Increment="1" Value="{Binding TrainerSpriteFrame}"/>
               </StackPanel>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-              <Button Content="Save Entry" Click="SaveVsTrainer_Click"/>
-              <Button Content="?"          Click="VsTrainerHelp_Click" Width="28"/>
-            </StackPanel>
+            <controls:HelpTip Text="Links a trainer class to an effect combo, so every trainer of that class gets the same VS. animation and battle theme."
+                              HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
-        </Grid>
+        </Grid></controls:CappedWidth>
       </TabItem>
 
       <!-- ── VS Pokémon (HGSS, display only) ────────────────────────────────── -->
       <TabItem Header="VS Pokémon" IsVisible="{Binding ShowVsTables}">
-        <Grid ColumnDefinitions="*,260" Margin="4">
+        <controls:CappedWidth Cap="900"><Grid ColumnDefinitions="*,260" Margin="4">
           <ListBox Grid.Column="0"
                    ItemsSource="{Binding VsPokemonItems}"
                    SelectedIndex="{Binding VsPokemonSelectedIndex}"/>
           <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
             <TextBlock Text="Pokémon" FontWeight="Bold"/>
-            <ComboBox HorizontalAlignment="Stretch"
+            <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch"
                       ItemsSource="{Binding PokemonNames}"
                       SelectedIndex="{Binding PokemonIndex}"
                       IsEnabled="False"/>
@@ -126,9 +129,9 @@
                       IsEnabled="False"/>
             <TextBlock Text="Read-only."
                        Foreground="#888" FontStyle="Italic" TextWrapping="Wrap" Margin="0,4,0,0"/>
-            <Button Content="?" Click="VsPokemonHelp_Click" Width="28" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+            <controls:HelpTip Text="Links a wild Pokémon to an effect combo, played whenever it's met in the grass or by script." HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
-        </Grid>
+        </Grid></controls:CappedWidth>
       </TabItem>
 
     </TabControl>

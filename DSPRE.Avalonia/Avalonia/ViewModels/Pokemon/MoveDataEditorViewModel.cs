@@ -66,7 +66,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         public void DiscardChanges()
         {
-            if (_pendingMove == null && _pendingImports.Count == 0) { SetClean(); return; }
+            if (_pendingMove == null && _pendingImports.Count == 0)
+            {
+                // The edits live in _currentFile, so reading the move again is what puts them back.
+                if (_currentFile != null) LoadMove(_currentId); else SetClean();
+                return;
+            }
             int back = _pendingMove != null ? _returnIndex : _currentId;
             _pendingImports.Clear();
             Status = "";

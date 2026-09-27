@@ -22,12 +22,30 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await ViewModel.SaveCommand();
 
-        private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.Undo();
-        private void Redo_Click(object sender, RoutedEventArgs e) => ViewModel.Redo();
+        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel.DiscardChanges();
 
         private void AddFile_Click(object sender, RoutedEventArgs e) => ViewModel.AddEncounterFile();
         private async void RemFile_Click(object sender, RoutedEventArgs e) => await ViewModel.RemoveLastEncounterFileAsync();
         private async void RepairAll_Click(object sender, RoutedEventArgs e) => await ViewModel.RepairAllAsync();
+        private void SlotOdds_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenEncounterSlotOdds();
+
+        // Coming back from the Slot Odds editor shows the new chances in the slot labels.
+        private Window _window;
+        protected override void OnAttachedToVisualTree(global::Avalonia.VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+            _window = TopLevel.GetTopLevel(this) as Window;
+            if (_window != null) _window.Activated += Window_Activated;
+        }
+
+        protected override void OnDetachedFromVisualTree(global::Avalonia.VisualTreeAttachmentEventArgs e)
+        {
+            if (_window != null) _window.Activated -= Window_Activated;
+            _window = null;
+            base.OnDetachedFromVisualTree(e);
+        }
+
+        private void Window_Activated(object sender, System.EventArgs e) => (DataContext as WildEditorHGSSViewModel)?.RefreshSlotLabels();
 
         private async void ImportFile_Click(object sender, RoutedEventArgs e)
         {

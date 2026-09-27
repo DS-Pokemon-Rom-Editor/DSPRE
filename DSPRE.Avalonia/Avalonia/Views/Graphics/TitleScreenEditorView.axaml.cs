@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private readonly Image _logoOverlay;
 
         private static readonly FilePickerFileType NclrFilter =
-            new("NCLR Palette") { Patterns = new[] { "*.nclr", "*.bin" } };
+            new("Colours (.nclr)") { Patterns = new[] { "*.nclr", "*.bin" } };
 
         public TitleScreenEditorView()
         {
@@ -21,6 +21,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             _logoOverlay = this.FindControl<Image>("LogoOverlay");
             _vm = new TitleScreenEditorViewModel();
             DataContext = _vm;
+            EditorWindowChrome.Attach(this, _vm);
         }
 
         private async void ImportLogo_Click(object sender, RoutedEventArgs e) => await ImportPng(_vm.ImportLogo);
@@ -69,7 +70,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import Palette",
+                Title = "Import colours",
                 AllowMultiple = false,
                 FileTypeFilter = new List<FilePickerFileType> { NclrFilter, DialogHelper.AllFilter }
             });
@@ -82,11 +83,13 @@ namespace DSPRE.Avalonia.Views.Graphics
                 await DialogHelper.ShowError($"Import failed: {error}", "Import Error", this);
         }
 
+        private void Save_Click(object sender, RoutedEventArgs e) => _vm.SaveChanges();
+
         private async void RevertChanges_Click(object sender, RoutedEventArgs e)
         {
             bool ok = await DialogHelper.AskYesNo(
-                "Revert all title screen changes made in this session (either version's logo/background/palette, and the copyright text) back to what they were when this editor was opened?",
-                "Revert Changes", this);
+                "Discard the unsaved title screen changes?",
+                "Discard", this);
             if (!ok) return;
             _vm.RevertChanges();
         }
@@ -95,7 +98,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export Palette",
+                Title = "Export colours",
                 DefaultExtension = "nclr",
                 SuggestedFileName = "title_palette.nclr",
                 FileTypeChoices = new List<FilePickerFileType> { NclrFilter }

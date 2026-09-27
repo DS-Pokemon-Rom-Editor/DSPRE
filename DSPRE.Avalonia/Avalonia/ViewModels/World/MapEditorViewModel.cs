@@ -233,8 +233,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         private int _buildingTilesetIndex;
         public int BuildingTilesetIndex { get => _buildingTilesetIndex; set { if (Set(ref _buildingTilesetIndex, value) && !_suppress && _map != null) { EditArea(a => a.buildingsTileset = (ushort)(value - 1)); RebuildPreview(); } } }
 
-        // ── Area data: the texture packs, terrain animation and light of the shown map's area ──
-        // Edited here rather than in a separate window, held with the map's edits and written by the same Save.
+        // ── Area data: texture packs, terrain animation and light ──
+        // Held with the map's edits and written by the same Save.
         private AreaData _area;
         private byte _areaId;
         private bool _areaDirty;
@@ -573,12 +573,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
-        /// <summary>The header's maps, in the order they were stitched, for the "This header" view's map picker.</summary>
+        /// <summary>The header's maps in stitch order, for the "This header" map picker.</summary>
         public ObservableCollection<string> HeaderMapNames { get; } = new ObservableCollection<string>();
 
         private int _selectedHeaderMap = -1;
-        /// <summary>The header map that model editing and "open in a window" act on; follows the last
-        /// building picked or square painted.</summary>
+        /// <summary>The header map that model editing and "open in a window" act on; follows the last pick or paint.</summary>
         public int SelectedHeaderMapIndex
         {
             get => _selectedHeaderMap;
@@ -593,7 +592,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool CanEditModel => IsSingleMap ? _map != null
             : IsHeaderView && _selectedHeaderMap >= 0 && _selectedHeaderMap < _headerCells.Count;
 
-        /// <summary>The map this view is about: the picked map, or the picked map of the header; -1 for none.</summary>
+        /// <summary>The picked map, or the header's picked map; -1 for none.</summary>
         public int FocusedMapIndex => IsSingleMap ? _selectedMapIndex
             : IsHeaderView && _selectedHeaderMap >= 0 && _selectedHeaderMap < _headerCells.Count ? _headerCells[_selectedHeaderMap].MapIndex : -1;
 
@@ -602,7 +601,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (IsSingleMap) return _map != null;
             if (!CanEditModel) return false;
-            // The single-map fields follow the header map until EndModelEdit, so the import checks and warp moves read it.
+            // The single-map fields follow the header map until EndModelEdit, so import checks and warp moves read it.
             var cell = _headerCells[_selectedHeaderMap];
             _borrowed = (_map, _selectedMapIndex);
             _map = cell.Map;
@@ -2071,7 +2070,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     saved++;
                     AppEvents.RaiseMapSaved(this, cell.MapIndex);
                 }
-                // Warps moved with a refused map's buildings wait for it, so events and maps stay in step on disk.
+                // Warps moved with a refused map's buildings wait for it, so events and maps stay in step.
                 if (refused) return;
                 foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
                 _eventsToSave.Clear();
@@ -2181,10 +2180,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportNsbmdAsync()
         {
             if (_map == null) return;
-            var filter = new FilePickerFileType("NSBMD model") { Patterns = new[] { "*.nsbmd" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export map model (NSBMD)", new[] { filter }, ModelName() + ".nsbmd");
+            var filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
+            string path = await DialogHelper.SaveFile(_owner, "Export map model", new[] { filter }, ModelName() + ".nsbmd");
             if (path == null) return;
-            try { File.WriteAllBytes(path, _map.mapModelData); StatusText = "Exported map model (NSBMD)."; }
+            try { File.WriteAllBytes(path, _map.mapModelData); StatusText = "Exported map model."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
         }
         public void ExportDae() { if (_map != null) try { ModelUtils.ModelToDAE(ModelName(), _map.mapModelData, MapTextureData()); StatusText = "Exported DAE."; } catch (Exception ex) { AppLogger.Error("DAE export: " + ex.Message); } }
@@ -2194,7 +2193,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportTerrainAsync()
         {
             if (_map == null) return;
-            string path = await DialogHelper.OpenFile(_owner, "Import terrain (BDHC)", new[] { new FilePickerFileType("BDHC") { Patterns = new[] { "*.bdhc", "*.bin", "*.*" } } });
+            string path = await DialogHelper.OpenFile(_owner, "Import terrain", new[] { new FilePickerFileType("Terrain (.bdhc)") { Patterns = new[] { "*.bdhc", "*.bin", "*.*" } } });
             if (path == null) return;
             try { _map.ImportTerrain(File.ReadAllBytes(path)); MarkDirty(); StatusText = $"Imported terrain ({_map.bdhc.Length} B)."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
@@ -2202,7 +2201,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportTerrainAsync()
         {
             if (_map == null) return;
-            string path = await DialogHelper.SaveFile(_owner, "Export terrain (BDHC)", new[] { new FilePickerFileType("BDHC") { Patterns = new[] { "*.bdhc" } } }, ModelName() + ".bdhc");
+            string path = await DialogHelper.SaveFile(_owner, "Export terrain", new[] { new FilePickerFileType("Terrain (.bdhc)") { Patterns = new[] { "*.bdhc" } } }, ModelName() + ".bdhc");
             if (path == null) return;
             try { File.WriteAllBytes(path, _map.bdhc); StatusText = "Exported terrain."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
@@ -2212,7 +2211,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportSoundAsync()
         {
             if (_map == null) return;
-            string path = await DialogHelper.OpenFile(_owner, "Import sound plates (BGS)", new[] { new FilePickerFileType("BGS") { Patterns = new[] { "*.bgs", "*.bin", "*.*" } } });
+            string path = await DialogHelper.OpenFile(_owner, "Import sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs", "*.bin", "*.*" } } });
             if (path == null) return;
             try { _map.ImportSoundPlates(File.ReadAllBytes(path)); MarkDirty(); StatusText = $"Imported sound plates ({_map.bgs.Length} B)."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
@@ -2220,7 +2219,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportSoundAsync()
         {
             if (_map == null) return;
-            string path = await DialogHelper.SaveFile(_owner, "Export sound plates (BGS)", new[] { new FilePickerFileType("BGS") { Patterns = new[] { "*.bgs" } } }, ModelName() + ".bgs");
+            string path = await DialogHelper.SaveFile(_owner, "Export sound plates", new[] { new FilePickerFileType("Sound plates (.bgs)") { Patterns = new[] { "*.bgs" } } }, ModelName() + ".bgs");
             if (path == null) return;
             try { File.WriteAllBytes(path, _map.bgs); StatusText = "Exported sound plates."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }

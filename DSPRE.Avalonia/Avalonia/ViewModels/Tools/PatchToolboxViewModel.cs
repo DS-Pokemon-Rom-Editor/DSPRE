@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 return;
             }
 
-            HeaderNote = "These patches modify the ROM binary (ARM9 / overlays / NARCs). Back up your project first; some are irreversible.";
+            HeaderNote = "Back up your project first. Some patches cannot be undone.";
             foreach (var p in DSPRE.PatchToolboxLogic.GetPatchStatuses())
                 Patches.Add(new PatchRowViewModel(p));
         }

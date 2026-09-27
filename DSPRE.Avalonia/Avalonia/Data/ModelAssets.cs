@@ -57,13 +57,13 @@ namespace DSPRE.Avalonia.Data
             new Archive { Dir = DirNames.interiorBuildingModels, Title = "Buildings, inside", TextureArchive = DirNames.buildingTextures, AnimationArchive = DirNames.buildingAnimations, Indoor = true, In = Group.Buildings,
                 What = "The insides of buildings you can walk into.", DeepEditor = "Building Editor" },
             new Archive { Dir = DirNames.buildingTextures, Title = "Building textures", In = Group.Buildings,
-                What = "The pictures painted onto the buildings.", DeepEditor = "NSBTX Texture Editor" },
+                What = "The pictures painted onto the buildings.", DeepEditor = "Map & Building Textures editor" },
             new Archive { Dir = DirNames.buildingAnimations, Title = "Building animations", In = Group.Buildings,
                 What = "Doors opening, windmills turning, and the rest of what buildings do." },
 
             new Archive { Dir = DirNames.mapTextures, Title = "Map textures", In = Group.Maps,
                 What = "The pictures painted onto the ground and scenery of each map.",
-                DeepEditor = "NSBTX Texture Editor" },
+                DeepEditor = "Map & Building Textures editor" },
             new Archive { Dir = DirNames.groundAnimations, Title = "Ground animations", In = Group.Maps,
                 What = "Water and other ground that moves." },
 
@@ -154,7 +154,7 @@ namespace DSPRE.Avalonia.Data
                 case Kind.TextureBundle:
                     o.CanShow = false;
                     o.ShowNote = "This is a set of pictures for painting onto models, not a model itself, "
-                               + "so there is no shape to show. Open it in the NSBTX Texture Editor to see "
+                               + "so there is no shape to show. Open it in the Map & Building Textures editor to see "
                                + "the pictures.";
                     o.CanSaveModel = false;
                     o.SaveNote = "There is no model here to save as a 3D file. The whole file can still be "
@@ -616,7 +616,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public const string CanConvertAMesh =
             "An OBJ is turned into a model as it goes in: its corners, the way they face, where they " + 
-            "land on their pictures, and the colours and pictures its materials name. A finished NSBMD " + 
+            "land on their pictures, and the colours and pictures its materials name. A finished model file " + 
             "goes in as it is.";
 
         /// <summary>Puts a file back into an archive, in place of one entry.</summary>

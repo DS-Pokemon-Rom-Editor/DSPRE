@@ -46,8 +46,37 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── IEditorWithUnsavedChanges ──
         public bool HasUnsavedChanges => _isDirty;
         public string UnsavedChangesDescription => "Battle Tower Editor";
-        public void SaveChanges() { SaveTrainers(); SaveSets(); }
-        public void DiscardChanges() { _isDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void SaveChanges()
+        {
+            if (_trainerFile == null || _setFile == null) return;
+            _trainerFile.SaveToNarc();
+            _setFile.SaveToNarc();
+            _isDirty = false;
+            SaveNotice.Saved(UnsavedChangesDescription);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
+
+        public void DiscardChanges()
+        {
+            if (_isDirty && _trainerFile != null && _setFile != null)
+            {
+                int trainer = Math.Max(0, _selectedTrainerIndex), set = Math.Max(0, _selectedSetIndex);
+                _setFile = new BattleTowerPokemonSetFile(true);
+                _trainerFile = new BattleTowerTrainerFile(true);
+                RefreshTrainerList(trainer);
+                RefreshSetList(set);
+                // The list may keep the same index, which skips the setter's reload.
+                LoadTrainer(_selectedTrainerIndex);
+                LoadSet(_selectedSetIndex);
+                OnPropertyChanged(nameof(AddSetPreviewLabel));
+            }
+            _isDirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
+
+        public void LocateActive() { if (ActiveTabIndex == 1) LocateSets(); else LocateTrainers(); }
 
         // ── Trainers tab ─────────────────────────────────────────────────
         public ObservableCollection<string> TrainerLabels { get; } = new();
@@ -255,16 +284,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SelectedSetIndex = setId;
         }
 
-        public void SaveTrainers()
-        {
-            if (_trainerFile == null) return;
-            _trainerFile.SaveToNarc();
-            _isDirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            UpdateStatus();
-        }
-
         public void ExportTrainers(string path) => _trainerFile?.ExportToFile(path);
 
         public void ImportTrainers(string path)
@@ -370,16 +389,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _setFile.Sets.Add(new BattleTowerPokemonSet());
             RefreshSetList(_setFile.Sets.Count - 1);
             MarkDirty();
-        }
-
-        public void SaveSets()
-        {
-            if (_setFile == null) return;
-            _setFile.SaveToNarc();
-            _isDirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            UpdateStatus();
         }
 
         public void ExportSets(string path) => _setFile?.ExportToFile(path);

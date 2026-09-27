@@ -1154,16 +1154,6 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
         }
 
-        private decimal _goToValue;
-        public decimal GoToValue { get => _goToValue; set => Set(ref _goToValue, value); }
-        public void GoTo()
-        {
-            int n = (int)_goToValue;
-            if (n < 0 || n >= _headerListNames.Count) return;
-            if (!string.IsNullOrWhiteSpace(TreeFilterText)) TreeFilterText = "";   // reveal it if a search is active
-            SelectHeader((ushort)n);
-        }
-
         /// <summary>Shows a header asked for from another editor.</summary>
         public void GoToHeader(int id)
         {

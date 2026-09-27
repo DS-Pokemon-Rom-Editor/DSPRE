@@ -12,7 +12,7 @@
         <Button Content="Front" Click="CamFront_Click" Margin="4,0,0,0"/>
         <Button Content="Side" Click="CamSide_Click" Margin="4,0,0,0"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
-        <Button Content="Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}"/>
+        <Button Content="Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="Export" Click="Export_Click" Margin="4,0,0,0"
                 ToolTip.Tip="OBJ with textures"/>
         <Button Content="Import" Click="Import_Click" Margin="4,0,0,0"
@@ -53,7 +53,7 @@
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding TerrainNote}" TextWrapping="Wrap"
                      Foreground="{DynamicResource Editor.Subtle}"/>
-          <CheckBox Content="Show plates" IsChecked="{Binding ShowPlates}" ToolTip.Tip="BDHC walking plates"/>
+          <CheckBox Content="Show plates" IsChecked="{Binding ShowPlates}" ToolTip.Tip="The terrain surfaces the player walks on"/>
           <StackPanel IsVisible="{Binding ShowPlates}" Spacing="3" Margin="22,0,0,4">
             <ItemsControl ItemsSource="{Binding PlateLegend}" ToolTip.Tip="Plate height in tiles">
               <ItemsControl.ItemsPanel>

@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
         x:Class="DSPRE.Avalonia.Views.Items.ItemTableEditorView"
         x:DataType="vm:ItemTableEditorViewModel"
@@ -11,22 +12,22 @@
     <vm:ItemTableEditorViewModel/>
   </Design.DataContext>
 
-  <DockPanel Margin="8">
-    <!-- Buttons -->
-    <Border DockPanel.Dock="Bottom" Padding="0,8,0,0">
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Save Changes" Width="120" Click="Save_Click" IsDefault="True"/>
-        <Button Content="Close"        Width="80"  Click="Close_Click"/>
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       </StackPanel>
     </Border>
 
     <!-- Main content -->
-    <TabControl x:Name="Tabs">
+    <TabControl x:Name="Tabs" Margin="8">
       <!-- ── Pickup Table tab ─────────────────────────────────────────── -->
       <TabItem Header="Pickup Table" IsVisible="{Binding ShowPickupTab}">
         <DockPanel Margin="4">
           <!-- Activation divisor above the activation table -->
-          <Border DockPanel.Dock="Bottom" Margin="0,4,0,0" Padding="6"
+          <Border x:Name="DivisorBox" DockPanel.Dock="Bottom" Margin="0,4,0,0" Padding="6"
                   BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <TextBlock Text="Activation Divisor (1-255):" VerticalAlignment="Center"/>
@@ -37,7 +38,7 @@
             </StackPanel>
           </Border>
 
-          <Grid RowDefinitions="Auto,4,*,4,Auto,4,Auto">
+          <Grid RowDefinitions="Auto,4,Auto,4,Auto,4,*">
             <!-- Activation odds header -->
             <TextBlock Grid.Row="0" Text="Which slot is picked" FontWeight="SemiBold" FontSize="12"/>
 
@@ -202,12 +203,12 @@
           </DockPanel>
 
           <!-- Right: edit panel -->
-          <Border Grid.Column="2" Padding="10" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
+          <Border x:Name="HiddenEditPanel" Grid.Column="2" Padding="10" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
                   IsEnabled="{Binding HiddenItemSelected}">
             <StackPanel Spacing="10">
               <StackPanel Spacing="4">
                 <TextBlock Text="Item:" FontSize="12"/>
-                <ComboBox ItemsSource="{Binding ItemNames}"
+                <ComboBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}"
                           SelectedIndex="{Binding SelectedItemID}"
                           HorizontalAlignment="Stretch"/>
               </StackPanel>
@@ -234,7 +235,7 @@
       <TabItem Header="Rock Smash" IsVisible="{Binding ShowRockSmashTab}">
         <DockPanel Margin="4">
           <!-- Item-drop tables: hardcoded in ov001.bin, only confirmed for English builds -->
-          <Border DockPanel.Dock="Top" Margin="0,0,0,8" Padding="8"
+          <Border x:Name="RockSmashTables" DockPanel.Dock="Top" Margin="0,0,0,8" Padding="8"
                   BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
                   IsVisible="{Binding ShowRockSmashItemTables}">
             <StackPanel Spacing="6">

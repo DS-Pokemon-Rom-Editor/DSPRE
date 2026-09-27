@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.Views.Tools
             AvaloniaXamlLoader.Load(this);
             var vm = new OverlayEditorViewModel();
             DataContext = vm;
-            // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
+            // The VM owns the bound Title; the chrome adds Ctrl+S and the close guard.
             EditorWindowChrome.Attach(this, vm, manageTitle: false);
         }
 
@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Views.Tools
         private void ToggleMarked_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
             => VM.ToggleAllMarked();
 
-        private void Revert_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => VM.RevertChanges();
+        private void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => VM.DiscardChanges();
     }
 }

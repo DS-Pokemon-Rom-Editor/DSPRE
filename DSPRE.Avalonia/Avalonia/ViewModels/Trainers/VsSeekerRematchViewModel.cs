@@ -85,7 +85,26 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool HasUnsavedChanges => _dirtyRows.Count > 0;
         public string UnsavedChangesDescription => "Vs. Seeker Rematch Editor";
         public void SaveChanges() => SaveAll();
-        public void DiscardChanges() { _dirtyRows.Clear(); OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void DiscardChanges()
+        {
+            if (_dirtyRows.Count > 0 && IsSupported)
+            {
+                var saved = VsSeekerRematchTable.ReadAll();
+                foreach (int r in _dirtyRows)
+                    if (r < saved.Count) _rows[r] = saved[r];
+
+                int listPos = _selectedRowListIndex;
+                _suppress = true;
+                for (int i = 0; i < _filteredIndices.Count && i < RowLabels.Count; i++)
+                    if (_dirtyRows.Contains(_filteredIndices[i])) RowLabels[i] = RowLabel(_filteredIndices[i]);
+                _suppress = false;
+                if (_selectedRowListIndex != listPos) { _selectedRowListIndex = listPos; OnPropertyChanged(nameof(SelectedRowListIndex)); }
+                if (_currentRowIndex >= 0) LoadRowIntoDetail(_currentRowIndex);
+            }
+            _dirtyRows.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
 
         public VsSeekerRematchViewModel(int initialRowIndex = -1)
         {
@@ -192,20 +211,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 RowLabels[listPos] = RowLabel(_currentRowIndex);
                 _suppress = false;
             }
-        }
-
-        public void SaveCurrentRow()
-        {
-            if (_currentRowIndex < 0) return;
-
-            if (!VsSeekerRematchTable.WriteRow(_currentRowIndex, _rows[_currentRowIndex], out string error))
-            {
-                AppMessages.Error("Save failed: " + error, "Error");
-                return;
-            }
-            _dirtyRows.Remove(_currentRowIndex);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            UpdateStatus($"Row {_currentRowIndex} saved.");
         }
 
         public void SaveAll()

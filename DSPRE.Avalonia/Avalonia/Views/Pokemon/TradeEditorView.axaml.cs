@@ -17,17 +17,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
             EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
         }
 
-        private void SaveTrade_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => VM.SaveTradeCommand();
+        private void Save_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => VM.SaveChanges();
 
-        private void SaveText_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => VM.SaveTextCommand();
-
-        private void SaveAll_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-            => VM.SaveAllCommand();
-
-        private void Undo_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.Undo();
-        private void Redo_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e) => VM.Redo();
+        private void Discard_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+            => VM.DiscardChanges();
 
         private async void TradeID_Changed(object sender, NumericUpDownValueChangedEventArgs e)
         {

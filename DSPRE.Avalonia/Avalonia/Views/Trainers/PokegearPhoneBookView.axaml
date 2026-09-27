@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Trainers.PokegearPhoneBookView"
         x:DataType="vm:PokegearPhoneBookViewModel">
 
@@ -16,57 +17,6 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Save" Click="Save_Click"/>
         <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="Filter…" Margin="12,0,0,0"/>
-        <Button Content="Help" Margin="12,0,0,0">
-          <Button.Flyout>
-            <Flyout Placement="BottomEdgeAlignedLeft">
-              <ScrollViewer MaxHeight="560" Width="470">
-                <StackPanel Spacing="10" Margin="4">
-                  <StackPanel.Styles>
-                    <Style Selector="TextBlock">
-                      <Setter Property="TextWrapping" Value="Wrap"/>
-                    </Style>
-                    <Style Selector="TextBlock.field">
-                      <Setter Property="FontWeight" Value="SemiBold"/>
-                      <Setter Property="Margin" Value="0,4,0,-8"/>
-                    </Style>
-                  </StackPanel.Styles>
-
-                  <TextBlock Text="A contact's name is the first message of the text archive shown in its heading. Edit it in the Text Editor."/>
-
-                  <TextBlock Classes="field" Text="Call type"/>
-                  <TextBlock Text="Which call routine runs this contact. Each special type has its own routine, so a trainer switched to one keeps the trainer call data. Only Trainer, Buena, Ethan / Lyra, Gym Leader and Irwin call at random."/>
-
-                  <TextBlock Classes="field" Text="Title"/>
-                  <TextBlock Text="The label under the name in the contact list. 0-199 are trainer classes, 200 shows no title, and 201-207 are phone titles such as Pokémon Professor."/>
-
-                  <TextBlock Classes="field" Text="Trainer"/>
-                  <TextBlock Text="The trainer this contact is. The game matches it after a win to offer their number, rematches and gifts, so it must match the trainer battled and their Rematch Editor row. Pick 'not a trainer' for people you never battle."/>
-
-                  <TextBlock Classes="field" Text="Map"/>
-                  <TextBlock Text="Where the contact lives. Calling them while you're on this map plays their local line, they don't call you at random while you're there, and their dialogue can name the place or a wild Pokémon found there."/>
-
-                  <TextBlock Classes="field" Text="Rematch gift"/>
-                  <TextBlock Text="An item handed over each time you win a rematch against this trainer. Cheri Berry gives a random berry."/>
-
-                  <TextBlock Classes="field" Text="Call on their map"/>
-                  <TextBlock Text="The phone script a trainer contact uses when you call them from their own map. Other call types ignore it."/>
-
-                  <TextBlock Classes="field" Text="Greeting"/>
-                  <TextBlock Text="The style of greeting said at the start of a trainer's call, with a line for each time of day."/>
-
-                  <TextBlock Classes="field" Text="Rematch day"/>
-                  <TextBlock Text="The day and time when calling this trainer or Gym Leader can set up a rematch. Day covers 10:00 to 19:59. Trainers can still offer a rematch when they call you on other days; Gym Leaders also need all 16 badges. Never turns it off."/>
-
-                  <TextBlock Classes="field" Text="Random calls"/>
-                  <TextBlock Text="A random call first picks a group, 0 half the time, 1 three times in ten and 2 the rest, then a contact in that group. A contact in a small group calls more often. Never keeps them from calling at random."/>
-
-                  <TextBlock Classes="field" Text="Sort order"/>
-                  <TextBlock Text="The Pokégear lists contacts by title, by name or by location. Each contact keeps its own position in all three, so renaming or moving one leaves the order alone. Drag a contact, or press Auto Sort, to change a list."/>
-                </StackPanel>
-              </ScrollViewer>
-            </Flyout>
-          </Button.Flyout>
-        </Button>
       </StackPanel>
     </Border>
 
@@ -76,49 +26,79 @@
       <ScrollViewer Grid.Column="1">
         <StackPanel Margin="16" Spacing="10" IsEnabled="{Binding IsEntrySelected}">
           <TextBlock Text="{Binding LoadError}" IsVisible="{Binding HasLoadError}" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
-          <TextBlock Text="{Binding Heading}" FontSize="16" FontWeight="SemiBold"/>
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding Heading}" FontSize="16" FontWeight="SemiBold"/>
+            <controls:HelpTip Text="A contact's name is the first message of the text archive shown in its heading. Edit it in the Text Editor."/>
+          </StackPanel>
           <TextBlock Text="{Binding Problems}" IsVisible="{Binding HasProblems}" FontSize="11"
                      Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
 
-          <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
-            <TextBlock Grid.Row="0" Text="Call type" VerticalAlignment="Center"/>
+          <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Call type"/>
+              <controls:HelpTip Text="Which call routine runs this contact. Each special type has its own routine, so a trainer switched to one keeps the trainer call data. Only Trainer, Buena, Ethan / Lyra, Gym Leader and Irwin call at random."/>
+            </StackPanel>
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="10">
               <ComboBox ItemsSource="{Binding TypeChoices}" SelectedIndex="{Binding TypeIndex}" Width="200"/>
               <TextBlock Text="{Binding TypeNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
             </StackPanel>
 
-            <TextBlock Grid.Row="1" Text="Title" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Title"/>
+              <controls:HelpTip Text="The label under the name in the contact list. 0-199 are trainer classes, 200 shows no title, and 201-207 are phone titles such as Pokémon Professor."/>
+            </StackPanel>
             <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding TitleChoices}" SelectedIndex="{Binding TitleIndex}" HorizontalAlignment="Stretch"/>
 
-            <TextBlock Grid.Row="2" Text="Trainer" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Trainer"/>
+              <controls:HelpTip Text="The trainer this contact is. The game matches it after a win to offer their number, rematches and gifts, so it must match the trainer battled and their Rematch Editor row. Pick 'not a trainer' for people you never battle."/>
+            </StackPanel>
             <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <ComboBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"/>
               <Button Grid.Column="1" Content="Open in Rematch Editor" Click="OpenRematch_Click" IsVisible="{Binding HasRematchRow}"/>
             </Grid>
 
-            <TextBlock Grid.Row="3" Text="Map" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="3" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Map"/>
+              <controls:HelpTip Text="Where the contact lives. Calling them while you're on this map plays their local line, they don't call you at random while you're there, and their dialogue can name the place or a wild Pokémon found there."/>
+            </StackPanel>
             <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding MapChoices}" SelectedIndex="{Binding MapIndex}" HorizontalAlignment="Stretch"/>
 
-            <TextBlock Grid.Row="4" Text="Rematch gift" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Rematch gift"/>
+              <controls:HelpTip Text="An item handed over each time you win a rematch against this trainer. Cheri Berry gives a random berry."/>
+            </StackPanel>
             <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemChoices}" SelectedIndex="{Binding GiftIndex}" HorizontalAlignment="Stretch"
                       ToolTip.Tip="Given after each rematch win. Cheri Berry gives a random berry."/>
 
-            <TextBlock Grid.Row="5" Text="Call on their map" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="5" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Call on their map"/>
+              <controls:HelpTip Text="The phone script a trainer contact uses when you call them from their own map. Other call types ignore it."/>
+            </StackPanel>
             <NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding LocalScript}" Minimum="0" Maximum="65535" Increment="1" FormatString="0"
                            Width="140" HorizontalAlignment="Left" IsEnabled="{Binding IsTrainerType}"
                            ToolTip.Tip="Phone script used when you call this trainer from their own map"/>
 
-            <TextBlock Grid.Row="6" Text="Greeting" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="6" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Greeting"/>
+              <controls:HelpTip Text="The style of greeting said at the start of a trainer's call, with a line for each time of day."/>
+            </StackPanel>
             <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding GreetingChoices}" SelectedIndex="{Binding GreetingIndex}" Width="200" HorizontalAlignment="Left"/>
 
-            <TextBlock Grid.Row="7" Text="Rematch day" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="7" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Rematch day"/>
+              <controls:HelpTip Text="The day and time when calling this trainer or Gym Leader can set up a rematch. Day covers 10:00 to 19:59. Trainers can still offer a rematch when they call you on other days; Gym Leaders also need all 16 badges. Never turns it off."/>
+            </StackPanel>
             <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding UsesSchedule}"
                         ToolTip.Tip="When calling this contact can set up a rematch">
               <ComboBox ItemsSource="{Binding WeekdayChoices}" SelectedIndex="{Binding WeekdayIndex}" Width="140"/>
               <ComboBox ItemsSource="{Binding TimeChoices}" SelectedIndex="{Binding TimeIndex}" Width="120"/>
             </StackPanel>
 
-            <TextBlock Grid.Row="8" Text="Random calls" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="8" Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Random calls"/>
+              <controls:HelpTip Text="A random call first picks a group, 0 half the time, 1 three times in ten and 2 the rest, then a contact in that group. A contact in a small group calls more often. Never keeps them from calling at random."/>
+            </StackPanel>
             <ComboBox Grid.Row="8" Grid.Column="1" ItemsSource="{Binding GroupChoices}" SelectedIndex="{Binding GroupIndex}" Width="200" HorizontalAlignment="Left"
                       ToolTip.Tip="How often this contact's group is picked when a random call rings"/>
 
@@ -140,8 +120,11 @@
       <Border Grid.Column="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
         <DockPanel Margin="6">
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="2,0,0,6">
-            <TextBlock Text="Sort order" FontWeight="SemiBold" VerticalAlignment="Center"
-                       ToolTip.Tip="Drag a contact to move it, or use Alt+Up and Alt+Down"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock Text="Sort order" FontWeight="SemiBold"
+                         ToolTip.Tip="Drag a contact to move it, or use Alt+Up and Alt+Down"/>
+              <controls:HelpTip Text="The Pokégear lists contacts by title, by name or by location. Each contact keeps its own position in all three, so renaming or moving one leaves the order alone. Drag a contact, or press Auto Sort, to change a list."/>
+            </StackPanel>
             <Button Grid.Column="1" Content="Auto Sort" Click="AutoSort_Click" ToolTip.Tip="{Binding AutoSortTip}"/>
           </Grid>
           <TabControl DockPanel.Dock="Top" SelectedIndex="{Binding SortTabIndex}" Margin="0,0,0,4" Padding="0">

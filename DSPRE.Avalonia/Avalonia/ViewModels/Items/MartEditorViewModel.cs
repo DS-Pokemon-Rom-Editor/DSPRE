@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
     public sealed class MartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
-        private readonly MartData _data;
+        private MartData _data;
         private readonly string[] _itemNames;
         private bool _dirty;
         private MartShopVM _selectedShop;
@@ -221,8 +221,35 @@ namespace DSPRE.Avalonia.ViewModels.Items
             SaveNotice.Saved(UnsavedChangesDescription);
         }
 
+        /// <summary>Shown while the marts can't grow yet this ROM could take the ARM9 expansion.</summary>
+        public bool CanOfferExpansion => !CanResize && PatchToolboxLogic.Arm9ExpansionWhyNot() == null;
+
+        /// <summary>Applies the ARM9 expansion and reloads the marts so they can grow.</summary>
+        public async System.Threading.Tasks.Task OfferExpansionAsync()
+        {
+            if (_dirty)
+            {
+                await DialogHelper.ShowInfo("Save or discard the mart changes first; the marts reload after the expansion.", "Mart Editor");
+                return;
+            }
+            if (!await Arm9ExpansionOffer.EnsureAsync("Adding mart slots or custom marts", "Mart Editor")) return;
+            _data = MartData.LoadCurrent();
+            PopulateShops();
+            foreach (var n in new[] { nameof(CanResize), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop),
+                                      nameof(ResizeStatus), nameof(CanOfferExpansion) })
+                Notify(n);
+        }
+
         public void DiscardChanges()
         {
+            if (_data != null)
+            {
+                int selected = Math.Max(0, Shops.IndexOf(SelectedShop));
+                _data = MartData.LoadCurrent();
+                PopulateShops(selected);
+                foreach (var n in new[] { nameof(SelectedShopDescription), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop) })
+                    Notify(n);
+            }
             _dirty = false;
             Notify(nameof(HasUnsavedChanges));
         }

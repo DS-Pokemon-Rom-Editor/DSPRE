@@ -150,7 +150,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         public AreaDataEditorViewModel() { }
-        public AreaDataEditorViewModel(bool _) { }
+        public AreaDataEditorViewModel(bool _) { AppEvents.AreaDataSaved += OnSavedElsewhere; }
+
+        /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
+        public void Detach() => AppEvents.AreaDataSaved -= OnSavedElsewhere;
+
+        // The Map Editor edits areas too: show its save, unless this copy holds its own edits.
+        private void OnSavedElsewhere(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this) || id != _selectedIndex) return;
+            if (_dirty) { StatusText = $"Area data {id} was saved in another window. Save or discard here to see it."; return; }
+            LoadArea(id);
+            StatusText = $"Area data {id} was saved in another window and reloaded.";
+        }
 
         public async Task SetupAsync(Window owner)
         {
@@ -191,7 +203,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Save()
         {
             if (_area == null || _selectedIndex < 0) return;
-            try { _area.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); }
+            try { _area.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Area Data"); }
         }
     }

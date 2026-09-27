@@ -32,7 +32,7 @@
         <Button Grid.Column="0" Content="Choose PNG…" Click="ChoosePng_Click" HorizontalAlignment="Stretch"
                 ToolTip.Tip="A normal image file. It's converted into the ROM's native texture format on Add."/>
         <Button Grid.Column="2" Content="Choose Raw Texture…" Click="ChooseRawBtx_Click" HorizontalAlignment="Stretch"
-                ToolTip.Tip="An already ROM-native BTX0 texture file (e.g. extracted from another ROM), copied in as-is, no conversion, so it's pixel-perfect."/>
+                ToolTip.Tip="A texture file already in the game's own format (e.g. taken from another ROM), copied in as it is, so it stays pixel-perfect."/>
         <Button Grid.Column="4" Content="Clear" Click="ClearImage_Click" IsEnabled="{Binding HasImage}"/>
       </Grid>
       <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" Height="120">

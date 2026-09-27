@@ -21,9 +21,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
             DataContext = vm;
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e)
-            => await ViewModel.SaveCommand();
-
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
             var window = TopLevel.GetTopLevel(this) as Window;

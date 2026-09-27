@@ -848,12 +848,22 @@ namespace DSPRE.Avalonia.ViewModels.Items
             DSUtils.WriteToFile(overlayPath, raw, offset);
         }
 
+        // Re-reads each edited table from the project; the flags clear even if a read fails so closing never gets stuck.
         public void DiscardChanges()
         {
-            _pickupDirty = false;
-            _hiddenDirty = false;
-            _rockSmashDirty = false;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            try
+            {
+                if (_pickupDirty && ShowPickupTab) { LoadPickupTable(); OnPropertyChanged(nameof(ActivationDivisorEdit)); }
+                if (_hiddenDirty && ShowHiddenItemsTab) { SelectedHiddenItem = null; LoadHiddenItems(); }
+                if (_rockSmashDirty && ShowRockSmashTab) LoadRockSmash();
+            }
+            finally
+            {
+                _pickupDirty = false;
+                _hiddenDirty = false;
+                _rockSmashDirty = false;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+            }
         }
     }
 }

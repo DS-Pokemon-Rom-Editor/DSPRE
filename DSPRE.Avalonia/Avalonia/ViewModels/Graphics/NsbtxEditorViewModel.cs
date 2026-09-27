@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up NSBTX Editor:\n{ex.Message}", "Map & Building Textures");
+                await DialogHelper.ShowError($"Couldn't open the texture editor:\n{ex.Message}", "Map & Building Textures");
             }
         }
 
@@ -248,9 +248,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // ── Save / Discard ───────────────────────────────────────────────────────────────
-        // Adds, removes and imports change the unpacked files at once so the lists and previews show them; each
-        // file's state from before its first change is kept (null when it didn't exist), and Discard or closing
-        // without saving puts that back.
+        // Edits hit the unpacked files at once, so each file's prior bytes (null if new) are kept for Discard.
         private readonly Dictionary<string, byte[]> _originals = new();
         private void Keep(string path)
         {

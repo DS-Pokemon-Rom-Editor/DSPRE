@@ -54,6 +54,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardTrainer();
 
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();

@@ -1,5 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using DSPRE.Editors;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -42,6 +44,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private int[] _curMachineMoves;
         private int[] _curMachinePalettes;
+        private bool _palettesKnown;
+        private int[] _savedMachineMoves = System.Array.Empty<int>();
+        /// <summary>False when a machine has no item row: palettes then can't be read or written.</summary>
+        public bool PalettesKnown => _palettesKnown;
         private bool _loading;
         private bool _dirty;
 
@@ -94,7 +100,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Observable collections (bound to ListBox / ComboBoxes)
         // ----------------------------------------------------------------
 
-        public ObservableCollection<string> MachineItems { get; } = new ObservableCollection<string>();
+        public sealed class MachineRow
+        {
+            public string Text { get; init; }
+            public int Move { get; init; }
+            public override string ToString() => Text;
+        }
+        public ObservableCollection<MachineRow> MachineItems { get; } = new ObservableCollection<MachineRow>();
         public ObservableCollection<string> MoveNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> TypeNames { get; } = new ObservableCollection<string>();
 
@@ -102,15 +114,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Selected indices
         // ----------------------------------------------------------------
 
+        // The list shows TMs first and HMs last, so a list position isn't a machine index.
+        private int[] _order = System.Array.Empty<int>();
+        private int Pos(int machine) => System.Array.IndexOf(_order, machine);
+
         private int _selectedMachineIndex = -1;
+        /// <summary>The selected row of the machine list; <c>_selectedMachineIndex</c> is the machine it shows.</summary>
         public int SelectedMachineIndex
         {
-            get => _selectedMachineIndex;
+            get => Pos(_selectedMachineIndex);
             set
             {
-                if (!Set(ref _selectedMachineIndex, value)) return;
-                if (_loading || value < 0) return;
-                OnMachineSelected(value);
+                int machine = value >= 0 && value < _order.Length ? _order[value] : -1;
+                if (machine == _selectedMachineIndex) return;
+                _selectedMachineIndex = machine;
+                OnPropertyChanged();
+                if (_loading || machine < 0) return;
+                OnMachineSelected(machine);
             }
         }
 
@@ -125,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 _curMachineMoves[_selectedMachineIndex] = value;
                 string label = TMEditor.MachineLabelFromIndex(_selectedMachineIndex);
-                MachineItems[_selectedMachineIndex] = $"{label} - {GetMoveNameFromID(value)}";
+                MachineItems[Pos(_selectedMachineIndex)] = new MachineRow { Text = $"{label} - {GetMoveNameFromID(value)}", Move = value };
                 SetDirty(true);
             }
         }
@@ -137,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             set
             {
                 if (!Set(ref _selectedTypeIndex, value)) return;
-                if (_loading || _selectedMachineIndex < 0 || _selectedMachineIndex >= _curMachineMoves.Length) return;
+                if (_loading || !_palettesKnown || _selectedMachineIndex < 0 || _selectedMachineIndex >= _curMachineMoves.Length) return;
 
                 _curMachinePalettes[_selectedMachineIndex] = TypeIndexToPalette(value);
                 SetDirty(true);
@@ -163,7 +183,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string UnsavedChangesDescription => "TM/HM Editor";
 
         void IEditorWithUnsavedChanges.SaveChanges() => SaveChangesCore();
-        public void DiscardChanges() => SetDirty(false);
+        public void DiscardChanges()
+        {
+            if (!_dirty || _savedSnap == null) return;
+            _history.Reset(_savedSnap);
+            _lastCaptureUtc = DateTime.MinValue;
+            ApplyState(_savedSnap);
+        }
+
+        // The table as it is on disk, for Discard. ApplyState copies out of it, so it is never edited.
+        private TMSnapshot _savedSnap;
 
         // ----------------------------------------------------------------
         // Constructor
@@ -177,7 +206,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _curMachinePalettes = new int[5];
                 for (int i = 0; i < 5; i++)
                 {
-                    MachineItems.Add($"TM{i + 1:D2} - Dummy Move {i + 1}");
+                    MachineItems.Add(new MachineRow { Text = $"TM{i + 1:D2} - Dummy Move {i + 1}" });
                     MoveNames.Add($"Dummy Move {i + 1}");
                     TypeNames.Add($"Type {i + 1}");
                     _curMachineMoves[i] = i;
@@ -192,9 +221,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PopulateTypeNames();
 
             _curMachineMoves = TMEditor.ReadMachineMoves();
-            _curMachinePalettes = TMEditor.ReadMachinePalettes();
+            _savedMachineMoves = (int[])_curMachineMoves.Clone();
+            // Unreadable palettes show as zero and are never written back.
+            int[] palettes = TMEditor.ReadMachinePalettes();
+            _palettesKnown = palettes != null;
+            _curMachinePalettes = palettes ?? new int[_curMachineMoves.Length];
             RefreshMachineMoveList();
-            _history.Reset(Snapshot());   // loaded table is the clean undo baseline
+            _savedSnap = Snapshot();
+            _history.Reset(_savedSnap);   // loaded table is the clean undo baseline
             AppEvents.NamesChanged += OnNamesChanged;   // live-refresh move/type names from the Text editor
 
             // Start on the first machine, so the move and palette boxes show something rather than blank.
@@ -209,7 +243,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void AutoPaletteCommand()
         {
-            if (_selectedMachineIndex < 0 || _selectedMachineIndex >= _curMachineMoves.Length)
+            if (!_palettesKnown || _selectedMachineIndex < 0 || _selectedMachineIndex >= _curMachineMoves.Length)
                 return;
 
             int moveId = _curMachineMoves[_selectedMachineIndex];
@@ -225,6 +259,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task AutoPaletteAllCommand(Window owner)
         {
+            if (!_palettesKnown) return;
             bool confirmed = await DialogHelper.AskYesNo(
                 "This will set the palette of all TMs and HMs based on their move types.\n" +
                 "If any of the moves have custom types (e.g. Fairy) they will receive the Normal type palette instead and " +
@@ -293,6 +328,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 var lines = File.ReadAllLines(path);
+                int skipped = 0;
                 for (int i = 1; i < lines.Length; i++) // skip header
                 {
                     var parts = lines[i].Split(',');
@@ -301,25 +337,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     string machineLabel = parts[0].Trim();
                     int moveId = int.Parse(parts[1].Trim());
                     int paletteId = int.Parse(parts[3].Trim());
-                    int machineIndex;
+                    int machineIndex = TMEditor.MachineIndexFromLabel(machineLabel);
+                    if (machineIndex < 0 || machineIndex >= _curMachineMoves.Length) { skipped++; continue; }
 
-                    if (machineLabel.StartsWith("TM"))
-                        machineIndex = int.Parse(machineLabel.Substring(2)) - 1;
-                    else if (machineLabel.StartsWith("HM"))
-                        machineIndex = int.Parse(machineLabel.Substring(2)) + PokemonPersonalData.tmsCount - 1;
-                    else
-                        continue;
-
-                    if (machineIndex >= 0 && machineIndex < _curMachineMoves.Length)
-                    {
-                        _curMachineMoves[machineIndex] = moveId;
-                        _curMachinePalettes[machineIndex] = paletteId;
-                    }
+                    _curMachineMoves[machineIndex] = moveId;
+                    if (_palettesKnown) _curMachinePalettes[machineIndex] = paletteId;
                 }
 
                 RefreshMachineMoveList();
                 SetDirty(true);
-                await DialogHelper.ShowInfo("Machine data imported successfully.", "Import Complete");
+                await DialogHelper.ShowInfo(skipped == 0 ? "Machine data imported successfully."
+                    : $"Machine data imported. {skipped} row(s) name machines this ROM doesn't have and were skipped.", "Import Complete");
             }
             catch (Exception ex)
             {
@@ -351,8 +379,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             MachineItems.Clear();
             string[] names = TMEditor.GetMachineMoveNames(_curMachineMoves);
-            for (int i = 0; i < names.Length; i++)
-                MachineItems.Add($"{TMEditor.MachineLabelFromIndex(i)} - {names[i]}");
+            _order = _order.Length == names.Length ? _order : TMEditor.DisplayOrder().Where(i => i < names.Length).ToArray();
+            foreach (int i in _order)
+                MachineItems.Add(new MachineRow { Text = $"{TMEditor.MachineLabelFromIndex(i)} - {names[i]}", Move = _curMachineMoves[i] });
         }
 
         private void PopulateMoveNames()
@@ -383,44 +412,47 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return (moveId >= 0 && moveId < names.Length) ? names[moveId] : $"UNK_{moveId}";
         }
 
-        private void SaveChangesCore()
+        // The old description names the old move, so it is offered for rewriting rather than left wrong.
+        private async Task UpdateDescriptionsAsync(List<(int Machine, int OldMove, int NewMove)> moved)
+        {
+            string labels = string.Join(", ", moved.Take(6).Select(m => TMEditor.MachineLabelFromIndex(m.Machine))) + (moved.Count > 6 ? "…" : "");
+            if (!await DialogHelper.AskYesNo($"Rewrite the item descriptions of {labels} for their new moves?", "TM/HM Editor")) return;
+            try
+            {
+                var result = TmItemDescriptions.Update(moved);
+                if (result.Kept.Count > 0)
+                    await DialogHelper.ShowInfo("Too long for the bag, left as they were: " + string.Join(", ", result.Kept) + ".", "TM/HM Editor");
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            {
+                await DialogHelper.ShowError("The descriptions were not rewritten:\n" + e.Message, "TM/HM Editor");
+            }
+        }
+
+        private bool SaveChangesCore()
         {
             try
             {
-                var writer = new ARM9.Writer(RomInfo.GetMachineMoveOffset());
-                foreach (int move in _curMachineMoves)
-                    writer.Write((ushort)move);
-                writer.Close();
-
-                for (int i = 0; i < _curMachinePalettes.Length; i++)
-                    WritePaletteID(i, _curMachinePalettes[i]);
+                TMEditor.WriteMachines(_curMachineMoves, _palettesKnown ? _curMachinePalettes : null);
+                var moved = Enumerable.Range(0, Math.Min(_curMachineMoves.Length, _savedMachineMoves.Length))
+                    .Where(i => _curMachineMoves[i] != _savedMachineMoves[i])
+                    .Select(i => (i, _savedMachineMoves[i], _curMachineMoves[i])).ToList();
+                _savedMachineMoves = (int[])_curMachineMoves.Clone();
+                _savedSnap = Snapshot();
+                if (moved.Count > 0 && TmItemDescriptions.WhyNot() == null) _ = UpdateDescriptionsAsync(moved);
 
                 SetDirty(false);
                 _history.MarkSaved();
                 RaiseUndoState();
                 SaveNotice.Saved(UnsavedChangesDescription);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException || ex is ArgumentException)
             {
                 AppLogger.Error($"TM Editor: Failed to save machine moves or palettes. Exception: {ex.Message}");
-                // Fire-and-forget, we're in a sync context here; errors are logged
+                _ = DialogHelper.ShowError("The TMs and HMs were not saved:\n" + ex.Message, "TM/HM Editor");
+                return false;
             }
-        }
-
-        private void WritePaletteID(int machineIndex, int paletteID)
-        {
-            uint itemTableOffset = RomInfo.GetItemTableOffset();
-            int adjustedIndex = machineIndex + 328;
-            try
-            {
-                ARM9.WriteBytes(
-                    System.BitConverter.GetBytes((ushort)paletteID),
-                    (uint)(itemTableOffset + adjustedIndex * 8 + 4));
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"TM Editor: Failed to write palette ID for machine index {machineIndex}. Exception: {ex.Message}");
-            }
+            return true;
         }
 
         private void SetDirty(bool isDirty)

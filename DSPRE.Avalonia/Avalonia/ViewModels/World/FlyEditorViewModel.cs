@@ -94,7 +94,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             await SaveCommand();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() => SetClean();
+        public void DiscardChanges() { LoadRows(); SetClean(); }
 
         // ── Observable state ─────────────────────────────────────────────────
         public ObservableCollection<FlyRow>   Rows    { get; } = new();

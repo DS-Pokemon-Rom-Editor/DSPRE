@@ -132,7 +132,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             await SaveCommand();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() => SetClean();
+        // Reloads the shown file from disk so Discard really drops the edits.
+        public void DiscardChanges()
+        {
+            if (_current == null) { SetClean(); return; }
+            try { LoadFile(_selectedEncounterIndex); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { SetClean(); }
+        }
 
         // ── Pokemon name list ─────────────────────────────────────────────
         public ObservableCollection<string> PokemonNames { get; } = new();

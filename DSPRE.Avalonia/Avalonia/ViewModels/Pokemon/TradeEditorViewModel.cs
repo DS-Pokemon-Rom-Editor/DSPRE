@@ -35,8 +35,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _textDirty;
         public bool HasUnsavedChanges => _tradeDirty || _textDirty;
         public string UnsavedChangesDescription => "Trade Editor";
-        void IEditorWithUnsavedChanges.SaveChanges() { SaveTradeCore(); SaveTextCore(); }
-        public void DiscardChanges() { _tradeDirty = false; _textDirty = false; }
+        public void SaveChanges()
+        {
+            if (!HasUnsavedChanges) return;
+            if (_tradeDirty) SaveTradeCore();
+            if (_textDirty) SaveTextCore();
+            if (!HasUnsavedChanges) SaveNotice.Saved(UnsavedChangesDescription);
+        }
+
+        public void DiscardChanges()
+        {
+            if (!HasUnsavedChanges) return;
+            if (_cur != null) LoadFromFile(_cur.id);
+            else { _tradeDirty = _textDirty = false; Title = "Trade Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        }
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
         // Trade edits live in the VM fields (only synced to _cur at save), and the nickname/OT names live in a
@@ -341,10 +353,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Commands
         // ----------------------------------------------------------------
 
-        public void SaveTradeCommand()  => SaveTradeCore();
-        public void SaveTextCommand()   => SaveTextCore();
-        public void SaveAllCommand()    { SaveTradeCore(); SaveTextCore(); }
-
         /// <summary>Called when TradeID spinner value changes (after user confirms).</summary>
         public async Task ChangeTradeIDAsync(int newID)
         {
@@ -356,10 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     "Unsaved Changes");
 
                 if (result == DialogHelper.MsgResult.Yes)
-                {
-                    SaveTradeCore();
-                    SaveTextCore();
-                }
+                    SaveChanges();
                 else if (result == DialogHelper.MsgResult.Cancel)
                 {
                     // revert spinner: caller must handle
@@ -393,6 +398,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _tradeDirty = false;
             _textDirty  = false;
             Title = "Trade Editor";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
 
             _loading = false;
 
@@ -408,7 +414,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             _cur.SaveToFileDefaultDir(TradeID, false);
             _tradeDirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             if (!_textDirty) Title = "Trade Editor";
             AppLogger.Debug($"TradeEditor: Saved trade data for ID {_cur.id}.");
             MarkSavedIfClean();
@@ -427,7 +433,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _tradeArchive.messages[TradeID + count] = OtName;
             _tradeArchive.SaveToExpandedDir(GetTextBankIndex(), false);
             _textDirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             if (!_tradeDirty) Title = "Trade Editor";
             AppLogger.Debug($"TradeEditor: Saved trade text data to message bank {GetTextBankIndex()}");
             MarkSavedIfClean();

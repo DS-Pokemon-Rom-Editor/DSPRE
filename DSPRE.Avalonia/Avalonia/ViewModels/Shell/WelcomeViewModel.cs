@@ -92,7 +92,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                     "• Validation & Where-Used scans headers for broken references and finds every place " +
                     "a matrix, script or event file is used.\n" +
                     "• Advanced Header Search queries headers by any field.\n" +
-                    "• The NARC and NSBMD utilities unpack and rebuild game archives and model textures.\n\n" +
+                    "• The archive and model texture tools unpack and rebuild game archives and model textures.\n\n" +
                     "You can reopen this guide anytime from Tools > Welcome & Tutorial. A short guided " +
                     "tour will also point out where everything is when you open your first ROM."
             },

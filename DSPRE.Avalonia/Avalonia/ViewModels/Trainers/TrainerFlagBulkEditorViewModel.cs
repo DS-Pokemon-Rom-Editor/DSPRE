@@ -96,7 +96,18 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool HasUnsavedChanges => _isDirty;
         public string UnsavedChangesDescription => "Trainer Flag Bulk Editor";
         public void SaveChanges() => SaveAllChanges();
-        public void DiscardChanges() { _isDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void DiscardChanges()
+        {
+            if (_isDirty)
+            {
+                LoadAllTrainerData();
+                RebuildTree();
+                RefreshFlagChecklistFromSelection();
+            }
+            _isDirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
 
         public TrainerFlagBulkEditorViewModel()
         {

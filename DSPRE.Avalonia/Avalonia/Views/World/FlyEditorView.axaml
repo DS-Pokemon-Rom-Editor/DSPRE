@@ -12,17 +12,19 @@
   </Design.DataContext>
 
 
-  <DockPanel Margin="8" LastChildFill="True">
+  <DockPanel LastChildFill="True">
 
-	<!-- Save row -->
-	<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-				HorizontalAlignment="Right" Spacing="6" Margin="0,8,0,0">
-	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
-	  <Button Content="Save Changes" Click="Save_Click"/>
-	</StackPanel>
+	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+			BorderThickness="0,0,0,1" Padding="6,4">
+	  <StackPanel Orientation="Horizontal" Spacing="6">
+		<Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed" Margin="12,0,0,0"/>
+	  </StackPanel>
+	</Border>
 
 	<!-- Three tabs -->
-	<TabControl>
+	<TabControl Margin="8">
 
 	  <!-- ── Tab 1: Game-Over / Death Warps ─────────────────────────────── -->
 	  <TabItem Header="Game-Over Warps">

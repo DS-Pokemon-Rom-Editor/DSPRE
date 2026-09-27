@@ -158,14 +158,24 @@ namespace DSPRE.Avalonia.ViewModels.World
             _matrixX = Math.Min(matrixX, _matrixXMax);
             _matrixY = Math.Min(matrixY, _matrixYMax);
             _playerDirIndex = 0; // default Up
-            _initialMoney = 0;
+            // The preset only moves the spawn; the money stays what the ROM has.
+            try { _initialMoney = ReadMoney(); } catch { _initialMoney = 3000; }
 
             OnPropertyChanged(nameof(MatrixX));
             OnPropertyChanged(nameof(MatrixY));
             OnPropertyChanged(nameof(PlayerDirIndex));
             OnPropertyChanged(nameof(InitialMoney));
             _isLoading = false;
-            SetClean();
+            // The preset is a proposal not yet in the ROM, so Save and Discard start enabled.
+            SetDirty();
+        }
+
+        private static decimal ReadMoney()
+        {
+            if (OverlayUtils.IsStillCompressed(RomInfo.initialMoneyOverlayNumber))
+                OverlayUtils.Decompress(RomInfo.initialMoneyOverlayNumber);
+            string moneyPath = OverlayUtils.GetPath(RomInfo.initialMoneyOverlayNumber);
+            return BitConverter.ToUInt32(DSUtils.ReadFromFile(moneyPath, RomInfo.initialMoneyOverlayOffset, 4), 0);
         }
 
         // ── Load from ROM ──────────────────────────────────────────────────────
@@ -174,11 +184,6 @@ namespace DSPRE.Avalonia.ViewModels.World
             _isLoading = true;
             try
             {
-                // Decompress money overlay if needed
-                if (OverlayUtils.OverlayTable.IsDefaultCompressed(RomInfo.initialMoneyOverlayNumber) &&
-                    OverlayUtils.IsCompressed(RomInfo.initialMoneyOverlayNumber))
-                    OverlayUtils.Decompress(RomInfo.initialMoneyOverlayNumber);
-
                 ushort headerNumber = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset, 2), 0);
                 ushort globalX      = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 8, 2), 0);
                 ushort globalY      = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 12, 2), 0);
@@ -195,8 +200,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _localY  = globalY % 32;
                 _playerDirIndex = Math.Min(playerDir, (ushort)3);
 
-                string moneyPath = OverlayUtils.GetPath(RomInfo.initialMoneyOverlayNumber);
-                _initialMoney = BitConverter.ToUInt32(DSUtils.ReadFromFile(moneyPath, RomInfo.initialMoneyOverlayOffset, 4), 0);
+                _initialMoney = ReadMoney();
             }
             catch { /* leave defaults */ }
             finally

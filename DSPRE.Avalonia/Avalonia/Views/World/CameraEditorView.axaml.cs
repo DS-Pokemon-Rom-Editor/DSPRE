@@ -61,6 +61,8 @@ namespace DSPRE.Avalonia.Views.World
         private async void SaveTable_Click(object sender, RoutedEventArgs e)
             => await RunSafe(() => VM?.SaveAsync());
 
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+
         private async void ExportTable_Click(object sender, RoutedEventArgs e)
             => await RunSafe(() => VM?.ExportTableAsync());
 

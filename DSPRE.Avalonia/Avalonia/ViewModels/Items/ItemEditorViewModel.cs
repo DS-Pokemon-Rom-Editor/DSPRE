@@ -428,6 +428,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 OnPropertyChanged(nameof(SelectedItemIndex));
                 LoadFile(back);
             }
+            else if (_selectedItemIndex >= 0 && _selectedItemIndex < ItemNames.Count)
+                LoadFile(_selectedItemIndex);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 

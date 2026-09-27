@@ -24,8 +24,8 @@ namespace DSPRE.Avalonia.Views.World
         private void ResetFilter_Click(object sender, RoutedEventArgs e)
             => VM?.ResetFilter();
 
-        private void Load_Click(object sender, RoutedEventArgs e)
-            => VM?.LoadFromRom();
+        private void Discard_Click(object sender, RoutedEventArgs e)
+            => VM?.DiscardChanges();
 
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await (VM?.SaveChangesAsync() ?? System.Threading.Tasks.Task.CompletedTask);

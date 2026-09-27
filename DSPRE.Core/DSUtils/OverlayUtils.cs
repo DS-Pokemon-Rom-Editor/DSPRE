@@ -172,6 +172,10 @@ namespace DSPRE
         /**
          * Checks the actual size of the overlay file
          **/
+        /// <summary>Whether the overlay on disk is still compressed. ds-rom projects keep overlays flat until build.</summary>
+        public static bool IsStillCompressed(int ovNumber) =>
+            !RomInfo.IsDsRomProject && OverlayTable.IsDefaultCompressed(ovNumber) && IsCompressed(ovNumber);
+
         public static bool IsCompressed(int ovNumber)
         {
             string overlayPath = GetPath(ovNumber);

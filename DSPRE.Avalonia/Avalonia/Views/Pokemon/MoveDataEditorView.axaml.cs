@@ -20,8 +20,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await ViewModel.SaveCommand();
 
-        private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.Undo();
-        private void Redo_Click(object sender, RoutedEventArgs e) => ViewModel.Redo();
+        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel.DiscardChanges();
 
         private async void Export_Click(object sender, RoutedEventArgs e)
             => await ViewModel.ExportCommand(this);

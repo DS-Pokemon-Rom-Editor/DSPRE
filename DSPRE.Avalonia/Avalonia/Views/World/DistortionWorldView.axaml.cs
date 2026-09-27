@@ -117,5 +117,6 @@ namespace DSPRE.Avalonia.Views.World
         private void Edited(object sender, DataGridCellEditEndedEventArgs e) => VM?.MarkEdited();
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
     }
 }

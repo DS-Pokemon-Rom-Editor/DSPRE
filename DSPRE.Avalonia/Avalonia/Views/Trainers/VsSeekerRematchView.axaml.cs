@@ -18,8 +18,8 @@ namespace DSPRE.Avalonia.Views.Trainers
             DataContext = vm;
         }
 
-        private void SaveRow_Click(object sender, RoutedEventArgs e) => VM?.SaveCurrentRow();
+        private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveAll();
 
-        private void SaveAll_Click(object sender, RoutedEventArgs e) => VM?.SaveAll();
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
     }
 }

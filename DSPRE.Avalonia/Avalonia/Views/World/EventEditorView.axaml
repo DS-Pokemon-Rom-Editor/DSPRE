@@ -158,7 +158,8 @@
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
-                  <TextBlock Text="OW ID" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Object ID" FontWeight="Bold" Margin="0,4,0,0"
+                             ToolTip.Tip="The number scripts use to move, show or hide this overworld."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwId}"/>
 
                   <TextBlock Text="Sprite" FontWeight="Bold" Margin="0,4,0,0"/>
@@ -212,13 +213,13 @@
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIsDummy}"/>
                     <CheckBox Content="Partner (double battle)" IsChecked="{Binding OwPartnerTrainer}"/>
                     <TextBlock Text="Sight range" FontWeight="Bold" Margin="0,4,0,0"
-                               ToolTip.Tip="How many tiles ahead the trainer notices the player (the engine's param0)."/>
+                               ToolTip.Tip="How many tiles ahead the trainer notices the player. Stored in the first general parameter."/>
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
                   </StackPanel>
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwIsApricornTree}" Margin="0,4,0,0">
                     <TextBlock Text="Apricorn bed" FontWeight="Bold"
-                               ToolTip.Tip="Which apricorn bed this tree belongs to. The same field a trainer uses for sight range (the engine's param0)."/>
+                               ToolTip.Tip="Which apricorn bed this tree belongs to. The same field a trainer uses for sight range (the first general parameter)."/>
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
                     <TextBlock Text="{Binding OwApricornNote}" FontSize="10" TextWrapping="Wrap"
                                Foreground="{DynamicResource Editor.Subtle}"/>
@@ -226,7 +227,7 @@
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwParam1Visible}" Margin="0,4,0,0">
                     <TextBlock Text="{Binding OwParam1Label}" FontWeight="Bold"
-                               ToolTip.Tip="How long this trainer waits between turns (the engine's param1)."/>
+                               ToolTip.Tip="How long this trainer waits between turns. Stored in the second general parameter."/>
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam1}"/>
                   </StackPanel>
 
@@ -248,14 +249,15 @@
                     </Grid>
                   </StackPanel>
 
-                  <TextBlock Text="Flag" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Hide flag" FontWeight="Bold" Margin="0,4,0,0"
+                             ToolTip.Tip="While this flag is set, the overworld is not placed on the map."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwFlag}"/>
-                  <TextBlock Text="Param 2" FontWeight="Bold" Margin="0,4,0,0"
-                             ToolTip.Tip="Kept with the event. Nothing in the game reads it."/>
+                  <TextBlock Text="Parameter 3" FontWeight="Bold" Margin="0,4,0,0"
+                             ToolTip.Tip="A third general value kept with the event. Platinum never reads it; HeartGold reads it for walking Pokémon."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam2}"/>
 
                   <TextBlock Text="Movement range" FontWeight="Bold" Margin="0,4,0,0"
-                             ToolTip.Tip="How far the NPC may wander from its position (the engine's move_limit_x / move_limit_z)."/>
+                             ToolTip.Tip="How many tiles a wandering NPC may stray from its start, each way."/>
                   <Grid ColumnDefinitions="72,*,72,*">
                     <TextBlock Grid.Column="0" Text="X range" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding OwXRange}"/>
@@ -299,7 +301,8 @@
                   <TextBlock Text="Destination header" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown controls:EditorLink.To="Header" Minimum="0" Maximum="65535" Value="{Binding WarpHeader}"/>
                   <TextBlock Text="{Binding WarpHeaderName}" Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>
-                  <TextBlock Text="Anchor" FontWeight="Bold" Margin="0,4,0,0"/>
+                  <TextBlock Text="Destination warp" FontWeight="Bold" Margin="0,4,0,0"
+                             ToolTip.Tip="Which warp of the destination header the player comes out at."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpAnchor}"/>
                   <TextBlock Text="Height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="4294967295" Value="{Binding WarpHeight}"/>

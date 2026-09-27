@@ -23,12 +23,9 @@
     </Style>
   </UserControl.Styles>
   <DockPanel LastChildFill="True" Margin="10">
-    <Border DockPanel.Dock="Bottom" Margin="0,8,0,0">
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-        <Button Content="Export CSV" Click="Export_Click" Width="110"/>
-        <Button Content="Save Entry" Click="Save_Click"   Width="110"/>
-      </StackPanel>
-    </Border>
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+      <Button Content="📤 Export CSV" Click="Export_Click" ToolTip.Tip="Export every Pokémon's personal data"/>
+    </StackPanel>
     <TextBlock DockPanel.Dock="Top" Text="{Binding HgLoadError}" IsVisible="{Binding HasHgLoadError}"
                Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap" Margin="0,0,0,8"/>
     <TabControl>

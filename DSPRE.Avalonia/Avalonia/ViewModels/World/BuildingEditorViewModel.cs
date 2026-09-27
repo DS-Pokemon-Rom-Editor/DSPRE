@@ -53,14 +53,28 @@ namespace DSPRE.Avalonia.ViewModels.World
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
-        // Import writes the chosen NSBMD straight into the unpacked model archive, which is the same
-        // place every other editor's Save writes to. There is no in-memory edit waiting to be written,
-        // so there is nothing for a prompt to offer to save. Reported as a dirty-tracking gap in #218;
-        // it is the absence of a Save step, not a missing flag.
-        public bool HasUnsavedChanges => false;
-        public string UnsavedChangesDescription => "Building Editor";
-        public void SaveChanges() { }
-        public void DiscardChanges() { }
+        // Import writes the unpacked archive at once for the preview, so the pre-import bytes are kept for Discard.
+        private readonly Dictionary<string, byte[]> _originals = new();
+        public bool HasUnsavedChanges => _originals.Count > 0;
+        public string UnsavedChangesDescription => "Building models";
+        public void SaveChanges()
+        {
+            if (_originals.Count == 0) return;
+            _originals.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            SaveNotice.Saved(UnsavedChangesDescription);
+        }
+        public void DiscardChanges()
+        {
+            foreach (var (path, bytes) in _originals)
+            {
+                try { File.WriteAllBytes(path, bytes); }
+                catch (Exception ex) { AppLogger.Error("Building discard: " + ex.Message); }
+            }
+            _originals.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            if (_selBuilding >= 0) LoadModel(_selBuilding);
+        }
 
         public BuildingEditorViewModel() { }
         public BuildingEditorViewModel(bool _) { }
@@ -172,14 +186,17 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportAsync()
         {
             if (_selBuilding < 0) return;
-            var filter = new FilePickerFileType("NSBMD model") { Patterns = new[] { "*.nsbmd", "*.bin", "*.*" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import building model (NSBMD)", new[] { filter });
+            var filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd", "*.bin", "*.*" } };
+            string path = await DialogHelper.OpenFile(_owner, "Import building model", new[] { filter });
             if (path == null) return;
             try
             {
-                File.Copy(path, Path.Combine(BuildingDir(), _selBuilding.ToString("D4")), true);
+                string target = Path.Combine(BuildingDir(), _selBuilding.ToString("D4"));
+                if (!_originals.ContainsKey(target) && File.Exists(target)) _originals[target] = File.ReadAllBytes(target);
+                File.Copy(path, target, true);
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 LoadModel(_selBuilding);
-                StatusText = "Imported building model.";
+                StatusText = "Imported building model. Save to keep it.";
             }
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
         }
@@ -187,8 +204,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportAsync()
         {
             if (_selBuilding < 0) return;
-            var filter = new FilePickerFileType("NSBMD model") { Patterns = new[] { "*.nsbmd" } };
-            string path = await DialogHelper.SaveFile(_owner, "Export building model (NSBMD)", new[] { filter }, $"building_{_selBuilding:D4}.nsbmd");
+            var filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
+            string path = await DialogHelper.SaveFile(_owner, "Export building model", new[] { filter }, $"building_{_selBuilding:D4}.nsbmd");
             if (path == null) return;
             try { File.Copy(Path.Combine(BuildingDir(), _selBuilding.ToString("D4")), path, true); StatusText = "Exported."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }

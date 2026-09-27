@@ -22,9 +22,15 @@ namespace DSPRE.Avalonia.Views.Items
             try { ViewModel?.SaveChanges(); }
             catch (System.Exception ex) { await DialogHelper.ShowError("The marts could not be saved:\n" + ex.Message, "Mart Editor"); }
         }
+        private async void Discard_Click(object sender, RoutedEventArgs e)
+        {
+            try { ViewModel?.DiscardChanges(); }
+            catch (System.Exception ex) { await DialogHelper.ShowError("The marts could not be reloaded:\n" + ex.Message, "Mart Editor"); }
+        }
         private void AddItem_Click(object sender, RoutedEventArgs e) => ViewModel?.AddItem();
         private void RemoveItem_Click(object sender, RoutedEventArgs e) => ViewModel?.RemoveLastItem();
         private void AddShop_Click(object sender, RoutedEventArgs e) => ViewModel?.AddShop();
+        private async void Expand_Click(object sender, RoutedEventArgs e) { if (ViewModel != null) await ViewModel.OfferExpansionAsync(); }
         private async void RemoveShop_Click(object sender, RoutedEventArgs e)
         {
             if (!await DialogHelper.AskYesNo(

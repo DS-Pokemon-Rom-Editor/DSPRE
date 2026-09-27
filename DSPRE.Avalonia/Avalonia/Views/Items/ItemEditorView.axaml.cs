@@ -35,6 +35,7 @@ namespace DSPRE.Avalonia.Views.Items
             AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.itemIcons, drawing);
         }
 
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();
     }

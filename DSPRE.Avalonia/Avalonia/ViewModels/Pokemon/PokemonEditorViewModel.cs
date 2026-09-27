@@ -110,10 +110,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DiscardChanges()
         {
             PersonalVM.DiscardChanges();
-            LearnsetVM.DiscardChanges();
-            EvolutionsVM.DiscardChanges();
-            SpriteVM.DiscardChanges();
             BattleDisplayVM.DiscardChanges();
+            // These three only clear their flag on discard, so their edits are put back by reading the mon again.
+            if (LearnsetVM.HasUnsavedChanges)   { LearnsetVM.DiscardChanges();   LearnsetVM.LoadMon(_selectedMonIndex); }
+            if (EvolutionsVM.HasUnsavedChanges) { EvolutionsVM.DiscardChanges(); EvolutionsVM.LoadMon(_selectedMonIndex); }
+            if (SpriteVM.HasUnsavedChanges)     { SpriteVM.DiscardChanges();     SpriteVM.LoadMon(_selectedMonIndex); }
             DropPendingSpecies();
         }
 

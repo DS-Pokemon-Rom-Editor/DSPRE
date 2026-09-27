@@ -189,7 +189,7 @@
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Scan headers for broken references, and look up which headers use a matrix/event/script/…'}"/>
         <Separator/>
         <MenuItem Header="ROM Patch Toolbox…" Click="PatchToolbox_Click" IsEnabled="{Binding HgeUnlinkedAllows}"
-                  ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='ARM9 expansion, matrix/header/trainer-name expansion, BDHCam, script-command repoint, item standardization and other ROM patches'}"/>
+                  ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='ARM9 expansion, matrix/header/trainer-name expansion, dynamic cameras, script-command repoint, item standardization and other ROM patches'}"/>
         <MenuItem Header="Overlay Editor…" Click="OverlayEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <MenuItem Header="Music &amp; Battle Tables…" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Misc game-wide tables: conditional map music (HGSS), battle-effect combos (Plat/HGSS) and the VS Trainer / VS Pokémon posters (HGSS)'}"/>
@@ -199,14 +199,14 @@
         <Separator/>
         <MenuItem Header="Export Docs…" Click="ExportDocs_Click" IsEnabled="{Binding CanUseDataExports}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Export Pokémon/learnset/evolution/trainer/move/TM/egg-move/header/encounter data as CSV, TXT and JSON'}"/>
-        <MenuItem Header="NARC Utility">
-          <MenuItem Header="Unpack NARC to Folder…" Click="NarcUnpack_Click"/>
-          <MenuItem Header="Pack Folder to NARC…" Click="NarcPack_Click"/>
+        <MenuItem Header="Archive tools">
+          <MenuItem Header="Unpack archive to folder…" Click="NarcUnpack_Click"/>
+          <MenuItem Header="Pack folder into archive…" Click="NarcPack_Click"/>
         </MenuItem>
-        <MenuItem Header="NSBMD Utility">
-          <MenuItem Header="Add/Replace NSBMD textures…" Click="NsbmdAddTex_Click"/>
-          <MenuItem Header="Remove textures from NSBMD…" Click="NsbmdRemoveTex_Click"/>
-          <MenuItem Header="Save textures from NSBMD…" Click="NsbmdSaveTex_Click"/>
+        <MenuItem Header="Model texture tools">
+          <MenuItem Header="Add or replace model textures…" Click="NsbmdAddTex_Click"/>
+          <MenuItem Header="Remove textures from a model…" Click="NsbmdRemoveTex_Click"/>
+          <MenuItem Header="Save textures from a model…" Click="NsbmdSaveTex_Click"/>
         </MenuItem>
         <Separator/>
         <MenuItem Header="Edit Dropdown Labels…" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"

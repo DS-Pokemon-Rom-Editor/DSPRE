@@ -59,11 +59,11 @@ namespace DSPRE.Avalonia.Data
             return raw;
         }
 
-        /// <summary>Restores every archive member touched by an import this session back to its bytes from
-        /// before the first edit, then forgets the backup (so importing again starts a fresh checkpoint).</summary>
-        /// <summary>Keeps every change made so far: Save. Later changes start a new checkpoint.</summary>
+        /// <summary>Keeps every change so far, for Save; later changes start a new checkpoint.</summary>
         public void AcceptAll() => _backup.Clear();
 
+        /// <summary>Restores every archive member touched by an import this session back to its bytes from
+        /// before the first edit, then forgets the backup (so importing again starts a fresh checkpoint).</summary>
         public void RevertAll()
         {
             foreach (var kv in _backup) _narc.Put(kv.Key, kv.Value);
@@ -229,7 +229,7 @@ namespace DSPRE.Avalonia.Data
             if (!Available) return "Title screen graphics archive is not available for this ROM.";
             if (nclrBytes == null || nclrBytes.Length < 4 ||
                 nclrBytes[0] != (byte)'R' || nclrBytes[1] != (byte)'L' || nclrBytes[2] != (byte)'C' || nclrBytes[3] != (byte)'N')
-                return "Not a valid NCLR palette file.";
+                return "Not a valid colour file.";
             int id = TitleScreenMembersFor(Version).palette;
             GetAndSnapshot(id);
             _narc.Put(id, nclrBytes);

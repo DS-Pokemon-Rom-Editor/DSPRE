@@ -132,10 +132,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         private decimal _vsAnimation;
-        public decimal VsAnimation { get => _vsAnimation; set { if (Set(ref _vsAnimation, value)) MarkEffectsDirty(); } }
+        public decimal VsAnimation { get => _vsAnimation; set { if (Set(ref _vsAnimation, value)) OnComboEdited(); } }
 
         private decimal _battleSseq;
-        public decimal BattleSseq { get => _battleSseq; set { if (Set(ref _battleSseq, value)) MarkEffectsDirty(); } }
+        public decimal BattleSseq { get => _battleSseq; set { if (Set(ref _battleSseq, value)) OnComboEdited(); } }
 
         // ── VS Trainer selection/detail ───────────────────────────────────────────
         private int _vsTrainerSelectedIndex = -1;
@@ -146,7 +146,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         private int _trainerClassIndex = -1;
-        public int TrainerClassIndex { get => _trainerClassIndex; set { if (Set(ref _trainerClassIndex, value)) { MarkVsTrainerDirty(); UpdateTrainerSprite(); } } }
+        public int TrainerClassIndex { get => _trainerClassIndex; set { if (Set(ref _trainerClassIndex, value)) { OnVsTrainerEdited(); UpdateTrainerSprite(); } } }
 
         // ── Trainer-class sprite preview (restored via the shared renderer) ──────────
         private readonly TrainerClassSpriteRenderer _trainerSprite = new TrainerClassSpriteRenderer();
@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         private int _trainerComboIndex = -1;
-        public int TrainerComboIndex { get => _trainerComboIndex; set { if (Set(ref _trainerComboIndex, value)) MarkVsTrainerDirty(); } }
+        public int TrainerComboIndex { get => _trainerComboIndex; set { if (Set(ref _trainerComboIndex, value)) OnVsTrainerEdited(); } }
 
         // ── VS Pokémon selection/detail (display only, original Save is a no-op) ──
         private int _vsPokemonSelectedIndex = -1;
@@ -200,19 +200,77 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         // ── Dirty tracking ────────────────────────────────────────────────────────
         private bool _condDirty, _effectsDirty, _vsTrainerDirty;
+        // Rows edited since the last save, so one Save writes every changed row, not just the shown one.
+        private readonly HashSet<int> _dirtyCombos = new HashSet<int>();
+        private readonly HashSet<int> _dirtyVsTrainers = new HashSet<int>();
         public bool HasUnsavedChanges => _condDirty || _effectsDirty || _vsTrainerDirty;
         public string UnsavedChangesDescription => "Table Editor";
-        public void SaveChanges()
+        public void SaveChanges() => _ = SaveAllAsync();
+
+        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            if (_condDirty) SaveConditionalMusic();
-            if (_effectsDirty) SaveEffectCombo();
-            if (_vsTrainerDirty) SaveVsTrainer();
+            await SaveAllAsync();
+            return !HasUnsavedChanges;
         }
+
+        public async Task SaveAllAsync()
+        {
+            if (!HasUnsavedChanges) return;
+            int cond = _condSelectedIndex, combo = _comboSelectedIndex, vs = _vsTrainerSelectedIndex, poke = _vsPokemonSelectedIndex;
+            bool toSource = _fromSource && (_effectsDirty || _vsTrainerDirty);
+            if (_condDirty) SaveConditionalMusic();
+            if (_effectsDirty) await SaveEffectCombosAsync();
+            if (_vsTrainerDirty) await SaveVsTrainersAsync();
+            Reselect(cond, combo, vs, poke);
+            if (!HasUnsavedChanges)
+            {
+                SaveNotice.Saved(UnsavedChangesDescription);
+                StatusText = toSource
+                    ? $"Saved to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it."
+                    : "Tables saved.";
+            }
+        }
+
+        /// <summary>Re-reads every table and keeps the shown rows.</summary>
         public void DiscardChanges()
         {
+            if (HasUnsavedChanges)
+            {
+                int cond = _condSelectedIndex, combo = _comboSelectedIndex, vs = _vsTrainerSelectedIndex, poke = _vsPokemonSelectedIndex;
+                _suppress = true;
+                try
+                {
+                    SetupConditionalMusic();
+                    SetupBattleEffects();
+                }
+                catch (Exception ex) { StatusText = $"Error loading tables: {ex.Message}"; }
+                finally { _suppress = false; }
+                Reselect(cond, combo, vs, poke);
+            }
             _condDirty = _effectsDirty = _vsTrainerDirty = false;
+            _dirtyCombos.Clear();
+            _dirtyVsTrainers.Clear();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
+
+        // Rewriting a list's items can drop the list's selection; put it back and refresh the fields.
+        private void Reselect(int cond, int combo, int vsTrainer, int vsPokemon)
+        {
+            _suppress = true;
+            try
+            {
+                if (_condSelectedIndex != cond) { _condSelectedIndex = cond; OnPropertyChanged(nameof(CondSelectedIndex)); }
+                if (_comboSelectedIndex != combo) { _comboSelectedIndex = combo; OnPropertyChanged(nameof(ComboSelectedIndex)); }
+                if (_vsTrainerSelectedIndex != vsTrainer) { _vsTrainerSelectedIndex = vsTrainer; OnPropertyChanged(nameof(VsTrainerSelectedIndex)); }
+                if (_vsPokemonSelectedIndex != vsPokemon) { _vsPokemonSelectedIndex = vsPokemon; OnPropertyChanged(nameof(VsPokemonSelectedIndex)); }
+            }
+            finally { _suppress = false; }
+            LoadCondEntry(cond);
+            LoadComboEntry(combo);
+            LoadVsTrainerEntry(vsTrainer);
+            LoadVsPokemonEntry(vsPokemon);
+        }
+
         private void MarkDirty(ref bool flag) { flag = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Constructors ──────────────────────────────────────────────────────────
@@ -412,7 +470,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 ARM9.WriteBytes(BitConverter.GetBytes(_condMusicTable[i].music), (uint)(_condMusicStartAddr + 6 * i + 4));
             }
             _condDirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             StatusText = "Conditional music table saved.";
         }
@@ -431,50 +488,53 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             finally { _suppress = false; }
         }
 
-        public void SaveEffectCombo() => _ = SaveEffectComboAsync();
-
-        async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
+        private async Task SaveEffectCombosAsync()
         {
-            if (_condDirty) SaveConditionalMusic();
-            if (_effectsDirty) await SaveEffectComboAsync();
-            if (_vsTrainerDirty) await SaveVsTrainerAsync();
-            return !HasUnsavedChanges;
-        }
-
-        public async Task SaveEffectComboAsync()
-        {
-            int index = _comboSelectedIndex;
-            if (_effectsComboTable == null || index < 0 || index >= _effectsComboTable.Count) return;
-
-            ushort effect = (ushort)VsAnimation;
-            ushort music = (ushort)BattleSseq;
-            _effectsComboTable[index] = (effect, music);
+            if (_effectsComboTable == null) return;
+            var rows = _dirtyCombos.Where(i => i >= 0 && i < _effectsComboTable.Count).OrderBy(i => i).ToList();
 
             if (_fromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TrySetCombo(index, effect, music, out string e) ? null : e);
+                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                {
+                    foreach (int i in rows)
+                        if (!HgEngineMusicTables.TrySetCombo(i, _effectsComboTable[i].vsGraph, _effectsComboTable[i].battleSSEQ, out string e)) return e;
+                    return null;
+                });
                 if (!saved) { if (error != null) StatusText = error; return; }
             }
             else
             {
-                string expArmPath = Filesystem.expArmPath;
-                using var wr = new DSUtils.EasyWriter(RomPatchState.flag_MainComboTableRepointed ? expArmPath : arm9Path, _effectsComboStartAddr + 4 * (uint)index);
-                wr.Write(effect);
-                wr.Write(music);
+                string path = RomPatchState.flag_MainComboTableRepointed ? Filesystem.expArmPath : arm9Path;
+                foreach (int i in rows)
+                {
+                    using var wr = new DSUtils.EasyWriter(path, _effectsComboStartAddr + 4 * (uint)i);
+                    wr.Write(_effectsComboTable[i].vsGraph);
+                    wr.Write(_effectsComboTable[i].battleSSEQ);
+                }
             }
+            _dirtyCombos.Clear();
             _effectsDirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
-            string updated = $"Combo {index:D2} - Effect #{effect}, Music #{music}";
             _suppress = true;
-            ComboItems[index] = updated;
-            _suppress = false;
-            StatusText = _fromSource ? $"Saved to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it." : "Effect combo saved.";
+            try
+            {
+                foreach (int i in rows)
+                    ComboItems[i] = $"Combo {i:D2} - Effect #{_effectsComboTable[i].vsGraph}, Music #{_effectsComboTable[i].battleSSEQ}";
+            }
+            finally { _suppress = false; }
         }
 
-        // Mark the combo detail dirty when the user edits the numerics.
-        public void MarkEffectsDirty() { if (!_suppress) MarkDirty(ref _effectsDirty); }
+        // An edited combo goes straight into the table so switching rows keeps it.
+        private void OnComboEdited()
+        {
+            int index = _comboSelectedIndex;
+            if (_suppress || _effectsComboTable == null || index < 0 || index >= _effectsComboTable.Count) return;
+            _effectsComboTable[index] = ((ushort)VsAnimation, (ushort)BattleSseq);
+            _dirtyCombos.Add(index);
+            MarkDirty(ref _effectsDirty);
+        }
 
         // ── VS Trainer handlers ────────────────────────────────────────────────────
         private void LoadVsTrainerEntry(int index)
@@ -490,39 +550,52 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             finally { _suppress = false; }
         }
 
-        public void SaveVsTrainer() => _ = SaveVsTrainerAsync();
-
-        public async Task SaveVsTrainerAsync()
+        private async Task SaveVsTrainersAsync()
         {
-            int index = _vsTrainerSelectedIndex;
-            if (_vsTrainerList == null || index < 0 || index >= _vsTrainerList.Count) return;
-
-            ushort trainerClass = (ushort)Math.Max(0, _trainerClassIndex);
-            ushort comboID = (ushort)Math.Max(0, _trainerComboIndex);
-            _vsTrainerList[index] = (trainerClass, comboID);
+            if (_vsTrainerList == null) return;
+            var rows = _dirtyVsTrainers.Where(i => i >= 0 && i < _vsTrainerList.Count).OrderBy(i => i).ToList();
 
             if (_fromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TrySetClassCombo(index, trainerClass, comboID, out string e) ? null : e);
+                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                {
+                    foreach (int i in rows)
+                        if (!HgEngineMusicTables.TrySetClassCombo(i, _vsTrainerList[i].trainerClass, _vsTrainerList[i].comboID, out string e)) return e;
+                    return null;
+                });
                 if (!saved) { if (error != null) StatusText = error; return; }
             }
             else
             {
-                string expArmPath = Filesystem.expArmPath;
-                using var wr = new DSUtils.EasyWriter(RomPatchState.flag_TrainerClassBattleTableRepointed ? expArmPath : arm9Path, _vsTrainerStartAddr + 2 * (uint)index);
-                wr.Write((ushort)((trainerClass & 1023) + (comboID << 10)));
+                string path = RomPatchState.flag_TrainerClassBattleTableRepointed ? Filesystem.expArmPath : arm9Path;
+                foreach (int i in rows)
+                {
+                    using var wr = new DSUtils.EasyWriter(path, _vsTrainerStartAddr + 2 * (uint)i);
+                    wr.Write((ushort)((_vsTrainerList[i].trainerClass & 1023) + (_vsTrainerList[i].comboID << 10)));
+                }
             }
+            _dirtyVsTrainers.Clear();
             _vsTrainerDirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             _suppress = true;
-            VsTrainerItems[index] = $"{TrainerLabel(trainerClass)} uses Combo #{comboID}";
-            _suppress = false;
-            StatusText = _fromSource ? $"Saved to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it." : "VS Trainer entry saved.";
+            try
+            {
+                foreach (int i in rows)
+                    VsTrainerItems[i] = $"{TrainerLabel(_vsTrainerList[i].trainerClass)} uses Combo #{_vsTrainerList[i].comboID}";
+            }
+            finally { _suppress = false; }
         }
 
-        public void MarkVsTrainerDirty() { if (!_suppress) MarkDirty(ref _vsTrainerDirty); }
+        // An edited row goes straight into the table so switching rows keeps it.
+        private void OnVsTrainerEdited()
+        {
+            int index = _vsTrainerSelectedIndex;
+            if (_suppress || _vsTrainerList == null || index < 0 || index >= _vsTrainerList.Count) return;
+            _vsTrainerList[index] = ((ushort)Math.Max(0, _trainerClassIndex), (ushort)Math.Max(0, _trainerComboIndex));
+            _dirtyVsTrainers.Add(index);
+            MarkDirty(ref _vsTrainerDirty);
+        }
 
         // ── VS Pokémon handlers (display only) ─────────────────────────────────────
         private void LoadVsPokemonEntry(int index)

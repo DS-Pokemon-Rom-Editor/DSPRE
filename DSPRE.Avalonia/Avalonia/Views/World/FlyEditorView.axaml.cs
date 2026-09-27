@@ -36,5 +36,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await _vm.SaveCommand();
+
+        private void Discard_Click(object sender, RoutedEventArgs e) => _vm?.DiscardChanges();
     }
 }

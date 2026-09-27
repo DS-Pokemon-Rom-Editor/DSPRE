@@ -27,7 +27,21 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Starter Pokémon Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => SaveChanges();
-        public void DiscardChanges() => _dirty = false;
+        public void DiscardChanges()
+        {
+            if (!_dirty || _saved == null) return;
+            _loading = true;
+            _starterLevel = _savedLevel; OnPropertyChanged(nameof(StarterLevel));
+            _loading = false;
+            _history.Reset(_saved);
+            _lastCaptureUtc = System.DateTime.MinValue;
+            ApplyState(_saved);
+        }
+
+        // What is on disk, for Discard. The level is not part of the undo snapshot.
+        private Snapshot _saved;
+        private int _savedLevel;
+        private void MarkClean() { _saved = TakeSnapshot(); _savedLevel = _starterLevel; }
 
         // ── Undo / redo (ISupportsUndo) ─────────────────────────────────────────
         // Only the 4 field values are snapshotted; the byte patches (ASM/rival scripts/text) run once, on
@@ -208,6 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             LocateStarterCommand();
 
+            MarkClean();
             _dirty = false;
             Title = "Starter Pokémon Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -310,6 +325,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (chosen == null || SettingsManager.Settings == null) return;
             _command = chosen;
+            _savedLevel = chosen.Level;   // the level this command holds on disk
             StarterLevel = chosen.Level;
             SettingsManager.Settings.starterCommandChoice ??= new System.Collections.Generic.Dictionary<string, string>();
             SettingsManager.Settings.starterCommandChoice[ProjectKey()] = chosen.Key;
@@ -359,6 +375,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (RomInfo.starterHeldItemScriptFileID >= 0) touchedScripts.Add(RomInfo.starterHeldItemScriptFileID);
             }
 
+            MarkClean();
             _dirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             Title = "Starter Pokémon Editor";

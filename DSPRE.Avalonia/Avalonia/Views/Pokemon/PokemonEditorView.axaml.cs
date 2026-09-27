@@ -29,11 +29,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
             EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
         }
 
-        private void SaveAll_Click(object sender, RoutedEventArgs e)
+        private void Save_Click(object sender, RoutedEventArgs e)
             => ViewModel.SaveAll();
 
-        private void Close_Click(object sender, RoutedEventArgs e)
-            => Close();
+        private void Discard_Click(object sender, RoutedEventArgs e)
+            => ViewModel.DiscardChanges();
 
         private async void AddSpecies_Click(object sender, RoutedEventArgs e)
             => await ViewModel.AddNewFakemonAsync(this);
@@ -66,9 +66,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
             _ = AvaloniaEditorLauncher.OpenAudioEditorAsync(species);
         }
 
-        private void Undo_Click(object sender, RoutedEventArgs e) => ViewModel.Undo();
-        private void Redo_Click(object sender, RoutedEventArgs e) => ViewModel.Redo();
-
         // ─── Learnset button handlers ─────────────────────────────────────────────
         private void Learnset_Add_Click(object sender, RoutedEventArgs e)
             => ViewModel.LearnsetVM.AddEntry();
@@ -94,9 +91,5 @@ namespace DSPRE.Avalonia.Views.Pokemon
             try { System.IO.File.WriteAllText(path, vm.BuildCsv()); }
             catch (System.Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
         }
-
-        // ─── Evolutions button handler ────────────────────────────────────────────
-        private void SaveEvolutions_Click(object sender, RoutedEventArgs e)
-            => ViewModel.EvolutionsVM.Save();
     }
 }
