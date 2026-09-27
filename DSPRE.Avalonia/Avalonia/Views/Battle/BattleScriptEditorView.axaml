@@ -10,6 +10,26 @@
     <vm:BattleScriptEditorViewModel/>
   </Design.DataContext>
 
+  <DockPanel>
+  <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+          BorderThickness="0,0,0,1" Padding="6,4">
+    <WrapPanel Classes="toolbar">
+      <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
+              ToolTip.Tip="{Binding SaveHint}" ToolTip.ShowOnDisabled="True"/>
+      <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <StackPanel x:Name="EntryPicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
+        <TextBlock Text="Archive" VerticalAlignment="Center"/>
+        <ComboBox ItemsSource="{Binding ArchiveOptions}" SelectedIndex="{Binding ArchiveIndex}" Width="260"/>
+        <TextBlock Text="Entry" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <controls:FusionAutoCompleteBox ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" Width="320" MaxDropDownHeight="420"/>
+      </StackPanel>
+      <StackPanel x:Name="ScriptButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
+        <Button Content="＋ Add command" Click="AddCommand_Click"/>
+        <Button Content="❓ Command guide" Click="CommandGuide_Click"/>
+      </StackPanel>
+    </WrapPanel>
+  </Border>
+
   <Grid Margin="12" RowDefinitions="Auto,Auto,*">
 
     <!-- Unsupported game banner -->
@@ -20,23 +40,11 @@
 
     <!-- Selectors -->
     <StackPanel Grid.Row="1" IsVisible="{Binding IsAvailable}" Spacing="8" Margin="0,0,0,8">
-      <Grid x:Name="EntryPicker" ColumnDefinitions="120,10,260,40,90,10,*">
-        <TextBlock Grid.Column="0" Text="Archive" VerticalAlignment="Center"/>
-        <ComboBox Grid.Column="2" ItemsSource="{Binding ArchiveOptions}" SelectedIndex="{Binding ArchiveIndex}" HorizontalAlignment="Stretch"/>
-        <TextBlock Grid.Column="4" Text="Entry" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
-        <controls:FusionAutoCompleteBox Grid.Column="6" ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" HorizontalAlignment="Stretch" MaxDropDownHeight="420"/>
-      </Grid>
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
       <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line, like AddParticles slot=0 data=482. Lines starting with // are comments."
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
-      <StackPanel x:Name="ScriptButtons" Orientation="Horizontal" Spacing="6">
-        <Button Content="＋ Add command" Click="AddCommand_Click"/>
-        <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding Dirty}"
-                ToolTip.Tip="{Binding SaveHint}" ToolTip.ShowOnDisabled="True"/>
-        <Button Content="❓ Command guide" Click="CommandGuide_Click"/>
-      </StackPanel>
     </StackPanel>
 
     <!-- Command list + (WEST) storyboard. 50/50 split so the command-arg column can't expand and crowd out the
@@ -324,4 +332,5 @@
       </ScrollViewer>
     </Grid>
   </Grid>
+  </DockPanel>
 </UserControl>

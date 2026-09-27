@@ -333,6 +333,5 @@ namespace DSPRE.Avalonia.Views.Audio
 
         private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel?.DiscardChanges();
 
-        private void Close_Click(object sender, RoutedEventArgs e) => Close();
     }
 }

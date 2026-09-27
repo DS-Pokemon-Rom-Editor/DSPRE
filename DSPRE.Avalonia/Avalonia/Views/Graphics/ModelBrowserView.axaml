@@ -13,18 +13,30 @@
 
   <DockPanel>
 
-    <Border DockPanel.Dock="Top" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
-      <!-- The button beside the box empties the box. Closing the window lives at the bottom, away from
-           what you are typing in. -->
-      <TextBox PlaceholderText="Search by name or number, like building or map" x:Name="SearchBox"
-               Text="{Binding Search}" FontSize="13">
-        <TextBox.InnerRightContent>
-          <Button Content="✕" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
-                  Background="Transparent" BorderThickness="0"
-                  ToolTip.Tip="Empty the search box"
-                  IsVisible="{Binding Search, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-        </TextBox.InnerRightContent>
-      </TextBox>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <TextBox PlaceholderText="Search by name or number, like building or map" x:Name="SearchBox"
+                 Text="{Binding Search}" FontSize="13" Width="340">
+          <TextBox.InnerRightContent>
+            <Button Content="✕" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
+                    Background="Transparent" BorderThickness="0"
+                    ToolTip.Tip="Empty the search box"
+                    IsVisible="{Binding Search, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+          </TextBox.InnerRightContent>
+        </TextBox>
+        <StackPanel x:Name="FileButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
+          <Button Content="Save as a 3D file" Click="SaveDae_Click"
+                  IsEnabled="{Binding CanSaveModel}" ToolTip.Tip="{Binding SaveModelHelp}"/>
+          <Button Content="Save as glTF" Click="SaveGlb_Click"
+                  IsEnabled="{Binding CanSaveModel}" ToolTip.Tip="{Binding SaveModelHelp}"/>
+          <Button Content="Put a file in" Click="PutIn_Click"
+                  IsEnabled="{Binding CanPutFileIn}" ToolTip.Tip="{Binding PutFileInHelp}"/>
+          <Button Content="Save file as it is" Click="SaveRaw_Click"
+                  IsEnabled="{Binding HasSelection}"
+                  ToolTip.Tip="Save the whole entry exactly as it sits in the ROM, keeping everything a 3D file would drop."/>
+        </StackPanel>
+      </WrapPanel>
     </Border>
 
     <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
@@ -35,8 +47,6 @@
           <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource Editor.Subtle}"/>
         </StackPanel>
-        <Button Grid.Column="2" Content="Close" Click="Close_Click" Width="66"
-                VerticalAlignment="Bottom"/>
       </Grid>
     </Border>
 
@@ -45,7 +55,7 @@
       <DockPanel Grid.Column="0">
         <!-- One tab per kind of 3D thing, so the models are not mixed in with the picture sets and the
              animations when you are only after one of them. -->
-        <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}"
+        <ListBox x:Name="CategoryList" DockPanel.Dock="Top" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}"
                  Background="Transparent" BorderThickness="0" Margin="0,0,0,6" MaxHeight="120"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemsPanel>
@@ -65,7 +75,7 @@
           </ListBox.ItemTemplate>
         </ListBox>
 
-        <ListBox ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}">
+        <ListBox x:Name="ItemList" ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:ModelBrowserViewModel+Item">
               <TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/>
@@ -92,7 +102,7 @@
 
       <GridSplitter Grid.Column="3" Width="6" Background="Transparent"/>
 
-      <ScrollViewer Grid.Column="4" HorizontalScrollBarVisibility="Disabled">
+      <ScrollViewer x:Name="SidePanel" Grid.Column="4" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Spacing="8" Margin="2,0,0,0">
 
           <!-- An overworld person is a model, its pictures and its movement filed one after another.
@@ -173,7 +183,7 @@
                         ToolTip.Tip="Parts of the model being hidden and shown again. Hidden parts are left out of the preview."/>
             </StackPanel>
 
-          <WrapPanel Classes="toolbar" Orientation="Horizontal">
+          <WrapPanel x:Name="PlayBar" Classes="toolbar" Orientation="Horizontal">
             <Button Content="{Binding PlayLabel}" Click="Play_Click"
                     IsEnabled="{Binding CanPlay}" ToolTip.Tip="{Binding PlayHelp}"/>
             <TextBlock Text="{Binding FrameSummary}" VerticalAlignment="Center" Margin="8,0,0,0"
@@ -199,20 +209,6 @@
                      FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
           <TextBlock Text="{Binding DeepEditorHint}" IsVisible="{Binding HasDeepEditor}"
                      FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
-
-          <Separator/>
-
-          <StackPanel Spacing="4">
-            <Button Content="Save as a 3D file" Click="SaveDae_Click" HorizontalAlignment="Stretch"
-                    IsEnabled="{Binding CanSaveModel}" ToolTip.Tip="{Binding SaveModelHelp}"/>
-            <Button Content="Save as glTF" Click="SaveGlb_Click" HorizontalAlignment="Stretch"
-                    IsEnabled="{Binding CanSaveModel}" ToolTip.Tip="{Binding SaveModelHelp}"/>
-            <Button Content="Put a file in" Click="PutIn_Click" HorizontalAlignment="Stretch"
-                    IsEnabled="{Binding CanPutFileIn}" ToolTip.Tip="{Binding PutFileInHelp}"/>
-            <Button Content="Save file as it is" Click="SaveRaw_Click" HorizontalAlignment="Stretch"
-                    IsEnabled="{Binding HasSelection}"
-                    ToolTip.Tip="Save the whole entry exactly as it sits in the ROM, keeping everything a 3D file would drop."/>
-          </StackPanel>
 
         </StackPanel>
       </ScrollViewer>

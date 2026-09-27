@@ -11,6 +11,34 @@
     <vm:BtxEditorViewModel/>
   </Design.DataContext>
 
+  <DockPanel>
+  <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+          BorderThickness="0,0,0,1" Padding="6,4">
+    <WrapPanel x:Name="SpriteButtons" Classes="toolbar">
+      <Button Content="Save Selected" Click="SaveSelected_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Save All" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Import PNG" Click="Import_Click" IsEnabled="{Binding HasSelectedEntry}" Margin="12,2,6,2"/>
+      <Button Content="Export PNG" Click="Export_Click" IsEnabled="{Binding HasSelectedEntry}"/>
+      <Button Content="Show File" Click="ShowFile_Click" IsEnabled="{Binding HasSelectedEntry}"/>
+      <CheckBox Content="Shiny palette" IsChecked="{Binding IsShiny}"
+                IsEnabled="{Binding HasShinyPalette}" ToolTip.Tip="{Binding ShinyPaletteNote}"/>
+      <StackPanel x:Name="EntryButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
+        <StackPanel.IsVisible>
+          <MultiBinding Converter="{x:Static BoolConverters.And}">
+            <Binding Path="HasRenderTable"/>
+            <Binding Path="IsExpansionApplied"/>
+          </MultiBinding>
+        </StackPanel.IsVisible>
+        <Button Content="Add Custom Entry…" Click="AddEntry_Click" IsEnabled="{Binding CanAddEntry}"
+                ToolTip.Tip="Needs the overworld sprite expansion patch"/>
+        <Button Content="Delete Selected Entry" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}"
+                ToolTip.Tip="Only entries you added"/>
+      </StackPanel>
+      <TextBlock Text="{Binding ModifiedCount}" Foreground="OrangeRed" FontSize="12"/>
+    </WrapPanel>
+  </Border>
+
   <Grid ColumnDefinitions="160,8,*,8,260" Margin="8">
     <!-- Left: entry list -->
     <DockPanel Grid.Column="0">
@@ -22,32 +50,10 @@
 
     <!-- Middle: texture preview + save controls -->
     <DockPanel Grid.Column="2">
-      <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
-        <CheckBox Content="Shiny palette" IsChecked="{Binding IsShiny}"
-                  IsEnabled="{Binding HasShinyPalette}" ToolTip.Tip="{Binding ShinyPaletteNote}"/>
-        <Grid ColumnDefinitions="*,8,*">
-          <Button Grid.Column="0" Content="Import PNG" Click="Import_Click"
-                  IsEnabled="{Binding HasSelectedEntry}" HorizontalAlignment="Stretch"/>
-          <Button Grid.Column="2" Content="Export PNG" Click="Export_Click"
-                  IsEnabled="{Binding HasSelectedEntry}" HorizontalAlignment="Stretch"/>
-        </Grid>
-        <Grid ColumnDefinitions="*,8,*">
-          <Button Grid.Column="0" Content="Save Selected" Click="SaveSelected_Click"
-                  IsEnabled="{Binding HasUnsavedChanges}" HorizontalAlignment="Stretch"/>
-          <Button Grid.Column="2" Content="Save All"      Click="SaveAll_Click"
-                  IsEnabled="{Binding HasUnsavedChanges}" HorizontalAlignment="Stretch"/>
-        </Grid>
-        <Grid ColumnDefinitions="*,8,*">
-          <Button Grid.Column="0" Content="Show File" Click="ShowFile_Click"
-                  IsEnabled="{Binding HasSelectedEntry}" HorizontalAlignment="Stretch"/>
-          <TextBlock Grid.Column="2" Text="{Binding ModifiedCount}"
-                     VerticalAlignment="Center" Foreground="OrangeRed" FontSize="12"/>
-        </Grid>
-        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
-                   TextWrapping="Wrap"/>
-      </StackPanel>
+      <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Text="{Binding StatusText}" FontSize="12"
+                 Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
 
-      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}">
+      <Border x:Name="SpritePreview" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}">
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
           <StackPanel Orientation="Horizontal" Spacing="20" Margin="12"
                       HorizontalAlignment="Center" VerticalAlignment="Top">
@@ -76,7 +82,7 @@
     </DockPanel>
 
     <!-- Right: overworld properties (render state + expansion-patch add/delete) -->
-    <Grid Grid.Column="4" RowDefinitions="Auto,*" IsVisible="{Binding HasRenderTable}">
+    <Grid x:Name="PropertiesPanel" Grid.Column="4" RowDefinitions="Auto,*" IsVisible="{Binding HasRenderTable}">
       <TextBlock Grid.Row="0" Text="Overworld properties" FontWeight="SemiBold" Margin="0,0,0,4"/>
 
       <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -110,17 +116,10 @@
             <TextBlock Text="{Binding AnimationInfoText, StringFormat='Animation row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
           </StackPanel>
 
-          <Separator IsVisible="{Binding IsExpansionApplied}"/>
-
-          <StackPanel Spacing="4" IsVisible="{Binding IsExpansionApplied}">
-            <Button Content="Add Custom Entry…" Click="AddEntry_Click" IsEnabled="{Binding CanAddEntry}" HorizontalAlignment="Stretch"
-                    ToolTip.Tip="Needs the overworld sprite expansion patch"/>
-            <Button Content="Delete Selected Entry" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}" HorizontalAlignment="Stretch"
-                    ToolTip.Tip="Only entries you added"/>
-          </StackPanel>
         </StackPanel>
       </ScrollViewer>
     </Grid>
 
   </Grid>
+  </DockPanel>
 </Window>

@@ -15,14 +15,17 @@
     <TabControl Margin="4">
       <!-- ── Validation ────────────────────────────────────────────── -->
       <TabItem Header="Validation">
-        <DockPanel Margin="4">
-          <WrapPanel DockPanel.Dock="Top" Classes="toolbar">
-            <Button Content="🔍 Run validation" Click="Run_Click" IsEnabled="{Binding !IsRunning}"/>
-            <TextBlock Text="{Binding ValidationStatus}" VerticalAlignment="Center"
-                       Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
-          </WrapPanel>
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+                  BorderThickness="0,0,0,1" Padding="6,4">
+            <WrapPanel Classes="toolbar">
+              <Button Content="🔍 Run validation" Click="Run_Click" IsEnabled="{Binding !IsRunning}"/>
+              <TextBlock Text="{Binding ValidationStatus}" VerticalAlignment="Center"
+                         Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+            </WrapPanel>
+          </Border>
           <DataGrid ItemsSource="{Binding Issues}" IsReadOnly="True" GridLinesVisibility="Horizontal"
-                    Margin="0,6,0,0" CanUserResizeColumns="True">
+                    Margin="4,6,4,4" CanUserResizeColumns="True">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Type"   Binding="{Binding Category}" Width="120"/>
               <DataGridTextColumn Header="Where"  Binding="{Binding Where}"    Width="120"/>
@@ -34,17 +37,20 @@
 
       <!-- ── Where used ────────────────────────────────────────────── -->
       <TabItem Header="Where used">
-        <DockPanel Margin="4">
-          <WrapPanel DockPanel.Dock="Top" Classes="toolbar">
-            <TextBlock Text="File type:" VerticalAlignment="Center"/>
-            <ComboBox Width="130" ItemsSource="{Binding RefKinds}" SelectedIndex="{Binding RefKindIndex}"/>
-            <TextBlock Text="Id:" VerticalAlignment="Center"/>
-            <NumericUpDown Width="110" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding LookupId}"/>
-            <Button Content="🔗 Find headers" Click="Find_Click"/>
-          </WrapPanel>
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+                  BorderThickness="0,0,0,1" Padding="6,4">
+            <WrapPanel Classes="toolbar">
+              <TextBlock Text="File type:" VerticalAlignment="Center"/>
+              <ComboBox Width="130" ItemsSource="{Binding RefKinds}" SelectedIndex="{Binding RefKindIndex}"/>
+              <TextBlock Text="Id:" VerticalAlignment="Center"/>
+              <NumericUpDown Width="110" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding LookupId}"/>
+              <Button Content="🔗 Find headers" Click="Find_Click"/>
+            </WrapPanel>
+          </Border>
           <TextBlock DockPanel.Dock="Top" Text="{Binding FindStatus}" Foreground="{DynamicResource Editor.Subtle}"
-                     FontSize="12" Margin="2,4,0,4" TextWrapping="Wrap"/>
-          <ListBox ItemsSource="{Binding FindResults}"/>
+                     FontSize="12" Margin="6,4,4,4" TextWrapping="Wrap"/>
+          <ListBox ItemsSource="{Binding FindResults}" Margin="4,0,4,4"/>
         </DockPanel>
       </TabItem>
     </TabControl>

@@ -32,10 +32,10 @@
 
     <!-- Which screen, and what it is showing -->
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
-            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Spacing="6">
-        <DockPanel>
-          <StackPanel x:Name="SaveButtons" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+        <WrapPanel Classes="toolbar">
+          <StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
             <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Undo" Click="Undo_Click"
@@ -43,8 +43,8 @@
             <Button Content="Redo" Click="Redo_Click"
                     IsEnabled="{Binding CanRedo}" ToolTip.Tip="{Binding RedoWhat}"/>
           </StackPanel>
-          <TabStrip x:Name="ScreenTabs" ItemsSource="{Binding TabNames}" SelectedIndex="{Binding TabIndex}"/>
-        </DockPanel>
+          <TabStrip x:Name="ScreenTabs" ItemsSource="{Binding TabNames}" SelectedIndex="{Binding TabIndex}" Margin="12,2,6,2"/>
+        </WrapPanel>
 
         <WrapPanel x:Name="ScreenOptions" Orientation="Horizontal">
           <CheckBox Content="Busy mode" IsChecked="{Binding ScriptRunning}"

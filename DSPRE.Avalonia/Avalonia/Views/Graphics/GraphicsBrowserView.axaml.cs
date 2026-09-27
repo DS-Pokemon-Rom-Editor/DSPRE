@@ -28,8 +28,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             SearchBox.Focus();
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e) => Close();
-
         private async void SavePicture_Click(object sender, RoutedEventArgs e)
         {
             var vm = ViewModel;

@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		x:Class="DSPRE.Avalonia.Views.Graphics.TitleScreenEditorView"
 		x:DataType="vm:TitleScreenEditorViewModel"
 		Title="Title Screen Editor"
@@ -10,10 +11,16 @@
     <vm:TitleScreenEditorViewModel/>
   </Design.DataContext>
 
+  <DockPanel>
+  <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+	<StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
+	  <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasChanges}"/>
+	  <Button Content="Discard" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"/>
+	  <TextBlock Text="{Binding StatusText}" Foreground="OrangeRed" VerticalAlignment="Center" Margin="6,0,0,0"/>
+	</StackPanel>
+  </Border>
   <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
   <StackPanel Margin="12" Spacing="12">
-
-	<TextBlock Text="{Binding StatusText}" Foreground="OrangeRed"/>
 
 	<!-- Row 1: the Background/Logo/Palette cards live inside each TabItem's own Content (duplicated
 	     markup, identical bindings), rather than below a content-less TabControl, so there's no empty
@@ -23,7 +30,7 @@
 		<TabItem Header="HeartGold">
 		  <StackPanel Orientation="Horizontal" Spacing="12" Margin="10">
 
-			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
+			<Border x:Name="BackgroundCard" BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
 			  <StackPanel Spacing="8">
 				<TextBlock Text="Background" FontWeight="Bold"/>
 				<Border Background="#181818" HorizontalAlignment="Left">
@@ -51,12 +58,13 @@
 
 			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
 			  <StackPanel Spacing="8">
-				<TextBlock Text="Palette (advanced)" FontWeight="Bold"/>
-				<TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-						   Text="Importing the logo or background rebuilds their shared palette automatically. Use these only to hand-edit the raw NCLR file directly."/>
+				<StackPanel Orientation="Horizontal">
+				  <TextBlock Text="Colours (advanced)" FontWeight="Bold"/>
+				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours for you. Use these only to edit the colour file by hand."/>
+				</StackPanel>
 				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import NCLR…" Click="ImportPalette_Click"/>
-				  <Button Content="Export NCLR…" Click="ExportPalette_Click"/>
+				  <Button Content="Import colours…" Click="ImportPalette_Click"/>
+				  <Button Content="Export colours…" Click="ExportPalette_Click"/>
 				</StackPanel>
 			  </StackPanel>
 			</Border>
@@ -95,12 +103,13 @@
 
 			<Border BorderBrush="Gray" BorderThickness="1" Padding="10" Width="360">
 			  <StackPanel Spacing="8">
-				<TextBlock Text="Palette (advanced)" FontWeight="Bold"/>
-				<TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-						   Text="Importing the logo or background rebuilds their shared palette automatically. Use these only to hand-edit the raw NCLR file directly."/>
+				<StackPanel Orientation="Horizontal">
+				  <TextBlock Text="Colours (advanced)" FontWeight="Bold"/>
+				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours for you. Use these only to edit the colour file by hand."/>
+				</StackPanel>
 				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import NCLR…" Click="ImportPalette_Click"/>
-				  <Button Content="Export NCLR…" Click="ExportPalette_Click"/>
+				  <Button Content="Import colours…" Click="ImportPalette_Click"/>
+				  <Button Content="Export colours…" Click="ExportPalette_Click"/>
 				</StackPanel>
 			  </StackPanel>
 			</Border>
@@ -113,7 +122,7 @@
 	<!-- Row 2: Copyright (bottom left) + Preview (bottom right), Revert Changes centered between them -->
 	<Grid ColumnDefinitions="280,*,420">
 
-	  <Border Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="0,0,12,0">
+	  <Border x:Name="CopyrightCard" Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="0,0,12,0">
 		<StackPanel Spacing="8">
 		  <TextBlock Text="Copyright Text" FontWeight="Bold"/>
 		  <Border Background="#181818" HorizontalAlignment="Left">
@@ -126,10 +135,8 @@
 		</StackPanel>
 	  </Border>
 
-	  <Button Grid.Column="1" Content="Revert Changes" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"
-			  HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
-	  <Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="12,0,0,0">
+	  <Border x:Name="PreviewCard" Grid.Column="2" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="12,0,0,0">
 		<StackPanel Spacing="8">
 		  <TextBlock Text="Preview (background + logo + copyright text)" FontWeight="Bold"/>
 		  <Border Background="#181818" HorizontalAlignment="Center" Width="384" Height="288" ClipToBounds="True">
@@ -143,9 +150,8 @@
 			  <Image Source="{Binding CopyrightPreview}" Width="384" Height="288" Stretch="Uniform"/>
 			</Grid>
 		  </Border>
-		  <Button Content="▶ Play Intro" Click="PlayIntro_Click" HorizontalAlignment="Left"/>
-		  <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11"
-					 Text="A recreation of the logo animation, close to the game's."/>
+		  <Button Content="▶ Play Intro" Click="PlayIntro_Click" HorizontalAlignment="Left"
+				  ToolTip.Tip="A recreation of the logo animation, close to the game's."/>
 		</StackPanel>
 	  </Border>
 
@@ -153,4 +159,5 @@
 
   </StackPanel>
   </ScrollViewer>
+  </DockPanel>
 </Window>

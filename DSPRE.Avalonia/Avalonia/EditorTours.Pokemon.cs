@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia
                 S("name:ScriptButtons", "Commands and help", "＋ Add command adds a new line. Command guide explains what every command does."),
                 S("name:PreviewPanel", "Preview", "For move animations, the battle scene plays the move. Change the backdrop, ground and HP gauges, or cast it from the enemy side."),
                 S("name:EditParticlesButton", "Particles", "Opens the particle effects this move uses."),
-                S("name:ScriptButtons", "Saving", "💾 Save writes this entry; Ctrl+S does the same. Closing with unsaved edits asks first."));
+                S("name:SaveButton", "Saving", "Save writes this entry and Discard drops your edits; Ctrl+S saves too. Closing with unsaved edits asks first."));
 
             Add("TMEditorView", "TM / HM Editor",
                 S("list", "Machines", "Every TM and HM with the move it teaches. Pick one to change it."),
@@ -160,7 +160,7 @@ namespace DSPRE.Avalonia
                 S("name:SpeciesBar", "Pick a Pokémon", "Pick a base Pokémon to see its alternate forms, such as Mega or regional forms."),
                 S("name:FormList", "Its forms", "Each row is one form and the species entry it uses. Tick Needs Reversion for forms that change back, like Mega Evolution."),
                 S("name:AddSlotButton", "Adding forms", "+ Add Form adds a row and ✕ removes one. A form's own stats, types and abilities are edited in the Pokémon Editor."),
-                S("name:SaveButton", "Saving", "💾 Save writes your changes; Ctrl+S does the same."));
+                S("name:SaveButton", "Saving", "Save writes your changes and Discard drops them; Ctrl+S saves too."));
         }
     }
 }

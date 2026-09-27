@@ -50,6 +50,8 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
 
+        private void Discard_Click(object sender, RoutedEventArgs e) => (DataContext as DungeonCutinEditorViewModel)?.DiscardChanges();
+
         private async void Save_Click(object sender, RoutedEventArgs e)
             => await _vm.SaveCommand();
 

@@ -93,6 +93,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void SaveSelected_Click(object sender, RoutedEventArgs e) => VM?.SaveSelected();
         private void SaveAll_Click(object sender, RoutedEventArgs e)      => VM?.SaveAll();
+        private void Discard_Click(object sender, RoutedEventArgs e)      => VM?.DiscardChanges();
 
         private void ShowFile_Click(object sender, RoutedEventArgs e)
         {

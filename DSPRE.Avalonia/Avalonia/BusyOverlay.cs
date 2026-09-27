@@ -11,13 +11,31 @@ using DSPRE.Avalonia.Views.Shell;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// Runs slow file work off the UI thread behind a "busy" card on the window that asked for it, so the
-    /// wait shows where the click happened. The main window has its own card; any other window gets one in
-    /// its overlay layer, and its content is disabled until the work is done.
+    /// Runs slow file work off the UI thread behind a busy card on the window that asked for it, with that
+    /// window's content disabled until the work is done.
     /// </summary>
     public static class BusyOverlay
     {
+        private static readonly System.Collections.Generic.HashSet<Window> Busy = new();
+        // One load at a time, so an editor opened mid-load doesn't race the first.
+        private static readonly System.Threading.SemaphoreSlim OneAtATime = new(1, 1);
+
+        /// <summary>Whether the window holding <paramref name="c"/> is behind a busy card right now.</summary>
+        public static bool IsBusy(Control c)
+        {
+            var top = TopLevel.GetTopLevel(c);
+            if (top is MainWindowView { DataContext: MainWindowViewModel vm } && vm.IsBusy) return true;
+            return top is Window w && Busy.Contains(w);
+        }
+
         public static async Task RunAsync(string text, string hint, Action work, Window owner = null)
+        {
+            await OneAtATime.WaitAsync();
+            try { await RunOneAsync(text, hint, work, owner); }
+            finally { OneAtATime.Release(); }
+        }
+
+        private static async Task RunOneAsync(string text, string hint, Action work, Window owner)
         {
             owner ??= OwnerWindow.Current;
             if (owner is MainWindowView { DataContext: MainWindowViewModel vm })
@@ -43,9 +61,11 @@ namespace DSPRE.Avalonia
             owner.SizeChanged += Resize;
             layer.Children.Add(cover);
             if (content != null) content.IsEnabled = false;
+            Busy.Add(owner);
             try { await Task.Run(work); }
             finally
             {
+                Busy.Remove(owner);
                 owner.SizeChanged -= Resize;
                 layer.Children.Remove(cover);
                 if (content != null) content.IsEnabled = wasEnabled;

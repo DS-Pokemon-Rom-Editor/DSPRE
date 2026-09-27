@@ -67,8 +67,6 @@ namespace DSPRE.Avalonia.Views.Graphics
             SearchBox.Focus();
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e) => Close();
-
         private async void SaveDae_Click(object sender, RoutedEventArgs e) => await Save(glb: false);
         private async void SaveGlb_Click(object sender, RoutedEventArgs e) => await Save(glb: true);
 

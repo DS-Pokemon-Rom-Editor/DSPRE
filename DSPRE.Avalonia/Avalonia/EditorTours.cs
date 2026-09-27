@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia
             timer.Tick += (_, _) =>
             {
                 if (!buttonAdded) buttonAdded = AddButton(root, key);
-                if (GuidedTour.IsActive || !root.IsEffectivelyVisible || root.Bounds.Width < 200) { visibleTicks = 0; return; }
+                if (GuidedTour.IsActive || !root.IsEffectivelyVisible || root.Bounds.Width < 200 || BusyOverlay.IsBusy(root) || StillLoading(root)) { visibleTicks = 0; return; }
                 // Give the editor a moment to fill in before offering.
                 if (++visibleTicks < 3) return;
                 timer.Stop();
@@ -163,6 +163,19 @@ namespace DSPRE.Avalonia
             public static bool Contains(Control c) => HasButtonTable.TryGetValue(c, out _);
         }
 
+        /// <summary>
+        /// Editors that fill in after their window opens say so with an IsLoading or IsBusy flag on their view
+        /// model; the offer waits for it, so the tour never points at a half-built window.
+        /// </summary>
+        private static bool StillLoading(Control root)
+        {
+            object vm = root is DSPRE.Avalonia.Views.Shell.EditorHostWindow { Content: Control hosted } ? hosted.DataContext : root.DataContext;
+            if (vm == null) return false;
+            foreach (string name in new[] { "IsLoading", "IsBusy" })
+                if (vm.GetType().GetProperty(name)?.GetValue(vm) is true) return true;
+            return false;
+        }
+
         /// <summary>Puts "?" at the end of the editor's first row of toolbar buttons, once the toolbar exists.</summary>
         private static bool AddButton(Control root, string key)
         {
@@ -170,8 +183,12 @@ namespace DSPRE.Avalonia
             if (toolbar == null) return false;
             var rows = toolbar.GetVisualDescendants().OfType<Panel>().Prepend(toolbar.Child as Panel).Where(p => p != null).ToList();
             if (rows.Any(p => p.Children.OfType<Button>().Any(b => b.Content as string == "?"))) { HasButton.Add(root); return true; }
-            var row = rows.LastOrDefault(p => (p is WrapPanel || p is StackPanel { Orientation: Orientation.Horizontal })
-                                               && p.Children.OfType<Button>().Any());
+            static bool IsRow(Panel p) => p is WrapPanel || p is StackPanel { Orientation: Orientation.Horizontal };
+            // The toolbar's own row, or the first row of a stacked toolbar; otherwise the last button row that is showing.
+            var top = toolbar.Child as Panel;
+            var row = top != null && IsRow(top) ? top
+                    : (top as StackPanel)?.Orientation == Orientation.Vertical ? top.Children.OfType<Panel>().FirstOrDefault(p => IsRow(p) && p.IsVisible)
+                    : rows.LastOrDefault(p => IsRow(p) && p.IsVisible && p.Children.OfType<Button>().Any());
             if (row == null) return true;
             HasButton.Add(root);
             var help = new Button { Content = "?", Padding = new Thickness(8, 2) };

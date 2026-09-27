@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool CanUseBpShop => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["BpShopEditorView"];
         public bool CanUseFriendship => IsRomLoaded && !isHGE && Beta["FriendshipChangesView"];
         public bool CanUseSlotOdds => IsRomLoaded && !isHGE && Beta["EncounterSlotOddsView"];
-        // Tables a game family simply doesn't have are hidden rather than greyed out.
+        // Tables a game family doesn't have are hidden rather than greyed out.
         public bool HasMoveTutors => !IsRomLoaded || gameFamily != GameFamilies.DP;
         public bool IsDpOrPlatinum => !IsRomLoaded || gameFamily != GameFamilies.HGSS;
         public bool CanUsePokemonEditor => IsRomLoaded && HgAllows;
@@ -215,7 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             set { if (_isBusy != value) { _isBusy = value; OnPropertyChanged(); } }
         }
 
-        private string _busyText = "Opening ROM…";
+        private string _busyText = "";
         public string BusyText
         {
             get => _busyText;

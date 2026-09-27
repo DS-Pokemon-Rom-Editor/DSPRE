@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window MinWidth="760" MinHeight="520" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Audio"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
@@ -12,10 +12,17 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
-      <Grid ColumnDefinitions="*,8,Auto">
-        <TextBox Grid.Column="0" PlaceholderText="Search every tab by name or number" x:Name="SearchBox"
-                 Text="{Binding Search}" FontSize="13">
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
+          <Button Content="Save" Click="Save_Click"
+                  IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Write what was imported."/>
+          <Button Content="Discard" Click="Discard_Click"
+                  IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Forget what was imported."/>
+        </StackPanel>
+        <TextBox PlaceholderText="Search every tab by name or number" x:Name="SearchBox"
+                 Text="{Binding Search}" FontSize="13" Width="280" Margin="12,2,6,2">
           <TextBox.InnerRightContent>
             <Button Content="✕" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
                     Background="Transparent" BorderThickness="0"
@@ -23,22 +30,17 @@
                     IsVisible="{Binding Search, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
           </TextBox.InnerRightContent>
         </TextBox>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-          <Button Content="Export WAV" Click="Export_Click" Width="94" IsEnabled="{Binding CanPlay}"
+        <StackPanel x:Name="AudioActions" Orientation="Horizontal" Spacing="6">
+          <Button Content="Export WAV" Click="Export_Click" IsEnabled="{Binding CanPlay}"
                   ToolTip.Tip="Save this as a WAV. A cry is saved as its own sample; everything else is saved as it sounds when played."/>
-          <Button Content="Export MIDI" Click="ExportMidi_Click" Width="94" IsEnabled="{Binding CanSaveMidi}"
+          <Button Content="Export MIDI" Click="ExportMidi_Click" IsEnabled="{Binding CanSaveMidi}"
                   ToolTip.Tip="{Binding SaveMidiHelp}"/>
-          <Button Content="Export SoundFont" Click="ExportSoundFont_Click" Width="130"
+          <Button Content="Export SoundFont" Click="ExportSoundFont_Click"
                   IsEnabled="{Binding CanSaveSoundFont}" ToolTip.Tip="{Binding SaveSoundFontHelp}"/>
-          <Button Content="Import" Click="Import_Click" Width="66" IsEnabled="{Binding CanImport}"
+          <Button Content="Import" Click="Import_Click" IsEnabled="{Binding CanImport}"
                   ToolTip.Tip="{Binding ImportHelp}"/>
-          <Button Content="Save" Click="Save_Click" Width="66"
-                  IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Write what was imported."/>
-          <Button Content="Discard" Click="Discard_Click" Width="70"
-                  IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Forget what was imported."/>
-          <Button Content="Close" Click="Close_Click" Width="66"/>
         </StackPanel>
-      </Grid>
+      </WrapPanel>
     </Border>
 
     <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
@@ -59,7 +61,7 @@
                               ToolTip.Tip="The two channels, loudest to quietest. Click anywhere to play from there."/>
         </Border>
 
-        <Grid ColumnDefinitions="Auto,6,Auto,10,Auto,12,Auto,*">
+        <Grid x:Name="PlayBar" ColumnDefinitions="Auto,6,Auto,10,Auto,12,Auto,*">
           <Button Grid.Column="0" Content="▶  Play" Click="Play_Click" Width="86" IsEnabled="{Binding CanPlay}"/>
           <Button Grid.Column="2" x:Name="StopButton" Content="■  Stop" Click="Stop_Click" Width="86" IsEnabled="False"/>
           <CheckBox Grid.Column="4" x:Name="LoopBox" Content="Loop"

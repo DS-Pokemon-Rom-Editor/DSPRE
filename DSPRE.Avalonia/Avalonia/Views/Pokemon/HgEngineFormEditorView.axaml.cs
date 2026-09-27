@@ -17,6 +17,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
             DSPRE.Avalonia.EditorWindowChrome.Attach(this, vm);
         }
 
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+
         private void RemoveSlot_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button b && b.DataContext is FormSlotRow row) VM?.RemoveSlot(row);

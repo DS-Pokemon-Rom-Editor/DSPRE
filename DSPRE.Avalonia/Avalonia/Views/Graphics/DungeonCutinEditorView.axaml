@@ -10,18 +10,21 @@
     <vm:DungeonCutinEditorViewModel/>
   </Design.DataContext>
 
-  <DockPanel Margin="8" LastChildFill="True">
+  <DockPanel LastChildFill="True">
 
-	<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
+	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+	<StackPanel x:Name="CutinToolbar" Orientation="Horizontal" Spacing="6">
+	  <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+	  <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 	  <Button Content="Export CSV…" Click="Export_Click"/>
 	  <Button Content="Import CSV…" Click="Import_Click"/>
-	  <Button Content="Save Changes" Click="Save_Click"/>
 	  <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"
 	          ToolTip.Tip="Open this splash screen in the Graphics window, where its drawing, colours and arrangement for all four times of day sit together."/>
 	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
 	</StackPanel>
+	</Border>
 
-	<ListBox DockPanel.Dock="Left" Width="220" Margin="0,0,8,0"
+	<ListBox x:Name="CutinList" DockPanel.Dock="Left" Width="220" Margin="8,8,8,8"
 			 ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}">
 	  <ListBox.ItemTemplate>
 		<DataTemplate x:DataType="vm:DungeonCutinRow">
@@ -33,7 +36,7 @@
 	<ScrollViewer>
 	  <StackPanel Spacing="10" Margin="0,0,4,0">
 
-		<Border BorderBrush="Gray" BorderThickness="1" Padding="10">
+		<Border x:Name="LocationCard" BorderBrush="Gray" BorderThickness="1" Padding="10">
 		  <StackPanel Spacing="8">
 			<TextBlock Text="Location" FontWeight="Bold"/>
 			<StackPanel Orientation="Horizontal" Spacing="16">
@@ -55,7 +58,7 @@
 		  </StackPanel>
 		</Border>
 
-		<UniformGrid Columns="2" IsVisible="{Binding GraphicsAvailable}">
+		<UniformGrid x:Name="TimesGrid" Columns="2" IsVisible="{Binding GraphicsAvailable}">
 
 		  <Border BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="4">
 			<StackPanel Spacing="8">

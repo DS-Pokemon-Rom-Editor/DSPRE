@@ -11,16 +11,19 @@
     <vm:ParticleLibraryViewModel/>
   </Design.DataContext>
 
-  <DockPanel Margin="10">
-    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
-      <Button x:Name="OpenButton" DockPanel.Dock="Right" Content="Open" Click="Open_Click" Width="90"/>
-      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
-    </DockPanel>
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <ComboBox x:Name="CategoryPicker" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" Width="200"/>
+        <TextBox x:Name="ParticleSearch" Text="{Binding Search}" PlaceholderText="Find by name or file number" Width="220"/>
+        <Button x:Name="OpenButton" Content="Open" Click="Open_Click"/>
+      </WrapPanel>
+    </Border>
 
-    <Grid DockPanel.Dock="Top" ColumnDefinitions="200,8,*" Margin="0,0,0,8">
-      <ComboBox x:Name="CategoryPicker" Grid.Column="0" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" HorizontalAlignment="Stretch"/>
-      <TextBox x:Name="ParticleSearch" Grid.Column="2" Text="{Binding Search}" PlaceholderText="Find by name or file number"/>
-    </Grid>
+  <DockPanel Margin="10">
+    <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Text="{Binding StatusText}" FontSize="12"
+               Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
 
     <ListBox x:Name="ParticleList" ItemsSource="{Binding Shown}" SelectedIndex="{Binding SelectedIndex}"
              ScrollViewer.HorizontalScrollBarVisibility="Disabled" DoubleTapped="List_DoubleTapped">
@@ -33,5 +36,6 @@
         </DataTemplate>
       </ListBox.ItemTemplate>
     </ListBox>
+  </DockPanel>
   </DockPanel>
 </Window>

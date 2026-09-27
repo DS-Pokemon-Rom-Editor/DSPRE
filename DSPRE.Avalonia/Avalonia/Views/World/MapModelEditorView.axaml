@@ -6,18 +6,26 @@
         x:DataType="vm:MapModelEditorViewModel"
         Title="Map model" Width="1280" Height="860"
         WindowStartupLocation="CenterOwner">
-  <Grid RowDefinitions="Auto,*,Auto" Margin="8">
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <Button x:Name="DoneButton" Content="Done" Click="Done_Click" MinWidth="110"/>
+        <TextBlock Text="{Binding Unsaved}"
+                   Foreground="{DynamicResource Editor.Warn}"
+                   IsVisible="{Binding Unsaved, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+        <TextBlock Text="{Binding Which}" FontWeight="SemiBold" Margin="12,2,6,2"/>
+        <TextBlock Text="{Binding Shared}" IsVisible="{Binding Shared, Converter={x:Static ObjectConverters.IsNotNull}}"
+                   ToolTip.Tip="{Binding SharedTip}" Foreground="{DynamicResource Editor.Warn}"/>
+        <Rectangle Width="1" Height="16" Fill="{DynamicResource Editor.Separator}"/>
+        <TextBlock Text="{Binding Note}"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+      </WrapPanel>
+    </Border>
 
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
-      <TextBlock Text="{Binding Which}" VerticalAlignment="Center" FontWeight="SemiBold"/>
-      <TextBlock Text="{Binding Shared}" IsVisible="{Binding Shared, Converter={x:Static ObjectConverters.IsNotNull}}"
-                 ToolTip.Tip="{Binding SharedTip}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"/>
-      <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,1"/>
-      <TextBlock Text="{Binding Note}" VerticalAlignment="Center"
-                 Foreground="{DynamicResource Editor.Subtle}"/>
-    </StackPanel>
+  <Grid RowDefinitions="*" Margin="8">
 
-    <TabControl Grid.Row="1" SelectionChanged="Half_Changed">
+    <TabControl Grid.Row="0" SelectionChanged="Half_Changed">
       <TabItem Header="Tiles">
         <world:MapTilesView DataContext="{Binding Tiles}" Margin="2"/>
       </TabItem>
@@ -25,13 +33,6 @@
         <world:MapGeometryView DataContext="{Binding Shape}" Margin="2"/>
       </TabItem>
     </TabControl>
-
-    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8"
-                Margin="0,8,0,0">
-      <TextBlock Text="{Binding Unsaved}" VerticalAlignment="Center"
-                 Foreground="{DynamicResource Editor.Warn}"
-                 IsVisible="{Binding Unsaved, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-      <Button x:Name="DoneButton" Content="Done" Click="Done_Click" MinWidth="110"/>
-    </StackPanel>
   </Grid>
+  </DockPanel>
 </Window>

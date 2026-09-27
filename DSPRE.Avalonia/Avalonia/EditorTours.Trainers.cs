@@ -16,11 +16,11 @@ namespace DSPRE.Avalonia
                 S("tab:Sprite>name:CanvasImage", "Paint", "Click or drag on the sprite to paint with the selected colour."),
                 S("tab:Sprite>name:PaletteColumn", "Tools and colours", "Switch between Pencil and Eyedropper and pick a colour. Double-click a colour, or press Edit colour, to change it."),
                 S("tab:Sprite>name:FrameStrip", "Frames", "Click a frame to paint on it. Frames that share parts change together."),
-                S("tab:Sprite>name:SpriteButtons", "Pictures in and out", "Export saves the sprite as a picture, and Import brings one back if its colours match. Open in Graphics shows it in the Graphics window."),
+                S("name:SpriteButtons", "Pictures in and out", "Export saves the sprite as a picture, and Import brings one back if its colours match. Open in Graphics shows it in the Graphics window."),
                 S("tab:Animations", "Animations", "Pick a sequence to see each frame's pose and how long it shows. ▶ Play once previews it."),
                 S("tab:Editor", "Changing an animation", "Where editing is allowed, add or remove sequences and frames, change poses and delays, and move frames with the arrows."),
                 S("tab:JSON", "As text", "The same animation written out as text, for editing by hand. Save Animation JSON keeps it."),
-                S("tab:Sprite>name:SaveButton", "Saving", "Save writes the sprite and its colours. Ctrl+S saves too, and closing with unsaved changes asks first."));
+                S("name:SaveButton", "Saving", "Save writes the sprite and its colours. Ctrl+S saves too, and closing with unsaved changes asks first."));
 
             Add("VsSeekerRematchView", "Vs. Seeker Rematch Editor",
                 S("list", "Encounters", "Each row is a trainer you meet on your journey. Pick one to set who you face when you rematch them with the Vs. Seeker."),

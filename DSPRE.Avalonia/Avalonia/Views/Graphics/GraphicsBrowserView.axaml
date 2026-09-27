@@ -12,18 +12,39 @@
 
   <DockPanel>
 
-    <Border DockPanel.Dock="Top" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
-      <!-- The button beside the box empties the box. Closing the window lives at the bottom, away from
-           what you are typing in. -->
-      <TextBox PlaceholderText="Search by name or number, like trainer or icon" x:Name="SearchBox"
-               Text="{Binding Search}" FontSize="13">
-        <TextBox.InnerRightContent>
-          <Button Content="✕" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
-                  Background="Transparent" BorderThickness="0"
-                  ToolTip.Tip="Empty the search box"
-                  IsVisible="{Binding Search, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-        </TextBox.InnerRightContent>
-      </TextBox>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <TextBox PlaceholderText="Search by name or number, like trainer or icon" x:Name="SearchBox"
+                 Text="{Binding Search}" FontSize="13" Width="340">
+          <TextBox.InnerRightContent>
+            <Button Content="✕" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
+                    Background="Transparent" BorderThickness="0"
+                    ToolTip.Tip="Empty the search box"
+                    IsVisible="{Binding Search, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+          </TextBox.InnerRightContent>
+        </TextBox>
+        <WrapPanel x:Name="ActionsBar" Classes="toolbar" Orientation="Horizontal" Margin="12,2,6,2">
+          <Button Content="Save picture" Click="SavePicture_Click"
+                  IsEnabled="{Binding CanSavePicture}"
+                  ToolTip.Tip="{Binding SavePictureHelp}"/>
+          <Button Content="Save file as it is" Click="SaveRaw_Click"
+                  IsEnabled="{Binding HasSelection}"
+                  ToolTip.Tip="Save the whole entry exactly as it sits in the ROM, keeping everything a PNG would drop."/>
+          <Button Content="Put a picture in" Click="Replace_Click"
+                  IsEnabled="{Binding CanReplace}"
+                  ToolTip.Tip="{Binding ReplaceHelp}"/>
+          <CheckBox Content="Shiny" IsChecked="{Binding ShowShiny, Mode=TwoWay}"
+                    IsEnabled="{Binding CanShowShiny}" VerticalAlignment="Center"
+                    Margin="10,0,4,0" FontSize="12" ToolTip.Tip="{Binding ShinyHelp}"/>
+          <Button Content="{Binding OwningEditorLabel}" Click="OpenOwner_Click"
+                  IsEnabled="{Binding HasOwningEditor}"
+                  ToolTip.Tip="{Binding OwningEditorHelp}"/>
+          <Button Content="Paint this" Click="Paint_Click"
+                  IsEnabled="{Binding CanReplace}"
+                  ToolTip.Tip="{Binding ReplaceHelp}"/>
+        </WrapPanel>
+      </WrapPanel>
     </Border>
 
     <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
@@ -34,8 +55,6 @@
           <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
                      Foreground="{DynamicResource Editor.Subtle}"/>
         </StackPanel>
-        <Button Grid.Column="2" Content="Close" Click="Close_Click" Width="66"
-                VerticalAlignment="Bottom"/>
       </Grid>
     </Border>
 
@@ -44,7 +63,7 @@
       <DockPanel Grid.Column="0">
         <!-- One tab per kind of graphic. The list runs to thousands of entries, so landing on a kind
              first is quicker than typing at all of them. -->
-        <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}"
+        <ListBox x:Name="CategoryList" DockPanel.Dock="Top" ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}"
                  Background="Transparent" BorderThickness="0" Margin="0,0,0,6" MaxHeight="170"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemsPanel>
@@ -64,7 +83,7 @@
           </ListBox.ItemTemplate>
         </ListBox>
 
-        <ListBox ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}">
+        <ListBox x:Name="ItemList" ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:GraphicsBrowserViewModel+Item">
               <TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/>
@@ -81,7 +100,7 @@
           <StackPanel Spacing="6">
             <!-- The files that make up the thing picked. A Pokemon's battle sprites are six files and a
                  trainer is five, so they are grouped into one row and offered here instead. -->
-            <ListBox ItemsSource="{Binding Parts}" SelectedIndex="{Binding PartIndex, Mode=TwoWay}"
+            <ListBox x:Name="PartsList" ItemsSource="{Binding Parts}" SelectedIndex="{Binding PartIndex, Mode=TwoWay}"
                      IsVisible="{Binding HasParts}" Background="Transparent" BorderThickness="0"
                      MaxHeight="72" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
               <ListBox.ItemsPanel>
@@ -103,30 +122,10 @@
             <TextBlock Text="{Binding Details}" FontSize="13" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding DeepEditorHint}" IsVisible="{Binding HasDeepEditor}"
                        FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
-            <WrapPanel Classes="toolbar" Orientation="Horizontal">
-              <Button Content="Save picture" Click="SavePicture_Click"
-                      IsEnabled="{Binding CanSavePicture}"
-                      ToolTip.Tip="{Binding SavePictureHelp}"/>
-              <Button Content="Save file as it is" Click="SaveRaw_Click"
-                      IsEnabled="{Binding HasSelection}"
-                      ToolTip.Tip="Save the whole entry exactly as it sits in the ROM, keeping everything a PNG would drop."/>
-              <Button Content="Put a picture in" Click="Replace_Click"
-                      IsEnabled="{Binding CanReplace}"
-                      ToolTip.Tip="{Binding ReplaceHelp}"/>
-              <CheckBox Content="Shiny" IsChecked="{Binding ShowShiny, Mode=TwoWay}"
-                        IsEnabled="{Binding CanShowShiny}" VerticalAlignment="Center"
-                        Margin="10,0,4,0" FontSize="12" ToolTip.Tip="{Binding ShinyHelp}"/>
-              <Button Content="{Binding OwningEditorLabel}" Click="OpenOwner_Click"
-                      IsEnabled="{Binding HasOwningEditor}"
-                      ToolTip.Tip="{Binding OwningEditorHelp}"/>
-              <Button Content="Paint this" Click="Paint_Click"
-                      IsEnabled="{Binding CanReplace}"
-                      ToolTip.Tip="{Binding ReplaceHelp}"/>
-            </WrapPanel>
           </StackPanel>
         </Border>
 
-        <Border Background="{DynamicResource Editor.PanelBg}"
+        <Border x:Name="PreviewPanel" Background="{DynamicResource Editor.PanelBg}"
                 BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
           <Panel>
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"

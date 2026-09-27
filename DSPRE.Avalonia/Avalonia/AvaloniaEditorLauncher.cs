@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia
             catch { return ""; }
         }
 
-        private static async System.Threading.Tasks.Task RunBusyAsync(string busyText, string busyHint, System.Action work)
+        private static System.Threading.Tasks.Task RunBusyAsync(string busyText, string busyHint, System.Action work)
         => BusyOverlay.RunAsync(busyText, busyHint, work);
 
         /// <summary>
@@ -495,8 +495,7 @@ namespace DSPRE.Avalonia
             window.ShowManaged();
         }
 
-        // One standalone window per world editor: a second copy of the same file would go stale and could save
-        // over the first. Brings the open one forward and points it at what was asked for.
+        // One standalone window per world editor, since a second copy of the same file would go stale and save over the first.
         private static bool BringForward<TView, TModel>(System.Action<TModel> goTo) where TModel : class
         {
             var open = (global::Avalonia.Application.Current?.ApplicationLifetime

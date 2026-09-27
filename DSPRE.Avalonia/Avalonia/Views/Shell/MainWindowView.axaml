@@ -20,7 +20,7 @@
       <Image x:Name="GameIconImage" DockPanel.Dock="Right" Width="28" Height="28" Margin="4,2,10,2"
              IsVisible="False" RenderOptions.BitmapInterpolationMode="None"
              DoubleTapped="GameIcon_DoubleTapped"/>
-      <Menu>
+      <Menu IsEnabled="{Binding !IsBusy}">
       <MenuItem Header="_File" x:Name="FileMenu">
         <MenuItem Header="Open ROM…" Click="OpenRom_Click"/>
         <MenuItem Header="Open extracted folder…" Click="OpenFolder_Click"/>

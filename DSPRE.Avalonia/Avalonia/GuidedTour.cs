@@ -17,8 +17,7 @@ namespace DSPRE.Avalonia
     /// time (header list, map tabs, the main editor menus) with a small callout card. Starts
     /// automatically after the first successful ROM load; replay via Tools &gt; Guided Tour.
     /// The spotlight hole is not dimmed and stays clickable, so users can try the highlighted
-    /// control mid-tour. Editors run their own short tour the first time they open
-    /// (<see cref="StartEditor"/>), drawn in their window's overlay layer.
+    /// control mid-tour. Editors run their own tour on first open (<see cref="StartEditor"/>).
     /// </summary>
     public sealed class GuidedTour
     {
@@ -329,7 +328,7 @@ namespace DSPRE.Avalonia
             RenderSettled();
         }
 
-        // A step that switched tabs points at controls the new tab has not laid out yet; draw now, then again once it has.
+        // A step that switched tabs points at controls not laid out yet, so draw again once they are.
         private void RenderSettled()
         {
             Render();
@@ -506,6 +505,8 @@ namespace DSPRE.Avalonia
                 x = (full.Width - calloutWidth) / 2;
                 y = (full.Height - h) / 2;
             }
+            // The height measures short before the card is shown, so keep a margin for its buttons.
+            y = Math.Max(8, Math.Min(y, full.Height - h - 24));
             Canvas.SetLeft(card, x);
             Canvas.SetTop(card, y);
             return card;

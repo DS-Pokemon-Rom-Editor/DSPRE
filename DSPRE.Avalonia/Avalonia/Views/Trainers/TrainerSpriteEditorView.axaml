@@ -26,11 +26,24 @@
     </Style>
   </Window.Styles>
 
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <StackPanel x:Name="SpriteButtons" Orientation="Horizontal" Spacing="6">
+          <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Import PNG…" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
+          <Button Content="Export PNG…" Click="Export_Click"/>
+          <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"/>
+        </StackPanel>
+        <StackPanel x:Name="SpritePicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
+          <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
+          <ComboBox ItemsSource="{Binding ClassNames}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
+        </StackPanel>
+      </WrapPanel>
+    </Border>
+
   <DockPanel Margin="8">
-    <StackPanel x:Name="SpritePicker" DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
-      <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
-      <ComboBox ItemsSource="{Binding ClassNames}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
-    </StackPanel>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3" Margin="0,8,0,0">
@@ -40,13 +53,6 @@
     <TabControl x:Name="OuterTabs" SelectionChanged="OuterTabs_SelectionChanged">
       <TabItem Header="Sprite">
         <DockPanel Margin="0,8,0,0">
-          <StackPanel x:Name="SpriteButtons" DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-            <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <Button Content="Import PNG…" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
-            <Button Content="Export PNG…" Click="Export_Click"/>
-            <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"/>
-          </StackPanel>
-
           <StackPanel x:Name="FrameStrip" DockPanel.Dock="Bottom" Spacing="4" Margin="0,8,0,0" IsVisible="{Binding HasFrames}"
                       ToolTip.Tip="Frames that share tiles change together.">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Height="84">
@@ -222,5 +228,6 @@
         </DockPanel>
       </TabItem>
     </TabControl>
+  </DockPanel>
   </DockPanel>
 </Window>
