@@ -40,7 +40,7 @@
         <Button Content="📷 Screenshot" Click="Screenshot_Click"
                 ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="🐞 Placement report…" Click="ExportDebug_Click"
+        <Button Content="🐞 Report…" Click="ExportDebug_Click"
                 ToolTip.Tip="Saves where every map and event was placed, plus a picture of the view, to attach to a bug report."/>
         <Button Content="?" Click="Tour_Click" ToolTip.Tip="Tour"/>
       </WrapPanel>

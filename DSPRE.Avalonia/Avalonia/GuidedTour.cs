@@ -85,6 +85,7 @@ namespace DSPRE.Avalonia
             var list = new List<Step>();
             foreach (var (target, title, body) in steps) list.Add(new Step { Target = target, Title = title, Body = body });
             _active = new GuidedTour(root, layer, list);
+            AppLogger.Info($"Editor tour started: {key}");
             _active.Begin();
         }
 
@@ -377,7 +378,14 @@ namespace DSPRE.Avalonia
             _layer.Children.Clear();
             var step = _steps[_index];
 
-            var layerSize = _layer.Bounds.Size;
+            // An editor tour's canvas sits in the window's overlay layer, which does not stretch its children.
+            if (_main == null && _layer.Parent is Control overlayHost)
+            {
+                _layer.Width = overlayHost.Bounds.Width;
+                _layer.Height = overlayHost.Bounds.Height;
+            }
+            var layerSize = _main == null ? new Size(_layer.Width, _layer.Height) : _layer.Bounds.Size;
+            if (double.IsNaN(layerSize.Width)) layerSize = default;
             if (layerSize.Width <= 0 || layerSize.Height <= 0)
             {
                 // Layout has not caught up yet; try again on the next loop iteration (bounded).
