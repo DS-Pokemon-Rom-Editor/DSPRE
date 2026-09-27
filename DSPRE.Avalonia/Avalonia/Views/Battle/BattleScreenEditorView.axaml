@@ -1,11 +1,12 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Battle.BattleScreenEditorView"
         x:DataType="vm:BattleScreenEditorViewModel"
         Title="Battle Screen"
-        Width="1120" Height="780" MinWidth="640" MinHeight="480"
+        Width="1120" Height="780" MinWidth="980" MinHeight="620"
         WindowStartupLocation="CenterScreen">
 
   <Design.DataContext>
@@ -59,10 +60,11 @@
     <Border DockPanel.Dock="Left" Width="196" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,1,0">
       <DockPanel Margin="6">
-        <TextBlock DockPanel.Dock="Top" Text="Pieces" FontWeight="SemiBold" Margin="0,0,0,4"/>
-        <TextBlock DockPanel.Dock="Top" Classes="hint" Margin="0,0,0,6"
-                   Text="Click one here, or click it on either screen."/>
-        <ListBox ItemsSource="{Binding Pieces}" SelectedIndex="{Binding SelectedIndex}">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+          <TextBlock Text="Pieces" FontWeight="SemiBold"/>
+          <controls:HelpTip Text="Click one here, or click it on either screen."/>
+        </StackPanel>
+        <ListBox x:Name="PieceList" ItemsSource="{Binding Pieces}" SelectedIndex="{Binding SelectedIndex}">
           <ListBox.ItemTemplate>
             <DataTemplate>
               <StackPanel>
@@ -80,7 +82,7 @@
     </Border>
 
     <!-- What is picked -->
-    <Border DockPanel.Dock="Right" Width="240" BorderBrush="{DynamicResource Editor.Border}"
+    <Border x:Name="PieceDetails" DockPanel.Dock="Right" Width="240" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="1,0,0,0">
       <ScrollViewer>
         <StackPanel Margin="8" Spacing="8">
@@ -106,9 +108,10 @@
 
           <Separator Margin="0,4"/>
 
-          <TextBlock Text="Sample" FontWeight="SemiBold"/>
-          <TextBlock Classes="hint"
-                     Text="Preview only, nothing is written to the ROM. Use it to check an edited bar against a long name or a full bar."/>
+          <StackPanel x:Name="SampleSection" Orientation="Horizontal">
+            <TextBlock Text="Sample" FontWeight="SemiBold"/>
+            <controls:HelpTip Text="Preview only, nothing is written to the ROM. Use it to check an edited bar against a long name or a full bar."/>
+          </StackPanel>
           <TextBlock Text="How many Pokemon a side" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
           <ComboBox SelectedIndex="{Binding BattleSizeChoice}" HorizontalAlignment="Stretch"
                     IsVisible="{Binding GaugeTextIsReal}">
@@ -155,7 +158,7 @@
 
     <!-- The two screens, stacked the way a DS has them -->
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="10" Margin="12" HorizontalAlignment="Center">
+      <StackPanel x:Name="BothScreens" Spacing="10" Margin="12" HorizontalAlignment="Center">
 
         <TextBlock Text="Top screen" Classes="hint" HorizontalAlignment="Center"/>
         <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="Black">

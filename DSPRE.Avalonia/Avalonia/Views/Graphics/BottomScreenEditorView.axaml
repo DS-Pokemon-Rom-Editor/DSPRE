@@ -35,7 +35,7 @@
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
       <StackPanel Spacing="6">
         <DockPanel>
-          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+          <StackPanel x:Name="SaveButtons" DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
             <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Undo" Click="Undo_Click"
@@ -43,10 +43,10 @@
             <Button Content="Redo" Click="Redo_Click"
                     IsEnabled="{Binding CanRedo}" ToolTip.Tip="{Binding RedoWhat}"/>
           </StackPanel>
-          <TabStrip ItemsSource="{Binding TabNames}" SelectedIndex="{Binding TabIndex}"/>
+          <TabStrip x:Name="ScreenTabs" ItemsSource="{Binding TabNames}" SelectedIndex="{Binding TabIndex}"/>
         </DockPanel>
 
-        <WrapPanel Orientation="Horizontal">
+        <WrapPanel x:Name="ScreenOptions" Orientation="Horizontal">
           <CheckBox Content="Busy mode" IsChecked="{Binding ScriptRunning}"
                     IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"
                     ToolTip.Tip="How the panel looks while a script has control: the icons go see-through and only the A button stays solid"/>
@@ -104,7 +104,7 @@
     <Border DockPanel.Dock="Left" Width="228" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,1,0">
       <DockPanel Margin="6">
-        <ListBox ItemsSource="{Binding Pieces}" SelectedIndex="{Binding SelectedIndex}"
+        <ListBox x:Name="PieceList" ItemsSource="{Binding Pieces}" SelectedIndex="{Binding SelectedIndex}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:BottomScreenPieceRow">
@@ -120,7 +120,7 @@
     </Border>
 
     <!-- What is picked -->
-    <Border DockPanel.Dock="Right" Width="300" BorderBrush="{DynamicResource Editor.Border}"
+    <Border x:Name="PieceDetails" DockPanel.Dock="Right" Width="300" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="1,0,0,0">
       <ScrollViewer>
         <StackPanel Margin="10" Spacing="8">
@@ -158,7 +158,7 @@
               <TextBlock Text="{Binding SharedNote}" Classes="hint"/>
             </Border>
 
-            <ItemsControl ItemsSource="{Binding Swatches}">
+            <ItemsControl x:Name="ColourSwatches" ItemsSource="{Binding Swatches}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                   <WrapPanel Orientation="Horizontal" Width="288"/>
@@ -182,7 +182,7 @@
          casing is never cut off at the edges. -->
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="12" Spacing="8" HorizontalAlignment="Center">
-        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+        <Border x:Name="ScreenPreview" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
           <Image Source="{Binding Screen}" Width="640" Height="480" Stretch="Uniform"
                  RenderOptions.BitmapInterpolationMode="None"/>
         </Border>

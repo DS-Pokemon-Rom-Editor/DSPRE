@@ -29,7 +29,7 @@
         <TextBlock Grid.Column="2" Text="Needs a parent holding" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="3" Text="Otherwise hatches" FontWeight="SemiBold"/>
       </Grid>
-      <ItemsControl ItemsSource="{Binding Rows}">
+      <ItemsControl x:Name="BreedingRows" ItemsSource="{Binding Rows}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:BreedingItemsViewModel+RowViewModel">
             <Grid ColumnDefinitions="30,236,236,236" Margin="0,2">

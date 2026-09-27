@@ -41,6 +41,9 @@ namespace DSPRE.Avalonia.Views.World
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
+            // Each tab offers its own tour the first time it is on screen.
+            foreach (Control tab in new Control[] { HeaderEmbed, MapEmbed, EventsEmbed, MatrixEmbed, AreaDataEmbed, ScriptsEmbed, LevelScriptsEmbed, TextEmbed })
+                EditorTours.Attach(tab, tab.GetType().Name);
         }
 
         public IEnumerable<(string EditorName, IEditorWithUnsavedChanges Editor)> GetEmbeddedEditors()
@@ -237,12 +240,14 @@ namespace DSPRE.Avalonia.Views.World
                     var evm = new WildEditorDPPtViewModel(path, names, initial, headerCount);
                     _encountersVm = evm;
                     EncountersTab.Content = new WildEditorDPPtView(evm);
+                    EditorTours.Attach((Control)EncountersTab.Content, nameof(WildEditorDPPtView));
                 }
                 else
                 {
                     var evm = new WildEditorHGSSViewModel(path, names, initial, headerCount);
                     _encountersVm = evm;
                     EncountersTab.Content = new WildEditorHGSSView(evm);
+                    EditorTours.Attach((Control)EncountersTab.Content, nameof(WildEditorHGSSView));
                 }
                 _encountersEmbedded = true;
             }
@@ -267,8 +272,7 @@ namespace DSPRE.Avalonia.Views.World
             }
         }
 
-        /// <summary>Opens the current tab's full editor on what the tab shows. Unsaved tab edits are
-        /// offered a save first, since the window reads from disk.</summary>
+        /// <summary>Opens the current tab's full editor, offering to save tab edits first since it reads from disk.</summary>
         private async void PopOut_Click(object sender, RoutedEventArgs e)
         {
             var vm = VM;

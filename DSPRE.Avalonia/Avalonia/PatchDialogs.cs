@@ -33,6 +33,8 @@ namespace DSPRE.Avalonia
 
         private static Window ActiveOwner(Window exclude = null)
         {
+            var current = OwnerWindow.Current;
+            if (current != null && !ReferenceEquals(current, exclude)) return current;
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d)
             {
                 foreach (var w in d.Windows)

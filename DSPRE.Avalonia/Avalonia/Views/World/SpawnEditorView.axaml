@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.World.SpawnEditorView"
         x:DataType="vm:SpawnEditorViewModel"
-        Title="Spawn Settings Editor"
+        Title="Spawn Point Editor"
         Width="420" Height="290"
         MinWidth="420" MinHeight="290"
         CanResize="False"
@@ -21,20 +21,22 @@
     </Style>
   </Window.Styles>
 
-  <DockPanel Margin="10">
-    <!-- Buttons row -->
-    <Grid DockPanel.Dock="Bottom" Margin="0,10,0,0"
-          ColumnDefinitions="Auto,*,Auto,8,Auto">
-      <Button Grid.Column="0" Content="Show all headers" Width="120" Click="ResetFilter_Click"
-              ToolTip.Tip="Puts every header back in the list when it has been narrowed to one map"/>
-      <Button Grid.Column="2" Content="Load Saved"     Width="110" Click="Load_Click"/>
-      <Button Grid.Column="4" Content="Save Settings"  Width="110" Click="Save_Click" IsDefault="True"/>
-    </Grid>
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"
+                ToolTip.Tip="Reload the spawn point saved in the ROM"/>
+        <Button Content="Show all headers" Click="ResetFilter_Click" Margin="12,0,0,0"
+                ToolTip.Tip="Puts every header back in the list when it has been narrowed to one map"/>
+      </StackPanel>
+    </Border>
 
     <!-- Content -->
-    <StackPanel Spacing="8">
+    <controls:CappedWidth Cap="620" Margin="10"><StackPanel Spacing="8">
       <!-- Row 1: Header + Direction -->
-      <Grid ColumnDefinitions="*,12,*">
+      <Grid x:Name="SpawnHeaderRow" ColumnDefinitions="*,12,*">
         <StackPanel Grid.Column="0" Spacing="3">
           <TextBlock Text="Spawn Header:" Classes="lbl"/>
           <controls:FusionAutoCompleteBox ItemsSource="{Binding HeaderNames}"
@@ -53,7 +55,7 @@
       <TextBlock Text="{Binding LocationName}" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
 
       <!-- Row 3: Coordinates -->
-      <Grid ColumnDefinitions="Auto,8,90,16,Auto,8,90" RowDefinitions="Auto,6,Auto">
+      <Grid x:Name="CoordsGrid" ColumnDefinitions="Auto,8,90,16,Auto,8,90" RowDefinitions="Auto,6,Auto">
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Matrix X:" Classes="lbl"/>
         <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding MatrixX}"
                        Minimum="0" Maximum="{Binding MatrixXMax}" FormatString="0" Width="90"/>
@@ -69,11 +71,11 @@
       </Grid>
 
       <!-- Row 4: Initial money -->
-      <StackPanel Orientation="Horizontal" Spacing="8">
+      <StackPanel x:Name="MoneyRow" Orientation="Horizontal" Spacing="8">
         <TextBlock Text="Initial Money:" Classes="lbl"/>
         <NumericUpDown Value="{Binding InitialMoney}"
                        Minimum="0" Maximum="999999" FormatString="0" Width="110"/>
       </StackPanel>
-    </StackPanel>
+    </StackPanel></controls:CappedWidth>
   </DockPanel>
 </Window>

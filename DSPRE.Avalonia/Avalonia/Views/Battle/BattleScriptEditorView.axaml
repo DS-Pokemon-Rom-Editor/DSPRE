@@ -20,7 +20,7 @@
 
     <!-- Selectors -->
     <StackPanel Grid.Row="1" IsVisible="{Binding IsAvailable}" Spacing="8" Margin="0,0,0,8">
-      <Grid ColumnDefinitions="120,10,260,40,90,10,*">
+      <Grid x:Name="EntryPicker" ColumnDefinitions="120,10,260,40,90,10,*">
         <TextBlock Grid.Column="0" Text="Archive" VerticalAlignment="Center"/>
         <ComboBox Grid.Column="2" ItemsSource="{Binding ArchiveOptions}" SelectedIndex="{Binding ArchiveIndex}" HorizontalAlignment="Stretch"/>
         <TextBlock Grid.Column="4" Text="Entry" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0"/>
@@ -31,7 +31,7 @@
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
       <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line, like AddParticles slot=0 data=482. Lines starting with // are comments."
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
-      <StackPanel Orientation="Horizontal" Spacing="6">
+      <StackPanel x:Name="ScriptButtons" Orientation="Horizontal" Spacing="6">
         <Button Content="＋ Add command" Click="AddCommand_Click"/>
         <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding Dirty}"
                 ToolTip.Tip="{Binding SaveHint}" ToolTip.ShowOnDisabled="True"/>
@@ -191,7 +191,7 @@
            this the bottom of them was simply cut off with nothing to say so. -->
       <GridSplitter Grid.Column="1" Width="6" Background="Transparent" ResizeDirection="Columns"
                     HorizontalAlignment="Stretch"/>
-      <ScrollViewer Grid.Column="2" IsVisible="{Binding ShowStoryboard}" Margin="10,0,0,0"
+      <ScrollViewer x:Name="PreviewPanel" Grid.Column="2" IsVisible="{Binding ShowStoryboard}" Margin="10,0,0,0"
                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <Grid MinHeight="420" RowDefinitions="Auto,Auto,Auto,Auto,*">
         <StackPanel Grid.Row="0" Spacing="1" Margin="0,0,0,4" IsVisible="{Binding HasPreview}">

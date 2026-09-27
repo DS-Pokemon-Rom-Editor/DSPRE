@@ -1,9 +1,9 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window MinWidth="760" MinHeight="480" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.NsbtxEditorView"
         x:DataType="vm:NsbtxEditorViewModel"
-        Title="NSBTX (Texture) Editor"
+        Title="Map &amp; Building Textures"
         Width="800" Height="560"
         WindowStartupLocation="CenterScreen">
 
@@ -14,6 +14,9 @@
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <RadioButton Content="Map textures"      GroupName="tt" IsChecked="{Binding MapTextures}"/>
         <RadioButton Content="Building textures" GroupName="tt" IsChecked="{Binding BuildingTextures}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
@@ -32,11 +35,11 @@
     <Grid ColumnDefinitions="170,170,170,*" Margin="4">
       <DockPanel Grid.Column="0" Margin="0,0,4,0">
         <TextBlock DockPanel.Dock="Top" Text="Texture packs" FontWeight="Bold" Margin="0,0,0,2"/>
-        <ListBox ItemsSource="{Binding PackNames}" SelectedIndex="{Binding PackIndex}"/>
+        <ListBox x:Name="PackList" ItemsSource="{Binding PackNames}" SelectedIndex="{Binding PackIndex}"/>
       </DockPanel>
       <DockPanel Grid.Column="1" Margin="0,0,4,0">
         <TextBlock DockPanel.Dock="Top" Text="Textures" FontWeight="Bold" Margin="0,0,0,2"/>
-        <ListBox ItemsSource="{Binding TextureNames}" SelectedIndex="{Binding TextureIndex}"/>
+        <ListBox x:Name="TextureList" ItemsSource="{Binding TextureNames}" SelectedIndex="{Binding TextureIndex}"/>
       </DockPanel>
       <DockPanel Grid.Column="2" Margin="0,0,4,0">
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,4">
@@ -44,9 +47,9 @@
           <TextBlock Text="Suggested from names; you can override it." FontSize="10"
                      Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
         </StackPanel>
-        <ListBox ItemsSource="{Binding PaletteNames}" SelectedIndex="{Binding PaletteIndex}"/>
+        <ListBox x:Name="PaletteList" ItemsSource="{Binding PaletteNames}" SelectedIndex="{Binding PaletteIndex}"/>
       </DockPanel>
-      <Border Grid.Column="3" Background="#2A2A2E" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+      <Border x:Name="TexturePreview" Grid.Column="3" Background="#2A2A2E" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
         <Panel>
           <Image Source="{Binding Preview}" Stretch="Uniform" Margin="8"
                  RenderOptions.BitmapInterpolationMode="None"/>

@@ -71,20 +71,20 @@ namespace DSPRE.Avalonia
             return false;
         }
 
-        /// <summary>What the busy overlay says under the title while an archive is being unpacked.</summary>
-        private const string UnpackHint =
-            "First-time opens unpack the ROM's data and can take a while, especially for a WSL-hosted project.";
-
         /// <summary>Runs unpack-heavy file I/O off the UI thread behind the app's busy overlay. Only pass plain file I/O, not UI/bitmap work.</summary>
-        private static async System.Threading.Tasks.Task RunBusyAsync(string busyText, string busyHint, System.Action work)
+        /// <summary>" at NAME" for a busy title when an editor opens on a particular record, or nothing.</summary>
+        private static string At(System.Func<string[]> names, int index)
         {
-            var app = global::Avalonia.Application.Current?.ApplicationLifetime
-                as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-            var vm = app?.MainWindow?.DataContext as MainWindowViewModel;
-            if (vm != null) { vm.BusyText = busyText; vm.BusyHint = busyHint; vm.IsBusy = true; }
-            try { await System.Threading.Tasks.Task.Run(work); }
-            finally { if (vm != null) vm.IsBusy = false; }
+            try
+            {
+                var all = names();
+                return index >= 0 && index < all.Length && !string.IsNullOrWhiteSpace(all[index]) ? " at " + all[index].Trim() : "";
+            }
+            catch { return ""; }
         }
+
+        private static async System.Threading.Tasks.Task RunBusyAsync(string busyText, string busyHint, System.Action work)
+        => BusyOverlay.RunAsync(busyText, busyHint, work);
 
         /// <summary>
         /// Everything in the ROM that makes a noise: the cries, the music, the fanfares and the sound
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia
             try
             {
                 // The species list is counted from the personal data, which a fresh project has not unpacked yet.
-                await RunBusyAsync("Opening Audio Editor…", UnpackHint,
+                await RunBusyAsync("Opening Audio Editor…", "Reading the cries, music and sound effects.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData }));
 
                 string[] names;
@@ -126,8 +126,8 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Pokémon Editor…",
-                    "First-time opens unpack the ROM's data and can take a while, especially for a WSL-hosted project.",
+                await RunBusyAsync("Opening Pokémon Editor" + (initialMon != 1 ? At(GetPokemonNames, initialMon) : "") + "…",
+                    "Reading species data, learnsets, evolutions and sprites.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> {
                         DirNames.personalPokeData, DirNames.learnsets,
                         DirNames.evolutions, DirNames.monIcons }));
@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Move Data Editor…", UnpackHint,
+                await RunBusyAsync("Opening Move Data Editor" + (initialIndex > 0 ? At(GetAttackNames, initialIndex) : "") + "…", "Reading every move.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData }));
                 var view = new MoveDataEditorView();
                 if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Item Editor…", UnpackHint,
+                await RunBusyAsync("Opening Item Editor" + (initialIndex > 1 ? At(GetItemNames, initialIndex) : "") + "…", "Reading every item and its icon.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData }));
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
                 var vm = new ItemEditorViewModel(GetItemNames());
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Trade Editor…", UnpackHint,
+                await RunBusyAsync("Opening Trade Editor…", "Reading the in-game trades.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData }));
                 var view = new TradeEditorView();
                 if (initialIndex > 0 && view.DataContext is TradeEditorViewModel vm)
@@ -297,7 +297,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Text Editor…", UnpackHint,
+                await RunBusyAsync("Opening Text Editor…", "Reading every text archive.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives }));
                 new EditorHostWindow("Text Editor",
                     new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }),
@@ -423,7 +423,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening TM/HM Bulk Editor…", UnpackHint,
+                await RunBusyAsync("Opening TM/HM Bulk Editor…", "Reading which Pokémon learn each TM and HM.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions }));
                 var vm = new TmHmBulkEditorViewModel(GetPokemonNames());
                 new EditorHostWindow("TM/HM Bulk Editor", new TmHmBulkEditorView(vm), 1050, 700).ShowManaged();
@@ -455,7 +455,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Wild Pokémon Editor…", UnpackHint,
+                await RunBusyAsync("Opening Wild Pokémon Editor…", "Reading this game's encounter files.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons }));
                 string path = gameDirs[DirNames.encounters].unpackedDir;
                 string[] names = GetPokemonNames();
@@ -523,7 +523,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Trainer Editor…", UnpackHint,
+                await RunBusyAsync("Opening Trainer Editor" + (initialIndex > 0 ? At(GetSimpleTrainerNames, initialIndex) : "") + "…", "Reading every trainer, party and trainer sprite.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics }));
                 new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
             }
@@ -541,7 +541,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Trainer Sprite Editor…", UnpackHint,
+                await RunBusyAsync("Opening Trainer Sprite Editor…", "Reading the trainer class sprites.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics }));
                 var window = new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex));
                 if (closed != null) window.Closed += (_, _) => closed();
@@ -671,7 +671,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Starter Editor…", UnpackHint,
+                await RunBusyAsync("Opening Starter Editor…", "Finding the starter script.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts, DirNames.personalPokeData }));
                 new StarterEditorView().ShowManaged();
             }
@@ -741,7 +741,7 @@ namespace DSPRE.Avalonia
                 // behind the busy overlay. The window itself is built here, on the thread that owns it.
                 var vm = new ViewModels.Graphics.CellAnimationPickerViewModel();
                 await RunBusyAsync("Looking for animations…",
-                                   "Reading every archive in the ROM", vm.Gather);
+                                   "Reading every archive in the ROM.", vm.Gather);
                 vm.Ready();
                 new Views.Graphics.CellAnimationPickerView(vm).ShowManaged();
             }
@@ -916,7 +916,7 @@ namespace DSPRE.Avalonia
             try
             {
                 var vm = new ViewModels.Graphics.ParticleLibraryViewModel();
-                await RunBusyAsync("Looking for particles…", "Reading every archive in the ROM", () =>
+                await RunBusyAsync("Looking for particles…", "Reading every archive in the ROM.", () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> {
                         DirNames.wazaParticle, DirNames.ballParticles, DirNames.wazaEffectScripts, DirNames.wazaEffectSub }
@@ -949,7 +949,7 @@ namespace DSPRE.Avalonia
             Dictionary<int, List<string>> usedBy = null;
             try
             {
-                await RunBusyAsync("Opening Ball Capsules…", UnpackHint, () =>
+                await RunBusyAsync("Opening Ball Capsules…", "Reading the seals and their effects.", () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> {
                         DirNames.personalPokeData, DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites,
@@ -1072,7 +1072,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Overworld Editor…", UnpackHint,
+                await RunBusyAsync("Opening Overworld Editor…", "Reading every overworld sprite.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites }));
                 SetOWtable();
                 Set3DOverworldsDict();
@@ -1254,7 +1254,7 @@ namespace DSPRE.Avalonia
             try
             {
                 var vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
-                await RunBusyAsync("Opening Graphics…", UnpackHint, vm.Scan);
+                await RunBusyAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan);
                 vm.Publish();
                 new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
             }
@@ -1283,7 +1283,7 @@ namespace DSPRE.Avalonia
                 }
 
                 var vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
-                await RunBusyAsync("Opening Graphics…", UnpackHint, vm.Scan);
+                await RunBusyAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan);
                 vm.Publish();
                 bool found = vm.JumpTo(a, fileIndex, preferAssembled);
                 new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
@@ -1305,7 +1305,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Trainer Back Sprite Editor…", UnpackHint,
+                await RunBusyAsync("Opening Trainer Back Sprite Editor…", "Reading the player back sprites.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerBackGraphics }));
                 new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialSprite, TrainerSpriteSet.Backs)).ShowManaged();
             }
@@ -1426,7 +1426,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Battle Screen…", UnpackHint,
+                await RunBusyAsync("Opening Battle Screen…", "Reading battle backgrounds, gauges, text boxes and fonts.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> {
                         DirNames.battleObj, DirNames.battleBg, DirNames.windowFrames, DirNames.fonts }));
                 new Views.Battle.BattleScreenEditorView().ShowManaged();
@@ -1467,7 +1467,7 @@ namespace DSPRE.Avalonia
                 // Listing means reading every 3D archive to see what is in it, which is far too much
                 // file work to do on the click.
                 var vm = new ViewModels.Graphics.ModelBrowserViewModel();
-                await RunBusyAsync("Opening Models…", UnpackHint, vm.Scan);
+                await RunBusyAsync("Opening Models…", "Finding every model and texture in the ROM.", vm.Scan);
                 vm.Publish();
                 new Views.Graphics.ModelBrowserView(vm).ShowManaged();
             }

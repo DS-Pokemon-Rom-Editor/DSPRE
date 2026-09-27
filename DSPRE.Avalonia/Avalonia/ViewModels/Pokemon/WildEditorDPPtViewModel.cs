@@ -132,7 +132,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             await SaveCommand();
             return !HasUnsavedChanges;
         }
-        // Reloads the shown file from disk so Discard really drops the edits.
         public void DiscardChanges()
         {
             if (_current == null) { SetClean(); return; }
@@ -198,9 +197,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             "Only E", "Only D", "! and ?"
         };
 
-        // The file stores these as a chance out of a hundred, but the games only ask whether it is zero,
-        // so the editor offers the two sea forms and keeps whatever number was already there when the
-        // choice has not changed.
+        // Stored as a percentage the game only tests for zero, so the original number is kept unless the form changes.
         private uint _shellosRaw, _gastrodonRaw;
 
         private int _shellosFormIndex;

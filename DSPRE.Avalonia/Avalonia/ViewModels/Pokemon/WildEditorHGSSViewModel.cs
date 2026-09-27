@@ -94,6 +94,31 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<WildEncounterRow> DayRows     { get; } = new();
         public ObservableCollection<WildEncounterRow> NightRows   { get; } = new();
 
+        // HGSS keeps one list of grass levels; morning, day and night only change the species. A level
+        // edited on any of the three is the same slot's level on the other two.
+        private readonly HashSet<WildEncounterRow> _levelLinked = new();
+        private bool _linkingLevels;
+        private void LinkWalkingLevels()
+        {
+            var sets = new[] { MorningRows, DayRows, NightRows };
+            foreach (var rows in sets)
+                foreach (var row in rows)
+                {
+                    if (!_levelLinked.Add(row)) continue;
+                    row.PropertyChanged += (sender, e) =>
+                    {
+                        if (e.PropertyName != nameof(WildEncounterRow.Level) || _linkingLevels) return;
+                        var changed = (WildEncounterRow)sender;
+                        int slot = -1;
+                        foreach (var set in sets) { slot = set.IndexOf(changed); if (slot >= 0) break; }
+                        if (slot < 0) return;
+                        _linkingLevels = true;
+                        try { foreach (var set in sets) if (slot < set.Count && !ReferenceEquals(set[slot], changed)) set[slot].Level = changed.Level; }
+                        finally { _linkingLevels = false; }
+                    };
+                }
+        }
+
         // ── Swarm / Rock Smash / Radio ─────────────────────────────────────
         public ObservableCollection<WildEncounterRow> SwarmRows        { get; } = new();
         public ObservableCollection<WildEncounterRow> RockSmashRows    { get; } = new();
@@ -363,6 +388,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SyncRows(MorningRows, 12, i => walkLabels[i], i => _current.morningPokemon[i], i => _current.walkingLevels[i], null, null, false);
             SyncRows(DayRows,     12, i => walkLabels[i], i => _current.dayPokemon[i],     i => _current.walkingLevels[i], null, null, false);
             SyncRows(NightRows,   12, i => walkLabels[i], i => _current.nightPokemon[i],   i => _current.walkingLevels[i], null, null, false);
+            LinkWalkingLevels();
 
             // Slot 2 is the night-only fishing Pokémon, not a swarm.
             string[] swarmLabels = { "Swarm, walking", "Swarm, surfing", "Night fishing", "Swarm, fishing" };

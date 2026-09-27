@@ -15,7 +15,7 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
-        <ComboBox ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}" Width="220" MaxDropDownHeight="420"/>
+        <ComboBox x:Name="CapsulePicker" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}" Width="220" MaxDropDownHeight="420"/>
         <TextBlock Text="{Binding UsedByText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="520"
                    Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="{Binding UsedByText}"/>
         <Button Content="Clear" Click="Clear_Click" Width="70"/>
@@ -33,7 +33,7 @@
       <DockPanel Grid.Column="0">
         <TextBlock DockPanel.Dock="Top" Text="Seals" FontWeight="SemiBold" Margin="0,0,0,6"/>
         <TextBox DockPanel.Dock="Top" x:Name="SealFind" Text="{Binding SealFilter}" PlaceholderText="Find a seal" Margin="0,0,0,6"/>
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+        <StackPanel x:Name="SealButtons" DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
           <Button Content="Place" Click="Place_Click" Width="70"/>
           <Button Content="Edit sticker" Click="EditSticker_Click" Width="90"/>
           <Button Content="Edit particles" Click="EditParticles_Click" Width="96"/>
@@ -63,7 +63,7 @@
         <TextBlock Text="Right-click a seal to remove it." FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
 
-      <StackPanel Grid.Column="4" Spacing="8">
+      <StackPanel x:Name="SendOutPanel" Grid.Column="4" Spacing="8">
         <TextBlock Text="Preview" FontWeight="SemiBold"/>
         <StackPanel Orientation="Horizontal" Spacing="8">
           <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" Width="220" MaxDropDownHeight="420"/>

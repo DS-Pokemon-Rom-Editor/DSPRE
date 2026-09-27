@@ -35,7 +35,7 @@
       </DockPanel>
 
       <!-- Add panel -->
-      <Border Grid.Column="1" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4" Padding="8">
+      <Border x:Name="AddTriggerPanel" Grid.Column="1" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4" Padding="8">
         <StackPanel Spacing="6">
           <TextBlock Text="Add a trigger" FontWeight="Bold"/>
           <TextBlock Text="Type" FontSize="12"/>

@@ -117,14 +117,6 @@ namespace DSPRE.Avalonia
         }
 
         private static Window ActiveWindow()
-        {
-            if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
-                return null;
-
-            foreach (var w in desktop.Windows)
-                if (w.IsActive) return w;
-
-            return desktop.MainWindow;
-        }
+        => OwnerWindow.Current;
     }
 }

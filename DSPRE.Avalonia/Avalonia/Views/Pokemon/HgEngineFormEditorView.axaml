@@ -14,15 +14,19 @@
 
   <DockPanel>
     <!-- ── Top: species selector ── -->
-    <Border DockPanel.Dock="Top" Padding="6,4" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock VerticalAlignment="Center">Species:</TextBlock>
-        <controls:FusionAutoCompleteBox ItemsSource="{Binding PokemonNames}"
-                                        SelectedIndex="{Binding SelectedSpeciesIndex}"
-                                        Width="260" MaxDropDownHeight="300"/>
-        <Separator Width="12"/>
-        <Button x:Name="SaveButton" Content="💾 Save"/>
-      </StackPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <WrapPanel Classes="toolbar">
+        <Button x:Name="SaveButton" Content="Save" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <StackPanel x:Name="SpeciesBar" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
+          <TextBlock VerticalAlignment="Center">Species:</TextBlock>
+          <controls:FusionAutoCompleteBox ItemsSource="{Binding PokemonNames}"
+                                          SelectedIndex="{Binding SelectedSpeciesIndex}"
+                                          Width="260" MaxDropDownHeight="300"/>
+        </StackPanel>
+        <Button x:Name="AddSlotButton" Content="+ Add Form"/>
+      </WrapPanel>
     </Border>
     <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F">
       <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
@@ -33,17 +37,14 @@
                  Text="Which form species exist for the selected base Pokémon (Mega, regional, Gmax, etc.), from data/PokeFormDataTbl.c. A form's own stats/types/abilities are edited in the Pokémon Editor; this only manages which form entries exist. &quot;Needs Reversion&quot; marks a form that reverts to base under specific conditions (Mega Evolution, Primal Reversion, and a few late-gen forms)."/>
     </Border>
 
-    <!-- ── Bottom: status + add ── -->
+    <!-- ── Bottom: status ── -->
     <Border DockPanel.Dock="Bottom" Padding="8,6" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Grid.Column="0" Text="{Binding StatusText}" VerticalAlignment="Center" TextWrapping="Wrap"/>
-        <Button Grid.Column="1" x:Name="AddSlotButton" Content="+ Add Form"/>
-      </Grid>
+      <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" TextWrapping="Wrap"/>
     </Border>
 
     <!-- ── Main: slot list ── -->
     <ScrollViewer>
-      <ItemsControl ItemsSource="{Binding Slots}" Margin="8">
+      <ItemsControl x:Name="FormList" ItemsSource="{Binding Slots}" Margin="8">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
             <Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"

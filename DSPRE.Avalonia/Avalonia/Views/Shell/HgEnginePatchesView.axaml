@@ -15,12 +15,12 @@
     </Border>
 
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6">
+            BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock Text="Show:" VerticalAlignment="Center"/>
-        <ComboBox Width="160" ItemsSource="{Binding Binaries}" SelectedIndex="{Binding BinaryFilter}"/>
         <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <TextBlock Text="Show:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <ComboBox Width="160" ItemsSource="{Binding Binaries}" SelectedIndex="{Binding BinaryFilter}"/>
         <Button Content="Reload" Click="Reload_Click"/>
       </StackPanel>
     </Border>
@@ -31,7 +31,7 @@
     </Border>
 
     <!-- Adding one -->
-    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
+    <Border x:Name="AddPatchPanel" DockPanel.Dock="Bottom" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8">
       <StackPanel Spacing="6">
         <TextBlock Text="Add a patch" FontWeight="Bold" FontSize="12"/>

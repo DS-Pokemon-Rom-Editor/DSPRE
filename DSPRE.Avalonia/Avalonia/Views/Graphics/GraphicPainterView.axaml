@@ -15,8 +15,8 @@
         <TextBlock Text="{Binding Measurements}" FontSize="12" FontWeight="SemiBold"/>
         <TextBlock Text="{Binding Explain}" TextWrapping="Wrap" FontSize="12"
                    Foreground="{DynamicResource Editor.Subtle}"/>
-        <WrapPanel Classes="toolbar" Orientation="Horizontal">
-          <Button Content="Save into the game" Click="Save_Click"
+        <WrapPanel x:Name="PainterButtons" Classes="toolbar" Orientation="Horizontal">
+          <Button Content="Save" Click="Save_Click"
                   IsEnabled="{Binding CanPaint}"
                   ToolTip.Tip="Write this back into the ROM. Save the ROM afterwards to keep it."/>
           <Button Content="Change this colour" Click="ChangeColour_Click"
@@ -27,7 +27,7 @@
                   ToolTip.Tip="{Binding UndoHelp}"/>
           <Button Content="Close" Click="Close_Click"/>
         </WrapPanel>
-        <WrapPanel Classes="toolbar" Orientation="Horizontal" IsVisible="{Binding CanPaint}">
+        <WrapPanel x:Name="ViewBar" Classes="toolbar" Orientation="Horizontal" IsVisible="{Binding CanPaint}">
           <TextBlock Text="Frame" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"
                      IsVisible="{Binding HasFrames}"/>
           <ComboBox ItemsSource="{Binding Frames}" SelectedIndex="{Binding FrameIndex, Mode=TwoWay}"
@@ -62,7 +62,7 @@
       <StackPanel Spacing="5">
         <TextBlock Text="The colours. Click one to paint with it. With one picked, Change this colour above alters the colour itself, and every pixel already using it changes too."
                    FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
-        <ListBox ItemsSource="{Binding Colours}" SelectedItem="{Binding SelectedSwatch}"
+        <ListBox x:Name="ColourList" ItemsSource="{Binding Colours}" SelectedItem="{Binding SelectedSwatch}"
                  MaxHeight="96" Background="Transparent" BorderThickness="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.Styles>

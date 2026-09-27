@@ -41,15 +41,7 @@ namespace DSPRE.Avalonia
         private static string Coalesce(string s, string fallback) => string.IsNullOrEmpty(s) ? fallback : s;
 
         private static Window ActiveOwner()
-        {
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d)
-            {
-                foreach (var w in d.Windows)
-                    if (w.IsActive) return w;
-                return d.MainWindow;
-            }
-            return null;
-        }
+        => OwnerWindow.Current;
 
         // Convert a WinForms-style filter ("Gen IV Script File (*.scr)|*.scr") into an Avalonia file type.
         private static FilePickerFileType ToFileType(string filter)

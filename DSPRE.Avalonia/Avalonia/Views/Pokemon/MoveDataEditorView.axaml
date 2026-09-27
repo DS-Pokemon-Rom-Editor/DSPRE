@@ -26,7 +26,27 @@
 	</Style>
   </Window.Styles>
 
-  <DockPanel LastChildFill="True" Margin="10">
+  <DockPanel LastChildFill="True">
+	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+			BorderThickness="0,0,0,1" Padding="6,4">
+	  <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
+		<Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"/>
+		<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<controls:UndoRedoButtons/>
+		<TextBlock Text="Move:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+		<controls:FusionAutoCompleteBox x:Name="MovePicker" ItemsSource="{Binding MoveNames}"
+					  SelectedIndex="{Binding SelectedMoveIndex}"
+					  MinWidth="260"/>
+		<Button Content="✎ Edit move script" Click="EditMoveScript_Click"
+				ToolTip.Tip="Open this move's battle script. Platinum and HGSS only."/>
+		<Button Content="Export CSV" Click="Export_Click" Margin="12,0,0,0"/>
+		<Button Content="Import CSV" Click="Import_Click"/>
+		<Button Content="+ Add New Move…" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
+				ToolTip.Tip="Add a new move to the hg-engine checkout"/>
+	  </WrapPanel>
+	</Border>
+
+	<DockPanel LastChildFill="True" Margin="10">
 
 	<Border DockPanel.Dock="Top" Padding="8,3" Margin="0,0,0,8" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
 	  <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
@@ -35,33 +55,8 @@
 	  <TextBlock Text="{Binding SourceLoadError, StringFormat='Saving is off: {0}'}" Foreground="White" FontSize="12" TextWrapping="Wrap"/>
 	</Border>
 
-	<!-- Move selector bar -->
-	<Border DockPanel.Dock="Top" Margin="0,0,0,8">
-	  <StackPanel Orientation="Horizontal" Spacing="8">
-		<TextBlock Text="Move:" Classes="label" FontWeight="SemiBold"/>
-		<controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}"
-					  SelectedIndex="{Binding SelectedMoveIndex}"
-					  MinWidth="260"/>
-		<Button Content="✎ Edit move script" Click="EditMoveScript_Click"
-				ToolTip.Tip="Open the battle-script editor at this move's sequence (waza_seq / be_seq / sub_seq / animation). Platinum &amp; HGSS only."/>
-	  </StackPanel>
-	</Border>
-
-	<!-- Bottom toolbar -->
-	<Border DockPanel.Dock="Bottom" Margin="0,8,0,0">
-	  <Grid ColumnDefinitions="*,Auto">
-	  <TextBlock Grid.Column="0" Text="{Binding Status}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
-	  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-		<Button Content="↶ Undo"      Click="Undo_Click"    Width="80"  IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-		<Button Content="↷ Redo"      Click="Redo_Click"    Width="80"  IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-		<Button Content="Export CSV"   Click="Export_Click"  Width="110"/>
-		<Button Content="Import CSV"   Click="Import_Click"  Width="110"/>
-		<Button Content="Save Move"    Click="Save_Click"    Width="110" IsDefault="True"/>
-		<Button Content="+ Add New Move…" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
-				ToolTip.Tip="Mint a brand new move in the linked hg-engine checkout"/>
-	  </StackPanel>
-	  </Grid>
-	</Border>
+	<TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Margin="0,8,0,0" TextTrimming="CharacterEllipsis"
+			   IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
 	<!-- Main editing area -->
 	<Grid ColumnDefinitions="*,10,*" RowDefinitions="Auto,8,Auto,8,Auto,*">
@@ -69,7 +64,7 @@
 	  <!-- ── Left column ── -->
 
 	  <!-- Type / Split / Range -->
-	  <GroupBox Grid.Row="0" Grid.Column="0" Header="Move Properties">
+	  <GroupBox x:Name="PropertiesBox" Grid.Row="0" Grid.Column="0" Header="Move Properties">
 		<Grid RowDefinitions="Auto,8,Auto,8,Auto" ColumnDefinitions="Auto,*">
 
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Type:"   Classes="label"/>
@@ -87,14 +82,14 @@
 	  </GroupBox>
 
 	  <!-- Battle sequence -->
-	  <GroupBox Grid.Row="2" Grid.Column="0" Header="Battle Sequence (Effect)">
+	  <GroupBox x:Name="EffectBox" Grid.Row="2" Grid.Column="0" Header="Battle Sequence (Effect)">
 		<ComboBox ItemsSource="{Binding BattleSeqItems}"
 				  SelectedIndex="{Binding BattleSeqIndex}"
 				  HorizontalAlignment="Stretch" MinWidth="0"/>
 	  </GroupBox>
 
 	  <!-- Description -->
-	  <GroupBox Grid.Row="4" Grid.Column="0" Header="Description">
+	  <GroupBox x:Name="DescriptionBox" Grid.Row="4" Grid.Column="0" Header="Description">
 		<TextBox Text="{Binding Description}" IsReadOnly="True"
 				 TextWrapping="Wrap" MinHeight="70" AcceptsReturn="True"/>
 	  </GroupBox>
@@ -102,7 +97,7 @@
 	  <!-- ── Right column ── -->
 
 	  <!-- Numeric stats -->
-	  <GroupBox Grid.Row="0" Grid.Column="2" Header="Stats">
+	  <GroupBox x:Name="StatsBox" Grid.Row="0" Grid.Column="2" Header="Stats">
 		<Grid RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto" ColumnDefinitions="Auto,*">
 
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Power:"           Classes="label"/>
@@ -128,7 +123,7 @@
 	  </GroupBox>
 
 	  <!-- Contest -->
-	  <GroupBox Grid.Row="2" Grid.Column="2" Header="Contest">
+	  <GroupBox x:Name="ContestBox" Grid.Row="2" Grid.Column="2" Header="Contest">
 		<Grid RowDefinitions="Auto,8,Auto" ColumnDefinitions="Auto,*">
 
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Condition:" Classes="label"/>
@@ -142,7 +137,7 @@
 	  </GroupBox>
 
 	  <!-- Flags -->
-	  <GroupBox Grid.Row="4" Grid.Column="2" Grid.RowSpan="2" Header="Flags">
+	  <GroupBox x:Name="FlagsBox" Grid.Row="4" Grid.Column="2" Grid.RowSpan="2" Header="Flags">
 		<ScrollViewer>
 		  <ItemsControl ItemsSource="{Binding Flags}">
 			<ItemsControl.ItemTemplate>
@@ -155,5 +150,6 @@
 	  </GroupBox>
 
 	</Grid>
+	</DockPanel>
   </DockPanel>
 </Window>

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
         x:Class="DSPRE.Avalonia.Views.Trainers.PokegearRematchView"
         x:DataType="vm:PokegearRematchViewModel">
@@ -18,13 +19,13 @@
             BorderThickness="0,0,0,1" Padding="6">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Save Row" Click="SaveRow_Click" IsEnabled="{Binding IsRowSelected}"/>
-        <Button Content="Save All" Click="SaveAll_Click"/>
+        <Button x:Name="SaveAllButton" Content="Save All" Click="SaveAll_Click"/>
         <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="trainer name…"/>
       </StackPanel>
     </Border>
 
-    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,4">
+    <Border x:Name="NotesPanel" DockPanel.Dock="Top" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,4">
       <StackPanel Spacing="2">
         <TextBlock Text="{Binding TableNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
         <TextBlock Text="{Binding ReachabilityNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
@@ -36,9 +37,9 @@
                SelectedIndex="{Binding SelectedRowListIndex}"/>
 
       <ScrollViewer Grid.Column="1">
-        <StackPanel Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
+        <StackPanel x:Name="RowPanel" Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
           <TextBlock Text="Base Trainer" FontWeight="Bold"/>
-          <ComboBox ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding BaseTrainerIndex}" HorizontalAlignment="Stretch"/>
+          <ComboBox x:Name="BaseTrainerBox" controls:EditorLink.To="Trainer" ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding BaseTrainerIndex}" HorizontalAlignment="Stretch"/>
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="{Binding RowNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" VerticalAlignment="Center"/>
             <Button Content="Open in Phone Book" Click="OpenPhoneBook_Click" IsVisible="{Binding HasPhoneEntry}" FontSize="11" Padding="6,1"/>

@@ -1,10 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		x:Class="DSPRE.Avalonia.Views.Pokemon.TMEditorView"
 		x:DataType="vm:TMEditorViewModel"
 		Title="{Binding Title}"
-		Width="470" Height="480" MinWidth="430" MinHeight="380"
+		Width="620" Height="560" MinWidth="520" MinHeight="420"
 		CanResize="True"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
@@ -13,7 +14,7 @@
 
 
 	<Window.Styles>
-		<Style Selector="Button">
+		<Style Selector="StackPanel.detail Button">
 			<Setter Property="MinWidth" Value="120"/>
 			<Setter Property="Height" Value="30"/>
 			<Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -23,73 +24,72 @@
 		</Style>
 	</Window.Styles>
 
-	<!-- Root: two columns (list, detail panel) -->
-	<Grid Margin="8" ColumnDefinitions="230,*" RowDefinitions="*,Auto">
+	<DockPanel>
+		<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+				BorderThickness="0,0,0,1" Padding="6,4">
+			<StackPanel Orientation="Horizontal" Spacing="6">
+				<Button Content="Save" Click="SaveButton_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+				<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+				<controls:UndoRedoButtons/>
+				<Button Content="Export CSV" Click="ExportButton_Click" Margin="12,0,0,0"/>
+				<Button Content="Import CSV" Click="ImportButton_Click"/>
+			</StackPanel>
+		</Border>
 
-		<!-- ── Left column: TM/HM list ─────────────────────────────── -->
-		<StackPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="2"
-					Margin="0,0,8,0">
-			<Label Content="TM / HM List" FontWeight="SemiBold" Margin="0,0,0,4"/>
-			<ListBox ItemsSource="{Binding MachineItems}"
-					 SelectedIndex="{Binding SelectedMachineIndex}"
-					 Height="390"
-					 ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-		</StackPanel>
+		<!-- Two columns: list, detail panel -->
+		<Grid Margin="8" ColumnDefinitions="280,*">
 
-		<!-- ── Right column: detail controls ──────────────────────── -->
-		<StackPanel Grid.Column="1" Grid.Row="0"
-					Spacing="8" VerticalAlignment="Top">
+			<!-- ── Left column: TM/HM list ─────────────────────────────── -->
+			<DockPanel Grid.Column="0" Margin="0,0,8,0">
+				<Label DockPanel.Dock="Top" Content="TM / HM List" FontWeight="SemiBold" Margin="0,0,0,4"/>
+				<ListBox ItemsSource="{Binding MachineItems}"
+						 SelectedIndex="{Binding SelectedMachineIndex}"
+						 ScrollViewer.VerticalScrollBarVisibility="Auto">
+					<ListBox.ItemTemplate>
+						<DataTemplate x:DataType="vm:TMEditorViewModel+MachineRow">
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<Image Width="32" Height="16" RenderOptions.BitmapInterpolationMode="None"
+									   Source="{Binding Move, Converter={x:Static controls:GameIconConverter.MoveType}}"/>
+								<TextBlock Text="{Binding Text}" VerticalAlignment="Center"/>
+							</StackPanel>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+			</DockPanel>
 
-			<!-- Move selector -->
-			<Label Content="Move"/>
-			<ComboBox ItemsSource="{Binding MoveNames}"
-					  SelectedIndex="{Binding SelectedMoveIndex}"
-					  HorizontalAlignment="Stretch"/>
+			<!-- ── Right column: detail controls ──────────────────────── -->
+			<StackPanel x:Name="MachineDetail" Grid.Column="1" Classes="detail"
+						Spacing="8" VerticalAlignment="Top" MaxWidth="360" HorizontalAlignment="Left" MinWidth="220">
 
-			<!-- Auto-Palette (single) -->
-			<Button Content="Auto Palette"
-					Click="AutoPaletteButton_Click"
-					ToolTip.Tip="Set palette based on the selected move's type."
-					HorizontalAlignment="Stretch"/>
+				<!-- Move selector -->
+				<Label Content="Move"/>
+				<ComboBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}"
+						  SelectedIndex="{Binding SelectedMoveIndex}"
+						  HorizontalAlignment="Stretch"/>
 
-			<!-- Type / Palette selector -->
-			<Label Content="Palette (Type)"/>
-			<ComboBox ItemsSource="{Binding TypeNames}"
-					  SelectedIndex="{Binding SelectedTypeIndex}"
-					  HorizontalAlignment="Stretch"/>
+				<!-- Auto-Palette (single) -->
+				<Button Content="Auto Palette"
+						Click="AutoPaletteButton_Click"
+						IsEnabled="{Binding PalettesKnown}"
+						ToolTip.Tip="Set palette based on the selected move's type."
+						HorizontalAlignment="Stretch"/>
 
-			<!-- Auto-Palette All -->
-			<Button Content="Auto Palette All"
-					Click="AutoPaletteAllButton_Click"
-					ToolTip.Tip="Apply automatic palette based on move type to all TMs/HMs."
-					HorizontalAlignment="Stretch"/>
+				<!-- Type / Palette selector -->
+				<Label Content="Palette (Type)"/>
+				<ComboBox ItemsSource="{Binding TypeNames}"
+						  SelectedIndex="{Binding SelectedTypeIndex}"
+						  IsEnabled="{Binding PalettesKnown}"
+						  HorizontalAlignment="Stretch"/>
 
-		</StackPanel>
+				<!-- Auto-Palette All -->
+				<Button Content="Auto Palette All"
+						Click="AutoPaletteAllButton_Click"
+						IsEnabled="{Binding PalettesKnown}"
+						ToolTip.Tip="Apply automatic palette based on move type to all TMs/HMs."
+						HorizontalAlignment="Stretch"/>
 
-		<!-- ── Right column bottom: save / export / import ─────────── -->
-		<StackPanel Grid.Column="1" Grid.Row="1"
-					Spacing="6" VerticalAlignment="Bottom">
+			</StackPanel>
 
-			<!-- Undo and Redo sit side by side here, so the window has to be wide enough for both
-			     labels. At 400 they were cut in half. -->
-			<Grid ColumnDefinitions="*,6,*">
-				<Button Grid.Column="0" Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-				<Button Grid.Column="2" Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
-			</Grid>
-
-			<Button Content="Save"
-					Click="SaveButton_Click"
-					HorizontalAlignment="Stretch"/>
-
-			<Button Content="Export"
-					Click="ExportButton_Click"
-					HorizontalAlignment="Stretch"/>
-
-			<Button Content="Import"
-					Click="ImportButton_Click"
-					HorizontalAlignment="Stretch"/>
-
-		</StackPanel>
-
-	</Grid>
+		</Grid>
+	</DockPanel>
 </Window>

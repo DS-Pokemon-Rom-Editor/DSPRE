@@ -6,7 +6,7 @@
              x:DataType="vm:MapGeometryViewModel">
   <Grid ColumnDefinitions="*,250">
     <DockPanel Grid.Column="0">
-      <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+      <WrapPanel x:Name="ShapeBar" DockPanel.Dock="Top" Margin="0,0,0,4">
         <Button Content="Top" Click="CamTop_Click"/>
         <Button Content="Corner" Click="CamIso_Click" Margin="4,0,0,0"/>
         <Button Content="Front" Click="CamFront_Click" Margin="4,0,0,0"/>
@@ -27,7 +27,7 @@
       </Border>
     </DockPanel>
 
-    <DockPanel Grid.Column="1" Margin="8,0,0,0">
+    <DockPanel x:Name="ShapePanel" Grid.Column="1" Margin="8,0,0,0">
       <StackPanel DockPanel.Dock="Top" Spacing="6">
         <TextBlock Text="{Binding Note}" TextWrapping="Wrap" MinHeight="64"
                    FontFamily="Consolas,monospace"/>

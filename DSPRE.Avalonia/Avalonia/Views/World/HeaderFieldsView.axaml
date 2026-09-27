@@ -30,7 +30,7 @@
       <StackPanel Grid.Column="0" Spacing="10" Margin="0,0,10,0">
 
         <!-- Location & area -->
-        <GroupBox Header="Location &amp; Area">
+        <GroupBox x:Name="LocationGroup" Header="Location &amp; Area">
           <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto">
             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Internal name"/>
@@ -55,7 +55,7 @@
         </GroupBox>
 
         <!-- Appearance & sound: fixed-width numeric + readable combo, no full-width dropdowns -->
-        <GroupBox Header="Appearance &amp; Sound">
+        <GroupBox x:Name="SoundGroup" Header="Appearance &amp; Sound">
           <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto">
             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Music (Day)"/>
@@ -89,7 +89,7 @@
         </GroupBox>
 
         <!-- Linked files. The "🔗 Open" buttons jump to the referenced file in its editor. -->
-        <GroupBox Header="Linked Files">
+        <GroupBox x:Name="LinkedFilesGroup" Header="Linked Files">
           <Grid ColumnDefinitions="Auto,Auto,28,Auto,Auto" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto">
             <TextBlock Grid.Row="0" Grid.Column="0" Classes="inlinelabel" Text="Matrix"/>
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
@@ -139,7 +139,7 @@
         </GroupBox>
 
         <!-- Map setting flags (names match WinForms; flags 4-6 HGSS-only) -->
-        <GroupBox Header="Map Settings">
+        <GroupBox x:Name="MapSettingsGroup" Header="Map Settings">
           <WrapPanel>
             <CheckBox Content="Bicycle"   IsChecked="{Binding Flag0}" Margin="0,0,16,0"/>
             <CheckBox Content="Run"       IsChecked="{Binding Flag1}" Margin="0,0,16,0"/>
@@ -152,7 +152,7 @@
         </GroupBox>
 
         <!-- HGSS-only -->
-        <GroupBox Header="HGSS Settings" IsVisible="{Binding ShowHgssOnly}">
+        <GroupBox x:Name="HgssGroup" Header="HGSS Settings" IsVisible="{Binding ShowHgssOnly}">
           <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto,8,Auto">
             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="World map coordinates"/>
@@ -185,7 +185,7 @@
 
       <!-- ── Right: preview rail. The images are DS-resolution (256x192) screenshots and
            ~130x37 pixel banners, so they get big fixed frames instead of thumbnails. ── -->
-      <StackPanel Grid.Column="1" Width="260" Spacing="10">
+      <StackPanel x:Name="PreviewRail" Grid.Column="1" Width="260" Spacing="10">
         <GroupBox Header="Area Icon" IsVisible="{Binding ShowAreaIcon}">
           <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
                   BorderThickness="1" Height="56" Padding="3">

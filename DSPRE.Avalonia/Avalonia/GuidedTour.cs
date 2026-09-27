@@ -59,55 +59,19 @@ namespace DSPRE.Avalonia
             _active.Begin();
         }
 
-        /// <summary>
-        /// Runs an editor's tour the first time that editor opens, or every time when <paramref name="force"/>
-        /// is set (its replay button). <paramref name="key"/> names the editor in the settings.
-        /// </summary>
-        public static void StartEditor(Control root, string key, bool force,
-            params (Func<Control> target, string title, string body)[] steps)
+        /// <summary>Plays an editor's tour over <paramref name="root"/>, in that editor's own window.</summary>
+        public static void StartSteps(Control root, List<(Func<Control> target, string title, string body, Action onEnter)> steps)
         {
-            if (root == null || _active != null || steps.Length == 0) return;
-            var settings = SettingsManager.Settings;
-            if (!force)
-            {
-                if (settings == null) return;
-                settings.editorToursShown ??= new List<string>();
-                if (settings.editorToursShown.Contains(key)) return;
-                settings.editorToursShown.Add(key);
-                SettingsManager.Save();
-            }
-
+            if (root == null || _active != null || steps.Count == 0) return;
             var overlay = OverlayLayer.GetOverlayLayer(root);
             if (overlay == null) return;
             var layer = new Canvas { Background = null };
             overlay.Children.Add(layer);
 
             var list = new List<Step>();
-            foreach (var (target, title, body) in steps) list.Add(new Step { Target = target, Title = title, Body = body });
+            foreach (var (target, title, body, onEnter) in steps) list.Add(new Step { Target = target, Title = title, Body = body, OnEnter = onEnter });
             _active = new GuidedTour(root, layer, list);
-            AppLogger.Info($"Editor tour started: {key}");
             _active.Begin();
-        }
-
-        /// <summary>
-        /// Starts an editor's tour once it is on screen with its data loaded, unless it has run before.
-        /// Polls because an embedded editor becomes visible when its tab is picked, not when it loads.
-        /// </summary>
-        public static void OfferWhenShown(Control view, string key, Func<bool> ready,
-            Func<(Func<Control> target, string title, string body)[]> steps)
-        {
-            if (Design.IsDesignMode) return;
-            var timer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            timer.Tick += (_, _) =>
-            {
-                if (SettingsManager.Settings?.editorToursShown?.Contains(key) == true) { timer.Stop(); return; }
-                if (_active != null || !view.IsEffectivelyVisible || view.Bounds.Width < 200 || !ready()) return;
-                timer.Stop();
-                StartEditor(view, key, false, steps());
-            };
-            view.AttachedToVisualTree += (_, _) => timer.Start();
-            view.DetachedFromVisualTree += (_, _) => timer.Stop();
-            if (TopLevel.GetTopLevel(view) != null) timer.Start();
         }
 
         private GuidedTour(Control root, Canvas layer, List<Step> steps)
@@ -354,7 +318,7 @@ namespace DSPRE.Avalonia
             if (_index >= _steps.Count - 1) { End(); return; }
             _index++;
             _steps[_index].OnEnter?.Invoke();
-            Render();
+            RenderSettled();
         }
 
         private void Back()
@@ -362,7 +326,15 @@ namespace DSPRE.Avalonia
             if (_index == 0) return;
             _index--;
             _steps[_index].OnEnter?.Invoke();
+            RenderSettled();
+        }
+
+        // A step that switched tabs points at controls the new tab has not laid out yet; draw now, then again once it has.
+        private void RenderSettled()
+        {
             Render();
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { if (_active == this) Render(); },
+                global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
         // ── Rendering ────────────────────────────────────────────────────────────

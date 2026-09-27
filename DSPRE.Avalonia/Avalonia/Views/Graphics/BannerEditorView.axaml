@@ -1,5 +1,6 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window MinWidth="520" MinHeight="480" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.BannerEditorView"
         x:DataType="vm:BannerEditorViewModel"
@@ -17,11 +18,19 @@
       <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      </StackPanel>
+    </Border>
+
     <ScrollViewer>
       <StackPanel Margin="12" Spacing="12">
 
         <TextBlock Text="Game icon" FontWeight="SemiBold"/>
-        <StackPanel Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
+        <StackPanel x:Name="IconRow" Orientation="Horizontal" Spacing="14" VerticalAlignment="Center">
           <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Padding="4"
                   Background="{DynamicResource Editor.PanelBg}">
             <Image Source="{Binding IconPreview}" Width="128" Height="128"
@@ -37,10 +46,11 @@
 
         <Separator/>
 
-        <TextBlock Text="Menu titles" FontWeight="SemiBold"/>
-        <TextBlock Text="The text shown under the icon in the DS system menu (usually game name, then publisher). Line breaks matter."
-                   FontSize="11" Opacity="0.7" TextWrapping="Wrap"/>
-        <ItemsControl ItemsSource="{Binding Titles}">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Text="Menu titles" FontWeight="SemiBold"/>
+          <controls:HelpTip Text="The text shown under the icon in the DS system menu (usually game name, then publisher). Line breaks matter."/>
+        </StackPanel>
+        <ItemsControl x:Name="TitlesList" ItemsSource="{Binding Titles}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:BannerEditorViewModel+TitleEntry">
               <StackPanel Spacing="2" Margin="0,4,0,0">
@@ -51,7 +61,6 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <Button Content="Save titles" Click="SaveTitles_Click" HorizontalAlignment="Left" Margin="0,4,0,0"/>
       </StackPanel>
     </ScrollViewer>
   </DockPanel>

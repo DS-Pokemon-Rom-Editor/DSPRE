@@ -11,18 +11,20 @@
   </Design.DataContext>
 
 
-  <DockPanel Margin="8" LastChildFill="True">
+  <DockPanel>
+	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+			BorderThickness="0,0,0,1" Padding="6,4">
+	  <WrapPanel x:Name="MapActions" Classes="toolbar">
+		<Button Content="Save"              IsEnabled="{Binding HasMap}" Click="Save_Click"/>
+		<Button Content="Create Custom Map" Click="CreateMap_Click" Margin="12,2,6,2"/>
+		<Button Content="Delete Custom Map" IsEnabled="{Binding HasMap}" Click="DeleteMap_Click"/>
+		<Button Content="Reload"            Click="Reload_Click"/>
+		<Button Content="Open File"         IsEnabled="{Binding HasMap}" Click="OpenFile_Click"/>
+		<Button Content="Rebase"            IsEnabled="{Binding HasMap}" Click="Rebase_Click"/>
+	  </WrapPanel>
+	</Border>
 
-	<!-- Bottom action bar -->
-	<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
-				HorizontalAlignment="Right" Spacing="6" Margin="0,8,0,0">
-	  <Button Content="Create Custom Map" Click="CreateMap_Click"/>
-	  <Button Content="Delete Custom Map" IsEnabled="{Binding HasMap}" Click="DeleteMap_Click"/>
-	  <Button Content="Reload"            Click="Reload_Click"/>
-	  <Button Content="Open File"         IsEnabled="{Binding HasMap}" Click="OpenFile_Click"/>
-	  <Button Content="Rebase"            IsEnabled="{Binding HasMap}" Click="Rebase_Click"/>
-	  <Button Content="Save"              IsEnabled="{Binding HasMap}" Click="Save_Click"/>
-	</StackPanel>
+  <DockPanel Margin="8" LastChildFill="True">
 
 	<Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,*,Auto,Auto">
 
@@ -34,7 +36,7 @@
 				 DoubleTapped="CharMapList_DoubleTapped"/>
 
 	  <!-- Search row under charmap list -->
-	  <DockPanel Grid.Row="2" Grid.Column="0" Margin="0,6,0,0">
+	  <DockPanel x:Name="CharSearch" Grid.Row="2" Grid.Column="0" Margin="0,6,0,0">
 		<Button DockPanel.Dock="Right" Content="Search" Click="Search_Click" Margin="6,0,0,0"/>
 		<TextBox Text="{Binding SearchText}" PlaceholderText="Search (0x... for hex code)"
 				 KeyDown="Search_KeyDown"/>
@@ -51,7 +53,7 @@
 				 SelectedIndex="{Binding SelectedAliasIndex}"/>
 
 	  <!-- Right bottom: Add alias controls -->
-	  <StackPanel Grid.Row="2" Grid.Column="2" Margin="0,6,0,0" Spacing="4">
+	  <StackPanel x:Name="AliasPanel" Grid.Row="2" Grid.Column="2" Margin="0,6,0,0" Spacing="4">
 		<TextBlock Text="Code to alias:"/>
 		<ComboBox ItemsSource="{Binding CodeItems}"
 				  SelectedIndex="{Binding SelectedCodeIndex}"
@@ -64,5 +66,6 @@
 	  </StackPanel>
 
 	</Grid>
+  </DockPanel>
   </DockPanel>
 </Window>

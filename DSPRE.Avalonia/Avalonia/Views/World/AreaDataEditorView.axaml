@@ -25,12 +25,15 @@
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <StackPanel Margin="14" Spacing="8" MaxWidth="380" HorizontalAlignment="Left">
-      <TextBlock Text="These pick the NSBTX packs the map/event 3D views use." FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+    <StackPanel x:Name="AreaFields" Margin="14" Spacing="8" MaxWidth="380" HorizontalAlignment="Left">
+      <StackPanel Orientation="Horizontal">
+        <TextBlock Text="Texture packs" FontWeight="SemiBold"/>
+        <controls:HelpTip Text="Which texture sets the map and its buildings use."/>
+      </StackPanel>
       <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" >
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Map tileset (NSBTX)" VerticalAlignment="Center"/>
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Map textures" VerticalAlignment="Center"/>
         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding MapTileset}" Margin="2"/>
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Buildings tileset (NSBTX)" VerticalAlignment="Center"/>
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Building textures" VerticalAlignment="Center"/>
         <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding BuildingsTileset}" Margin="2"/>
         <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding ThirdFieldLabel}" VerticalAlignment="Center"/>
         <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6">

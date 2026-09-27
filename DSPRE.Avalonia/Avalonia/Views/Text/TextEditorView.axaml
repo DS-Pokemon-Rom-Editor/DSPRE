@@ -50,7 +50,7 @@
     </Border>
 
     <!-- ── Search / replace panel ──────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Right" Width="300" Background="{DynamicResource Editor.PanelBg}"
+    <Border x:Name="ReplacePanel" DockPanel.Dock="Right" Width="300" Background="{DynamicResource Editor.PanelBg}"
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0" Padding="8">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Spacing="4">
@@ -73,7 +73,7 @@
 
     <!-- ── Message grid + line controls ────────────────────────────────────── -->
     <DockPanel>
-      <Border DockPanel.Dock="Bottom" Padding="4" Background="{DynamicResource Editor.ToolbarBg}"
+      <Border x:Name="LineButtons" DockPanel.Dock="Bottom" Padding="4" Background="{DynamicResource Editor.ToolbarBg}"
               BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Button Content="Add String"    Click="AddString_Click"/>

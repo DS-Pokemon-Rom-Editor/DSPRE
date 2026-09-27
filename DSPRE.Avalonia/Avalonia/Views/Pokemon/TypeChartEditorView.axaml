@@ -15,7 +15,7 @@
         <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button Content="Make room…" Click="MakeRoom_Click" IsVisible="{Binding CanMakeRoom}"
+        <Button x:Name="MakeRoomButton" Content="Make room…" Click="MakeRoom_Click" IsVisible="{Binding CanMakeRoom}"
                 ToolTip.Tip="{Binding MakeRoomTip}"/>
         <TextBlock Text="{Binding Room}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
@@ -33,7 +33,7 @@
         </LayoutTransformControl>
       </ScrollViewer>
 
-      <StackPanel Margin="16,0,0,0" Spacing="8" Width="240" HorizontalAlignment="Left">
+      <StackPanel x:Name="EditPanel" Margin="16,0,0,0" Spacing="8" Width="240" HorizontalAlignment="Left">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Image Source="{Binding AttackerIcon}" Width="32" Height="16" IsVisible="{Binding AttackerIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>
           <TextBlock Text="→" VerticalAlignment="Center" IsVisible="{Binding DefenderIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>

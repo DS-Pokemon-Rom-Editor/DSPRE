@@ -14,8 +14,13 @@
 
     <DockPanel>
         <!-- ── Top: Item Selector ── -->
-        <Border DockPanel.Dock="Top" Padding="6,4" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
+        <Border DockPanel.Dock="Top" Padding="6,4" BorderThickness="0,0,0,1" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}">
+            <StackPanel x:Name="ItemBar" Orientation="Horizontal" Spacing="6">
+                <Button x:Name="SaveAllButton" Content="Save" IsEnabled="{Binding HasUnsavedChanges}"/>
+                <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+                <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+                <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+                <Separator Width="12"/>
                 <TextBlock VerticalAlignment="Center">Item:</TextBlock>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}"
                                                 SelectedIndex="{Binding SelectedItemIndex}"
@@ -25,10 +30,6 @@
                                Minimum="0" Maximum="{Binding MaxItemIndex}"
                                Width="100" FormatString="0"/>
                 <Separator Width="12"/>
-                <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-                <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-                <Separator Width="12"/>
-                <Button x:Name="SaveAllButton">💾 Save All</Button>
                 <Button x:Name="ExportButton" Click="Export_Click">📤 Export…</Button>
                 <Button Content="Open icon in Graphics…" Click="OpenInGraphics_Click"
                         ToolTip.Tip="Open this item's icon in the Graphics window, where it can be painted by hand."/>
@@ -36,6 +37,8 @@
                         ToolTip.Tip="Mint a brand new item in the linked hg-engine checkout"/>
             </StackPanel>
         </Border>
+        <TextBlock DockPanel.Dock="Top" Margin="8,3" Text="{Binding SharedDataNote}" IsVisible="{Binding HasSharedDataNote}"
+                   Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
         <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
             <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
         </Border>
@@ -51,7 +54,7 @@
                 <Grid ColumnDefinitions="200,*,*" ColumnSpacing="6">
 
                     <!-- Left: Icon preview + Table Entry -->
-                    <StackPanel Grid.Column="0" Spacing="4">
+                    <StackPanel x:Name="TableEntryBox" Grid.Column="0" Spacing="4">
                         <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
                                 Width="64" Height="64" HorizontalAlignment="Left"
                                 CornerRadius="4">
@@ -90,7 +93,7 @@
                     </StackPanel>
 
                     <!-- Middle: Hold Effect + Pocket -->
-                    <StackPanel Grid.Column="1" Spacing="4">
+                    <StackPanel x:Name="HoldPocketColumn" Grid.Column="1" Spacing="4">
                         <!-- Hold Effect -->
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
@@ -129,7 +132,7 @@
                     </StackPanel>
 
                     <!-- Right: Checks + Price + Functions -->
-                    <StackPanel Grid.Column="2" Spacing="4">
+                    <StackPanel x:Name="UsageColumn" Grid.Column="2" Spacing="4">
                         <!-- Checks -->
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
@@ -173,7 +176,7 @@
                 </Grid>
 
                 <!-- Row 2: Move Related (full width) -->
-                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                <Border x:Name="MoveRelatedBox" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                         BorderThickness="1" CornerRadius="4" Padding="6">
                     <StackPanel Spacing="4">
                         <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Move Related</TextBlock>

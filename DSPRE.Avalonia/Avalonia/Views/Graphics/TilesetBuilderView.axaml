@@ -46,7 +46,7 @@
 
       <!-- Saving stays at the bottom of the panel rather than at the end of a long scroll, so the one
            thing this window is for is never below the fold. -->
-      <StackPanel DockPanel.Dock="Bottom" Margin="12,10,12,12" Spacing="8">
+      <StackPanel x:Name="SavePanel" DockPanel.Dock="Bottom" Margin="12,10,12,12" Spacing="8">
         <Separator Background="{DynamicResource Editor.Separator}"/>
         <Button Content="💾 Save the three files…" Click="Save_Click"
                 IsEnabled="{Binding CanSave}" HorizontalAlignment="Stretch"
@@ -57,7 +57,7 @@
                    Text="Writes the three files side by side, ready for the Graphics workbench."/>
       </StackPanel>
 
-      <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <ScrollViewer x:Name="OptionsPanel" VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="12" Spacing="12">
 
           <TextBlock Text="How it is drawn" Classes="head"/>
@@ -119,7 +119,7 @@
 
     <!-- The picture, before and after. The words sit outside the scroller so they wrap to whatever
          width there is, while a picture wider than the window scrolls sideways on its own. -->
-    <DockPanel Margin="14,12,14,10">
+    <DockPanel x:Name="PictureArea" Margin="14,12,14,10">
 
       <TextBlock DockPanel.Dock="Top" Classes="hint" IsVisible="{Binding HasNoPicture}"
                  Text="Open a PNG to see it as it is and as the game would draw it. Differences are what the screen cannot hold."/>

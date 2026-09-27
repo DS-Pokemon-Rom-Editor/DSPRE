@@ -21,7 +21,7 @@
     <Grid ColumnDefinitions="230,*" Margin="8">
       <DockPanel Grid.Column="0" Margin="0,0,8,0">
         <TextBlock DockPanel.Dock="Top" Text="Floors" FontWeight="Bold" Margin="0,0,0,4"/>
-        <ListBox ItemsSource="{Binding Floors}" SelectedIndex="{Binding SelectedFloorIndex}">
+        <ListBox x:Name="FloorList" ItemsSource="{Binding Floors}" SelectedIndex="{Binding SelectedFloorIndex}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:DistortionWorldViewModel+FloorRow">
               <TextBlock Text="{Binding Label}"/>
@@ -38,7 +38,7 @@
           <TabItem Header="Map">
             <Grid ColumnDefinitions="*,340" Margin="2">
               <DockPanel Grid.Column="0">
-                <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                <WrapPanel x:Name="MapViewBar" DockPanel.Dock="Top" Margin="0,0,0,4">
                   <ToggleButton Content="2D" IsChecked="{Binding Flat2D}" Padding="6,2" VerticalAlignment="Center"/>
                   <Button Content="Top" Click="CamTop_Click" Padding="6,2" IsEnabled="{Binding !Flat2D}"/>
                   <Button Content="Iso" Click="CamIso_Click" Padding="6,2" IsEnabled="{Binding !Flat2D}"/>
@@ -76,7 +76,7 @@
 
               <DockPanel Grid.Column="1" Margin="8,0,0,0">
                 <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
-                  <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SurfaceRows}"
+                  <ComboBox x:Name="SurfaceBox" HorizontalAlignment="Stretch" ItemsSource="{Binding SurfaceRows}"
                             SelectedIndex="{Binding SelectedPlatformIndex}">
                     <ComboBox.ItemTemplate>
                       <DataTemplate x:DataType="vm:DistortionWorldViewModel+SurfaceRow">

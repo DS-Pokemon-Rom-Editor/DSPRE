@@ -1,4 +1,4 @@
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -31,6 +31,21 @@ namespace DSPRE
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
+
+            // A cleared number box would sit blank over an unchanged value, so it gets its last number back on losing focus.
+            var lastNumber = new System.Runtime.CompilerServices.ConditionalWeakTable<NumericUpDown, object>();
+            void RestoreIfEmpty(NumericUpDown box) => global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (box.Value == null && !box.IsKeyboardFocusWithin && lastNumber.TryGetValue(box, out var last))
+                    box.SetCurrentValue(NumericUpDown.ValueProperty, (decimal)last);
+            });
+            NumericUpDown.ValueChangedEvent.AddClassHandler<NumericUpDown>((box, e) =>
+            {
+                if (e.NewValue is decimal v) lastNumber.AddOrUpdate(box, v);
+                else RestoreIfEmpty(box);
+            }, global::Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
+            global::Avalonia.Input.InputElement.LostFocusEvent.AddClassHandler<NumericUpDown>((box, _) => RestoreIfEmpty(box),
+                global::Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
         }
 
         public override void OnFrameworkInitializationCompleted()
@@ -44,6 +59,18 @@ namespace DSPRE
                 // Catch exceptions from async-void UI handlers (Save/Import/close, …) so one editor
                 // throwing doesn't kill the process and every other editor's unsaved work with it.
                 DSPRE.Avalonia.AvaloniaErrorHandler.Install();
+                DSPRE.Avalonia.OwnerWindow.Install();
+                DSPRE.Avalonia.EditorTours.Install();
+
+                // Grey secondary text in list rows is unreadable on the blue selection, in both themes.
+                var subtleOnSelection = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xD8, 0xE8, 0xF4));
+                void Selected(global::Avalonia.Controls.Control row, bool on)
+                {
+                    if (on) row.Resources["Editor.Subtle"] = subtleOnSelection;
+                    else row.Resources.Remove("Editor.Subtle");
+                }
+                global::Avalonia.Controls.ListBoxItem.IsSelectedProperty.Changed.AddClassHandler<global::Avalonia.Controls.ListBoxItem>((row, e) => Selected(row, row.IsSelected));
+                global::Avalonia.Controls.TreeViewItem.IsSelectedProperty.Changed.AddClassHandler<global::Avalonia.Controls.TreeViewItem>((row, e) => Selected(row, row.IsSelected));
 
                 if (WinFormsHostHook == null || !UseWinFormsShell)
                 {

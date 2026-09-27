@@ -272,12 +272,15 @@
 
       <Border IsVisible="{Binding IsBusy}"
               Background="#A0000000" ZIndex="100">
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Width="320">
-          <TextBlock Text="{Binding BusyText}" FontSize="18" HorizontalAlignment="Center"/>
-          <ProgressBar IsIndeterminate="True"/>
-          <TextBlock Text="{Binding BusyHint}"
-                     FontSize="12" Opacity="0.8" TextWrapping="Wrap" TextAlignment="Center"/>
-        </StackPanel>
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center" Background="{DynamicResource Editor.PanelBg}"
+                BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="6" Padding="20,16">
+          <StackPanel Spacing="12" Width="320">
+            <TextBlock Text="{Binding BusyText}" FontSize="18" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+            <ProgressBar IsIndeterminate="True"/>
+            <TextBlock Text="{Binding BusyHint}"
+                       FontSize="12" Opacity="0.8" TextWrapping="Wrap" TextAlignment="Center"/>
+          </StackPanel>
+        </Border>
       </Border>
     </Panel>
 

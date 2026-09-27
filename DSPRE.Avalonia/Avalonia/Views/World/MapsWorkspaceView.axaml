@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.World"
@@ -57,6 +57,9 @@
           <StackPanel Spacing="7">
             <DockPanel>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" x:Name="SaveResetPanel">
+                <Button Content="⧉ Open in window" Click="PopOut_Click"
+                        ToolTip.Tip="Open the current tab in its full editor, on the same map or file."/>
+                <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
                 <Button Content="💾 Save header" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
                         ToolTip.Tip="Save just this header's own fields. Each tab (Map, Events, Scripts…) has its own Save button for its own data."/>
                 <Button Content="↺ Reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
@@ -72,7 +75,7 @@
             </DockPanel>
             <WrapPanel>
               <Border Classes="chip" ToolTip.Tip="The world-map grid this header's maps sit in. The Matrix Editor shows the whole grid."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="Terrain and building set used by this area (textures, models, tile behaviors)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="The map and building texture packs, lighting and terrain animation this header uses."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId}"/></StackPanel></Border>
               <Border Classes="chip" ToolTip.Tip="File with the NPCs, warps, triggers and hidden items placed on this map."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId}"/></StackPanel></Border>
               <Border Classes="chip" ToolTip.Tip="File with the event logic that runs when you talk to NPCs or step on triggers here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId}"/></StackPanel></Border>
               <Border Classes="chip" ToolTip.Tip="Scripts that run automatically when the map loads (music, weather, one-time setup)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level Scripts"/><TextBlock Text="{Binding LevelScriptId}"/></StackPanel></Border>
@@ -91,7 +94,7 @@
                 <TextBlock Text="Header" VerticalAlignment="Center"/>
               </StackPanel>
             </TabItem.Header>
-            <views:HeaderFieldsView/>
+            <views:HeaderFieldsView x:Name="HeaderEmbed"/>
           </TabItem>
           <TabItem ToolTip.Tip="The 3D terrain and buildings of the selected map." AutomationProperties.Name="Map">
             <TabItem.Header>

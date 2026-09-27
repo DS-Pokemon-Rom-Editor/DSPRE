@@ -1,5 +1,6 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window MinWidth="700" MinHeight="560" xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
 		x:Class="DSPRE.Avalonia.Views.Pokemon.TradeEditorView"
 		x:DataType="vm:TradeEditorViewModel"
@@ -11,33 +12,29 @@
   </Design.DataContext>
 
 
-  <DockPanel Margin="10" LastChildFill="True">
+  <DockPanel LastChildFill="True">
+	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+			BorderThickness="0,0,0,1" Padding="6,4">
+	  <StackPanel Orientation="Horizontal" Spacing="6">
+		<Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<controls:UndoRedoButtons/>
+		<TextBlock Text="Trade ID:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+		<NumericUpDown x:Name="TradePicker" Value="{Binding TradeID}"
+					   Minimum="{Binding TradeIDMin}"
+					   Maximum="{Binding TradeIDMax}"
+					   Width="80"
+					   ValueChanged="TradeID_Changed"/>
+	  </StackPanel>
+	</Border>
 
-	<!-- Trade ID selector -->
-	<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,10">
-	  <TextBlock Text="Trade ID:" VerticalAlignment="Center"/>
-	  <NumericUpDown Value="{Binding TradeID}"
-					 Minimum="{Binding TradeIDMin}"
-					 Maximum="{Binding TradeIDMax}"
-					 Width="80"
-					 ValueChanged="TradeID_Changed"/>
-	</StackPanel>
-
-	<!-- Save buttons -->
-	<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6"
-				HorizontalAlignment="Right" Margin="0,8,0,0">
-	  <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-	  <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-	  <Button Content="Save Trade Data" Click="SaveTrade_Click"/>
-	  <Button Content="Save Text Data"  Click="SaveText_Click"/>
-	  <Button Content="Save All"        Click="SaveAll_Click"/>
-	</StackPanel>
+	<DockPanel Margin="10" LastChildFill="True">
 
 	<!-- Two columns: Trade Data | Text Data -->
-	<Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+	<controls:CappedWidth Cap="1100"><Grid ColumnDefinitions="*,*" ColumnSpacing="10">
 
 	  <!-- LEFT: Trade Data -->
-	  <Border Grid.Column="0" BorderThickness="1"
+	  <Border x:Name="TradeDataPanel" Grid.Column="0" BorderThickness="1"
 			  BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
 		<ScrollViewer>
 		  <StackPanel Spacing="6">
@@ -46,16 +43,25 @@
 			<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
 
 			  <TextBlock Grid.Row="0"  Grid.Column="0" Text="Species:"          VerticalAlignment="Center"/>
-			  <ComboBox  Grid.Row="0"  Grid.Column="1" ItemsSource="{Binding PokemonNames}"  SelectedIndex="{Binding SelectedSpecies}"/>
+			  <DockPanel Grid.Row="0" Grid.Column="1">
+			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedSpecies, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+			    <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedSpecies}"/>
+			  </DockPanel>
 
 			  <TextBlock Grid.Row="1"  Grid.Column="0" Text="Requested:"        VerticalAlignment="Center"/>
-			  <ComboBox  Grid.Row="1"  Grid.Column="1" ItemsSource="{Binding PokemonNames}"  SelectedIndex="{Binding SelectedRequested}"/>
+			  <DockPanel Grid.Row="1" Grid.Column="1">
+			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedRequested, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+			    <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedRequested}"/>
+			  </DockPanel>
 
 			  <TextBlock Grid.Row="2"  Grid.Column="0" Text="Ability:"          VerticalAlignment="Center"/>
 			  <ComboBox  Grid.Row="2"  Grid.Column="1" ItemsSource="{Binding AbilityNames}"  SelectedIndex="{Binding SelectedAbility}"/>
 
 			  <TextBlock Grid.Row="3"  Grid.Column="0" Text="Held Item:"        VerticalAlignment="Center"/>
-			  <ComboBox  Grid.Row="3"  Grid.Column="1" ItemsSource="{Binding ItemNames}"     SelectedIndex="{Binding SelectedHeldItem}"/>
+			  <DockPanel Grid.Row="3" Grid.Column="1">
+			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedHeldItem, Converter={x:Static controls:GameIconConverter.Item}}"/>
+			    <ComboBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding SelectedHeldItem}"/>
+			  </DockPanel>
 
 			  <TextBlock Grid.Row="4"  Grid.Column="0" Text="OT Gender:"        VerticalAlignment="Center"/>
 			  <ComboBox  Grid.Row="4"  Grid.Column="1" ItemsSource="{Binding OTGenderNames}" SelectedIndex="{Binding SelectedOTGender}"/>
@@ -116,7 +122,7 @@
 	  </Border>
 
 	  <!-- RIGHT: Text Data -->
-	  <Border Grid.Column="1" BorderThickness="1"
+	  <Border x:Name="TextDataPanel" Grid.Column="1" BorderThickness="1"
 			  BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
 		<StackPanel Spacing="8">
 		  <TextBlock Text="Text Data" FontWeight="Bold"/>
@@ -129,6 +135,7 @@
 		</StackPanel>
 	  </Border>
 
-	</Grid>
+	</Grid></controls:CappedWidth>
+	</DockPanel>
   </DockPanel>
 </Window>

@@ -17,7 +17,7 @@
   </UserControl.Styles>
 
   <DockPanel>
-    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+    <WrapPanel x:Name="SetupBar" DockPanel.Dock="Top" Margin="0,0,0,4">
       <Button Content="From map" Click="TakeApart_Click"
               ToolTip.Tip="Use this map's own tiles"/>
       <Button Content="Import…" Click="BringIn_Click" Margin="4,0,0,0"
@@ -45,7 +45,7 @@
                 IsVisible="{Binding HasProject}" MinWidth="170" ToolTip.Tip="Map in project"/>
     </WrapPanel>
 
-    <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+    <WrapPanel x:Name="ToolStrip" DockPanel.Dock="Top" Margin="0,0,0,6">
       <ListBox Classes="strip" ItemsSource="{Binding Tools}" SelectedIndex="{Binding ToolIndex}"
                ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Transparent">
         <ListBox.ItemsPanel>
@@ -106,7 +106,7 @@
                Foreground="{DynamicResource Editor.Subtle}"/>
 
     <Grid ColumnDefinitions="272,*,300">
-      <TabControl Grid.Column="0" Padding="0">
+      <TabControl x:Name="TilePalette" Grid.Column="0" Padding="0">
         <TabItem Header="Tiles">
           <DockPanel>
           <TextBox DockPanel.Dock="Top" Text="{Binding TileSearch}" PlaceholderText="Search tiles or textures"
@@ -310,7 +310,7 @@
           <gl:NsbmdGlControl x:Name="TileView"/>
         </Border>
         <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,6,0,0">
-          <StackPanel Grid.Column="0" Spacing="4">
+          <StackPanel x:Name="LayerPanel" Grid.Column="0" Spacing="4">
             <DockPanel>
               <CheckBox DockPanel.Dock="Right" Content="Dim others" IsChecked="{Binding DimOtherLayers}" FontSize="11"/>
               <CheckBox DockPanel.Dock="Right" Content="Buildings" IsChecked="{Binding ShowBuildings}" FontSize="11" Margin="0,0,6,0"/>

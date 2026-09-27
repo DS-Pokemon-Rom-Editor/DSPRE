@@ -28,7 +28,7 @@
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <TabStrip DockPanel.Dock="Top" ItemsSource="{Binding GroupNames}" SelectedIndex="{Binding SelectedGroupIndex}"
+    <TabStrip x:Name="GroupStrip" DockPanel.Dock="Top" ItemsSource="{Binding GroupNames}" SelectedIndex="{Binding SelectedGroupIndex}"
               Background="{DynamicResource Editor.PanelBg}" Margin="4,2,4,0"/>
 
     <Grid ColumnDefinitions="220,*" Margin="6">
@@ -48,7 +48,7 @@
                      IsVisible="{Binding CurrentHasAttr}"/>
         </Grid>
         <ScrollViewer>
-          <ItemsControl ItemsSource="{Binding Entries}">
+          <ItemsControl x:Name="EntryRows" ItemsSource="{Binding Entries}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:LabelEntryRow">
                 <Grid ColumnDefinitions="44,*,150,150" Margin="0,1">

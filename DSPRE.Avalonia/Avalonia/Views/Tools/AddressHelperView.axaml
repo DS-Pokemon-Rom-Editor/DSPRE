@@ -13,19 +13,21 @@
   </Design.DataContext>
 
 
-	<StackPanel Margin="8" Spacing="6">
+	<DockPanel>
+		<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+				BorderThickness="0,0,0,1" Padding="6,4">
+			<WrapPanel Classes="toolbar">
+				<TextBlock Text="RAM Address (hex):"/>
+				<TextBox x:Name="AddressBox" Width="130"
+						 Text="{Binding AddressInput}"
+						 PlaceholderText="e.g. 02004800"/>
+				<Button Content="Search" Click="SearchButton_Click"/>
+			</WrapPanel>
+		</Border>
 
-		<Label Content="RAM Address (hex):"/>
-		<Grid ColumnDefinitions="*,Auto">
-			<TextBox Grid.Column="0"
-					 Text="{Binding AddressInput}"
-					 PlaceholderText="e.g. 02004800"/>
-			<Button Grid.Column="1" Content="Search"
-					Margin="6,0,0,0"
-					Click="SearchButton_Click"/>
-		</Grid>
+	<DockPanel Margin="8">
 
-		<TextBlock Text="{Binding StatusMessage}"
+		<TextBlock DockPanel.Dock="Top" Text="{Binding StatusMessage}"
 				   Foreground="OrangeRed"
 				   IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
@@ -35,7 +37,7 @@
 					  CanUserReorderColumns="True"
 					  CanUserResizeColumns="True"
 					  IsReadOnly="True"
-					  Height="160">
+>
 				<DataGrid.Columns>
 					<DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="*"/>
 					<DataGridTextColumn Header="Offset"   Binding="{Binding Offset}"   Width="*"/>
@@ -43,5 +45,6 @@
 			</DataGrid>
 		</Border>
 
-	</StackPanel>
+	</DockPanel>
+	</DockPanel>
 </Window>

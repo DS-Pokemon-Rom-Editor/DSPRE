@@ -15,7 +15,7 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button Content="Save" Click="Save_Click"/>
+        <Button x:Name="SaveButton" Content="Save" Click="Save_Click"/>
         <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="Filter…" Margin="12,0,0,0"/>
       </StackPanel>
     </Border>
@@ -33,7 +33,7 @@
           <TextBlock Text="{Binding Problems}" IsVisible="{Binding HasProblems}" FontSize="11"
                      Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
 
-          <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
+          <Grid x:Name="ContactGrid" ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
             <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Call type"/>
               <controls:HelpTip Text="Which call routine runs this contact. Each special type has its own routine, so a trainer switched to one keeps the trainer call data. Only Trainer, Buena, Ethan / Lyra, Gym Leader and Irwin call at random."/>
@@ -89,7 +89,7 @@
               <TextBlock Text="Rematch day"/>
               <controls:HelpTip Text="The day and time when calling this trainer or Gym Leader can set up a rematch. Day covers 10:00 to 19:59. Trainers can still offer a rematch when they call you on other days; Gym Leaders also need all 16 badges. Never turns it off."/>
             </StackPanel>
-            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding UsesSchedule}"
+            <StackPanel x:Name="RematchDayBox" Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding UsesSchedule}"
                         ToolTip.Tip="When calling this contact can set up a rematch">
               <ComboBox ItemsSource="{Binding WeekdayChoices}" SelectedIndex="{Binding WeekdayIndex}" Width="140"/>
               <ComboBox ItemsSource="{Binding TimeChoices}" SelectedIndex="{Binding TimeIndex}" Width="120"/>
@@ -117,7 +117,7 @@
         </StackPanel>
       </ScrollViewer>
 
-      <Border Grid.Column="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
+      <Border x:Name="SortPanel" Grid.Column="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
         <DockPanel Margin="6">
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="2,0,0,6">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

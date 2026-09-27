@@ -82,22 +82,10 @@ namespace DSPRE.Avalonia.Views.World
 
             Loaded += OnLoadedSetup;
             Loaded += (_, _) => VM?.Attach();
-            GuidedTour.OfferWhenShown(this, "Event", () => _setupDone && VM?.EventNames.Count > 0, TourSteps);
             Unloaded += (_, _) => VM?.Detach();
         }
 
         public EventEditorView(EventEditorViewModel vm) : this() { DataContext = vm; }
-
-        private (Func<Control>, string, string)[] TourSteps() => new (Func<Control>, string, string)[]
-        {
-            (() => GlHost, "The map", "Every event on this header's maps. Click one to select it, or turn on ✋ Move and drag it. Drag to pan, right-drag to orbit, wheel to zoom."),
-            (() => ShowBar, "What's shown", "Hide kinds of events, switch to a flat 2D view, or centre the camera on the selected event."),
-            (() => EventTabs, "The events", "One tab per kind: people, warps, triggers and spawnables. Pick one in the list and edit it below. The colour square matches its marker on the map."),
-            (() => EventTabs, "Jump to other editors", "Fields that show ↗ when you point at them lead to another editor: a person's trainer, a warp's destination. Right-click and pick Open, or Ctrl+click."),
-            (() => SaveButton, "Saving", "Edits stay here until you save (Ctrl+S). Closing with unsaved edits asks first."),
-        };
-
-        private void Tour_Click(object sender, RoutedEventArgs e) => GuidedTour.StartEditor(this, "Event", true, TourSteps());
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {

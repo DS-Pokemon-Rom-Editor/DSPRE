@@ -122,16 +122,7 @@ namespace DSPRE.Avalonia
         /// from somewhere else and can end up behind the window that raised it.
         /// </summary>
         private static Window ActiveOwner()
-        {
-            var app = global::Avalonia.Application.Current?.ApplicationLifetime
-                as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
-            if (app == null) return null;
-
-            foreach (Window w in app.Windows)
-                if (w.IsActive && w.IsVisible) return w;
-
-            return app.MainWindow;
-        }
+        => OwnerWindow.Current;
 
         /// <summary>Notice the user can turn off. True when they asked not to see it again.</summary>
         public static async Task<bool> ShowNoticeWithOptOut(string message, string title,

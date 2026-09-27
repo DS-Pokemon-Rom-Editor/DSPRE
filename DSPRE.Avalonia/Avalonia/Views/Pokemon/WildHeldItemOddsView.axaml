@@ -19,7 +19,7 @@
     </Border>
 
     <StackPanel Margin="12" Spacing="18">
-      <StackPanel Spacing="6">
+      <StackPanel x:Name="NormalOdds" Spacing="6">
         <TextBlock Text="Wild Pokémon" FontWeight="SemiBold"/>
         <controls:ProportionBar Parts="{Binding NormalParts}" HorizontalAlignment="Stretch"/>
         <WrapPanel ItemSpacing="16" LineSpacing="6">
@@ -37,7 +37,7 @@
           </StackPanel>
         </WrapPanel>
       </StackPanel>
-      <StackPanel Spacing="6">
+      <StackPanel x:Name="EyesOdds" Spacing="6">
         <TextBlock Text="With a Compound Eyes lead" FontWeight="SemiBold" ToolTip.Tip="When the lead Pokémon has Compound Eyes"/>
         <controls:ProportionBar Parts="{Binding EyesParts}" HorizontalAlignment="Stretch"/>
         <WrapPanel ItemSpacing="16" LineSpacing="6">

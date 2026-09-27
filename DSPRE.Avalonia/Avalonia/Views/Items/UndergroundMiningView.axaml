@@ -28,19 +28,19 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
 
-    <StackPanel DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
+    <StackPanel x:Name="MiningTotals" DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
       <TextBlock Text="{Binding Totals}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
     </StackPanel>
 
     <DockPanel Margin="8">
-      <Grid DockPanel.Dock="Top" ColumnDefinitions="226,*,*,*,*" Margin="4,0,20,4">
+      <Grid x:Name="MiningColumns" DockPanel.Dock="Top" ColumnDefinitions="226,*,*,*,*" Margin="4,0,20,4">
         <TextBlock Grid.Column="0" Text="Treasure" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="1" Text="{Binding Columns[0]}" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="2" Text="{Binding Columns[1]}" FontWeight="SemiBold"/>

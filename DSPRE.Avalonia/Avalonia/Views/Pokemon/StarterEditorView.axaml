@@ -1,5 +1,6 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window MinWidth="480" MinHeight="440" xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
 		x:Class="DSPRE.Avalonia.Views.Pokemon.StarterEditorView"
 		x:DataType="vm:StarterEditorViewModel"
@@ -11,38 +12,39 @@
     <vm:StarterEditorViewModel/>
   </Design.DataContext>
 
-  <DockPanel Margin="12" LastChildFill="True">
+  <DockPanel LastChildFill="True">
+	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+			BorderThickness="0,0,0,1" Padding="6,4">
+	  <StackPanel Orientation="Horizontal" Spacing="6">
+		<Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<controls:UndoRedoButtons/>
+		<TextBlock Text="{Binding BusyText}" IsVisible="{Binding IsBusy}" VerticalAlignment="Center" Opacity="0.7" Margin="12,0,0,0"/>
+	  </StackPanel>
+	</Border>
 
-	<!-- Undo / Save -->
-	<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6"
-				HorizontalAlignment="Right" Margin="0,12,0,0">
-	  <TextBlock Text="{Binding BusyText}" IsVisible="{Binding IsBusy}" VerticalAlignment="Center" Opacity="0.7" Margin="0,0,6,0"/>
-	  <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-	  <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-	  <Button Content="Save" Click="Save_Click"/>
-	</StackPanel>
-
-	<Border BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="10">
+	<Border Margin="12" BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="10">
 	  <StackPanel Spacing="8">
-		<TextBlock Text="Starter Pokémon" FontWeight="Bold"/>
-		<TextBlock TextWrapping="Wrap" Opacity="0.8"
-				   Text="Also updates the DP/Pt selection-scene graphics, the rival's early team, tag-battle partners, HGSS starter cries, and the professor/rival dialogue naming the species."/>
+		<StackPanel Orientation="Horizontal">
+		  <TextBlock Text="Starter Pokémon" FontWeight="Bold"/>
+		  <controls:HelpTip Text="Also updates the DP/Pt selection-scene graphics, the rival's early team, tag-battle partners, HGSS starter cries, and the professor/rival dialogue naming the species."/>
+		</StackPanel>
 
-		<Grid ColumnDefinitions="Auto,*,36" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8" Margin="0,8,0,0">
+		<controls:CappedWidth Cap="560"><Grid x:Name="StarterGrid" ColumnDefinitions="Auto,*,36" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8" Margin="0,8,0,0">
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Starter 1:" VerticalAlignment="Center"/>
-		  <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter1}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
+		  <ComboBox controls:EditorLink.To="Pokemon"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter1}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
 		  <Image     Grid.Row="0" Grid.Column="2" Source="{Binding Starter1Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="1" Grid.Column="0" Text="Starter 2:" VerticalAlignment="Center"/>
-		  <ComboBox  Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter2}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
+		  <ComboBox controls:EditorLink.To="Pokemon"  Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter2}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
 		  <Image     Grid.Row="1" Grid.Column="2" Source="{Binding Starter2Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Starter 3:" VerticalAlignment="Center"/>
-		  <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter3}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
+		  <ComboBox controls:EditorLink.To="Pokemon"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter3}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
 		  <Image     Grid.Row="2" Grid.Column="2" Source="{Binding Starter3Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="3" Grid.Column="0" Text="Held Item:" VerticalAlignment="Center" IsVisible="{Binding IsHeldItemSupported}"/>
-		  <ComboBox  Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HeldItem}"
+		  <ComboBox controls:EditorLink.To="Item"  Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HeldItem}"
 					 HorizontalAlignment="Stretch" IsVisible="{Binding IsHeldItemSupported}"/>
 		  <Image     Grid.Row="3" Grid.Column="2" Source="{Binding HeldItemIcon}" Width="32" Height="32" Stretch="Uniform"
 					 IsVisible="{Binding IsHeldItemSupported}"/>
@@ -55,10 +57,10 @@
 		  <!-- Diamond and Pearl keep the held item and level in a script command, so say where. -->
 		  <TextBlock Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" TextWrapping="Wrap" Margin="0,6,0,0"
 					 Opacity="0.85" IsVisible="{Binding HasScriptNote}" Text="{Binding ScriptNote}"/>
-		</Grid>
+		</Grid></controls:CappedWidth>
 
 		<!-- Which command hands the starter over, and how to point the editor at a different one. -->
-		<StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0" IsVisible="{Binding CanManageCommand}">
+		<StackPanel x:Name="CommandBar" Orientation="Horizontal" Spacing="8" Margin="0,4,0,0" IsVisible="{Binding CanManageCommand}">
 		  <TextBlock Text="{Binding CommandLocation}" VerticalAlignment="Center" Opacity="0.75"
 					 IsVisible="{Binding HasCommandLocation}"/>
 		  <Button Content="Manage…" Click="Manage_Click"

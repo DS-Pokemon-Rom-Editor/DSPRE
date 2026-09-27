@@ -42,7 +42,6 @@
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="🐞 Report…" Click="ExportDebug_Click"
                 ToolTip.Tip="Saves where every map and event was placed, plus a picture of the view, to attach to a bug report."/>
-        <Button Content="?" Click="Tour_Click" ToolTip.Tip="Tour"/>
       </WrapPanel>
     </Border>
 

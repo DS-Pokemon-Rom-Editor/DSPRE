@@ -39,7 +39,6 @@
             <Button Content="Import properties…" Click="ImportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
             <Button Content="Export party…" Click="ExportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
             <Button Content="Import party…" Click="ImportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
-            <Button Content="?" Click="Tour_Click" ToolTip.Tip="Tour"/>
           </WrapPanel>
         </Border>
         <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">

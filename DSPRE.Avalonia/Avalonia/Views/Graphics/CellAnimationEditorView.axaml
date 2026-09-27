@@ -54,11 +54,11 @@
           <NumericUpDown Value="{Binding JumpTo}" Minimum="0" Increment="1" Width="110" FormatString="0"
                          ToolTip.Tip="Jump straight to a sequence by its number"/>
         </StackPanel>
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
+        <StackPanel x:Name="SequenceButtons" DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
           <Button Content="Add on the end" Click="AddSequence_Click" FontSize="11" Padding="7,2"/>
           <Button Content="Remove the last" Click="RemoveSequence_Click" FontSize="11" Padding="7,2"/>
         </StackPanel>
-        <ListBox ItemsSource="{Binding Sequences}" SelectedIndex="{Binding SelectedSequence}"
+        <ListBox x:Name="SequenceList" ItemsSource="{Binding Sequences}" SelectedIndex="{Binding SelectedSequence}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:CellSequenceRow">
@@ -74,7 +74,7 @@
     </Border>
 
     <!-- The frames of the chosen sequence -->
-    <Border DockPanel.Dock="Right" Width="330" BorderBrush="{DynamicResource Editor.Border}"
+    <Border x:Name="FramesPanel" DockPanel.Dock="Right" Width="330" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="1,0,0,0">
       <DockPanel Margin="8">
         <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
@@ -161,7 +161,7 @@
 
     <!-- The animation itself -->
     <StackPanel Margin="12" Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Top">
-      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+      <Border x:Name="AnimationPreview" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
         <Image Source="{Binding Preview}" Width="512" Height="384" Stretch="Uniform"
                RenderOptions.BitmapInterpolationMode="None"/>
       </Border>
@@ -175,7 +175,7 @@
                 ToolTip.Tip="Open the Bottom Screen editor on the application this belongs to"/>
       </StackPanel>
       <!-- Where the pieces of one drawing sit. The preview follows a move straight away. -->
-      <Border IsVisible="{Binding CanMovePieces}" Padding="10" CornerRadius="4" MaxWidth="512"
+      <Border x:Name="PiecesPanel" IsVisible="{Binding CanMovePieces}" Padding="10" CornerRadius="4" MaxWidth="512"
               Background="{DynamicResource Editor.PanelBg}"
               BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
         <StackPanel Spacing="6">

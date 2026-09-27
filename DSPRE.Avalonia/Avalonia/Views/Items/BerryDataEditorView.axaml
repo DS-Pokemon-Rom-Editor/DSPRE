@@ -24,7 +24,7 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
       </StackPanel>
@@ -53,7 +53,7 @@
                  Source="{Binding SelectedItem, Converter={x:Static controls:GameIconConverter.Item}}"/>
           <TextBlock Text="{Binding SelectedName}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
-        <GroupBox Header="Growth">
+        <GroupBox x:Name="GrowthBox" Header="Growth">
           <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,6,Auto,6,Auto" Margin="4">
             <TextBlock Grid.Row="0" Classes="label" Text="Hours per stage"/>
             <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding HoursPerStage}" Minimum="1" Maximum="255"/>
@@ -65,7 +65,7 @@
           </Grid>
         </GroupBox>
 
-        <GroupBox Header="Look and taste">
+        <GroupBox x:Name="LookBox" Header="Look and taste">
           <StackPanel Spacing="6" Margin="4">
             <controls:ProportionBar Parts="{Binding FlavourParts}" HorizontalAlignment="Stretch" ToolTip.Tip="Share of each flavour"/>
             <TextBlock Text="HeartGold may not read these." IsVisible="{Binding LooksUnread}"
