@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         x:Class="DSPRE.Avalonia.Views.Pokemon.BulkLearnsetEditorView"
         x:DataType="vm:BulkLearnsetEditorViewModel"
@@ -33,7 +34,7 @@
         <DataGridTemplateColumn Header="Species" Width="280">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:BulkLearnsetRow">
-              <ComboBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch" Margin="2"/>
+              <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch" Margin="2"/>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
@@ -47,7 +48,7 @@
         <DataGridTemplateColumn Header="Move" Width="*">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:BulkLearnsetRow">
-              <ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding MoveIndex}" HorizontalAlignment="Stretch" Margin="2"/>
+              <ComboBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding MoveIndex}" HorizontalAlignment="Stretch" Margin="2"/>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>

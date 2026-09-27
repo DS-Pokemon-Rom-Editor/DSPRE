@@ -45,6 +45,121 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // Cell accessors used by the grid controls (col = x, row = y → array[row, col]).
         public int GetMap(int c, int r) => _matrix.maps[r, c];
+
+        /// <summary>The header being worked on, whose cells the grid outlines and centres on; -1 for none.</summary>
+        private int _focusHeader = -1;
+        public int FocusHeader { get => _focusHeader; set { if (_focusHeader == value) return; _focusHeader = value; OnPropertyChanged(); } }
+
+        /// <summary>Which header a cell belongs to; without a header section only the focus header's matrix counts.</summary>
+        public int HeaderOfCell(int c, int r)
+        {
+            if (_matrix == null) return -1;
+            if (_matrix.hasHeadersSection) return _matrix.headers[r, c];
+            if (_matrix.maps[r, c] == GameMatrix.EMPTY || _focusHeader < 0) return -1;
+            try { return MapHeader.GetMapHeader((ushort)_focusHeader)?.matrixID == _selectedIndex ? _focusHeader : -1; }
+            catch { return -1; }
+        }
+
+        // ── What kind of place each cell is ─────────────────────────────────────────
+        public enum PlaceKind { None, OutOfBounds, Town, Route, Forest, Sea, Lake, Park, Cave, Underground, Building }
+
+        public static readonly (PlaceKind Kind, string Name, global::Avalonia.Media.Color Colour)[] Kinds =
+        {
+            (PlaceKind.Town, "Town / City", global::Avalonia.Media.Color.FromRgb(0xB0, 0x3A, 0x2E)),
+            (PlaceKind.Route, "Route", global::Avalonia.Media.Color.FromRgb(0x3B, 0x8A, 0x3E)),
+            (PlaceKind.Forest, "Forest", global::Avalonia.Media.Color.FromRgb(0x1B, 0x5A, 0x2C)),
+            (PlaceKind.Park, "Park", global::Avalonia.Media.Color.FromRgb(0x8A, 0x7A, 0x1C)),
+            (PlaceKind.Sea, "Sea route", global::Avalonia.Media.Color.FromRgb(0x1D, 0x5B, 0xA6)),
+            (PlaceKind.Lake, "Lake", global::Avalonia.Media.Color.FromRgb(0x2B, 0x84, 0xB8)),
+            (PlaceKind.Cave, "Cave", global::Avalonia.Media.Color.FromRgb(0x6E, 0x47, 0x2A)),
+            (PlaceKind.Underground, "Underground", global::Avalonia.Media.Color.FromRgb(0x5A, 0x37, 0x8C)),
+            (PlaceKind.Building, "Building", global::Avalonia.Media.Color.FromRgb(0x55, 0x5E, 0x6E)),
+            (PlaceKind.OutOfBounds, "Out of bounds", global::Avalonia.Media.Color.FromRgb(0x2A, 0x2D, 0x32)),
+            (PlaceKind.None, "Other", global::Avalonia.Media.Color.FromRgb(0x3E, 0x44, 0x4C)),
+        };
+
+        private readonly Dictionary<int, PlaceKind> _kindOfHeader = new();
+        private int _headerOfWholeMatrix = -1;
+
+        /// <summary>
+        /// A header's kind of place from its map type; outdoor ones are refined by name popup style, and header 0
+        /// is the catch-all for scenery the player can't reach.
+        /// </summary>
+        public static PlaceKind KindOf(int id, MapHeader h)
+        {
+            if (h == null) return PlaceKind.None;
+            if (id == 0) return PlaceKind.OutOfBounds;
+            int type = h is HeaderHGSS hg ? hg.locationType : h.locationSpecifier;
+            int popup = h is HeaderPt pt ? pt.areaIcon : h is HeaderHGSS hgp ? hgp.areaIcon : 0;
+            switch (type)
+            {
+                case 1: return PlaceKind.Town;
+                case 2:
+                    return popup switch { 5 => PlaceKind.Forest, 6 => PlaceKind.Sea, 7 => PlaceKind.Park, 8 => PlaceKind.Lake, _ => PlaceKind.Route };
+                case 3: return PlaceKind.Cave;
+                case 4: case 5: return PlaceKind.Building;
+                case 6: return PlaceKind.Underground;
+                default: return PlaceKind.None;
+            }
+        }
+
+        private int HeaderForColour(int c, int r)
+        {
+            if (_matrix == null || _matrix.maps[r, c] == GameMatrix.EMPTY) return -1;
+            return _matrix.hasHeadersSection ? _matrix.headers[r, c] : _headerOfWholeMatrix;
+        }
+
+        /// <summary>The colour of the kind of place a cell is, or null for a cell with no map.</summary>
+        public global::Avalonia.Media.Color? CellColour(int c, int r)
+        {
+            int h = HeaderForColour(c, r);
+            if (h < 0) return null;
+            if (!_kindOfHeader.TryGetValue(h, out var kind))
+            {
+                try { kind = KindOf(h, MapHeader.GetMapHeader((ushort)h)); } catch { kind = PlaceKind.None; }
+                _kindOfHeader[h] = kind;
+            }
+            foreach (var k in Kinds) if (k.Kind == kind) return k.Colour;
+            return null;
+        }
+
+        /// <summary>The kinds present in the shown matrix, for the legend.</summary>
+        public System.Collections.ObjectModel.ObservableCollection<LegendEntry> Legend { get; } = new();
+        public sealed class LegendEntry
+        {
+            public string Name { get; init; }
+            public global::Avalonia.Media.IBrush Brush { get; init; }
+        }
+
+        private void RebuildLegend()
+        {
+            _kindOfHeader.Clear();
+            _headerOfWholeMatrix = -1;
+            if (_matrix != null && !_matrix.hasHeadersSection)
+            {
+                // A matrix without a header section belongs to whichever header uses it.
+                try
+                {
+                    for (int h = 0; h < GetHeaderCount(); h++)
+                        if (MapHeader.GetMapHeader((ushort)h)?.matrixID == _selectedIndex) { _headerOfWholeMatrix = h; break; }
+                }
+                catch { }
+            }
+            var seen = new HashSet<global::Avalonia.Media.Color>();
+            for (int r = 0; r < Height; r++)
+                for (int c = 0; c < Width; c++)
+                    if (CellColour(c, r) is global::Avalonia.Media.Color col) seen.Add(col);
+            Legend.Clear();
+            foreach (var k in Kinds)
+                if (seen.Contains(k.Colour))
+                    Legend.Add(new LegendEntry { Name = k.Name, Brush = new global::Avalonia.Media.SolidColorBrush(k.Colour) });
+        }
+
+        /// <summary>Opens a header cell's header; the Maps workspace replaces it to switch its own header.</summary>
+        public Action<int> OpenHeader { get; set; } = id => AvaloniaEditorLauncher.OpenHeaderEditor(id);
+
+        private bool _paintMode;
+        public bool PaintMode { get => _paintMode; set { if (_paintMode == value) return; _paintMode = value; OnPropertyChanged(); } }
         public void SetMap(int c, int r, int v) => _matrix.maps[r, c] = (ushort)v;
         public int GetHeader(int c, int r) => _matrix.headers[r, c];
         public void SetHeader(int c, int r, int v) => _matrix.headers[r, c] = (ushort)v;
@@ -106,7 +221,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         public MatrixEditorViewModel() { if (Design.IsDesignMode) MatrixNames.Add("Matrix 0"); }
-        public MatrixEditorViewModel(bool _) { }
+        public MatrixEditorViewModel(bool _) { AppEvents.MatrixSaved += OnSavedElsewhere; }
+
+        /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
+        public void Detach() => AppEvents.MatrixSaved -= OnSavedElsewhere;
+
+        // Another open copy of this matrix saved: show it, unless this copy holds its own edits.
+        private void OnSavedElsewhere(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this) || id != _selectedIndex) return;
+            if (_dirty) { StatusText = $"Matrix {id} was saved in another window. Save or discard here to see it."; return; }
+            LoadMatrix(id);
+            StatusText = $"Matrix {id} was saved in another window and reloaded.";
+        }
         public int InitialIndex { get; set; }
 
         public async Task SetupAsync(Window owner)
@@ -135,6 +262,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 _matrix = new GameMatrix(index);
+                RebuildLegend();
                 SetClean();
                 StatusText = $"Loaded matrix {index} ({Width}×{Height}).";
                 RaiseLoaded();
@@ -177,6 +305,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved matrix {_selectedIndex}.";
+            AppEvents.RaiseMatrixSaved(this, _selectedIndex);
         }
 
         public async Task ImportAsync()

@@ -118,6 +118,8 @@ namespace DSPRE.Avalonia
         }
 
         // ── Pokémon-related editors ────────────────────────────────────────────
+        public static void OpenPokemonEditor(int species) => _ = OpenPokemonEditorAsync(species);
+
         public static async System.Threading.Tasks.Task OpenPokemonEditorAsync(int initialMon = 1)
         {
             if (!IsRomLoaded || BlockedForHge("The Pokémon Editor", HgEngineDomain.Species)) return;
@@ -486,8 +488,25 @@ namespace DSPRE.Avalonia
         public static void OpenHeaderEditor(int initialIndex = -1)
         {
             if (!IsRomLoaded) return;
-            new EditorHostWindow("Header Editor",
-                new HeaderEditorView(new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex })).ShowManaged();
+            if (BringForward<HeaderEditorView, HeaderEditorViewModel>(vm => { if (initialIndex >= 0) vm.GoToHeader(initialIndex); })) return;
+            var model = new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex };
+            var window = new EditorHostWindow("Header Editor", new HeaderEditorView(model));
+            window.Closed += (_, _) => model.Detach();
+            window.ShowManaged();
+        }
+
+        // One standalone window per world editor: a second copy of the same file would go stale and could save
+        // over the first. Brings the open one forward and points it at what was asked for.
+        private static bool BringForward<TView, TModel>(System.Action<TModel> goTo) where TModel : class
+        {
+            var open = (global::Avalonia.Application.Current?.ApplicationLifetime
+                        as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
+            var host = open?.OfType<EditorHostWindow>().FirstOrDefault(w => w.Content is TView);
+            if (host == null) return false;
+            if (host.WindowState == global::Avalonia.Controls.WindowState.Minimized) host.WindowState = global::Avalonia.Controls.WindowState.Normal;
+            host.Activate();
+            if ((host.Content as global::Avalonia.Controls.Control)?.DataContext is TModel vm) goTo(vm);
+            return true;
         }
 
         public static void OpenCameraEditor()
@@ -994,42 +1013,49 @@ namespace DSPRE.Avalonia
             new BuildingEditorView(new BuildingEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
         }
 
-        public static void OpenMatrixEditor(int initialIndex = 0)
+        public static void OpenMatrixEditor(int initialIndex = 0, int focusHeader = -1)
         {
             if (!IsRomLoaded) return;
-            new EditorHostWindow("Matrix Editor",
-                new MatrixEditorView(new MatrixEditorViewModel(true) { InitialIndex = initialIndex }),
-                860, 640).ShowManaged();
+            if (BringForward<MatrixEditorView, MatrixEditorViewModel>(vm => { vm.SelectedMatrixIndex = initialIndex; vm.FocusHeader = focusHeader; })) return;
+            var model = new MatrixEditorViewModel(true) { InitialIndex = initialIndex, FocusHeader = focusHeader };
+            var window = new EditorHostWindow("Matrix Editor", new MatrixEditorView(model), 860, 640);
+            window.Closed += (_, _) => model.Detach();
+            window.ShowManaged();
         }
 
         public static void OpenEventEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            new EditorHostWindow("Event Editor",
-                new EventEditorView(new EventEditorViewModel(true) { InitialIndex = initialIndex }),
-                1200, 720).ShowManaged();
+            if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.SelectedEventIndex = initialIndex)) return;
+            var model = new EventEditorViewModel(true) { InitialIndex = initialIndex };
+            var window = new EditorHostWindow("Event Editor", new EventEditorView(model), 1200, 720);
+            window.Closed += (_, _) => model.DetachSaves();
+            window.ShowManaged();
         }
 
         public static void OpenEventEditorWithOverworld(int eventFileId, int owIndex)
         {
             if (!IsRomLoaded) return;
-            new EditorHostWindow("Event Editor",
-                new EventEditorView(new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialOverworldIndex = owIndex }),
-                1200, 720).ShowManaged();
+            if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.GoToOverworld(eventFileId, owIndex))) return;
+            var model = new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialOverworldIndex = owIndex };
+            var window = new EditorHostWindow("Event Editor", new EventEditorView(model), 1200, 720);
+            window.Closed += (_, _) => model.DetachSaves();
+            window.ShowManaged();
+        }
+
+        public static void OpenAreaDataEditor(int initialIndex = 0)
+        {
+            if (!IsRomLoaded) return;
+            var model = new AreaDataEditorViewModel(true) { InitialIndex = initialIndex };
+            var window = new EditorHostWindow("Area Data Editor", new AreaDataEditorView(model), 520, 380);
+            window.Closed += (_, _) => model.Detach();
+            window.ShowManaged();
         }
 
         public static void OpenNsbtxEditor()
         {
             if (!IsRomLoaded) return;
             new NsbtxEditorView(new NsbtxEditorViewModel(true)).ShowManaged();
-        }
-
-        public static void OpenAreaDataEditor(int initialIndex = 0)
-        {
-            if (!IsRomLoaded) return;
-            new EditorHostWindow("Area Data Editor",
-                new AreaDataEditorView(new AreaDataEditorViewModel(true) { InitialIndex = initialIndex }),
-                520, 380).ShowManaged();
         }
 
         public static void OpenOverlayEditor()
@@ -1512,8 +1538,8 @@ namespace DSPRE.Avalonia
             new() { Name = "Advanced Header Search", Keywords = "find filter query field", Run = OpenHeaderSearch },
             new() { Name = "Overlay Editor",        Run = OpenOverlayEditor },
             new() { Name = "Overworld Editor",      Keywords = "overworld sprites btx npc", Run = OpenOverworldEditor },
-            new() { Name = "Map & Building Textures", Keywords = "texture nsbtx tileset", Run = OpenNsbtxEditor },
             new() { Name = "Area Data Editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
+            new() { Name = "Map & Building Textures", Keywords = "texture nsbtx tileset", Run = OpenNsbtxEditor },
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
             new() { Name = "Wild Held Items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },
             new() { Name = "Special Encounters Editor", Keywords = "headbutt tree bug contest opponents great marsh honey safari trophy garden daily swarm", Run = () => OpenSpecialEncountersEditor() },

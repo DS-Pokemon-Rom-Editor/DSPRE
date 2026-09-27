@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
         xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
@@ -18,7 +18,7 @@
         <Button Content="＋ Add"     Click="AddFile_Click"/>
         <Button Content="🗑 Remove last" Click="RemFile_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button x:Name="SaveButton" Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="📥 Import" Click="Import_Click"/>
         <Button Content="📤 Export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
@@ -42,6 +42,7 @@
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="🐞 Placement report…" Click="ExportDebug_Click"
                 ToolTip.Tip="Saves where every map and event was placed, plus a picture of the view, to attach to a bug report."/>
+        <Button Content="?" Click="Tour_Click" ToolTip.Tip="Tour"/>
       </WrapPanel>
     </Border>
 
@@ -64,7 +65,7 @@
               <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <TextBlock Text="left-drag pan · right-drag orbit · wheel zoom" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             </StackPanel>
-            <WrapPanel Classes="toolbar">
+            <WrapPanel x:Name="ShowBar" Classes="toolbar">
               <TextBlock Text="Show:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <CheckBox Content="Overworlds" IsChecked="{Binding ShowOverworlds}" FontSize="12"/>
               <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="12"/>
@@ -117,7 +118,7 @@
       </DockPanel>
 
       <!-- Editing panels -->
-      <TabControl Grid.Column="1" Margin="0,4,4,4">
+      <TabControl x:Name="EventTabs" Grid.Column="1" Margin="0,4,4,4">
 
         <!-- ── Overworlds (NPCs/trainers) ─────────────────────────────────────── -->
         <TabItem Header="Overworlds">
@@ -204,7 +205,7 @@
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwTrainerFieldsVisible}" Margin="0,4,0,0">
                     <TextBlock Text="Trainer" FontWeight="Bold"/>
-                    <ComboBox ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
+                    <ComboBox controls:EditorLink.To="Trainer" ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Script number doesn't match a known trainer (edit Script below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
                     <TextBlock Text="Trainer 0 is the empty slot. Pick another or the battle has nobody in it."
@@ -276,8 +277,8 @@
               <Button Content="Remove" Click="RemoveWarp_Click" IsEnabled="{Binding HasWarp}"/>
               <Button Content="Duplicate" Click="DupWarp_Click" IsEnabled="{Binding HasWarp}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <Button Content="🔗 Test warp" Click="TestWarp_Click" IsEnabled="{Binding HasWarp}"
-                      ToolTip.Tip="Jump to the destination header's event file"/>
+              <Button Content="↪ Go to destination" Click="TestWarp_Click" IsEnabled="{Binding HasWarp}"
+                      ToolTip.Tip="Show the destination header's event file here"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Warps}" SelectedIndex="{Binding SelectedWarpIndex}"/>
@@ -296,7 +297,8 @@
                     <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
                   <TextBlock Text="Destination header" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpHeader}"/>
+                  <NumericUpDown controls:EditorLink.To="Header" Minimum="0" Maximum="65535" Value="{Binding WarpHeader}"/>
+                  <TextBlock Text="{Binding WarpHeaderName}" Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>
                   <TextBlock Text="Anchor" FontWeight="Bold" Margin="0,4,0,0"/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding WarpAnchor}"/>
                   <TextBlock Text="Height" FontWeight="Bold" Margin="0,4,0,0"/>

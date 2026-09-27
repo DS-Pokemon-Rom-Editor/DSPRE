@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.Views.World
                         case nameof(HeaderEditorViewModel.LevelScriptId): RetargetLevelScripts(); break;
                         case nameof(HeaderEditorViewModel.TextArchiveId): RetargetText(); break;
                         case nameof(HeaderEditorViewModel.WildPokemon): RetargetEncounters(); break;
-                        case nameof(HeaderEditorViewModel.CurrentHeaderId): MapVM.HeaderId = vm.CurrentHeaderId; break;
+                        case nameof(HeaderEditorViewModel.CurrentHeaderId): MapVM.HeaderId = vm.CurrentHeaderId; MatrixVM.FocusHeader = vm.CurrentHeaderId; break;
                     }
                 };
             }
@@ -117,6 +117,8 @@ namespace DSPRE.Avalonia.Views.World
             // so reset first rather than relying on the property setters' equality-skip).
             EventVM.InitialIndex = (int)vm.EventFileId;
             MatrixVM.InitialIndex = (int)vm.MatrixId;
+            MatrixVM.FocusHeader = vm.CurrentHeaderId;
+            MatrixVM.OpenHeader = id => vm.GoToHeader(id);
             AreaDataVM.InitialIndex = (int)vm.AreaDataId;
             ScriptsVM.InitialIndex = (int)vm.ScriptFileId;
             LevelScriptsVM.InitialIndex = (int)vm.LevelScriptId;

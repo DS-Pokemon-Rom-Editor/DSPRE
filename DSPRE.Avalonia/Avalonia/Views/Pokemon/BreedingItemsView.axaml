@@ -36,15 +36,15 @@
               <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               <DockPanel Grid.Column="1" Margin="0,0,8,0">
                 <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Baby, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-                <controls:FusionAutoCompleteBox AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Baby}"/>
+                <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Baby}"/>
               </DockPanel>
               <DockPanel Grid.Column="2" Margin="0,0,8,0">
                 <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
-                <controls:FusionAutoCompleteBox AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).ItemNames}" SelectedIndex="{Binding Item}"/>
+                <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).ItemNames}" SelectedIndex="{Binding Item}"/>
               </DockPanel>
               <DockPanel Grid.Column="3">
                 <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Fallback, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-                <controls:FusionAutoCompleteBox AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Fallback}"/>
+                <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Fallback}"/>
               </DockPanel>
             </Grid>
           </DataTemplate>

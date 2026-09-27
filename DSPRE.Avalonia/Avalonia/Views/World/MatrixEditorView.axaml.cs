@@ -17,15 +17,19 @@ namespace DSPRE.Avalonia.Views.World
         public MatrixEditorView()
         {
             InitializeComponent();
-            MapGrid.ColorByValue = true;
-            HeaderGrid.ColorByValue = true;
-            HeightGrid.ColorByValue = false;
+            HeightGrid.RampByValue = true;
 
             MapGrid.Changed += (_, _) => VM?.MarkDirty();
             HeaderGrid.Changed += (_, _) => VM?.MarkDirty();
             HeightGrid.Changed += (_, _) => VM?.MarkDirty();
             MapGrid.CellSelected += (_, e) => SetCellInfo("Map", e);
-            HeaderGrid.CellSelected += (_, e) => SetCellInfo("Header", e);
+            HeaderGrid.CellSelected += (_, e) =>
+            {
+                SetCellInfo("Header", e);
+                // Out of paint mode a header cell is a way to that header.
+                if (VM != null && !VM.PaintMode && e.value != 65535) VM.OpenHeader(e.value);
+            };
+            MapGrid.CellActivated += (_, e) => { if (e.value != 65535) AvaloniaEditorLauncher.OpenMapEditor(e.value); };
             HeightGrid.CellSelected += (_, e) => SetCellInfo("Height", e);
 
             Loaded += OnLoadedSetup;
@@ -85,6 +89,27 @@ namespace DSPRE.Avalonia.Views.World
             MapGrid.SetSource(VM.Width, VM.Height, VM.GetMap, VM.SetMap);
             if (VM.HasHeaders) HeaderGrid.SetSource(VM.Width, VM.Height, VM.GetHeader, VM.SetHeader);
             if (VM.HasHeights) HeightGrid.SetSource(VM.Width, VM.Height, VM.GetHeight, VM.SetHeight);
+            ApplyFocus();
+        }
+
+        // Outlines the current header's cells in every grid and scrolls the visible one to them.
+        private void ApplyFocus()
+        {
+            foreach (var g in new[] { MapGrid, HeaderGrid, HeightGrid })
+            {
+                g.HeaderAt = VM.HeaderOfCell;
+                g.CellColour = VM.CellColour;
+                g.FocusHeader = VM.FocusHeader;
+                g.PaintMode = VM.PaintMode;
+            }
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                foreach (var g in new[] { MapGrid, HeaderGrid, HeightGrid })
+                    if (g.Parent is ScrollViewer sv && g.FocusBounds() is global::Avalonia.Rect b)
+                        sv.Offset = new global::Avalonia.Vector(
+                            System.Math.Max(0, b.Center.X - sv.Viewport.Width / 2),
+                            System.Math.Max(0, b.Center.Y - sv.Viewport.Height / 2));
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
         private void OnVmChanged(object sender, PropertyChangedEventArgs e)
@@ -94,6 +119,8 @@ namespace DSPRE.Avalonia.Views.World
                 case nameof(MatrixEditorViewModel.MapPaint): MapGrid.PaintValue = (int)VM.MapPaint; break;
                 case nameof(MatrixEditorViewModel.HeaderPaint): HeaderGrid.PaintValue = (int)VM.HeaderPaint; break;
                 case nameof(MatrixEditorViewModel.HeightPaint): HeightGrid.PaintValue = (int)VM.HeightPaint; break;
+                case nameof(MatrixEditorViewModel.PaintMode):
+                case nameof(MatrixEditorViewModel.FocusHeader): ApplyFocus(); break;
             }
         }
 

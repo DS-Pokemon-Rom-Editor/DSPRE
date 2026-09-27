@@ -50,6 +50,7 @@ namespace DSPRE.Avalonia.Views.World
             GlHost.KeyDown += OnKeyDown;
 
             Loaded += OnLoadedSetup;
+            GuidedTour.OfferWhenShown(this, "Map", () => _setupDone && VM?.HeaderNames.Count > 0, TourSteps);
         }
 
         private void OnKeyDown(object sender, KeyEventArgs e)
@@ -95,6 +96,17 @@ namespace DSPRE.Avalonia.Views.World
         {
             DataContext = vm;
         }
+
+        private (Func<Control>, string, string)[] TourSteps() => new (Func<Control>, string, string)[]
+        {
+            (() => GlHost, "The map", "Drag to pan, right-drag to orbit, wheel to zoom. With a Show mode picked, you can paint squares straight onto the map."),
+            (() => ViewModeBox, "What you edit", "One map, every map of this header, or the whole matrix at once."),
+            (() => MapTabs, "Editing panels", "Permissions paints where the player can walk and what each square is, like grass, water or ledges. Buildings places buildings. Area picks this area's textures, shared by every header that uses it."),
+            (() => EditModelButton, "Changing the ground", "Reshape the terrain from tiles, or import a map from Pokémon DS Map Studio."),
+            (() => SaveButton, "Saving", "Edits stay here until you save (Ctrl+S). Closing with unsaved edits asks first."),
+        };
+
+        private void Tour_Click(object sender, RoutedEventArgs e) => GuidedTour.StartEditor(this, "Map", true, TourSteps());
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {

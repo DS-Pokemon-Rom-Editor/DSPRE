@@ -46,7 +46,7 @@
                     <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center"/>
                     <DockPanel Grid.Column="1" Margin="0,0,4,0">
                       <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding SpeciesIndex, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-                      <controls:FusionAutoCompleteBox AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BugContestTrainersViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}"/>
+                      <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BugContestTrainersViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}"/>
                     </DockPanel>
                     <ComboBox Grid.Column="2" Margin="0,0,4,0" HorizontalAlignment="Stretch"
                               ItemsSource="{Binding $parent[ItemsControl].((vm:BugContestTrainersViewModel)DataContext).DayOptions}"

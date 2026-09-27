@@ -20,7 +20,18 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
+            GuidedTour.OfferWhenShown(this, "Trainer", () => _setupDone && (DataContext as TrainerEditorViewModel)?.TrainerNames.Count > 0, TourSteps);
         }
+
+        private (System.Func<Control>, string, string)[] TourSteps() => new (System.Func<Control>, string, string)[]
+        {
+            (() => TrainerList, "Trainers", "Every trainer in the game. Pick one to edit it."),
+            (() => PartyBox, "The party", "Each Pokémon's species, level, moves and held item. Right-click a species, move or item to open it in its own editor, or Ctrl+click it."),
+            (() => TrainerToolbar, "Tools", "Search, reorder the party, edit battle messages and the trainer's class. Ctrl+Z undoes, Ctrl+S saves."),
+            (() => MainTabs, "Classes", "The Classes tab edits the classes trainers belong to."),
+        };
+
+        private void Tour_Click(object sender, RoutedEventArgs e) => GuidedTour.StartEditor(this, "Trainer", true, TourSteps());
 
         public TrainerEditorView(TrainerEditorViewModel vm) : this()
         {

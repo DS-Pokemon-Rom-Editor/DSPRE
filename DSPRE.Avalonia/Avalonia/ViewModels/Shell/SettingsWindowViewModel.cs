@@ -238,6 +238,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             SettingsManager.Settings.automaticallyUpdateDBs = AutoUpdateDBs;
             SettingsManager.Settings.showWelcomeOnStartup   = ShowWelcomeOnStartup;
             SettingsManager.Settings.guidedTourShown        = !ShowGuidedTourNextLoad;
+            if (ShowGuidedTourNextLoad) SettingsManager.Settings.editorToursShown?.Clear();
             SettingsManager.Settings.uiScale                = (double)UiScale;
 
             SettingsManager.Settings.camPanSpeed     = (float)CamPanSpeed;

@@ -53,7 +53,7 @@
                   <DockPanel Grid.Column="1" Margin="0,0,6,0">
                     <Image DockPanel.Dock="Left" Width="32" Height="16" Margin="0,0,4,0" RenderOptions.BitmapInterpolationMode="None"
                            Source="{Binding Move, Converter={x:Static controls:GameIconConverter.MoveType}}"/>
-                    <controls:FusionAutoCompleteBox AllowsNone="False"
+                    <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" AllowsNone="False"
                         ItemsSource="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).MoveNames}" SelectedIndex="{Binding Move}"/>
                   </DockPanel>
                   <NumericUpDown Grid.Column="2" Value="{Binding Cost0}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"/>

@@ -80,6 +80,9 @@ namespace DSPRE
         /// the tour starts automatically after the next successful ROM load in the Avalonia shell.</summary>
         public bool guidedTourShown { get; set; } = false;
 
+        /// <summary>Editors whose first-open tour has run; the rest show theirs the next time they open.</summary>
+        public List<string> editorToursShown { get; set; } = new List<string>();
+
         /// <summary>Main-window placement, saved on close and restored at startup (0 = unset).</summary>
         public double mainWindowWidth { get; set; } = 0;
         public double mainWindowHeight { get; set; } = 0;

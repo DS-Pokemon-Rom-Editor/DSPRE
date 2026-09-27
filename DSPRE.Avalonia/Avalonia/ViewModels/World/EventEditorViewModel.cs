@@ -803,7 +803,17 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Warp fields ───────────────────────────────────────────────────────────────
         private decimal _warpHeader, _warpAnchor, _warpHeight;
-        public decimal WarpHeader { get => _warpHeader; set { if (Set(ref _warpHeader, value) && !_suppress && _warp != null) { _warp.header = (ushort)value; Dirty(); } } }
+        public decimal WarpHeader { get => _warpHeader; set { if (Set(ref _warpHeader, value)) { OnPropertyChanged(nameof(WarpHeaderName)); if (!_suppress && _warp != null) { _warp.header = (ushort)value; Dirty(); } } } }
+        private List<string> _headerNames;
+        public string WarpHeaderName
+        {
+            get
+            {
+                try { _headerNames ??= HeaderLists.GetHeaderListBoxNames(); } catch { return ""; }
+                int i = (int)_warpHeader;
+                return i >= 0 && i < _headerNames.Count ? _headerNames[i].Trim() : "No such header";
+            }
+        }
         public decimal WarpAnchor { get => _warpAnchor; set { if (Set(ref _warpAnchor, value) && !_suppress && _warp != null) { _warp.anchor = (ushort)value; Dirty(); } } }
         public decimal WarpHeight { get => _warpHeight; set { if (Set(ref _warpHeight, value) && !_suppress && _warp != null) { _warp.height = (uint)value; Dirty(); } } }
 
@@ -959,6 +969,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task SetupAsync(Window owner)
         {
             _owner = owner;
+            _headerNames = null;   // per ROM
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> {
@@ -1354,12 +1365,6 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>
-        /// The matrix cells to render for this event file: the bounding box spanning every cell its
-        /// events occupy, so the maps between them are loaded too and stitch into one continuous
-        /// surface (rather than just the exact occupied cells, which leaves holes where an event
-        /// skips a cell). Capped so a stray far-flung event can't pull in a whole world matrix.
-        /// </summary>
-        /// <summary>
         /// The matrix cells belonging to this event file's header, or null when the matrix has no
         /// headers section to identify them by.
         /// </summary>
@@ -1374,6 +1379,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             return set.Count > 0 ? set : null;
         }
 
+        /// <summary>The box around every cell with an event, so the maps between them stitch without holes; capped against a stray far-off event.</summary>
         private HashSet<(int x, int y)> EventCells()
         {
             var set = new HashSet<(int x, int y)>();

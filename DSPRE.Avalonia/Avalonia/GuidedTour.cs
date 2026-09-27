@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using global::Avalonia;
 using global::Avalonia.Controls;
+using global::Avalonia.Controls.Primitives;
 using global::Avalonia.Controls.Shapes;
 using global::Avalonia.Input;
 using global::Avalonia.Interactivity;
@@ -16,7 +17,8 @@ namespace DSPRE.Avalonia
     /// time (header list, map tabs, the main editor menus) with a small callout card. Starts
     /// automatically after the first successful ROM load; replay via Tools &gt; Guided Tour.
     /// The spotlight hole is not dimmed and stays clickable, so users can try the highlighted
-    /// control mid-tour.
+    /// control mid-tour. Editors run their own short tour the first time they open
+    /// (<see cref="StartEditor"/>), drawn in their window's overlay layer.
     /// </summary>
     public sealed class GuidedTour
     {
@@ -30,8 +32,10 @@ namespace DSPRE.Avalonia
 
         private static GuidedTour _active;
 
-        private readonly MainWindowView _main;
+        private readonly Control _root;
+        private readonly MainWindowView _main;   // null for an editor tour
         private readonly Canvas _layer;
+        private TopLevel _host;
         private readonly List<Step> _steps;
         private int _index;
         private int _sizeRetries;
@@ -55,8 +59,66 @@ namespace DSPRE.Avalonia
             _active.Begin();
         }
 
+        /// <summary>
+        /// Runs an editor's tour the first time that editor opens, or every time when <paramref name="force"/>
+        /// is set (its replay button). <paramref name="key"/> names the editor in the settings.
+        /// </summary>
+        public static void StartEditor(Control root, string key, bool force,
+            params (Func<Control> target, string title, string body)[] steps)
+        {
+            if (root == null || _active != null || steps.Length == 0) return;
+            var settings = SettingsManager.Settings;
+            if (!force)
+            {
+                if (settings == null) return;
+                settings.editorToursShown ??= new List<string>();
+                if (settings.editorToursShown.Contains(key)) return;
+                settings.editorToursShown.Add(key);
+                SettingsManager.Save();
+            }
+
+            var overlay = OverlayLayer.GetOverlayLayer(root);
+            if (overlay == null) return;
+            var layer = new Canvas { Background = null };
+            overlay.Children.Add(layer);
+
+            var list = new List<Step>();
+            foreach (var (target, title, body) in steps) list.Add(new Step { Target = target, Title = title, Body = body });
+            _active = new GuidedTour(root, layer, list);
+            _active.Begin();
+        }
+
+        /// <summary>
+        /// Starts an editor's tour once it is on screen with its data loaded, unless it has run before.
+        /// Polls because an embedded editor becomes visible when its tab is picked, not when it loads.
+        /// </summary>
+        public static void OfferWhenShown(Control view, string key, Func<bool> ready,
+            Func<(Func<Control> target, string title, string body)[]> steps)
+        {
+            if (Design.IsDesignMode) return;
+            var timer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            timer.Tick += (_, _) =>
+            {
+                if (SettingsManager.Settings?.editorToursShown?.Contains(key) == true) { timer.Stop(); return; }
+                if (_active != null || !view.IsEffectivelyVisible || view.Bounds.Width < 200 || !ready()) return;
+                timer.Stop();
+                StartEditor(view, key, false, steps());
+            };
+            view.AttachedToVisualTree += (_, _) => timer.Start();
+            view.DetachedFromVisualTree += (_, _) => timer.Stop();
+            if (TopLevel.GetTopLevel(view) != null) timer.Start();
+        }
+
+        private GuidedTour(Control root, Canvas layer, List<Step> steps)
+        {
+            _root = root;
+            _layer = layer;
+            _steps = steps;
+        }
+
         private GuidedTour(MainWindowView main, Canvas layer)
         {
+            _root = main;
             _main = main;
             _layer = layer;
             var maps = main.FindControl<MapsWorkspaceView>("Maps");
@@ -104,7 +166,9 @@ namespace DSPRE.Avalonia
                     "stitched together."),
                 Tab(2, "Tab 3 of 9: Events",
                     "Everything placed ON the map: NPCs (overworlds), warps between maps, script " +
-                    "triggers and ground items. This is where you populate the world."),
+                    "triggers and ground items. This is where you populate the world.\n\n" +
+                    "Fields that show ↗ when you point at them, here and in other editors, lead to the " +
+                    "editor they refer to: right-click and pick Open, or Ctrl+click."),
                 Tab(3, "Tab 4 of 9: Matrix",
                     "The grid that stitches individual maps into the seamless overworld. Each cell " +
                     "points at one map file and sets its elevation."),
@@ -127,63 +191,69 @@ namespace DSPRE.Avalonia
                 // ── The menus: what lives where ──
                 new Step
                 {
+                    Target = () => main.FindControl<Control>("FileMenu"),
+                    Title = "The File menu",
+                    Body = "Open a ROM or an extracted project, save a playable .nds (Save ROM), or build " +
+                           "and run it in your emulator with F5. hg-engine projects have their own submenu " +
+                           "here: link the checkout, compile, and review its patches."
+                },
+                new Step
+                {
                     Target = () => main.FindControl<Control>("PokemonMenu"),
                     Title = "The Pokémon menu",
-                    Body = "Edit the creatures themselves here: species stats and learnsets (Pokémon " +
-                           "Editor), move data, TM/HM assignments, egg moves, in-game trades, and wild " +
-                           "encounters (grass/surf, special encounters, headbutt trees)."
+                    Body = "The creatures and their moves: species stats, learnsets and sprites (Pokémon " +
+                           "Editor), move data and animations, TM/HM and egg moves, trades and starters, " +
+                           "wild encounters, and the Special Encounters Editor for headbutt trees, the Bug " +
+                           "Contest, the Safari Zone, honey trees, the Great Marsh and the Trophy Garden."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("TrainersMenu"),
                     Title = "The Trainers menu",
-                    Body = "Everyone the player battles: parties and properties in the Trainer Editor, " +
-                           "and each trainer class's overworld sprite in the Trainer Sprite Editor."
+                    Body = "Everyone the player battles: parties in the Trainer Editor, trainer sprites, " +
+                           "rematches, the Pokégear phone book, bulk trainer flags and the Battle Tower."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("ItemsMenu"),
                     Title = "The Items menu",
-                    Body = "Edit items here: the Item Editor covers each item's data and icon, and Item " +
-                           "Tables covers where items come from: the Pickup ability's loot, hidden " +
-                           "ground items, and HGSS Rock Smash drops."
+                    Body = "Each item's data and icon (Item Editor), what the marts sell, and where items " +
+                           "come from: Pickup loot, hidden ground items and HGSS Rock Smash drops."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("TextMenu"),
                     Title = "The Text menu",
-                    Body = "Edit words and logic here: all game text in the Text Editor, and the same " +
-                           "Script / Level Script editors you saw as tabs, as standalone windows."
+                    Body = "Words and logic: all game text, the Script and Level Script editors you saw as " +
+                           "tabs, custom script commands, the font and the character map."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("WorldMenu"),
                     Title = "The World menu",
-                    Body = "Edit world structure here: the same map tools you just toured as tabs, plus " +
-                           "extras like the Building and Camera editors, fly/spawn points and the " +
-                           "Advanced Header Search."
+                    Body = "The map tools you just toured as tabs, as full windows, plus buildings, fly and " +
+                           "spawn points, Platinum's Distortion World and the Advanced Header Search."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("GraphicsMenu"),
                     Title = "The Graphics menu",
-                    Body = "Standalone art editors: the title screen, dungeon cutin splashes, the " +
-                           "trainer card, overworld sprites and NSBTX textures."
+                    Body = "Every picture and model in the game, plus editors for battle scenes, the title " +
+                           "screen, the trainer card, the game icon, overworld sprites, particles and more."
+                },
+                new Step
+                {
+                    Target = () => main.FindControl<Control>("AudioMenu"),
+                    Title = "The Audio menu",
+                    Body = "Cries, music, fanfares and sound effects: listen, export and replace them."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("ToolsMenu"),
                     Title = "The Tools menu",
-                    Body = "Power tools: the ROM Patch Toolbox, Validation & Where-Used, Music & Battle " +
-                           "Tables, the Game Icon & Banner editor, NARC utilities and Settings.\n\n" +
+                    Body = "Power tools: Validation & Where-Used, the ROM Patch Toolbox, overlays, music " +
+                           "and battle tables, data exports, NARC utilities and Settings.\n\n" +
                            "Tip: press Ctrl+P anywhere and type an editor's name to open it instantly."
-                },
-                new Step
-                {
-                    Target = () => BetaEditors.Enabled
-                        ? main.FindControl<Control>("BetaNoticeText") : null,
-                    Title = "You are running the unfinished editors",
-                    Body = BetaSummary(),
                 },
                 new Step
                 {
@@ -234,8 +304,13 @@ namespace DSPRE.Avalonia
             _index = 0;
             _steps[0].OnEnter?.Invoke();
             _layer.IsVisible = true;
-            _main.SizeChanged += OnMainResized;
-            _main.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+            _host = TopLevel.GetTopLevel(_root);
+            if (_host != null)
+            {
+                _host.SizeChanged += OnMainResized;
+                _host.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
+            }
+            _root.DetachedFromVisualTree += OnRootDetached;
             // The layer was collapsed until now, so its Bounds are still empty; render after
             // the layout pass that IsVisible=true just scheduled.
             global::Avalonia.Threading.Dispatcher.UIThread.Post(Render,
@@ -244,11 +319,17 @@ namespace DSPRE.Avalonia
 
         private void End()
         {
-            _main.SizeChanged -= OnMainResized;
-            _main.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
+            if (_host != null)
+            {
+                _host.SizeChanged -= OnMainResized;
+                _host.RemoveHandler(InputElement.KeyDownEvent, OnKeyDown);
+            }
+            _root.DetachedFromVisualTree -= OnRootDetached;
             _layer.Children.Clear();
             _layer.IsVisible = false;
+            if (_main == null) (_layer.Parent as Panel)?.Children.Remove(_layer);
             _active = null;
+            if (_main == null) return;
 
             // The tab-walk steps switch the live Maps tab; don't leave the user parked on a
             // random one if they bailed out mid-tour.
@@ -257,6 +338,8 @@ namespace DSPRE.Avalonia
         }
 
         private void OnMainResized(object sender, SizeChangedEventArgs e) => Render();
+
+        private void OnRootDetached(object sender, VisualTreeAttachmentEventArgs e) { if (_active == this) End(); }
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
@@ -285,7 +368,7 @@ namespace DSPRE.Avalonia
 
         private IBrush Res(string key, Color fallback)
         {
-            if (_main.TryFindResource(key, _main.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (_root.TryFindResource(key, _root.ActualThemeVariant, out var v) && v is IBrush b) return b;
             return new SolidColorBrush(fallback);
         }
 

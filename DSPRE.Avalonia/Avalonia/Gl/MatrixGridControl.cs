@@ -8,14 +8,11 @@ using global::Avalonia.Media;
 namespace DSPRE.Avalonia.Gl
 {
     /// <summary>
-    /// Editable W×H integer grid for the Matrix editor (maps / headers / altitudes).
-    /// Shows each cell's value; click or drag fills cells with the current
-    /// <see cref="PaintValue"/>. Works on any 2-D source via get/set delegates, so it
-    /// serves ushort and byte matrices alike. EMPTY (0xFFFF) cells are shown blank.
+    /// W×H integer grid for the Matrix editor (maps / headers / altitudes); EMPTY (0xFFFF) cells are shown blank.
     /// </summary>
     public class MatrixGridControl : Control
     {
-        private const double CW = 34, CH = 24;
+        private const double CW = 38, CH = 26;
         private const int EMPTY = 65535;
 
         private int _w, _h;
@@ -25,12 +22,26 @@ namespace DSPRE.Avalonia.Gl
         private int _selCol = -1, _selRow = -1;
 
         public int PaintValue { get; set; }
-        /// <summary>When true the cell colour is a hue from its value (good for map IDs); else neutral.</summary>
-        public bool ColorByValue { get; set; } = true;
+        public bool PaintMode { get; set; }
+        /// <summary>A cell's fill by kind of place; null draws a neutral fill.</summary>
+        public Func<int, int, Color?> CellColour { get; set; }
+        /// <summary>For heights: fill by value on a light-to-deep ramp instead of by place.</summary>
+        public bool RampByValue { get; set; }
+
+        /// <summary>Each cell's header, used to outline <see cref="FocusHeader"/>'s cells.</summary>
+        public Func<int, int, int> HeaderAt { get; set; }
+        private int _focusHeader = -1;
+        public int FocusHeader { get => _focusHeader; set { _focusHeader = value; InvalidateVisual(); } }
+
         public event EventHandler Changed;
         public event EventHandler<(int col, int row, int value)> CellSelected;
+        public event EventHandler<(int col, int row, int value)> CellActivated;
 
-        public MatrixGridControl() { ClipToBounds = true; }
+        public MatrixGridControl()
+        {
+            ClipToBounds = true;
+            ActualThemeVariantChanged += (_, _) => InvalidateVisual();
+        }
 
         public void SetSource(int width, int height, Func<int, int, int> getter, Action<int, int, int> setter)
         {
@@ -40,16 +51,35 @@ namespace DSPRE.Avalonia.Gl
             InvalidateVisual();
         }
 
+        public Rect? FocusBounds()
+        {
+            if (HeaderAt == null || _focusHeader < 0 || _get == null) return null;
+            int minC = int.MaxValue, minR = int.MaxValue, maxC = -1, maxR = -1;
+            for (int r = 0; r < _h; r++)
+                for (int c = 0; c < _w; c++)
+                    if (InFocus(c, r)) { minC = Math.Min(minC, c); minR = Math.Min(minR, r); maxC = Math.Max(maxC, c); maxR = Math.Max(maxR, r); }
+            return maxC < 0 ? null : new Rect(minC * CW, minR * CH, (maxC - minC + 1) * CW, (maxR - minR + 1) * CH);
+        }
+
+        private bool InFocus(int c, int r) =>
+            c >= 0 && r >= 0 && c < _w && r < _h && HeaderAt != null && _focusHeader >= 0 && HeaderAt(c, r) == _focusHeader;
+
         protected override Size MeasureOverride(Size availableSize)
             => new Size(Math.Max(1, _w) * CW, Math.Max(1, _h) * CH);
 
         protected override void OnPointerPressed(PointerPressedEventArgs e)
         {
             base.OnPointerPressed(e);
-            _painting = true;
-            e.Pointer.Capture(this);
+            if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
             Select(e.GetPosition(this));
-            Paint(e.GetPosition(this));
+            if (PaintMode)
+            {
+                _painting = true;
+                e.Pointer.Capture(this);
+                Paint(e.GetPosition(this));
+            }
+            else if (e.ClickCount >= 2 && _selCol >= 0)
+                CellActivated?.Invoke(this, (_selCol, _selRow, _get(_selCol, _selRow)));
         }
 
         protected override void OnPointerMoved(PointerEventArgs e)
@@ -70,7 +100,7 @@ namespace DSPRE.Avalonia.Gl
         private void Select(Point p)
         {
             var (c, r) = CellAt(p);
-            if (c < 0 || c >= _w || r < 0 || r >= _h) return;
+            if (_get == null || c < 0 || c >= _w || r < 0 || r >= _h) return;
             _selCol = c; _selRow = r;
             CellSelected?.Invoke(this, (c, r, _get(c, r)));
             InvalidateVisual();
@@ -87,52 +117,66 @@ namespace DSPRE.Avalonia.Gl
             InvalidateVisual();
         }
 
+        private IBrush Res(string key, IBrush fallback) =>
+            this.TryFindResource(key, ActualThemeVariant, out var v) && v is IBrush b ? b : fallback;
+
         public override void Render(DrawingContext ctx)
         {
-            ctx.FillRectangle(Brushes.White, new Rect(0, 0, _w * CW, _h * CH));
+            IBrush back = Res("Editor.PanelBg", Brushes.Transparent);
+            IBrush text = Res("Editor.Text", Brushes.Gainsboro);
+            bool dark = ActualThemeVariant == global::Avalonia.Styling.ThemeVariant.Dark;
+
+            ctx.FillRectangle(back, new Rect(0, 0, _w * CW, _h * CH));
             if (_get == null) return;
 
-            var grid = new Pen(new SolidColorBrush(Color.FromArgb(60, 0, 0, 0)));
-            var sel = new Pen(Brushes.OrangeRed, 2);
+            var grid = new Pen(new SolidColorBrush(dark ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(40, 0, 0, 0)));
             var typeface = new Typeface(FontFamily.Default);
+            bool anyFocus = HeaderAt != null && _focusHeader >= 0;
 
             for (int row = 0; row < _h; row++)
                 for (int col = 0; col < _w; col++)
                 {
                     int val = _get(col, row);
                     var rect = new Rect(col * CW, row * CH, CW, CH);
-
-                    IBrush bg = Brushes.White;
-                    if (val == EMPTY) bg = new SolidColorBrush(Color.FromRgb(235, 235, 235));
-                    else if (ColorByValue) bg = new SolidColorBrush(HueColor(val));
-                    ctx.FillRectangle(bg, rect);
-                    ctx.DrawRectangle(grid, rect);
-
                     if (val != EMPTY)
                     {
-                        var text = new FormattedText(val.ToString(), CultureInfo.InvariantCulture,
-                            FlowDirection.LeftToRight, typeface, 11, Brushes.Black);
-                        ctx.DrawText(text, new Point(rect.X + 3, rect.Y + (CH - text.Height) / 2));
+                        Color fill = RampByValue ? Ramp(val) : CellColour?.Invoke(col, row) ?? Color.FromRgb(0x4A, 0x50, 0x58);
+                        ctx.FillRectangle(new SolidColorBrush(fill), rect);
+                    }
+                    ctx.DrawRectangle(grid, rect);
+                    if (val != EMPTY)
+                    {
+                        var t = new FormattedText(val.ToString(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                            typeface, 11, Brushes.White);
+                        ctx.DrawText(t, new Point(rect.X + (CW - t.Width) / 2, rect.Y + (CH - t.Height) / 2));
                     }
                 }
 
+            // Outline the current header's cells along the edges they don't share with each other.
+            if (anyFocus)
+            {
+                var edge = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xD5, 0x3D)), 3);
+                for (int r = 0; r < _h; r++)
+                    for (int c = 0; c < _w; c++)
+                    {
+                        if (!InFocus(c, r)) continue;
+                        double x = c * CW, y = r * CH;
+                        if (!InFocus(c, r - 1)) ctx.DrawLine(edge, new Point(x, y), new Point(x + CW, y));
+                        if (!InFocus(c, r + 1)) ctx.DrawLine(edge, new Point(x, y + CH), new Point(x + CW, y + CH));
+                        if (!InFocus(c - 1, r)) ctx.DrawLine(edge, new Point(x, y), new Point(x, y + CH));
+                        if (!InFocus(c + 1, r)) ctx.DrawLine(edge, new Point(x + CW, y), new Point(x + CW, y + CH));
+                    }
+            }
+
             if (_selCol >= 0 && _selRow >= 0)
-                ctx.DrawRectangle(sel, new Rect(_selCol * CW, _selRow * CH, CW, CH));
+                ctx.DrawRectangle(new Pen(text, 2), new Rect(_selCol * CW + 1, _selRow * CH + 1, CW - 2, CH - 2));
         }
 
-        private static Color HueColor(int v)
+        // Heights: deep blue low to warm high, dark enough for white numbers throughout.
+        private static Color Ramp(int v)
         {
-            double h = (v * 53) % 360;
-            // pastel
-            double c = 0.35, x = c * (1 - Math.Abs((h / 60.0) % 2 - 1)), m = 0.75;
-            double r = 0, g = 0, b = 0;
-            if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
-            else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
-            else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
-            return Color.FromRgb(Pale(r + m), Pale(g + m), Pale(b + m));
+            double t = Math.Clamp(v / 32.0, 0, 1);
+            return Color.FromRgb((byte)(0x2A + t * 0x90), (byte)(0x4A + t * 0x20), (byte)(0x8C - t * 0x60));
         }
-
-        // c + m reaches 1.1, so a full-strength channel has to be clamped or it wraps past 255 to near black.
-        private static byte Pale(double v) => (byte)Math.Clamp(v * 255, 0, 255);
     }
 }

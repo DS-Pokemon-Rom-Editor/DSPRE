@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         xmlns:vmb="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Battle"
@@ -65,7 +66,7 @@
       <StackPanel Grid.Column="4" Spacing="8">
         <TextBlock Text="Preview" FontWeight="SemiBold"/>
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <ComboBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" Width="220" MaxDropDownHeight="420"/>
+          <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" Width="220" MaxDropDownHeight="420"/>
           <Button Content="{Binding Battle.SendOutButtonText}" Click="Play_Click" MinWidth="120"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="8" x:DataType="vmb:BattleDisplayEditorViewModel" DataContext="{Binding Battle}">

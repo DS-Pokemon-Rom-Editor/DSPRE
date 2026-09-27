@@ -1173,7 +1173,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // Jump to the related editor at this header's referenced file.
-        public void OpenMatrix() { if (_header != null) AvaloniaEditorLauncher.OpenMatrixEditor(_header.matrixID); }
+        public void OpenMatrix() { if (_header != null) AvaloniaEditorLauncher.OpenMatrixEditor(_header.matrixID, _header.ID); }
         public void OpenAreaData() { if (_header != null) AvaloniaEditorLauncher.OpenAreaDataEditor(_header.areaDataID); }
         public void OpenEvents() { if (_header != null) AvaloniaEditorLauncher.OpenEventEditor(_header.eventFileID); }
         public void OpenScripts() { if (_header != null) AvaloniaEditorLauncher.OpenScriptEditor(_header.scriptFileID); }
