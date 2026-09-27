@@ -13,13 +13,30 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>The move tutors' moves, prices and places, and which Pokémon each can teach.</summary>
-    public class MoveTutorEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class MoveTutorEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private MoveTutorData _data;
         private byte[] _savedPool, _savedMasks;
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _data.PoolBytes().Concat(_data.MaskBytes()).ToArray(), ApplyTutors, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private void ApplyTutors(byte[] b)
+        {
+            int pool = _data.PoolBytes().Length;
+            _data.Restore(b[..pool], b[pool..]);
+            _tutorNames = null;
+            foreach (var row in Pool) row.Refresh();
+            ShowSpecies(); ShowTutor();
+            Changed(true);
+        }
 
         public string[] MoveNames { get; } = Array.Empty<string>();
         public string[] Places => _data?.Places ?? Array.Empty<string>();
@@ -45,6 +62,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _data = MoveTutorData.Load();
             _savedPool = _data.PoolBytes();
             _savedMasks = _data.MaskBytes();
+            StartUndo();
             MoveNames = GetAttackNames();
             for (int i = 0; i < _data.Pool.Count; i++) Pool.Add(new PoolRow(this, i));
 
@@ -72,7 +90,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 set
                 {
                     // "None" isn't a tutor move; put the box back to the stored one.
-                    if (value <= 0) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move))); return; }
+                    if (value <= 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move)))); return; }
                     if (value != T.Move) { T.Move = (ushort)value; _o.Changed(true); }
                 }
             }
@@ -144,8 +162,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Changed(bool movesRenamed)
         {
-            if (movesRenamed) { _tutorNames = null; Raise(nameof(TutorNames)); ShowSpecies(); }
+            // A new names list clears the ListBox selection, so the selection is raised again after it.
+            if (movesRenamed) { _tutorNames = null; Raise(nameof(TutorNames)); Raise(nameof(SelectedTutor)); ShowSpecies(); }
             Raise(nameof(Problem)); Raise(nameof(HasProblem)); Raise(nameof(HasUnsavedChanges));
+            _undo?.Record();
         }
 
         public bool HasUnsavedChanges => _data != null &&
@@ -183,6 +203,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _tutorNames = null;
             _savedPool = _data.PoolBytes();
             _savedMasks = _data.MaskBytes();
+            StartUndo();
             foreach (var row in Pool) row.Refresh();
             ShowSpecies(); ShowTutor();
             Changed(true);

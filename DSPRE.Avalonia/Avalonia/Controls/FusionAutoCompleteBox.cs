@@ -18,6 +18,16 @@ namespace DSPRE.Avalonia.Controls
                 -1,
                 defaultBindingMode: global::Avalonia.Data.BindingMode.TwoWay);
 
+        /// <summary>False where "nothing" isn't a valid choice: clearing the box then puts the last item back.</summary>
+        public static readonly StyledProperty<bool> AllowsNoneProperty =
+            AvaloniaProperty.Register<FusionAutoCompleteBox, bool>(nameof(AllowsNone), true);
+
+        public bool AllowsNone
+        {
+            get => GetValue(AllowsNoneProperty);
+            set => SetValue(AllowsNoneProperty, value);
+        }
+
         private bool _editingText;
         private bool _showAllItems;
         private bool _refreshingDropDown;
@@ -253,6 +263,11 @@ namespace DSPRE.Avalonia.Controls
             if (exactItem != null)
             {
                 SetCurrentValue(SelectedItemProperty, exactItem);
+            }
+            else if (text.Length == 0 && !AllowsNone && _lastCommittedItem != null && FindItemIndex(_lastCommittedItem) >= 0)
+            {
+                SetCurrentValue(SelectedItemProperty, _lastCommittedItem);
+                SetCurrentValue(TextProperty, FormatValue(_lastCommittedItem));
             }
             else if (text.Length == 0)
             {

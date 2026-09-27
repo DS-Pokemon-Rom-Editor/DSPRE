@@ -7,17 +7,34 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
+using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>How much friendship each event adds or takes, by how friendly the Pokémon already is.</summary>
-    public class FriendshipChangesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class FriendshipChangesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private FriendshipTable _table;
         private byte[] _saved;
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _table.ToBytes(), b => { CopyValues(b); Changed(); }, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private void CopyValues(byte[] bytes)
+        {
+            var back = new FriendshipTable(bytes);
+            for (int e = 0; e < FriendshipTable.Events; e++)
+                for (int b = 0; b < FriendshipTable.Bands; b++)
+                    _table.Values[e, b] = back.Values[e, b];
+            foreach (var r in Rows) r.Refresh();
+        }
 
         public string[] BandNames => FriendshipTable.BandNames;
         public ObservableCollection<RowViewModel> Rows { get; } = new ObservableCollection<RowViewModel>();
@@ -29,7 +46,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!load) return;
             _table = FriendshipTable.Load();
             _saved = _table.ToBytes();
-            for (int e = 0; e < FriendshipTable.Events; e++) Rows.Add(new RowViewModel(this, e));
+            for (int e = 0; e < FriendshipTable.Events; e++)
+                if (e != 9 || gameFamily != GameFamilies.HGSS)   // HeartGold has no Contests
+                    Rows.Add(new RowViewModel(this, e));
+            StartUndo();
         }
 
         public sealed class RowViewModel : INotifyPropertyChanged
@@ -79,6 +99,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void Changed()
         {
             foreach (var n in new[] { nameof(Warning), nameof(HasWarning), nameof(HasUnsavedChanges) }) Raise(n);
+            _undo?.Record();
         }
 
         public bool HasUnsavedChanges => _table != null && !_table.ToBytes().AsSpan().SequenceEqual(_saved);
@@ -104,11 +125,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DiscardChanges()
         {
             if (_table == null) return;
-            var back = new FriendshipTable(_saved);
-            for (int e = 0; e < FriendshipTable.Events; e++)
-                for (int b = 0; b < FriendshipTable.Bands; b++)
-                    _table.Values[e, b] = back.Values[e, b];
-            foreach (var r in Rows) r.Refresh();
+            CopyValues(_saved);
+            StartUndo();
             Changed();
         }
     }

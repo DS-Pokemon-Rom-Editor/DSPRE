@@ -149,7 +149,8 @@ namespace DSPRE
         {
             if (moves.Length != MachineCount || (palettes != null && palettes.Length != moves.Length))
                 throw new InvalidOperationException("The number of machines changed since the editor opened. Reopen it to edit them.");
-            for (int i = 0; i < moves.Length; i++)
+            // The move tables don't need item rows; only palettes are written there.
+            for (int i = 0; palettes != null && i < moves.Length; i++)
                 if (!ItemTable.Exists(MachineItemId(i))) throw new InvalidOperationException($"{MachineLabelFromIndex(i)} has no item row, so nothing was saved.");
 
             var writer = new ARM9.Writer(RomInfo.GetMachineMoveOffset());

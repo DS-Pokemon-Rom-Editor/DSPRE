@@ -158,6 +158,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 if (_isLoading || value < 0 || value > MaxItemDataId) return;
                 _currentEntry.itemData = (uint)value;
                 LoadItemData(value);
+                UpdateSharedDataNote(_selectedItemIndex);
                 SetEntryDirty();
             }
         }
@@ -598,6 +599,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             RefreshEntryBoundProps();
             PopulateFromCurrentData();
             UpdateIcon();
+            UpdateSharedDataNote(_selectedItemIndex);
             _isLoading = false;
 
             _dataDirty = _entryDirty = _history.IsDirty;
@@ -632,10 +634,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string SharedDataNote { get => _sharedDataNote; private set { _sharedDataNote = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasSharedDataNote)); } }
         public bool HasSharedDataNote => _sharedDataNote.Length > 0;
 
+        // Follows the data id being edited, not the saved one, so pointing an item elsewhere updates it at once.
         private void UpdateSharedDataNote(int id)
         {
             if (RomInfo.isHGE || PlatPatches.Items() == null) { SharedDataNote = ""; return; }
-            var others = ItemTable.SharingData(id, ItemNames.Count);
+            var others = ItemTable.SharingData(id, (int)_currentEntry.itemData, ItemNames.Count);
             if (others.Count == 0) { SharedDataNote = ""; return; }
             string names = string.Join(", ", others.Take(4).Select(i => i < ItemNames.Count ? ItemNames[i] : $"Item {i}"));
             SharedDataNote = $"Shares its item data with {names}{(others.Count > 4 ? $" and {others.Count - 4} more" : "")}; editing it changes those too.";

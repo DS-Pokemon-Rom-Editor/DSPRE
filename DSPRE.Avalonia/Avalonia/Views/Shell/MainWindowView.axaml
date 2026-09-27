@@ -53,33 +53,33 @@
         <MenuItem Header="Pokémon Editor…"   Click="PokemonEditor_Click" IsEnabled="{Binding CanUsePokemonEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <MenuItem Header="Form Editor (hg-engine)…" Click="HgEngineFormEditor_Click" IsEnabled="{Binding CanUseHgEngineFormEditor}"
                   ToolTip.Tip="Which form species (Mega/regional/Gmax/etc.) exist per base Pokémon, from the linked checkout's PokeFormDataTbl.c"/>
+        <MenuItem Header="Growth Curves…" Click="GrowthCurves_Click" IsEnabled="{Binding CanUseGrowthCurves}"
+                  ToolTip.Tip="{Binding BlockedNote[GrowthCurveEditorView], TargetNullValue='The EXP each growth rate needs per level'}"/>
+        <MenuItem Header="Breeding Items…" Click="BreedingItems_Click" IsEnabled="{Binding CanUseBreedingItems}"
+                  ToolTip.Tip="{Binding BlockedNote[BreedingItemsView], TargetNullValue='Babies that only hatch while a parent holds an incense'}"/>
+        <MenuItem Header="Friendship Changes…" Click="FriendshipChanges_Click" IsEnabled="{Binding CanUseFriendship}"
+                  ToolTip.Tip="{Binding BlockedNote[FriendshipChangesView], TargetNullValue='How much friendship each event adds or takes'}"/>
         <Separator/>
         <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click" IsEnabled="{Binding CanUseMoveEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <MenuItem Header="Move Animations &amp; Battle Scripts…" Click="BattleScriptEditor_Click"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Edit move animations (WEST) and battle-effect scripts, with a live animation preview'}" IsEnabled="{Binding CanUseBattleScriptEditor}"/>
-        <MenuItem Header="Type Chart Editor…" Click="TypeChart_Click" IsEnabled="{Binding CanUseTypeChart}"
-                  ToolTip.Tip="How well each type hits each other type"/>
+        <MenuItem Header="Type Chart…" Click="TypeChart_Click" IsEnabled="{Binding CanUseTypeChart}"
+                  ToolTip.Tip="{Binding BlockedNote[TypeChartEditorView], TargetNullValue='How well each type hits each other type'}"/>
         <MenuItem Header="TM / HM Editor…"   Click="TMEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Move Tutor Editor…" Click="MoveTutors_Click" IsEnabled="{Binding CanUseMoveTutors}"
-                  ToolTip.Tip="The move tutors' moves, prices and places, and which Pokémon each can teach"/>
+        <MenuItem Header="Move Tutors…" Click="MoveTutors_Click" IsEnabled="{Binding CanUseMoveTutors}" IsVisible="{Binding HasMoveTutors}"
+                  ToolTip.Tip="{Binding BlockedNote[MoveTutorEditorView], TargetNullValue='What each move tutor teaches, where, at what price, and to which Pokémon'}"/>
         <MenuItem Header="Egg Move Editor…"  Click="EggMoveEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Growth Curve Editor…" Click="GrowthCurves_Click" IsEnabled="{Binding CanUseGrowthCurves}"
-                  ToolTip.Tip="The EXP each growth rate needs per level"/>
-        <MenuItem Header="Breeding Items…" Click="BreedingItems_Click" IsEnabled="{Binding CanUseBreedingItems}"
-                  ToolTip.Tip="Babies that only hatch while a parent holds an incense"/>
-        <MenuItem Header="Friendship Changes…" Click="FriendshipChanges_Click" IsEnabled="{Binding CanUseFriendship}"
-                  ToolTip.Tip="How much friendship each event adds or takes"/>
         <Separator/>
         <MenuItem Header="Trade Editor…"      Click="TradeEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <MenuItem Header="Starter Pokémon Editor…" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <Separator/>
         <MenuItem Header="Wild Pokémon Editor…"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <MenuItem Header="Encounter Slot Odds…" Click="EncounterSlotOdds_Click" IsEnabled="{Binding CanUseSlotOdds}"
-                  ToolTip.Tip="The chance of each wild encounter slot"/>
+                  ToolTip.Tip="{Binding BlockedNote[EncounterSlotOddsView], TargetNullValue='The chance of each wild encounter slot'}"/>
         <MenuItem Header="Wild Held Items…" Click="WildHeldItems_Click" IsEnabled="{Binding CanUseWildHeldItems}"
-                  ToolTip.Tip="How often wild Pokémon hold their common or rare item"/>
+                  ToolTip.Tip="{Binding BlockedNote[WildHeldItemOddsView], TargetNullValue='How often wild Pokémon hold their common or rare item'}"/>
         <MenuItem Header="Special Encounters Editor…" Click="SpecialEncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"
-                  ToolTip.Tip="Headbutt trees, Bug Contest, Safari Zone, Honey Trees, Great Marsh and Trophy Garden"/>
+                  ToolTip.Tip="Headbutt trees, Bug Contest, Safari Zone, Honey Trees, Great Marsh, Trophy Garden and swarms"/>
       </MenuItem>
 
       <MenuItem Header="_Trainers" x:Name="TrainersMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -108,12 +108,12 @@
                   ToolTip.Tip="Each item's data: price, effect parameters, description and icon"/>
         <MenuItem Header="Mart Editor…" Click="MartEditor_Click" IsEnabled="{Binding CanUseMartEditor}"
                   ToolTip.Tip="{Binding MartEditorNote}"/>
-        <MenuItem Header="Berry Data Editor…" Click="BerryData_Click" IsEnabled="{Binding CanUseBerryData}"
-                  ToolTip.Tip="Each berry's size, firmness, growth and flavours"/>
-        <MenuItem Header="Battle Point Shop Editor…" Click="BpShop_Click" IsEnabled="{Binding CanUseBpShop}"
-                  ToolTip.Tip="What the Battle Point exchange counters sell"/>
-        <MenuItem Header="Underground Mining…" Click="UndergroundMining_Click" IsEnabled="{Binding CanUseMining}"
-                  ToolTip.Tip="How likely each Underground treasure is"/>
+        <MenuItem Header="Berry Data…" Click="BerryData_Click" IsEnabled="{Binding CanUseBerryData}"
+                  ToolTip.Tip="{Binding BlockedNote[BerryDataEditorView], TargetNullValue='The size, firmness, growth and flavours of each berry'}"/>
+        <MenuItem Header="Battle Point Shop…" Click="BpShop_Click" IsEnabled="{Binding CanUseBpShop}" IsVisible="{Binding IsDpOrPlatinum}"
+                  ToolTip.Tip="{Binding BlockedNote[BpShopEditorView], TargetNullValue='What the Battle Point exchange counters sell'}"/>
+        <MenuItem Header="Underground Mining…" Click="UndergroundMining_Click" IsEnabled="{Binding CanUseMining}" IsVisible="{Binding IsDpOrPlatinum}"
+                  ToolTip.Tip="{Binding BlockedNote[UndergroundMiningView], TargetNullValue='How likely each Underground treasure is'}"/>
         <MenuItem Header="Item Tables (Pickup, Hidden, Rock Smash)…" Click="ItemTableEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}"
                   ToolTip.Tip="Where items come from: the Pickup ability's common/rare tables, hidden ground items, and HGSS Rock Smash drops"/>
       </MenuItem>

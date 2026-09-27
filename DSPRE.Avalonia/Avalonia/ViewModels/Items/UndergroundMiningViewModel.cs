@@ -13,13 +13,20 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Items
 {
     /// <summary>How likely each Underground treasure is, for each kind of player.</summary>
-    public class UndergroundMiningViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class UndergroundMiningViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private MiningTable _table;
         private byte[] _saved;
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _table.ToBytes(), b => { _table.RestoreWeights(b); Changed(true); }, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
 
         public string[] Columns => MiningTable.Columns;
         public ObservableCollection<TreasureRow> Rows { get; } = new ObservableCollection<TreasureRow>();
@@ -31,6 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (!load) return;
             _table = MiningTable.Load();
             _saved = _table.ToBytes();
+            StartUndo();
             string[] items = GetItemNames();
             var seen = new Dictionary<string, int>();
             foreach (var row in _table.Treasures)
@@ -64,13 +72,15 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 ushort w = (ushort)Math.Clamp(v, 0, ushort.MaxValue);
                 if (_row.Weights[c] == w) return;
                 _row.Weights[c] = w;
-                _o.Changed();
+                _o.Changed(false, c);
             }
 
-            internal void Refresh()
+            /// <param name="column">Only that column's share; -1 for every value.</param>
+            internal void Refresh(int column = -1)
             {
-                foreach (var n in new[] { nameof(W0), nameof(W1), nameof(W2), nameof(W3), nameof(P0), nameof(P1), nameof(P2), nameof(P3) })
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+                var names = column >= 0 ? new[] { $"P{column}" }
+                    : new[] { nameof(W0), nameof(W1), nameof(W2), nameof(W3), nameof(P0), nameof(P1), nameof(P2), nameof(P3) };
+                foreach (var n in names) PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }
 
@@ -86,10 +96,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string Problem => _table?.Problem() ?? "";
         public bool HasProblem => Problem.Length > 0;
 
-        private void Changed()
+        // One edited weight only moves the shares in its column.
+        private void Changed(bool weights = true, int column = -1)
         {
-            foreach (var r in Rows) r.Refresh();
+            foreach (var r in Rows) r.Refresh(weights ? -1 : column);
             foreach (var n in new[] { nameof(Totals), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
+            _undo?.Record();
         }
 
         public bool HasUnsavedChanges => _table != null && !_table.ToBytes().AsSpan().SequenceEqual(_saved);
@@ -117,6 +129,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_table == null) return;
             _table.RestoreWeights(_saved);
+            StartUndo();
             Changed();
         }
     }

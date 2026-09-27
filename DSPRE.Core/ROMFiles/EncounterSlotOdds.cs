@@ -30,7 +30,7 @@ namespace DSPRE.ROMFiles
         public static string WhyNot()
         {
             var methods = SlotOddsMethods;
-            if (methods == null) return "This game version isn't supported yet. Only US HeartGold, Platinum Rev 1 and Diamond are checked.";
+            if (methods == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
             foreach (int ov in methods.Select(m => m.Overlay).Distinct())
                 if (!File.Exists(OverlayUtils.GetPath(ov))) return $"Overlay {ov} is missing from this project.";
             try { Load(); }

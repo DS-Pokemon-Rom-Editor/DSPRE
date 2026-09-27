@@ -5,10 +5,8 @@ using System.Linq;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// What the Underground's walls hold (sMiningObjects, Diamond/Pearl and Platinum): 85 rows of 20 bytes. Each row
-    /// has four weights, picked by the player's trainer ID being odd or even and by having the National Dex, then its
-    /// size, mining id, sprite and palette. The game draws treasures by weight over the rows before the first rock
-    /// (id 60); rocks must stay last and the row count is compiled in, so only the weights are edited here.
+    /// What the Underground's walls hold: 85 rows, each with four weights picked by trainer ID parity and National Dex.
+    /// Rocks must stay last and the row count is compiled in, so only the weights are editable.
     /// </summary>
     public class MiningTable
     {
@@ -36,6 +34,7 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot()
         {
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return "HeartGold and SoulSilver have no Underground.";
             if (GameTableFile.WhyNot(RomInfo.GameTable.MiningTreasures, Size) is string why) return why;
             return GameTableFile.WhyNot(RomInfo.GameTable.MiningItems, ItemListCount * 2);
         }

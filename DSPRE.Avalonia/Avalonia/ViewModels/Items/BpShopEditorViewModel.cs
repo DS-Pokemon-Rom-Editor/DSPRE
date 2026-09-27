@@ -13,13 +13,20 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Items
 {
     /// <summary>What the two Battle Point exchange counters sell and for how many points.</summary>
-    public class BpShopEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BpShopEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private BpShopData _shop;
         private byte[] _saved;
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _shop.Snapshot(), b => { _shop.Restore(b); SelectedLeft = SelectedRight = null; Rebuild(); Changed(); }, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
 
         public string[] ItemNames { get; } = Array.Empty<string>();
         public ObservableCollection<EntryViewModel> Left { get; } = new ObservableCollection<EntryViewModel>();
@@ -37,6 +44,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             ItemNames = GetItemNames();
             _shop = BpShopData.Load();
             _saved = _shop.Snapshot();
+            StartUndo();
             Rebuild();
         }
 
@@ -53,7 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 set
                 {
                     // "None" can't be sold; put the box back to the stored item.
-                    if (value <= 0) { PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Item))); return; }
+                    if (value <= 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Item)))); return; }
                     if (value != Entry.Item) { Entry.Item = (ushort)value; _changed(); }
                 }
             }
@@ -129,8 +137,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (_shop == null) return "";
                 if (!_shop.IsPlatinum) return "";
-                if (_shop.InPlace) return _shop.FitsInPlace ? "" : "Saving moves the lists to the expanded ARM9 area.";
-                return _shop.InExpansion ? "In the expanded ARM9 area." : "Moved by a patch DSPRE doesn't follow, so saving is off.";
+                if (_shop.InPlace) return _shop.FitsInPlace || HasProblem ? "" : "Saving moves the lists to the expanded ARM9 area.";
+                return _shop.InExpansion ? "In the expanded ARM9 area." : "";
             }
         }
 
@@ -146,6 +154,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             foreach (var n in new[] { nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(Status),
                 nameof(LeftHeader), nameof(RightHeader), nameof(HasUnsavedChanges) })
                 Raise(n);
+            _undo?.Record();
         }
 
         public bool HasUnsavedChanges => _shop != null && !_shop.Snapshot().AsSpan().SequenceEqual(_saved);
@@ -175,6 +184,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _shop.Restore(_saved);
             SelectedLeft = SelectedRight = null;
             Rebuild();
+            StartUndo();
             Changed();
         }
     }

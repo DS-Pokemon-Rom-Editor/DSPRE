@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
              x:Class="DSPRE.Avalonia.Views.Items.BerryDataEditorView"
@@ -25,6 +26,7 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
 
@@ -34,7 +36,8 @@
     <Grid ColumnDefinitions="200,*" Margin="8">
       <ListBox Grid.Column="0" ItemsSource="{Binding BerryNames}" SelectedIndex="{Binding SelectedBerry}" Margin="0,0,10,0"/>
 
-      <StackPanel Grid.Column="1" Spacing="10">
+      <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="10">
         <GroupBox Header="Growth">
           <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,6,Auto,6,Auto" Margin="4">
             <TextBlock Grid.Row="0" Classes="label" Text="Hours per stage"/>
@@ -49,8 +52,8 @@
 
         <GroupBox Header="Look and taste">
           <StackPanel Spacing="6" Margin="4">
-            <TextBlock Text="HeartGold and SoulSilver don't read these, as far as we know." IsVisible="{Binding LooksUnread}"
-                       Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+            <TextBlock Text="HeartGold may not read these." IsVisible="{Binding LooksUnread}"
+                       Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
             <Grid ColumnDefinitions="Auto,Auto,24,Auto,Auto" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto">
               <TextBlock Grid.Row="0" Classes="label" Text="Size (mm)"/>
               <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding SizeMm}" Minimum="0" Maximum="65535"/>
@@ -75,6 +78,7 @@
           </StackPanel>
         </GroupBox>
       </StackPanel>
+      </ScrollViewer>
     </Grid>
   </DockPanel>
 </UserControl>

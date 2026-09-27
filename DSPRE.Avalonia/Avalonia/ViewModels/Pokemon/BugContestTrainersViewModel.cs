@@ -173,7 +173,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public int SpeciesIndex
             {
                 get => _row.Species;
-                set { if (value < 0 || value == _row.Species) return; _row.Species = (ushort)value; Changed(); }
+                set
+                {
+                    if (value < 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => Raise(nameof(SpeciesIndex))); return; }   // a cleared box goes back to the stored species
+                    if (value == _row.Species) return;
+                    _row.Species = (ushort)value; Changed();
+                }
             }
 
             public int DayIndex

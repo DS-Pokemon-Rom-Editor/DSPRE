@@ -182,25 +182,18 @@
                   </ItemsControl>
                 </StackPanel>
               </GroupBox>
-              <GroupBox>
-                <GroupBox.Header>
-                  <StackPanel Orientation="Horizontal" Spacing="6">
-                    <TextBlock Text="Event display" VerticalAlignment="Center"/>
-                    <Button Content="?" Click="PokeathlonDisplayHelp_Click" Padding="6,0" MinWidth="0"
-                            ToolTip.Tip="What these values do"/>
-                  </StackPanel>
-                </GroupBox.Header>
+              <GroupBox Header="Event display">
                 <Grid ColumnDefinitions="Auto,140,24,Auto,140" HorizontalAlignment="Left" RowDefinitions="Auto,8,Auto" Margin="4">
-                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Cell (?):" Classes="label" Margin="0,0,10,0"/>
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Cell:" Classes="label" Margin="0,0,10,0" ToolTip.Tip="Sprite size"/>
                   <ComboBox  Grid.Row="0" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
                              ItemsSource="{Binding AthlonCellOptions}" SelectedIndex="{Binding AthlonCellIndex}"/>
-                  <TextBlock Grid.Row="0" Grid.Column="3" Text="Hit (?):" Classes="label" Margin="0,0,10,0"/>
+                  <TextBlock Grid.Row="0" Grid.Column="3" Text="Hit:" Classes="label" Margin="0,0,10,0" ToolTip.Tip="Hitbox in events"/>
                   <ComboBox  Grid.Row="0" Grid.Column="4" MinWidth="0" HorizontalAlignment="Stretch"
                              ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonHitIndex}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Touch (?):" Classes="label" Margin="0,0,10,0"/>
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Touch:" Classes="label" Margin="0,0,10,0" ToolTip.Tip="Height of the sweat mark"/>
                   <ComboBox  Grid.Row="2" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
                              ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonTouchIndex}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="3" Text="Shadow (?):" Classes="label" Margin="0,0,10,0"/>
+                  <TextBlock Grid.Row="2" Grid.Column="3" Text="Shadow:" Classes="label" Margin="0,0,10,0" ToolTip.Tip="Where its shadow and player marker sit"/>
                   <ComboBox  Grid.Row="2" Grid.Column="4" MinWidth="0" HorizontalAlignment="Stretch"
                              ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonShadowIndex}"/>
                 </Grid>

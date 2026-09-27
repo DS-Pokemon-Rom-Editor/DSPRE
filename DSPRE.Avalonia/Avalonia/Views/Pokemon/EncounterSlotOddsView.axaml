@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.EncounterSlotOddsView"
+             x:DataType="vm:EncounterSlotOddsViewModel">
+  <Design.DataContext>
+    <vm:EncounterSlotOddsViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+      </StackPanel>
+    </Border>
+
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Margin="8,4"
+               Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+
+    <TabControl ItemsSource="{Binding Methods}" Margin="4">
+      <TabControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:EncounterSlotOddsViewModel+MethodViewModel">
+          <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding Note}"/>
+        </DataTemplate>
+      </TabControl.ItemTemplate>
+      <TabControl.ContentTemplate>
+        <DataTemplate x:DataType="vm:EncounterSlotOddsViewModel+MethodViewModel">
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="10" Spacing="4">
+            <controls:ProportionBar Parts="{Binding Parts}" HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
+            <ItemsControl ItemsSource="{Binding Slots}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:EncounterSlotOddsViewModel+SlotViewModel">
+                  <Grid ColumnDefinitions="70,120,*" Margin="0,2">
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Column="1" Value="{Binding Percent}" Minimum="0" Maximum="100" FormatString="0'%'"/>
+                    <controls:ProportionBar Grid.Column="2" Parts="{Binding Bar}" Height="16" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding Total}" FontWeight="SemiBold" Margin="0,6,0,0" Classes.bad="{Binding IsOff}"/>
+          </StackPanel>
+          </ScrollViewer>
+        </DataTemplate>
+      </TabControl.ContentTemplate>
+      <TabControl.Styles>
+        <Style Selector="TextBlock.bad">
+          <Setter Property="Foreground" Value="{DynamicResource Editor.Bad}"/>
+        </Style>
+      </TabControl.Styles>
+    </TabControl>
+  </DockPanel>
+</UserControl>

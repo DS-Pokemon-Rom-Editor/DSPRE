@@ -44,7 +44,7 @@ namespace DSPRE.ROMFiles
         public static string WhyNot()
         {
             var sites = SwarmCodeSites;
-            if (sites == null) return "This game version isn't supported yet. Only US HeartGold, Platinum Rev 1 and Diamond are checked.";
+            if (sites == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
             if (sites.Overlay < 0 && !IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             try { Load(); }
             catch (Exception e) when (e is InvalidDataException || e is IOException || e is ArgumentException) { return e.Message; }
@@ -128,6 +128,8 @@ namespace DSPRE.ROMFiles
         {
             if (Rows.Count == 0) return "The swarm table needs at least one row.";
             if (Rows.Count > 255) return "The game can pick from up to 255 swarm rows.";
+            if (!FitsWhereItIs && !InExpansion && !SyntheticOverlaySpace.Available())
+                return $"The table holds {Capacity} rows until the ARM9 expansion is applied in the ROM Patch Toolbox.";
             for (int i = 0; i < Rows.Count; i++)
             {
                 if (Rows[i].Header >= headerCount) return $"Row {i + 1} points at a header that doesn't exist.";

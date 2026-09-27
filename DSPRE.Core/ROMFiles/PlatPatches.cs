@@ -315,11 +315,13 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>Other items reading the same item-data member, which an edit to it also changes.</summary>
-        public static List<int> SharingData(int itemId, int itemCount)
+        public static List<int> SharingData(int itemId, int itemCount) =>
+            Exists(itemId) ? SharingData(itemId, (int)Read(itemId).itemData, itemCount) : new List<int>();
+
+        /// <summary>Other items whose rows point at item data <paramref name="data"/>.</summary>
+        public static List<int> SharingData(int itemId, int data, int itemCount)
         {
-            if (!Exists(itemId)) return new List<int>();
             int[] members = DataMembers(itemCount);
-            int data = (int)Read(itemId).itemData;
             return Enumerable.Range(0, itemCount).Where(i => i != itemId && members[i] == data).ToList();
         }
     }

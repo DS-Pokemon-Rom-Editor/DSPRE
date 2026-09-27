@@ -1200,15 +1200,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             set { if (value is >= 0 and <= 2) StageAthlon(r => r.Shadow = (byte)(value + 1)); }
         }
 
-        public System.Threading.Tasks.Task ShowPokeathlonDisplayHelp() => DSPRE.Avalonia.DialogHelper.ShowInfo(
-            "These four values set how the Pokémon is drawn in Pokéathlon events. The names come from the game's code; " +
-            "what each one changes is only partly known, hence the (?).\n\n" +
-            "Cell: the sprite size. Steelix, the large legendaries and Arceus use Large.\n" +
-            "Hit: the hitbox each event gives it. Every Pokémon uses Small.\n" +
-            "Touch: raises the sweat mark in some events. Lugia, Ho-Oh, Wailord and Groudon use Large, all others Medium.\n" +
-            "Shadow: where its shadow and player marker sit. Every Pokémon uses Small.",
-            "Event display");
-
         public string PokeathlonProblem => AthlonRecord?.Problem() ?? "";
         public bool HasPokeathlonProblem => PokeathlonProblem.Length > 0;
 

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              x:Class="DSPRE.Avalonia.Views.Pokemon.BugContestTrainersView"
              x:DataType="vm:BugContestTrainersViewModel">
   <Design.DataContext>
@@ -15,6 +16,7 @@
               BorderThickness="0,0,0,1" Padding="6,4">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Button Content="Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="Locate" Click="Locate_Click"/>
         </StackPanel>
       </Border>
@@ -42,7 +44,7 @@
                 <DataTemplate x:DataType="vm:BugContestTrainersViewModel+RowViewModel">
                   <Grid ColumnDefinitions="24,170,120,150,90,90,*" Margin="0,2">
                     <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center"/>
-                    <ComboBox Grid.Column="1" Margin="0,0,4,0" HorizontalAlignment="Stretch"
+                    <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="1" Margin="0,0,4,0"
                               ItemsSource="{Binding $parent[ItemsControl].((vm:BugContestTrainersViewModel)DataContext).SpeciesNames}"
                               SelectedIndex="{Binding SpeciesIndex}"/>
                     <ComboBox Grid.Column="2" Margin="0,0,4,0" HorizontalAlignment="Stretch"

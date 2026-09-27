@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.FriendshipChangesView"
+             x:DataType="vm:FriendshipChangesViewModel">
+  <Design.DataContext>
+    <vm:FriendshipChangesViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="NumericUpDown.f">
+      <Setter Property="MinWidth" Value="96"/>
+      <Setter Property="MaxWidth" Value="170"/>
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="FormatString" Value="+0;-0;0"/>
+      <Setter Property="Minimum" Value="-128"/>
+      <Setter Property="Maximum" Value="127"/>
+      <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+      </StackPanel>
+    </Border>
+
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Margin="8,4"
+               Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="10" Spacing="4">
+      <Grid Margin="0,0,0,2">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MaxWidth="420"/><ColumnDefinition Width="*" MaxWidth="190"/>
+                <ColumnDefinition Width="*" MaxWidth="190"/><ColumnDefinition Width="*" MaxWidth="190"/>
+              </Grid.ColumnDefinitions>
+        <TextBlock Grid.Column="0" Text="Event" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="1" Text="{Binding BandNames[0]}" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="2" Text="{Binding BandNames[1]}" FontWeight="SemiBold"/>
+        <TextBlock Grid.Column="3" Text="{Binding BandNames[2]}" FontWeight="SemiBold"/>
+      </Grid>
+      <ItemsControl x:Name="FriendshipRows" ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:FriendshipChangesViewModel+RowViewModel">
+            <Grid Margin="0,2">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MaxWidth="420"/><ColumnDefinition Width="*" MaxWidth="190"/>
+                <ColumnDefinition Width="*" MaxWidth="190"/><ColumnDefinition Width="*" MaxWidth="190"/>
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
+                         Classes.subtle="{Binding Unused}"/>
+              <NumericUpDown Grid.Column="1" Classes="f" Value="{Binding Low}" IsEnabled="{Binding !Unused}"/>
+              <NumericUpDown Grid.Column="2" Classes="f" Value="{Binding Mid}" IsEnabled="{Binding !Unused}"/>
+              <NumericUpDown Grid.Column="3" Classes="f" Value="{Binding High}" IsEnabled="{Binding !Unused}"/>
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+        <ItemsControl.Styles>
+          <Style Selector="TextBlock.subtle">
+            <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+          </Style>
+        </ItemsControl.Styles>
+      </ItemsControl>
+    </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

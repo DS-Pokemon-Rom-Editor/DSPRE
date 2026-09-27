@@ -44,6 +44,38 @@ namespace DSPRE.Tests
         }
 
         [Fact]
+        public void ClearingTheTextPutsTheItemBackWhenNoneIsNotAllowed()
+        {
+            var box = new TestFusionAutoCompleteBox
+            {
+                ItemsSource = new[] { "Bulbasaur", "Charmander", "Squirtle" },
+                SelectedIndex = 1,
+                AllowsNone = false,
+            };
+
+            box.Text = "";
+            box.Press(Key.Enter);
+
+            Assert.Equal("Charmander", box.Text);
+            Assert.Equal(1, box.SelectedIndex);
+        }
+
+        [Fact]
+        public void ClearingTheTextSelectsNothingByDefault()
+        {
+            var box = new TestFusionAutoCompleteBox
+            {
+                ItemsSource = new[] { "Bulbasaur", "Charmander", "Squirtle" },
+                SelectedIndex = 1,
+            };
+
+            box.Text = "";
+            box.Press(Key.Enter);
+
+            Assert.Equal(-1, box.SelectedIndex);
+        }
+
+        [Fact]
         public void FilterMatchesTextInsideFormattedLabelsAndSmallTypos()
         {
             var box = new FusionAutoCompleteBox();

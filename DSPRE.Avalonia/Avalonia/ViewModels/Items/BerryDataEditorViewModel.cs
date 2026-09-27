@@ -12,13 +12,20 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Items
 {
     /// <summary>Each berry's size, firmness, growth and flavours.</summary>
-    public class BerryDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BerryDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private List<BerryData> _berries = new List<BerryData>();
         private List<byte[]> _saved = new List<byte[]>();
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _berries.SelectMany(b => b.ToBytes()).ToArray(), b => { for (int i = 0; i < _berries.Count; i++) _berries[i] = new BerryData(b.AsSpan(i * BerryData.Size, BerryData.Size).ToArray()); RaiseFields(); }, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
 
         public List<string> BerryNames { get; } = new List<string>();
         public string[] FirmnessNames => BerryData.Firmness;
@@ -31,6 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (!load) return;
             _berries = BerryData.LoadAll();
             _saved = _berries.Select(b => b.ToBytes()).ToList();
+            StartUndo();
             string[] items = GetItemNames();
             for (int b = 0; b < BerryData.Count; b++)
             {
@@ -50,7 +58,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private BerryData Current => _selected >= 0 && _selected < _berries.Count ? _berries[_selected] : null;
 
         private decimal Get(Func<BerryData, int> read) => Current == null ? 0 : read(Current);
-        private void Set(Action<BerryData> write) { if (Current == null) return; write(Current); RaiseFields(); }
+        private void Set(Action<BerryData> write) { if (Current == null) return; write(Current); RaiseFields(); _undo?.Record(); }
 
         public decimal SizeMm { get => Get(b => b.SizeMm); set => Set(b => b.SizeMm = (ushort)Math.Clamp(value, 0, ushort.MaxValue)); }
         public int FirmnessIndex { get => Current == null ? -1 : Current.FirmnessLevel - 1; set { if (value >= 0 && value < 5) Set(b => b.FirmnessLevel = (byte)(value + 1)); } }
@@ -106,6 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void DiscardChanges()
         {
             for (int b = 0; b < _berries.Count; b++) _berries[b] = new BerryData(_saved[b]);
+            StartUndo();
             RaiseFields();
         }
     }

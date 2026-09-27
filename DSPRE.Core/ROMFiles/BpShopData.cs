@@ -49,7 +49,7 @@ namespace DSPRE.ROMFiles
             if (gameFamily == GameFamilies.HGSS)
                 return "HeartGold and SoulSilver build their Battle Point exchange menus in scripts. Use the Script and Text editors.";
             var sites = BpShopCodeSites;
-            if (sites == null) return "This game version isn't supported yet. Only US Platinum Rev 1 and Diamond are checked.";
+            if (sites == null) return "Only US Platinum (Rev 1) and Diamond are supported.";
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             if (!File.Exists(arm9Path)) return "arm9 is missing from this project.";
             if (sites.ListPointers >= 0 && !File.Exists(OverlayUtils.GetPath(7))) return "Overlay 7 is missing from this project.";
@@ -300,6 +300,9 @@ namespace DSPRE.ROMFiles
             }
             if (IsPlatinum)
             {
+                if (!_inPlace && _blockStart < 0) return "A patch moved these lists somewhere DSPRE doesn't follow, so they can't be saved here.";
+                if (_inPlace && !FitsInPlace && !SyntheticOverlaySpace.Available())
+                    return $"The item counter holds {VanillaLeft} items and the TM counter {VanillaRight} until the ARM9 expansion is applied in the ROM Patch Toolbox.";
                 if (Left.Count > MaxListItems || Right.Count > MaxListItems) return $"Each counter can show up to {MaxListItems} items.";
                 // The price lookup's row count is a byte immediate.
                 if (PriceRows().Count > 255) return "The game can price up to 255 different items across both counters.";

@@ -14,6 +14,7 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
 
@@ -23,28 +24,28 @@
     <TabControl Margin="4">
       <TabItem Header="Moves">
         <DockPanel Margin="4">
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="36,200,70,70,70,70,*" Margin="0,0,20,4">
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="36,200,70,Auto,Auto,Auto,*" Margin="0,0,20,4">
             <TextBlock Grid.Column="1" Text="Move" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="2" Text="Red" FontWeight="SemiBold" IsVisible="{Binding Platinum}"/>
-            <TextBlock Grid.Column="2" Text="BP" FontWeight="SemiBold" IsVisible="{Binding HeartGold}"/>
-            <TextBlock Grid.Column="3" Text="Blue" FontWeight="SemiBold" IsVisible="{Binding Platinum}"/>
-            <TextBlock Grid.Column="4" Text="Yellow" FontWeight="SemiBold" IsVisible="{Binding Platinum}"/>
-            <TextBlock Grid.Column="5" Text="Green" FontWeight="SemiBold" IsVisible="{Binding Platinum}"/>
-            <TextBlock Grid.Column="6" Text="Taught by" FontWeight="SemiBold" Margin="8,0,0,0"/>
+            <TextBlock Grid.Column="2" Text="Red" FontWeight="SemiBold" IsVisible="{Binding Platinum}" ToolTip.Tip="Red Shards"/>
+            <TextBlock Grid.Column="2" Text="BP" FontWeight="SemiBold" IsVisible="{Binding HeartGold}" ToolTip.Tip="Battle Points"/>
+            <TextBlock Grid.Column="3" Text="Blue" FontWeight="SemiBold" IsVisible="{Binding Platinum}" Width="70" ToolTip.Tip="Blue Shards"/>
+            <TextBlock Grid.Column="4" Text="Yellow" FontWeight="SemiBold" IsVisible="{Binding Platinum}" Width="70" ToolTip.Tip="Yellow Shards"/>
+            <TextBlock Grid.Column="5" Text="Green" FontWeight="SemiBold" IsVisible="{Binding Platinum}" Width="70" ToolTip.Tip="Green Shards"/>
+            <TextBlock Grid.Column="6" Text="Place" FontWeight="SemiBold" Margin="8,0,0,0"/>
           </Grid>
-          <ListBox ItemsSource="{Binding Pool}">
+          <ListBox ItemsSource="{Binding Pool}" KeyboardNavigation.TabNavigation="Continue">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+PoolRow">
-                <Grid ColumnDefinitions="36,200,70,70,70,70,*">
+                <Grid ColumnDefinitions="36,200,70,Auto,Auto,Auto,*">
                   <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center"/>
-                  <controls:FusionAutoCompleteBox Grid.Column="1" Margin="0,0,6,0"
+                  <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="1" Margin="0,0,6,0"
                       ItemsSource="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).MoveNames}" SelectedIndex="{Binding Move}"/>
                   <NumericUpDown Grid.Column="2" Value="{Binding Cost0}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"/>
-                  <NumericUpDown Grid.Column="3" Value="{Binding Cost1}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"
+                  <NumericUpDown Grid.Column="3" Width="66" Value="{Binding Cost1}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"
                                  IsVisible="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).Platinum}"/>
-                  <NumericUpDown Grid.Column="4" Value="{Binding Cost2}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"
+                  <NumericUpDown Grid.Column="4" Width="66" Value="{Binding Cost2}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"
                                  IsVisible="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).Platinum}"/>
-                  <NumericUpDown Grid.Column="5" Value="{Binding Cost3}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"
+                  <NumericUpDown Grid.Column="5" Width="66" Value="{Binding Cost3}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"
                                  IsVisible="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).Platinum}"/>
                   <ComboBox Grid.Column="6" Margin="8,0,0,0" MinWidth="180"
                             ItemsSource="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).Places}" SelectedIndex="{Binding Where}"/>
@@ -68,7 +69,7 @@
         </Grid>
       </TabItem>
 
-      <TabItem Header="By move">
+      <TabItem Header="By Move">
         <Grid ColumnDefinitions="240,*" Margin="4">
           <ListBox Grid.Column="0" ItemsSource="{Binding TutorNames}" SelectedIndex="{Binding SelectedTutor}" Margin="0,0,8,0"/>
           <ListBox Grid.Column="1" ItemsSource="{Binding SpeciesOfMove}">

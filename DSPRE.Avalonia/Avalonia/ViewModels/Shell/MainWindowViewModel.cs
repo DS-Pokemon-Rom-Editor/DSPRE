@@ -110,6 +110,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool CanUseBpShop => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["BpShopEditorView"];
         public bool CanUseFriendship => IsRomLoaded && !isHGE && Beta["FriendshipChangesView"];
         public bool CanUseSlotOdds => IsRomLoaded && !isHGE && Beta["EncounterSlotOddsView"];
+        // Tables a game family simply doesn't have are hidden rather than greyed out.
+        public bool HasMoveTutors => !IsRomLoaded || gameFamily != GameFamilies.DP;
+        public bool IsDpOrPlatinum => !IsRomLoaded || gameFamily != GameFamilies.HGSS;
         public bool CanUsePokemonEditor => IsRomLoaded && HgAllows;
         // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.
@@ -302,6 +305,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseBpShop));
             OnPropertyChanged(nameof(CanUseFriendship));
             OnPropertyChanged(nameof(CanUseSlotOdds));
+            OnPropertyChanged(nameof(HasMoveTutors));
+            OnPropertyChanged(nameof(IsDpOrPlatinum));
             RefreshRecents();
         }
 
@@ -348,6 +353,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseBpShop));
             OnPropertyChanged(nameof(CanUseFriendship));
             OnPropertyChanged(nameof(CanUseSlotOdds));
+            OnPropertyChanged(nameof(HasMoveTutors));
+            OnPropertyChanged(nameof(IsDpOrPlatinum));
             OnPropertyChanged(nameof(CanUseBattleScreen));
             OnPropertyChanged(nameof(CanUseVsSeekerRematchEditor));
             OnPropertyChanged(nameof(CanUsePokegearRematchEditor));

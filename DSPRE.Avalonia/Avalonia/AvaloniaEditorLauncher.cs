@@ -348,13 +348,31 @@ namespace DSPRE.Avalonia
 
         /// <summary>Opens a small editor for one of the fixed game tables, or says why this ROM can't.</summary>
         /// <param name="whyNot">Run only after the ROM and hg-engine checks: some checks unpack or decompress files.</param>
-        private static void OpenTableEditor(string title, System.Func<string> whyNot, System.Func<global::Avalonia.Controls.Control> make, double width, double height)
+        private static void OpenTableEditor<TView>(string title, System.Func<string> whyNot, System.Func<TView> make, double width, double height)
+            where TView : global::Avalonia.Controls.Control
         {
             if (!IsRomLoaded || BlockedForHge("The " + title + " editor")) return;
+            // Before anything reads the ROM: loading a table can decompress its overlay.
+            if (!BetaEditors.Allows(typeof(TView).Name)) { _ = DialogHelper.ShowInfo(BetaEditors.WhyNot(typeof(TView).Name), "Not available yet"); return; }
+            // Two windows on one table would each keep their own saved copy and overwrite each other.
+            var open = (global::Avalonia.Application.Current?.ApplicationLifetime
+                        as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
+            var already = open?.OfType<EditorHostWindow>().FirstOrDefault(w => w.Content is TView);
+            if (already != null)
+            {
+                if (already.WindowState == global::Avalonia.Controls.WindowState.Minimized) already.WindowState = global::Avalonia.Controls.WindowState.Normal;
+                already.Activate();
+                return;
+            }
             try
             {
                 if (whyNot() is string why) { _ = DialogHelper.ShowInfo(why, title); return; }
-                new EditorHostWindow(title, make(), width, height).ShowManaged();
+                var window = new EditorHostWindow(title, make(), width, height)
+                {
+                    MinWidth = System.Math.Min(width, 420),
+                    MinHeight = System.Math.Min(height, 220),
+                };
+                window.ShowManaged();
             }
             catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException || ex is System.InvalidOperationException
                                               || ex is System.ArgumentException || ex is System.UnauthorizedAccessException)
@@ -376,7 +394,7 @@ namespace DSPRE.Avalonia
             () => new EncounterSlotOddsView(new EncounterSlotOddsViewModel(true)), 520, 620);
 
         public static void OpenBreedingItems() => OpenTableEditor("Breeding Items", IncenseBreedingTable.WhyNot,
-            () => new BreedingItemsView(new BreedingItemsViewModel(true)), 680, 420);
+            () => new BreedingItemsView(new BreedingItemsViewModel(true)), 720, 440);
 
         public static void OpenBerryData() => OpenTableEditor("Berry Data", BerryData.WhyNot,
             () => new BerryDataEditorView(new BerryDataEditorViewModel(true)), 720, 520);
@@ -1452,16 +1470,16 @@ namespace DSPRE.Avalonia
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "TM/HM Bulk Editor",     Keywords = "machine compatibility bulk family sync copy", Run = OpenTmHmBulkEditor },
-            new() { Name = "Growth Curve Editor",   Keywords = "exp experience level growth rate curve", Run = OpenGrowthCurves },
+            new() { Name = "Growth Curves",         Keywords = "exp experience level growth rate curve", Run = OpenGrowthCurves },
             new() { Name = "Friendship Changes",    Keywords = "friendship happiness walking level up faint soothe bell luxury", Run = OpenFriendshipChanges },
             new() { Name = "Encounter Slot Odds",   Keywords = "encounter slot odds chance percent wild rate fishing surf headbutt rock smash", Run = OpenEncounterSlotOdds },
             new() { Name = "Breeding Items",        Keywords = "incense baby egg hatch breeding wynaut azurill munchlax", Run = OpenBreedingItems },
-            new() { Name = "Type Chart Editor",     Keywords = "type effectiveness matchup super effective resist immune weakness fairy", Run = OpenTypeChart },
-            new() { Name = "Move Tutor Editor",     Keywords = "tutor tutors shards bp teach move compatibility", Run = OpenMoveTutors },
+            new() { Name = "Type Chart",            Keywords = "type effectiveness matchup super effective resist immune weakness", Run = OpenTypeChart },
+            new() { Name = "Move Tutors",           Keywords = "tutor tutors shards bp teach move compatibility", Run = OpenMoveTutors },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
             new() { Name = "Move Animations & Battle Scripts", Keywords = "battle script editor move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
-            new() { Name = "Berry Data Editor",     Keywords = "berry berries firmness flavour flavor growth yield poffin", Run = OpenBerryData },
+            new() { Name = "Berry Data",            Keywords = "berry berries firmness flavour flavor growth yield poffin", Run = OpenBerryData },
             new() { Name = "Battle Point Shop",     Keywords = "battle point bp shop exchange frontier tower tm prize", Run = OpenBpShop },
             new() { Name = "Underground Mining",    Keywords = "underground mining dig treasure sphere fossil plate wall", Run = OpenUndergroundMining },
             new() { Name = "Mart Editor",           Keywords = "shop store inventory stock poke mart", Run = OpenMartEditor },
@@ -1495,7 +1513,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Area Data Editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
             new() { Name = "Wild Held Items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },
-            new() { Name = "Special Encounters Editor", Keywords = "headbutt tree bug contest opponents great marsh honey safari trophy garden daily", Run = () => OpenSpecialEncountersEditor() },
+            new() { Name = "Special Encounters Editor", Keywords = "headbutt tree bug contest opponents great marsh honey safari trophy garden daily swarm", Run = () => OpenSpecialEncountersEditor() },
             new() { Name = "Battle Tower Editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },
             new() { Name = "Address Helper",        Run = OpenAddressHelper },
             new() { Name = "Research Helper",       Run = OpenResearchHelper },

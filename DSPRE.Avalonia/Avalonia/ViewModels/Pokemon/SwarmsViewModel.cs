@@ -67,7 +67,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public int Header
             {
                 get => Row.Header;
-                set { if (value >= 0 && value != Row.Header) { Row.Header = (ushort)value; Refresh(); _o.Changed(); } }
+                set
+                {
+                    if (value < 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(Refresh); return; }   // a cleared box goes back to the stored header
+                    if (value != Row.Header) { Row.Header = (ushort)value; Refresh(); _o.Changed(); }
+                }
             }
             public int Method
             {
@@ -140,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public string Status => _table == null ? "" :
-            !_table.FitsWhereItIs ? $"{Rows.Count} destinations · saving moves the table to the expanded ARM9 area"
+            !_table.FitsWhereItIs && !HasProblem ? $"{Rows.Count} destinations · saving moves the table to the expanded ARM9 area"
             : _table.InExpansion ? $"{Rows.Count} destinations · in the expanded ARM9 area"
             : $"{Rows.Count} destinations";
 

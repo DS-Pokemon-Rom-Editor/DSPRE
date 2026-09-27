@@ -9,13 +9,20 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>How often wild Pokémon hold their common or rare item, normally and with a Compound Eyes lead.</summary>
-    public class WildHeldItemOddsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class WildHeldItemOddsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private WildHeldItemOdds _odds;
         private byte[] _saved;
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _odds.ToBytes(), b => { _odds = new WildHeldItemOdds(b); RaiseAll(); }, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
 
         public WildHeldItemOddsViewModel() { }
 
@@ -25,6 +32,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             _odds = WildHeldItemOdds.Load();
             _saved = _odds.ToBytes();
+            StartUndo();
             RaiseAll();
         }
 
@@ -34,8 +42,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_odds == null) return;
             change(_odds);
-            Status = "";
             RaiseAll();
+            _undo?.Record();
         }
 
         // Each row edits "none" and "common"; "rare" is whatever is left of 100.
@@ -61,6 +69,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => Get(o => o.CompoundEyes.CommonPercent);
             set => Change(o => o.CompoundEyes.RareFrom = Math.Min(100, o.CompoundEyes.NoneBelow + Clamp(value)));
         }
+        // Common can't take more than None leaves.
+        public decimal NormalCommonMax => 100 - NormalNone;
+        public decimal EyesCommonMax => 100 - EyesNone;
         public string EyesRare => $"{Get(o => o.CompoundEyes.RarePercent)}%";
 
         private static int Clamp(decimal v) => (int)Math.Clamp(v, 0, 100);
@@ -68,13 +79,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _odds != null && !_odds.ToBytes().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Wild held item odds";
 
-        private string _status = "";
-        public string Status { get => _status; private set { _status = value; Raise(); } }
-
         private void RaiseAll()
         {
             foreach (var n in new[] { nameof(NormalNone), nameof(NormalCommon), nameof(NormalRare),
-                                      nameof(EyesNone), nameof(EyesCommon), nameof(EyesRare), nameof(HasUnsavedChanges) })
+                                      nameof(EyesNone), nameof(EyesCommon), nameof(EyesRare), nameof(HasUnsavedChanges),
+                                      nameof(NormalCommonMax), nameof(EyesCommonMax) })
                 Raise(n);
         }
 
@@ -92,7 +101,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             _saved = _odds.ToBytes();
             Raise(nameof(HasUnsavedChanges));
-            Status = "Saved.";
             SaveNotice.Saved(UnsavedChangesDescription);
             return true;
         }
@@ -101,6 +109,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_saved == null) return;
             _odds = new WildHeldItemOdds(_saved);
+            StartUndo();
             RaiseAll();
         }
     }

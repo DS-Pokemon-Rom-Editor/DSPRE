@@ -7,11 +7,9 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Move tutors (Platinum sTeachableMoves, HGSS sTutorMoves) and which Pokémon each can teach. Platinum keeps both
-    /// in overlay 5: 38 moves of 12 bytes (move, red/blue/yellow/green shard costs, location) and a 5-byte mask per
-    /// Pokémon. HGSS keeps 52 moves of 4 bytes (move, BP cost, tutor) in overlay 1 and an 8-byte mask per Pokémon in
-    /// waza_oshie.bin. Bit n of a mask is pool move n. Both counts are compiled into the games, so moves can be
-    /// changed but not added. Rows follow the personal files: species 1-493, then the 12 form files.
+    /// Move tutors and who can learn them; the counts are compiled in, so moves can be changed but not added.
+    /// Pt: overlay 5, 38 moves of 12 bytes, 5-byte mask per Pokémon. HGSS: overlay 1, 52 moves of 4 bytes, 8-byte masks in
+    /// waza_oshie.bin. Bit n of a mask is pool move n; rows follow the personal files, species 1-493 then 12 form files.
     /// </summary>
     public class MoveTutorData
     {
@@ -57,22 +55,28 @@ namespace DSPRE.ROMFiles
             if (WhyNot() is string why) throw new InvalidOperationException(why);
             var data = new MoveTutorData(gameFamily == GameFamilies.Plat);
             byte[] pool = GameTableFile.Read(GameTable.TutorPool, data.PoolSize * data.RecordSize);
-            for (int i = 0; i < data.PoolSize; i++)
+            byte[] masks = data.Platinum ? GameTableFile.Read(GameTable.TutorCompatibility, Rows * 5) : File.ReadAllBytes(HgMaskPath);
+            data.Restore(pool, masks);
+            return data;
+        }
+
+        /// <summary>Loads bytes <see cref="PoolBytes"/> and <see cref="MaskBytes"/> produced.</summary>
+        public void Restore(byte[] pool, byte[] masks)
+        {
+            Pool.Clear();
+            for (int i = 0; i < PoolSize; i++)
             {
-                int at = i * data.RecordSize;
-                var raw = pool.AsSpan(at, data.RecordSize).ToArray();
-                data.Pool.Add(data.Platinum
+                var raw = pool.AsSpan(i * RecordSize, RecordSize).ToArray();
+                Pool.Add(Platinum
                     ? new Tutor { Move = BitConverter.ToUInt16(raw, 0), Costs = raw[2..6], Where = (int)BitConverter.ToUInt32(raw, 8), Raw = raw }
                     : new Tutor { Move = BitConverter.ToUInt16(raw, 0), Costs = new[] { raw[2] }, Where = raw[3], Raw = raw });
             }
-            byte[] masks = data.Platinum ? GameTableFile.Read(GameTable.TutorCompatibility, Rows * 5) : File.ReadAllBytes(HgMaskPath);
             for (int r = 0; r < Rows; r++)
             {
                 ulong m = 0;
-                for (int b = 0; b < data.MaskSize; b++) m |= (ulong)masks[r * data.MaskSize + b] << (8 * b);
-                data.Masks[r] = m;
+                for (int b = 0; b < MaskSize; b++) m |= (ulong)masks[r * MaskSize + b] << (8 * b);
+                Masks[r] = m;
             }
-            return data;
         }
 
         /// <summary>The mask row for a personal file id, or -1 (eggs have none).</summary>

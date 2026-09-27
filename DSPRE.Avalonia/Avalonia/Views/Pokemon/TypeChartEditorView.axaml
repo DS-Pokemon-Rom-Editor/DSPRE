@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
              x:Class="DSPRE.Avalonia.Views.Pokemon.TypeChartEditorView"
@@ -13,7 +14,9 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <Button Content="Make room…" Click="MakeRoom_Click" IsVisible="{Binding CanMakeRoom}"
+                IsEnabled="{Binding ExpansionReady}" ToolTip.ShowOnDisabled="True"
                 ToolTip.Tip="{Binding MakeRoomTip}"/>
         <TextBlock Text="{Binding Room}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
@@ -26,10 +29,7 @@
 
     <Grid ColumnDefinitions="Auto,*" Margin="8">
       <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="2">
-          <TextBlock Text="Attacking type down, defending type across" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-          <Grid x:Name="Cells"/>
-        </StackPanel>
+        <Grid x:Name="Cells" Focusable="True"/>
       </ScrollViewer>
 
       <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="8" MinWidth="220" MaxWidth="300" HorizontalAlignment="Left">

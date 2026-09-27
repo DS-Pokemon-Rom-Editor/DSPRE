@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
         public static string WhyNot(RomInfo.GameTable table, int length)
         {
             var spot = RomInfo.SpotOf(table);
-            if (spot == null) return "This game version isn't supported yet. Only US HeartGold, Platinum Rev 1 and Diamond are checked.";
+            if (spot == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
             string path = PathOf(spot.Value);
             if (!File.Exists(path)) return $"{Path.GetFileName(path)} is missing from this project.";
             if (spot.Value.Overlay < 0 && !RomInfo.IsDsRomProject && ARM9.CheckCompressionMark())

@@ -12,13 +12,20 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>The chance of each wild encounter slot, per encounter method.</summary>
-    public class EncounterSlotOddsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class EncounterSlotOddsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private EncounterSlotOdds _odds;
         private byte[] _saved;
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _odds.Snapshot(), b => { _odds.Restore(b); foreach (var m in Methods) m.Refresh(); Changed(); }, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
 
         public ObservableCollection<MethodViewModel> Methods { get; } = new ObservableCollection<MethodViewModel>();
 
@@ -30,6 +37,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _odds = EncounterSlotOdds.Load();
             _saved = _odds.Snapshot();
             foreach (var m in _odds.Methods) Methods.Add(new MethodViewModel(this, m));
+            StartUndo();
         }
 
         public sealed class MethodViewModel : INotifyPropertyChanged
@@ -92,6 +100,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         internal void Changed()
         {
             foreach (var n in new[] { nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
+            _undo?.Record();
         }
 
         public bool HasUnsavedChanges => _odds != null && !_odds.Snapshot().AsSpan().SequenceEqual(_saved);
@@ -120,6 +129,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_odds == null) return;
             _odds.Restore(_saved);
             foreach (var m in Methods) m.Refresh();
+            StartUndo();
             Changed();
         }
     }

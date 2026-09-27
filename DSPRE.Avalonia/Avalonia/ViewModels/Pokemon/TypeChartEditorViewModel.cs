@@ -11,12 +11,27 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>How well each type hits each other type.</summary>
-    public class TypeChartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TypeChartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private TypeChart _chart;
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _chart.Matchups.SelectMany(m => new[] { m.Attacker, m.Defender, m.Tenths, (byte)(m.ForesightRemovable ? 1 : 0) }).ToArray(), ApplyMatchups, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private void ApplyMatchups(byte[] b)
+        {
+            _chart.Matchups.Clear();
+            for (int k = 0; k + 3 < b.Length; k += 4)
+                _chart.Matchups.Add(new TypeChart.Matchup { Attacker = b[k], Defender = b[k + 1], Tenths = b[k + 2], ForesightRemovable = b[k + 3] != 0 });
+            Changed();
+        }
 
 
         public string[] TypeNames { get; } = Array.Empty<string>();
@@ -32,6 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!load) return;
             _chart = TypeChart.Load();
             _savedKey = Key();
+            StartUndo();
             TypeNames = GetTypeNames();
             int highest = _chart.Matchups.Count == 0 ? 0 : _chart.Matchups.Max(m => Math.Max(m.Attacker, m.Defender)) + 1;
             TypeCount = Math.Min(32, Math.Max(TypeNames.Length, highest));
@@ -54,10 +70,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 int now = TenthsAt(attacker, defender);
                 int next = now == 10 ? 20 : now == 20 ? 5 : now == 5 ? 0 : 10;
+                _customMode = false;
                 SetSelected(next);
                 return;
             }
             _attacker = attacker; _defender = defender;
+            _customMode = false;
             RaiseSelection();
         }
 
@@ -70,15 +88,25 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (_attacker < 0) return -1;
+                if (_customMode) return 4;
                 return TenthsAt(_attacker, _defender) switch { 0 => 0, 5 => 1, 10 => 2, 20 => 3, _ => 4 };
             }
             set
             {
                 if (_attacker < 0 || value < 0 || value == SelectedChoice) return;
-                if (value == 4) { SetSelected(15); return; }   // a custom value starts at 1.5x
+                if (value == 4)
+                {
+                    // Stays in Custom while typing, even through 1.0 or 2.0; a custom value starts at 1.5x.
+                    bool preset = TenthsAt(_attacker, _defender) is 0 or 5 or 10 or 20;
+                    _customMode = true;
+                    if (preset) SetSelected(15); else RaiseSelection();
+                    return;
+                }
+                _customMode = false;
                 SetSelected(new[] { 0, 5, 10, 20 }[value]);
             }
         }
+        private bool _customMode;
 
         public bool IsCustom => SelectedChoice == 4;
 
@@ -135,6 +163,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (var n in new[] { nameof(Room), nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(HasUnsavedChanges) })
                 Raise(n);
             CellsChanged?.Invoke(this, EventArgs.Empty);
+            _undo?.Record();
         }
 
         // Compared as a set: undoing an edit re-adds a pair at the end of its section, which is the same chart.
@@ -165,14 +194,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public bool CanMakeRoom => _chart != null && !_chart.InExpansion;
-        public string MakeRoomTip => $"Move the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
+        private bool? _expansionReady;
+        public bool ExpansionReady => _expansionReady ??= SyntheticOverlaySpace.Available();
+        public string MakeRoomTip => !ExpansionReady ? "Needs the ARM9 expansion from the ROM Patch Toolbox"
+            : $"Move the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
 
         /// <summary>Moves the chart, edits included, to the expanded ARM9 area so it can hold more matchups.</summary>
         public async Task MakeRoomAsync()
         {
             if (!CanMakeRoom) return;
             if (!await DialogHelper.AskYesNo($"Move the type chart to the expanded ARM9 area? It will hold up to {TypeChart.ExpandedCapacity - 2} matchups instead of {_chart.MaxMatchups}. " +
-                "This saves the chart, including any unsaved edits, and needs the ARM9 expansion from the ROM Patch Toolbox.", "Type Chart")) return;
+                "This saves the chart, including any unsaved edits.", "Type Chart")) return;
             try { _chart.MoveToExpansion(); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
@@ -198,6 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             _savedKey = Key();
+            StartUndo();
             Changed();
         }
     }

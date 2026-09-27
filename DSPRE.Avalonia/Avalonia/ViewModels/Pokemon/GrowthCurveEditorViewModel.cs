@@ -12,13 +12,29 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>The EXP each growth curve needs per level.</summary>
-    public class GrowthCurveEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class GrowthCurveEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private GrowthTable _table;
         private uint[][] _saved;
+
+        private ByteStateUndo _undo;
+        private void StartUndo() => _undo = new ByteStateUndo(() => _table.Totals.SelectMany(c => c).SelectMany(BitConverter.GetBytes).ToArray(), ApplyTotals, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private void ApplyTotals(byte[] b)
+        {
+            int k = 0;
+            for (int c = 0; c < GrowthTable.Curves; c++)
+                for (int l = 0; l < _table.Totals[c].Length; l++, k += 4) _table.Totals[c][l] = BitConverter.ToUInt32(b, k);
+            foreach (var row in Levels) row.Refresh();
+            Changed();
+        }
 
         public string[] CurveNames => GrowthTable.CurveNames;
         public ObservableCollection<LevelRow> Levels { get; } = new ObservableCollection<LevelRow>();
@@ -30,6 +46,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!load) return;
             _table = GrowthTable.Load();
             _saved = Enumerable.Range(0, GrowthTable.Curves).Select(_table.Copy).ToArray();
+            StartUndo();
             ShowCurve();
         }
 
@@ -46,6 +63,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public event PropertyChangedEventHandler PropertyChanged;
             private readonly GrowthCurveEditorViewModel _owner;
             public int Level { get; }
+            public bool IsFirst => Level == 1;   // level 1 is always 0 EXP
             public LevelRow(GrowthCurveEditorViewModel owner, int level) { _owner = owner; Level = level; }
 
             public decimal Total
@@ -74,6 +92,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (level - 2 >= 0 && level - 2 < Levels.Count) Levels[level - 2].Refresh();
             if (level - 1 < Levels.Count) Levels[level - 1].Refresh();
             Changed();
+            _undo?.Record();
         }
 
         private void ShowCurve()
@@ -128,6 +147,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_table == null) return;
             for (int c = 0; c < GrowthTable.Curves; c++) _table.Totals[c] = (uint[])_saved[c].Clone();
             foreach (var row in Levels) row.Refresh();
+            StartUndo();
             Changed();
         }
     }

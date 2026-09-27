@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Items"
              x:Class="DSPRE.Avalonia.Views.Items.UndergroundMiningView"
@@ -29,6 +30,7 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
 
@@ -45,7 +47,7 @@
         <TextBlock Grid.Column="3" Text="{Binding Columns[2]}" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="4" Text="{Binding Columns[3]}" FontWeight="SemiBold"/>
       </Grid>
-      <ListBox ItemsSource="{Binding Rows}">
+      <ListBox ItemsSource="{Binding Rows}" KeyboardNavigation.TabNavigation="Continue">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:UndergroundMiningViewModel+TreasureRow">
             <Grid ColumnDefinitions="190,154,154,154,154">

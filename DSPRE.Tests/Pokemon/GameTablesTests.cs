@@ -299,6 +299,24 @@ namespace DSPRE.Tests.Pokemon
         [SkippableTheory]
         [InlineData("Platinum")]
         [InlineData("HeartGold")]
+        public void TutorRestorePutsEditsBack(string game)
+        {
+            Open(game);
+            var data = MoveTutorData.Load();
+            byte[] pool = data.PoolBytes(), masks = data.MaskBytes();
+            data.Pool[0].Move = 1;
+            data.Pool[0].Costs[0] = 99;
+            data.SetLearns(MoveTutorData.RowOf(25), 0, !data.Learns(MoveTutorData.RowOf(25), 0));
+            Assert.NotEqual(pool, data.PoolBytes());
+            Assert.NotEqual(masks, data.MaskBytes());
+            data.Restore(pool, masks);
+            Assert.Equal(pool, data.PoolBytes());
+            Assert.Equal(masks, data.MaskBytes());
+        }
+
+        [SkippableTheory]
+        [InlineData("Platinum")]
+        [InlineData("HeartGold")]
         public void TutorEditsSaveAndDuplicatesAreRefused(string game)
         {
             Open(game);
