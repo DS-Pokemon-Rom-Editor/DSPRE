@@ -539,23 +539,5 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         // ── Info dialogs ───────────────────────────────────────────────────────────
-        public Task ShowConditionalMusicHelp() => DialogHelper.ShowInfo(
-            "For each Location in the list, override Header's music with chosen Music ID, if Flag is set.",
-            "How this table works");
-
-        public Task ShowEffectsComboHelp() => DialogHelper.ShowInfo(
-            "An entry of this table is a combination of VS. Graphics + Battle Theme.\n\n" +
-            (gameFamily == GameFamilies.HGSS ? "Each entry can be \"inherited\" by one or more Pokémon or Trainer classes." : ""),
-            "How this table works");
-
-        public Task ShowVsTrainerHelp() => DialogHelper.ShowInfo(
-            "Each entry of this table links a Trainer Class to an Effect Combo from the Combos Table.\n\n" +
-            "Every Trainer Class with a given combo will start the same VS. Sequence and Battle Theme.",
-            "How this table works");
-
-        public Task ShowVsPokemonHelp() => DialogHelper.ShowInfo(
-            "Each entry of this table links a \"Wild\" Pokémon to an Effect Combo from the Combos Table.\n\n" +
-            "Whenever that Pokémon is encountered in the tall grass or via script command, its VS. Sequence and Battle Theme will be automatically triggered.",
-            "How this table works");
     }
 }

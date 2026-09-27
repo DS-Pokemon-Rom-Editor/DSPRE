@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window MinWidth="520" MinHeight="420" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.ParticleEditorView"

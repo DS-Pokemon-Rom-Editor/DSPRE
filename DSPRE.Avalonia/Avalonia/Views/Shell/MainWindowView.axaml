@@ -87,9 +87,9 @@
         <MenuItem Header="Trainer Sprite Editor…" Click="TrainerSpriteEditor_Click" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BlockedNote[TrainerSpriteEditorView]}"/>
         <MenuItem Header="Trainer Back Sprite Editor…" Click="TrainerBackSpriteEditor_Click" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BlockedNote[TrainerSpriteEditorView]}"/>
         <Separator/>
-        <MenuItem Header="Vs. Seeker Rematch Editor…" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}"
+        <MenuItem Header="Vs. Seeker Rematch Editor…" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}" IsVisible="{Binding IsDpOrPlatinum}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Diamond/Pearl/Platinum (English): which trainer rematches via the Vs. Seeker for each encounter trainer'}"/>
-        <MenuItem Header="Pokégear Rematch Editor…" Click="PokegearRematchEditor_Click" IsEnabled="{Binding CanUsePokegearRematchEditor}"
+        <MenuItem Header="Pokégear Rematch Editor…" Click="PokegearRematchEditor_Click" IsEnabled="{Binding CanUsePokegearRematchEditor}" IsVisible="{Binding !IsDpOrPlatinum}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='HeartGold/SoulSilver: which trainer you rematch when a Pokégear caller wants a battle'}"/>
         <MenuItem Header="Pokégear Phone Book…" Click="PokegearPhoneBook_Click" IsEnabled="{Binding CanUsePokegearPhoneBook}"
                   ToolTip.Tip="{Binding BlockedNote[PokegearPhoneBookView]}"/>
@@ -164,7 +164,7 @@
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Edit the 32×32 icon and menu titles shown in the DS system menu (ds-rom projects)'}"/>
         <Separator/>
         <MenuItem Header="Overworld Editor…" Click="OverworldEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="NSBTX Texture Editor…"   Click="NsbtxEditor_Click"/>
+        <MenuItem Header="Map &amp; Building Textures…"   Click="NsbtxEditor_Click"/>
         <Separator/>
         <MenuItem Header="Cell Animations…" Click="CellAnimations_Click" IsEnabled="{Binding CanUseCellAnimations}"
                   ToolTip.Tip="{Binding BlockedNote[CellAnimationEditorView]}"/>

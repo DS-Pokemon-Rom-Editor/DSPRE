@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui"
+<Window MinWidth="900" MinHeight="560" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
              xmlns:world="clr-namespace:DSPRE.Avalonia.Views.World"

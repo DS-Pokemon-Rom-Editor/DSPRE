@@ -31,12 +31,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             if (VM == null || VM.SelectedClassIndex < 0 || !VM.CanEditSprite) return;
             var classesVm = VM;
-            var vm = new TrainerSpriteEditorViewModel(VM.SelectedClassIndex);
-            var win = new TrainerSpriteEditorView(vm);
-            win.Closed += (_, __) => classesVm.RefreshSpritePreview();
-            var owner = TopLevel.GetTopLevel(this) as Window;
-            if (owner != null) win.Show(owner);
-            else win.Show();
+            AvaloniaEditorLauncher.OpenTrainerSpriteEditor(VM.SelectedClassIndex, () => classesVm.RefreshSpritePreview());
         }
 
         private async void AddTrainerClass_Click(object sender, RoutedEventArgs e)

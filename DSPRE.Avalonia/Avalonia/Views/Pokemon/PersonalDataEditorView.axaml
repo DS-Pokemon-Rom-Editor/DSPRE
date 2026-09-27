@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
@@ -34,7 +34,7 @@
     <TabControl>
       <TabItem Header="Stats / Types">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Spacing="8" Margin="8">
+          <controls:CappedWidth Cap="980"><StackPanel Spacing="8" Margin="8">
             <GroupBox Header="Base Stats">
               <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*" RowDefinitions="Auto,8,Auto" Margin="4">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="HP:"      Classes="label"/>
@@ -89,12 +89,12 @@
                 </Grid>
               </GroupBox>
             </Grid>
-          </StackPanel>
+          </StackPanel></controls:CappedWidth>
         </ScrollViewer>
       </TabItem>
       <TabItem Header="Misc">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Spacing="8" Margin="8">
+          <controls:CappedWidth Cap="980"><StackPanel Spacing="8" Margin="8">
             <GroupBox Header="General">
               <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto,8,Auto" Margin="4">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Catch Rate:"      Classes="label"/>
@@ -150,12 +150,12 @@
                            Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
               </StackPanel>
             </GroupBox>
-          </StackPanel>
+          </StackPanel></controls:CappedWidth>
         </ScrollViewer>
       </TabItem>
       <TabItem Header="Pokéathlon" IsVisible="{Binding ShowPokeathlon}">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Spacing="8" Margin="8">
+          <controls:CappedWidth Cap="980"><StackPanel Spacing="8" Margin="8">
             <TextBlock Text="{Binding PokeathlonNote}" IsVisible="{Binding HasPokeathlonNote}" FontStyle="Italic" TextWrapping="Wrap"/>
             <StackPanel Spacing="8" IsVisible="{Binding PokeathlonEditable}">
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPokeathlonFormChoice}">
@@ -186,7 +186,7 @@
                 </StackPanel>
               </GroupBox>
               <GroupBox Header="In the events">
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto" Margin="4" MaxWidth="520" HorizontalAlignment="Left">
+                <controls:CappedWidth Cap="520"><Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto" Margin="4">
                   <CheckBox Grid.Row="0" Grid.ColumnSpan="2" Content="Large sprite" IsChecked="{Binding AthlonLargeSprite}"
                             ToolTip.Tip="For Pokémon drawn 64 px tall: Lamp Jump and Pennant Capture put the status icon 24 px up instead of 16"/>
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Hitbox" Classes="label" Margin="0,0,12,0"
@@ -201,12 +201,12 @@
                              ToolTip.Tip="Shadow and player marker, above the sprite's bottom edge, in every event"/>
                   <ComboBox Grid.Row="6" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
                             ItemsSource="{Binding AthlonShadowOptions}" SelectedIndex="{Binding AthlonShadowIndex}"/>
-                </Grid>
+                </Grid></controls:CappedWidth>
               </GroupBox>
               <TextBlock Text="{Binding PokeathlonProblem}" IsVisible="{Binding HasPokeathlonProblem}"
                          Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
             </StackPanel>
-          </StackPanel>
+          </StackPanel></controls:CappedWidth>
         </ScrollViewer>
       </TabItem>
       <!-- hg-engine takes machine moves from data/learnsets/learnsets.json, not personal data. -->
@@ -234,7 +234,7 @@
       </TabItem>
       <TabItem Header="hg-engine" IsVisible="{Binding ShowHgEngineExtras}">
         <ScrollViewer HorizontalScrollBarVisibility="Disabled">
-          <StackPanel Spacing="8" Margin="8">
+          <controls:CappedWidth Cap="980"><StackPanel Spacing="8" Margin="8">
             <GroupBox Header="Breeding / Dex">
               <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto" Margin="4">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Hidden Ability:"  Classes="label"/>
@@ -294,7 +294,7 @@
                 <Button Content="Create Overworld Follower Entry" Click="CreateOwEntry_Click" IsVisible="{Binding CanCreateOwEntry}"/>
               </StackPanel>
             </GroupBox>
-          </StackPanel>
+          </StackPanel></controls:CappedWidth>
         </ScrollViewer>
       </TabItem>
     </TabControl>

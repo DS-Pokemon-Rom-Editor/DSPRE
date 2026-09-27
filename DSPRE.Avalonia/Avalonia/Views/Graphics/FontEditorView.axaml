@@ -1,11 +1,12 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Graphics.FontEditorView"
         x:DataType="vm:FontEditorViewModel"
         Title="Font Editor"
-        Width="980" Height="700" MinWidth="620" MinHeight="460"
+        Width="980" Height="700" MinWidth="900" MinHeight="560"
         WindowStartupLocation="CenterScreen">
 
   <Design.DataContext>
@@ -51,9 +52,10 @@
     <Border DockPanel.Dock="Left" Width="230" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,1,0">
       <DockPanel Margin="6">
-        <TextBlock DockPanel.Dock="Top" Text="Letters" FontWeight="SemiBold" Margin="0,0,0,4"/>
-        <TextBlock DockPanel.Dock="Top" Classes="hint" Margin="0,0,0,6"
-                   Text="The number is the picture's place in the font, beside the character it writes. Empty slots are marked."/>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+          <TextBlock Text="Letters" FontWeight="SemiBold"/>
+          <controls:HelpTip Text="The number is the picture's place in the font, beside the character it writes. Empty slots are marked."/>
+        </StackPanel>
 
         <TextBox DockPanel.Dock="Top" Text="{Binding Search}" Margin="0,0,0,4"
                  PlaceholderText="Find a letter, or type its number"/>
@@ -98,9 +100,10 @@
           </Border>
 
           <StackPanel Spacing="8" Width="230">
-            <TextBlock Text="Shade" FontWeight="SemiBold"/>
-            <TextBlock Classes="hint"
-                       Text="Four shades, two bits a pixel. Left button paints the shade picked here. Right button rubs out."/>
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="Shade" FontWeight="SemiBold"/>
+              <controls:HelpTip Text="Four shades, two bits a pixel. Left button paints the shade picked here. Right button rubs out."/>
+            </StackPanel>
             <ComboBox x:Name="ShadePicker" SelectedIndex="1" Width="200">
               <ComboBoxItem>Nothing</ComboBoxItem>
               <ComboBoxItem>Ink</ComboBoxItem>
@@ -108,9 +111,10 @@
               <ComboBoxItem>Paper</ComboBoxItem>
             </ComboBox>
 
-            <TextBlock Text="Width" FontWeight="SemiBold" Margin="0,8,0,0"/>
-            <TextBlock Classes="hint"
-                       Text="How far along the next letter starts. The red line shows it; anything drawn past it sits under whatever comes next."/>
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+              <TextBlock Text="Width" FontWeight="SemiBold"/>
+              <controls:HelpTip Text="How far along the next letter starts. The red line shows it; anything drawn past it sits under whatever comes next."/>
+            </StackPanel>
             <NumericUpDown Value="{Binding GlyphWidth}" Minimum="0" Maximum="16" FormatString="0"
                            IsEnabled="{Binding HasGlyph}" Width="120" HorizontalAlignment="Left"/>
             <TextBlock Classes="hint" Text="Pick a letter on the left first." IsVisible="{Binding !HasGlyph}"/>

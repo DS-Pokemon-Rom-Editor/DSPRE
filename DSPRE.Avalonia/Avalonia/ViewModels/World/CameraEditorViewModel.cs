@@ -92,7 +92,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     }
 
     // ── Main ViewModel ────────────────────────────────────────────────────────
-    public class CameraEditorViewModel : INotifyPropertyChanged
+    public class CameraEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         void Notify([CallerMemberName] string p = null) =>
@@ -106,7 +106,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool IsReady { get => _isReady; private set { _isReady = value; Notify(); } }
 
         private bool _isDirty;
-        public bool IsDirty { get => _isDirty; private set { _isDirty = value; Notify(); } }
+        public bool IsDirty { get => _isDirty; private set { _isDirty = value; Notify(); Notify(nameof(HasUnsavedChanges)); } }
+
+        public bool HasUnsavedChanges => IsDirty;
+        public string UnsavedChangesDescription => "Camera table";
+        public void SaveChanges() => _ = SaveChangesAsync();
+        public async Task<bool> SaveChangesAsync() { await SaveAsync(); return !IsDirty; }
+        public void DiscardChanges() => _ = SetupAsync(_owner);
 
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set { _statusText = value; Notify(); } }

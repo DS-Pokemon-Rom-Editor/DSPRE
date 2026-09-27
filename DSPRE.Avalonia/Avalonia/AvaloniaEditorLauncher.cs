@@ -514,9 +514,9 @@ namespace DSPRE.Avalonia
             }
         }
 
-        public static void OpenTrainerSpriteEditor(int initialClassIndex = 0) => _ = OpenTrainerSpriteEditorAsync(initialClassIndex);
+        public static void OpenTrainerSpriteEditor(int initialClassIndex = 0, System.Action closed = null) => _ = OpenTrainerSpriteEditorAsync(initialClassIndex, closed);
 
-        public static async System.Threading.Tasks.Task OpenTrainerSpriteEditorAsync(int initialClassIndex = 0)
+        public static async System.Threading.Tasks.Task OpenTrainerSpriteEditorAsync(int initialClassIndex = 0, System.Action closed = null)
         {
             if (!IsRomLoaded || BlockedForHge("The Trainer Sprite Editor", HgEngineDomain.TrainerGraphics)) return;
 
@@ -524,7 +524,9 @@ namespace DSPRE.Avalonia
             {
                 await RunBusyAsync("Opening Trainer Sprite Editor…", UnpackHint,
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics }));
-                new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex)).ShowManaged();
+                var window = new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex));
+                if (closed != null) window.Closed += (_, _) => closed();
+                window.ShowManaged();
             }
             catch (System.Exception ex)
             {
@@ -1510,7 +1512,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Advanced Header Search", Keywords = "find filter query field", Run = OpenHeaderSearch },
             new() { Name = "Overlay Editor",        Run = OpenOverlayEditor },
             new() { Name = "Overworld Editor",      Keywords = "overworld sprites btx npc", Run = OpenOverworldEditor },
-            new() { Name = "NSBTX Texture Editor",  Keywords = "texture", Run = OpenNsbtxEditor },
+            new() { Name = "Map & Building Textures", Keywords = "texture nsbtx tileset", Run = OpenNsbtxEditor },
             new() { Name = "Area Data Editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
             new() { Name = "Wild Held Items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },

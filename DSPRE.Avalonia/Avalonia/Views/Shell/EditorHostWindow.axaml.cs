@@ -14,6 +14,13 @@ namespace DSPRE.Avalonia.Views.Shell
     {
         private bool _closeConfirmed;
 
+        private static readonly System.Collections.Generic.Dictionary<string, (double, double)> MinimumFor = new()
+        {
+            ["Mart Editor"] = (860, 500), ["Header Editor"] = (900, 560), ["Matrix Editor"] = (720, 500),
+            ["Map Editor"] = (1000, 600), ["Event Editor"] = (1000, 600), ["Vs. Seeker Rematch Editor"] = (720, 460),
+            ["Camera Editor"] = (820, 480),
+        };
+
         public EditorHostWindow() { }
 
         public EditorHostWindow(string title, Control content, double width = 900, double height = 700)
@@ -21,6 +28,10 @@ namespace DSPRE.Avalonia.Views.Shell
             Title = title;
             Width = width;
             Height = height;
+            // A floor for every editor; larger layouts raise it here or after construction.
+            var floor = MinimumFor.TryGetValue(title ?? "", out var m) ? m : (600, 400);
+            MinWidth = System.Math.Min(width, floor.Item1);
+            MinHeight = System.Math.Min(height, floor.Item2);
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Content = content;
 
