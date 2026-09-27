@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
              x:Class="DSPRE.Avalonia.Views.Pokemon.GreatMarshEncounterView"
              x:DataType="vm:GreatMarshEncounterViewModel">
@@ -34,12 +35,21 @@
                        TextWrapping="Wrap" Margin="0,2,0,4"/>
           </StackPanel>
           <ListBox ItemsSource="{Binding EncounterSlots}"
-                   SelectedIndex="{Binding SelectedSlotIndex}"/>
+                   SelectedIndex="{Binding SelectedSlotIndex}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.PokemonInLabel}}"/>
+                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+            </ListBox>
         </DockPanel>
 
         <StackPanel Grid.Column="1" Spacing="6">
           <TextBlock Text="Species" FontWeight="Bold"/>
-          <ComboBox HorizontalAlignment="Stretch"
+          <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch"
                     ItemsSource="{Binding SpeciesNames}"
                     SelectedIndex="{Binding SelectedSpeciesIndex}"/>
           <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"

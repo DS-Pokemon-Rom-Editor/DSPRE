@@ -191,9 +191,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             "Only E", "Only D", "! and ?"
         };
 
-        // The file stores these as a chance out of a hundred, but the games only ask whether it is zero
-        // (encount_set.c:2580: "if it is not zero, change"), so the editor offers the two sea forms and
-        // keeps whatever number was already there when the choice has not changed.
+        // The file stores these as a chance out of a hundred, but the games only ask whether it is zero,
+        // so the editor offers the two sea forms and keeps whatever number was already there when the
+        // choice has not changed.
         private uint _shellosRaw, _gastrodonRaw;
 
         private int _shellosFormIndex;

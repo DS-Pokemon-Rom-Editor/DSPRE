@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -37,7 +38,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string[] TypeNames { get; } = Array.Empty<string>();
         public int TypeCount { get; }
 
-        /// <summary>Raised when any cell's value changes, so the grid can repaint.</summary>
         public event EventHandler CellsChanged;
 
         public TypeChartEditorViewModel() { }
@@ -80,6 +80,63 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public string SelectedTitle => _attacker < 0 ? "" : $"{NameOf(_attacker)} attacking {NameOf(_defender)}";
+        public global::Avalonia.Media.IImage AttackerIcon => _attacker < 0 ? null : DSPRE.Avalonia.Data.TypeIcons.For(_attacker);
+        public global::Avalonia.Media.IImage DefenderIcon => _attacker < 0 ? null : DSPRE.Avalonia.Data.TypeIcons.For(_defender);
+
+        // ── Highlighted row (attacking) and column (defending), toggled from the type icons ──
+        private int _row = -1, _col = -1;
+        public int HighlightRow => _row;
+        public int HighlightColumn => _col;
+        public event EventHandler HighlightChanged;
+
+        public void ToggleRow(int type) { _row = _row == type ? -1 : type; HighlightMoved(); }
+        public void ToggleColumn(int type) { _col = _col == type ? -1 : type; HighlightMoved(); }
+
+        private void HighlightMoved()
+        {
+            RefreshSummary();
+            HighlightChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        public sealed class SummaryLine
+        {
+            public global::Avalonia.Media.IImage From { get; init; }
+            public global::Avalonia.Media.IImage To { get; init; }
+            public string FromName { get; init; }
+            public string ToName { get; init; }
+            public bool FromHasIcon => From != null;
+            public bool ToHasIcon => To != null;
+            public string Multiplier { get; init; }
+        }
+
+        public ObservableCollection<SummaryLine> Summary { get; } = new();
+        public bool HasSummary => Summary.Count > 0;
+
+        private static string Times(int tenths, bool foresight) => tenths switch
+        {
+            0 => foresight ? "×0 (Foresight hits)" : "×0",
+            5 => "×½",
+            10 => "×1",
+            20 => "×2",
+            _ => "×" + (tenths / 10m).ToString("0.#"),
+        };
+
+        private void RefreshSummary()
+        {
+            Summary.Clear();
+            if (_chart != null)
+            {
+                SummaryLine Line(int a, int d) => new SummaryLine
+                {
+                    From = DSPRE.Avalonia.Data.TypeIcons.For(a), To = DSPRE.Avalonia.Data.TypeIcons.For(d),
+                    FromName = NameOf(a), ToName = NameOf(d), Multiplier = Times(TenthsAt(a, d), ForesightAt(a, d)),
+                };
+                if (_row >= 0 && _col >= 0) Summary.Add(Line(_row, _col));
+                else if (_row >= 0) for (int d = 0; d < TypeCount; d++) Summary.Add(Line(_row, d));
+                else if (_col >= 0) for (int a = 0; a < TypeCount; a++) Summary.Add(Line(a, _col));
+            }
+            Raise(nameof(HasSummary));
+        }
 
         public string[] Choices { get; } = { "No effect (0×)", "Not very effective (½×)", "Neutral (1×)", "Super effective (2×)", "Custom" };
 
@@ -96,7 +153,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_attacker < 0 || value < 0 || value == SelectedChoice) return;
                 if (value == 4)
                 {
-                    // Stays in Custom while typing, even through 1.0 or 2.0; a custom value starts at 1.5x.
+                    // Stays in Custom while typing, even through 1.0 or 2.0.
                     bool preset = TenthsAt(_attacker, _defender) is 0 or 5 or 10 or 20;
                     _customMode = true;
                     if (preset) SetSelected(15); else RaiseSelection();
@@ -110,7 +167,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public bool IsCustom => SelectedChoice == 4;
 
-        /// <summary>The selected pair's multiplier, e.g. 1.5 for 1.5×.</summary>
+        /// <summary>The selected pair's multiplier as a factor, not tenths.</summary>
         public decimal Multiplier
         {
             get => _attacker < 0 ? 1 : TenthsAt(_attacker, _defender) / 10m;
@@ -134,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void RaiseSelection()
         {
-            foreach (var n in new[] { nameof(SelectedAttacker), nameof(SelectedDefender), nameof(SelectedTitle), nameof(SelectedChoice),
+            foreach (var n in new[] { nameof(SelectedAttacker), nameof(SelectedDefender), nameof(SelectedTitle), nameof(AttackerIcon), nameof(DefenderIcon), nameof(SelectedChoice),
                                       nameof(IsCustom), nameof(Multiplier), nameof(Foresight), nameof(CanForesight) })
                 Raise(n);
         }
@@ -163,6 +220,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (var n in new[] { nameof(Room), nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(HasUnsavedChanges) })
                 Raise(n);
             CellsChanged?.Invoke(this, EventArgs.Empty);
+            RefreshSummary();
             _undo?.Record();
         }
 
@@ -196,13 +254,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool CanMakeRoom => _chart != null && !_chart.InExpansion;
         private bool? _expansionReady;
         public bool ExpansionReady => _expansionReady ??= SyntheticOverlaySpace.Available();
-        public string MakeRoomTip => !ExpansionReady ? "Needs the ARM9 expansion from the ROM Patch Toolbox"
-            : $"Move the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
+        public string MakeRoomTip => $"Move the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups"
+            + (ExpansionReady ? "" : " (offers to apply the ARM9 expansion first)");
 
         /// <summary>Moves the chart, edits included, to the expanded ARM9 area so it can hold more matchups.</summary>
         public async Task MakeRoomAsync()
         {
             if (!CanMakeRoom) return;
+            if (!ExpansionReady)
+            {
+                if (!await Arm9ExpansionOffer.EnsureAsync("Making room for more matchups", "Type Chart")) return;
+                _expansionReady = null;
+                Raise(nameof(ExpansionReady)); Raise(nameof(MakeRoomTip));
+            }
             if (!await DialogHelper.AskYesNo($"Move the type chart to the expanded ARM9 area? It will hold up to {TypeChart.ExpandedCapacity - 2} matchups instead of {_chart.MaxMatchups}. " +
                 "This saves the chart, including any unsaved edits.", "Type Chart")) return;
             try { _chart.MoveToExpansion(); }

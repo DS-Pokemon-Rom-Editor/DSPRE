@@ -223,7 +223,7 @@ namespace DSPRE.Avalonia.Data
             ["STYLE"] = 0, ["BEAUTIFUL"] = 1, ["CUTE"] = 1, ["INTELLI"] = 2, ["STRONG"] = 0,
         };
 
-        // WazaKindPlttOffset, from the same file.
+        // The same table's banks for the move-category icons.
         private static readonly Dictionary<string, int> KindBank = new(StringComparer.Ordinal)
         {
             ["BUTURI"] = 0, ["TOKUSYU"] = 1, ["HENKA"] = 0,

@@ -5,11 +5,11 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE
 {
-    /// <summary>Machine moves and disc colours. Indices 0-91 are TM01-TM92, 92-99 HM01-HM08, and 100 onwards
-    /// PlatPatches' extra TMs, so the HMs keep their indices whether or not that patch is installed.</summary>
+    /// <summary>Machine moves and disc colours. Indices 0-99 are TM01-HM08 and PlatPatches' extra TMs start at 100,
+    /// so HM indices never shift.</summary>
     public static class TMEditor
     {
-        /// <summary>TM01-TM92 and HM01-HM08, the machines every retail game has, at indices 0-99.</summary>
+        /// <summary>TM01-TM92 and HM01-HM08, at indices 0-99.</summary>
         public static readonly int VanillaMachineCount = PokemonPersonalData.tmsCount + PokemonPersonalData.hmsCount;
         private const int FirstMachineItem = 328;
 
@@ -26,7 +26,7 @@ namespace DSPRE
                 .ToArray();
         }
 
-        /// <summary>The item a machine index is: TM01 is 328, and extra TMs use the item ids PlatPatches gave them.</summary>
+        /// <summary>A machine's item id; extra TMs use the ids PlatPatches gave them.</summary>
         public static int MachineItemId(int index)
         {
             if (index < VanillaMachineCount) return FirstMachineItem + index;
@@ -152,9 +152,7 @@ namespace DSPRE
             return paletteIds;
         }
 
-        /// <summary>Writes every machine's move and disc colour: the ARM9 move table for TM01-HM08, PlatPatches'
-        /// move list for extra TMs, and each machine item's palette wherever its item row lives.</summary>
-        /// <remarks>Everything is checked before anything is written. <paramref name="palettes"/> may be null.</remarks>
+        /// <summary>Writes every machine's move and disc colour, checking everything first; palettes may be null.</summary>
         public static void WriteMachines(int[] moves, int[] palettes)
         {
             if (moves.Length != MachineCount || (palettes != null && palettes.Length != moves.Length))

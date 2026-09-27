@@ -35,6 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             public event PropertyChangedEventHandler PropertyChanged;
             public string Name { get; init; }
+            public int Item { get; init; }
             private bool _changed;
             public bool Changed
             {
@@ -58,7 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 int item = BerryData.FirstBerryItem + b;
                 BerryNames.Add(item < items.Length ? items[item] : $"Berry {b + 1}");
-                BerryRows.Add(new BerryRow { Name = BerryNames[b] });
+                BerryRows.Add(new BerryRow { Name = BerryNames[b], Item = item });
             }
             _selected = 0;
         }
@@ -92,11 +93,25 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string Problem => Current?.Problem() ?? "";
         public bool HasProblem => Problem.Length > 0;
 
+        public int SelectedItem => _selected >= 0 && _selected < BerryRows.Count ? BerryRows[_selected].Item : 0;
+        public string SelectedName => _selected >= 0 && _selected < BerryRows.Count ? BerryRows[_selected].Name : "";
+
+        // The Poffin and Pokéblock colours for each flavour.
+        public System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Controls.BarPart> FlavourParts => Current == null ? null : new[]
+        {
+            new DSPRE.Avalonia.Controls.BarPart { Value = Current.Flavour[0], Label = "Spicy", Colour = global::Avalonia.Media.Color.FromRgb(0xD9, 0x4B, 0x3F) },
+            new DSPRE.Avalonia.Controls.BarPart { Value = Current.Flavour[1], Label = "Dry", Colour = global::Avalonia.Media.Color.FromRgb(0x3F, 0x7F, 0xD9) },
+            new DSPRE.Avalonia.Controls.BarPart { Value = Current.Flavour[2], Label = "Sweet", Colour = global::Avalonia.Media.Color.FromRgb(0xE0, 0x6F, 0xB0) },
+            new DSPRE.Avalonia.Controls.BarPart { Value = Current.Flavour[3], Label = "Bitter", Colour = global::Avalonia.Media.Color.FromRgb(0x4F, 0xA8, 0x4F) },
+            new DSPRE.Avalonia.Controls.BarPart { Value = Current.Flavour[4], Label = "Sour", Colour = global::Avalonia.Media.Color.FromRgb(0xC9, 0xAE, 0x2E) },
+        };
+
         private void RaiseFields()
         {
             foreach (var n in new[] { nameof(SelectedBerry), nameof(SizeMm), nameof(FirmnessIndex), nameof(Yield), nameof(HoursPerStage),
                                       nameof(Drain), nameof(Spicy), nameof(Dry), nameof(Sweet), nameof(Bitter), nameof(Sour),
-                                      nameof(Smoothness), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) })
+                                      nameof(Smoothness), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges),
+                                      nameof(SelectedItem), nameof(SelectedName), nameof(FlavourParts) })
                 Raise(n);
             for (int b = 0; b < BerryRows.Count && b < _berries.Count; b++) BerryRows[b].Changed = BerryChanged(b);
         }

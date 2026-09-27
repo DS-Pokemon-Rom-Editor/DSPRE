@@ -31,7 +31,7 @@
 
         <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto">
           <StackPanel Spacing="4">
-            <Grid ColumnDefinitions="24,170,120,150,90,90,*">
+            <Grid ColumnDefinitions="24,206,120,150,90,90,*">
               <TextBlock Grid.Column="1" Text="Pokémon" FontWeight="Bold"/>
               <TextBlock Grid.Column="2" Text="Day" FontWeight="Bold"/>
               <TextBlock Grid.Column="3" Text="Offered" FontWeight="Bold"/>
@@ -42,11 +42,12 @@
             <ItemsControl ItemsSource="{Binding Rows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:BugContestTrainersViewModel+RowViewModel">
-                  <Grid ColumnDefinitions="24,170,120,150,90,90,*" Margin="0,2">
+                  <Grid ColumnDefinitions="24,206,120,150,90,90,*" Margin="0,2">
                     <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center"/>
-                    <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="1" Margin="0,0,4,0"
-                              ItemsSource="{Binding $parent[ItemsControl].((vm:BugContestTrainersViewModel)DataContext).SpeciesNames}"
-                              SelectedIndex="{Binding SpeciesIndex}"/>
+                    <DockPanel Grid.Column="1" Margin="0,0,4,0">
+                      <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding SpeciesIndex, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+                      <controls:FusionAutoCompleteBox AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BugContestTrainersViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}"/>
+                    </DockPanel>
                     <ComboBox Grid.Column="2" Margin="0,0,4,0" HorizontalAlignment="Stretch"
                               ItemsSource="{Binding $parent[ItemsControl].((vm:BugContestTrainersViewModel)DataContext).DayOptions}"
                               SelectedIndex="{Binding DayIndex}"/>

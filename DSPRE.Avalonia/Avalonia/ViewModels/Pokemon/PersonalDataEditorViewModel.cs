@@ -501,8 +501,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // collapse into one undo step.
         private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; public FollowerStaged[] Followers; public byte[][] Athlon; public int[] ExtraTms; }
 
-        // PlatPatches' TM121 onwards (extra rows 28+) are kept in the synthetic overlay, not the personal file, so they
-        // are staged here by machine index and written on Save. TM93-TM120 live in the personal file's own bits.
+        // PlatPatches' TM121+ compatibility lives in the synthetic overlay, so it is staged here until Save.
         private HashSet<int> _extraMaskTms = new HashSet<int>(), _extraMaskTmsSaved = new HashSet<int>();
         private static int FirstMaskMachine => TMEditor.VanillaMachineCount + PlatPatches.PersonalMaskRows;
         private readonly DSPRE.Avalonia.UndoHistory<PersonalSnapshot> _history = new();
@@ -1155,6 +1154,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string[] StarOptions { get; } = { "★", "★★", "★★★", "★★★★", "★★★★★" };
         public string[] AthlonCellOptions { get; } = { "Small sprite", "Large sprite" };
         public string[] AthlonSizeOptions { get; } = { "Small", "Medium", "Large" };
+        public string[] AthlonTouchOptions { get; } = { "Small · 8 px", "Medium · 8 px", "Large · 16 px" };
+        public string[] AthlonShadowOptions { get; } = { "Small · 3 px", "Medium · 4 px", "Large · 5 px" };
+
+        public bool AthlonLargeSprite
+        {
+            get => AthlonCellIndex == 1;
+            set => AthlonCellIndex = value ? 1 : 0;
+        }
 
         private int _athlonFormIndex;
         public int PokeathlonFormIndex
@@ -1242,7 +1249,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void ShowPokeathlonForm()
         {
             foreach (var row in PokeathlonStats) row.Refresh();
-            foreach (var name in new[] { nameof(PokeathlonFormIndex), nameof(AthlonCellIndex), nameof(AthlonHitIndex), nameof(AthlonTouchIndex),
+            foreach (var name in new[] { nameof(PokeathlonFormIndex), nameof(AthlonCellIndex), nameof(AthlonLargeSprite), nameof(AthlonHitIndex), nameof(AthlonTouchIndex),
                                          nameof(AthlonShadowIndex), nameof(PokeathlonProblem), nameof(HasPokeathlonProblem),
                                          nameof(PokeathlonEditable), nameof(PokeathlonNote), nameof(HasPokeathlonNote),
                                          nameof(HasPokeathlonFormChoice) })

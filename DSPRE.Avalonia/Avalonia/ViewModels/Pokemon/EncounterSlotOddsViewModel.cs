@@ -59,10 +59,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public string Note => Name == "Walking" && gameFamily != GameFamilies.HGSS
                 ? "The Poké Radar uses these odds too" : null;
 
+            // Alternating shades so neighbouring slots stay apart in the bar.
+            private static readonly global::Avalonia.Media.Color[] Shades =
+            {
+                global::Avalonia.Media.Color.FromRgb(0x3A, 0x7B, 0xC8), global::Avalonia.Media.Color.FromRgb(0x2E, 0x9E, 0x8F),
+                global::Avalonia.Media.Color.FromRgb(0x7A, 0x5C, 0xC0), global::Avalonia.Media.Color.FromRgb(0xC8, 0x7B, 0x2E),
+            };
+            internal static global::Avalonia.Media.Color ShadeOf(int slot) => Shades[slot % Shades.Length];
+
+            public System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Controls.BarPart> Parts =>
+                Method.Percents.Select((p, i) => new DSPRE.Avalonia.Controls.BarPart { Value = p, Label = (i + 1).ToString(), Colour = ShadeOf(i) }).ToList();
+
             internal void Changed()
             {
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsOff)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parts)));
+                foreach (var slot in Slots) slot.Refresh();
                 _o.Changed();
             }
 
@@ -91,7 +104,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     _m.Changed();
                 }
             }
-            internal void Refresh() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Percent)));
+            public System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Controls.BarPart> Bar => new[]
+            {
+                new DSPRE.Avalonia.Controls.BarPart { Value = _m.Method.Percents[_i], Colour = MethodViewModel.ShadeOf(_i) },
+                new DSPRE.Avalonia.Controls.BarPart { Value = Math.Max(0, 100 - _m.Method.Percents[_i]), Colour = global::Avalonia.Media.Colors.Transparent },
+            };
+            internal void Refresh()
+            {
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Percent)));
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Bar)));
+            }
         }
 
         public string Problem => _odds?.Problem() ?? "";

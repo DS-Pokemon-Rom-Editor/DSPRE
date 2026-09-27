@@ -24,22 +24,38 @@
     <TabControl Margin="4">
       <TabItem Header="Moves">
         <DockPanel Margin="4">
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="36,200,70,Auto,Auto,Auto,*" Margin="0,0,20,4">
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="36,240,70,Auto,Auto,Auto,*" Margin="0,0,20,4">
             <TextBlock Grid.Column="1" Text="Move" FontWeight="SemiBold"/>
-            <TextBlock Grid.Column="2" Text="Red" FontWeight="SemiBold" IsVisible="{Binding Platinum}" ToolTip.Tip="Red Shards"/>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" IsVisible="{Binding Platinum}" ToolTip.Tip="Red Shards">
+              <Image Width="24" Height="24" Source="{Binding Source=72, Converter={x:Static controls:GameIconConverter.Item}}"/>
+              <TextBlock Text="Red" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
             <TextBlock Grid.Column="2" Text="BP" FontWeight="SemiBold" IsVisible="{Binding HeartGold}" ToolTip.Tip="Battle Points"/>
-            <TextBlock Grid.Column="3" Text="Blue" FontWeight="SemiBold" IsVisible="{Binding Platinum}" Width="70" ToolTip.Tip="Blue Shards"/>
-            <TextBlock Grid.Column="4" Text="Yellow" FontWeight="SemiBold" IsVisible="{Binding Platinum}" Width="70" ToolTip.Tip="Yellow Shards"/>
-            <TextBlock Grid.Column="5" Text="Green" FontWeight="SemiBold" IsVisible="{Binding Platinum}" Width="70" ToolTip.Tip="Green Shards"/>
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2" IsVisible="{Binding Platinum}" ToolTip.Tip="Blue Shards" Width="70">
+              <Image Width="24" Height="24" Source="{Binding Source=73, Converter={x:Static controls:GameIconConverter.Item}}"/>
+              <TextBlock Text="Blue" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="2" IsVisible="{Binding Platinum}" ToolTip.Tip="Yellow Shards" Width="70">
+              <Image Width="24" Height="24" Source="{Binding Source=74, Converter={x:Static controls:GameIconConverter.Item}}"/>
+              <TextBlock Text="Yellow" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
+            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="2" IsVisible="{Binding Platinum}" ToolTip.Tip="Green Shards" Width="70">
+              <Image Width="24" Height="24" Source="{Binding Source=75, Converter={x:Static controls:GameIconConverter.Item}}"/>
+              <TextBlock Text="Green" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </StackPanel>
             <TextBlock Grid.Column="6" Text="Place" FontWeight="SemiBold" Margin="8,0,0,0"/>
           </Grid>
-          <ListBox ItemsSource="{Binding Pool}" KeyboardNavigation.TabNavigation="Continue">
+          <ListBox ItemsSource="{Binding Pool}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+PoolRow">
-                <Grid ColumnDefinitions="36,200,70,Auto,Auto,Auto,*">
+                <Grid ColumnDefinitions="36,240,70,Auto,Auto,Auto,*">
                   <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center"/>
-                  <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="1" Margin="0,0,6,0"
-                      ItemsSource="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).MoveNames}" SelectedIndex="{Binding Move}"/>
+                  <DockPanel Grid.Column="1" Margin="0,0,6,0">
+                    <Image DockPanel.Dock="Left" Width="32" Height="16" Margin="0,0,4,0" RenderOptions.BitmapInterpolationMode="None"
+                           Source="{Binding Move, Converter={x:Static controls:GameIconConverter.MoveType}}"/>
+                    <controls:FusionAutoCompleteBox AllowsNone="False"
+                        ItemsSource="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).MoveNames}" SelectedIndex="{Binding Move}"/>
+                  </DockPanel>
                   <NumericUpDown Grid.Column="2" Value="{Binding Cost0}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"/>
                   <NumericUpDown Grid.Column="3" Width="66" Value="{Binding Cost1}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"
                                  IsVisible="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).Platinum}"/>
@@ -47,7 +63,7 @@
                                  IsVisible="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).Platinum}"/>
                   <NumericUpDown Grid.Column="5" Width="66" Value="{Binding Cost3}" Minimum="0" Maximum="255" FormatString="0" ShowButtonSpinner="False" Margin="0,0,4,0"
                                  IsVisible="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).Platinum}"/>
-                  <ComboBox Grid.Column="6" Margin="8,0,0,0" MinWidth="180"
+                  <ComboBox Grid.Column="6" Margin="8,0,0,0" MinWidth="180" MaxWidth="300" HorizontalAlignment="Left"
                             ItemsSource="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).Places}" SelectedIndex="{Binding Where}"/>
                 </Grid>
               </DataTemplate>

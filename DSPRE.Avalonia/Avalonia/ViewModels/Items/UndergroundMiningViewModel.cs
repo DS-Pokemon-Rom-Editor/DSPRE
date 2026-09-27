@@ -56,6 +56,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             private readonly UndergroundMiningViewModel _o;
             private readonly MiningTable.Row _row;
             public string Name { get; }
+            public int Item => _row.BagItem;
             public TreasureRow(UndergroundMiningViewModel owner, MiningTable.Row row, string name) { _o = owner; _row = row; Name = name; }
 
             public decimal W0 { get => _row.Weights[0]; set => Set(0, value); }

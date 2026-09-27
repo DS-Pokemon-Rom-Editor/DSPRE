@@ -8,10 +8,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Where a swarm can happen. The day's swarm is a stored random number taken modulo the row count, so the count
-    /// lives only in the two `movs r1, #count` sites. HeartGold and SoulSilver rows are a header and an encounter
-    /// method (0 walking, 1 surfing, 2 fishing); Diamond, Pearl and Platinum rows are a header. A table that outgrows
-    /// its space moves into the expanded ARM9 area.
+    /// Where a swarm can happen; HGSS rows add an encounter method. The row count lives only in the two
+    /// `movs r1, #count` sites that pick the day's swarm, and a table that outgrows its space moves to the ARM9 expansion.
     /// </summary>
     public sealed class SwarmTable
     {
@@ -123,12 +121,15 @@ namespace DSPRE.ROMFiles
             return bytes;
         }
 
+        /// <summary>The table outgrew its room in the game and the ARM9 expansion isn't there to take it.</summary>
+        public bool NeedsExpansion => !FitsWhereItIs && !InExpansion && !SyntheticOverlaySpace.Available();
+
         /// <summary>Why the table can't be saved, or null.</summary>
         public string Problem(int headerCount, Func<ushort, bool> hasEncounters)
         {
             if (Rows.Count == 0) return "The swarm table needs at least one row.";
             if (Rows.Count > 255) return "The game can pick from up to 255 swarm rows.";
-            if (!FitsWhereItIs && !InExpansion && !SyntheticOverlaySpace.Available())
+            if (NeedsExpansion)
                 return $"The table holds {Capacity} rows until the ARM9 expansion is applied in the ROM Patch Toolbox.";
             for (int i = 0; i < Rows.Count; i++)
             {

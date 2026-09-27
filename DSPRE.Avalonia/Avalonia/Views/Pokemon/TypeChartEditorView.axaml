@@ -16,7 +16,6 @@
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Make room…" Click="MakeRoom_Click" IsVisible="{Binding CanMakeRoom}"
-                IsEnabled="{Binding ExpansionReady}" ToolTip.ShowOnDisabled="True"
                 ToolTip.Tip="{Binding MakeRoomTip}"/>
         <TextBlock Text="{Binding Room}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
@@ -27,12 +26,19 @@
       <TextBlock Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
     </StackPanel>
 
-    <Grid ColumnDefinitions="Auto,*" Margin="8">
-      <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-        <Grid x:Name="Cells" Focusable="True"/>
+    <DockPanel x:Name="Host" Margin="8">
+      <ScrollViewer x:Name="ChartScroll" DockPanel.Dock="Left" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <LayoutTransformControl x:Name="ChartScale" HorizontalAlignment="Left" VerticalAlignment="Top">
+          <Grid x:Name="Cells" Focusable="True" RenderOptions.BitmapInterpolationMode="None"/>
+        </LayoutTransformControl>
       </ScrollViewer>
 
-      <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="8" MinWidth="220" MaxWidth="300" HorizontalAlignment="Left">
+      <StackPanel Margin="16,0,0,0" Spacing="8" Width="240" HorizontalAlignment="Left">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Image Source="{Binding AttackerIcon}" Width="32" Height="16" IsVisible="{Binding AttackerIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <TextBlock Text="→" VerticalAlignment="Center" IsVisible="{Binding DefenderIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Image Source="{Binding DefenderIcon}" Width="32" Height="16" IsVisible="{Binding DefenderIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+        </StackPanel>
         <TextBlock Text="{Binding SelectedTitle}" FontWeight="SemiBold" TextWrapping="Wrap"/>
         <ComboBox ItemsSource="{Binding Choices}" SelectedIndex="{Binding SelectedChoice}" HorizontalAlignment="Stretch"/>
         <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsCustom}">
@@ -40,7 +46,23 @@
           <TextBlock Text="×" VerticalAlignment="Center"/>
         </StackPanel>
         <CheckBox Content="Foresight and Scrappy let it hit" IsChecked="{Binding Foresight}" IsEnabled="{Binding CanForesight}"/>
+
+        <Border Height="1" Background="{DynamicResource Editor.Border}" Margin="0,6" IsVisible="{Binding HasSummary}"/>
+        <ItemsControl ItemsSource="{Binding Summary}" IsVisible="{Binding HasSummary}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TypeChartEditorViewModel+SummaryLine">
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1" RenderOptions.BitmapInterpolationMode="None">
+                <Image Source="{Binding From}" Width="32" Height="16" IsVisible="{Binding FromHasIcon}" ToolTip.Tip="{Binding FromName}"/>
+                <TextBlock Text="{Binding FromName}" IsVisible="{Binding !FromHasIcon}" VerticalAlignment="Center"/>
+                <TextBlock Text="→" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                <Image Source="{Binding To}" Width="32" Height="16" IsVisible="{Binding ToHasIcon}" ToolTip.Tip="{Binding ToName}"/>
+                <TextBlock Text="{Binding ToName}" IsVisible="{Binding !ToHasIcon}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Multiplier}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
       </StackPanel>
-    </Grid>
+    </DockPanel>
   </DockPanel>
 </UserControl>

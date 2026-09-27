@@ -38,8 +38,9 @@
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:BerryDataEditorViewModel+BerryRow">
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <TextBlock Text="●" IsVisible="{Binding Changed}" ToolTip.Tip="Unsaved"/>
-              <TextBlock Text="{Binding Name}"/>
+              <TextBlock Text="●" IsVisible="{Binding Changed}" ToolTip.Tip="Unsaved" VerticalAlignment="Center"/>
+              <Image Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}" Width="32" Height="32"/>
+              <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
             </StackPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>
@@ -47,6 +48,11 @@
 
       <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Image Width="64" Height="64" RenderOptions.BitmapInterpolationMode="None"
+                 Source="{Binding SelectedItem, Converter={x:Static controls:GameIconConverter.Item}}"/>
+          <TextBlock Text="{Binding SelectedName}" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/>
+        </StackPanel>
         <GroupBox Header="Growth">
           <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,6,Auto,6,Auto" Margin="4">
             <TextBlock Grid.Row="0" Classes="label" Text="Hours per stage"/>
@@ -61,6 +67,7 @@
 
         <GroupBox Header="Look and taste">
           <StackPanel Spacing="6" Margin="4">
+            <controls:ProportionBar Parts="{Binding FlavourParts}" HorizontalAlignment="Stretch" ToolTip.Tip="Share of each flavour"/>
             <TextBlock Text="HeartGold may not read these." IsVisible="{Binding LooksUnread}"
                        Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
             <Grid ColumnDefinitions="Auto,Auto,24,Auto,Auto" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto">

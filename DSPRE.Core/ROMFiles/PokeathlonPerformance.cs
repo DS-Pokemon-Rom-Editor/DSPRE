@@ -6,8 +6,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// HGSS Pokéathlon performance (a/1/6/9): one 20-byte record per species form. Stars are stored as 0-4 for
-    /// 1-5, as base values at 0x00 and minimum/maximum pairs from 0x09, all in the order of <see cref="Stats"/>.
+    /// HGSS Pokéathlon performance (a/1/6/9): one 20-byte record per species form.
+    /// Stars are stored 0-4 for 1-5: base values at 0x00, minimum/maximum pairs from 0x09, in <see cref="Stats"/> order.
     /// </summary>
     public class PokeathlonPerformance
     {
@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
 
         public static readonly string[] Stats = { "Power", "Speed", "Jump", "Stamina", "Skill" };
 
-        // Species with more than one record, and how many. The game lists them in form order.
+        // Species with more than one record, listed in form order.
         private static readonly Dictionary<int, int> FormRecords = new Dictionary<int, int>
         {
             [172] = 2, [201] = 28, [386] = 4, [412] = 3, [413] = 3, [422] = 2,
@@ -74,7 +74,10 @@ namespace DSPRE.ROMFiles
         public void SetMin(int stat, byte value) => _data[9 + stat * 2] = value;
         public void SetMax(int stat, byte value) => _data[10 + stat * 2] = value;
 
-        // Named after the Pokéathlon event code that reads them; what each changes is not settled yet.
+        // Cell: non-zero for 64 px sprites, which raises the status icon in Lamp Jump and Pennant Capture.
+        // Hit: 1-3 picks a per-event collision circle from a/1/7/0.
+        // Touch: 1-3 lifts the Circle Push and Goal Roll status icon 8/8/16 px.
+        // Shadow: 1-3 draws the shadow and player marker 3/4/5 px above the sprite box's bottom.
         public byte Cell { get => _data[5]; set => _data[5] = value; }
         public byte Hit { get => _data[6]; set => _data[6] = value; }
         public byte Touch { get => _data[7]; set => _data[7] = value; }

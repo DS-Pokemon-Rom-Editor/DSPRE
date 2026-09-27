@@ -29,8 +29,7 @@ namespace DSPRE.Editors
             public List<string> Kept { get; } = new List<string>();
         }
 
-        /// <summary>Rewrites the descriptions of machines whose move changed. <paramref name="changes"/> holds
-        /// (machine index, old move, new move).</summary>
+        /// <summary>Rewrites the descriptions of machines whose move changed.</summary>
         public static Result Update(IReadOnlyList<(int Machine, int OldMove, int NewMove)> changes)
         {
             var result = new Result();

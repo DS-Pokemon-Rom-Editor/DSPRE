@@ -76,6 +76,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static int Clamp(decimal v) => (int)Math.Clamp(v, 0, 100);
 
+        public System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Controls.BarPart> NormalParts => Parts(_odds?.Normal);
+        public System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Controls.BarPart> EyesParts => Parts(_odds?.CompoundEyes);
+
+        private static System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Controls.BarPart> Parts(WildHeldItemOdds.Row split) => split == null ? null : new[]
+        {
+            new DSPRE.Avalonia.Controls.BarPart { Value = split.NonePercent, Label = $"No item {split.NonePercent}%", Colour = global::Avalonia.Media.Color.FromRgb(0x55, 0x5B, 0x66) },
+            new DSPRE.Avalonia.Controls.BarPart { Value = split.CommonPercent, Label = $"Common {split.CommonPercent}%", Colour = global::Avalonia.Media.Color.FromRgb(0x3A, 0x7B, 0xC8) },
+            new DSPRE.Avalonia.Controls.BarPart { Value = split.RarePercent, Label = $"Rare {split.RarePercent}%", Colour = global::Avalonia.Media.Color.FromRgb(0xC8, 0x9B, 0x2E) },
+        };
+
         public bool HasUnsavedChanges => _odds != null && !_odds.ToBytes().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Wild held item odds";
 
@@ -83,7 +93,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             foreach (var n in new[] { nameof(NormalNone), nameof(NormalCommon), nameof(NormalRare),
                                       nameof(EyesNone), nameof(EyesCommon), nameof(EyesRare), nameof(HasUnsavedChanges),
-                                      nameof(NormalCommonMax), nameof(EyesCommonMax) })
+                                      nameof(NormalCommonMax), nameof(EyesCommonMax), nameof(NormalParts), nameof(EyesParts) })
                 Raise(n);
         }
 

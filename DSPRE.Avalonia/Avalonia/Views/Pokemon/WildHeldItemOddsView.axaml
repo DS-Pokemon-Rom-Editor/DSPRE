@@ -18,21 +18,43 @@
       </StackPanel>
     </Border>
 
-    <Grid Margin="12" ColumnDefinitions="Auto,110,110,80" RowDefinitions="Auto,8,Auto,8,Auto" HorizontalAlignment="Left">
-      <TextBlock Grid.Row="0" Grid.Column="1" Text="No item" FontWeight="SemiBold"/>
-      <TextBlock Grid.Row="0" Grid.Column="2" Text="Common item" FontWeight="SemiBold"/>
-      <TextBlock Grid.Row="0" Grid.Column="3" Text="Rare item" FontWeight="SemiBold"/>
-
-      <TextBlock Grid.Row="2" Grid.Column="0" Text="Normal" VerticalAlignment="Center" Margin="0,0,12,0"/>
-      <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding NormalNone}" Minimum="0" Maximum="100" FormatString="0'%'" Margin="0,0,8,0"/>
-      <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding NormalCommon}" Minimum="0" Maximum="{Binding NormalCommonMax}" FormatString="0'%'" Margin="0,0,8,0"/>
-      <TextBlock Grid.Row="2" Grid.Column="3" Text="{Binding NormalRare}" VerticalAlignment="Center"/>
-
-      <TextBlock Grid.Row="4" Grid.Column="0" Text="Compound Eyes" VerticalAlignment="Center" Margin="0,0,12,0"
-                 ToolTip.Tip="When the lead Pokémon has Compound Eyes"/>
-      <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding EyesNone}" Minimum="0" Maximum="100" FormatString="0'%'" Margin="0,0,8,0"/>
-      <NumericUpDown Grid.Row="4" Grid.Column="2" Value="{Binding EyesCommon}" Minimum="0" Maximum="{Binding EyesCommonMax}" FormatString="0'%'" Margin="0,0,8,0"/>
-      <TextBlock Grid.Row="4" Grid.Column="3" Text="{Binding EyesRare}" VerticalAlignment="Center"/>
-    </Grid>
+    <StackPanel Margin="12" Spacing="18">
+      <StackPanel Spacing="6">
+        <TextBlock Text="Wild Pokémon" FontWeight="SemiBold"/>
+        <controls:ProportionBar Parts="{Binding NormalParts}" HorizontalAlignment="Stretch"/>
+        <WrapPanel ItemSpacing="16" LineSpacing="6">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="No item" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding NormalNone}" Minimum="0" Maximum="100" FormatString="0'%'" Width="110"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Common" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding NormalCommon}" Minimum="0" Maximum="{Binding NormalCommonMax}" FormatString="0'%'" Width="110"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Rare" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding NormalRare}" VerticalAlignment="Center" FontWeight="SemiBold" ToolTip.Tip="Whatever is left"/>
+          </StackPanel>
+        </WrapPanel>
+      </StackPanel>
+      <StackPanel Spacing="6">
+        <TextBlock Text="With a Compound Eyes lead" FontWeight="SemiBold" ToolTip.Tip="When the lead Pokémon has Compound Eyes"/>
+        <controls:ProportionBar Parts="{Binding EyesParts}" HorizontalAlignment="Stretch"/>
+        <WrapPanel ItemSpacing="16" LineSpacing="6">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="No item" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding EyesNone}" Minimum="0" Maximum="100" FormatString="0'%'" Width="110"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Common" VerticalAlignment="Center"/>
+            <NumericUpDown Value="{Binding EyesCommon}" Minimum="0" Maximum="{Binding EyesCommonMax}" FormatString="0'%'" Width="110"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="Rare" VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding EyesRare}" VerticalAlignment="Center" FontWeight="SemiBold" ToolTip.Tip="Whatever is left"/>
+          </StackPanel>
+        </WrapPanel>
+      </StackPanel>
+    </StackPanel>
   </DockPanel>
 </UserControl>

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
              x:Class="DSPRE.Avalonia.Views.Pokemon.SafariZoneGroupView"
              x:DataType="vm:SafariZoneGroupViewModel">
@@ -12,37 +13,64 @@
         <TabItem Header="Morning">
           <DockPanel>
             <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
-              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding MorningSpecies}"/>
+              <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding MorningSpecies}"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="Level" VerticalAlignment="Center"/>
                 <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding MorningLevel}"/>
               </StackPanel>
             </StackPanel>
-            <ListBox ItemsSource="{Binding MorningItems}" SelectedIndex="{Binding MorningIndex}"/>
+            <ListBox ItemsSource="{Binding MorningItems}" SelectedIndex="{Binding MorningIndex}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.PokemonInLabel}}"/>
+                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+            </ListBox>
           </DockPanel>
         </TabItem>
         <TabItem Header="Day">
           <DockPanel>
             <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
-              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding DaySpecies}"/>
+              <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding DaySpecies}"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="Level" VerticalAlignment="Center"/>
                 <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding DayLevel}"/>
               </StackPanel>
             </StackPanel>
-            <ListBox ItemsSource="{Binding DayItems}" SelectedIndex="{Binding DayIndex}"/>
+            <ListBox ItemsSource="{Binding DayItems}" SelectedIndex="{Binding DayIndex}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.PokemonInLabel}}"/>
+                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+            </ListBox>
           </DockPanel>
         </TabItem>
         <TabItem Header="Night">
           <DockPanel>
             <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
-              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding NightSpecies}"/>
+              <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding NightSpecies}"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="Level" VerticalAlignment="Center"/>
                 <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding NightLevel}"/>
               </StackPanel>
             </StackPanel>
-            <ListBox ItemsSource="{Binding NightItems}" SelectedIndex="{Binding NightIndex}"/>
+            <ListBox ItemsSource="{Binding NightItems}" SelectedIndex="{Binding NightIndex}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.PokemonInLabel}}"/>
+                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+            </ListBox>
           </DockPanel>
         </TabItem>
       </TabControl>
@@ -61,13 +89,13 @@
         <ScrollViewer>
           <StackPanel Spacing="3" Margin="0,6,0,0">
             <TextBlock Text="Morning" FontWeight="Bold"/>
-            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjMorningSpecies}"/>
+            <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjMorningSpecies}"/>
             <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjMorningLevel}"/>
             <TextBlock Text="Day" FontWeight="Bold"/>
-            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjDaySpecies}"/>
+            <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjDaySpecies}"/>
             <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjDayLevel}"/>
             <TextBlock Text="Night" FontWeight="Bold"/>
-            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjNightSpecies}"/>
+            <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjNightSpecies}"/>
             <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjNightLevel}"/>
             <TextBlock Text="Requirement" FontWeight="Bold" Margin="0,4,0,0"/>
             <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding ReqType}"/>

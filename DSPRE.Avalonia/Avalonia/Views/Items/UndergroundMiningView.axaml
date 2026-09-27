@@ -40,18 +40,21 @@
     </StackPanel>
 
     <DockPanel Margin="8">
-      <Grid DockPanel.Dock="Top" ColumnDefinitions="190,154,154,154,154" Margin="4,0,20,4">
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="226,*,*,*,*" Margin="4,0,20,4">
         <TextBlock Grid.Column="0" Text="Treasure" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="1" Text="{Binding Columns[0]}" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="2" Text="{Binding Columns[1]}" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="3" Text="{Binding Columns[2]}" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="4" Text="{Binding Columns[3]}" FontWeight="SemiBold"/>
       </Grid>
-      <ListBox ItemsSource="{Binding Rows}" KeyboardNavigation.TabNavigation="Continue">
+      <ListBox ItemsSource="{Binding Rows}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:UndergroundMiningViewModel+TreasureRow">
-            <Grid ColumnDefinitions="190,154,154,154,154">
-              <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"/>
+            <Grid ColumnDefinitions="226,*,*,*,*">
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
+                <Image Width="32" Height="32" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+              </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <NumericUpDown Classes="w" Value="{Binding W0}"/><TextBlock Classes="p" Text="{Binding P0}"/>
               </StackPanel>

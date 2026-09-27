@@ -23,7 +23,7 @@
 
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="10" Spacing="4">
-      <Grid ColumnDefinitions="30,200,200,200" Margin="0,0,0,2">
+      <Grid ColumnDefinitions="30,236,236,236" Margin="0,0,0,2">
         <TextBlock Grid.Column="0" Text="Row" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="1" Text="Baby" FontWeight="SemiBold"/>
         <TextBlock Grid.Column="2" Text="Needs a parent holding" FontWeight="SemiBold"/>
@@ -32,14 +32,20 @@
       <ItemsControl ItemsSource="{Binding Rows}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:BreedingItemsViewModel+RowViewModel">
-            <Grid ColumnDefinitions="30,200,200,200" Margin="0,2">
+            <Grid ColumnDefinitions="30,236,236,236" Margin="0,2">
               <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
-              <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="1" Margin="0,0,8,0"
-                  ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Baby}"/>
-              <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="2" Margin="0,0,8,0"
-                  ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).ItemNames}" SelectedIndex="{Binding Item}"/>
-              <controls:FusionAutoCompleteBox AllowsNone="False" Grid.Column="3"
-                  ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Fallback}"/>
+              <DockPanel Grid.Column="1" Margin="0,0,8,0">
+                <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Baby, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+                <controls:FusionAutoCompleteBox AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Baby}"/>
+              </DockPanel>
+              <DockPanel Grid.Column="2" Margin="0,0,8,0">
+                <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                <controls:FusionAutoCompleteBox AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).ItemNames}" SelectedIndex="{Binding Item}"/>
+              </DockPanel>
+              <DockPanel Grid.Column="3">
+                <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Fallback, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+                <controls:FusionAutoCompleteBox AllowsNone="False" ItemsSource="{Binding $parent[ItemsControl].((vm:BreedingItemsViewModel)DataContext).SpeciesNames}" SelectedIndex="{Binding Fallback}"/>
+              </DockPanel>
             </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>

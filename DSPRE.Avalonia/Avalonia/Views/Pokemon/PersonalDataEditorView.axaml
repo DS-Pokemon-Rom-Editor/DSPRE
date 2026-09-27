@@ -1,5 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
              x:Class="DSPRE.Avalonia.Views.Pokemon.PersonalDataEditorView"
              x:DataType="vm:PersonalDataEditorViewModel">
@@ -161,41 +162,45 @@
                 <TextBlock Text="Form:" Classes="label"/>
                 <ComboBox ItemsSource="{Binding PokeathlonFormNames}" SelectedIndex="{Binding PokeathlonFormIndex}" MinWidth="140"/>
               </StackPanel>
-              <GroupBox Header="Stats">
+              <GroupBox Header="Performance">
                 <StackPanel Spacing="4" Margin="4">
-                  <Grid ColumnDefinitions="80,120,120,120">
-                    <TextBlock Grid.Column="1" Text="Minimum" FontWeight="Bold"/>
-                    <TextBlock Grid.Column="2" Text="Base" FontWeight="Bold"/>
-                    <TextBlock Grid.Column="3" Text="Maximum" FontWeight="Bold"/>
+                  <Grid ColumnDefinitions="80,124,*,*,*" Margin="0,0,0,2">
+                    <TextBlock Grid.Column="2" Text="Minimum" FontWeight="Bold" Margin="4,0"/>
+                    <TextBlock Grid.Column="3" Text="Base" FontWeight="Bold" Margin="4,0"/>
+                    <TextBlock Grid.Column="4" Text="Maximum" FontWeight="Bold" Margin="4,0"/>
                   </Grid>
                   <ItemsControl ItemsSource="{Binding PokeathlonStats}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:PersonalDataEditorViewModel+PokeathlonStatRow">
-                        <Grid ColumnDefinitions="80,120,120,120" Margin="0,2">
+                        <Grid ColumnDefinitions="80,124,*,*,*" Margin="0,2">
                           <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="label"/>
-                          <ComboBox Grid.Column="1" Width="110" MinWidth="0" HorizontalAlignment="Left" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MinIndex}"/>
-                          <ComboBox Grid.Column="2" Width="110" MinWidth="0" HorizontalAlignment="Left" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding BaseIndex}"/>
-                          <ComboBox Grid.Column="3" Width="110" MinWidth="0" HorizontalAlignment="Left" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MaxIndex}"/>
+                          <controls:StarRange Grid.Column="1" Min="{Binding MinIndex}" Base="{Binding BaseIndex}" Max="{Binding MaxIndex}"
+                                              VerticalAlignment="Center" ToolTip.Tip="Deep gold: minimum · gold: base · faint: up to maximum"/>
+                          <ComboBox Grid.Column="2" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MinIndex}"/>
+                          <ComboBox Grid.Column="3" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding BaseIndex}"/>
+                          <ComboBox Grid.Column="4" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MaxIndex}"/>
                         </Grid>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                 </StackPanel>
               </GroupBox>
-              <GroupBox Header="Event display">
-                <Grid ColumnDefinitions="Auto,140,24,Auto,140" HorizontalAlignment="Left" RowDefinitions="Auto,8,Auto" Margin="4">
-                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Cell:" Classes="label" Margin="0,0,10,0" ToolTip.Tip="Sprite size"/>
-                  <ComboBox  Grid.Row="0" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
-                             ItemsSource="{Binding AthlonCellOptions}" SelectedIndex="{Binding AthlonCellIndex}"/>
-                  <TextBlock Grid.Row="0" Grid.Column="3" Text="Hit:" Classes="label" Margin="0,0,10,0" ToolTip.Tip="Hitbox in events"/>
-                  <ComboBox  Grid.Row="0" Grid.Column="4" MinWidth="0" HorizontalAlignment="Stretch"
-                             ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonHitIndex}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Touch:" Classes="label" Margin="0,0,10,0" ToolTip.Tip="Height of the sweat mark"/>
-                  <ComboBox  Grid.Row="2" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
-                             ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonTouchIndex}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="3" Text="Shadow:" Classes="label" Margin="0,0,10,0" ToolTip.Tip="Where its shadow and player marker sit"/>
-                  <ComboBox  Grid.Row="2" Grid.Column="4" MinWidth="0" HorizontalAlignment="Stretch"
-                             ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonShadowIndex}"/>
+              <GroupBox Header="In the events">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto" Margin="4" MaxWidth="520" HorizontalAlignment="Left">
+                  <CheckBox Grid.Row="0" Grid.ColumnSpan="2" Content="Large sprite" IsChecked="{Binding AthlonLargeSprite}"
+                            ToolTip.Tip="For Pokémon drawn 64 px tall: Lamp Jump and Pennant Capture put the status icon 24 px up instead of 16"/>
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Hitbox" Classes="label" Margin="0,0,12,0"
+                             ToolTip.Tip="Collision circle in most events, e.g. Relay Run radius 8 / 10 / 14 px, Circle Push 8 / 14 / 18 px"/>
+                  <ComboBox Grid.Row="2" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonHitIndex}"/>
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Icon height" Classes="label" Margin="0,0,12,0"
+                             ToolTip.Tip="How high the status icon floats in Circle Push and Goal Roll; tapping range doesn't change"/>
+                  <ComboBox Grid.Row="4" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding AthlonTouchOptions}" SelectedIndex="{Binding AthlonTouchIndex}"/>
+                  <TextBlock Grid.Row="6" Grid.Column="0" Text="Shadow height" Classes="label" Margin="0,0,12,0"
+                             ToolTip.Tip="Shadow and player marker, above the sprite's bottom edge, in every event"/>
+                  <ComboBox Grid.Row="6" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
+                            ItemsSource="{Binding AthlonShadowOptions}" SelectedIndex="{Binding AthlonShadowIndex}"/>
                 </Grid>
               </GroupBox>
               <TextBlock Text="{Binding PokeathlonProblem}" IsVisible="{Binding HasPokeathlonProblem}"

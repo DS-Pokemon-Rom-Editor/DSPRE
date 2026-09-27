@@ -42,6 +42,19 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (!load) return;
             ItemNames = GetItemNames();
+            // "TM06" alone doesn't say what's for sale; name the move too.
+            try
+            {
+                int[] moves = TMEditor.ReadMachineMoves();
+                string[] moveNames = GetAttackNames();
+                for (int m = 0; m < moves.Length; m++)
+                {
+                    int item = TMEditor.MachineItemId(m);
+                    if (item > 0 && item < ItemNames.Length && moves[m] > 0 && moves[m] < moveNames.Length)
+                        ItemNames[item] = $"{ItemNames[item]} {moveNames[moves[m]]}";
+                }
+            }
+            catch (Exception e) when (e is IOException || e is InvalidOperationException || e is IndexOutOfRangeException) { }
             _shop = BpShopData.Load();
             _saved = _shop.Snapshot();
             StartUndo();
@@ -62,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 {
                     // "None" can't be sold; put the box back to the stored item.
                     if (value <= 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Item)))); return; }
-                    if (value != Entry.Item) { Entry.Item = (ushort)value; _changed(); }
+                    if (value != Entry.Item) { Entry.Item = (ushort)value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Item))); _changed(); }
                 }
             }
             public decimal Price { get => Entry.Price; set { ushort v = (ushort)Math.Clamp(value, 0, ushort.MaxValue); if (v != Entry.Price) { Entry.Price = v; _changed(); } } }
@@ -87,6 +100,17 @@ namespace DSPRE.Avalonia.ViewModels.Items
             RowsOf(right).Add(row);
             if (right) SelectedRight = row; else SelectedLeft = row;
             Changed();
+            _ = OfferExpansionAsync();
+        }
+
+        private bool _expansionOffered;
+
+        // Offered once when a list first outgrows the game's room; Save asks again if still needed.
+        private async Task OfferExpansionAsync()
+        {
+            if (_expansionOffered || _shop?.NeedsExpansion != true) return;
+            _expansionOffered = true;
+            if (await Arm9ExpansionOffer.EnsureAsync("A longer counter list", "Battle Point Shop")) Changed();
         }
 
         public void Remove(bool right)
@@ -165,6 +189,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public async Task<bool> SaveChangesAsync()
         {
             if (_shop == null) return true;
+            if (_shop.NeedsExpansion && await Arm9ExpansionOffer.EnsureAsync("A longer counter list", "Battle Point Shop")) Changed();
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Battle Point Shop"); return false; }
             try { _shop.Save(ItemNames.Length); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)

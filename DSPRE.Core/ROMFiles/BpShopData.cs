@@ -146,6 +146,9 @@ namespace DSPRE.ROMFiles
         /// <summary>Whether entries can be added, removed or moved between counters.</summary>
         public bool CanResize => IsPlatinum;
 
+        /// <summary>The lists outgrew their room in the game and the ARM9 expansion isn't there to take them.</summary>
+        public bool NeedsExpansion => IsPlatinum && _inPlace && !FitsInPlace && !SyntheticOverlaySpace.Available();
+
         public bool FitsInPlace => IsPlatinum
             ? Left.Count <= VanillaLeft && Right.Count <= VanillaRight && PriceRows().Count <= ExchangeRows
             : Left.Count + Right.Count <= ExchangeRows;
@@ -301,7 +304,7 @@ namespace DSPRE.ROMFiles
             if (IsPlatinum)
             {
                 if (!_inPlace && _blockStart < 0) return "A patch moved these lists somewhere DSPRE doesn't follow, so they can't be saved here.";
-                if (_inPlace && !FitsInPlace && !SyntheticOverlaySpace.Available())
+                if (NeedsExpansion)
                     return $"The item counter holds {VanillaLeft} items and the TM counter {VanillaRight} until the ARM9 expansion is applied in the ROM Patch Toolbox.";
                 if (Left.Count > MaxListItems || Right.Count > MaxListItems) return $"Each counter can show up to {MaxListItems} items.";
                 // The price lookup's row count is a byte immediate.

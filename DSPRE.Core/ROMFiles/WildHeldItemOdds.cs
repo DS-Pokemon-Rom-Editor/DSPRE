@@ -3,10 +3,8 @@ using System;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The chance a wild Pokémon holds its common or rare item (sItemOdds). The game rolls 0-99: below
-    /// <see cref="Row.NoneBelow"/> it holds nothing, below <see cref="Row.RareFrom"/> its common item, else its
-    /// rare item. The second row is used when the lead Pokémon has Compound Eyes. When a species lists the
-    /// same item twice the game ignores these odds and always gives it.
+    /// Wild held-item odds: a 0-99 roll below <see cref="Row.NoneBelow"/> gives nothing, below <see cref="Row.RareFrom"/>
+    /// the common item, else the rare one. Row 2 is for a Compound Eyes lead; a species listing one item twice always holds it.
     /// </summary>
     public class WildHeldItemOdds
     {

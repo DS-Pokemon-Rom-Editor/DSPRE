@@ -348,7 +348,8 @@ namespace DSPRE.Avalonia
 
         /// <summary>Opens a small editor for one of the fixed game tables, or says why this ROM can't.</summary>
         /// <param name="whyNot">Run only after the ROM and hg-engine checks: some checks unpack or decompress files.</param>
-        private static void OpenTableEditor<TView>(string title, System.Func<string> whyNot, System.Func<TView> make, double width, double height)
+        private static void OpenTableEditor<TView>(string title, System.Func<string> whyNot, System.Func<TView> make, double width, double height,
+            double minWidth = 420, double minHeight = 220)
             where TView : global::Avalonia.Controls.Control
         {
             if (!IsRomLoaded || BlockedForHge("The " + title + " editor")) return;
@@ -369,8 +370,8 @@ namespace DSPRE.Avalonia
                 if (whyNot() is string why) { _ = DialogHelper.ShowInfo(why, title); return; }
                 var window = new EditorHostWindow(title, make(), width, height)
                 {
-                    MinWidth = System.Math.Min(width, 420),
-                    MinHeight = System.Math.Min(height, 220),
+                    MinWidth = System.Math.Min(width, minWidth),
+                    MinHeight = System.Math.Min(height, minHeight),
                 };
                 window.ShowManaged();
             }
@@ -382,34 +383,34 @@ namespace DSPRE.Avalonia
         }
 
         public static void OpenWildHeldItems() => OpenTableEditor("Wild Held Items", WildHeldItemOdds.WhyNot,
-            () => new WildHeldItemOddsView(new WildHeldItemOddsViewModel(true)), 560, 230);
+            () => new WildHeldItemOddsView(new WildHeldItemOddsViewModel(true)), 640, 360, 460, 340);
 
         public static void OpenGrowthCurves() => OpenTableEditor("Growth Curves", GrowthTable.WhyNot,
-            () => new GrowthCurveEditorView(new GrowthCurveEditorViewModel(true)), 900, 680);
+            () => new GrowthCurveEditorView(new GrowthCurveEditorViewModel(true)), 900, 680, 700, 460);
 
         public static void OpenFriendshipChanges() => OpenTableEditor("Friendship Changes", FriendshipTable.WhyNot,
-            () => new FriendshipChangesView(new FriendshipChangesViewModel(true)), 760, 480);
+            () => new FriendshipChangesView(new FriendshipChangesViewModel(true)), 760, 480, 640, 440);
 
         public static void OpenEncounterSlotOdds() => OpenTableEditor("Encounter Slot Odds", EncounterSlotOdds.WhyNot,
-            () => new EncounterSlotOddsView(new EncounterSlotOddsViewModel(true)), 520, 620);
+            () => new EncounterSlotOddsView(new EncounterSlotOddsViewModel(true)), 560, 660, 440, 480);
 
         public static void OpenBreedingItems() => OpenTableEditor("Breeding Items", IncenseBreedingTable.WhyNot,
-            () => new BreedingItemsView(new BreedingItemsViewModel(true)), 720, 440);
+            () => new BreedingItemsView(new BreedingItemsViewModel(true)), 820, 440, 790, 360);
 
         public static void OpenBerryData() => OpenTableEditor("Berry Data", BerryData.WhyNot,
-            () => new BerryDataEditorView(new BerryDataEditorViewModel(true)), 720, 520);
+            () => new BerryDataEditorView(new BerryDataEditorViewModel(true)), 800, 580, 760, 480);
 
         public static void OpenTypeChart() => OpenTableEditor("Type Chart", TypeChart.WhyNot,
             () => new TypeChartEditorView(new TypeChartEditorViewModel(true)), 1080, 780);
 
         public static void OpenMoveTutors() => OpenTableEditor("Move Tutors", MoveTutorData.WhyNot,
-            () => new MoveTutorEditorView(new MoveTutorEditorViewModel(true)), 900, 680);
+            () => new MoveTutorEditorView(new MoveTutorEditorViewModel(true)), 1000, 680, 820, 420);
 
         public static void OpenBpShop() => OpenTableEditor("Battle Point Shop", BpShopData.WhyNot,
-            () => new BpShopEditorView(new BpShopEditorViewModel(true)), 900, 640);
+            () => new BpShopEditorView(new BpShopEditorViewModel(true)), 1000, 640, 760, 420);
 
         public static void OpenUndergroundMining() => OpenTableEditor("Underground Mining", MiningTable.WhyNot,
-            () => new UndergroundMiningView(new UndergroundMiningViewModel(true)), 900, 700);
+            () => new UndergroundMiningView(new UndergroundMiningViewModel(true)), 1000, 700, 900, 420);
 
         public static void OpenTmHmBulkEditor() => _ = OpenTmHmBulkEditorAsync();
 
@@ -464,14 +465,14 @@ namespace DSPRE.Avalonia
                 if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
                 {
                     var vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
-                    var window = new EditorHostWindow("Wild Pokémon Editor (DPPt)", new WildEditorDPPtView(vm), 900, 680);
+                    var window = new EditorHostWindow("Wild Pokémon Editor (DPPt)", new WildEditorDPPtView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
                     window.Closed += (_, _) => vm.Detach();
                     window.ShowManaged();
                 }
                 else
                 {
                     var vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
-                    var window = new EditorHostWindow("Wild Pokémon Editor (HGSS)", new WildEditorHGSSView(vm), 900, 680);
+                    var window = new EditorHostWindow("Wild Pokémon Editor (HGSS)", new WildEditorHGSSView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
                     window.Closed += (_, _) => vm.Detach();
                     window.ShowManaged();
                 }

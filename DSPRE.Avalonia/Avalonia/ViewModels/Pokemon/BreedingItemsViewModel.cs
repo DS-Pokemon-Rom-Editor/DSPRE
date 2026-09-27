@@ -66,13 +66,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public int Item { get => _row.Item; set => Put(value, _row.Item, v => _row.Item = v, nameof(Item)); }
             public int Fallback { get => _row.Fallback; set => Put(value, _row.Fallback, v => _row.Fallback = v, nameof(Fallback)); }
 
-            // A cleared box sends -1; put it back to the stored value rather than leave it blank. Raised after the
-            // binding finishes, since a change raised while it is still writing is ignored.
+            // A cleared box sends -1; the stored value is raised after the binding finishes, as one raised mid-write is ignored.
             private void Put(int value, ushort now, Action<ushort> set, string name)
             {
                 if (value < 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name))); return; }
                 if (value == now) return;
                 set((ushort)value);
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
                 _changed();
             }
 

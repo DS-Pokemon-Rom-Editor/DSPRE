@@ -129,6 +129,13 @@ namespace DSPRE
 
         // ── File-state checks (do the ROM bytes say the patch is applied?) ─────────────────────────
 
+        /// <summary>Why the ARM9 expansion can't be applied to this ROM, or null when it can (or already is).</summary>
+        public static string Arm9ExpansionWhyNot() =>
+            RomInfo.isHGE ? HgEngine.HgEngineSyntheticOverlay.ToolboxReason
+            : !ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage)
+                ? "The ARM9 expansion isn't available for this game's language."
+            : null;
+
         public static bool CheckFilesArm9ExpansionApplied()
         {
             ARM9PatchData data = new ARM9PatchData();

@@ -31,7 +31,7 @@
           <TextBlock Grid.Column="1" Text="Total EXP" FontWeight="SemiBold"/>
           <TextBlock Grid.Column="2" Text="To next" FontWeight="SemiBold"/>
         </Grid>
-        <ListBox ItemsSource="{Binding Levels}" KeyboardNavigation.TabNavigation="Continue">
+        <ListBox ItemsSource="{Binding Levels}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:GrowthCurveEditorViewModel+LevelRow">
               <Grid ColumnDefinitions="60,150,*">
@@ -47,7 +47,7 @@
 
       <Border Grid.Column="1" Margin="12,0,0,0" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3"
               Background="{DynamicResource Editor.PanelBg}">
-        <Canvas x:Name="Chart" ClipToBounds="True"/>
+        <Canvas x:Name="Chart" ClipToBounds="True" Background="Transparent"/>
       </Border>
     </Grid>
   </DockPanel>

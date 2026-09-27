@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private SwarmTable _table;
         private byte[] _saved;
-        private readonly Dictionary<ushort, string> _speciesCache = new Dictionary<ushort, string>();
+        private readonly Dictionary<ushort, (string Text, int[] Ids)> _speciesCache = new();
         private string[] _pokemonNames = Array.Empty<string>();
 
         public string[] HeaderNames { get; private set; } = Array.Empty<string>();
@@ -78,22 +78,24 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 get => Row.Method;
                 set { if (value >= 0 && value != Row.Method) { Row.Method = (ushort)value; Refresh(); _o.Changed(); } }
             }
-            public string Species => _o.SpeciesFor(Row);
+            public string Species => _o.SpeciesFor(Row).Text;
+            public int[] SpeciesIds => _o.SpeciesFor(Row).Ids;
 
             internal void Refresh()
             {
-                foreach (var n in new[] { nameof(Header), nameof(Method), nameof(Species) })
+                foreach (var n in new[] { nameof(Header), nameof(Method), nameof(Species), nameof(SpeciesIds) })
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }
 
-        /// <summary>The swarm Pokémon this destination gives, read from its header's encounter file.</summary>
-        internal string SpeciesFor(SwarmTable.Row row)
+        /// <summary>Read from the destination header's encounter file.</summary>
+        internal (string Text, int[] Ids) SpeciesFor(SwarmTable.Row row)
         {
             ushort file = EncounterFileOf(row.Header);
-            if (file == ushort.MaxValue) return "No wild encounters";
-            if (_speciesCache.TryGetValue((ushort)(file * 4 + row.Method), out string cached)) return cached;
+            if (file == ushort.MaxValue) return ("No wild encounters", Array.Empty<int>());
+            if (_speciesCache.TryGetValue((ushort)(file * 4 + row.Method), out var cached)) return cached;
             string text;
+            int[] ids = Array.Empty<int>();
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters });
@@ -104,12 +106,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ushort[] mons = gameFamily == GameFamilies.HGSS
                     ? new[] { enc.swarmPokemon[row.Method == 2 ? 3 : Math.Min((int)row.Method, 1)] }
                     : enc.swarmPokemon.Take(2).Distinct().ToArray();
+                ids = mons.Where(m => m != 0).Select(m => (int)m).ToArray();
                 text = string.Join(", ", mons.Select(m => m == 0 ? "none" : m < _pokemonNames.Length ? _pokemonNames[m] : $"#{m}"))
                     + $" (file {file})";
             }
             catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { text = $"file {file} unreadable"; }
-            _speciesCache[(ushort)(file * 4 + row.Method)] = text;
-            return text;
+            _speciesCache[(ushort)(file * 4 + row.Method)] = (text, ids);
+            return (text, ids);
         }
 
         private static ushort EncounterFileOf(ushort header)
@@ -131,6 +134,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Rows.Add(vm);
             Selected = vm;
             Changed();
+            _ = OfferExpansionAsync();
+        }
+
+        private bool _expansionOffered;
+
+        // Offered once when the table first outgrows the game's room; Save asks again if still needed.
+        private async Task OfferExpansionAsync()
+        {
+            if (_expansionOffered || _table?.NeedsExpansion != true) return;
+            _expansionOffered = true;
+            if (await Arm9ExpansionOffer.EnsureAsync("More swarm rows", "Swarms")) Changed();
         }
 
         /// <summary>Re-reads each destination's Pokémon, which the Wild editor may have changed.</summary>
@@ -172,6 +186,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_table == null) return true;
+            if (_table.NeedsExpansion && await Arm9ExpansionOffer.EnsureAsync("More swarm rows", "Swarms")) Changed();
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Swarms"); return false; }
             try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)

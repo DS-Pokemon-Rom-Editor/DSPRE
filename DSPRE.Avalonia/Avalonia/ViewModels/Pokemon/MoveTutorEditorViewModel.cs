@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     // "None" isn't a tutor move; put the box back to the stored one.
                     if (value <= 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move)))); return; }
-                    if (value != T.Move) { T.Move = (ushort)value; _o.Changed(true); }
+                    if (value != T.Move) { T.Move = (ushort)value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move))); _o.Changed(true); }
                 }
             }
             public int Where { get => T.Where; set { if (value >= 0 && value != T.Where) { T.Where = value; _o.Changed(false); } } }
