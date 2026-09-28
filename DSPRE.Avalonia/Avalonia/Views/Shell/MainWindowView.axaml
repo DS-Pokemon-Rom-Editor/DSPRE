@@ -80,6 +80,8 @@
                   ToolTip.Tip="{Binding BlockedNote[WildHeldItemOddsView], TargetNullValue='How often wild Pokémon hold their common or rare item'}"/>
         <MenuItem Header="Special Encounters Editor…" Click="SpecialEncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"
                   ToolTip.Tip="Headbutt trees, Bug Contest, Safari Zone, Honey Trees, Great Marsh, Trophy Garden and swarms"/>
+        <MenuItem Header="Wild Pokémon Intro Editor…" Click="WildIntroEditor_Click" IsEnabled="{Binding CanUseWildIntroEditor}"
+                  ToolTip.Tip="{Binding BlockedNote[WildIntroEditorView], TargetNullValue='The intros and music of wild Pokémon battles'}"/>
       </MenuItem>
 
       <MenuItem Header="_Trainers" x:Name="TrainersMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -93,6 +95,8 @@
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='HeartGold/SoulSilver: which trainer you rematch when a Pokégear caller wants a battle'}"/>
         <MenuItem Header="Pokégear Phone Book…" Click="PokegearPhoneBook_Click" IsEnabled="{Binding CanUsePokegearPhoneBook}"
                   ToolTip.Tip="{Binding BlockedNote[PokegearPhoneBookView]}"/>
+        <MenuItem Header="VS Intro Editor…" Click="VsIntroEditor_Click" IsEnabled="{Binding CanUseVsIntroEditor}"
+                  ToolTip.Tip="{Binding BlockedNote[VsIntroEditorView], TargetNullValue='The mugshots and music special trainer battles open with'}"/>
         <Separator/>
         <MenuItem Header="Trainer Flag Bulk Editor…" Click="TrainerFlagBulkEditor_Click" IsEnabled="{Binding CanUseTrainerFlagBulkEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Bulk-edit AI flags and the double-battle flag across many trainers at once'}"/>

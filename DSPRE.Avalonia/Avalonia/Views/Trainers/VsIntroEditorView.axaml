@@ -1,0 +1,218 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Trainers.VsIntroEditorView"
+             x:DataType="vm:VsIntroEditorViewModel">
+  <Design.DataContext>
+    <vm:VsIntroEditorViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="ListBox.grouped ListBoxItem">
+      <Setter Property="IsHitTestVisible" Value="{ReflectionBinding IsItem, Mode=OneWay}"/>
+      <Setter Property="Focusable" Value="{ReflectionBinding IsItem, Mode=OneWay}"/>
+    </Style>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,10,0,2"/>
+    </Style>
+    <Style Selector="TextBlock.subtle">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+      </StackPanel>
+    </Border>
+
+    <TabControl x:Name="IntroTabs" SelectedIndex="{Binding SelectedTab}" Margin="4">
+
+      <!-- Mugshots -->
+      <TabItem Header="Mugshots">
+        <Grid ColumnDefinitions="220,*,540">
+          <ListBox x:Name="MugshotList" Classes="grouped" Grid.Column="0" Margin="4" ItemsSource="{Binding MugshotRows}"
+                   SelectedItem="{Binding SelectedMugshot}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:IntroRow">
+                <StackPanel>
+                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold" IsVisible="{Binding IsHeader}" Margin="0,6,0,0"
+                             Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBlock Text="{Binding Title}" IsVisible="{Binding IsItem}"/>
+                  <TextBlock Text="{Binding Detail}" IsVisible="{Binding IsItem}" FontSize="11" TextWrapping="Wrap"
+                             Foreground="{DynamicResource Editor.Subtle}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <ScrollViewer Grid.Column="1">
+            <StackPanel x:Name="MugshotDetails" Margin="12,8" Spacing="6" IsVisible="{Binding HasMugshot}">
+              <TextBlock Text="{Binding MugshotTitle}" FontSize="16" FontWeight="SemiBold"/>
+              <TextBlock Text="{Binding MugshotUsedBy}" Classes="subtle"/>
+              <Button Content="Classes and music…" Click="ClassesAndMusic_Click" HorizontalAlignment="Left"/>
+
+              <TextBlock Text="Banner name" Classes="section" IsVisible="{Binding ShowTrainer}"/>
+              <ComboBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"
+                        IsVisible="{Binding ShowTrainer}" ToolTip.Tip="The trainer whose name the banner shows"/>
+              <CheckBox Content="Show the rival's name" IsChecked="{Binding RivalName}" IsVisible="{Binding ShowRivalName}"/>
+
+              <TextBlock Text="{Binding ClassLabel}" Classes="section" IsVisible="{Binding ShowClass}"/>
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding ShowClass}">
+                <ComboBox ItemsSource="{Binding ClassChoices}" SelectedIndex="{Binding ClassIndex}" HorizontalAlignment="Stretch"
+                          ToolTip.Tip="{Binding ClassTip}"/>
+                <Button Grid.Column="1" Content="Edit colours" Click="ClassColours_Click" IsVisible="{Binding CanEditClassColours}"
+                        ToolTip.Tip="The class's battle sprite uses the same colours, so it changes too"/>
+              </Grid>
+
+              <TextBlock Text="Face" Classes="section" IsVisible="{Binding ShowFace}"/>
+              <ComboBox ItemsSource="{Binding FaceSetChoices}" SelectedIndex="{Binding FaceSetIndex}" HorizontalAlignment="Stretch"
+                        IsVisible="{Binding ShowFace}" PlaceholderText="{Binding FaceFiles}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowFace}">
+                <Button Content="Paint" Click="PaintFace_Click"/>
+                <Button Content="Animation" Click="AnimateFace_Click"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowEndX}">
+                <TextBlock Text="Stops at X" VerticalAlignment="Center"/>
+                <NumericUpDown Value="{Binding EndX}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowFaceColumn}">
+                <TextBlock Text="Cut from column" VerticalAlignment="Center"/>
+                <NumericUpDown Value="{Binding FaceColumn}" Minimum="0" Maximum="8" Increment="1" FormatString="0" Width="110"
+                               ToolTip.Tip="How many 8 pixel columns into the battle sprite the face starts"/>
+              </StackPanel>
+
+              <TextBlock Text="Banner" Classes="section" IsVisible="{Binding ShowBanner}"/>
+              <ComboBox ItemsSource="{Binding BannerSetChoices}" SelectedIndex="{Binding BannerSetIndex}" HorizontalAlignment="Stretch"
+                        IsVisible="{Binding ShowBanner}" PlaceholderText="{Binding BannerFiles}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowBanner}">
+                <Button Content="Paint" Click="PaintBanner_Click"/>
+                <Button Content="In Graphics" Click="BannerGraphics_Click"/>
+              </StackPanel>
+
+              <TextBlock Text="{Binding FramePaletteLabel}" Classes="section" IsVisible="{Binding ShowFramePalette}"/>
+              <ComboBox ItemsSource="{Binding FramePaletteChoices}" SelectedIndex="{Binding FramePaletteIndex}" HorizontalAlignment="Stretch"
+                        IsVisible="{Binding ShowFramePalette}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowClash}">
+                <TextBlock Text="Clash shake" VerticalAlignment="Center"/>
+                <NumericUpDown Value="{Binding ClashFrames}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110"
+                               ToolTip.Tip="Frames"/>
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowCamera}">
+                <TextBlock Text="Camera turn" VerticalAlignment="Center"/>
+                <NumericUpDown Value="{Binding CameraTurn}" Minimum="0" Maximum="65535" Increment="100" FormatString="0" Width="120"/>
+                <TextBlock Text="over" VerticalAlignment="Center"/>
+                <NumericUpDown Value="{Binding PanFrames}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="100"
+                               ToolTip.Tip="Frames"/>
+              </StackPanel>
+
+              <TextBlock Text="Particles" Classes="section" IsVisible="{Binding ShowParticles}"/>
+              <ItemsControl ItemsSource="{Binding Particles}" IsVisible="{Binding ShowParticles}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ParticleArt">
+                    <Grid ColumnDefinitions="120,*,Auto" Margin="0,2">
+                      <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                      <Button Grid.Column="2" Content="Open" Tag="{Binding}" Click="Particle_Click"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <TextBlock Text="Fixed by the game" Classes="section"/>
+              <ItemsControl x:Name="FixedList" ItemsSource="{Binding Fixed}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FixedArt">
+                    <Grid ColumnDefinitions="120,*,Auto" Margin="0,2">
+                      <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" TextWrapping="Wrap"
+                                 Foreground="{DynamicResource Editor.Subtle}"/>
+                      <Button Grid.Column="2" Content="Open" Tag="{Binding}" Click="Fixed_Click" IsVisible="{Binding CanOpen}"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+
+          <StackPanel x:Name="MugshotPreview" Grid.Column="2" Margin="8" Spacing="6" IsVisible="{Binding HasPreview}">
+            <Border Background="Black" Width="512" Height="384" HorizontalAlignment="Left">
+              <Image Source="{Binding PreviewImage}" Width="512" Height="384" RenderOptions.BitmapInterpolationMode="None"/>
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="{Binding AnimateLabel}" Click="Animate_Click"/>
+              <CheckBox Content="Girl player" IsChecked="{Binding PlayerGirl}" IsVisible="{Binding ShowPlayerChoice}"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+      <!-- Trainer intros and music -->
+      <TabItem Header="Trainer intros and music">
+        <Grid ColumnDefinitions="260,*,300">
+          <ListBox x:Name="IntroList" Classes="grouped" Grid.Column="0" Margin="4" ItemsSource="{Binding IntroRows}"
+                   SelectedItem="{Binding SelectedIntro}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:IntroRow">
+                <StackPanel>
+                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold" IsVisible="{Binding IsHeader}" Margin="0,6,0,0"
+                             Foreground="{DynamicResource Editor.Subtle}"/>
+                  <TextBlock Text="{Binding Title}" IsVisible="{Binding IsItem}"/>
+                  <TextBlock Text="{Binding Detail}" IsVisible="{Binding IsItem}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <StackPanel x:Name="IntroDetails" Grid.Column="1" Margin="12,8" Spacing="6" IsVisible="{Binding HasIntro}">
+            <TextBlock Text="{Binding IntroTitle}" FontSize="16" FontWeight="SemiBold"/>
+            <TextBlock Text="{Binding IntroKindText}" Classes="subtle"/>
+            <Button Content="Show mugshot" Click="ShowMugshot_Click" IsVisible="{Binding HasIntroMugshot}" HorizontalAlignment="Left"/>
+            <TextBlock Text="Music" Classes="section"/>
+            <ComboBox ItemsSource="{Binding SequenceChoices}" SelectedIndex="{Binding SequenceIndex}" HorizontalAlignment="Stretch"/>
+            <TextBlock Text="Trainer classes" Classes="section"/>
+            <ListBox x:Name="IntroClassList" ItemsSource="{Binding IntroClasses}" MaxHeight="260" SelectionChanged="IntroClass_Changed"/>
+            <TextBlock Text="{Binding IntroClassesNote}" Classes="subtle"/>
+          </StackPanel>
+
+          <DockPanel Grid.Column="2" Margin="4">
+            <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding HasClass}">
+              <TextBlock Text="{Binding ClassTitle}" FontWeight="SemiBold"/>
+              <ComboBox ItemsSource="{Binding ClassIntroChoices}" SelectedIndex="{Binding ClassIntroIndex}" HorizontalAlignment="Stretch"
+                        IsEnabled="{Binding ClassEditable}"/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding ClassNote}" Classes="subtle" VerticalAlignment="Center"/>
+                <Button Content="Make room" Click="MakeClassRoom_Click" IsVisible="{Binding CanMakeClassRoom}"
+                        ToolTip.Tip="Room for up to 255 classes"/>
+              </StackPanel>
+            </StackPanel>
+            <ListBox x:Name="ClassList" ItemsSource="{Binding ClassRows}" SelectedItem="{Binding SelectedClass}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:IntroRow">
+                  <StackPanel>
+                    <TextBlock Text="{Binding Title}"/>
+                    <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Grid>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</UserControl>

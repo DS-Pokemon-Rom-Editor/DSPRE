@@ -508,6 +508,42 @@ namespace DSPRE.Avalonia
             return true;
         }
 
+        /// <summary>The mugshots special trainer battles open with, and which classes get which intro and music.</summary>
+        public static void OpenVsIntroEditor() => _ = OpenIntroEditorAsync<VsIntroEditorView, VsIntroEditorViewModel>(
+            VsIntroEditorViewModel.Title, "Reading the intro tables, their art and the trainer names.",
+            () => new VsIntroEditorViewModel(), vm => vm.Load(), vm => vm.Ready(), vm => new VsIntroEditorView(vm), 1320, 780);
+
+        /// <summary>Which wild Pokémon get their own battle intro, and the music of the wild intros.</summary>
+        public static void OpenWildIntroEditor() => _ = OpenIntroEditorAsync<WildIntroEditorView, WildIntroEditorViewModel>(
+            WildIntroEditorViewModel.Title, "Reading the intro tables and the Pokémon names.",
+            () => new WildIntroEditorViewModel(), vm => vm.Load(), vm => vm.Ready(), vm => new WildIntroEditorView(vm), 820, 620);
+
+        // Both intro editors read the same tables, each one window at most, so neither edits a stale copy of its own bytes.
+        private static async System.Threading.Tasks.Task OpenIntroEditorAsync<TView, TModel>(string title, string busyHint,
+            System.Func<TModel> make, System.Action<TModel> load, System.Action<TModel> ready, System.Func<TModel, TView> view,
+            double width, double height)
+            where TView : global::Avalonia.Controls.Control where TModel : class
+        {
+            if (!IsRomLoaded || BlockedForHge("The " + title)) return;
+            if (!BetaEditors.Allows(typeof(TView).Name)) { _ = DialogHelper.ShowInfo(BetaEditors.WhyNot(typeof(TView).Name), title); return; }
+            if (BringForward<TView, TModel>(_ => { })) return;
+            if (VsIntroTables.WhyNot() is string why) { _ = DialogHelper.ShowInfo(why, title); return; }
+
+            TModel vm = make();
+            try
+            {
+                await RunBusyAsync("Opening " + title + "…", busyHint, () => load(vm));
+                ready(vm);
+            }
+            catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException
+                                              || ex is System.InvalidOperationException || ex is System.UnauthorizedAccessException)
+            {
+                _ = DialogHelper.ShowError(title + " could not be opened:\n" + ex.Message, title);
+                return;
+            }
+            new EditorHostWindow(title, view(vm), width, height).ShowManaged();
+        }
+
         public static void OpenCameraEditor()
         {
             if (!IsRomLoaded || BlockedForUnlinkedHge("The Camera Editor")) return;
@@ -918,7 +954,8 @@ namespace DSPRE.Avalonia
                 await RunBusyAsync("Looking for particles…", "Reading every archive in the ROM.", () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> {
-                        DirNames.wazaParticle, DirNames.ballParticles, DirNames.wazaEffectScripts, DirNames.wazaEffectSub }
+                        DirNames.wazaParticle, DirNames.ballParticles, DirNames.wazaEffectScripts, DirNames.wazaEffectSub,
+                        DirNames.encounterEffectGraphics }
                         .Where(d => gameDirs.ContainsKey(d)).ToList());
                     vm.Gather();
                 });
@@ -1355,6 +1392,9 @@ namespace DSPRE.Avalonia
                 case RomInfo.DirNames.sealGraphics:
                     return ("Ball Capsules", OpenBallCapsuleEditor);
 
+                case RomInfo.DirNames.encounterEffectGraphics:
+                    return ("VS Intro Editor", OpenVsIntroEditor);
+
                 default:
                     return null;
             }
@@ -1494,6 +1534,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Ball Capsules",         Keywords = "seal sticker capsule poke ball send out particles effect", Run = OpenBallCapsuleEditor },
             new() { Name = "Audio Editor",          Keywords = "sound cry cries music bgm fanfare sfx song", Run = () => { _ = OpenAudioEditorAsync(); } },
             new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => { _ = OpenPokemonEditorAsync(); } },
+            new() { Name = "Wild Pokémon Intro Editor", Keywords = "legendary wild battle intro music transition", Run = OpenWildIntroEditor },
             new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
@@ -1515,6 +1556,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
             new() { Name = "Starter Pokémon Editor", Keywords = "turtwig chimchar piplup chikorita cyndaquil totodile rival professor", Run = OpenStarterEditor },
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
+            new() { Name = "VS Intro Editor",       Keywords = "vs mugshot cut-in gym leader elite four battle intro music transition class", Run = OpenVsIntroEditor },
             new() { Name = "Trainer Sprite Editor", Keywords = "class pixel paint", Run = () => OpenTrainerSpriteEditor() },
             new() { Name = "Trainer Back Sprite Editor", Keywords = "player back sprite throw palette animation", Run = () => OpenTrainerBackSpriteEditor() },
             new() { Name = "Vs. Seeker Rematch Editor", Keywords = "rematch trainer encounter chain", Run = () => OpenVsSeekerRematchEditor() },

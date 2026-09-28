@@ -29,6 +29,14 @@
       </StackPanel>
     </Border>
 
+    <Border DockPanel.Dock="Top" Padding="8,6" IsVisible="{Binding ShowIntroLinks}">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="Battle intros and their music" VerticalAlignment="Center" Margin="0,0,6,0"/>
+        <Button Content="Open VS Intro Editor" Click="OpenVsIntros_Click"/>
+        <Button Content="Open Wild Pokémon Intro Editor" Click="OpenWildIntros_Click"/>
+      </StackPanel>
+    </Border>
+
     <!-- No tables for this ROM family -->
     <TextBlock DockPanel.Dock="Top" Margin="16"
                IsVisible="{Binding NoTablesAvailable}"

@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:rows="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.WildIntroEditorView"
+             x:DataType="vm:WildIntroEditorViewModel">
+  <Design.DataContext>
+    <vm:WildIntroEditorViewModel/>
+  </Design.DataContext>
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Margin" Value="0,10,0,2"/>
+    </Style>
+    <Style Selector="TextBlock.subtle">
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+    </Border>
+
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
+            BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="*,*" Margin="4">
+      <DockPanel Grid.Column="0" Margin="4">
+        <TextBlock DockPanel.Dock="Top" Text="Pokémon with their own intro" Classes="section" Margin="0,0,0,4"/>
+        <StackPanel x:Name="SpeciesDetails" DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6" IsVisible="{Binding SpeciesEditable}">
+            <TextBlock Text="Pokémon" VerticalAlignment="Center"/>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding SpeciesChoices}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch"/>
+            <TextBlock Grid.Row="1" Text="Intro" VerticalAlignment="Center"/>
+            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding ComboChoices}" SelectedIndex="{Binding SpeciesComboIndex}" HorizontalAlignment="Stretch"/>
+          </Grid>
+          <TextBlock Text="{Binding SpeciesNote}" Classes="subtle"/>
+        </StackPanel>
+        <ListBox x:Name="SpeciesList" ItemsSource="{Binding SpeciesRows}" SelectedItem="{Binding SelectedSpecies}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="rows:IntroRow">
+              <StackPanel>
+                <TextBlock Text="{Binding Title}"/>
+                <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <DockPanel Grid.Column="1" Margin="4">
+        <TextBlock DockPanel.Dock="Top" Text="Intros and music" Classes="section" Margin="0,0,0,4"/>
+        <StackPanel x:Name="ComboDetails" DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding HasCombo}">
+          <TextBlock Text="{Binding ComboTitle}" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding ComboKind}" Classes="subtle"/>
+          <TextBlock Text="{Binding ComboSpecies}" Classes="subtle"/>
+          <TextBlock Text="Music" Classes="section"/>
+          <ComboBox ItemsSource="{Binding SequenceChoices}" SelectedIndex="{Binding SequenceIndex}" HorizontalAlignment="Stretch"
+                    IsEnabled="{Binding MusicEditable}"/>
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding MusicElsewhere}">
+            <TextBlock Text="Trainers use this intro too, so its music is edited in the VS Intro Editor." Classes="subtle" VerticalAlignment="Center"/>
+            <Button Content="Open VS Intro Editor" Click="OpenVsIntros_Click"/>
+          </StackPanel>
+        </StackPanel>
+        <ListBox x:Name="ComboList" ItemsSource="{Binding ComboRows}" SelectedItem="{Binding SelectedCombo}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="rows:IntroRow">
+              <StackPanel>
+                <TextBlock Text="{Binding Title}"/>
+                <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</UserControl>

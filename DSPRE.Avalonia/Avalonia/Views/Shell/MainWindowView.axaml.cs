@@ -797,6 +797,10 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void TypeChart_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTypeChart();
+        private void VsIntroEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenVsIntroEditor();
+        private void WildIntroEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenWildIntroEditor();
 
         private void MoveTutors_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenMoveTutors();

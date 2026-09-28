@@ -56,6 +56,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _all.Clear();
             try { GatherScripted(); } catch (Exception ex) { AppLogger.Error("Particle library, scripts: " + ex.Message); }
             try { GatherBall(); } catch (Exception ex) { AppLogger.Error("Particle library, ball particles: " + ex.Message); }
+            try { GatherEncounter(); } catch (Exception ex) { AppLogger.Error("Particle library, battle intros: " + ex.Message); }
             try { GatherLoose(); } catch (Exception ex) { AppLogger.Error("Particle library, other archives: " + ex.Message); }
         }
 
@@ -197,6 +198,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     : ParticleFileNames.BallArchive(gameFamily, f, ballNames) is { } b ? (b.Category, b.Name, false)
                     : (ParticleFileNames.Other, $"Ball particle file {f}", false);
                 Add(category, name, source, "Ball particles", f, narc.Get(f), ortho);
+            }
+        }
+
+        /// <summary>
+        /// The battle intro archive is edited unpacked by the VS Intro Editor, so its particle files are read and
+        /// written through the same unpacked copy; a loose copy would be overwritten when the ROM is saved.
+        /// </summary>
+        private void GatherEncounter()
+        {
+            if (!gameDirs.TryGetValue(DirNames.encounterEffectGraphics, out var dirs)) return;
+            var source = ArchiveFiles.Mapped(DirNames.encounterEffectGraphics);
+            var narc = new ScriptNarc(DirNames.encounterEffectGraphics);
+            string relative = string.IsNullOrEmpty(dataPath) ? dirs.packedDir : Path.GetRelativePath(dataPath, dirs.packedDir).Replace('\\', '/');
+            for (int f = 0; f < narc.Count; f++)
+            {
+                var (category, name) = ParticleFileNames.Loose(gameFamily, relative, f);
+                Add(category, name, source, relative, f, narc.Get(f));
             }
         }
 

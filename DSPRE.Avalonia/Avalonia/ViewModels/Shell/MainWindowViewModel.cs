@@ -105,6 +105,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool CanUseBreedingItems => IsRomLoaded && !isHGE && Beta["BreedingItemsView"];
         public bool CanUseBerryData => IsRomLoaded && !isHGE && Beta["BerryDataEditorView"];
         public bool CanUseTypeChart => IsRomLoaded && !isHGE && Beta["TypeChartEditorView"];
+        public bool CanUseVsIntroEditor => IsRomLoaded && !isHGE && Beta["VsIntroEditorView"];
+        public bool CanUseWildIntroEditor => IsRomLoaded && !isHGE && Beta["WildIntroEditorView"];
         public bool CanUseMoveTutors => IsRomLoaded && !isHGE && (gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS) && Beta["MoveTutorEditorView"];
         public bool CanUseMining => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["UndergroundMiningView"];
         public bool CanUseBpShop => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["BpShopEditorView"];
@@ -329,6 +331,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseBreedingItems));
             OnPropertyChanged(nameof(CanUseBerryData));
             OnPropertyChanged(nameof(CanUseTypeChart));
+            OnPropertyChanged(nameof(CanUseVsIntroEditor));
+            OnPropertyChanged(nameof(CanUseWildIntroEditor));
             OnPropertyChanged(nameof(CanUseMoveTutors));
             OnPropertyChanged(nameof(CanUseMining));
             OnPropertyChanged(nameof(CanUseBpShop));
@@ -377,6 +381,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseBreedingItems));
             OnPropertyChanged(nameof(CanUseBerryData));
             OnPropertyChanged(nameof(CanUseTypeChart));
+            OnPropertyChanged(nameof(CanUseVsIntroEditor));
+            OnPropertyChanged(nameof(CanUseWildIntroEditor));
             OnPropertyChanged(nameof(CanUseMoveTutors));
             OnPropertyChanged(nameof(CanUseMining));
             OnPropertyChanged(nameof(CanUseBpShop));

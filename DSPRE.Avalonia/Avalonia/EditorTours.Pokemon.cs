@@ -111,6 +111,11 @@ namespace DSPRE.Avalonia
                 S("type:NumericUpDown", "Slot chances", "Each slot's chance in percent. The total underneath turns red when it is not 100."),
                 S("toolbar", "Saving", "Save or Ctrl+S writes the odds, Ctrl+Z undoes."));
 
+            Add("WildIntroEditorView", "Wild Pokémon Intro Editor",
+                S("name:SpeciesList", "Pokémon", "Wild Pokémon that get their own intro. Pick one to change which intro it gets."),
+                S("name:ComboList", "Intros and music", "The intros wild battles use. Pick one to change its music."),
+                S("toolbar", "Saving", "Save or Ctrl+S writes your changes, Ctrl+Z undoes. Save the ROM to keep them."));
+
             Add("WildHeldItemOddsView", "Wild Held Items",
                 S("name:NormalOdds", "Held item odds", "How often a wild Pokémon holds its common item, its rare item or nothing. Rare gets whatever is left."),
                 S("name:EyesOdds", "Compound Eyes", "The same odds when your lead Pokémon has Compound Eyes."),

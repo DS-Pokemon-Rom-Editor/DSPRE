@@ -44,6 +44,14 @@ namespace DSPRE.Avalonia
                 S("name:SortPanel", "Sort order", "The phone lists contacts by title, name or location. Drag a contact, use Alt+Up and Alt+Down, or press Auto Sort."),
                 S("name:SaveButton", "Saving", "Save writes the phone book. Ctrl+S saves too. A contact's name is edited in the Text Editor."));
 
+            Add("VsIntroEditorView", "VS Intro Editor",
+                S("tab:Mugshots>name:MugshotList", "Mugshots", "Every intro with its own art. Pick one to edit it."),
+                S("tab:Mugshots>name:MugshotDetails", "Editing a mugshot", "Pick the name on the banner, the face and the banner art. Paint and Animation open the art in the graphics editors."),
+                S("tab:Mugshots>name:MugshotPreview", "Preview", "The intro put together from its art. Animate plays a close copy of it."),
+                S("tab:Trainer intros and music>name:IntroList", "Intros and music", "Every intro trainer battles use. Pick one to change its music or see its classes."),
+                S("tab:Trainer intros and music>name:ClassList", "Classes", "Every trainer class and the intro it gets. Pick one to change it."),
+                S("toolbar", "Saving", "Save or Ctrl+S writes your changes, Ctrl+Z undoes. Save the ROM to keep them."));
+
             Add("TrainerFlagBulkEditorView", "Trainer Flag Bulk Editor",
                 S("list", "Trainers", "Every trainer, grouped by class. Tick trainers, or a whole class, to choose who you change."),
                 S("toolbar", "Two ways to work", "By Trainer sets the flags of every ticked trainer at once. By Flag picks one flag, and ticking a trainer turns it on for them."),

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
 
@@ -23,6 +24,86 @@ namespace DSPRE.ROMFiles
         /// <summary>HGSS only. Diamond, Pearl and Platinum decide these in code.</summary>
         public readonly Table<(int Class, int Combo)> Classes = new Table<(int, int)>();
         public readonly Table<(int Species, int Combo)> Species = new Table<(int, int)>();
+
+        /// <summary>
+        /// Diamond, Pearl and Platinum: the class switch, read from its jump table. Null where the table is
+        /// not known or does not look as expected, and then the built-in lists are used.
+        /// </summary>
+        public ClassJumpTable ClassJumps { get; private set; }
+
+        /// <summary>
+        /// False when the music reader's own pointer does not sit two bytes into the combo table, so the
+        /// music actually played is not the one read here. True where that pointer is not known.
+        /// </summary>
+        public bool MusicPointerAgrees { get; private set; } = true;
+
+        /// <summary>
+        /// DP/Pt's class switch: <c>subs r0,#first; movs r1,#default; cmp r0,#count-1; bhi end</c>, a signed
+        /// halfword table, then one <c>movs r1,#combo; b end</c> stub per result. An entry can point at any stub.
+        /// </summary>
+        public sealed class ClassJumpTable
+        {
+            public int FirstClass, DefaultCombo;
+            /// <summary>arm9 file offset of the first entry.</summary>
+            public int Start;
+            public int Count => Entries.Length;
+            /// <summary>Raw entries: each jumps to <see cref="Start"/> + 2 + entry.</summary>
+            public short[] Entries = Array.Empty<short>();
+            /// <summary>Every place an entry can jump to, with the combo it picks.</summary>
+            public readonly Dictionary<int, int> ComboAt = new Dictionary<int, int>();
+
+            public int TargetOf(short entry) => Start + 2 + entry;
+            public short EntryFor(int target) => (short)(target - (Start + 2));
+
+            /// <summary>The combo entry <paramref name="index"/> picks, or -1 when it jumps somewhere unknown.</summary>
+            public int ComboOfEntry(short entry) => ComboAt.TryGetValue(TargetOf(entry), out int c) ? c : -1;
+
+            public int ComboOf(int trainerClass)
+            {
+                int i = trainerClass - FirstClass;
+                return i >= 0 && i < Entries.Length ? ComboOfEntry(Entries[i]) : DefaultCombo;
+            }
+
+            /// <summary>A place that picks <paramref name="combo"/>, or -1 when no stub does.</summary>
+            public int TargetFor(int combo)
+            {
+                int best = -1;
+                foreach (var kv in ComboAt)
+                    if (kv.Value == combo && (best < 0 || kv.Key < best)) best = kv.Key;
+                return best;
+            }
+
+            private const ushort AddPcR0 = 0x4487, ReturnR1 = 0x1C08;
+
+            /// <summary>Decodes the switch around <paramref name="table"/> in <paramref name="arm9"/>, or null.</summary>
+            public static ClassJumpTable Decode(byte[] arm9, int table, int count)
+            {
+                ushort At(int o) => o >= 0 && o + 2 <= arm9.Length ? BitConverter.ToUInt16(arm9, o) : (ushort)0;
+                if (table < 0x14 || count <= 0 || table + 2 * count > arm9.Length) return null;
+                ushort subs = At(table - 0x14), movs = At(table - 0x12), cmp = At(table - 0x10);
+                if ((subs & 0xFF00) != 0x3800 || (movs & 0xFF00) != 0x2100 || cmp != (0x2800 | (count - 1))
+                    || At(table - 2) != AddPcR0) return null;
+
+                var t = new ClassJumpTable { FirstClass = subs & 0xFF, DefaultCombo = movs & 0xFF, Start = table };
+                t.Entries = new short[count];
+                for (int i = 0; i < count; i++) t.Entries[i] = (short)At(table + 2 * i);
+
+                // Stubs follow the table four bytes apart; the last falls through into the return.
+                int p = table + 2 * count;
+                while ((At(p) & 0xFF00) == 0x2100)
+                {
+                    t.ComboAt[p] = At(p) & 0xFF;
+                    if ((At(p + 2) & 0xF800) == 0xE000) p += 4; else { p += 2; break; }
+                }
+                if (At(p) == ReturnR1) t.ComboAt[p] = t.DefaultCombo;
+                foreach (short e in t.Entries)
+                {
+                    int target = t.TargetOf(e);
+                    if (!t.ComboAt.ContainsKey(target) && (At(target) & 0xFF00) == 0x2100) t.ComboAt[target] = At(target) & 0xFF;
+                }
+                return t;
+            }
+        }
 
         /// <summary>True when the rows came from hg-engine's source rather than the ROM.</summary>
         public bool FromHgEngineSource { get; }
@@ -72,9 +153,15 @@ namespace DSPRE.ROMFiles
             [479] = 19, [485] = 19, [486] = 19, [487] = 19, [491] = 19, [488] = 20,
         };
 
+        /// <summary>DP/Pt: the wild species the selection code gives their own combo. Empty for HGSS, which keeps a table.</summary>
+        public IReadOnlyDictionary<int, int> CodeSpeciesCombos =>
+            gameFamily == GameFamilies.DP ? DpSpeciesCombo : gameFamily == GameFamilies.Plat ? PtSpeciesCombo : new Dictionary<int, int>();
+
         /// <summary>The theme for a battle against this trainer class, or -1.</summary>
         public int TrainerSequence(int trainerClass, bool kanto = false)
         {
+            if (ClassJumps != null)
+                return ComboSequence(ClassJumps.ComboOf(trainerClass));
             if (gameFamily == GameFamilies.DP)
                 return ComboSequence(DpClassCombo.TryGetValue(trainerClass, out int d) ? d : DpNormalTrainer);
             if (gameFamily == GameFamilies.Plat)
@@ -139,6 +226,15 @@ namespace DSPRE.ROMFiles
                 ReadPacked(t.Classes, vsTrainerEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsTrainerEntryTableOffsetToSizeLimiter));
                 ReadPacked(t.Species, vsPokemonEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsPokemonEntryTableOffsetToSizeLimiter));
             }
+
+            var sites = VsIntroCodeSites;
+            uint musicLiteral = effectsComboTableSecondPointerOffset != 0 ? effectsComboTableSecondPointerOffset
+                : sites != null && sites.ComboMusicLiteral >= 0 ? (uint)sites.ComboMusicLiteral : 0;
+            if (musicLiteral != 0)
+                t.MusicPointerAgrees = BitConverter.ToUInt32(ARM9.ReadBytes(musicLiteral, 4), 0)
+                    == BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) + 2;
+            if (!hgss && sites != null && sites.ClassJumpTable >= 0 && File.Exists(arm9Path))
+                t.ClassJumps = ClassJumpTable.Decode(File.ReadAllBytes(arm9Path), sites.ClassJumpTable, sites.ClassJumpCount);
             return t;
         }
 

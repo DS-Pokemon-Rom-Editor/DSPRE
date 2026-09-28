@@ -31,7 +31,7 @@ namespace DSPRE.Tests
             new RomInfo(code, Project(name));
             DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<RomInfo.DirNames> {
                 RomInfo.DirNames.wazaParticle, RomInfo.DirNames.ballParticles,
-                RomInfo.DirNames.wazaEffectScripts, RomInfo.DirNames.wazaEffectSub });
+                RomInfo.DirNames.wazaEffectScripts, RomInfo.DirNames.wazaEffectSub, RomInfo.DirNames.encounterEffectGraphics });
 
             var vm = new ParticleLibraryViewModel();
             vm.Gather();

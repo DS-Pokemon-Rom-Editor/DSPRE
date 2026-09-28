@@ -367,6 +367,39 @@ namespace DSPRE
         public static BpShopSites BpShopCodeSites =>
             romID != null && BpShopSiteTable.TryGetValue((romID, romRevision), out var s) ? s : null;
 
+        /// <summary>
+        /// Special trainer battle intros, as file offsets in the named binary, -1 where the game has none.
+        /// DP/Pt pick an intro per class with an arm9 jump table; every game picks the intro's routine from a
+        /// task table, and the gym, league and HGSS Rocket executive routines each read one record. The member
+        /// numbers are the art the routines load by immediate. Every site is checked by content before use.
+        /// </summary>
+        public sealed record VsIntroSites(
+            int ClassJumpTable, int ClassJumpCount,
+            int TaskOverlay, int TaskTable, int TaskCount,
+            int RecordOverlay, int GymTable, int GymCount, int GymSize, int RivalRecord, int LeagueTable,
+            int ExecutiveOverlay, int ExecutiveTable,
+            int ComboMusicLiteral, int ComboMusicCount,
+            int[] ParticleSites, int[] EmitterSites,
+            int VsMark, int LeagueFrame, int PlayerFaceBoy, int PlayerFaceGirl, int NamePalette, int GymBanner, int ExecutiveBackdrop);
+
+        // US English only; any revision, since the content checks decide.
+        private static readonly Dictionary<string, VsIntroSites> VsIntroSiteTable = new()
+        {
+            ["IPKE"] = new(-1, 0, 1, 0x20FC4, 47, 115, 0x1390, 16, 20, 0x1354, 0x1368, 117, 0xAAC,
+                           0x517E4, 0x517D4, new[] { 0xBD0, 0xED4 }, Array.Empty<int>(), 59, 48, 207, 211, 16, -1, 215),
+            ["CPUE"] = new(0x51C34, 41, 5, 0x28CF4, 31, 5, 0x28FB4, 8, 20, -1, 0x28F8C, -1, -1,
+                           -1, -1, new[] { 0x14D94, 0x15098 }, new[] { 0x14F28, 0x150B4 }, 51, 40, 147, 151, 11, -1, -1),
+            ["ADAE"] = new(0x475D4, 36, 5, 0x20008, 31, 5, 0x20458, 8, 8, -1, 0x20430, -1, -1,
+                           -1, -1, Array.Empty<int>(), Array.Empty<int>(), -1, 15, -1, -1, -1, 11, -1),
+        };
+
+        // SoulSilver and Pearl share their partner's code here, as they do for the battle music tables; the content
+        // checks in VsIntroTables still refuse a ROM whose bytes differ.
+        private static readonly Dictionary<string, string> VsIntroSameAs = new() { ["IPGE"] = "IPKE", ["APAE"] = "ADAE" };
+
+        public static VsIntroSites VsIntroCodeSites =>
+            romID != null && VsIntroSiteTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out var same) ? same : romID, out var s) ? s : null;
+
         /// <summary>Where this ROM keeps <paramref name="table"/>, or null for an unsupported version.</summary>
         public static TableSpot? SpotOf(GameTable table) =>
             romID != null && TableSpots.TryGetValue((romID, romRevision, table), out var spot) ? spot : null;
@@ -583,6 +616,7 @@ namespace DSPRE
             fieldTouchMenu,         // HGSS a/0/1/4, the touch menu panel on the bottom screen
             fieldTouchChoices,      // HGSS a/2/3/7, the Poké Ball screen and its touch buttons
             fieldTextureAnimations, // Pt data/fldtanime.narc, HGSS a/1/3/9 (HGSS data/fldtanime.narc is unused): member 0 names textures, the rest hold frames
+            encounterEffectGraphics, // DP/Pt graphic/field_encounteffect.narc, HGSS a/1/0/9: special trainer battle intro art
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -1679,6 +1713,8 @@ namespace DSPRE
 
         public static void SetBattleEffectsData()
         {
+            // Only set where known, so a previous ROM's value never survives.
+            effectsComboTableSecondPointerOffset = 0;
             switch (gameFamily)
             {
                 case GameFamilies.HGSS:
@@ -1724,6 +1760,7 @@ namespace DSPRE
                     {
                         case GameLanguages.English:
                             effectsComboTableOffsetToRAMAddress = 0x51BE0;
+                            effectsComboTableSecondPointerOffset = 0x51BFC;
                             break;
 
                         case GameLanguages.Italian:
@@ -2695,6 +2732,7 @@ namespace DSPRE
                         [DirNames.trainerBackGraphics] = $@"{dataFolderName}\poketool\trgra\trbgra.narc",
                         [DirNames.poketch] = $@"{dataFolderName}\graphic\poketch.narc",
                         [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
+                        [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\graphic\field_encounteffect.narc",
                         [DirNames.moveData] = $@"{dataFolderName}\poketool\waza\waza_tbl.narc",
 
                         [DirNames.monIcons] = $@"{dataFolderName}\poketool\icongra\poke_icon.narc",
@@ -2795,6 +2833,7 @@ namespace DSPRE
                         [DirNames.ballParticles] = $@"{dataFolderName}\wazaeffect\effectdata\ball_particle.narc",
                         [DirNames.trainerBackGraphics] = $@"{dataFolderName}\poketool\trgra\trbgra.narc",
                         [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
+                        [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\graphic\field_encounteffect.narc",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
@@ -2959,6 +2998,7 @@ namespace DSPRE
                         [DirNames.dungeonCutinGraphics] = $@"{dataFolderName}\a\1\5\0",
                         [DirNames.titleScreenGraphics] = $@"{dataFolderName}\a\0\4\6",
                         [DirNames.trainerCardGraphics] = $@"{dataFolderName}\a\0\4\9",
+                        [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\a\1\0\9",
                         [DirNames.weatherGraphics] = $@"{dataFolderName}\a\0\6\3"
                     };
 

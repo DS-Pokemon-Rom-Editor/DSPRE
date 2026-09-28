@@ -409,6 +409,17 @@ namespace DSPRE.Avalonia.Data
                 BuildUnits = n => GraphicUnits.TrainerCard(
                     All.First(x => x.Dir == DirNames.trainerCardGraphics), n) },
 
+            new Archive { Dir = DirNames.encounterEffectGraphics, Title = "Battle intros", In = Group.Trainers,
+                What = "The faces, banners, frames and VS mark special trainer battles open with.",
+                DeepEditor = "VS Intro Editor",
+                // Sets keep their palette next to the drawing, before it or, in HGSS banners, after it.
+                ColourEntry = i =>
+                {
+                    var narc = new ScriptNarc(DirNames.encounterEffectGraphics);
+                    bool Palette(int k) => k >= 0 && k < narc.Count && Identify(narc.Get(k)) == Kind.Palette;
+                    return Palette(i - 1) ? i - 1 : Palette(i + 1) ? i + 1 : -1;
+                } },
+
             new Archive { Dir = DirNames.battleBg, Title = "Battle backgrounds", In = Group.BattleScenery,
                 What = "The scenery behind a battle, and the sweeping backgrounds some moves put up.",
                 ColourEntry = GraphicUnits.BackdropColours,

@@ -66,7 +66,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
-        public bool NoTablesAvailable => !ShowConditionalMusic && !ShowEffectsCombos && !ShowVsTables;
+        // The intro editors own the combo, class and species tables; they stay here only where those editors can't open the ROM.
+        private bool _showIntroLinks;
+        public bool ShowIntroLinks { get => _showIntroLinks; private set => Set(ref _showIntroLinks, value); }
+
+        public bool NoTablesAvailable => !ShowConditionalMusic && !ShowEffectsCombos && !ShowVsTables && !ShowIntroLinks;
 
         // ── List/combo sources ────────────────────────────────────────────────────
         public ObservableCollection<string> HeaderNames { get; } = new ObservableCollection<string>();
@@ -375,6 +379,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             // Writes go back to wherever the tables were read from.
             _fromSource = gameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource;
+            // Only hand the tables over where the intro editors can open this ROM; elsewhere they stay editable here.
+            ShowIntroLinks = !_fromSource && !isHGE && DSPRE.ROMFiles.VsIntroTables.WhyNot() == null;
+            if (ShowIntroLinks)
+            {
+                ShowEffectsCombos = false;
+                ShowVsTables = false;
+                return;
+            }
             var tables = _fromSource ? HgEngineMusicTables.ReadBattle() : BattleMusicTables.LoadRom();
             if (tables == null)
             {

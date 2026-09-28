@@ -68,6 +68,8 @@ namespace DSPRE
                 ["BpShopEditorView"] = "Battle Point shop editor",
                 ["FriendshipChangesView"] = "Friendship changes",
                 ["EncounterSlotOddsView"] = "Encounter slot odds",
+                ["VsIntroEditorView"] = "VS Intro Editor",
+                ["WildIntroEditorView"] = "Wild Pokémon Intro Editor",
             };
 
         /// <summary>Reads the switch off the command line. Call this once, before any window opens.</summary>
@@ -182,7 +184,8 @@ namespace DSPRE
                        or "ParticleLibraryView") return "Graphics";
             if (window is "WildHeldItemOddsView" or "GrowthCurveEditorView" or "BreedingItemsView"
                        or "TypeChartEditorView" or "MoveTutorEditorView" or "HgEngineFormEditorView"
-                       or "FriendshipChangesView" or "EncounterSlotOddsView") return "Pokémon";
+                       or "FriendshipChangesView" or "EncounterSlotOddsView" or "WildIntroEditorView") return "Pokémon";
+            if (window is "VsIntroEditorView") return "Trainers";
             if (window is "BerryDataEditorView" or "UndergroundMiningView" or "BpShopEditorView" or "MartEditorView") return "Items";
             return "Tools";
         }
