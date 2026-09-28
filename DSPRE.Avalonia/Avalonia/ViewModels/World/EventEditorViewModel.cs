@@ -810,6 +810,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             get
             {
                 try { _headerNames ??= HeaderLists.GetHeaderListBoxNames(); } catch { return ""; }
+                if (_headerNames == null) return "";
                 int i = (int)_warpHeader;
                 return i >= 0 && i < _headerNames.Count ? _headerNames[i].Trim() : "No such header";
             }

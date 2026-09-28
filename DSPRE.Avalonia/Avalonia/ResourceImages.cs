@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Avalonia;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using global::Avalonia.Labs.Gif;
@@ -125,11 +126,35 @@ namespace DSPRE.Avalonia
             Uri uri = ResolveGif(name);
             if (uri != null)
             {
-                try { source = GifStreamSource.FromUri(uri); }
+                try
+                {
+                    using Stream s = AssetLoader.Open(uri);
+                    using var ms = new MemoryStream();
+                    s.CopyTo(ms);
+                    source = new GifBytesSource(ms.ToArray());
+                }
                 catch (Exception ex) { AppLogger.Error($"Resource gif '{name}' failed to decode: {ex.Message}"); }
             }
             _gifSourceCache[name] = source;
             return source;
+        }
+
+        // GifImage asks for the stream again each time it is shown, and a stream source hands back the
+        // one it already read to the end, so every request gets a fresh stream.
+        private sealed class GifBytesSource : IGifSource
+        {
+            private readonly byte[] _bytes;
+
+            public GifBytesSource(byte[] bytes)
+            {
+                _bytes = bytes;
+                using var probe = GifStreamSource.FromStream(new MemoryStream(bytes, writable: false));
+                Size = probe.Size;
+            }
+
+            public PixelSize Size { get; }
+            public Stream GetStream() => new MemoryStream(_bytes, writable: false);
+            public void Dispose() { }
         }
 
         /// <summary>Loads the asset as a <see cref="RawImage"/> (for pixel-level use, e.g. GL upload). Null if unknown.</summary>
