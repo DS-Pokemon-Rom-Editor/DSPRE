@@ -54,7 +54,12 @@
       </Grid>
     </Border>
 
-    <Grid ColumnDefinitions="*,520">
+    <Grid x:Name="SplitGrid">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" MinWidth="300"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="520" MinWidth="460"/>
+      </Grid.ColumnDefinitions>
 
       <!-- 3D map with event markers -->
       <DockPanel Grid.Column="0" Margin="4">
@@ -117,7 +122,8 @@
       </DockPanel>
 
       <!-- Editing panels -->
-      <TabControl x:Name="EventTabs" Grid.Column="1" Margin="0,4,4,4">
+      <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" Background="Transparent"/>
+      <TabControl x:Name="EventTabs" Grid.Column="2" Margin="0,4,4,4">
 
         <!-- ── Overworlds (NPCs/trainers) ─────────────────────────────────────── -->
         <TabItem Header="Overworlds">

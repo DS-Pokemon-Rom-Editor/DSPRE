@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private static readonly System.Collections.Generic.Dictionary<string, (double, double)> MinimumFor = new()
         {
-            ["Mart Editor"] = (860, 500), ["Header Editor"] = (900, 560), ["Matrix Editor"] = (720, 500),
+            ["Mart Editor"] = (860, 500), ["Header Editor"] = (1080, 560), ["Matrix Editor"] = (720, 500),
             ["Map Editor"] = (1000, 600), ["Event Editor"] = (1000, 600), ["Vs. Seeker Rematch Editor"] = (720, 460),
             ["Camera Editor"] = (820, 480),
         };
@@ -26,12 +26,22 @@ namespace DSPRE.Avalonia.Views.Shell
         public EditorHostWindow(string title, Control content, double width = 900, double height = 700)
         {
             Title = title;
+            // An editor listed here needs that much room to show its content, so it opens at least that big;
+            // anything else gets a general floor that never exceeds its own opening size.
+            if (MinimumFor.TryGetValue(title ?? "", out var m))
+            {
+                width = System.Math.Max(width, m.Item1);
+                height = System.Math.Max(height, m.Item2);
+                MinWidth = m.Item1;
+                MinHeight = m.Item2;
+            }
+            else
+            {
+                MinWidth = System.Math.Min(width, 600);
+                MinHeight = System.Math.Min(height, 400);
+            }
             Width = width;
             Height = height;
-            // A floor for every editor; larger layouts raise it here or after construction.
-            var floor = MinimumFor.TryGetValue(title ?? "", out var m) ? m : (600, 400);
-            MinWidth = System.Math.Min(width, floor.Item1);
-            MinHeight = System.Math.Min(height, floor.Item2);
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             Content = content;
 

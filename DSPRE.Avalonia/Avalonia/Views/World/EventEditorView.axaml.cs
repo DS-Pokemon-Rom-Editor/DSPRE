@@ -28,6 +28,8 @@ namespace DSPRE.Avalonia.Views.World
         public EventEditorView()
         {
             InitializeComponent();
+            DSPRE.Avalonia.Controls.SidePanelWidth.Remember(SplitGrid, () => SettingsManager.Settings.eventEditorSidePanelWidth,
+                w => SettingsManager.Settings.eventEditorSidePanelWidth = w);
 
             // Left-drag pans, right-drag orbits, wheel zooms. In 3D edit mode a left-press grabs a
             // gizmo axis (to drag the event) or picks the nearest event. See Gl3DPointerNavigation.

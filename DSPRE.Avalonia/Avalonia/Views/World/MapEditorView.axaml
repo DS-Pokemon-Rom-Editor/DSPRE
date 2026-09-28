@@ -95,14 +95,20 @@
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <Grid ColumnDefinitions="*,420">
+    <Grid x:Name="SplitGrid">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" MinWidth="300"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="420" MinWidth="380"/>
+      </Grid.ColumnDefinitions>
       <!-- 3D preview (geometry; textures deferred) -->
       <Border x:Name="GlHost" Grid.Column="0" Background="Transparent" Margin="4">
         <gl:NsbmdGlControl x:Name="GlView"/>
       </Border>
 
       <!-- Editing panels (single map + "This header" view; Full matrix is render-only) -->
-      <TabControl x:Name="MapTabs" Grid.Column="1" Margin="0,4,4,4" IsEnabled="{Binding CanEdit}">
+      <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" Background="Transparent"/>
+      <TabControl x:Name="MapTabs" Grid.Column="2" Margin="0,4,4,4" IsEnabled="{Binding CanEdit}">
         <TabItem Header="Permissions">
           <ScrollViewer>
           <DockPanel Margin="4">

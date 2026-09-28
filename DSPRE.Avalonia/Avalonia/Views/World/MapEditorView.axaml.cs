@@ -23,6 +23,8 @@ namespace DSPRE.Avalonia.Views.World
         public MapEditorView()
         {
             InitializeComponent();
+            DSPRE.Avalonia.Controls.SidePanelWidth.Remember(SplitGrid, () => SettingsManager.Settings.mapEditorSidePanelWidth,
+                w => SettingsManager.Settings.mapEditorSidePanelWidth = w);
             CollisionGrid.IsCollision = true;
             TypeGrid.IsCollision = false;
             CollisionGrid.Changed += (_, _) => { VM?.MarkDirty(); VM?.RebuildOverlay(); };

@@ -88,6 +88,10 @@ namespace DSPRE
         public double mainWindowHeight { get; set; } = 0;
         public bool mainWindowMaximized { get; set; } = false;
 
+        /// <summary>Side panel widths the user dragged to in the Map and Event editors (0 = default).</summary>
+        public double mapEditorSidePanelWidth { get; set; } = 0;
+        public double eventEditorSidePanelWidth { get; set; } = 0;
+
         /// <summary>Most-recently-opened projects (.nds files or extracted folders), newest first.</summary>
         public List<string> recentProjects { get; set; } = new List<string>();
     }
