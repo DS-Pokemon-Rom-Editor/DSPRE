@@ -214,13 +214,15 @@ namespace DSPRE.Tests
                 new WazaSeqCommand(load, new[] { 0, 5 }),
                 new WazaSeqCommand(seqEnd, Array.Empty<int>()),
             };
-            string sb = WestStoryboard.Build(cmds, WazaSeqVersion.Plat);
+            var sb = WestStoryboard.Build(cmds, WazaSeqVersion.Plat);
 
-            Assert.Contains("f000", sb);                 // first commands at frame 0
-            Assert.Contains("wait 3", sb);
-            Assert.Contains("load particle", sb);
-            Assert.Contains("f003", sb);                 // SEQEND after the 3-frame wait
-            Assert.Contains("end", sb);
+            Assert.Equal(3, sb.Count);
+            Assert.Equal("f000", sb[0].Frame);
+            Assert.StartsWith("wait 3", sb[0].Text);
+            Assert.Equal("f003", sb[1].Frame);           // the load runs after the 3-frame wait
+            Assert.StartsWith("load particle", sb[1].Text);
+            Assert.Equal("f003", sb[2].Frame);
+            Assert.Equal("end", sb[2].Text);
         }
 
         [Fact]
