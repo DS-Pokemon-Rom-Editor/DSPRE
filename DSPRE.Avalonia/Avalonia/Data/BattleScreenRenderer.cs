@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
@@ -10,9 +11,9 @@ namespace DSPRE.Avalonia.Data
     /// Both screens of a battle, drawn from the ROM's own graphics, one piece at a time.
     ///
     /// The top screen carries the backdrop, the ground the Pokemon stand on, the HP bars and the message
-    /// box; the touch screen carries the command panel. Which screen a thing is on is not a guess: the
-    /// gauges are on the main screen, the message window sits on its own layer below them, and every
-    /// resource in battle_input.c is 2DSUB.
+    /// box; the touch screen carries the battle menus. The gauges are on the main screen, the message
+    /// window sits on its own layer below them, and every menu resource is loaded to the sub engine
+    /// (pokeheartgold src/battle/battle_input.c, pokeplatinum src/battle/battle_cursor.c).
     /// </summary>
     public sealed class BattleScreenRenderer
     {
@@ -32,6 +33,9 @@ namespace DSPRE.Avalonia.Data
             public string SharedNote;        // what else changes when this one does
             public string CannotEditBecause; // set when the painter cannot be handed this one
             public string Whynot;            // set when Rgba is null
+
+            // Hardware alpha blend weights in sixteenths; own 16 and below 0 is a plain draw.
+            public int BlendOwn = 16, BlendBelow;
 
             // Most of these are drawn on a whole screen's worth of room and use a corner of it, so the
             // part worth clicking and outlining is the part that has any paint on it.
@@ -72,7 +76,7 @@ namespace DSPRE.Avalonia.Data
             public int BackdropId = -1;      // -1 = the one that goes with the terrain
             public int TimeOfDay;            // 0 day, 1 evening, 2 night
             public int WindowStyle;          // 0..19, the player's own setting
-            public bool ShowCommandPanel = true;
+            public TouchMenu Menu = TouchMenu.Command;
             public string Message = "Wild PIDGEY appeared!";
             public string PokemonName = "PIDGEY";
             public int Level = 5;
@@ -132,6 +136,12 @@ namespace DSPRE.Avalonia.Data
                         int s = (y * p.Width + x) * 4, d = (cy * ScreenWidth + cx) * 4;
                         int a = p.Rgba[s + 3];
                         if (a == 0) continue;
+                        if (p.BlendBelow > 0 && canvas[d + 3] != 0)
+                        {
+                            for (int c = 0; c < 3; c++)
+                                canvas[d + c] = (byte)Math.Min(255, (p.Rgba[s + c] * p.BlendOwn + canvas[d + c] * p.BlendBelow) / 16);
+                            continue;
+                        }
                         for (int c = 0; c < 3; c++)
                             canvas[d + c] = (byte)((p.Rgba[s + c] * a + canvas[d + c] * (255 - a)) / 255);
                         canvas[d + 3] = (byte)Math.Min(255, canvas[d + 3] + a);
@@ -141,9 +151,13 @@ namespace DSPRE.Avalonia.Data
             return canvas;
         }
 
+        /// <summary>The backdrop being shown: the one picked, or the one that goes with the terrain.</summary>
+        public static int ResolveBackdrop(Options o) =>
+            o.BackdropId >= 0 ? o.BackdropId : BattleGroundRenderer.BackdropForTerrain(o.TerrainId);
+
         private void AddBackdrop(List<Piece> pieces, Options o)
         {
-            int bg = o.BackdropId >= 0 ? o.BackdropId : BattleGroundRenderer.BackdropForTerrain(o.TerrainId);
+            int bg = ResolveBackdrop(o);
             var piece = new Piece
             {
                 Name = "Backdrop",
@@ -254,7 +268,7 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        // fight.h:22-25 puts the writing at tile 2,19 and makes it 27 by 4 tiles. The frame the games draw
+        // The battle message window's text area starts at tile 2,19 and is 27 by 4 tiles. The frame drawn
         // round it adds two tile columns left, three right and a row above and below, which comes to the
         // whole screen width and the bottom 48 pixels.
         public const int MessageTilesWide = 27, MessageTilesHigh = 4;
@@ -311,8 +325,6 @@ namespace DSPRE.Avalonia.Data
             return piece;
         }
 
-        // battle_input.c:204-212 names the screens the touch panel is built from, :2453 reads them out of
-        // the battle background archive, and :2471 loads BATTLE_W_NCLR as their colours.
         /// <summary>
         /// Fills the middle of the box with the paper colour. The border the games draw never covers
         /// the middle, so without this the box is a rim round a hole.
@@ -333,49 +345,131 @@ namespace DSPRE.Avalonia.Data
                 }
         }
 
+        /// <summary>One of the touch screen's layers: which arrangement it shows and how the hardware stacks it.</summary>
+        private sealed record PanelLayer(string Screen, string Name, string What, int Priority, int BgNumber, bool Blended);
+
+        private static readonly PanelLayer Background = new("BATTLE_WBG0B_NSCR_BIN", "Touch screen background",
+            "The panel every menu sits on.", 3, 2, false);
+
         /// <summary>
-        /// The touch screen, layer by layer. BgMakeData in battle_input.c:1290 gives the command screen
-        /// three of them and says which is in front: the background at priority 3, the move panel at 3 and
-        /// the command panel at 2, so they go down background first. All three are drawn from
-        /// BATTLE_W_NCGR, not from BATTLE_WBG0A, which nothing in the battle code reads.
+        /// The layers of each menu, from the game's menu table (pokeheartgold src/battle/battle_input.c
+        /// sBattleMenuTemplates and sBottomScreenBgTilemapId; the same table in pokeplatinum
+        /// src/battle/battle_cursor.c). Layer 0 holds the buttons, layer 1 an overlay the hardware blends,
+        /// layer 2 the background. The playback menu swaps its own stop screen into layer 0 when it opens.
+        /// </summary>
+        private static IEnumerable<PanelLayer> LayersOf(TouchMenu menu)
+        {
+            yield return Background;
+            switch (menu)
+            {
+                case TouchMenu.Command:
+                    yield return new("BATTLE_WBG2A_NSCR_BIN", "Command silhouette",
+                        "The shape behind the command buttons, see-through over the background.", 3, 1, true);
+                    yield return new("BATTLE_WBG1A_NSCR_BIN", "Command buttons", "Fight, Bag, Pokemon and Run.", 2, 0, false);
+                    break;
+                case TouchMenu.Fight:
+                    yield return new("BATTLE_WBG1B_NSCR_BIN", "Move buttons",
+                        "The four move buttons. The game colours each one after its move's type.", 2, 0, false);
+                    break;
+                case TouchMenu.Target:
+                    yield return new("BATTLE_WBG1C_NSCR_BIN", "Target buttons", "Which Pokemon a move is aimed at.", 2, 0, false);
+                    yield return new("BATTLE_WBG3A_NSCR_BIN", "Target outlines",
+                        "The outlines over the target buttons, see-through.", 1, 1, true);
+                    break;
+                case TouchMenu.YesNo:
+                    yield return new("BATTLE_WBG1D_NSCR_BIN", "Yes and No buttons", "Two buttons, for any yes or no question.", 2, 0, false);
+                    break;
+                case TouchMenu.Playback:
+                    yield return new("BATTLE_WBG1STOP_NSCR_BIN", "Stop button", "Stops a recorded battle.", 2, 0, false);
+                    break;
+            }
+        }
+
+        /// <summary>Which menus this game has.</summary>
+        public static IReadOnlyList<TouchMenu> MenusForGame() =>
+            RomInfo.gameFamily == GameFamilies.DP
+                ? new[] { TouchMenu.Background, TouchMenu.Command, TouchMenu.Fight, TouchMenu.Target, TouchMenu.YesNo }
+                : new[] { TouchMenu.Background, TouchMenu.Command, TouchMenu.Fight, TouchMenu.Target, TouchMenu.YesNo, TouchMenu.Playback };
+
+        public static string MenuName(TouchMenu m) => m switch
+        {
+            TouchMenu.Background => "No menu",
+            TouchMenu.Command => "Command",
+            TouchMenu.Fight => "Fight",
+            TouchMenu.Target => "Target",
+            TouchMenu.YesNo => "Yes/No",
+            _ => "Playback",
+        };
+
+        // What the Fight preview colours its four buttons after: Normal, Fire, Water and Grass.
+        private static readonly int[] SampleMoveTypes = { 0, 10, 11, 12 };
+        private const int FirstMoveButtonRow = 8;
+
+        /// <summary>
+        /// The touch screen for one menu. Higher priority numbers are further back, and within a priority the
+        /// higher layer number is further back, so the pieces go down in that order. Every layer is drawn
+        /// from BATTLE_W_NCGR, not from BATTLE_WBG0A, which nothing in the battle code reads.
         /// </summary>
         private void AddTouchPanel(List<Piece> pieces, Options o)
         {
-            AddPanelLayer(pieces, "Touch screen background", "BATTLE_WBG0B_NSCR_BIN",
-                          "The panel everything else sits on.", opaque: true);
-            if (!o.ShowCommandPanel) return;
-            AddPanelLayer(pieces, "Move panel", "BATTLE_WBG2A_NSCR_BIN",
-                          "The part of the command screen the move buttons sit in.");
-            AddPanelLayer(pieces, "Command buttons", "BATTLE_WBG1A_NSCR_BIN",
-                          "Fight, Bag, Pokemon and Run.");
+            var colours = PanelColours(ResolveBackdrop(o), o.Menu);
+            // Layer 1 is blended over every layer under it. Platinum and HeartGold weigh it 8/16 over 12/16;
+            // Diamond and Pearl ask for 27 and 4, and the hardware caps a weight at 16.
+            (int own, int below) blend = RomInfo.gameFamily == GameFamilies.DP ? (16, 4) : (8, 12);
+            foreach (var layer in LayersOf(o.Menu).OrderByDescending(l => l.Priority).ThenByDescending(l => l.BgNumber))
+            {
+                var piece = AddPanelLayer(pieces, layer.Name, layer.Screen, layer.What, colours, opaque: layer == Background);
+                if (layer.Blended) { piece.BlendOwn = blend.own; piece.BlendBelow = blend.below; }
+            }
         }
 
         /// <summary>
-        /// The colours the touch panel is drawn with. battle_input.c:2471 loads the whole of
-        /// BATTLE_W_NCLR, then :2474 lays the scene's own first row over the top of it: one row's worth
-        /// of bytes, at the start. So the scene tints row zero and the rest of the palette stays.
+        /// The colours the touch panel is drawn with. The game loads the whole of BATTLE_W_NCLR, then in
+        /// Platinum and HeartGold lays the first 16 colours of the backdrop's own scene palette over row 0
+        /// (pokeheartgold src/battle/battle_input.c sBackgroundPaletteIds): BATTLE_W_00 to _16 for backdrops
+        /// 0 to 16, BATTLE_W_YAB for backdrop 17, and nothing for the rest. Diamond and Pearl keep row 0.
         ///
-        /// Row one is where the buttons keep their reds. Writing the scene over row one instead paints
-        /// the Fight button black, because the scene palette's fourth colour onwards are all black.
+        /// Rows 8 to 11 are placeholders in the file; the Fight menu fills them from the type palettes in
+        /// its overlay, one row per move button.
         /// </summary>
-        private (byte r, byte g, byte b)[] PanelColours()
+        private (byte r, byte g, byte b)[] PanelColours(int backdrop, TouchMenu menu)
         {
             var wide = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(BattleBgNames.Find("BATTLE_W_NCLR"))),
                                                out int count);
             var all = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < all.Length && i < count; i++) all[i] = wide[i];
 
-            int sceneAt = BattleBgNames.Find("BATTLE_W_00_NCLR");
-            if (sceneAt >= 0)
+            if (RomInfo.gameFamily != GameFamilies.DP)
             {
-                var scene = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(sceneAt)), out int sceneCount);
-                for (int i = 0; i < 16 && i < sceneCount; i++) all[i] = scene[i];
+                string tint = backdrop >= 0 && backdrop <= 16 ? $"BATTLE_W_{backdrop:D2}_NCLR"
+                            : backdrop == 17 ? "BATTLE_W_YAB_NCLR" : null;
+                int sceneAt = tint == null ? -1 : BattleBgNames.Find(tint);
+                if (sceneAt >= 0)
+                {
+                    var scene = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(sceneAt)), out int sceneCount);
+                    for (int i = 0; i < 16 && i < sceneCount; i++) all[i] = scene[i];
+                }
+            }
+
+            if (menu == TouchMenu.Fight)
+            {
+                for (int slot = 0; slot < SampleMoveTypes.Length; slot++)
+                {
+                    var row = BattleUiTables.MoveButtonPalette(SampleMoveTypes[slot]);
+                    if (row == null) continue;
+                    for (int i = 0; i < 16; i++)
+                    {
+                        int c = row[i];
+                        all[(FirstMoveButtonRow + slot) * 16 + i] =
+                            ((byte)((c & 0x1F) << 3), (byte)(((c >> 5) & 0x1F) << 3), (byte)(((c >> 10) & 0x1F) << 3));
+                    }
+                }
             }
             return all;
         }
 
-        private void AddPanelLayer(List<Piece> pieces, string name, string screenEntry, string what,
-                                   bool opaque = false)
+        private Piece AddPanelLayer(List<Piece> pieces, string name, string screenEntry, string what,
+                                    (byte r, byte g, byte b)[] colours, bool opaque)
         {
             var piece = new Piece
             {
@@ -401,7 +495,7 @@ namespace DSPRE.Avalonia.Data
                     // Colour zero is a real colour on the bottom layer, not a hole: the panel's own green
                     // is index 0. On the layers above it, colour zero is what lets the one below show.
                     var bg = NitroBgCodec.Composite(GraphicAssets.Unsqueeze(_bg.Get(chr)),
-                                                    PanelColours(), 256,
+                                                    colours, 256,
                                                     GraphicAssets.Unsqueeze(_bg.Get(scr)),
                                                     transparentZero: !opaque);
                     if (bg?.Rgba == null) piece.Whynot = "This panel could not be put together.";
@@ -410,6 +504,10 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex) { piece.Whynot = "This panel could not be drawn: " + ex.Message; }
             pieces.Add(piece);
+            return piece;
         }
     }
+
+    /// <summary>The touch screen menus the editor can show.</summary>
+    public enum TouchMenu { Background, Command, Fight, Target, YesNo, Playback }
 }

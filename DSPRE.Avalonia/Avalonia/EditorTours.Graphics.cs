@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia
 
             Add("BattleScreenEditorView", "Battle Screen editor",
                 S(null, "Battle Screen", "Both screens of a battle, drawn from this ROM, with every piece editable."),
-                S("toolbar", "What is shown", "Pick the ground, the time of day and the text box style. Tick Show the command buttons to see the touch screen while the player picks what to do."),
+                S("toolbar", "What is shown", "Pick the ground, the time of day, the text box style, the backdrop and which menu the touch screen shows."),
                 S("name:PieceList", "Pieces", "Every piece of both screens. Click one here, or click it on either screen, to select it."),
                 S("name:BothScreens", "The screens", "The top screen and the touch screen as a battle draws them. The selected piece is outlined."),
                 S("name:PieceDetails", "Editing a piece", "Paint it, export it as a PNG or import one in its place. If other things share the piece, you are asked first."),

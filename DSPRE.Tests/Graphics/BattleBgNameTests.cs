@@ -56,7 +56,7 @@ namespace DSPRE.Tests
         }
 
         /// <summary>
-        /// The touch screen's command panel is built from these, by battle_input.c:204-212. They sit at
+        /// The touch screen's battle menus are built from these. They sit at
         /// different numbers in each game, which is the whole reason for looking them up by name.
         /// </summary>
         [Fact]

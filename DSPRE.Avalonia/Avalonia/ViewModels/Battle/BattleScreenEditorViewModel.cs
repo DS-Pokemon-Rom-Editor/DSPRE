@@ -55,6 +55,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (var t in new[] { "Day", "Evening", "Night" }) TimeNames.Add(t);
             for (int i = 0; i < ROMFiles.FieldWindowFrame.FrameCount; i++)
                 WindowStyleNames.Add("Text box style " + (i + 1));
+            _menus = BattleScreenRenderer.MenusForGame();
+            foreach (var m in _menus) MenuNames.Add(BattleScreenRenderer.MenuName(m));
+            _menuIndex = Math.Max(0, _menus.ToList().IndexOf(TouchMenu.Command));
+            BackdropNames.Add("Same as the ground");
+            for (int i = 0; i < BattleBgRenderer.BackdropCount; i++) BackdropNames.Add("Backdrop " + i);
 
             _loading = false;
             Refresh();
@@ -64,6 +69,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public ObservableCollection<string> TerrainNames { get; } = new();
         public ObservableCollection<string> TimeNames { get; } = new();
         public ObservableCollection<string> WindowStyleNames { get; } = new();
+        public ObservableCollection<string> MenuNames { get; } = new();
+        public ObservableCollection<string> BackdropNames { get; } = new();
+        private IReadOnlyList<TouchMenu> _menus = Array.Empty<TouchMenu>();
 
         private int _terrainIndex = 2;      // Lawn, the one most battles use
         public int TerrainIndex { get => _terrainIndex; set { if (Set(ref _terrainIndex, value)) Refresh(); } }
@@ -74,8 +82,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int _windowStyleIndex;
         public int WindowStyleIndex { get => _windowStyleIndex; set { if (Set(ref _windowStyleIndex, value)) Refresh(); } }
 
-        private bool _showCommandPanel = true;
-        public bool ShowCommandPanel { get => _showCommandPanel; set { if (Set(ref _showCommandPanel, value)) Refresh(); } }
+        private int _menuIndex;
+        public int MenuIndex { get => _menuIndex; set { if (Set(ref _menuIndex, value)) Refresh(); } }
+
+        /// <summary>0 follows the ground; 1 onwards are the backdrops in order.</summary>
+        private int _backdropIndex;
+        public int BackdropIndex { get => _backdropIndex; set { if (Set(ref _backdropIndex, value)) Refresh(); } }
 
         // ── The sample the preview writes, so a changed graphic can be judged ─────
         private string _sampleName = "NIDORAN";
@@ -168,7 +180,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     TerrainId = _terrainIndex,
                     TimeOfDay = _timeIndex,
                     WindowStyle = _windowStyleIndex,
-                    ShowCommandPanel = _showCommandPanel,
+                    Menu = _menuIndex >= 0 && _menuIndex < _menus.Count ? _menus[_menuIndex] : TouchMenu.Background,
+                    BackdropId = _backdropIndex - 1,
                     PokemonName = _sampleName,
                     Level = _sampleLevel,
                     Gender = _gender,

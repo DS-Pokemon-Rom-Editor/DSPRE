@@ -85,9 +85,8 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// The touch screen panel is not a backdrop, and its files had no colours of their own, so
-        /// they were shown and put back in whatever palette came to hand. battle_input.c:2471 loads
-        /// BATTLE_W_NCLR for the panel, and :1290 says every one of its layers is drawn from
-        /// BATTLE_W_NCGR.
+        /// they were shown and put back in whatever palette came to hand. The battle menus load
+        /// BATTLE_W_NCLR, and every one of their layers is drawn from BATTLE_W_NCGR.
         /// </summary>
         private static int PanelColours(int fileIndex) =>
             IsPanelFile(fileIndex) ? BattleBgNames.Find("BATTLE_W_NCLR") : -1;

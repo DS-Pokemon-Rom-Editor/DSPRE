@@ -51,8 +51,14 @@
           <ComboBox Width="150" ItemsSource="{Binding WindowStyleNames}" SelectedIndex="{Binding WindowStyleIndex}"
                     ToolTip.Tip="The player picks this in the options, and the same choice is used on the field"/>
         </StackPanel>
-        <CheckBox Content="Show the command buttons" IsChecked="{Binding ShowCommandPanel}" Margin="0,0,0,4"
-                  ToolTip.Tip="The touch screen as it looks while you are choosing what to do"/>
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
+          <TextBlock Text="Backdrop" Classes="label"/>
+          <ComboBox Width="160" ItemsSource="{Binding BackdropNames}" SelectedIndex="{Binding BackdropIndex}"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+          <TextBlock Text="Menu" Classes="label"/>
+          <ComboBox Width="120" ItemsSource="{Binding MenuNames}" SelectedIndex="{Binding MenuIndex}"/>
+        </StackPanel>
       </WrapPanel>
     </Border>
 

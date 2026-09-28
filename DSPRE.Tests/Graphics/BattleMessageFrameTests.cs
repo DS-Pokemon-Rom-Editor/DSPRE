@@ -25,8 +25,8 @@ namespace DSPRE.Tests
 
         /// <summary>
         /// The frames carry no colours of their own, so without a rule for them they draw in whatever
-        /// palette happens to be reached for. battle_input.c:2760 in HeartGold and :2623 in Platinum load
-        /// BATTLE_WOBJ_NCLR for the screen the frames are on.
+        /// palette happens to be reached for. The battle loads BATTLE_WOBJ_NCLR for the screen the frames
+        /// are on.
         /// </summary>
         [Fact]
         public void EveryMessageFrameIsPairedWithTheColoursTheGameLoads()

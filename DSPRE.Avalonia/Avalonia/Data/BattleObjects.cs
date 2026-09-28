@@ -451,8 +451,8 @@ namespace DSPRE.Avalonia.Data
                 if (icons >= 0) return icons;
             }
 
-            // The message frames carry no colours of their own. battle_input.c:2760 in HeartGold and
-            // :2623 in Platinum load BATTLE_WOBJ_NCLR for the screen they are drawn on.
+            // The message frames carry no colours of their own; the battle loads BATTLE_WOBJ_NCLR for the
+            // screen they are drawn on.
             if (thing.StartsWith("BATTLE_W_WAKU", StringComparison.Ordinal))
             {
                 int frame = IndexOf(names, "BATTLE_WOBJ", "Colours");
