@@ -9,10 +9,10 @@ namespace DSPRE.ROMFiles
     /// </summary>
     public sealed class OverworldAnimator
     {
-        public const int SpinIntervalFrames = 24;                            // MV_SPIN_WAIT_FRAME
-        public static readonly int[] RandomWaits = { 16, 32, 48, 64 };       // DATA_MvDirRndWaitTbl
+        public const int SpinIntervalFrames = 24;                            // frames between turns for the spinning types
+        public static readonly int[] RandomWaits = { 16, 32, 48, 64 };       // the look-around types pick one of these waits
 
-        /// <summary>How long one tile of ordinary walking takes: AC_WALK_U_8F, eight frames.</summary>
+        /// <summary>How long one tile of ordinary walking takes: eight frames.</summary>
         public const int WalkFrames = 8;
 
         /// <summary>A movement range of -1 means the engine doesn't fence the event in at all.</summary>
@@ -68,7 +68,7 @@ namespace DSPRE.ROMFiles
             return from + (to - from) * gone;
         }
 
-        /// <param name="rangeX">move_limit_x, or <see cref="NoMoveLimit"/> for no limit on that axis.</param>
+        /// <param name="rangeX">The X range, or <see cref="NoMoveLimit"/> for no limit on that axis.</param>
         /// <param name="intervalOverride">param1 for the glance/spin trainer types, which set their own pace.</param>
         /// <param name="blocked">Whether the tile this many tiles from the start is blocked. Null means
         /// nothing is, which is what a preview with no permissions to hand should assume.</param>
@@ -378,7 +378,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// FieldOBJ_MoveHitCheckLimit: each axis is fenced to the spawn tile plus or minus its own limit,
+        /// Each axis is fenced to the spawn tile plus or minus its own limit,
         /// and an axis whose limit is -1 isn't fenced at all.
         /// </summary>
         private bool WithinRange(int x, int z)

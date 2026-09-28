@@ -20,22 +20,22 @@ namespace DSPRE.Tests
         private static readonly string HeartGold = TestRoms.HeartGold;
 
         /// <summary>
-        /// DSPRE reads the overworld record in the same order the engine's own FIELD_OBJ_H declares it, so
-        /// the field named sightRange really is param0 and sits at offset 0x0E.
+        /// DSPRE reads the overworld record in the engine's field order, so the field named sightRange is the
+        /// first parameter and sits at offset 0x0E.
         /// </summary>
         [Fact]
         public void SightRangeIsParamZeroAtTheOffsetTheEngineUses()
         {
-            // FIELD_OBJ_H: id, obj_code, move_code, event_type, event_flag, event_id, dir, param0, ...
+            // id, sprite, movement, type, flag, script, facing, then the three parameters,
             // all unsigned short, so param0 is the eighth field and starts at 7 * 2 = 14.
             var bytes = new byte[32];
             void U16(int at, int v) { bytes[at] = (byte)v; bytes[at + 1] = (byte)(v >> 8); }
             U16(0, 0x1111);    // id
-            U16(2, 0x0107);    // obj_code, an apricorn tree
-            U16(4, 0x3333);    // move_code
-            U16(6, 0x4444);    // event_type
-            U16(8, 0x5555);    // event_flag
-            U16(10, 0x6666);   // event_id
+            U16(2, 0x0107);    // sprite, an apricorn tree
+            U16(4, 0x3333);    // movement
+            U16(6, 0x4444);    // type
+            U16(8, 0x5555);    // flag
+            U16(10, 0x6666);   // script
             U16(12, 0x7777);   // dir
             U16(14, 0x00AB);   // param0
             U16(16, 0x9999);   // param1
@@ -46,7 +46,7 @@ namespace DSPRE.Tests
             Assert.Equal(0x00AB, ow.sightRange);
             Assert.Equal(0x9999, ow.param1);
             Assert.Equal(0xAAAA, ow.param2);
-            _out.WriteLine("param0 read from offset 0x0E as sightRange, matching FIELD_OBJ_H");
+            _out.WriteLine("param0 read from offset 0x0E as sightRange");
         }
 
         /// <summary>

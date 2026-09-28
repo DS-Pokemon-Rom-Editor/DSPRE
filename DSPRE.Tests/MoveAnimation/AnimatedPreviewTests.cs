@@ -679,7 +679,7 @@ namespace DSPRE.Tests
         [Fact]
         public void TheEngineDirectionNumbersAreTheOnesWeUse()
         {
-            // fieldobj_code.h: DIR_UP 0, DIR_DOWN 1, DIR_LEFT 2, DIR_RIGHT 3. The overworld's own
+            // The engine numbers directions up 0, down 1, left 2, right 3. The overworld's own
             // orientation field is written in those numbers, so the preview can use it directly.
             Assert.Equal(0, (int)MoveFacing.Up);
             Assert.Equal(1, (int)MoveFacing.Down);

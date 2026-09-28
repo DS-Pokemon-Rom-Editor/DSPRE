@@ -5,7 +5,7 @@ using Xunit;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// The spawnable record is the engine's BG_TALK_DATA: id, type, int gx, int gz, int height, dir,
+    /// The spawnable record is: id, type, int gx, int gz, int height, dir,
     /// padding.
     /// </summary>
     public class SpawnableLayoutTests

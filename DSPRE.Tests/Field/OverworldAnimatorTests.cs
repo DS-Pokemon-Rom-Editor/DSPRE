@@ -33,7 +33,7 @@ namespace DSPRE.Tests
         [Fact]
         public void FixedFacingSnapsToItsDirection()
         {
-            var a = For(0x0f, MoveFacing.Up);      // MV_DOWN
+            var a = For(0x0f, MoveFacing.Up);      // face down
             a.Advance(1);
             Assert.Equal(MoveFacing.Down, a.Facing);
         }
@@ -59,8 +59,7 @@ namespace DSPRE.Tests
         [Fact]
         public void LookAroundNeverLeavesItsTile()
         {
-            // MV_RND_UL and friends register a DirRnd handler, which turns the sprite off the move
-            // status for good. They face different ways but stay put, whatever range they carry.
+            // The look-around types only ever turn on the spot. They face different ways but stay put, whatever range they carry.
             var a = For(0x06, MoveFacing.Down, rx: 5, rz: 5, seed: 11);
             a.Advance(6000);
             Assert.Equal(0, a.OffsetX);
@@ -71,7 +70,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ARouteWalksAndTurnsBackAtTheEndOfItsRange()
         {
-            // MV_RT2 walks the way the event faces until the range stops it, then comes back.
+            // Type 20 walks the way the event faces until the range stops it, then comes back.
             var a = For(0x14, MoveFacing.Right, rx: 2, rz: 0, seed: 4);
             a.Advance(4000);
             Assert.InRange(a.OffsetX, -2, 2);

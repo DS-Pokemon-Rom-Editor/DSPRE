@@ -150,7 +150,7 @@ namespace DSPRE.ROMFiles {
         public Spawnable(Stream data) {
             evType = EventType.Spawnable;
             using (BinaryReader reader = new BinaryReader(data)) {
-                // Engine layout (BG_TALK_DATA): id, type, int gx, int gz, int height, dir, padding.
+                // Record layout: u16 script, u16 type, s32 x, s32 z, s32 height, u16 dir, u16 padding.
                 scriptNumber = reader.ReadUInt16();
                 type = reader.ReadUInt16();
 
@@ -247,12 +247,13 @@ namespace DSPRE.ROMFiles {
         public ushort scriptNumber;
         public short orientation;   // dir; the engine allows -1 for "no direction"
         public ushort sightRange;
-        // param0/1/2 in the engine (FIELD_OBJ_H). param0 is the trainer sight range; param1 is the
-        // glance/spin interval for those trainer types; param2 has no reader in the field code.
+        // The three data fields at +0x0E, +0x10 and +0x12 (param0-2 of MapObject_CreateWithParams in
+        // pokeheartgold src/map_object.c). +0x0E is the trainer sight range; +0x10 is the steps walked
+        // between looks for types 4-6; +0x12 is never read for a map-placed object.
         public ushort param1;
         public ushort param2;
-        // move_limit_x/z. Signed in the engine: -1 means it isn't fenced in on that axis at all,
-        // anything else is how many tiles either side of where it starts it may walk.
+        // Signed: -1 means it isn't fenced in on that axis at all, anything else is how many tiles
+        // either side of where it starts it may walk.
         public short xRange;
         public short yRange;
         public bool is3D = new bool();

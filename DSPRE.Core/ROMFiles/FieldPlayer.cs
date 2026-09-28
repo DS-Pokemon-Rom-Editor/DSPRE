@@ -239,7 +239,7 @@ namespace DSPRE.ROMFiles
 
     /// <summary>
     /// Which way you have to be standing to talk to a spawnable, as the games number it: the direction you
-    /// approach it FROM (TalkBgDirCheck in sxy.c).
+    /// approach it FROM.
     /// </summary>
     public enum SpawnableApproach
     {
@@ -250,10 +250,10 @@ namespace DSPRE.ROMFiles
     /// <summary>A trainer's number is a script id like any other event's. </summary>
     public static class TrainerScripts
     {
-        public const int SingleFirst = 3000;      // ID_TRAINER_OFFSET
-        public const int SingleLast = 4999;       // ID_TRAINER_OFFSET_END
-        public const int DoubleFirst = 5000;      // ID_TRAINER_2VS2_OFFSET
-        public const int DoubleLast = 6999;       // ID_TRAINER_2VS2_OFFSET_END
+        public const int SingleFirst = 3000;
+        public const int SingleLast = 4999;
+        public const int DoubleFirst = 5000;
+        public const int DoubleLast = 6999;
 
         /// <summary>True when a script id is one of the ones that stands for a trainer battle.</summary>
         public static bool IsTrainerScript(int scriptId) =>
@@ -273,8 +273,8 @@ namespace DSPRE.ROMFiles
 
     /// <summary>
     /// Finding what the player is interacting with, following the games' own checks: an overworld or a
-    /// spawnable on the tile in front (TalkObjEventCheck and TalkBgEventCheck in sxy.c), a trigger under
-    /// the player's feet (PosEventCheck), and a warp on the tile they stepped onto.
+    /// spawnable on the tile in front, a trigger under the player's feet, and a warp on the tile they
+    /// stepped onto.
     /// </summary>
     public static class FieldInteraction
     {
@@ -333,7 +333,7 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
-        /// <summary>Whether a spawnable answers someone facing this way (TalkBgDirCheck).</summary>
+        /// <summary>Whether a spawnable answers someone facing this way.</summary>
         public static bool CanTalkFrom(int spawnableDir, MoveFacing playerFacing)
         {
             var approach = (SpawnableApproach)spawnableDir;
