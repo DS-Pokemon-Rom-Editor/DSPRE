@@ -197,8 +197,14 @@
                   BorderThickness="1" Height="176">
             <Grid>
               <Image Source="{Binding WeatherImage}" Stretch="Uniform" IsVisible="{Binding !WeatherIsAnimated}"/>
-              <gif:GifImage Source="{Binding WeatherGifSource}" Stretch="Uniform" StretchDirection="Both"
-                            IsVisible="{Binding WeatherIsAnimated}"/>
+              <!-- An empty GifImage still tries to decode under software rendering, so it only exists with a source. -->
+              <ContentControl Content="{Binding WeatherGifSource}" IsVisible="{Binding WeatherIsAnimated}">
+                <ContentControl.ContentTemplate>
+                  <DataTemplate x:DataType="gif:IGifSource">
+                    <gif:GifImage Source="{Binding}" Stretch="Uniform" StretchDirection="Both"/>
+                  </DataTemplate>
+                </ContentControl.ContentTemplate>
+              </ContentControl>
             </Grid>
           </Border>
         </GroupBox>

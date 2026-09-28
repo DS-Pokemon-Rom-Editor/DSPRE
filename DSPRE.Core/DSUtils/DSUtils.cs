@@ -270,7 +270,7 @@ namespace DSPRE {
 
         /// <summary>True when running inside WSL, where the kernel can execute a Windows .exe directly
         /// (no Wine needed). WSL2 sets this env var by default.</summary>
-        private static bool IsWsl() =>
+        public static bool IsWsl() =>
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WSL_DISTRO_NAME"));
 
         /// <summary>No path rewriting needed here: WSL interop already resolves plain Linux paths in a

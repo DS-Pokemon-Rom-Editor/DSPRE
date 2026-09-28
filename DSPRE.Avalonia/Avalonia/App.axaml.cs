@@ -48,6 +48,18 @@ namespace DSPRE
                 global::Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
         }
 
+        // Without GPU interop every 3D view stays blank, so say which one this machine got.
+        private static async void LogRenderingMode(Window window)
+        {
+            try
+            {
+                var compositor = global::Avalonia.Rendering.Composition.ElementComposition.GetElementVisual(window)?.Compositor;
+                var interop = compositor == null ? null : await compositor.TryGetCompositionGpuInterop();
+                AppLogger.Info(interop != null ? "Rendering: GPU" : "Rendering: software, 3D views unavailable");
+            }
+            catch (System.Exception ex) { AppLogger.Warn("Rendering mode unknown: " + ex.Message); }
+        }
+
         public override void OnFrameworkInitializationCompleted()
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -123,6 +135,7 @@ namespace DSPRE
                     desktop.MainWindow = main;
                     desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;   // closing the shell exits the app
                     main.Show();
+                    LogRenderingMode(main);
 
                     // "Open Default ROM" setting: auto-open it at boot (asking first unless
                     // "Open without asking" is also set). The welcome window is skipped when the

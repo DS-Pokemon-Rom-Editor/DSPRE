@@ -1,5 +1,7 @@
 using System;
 using System.Globalization;
+using System.IO;
+using System.Runtime.InteropServices;
 using Avalonia;
 using DSPRE;
 using DSPRE.Avalonia.Data;
@@ -15,6 +17,7 @@ namespace DSPRE.AvaloniaShell
         [STAThread]   // required on Windows; harmless elsewhere
         public static void Main(string[] args)
         {
+            PreferWslGpu();
             BetaEditors.ReadFrom(args);
 
             // Velopack hooks (install/update/uninstall) must run before any UI is created.
@@ -30,6 +33,18 @@ namespace DSPRE.AvaloniaShell
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
+
+        // WSL's Mesa defaults to llvmpipe, which Avalonia refuses, leaving the 3D views without OpenGL; d3d12 reaches
+        // the GPU. Mesa reads the native environment, which Environment.SetEnvironmentVariable leaves alone on Linux.
+        private static void PreferWslGpu()
+        {
+            if (!OperatingSystem.IsLinux() || !DSUtils.IsWsl() || !File.Exists("/dev/dxg")) return;
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GALLIUM_DRIVER"))) return;
+            setenv("GALLIUM_DRIVER", "d3d12", 0);
+        }
+
+        [DllImport("libc")]
+        private static extern int setenv(string name, string value, int overwrite);
 
         private static void ApplyUiScaleOverride()
         {
