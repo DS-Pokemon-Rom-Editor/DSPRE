@@ -104,6 +104,7 @@
       <DependentUpon>AddressHelper.cs</DependentUpon>
     </Compile>
     <Compile Include="AppLogger.cs" />
+    <Compile Include="TrainerShinyPatch.cs" />
     <Compile Include="ReleaseNotes.cs" />
     <Compile Include="MarkdownRichText.cs" />
     <Compile Include="UpdateAvailableForm.cs" />

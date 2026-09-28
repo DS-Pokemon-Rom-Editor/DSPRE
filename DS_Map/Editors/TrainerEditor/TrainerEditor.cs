@@ -24,6 +24,18 @@ namespace DSPRE.Editors
         public bool trainerEditorIsReady { get; set; } = false;
         private bool isDirty = false;
         private int loadedTrainerID = -1;
+        private bool refreshingShinyControls;
+        private bool shinyPatch;
+        private CheckBox[] ShinyControls => new[] { partyShiny1CheckBox, partyShiny2CheckBox, partyShiny3CheckBox, partyShiny4CheckBox, partyShiny5CheckBox, partyShiny6CheckBox };
+
+        private void ShinySelectionChanged(object sender, EventArgs e)
+        {
+            if (refreshingShinyControls || Helpers.HandlersDisabled || !trainerEditorIsReady || !((CheckBox)sender).Enabled) return;
+            int slot = Array.IndexOf(ShinyControls, (CheckBox)sender);
+            currentTrainerFile.party[slot].ForceShiny = ((CheckBox)sender).Checked;
+            SetDirty();
+        }
+
 
         public TrainerEditor()
         {
@@ -62,6 +74,9 @@ namespace DSPRE.Editors
             isDirty = false;
             loadedTrainerID = -1;
             currentTrainerFile = null;
+            shinyPatch = false;
+            foreach (var checkbox in ShinyControls) { checkbox.Checked = false; checkbox.Enabled = false; }
+
 
             // Clear combo boxes and list boxes
             trainerComboBox.Items.Clear();
@@ -729,6 +744,8 @@ namespace DSPRE.Editors
 
                 currentTrainerFile.party[i].difficulty = (byte)partyIVUpdownList[i].Value;
 
+                bool forceShiny = currentTrainerFile.party[i].ForceShiny;
+
                 if (hasMoreThanOneGender((int)currentTrainerFile.party[i].pokeID, pokemonSpecies) && (gameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled))
                 {
                     switch (partyGenderComboBoxList[i].SelectedIndex)
@@ -758,12 +775,29 @@ namespace DSPRE.Editors
                     currentTrainerFile.party[i].genderAndAbilityFlags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
                 }
 
+                currentTrainerFile.party[i].ForceShiny = forceShiny;
+
                 currentTrainerFile.party[i].ballSeals = (ushort)partyBallUpdownList[i].Value;
             }
         }
 
         public void RefreshTrainerPartyGUI()
         {
+            shinyPatch = TrainerShinyPatch.DetectCurrentProject();
+            string shinyTooltip = shinyPatch ? null : "Requires the supported external shiny trainer patch.";
+            refreshingShinyControls = true;
+            for (int slot = 0; slot < ShinyControls.Length; slot++)
+            {
+                var checkbox = ShinyControls[slot];
+                checkbox.Visible = gameFamily == GameFamilies.HGSS;
+                checkbox.Checked = gameFamily == GameFamilies.HGSS && currentTrainerFile.party[slot].ForceShiny;
+                checkbox.Enabled = shinyPatch && slot < partyCountUpDown.Value;
+                checkbox.AccessibleDescription = shinyTooltip;
+                toolTip.SetToolTip(checkbox, shinyTooltip);
+                toolTip.SetToolTip(partyGroupboxList[slot], shinyTooltip);
+            }
+            refreshingShinyControls = false;
+
             for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
             {
                 partyPokemonComboboxList[i].SelectedIndex = currentTrainerFile.party[i].pokeID ?? 0;
@@ -949,11 +983,15 @@ namespace DSPRE.Editors
             for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
             {
                 partyGroupboxList[i].Enabled = (partyCountUpDown.Value > i);
+                ShinyControls[i].Enabled = shinyPatch && partyCountUpDown.Value > i;
                 partyPokemonPictureBoxList[i].Visible = partyGroupboxList[i].Enabled;
             }
             for (int i = Math.Min(currentTrainerFile.trp.partyCount, (int)partyCountUpDown.Value); i < TrainerFile.POKE_IN_PARTY; i++)
             {
                 currentTrainerFile.party[i] = new PartyPokemon(currentTrainerFile.trp.chooseItems, currentTrainerFile.trp.chooseMoves);
+                refreshingShinyControls = true;
+                ShinyControls[i].Checked = false;
+                refreshingShinyControls = false;
             }
         }
 
@@ -1122,6 +1160,8 @@ namespace DSPRE.Editors
 
                 currentTrainerFile.party[i].difficulty = (byte)partyIVUpdownList[i].Value;
 
+                bool forceShiny = currentTrainerFile.party[i].ForceShiny;
+
                 if (hasMoreThanOneGender((int)currentTrainerFile.party[i].pokeID, pokemonSpecies) && (gameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled))
                 {
                     switch (partyGenderComboBoxList[i].SelectedIndex)
@@ -1148,6 +1188,8 @@ namespace DSPRE.Editors
                 {
                     currentTrainerFile.party[i].genderAndAbilityFlags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
                 }
+
+                currentTrainerFile.party[i].ForceShiny = forceShiny;
 
                 currentTrainerFile.party[i].ballSeals = (ushort)partyBallUpdownList[i].Value;
             }

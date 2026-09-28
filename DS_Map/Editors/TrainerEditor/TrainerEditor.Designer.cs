@@ -40,6 +40,7 @@
             this.label48 = new System.Windows.Forms.Label();
             this.partyForm1ComboBox = new System.Windows.Forms.ComboBox();
             this.party1GroupBox = new System.Windows.Forms.GroupBox();
+            this.partyShiny1CheckBox = new System.Windows.Forms.CheckBox();
             this.partyAbility1ComboBox = new System.Windows.Forms.ComboBox();
             this.partyGender1ComboBox = new System.Windows.Forms.ComboBox();
             this.partyPokemonItemPictureBox1 = new System.Windows.Forms.PictureBox();
@@ -73,6 +74,7 @@
             this.partyBall6UpDown = new System.Windows.Forms.NumericUpDown();
             this.partyAbility4ComboBox = new System.Windows.Forms.ComboBox();
             this.party2GroupBox = new System.Windows.Forms.GroupBox();
+            this.partyShiny2CheckBox = new System.Windows.Forms.CheckBox();
             this.partyPokemonItemPictureBox2 = new System.Windows.Forms.PictureBox();
             this.poke2MovesGroupBox = new System.Windows.Forms.GroupBox();
             this.partyMove2_1ComboBox = new DSPRE.InputComboBox();
@@ -84,6 +86,7 @@
             this.partyPokemon2PictureBox = new System.Windows.Forms.PictureBox();
             this.partyPokemon2ComboBox = new DSPRE.InputComboBox();
             this.party4GroupBox = new System.Windows.Forms.GroupBox();
+            this.partyShiny4CheckBox = new System.Windows.Forms.CheckBox();
             this.partyGender4ComboBox = new System.Windows.Forms.ComboBox();
             this.partyPokemonItemPictureBox4 = new System.Windows.Forms.PictureBox();
             this.label54 = new System.Windows.Forms.Label();
@@ -133,12 +136,14 @@
             this.exportPartyButton = new System.Windows.Forms.Button();
             this.label74 = new System.Windows.Forms.Label();
             this.party6GroupBox = new System.Windows.Forms.GroupBox();
+            this.partyShiny6CheckBox = new System.Windows.Forms.CheckBox();
             this.partyGender6ComboBox = new System.Windows.Forms.ComboBox();
             this.partyPokemonItemPictureBox6 = new System.Windows.Forms.PictureBox();
             this.partyItem6ComboBox = new DSPRE.InputComboBox();
             this.partyPokemon6PictureBox = new System.Windows.Forms.PictureBox();
             this.partyPokemon6ComboBox = new DSPRE.InputComboBox();
             this.party5GroupBox = new System.Windows.Forms.GroupBox();
+            this.partyShiny5CheckBox = new System.Windows.Forms.CheckBox();
             this.partyForm5ComboBox = new System.Windows.Forms.ComboBox();
             this.partyAbility5ComboBox = new System.Windows.Forms.ComboBox();
             this.partyGender5ComboBox = new System.Windows.Forms.ComboBox();
@@ -158,6 +163,7 @@
             this.partyPokemon5PictureBox = new System.Windows.Forms.PictureBox();
             this.partyPokemon5ComboBox = new DSPRE.InputComboBox();
             this.party3GroupBox = new System.Windows.Forms.GroupBox();
+            this.partyShiny3CheckBox = new System.Windows.Forms.CheckBox();
             this.partyForm3ComboBox = new System.Windows.Forms.ComboBox();
             this.partyAbility3ComboBox = new System.Windows.Forms.ComboBox();
             this.partyGender3ComboBox = new System.Windows.Forms.ComboBox();
@@ -364,6 +370,15 @@
             // 
             // party1GroupBox
             // 
+            this.partyShiny1CheckBox.AutoSize = true;
+            this.partyShiny1CheckBox.Location = new System.Drawing.Point(263, 10);
+            this.partyShiny1CheckBox.Name = "partyShiny1CheckBox";
+            this.partyShiny1CheckBox.TabIndex = 15;
+            this.partyShiny1CheckBox.Text = "Shiny";
+            this.partyShiny1CheckBox.Enabled = false;
+            this.partyShiny1CheckBox.UseVisualStyleBackColor = true;
+            this.partyShiny1CheckBox.CheckedChanged += new System.EventHandler(this.ShinySelectionChanged);
+            this.party1GroupBox.Controls.Add(this.partyShiny1CheckBox);
             this.party1GroupBox.Controls.Add(this.partyForm1ComboBox);
             this.party1GroupBox.Controls.Add(this.partyAbility1ComboBox);
             this.party1GroupBox.Controls.Add(this.partyGender1ComboBox);
@@ -754,6 +769,15 @@
             // 
             // party2GroupBox
             // 
+            this.partyShiny2CheckBox.AutoSize = true;
+            this.partyShiny2CheckBox.Location = new System.Drawing.Point(263, 10);
+            this.partyShiny2CheckBox.Name = "partyShiny2CheckBox";
+            this.partyShiny2CheckBox.TabIndex = 15;
+            this.partyShiny2CheckBox.Text = "Shiny";
+            this.partyShiny2CheckBox.Enabled = false;
+            this.partyShiny2CheckBox.UseVisualStyleBackColor = true;
+            this.partyShiny2CheckBox.CheckedChanged += new System.EventHandler(this.ShinySelectionChanged);
+            this.party2GroupBox.Controls.Add(this.partyShiny2CheckBox);
             this.party2GroupBox.Controls.Add(this.partyForm2ComboBox);
             this.party2GroupBox.Controls.Add(this.partyAbility2ComboBox);
             this.party2GroupBox.Controls.Add(this.partyGender2ComboBox);
@@ -897,6 +921,15 @@
             // 
             // party4GroupBox
             // 
+            this.partyShiny4CheckBox.AutoSize = true;
+            this.partyShiny4CheckBox.Location = new System.Drawing.Point(263, 10);
+            this.partyShiny4CheckBox.Name = "partyShiny4CheckBox";
+            this.partyShiny4CheckBox.TabIndex = 15;
+            this.partyShiny4CheckBox.Text = "Shiny";
+            this.partyShiny4CheckBox.Enabled = false;
+            this.partyShiny4CheckBox.UseVisualStyleBackColor = true;
+            this.partyShiny4CheckBox.CheckedChanged += new System.EventHandler(this.ShinySelectionChanged);
+            this.party4GroupBox.Controls.Add(this.partyShiny4CheckBox);
             this.party4GroupBox.Controls.Add(this.partyForm4ComboBox);
             this.party4GroupBox.Controls.Add(this.partyAbility4ComboBox);
             this.party4GroupBox.Controls.Add(this.partyGender4ComboBox);
@@ -1499,6 +1532,15 @@
             // 
             // party6GroupBox
             // 
+            this.partyShiny6CheckBox.AutoSize = true;
+            this.partyShiny6CheckBox.Location = new System.Drawing.Point(263, 10);
+            this.partyShiny6CheckBox.Name = "partyShiny6CheckBox";
+            this.partyShiny6CheckBox.TabIndex = 15;
+            this.partyShiny6CheckBox.Text = "Shiny";
+            this.partyShiny6CheckBox.Enabled = false;
+            this.partyShiny6CheckBox.UseVisualStyleBackColor = true;
+            this.partyShiny6CheckBox.CheckedChanged += new System.EventHandler(this.ShinySelectionChanged);
+            this.party6GroupBox.Controls.Add(this.partyShiny6CheckBox);
             this.party6GroupBox.Controls.Add(this.partyForm6ComboBox);
             this.party6GroupBox.Controls.Add(this.partyAbility6ComboBox);
             this.party6GroupBox.Controls.Add(this.partyGender6ComboBox);
@@ -1574,6 +1616,15 @@
             // 
             // party5GroupBox
             // 
+            this.partyShiny5CheckBox.AutoSize = true;
+            this.partyShiny5CheckBox.Location = new System.Drawing.Point(263, 10);
+            this.partyShiny5CheckBox.Name = "partyShiny5CheckBox";
+            this.partyShiny5CheckBox.TabIndex = 15;
+            this.partyShiny5CheckBox.Text = "Shiny";
+            this.partyShiny5CheckBox.Enabled = false;
+            this.partyShiny5CheckBox.UseVisualStyleBackColor = true;
+            this.partyShiny5CheckBox.CheckedChanged += new System.EventHandler(this.ShinySelectionChanged);
+            this.party5GroupBox.Controls.Add(this.partyShiny5CheckBox);
             this.party5GroupBox.Controls.Add(this.partyForm5ComboBox);
             this.party5GroupBox.Controls.Add(this.partyAbility5ComboBox);
             this.party5GroupBox.Controls.Add(this.partyGender5ComboBox);
@@ -1802,6 +1853,15 @@
             // 
             // party3GroupBox
             // 
+            this.partyShiny3CheckBox.AutoSize = true;
+            this.partyShiny3CheckBox.Location = new System.Drawing.Point(263, 10);
+            this.partyShiny3CheckBox.Name = "partyShiny3CheckBox";
+            this.partyShiny3CheckBox.TabIndex = 15;
+            this.partyShiny3CheckBox.Text = "Shiny";
+            this.partyShiny3CheckBox.Enabled = false;
+            this.partyShiny3CheckBox.UseVisualStyleBackColor = true;
+            this.partyShiny3CheckBox.CheckedChanged += new System.EventHandler(this.ShinySelectionChanged);
+            this.party3GroupBox.Controls.Add(this.partyShiny3CheckBox);
             this.party3GroupBox.Controls.Add(this.partyForm3ComboBox);
             this.party3GroupBox.Controls.Add(this.partyAbility3ComboBox);
             this.party3GroupBox.Controls.Add(this.partyGender3ComboBox);
@@ -2503,6 +2563,7 @@
         private InputComboBox partyPokemon3ComboBox;
         private System.Windows.Forms.Button DVExplainButton;
         private System.Windows.Forms.GroupBox party1GroupBox;
+        private System.Windows.Forms.CheckBox partyShiny1CheckBox;
         private System.Windows.Forms.ComboBox partyAbility1ComboBox;
         private System.Windows.Forms.ComboBox partyGender1ComboBox;
         private System.Windows.Forms.PictureBox partyPokemonItemPictureBox1;
@@ -2537,11 +2598,13 @@
         private InputComboBox partyPokemon6ComboBox;
         private System.Windows.Forms.ComboBox partyAbility4ComboBox;
         private System.Windows.Forms.GroupBox party2GroupBox;
+        private System.Windows.Forms.CheckBox partyShiny2CheckBox;
         private System.Windows.Forms.GroupBox poke2MovesGroupBox;
         private System.Windows.Forms.NumericUpDown partyIV2UpDown;
         private System.Windows.Forms.PictureBox partyPokemon2PictureBox;
         private InputComboBox partyPokemon2ComboBox;
         private System.Windows.Forms.GroupBox party4GroupBox;
+        private System.Windows.Forms.CheckBox partyShiny4CheckBox;
         private System.Windows.Forms.ComboBox partyGender4ComboBox;
         private System.Windows.Forms.PictureBox partyPokemonItemPictureBox4;
         private System.Windows.Forms.Label label54;
@@ -2591,9 +2654,11 @@
         private System.Windows.Forms.Button exportPartyButton;
         private System.Windows.Forms.Label label74;
         private System.Windows.Forms.GroupBox party6GroupBox;
+        private System.Windows.Forms.CheckBox partyShiny6CheckBox;
         private System.Windows.Forms.ComboBox partyGender6ComboBox;
         private System.Windows.Forms.PictureBox partyPokemonItemPictureBox6;
         private System.Windows.Forms.GroupBox party5GroupBox;
+        private System.Windows.Forms.CheckBox partyShiny5CheckBox;
         private System.Windows.Forms.ComboBox partyForm5ComboBox;
         private System.Windows.Forms.ComboBox partyAbility5ComboBox;
         private System.Windows.Forms.ComboBox partyGender5ComboBox;
@@ -2613,6 +2678,7 @@
         private System.Windows.Forms.PictureBox partyPokemon5PictureBox;
         private InputComboBox partyPokemon5ComboBox;
         private System.Windows.Forms.GroupBox party3GroupBox;
+        private System.Windows.Forms.CheckBox partyShiny3CheckBox;
         private System.Windows.Forms.ComboBox partyForm3ComboBox;
         private System.Windows.Forms.ComboBox partyAbility3ComboBox;
         private System.Windows.Forms.ComboBox partyGender3ComboBox;

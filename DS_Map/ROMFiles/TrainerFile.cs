@@ -29,7 +29,14 @@ namespace DSPRE.ROMFiles {
             FORCE_MALE = 0x1,
             FORCE_FEMALE = 0x2,
             ABILITY_SLOT1 = 0x10,
-            ABILITY_SLOT2 = 0x20
+            ABILITY_SLOT2 = 0x20,
+            FORCE_SHINY = 0x40
+        }
+        public bool ForceShiny {
+            get => genderAndAbilityFlags.HasFlag(GenderAndAbilityFlags.FORCE_SHINY);
+            set => genderAndAbilityFlags = value
+                ? genderAndAbilityFlags | GenderAndAbilityFlags.FORCE_SHINY
+                : genderAndAbilityFlags & ~GenderAndAbilityFlags.FORCE_SHINY;
         }
         #endregion
 

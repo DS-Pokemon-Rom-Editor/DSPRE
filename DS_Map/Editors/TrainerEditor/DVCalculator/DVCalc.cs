@@ -30,6 +30,12 @@ namespace DSPRE
         private readonly string[] abilitySelection = { "No Flag", "Force Ability 1", "Force Ability 2" };
         private readonly string[] genderSelection = { "No Flag", "Force Male", "Force Female" };
         private bool listsSetup = false;
+        private readonly bool shinyPatch = TrainerShinyPatch.DetectCurrentProject();
+
+        // Retain the raw ability value if an imported shiny flag cannot be interpreted.
+        private int AbilityOverride(int slot) => abilityCombos[slot].SelectedIndex >= 0
+            ? abilityCombos[slot].SelectedIndex
+            : ((int)trainerFile.party[slot].genderAndAbilityFlags & (shinyPatch ? 0xB0 : 0xF0)) >> 4;
 
 
         public DVCalc(TrainerFile trainerFile)
@@ -95,7 +101,8 @@ namespace DSPRE
                 pokeLabels[i].Text = RomInfo.GetPokemonNames()[pokeID] + " Lv. " + pokeLevel;
 
                 // Upper 4 bits = ability index (0 = no flag, 1 = ability 1, 2 = ability 2)
-                abilityCombos[i].SelectedIndex = (((int)trainerFile.party[i].genderAndAbilityFlags & 0xF0) >> 4);
+                int ability = ((int)trainerFile.party[i].genderAndAbilityFlags & (shinyPatch ? 0xB0 : 0xF0)) >> 4;
+                abilityCombos[i].SelectedIndex = ability <= 2 ? ability : -1;
 
                 // Lower 4 bits = gender index (0 = no flag, 1 = force male, 2 = force female)
                 genderCombos[i].SelectedIndex = ((int)trainerFile.party[i].genderAndAbilityFlags & 0x0F);
@@ -173,7 +180,7 @@ namespace DSPRE
                 byte baseGenderRatio = new PokemonPersonalData((int) pokeID).genderVec;
 
                 uint PID = DVCalculator.generatePID(trainerProp.trainerID,trainerProp.trainerClass, 
-                    pokeID, pokeLevel, baseGenderRatio, genderCombos[i].SelectedIndex, abilityCombos[i].SelectedIndex,(byte)upDownsDV[i].Value);
+                    pokeID, pokeLevel, baseGenderRatio, genderCombos[i].SelectedIndex, AbilityOverride(i),(byte)upDownsDV[i].Value);
                 string nature = DVCalculator.Natures[DVCalculator.getNatureFromPID(PID)];
 
                 natureLabels[i].Text = nature;
@@ -200,7 +207,7 @@ namespace DSPRE
                 for (int i = 0; i < index; i++)
                 {
                     byte genderRatio = new PokemonPersonalData((int)trainerFile.party[i].pokeID).genderVec;
-                    DVCalculator.UpdateGenderMod((ushort)trainerFile.party[i].pokeID, genderRatio, genderCombos[i].SelectedIndex, abilityCombos[i].SelectedIndex);
+                    DVCalculator.UpdateGenderMod((ushort)trainerFile.party[i].pokeID, genderRatio, genderCombos[i].SelectedIndex, AbilityOverride(i));
 
                 }
             }
@@ -212,7 +219,7 @@ namespace DSPRE
                 (byte)trainerFile.party[index].level,
                 new PokemonPersonalData((int)trainerFile.party[index].pokeID).genderVec,
                 genderCombos[index].SelectedIndex,
-                abilityCombos[index].SelectedIndex);
+                AbilityOverride(index));
 
             return triplets;
         }
@@ -250,8 +257,10 @@ namespace DSPRE
         {
             for (int i = 0; i < trainerProp.partyCount; i++)
             {
-                trainerFile.party[i].genderAndAbilityFlags = (PartyPokemon.GenderAndAbilityFlags)(((abilityCombos[i].SelectedIndex & 0x0F) << 4)
+                bool forceShiny = trainerFile.party[i].ForceShiny;
+                trainerFile.party[i].genderAndAbilityFlags = (PartyPokemon.GenderAndAbilityFlags)(((AbilityOverride(i) & 0x0F) << 4)
                     | (genderCombos[i].SelectedIndex & 0x0F));
+                trainerFile.party[i].ForceShiny = forceShiny;
                 trainerFile.party[i].difficulty = (byte)upDownsDV[i].Value;
 
             }
