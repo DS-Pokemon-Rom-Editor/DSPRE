@@ -56,6 +56,15 @@ namespace DSPRE
 
             /// <summary>Read the address from the overlay's literal pool.</summary>
             public bool DeriveOffset;
+
+            /// <summary>File offsets of literal-pool words that hold the table's address. They must agree.</summary>
+            public int[] PointerWordOffsets;
+
+            /// <summary>File offset of the Thumb <c>cmp rN, #rows</c> bounding the lookup loop, or -1.</summary>
+            public int RowCountCompareOffset = -1;
+
+            /// <summary>Refuse a table whose rows don't look like trainer ids.</summary>
+            public bool ValidateRows;
         }
 
         /// <summary>Where the table sits.</summary>
@@ -117,8 +126,21 @@ namespace DSPRE
 
             long offset = descriptor.FallbackOffset;
             bool foundInOverlay = false;
+            int fixedRowCount = descriptor.FixedRowCount;
 
-            if (descriptor.DeriveOffset && ramBase > 0)
+            if (descriptor.PointerWordOffsets != null)
+            {
+                long found = ReadPointedOffset(data, ramBase, dataEnd, descriptor.PointerWordOffsets);
+                int rows = ReadCompareImmediate(data, descriptor.RowCountCompareOffset);
+                if (rows <= 0) rows = fixedRowCount;
+                if (found >= 0 && (!descriptor.ValidateRows || LooksLikeTrainerRows(data, found, rows, dataEnd)))
+                {
+                    offset = found;
+                    foundInOverlay = true;
+                    fixedRowCount = rows;
+                }
+            }
+            else if (descriptor.DeriveOffset && ramBase > 0)
             {
                 long found = FindTableOffset(data, ramBase, dataEnd);
                 if (found >= 0)
@@ -135,9 +157,17 @@ namespace DSPRE
                 return null;
             }
 
+            if (!foundInOverlay && descriptor.ValidateRows &&
+                !LooksLikeTrainerRows(data, offset, fixedRowCount, dataEnd))
+            {
+                error = $"The {descriptor.Name} couldn't be found in overlay {overlayNumber}, and the data at " +
+                    $"the usual offset 0x{offset:X} isn't a rematch table. Nothing will be read or saved.";
+                return null;
+            }
+
             long available = Math.Min(dataEnd, data.Length) - offset;
-            int rowCount = descriptor.FixedRowCount > 0
-                ? descriptor.FixedRowCount
+            int rowCount = fixedRowCount > 0
+                ? fixedRowCount
                 : (int)(available / RowSize);
             rowCount = (int)Math.Min(rowCount, (data.Length - offset) / RowSize);
 
@@ -218,6 +248,62 @@ namespace DSPRE
                 if (end > 0 && end <= fileLength) return (int)end;
             }
             return fileLength;
+        }
+
+        // Well above any vanilla or typical expanded trainer count, and below most Thumb opcodes, so code
+        // mistaken for the table fails.
+        private const int MaxPlausibleTrainerId = 0x1000;
+
+        /// <summary>
+        /// The table offset the given literal-pool words point at, or -1 unless every word holds the
+        /// same address inside the overlay's data.
+        /// </summary>
+        public static long ReadPointedOffset(byte[] data, uint ramBase, int dataEnd, IReadOnlyList<int> wordOffsets)
+        {
+            if (data == null || ramBase == 0 || wordOffsets == null || wordOffsets.Count == 0) return -1;
+
+            uint address = 0;
+            foreach (int at in wordOffsets)
+            {
+                if (at < 0 || at + 4 > data.Length) return -1;
+                uint word = BitConverter.ToUInt32(data, at);
+                if (address != 0 && word != address) return -1;
+                address = word;
+            }
+
+            if (address <= ramBase) return -1;
+            long target = address - ramBase;
+            if (target % 2 != 0 || target + RowSize > Math.Min(dataEnd, data.Length)) return -1;
+            return target;
+        }
+
+        /// <summary>The immediate of a Thumb <c>cmp rN, #imm8</c> at this offset, or -1 if it isn't one.</summary>
+        public static int ReadCompareImmediate(byte[] data, int offset)
+        {
+            if (data == null || offset < 0 || offset + 2 > data.Length) return -1;
+            ushort op = BitConverter.ToUInt16(data, offset);
+            return (op & 0xF800) == 0x2800 ? op & 0xFF : -1;
+        }
+
+        /// <summary>Every row has a lookup trainer and holds only trainer ids, skips and ends.</summary>
+        public static bool LooksLikeTrainerRows(byte[] data, long offset, int rowCount, int dataEnd)
+        {
+            if (data == null || offset <= 0 || rowCount <= 0) return false;
+            if (offset + (long)rowCount * RowSize > Math.Min(dataEnd, data.Length)) return false;
+
+            for (int r = 0; r < rowCount; r++)
+            {
+                long at = offset + (long)r * RowSize;
+                ushort lookup = BitConverter.ToUInt16(data, (int)at);
+                if (lookup == ChainEnd || lookup == NoRematch || lookup >= MaxPlausibleTrainerId) return false;
+
+                for (int slot = 1; slot < SlotCount; slot++)
+                {
+                    ushort id = BitConverter.ToUInt16(data, (int)(at + slot * 2));
+                    if (id != NoRematch && id >= MaxPlausibleTrainerId) return false;
+                }
+            }
+            return true;
         }
 
         /// <summary>

@@ -22,6 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
         private readonly List<RematchTable.Row> _rows;
+        private readonly RematchTable.Location _location;
         private readonly HashSet<int> _dirtyRows = new();
         private List<int> _filteredIndices = new();
         private bool _suppress;
@@ -31,7 +32,27 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public ObservableCollection<string> TrainerNames { get; } = new();
         public ObservableCollection<string> RematchChoices { get; } = new();
 
+        /// <summary>"Rematch N", with where it unlocks.</summary>
+        public IReadOnlyList<string> LevelLabels { get; } = VsSeekerRematchTable.LevelUnlocks
+            .Select((unlock, i) => $"Rematch {i + 1}  ·  {unlock}").ToList();
+
         public bool IsSupported => VsSeekerRematchTable.IsSupported;
+
+        private string _tableNote = "";
+        public string TableNote { get => _tableNote; set => Set(ref _tableNote, value); }
+
+        /// <summary>Row layouts the game mishandles, one per line.</summary>
+        public string RowProblems => _currentRowIndex < 0 ? ""
+            : string.Join("\n", VsSeekerRematchTable.Problems(_rows, _currentRowIndex));
+
+        public bool HasRowProblems => RowProblems.Length > 0;
+
+        private void RowChanged()
+        {
+            OnPropertyChanged(nameof(IsRowSelected));
+            OnPropertyChanged(nameof(RowProblems));
+            OnPropertyChanged(nameof(HasRowProblems));
+        }
 
         private string _filterText = "";
         public string FilterText
@@ -52,13 +73,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (value < 0 || value >= _filteredIndices.Count)
                 {
                     _currentRowIndex = -1;
-                    OnPropertyChanged(nameof(IsRowSelected));
+                    RowChanged();
                     return;
                 }
 
                 _currentRowIndex = _filteredIndices[value];
                 LoadRowIntoDetail(_currentRowIndex);
-                OnPropertyChanged(nameof(IsRowSelected));
+                RowChanged();
             }
         }
 
@@ -100,6 +121,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _suppress = false;
                 if (_selectedRowListIndex != listPos) { _selectedRowListIndex = listPos; OnPropertyChanged(nameof(SelectedRowListIndex)); }
                 if (_currentRowIndex >= 0) LoadRowIntoDetail(_currentRowIndex);
+                RowChanged();
             }
             _dirtyRows.Clear();
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -123,7 +145,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             RematchChoices.Add("(end of chain - 0x0000)");
             foreach (var n in TrainerNames) RematchChoices.Add(n);
 
-            _rows = VsSeekerRematchTable.ReadAll();
+            _rows = VsSeekerRematchTable.ReadAll(out _location, out string loadError);
+            TableNote = _location != null
+                ? "Table found in " + _location.Description
+                : loadError ?? "The Vs. Seeker rematch table couldn't be located in this ROM.";
 
             RebuildRowList();
 
@@ -202,6 +227,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             _dirtyRows.Add(_currentRowIndex);
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            RowChanged();
             UpdateStatus();
 
             int listPos = _selectedRowListIndex;

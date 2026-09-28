@@ -37,8 +37,8 @@ namespace DSPRE.Tests
             Assert.Equal(RomInfo.vsSeekerRematchTableOffset, (uint)location.Offset);
             Assert.Equal(VsSeekerRematchTable.RowCount, location.RowCount);
 
-            // Fixed layout, so the address is not searched for.
-            Assert.False(location.FoundInOverlay);
+            // The lookup code's pointers lead to the same place as the known offset.
+            Assert.True(location.FoundInOverlay);
         }
 
         [SkippableFact]

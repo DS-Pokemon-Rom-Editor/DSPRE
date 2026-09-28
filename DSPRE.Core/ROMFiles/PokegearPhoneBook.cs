@@ -16,8 +16,11 @@ namespace DSPRE
         public const int EntrySize = 20;
         public const int TrainerIdOffset = 4;
 
-        /// <summary>The save file, the phone app and several tables are sized for exactly this many.</summary>
+        /// <summary>The save data, the contact name table and the call tables are sized for exactly this many.</summary>
         public const int GameContactCount = 75;
+
+        /// <summary>The contact the game checks by number for Kenji's rematch (pokeheartgold phone_scripts_blackbelt_kenji.c).</summary>
+        public const int KenjiContact = 16;
 
         public const byte TitleNone = 200;
         public const byte FirstPhoneTitle = 201;
@@ -44,11 +47,17 @@ namespace DSPRE
         /// <summary>Index of the first phone title in the Pokégear phone strings.</summary>
         public const int FirstPhoneTitleMessage = 38;
 
-        /// <summary>The title shown under a contact's name, or "" when the game shows none.</summary>
+        /// <summary>
+        /// Past the last phone title the game reads beyond the end of the phone strings, so what it shows
+        /// is undefined.
+        /// </summary>
+        public static bool TitleReadsPastEnd(byte title) => title >= FirstPhoneTitle + PhoneTitleCount;
+
+        /// <summary>The title shown under a contact's name, or "" when the game shows none or it is undefined.</summary>
         public static string TitleText(byte title, IReadOnlyList<string> classNames, IReadOnlyList<string> phoneMessages)
         {
             if (title < TitleNone) return classNames != null && title < classNames.Count ? classNames[title] ?? "" : "";
-            if (title == TitleNone || title >= FirstPhoneTitle + PhoneTitleCount) return "";
+            if (title == TitleNone || TitleReadsPastEnd(title)) return "";
             int message = FirstPhoneTitleMessage + title - FirstPhoneTitle;
             return phoneMessages != null && message < phoneMessages.Count ? phoneMessages[message] ?? "" : "";
         }
@@ -66,7 +75,7 @@ namespace DSPRE
             public byte Type;
             /// <summary>Never read by the game.</summary>
             public byte Unused2;
-            /// <summary>0-199 trainer class, 200 no title, 201 and up a phone title.</summary>
+            /// <summary>0-199 trainer class, 200 no title, 201-207 a phone title, above that undefined.</summary>
             public byte Title;
             public ushort TrainerId;
             public ushort MapId;

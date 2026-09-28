@@ -78,7 +78,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             for (int t = 0; t < 256; t++)
             {
                 string label = TitleText((byte)t);
-                if (label.Length == 0) label = t == PokegearPhoneBook.TitleNone ? "(no title)" : "(blank)";
+                if (label.Length == 0)
+                    label = t == PokegearPhoneBook.TitleNone ? "(no title)"
+                        : PokegearPhoneBook.TitleReadsPastEnd((byte)t) ? "(undefined)" : "(blank)";
                 TitleChoices.Add($"{t}: {label}");
             }
 
@@ -364,6 +366,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool IsTrainerType => Current?.Type == PokegearPhoneBook.TypeTrainer;
         public bool UsesSchedule => Current != null && (Current.Type == PokegearPhoneBook.TypeTrainer || Current.Type == PokegearPhoneBook.TypeGymLeader);
 
+        /// <summary>Kenji's rematch only counts during the day band.</summary>
+        public bool IsKenji => _current == PokegearPhoneBook.KenjiContact;
+
         public string TypeNote => Current == null ? ""
             : PokegearPhoneBook.RingsAtRandom(Current.Type) ? "Can call at random." : "Only calls when a script or event starts the call.";
 
@@ -384,8 +389,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 if (e.Title < PokegearPhoneBook.TitleNone && e.Title >= _classNameCount)
                     lines.Add($"Trainer class {e.Title} has no name, so the title is blank.");
-                else if (e.Title >= PokegearPhoneBook.FirstPhoneTitle + PokegearPhoneBook.PhoneTitleCount)
-                    lines.Add("Titles above 207 are blank.");
+                else if (PokegearPhoneBook.TitleReadsPastEnd(e.Title))
+                    lines.Add("Titles above 207 read past the end of the phone text, so what shows is undefined.");
 
                 if (e.TrainerId != 0)
                 {
@@ -404,7 +409,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     lines.Add($"Random group {e.RandomGroup} is never picked, so this contact never calls at random.");
 
                 if (_book.Entries.Count != PokegearPhoneBook.GameContactCount)
-                    lines.Add($"The phone book has {_book.Entries.Count} contacts; the game is built for {PokegearPhoneBook.GameContactCount}.");
+                    lines.Add($"The phone book has {_book.Entries.Count} contacts, but the save data, the contact name table and the call tables are all sized for {PokegearPhoneBook.GameContactCount}.");
 
                 return string.Join("\n", lines);
             }
@@ -443,7 +448,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             foreach (string p in new[]
             {
-                nameof(IsEntrySelected), nameof(Heading), nameof(IsTrainerType), nameof(UsesSchedule), nameof(TypeNote),
+                nameof(IsEntrySelected), nameof(Heading), nameof(IsTrainerType), nameof(UsesSchedule), nameof(TypeNote), nameof(IsKenji),
                 nameof(RematchRow), nameof(HasRematchRow), nameof(Problems), nameof(HasProblems),
             }) OnPropertyChanged(p);
         }

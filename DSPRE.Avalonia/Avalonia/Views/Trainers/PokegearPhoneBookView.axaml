@@ -45,7 +45,7 @@
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Title"/>
-              <controls:HelpTip Text="The label under the name in the contact list. 0-199 are trainer classes, 200 shows no title, and 201-207 are phone titles such as Pokémon Professor."/>
+              <controls:HelpTip Text="The label under the name in the contact list. 0-199 are trainer classes, 200 shows no title, and 201-207 are phone titles such as Pokémon Professor. Higher values read past the phone text, so what shows is undefined."/>
             </StackPanel>
             <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding TitleChoices}" SelectedIndex="{Binding TitleIndex}" HorizontalAlignment="Stretch"/>
 
@@ -93,6 +93,8 @@
                         ToolTip.Tip="When calling this contact can set up a rematch">
               <ComboBox ItemsSource="{Binding WeekdayChoices}" SelectedIndex="{Binding WeekdayIndex}" Width="140"/>
               <ComboBox ItemsSource="{Binding TimeChoices}" SelectedIndex="{Binding TimeIndex}" Width="120"/>
+              <TextBlock Text="Day only (10:00-19:59)" IsVisible="{Binding IsKenji}" FontSize="11"
+                         Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
             </StackPanel>
 
             <StackPanel Grid.Row="8" Orientation="Horizontal" VerticalAlignment="Center">

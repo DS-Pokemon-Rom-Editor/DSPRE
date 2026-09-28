@@ -91,9 +91,11 @@ namespace DSPRE
         public static int starterScreenTextNumber { get; private set; } = -1;
         public static int starterPokedexSpeciesTextNumber { get; private set; } = -1; // DP/Pt only
 
-        // The HGSS offset is only a fallback; RematchTable reads the address from the overlay itself.
+        // Both table offsets are fallbacks; RematchTable reads the address from the overlay itself.
         public static int vsSeekerRematchOverlayNumber { get; private set; } = -1;
         public static uint vsSeekerRematchTableOffset { get; private set; }
+        public static int[] vsSeekerRematchPointerOffsets { get; private set; } = System.Array.Empty<int>();
+        public static int vsSeekerRematchRowCompareOffset { get; private set; } = -1;
         public static int pokegearRematchOverlayNumber { get; private set; } = -1;
         public static uint pokegearRematchFallbackTableOffset { get; private set; }
         /// <summary>Pokégear phone strings, whose messages from 38 on are the special contact titles. -1 when unknown.</summary>
@@ -1261,20 +1263,28 @@ namespace DSPRE
         {
             vsSeekerRematchOverlayNumber = -1;
             vsSeekerRematchTableOffset = 0;
+            vsSeekerRematchPointerOffsets = System.Array.Empty<int>();
+            vsSeekerRematchRowCompareOffset = -1;
             pokegearRematchOverlayNumber = -1;
             pokegearRematchFallbackTableOffset = 0;
             pokegearPhoneMessageArchive = -1;
 
             switch (gameFamily)
             {
+                // Literal-pool words in the lookup code that hold the table address, and the row-count
+                // compare bounding its loop (pokeplatinum overlay005/vs_seeker.c).
                 case GameFamilies.DP:
                     vsSeekerRematchOverlayNumber = 5;
                     vsSeekerRematchTableOffset = 0x1F43C;
+                    vsSeekerRematchPointerOffsets = new[] { 0xA3D8, 0xA420, 0xA47C, 0xA494 };
+                    vsSeekerRematchRowCompareOffset = 0xA3D0;
                     break;
 
                 case GameFamilies.Plat:
                     vsSeekerRematchOverlayNumber = 5;
                     vsSeekerRematchTableOffset = 0x280C8;
+                    vsSeekerRematchPointerOffsets = new[] { 0xB078, 0xB0C0, 0xB11C, 0xB134 };
+                    vsSeekerRematchRowCompareOffset = 0xB070;
                     break;
 
                 case GameFamilies.HGSS:
