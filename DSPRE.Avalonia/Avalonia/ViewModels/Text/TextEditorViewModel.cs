@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _previewFrame >= 0 && _previewFrame < _previewFrames.Count ? _previewFrames[_previewFrame] : null;
 
         /// <summary>What the box would be showing at this point in the message.</summary>
-        public string PreviewText => CurrentPreview?.Text;
+        public string PreviewText => CurrentPreview?.Text ?? "";
 
         public bool HasPreview => CurrentPreview != null;
 
