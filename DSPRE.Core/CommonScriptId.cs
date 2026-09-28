@@ -2,10 +2,10 @@ namespace DSPRE
 {
     /// <summary>
     /// Resolves a "common"/global script number against the CommonScript ID reference tables for
-    /// Platinum and HGSS (identical across languages for a given game). Below 2000, a script number is
-    /// always local to the current event's own paired script file, which DSPRE already handles; this
-    /// resolver is only meant to be consulted as a fallback once that local lookup fails. Diamond/Pearl
-    /// has no known table and is intentionally left alone (always returns NotCommon).
+    /// Diamond/Pearl, Platinum and HGSS (identical across languages for a given game). Below 2000, a
+    /// script number is always local to the current event's own paired script file, which DSPRE already
+    /// handles; this resolver is only meant to be consulted as a fallback once that local lookup fails.
+    /// Each game has its own table because some ranges changed meaning between games.
     /// </summary>
     public static class CommonScriptId
     {
@@ -39,6 +39,39 @@ namespace DSPRE
             public int[] DiscrepancyCandidates; // non-null only for a Discrepancy bracket
         }
 
+        // Decoded from pokediamond LoadScriptsAndMessagesByMapId (arm9/asm/unk_02038C78.s): each branch
+        // compares against the range start, loads a script and a message archive, and subtracts that start.
+        private static readonly Bracket[] DpBrackets =
+        {
+            new Bracket { Lower = 10300, Upper = 65536, ScriptArchive = 977,  TextArchive = 496 },
+            new Bracket { Lower = 10200, Upper = 10300, ScriptArchive = 373,  TextArchive = 332 },
+            new Bracket { Lower = 10150, Upper = 10200, ScriptArchive = 1042, TextArchive = 562 },
+            new Bracket { Lower = 10100, Upper = 10150, ScriptArchive = 1041, TextArchive = 563 },
+            new Bracket { Lower = 10000, Upper = 10100, ScriptArchive = 375,  TextArchive = 334 }, // Field moves
+            new Bracket { Lower = 9950,  Upper = 10000, ScriptArchive = 376,  TextArchive = 335 },
+            new Bracket { Lower = 9900,  Upper = 9950,  ScriptArchive = 365,  TextArchive = 199 },
+            new Bracket { Lower = 9800,  Upper = 9900,  ScriptArchive = 206,  TextArchive = 203 },
+            new Bracket { Lower = 9700,  Upper = 9800,  ScriptArchive = 387,  TextArchive = 378 },
+            new Bracket { Lower = 9600,  Upper = 9700,  ScriptArchive = 377,  TextArchive = 199 },
+            new Bracket { Lower = 9500,  Upper = 9600,  ScriptArchive = 464,  TextArchive = 492 },
+            new Bracket { Lower = 9400,  Upper = 9500,  ScriptArchive = 391,  TextArchive = 381 },
+            new Bracket { Lower = 9300,  Upper = 9400,  ScriptArchive = 372,  TextArchive = 329 },
+            new Bracket { Lower = 9200,  Upper = 9300,  ScriptArchive = 388,  TextArchive = 379 },
+            new Bracket { Lower = 9100,  Upper = 9200,  ScriptArchive = 0,    TextArchive = 9   },
+            new Bracket { Lower = 9000,  Upper = 9100,  ScriptArchive = 207,  TextArchive = 207 }, // Communication Club
+            new Bracket { Lower = 8970,  Upper = 9000,  ScriptArchive = 390,  TextArchive = 7   },
+            new Bracket { Lower = 8950,  Upper = 8970,  ScriptArchive = 463,  TextArchive = 486 },
+            new Bracket { Lower = 8900,  Upper = 8950,  ScriptArchive = 389,  TextArchive = 380 },
+            new Bracket { Lower = 8800,  Upper = 8900,  ScriptArchive = 462,  TextArchive = 485 },
+            new Bracket { Lower = 8000,  Upper = 8800,  ScriptArchive = 374,  TextArchive = 333 }, // Hidden Items
+            new Bracket { Lower = 7000,  Upper = 8000,  ScriptArchive = 370,  TextArchive = 325 }, // Ground Items
+            new Bracket { Lower = 5000,  Upper = 7000,  ScriptArchive = 1040, TextArchive = 199 }, // Double Battles
+            new Bracket { Lower = 3000,  Upper = 5000,  ScriptArchive = 1040, TextArchive = 199 }, // Single Battles
+            new Bracket { Lower = 2800,  Upper = 3000,  ScriptArchive = 378,  TextArchive = 350 }, // Berry soil
+            new Bracket { Lower = 2500,  Upper = 2800,  ScriptArchive = 1,    TextArchive = 13  },
+            new Bracket { Lower = 2000,  Upper = 2500,  ScriptArchive = 205,  TextArchive = 199 }, // "Common" Scripts
+        };
+
         private static readonly Bracket[] PlatBrackets =
         {
             new Bracket { Lower = 10490, Upper = 65536, ScriptArchive = 499,  TextArchive = 541 },
@@ -58,7 +91,7 @@ namespace DSPRE
             new Bracket { Lower = 9300,  Upper = 9400,  ScriptArchive = 406,  TextArchive = 374  },
             new Bracket { Lower = 9200,  Upper = 9300,  ScriptArchive = 423,  TextArchive = 430  },
             new Bracket { Lower = 9100,  Upper = 9200,  ScriptArchive = 0,    TextArchive = 11   },
-            new Bracket { Lower = 9000,  Upper = 9100,  ScriptArchive = 213,  TextArchive = 221  },
+            new Bracket { Lower = 9000,  Upper = 9100,  ScriptArchive = 213,  TextArchive = 221  }, // Communication Club
             new Bracket { Lower = 8970,  Upper = 9000,  ScriptArchive = 425,  TextArchive = 7    },
             new Bracket { Lower = 8950,  Upper = 8970,  ScriptArchive = 498,  TextArchive = 539  },
             new Bracket { Lower = 8900,  Upper = 8950,  ScriptArchive = 424,  TextArchive = 431  },
@@ -67,7 +100,7 @@ namespace DSPRE
             new Bracket { Lower = 7000,  Upper = 8000,  ScriptArchive = 404,  TextArchive = 369  }, // Ground Items
             new Bracket { Lower = 5000,  Upper = 7000,  ScriptArchive = 1114, TextArchive = 213  }, // Double Battles
             new Bracket { Lower = 3000,  Upper = 5000,  ScriptArchive = 1114, TextArchive = 213  }, // Single Battles
-            new Bracket { Lower = 2800,  Upper = 3000,  ScriptArchive = 413,  TextArchive = 397  },
+            new Bracket { Lower = 2800,  Upper = 3000,  ScriptArchive = 413,  TextArchive = 397  }, // Berry soil
             new Bracket { Lower = 2500,  Upper = 2800,  ScriptArchive = 1,    TextArchive = 17   },
             new Bracket { Lower = 2000,  Upper = 2500,  ScriptArchive = 211,  TextArchive = 213  }, // "Common" Scripts
         };
@@ -102,15 +135,14 @@ namespace DSPRE
             new Bracket { Lower = 7000,  Upper = 8000,  ScriptArchive = 141, TextArchive = 199 }, // Ground Items
             new Bracket { Lower = 5000,  Upper = 7000,  ScriptArchive = 953, TextArchive = 40  }, // Double Battles
             new Bracket { Lower = 3000,  Upper = 5000,  ScriptArchive = 953, TextArchive = 40  }, // Single Battles
-            new Bracket { Lower = 2800,  Upper = 3000,  ScriptArchive = 150, TextArchive = 23  },
+            new Bracket { Lower = 2800,  Upper = 3000,  ScriptArchive = 150, TextArchive = 23  }, // Apricorn trees
             new Bracket { Lower = 2500,  Upper = 2800,  ScriptArchive = 1,   TextArchive = 20  },
             new Bracket { Lower = 2000,  Upper = 2500,  ScriptArchive = 3,   TextArchive = 40  }, // "Common" Scripts
         };
 
         /// <summary>Resolves a script number that fell outside the current event's own paired script
-        /// file. Only meaningful for numbers &gt;= 2000 on Platinum/HGSS; everything else (including all
-        /// of Diamond/Pearl, which has no known table) returns NotCommon so callers keep their existing
-        /// local-only behavior.</summary>
+        /// file. Only meaningful for numbers &gt;= 2000; everything else returns NotCommon so callers keep
+        /// their existing local-only behavior.</summary>
         public static Result Resolve(RomInfo.GameFamilies family, int scriptNumber)
         {
             if (scriptNumber < 2000)
@@ -119,9 +151,10 @@ namespace DSPRE
             }
 
             Bracket[] table;
-            if (family == RomInfo.GameFamilies.Plat) table = PlatBrackets;
+            if (family == RomInfo.GameFamilies.DP) table = DpBrackets;
+            else if (family == RomInfo.GameFamilies.Plat) table = PlatBrackets;
             else if (family == RomInfo.GameFamilies.HGSS) table = HgssBrackets;
-            else return new Result { Kind = Kind.NotCommon }; // DP: no known table, old behavior stands
+            else return new Result { Kind = Kind.NotCommon };
 
             foreach (var b in table)
             {
