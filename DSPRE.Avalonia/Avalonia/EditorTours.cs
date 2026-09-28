@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia
             timer.Tick += (_, _) =>
             {
                 if (!buttonAdded) buttonAdded = AddButton(root, key);
-                if (GuidedTour.IsActive || !root.IsEffectivelyVisible || root.Bounds.Width < 200 || BusyOverlay.IsBusy(root) || StillLoading(root)) { visibleTicks = 0; return; }
+                if (!AvaloniaEditorLauncher.IsRomLoaded || GuidedTour.IsActive || !root.IsEffectivelyVisible || root.Bounds.Width < 200 || BusyOverlay.IsBusy(root) || StillLoading(root)) { visibleTicks = 0; return; }
                 // Give the editor a moment to fill in before offering.
                 if (++visibleTicks < 3) return;
                 timer.Stop();
