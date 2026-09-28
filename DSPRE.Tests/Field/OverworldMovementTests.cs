@@ -1,73 +1,97 @@
 using System.Linq;
+using DSPRE;
 using DSPRE.ROMFiles;
 using Xunit;
 
 namespace DSPRE.Tests
 {
-    /// <summary>Pins the movement table against fieldobj_code.h: 0x00-0x38 with no gaps.</summary>
+    /// <summary>
+    /// Pins the movement tables per game: Diamond/Pearl 0-54, Platinum 0-67, HeartGold/SoulSilver 0-56
+    /// without the berry patch at 47.
+    /// </summary>
     public class OverworldMovementTests
     {
         [Fact]
-        public void CoversEveryCodeTheEngineDefines()
+        public void DiamondPearlDefinesZeroToFiftyFour()
         {
-            var values = OverworldMovements.All.Select(m => m.Value).ToArray();
-            Assert.Equal(0x39, values.Length);                       // MV_CODE_MAX
-            Assert.Equal(Enumerable.Range(0, 0x39).Select(i => (byte)i), values);
+            var values = OverworldMovements.For(RomInfo.GameFamilies.DP).Select(m => (int)m.Value);
+            Assert.Equal(Enumerable.Range(0, 55), values);
         }
 
         [Fact]
-        public void CodesPastTheEngineMaximumAreNotDefined()
+        public void PlatinumDefinesZeroToSixtySeven()
         {
-            Assert.False(OverworldMovements.IsDefined(0x39));
-            Assert.False(OverworldMovements.IsDefined(71));          // DSPRE's dropdown goes this far
-            Assert.False(OverworldMovements.IsDefined(OverworldMovements.NotSet));
+            var values = OverworldMovements.For(RomInfo.GameFamilies.Plat).Select(m => (int)m.Value);
+            Assert.Equal(Enumerable.Range(0, 68), values);
+        }
+
+        [Fact]
+        public void HeartGoldDefinesZeroToFiftySixWithoutTheBerryPatch()
+        {
+            var values = OverworldMovements.For(RomInfo.GameFamilies.HGSS).Select(m => (int)m.Value);
+            Assert.Equal(Enumerable.Range(0, 57).Where(v => v != 47), values);
+            Assert.False(OverworldMovements.IsDefined(RomInfo.GameFamilies.HGSS, 47));
+            Assert.True(OverworldMovements.IsDefined(RomInfo.GameFamilies.Plat, 47));
+        }
+
+        [Fact]
+        public void ValuesPastEachGamesListAreNotDefined()
+        {
+            Assert.False(OverworldMovements.IsDefined(RomInfo.GameFamilies.DP, 55));
+            Assert.False(OverworldMovements.IsDefined(RomInfo.GameFamilies.HGSS, 57));
+            Assert.False(OverworldMovements.IsDefined(RomInfo.GameFamilies.Plat, 68));
+            Assert.False(OverworldMovements.IsDefined(RomInfo.GameFamilies.Plat, 0xFF));
+            Assert.False(OverworldMovements.IsDefined(RomInfo.GameFamilies.Plat, 0x1FF));
         }
 
         [Fact]
         public void WanderAxesAreConstrained()
         {
             Assert.Equal(new[] { MoveFacing.Up, MoveFacing.Down },
-                         OverworldMovements.Find(0x04).Facings.ToArray());
+                         OverworldMovements.Find(4).Facings.ToArray());
             Assert.Equal(new[] { MoveFacing.Left, MoveFacing.Right },
-                         OverworldMovements.Find(0x05).Facings.ToArray());
-            Assert.Equal(4, OverworldMovements.Find(0x03).Facings.Count);
+                         OverworldMovements.Find(5).Facings.ToArray());
+            Assert.Equal(4, OverworldMovements.Find(3).Facings.Count);
         }
 
         [Fact]
-        public void RouteFollowsTheOrderInTheName()
+        public void EveryRouteHasFourLegs()
         {
-            // MV_RTURLD: up, right, left, down
+            for (int v = 21; v <= 44; v++)
+            {
+                var route = OverworldMovements.Find(v);
+                Assert.Equal(MoveKind.Route, route.Kind);
+                Assert.Equal(4, route.Facings.Count);
+            }
             Assert.Equal(new[] { MoveFacing.Up, MoveFacing.Right, MoveFacing.Left, MoveFacing.Down },
-                         OverworldMovements.Find(0x15).Facings.ToArray());
-            // MV_RTUL: just up and left
-            Assert.Equal(new[] { MoveFacing.Up, MoveFacing.Left },
-                         OverworldMovements.Find(0x25).Facings.ToArray());
+                         OverworldMovements.Find(21).Facings.ToArray());
+            // 37 goes round a rectangle: north, west, south, east.
+            Assert.Equal(new[] { MoveFacing.Up, MoveFacing.Left, MoveFacing.Down, MoveFacing.Right },
+                         OverworldMovements.Find(37).Facings.ToArray());
         }
 
         [Fact]
-        public void OnlyThreeCodesActuallyWalkAtRandom()
+        public void OnlyFourCodesActuallyWalkAtRandom()
         {
-            // fieldobj_movedata.c gives MV_RND, MV_RND_V and MV_RND_H a walking handler; every other
-            // "random" code gets DirRnd, which switches movement off and only turns the sprite.
-            var walking = OverworldMovements.All.Where(m => m.Kind == MoveKind.Wander)
-                                                .Select(m => m.Value).ToArray();
-            Assert.Equal(new byte[] { 0x03, 0x04, 0x05 }, walking);
+            // 67 is 5's handler with only the range checked, so it walks through walls.
+            var walking = OverworldMovements.For(RomInfo.GameFamilies.Plat)
+                                            .Where(m => m.Kind == MoveKind.Wander)
+                                            .Select(m => m.Value).ToArray();
+            Assert.Equal(new byte[] { 3, 4, 5, 67 }, walking);
         }
 
         [Fact]
         public void WalkBackAndForthTakesItsDirectionFromTheEvent()
         {
-            // MV_RT2 reads the event's own facing rather than carrying a direction list.
-            var rt2 = OverworldMovements.Find(0x14);
-            Assert.True(rt2.RouteFollowsEventFacing);
-            Assert.False(OverworldMovements.Find(0x15).RouteFollowsEventFacing);
+            Assert.True(OverworldMovements.Find(20).RouteFollowsEventFacing);
+            Assert.False(OverworldMovements.Find(21).RouteFollowsEventFacing);
         }
 
         [Fact]
         public void SpinDirectionsDiffer()
         {
-            Assert.False(OverworldMovements.Find(0x12).SpinClockwise);
-            Assert.True(OverworldMovements.Find(0x13).SpinClockwise);
+            Assert.False(OverworldMovements.Find(18).SpinClockwise);
+            Assert.True(OverworldMovements.Find(19).SpinClockwise);
         }
     }
 }

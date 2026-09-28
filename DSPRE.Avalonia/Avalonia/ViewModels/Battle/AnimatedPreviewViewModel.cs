@@ -2097,13 +2097,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 int n = 0;
                 foreach (var ow in events.overworlds)
                 {
-                    var move = OverworldMovements.Find((byte)ow.movement);
+                    var move = OverworldMovements.Find(RomInfo.gameFamily, ow.movement);
                     var facing = (MoveFacing)Math.Min(Math.Max((int)ow.orientation, 0), 3);
-                    // The glancing and spinning trainer types take their pace from param1 rather than
-                    // the usual wait. Those are the only types that read it at all.
-                    OverworldEventType type = null;
-                    try { type = OverworldEventTypes.For(RomInfo.gameFamily).FirstOrDefault(t => t.Value == ow.type); } catch { }
-                    int interval = type?.Param1Label != null ? ow.param1 : 0;
+                    // param1 on the looking trainer types counts steps walked, not frames, so it
+                    // doesn't change the idle pace.
+                    const int interval = 0;
                     // The engine refuses a step into a closed-off tile, so the preview asks the same
                     // question, in whole-matrix tiles measured from where the event stands.
                     int homeX = ow.xMatrixPosition * MapFile.mapSize + ow.xMapPosition;

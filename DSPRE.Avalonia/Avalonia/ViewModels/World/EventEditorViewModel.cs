@@ -154,17 +154,18 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Overworld sprite/movement/orientation dropdowns (mirrors WinForms EventEditor) ──
         public ObservableCollection<string> OwSpriteEntries { get; } = new ObservableCollection<string>();
-        // Only the movement codes the games actually define (0x00-0x38). The old list ran to 71, so a
-        // third of it wrote codes no game has a handler for.
-        public ObservableCollection<string> OwMovementNames { get; } =
-            new ObservableCollection<string>(OverworldMovements.All.Select(m => m.ToString()));
+        // Only the movement types the loaded game defines; the list differs per game family.
+        public ObservableCollection<string> OwMovementNames { get; } = new ObservableCollection<string>();
+        private IReadOnlyList<OverworldMovement> _owMoveTable = new List<OverworldMovement>();
 
-        /// <summary>The event's movement code isn't one the games define, so leave it alone.</summary>
-        public bool OwMovementUnknown => _ow != null && !OverworldMovements.IsDefined((byte)_owMove);
+        /// <summary>The event's movement type isn't one this game defines, so leave it alone.</summary>
+        public bool OwMovementUnknown => _ow != null && OwMovementIndex < 0;
         public string OwMovementUnknownNote => OwMovementUnknown
-            ? $"Movement code {(int)_owMove} isn't one this game defines. It is kept as-is unless you pick another."
+            ? $"Movement {(int)_owMove} isn't one this game defines. It is kept as-is unless you pick another."
             : null;
-        public ObservableCollection<string> OwOrientationNames { get; } = new ObservableCollection<string> { "Up", "Down", "Left", "Right" };
+        // The record allows -1 for no facing; it sits last so 0-3 stay index == value.
+        public ObservableCollection<string> OwOrientationNames { get; } = new ObservableCollection<string> { "Up", "Down", "Left", "Right", "None" };
+        private const int OwNoFacingIndex = 4;
 
         private global::Avalonia.Media.Imaging.Bitmap _owSpritePreview;
         public global::Avalonia.Media.Imaging.Bitmap OwSpritePreview { get => _owSpritePreview; private set => Set(ref _owSpritePreview, value); }
@@ -217,9 +218,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string OwParam1Label => CurrentOwType?.Param1Label;
         public bool OwParam1Visible => !string.IsNullOrEmpty(OwParam1Label);
 
-        /// <summary>Type 9 runs the shared message script, so its number is a message, not a script.</summary>
-        public bool OwScriptIsMessageId => _owRawType == 9;
-        public string OwScriptSectionLabel => OwScriptIsMessageId ? "Message ID" : "Script";
+        /// <summary>param0 for a non-trainer type that reads it; trainers show it as sight range.</summary>
+        public string OwParam0Label => CurrentOwType?.IsTrainer == true ? null : CurrentOwType?.Param0Label;
+        public bool OwParam0Visible => !string.IsNullOrEmpty(OwParam0Label);
+
+        /// <summary>Type 9 runs an empty script when talked to, so its own script number is never reached by talking.</summary>
+        public bool OwTalkRunsNothing => _owRawType == 9;
 
         private static OwKind KindOfType(ushort t)
             => t == (ushort)Overworld.OwType.ITEM ? OwKind.Item
@@ -230,8 +234,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(OwEventTypeIndex)); OnPropertyChanged(nameof(OwTypeUnknown));
             OnPropertyChanged(nameof(OwTypeUnknownNote)); OnPropertyChanged(nameof(OwTypeNote));
             OnPropertyChanged(nameof(OwHasTypeNote)); OnPropertyChanged(nameof(OwParam1Label));
-            OnPropertyChanged(nameof(OwParam1Visible)); OnPropertyChanged(nameof(OwScriptIsMessageId));
-            OnPropertyChanged(nameof(OwScriptSectionLabel));
+            OnPropertyChanged(nameof(OwParam1Visible)); OnPropertyChanged(nameof(OwTalkRunsNothing));
+            OnPropertyChanged(nameof(OwParam0Label)); OnPropertyChanged(nameof(OwParam0Visible));
             OnPropertyChanged(nameof(OwScriptGenericWarningVisible)); OnPropertyChanged(nameof(OwScriptCommonInfo)); OnPropertyChanged(nameof(OwScriptHasCommonInfo));
         }
 
@@ -410,6 +414,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             _owTypeTable = OverworldEventTypes.For(RomInfo.gameFamily);
             OwEventTypes.Clear();
             foreach (var t in _owTypeTable) OwEventTypes.Add(t.ToString());
+
+            _owMoveTable = OverworldMovements.For(RomInfo.gameFamily);
+            OwMovementNames.Clear();
+            foreach (var m in _owMoveTable) OwMovementNames.Add(m.ToString());
         }
 
         private void PopulateOwTrainerAndItemEntries()
@@ -672,7 +680,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             get
             {
-                if (_ow == null || _owKind != OwKind.Normal || OwScriptIsMessageId || !OwScriptIndexOutOfRange) return null;
+                if (_ow == null || _owKind != OwKind.Normal || OwTalkRunsNothing || !OwScriptIndexOutOfRange) return null;
 
                 var result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_owScript);
                 switch (result.Kind)
@@ -744,7 +752,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void GoToSpawnableScript() { if (_spawn != null) GoToScript(_spawn.scriptNumber); }
 
         public bool OwScriptHasCommonInfo => !string.IsNullOrEmpty(OwScriptCommonInfo);
-        public bool OwScriptGenericWarningVisible => !OwScriptIsMessageId && OwScriptIndexOutOfRange && !OwScriptHasCommonInfo;
+        public bool OwScriptGenericWarningVisible => !OwTalkRunsNothing && OwScriptIndexOutOfRange && !OwScriptHasCommonInfo;
         public decimal OwOrientation
         {
             get => _owOrient;
@@ -767,14 +775,30 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged();
             }
         }
-        // index == code for the whole defined range, so an out-of-range code simply shows nothing
-        // selected rather than silently snapping to a different movement.
+        // A value the game doesn't define shows nothing selected rather than snapping to another movement.
         public int OwMovementIndex
         {
-            get => OverworldMovements.IsDefined((byte)_owMove) ? (int)_owMove : -1;
-            set { if (value >= 0) OwMovement = value; }
+            get
+            {
+                for (int i = 0; i < _owMoveTable.Count; i++) if (_owMoveTable[i].Value == _owMove) return i;
+                return -1;
+            }
+            set
+            {
+                if (value < 0 || value >= _owMoveTable.Count) return;
+                OwMovement = _owMoveTable[value].Value;
+                OnPropertyChanged(nameof(OwMovementUnknown)); OnPropertyChanged(nameof(OwMovementUnknownNote));
+            }
         }
-        public int OwOrientationIndex { get => (int)_owOrient; set => OwOrientation = value; }
+        public int OwOrientationIndex
+        {
+            get => _owOrient == -1 ? OwNoFacingIndex : (_owOrient >= 0 && _owOrient < OwNoFacingIndex ? (int)_owOrient : -1);
+            set
+            {
+                if (value < 0 || value > OwNoFacingIndex) return;
+                OwOrientation = value == OwNoFacingIndex ? -1 : value;
+            }
+        }
 
         private void UpdateOwSpritePreview()
         {
@@ -1083,7 +1107,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _owTrainerIndex = (idx >= 0 && idx < OwTrainerEntries.Count) ? idx : -1;
                 _owPartnerTrainer = partner;
             }
-            else if (_ow.type == (ushort)Overworld.OwType.ITEM || (_ow.scriptNumber >= 7000 && _ow.scriptNumber <= 8000))
+            else if (_ow.type == (ushort)Overworld.OwType.ITEM
+                     || (_ow.scriptNumber >= GroundItemScriptsLogic.ItemScrMin && _ow.scriptNumber < GroundItemScriptsLogic.ItemScrMax))
             {
                 _owKind = OwKind.Item;
                 int itemIdx = _ow.scriptNumber - 7000;

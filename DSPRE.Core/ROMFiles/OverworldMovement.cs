@@ -15,11 +15,11 @@ namespace DSPRE.ROMFiles
         FaceFixed,     // stands still facing one way
         Spin,          // turns on the spot in a fixed direction
         Route,         // walks a set path, turning back when it reaches the end
-        Special,       // hiding, pairs, rematches and so on: nothing generic to animate
+        Special,       // hiding, following, berry patches and so on: nothing generic to animate
     }
 
     /// <summary>
-    /// What an overworld's move_code makes it do, for previewing a map without running scripts.
+    /// What an overworld's movement type makes it do, for previewing a map without running scripts.
     /// </summary>
     public sealed class OverworldMovement
     {
@@ -30,16 +30,20 @@ namespace DSPRE.ROMFiles
         public IReadOnlyList<MoveFacing> Facings = Array.Empty<MoveFacing>();
         public bool SpinClockwise;
 
-        /// <summary>A route with no directions of its own walks the way the event is facing (MV_RT2).</summary>
+        /// <summary>A route with no directions of its own walks the way the event is facing (type 20).</summary>
         public bool RouteFollowsEventFacing => Kind == MoveKind.Route && Facings.Count == 0;
 
         public override string ToString() => $"[{Value:D2}]  {Name}";
     }
 
+    /// <summary>
+    /// The movement types each game defines. 0-46 and 48-54 mean the same in all three families;
+    /// Diamond/Pearl stops at 54, HeartGold/SoulSilver has no berry patch at 47 and adds 55-56, and
+    /// Platinum adds 55-67.
+    /// </summary>
     public static class OverworldMovements
     {
-        public const byte MaxDefined = 0x38;   // MV_CODE_MAX is 0x39, so 0x38 is the last real code
-        public const byte NotSet = 0xFF;       // MV_CODE_NOT
+        public const byte BerryPatch = 47;
 
         private static readonly Dictionary<char, MoveFacing> Letters = new Dictionary<char, MoveFacing>
         {
@@ -51,28 +55,30 @@ namespace DSPRE.ROMFiles
         private static string Spell(string letters) =>
             string.Join(", ", Parse(letters).Select(f => f.ToString().ToLowerInvariant()));
 
-        private static readonly OverworldMovement[] Table = BuildTable();
+        private static readonly OverworldMovement[] Common = BuildCommon();
+        private static readonly OverworldMovement[] DpTable = Common.ToArray();
+        private static readonly OverworldMovement[] PtTable = Common.Concat(PlatinumExtras()).ToArray();
+        private static readonly OverworldMovement[] HgssTable =
+            Common.Where(m => m.Value != BerryPatch).Concat(HgssExtras()).ToArray();
 
-        private static OverworldMovement[] BuildTable()
+        private static OverworldMovement[] BuildCommon()
         {
             var list = new List<OverworldMovement>
             {
-                new OverworldMovement { Value = 0x00, Name = "None",     Kind = MoveKind.Static },
-                new OverworldMovement { Value = 0x01, Name = "Player",   Kind = MoveKind.Player },
+                new OverworldMovement { Value = 0, Name = "None",   Kind = MoveKind.Static },
+                new OverworldMovement { Value = 1, Name = "Player", Kind = MoveKind.Player },
 
-                // MV_DIR_RND and the MV_RND_UL family all register a DirRnd handler, which switches the
-                // move status off for good: they turn on the spot and never leave their tile.
-                new OverworldMovement { Value = 0x02, Name = "Look around", Kind = MoveKind.TurnRandom,
+                // The look-around types turn on the spot and never leave their tile.
+                new OverworldMovement { Value = 2, Name = "Look around", Kind = MoveKind.TurnRandom,
                     Facings = Parse("UDLR") },
 
-                // Only these three walk at random. They take no direction table beyond their axis.
-                new OverworldMovement { Value = 0x03, Name = "Walk about",              Kind = MoveKind.Wander, Facings = Parse("UDLR") },
-                new OverworldMovement { Value = 0x04, Name = "Walk up and down",        Kind = MoveKind.Wander, Facings = Parse("UD") },
-                new OverworldMovement { Value = 0x05, Name = "Walk left and right",     Kind = MoveKind.Wander, Facings = Parse("LR") },
+                // Only these three walk at random.
+                new OverworldMovement { Value = 3, Name = "Walk about",          Kind = MoveKind.Wander, Facings = Parse("UDLR") },
+                new OverworldMovement { Value = 4, Name = "Walk up and down",    Kind = MoveKind.Wander, Facings = Parse("UD") },
+                new OverworldMovement { Value = 5, Name = "Walk left and right", Kind = MoveKind.Wander, Facings = Parse("LR") },
             };
 
-            // 0x06-0x0d: look around, but only towards some of the directions.
-            byte v = 0x06;
+            byte v = 6;
             foreach (string set in new[] { "UL", "UR", "DL", "DR", "UDL", "UDR", "ULR", "DLR" })
                 list.Add(new OverworldMovement
                 {
@@ -82,7 +88,7 @@ namespace DSPRE.ROMFiles
                     Facings = Parse(set),
                 });
 
-            foreach (var (val, set) in new (byte, string)[] { (0x0e, "U"), (0x0f, "D"), (0x10, "L"), (0x11, "R") })
+            foreach (var (val, set) in new (byte, string)[] { (14, "U"), (15, "D"), (16, "L"), (17, "R") })
                 list.Add(new OverworldMovement
                 {
                     Value = val,
@@ -91,20 +97,21 @@ namespace DSPRE.ROMFiles
                     Facings = Parse(set),
                 });
 
-            list.Add(new OverworldMovement { Value = 0x12, Name = "Spin anticlockwise", Kind = MoveKind.Spin });
-            list.Add(new OverworldMovement { Value = 0x13, Name = "Spin clockwise",     Kind = MoveKind.Spin, SpinClockwise = true });
+            list.Add(new OverworldMovement { Value = 18, Name = "Spin anticlockwise", Kind = MoveKind.Spin });
+            list.Add(new OverworldMovement { Value = 19, Name = "Spin clockwise",     Kind = MoveKind.Spin, SpinClockwise = true });
 
-            // MV_RT2 walks back and forth the way the event faces, turning round at the end of its range.
-            list.Add(new OverworldMovement { Value = 0x14, Name = "Walk back and forth", Kind = MoveKind.Route });
+            // Walks the way the event faces, turning round at the end of its range.
+            list.Add(new OverworldMovement { Value = 20, Name = "Walk back and forth", Kind = MoveKind.Route });
 
-            // 0x15-0x24 patrol four points, 0x25-0x2c patrol two; the letters after RT are the order.
+            // 21-44 each walk a route of four legs, moving to the next leg at the edge of the range.
+            // The legs are the game's own direction lists; 25 and 26 really are the same route.
             string[] routes =
             {
-                "URLD", "RLDU", "DURL", "LDUR", "ULRD", "LRDU", "DULR", "RDUL",
+                "URLD", "RLDU", "DURL", "LDUR", "LRDU", "LRDU", "DULR", "RDUL",
                 "LUDR", "UDRL", "RLUD", "DRLU", "RUDL", "UDLR", "LRUD", "DLRU",
-                "UL", "DR", "LD", "RU", "UR", "DL", "LU", "RD",
+                "ULDR", "DRUL", "LDRU", "RULD", "URDL", "DLUR", "LURD", "RDLU",
             };
-            v = 0x15;
+            v = 21;
             foreach (string route in routes)
                 list.Add(new OverworldMovement
                 {
@@ -114,28 +121,66 @@ namespace DSPRE.ROMFiles
                     Facings = Parse(route),
                 });
 
-            // Two more look-around codes, added later than the 0x06 block but the same handler.
-            list.Add(new OverworldMovement { Value = 0x2d, Name = "Look around, up, down",  Kind = MoveKind.TurnRandom, Facings = Parse("UD") });
-            list.Add(new OverworldMovement { Value = 0x2e, Name = "Look around, left, right", Kind = MoveKind.TurnRandom, Facings = Parse("LR") });
+            list.Add(new OverworldMovement { Value = 45, Name = "Look around, up, down",    Kind = MoveKind.TurnRandom, Facings = Parse("UD") });
+            list.Add(new OverworldMovement { Value = 46, Name = "Look around, left, right", Kind = MoveKind.TurnRandom, Facings = Parse("LR") });
 
             foreach (var (val, name) in new (byte, string)[]
             {
-                (0x2f, "Berry tree"), (0x30, "Follows the player"), (0x31, "Rematch"),
-                (0x32, "Trainer follows the player"),
-                (0x33, "Hidden in snow"), (0x34, "Hidden in sand"), (0x35, "Hidden in ground"),
-                (0x36, "Hidden in grass"),
-                (0x37, "Follows the player, no delay"), (0x38, "Follows the player, copying its movement"),
+                (BerryPatch, "Berry patch"), (48, "Follow the player"), (49, "Spin, ready for a rematch"),
+                (50, "Follow partner trainer"),
+                (51, "Hidden in snow"), (52, "Hidden in sand"), (53, "Hidden in rock"), (54, "Hidden in grass"),
             })
                 list.Add(new OverworldMovement { Value = val, Name = name, Kind = MoveKind.Special });
 
             return list.ToArray();
         }
 
-        public static IReadOnlyList<OverworldMovement> All => Table;
+        private static IEnumerable<OverworldMovement> HgssExtras() => new[]
+        {
+            // The walking Pokémon is switched to these after a warp or an item use, so it keeps up at once.
+            new OverworldMovement { Value = 55, Name = "Follow the player closely",                   Kind = MoveKind.Special },
+            new OverworldMovement { Value = 56, Name = "Follow the player closely, copying its moves", Kind = MoveKind.Special },
+        };
 
-        public static OverworldMovement Find(byte value) => Table.FirstOrDefault(m => m.Value == value);
+        // From the handlers in pokeplatinum src/unk_02069BE0.c and src/unk_0206450C.c; the decomp leaves them unnamed.
+        private static IEnumerable<OverworldMovement> PlatinumExtras()
+        {
+            // 55-58 share one handler; 59-62 also refuse any step out of very tall grass.
+            for (int v = 55; v <= 58; v++)
+                yield return new OverworldMovement { Value = (byte)v, Name = "Copy the player's steps", Kind = MoveKind.Special };
+            for (int v = 59; v <= 62; v++)
+                yield return new OverworldMovement { Value = (byte)v, Name = "Copy the player's steps in tall grass", Kind = MoveKind.Special };
 
-        /// <summary>True for a code no game defines, so the preview can leave it alone.</summary>
-        public static bool IsDefined(byte value) => value <= MaxDefined && Find(value) != null;
+            yield return new OverworldMovement { Value = 63, Name = "Follow a wall on the left",  Kind = MoveKind.Special };
+            yield return new OverworldMovement { Value = 64, Name = "Follow a wall on the right", Kind = MoveKind.Special };
+            yield return new OverworldMovement { Value = 65, Name = "Follow a wall on the left, turning back at the range edge",  Kind = MoveKind.Special };
+            yield return new OverworldMovement { Value = 66, Name = "Follow a wall on the right, turning back at the range edge", Kind = MoveKind.Special };
+
+            // Only the range stops it, so it walks through walls and other objects.
+            yield return new OverworldMovement { Value = 67, Name = "Walk left and right through walls",
+                Kind = MoveKind.Wander, Facings = Parse("LR") };
+        }
+
+        /// <summary>The movement types this game family defines, in value order.</summary>
+        public static IReadOnlyList<OverworldMovement> For(RomInfo.GameFamilies family)
+        {
+            switch (family)
+            {
+                case RomInfo.GameFamilies.DP: return DpTable;
+                case RomInfo.GameFamilies.Plat: return PtTable;
+                case RomInfo.GameFamilies.HGSS: return HgssTable;
+                default: return Common.Where(m => m.Value != BerryPatch).ToArray();
+            }
+        }
+
+        public static OverworldMovement Find(RomInfo.GameFamilies family, int value) =>
+            For(family).FirstOrDefault(m => m.Value == value);
+
+        /// <summary>A type every game gives the same meaning (0-46 and 48-54), or null.</summary>
+        public static OverworldMovement Find(int value) =>
+            value == BerryPatch ? null : Common.FirstOrDefault(m => m.Value == value);
+
+        /// <summary>False for a value this game has no handler for, so the editor keeps it as read.</summary>
+        public static bool IsDefined(RomInfo.GameFamilies family, int value) => Find(family, value) != null;
     }
 }

@@ -6,55 +6,57 @@ using Xunit;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// The event_type table mirrors fieldobj_code.h: HGSS defines 0x00-0x09, DP/Pt adds the fleeing trainer
-    /// at 0x0a.
+    /// The overworld type values: 0-9 in every game, plus type 10 in Platinum only. Type 10 jumps when
+    /// the player comes near and never battles, so it isn't a trainer.
     /// </summary>
     public class OverworldEventTypeTests
     {
-        [Fact]
-        public void HgssDefinesTenTypes()
+        [Theory]
+        [InlineData(RomInfo.GameFamilies.HGSS)]
+        [InlineData(RomInfo.GameFamilies.DP)]
+        public void DpAndHgssDefineTenTypes(RomInfo.GameFamilies family)
         {
-            var types = OverworldEventTypes.For(RomInfo.GameFamilies.HGSS);
-            Assert.Equal(10, types.Count);
-            Assert.Equal(0, types.First().Value);
-            Assert.Equal(9, types.Last().Value);
+            var types = OverworldEventTypes.For(family);
+            Assert.Equal(Enumerable.Range(0, 10).Select(i => (ushort)i), types.Select(t => t.Value));
         }
 
         [Fact]
-        public void DppTAddsTheFleeingTrainer()
+        public void PlatinumAddsTheJumperAsANonTrainer()
         {
             var types = OverworldEventTypes.For(RomInfo.GameFamilies.Plat);
             Assert.Equal(11, types.Count);
-            Assert.Equal(10, types.Last().Value);
-            Assert.True(types.Last().IsTrainer);
+            var jumper = types.Last();
+            Assert.Equal(10, jumper.Value);
+            Assert.False(jumper.IsTrainer);
+            Assert.False(string.IsNullOrEmpty(jumper.Param0Label));
         }
 
         [Theory]
-        [InlineData(1)]   // Trainer
-        [InlineData(2)]   // sees all directions
-        [InlineData(4)]   // glances
-        [InlineData(5)]   // spin in place, anticlockwise
-        [InlineData(6)]   // spin in place, clockwise
-        [InlineData(7)]   // spin moving, anticlockwise
-        [InlineData(8)]   // spin moving, clockwise
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(4)]
+        [InlineData(5)]
+        [InlineData(6)]
+        [InlineData(7)]
+        [InlineData(8)]
         public void EveryTrainerVariantCountsAsATrainer(ushort value)
         {
             Assert.True(OverworldEventTypes.Find(RomInfo.GameFamilies.HGSS, value).IsTrainer);
         }
 
         [Theory]
-        [InlineData(0)]   // Standard
-        [InlineData(3)]   // Item
-        [InlineData(9)]   // Message
+        [InlineData(0)]
+        [InlineData(3)]
+        [InlineData(9)]
         public void NonTrainerTypesAreNotTrainers(ushort value)
         {
             Assert.False(OverworldEventTypes.Find(RomInfo.GameFamilies.HGSS, value).IsTrainer);
         }
 
         [Fact]
-        public void OnlyTheGlanceAndStationarySpinTypesReadParam1()
+        public void OnlyTheLookingTypesReadParam1()
         {
-            var withParam1 = OverworldEventTypes.For(RomInfo.GameFamilies.HGSS)
+            var withParam1 = OverworldEventTypes.For(RomInfo.GameFamilies.Plat)
                 .Where(t => !string.IsNullOrEmpty(t.Param1Label))
                 .Select(t => t.Value)
                 .ToArray();
@@ -65,7 +67,9 @@ namespace DSPRE.Tests
         public void UnknownValueIsNotInvented()
         {
             Assert.Null(OverworldEventTypes.Find(RomInfo.GameFamilies.HGSS, 200));
-            Assert.Null(OverworldEventTypes.Find(RomInfo.GameFamilies.HGSS, 10));   // DP/Pt only
+            Assert.Null(OverworldEventTypes.Find(RomInfo.GameFamilies.HGSS, 10));
+            Assert.Null(OverworldEventTypes.Find(RomInfo.GameFamilies.DP, 10));
+            Assert.Null(OverworldEventTypes.Find(RomInfo.GameFamilies.Plat, 11));
         }
     }
 }

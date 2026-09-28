@@ -187,7 +187,7 @@
                   <TextBlock Text="Type" FontWeight="Bold" Margin="0,4,0,0"/>
                   <ComboBox ItemsSource="{Binding OwEventTypes}" SelectedIndex="{Binding OwEventTypeIndex}"
                             HorizontalAlignment="Stretch"
-                            ToolTip.Tip="Every type the game defines. The trainer variants all fight and see the player the same way; the type changes how the NPC turns or moves."/>
+                            ToolTip.Tip="Every type this game defines"/>
                   <TextBlock Text="{Binding OwTypeNote}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"
                              TextWrapping="Wrap" IsVisible="{Binding OwHasTypeNote}"/>
                   <TextBlock Text="{Binding OwTypeUnknownNote}" FontSize="10" Foreground="Orange"
@@ -230,19 +230,21 @@
                                Foreground="{DynamicResource Editor.Subtle}"/>
                   </StackPanel>
 
+                  <StackPanel Spacing="3" IsVisible="{Binding OwParam0Visible}" Margin="0,4,0,0">
+                    <TextBlock Text="{Binding OwParam0Label}" FontWeight="Bold"
+                               ToolTip.Tip="Tiles ahead. Stored in the first general parameter."/>
+                    <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
+                  </StackPanel>
+
                   <StackPanel Spacing="3" IsVisible="{Binding OwParam1Visible}" Margin="0,4,0,0">
                     <TextBlock Text="{Binding OwParam1Label}" FontWeight="Bold"
-                               ToolTip.Tip="How long this trainer waits between turns. Stored in the second general parameter."/>
+                               ToolTip.Tip="Stored in the second general parameter."/>
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam1}"/>
                   </StackPanel>
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwScriptSectionVisible}">
-                    <TextBlock Text="{Binding OwScriptSectionLabel}" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
-                    <TextBlock Text="This type runs the shared message script, so this number picks the message."
-                               FontSize="10" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"
-                               IsVisible="{Binding OwScriptIsMessageId}"/>
-                    <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"
-                              IsVisible="{Binding !OwScriptIsMessageId}"/>
+                    <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
+                    <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptGenericWarningVisible}"/>
                     <TextBlock Text="{Binding OwScriptCommonInfo}"
@@ -262,12 +264,12 @@
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam2}"/>
 
                   <TextBlock Text="Movement range" FontWeight="Bold" Margin="0,4,0,0"
-                             ToolTip.Tip="How many tiles a wandering NPC may stray from its start, each way."/>
+                             ToolTip.Tip="Tiles it may stray from its start, each way. -1 for no limit."/>
                   <Grid ColumnDefinitions="72,*,72,*">
                     <TextBlock Grid.Column="0" Text="X range" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding OwXRange}"/>
+                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="-1" Maximum="32767" Value="{Binding OwXRange}"/>
                     <TextBlock Grid.Column="2" Text="Y range" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding OwYRange}"/>
+                    <NumericUpDown Grid.Column="3" Minimum="-1" Maximum="32767" Value="{Binding OwYRange}"/>
                   </Grid>
                 </StackPanel>
               </ScrollViewer>
