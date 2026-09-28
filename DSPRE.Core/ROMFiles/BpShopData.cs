@@ -8,10 +8,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The Battle Point exchange counters. Platinum's Frontier mart shows two item lists (the left counter's items,
-    /// the right counter's TMs) and prices each item from one item/BP table; lists that outgrow their space move
-    /// into the synthetic overlay. Diamond and Pearl build the menus in a script from one 41-row item/BP table:
-    /// the left counter reads rows from 0, the right from the split row; their sizes stay as the game has them.
+    /// The Battle Point exchange counters. Platinum has two item lists priced from one table, movable into the synthetic
+    /// overlay; Diamond and Pearl split one fixed 41-row item/price table between the two counters.
     /// </summary>
     public sealed class BpShopData
     {
@@ -38,7 +36,7 @@ namespace DSPRE.ROMFiles
         public bool InPlace => _inPlace;
 
         private readonly BpShopSites _sites;
-        // Platinum: where each part lives now, as (file, offset) with -1 for "not in the synthetic overlay".
+        // Platinum: the lists' block in the synthetic overlay, -1 when they are not there.
         private int _blockStart = -1, _blockLength;
         private bool _inPlace;
 
@@ -261,8 +259,7 @@ namespace DSPRE.ROMFiles
 
         // ---------------------------------------------------------------- Diamond
 
-        // The counters' sizes live in script 0356, and Diamond/Pearl script editing is out of scope, so the split
-        // stays where the game has it and only the rows' items and prices change.
+        // The counters' sizes live in script 0356, so the split stays fixed and only items and prices change.
         private void LoadDiamond()
         {
             byte[] arm9 = File.ReadAllBytes(arm9Path);

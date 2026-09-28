@@ -7,11 +7,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The battle type chart (sTypeMatchupMultipliers / sTypeEffectiveness): 3-byte records of attacker, defender and
-    /// multiplier in tenths. Pairs missing from it are neutral. Records after <c>FE FE 00</c> are the ones
-    /// Foresight and Scrappy skip; <c>FF FF 00</c> ends it. The chart is followed through the battle overlay's
-    /// pointers, so one a patch moved (for a Fairy type, say) is edited where it now lives. Diamond, Pearl and
-    /// Platinum keep a Pokétch copy, an 18x18 grid of 1 (super effective), -1 (not very), -10 (none) and 0.
+    /// The battle type chart: 3-byte attacker, defender, tenths records; missing pairs are neutral, records after
+    /// <c>FE FE 00</c> are skipped by Foresight and Scrappy, and <c>FF FF 00</c> ends it.
     /// </summary>
     public class TypeChart
     {
@@ -31,7 +28,6 @@ namespace DSPRE.ROMFiles
         public int Capacity { get; private set; }
         public int MaxMatchups => Capacity - 2;
 
-        /// <summary>Where the chart was found, for the window's status line.</summary>
         public string Where { get; private set; }
 
         private string _path;
@@ -40,7 +36,7 @@ namespace DSPRE.ROMFiles
         private bool _countIsCompare;
 
         public const string Marker = "TYPECHARTXP1";
-        /// <summary>Record slots a moved chart gets: Conversion 2's bound is a byte immediate.</summary>
+        /// <summary>Capped at 255 because Conversion 2's bound is a byte immediate.</summary>
         public const int ExpandedCapacity = 255;
 
         /// <summary>Whether the chart already lives in a block DSPRE placed in the expanded ARM9 area.</summary>
@@ -73,7 +69,7 @@ namespace DSPRE.ROMFiles
             return chart;
         }
 
-        /// <summary>Finds the chart through the overlay's pointers and reads its capacity from Conversion 2's bound.</summary>
+        /// <summary>Follows the battle overlay's pointers, so a chart a patch moved is edited where it now lives.</summary>
         private void Locate()
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
@@ -111,12 +107,13 @@ namespace DSPRE.ROMFiles
             }
             else throw new InvalidDataException($"The type chart was moved to 0x{ram:X8}, which DSPRE can't follow.");
 
-            // Conversion 2 walks the chart by count, so its `cmp rN, #count` is the room the game allows.
+            // Conversion 2 walks the chart by count, so its `cmp rN, #count` is the capacity.
             byte imm = ov[sites.countCompare], op = ov[sites.countCompare + 1];
             _countIsCompare = (op & 0xF8) == 0x28;
             Capacity = _countIsCompare ? imm : 0;
         }
 
+        /// <summary>DP and Pt's Pokétch copy: an 18x18 grid of 1 (super effective), -1 (not very), -10 (none) and 0.</summary>
         public static byte[] PoketchGrid(IEnumerable<Matchup> matchups)
         {
             var grid = new byte[VanillaTypes * VanillaTypes];
@@ -159,11 +156,7 @@ namespace DSPRE.ROMFiles
                 GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
         }
 
-        /// <summary>
-        /// Moves the chart, with its current edits, into its own block in the expanded ARM9 area with room for
-        /// <see cref="ExpandedCapacity"/> records, then points the battle code's ten references and Conversion 2's
-        /// bound at it. The old copy stays where it was, unused.
-        /// </summary>
+        /// <summary>Moves the chart into its own expanded ARM9 block and repoints the battle code and Conversion 2's bound.</summary>
         public void MoveToExpansion()
         {
             if (InExpansion) return;
@@ -214,7 +207,7 @@ namespace DSPRE.ROMFiles
                 GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
         }
 
-        /// <summary>The chart's bytes when it sits in the expanded ARM9 area without a DSPRE block, so allocators skip it.</summary>
+        /// <summary>A chart in the expanded ARM9 area without a DSPRE block, so allocators skip it.</summary>
         internal static (long Start, long End)? UnmarkedRangeInExpansion()
         {
             try

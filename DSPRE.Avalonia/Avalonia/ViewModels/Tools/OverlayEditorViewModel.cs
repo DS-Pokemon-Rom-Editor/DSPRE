@@ -69,8 +69,18 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         // IEditorWithUnsavedChanges
         // ----------------------------------------------------------------
 
-        private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
+        // What was last loaded or saved, so the dirty state compares real values.
+        private (bool Compressed, bool Marked)[] _loaded = Array.Empty<(bool, bool)>();
+        public bool HasUnsavedChanges
+        {
+            get
+            {
+                if (_loaded.Length != Overlays.Count) return false;
+                for (int i = 0; i < Overlays.Count; i++)
+                    if (_loaded[i] != (Overlays[i].IsCompressed, Overlays[i].IsMarkedCompressed)) return true;
+                return false;
+            }
+        }
         public string UnsavedChangesDescription => "Overlay Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveChangesCore();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -78,7 +88,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             await SaveChangesCore();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() => SetClean();
+        public void DiscardChanges() => RevertChanges();
 
         // ----------------------------------------------------------------
         // Observable state
@@ -96,13 +106,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private bool _saveEnabled = true;
         public bool SaveEnabled { get => _saveEnabled; private set => Set(ref _saveEnabled, value); }
 
-        // Toggle state for bulk buttons (flip-flop like the original)
+        // The value each bulk toggle button applies next.
         private bool _currentValComp = true;
         private bool _currentValMark = true;
-
-        // ----------------------------------------------------------------
-        // Constructor
-        // ----------------------------------------------------------------
 
         public OverlayEditorViewModel()
         {
@@ -124,6 +130,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _isDsRomProject = RomInfo.IsDsRomProject;
             SaveEnabled = !_isDsRomProject;
             LoadOverlays();
+            SetClean();
         }
 
         // ----------------------------------------------------------------
@@ -239,7 +246,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     RAMAddressHex      = $"0x{OverlayUtils.OverlayTable.GetRAMAddress(i):X}",
                     UncompressedSize   = OverlayUtils.OverlayTable.GetUncompressedSize(i),
                 };
-                row.PropertyChanged += (_, _) => OnRowChanged();
+                row.PropertyChanged += (_, e) => { if (e.PropertyName != nameof(OverlayRow.MismatchBrush)) OnRowChanged(); };
                 Overlays.Add(row);
             }
             RefreshMismatch();
@@ -284,14 +291,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private void SetDirty()
         {
-            _dirty = true;
-            Title = "● Overlay Editor";
+            Title = HasUnsavedChanges ? "● Overlay Editor" : "Overlay Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         private void SetClean()
         {
-            _dirty = false;
+            _loaded = new (bool, bool)[Overlays.Count];
+            for (int i = 0; i < Overlays.Count; i++) _loaded[i] = (Overlays[i].IsCompressed, Overlays[i].IsMarkedCompressed);
             Title = "Overlay Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }

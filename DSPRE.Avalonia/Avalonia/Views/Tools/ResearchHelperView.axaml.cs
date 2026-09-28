@@ -18,6 +18,8 @@ namespace DSPRE.Avalonia.Views.Tools
             Opened += async (_, _) => await vm.LoadAllDataAsync();
         }
 
+        private async void Reload_Click(object sender, RoutedEventArgs e) => await VM.LoadAllDataAsync();
+
         // ── Variable Watcher ──────────────────────────────────────────────────
         private void VarSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchVariableUsage();
         private void VarClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearVariableResults();

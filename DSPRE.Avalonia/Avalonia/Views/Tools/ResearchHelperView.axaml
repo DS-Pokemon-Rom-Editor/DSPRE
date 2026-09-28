@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Tools.ResearchHelperView"
         x:DataType="vm:ResearchHelperViewModel"
         Title="Research Helper"
@@ -12,6 +13,12 @@
   </Design.DataContext>
 
   <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <Button Content="↻ Reload" Click="Reload_Click" IsEnabled="{Binding !IsLoading}"
+                ToolTip.Tip="Read the project again, after editing scripts or events."/>
+      </StackPanel>
+    </Border>
     <!-- Status bar -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">
       <Grid ColumnDefinitions="*,Auto">
@@ -78,9 +85,8 @@
             <RadioButton Content="Hex" IsChecked="{Binding VarHexMode}"  GroupName="varMode"/>
             <Button Content="Search"    Click="VarSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear"     Click="VarClear_Click"/>
+            <controls:HelpTip Text="Files that use this variable. Double-click a row to copy its ID."/>
           </StackPanel>
-          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
-                     Text="Files containing this variable. Double-click a row to copy ID to clipboard."/>
           <DataGrid ItemsSource="{Binding VariableResults}"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
@@ -106,9 +112,8 @@
             <RadioButton Content="Hex" IsChecked="{Binding FlagHexMode}"  GroupName="flagMode"/>
             <Button Content="Search"    Click="FlagSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear"     Click="FlagClear_Click"/>
+            <controls:HelpTip Text="Overworld hide flags and script flag commands. Double-click a row to copy it."/>
           </StackPanel>
-          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
-                     Text="Event overworld flags and script flag operations. Double-click to copy to clipboard."/>
           <DataGrid ItemsSource="{Binding FlagResults}"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
@@ -128,13 +133,12 @@
       <TabItem Header="Overworld Watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <TextBlock Text="OW Entry ID:" VerticalAlignment="Center"/>
+            <TextBlock Text="Sprite entry:" VerticalAlignment="Center"/>
             <NumericUpDown Value="{Binding OwEntryIdSearch}" Minimum="0" Maximum="9999" Width="120"/>
             <Button Content="Search"    Click="OwSearch_Click" IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear"     Click="OwClear_Click"/>
+            <controls:HelpTip Text="Overworlds that use this sprite entry. Double-click a row to open it in the Event Editor."/>
           </StackPanel>
-          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
-                     Text="Which overworld events use a given OW sprite table entry. Double-click to open in the Event Editor."/>
           <DataGrid ItemsSource="{Binding OwWatcherResults}"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
@@ -143,8 +147,8 @@
                     DoubleTapped="OwGrid_DoubleTapped">
             <DataGrid.Columns>
               <DataGridTextColumn Header="Event File" Binding="{Binding EventFileID}"  Width="80"/>
-              <DataGridTextColumn Header="OW Index"   Binding="{Binding OwIndex}"      Width="70"/>
-              <DataGridTextColumn Header="OW ID"      Binding="{Binding OwID}"         Width="60"/>
+              <DataGridTextColumn Header="Overworld #" Binding="{Binding OwIndex}"      Width="70"/>
+              <DataGridTextColumn Header="Object ID"  Binding="{Binding OwID}"         Width="70"/>
               <DataGridTextColumn Header="Position"   Binding="{Binding Position}"     Width="*"/>
               <DataGridTextColumn Header="Movement"   Binding="{Binding Movement}"     Width="80"/>
               <DataGridTextColumn Header="Script"     Binding="{Binding ScriptNumber}" Width="70"/>
@@ -160,9 +164,8 @@
             <ComboBox ItemsSource="{Binding TrainerNamesList}" SelectedIndex="{Binding SelectedTrainerIndex}" Width="260"/>
             <Button Content="Search"    Click="TrainerWatchSearch_Click" IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear"     Click="TrainerWatchClear_Click"/>
+            <controls:HelpTip Text="Scripts and functions that name this trainer, overworld trainer battles and Vs. Seeker rows. Double-click a row to open it."/>
           </StackPanel>
-          <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
-                     Text="Where a trainer is referenced: script/function Trainer params, overworld trainer battles, and Vs. Seeker rows. Double-click to open."/>
           <DataGrid ItemsSource="{Binding TrainerWatcherResults}"
                     AutoGenerateColumns="False"
                     IsReadOnly="True"
@@ -190,9 +193,8 @@
                 <TextBlock Text="Script File ID:" VerticalAlignment="Center"/>
                 <NumericUpDown Value="{Binding FileWatcherScriptFileId}" Minimum="0" Width="90" FormatString="0"/>
                 <Button Content="Search" Click="FileWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+                <controls:HelpTip Text="Headers that use this script file. Double-click a row to copy it."/>
               </StackPanel>
-              <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
-                         Text="Headers that reference this script file. Double-click to copy to clipboard."/>
               <DataGrid ItemsSource="{Binding FileWatcherResults}"
                         AutoGenerateColumns="False"
                         IsReadOnly="True"
@@ -221,9 +223,8 @@
                           SelectedIndex="{Binding SelectedScriptIdIndex}"
                           Width="120"/>
                 <Button Content="Search" Click="IdWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+                <controls:HelpTip Text="Events in the files that use this script file and run the selected script."/>
               </StackPanel>
-              <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
-                         Text="Event entities in files associated with this script that call the selected script ID."/>
               <DataGrid ItemsSource="{Binding ScriptIdResults}"
                         AutoGenerateColumns="False"
                         IsReadOnly="True"
@@ -250,13 +251,13 @@
             <TextBlock Text="Header ID:" VerticalAlignment="Center"/>
             <NumericUpDown Value="{Binding HeaderSearchId}" Minimum="0" Width="90" FormatString="0"/>
             <Button Content="Search" Click="HeaderSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+            <controls:HelpTip Text="Incoming warps lead to this header from other event files. Outgoing warps leave from its own event file. Double-click a warp to go to that header, or a property to copy its value."/>
           </StackPanel>
 
           <Grid ColumnDefinitions="220,8,*">
             <!-- Header properties -->
             <DockPanel Grid.Column="0">
               <TextBlock DockPanel.Dock="Top" Text="Header Properties" FontWeight="SemiBold" Margin="0,0,0,4" FontSize="12"/>
-              <TextBlock DockPanel.Dock="Top" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4" Text="Double-click a row to copy value"/>
               <DataGrid ItemsSource="{Binding HeaderProperties}"
                         AutoGenerateColumns="False"
                         IsReadOnly="True"
@@ -274,8 +275,6 @@
             <TabControl Grid.Column="2">
               <TabItem Header="Incoming Warps">
                 <DockPanel Margin="4">
-                  <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
-                             Text="Warps in other event files that lead TO this header. Double-click to navigate to that header."/>
                   <DataGrid ItemsSource="{Binding IncomingWarps}"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
@@ -286,15 +285,13 @@
                       <DataGridTextColumn Header="Event File" Binding="{Binding EventFileID}" Width="90"/>
                       <DataGridTextColumn Header="Warp #"     Binding="{Binding WarpIndex}"   Width="70"/>
                       <DataGridTextColumn Header="Position"   Binding="{Binding Position}"    Width="100"/>
-                      <DataGridTextColumn Header="Anchor"     Binding="{Binding Anchor}"      Width="70"/>
+                      <DataGridTextColumn Header="Arrival warp" Binding="{Binding Anchor}"      Width="70"/>
                     </DataGrid.Columns>
                   </DataGrid>
                 </DockPanel>
               </TabItem>
               <TabItem Header="Outgoing Warps">
                 <DockPanel Margin="4">
-                  <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,4"
-                             Text="Warps FROM this header's event file. Double-click to navigate to destination header."/>
                   <DataGrid ItemsSource="{Binding OutgoingWarps}"
                             AutoGenerateColumns="False"
                             IsReadOnly="True"
@@ -305,7 +302,7 @@
                       <DataGridTextColumn Header="Warp #"      Binding="{Binding WarpIndex}"  Width="70"/>
                       <DataGridTextColumn Header="Position"    Binding="{Binding Position}"   Width="100"/>
                       <DataGridTextColumn Header="Dest Header" Binding="{Binding DestHeader}" Width="90"/>
-                      <DataGridTextColumn Header="Dest Anchor" Binding="{Binding DestAnchor}" Width="90"/>
+                      <DataGridTextColumn Header="Dest warp"   Binding="{Binding DestAnchor}" Width="90"/>
                     </DataGrid.Columns>
                   </DataGrid>
                 </DockPanel>

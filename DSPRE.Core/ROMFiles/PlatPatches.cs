@@ -9,10 +9,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// hzla's PlatPatches for US Platinum: Item Expansion (items past 467 resolve through an overflow table) and Extra
-    /// TMs (TM93 to TM152). Both are found through the ARM9 hooks the game itself follows, `ldr r3, [pc]; bx r3` with
-    /// a Thumb pointer, whose target is 0x10 past a 16-byte marker in the synthetic overlay. Old copies of a payload
-    /// can stay behind after a relocation, so the marker is never searched for.
+    /// hzla's PlatPatches for US Platinum: Item Expansion and Extra TMs (TM93 to TM152). Payloads are found by following
+    /// the ARM9 hooks, never by searching for their marker, because stale copies can remain after a relocation.
     /// </summary>
     public static class PlatPatches
     {
@@ -193,10 +191,8 @@ namespace DSPRE.ROMFiles
             SetCanLearn(t, byPersonalId.Select(kv => (row, kv.Key, kv.Value)));
 
         /// <summary>
-        /// Sets compatibility as (row, personal file, can learn). Rows 0-27 live in bits 4-31 of each personal file's
-        /// fourth TM word (bits 0-3 are HM05-HM08); rows 28-59 live in a mask per personal file in the synthetic
-        /// overlay. Other bits are kept, each file is written at most once, and nothing is written when a target is
-        /// out of range.
+        /// Sets compatibility as (row, personal file, can learn). Rows 0-27 use bits 4-31 of the personal file's fourth
+        /// TM word (bits 0-3 are HM05-HM08); later rows use a mask per personal file in the synthetic overlay.
         /// </summary>
         public static void SetCanLearn(ExtraTms t, IEnumerable<(int Row, int PersonalId, bool Can)> changes)
         {
@@ -210,7 +206,7 @@ namespace DSPRE.ROMFiles
             foreach (var c in list.Where(c => c.Row >= PersonalMaskRows))
             {
                 int o = t.MasksAt + c.PersonalId * 4;
-                if (o + 4 > synth.Length) continue;   // only reachable for "can't learn", which it already can't
+                if (o + 4 > synth.Length) continue;   // only "can't learn" gets here, already true
                 uint mask = BitConverter.ToUInt32(synth, o), bit = 1u << (c.Row - PersonalMaskRows);
                 uint next = c.Can ? mask | bit : mask & ~bit;
                 if (next == mask) continue;
@@ -262,8 +258,7 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// Item id to item-data, icon and palette members: the ARM9 item table, or PlatPatches' overflow table for items it
-    /// added. Every item lookup goes through here so expanded items resolve the way the game resolves them.
+    /// Item id to item-data, icon and palette members, through PlatPatches' overflow table for expanded items as the game does.
     /// </summary>
     public static class ItemTable
     {

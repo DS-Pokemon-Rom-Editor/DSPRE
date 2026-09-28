@@ -14,11 +14,8 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Shell
 {
     /// <summary>
-    /// Pokemon graphics for an hg-engine project, and a check of the archive its data tables live in.
-    /// The check always reads the ROM, because the ROM is what it is checking; the graphics come from a
-    /// linked checkout when there is one, since that is what its next build will pack, and from the ROM
-    /// when there is not. Where the two disagree is worth seeing, so both are shown. Nothing here edits
-    /// graphics; the one thing it can change is the member order of a/0/2/8, and only when the user saves.
+    /// Pokemon graphics for an hg-engine project and a check of the a/0/2/8 table archive.
+    /// Graphics come from the linked checkout when there is one, since that is what the next build packs.
     /// </summary>
     public class HgeRomReviewViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
@@ -30,7 +27,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             public string Search { get; set; }
         }
 
-        /// <summary>One member of a/0/2/8, named both ways round when the archive is shifted.</summary>
+        /// <summary>One member of a/0/2/8, named both ways when the archive is shifted.</summary>
         public class MemberRow
         {
             public int Index { get; set; }
@@ -56,8 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public HgeRomReviewViewModel()
         {
-            // hg-engine owns neither of these, so their unpacked copies are the ROM's own bytes: the
-            // icon archive the icons are drawn from, and a/0/2/8 the check reads.
+            // hg-engine owns neither archive, so the unpacked copies are the ROM's own bytes.
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons, DirNames.synthOverlay });
 
             LoadSpecies();
@@ -92,8 +88,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             set { if (Set(ref _selectedSpeciesIndex, value)) QueueLoad(); }
         }
 
-        // Drawing a species reads several archives, which is far too slow to do on each keystroke while
-        // someone types a name into the search box, so the load waits for them to stop.
+        // Debounced: drawing a species is too slow to repeat on every search keystroke.
         private global::Avalonia.Threading.DispatcherTimer _loadTimer;
 
         private void QueueLoad()
@@ -121,8 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             string[] names;
             try { names = GetPokemonNames(); } catch { names = Array.Empty<string>(); }
 
-            // A linked checkout's species count is the one its editors work to; without one the ROM's
-            // own count is all there is.
+            // A linked checkout's count is the one its editors use.
             int count;
             try
             {
@@ -147,8 +141,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             Species.Clear();
             foreach (var row in shown) Species.Add(row);
 
-            // Keep the species that is already open if the narrowed list still has it, so typing does
-            // not redraw everything on each letter.
+            // Keep the open species if still listed, so typing does not redraw on each letter.
             int keep = _loadedSpeciesId >= 0 ? Species.ToList().FindIndex(r => r.Id == _loadedSpeciesId) : -1;
             SelectedSpeciesIndex = keep >= 0 ? keep : (Species.Count > 0 ? 0 : -1);
         }
@@ -165,11 +158,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private int _loadToken;
 
-        /// <summary>
-        /// Drawing a species reads several archives and decodes a dozen pictures, which is far too slow
-        /// to do on the UI thread: it swallowed keystrokes typed into the search box. The work happens
-        /// off it and only the finished pictures come back, with anything overtaken dropped.
-        /// </summary>
+        /// <summary>Builds the species pictures off the UI thread and drops results a newer selection overtook.</summary>
         private void LoadSelectedSpecies()
         {
             if (_selectedSpeciesIndex < 0 || _selectedSpeciesIndex >= Species.Count)
@@ -217,11 +206,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return view;
         }
 
-        /// <summary>
-        /// Follower sprites sit in one run after the ROM's people and objects, and a project that adds
-        /// its own pushes that run along, so where it starts is found rather than assumed. Each entry
-        /// carries its own normal and shiny colours.
-        /// </summary>
+        /// <summary>Follower sprites sit in one run whose start moves when a project adds objects, so it is searched for.</summary>
         private void LoadFollower(int species, SpeciesView view)
         {
             int start = FollowerRunStart();
@@ -262,10 +247,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
         }
 
-        // With a checkout linked its source is what the next build will contain, so that is what the
-        // graphics are read from, the same way every other editor reads them. Only with no checkout is
-        // the packed archive the better answer. The archive check is the other way round on purpose: it
-        // always reads the ROM, because what it is checking is the ROM.
+        // Graphics prefer the checkout's build; the archive check always reads the ROM.
         private ScriptNarc _spriteArchive, _overworldArchive;
         private string _spriteSourceNote = "";
 
@@ -287,12 +269,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return _spriteArchive = new ScriptNarc(DirNames.pokemonBattleSprites, fromPacked: true);
         }
 
-        // hg-engine does not own this archive, so packed and unpacked hold the same bytes; packed is
-        // read so that looking at one follower does not unpack an archive of nearly two thousand files.
+        // Read packed so one follower does not unpack an archive of nearly two thousand files.
         private ScriptNarc OverworldArchive()
             => _overworldArchive ??= new ScriptNarc(DirNames.OWSprites, fromPacked: true);
 
-        // Held per window rather than shared, so opening this on another ROM starts from that ROM.
+        // Per window, not static, so another ROM starts fresh.
         private int _followerRunStart = -2;
 
         /// <summary>Where the species run of follower entries begins, or -1 when the ROM has none.</summary>
@@ -303,8 +284,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             _followerRunStart = -1;
             try
             {
-                // The ROM keeps its vanilla follower entries as well, so the species run is the last
-                // unbroken one, found by walking back from the end of the archive.
+                // Vanilla follower entries remain too, so the species run is the last unbroken one.
                 var narc = OverworldArchive();
                 for (int i = narc.Count - 1; i >= 0; i--)
                 {
@@ -332,11 +312,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             return false;
         }
 
-        /// <summary>
-        /// Two answers to the same question, named by where each comes from: the table compiled into
-        /// the ROM, and the source table a linked checkout would compile next. With no checkout there
-        /// is only the ROM, so the three banks are shown alongside to compare against by eye.
-        /// </summary>
+        /// <summary>Compares the ROM's icon palette bank with the checkout's; without a checkout shows every bank.</summary>
         private void LoadIcons(int species, SpeciesView view)
         {
             var status = HgEngineCodeAddons.ReadIconPaletteId(species, out int inRom);
@@ -359,9 +335,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             if (haveSource)
             {
-                // The source icon is drawn where the checkout has one, since the ROM's pixels are the
-                // other half of what is being compared.
-                // The note above carries the path, so the tile only needs the file's name to fit.
                 string caption = $"In {System.IO.Path.GetFileName(HgEngineIconPalette.SourceFile)}: bank {inSource}";
                 view.Icons.Add(HgEnginePokemonIcons.TryGetIconPath(species, out string png)
                     ? SourceIconTile(png, caption)
@@ -380,10 +353,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 view.Icons.Add(IconTile(species, b, $"Bank {b}"));
         }
 
-        /// <summary>Where the compiled table lives, named the way hg-engine's own code addresses it.</summary>
         private static string ArchiveAndMember => $"a/0/2/8 file {HgEngineCodeAddons.IconPalettes}";
 
-        /// <summary>The icon straight out of the checkout's own PNG, which is what its next build packs.</summary>
         private static SpriteTile SourceIconTile(string iconPath, string caption)
         {
             try
@@ -409,16 +380,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
         }
 
-        /// <summary>
-        /// The four drawings pokegra holds for a species, each with the normal and the shiny colours
-        /// stored alongside them. A species with only one gender leaves the female members empty.
-        /// </summary>
+        /// <summary>Single-gender species leave the female members empty.</summary>
         private void LoadSprites(int species, SpeciesView view)
         {
             var archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.pokemonBattleSprites);
             if (archive == null) return;
 
-            // Settling where these are read from is also what decides the note above them.
             var source = SpriteArchive();
             view.SpriteNote = _spriteSourceNote;
 
@@ -431,7 +398,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
         }
 
-        /// <summary>Back female, back male, front female, front male, then the normal and shiny palettes.</summary>
+        // Back female, back male, front female, front male, normal palette, shiny palette.
         private const int SpriteMembersPerSpecies = 6;
 
         private static SpriteTile SpriteTileFor(GraphicAssets.Archive archive, ScriptNarc source, int index,
@@ -491,7 +458,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             Raise(nameof(CanRepair));
         }
 
-        /// <summary>Holds the repair until Save, the way every other edit in DSPRE waits.</summary>
         public void StageRepair()
         {
             if (!CanRepair) return;

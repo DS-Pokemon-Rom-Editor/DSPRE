@@ -5,9 +5,8 @@ using System.IO;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// The Bug-Catching Contest opponents in data/mushi/mushi_trainer.bin (HGSS): ten opponents with eight
-    /// rows each. The game draws five opponents, picks one of each one's rows allowed that day, and scores it
-    /// nominal + (random % (2 * variation)) - variation.
+    /// HGSS Bug-Catching Contest opponents in data/mushi/mushi_trainer.bin. The game picks a row allowed that day
+    /// and scores it nominal + (random % (2 * variation)) - variation.
     /// </summary>
     public class BugContestTrainerFile
     {
@@ -107,7 +106,7 @@ namespace DSPRE.ROMFiles
         public static readonly string[] DayNames = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
 
         /// <summary>What would make the game divide by zero: a variation of 0, or an opponent with no row allowed
-        /// on some day. <paramref name="name"/> labels an opponent by index.</summary>
+        /// on some day.</summary>
         public List<string> Problems(Func<int, string> name)
         {
             var problems = new List<string>();

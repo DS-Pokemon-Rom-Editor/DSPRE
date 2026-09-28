@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Tools.PatchToolboxView"
         x:DataType="vm:PatchToolboxViewModel"
         Title="ROM Patch Toolbox"
@@ -14,15 +15,18 @@
   <DockPanel Margin="0">
 
     <!-- ── Caution banner ─────────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.StatusBg}"
-            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="12,8">
-      <TextBlock Text="{Binding HeaderNote}" TextWrapping="Wrap" FontSize="12"
-                 Foreground="{DynamicResource Editor.Subtle}"/>
+    <Border x:Name="CautionBanner" DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="{Binding HeaderNote}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"
+                   Foreground="{DynamicResource Editor.Subtle}"/>
+        <controls:HelpTip Text="These patches change the game's code, overlays and data archives directly."/>
+      </StackPanel>
     </Border>
 
     <!-- ── Patch list ─────────────────────────────────────────────────── -->
     <ScrollViewer>
-      <ItemsControl ItemsSource="{Binding Patches}" Margin="8">
+      <ItemsControl x:Name="PatchList" ItemsSource="{Binding Patches}" Margin="8">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:PatchRowViewModel">
             <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="6"

@@ -7,9 +7,8 @@ using System.Text;
 namespace DSPRE.ROMFiles
 {
     /// <summary>
-    /// Free space in the synthetic overlay for tables DSPRE moves there. Each such table sits in a block that starts
-    /// with a 12-byte ASCII marker and keeps its length at +0x10, so every allocator can see the others' blocks.
-    /// The overworld expansion's headroom reads as zeros until used, so it is reserved by range instead.
+    /// Free space in the synthetic overlay for tables DSPRE moves there. Each block starts with a 12-byte ASCII marker
+    /// and keeps its length at +0x10, so every allocator can see the others' blocks.
     /// </summary>
     public static class SyntheticOverlaySpace
     {
@@ -51,12 +50,11 @@ namespace DSPRE.ROMFiles
             OverworldSpriteTableExpansion.Detect();
             var ow = OverworldSpriteTableExpansion.GetReservedByteRange();
             if (ow.HasValue) ranges.Add(ow.Value);
-            // A chart some other patch moved here has no marker, but the battle code still points at it.
+            // A chart moved here by another patch has no marker.
             var chart = TypeChart.UnmarkedRangeInExpansion();
             if (chart.HasValue) ranges.Add(chart.Value);
             ranges.AddRange(PlatPatchesBlocks(data));
-            // PlatPatches installs its item-related payloads at fixed offsets (0x10000 to 0x15000) and refuses to
-            // when a slot is occupied, so Platinum keeps them free for it.
+            // PlatPatches installs item payloads at fixed offsets and refuses when they are occupied.
             if (RomInfo.gameFamily == RomInfo.GameFamilies.Plat && data.Length > PlatPatchesFixedStart)
                 ranges.Add((PlatPatchesFixedStart, Math.Min(PlatPatchesFixedEnd, data.Length)));
             return ranges;
@@ -64,9 +62,7 @@ namespace DSPRE.ROMFiles
 
         public const int PlatPatchesFixedStart = 0x10000, PlatPatchesFixedEnd = 0x16000;
 
-        // PlatPatches' blocks keep no length in their header and pre-reserve rows that stay zero until used, so each is
-        // reserved by its documented extent: Extra TMs to the end of a 4-byte mask per personal file (1024 assumed),
-        // Item Expansion to the end of the rows its header's capacity allows, and the older item layout generously.
+        // PlatPatches' blocks store no length and their unused rows read as zero, so each is reserved by its full layout.
         private static readonly (string Marker, int Length)[] PlatPatchesLayouts =
         {
             ("EXTRATMSV1", 0x608 + 4 * 1024),

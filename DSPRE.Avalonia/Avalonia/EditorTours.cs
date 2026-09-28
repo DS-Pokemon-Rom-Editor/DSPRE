@@ -15,19 +15,12 @@ using global::Avalonia.VisualTree;
 namespace DSPRE.Avalonia
 {
     /// <summary>
-    /// One step of an editor's tour. <see cref="Target"/> says what to spotlight:
-    /// null for a centred card; "toolbar" for the editor's top bar; "tabs" for its tab strip;
-    /// "list" for its first list, tree or grid; "name:X" for the control named X; "type:X" for the first
-    /// control of class X; "tab:Name" switches to that tab first. "tab:Name>name:X" (or "&gt;list", "&gt;type:X")
-    /// switches to the tab, then spotlights something inside it. Steps whose tab is missing or hidden (a tab
-    /// only one game has) are left out.
+    /// One step of an editor's tour. <see cref="Target"/> is null (centred card), "toolbar", "tabs", "list",
+    /// "name:X", "type:X", or "tab:Name" optionally followed by "&gt;" and a target inside that tab.
     /// </summary>
     public sealed record TourStep(string Target, string Title, string Body);
 
-    /// <summary>
-    /// The first-open tours of every editor, keyed by the editor's view class. The first time an editor is on
-    /// screen it offers its tour; "?" in its toolbar and F1 replay it.
-    /// </summary>
+    /// <summary>First-open tours of every editor, keyed by the editor's view class.</summary>
     public static partial class EditorTours
     {
         private sealed record Tour(string Name, TourStep[] Steps);
@@ -52,8 +45,7 @@ namespace DSPRE.Avalonia
         static partial void RegisterGraphics();
         static partial void RegisterTools();
 
-        /// <param name="key">The editor's view class name, e.g. "TrainerEditorView".</param>
-        /// <param name="name">What the offer calls the editor, e.g. "Trainer Editor".</param>
+        /// <param name="key">The editor's view class name.</param>
         private static void Add(string key, string name, params TourStep[] steps) => All[key] = new Tour(name, steps);
 
         private static TourStep S(string target, string title, string body) => new(target, title, body);
@@ -78,7 +70,7 @@ namespace DSPRE.Avalonia
                     tab = FindTab(root, tabName);
                     if (tab == null || !tab.IsVisible || !tab.IsEnabled) continue;
                 }
-                // Outside a tab everything is on screen already, so a box only another game shows can be left out now.
+                // Outside a tab the controls already exist, so one only another game shows can be skipped now.
                 if (tab == null && target != null && target.Contains(':') && Resolve(root, target) == null) continue;
                 var capturedTab = tab;
                 string inner = target;
@@ -102,17 +94,13 @@ namespace DSPRE.Avalonia
             GuidedTour.StartSteps(root, steps);
         }
 
-        /// <summary>
-        /// Wires <paramref name="root"/> (an editor window, or an editor embedded in a tab) to its tour: a "?"
-        /// in its toolbar, F1, and a one-time offer the first time it is on screen.
-        /// </summary>
+        /// <summary>Wires an editor window or embedded editor to its tour: a "?" button, F1, and a one-time offer.</summary>
         public static void Attach(Control root, string key)
         {
             if (root == null || !Has(key) || Design.IsDesignMode) return;
             if (Attached.TryGetValue(root, out _)) return;
             Attached.AddOrUpdate(root, null);
 
-            // F1 anywhere in the editor.
             root.KeyBindings.Add(new KeyBinding
             {
                 Gesture = new KeyGesture(Key.F1),
@@ -145,10 +133,7 @@ namespace DSPRE.Avalonia
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, object> HasButtonTable = new();
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control, object> Attached = new();
 
-        /// <summary>
-        /// Every window with a tour gets one when it first shows, however it was opened (a menu, another
-        /// editor, or as a dialog). A window that hosts an editor is known by the editor inside it.
-        /// </summary>
+        /// <summary>Attaches tours to every window as it opens; a host window is keyed by the editor inside it.</summary>
         public static void Install()
         {
             Window.WindowOpenedEvent.AddClassHandler<Window>((w, _) =>
@@ -163,10 +148,7 @@ namespace DSPRE.Avalonia
             public static bool Contains(Control c) => HasButtonTable.TryGetValue(c, out _);
         }
 
-        /// <summary>
-        /// Editors that fill in after their window opens say so with an IsLoading or IsBusy flag on their view
-        /// model; the offer waits for it, so the tour never points at a half-built window.
-        /// </summary>
+        /// <summary>The view model's IsLoading or IsBusy flag, so the offer never points at a half-built window.</summary>
         private static bool StillLoading(Control root)
         {
             object vm = root is DSPRE.Avalonia.Views.Shell.EditorHostWindow { Content: Control hosted } ? hosted.DataContext : root.DataContext;
@@ -226,8 +208,7 @@ namespace DSPRE.Avalonia
                 Child = stack,
             };
 
-            // Anchor the card to the editor's own bottom-right corner, which for an embedded editor is not the window's.
-            // No background, so clicks outside the card reach the editor under it.
+            // Anchored to the editor's corner, not the window's; no background so clicks outside reach the editor.
             var holder = new Canvas { Background = null };
             holder.Children.Add(card);
             void Place()

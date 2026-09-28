@@ -35,9 +35,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
     }
 
     /// <summary>
-    /// hg-engine's own patch lists, shown as what they do rather than as four columns of hex. The lists
-    /// are the checkout's, so an added patch stays here until Save, which writes the list in place and
-    /// leaves every comment alone.
+    /// hg-engine's patch lists, shown by what they do. Added patches stay in memory until Save edits the
+    /// checkout's list in place, keeping its comments.
     /// </summary>
     public class HgEnginePatchesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
     {
@@ -50,7 +49,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private readonly Func<List<HgEnginePatchList>> _readAll;
         private List<HgEnginePatchList> _lists = new();
 
-        // Entries added since the lists were last read, held only in memory.
         private readonly HashSet<HgEnginePatchEntry> _pending = new();
 
         public ObservableCollection<PatchRow> Rows { get; } = new();
@@ -160,9 +158,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         /// <summary>
-        /// A patch running into the middle of another is worth seeing. Two at the same address are not:
-        /// hg-engine writes bytes and hooks at one spot on purpose, and the same line appears more than
-        /// once when it sits in alternative #ifdef branches, which are not evaluated here.
+        /// Flags patches starting inside another. Same-address pairs are skipped, since hg-engine stacks them on
+        /// purpose and repeats lines across #ifdef branches.
         /// </summary>
         private void MarkClashes()
         {
@@ -219,7 +216,6 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 return registerError;
 
             var added = list.Add(overlay, NewSymbol?.Trim(), at, register, bytes);
-            // Refused now rather than when Save writes the list.
             string problem = HgEnginePatchList.Problem(added);
             if (problem != null)
             {
