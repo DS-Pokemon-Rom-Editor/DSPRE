@@ -199,6 +199,13 @@ namespace DSPRE.Avalonia.Views.Shell
         public MainWindowView(MainWindowViewModel vm) : this()
         {
             DataContext = vm;
+            // A fresh walker each time the card comes up: the sprites may only have been unpacked since.
+            vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(MainWindowViewModel.IsBusy)) return;
+                WalkerHost.Children.Clear();
+                if (vm.IsBusy) WalkerHost.Children.Add(new DSPRE.Avalonia.Controls.LoadingWalker());
+            };
         }
 
         public IEnumerable<(string EditorName, IEditorWithUnsavedChanges Editor)> GetEmbeddedEditors()

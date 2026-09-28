@@ -79,9 +79,18 @@ namespace DSPRE.Avalonia
                 resources.TryFindResource(key, resources.ActualThemeVariant, out var v) && v is IBrush b ? b : fallback;
             var stack = new StackPanel { Spacing = 12, Width = 320 };
             stack.Children.Add(new TextBlock { Text = text, FontSize = 18, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center });
+            stack.Children.Add(new Panel { ClipToBounds = true, Children = { new DSPRE.Avalonia.Controls.LoadingWalker() } });
             stack.Children.Add(new ProgressBar { IsIndeterminate = true });
             if (!string.IsNullOrEmpty(hint))
                 stack.Children.Add(new TextBlock { Text = hint, FontSize = 12, Opacity = 0.8, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center });
+            var fact = new TextBlock { Text = PokeFacts.Next(), FontSize = 12, FontStyle = FontStyle.Italic, Opacity = 0.7,
+                                       TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 4, 0, 0) };
+            fact.IsVisible = fact.Text.Length > 0;
+            stack.Children.Add(fact);
+            var timer = new global::Avalonia.Threading.DispatcherTimer { Interval = PokeFacts.Interval };
+            timer.Tick += (_, _) => fact.Text = PokeFacts.Next();
+            fact.AttachedToVisualTree += (_, _) => timer.Start();
+            fact.DetachedFromVisualTree += (_, _) => timer.Stop();
             return new Border
             {
                 Background = Res("Editor.PanelBg", Brushes.Gray),

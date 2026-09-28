@@ -212,8 +212,37 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool IsBusy
         {
             get => _isBusy;
-            set { if (_isBusy != value) { _isBusy = value; OnPropertyChanged(); } }
+            set
+            {
+                if (_isBusy == value) return;
+                _isBusy = value;
+                OnPropertyChanged();
+                ShowFacts(value);
+            }
         }
+
+        private string _busyFact = "";
+        /// <summary>A Pokémon fact on the loading card, changing while it stays up.</summary>
+        public string BusyFact
+        {
+            get => _busyFact;
+            private set { if (_busyFact != value) { _busyFact = value; OnPropertyChanged(); } }
+        }
+
+        private global::Avalonia.Threading.DispatcherTimer _factTimer;
+
+        private void ShowFacts(bool on)
+        {
+            _factTimer?.Stop();
+            if (!on) return;
+            BusyFact = PokeFacts.Next();
+            _factTimer ??= new global::Avalonia.Threading.DispatcherTimer { Interval = PokeFacts.Interval };
+            _factTimer.Tick -= NextFact;
+            _factTimer.Tick += NextFact;
+            _factTimer.Start();
+        }
+
+        private void NextFact(object sender, System.EventArgs e) => BusyFact = PokeFacts.Next();
 
         private string _busyText = "";
         public string BusyText

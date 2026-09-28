@@ -276,9 +276,13 @@
                 BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="6" Padding="20,16">
           <StackPanel Spacing="12" Width="320">
             <TextBlock Text="{Binding BusyText}" FontSize="18" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+            <Panel x:Name="WalkerHost" ClipToBounds="True"/>
             <ProgressBar IsIndeterminate="True"/>
             <TextBlock Text="{Binding BusyHint}"
                        FontSize="12" Opacity="0.8" TextWrapping="Wrap" TextAlignment="Center"/>
+            <TextBlock Text="{Binding BusyFact}" IsVisible="{Binding BusyFact, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       FontSize="12" FontStyle="Italic" Opacity="0.7" TextWrapping="Wrap" TextAlignment="Center"
+                       Margin="0,4,0,0"/>
           </StackPanel>
         </Border>
       </Border>
