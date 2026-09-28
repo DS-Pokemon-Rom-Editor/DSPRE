@@ -88,6 +88,7 @@ namespace DSPRE.ROMFiles
             public (float x, float y, float z) OffsetFor(int propKind)
                 => propKind >= 0 && propKind < OffsetByPropKind.Length ? OffsetByPropKind[propKind] : (0f, 0f, 0f);
 
+            /// <summary>sPropScaleByKind: sizes the culling box (IsPropInView), never the drawn model.</summary>
             public (float x, float y, float z) ScaleFor(int propKind)
                 => propKind >= 0 && propKind < ScaleByPropKind.Length ? ScaleByPropKind[propKind] : (0f, 0f, 0f);
 

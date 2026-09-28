@@ -292,6 +292,11 @@ namespace DSPRE.Avalonia.Gl
         public float Pitch { get => _pitch; set { _pitch = Math.Max(-89f, Math.Min(89f, value)); RequestNextFrameRendering(); } }
         public float Distance { get => _distance; set { _distance = Math.Max(0.2f, value); RequestNextFrameRendering(); } }
 
+        private float _roll;
+
+        /// <summary>Turns the view about the line of sight, in degrees, the way the Distortion World camera rolls.</summary>
+        public float Roll { get => _roll; set { if (_roll != value) { _roll = value; RequestNextFrameRendering(); } } }
+
         private float _fovDegrees = DefaultFovDegrees;
 
         /// <summary>The everyday editor view, wide enough to see a whole map at a sensible distance.</summary>
@@ -751,7 +756,8 @@ namespace DSPRE.Avalonia.Gl
             var proj = _orthographic
                 ? Mat4.Ortho(_distance * (float)Math.Tan(halfFov), aspect, -1000f, 1000f)
                 : Mat4.Perspective(_fovDegrees * (float)Math.PI / 180f, aspect, 0.05f, 1000f);
-            var view = Mat4.Multiply(Mat4.OrbitView(_distance, _yaw, _pitch), Mat4.Translate(-_targetX, -_targetY, -_targetZ));
+            var view = Mat4.Multiply(Mat4.Multiply(Mat4.RotateZ(_roll * (float)Math.PI / 180f), Mat4.OrbitView(_distance, _yaw, _pitch)),
+                                     Mat4.Translate(-_targetX, -_targetY, -_targetZ));
             var mvp = Mat4.Multiply(proj, view);
             _lastMvp = mvp; _lastLogW = (float)Math.Max(1.0, Bounds.Width); _lastLogH = (float)Math.Max(1.0, Bounds.Height);
 
@@ -818,15 +824,17 @@ namespace DSPRE.Avalonia.Gl
                 // Real per-material translucency (ported from WinForms PR #209): materials like the
                 // "h_kage" building drop-shadow plane or puddle overlays carry their own NSBMD alpha
                 // instead of always being fully opaque (or, previously, skipped and not drawn at all).
-                bool blend = part.Alpha < 0.999f;
+                float alpha = part.Alpha;
+                if (_fadedMaterials != null && _fadedMaterials.TryGetValue(part.MaterialKey, out float faded))
+                    alpha = faded;
+                // Faded all the way out is not drawn: without blending it would still cover what is behind.
+                if (alpha <= 0.001f) continue;
+                bool blend = alpha < 0.999f;
                 if (blend)
                 {
                     _f.Enable(GlFunctions.GL_BLEND);
                     _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
                 }
-                float alpha = part.Alpha;
-                if (_fadedMaterials != null && _fadedMaterials.TryGetValue(part.MaterialKey, out float faded))
-                    alpha = faded;
                 _f.Uniform1f(_alphaLoc, alpha);
 
                 float[] texMtx = IdentityTexMatrix;

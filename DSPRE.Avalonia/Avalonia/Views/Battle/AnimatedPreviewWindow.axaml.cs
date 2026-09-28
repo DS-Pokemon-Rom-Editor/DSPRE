@@ -126,6 +126,15 @@ namespace DSPRE.Avalonia.Views.Battle
             Show(owner);
         }
 
+        /// <summary>Swaps in another scene of the same place, keeping the walk going.</summary>
+        public void ReplaceScene(NsbmdRenderModel scene, AreaData area, EventFile events, MapCollisionGrid collision)
+        {
+            bool indoor = area != null && area.areaType == AreaData.TYPE_INDOOR;
+            _vm.SwapScene(scene, GroundAnimationSet.ForArea(area), events, indoor, collision);
+            GlView.SetModel(scene);
+            Apply();
+        }
+
         private void Apply()
         {
             if (_vm.StepInto) PlaceCameraBehindPlayer();
@@ -167,12 +176,14 @@ namespace DSPRE.Avalonia.Views.Battle
         /// <summary>Back to the editor's own view when the player stops walking about. </summary>
         private void RestoreFreeCamera()
         {
+            GlView.Roll = 0f;
             GlView.Orthographic = false;
             GlView.VerticalFieldOfViewDegrees = NsbmdGlControl.DefaultFovDegrees;
         }
 
         private float _camYaw = FieldCamera.YawDegrees;
         private float _camPitch;
+        private float _camRoll;
 
         private static float ShortestTurn(float from, float to)
         {
@@ -212,6 +223,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 float part = 1f / Math.Max(1, own.Value.steps);
                 _camYaw += ShortestTurn(_camYaw, own.Value.yaw) * part;
                 _camPitch += (own.Value.pitch - _camPitch) * part;
+                _camRoll += ShortestTurn(_camRoll, own.Value.roll) * part;
                 wantYaw = _camYaw;
                 wantPitch = _camPitch;
             }
@@ -219,7 +231,9 @@ namespace DSPRE.Avalonia.Views.Battle
             {
                 _camYaw = wantYaw;
                 _camPitch = wantPitch;
+                _camRoll = 0f;
             }
+            GlView.Roll = _camRoll;
 
             GlView.SetOrientation(wantYaw, wantPitch);
         }

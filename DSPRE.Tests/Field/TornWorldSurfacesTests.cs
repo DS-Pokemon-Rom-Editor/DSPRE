@@ -53,6 +53,39 @@ namespace DSPRE.Tests.Field
             return (entry, data, surfaces);
         }
 
+        [SkippableTheory]
+        [InlineData(574)]
+        [InlineData(576)]
+        [InlineData(577)]
+        public void GroundJumpPointsAndPropTriggersAreReachedFromTheGround(long header)
+        {
+            // The game compares these with where the player stands, which on the ground is the terrain's height.
+            var (entry, data, surfaces) = Floor(header);
+            var ground = surfaces.Where(s => s.IsGround).ToList();
+            var boxes = data.JumpPoints.Select(j => j.Bounds)
+                .Concat(data.GhostTriggers.Select(g => g.Bounds))
+                .Where(b => b.StartY == entry.OffsetAltitude + 1)
+                .ToList();
+            Skip.If(boxes.Count == 0, "No ground level jump points or triggers on this floor.");
+
+            var missed = new List<string>();
+            foreach (var box in boxes)
+            {
+                bool hit = ground.Any(s =>
+                    Enumerable.Range(0, MapFile.mapSize).Any(row => Enumerable.Range(0, MapFile.mapSize).Any(col =>
+                    {
+                        var (x, y, z) = s.EventAt(col, row);
+                        return box.Contains(x, y, z);
+                    })));
+                if (hit) continue;
+                var lifts = ground.Where(s => box.StartX - s.GroundX >= 0 && box.StartX - s.GroundX < MapFile.mapSize
+                                             && box.StartZ - s.GroundZ >= 0 && box.StartZ - s.GroundZ < MapFile.mapSize)
+                                  .Select(s => s.EventAt(box.StartX - s.GroundX, box.StartZ - s.GroundZ).y);
+                missed.Add($"({box.StartX},{box.StartY},{box.StartZ}) size ({box.SizeX},{box.SizeY},{box.SizeZ}) ground y {string.Join("/", lifts)}");
+            }
+            Assert.True(missed.Count == 0, $"floor altitude {entry.OffsetAltitude}, missed: " + string.Join("; ", missed));
+        }
+
         [SkippableFact]
         public void EverySurfaceOfAFloorGetsAPatchOfItsOwn()
         {

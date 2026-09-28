@@ -162,8 +162,8 @@
                 <DataGridTextColumn Header="Size X" Binding="{Binding Bounds.SizeX}" Width="70"/>
                 <DataGridTextColumn Header="Size Y" Binding="{Binding Bounds.SizeY}" Width="70"/>
                 <DataGridTextColumn Header="Size Z" Binding="{Binding Bounds.SizeZ}" Width="70"/>
-                <DataGridTextColumn Header="Tiles down" Binding="{Binding TilesVertical}" Width="90"/>
-                <DataGridTextColumn Header="Tiles across" Binding="{Binding TilesHorizontal}" Width="*"/>
+                <DataGridTextColumn Header="Grid columns" Binding="{Binding TilesVertical}" Width="100"/>
+                <DataGridTextColumn Header="Grid rows" Binding="{Binding TilesHorizontal}" Width="*"/>
               </DataGrid.Columns>
             </DataGrid>
           </TabItem>

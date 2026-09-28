@@ -81,41 +81,6 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        public sealed class TravelAnimation : WholeModelMotion
-        {
-            private readonly float _x, _y, _z;
-            private readonly int _travel;
-            private int _startedAt = -1;
-
-            public TravelAnimation(float x, float y, float z, int frames)
-            {
-                _x = x; _y = y; _z = z;
-                _travel = Math.Max(1, frames);
-            }
-
-            public int Frames => _travel;
-
-            public bool Running => _startedAt >= 0;
-
-            public void Start(int frame)
-            {
-                if (_startedAt < 0) { _startedAt = frame; Backwards = false; return; }
-                _startedAt = frame;
-                Backwards = !Backwards;
-            }
-
-            public bool Backwards { get; private set; }
-
-            public override (float x, float y, float z) At(int frame)
-            {
-                if (_startedAt < 0) return (0f, 0f, 0f);
-
-                float along = Math.Min(1f, Math.Max(0f, (frame - _startedAt) / (float)_travel));
-                if (Backwards) along = 1f - along;
-                return (_x * along, _y * along, _z * along);
-            }
-        }
-
         public sealed class HoverAnimation : WholeModelMotion
         {
             public HoverAnimation(IReadOnlyList<float> offsets, float step)

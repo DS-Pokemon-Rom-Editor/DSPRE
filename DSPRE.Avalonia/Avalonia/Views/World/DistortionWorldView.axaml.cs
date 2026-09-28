@@ -2,6 +2,8 @@ using System;
 using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
+using DSPRE.ROMFiles;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels.World;
 using DSPRE.Avalonia.Views.Battle;
@@ -100,21 +102,51 @@ namespace DSPRE.Avalonia.Views.World
                 await DialogHelper.ShowError("This floor has no map to play.", "Distortion World");
                 return;
             }
+            var vm = VM;
             var preview = new AnimatedPreviewWindow();
-            preview.ViewModel.CameraAnglesAt = (x, z, facing) => VM.CameraAt(x, z, facing);
-            preview.ViewModel.PlayerArrivedOn = (x, z, frame) => VM.SomebodyStoodOn(x, z, frame);
-            VM.CurrentFrame = () => preview.ViewModel.Frame;
-            VM.PutPlayerOn = (x, z, facing) => preview.ViewModel.PutPlayerOn(x, z, facing);
-            preview.ViewModel.PlayerRollAt = (x, z) => VM.RollAt(x, z);
-            preview.ShowPeopleThroughWalls = true;
-            preview.ShowFor(this, VM.Model3D, VM.Area, VM.Events, null,
-                VM.Collision, (x, z) => VM.TileFoot(x, z),
-                cameraId: VM.CameraId, musicDayId: VM.MusicDayId, musicNightId: VM.MusicNightId);
+            var walk = preview.ViewModel;
+            vm.StartWalk();
+            walk.CameraAnglesAt = (x, z, facing) => vm.CameraAt(x, z, facing);
+            walk.PlayerArrivedOn = (x, z, frame) => vm.SomebodyStoodOn(x, z, frame, walk.Player?.Facing ?? MoveFacing.Down);
+            vm.CurrentFrame = () => walk.Frame;
+            vm.PutPlayerOn = (x, z, facing) => walk.PutPlayerOn(x, z, facing);
+            walk.PlayerRollAt = (x, z) => vm.RollAt(x, z);
+            walk.PlayerHeld = () => vm.PlayerHeld;
+            walk.PlayerSpriteShift = vm.PlayerSpriteShift;
+            walk.BuildingOpacity = vm.OpacityOf;
+            walk.FrameAdvanced += (_, _) => vm.Tick(walk.Frame);
 
-            if (!VM.WholeWorld) preview.ViewModel.StartTile = VM.WhereToStand();
+            // A ride that leaves the floor shown carries on on the next one; the reload waits for the frame to end.
+            Action changed = () => Dispatcher.UIThread.Post(() =>
+            {
+                if (!vm.ShowRideFloor()) return;
+                preview.ReplaceScene(vm.Model3D, vm.Area, vm.Events, vm.Collision);
+                var tile = vm.RideWalkTile();
+                if (tile != null) walk.StandOn(tile.Value.x, tile.Value.z, vm.RideFacing);
+                if (walk.Player != null) vm.RideContinuesFrom(walk.Player.TileX, walk.Player.TileZ, walk.Frame);
+            });
+            vm.RideChangedFloor += changed;
+            preview.Closed += (_, _) => vm.RideChangedFloor -= changed;
+
+            preview.ShowPeopleThroughWalls = true;
+            preview.ShowFor(this, vm.Model3D, vm.Area, vm.Events, null,
+                vm.Collision, (x, z) => vm.TileFoot(x, z),
+                cameraId: vm.CameraId, musicDayId: vm.MusicDayId, musicNightId: vm.MusicNightId);
+
+            if (!vm.WholeWorld) walk.StartTile = vm.WhereToStand();
         }
 
-        private void Edited(object sender, DataGridCellEditEndedEventArgs e) => VM?.MarkEdited();
+        private void Edited(object sender, DataGridCellEditEndedEventArgs e)
+        {
+            if (VM == null || VM.MarkEdited() || sender is not DataGrid grid) return;
+            // The rows raise no change of their own, so the grid only shows the value put back once it rebinds.
+            Dispatcher.UIThread.Post(() =>
+            {
+                var rows = grid.ItemsSource;
+                grid.ItemsSource = null;
+                grid.ItemsSource = rows;
+            });
+        }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
         private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();

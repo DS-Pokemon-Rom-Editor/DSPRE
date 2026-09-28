@@ -1080,7 +1080,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public FieldCameraEntry CameraEntry => FieldCamera.Entry(_cameraId, _family);
 
-        public Func<int, int, MoveFacing, (float pitch, float yaw, int steps)?> CameraAnglesAt;
+        public Func<int, int, MoveFacing, (float pitch, float yaw, float roll, int steps)?> CameraAnglesAt;
 
         /// <summary>What the step-in camera is doing, for the toolbar.</summary>
         public string CameraDescription
@@ -1473,6 +1473,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string Move(MoveFacing dir)
         {
             if (Player == null || _question != null) return null;
+            if (PlayerHeld?.Invoke() == true) return null;
 
             if (ScriptRunning)
             {
@@ -1505,6 +1506,24 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public Action<int, int, int> PlayerArrivedOn;
 
         public Func<int, int, float> PlayerRollAt;
+
+        /// <summary>True while something the map runs has taken the controls from the player.</summary>
+        public Func<bool> PlayerHeld;
+
+        /// <summary>An extra shift of the player's sprite alone, in tiles.</summary>
+        public Func<(float x, float y, float z)> PlayerSpriteShift;
+
+        /// <summary>How see-through a placed model is this frame, by model id, or null to leave it be.</summary>
+        public Func<int, float?> BuildingOpacity;
+
+        /// <summary>Shows another scene with the same lookups, keeping the clock running and the step-in view.</summary>
+        public void SwapScene(NsbmdRenderModel scene, TextureSrtAnimation terrain, EventFile events, bool indoor,
+                              MapCollisionGrid collision)
+        {
+            Load(scene, terrain, events, indoor, collision, _seed, _tileToWorld, _walkerFor, _walkerStartId,
+                 _scriptHome, _actionsFor);
+            PlaceNpcs(_footFinder);
+        }
 
         public void PutPlayerOn(int tileX, int tileZ, MoveFacing facing)
         {
@@ -2373,6 +2392,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (fades.Count > 0) MaterialFades = fades;
             }
 
+            if (BuildingOpacity != null)
+            {
+                Dictionary<int, float> fades = null;
+                foreach (var b in _scene.Buildings)
+                {
+                    float? opacity = BuildingOpacity(b.ModelId);
+                    if (opacity == null) continue;
+                    fades ??= MaterialFades != null ? new Dictionary<int, float>(MaterialFades) : new Dictionary<int, float>();
+                    for (int k = b.FirstKey; k < b.FirstKey + b.Count; k++) fades[k] = opacity.Value;
+                }
+                if (fades != null) MaterialFades = fades;
+            }
+
             MovedParts = null;
             if (_animateTerrain && _jointed.Count > 0)
             {
@@ -2489,11 +2521,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     var foot = _tileToWorld(Player.DrawX, Player.DrawZ);
                     float halfH = HalfHeightOf(pix);
                     float roll = PlayerRollAt?.Invoke(Player.TileX, Player.TileZ) ?? 0f;
+                    var (shiftX, shiftY, shiftZ) = PlayerSpriteShift?.Invoke() ?? (0f, 0f, 0f);
                     sprites.Add(new NsbmdGlControl.SpriteInstance
                     {
-                        Cx = foot.x,
-                        Cy = foot.y + halfH + Player.HopHeight * _tileX,
-                        Cz = foot.z,
+                        Cx = foot.x + shiftX * _tileX,
+                        Cy = foot.y + halfH + (Player.HopHeight + shiftY) * _tileX,
+                        Cz = foot.z + shiftZ * _tileZ,
                         HalfW = HalfWidthOf(pix),
                         HalfH = halfH,
                         Rgba = pix.Rgba,
