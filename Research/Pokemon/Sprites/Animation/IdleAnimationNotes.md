@@ -29,10 +29,10 @@ unk_02016EDC.h:
 NARC_a_1_8_0 = single-file NARC, member size 43966 bytes (read directly from its own FATB header)
   43966 / 89 = 494 exact -> one 89-byte record per species, same species count as a/1/1/1
 
-NARC_ReadPokepicAnimScript (pokemon.c:2188): reads one species record, copies one of unk0[2] (front/back) into PokepicAnimScript[10]
-  called from register_hall_of_fame.c:2023 for both front and back sprite per party member
+NARC_ReadPokepicAnimScript (pokemon.c): reads one species record, copies one of unk0[2] (front/back) into PokepicAnimScript[10]
+  called from register_hall_of_fame.c for both front and back sprite per party member
 
-Pokepic_RunAnimInternal (pokepic.c:997) = real per-frame stepper
+Pokepic_RunAnimInternal (pokepic.c) = real per-frame stepper
   animStepDelay counts down to 0, then advances whichAnim
   each step: duration (hold frames), xOffset (pixel shift while active), next
     next == -1 -> animation ends

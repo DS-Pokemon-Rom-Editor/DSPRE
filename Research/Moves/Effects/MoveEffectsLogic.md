@@ -57,7 +57,7 @@ _000:
     GoToEffectScript
 ```
 
-`GoToEffectScript` (opcode 36) is implemented by `BtlCmd_GoToEffectScript`, `src/battle/battle_command.c:1176`:
+`GoToEffectScript` (opcode 36) is implemented by `BtlCmd_GoToEffectScript`, `src/battle/battle_command.c`:
 
 ```c
 BOOL BtlCmd_GoToEffectScript(BattleSystem *battleSystem, BattleContext *ctx) {

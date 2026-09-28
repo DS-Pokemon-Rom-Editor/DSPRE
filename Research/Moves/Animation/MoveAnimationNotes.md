@@ -2,20 +2,20 @@
 
 Notes for [MoveAnimationLogic.md](MoveAnimationLogic.md).
 
-PlayMoveAnimation (opcode 23) -> BtlCmd_PlayMoveAnimation (battle_command.c:879)
+PlayMoveAnimation (opcode 23) -> BtlCmd_PlayMoveAnimation (battle_command.c)
   picks move = ctx->moveTemp or ctx->moveNoCur
-  gated on BATTLE_STATUS_MOVE_ANIMATIONS_OFF + BattleSystem_AreBattleAnimationsOn (battle_system.c:748, "Battle effects" setting), or move == MOVE_TRANSFORM
+  gated on BATTLE_STATUS_MOVE_ANIMATIONS_OFF + BattleSystem_AreBattleAnimationsOn (battle_system.c, "Battle effects" setting), or move == MOVE_TRANSFORM
   calls BattleController_SetMoveAnimation(battleSystem, ctx, move)
 
-PlayMoveAnimationOnMons (opcode 24) -> BtlCmd_PlayMoveAnimationOnMons (battle_command.c:903)
+PlayMoveAnimationOnMons (opcode 24) -> BtlCmd_PlayMoveAnimationOnMons (battle_command.c)
   same gate, calls ov12_0226343C(battleSystem, ctx, move, attacker, defender) instead
 
-BattleController_SetMoveAnimation: declared battle_controller.h:26, void, args (BattleSystem*, BattleContext*, u16 move)
+BattleController_SetMoveAnimation: declared battle_controller.h, void, args (BattleSystem*, BattleContext*, u16 move)
   NOT DEFINED anywhere in src/ - declaration only
 
 ov12_0226343C: address-named stub, unmatched, not decompiled
 
-PlayBattleAnimation/OnMons/FromVar (opcodes 69/70/71) -> battle_command.c:2258 onward
+PlayBattleAnimation/OnMons/FromVar (opcodes 69/70/71) -> battle_command.c onward
   separate simpler trigger, explicit animation id arg, used for non-move animations (status/faint/encounter)
   gated on BattleSystem_AreBattleAnimationsOn + specific ctx status values (15/16/25/26)
 
@@ -26,13 +26,12 @@ particle library, fully decompiled, generic (not battle-specific):
   struct SPLResBase (spl_resource.h): pos, gen_num, radius, length, axis, clr_n, init_vel_mag_pos, init_vel_mag_axis, base_scl, emtr_life, ptcl_life
   SPLResBaseFlag bitfield: init_pos_type, draw_type, circle_axis, use_scl_anm, use_clr_anm, use_alp_anm, use_tex_anm, use_fld_grvt, use_fld_rndm, use_fld_mgnt, use_fld_spin, ...
   used in: src/overlay_06.c, src/overlay_94.c, src/intro_movie_scene_4.c, src/register_hall_of_fame.c
-  zero call sites in src/battle/ - no confirmed link to move effects
+  battle loads a/0/2/9 (NARC 29) through the particle loader in asm/overlay_07.s; Pt names it waza_particle (battle_particle_util.c)
+  format + archives: Graphics/Particles/ParticlesLogic.md
 
 not decompiled:
 - BattleController_SetMoveAnimation body (the real move-animation loader/interpreter)
 - ov12_0226343C (two-mon variant)
-- archive name/constant for per-move visual animation bytecode or particle resource data (not in move_script/effect_script/subscript, none of those hold visual data)
-- any link between spl_* particle API and move effects
 
 possible loader locations (address-named / partial, battle overlay):
 - src/battle/overlay_12_0224E4FC.c (6719 lines, mixed named + ov12_ stubs)

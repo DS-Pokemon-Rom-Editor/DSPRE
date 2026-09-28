@@ -17,3 +17,7 @@
 - [Graphics census](Graphics/GraphicsCensus.md)
 - [Battle menu icons and gauge status words](Graphics/BattleIconsLogic.md)
 - [Nintendo DS 3D formats](Graphics/ThreeDFormats.md)
+- [Type icons](Graphics/TypeIconsLogic.md)
+- [Bottom screens](Graphics/BottomScreens/BottomScreensLogic.md)
+- [Particles](Graphics/Particles/ParticlesLogic.md)
+- [VS intros](Graphics/VsIntros/VsIntrosLogic.md)

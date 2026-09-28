@@ -17,9 +17,9 @@ const u8 GetMonIconPaletteEx(u32 species, u32 form, u32 isEgg);
 const u8 GetBattleMonIconPaletteEx(u32 species, u32 form, BOOL isEgg);
 ```
 
-`Pokemon_GetIconNaix` calls `Boxmon_GetIconNaix`, which reads species/isEgg/form off a `BoxPokemon` and calls `GetMonIconNaixEx` (`src/pokemon_icon_idx.c:11-29`).
+`Pokemon_GetIconNaix` calls `Boxmon_GetIconNaix`, which reads species/isEgg/form off a `BoxPokemon` and calls `GetMonIconNaixEx` (`src/pokemon_icon_idx.c`).
 
-`BoxMonGetForm` (`:85`) only reads a nonzero form for Unown (its letter, via `GetBoxMonUnownLetter`), Deoxys, Shellos, Gastrodon, Burmy, Wormadam, Giratina, Shaymin, and Rotom. Every other species is forced to form 0 for icon purposes.
+`BoxMonGetForm` only reads a nonzero form for Unown (its letter, via `GetBoxMonUnownLetter`), Deoxys, Shellos, Gastrodon, Burmy, Wormadam, Giratina, Shaymin, and Rotom. Every other species is forced to form 0 for icon purposes.
 
 ## GetMonIconNaixEx
 
@@ -64,7 +64,7 @@ u32 GetMonIconNaixEx(u32 species, BOOL isEgg, u32 form) {
 
 `sub_02070438` is the exact same form-clamp helper used by the battle-sprite otherpoke redirect (see `AltFormSpritesLogic.md`). A plain species with form 0 lands on `species + 7`: the icon sheet reserves the first 7 slots for non-species icons (egg placeholders and similar) before the per-species entries begin.
 
-`GetBattleMonIconNaixEx` (`:68`) wraps the same function, only adding two more form-aware cases on top for the battle-only icon set:
+`GetBattleMonIconNaixEx` wraps the same function, only adding two more form-aware cases on top for the battle-only icon set:
 
 ```c
 u32 GetBattleMonIconNaixEx(u32 species, BOOL isEgg, u32 form) {
@@ -124,15 +124,16 @@ const u8 GetMonIconPaletteEx(u32 species, u32 form, u32 isEgg) {
 }
 ```
 
-The palette index is not a formula on its own, it is a lookup into a real array, `sPokemonPalNoBySpeciesAndForm` (`src/pokemon_icon_idx.c:103`), keyed by the same remapped species/form/egg index built above. The array is fully decompiled, around 546 entries long, one byte per icon slot.
+The palette index is not a formula on its own, it is a lookup into a real array, `sPokemonPalNoBySpeciesAndForm` (`src/pokemon_icon_idx.c`), keyed by the same remapped species/form/egg index built above. The array is fully decompiled, around 546 entries long, one byte per icon slot.
 
-`GetBattleMonIconPaletteEx` (`:683`) mirrors `GetBattleMonIconNaixEx`: Castform and Cherrim index straight into `sPokemonPalNoBySpeciesAndForm` at their own offsets (`540 + form - 1` and `543 + form - 1`) when they have a nonzero form, otherwise it falls through to `GetMonIconPaletteEx`.
+`GetBattleMonIconPaletteEx` mirrors `GetBattleMonIconNaixEx`: Castform and Cherrim index straight into `sPokemonPalNoBySpeciesAndForm` at their own offsets (`540 + form - 1` and `543 + form - 1`) when they have a nonzero form, otherwise it falls through to `GetMonIconPaletteEx`.
 
 ## What DSPRE already does
 
-`RomInfo.cs:2212` maps `DirNames.monIcons` to `poketool\icongra\poke_icon.narc` for HGSS; `:2327` maps it to `pl_poke_icon.narc` for Platinum; `:2406` points a DP-generation game code straight at the raw archive path `a\0\2\0`.
+The archive is found through the `monIcons` entry of `SetNarcDirs` in `DSPRE.Core/RomInfo.cs`: `poketool\icongra\poke_icon.narc` in HeartGold and SoulSilver, `pl_poke_icon.narc` in Platinum, and the raw archive path `a\0\2\0` for the Diamond and Pearl layout.
 
-DSPRE already reads a real in-ROM address, `RomInfo.monIconPalTableAddress`, for the per-species icon palette table (`DS_Map/DSUtils/DSUtils.cs`, around lines 115-127 and 1295-1303), which is the same table as `sPokemonPalNoBySpeciesAndForm` above.
+The per species palette byte is the same table as `sPokemonPalNoBySpeciesAndForm` above. DSPRE reads and writes it at `RomInfo.monIconPalTableAddress` through `GetMonIconPaletteId` and `SetMonIconPaletteId` in `DSPRE.Core/DSUtils/DSUtils.cs`, after `TryResolveMonIconPalTable` works out whether that address falls in the ARM9 or in the overlay the table was moved to.
 
-DSPRE does not reimplement the `GetMonIconNaixEx` index arithmetic. The unpacked `poke_icon.narc` already has one NCGR/NCER file per icon slot, and DSPRE reads those files directly by their existing filename (`DSUtils.cs:1230`, `:1279`, `:1319`, `:1324`), so the runtime index math above is only needed by the game itself, not by an editor working against the unpacked archive.
+The file numbering is carried by `PokemonIconFiles` in `DSPRE.Core/ROMFiles/PokemonIconFiles.cs`, which is the arithmetic of `GetMonIconNaixEx` written as data: seven shared files first, so a species is file `species + 7`, the egg at 501 and the Manaphy egg at 502, and one run of files per form family starting where the formulas above put it (Deoxys at 503, Unown from 506 so that B lands on 507, and so on), with Giratina, Shaymin and Rotom only from Platinum and the battle-only Castform and Cherrim frames only in HeartGold and SoulSilver. `Describe` turns a file number back into a species and form, which is how the icon editors label each file and open the Pokémon Editor entry that owns it.
 
+The pictures themselves are read and written per file by `GetMonIconGraphicRaw`, `ValidateMonIconGraphic` and `SetMonIconGraphic` in `DSUtils.cs`, with the shared palette files read from the same unpacked archive.

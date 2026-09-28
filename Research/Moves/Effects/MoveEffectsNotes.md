@@ -32,7 +32,7 @@ subscript/ = 297 files, named (subscript_0000_StartEncounter.s ...)
 move_script_0001_Pound.s, full file:
   GoToEffectScript
 
-BtlCmd_GoToEffectScript (battle_command.c:1176):
+BtlCmd_GoToEffectScript (battle_command.c):
   BattleScriptJump(ctx, NARC_a_0_3_0, ctx->trainerAIData.moveData[ctx->moveNoCur].effect)
   -> jumps by move's effect id, not move id
 

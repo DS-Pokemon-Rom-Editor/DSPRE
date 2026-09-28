@@ -81,9 +81,9 @@ struct UnkStruct_02072914 {
 
 `sizeof(struct UnkStruct_02072914)` is 89 bytes (2 * (3 + 10*4) + 3). `NARC_a_1_8_0` is a single-file NARC whose one member is 43966 bytes, confirmed by reading its own FATB header directly: 43966 / 89 = 494 exactly, one record per species, same species count as `a/1/1/1`.
 
-`NARC_ReadPokepicAnimScript` (`src/pokemon.c:2188`) reads one species' record out of `NARC_a_1_8_0` and copies out one of the two `unk0[]` sub-entries (front or back, picked by a facing argument) into a `PokepicAnimScript[10]` buffer. `register_hall_of_fame.c:2023` calls it for both the front and back sprite of each Hall of Fame party member.
+`NARC_ReadPokepicAnimScript` (`src/pokemon.c`) reads one species' record out of `NARC_a_1_8_0` and copies out one of the two `unk0[]` sub-entries (front or back, picked by a facing argument) into a `PokepicAnimScript[10]` buffer. `register_hall_of_fame.c` calls it for both the front and back sprite of each Hall of Fame party member.
 
-`Pokepic_RunAnimInternal` (`src/pokepic.c:997`) is the real per-frame stepper:
+`Pokepic_RunAnimInternal` (`src/pokepic.c`) is the real per-frame stepper:
 
 ```c
 static void Pokepic_RunAnimInternal(Pokepic *pokepic) {

@@ -2,7 +2,7 @@
 
 # Particle emitter fields
 
-Generated from `SpaFieldNotes.cs`. Do not edit by hand; `SpaFieldDocTests` rewrites it.
+First generated from `SpaFieldNotes.cs` by a test that has since been removed, and now kept by hand.
 
 An emitter record in a `.spa` archive holds 130 fields. Every one of them is read. This says which ones the preview acts on, which ones only the drawing code looks at, and which ones it deliberately ignores.
 
@@ -56,7 +56,7 @@ The remaining fields drive the preview: how many particles there are, where they
 - `ChildG`
 - `ChildGenIntvl`
 - `ChildGenNum`
-- `ChildGenStart`
+- `ChildGenDelay`
 - `ChildHasAlpAnm`
 - `ChildHasSclAnm`
 - `ChildLife`

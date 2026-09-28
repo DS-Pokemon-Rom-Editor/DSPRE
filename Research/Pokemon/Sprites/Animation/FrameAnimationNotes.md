@@ -16,11 +16,11 @@ frame stepping (src/sprite.c), all branch on sprite->flag then call into Nitro S
   Sprite_SetAnimationFrame(sprite, frameIndex) -> NNS_G2dSetCellAnimationCurrentFrame / NNS_G2dSetMCAnimationCurrentFrame
   Sprite_GetAnimationFrame(sprite) -> NNS_G2dGetAnimCtrlCurrentFrame
 
-Sprite_SetAnimCtrlSeq (sprite.c:295): NNS_G2dGetAnimSequenceByIdx -> NNS_G2dSetCellAnimationSequence -> NNS_G2dStartAnimCtrl
-Sprite_TryChangeAnimSeq (:311): only calls SetAnimCtrlSeq if animationNo actually changed
-Sprite_ResetAnimCtrlState (:317): resets control state, forces frame to 0
+Sprite_SetAnimCtrlSeq (sprite.c): NNS_G2dGetAnimSequenceByIdx -> NNS_G2dSetCellAnimationSequence -> NNS_G2dStartAnimCtrl
+Sprite_TryChangeAnimSeq : only calls SetAnimCtrlSeq if animationNo actually changed
+Sprite_ResetAnimCtrlState : resets control state, forces frame to 0
 
-DSPRE side: DS_Map/Avalonia/Data/CellAnim.cs
+DSPRE side: DSPRE.Avalonia/Avalonia/Data/CellAnim.cs (CFrame, CellSequence, CellActor)
   CFrame (cell, dur, pos, rot, scale per frame), CellSequence (CFrame[]), CellActor (timeline/playback state)
   same shape as SpriteAnimationData/NNSG2dCellAnimation, parsed straight from ROM NANR/NCER instead of loaded via g2d lib
 

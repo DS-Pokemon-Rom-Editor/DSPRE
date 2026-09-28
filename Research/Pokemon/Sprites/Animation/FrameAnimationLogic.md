@@ -93,11 +93,11 @@ u16 Sprite_GetAnimationFrame(Sprite *sprite) {
 }
 ```
 
-Switching which animation sequence plays goes through `Sprite_SetAnimCtrlSeq` (`src/sprite.c:295`), which pulls the sequence by index out of `animBankData` (`NNS_G2dGetAnimSequenceByIdx`), assigns it to the live `animation` (`NNS_G2dSetCellAnimationSequence`), and starts it (`NNS_G2dStartAnimCtrl`). `Sprite_TryChangeAnimSeq` (`:311`) is a no-op guard that only calls `Sprite_SetAnimCtrlSeq` if `sprite->animationNo` actually changed. `Sprite_ResetAnimCtrlState` (`:317`) resets the control state and forces the frame back to 0.
+Switching which animation sequence plays goes through `Sprite_SetAnimCtrlSeq` (`src/sprite.c`), which pulls the sequence by index out of `animBankData` (`NNS_G2dGetAnimSequenceByIdx`), assigns it to the live `animation` (`NNS_G2dSetCellAnimationSequence`), and starts it (`NNS_G2dStartAnimCtrl`). `Sprite_TryChangeAnimSeq` is a no-op guard that only calls `Sprite_SetAnimCtrlSeq` if `sprite->animationNo` actually changed. `Sprite_ResetAnimCtrlState` resets the control state and forces the frame back to 0.
 
 ## What DSPRE already does
 
-DSPRE has its own reimplementation of this same cell/frame model, built directly from the NANR/NCER binary layout rather than from source. `DS_Map/Avalonia/Data/CellAnim.cs` defines `CFrame` (cell index, duration, position, rotation, scale per frame), `CellSequence` (an array of `CFrame`), and `CellActor` (owns the timeline/playback state and advances it). This mirrors the same shape as `SpriteAnimationData`/`NNSG2dCellAnimation`: a cell bank, an animation bank, and a live per-instance playback cursor, just parsed straight from the ROM's NANR/NCER files instead of loaded through the g2d library.
+DSPRE has its own reimplementation of this same cell/frame model, built directly from the NANR/NCER binary layout rather than from source. `DSPRE.Avalonia/Avalonia/Data/CellAnim.cs` defines `CFrame` (cell index, duration, position, rotation, scale per frame), `CellSequence` (an array of `CFrame`), and `CellActor` (owns the timeline/playback state and advances it). This mirrors the same shape as `SpriteAnimationData`/`NNSG2dCellAnimation`: a cell bank, an animation bank, and a live per-instance playback cursor, just parsed straight from the ROM's NANR/NCER files instead of loaded through the g2d library.
 
 ## Not decompiled yet
 

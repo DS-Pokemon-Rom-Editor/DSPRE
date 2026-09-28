@@ -91,23 +91,29 @@ guesswork, and the guess is never dressed up as a fact (`web/src/state/grouping.
 
 ## Where DSPRE stands against this
 
-Read from `DSPRE.Avalonia/Avalonia/Data/ModelAssets.cs` as it is today.
+`Identify` in `DSPRE.Avalonia/Avalonia/Data/ModelAssets.cs` recognises all seven magics, and the Model
+Browser now plays every kind of animation. Joint movement comes through `ModelAssets.AnimationFor`. The
+other four, texture sliding, texture swapping, colour and visibility, are found by `FindCompanions` in
+`ModelBrowserViewModel.Companions.cs` and read by `TextureSrtAnimation`, `TexturePatternAnimation`,
+`MaterialColourAnimation` and `VisibilityAnimation` in `DSPRE.Core/ROMFiles`. Each is offered as a
+choice with how sure the match is, and its effect is applied to the model's materials by name rather
+than by order, with a note when a chosen file drives nothing on the model being shown.
 
-`Identify` recognises all seven magics (`ModelAssets.cs:77-90`), but only joint movement is ever parsed:
-`AnimationFor` returns a `JointAnimation` and nothing reads `BTP0`, `BVA0`, `BMA0` or `BTA0`
-(`ModelAssets.cs:469-496`). So four of the seven kinds can be named but not shown.
+Pairing follows the reference's two rules, in `ModelAssets.MatchFor`. One is a shared start of at least
+four characters where one name begins with the other (`NameMatch`). The other is the cut-down name from
+`BaseName`, which strips the game prefix and drops everything from the first underscore, so `pl_manene`
+and `manene_aruku` both come out as `manene`; bases of one or two letters are ignored because most of a
+game's models share them. Where no name fits, filing order decides, but only inside the model's own
+archive and only within three entries either side of it.
 
-Pairing is cruder than the reference in two specific ways. Names are compared by counting a shared
-leading run of at least four characters and requiring one to start with the other
-(`ModelAssets.cs:430-437`), with no game-prefix strip and no clip-suffix truncation, so `pl_manene`
-against `manene_aruku` scores nothing where NitroViewer matches them. And the positional fallback looks
-only at the three entries after the model (`ModelAssets.cs:484-491`) rather than the first candidate
-anywhere at or after it, with no fallback to the last one before.
+One gap remains against the reference. The fallback for joint movement in `AnimationFor` still looks
+only at the three entries after the model, rather than at the first candidate anywhere after it, with no
+fallback to the last one before.
 
-One thing DSPRE does that the reference does not: for buildings it reads the game's own animation table
-through `BuildingAnimationSet.InfoFor` (`ModelAssets.cs:442-455`), which is a real manifest rather than a
-guess. That is the right shape and should stay; it is the unlisted archives that need the reference's
-fallback rules.
+For buildings DSPRE reads the game's own animation table instead of guessing, through
+`ModelAssets.OwnAnimations` and `BuildingAnimationSet.InfoFor`, and looks in the separate archive
+buildings keep their animations in as well as beside the model. In Platinum every sliding and swapping
+picture for a building is in that archive and none sits next to a model at all.
 
 ## A note on NSBTA
 

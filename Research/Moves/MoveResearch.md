@@ -12,3 +12,7 @@
 - [Move Animation Test Coverage](Animation/MoveAnimationTestCoverage.md)
 - [Move Animation Routines](Animation/MoveAnimationRoutines.md)
 - [Move Animation Particle Fields](Animation/MoveAnimationParticleFields.md)
+
+## Types
+
+- [Type Chart Logic](Types/TypeChartLogic.md)
