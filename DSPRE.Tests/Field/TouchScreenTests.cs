@@ -29,6 +29,68 @@ namespace DSPRE.Tests
         public void AFiveEntryListSplitsIntoTwoColumns(int x, int y, int expected)
             => Assert.Equal(expected, HgssTouchScreen.HitChoice(5, false, x, y));
 
+        // The game's rectangles take in their top and left edge but not their bottom and right one.
+        [Theory]
+        [InlineData(3, 50, 0)]
+        [InlineData(250, 91, 0)]
+        [InlineData(251, 60, -1)]      // right edge of the table's 3..251
+        [InlineData(128, 92, -1)]      // bottom edge of 50..92, and above NO's 99
+        [InlineData(128, 99, 1)]
+        [InlineData(128, 140, -1)]
+        public void TheYesNoRectanglesAreHalfOpen(int x, int y, int expected)
+            => Assert.Equal(expected, HgssTouchScreen.HitChoice(2, true, x, y));
+
+        [Theory]
+        [InlineData(3, 27, 3, 0)]
+        [InlineData(128, 164, 3, -1)]
+        [InlineData(122, 3, 8, 0)]
+        [InlineData(123, 3, 8, -1)]    // the gap between the columns
+        [InlineData(131, 187, 8, 7)]
+        [InlineData(252, 187, 8, -1)]
+        public void ListRectanglesComeFromTheGamesTables(int x, int y, int count, int expected)
+            => Assert.Equal(expected, HgssTouchScreen.HitChoice(count, false, x, y));
+
+        [Theory]
+        [InlineData(8, 0, HgssTouchScreen.MenuSpot.Strip, 0)]
+        [InlineData(160, 5, HgssTouchScreen.MenuSpot.None, 0)]
+        [InlineData(20, 16, HgssTouchScreen.MenuSpot.None, 0)]
+        [InlineData(16, 22, HgssTouchScreen.MenuSpot.Icon, 0)]
+        [InlineData(76, 30, HgssTouchScreen.MenuSpot.None, 0)]
+        [InlineData(100, 133, HgssTouchScreen.MenuSpot.Icon, 6)]
+        [InlineData(100, 134, HgssTouchScreen.MenuSpot.None, 0)]
+        [InlineData(203, 8, HgssTouchScreen.MenuSpot.Item, 0)]
+        [InlineData(255, 20, HgssTouchScreen.MenuSpot.None, 0)]
+        [InlineData(210, 76, HgssTouchScreen.MenuSpot.Item, 1)]
+        [InlineData(210, 77, HgssTouchScreen.MenuSpot.None, 0)]
+        [InlineData(251, 133, HgssTouchScreen.MenuSpot.Shoes, 0)]
+        [InlineData(252, 100, HgssTouchScreen.MenuSpot.None, 0)]
+        [InlineData(168, 144, HgssTouchScreen.MenuSpot.AButton, 0)]
+        [InlineData(200, 188, HgssTouchScreen.MenuSpot.None, 0)]
+        [InlineData(255, 150, HgssTouchScreen.MenuSpot.None, 0)]
+        public void TheMenuRectanglesAreHalfOpen(int x, int y, HgssTouchScreen.MenuSpot spot, int index)
+        {
+            var (s, i) = HgssTouchScreen.HitMenu(x, y);
+            Assert.Equal(spot, s);
+            Assert.Equal(index, i);
+        }
+
+        [Fact]
+        public void TheAButtonOffersFishing()
+        {
+            Assert.Contains(HgssTouchScreen.FishingMessage, HgssTouchScreen.ALabelMessages);
+            Assert.Equal(22, HgssTouchScreen.FishingMessage);
+        }
+
+        [Fact]
+        public void TheBugContestMovesTheIconsAlong()
+        {
+            Assert.Equal(0, HgssTouchScreen.SlotOf(0, false));
+            Assert.Equal(1, HgssTouchScreen.SlotOf(0, true));      // RETIRE takes the first slot
+            Assert.Equal(0, HgssTouchScreen.SlotOf(7, true));
+            Assert.Equal(-1, HgssTouchScreen.SlotOf(5, true));     // no SAVE during the contest
+            Assert.Equal(-1, HgssTouchScreen.SlotOf(7, false));
+        }
+
         [Fact]
         public void TheDPadStaysInAColumnGoingUpAndDownAndCrossesOverSideways()
         {
@@ -117,6 +179,18 @@ namespace DSPRE.Tests
 
             Assert.True(Differs(idle, dimmed, 16, 10, 80, 60), "the icons should dim");
             Assert.False(Differs(idle, dimmed, 170, 150, 256, 190), "the A button never dims");
+            Assert.False(Differs(idle, dimmed, 54, 0, 70, 16), "the X mark never dims");
+
+            // With the menu open, the icon under its cursor stays solid while the rest dim.
+            byte[] open = screen.RenderMenu(null, null, null, new HgssTouchScreen.MenuLook
+                { Busy = true, Cursor = 0, RegisteredItems = true });
+            byte[] still = screen.RenderMenu(null, null, null, new HgssTouchScreen.MenuLook { RegisteredItems = true });
+            Assert.False(Differs(still, open, 24, 22, 64, 54), "the icon under the cursor stays solid");
+            Assert.True(Differs(still, open, 24, 62, 64, 94), "the other icons dim");
+
+            // The item frames only show with something registered to them.
+            byte[] none = screen.RenderMenu(null, null, null, new HgssTouchScreen.MenuLook { RegisteredItems = false });
+            Assert.True(Differs(still, none, 200, 8, 256, 40), "the first item frame comes and goes");
             Assert.True(Differs(idle, pressed, 168, 144, 256, 192), "a held A button looks pressed");
             Assert.True(Differs(idle, lit, 16, 10, 80, 60), "a touched icon lights up");
         }

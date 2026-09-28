@@ -95,11 +95,12 @@ namespace DSPRE.Tests
         }
 
         /// <summary>
-        /// The seven icons are all painted from one row, so the editor has to say so before somebody
-        /// recolours the Pokédex button and finds the other six have moved with it.
+        /// The icons, the seven of a normal walk and the Bug Contest's RETIRE, are all painted from one row,
+        /// so the editor has to say so before somebody recolours the Pokédex button and finds the others
+        /// have moved with it.
         /// </summary>
         [SkippableFact]
-        public void TheSevenIconsAreToldToShareTheirColours()
+        public void TheIconsAreToldToShareTheirColours()
         {
             Skip.If(!Ready(TestRoms.HeartGold, "IPKE"), "HeartGold is not unpacked here");
 
@@ -107,7 +108,7 @@ namespace DSPRE.Tests
             BottomScreenEditorViewModel.NoteSharing(pieces);
 
             var icons = pieces.Where(p => p.Name.EndsWith(" icon")).ToList();
-            Assert.Equal(7, icons.Count);
+            Assert.Equal(8, icons.Count);
             Assert.Single(icons.Select(p => (p.PaletteMember, p.PaletteRow)).Distinct());
 
             foreach (var icon in icons)

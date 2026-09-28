@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Views.Controls
     /// <summary>
     /// HeartGold and SoulSilver's bottom screen. The touch menu reacts to a touch the way the game does without
     /// opening anything: the A button presses A, the running shoes flip, an icon lights up while held. While a
-    /// script runs everything but the A button is dimmed and ignores touches. The Poké Ball screen takes a touch
+    /// script runs the icons, item slots and shoes are dimmed and ignore touches. The Poké Ball screen takes a touch
     /// on one of its entries as picking it.
     /// </summary>
     public sealed class HgssTouchScreenView : Control, ICustomHitTest
@@ -53,8 +53,10 @@ namespace DSPRE.Avalonia.Views.Controls
 
         /// <summary>The ROM's touch screen graphics.</summary>
         public static HgssTouchScreen Screen { get; set; }
-        /// <summary>The font the touch screen writes in.</summary>
+        /// <summary>The font the touch screen writes MENU and the A button's word in.</summary>
         public static FieldFont Font { get; set; }
+        /// <summary>The font the names under the icons are written in.</summary>
+        public static FieldFont IconFont { get; set; }
         /// <summary>The touch menu's words by text bank entry, gaps already filled.</summary>
         public static Func<int, string> Text { get; set; }
 
@@ -166,7 +168,11 @@ namespace DSPRE.Avalonia.Views.Controls
             {
                 byte[] rgba = ShowsChoices
                     ? screen.RenderChoices(Font, choices, YesNo, Cursor, CursorShown)
-                    : screen.RenderMenu(Font, Text, Dimmed, _aHeld, _shoesOn, _highlight, ALabel);
+                    : screen.RenderMenu(Font, IconFont ?? Font, Text, new HgssTouchScreen.MenuLook
+                    {
+                        Busy = Dimmed, AHeld = _aHeld, ShoesOn = _shoesOn, Highlighted = _highlight,
+                        ALabel = ALabel, RegisteredItems = true,
+                    });
                 DsBgScreen.Fade(rgba, Brightness);
                 _picture?.Dispose();
                 _picture = ToBitmap(rgba);

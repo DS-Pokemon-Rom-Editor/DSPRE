@@ -90,6 +90,7 @@ namespace DSPRE.Avalonia.Views.Battle
             Poketch.PlaySound = id => PlayFieldSound(ScriptEffectKind.SoundEffect, id);
             HgssTouchScreenView.Screen = DSPRE.Avalonia.Data.HgssTouchScreen.Load();
             HgssTouchScreenView.Font = FieldFont.LoadFromArchive(DSPRE.Avalonia.Data.HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
+            HgssTouchScreenView.IconFont = FieldFont.LoadFromArchive(DSPRE.Avalonia.Data.HgssTouchScreen.IconFontEntry);
             HgssTouchScreenView.Text = TouchMenuText;
             TouchMenu.PlaySound = id => PlayFieldSound(ScriptEffectKind.SoundEffect, id);
             TouchMenu.ChoiceTouched = index => _vm.TouchChoice(index);

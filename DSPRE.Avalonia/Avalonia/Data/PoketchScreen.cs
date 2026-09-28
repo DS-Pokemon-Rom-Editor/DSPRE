@@ -145,17 +145,19 @@ namespace DSPRE.Avalonia.Data
         /// <param name="slots">Where to repeat the sprite, or null to show it in the middle.</param>
         /// <param name="fills">Rectangles a running game fills in, drawn only when asked for.</param>
         /// <param name="motion">What the frame being shown does to the sprite.</param>
+        /// <param name="bgLayer">The layer the application's drawing goes on: 2, or 3 for the Calendar.</param>
         public byte[] RenderApp(bool female, int theme, bool backlight, int tiles, int arrangement,
                                 int sprites = -1, int cells = -1, int bank = 0,
                                 (int X, int Y)[] slots = null,
                                 (int X, int Y, int W, int H, int Colour)[] fills = null,
-                                Motion? motion = null)
+                                Motion? motion = null, int bgLayer = 2)
         {
             var s = new DsBgScreen();
+            int layer = bgLayer == 3 ? 3 : 2;
 
             s.InitLayer(0, 0, BoardCharBase);
             s.InitLayer(1, 1, BoardCharBase);
-            s.InitLayer(2, 2, 0);
+            s.InitLayer(layer, layer, 0);
             s.LoadTiles(BoardCharBase, _member(BorderTiles), BoardTileOffset);
             var (bw, board) = DsBgScreen.ReadMap(_member(BorderMap));
             s.LoadMap(0, board, bw);
@@ -169,7 +171,7 @@ namespace DSPRE.Avalonia.Data
                 if (arrangement >= 0)
                 {
                     var (aw, map) = DsBgScreen.ReadMap(_member(arrangement));
-                    s.LoadMap(2, map, aw);
+                    s.LoadMap(layer, map, aw);
                 }
                 var themes = DsBgScreen.ReadColours(_member(ThemePalettes));
                 int rows = Math.Max(1, themes.Length / 16);

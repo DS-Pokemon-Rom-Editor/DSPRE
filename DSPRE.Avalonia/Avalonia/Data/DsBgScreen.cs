@@ -63,6 +63,10 @@ namespace DSPRE.Avalonia.Data
             if (pltt < 0) return Array.Empty<ushort>();
             int size = NitroBgCodec.U32(nclr, pltt + 0x10);
             int at = pltt + 0x18;
+            // Some Diamond files claim more colours than their section holds, and what follows is the
+            // PMCP section rather than colours, so the section's own length is the real bound.
+            int section = pltt + 8 <= nclr.Length ? NitroBgCodec.U32(nclr, pltt + 4) : 0;
+            if (section >= 0x18) size = Math.Min(size, section - 0x18);
             int count = Math.Max(0, Math.Min(size, nclr.Length - at)) / 2;
             var colours = new ushort[count];
             for (int i = 0; i < count; i++) colours[i] = (ushort)NitroBgCodec.U16(nclr, at + i * 2);
@@ -274,9 +278,14 @@ namespace DSPRE.Avalonia.Data
         /// Draws a cell centred on screen pixel ox, oy. A translucent one is blended six sixteenths over nine
         /// sixteenths of what is under it, the way the touch menu dims its buttons.
         /// </summary>
+        /// <param name="under">
+        /// The backgrounds alone, to blend against. The hardware blends a sprite with the background under
+        /// it, never with another sprite, so two dimmed sprites overlapping do not darken each other.
+        /// </param>
         public static void DrawCell(byte[] rgba, Oam[] cell, byte[] characters, Func<int, ushort[]> paletteFor,
-                                    int ox, int oy, bool translucent = false)
+                                    int ox, int oy, bool translucent = false, byte[] under = null)
         {
+            under ??= rgba;
             if (rgba == null || cell == null || characters == null) return;
             for (int k = cell.Length - 1; k >= 0; k--)
             {
@@ -299,11 +308,31 @@ namespace DSPRE.Avalonia.Data
                         ushort c = palette[index];
                         int p = (Y * Width + X) * 4;
                         if (!translucent) { Put(rgba, p, c); continue; }
-                        rgba[p] = (byte)((Expand(c & 31) * 6 + rgba[p] * 9) / 16);
-                        rgba[p + 1] = (byte)((Expand((c >> 5) & 31) * 6 + rgba[p + 1] * 9) / 16);
-                        rgba[p + 2] = (byte)((Expand((c >> 10) & 31) * 6 + rgba[p + 2] * 9) / 16);
+                        rgba[p] = (byte)((Expand(c & 31) * 6 + under[p] * 9) / 16);
+                        rgba[p + 1] = (byte)((Expand((c >> 5) & 31) * 6 + under[p + 1] * 9) / 16);
+                        rgba[p + 2] = (byte)((Expand((c >> 10) & 31) * 6 + under[p + 2] * 9) / 16);
+                        rgba[p + 3] = 255;
                     }
             }
+        }
+
+        /// <summary>Pastes a picture with its top left at x, y, leaving its see-through pixels alone.</summary>
+        public static void DrawImage(byte[] rgba, DSPRE.RawImage image, int x, int y)
+        {
+            if (rgba == null || image == null || image.IsEmpty) return;
+            for (int yy = 0; yy < image.Height; yy++)
+                for (int xx = 0; xx < image.Width; xx++)
+                {
+                    int X = x + xx, Y = y + yy;
+                    if (X < 0 || Y < 0 || X >= Width || Y >= Height) continue;
+                    int s = (yy * image.Width + xx) * 4;
+                    if (image.Bgra[s + 3] < 128) continue;
+                    int p = (Y * Width + X) * 4;
+                    rgba[p] = image.Bgra[s + 2];
+                    rgba[p + 1] = image.Bgra[s + 1];
+                    rgba[p + 2] = image.Bgra[s];
+                    rgba[p + 3] = 255;
+                }
         }
 
         /// <summary>

@@ -196,6 +196,93 @@ namespace DSPRE.Tests
             Assert.Equal(new[] { "Calculator" }, PoketchApps.SharedBy(16).ToArray());
         }
 
+        /// <summary>The backlight switch screen's five files are authored but never loaded.</summary>
+        [Fact]
+        public void TheBacklightSwitchFilesAreListedAsNeverLoaded()
+        {
+            foreach (int member in new[] { 1, 8, 9, 58, 59, 100, 101, 102, 103, 104, 105 })
+                Assert.Contains(member, PoketchApps.NeverLoaded);
+            Assert.Equal(11, PoketchApps.NeverLoaded.Length);
+        }
+
+        /// <summary>Member 0 is the theme colours; the casing keeps its own, so it is not named.</summary>
+        [Fact]
+        public void TheThemeColoursDoNotClaimTheCasing()
+        {
+            string said = string.Join(" ", PoketchApps.SharedBy(0));
+            Assert.Contains("every application", said);
+            Assert.DoesNotContain("casing", said);
+        }
+
+        /// <summary>The picture before the Pokétch is borrowed by screens outside it.</summary>
+        [Fact]
+        public void ThePictureBeforeThePoketchNamesTheScreensThatBorrowIt()
+        {
+            foreach (int member in new[] { 10, 11, 12 })
+            {
+                var names = PoketchApps.SharedBy(member);
+                foreach (string name in new[] { "egg hatching", "evolution", "Frontier records", "dress-up photos",
+                                                "Spin Trade" })
+                    Assert.Contains(name, names);
+            }
+            // The naming screen only takes the colours.
+            Assert.Contains("the naming screen", PoketchApps.SharedBy(12));
+            Assert.DoesNotContain("the naming screen", PoketchApps.SharedBy(10));
+        }
+
+        /// <summary>
+        /// A sprite sheet's room is the ceiling less whatever else the screen keeps in sprite memory, and
+        /// every stock sheet fits the room it is given.
+        /// </summary>
+        [Fact]
+        public void SpriteSheetsAreGivenTheRoomLeftBesideTheirNeighbours()
+        {
+            Assert.Equal(PoketchApps.TileCeiling - PoketchApps.DigitSheetTiles,
+                         PoketchApps.All.Single(a => a.Name == "Stopwatch").SpriteRoom);
+            Assert.Equal(PoketchApps.TileCeiling, PoketchApps.All.Single(a => a.Name == "Coin Toss").SpriteRoom);
+
+            int looked = 0;
+            foreach (var app in PoketchApps.All.Where(a => a.Sprites >= 0))
+            {
+                Assert.True(app.SpriteRoom > 0, $"{app.Name} has no sprite room");
+                Assert.True(app.SpriteRoom <= PoketchApps.TileCeiling, $"{app.Name} has more room than the ceiling");
+                looked++;
+            }
+            Assert.True(looked > 15);
+        }
+
+        /// <summary>The Calendar draws its art on BG3 under the day numbers; the rest use BG2.</summary>
+        [Fact]
+        public void OnlyTheCalendarDrawsOnTheBackLayer()
+        {
+            Assert.Equal(3, PoketchApps.All.Single(a => a.Name == "Calendar").BgLayer);
+            Assert.All(PoketchApps.All.Where(a => a.Name != "Calendar"), a => Assert.Equal(2, a.BgLayer));
+        }
+
+        /// <summary>
+        /// A palette whose header claims more colours than its section holds is read to the section's end,
+        /// not past it into the next section.
+        /// </summary>
+        [Fact]
+        public void ColoursStopAtTheEndOfTheirSection()
+        {
+            // NCLR header, then a TTLP section of 0x18 + 32 bytes whose size field claims 480, then PMCP.
+            var file = new System.Collections.Generic.List<byte>();
+            void U16(int v) { file.Add((byte)v); file.Add((byte)(v >> 8)); }
+            void U32(int v) { U16(v & 0xFFFF); U16(v >> 16); }
+            file.AddRange(System.Text.Encoding.ASCII.GetBytes("RLCN"));
+            U16(0xFEFF); U16(0x0100); U32(0x10 + 0x18 + 32 + 0x12); U16(0x10); U16(2);
+            file.AddRange(System.Text.Encoding.ASCII.GetBytes("TTLP"));
+            U32(0x18 + 32); U32(3); U32(0); U32(480); U32(0x10);
+            for (int i = 0; i < 16; i++) U16(i);
+            file.AddRange(System.Text.Encoding.ASCII.GetBytes("PMCP"));
+            U32(0x12); U16(1); U16(0xBEEF); U32(8); U16(0);
+
+            ushort[] colours = DsBgScreen.ReadColours(file.ToArray());
+            Assert.Equal(16, colours.Length);
+            Assert.Equal(15, colours[15]);
+        }
+
         /// <summary>
         /// Only five animations carry a transform. The editor shows rotation and scale boxes for those and
         /// says "frame order only" for the rest, so the list has to be right.

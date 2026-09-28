@@ -1034,7 +1034,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     Preview = ToBitmap(_casing.RenderApp(
                         false, 0, false, _app.Tiles, _app.Arrangement, _app.Sprites, _app.Cells, cell,
                         slots, _app.Fills,
-                        new PoketchScreen.Motion(degrees, scaleX, scaleY, sx, sy)));
+                        new PoketchScreen.Motion(degrees, scaleX, scaleY, sx, sy), _app.BgLayer));
                     OnPropertyChanged(nameof(PlayingFrame));
                     if (_app.SpriteSlots == null && string.IsNullOrEmpty(StatusText))
                         StatusText = "Where this screen puts its sprite is in the game's code, so the frame "

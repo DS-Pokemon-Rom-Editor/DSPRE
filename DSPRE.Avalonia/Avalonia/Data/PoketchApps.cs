@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,8 +24,11 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public const int DigitSheetTiles = 80;
 
-        /// <summary>Members no reachable application ever loads.</summary>
-        public static readonly int[] NeverLoaded = { 1, 8, 9, 58, 59, 105 };
+        /// <summary>
+        /// Members no reachable application ever loads. 100 to 104 belong to the backlight switch screen,
+        /// which the game has code for but never lists among the applications.
+        /// </summary>
+        public static readonly int[] NeverLoaded = { 1, 8, 9, 58, 59, 100, 101, 102, 103, 104, 105 };
 
         /// <summary>
         /// The sheet of figures five screens share. It is loaded into sprite memory before a screen's own
@@ -41,6 +45,17 @@ namespace DSPRE.Avalonia.Data
         /// canvas all pick from these, so changing them reaches far beyond one screen.
         /// </summary>
         public static readonly int[] ToneRamp = { 1, 4, 8, 15 };
+
+        /// <summary>
+        /// Tiles in each sprite sheet as the game ships it, the same in Diamond, Pearl and Platinum. The
+        /// difference from <see cref="App.SpriteTilesUsed"/> is what else the screen puts in sprite memory.
+        /// </summary>
+        private static readonly Dictionary<int, int> StockSheetTiles = new()
+        {
+            [22] = 348, [29] = 48, [32] = 160, [35] = 32, [42] = 101, [47] = 128, [52] = 128, [57] = 192,
+            [64] = 32, [69] = 16, [74] = 124, [79] = 208, [84] = 48, [89] = 166, [94] = 328, [99] = 124,
+            [109] = 8, [114] = 16, [120] = 60, [125] = 20,
+        };
 
         /// <summary>Members that carry more than a frame order: rotation, scale or a shift per frame.</summary>
         public static readonly int[] AnimationsWithTransforms = { 6, 28, 41, 73, 119 };
@@ -60,6 +75,7 @@ namespace DSPRE.Avalonia.Data
             public bool UsesPokemonIcons;   // members 5, 6 plus icons from another archive
             public int FixedWidthTiles;     // 0 when the drawing may be any shape
             public int MaxTiles;            // 0 when only the ceiling applies
+            public int BgLayer = 2;         // the layer the drawing is put on
             public string ReadOnlyBecause;  // set when there is nothing here to edit
             public string Warning;          // a rule worth saying out loud before an edit
 
@@ -80,6 +96,14 @@ namespace DSPRE.Avalonia.Data
 
             // How much of TilesUsed is the drawing itself rather than a window the app opens after it.
             private int Drawn => MaxTiles > 0 ? MaxTiles : TilesUsed;
+
+            /// <summary>
+            /// Room for the sprite sheet: the ceiling less whatever else shares sprite memory with it, the
+            /// digit sheet or the party icons, which stay the size they are. 0 when there is no sheet.
+            /// </summary>
+            public int SpriteRoom =>
+                Sprites >= 0 && StockSheetTiles.TryGetValue(Sprites, out int stock)
+                    ? TileCeiling - (SpriteTilesUsed - stock) : 0;
         }
 
         /// <summary>
@@ -162,6 +186,8 @@ namespace DSPRE.Avalonia.Data
                                             (108, 72), (196, 72), (44, 48) } },
             new App { Id = 16, Name = "Calendar", Tiles = 111, Arrangement = 110, Sprites = 114, Cells = 112,
                       Animation = 113, TilesUsed = 144, SpriteTilesUsed = 16, FixedWidthTiles = 12,
+                      // The day numbers go on BG2 over it, so the art itself sits on BG3.
+                      BgLayer = 3,
                       Warning = "Each figure's second row is found 12 tiles on, and the month and day tiles "
                               + "sit at fixed numbers. The drawing has to stay 12 tiles wide." },
             new App { Id = 17, Name = "Dot Artist", TilesUsed = 16,
@@ -250,7 +276,24 @@ namespace DSPRE.Avalonia.Data
             }
             if (member is 5 or 6)
                 names.AddRange(All.Where(a => a.UsesPokemonIcons && !names.Contains(a.Name)).Select(a => a.Name));
-            if (member == 0) return new[] { "every application, the casing and the counter" };
+            // The theme colours. The casing has its own, member 13.
+            if (member == 0) return new[] { "every application and the application counter" };
+            if (member is 10 or 11 or 12) return OutsideThePoketch(member);
+            return names;
+        }
+
+        // The picture shown before the player has a Pokétch is borrowed by other bottom screens, per the
+        // pokeplatinum decomp: egg_hatch/graphics.c, evolution.c, naming_screen.c, frontier/records/main.c,
+        // and the dress-up photo (overlay 22), record mixing (overlay 59), Spear Pillar (overlay 100) and
+        // Spin Trade (overlay 109) screens. The naming screen takes only the colours.
+        private static IReadOnlyList<string> OutsideThePoketch(int member)
+        {
+            var names = new List<string>
+            {
+                "the screen before you have a Pokétch", "egg hatching", "evolution", "Frontier records",
+                "dress-up photos", "record mixing", "the Spear Pillar scene", "Spin Trade",
+            };
+            if (member == 12) names.Add("the naming screen");
             return names;
         }
 

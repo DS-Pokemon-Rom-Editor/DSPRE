@@ -49,11 +49,23 @@
         <WrapPanel x:Name="ScreenOptions" Orientation="Horizontal">
           <CheckBox Content="Busy mode" IsChecked="{Binding ScriptRunning}"
                     IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"
-                    ToolTip.Tip="How the panel looks while a script has control: the icons go see-through and only the A button stays solid"/>
-          <CheckBox Content="Running shoes on" IsChecked="{Binding ShoesOn}"
+                    ToolTip.Tip="While a script has control"/>
+          <CheckBox Content="Menu open" IsChecked="{Binding MenuOpen}"
+                    IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"
+                    ToolTip.Tip="The picked icon stays solid"/>
+          <CheckBox Content="Registered items" IsChecked="{Binding RegisteredItems}"
+                    IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
+          <CheckBox Content="Running shoes" IsChecked="{Binding ShoesShown}"
+                    IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
+          <CheckBox Content="Shoes on" IsChecked="{Binding ShoesOn}"
+                    IsVisible="{Binding IsMenuTab}" IsEnabled="{Binding ShoesShown}" Margin="0,0,16,0"/>
+          <CheckBox Content="Bug Contest" IsChecked="{Binding BugContest}"
                     IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
           <CheckBox Content="A button held" IsChecked="{Binding AHeld}"
                     IsVisible="{Binding IsMenuTab}" Margin="0,0,16,0"/>
+          <ComboBox Width="130" Margin="0,0,16,0" IsVisible="{Binding IsMenuTab}"
+                    ItemsSource="{Binding ALabelNames}" SelectedIndex="{Binding ALabelIndex}"
+                    ToolTip.Tip="The A button's word"/>
 
           <ComboBox Width="190" Margin="0,0,16,0" IsVisible="{Binding HasPoketch}"
                     ItemsSource="{Binding AppNames}" SelectedIndex="{Binding SelectedApp}"/>

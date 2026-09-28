@@ -60,6 +60,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Set when the game does not read this from a file, so there is nothing here to edit.</summary>
         public string ReadOnlyBecause;
 
+        /// <summary>The most tiles the drawing may have, or 0 when nothing is known to limit it.</summary>
+        public int TileRoom;
+
+        /// <summary>For a touch menu icon, which of overlay 27's icon kinds it is, or -1.</summary>
+        public int IconKind = -1;
+
         /// <summary>A rule worth saying before this one is changed, or null.</summary>
         public string Warning;
 
@@ -94,10 +100,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             f = v; OnPropertyChanged(n); return true;
         }
 
-        // The HGSS touch menu's seven icons, in the order the panel lays them out.
+        // The HGSS touch menu's icons, in overlay 27's order: the seven the panel normally shows, then the
+        // one the Bug Contest puts first.
         private static readonly string[] IconNames =
-            { "POKéDEX icon", "POKéMON icon", "BAG icon", "POKéGEAR icon", "Player icon", "SAVE icon", "OPTIONS icon" };
-        private static readonly int[] IconDrawings = { 18, 21, 24, 30, 33, 36, 39 };
+            { "POKéDEX icon", "POKéMON icon", "BAG icon", "POKéGEAR icon", "Player icon", "SAVE icon", "OPTIONS icon",
+              "RETIRE icon" };
+        private static readonly int[] IconDrawings = { 18, 21, 24, 30, 33, 36, 39, 42 };
         private const int MenuPalettes = 7, MenuTiles = 8, MenuMap = 9, IconPalettes = 14, IconCells = 16,
                           ButtonCells = 68, ButtonDrawing = 70;
         private const int ChoicePalettes = 0, ChoiceTiles = 1, PokeBallMap = 9, YesNoMap = 10,
@@ -108,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private HgssTouchScreen _hgss;
         private PoketchScreen _poketch;
-        private FieldFont _font;
+        private FieldFont _font, _iconFont;
         private TextArchive _words;
         private List<BottomScreenPiece> _pieces = new();
         private bool _loading = true;
@@ -137,7 +145,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 foreach (var a in PoketchApps.All) AppNames.Add(a.Name);
             }
 
-            try { _font = FieldFont.LoadFromArchive(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont(); }
+            try
+            {
+                _font = FieldFont.LoadFromArchive(HgssTouchScreen.FontEntry) ?? FieldFont.LoadSystemFont();
+                _iconFont = FieldFont.LoadFromArchive(HgssTouchScreen.IconFontEntry) ?? _font;
+            }
             catch (Exception ex) { AppLogger.Error("Bottom screen font: " + ex.Message); }
 
             var now = System.DateTime.Now;
@@ -145,6 +157,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _minute = now.Minute;
 
             LoadScreens();
+            if (IsHgss)
+                foreach (int m in HgssTouchScreen.ALabelMessages)
+                    ALabelNames.Add(Word(m)?.Trim() is { Length: > 0 } w ? w : "Message " + m);
             _loading = false;
             Refresh();
         }
@@ -228,14 +243,35 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // ── What the screen is showing, so an edited piece can be seen in every state ──
 
         private bool _scriptRunning;
-        /// <summary>While a script runs the icons go see-through and only the A button stays solid.</summary>
+        /// <summary>While a script runs the icons, item slots and shoes go see-through.</summary>
         public bool ScriptRunning { get => _scriptRunning; set { if (Set(ref _scriptRunning, value)) Draw(); } }
+
+        private bool _menuOpen;
+        /// <summary>The same dimming with the menu open, which leaves the picked icon solid.</summary>
+        public bool MenuOpen { get => _menuOpen; set { if (Set(ref _menuOpen, value)) Draw(); } }
+
+        private bool _shoesShown = true;
+        /// <summary>The shoes only show once the player has them, and not on the bicycle.</summary>
+        public bool ShoesShown { get => _shoesShown; set { if (Set(ref _shoesShown, value)) Draw(); } }
 
         private bool _shoesOn;
         public bool ShoesOn { get => _shoesOn; set { if (Set(ref _shoesOn, value)) Draw(); } }
 
+        private bool _registeredItems = true;
+        /// <summary>The item frames and icons only show with an item registered to them.</summary>
+        public bool RegisteredItems { get => _registeredItems; set { if (Set(ref _registeredItems, value)) Draw(); } }
+
+        private bool _bugContest;
+        public bool BugContest { get => _bugContest; set { if (Set(ref _bugContest, value)) Draw(); } }
+
         private bool _aHeld;
         public bool AHeld { get => _aHeld; set { if (Set(ref _aHeld, value)) Draw(); } }
+
+        /// <summary>The words the A button can show, in the game's own text.</summary>
+        public ObservableCollection<string> ALabelNames { get; } = new();
+
+        private int _aLabel;
+        public int ALabelIndex { get => _aLabel; set { if (Set(ref _aLabel, value)) Draw(); } }
 
         private int _choiceCount = 2;
         public int ChoiceCount { get => _choiceCount; set { if (Set(ref _choiceCount, Math.Clamp(value, 2, 8))) Draw(); } }
@@ -422,12 +458,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     {
                         Name = IconNames[i],
                         Archive = DirNames.fieldTouchMenu, Drawing = IconDrawings[i], Cells = IconCells,
-                        PaletteMember = IconPalettes, PaletteRow = 0,
+                        PaletteMember = IconPalettes, PaletteRow = 0, IconKind = i,
                     });
                 list.Add(new BottomScreenPiece
                 {
                     Name = "Side buttons",
-                    What = "Item slots, running shoes, the A button and the mark beside MENU.",
+                    What = "Registered item frames, running shoes, the A button and the mark beside MENU.",
                     Archive = DirNames.fieldTouchMenu, Drawing = ButtonDrawing, Cells = ButtonCells,
                     PaletteMember = MenuPalettes, PaletteRow = 0, PaletteRows = 16,
                 });
@@ -485,6 +521,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         What = $"{a.Name}'s own screen, {a.TilesUsed} of {PoketchApps.TileCeiling} tiles.",
                         Archive = DirNames.poketch, Drawing = a.Tiles, Arrangement = a.Arrangement,
                         PaletteMember = ThemePalettes, PaletteRow = row, Warning = a.Warning,
+                        TileRoom = a.TileRoom,
                     });
                 if (a.Sprites >= 0)
                     list.Add(new BottomScreenPiece
@@ -494,6 +531,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                              + (a.UsesDigitSheet ? ", counting the shared figures." : "."),
                         Archive = DirNames.poketch, Drawing = a.Sprites,
                         PaletteMember = ThemePalettes, PaletteRow = row,
+                        TileRoom = a.SpriteRoom,
                     });
                 if (a.Cells >= 0)
                     list.Add(new BottomScreenPiece
@@ -553,6 +591,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     What = "Shown until the player is given a Pokétch.",
                     Archive = DirNames.poketch, Drawing = UnavailableTiles, Arrangement = UnavailableMap,
                     PaletteMember = UnavailablePalette, PaletteRow = 0,
+                    Warning = "Also shown by " + Join(PoketchApps.SharedBy(UnavailablePalette).Skip(1).ToList()) + ".",
                 });
             }
             return list;
@@ -591,8 +630,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 byte[] rgba = null;
                 if (IsMenuTab && _hgss != null)
-                    rgba = _hgss.RenderMenu(_font, Word, ScriptRunning, AHeld, ShoesOn, -1,
-                                            ScriptRunning ? HgssTouchScreen.TalkMessage : HgssTouchScreen.CheckMessage);
+                    rgba = _hgss.RenderMenu(_font, _iconFont, Word, MenuLook());
                 else if (IsChoicesTab && _hgss != null)
                 {
                     // Picking a layout on the left shows that layout, so the boxes for five answers are
@@ -611,6 +649,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 AppLogger.Error("Bottom screen draw: " + ex.Message);
                 StatusText = "This screen could not be drawn. " + ex.Message;
             }
+        }
+
+        private HgssTouchScreen.MenuLook MenuLook()
+        {
+            // With the menu open, the icon picked in the list is the one the cursor is on.
+            int kind = Selected?.IconKind ?? -1;
+            int cursor = MenuOpen ? HgssTouchScreen.SlotOf(kind < 0 ? 0 : kind, BugContest) : -1;
+            int label = ALabelIndex >= 0 && ALabelIndex < HgssTouchScreen.ALabelMessages.Length
+                ? HgssTouchScreen.ALabelMessages[ALabelIndex] : HgssTouchScreen.CheckMessage;
+            return new HgssTouchScreen.MenuLook
+            {
+                Busy = ScriptRunning || MenuOpen, Cursor = cursor, AHeld = AHeld,
+                Shoes = ShoesShown, ShoesOn = ShoesOn, RegisteredItems = RegisteredItems,
+                BugContest = BugContest, ALabel = label,
+            };
         }
 
         // The Pokétch draws its casing round whichever application is up. The Digital Watch is the one with
@@ -635,7 +688,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                                       CellBank,
                                       FillContents ? app.SpriteSlots : null,
                                       FillContents ? app.Fills : null,
-                                      _motion);
+                                      _motion, app.BgLayer);
         }
 
         // ── Playing the application's own animation ───────────────────────────────────
@@ -920,6 +973,34 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 AppLogger.Error("Bottom screen colour: " + ex.Message);
                 StatusText = "That colour could not be saved. " + ex.Message;
             }
+        }
+
+        /// <summary>
+        /// Why the drawing just put into a piece is too big for the room the game gives it, or null. The
+        /// game copies it into video memory unchecked, so an oversized one would overwrite the casing. A
+        /// refused one is put back the way it was.
+        /// </summary>
+        public string RefuseIfOverRoom(BottomScreenPiece p)
+        {
+            if (p == null || p.TileRoom <= 0 || p.Drawing < 0) return null;
+            int tiles;
+            try { tiles = DsBgScreen.ReadCharacters(NitroBgCodec.Inflate(new ScriptNarc(p.Archive).Get(p.Drawing))).Length / 32; }
+            catch { return null; }
+            if (tiles <= p.TileRoom) return null;
+            TakeBackLastStep();
+            return $"That drawing needs {tiles} tiles and this screen has room for {p.TileRoom}. Nothing was changed.";
+        }
+
+        // Undoes the last change without offering to redo it, for a change that should never have landed.
+        private void TakeBackLastStep()
+        {
+            if (_undo.Count == 0) return;
+            var step = _undo.Pop();
+            try { new ScriptNarc(step.Dir).Put(step.Member, step.Bytes); }
+            catch (Exception ex) { AppLogger.Error("Bottom screen take back: " + ex.Message); }
+            if (!_undo.Any(s => s.Dir == step.Dir && s.Member == step.Member))
+                _originals.Remove((step.Dir, step.Member));
+            RaiseSteps();
         }
 
         /// <summary>Reads everything again after a drawing has been replaced.</summary>

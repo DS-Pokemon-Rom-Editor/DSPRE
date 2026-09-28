@@ -80,6 +80,7 @@ namespace DSPRE.Avalonia
             Views.Controls.PoketchView.Screen = null;
             Views.Controls.HgssTouchScreenView.Screen = null;
             Views.Controls.HgssTouchScreenView.Font = null;
+            Views.Controls.HgssTouchScreenView.IconFont = null;
             Data.SoundArchive.Reset();
             ROMFiles.FieldFontCharacters.Reset();
 
