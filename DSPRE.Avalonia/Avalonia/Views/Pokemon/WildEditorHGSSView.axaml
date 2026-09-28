@@ -45,12 +45,12 @@
         <controls:UndoRedoButtons/>
         <TextBlock Text="Encounter File:" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,6,0"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="300"/>
-        <Button Content="＋ Add"     Click="AddFile_Click"/>
-        <Button Content="🗑 Remove last" Click="RemFile_Click"/>
+        <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemFile_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button x:Name="ImportButton" Content="📥 Import" Click="ImportFile_Click"/>
-        <Button Content="📤 Export" Click="ExportFile_Click"/>
-        <Button Content="🛠 Repair all" Click="RepairAll_Click" ToolTip.Tip="Reset corrupted fields in every encounter file to defaults"/>
+        <Button x:Name="ImportButton" Content="Import" controls:Icon.Key="import" Click="ImportFile_Click"/>
+        <Button Content="Export" controls:Icon.Key="export" Click="ExportFile_Click"/>
+        <Button Content="Repair all" controls:Icon.Key="wrench" Click="RepairAll_Click" ToolTip.Tip="Reset corrupted fields in every encounter file to defaults"/>
         <Button x:Name="SlotOddsButton" Content="% Slot odds…" Click="SlotOdds_Click" ToolTip.Tip="Edit the chance of each slot, shared by every encounter file"/>
       </WrapPanel>
     </Border>

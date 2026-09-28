@@ -1151,7 +1151,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<string> PokeathlonFormNames { get; } = new();
         public bool HasPokeathlonFormChoice => PokeathlonFormNames.Count > 1;
         public ObservableCollection<PokeathlonStatRow> PokeathlonStats { get; } = new();
-        public string[] StarOptions { get; } = { "★", "★★", "★★★", "★★★★", "★★★★★" };
+        public int[] StarOptions { get; } = { 0, 1, 2, 3, 4 };
         public string[] AthlonCellOptions { get; } = { "Small sprite", "Large sprite" };
         public string[] AthlonSizeOptions { get; } = { "Small", "Medium", "Large" };
         public string[] AthlonTouchOptions { get; } = { "Small · 8 px", "Medium · 8 px", "Large · 16 px" };
@@ -1220,7 +1220,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public PokeathlonStatRow(PersonalDataEditorViewModel owner, int stat) { _owner = owner; _stat = stat; }
 
             public string Name => PokeathlonPerformance.Stats[_stat];
-            public string[] StarOptions => _owner.StarOptions;
+            public int[] StarOptions => _owner.StarOptions;
 
             public int BaseIndex
             {

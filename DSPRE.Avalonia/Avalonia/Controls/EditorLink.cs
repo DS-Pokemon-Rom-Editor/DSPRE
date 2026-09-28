@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.Controls
     public enum LinkKind { None, Pokemon, Item, Move, Trainer, Header, Script, EventFile, Matrix, Map, Text, Wild, AreaData }
 
     /// <summary>
-    /// Attached behaviour (<c>controls:EditorLink.To="Item"</c>) that opens the owning editor from a hover ↗, the
+    /// Attached behaviour (<c>controls:EditorLink.To="Item"</c>) that opens the owning editor from a hover link button, the
     /// context menu or Ctrl+click, using the picker's selected index or the number box's value.
     /// </summary>
     public static class EditorLink
@@ -97,15 +97,16 @@ namespace DSPRE.Avalonia.Controls
                 }
             }, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
-            // The ↗ sits just inside the right edge, left of a drop-down arrow, and only while hovered.
+            // The link button sits just inside the right edge, left of a drop-down arrow, and only while hovered.
             var arrow = new Button
             {
-                Content = "↗", FontSize = 11, Padding = new Thickness(4, 0), MinWidth = 0, MinHeight = 0, Height = 20,
+                Content = Icon.Image("link"), Padding = new Thickness(2, 0), MinWidth = 0, MinHeight = 0, Height = 20,
                 HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, c is NumericUpDown ? 30 : 26, 0), IsVisible = false, Focusable = false,
                 Background = new SolidColorBrush(Color.FromArgb(0xC0, 0x30, 0x30, 0x30)),
             };
             ToolTip.SetTip(arrow, $"Open in {name} (or right-click, or Ctrl+click)");
+            global::Avalonia.Automation.AutomationProperties.SetName(arrow, $"Open in {name}");
             arrow.Click += (_, _) => Go(c);
             var host = new Panel { IsHitTestVisible = true, Background = null, Children = { arrow } };
 

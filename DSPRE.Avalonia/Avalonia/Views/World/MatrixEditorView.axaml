@@ -16,13 +16,13 @@
         <TextBlock Text="Matrix:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding MatrixNames}" SelectedIndex="{Binding SelectedMatrixIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <ToggleButton x:Name="PaintToggle" Content="✏ Paint" IsChecked="{Binding PaintMode}"
+        <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <ToggleButton x:Name="PaintToggle" Content="Paint" controls:Icon.Key="brush" IsChecked="{Binding PaintMode}"
                       ToolTip.Tip="On: click or drag fills cells with the paint value. Off: click selects, and a header cell opens its header."/>
-        <Button Content="📥 Import" Click="Import_Click"/>
-        <Button Content="📤 Export" Click="Export_Click"/>
+        <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export" controls:Icon.Key="export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button x:Name="SpawnButton" Content="📍 Set spawn to selection" Click="SetSpawn_Click"
+        <Button x:Name="SpawnButton" Content="Set spawn to selection" controls:Icon.Key="pin" Click="SetSpawn_Click"
                 ToolTip.Tip="Set the game's start position to the selected matrix cell"/>
       </WrapPanel>
     </Border>

@@ -16,15 +16,15 @@
         <TextBlock Text="Headbutt file:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="💾 Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <ToggleButton Content="✋ Move trees" IsChecked="{Binding EditMode3D}"
+        <ToggleButton Content="Move trees" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}"
                       ToolTip.Tip="3D edit mode: click a tree to select it, then drag the red/blue handles to move it across the map. Arrow keys nudge one tile."/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <TextBlock Text="View:" VerticalAlignment="Center"/>
         <Button Content="Top" Click="CamTop_Click" Padding="6,2" ToolTip.Tip="Top-down camera"/>
         <Button Content="Iso" Click="CamIso_Click" Padding="6,2" ToolTip.Tip="Isometric camera"/>
-        <Button Content="⟲" Click="CamReset_Click" Padding="6,2" ToolTip.Tip="Reset camera"/>
+        <Button controls:Icon.Key="reset" Click="CamReset_Click" Padding="6,2" ToolTip.Tip="Reset camera"/>
       </WrapPanel>
     </Border>
 
@@ -56,8 +56,8 @@
               <ListBox DockPanel.Dock="Top" Height="110" ItemsSource="{Binding NormalTreeGroups}" SelectedIndex="{Binding SelectedNormalGroupIndex}"/>
               <DockPanel DockPanel.Dock="Top" Margin="0,6,0,4">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
-                  <Button Content="＋" Click="AddTree_Click" ToolTip.Tip="Add a tree (activate an empty slot)" Padding="6,1"/>
-                  <Button Content="🗑" Click="RemoveTree_Click" ToolTip.Tip="Clear the selected tree (free its slot)" Padding="6,1"/>
+                  <Button controls:Icon.Key="addIcon" Click="AddTree_Click" ToolTip.Tip="Add a tree (activate an empty slot)" Padding="6,1"/>
+                  <Button controls:Icon.Key="deleteIcon" Click="RemoveTree_Click" ToolTip.Tip="Clear the selected tree (free its slot)" Padding="6,1"/>
                 </StackPanel>
                 <TextBlock Text="Trees in group" FontWeight="Bold" VerticalAlignment="Center"/>
               </DockPanel>
@@ -107,8 +107,8 @@
               <ListBox DockPanel.Dock="Top" Height="110" ItemsSource="{Binding SpecialTreeGroups}" SelectedIndex="{Binding SelectedSpecialGroupIndex}"/>
               <DockPanel DockPanel.Dock="Top" Margin="0,6,0,4">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
-                  <Button Content="＋" Click="AddTree_Click" ToolTip.Tip="Add a tree (activate an empty slot)" Padding="6,1"/>
-                  <Button Content="🗑" Click="RemoveTree_Click" ToolTip.Tip="Clear the selected tree (free its slot)" Padding="6,1"/>
+                  <Button controls:Icon.Key="addIcon" Click="AddTree_Click" ToolTip.Tip="Add a tree (activate an empty slot)" Padding="6,1"/>
+                  <Button controls:Icon.Key="deleteIcon" Click="RemoveTree_Click" ToolTip.Tip="Clear the selected tree (free its slot)" Padding="6,1"/>
                 </StackPanel>
                 <TextBlock Text="Trees in group" FontWeight="Bold" VerticalAlignment="Center"/>
               </DockPanel>
@@ -132,8 +132,14 @@
       <!-- 3D map with the selected group's trees -->
       <DockPanel Grid.Column="1" Margin="0,4,4,4">
         <TextBlock DockPanel.Dock="Top" Text="{Binding MapInfo}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
-        <TextBlock DockPanel.Dock="Top" Text="left-drag pan · right-drag orbit · wheel zoom · hover a tree for its Pokémon · 🟢 normal 🟡 special"
-                   FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="2,0,0,3">
+          <TextBlock Text="left-drag pan · right-drag orbit · wheel zoom · hover a tree for its Pokémon ·"
+                     FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+          <controls:IconImage Key="dot_green"/>
+          <TextBlock Text="normal" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+          <controls:IconImage Key="dot_yellow"/>
+          <TextBlock Text="special" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+        </StackPanel>
         <Panel>
           <Border x:Name="GlHost" Background="#1F1F23" BorderBrush="#444" BorderThickness="1">
             <gl:NsbmdGlControl x:Name="GlView"/>

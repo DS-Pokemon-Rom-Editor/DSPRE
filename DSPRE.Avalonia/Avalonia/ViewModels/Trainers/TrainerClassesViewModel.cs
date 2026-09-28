@@ -36,8 +36,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private readonly global::Avalonia.Threading.DispatcherTimer _animTimer;
         private int _playCountdown;
         private bool _isPlaying;
-        public bool IsPlaying { get => _isPlaying; private set { if (Set(ref _isPlaying, value)) OnPropertyChanged(nameof(PlayButtonText)); } }
-        public string PlayButtonText => IsPlaying ? "⏹ Stop" : "▶ Play animation";
+        public bool IsPlaying { get => _isPlaying; private set { if (Set(ref _isPlaying, value)) OnPropertyChanged(nameof(PlayButtonText)); OnPropertyChanged(nameof(PlayButtonIcon)); } }
+        public string PlayButtonText => IsPlaying ? "Stop" : "Play animation";
+        public string PlayButtonIcon => IsPlaying ? "stop" : "play";
         public bool CanPlayAnimation => _spriteRenderer.FrameCount > 1;
 
         public void TogglePlay()

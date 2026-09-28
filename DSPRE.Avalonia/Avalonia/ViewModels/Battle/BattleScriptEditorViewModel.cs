@@ -852,6 +852,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── WEST storyboard (readable timeline) ─────────────────────────────────────
         private string _storyboard = "";
         public string Storyboard { get => _storyboard; private set => Set(ref _storyboard, value); }
+        private IReadOnlyList<WestStoryboard.Line> _storyboardLines = Array.Empty<WestStoryboard.Line>();
+        public IReadOnlyList<WestStoryboard.Line> StoryboardLines { get => _storyboardLines; private set => Set(ref _storyboardLines, value); }
         public bool ShowStoryboard => IsAvailable && HasRows;
         public string StoryboardTitle => IsWest ? "Animation storyboard" : "Effect summary";
 
@@ -865,9 +867,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(ShowStoryboard));
             OnPropertyChanged(nameof(StoryboardTitle));
             OnPropertyChanged(nameof(StoryboardWrap));
-            if (!HasRows) { Storyboard = ""; return; }
+            if (!HasRows) { Storyboard = ""; StoryboardLines = Array.Empty<WestStoryboard.Line>(); return; }
             var cmds = BuildCommands();
-            Storyboard = IsWest ? WestStoryboard.Build(cmds, _version) : WazaSeqStoryboard.Build(cmds, _version);
+            if (IsWest)
+            {
+                var lines = WestStoryboard.Build(cmds, _version);
+                StoryboardLines = lines;
+                Storyboard = lines.Count == 0 ? "(empty script)" : "";
+            }
+            else
+            {
+                StoryboardLines = Array.Empty<WestStoryboard.Line>();
+                Storyboard = WazaSeqStoryboard.Build(cmds, _version);
+            }
         }
 
         // ── Animation preview: cell-anim (CATS, ~32 moves) + particles (SPA, ~425 moves) ──
@@ -921,7 +933,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private global::Avalonia.RelativePoint _cellOrigin = global::Avalonia.RelativePoint.Center;
         public global::Avalonia.RelativePoint CellOrigin { get => _cellOrigin; private set => Set(ref _cellOrigin, value); }
         public bool IsCellPlaying => _previewTimer != null && _previewTimer.IsEnabled;
-        public string CellPlayButtonText => IsCellPlaying ? "⏹ Stop" : "▶ Play animation";
+        public string CellPlayButtonText => IsCellPlaying ? "Stop" : "Play animation";
+        public string CellPlayButtonIcon => IsCellPlaying ? "stop" : "play";
         // Scene-wide effects driven live by the timeline (WT_SHAKE, HAIKEI_PAL_FADE).
         private double _bgDarken; public double BackgroundDarken { get => _bgDarken; private set => Set(ref _bgDarken, value); }
         private IBrush _fadeBrush = Brushes.Black; public IBrush FadeBrush { get => _fadeBrush; private set => Set(ref _fadeBrush, value); }
@@ -1344,10 +1357,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 HasParticleAnimation = emitters > 0 && _particleNarc.Available;
 
                 CellAnimNote =
-                    HasCellAnimation && HasParticleAnimation ? "Cell + particle effect. ▶ to play."
-                  : HasCellAnimation ? $"Cell animation: {_cellFrames.Count} frame(s). ▶ to play."
-                  : HasParticleAnimation ? $"Particle effect: {emitters} emitter(s). ▶ to play."
-                  : "Pokémon-motion effect (no particles). Press ▶ to play the lunge / shake.";
+                    HasCellAnimation && HasParticleAnimation ? "Cell + particle effect. Press Play."
+                  : HasCellAnimation ? $"Cell animation: {_cellFrames.Count} frame(s). Press Play."
+                  : HasParticleAnimation ? $"Particle effect: {emitters} emitter(s). Press Play."
+                  : "Pokémon-motion effect (no particles). Press Play to see the lunge / shake.";
             }
             RaisePreviewProps();
         }
@@ -1373,7 +1386,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     _cellFrames = _cellRenderer.RenderAnimation(bank);
                     if (_cellFrames.Count > 0)
                     {
-                        HasCellAnimation = true;   // shown only on ▶ play, not as a static poster
+                        HasCellAnimation = true;   // shown only on Play, not as a static poster
                         CellOrigin = new global::Avalonia.RelativePoint(
                             _cellRenderer.ContentCx / 256.0, _cellRenderer.ContentCy / 192.0,
                             global::Avalonia.RelativeUnit.Relative);
@@ -1488,7 +1501,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (HasCellAnimation && _cellFrames.Count > 0) CellPreview = _cellFrames[0].Bitmap;
 
             string calledName = moveId >= 0 && moveId < _moveNames.Length ? _moveNames[moveId] : $"Move {moveId}";
-            CellAnimNote = $"🎲 Metronome called {calledName}!";
+            CellAnimNote = $"Metronome called {calledName}!";
             RaisePreviewProps();
         }
 
@@ -1583,7 +1596,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             PlayerRotation = EnemyRotation = 0; PlayerScaleX = PlayerScaleY = EnemyScaleX = EnemyScaleY = 1;
             PlayerTintOpacity = EnemyTintOpacity = 0; PlayerVisible = EnemyVisible = true;
             OnPropertyChanged(nameof(IsCellPlaying));
-            OnPropertyChanged(nameof(CellPlayButtonText));
+            OnPropertyChanged(nameof(CellPlayButtonText)); OnPropertyChanged(nameof(CellPlayButtonIcon));
             OnPropertyChanged(nameof(GaugesVisible));
             OnPropertyChanged(nameof(ShadowHidden));
             OnPropertyChanged(nameof(RealGaugesVisible));
@@ -1600,7 +1613,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(PreviewNotes));
             OnPropertyChanged(nameof(HasPreviewNotes));
             OnPropertyChanged(nameof(IsCellPlaying));
-            OnPropertyChanged(nameof(CellPlayButtonText));
+            OnPropertyChanged(nameof(CellPlayButtonText)); OnPropertyChanged(nameof(CellPlayButtonIcon));
             OnPropertyChanged(nameof(GaugesVisible));
             OnPropertyChanged(nameof(ShadowHidden));
             OnPropertyChanged(nameof(RealGaugesVisible));

@@ -1,4 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:DSPRE.Avalonia.ViewModels.Shell"
         x:Class="DSPRE.Avalonia.Views.Shell.WelcomeView"
@@ -47,9 +48,9 @@
               CornerRadius="6" Padding="16">
         <DockPanel>
           <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-            <Button DockPanel.Dock="Left" Content="← Back" MinWidth="80" Click="Back_Click"
+            <Button DockPanel.Dock="Left" Content="Back" controls:Icon.Key="left" MinWidth="80" Click="Back_Click"
                     IsEnabled="{Binding CanGoBack}"/>
-            <Button DockPanel.Dock="Right" Content="Next →" MinWidth="80" Click="Next_Click"
+            <Button DockPanel.Dock="Right" Content="Next" controls:Icon.Key="right" controls:Icon.After="True" MinWidth="80" Click="Next_Click"
                     IsEnabled="{Binding CanGoNext}"/>
             <TextBlock Text="{Binding PageLabel}" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.7"/>
           </DockPanel>

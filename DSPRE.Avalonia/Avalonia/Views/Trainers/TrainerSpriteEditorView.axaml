@@ -1,4 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
         xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
@@ -141,7 +142,7 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                  <Button Content="+ Add Sequence" Click="AddSequence_Click" IsVisible="{Binding CanEditAnimJson}"/>
+                  <Button Content="Add Sequence" controls:Icon.Key="addIcon" Click="AddSequence_Click" IsVisible="{Binding CanEditAnimJson}"/>
                   <Button Content="Remove Sequence" Click="RemoveSequence_Click" IsVisible="{Binding CanEditAnimJson}" IsEnabled="{Binding HasSelectedAnimSequence}"/>
                 </StackPanel>
 
@@ -152,7 +153,7 @@
                       <Image Source="{Binding AnimPreviewBitmap}" Stretch="Uniform" Margin="4"/>
                     </Border>
                     <StackPanel Spacing="6" VerticalAlignment="Center">
-                      <Button Content="▶ Play once" Click="PlayAnimPreview_Click" IsEnabled="{Binding !AnimPreviewPlaying}"/>
+                      <Button Content="Play once" controls:Icon.Key="play" Click="PlayAnimPreview_Click" IsEnabled="{Binding !AnimPreviewPlaying}"/>
                       <TextBlock Text="{Binding AnimPreviewFrameNumber, StringFormat='Frame {0}'}" FontSize="11"
                                  Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding AnimPreviewPlaying}"/>
                     </StackPanel>
@@ -195,9 +196,9 @@
 
                               <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" Margin="0,4,0,0"
                                           IsVisible="{Binding #RootWindow.DataContext.CanEditAnimJson}">
-                                <Button Content="↑" Click="MoveFrameUp_Click" Padding="8,2" ToolTip.Tip="Move earlier"/>
-                                <Button Content="↓" Click="MoveFrameDown_Click" Padding="8,2" ToolTip.Tip="Move later"/>
-                                <Button Content="✕" Click="RemoveFrame_Click" Padding="8,2" ToolTip.Tip="Remove frame"/>
+                                <Button controls:Icon.Key="up" Click="MoveFrameUp_Click" Padding="8,2" ToolTip.Tip="Move earlier"/>
+                                <Button controls:Icon.Key="down" Click="MoveFrameDown_Click" Padding="8,2" ToolTip.Tip="Move later"/>
+                                <Button controls:Icon.Key="cross" Click="RemoveFrame_Click" Padding="8,2" ToolTip.Tip="Remove frame"/>
                               </StackPanel>
                             </StackPanel>
                           </Border>
@@ -205,7 +206,7 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Button Content="+ Add Frame" Click="AddFrame_Click" VerticalAlignment="Top" Margin="0,28,0,0"
+                    <Button Content="Add Frame" controls:Icon.Key="addIcon" Click="AddFrame_Click" VerticalAlignment="Top" Margin="0,28,0,0"
                             IsVisible="{Binding CanEditAnimJson}" IsEnabled="{Binding HasSelectedAnimSequence}"/>
                   </StackPanel>
                 </ScrollViewer>

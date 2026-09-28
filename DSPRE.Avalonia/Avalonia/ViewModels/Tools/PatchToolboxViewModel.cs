@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             switch (p.State)
             {
                 case DSPRE.PatchToolboxLogic.PatchState.Applied:
-                    StatusText = "✔ Applied";
+                    StatusText = "Applied";
                     CanApply = false;
                     ButtonText = "Applied";
                     StatusBrush = new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));

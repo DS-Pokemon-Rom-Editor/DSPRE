@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
         xmlns:gif="clr-namespace:Avalonia.Labs.Gif;assembly=Avalonia.Labs.Gif"
@@ -94,45 +95,45 @@
             <TextBlock Grid.Row="0" Grid.Column="0" Classes="inlinelabel" Text="Matrix"/>
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding MatrixId}"/>
-              <Button Content="🔗 Open" Click="OpenMatrix_Click" Padding="8,2" ToolTip.Tip="Open the linked Matrix"/>
+              <Button Content="Open" controls:Icon.Key="link" Click="OpenMatrix_Click" Padding="8,2" ToolTip.Tip="Open the linked Matrix"/>
             </StackPanel>
             <TextBlock Grid.Row="0" Grid.Column="3" Classes="inlinelabel" Text="Area Data"/>
             <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding AreaDataId}"/>
-              <Button Content="🔗 Open" Click="OpenAreaData_Click" Padding="8,2" ToolTip.Tip="Open the linked Area Data"/>
+              <Button Content="Open" controls:Icon.Key="link" Click="OpenAreaData_Click" Padding="8,2" ToolTip.Tip="Open the linked Area Data"/>
             </StackPanel>
 
             <TextBlock Grid.Row="2" Grid.Column="0" Classes="inlinelabel" Text="Script"/>
             <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding ScriptFileId}"/>
-              <Button Content="🔗 Open" Click="OpenScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Script"/>
+              <Button Content="Open" controls:Icon.Key="link" Click="OpenScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Script"/>
             </StackPanel>
             <TextBlock Grid.Row="2" Grid.Column="3" Classes="inlinelabel" Text="Level Script"/>
             <StackPanel Grid.Row="2" Grid.Column="4" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding LevelScriptId}"/>
-              <Button Content="🔗 Open" Click="OpenLevelScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Level Script"/>
+              <Button Content="Open" controls:Icon.Key="link" Click="OpenLevelScripts_Click" Padding="8,2" ToolTip.Tip="Open the linked Level Script"/>
             </StackPanel>
 
             <TextBlock Grid.Row="4" Grid.Column="0" Classes="inlinelabel" Text="Event"/>
             <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding EventFileId}"/>
-              <Button Content="🔗 Open" Click="OpenEvents_Click" Padding="8,2" ToolTip.Tip="Open the linked Events"/>
+              <Button Content="Open" controls:Icon.Key="link" Click="OpenEvents_Click" Padding="8,2" ToolTip.Tip="Open the linked Events"/>
             </StackPanel>
             <TextBlock Grid.Row="4" Grid.Column="3" Classes="inlinelabel" Text="Text"/>
             <StackPanel Grid.Row="4" Grid.Column="4" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding TextArchiveId}"/>
-              <Button Content="🔗 Open" Click="OpenTexts_Click" Padding="8,2" ToolTip.Tip="Open the linked Text archive"/>
+              <Button Content="Open" controls:Icon.Key="link" Click="OpenTexts_Click" Padding="8,2" ToolTip.Tip="Open the linked Text archive"/>
             </StackPanel>
 
             <TextBlock Grid.Row="6" Grid.Column="0" Classes="inlinelabel" Text="Wild Pokémon"/>
             <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="{Binding WildPokeMax}" Value="{Binding WildPokemon}"/>
-              <Button Content="🔗 Open" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}" Padding="8,2" ToolTip.Tip="Open the linked wild encounters"/>
+              <Button Content="Open" controls:Icon.Key="link" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}" Padding="8,2" ToolTip.Tip="Open the linked wild encounters"/>
             </StackPanel>
             <TextBlock Grid.Row="6" Grid.Column="3" Classes="inlinelabel" Text="Battle BG"/>
             <StackPanel Grid.Row="6" Grid.Column="4" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding BattleBackground}"/>
-              <Button Content="🔗 Open" Click="OpenBattleScenery_Click" Padding="8,2"
+              <Button Content="Open" controls:Icon.Key="link" Click="OpenBattleScenery_Click" Padding="8,2"
                       ToolTip.Tip="Show this scenery and every place that fights on it"/>
             </StackPanel>
           </Grid>

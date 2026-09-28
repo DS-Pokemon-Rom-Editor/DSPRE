@@ -150,7 +150,7 @@
 			  <Image Source="{Binding CopyrightPreview}" Width="384" Height="288" Stretch="Uniform"/>
 			</Grid>
 		  </Border>
-		  <Button Content="▶ Play Intro" Click="PlayIntro_Click" HorizontalAlignment="Left"
+		  <Button Content="Play Intro" controls:Icon.Key="play" Click="PlayIntro_Click" HorizontalAlignment="Left"
 				  ToolTip.Tip="A recreation of the logo animation, close to the game's."/>
 		</StackPanel>
 	  </Border>

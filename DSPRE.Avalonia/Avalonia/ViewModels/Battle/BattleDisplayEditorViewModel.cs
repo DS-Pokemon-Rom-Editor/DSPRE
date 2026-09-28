@@ -1109,10 +1109,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private readonly bool _sound;
 
         public bool IsPlaying => _mode != PreviewMode.None;
-        public string FramesButtonText => ButtonText(PreviewMode.Frames, "▶ Play frames");
-        public string AnimationButtonText => ButtonText(PreviewMode.Animation, "▶ Play animation");
-        public string SendOutButtonText => _sendOutLoading ? "Loading…" : ButtonText(PreviewMode.SendOut, "▶ Play send-out");
-        private string ButtonText(PreviewMode mode, string idle) => _mode == mode ? "⏹ Stop" : idle;
+        public string FramesButtonText => ButtonText(PreviewMode.Frames, "Play frames");
+        public string AnimationButtonText => ButtonText(PreviewMode.Animation, "Play animation");
+        public string SendOutButtonText => _sendOutLoading ? "Loading…" : ButtonText(PreviewMode.SendOut, "Play send-out");
+        private string ButtonText(PreviewMode mode, string idle) => _mode == mode ? "Stop" : idle;
+        public string FramesButtonIcon => ButtonIcon(PreviewMode.Frames);
+        public string AnimationButtonIcon => ButtonIcon(PreviewMode.Animation);
+        public string SendOutButtonIcon => _sendOutLoading ? "wait" : ButtonIcon(PreviewMode.SendOut);
+        private string ButtonIcon(PreviewMode mode) => _mode == mode ? "stop" : "play";
         public bool CanPlay => _hasAnimData;
 
         /// <summary>Which sprites the three Play buttons drive. Shared, so the choice follows between tabs.</summary>
@@ -1394,6 +1398,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_sendOutLoading == loading) return;
             _sendOutLoading = loading;
             OnPropertyChanged(nameof(SendOutButtonText));
+            OnPropertyChanged(nameof(SendOutButtonIcon));
         }
 
         // Finds and names the theme off the UI thread and starts rendering it; null when there is none.
@@ -1785,6 +1790,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(FramesButtonText));
             OnPropertyChanged(nameof(AnimationButtonText));
             OnPropertyChanged(nameof(SendOutButtonText));
+            OnPropertyChanged(nameof(FramesButtonIcon));
+            OnPropertyChanged(nameof(AnimationButtonIcon));
+            OnPropertyChanged(nameof(SendOutButtonIcon));
             RaiseMessage();
         }
 

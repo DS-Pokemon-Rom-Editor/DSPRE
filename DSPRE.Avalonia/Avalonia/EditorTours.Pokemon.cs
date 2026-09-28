@@ -15,13 +15,13 @@ namespace DSPRE.Avalonia
                 S("tab:Evolutions", "Evolutions", "What it evolves into, and how: level, item, trade, friendship and more."),
                 S("tab:Sprites", "Sprites", "Its battle sprites and colours. Import or export pictures, click a colour to change it, or open them in the Graphics window to paint by hand."),
                 S("tab:Battle Display", "Battle display", "Where it stands in battle, its shadow, its party icon and how it moves when it appears. The preview plays it."),
-                S("name:SaveButton", "Saving", "Save or Ctrl+S writes every tab, Ctrl+Z undoes. Moves and items that show ↗ open in their own editor from the right-click menu, or with Ctrl+click."));
+                S("name:SaveButton", "Saving", "Save or Ctrl+S writes every tab, Ctrl+Z undoes. Moves and items that show a link button open in their own editor from the right-click menu, or with Ctrl+click."));
 
             Add("MoveDataEditorView", "Move Data Editor",
                 S("name:MovePicker", "Pick a move", "Every move in the game. Type part of its name to find it."),
                 S("name:PropertiesBox", "Type and split", "Its type, whether it is physical or special, and which Pokémon it targets."),
                 S("name:StatsBox", "Numbers", "Power, accuracy, PP, priority, and the chance its extra effect happens."),
-                S("name:EffectBox", "Effect", "What the move does besides damage. ✎ Edit move script in the toolbar opens this move's battle script."),
+                S("name:EffectBox", "Effect", "What the move does besides damage. Edit move script in the toolbar opens this move's battle script."),
                 S("name:DescriptionBox", "Description", "The move's in-game description, shown for reference."),
                 S("name:ContestBox", "Contests", "The contest condition it shows off and its appeal."),
                 S("name:FlagsBox", "Flags", "How the move behaves: whether it makes contact, can be blocked by Protect, reflected, snatched or copied."),
@@ -31,9 +31,9 @@ namespace DSPRE.Avalonia
             Add("BattleScriptEditorView", "Move Animations & Battle Scripts",
                 S("name:EntryPicker", "Pick a script", "Choose what to edit: move scripts, move effects, shared subroutines or move animations. Then pick an entry."),
                 S("tab:Read", "Read", "Move animations laid out step by step. Show as switches between a guided, script and raw view; click a line for details."),
-                S("tab:Cards", "Cards", "Each command as a card. Expand one to change its command and values, or use ↑, ↓ and 🗑 to move or remove it."),
+                S("tab:Cards", "Cards", "Each command as a card. Expand one to change its command and values, or use its arrow and remove buttons to move or remove it."),
                 S("tab:Text", "Text", "The same commands as lines you can type. Mistakes are listed below, and Cards stays locked until they are fixed."),
-                S("name:ScriptButtons", "Commands and help", "＋ Add command adds a new line. Command guide explains what every command does."),
+                S("name:ScriptButtons", "Commands and help", "Add command adds a new line. Command guide explains what every command does."),
                 S("name:PreviewPanel", "Preview", "For move animations, the battle scene plays the move. Change the backdrop, ground and HP gauges, or cast it from the enemy side."),
                 S("name:EditParticlesButton", "Particles", "Opens the particle effects this move uses."),
                 S("name:SaveButton", "Saving", "Save writes this entry and Discard drops your edits; Ctrl+S saves too. Closing with unsaved edits asks first."));
@@ -149,7 +149,7 @@ namespace DSPRE.Avalonia
                 S("tab:Great Marsh", "Great Marsh", "The Great Marsh Pokémon before and after the National Pokédex. Pick a list, a slot, then its species."),
                 S("tab:Trophy Garden", "Trophy Garden", "The Pokémon that can turn up in the Trophy Garden. Pick a slot, then its species."),
                 S("tab:Headbutt", "Headbutt", "Pick a file, then set species and levels for normal and special trees. The 3D map shows where the trees are."),
-                S("tab:Headbutt>name:GlHost", "The trees", "Green trees are normal, yellow ones special. Turn on ✋ Move trees to drag them, or type their positions in the tree list."),
+                S("tab:Headbutt>name:GlHost", "The trees", "Green trees are normal, yellow ones special. Turn on Move trees to drag them, or type their positions in the tree list."),
                 S("tab:Bug Contest", "Bug Contest", "The Pokémon of the Bug-Catching Contest, with levels, rate and score. Each set covers certain days once you have the National Pokédex."),
                 S("tab:Bug Contest Opponents", "Contest rivals", "What each rival enters with, on which day, and the score they finish with."),
                 S("tab:Safari Zone", "Safari Zone", "Pick an area, then grass, surfing or a rod. Each has Pokémon by time of day, plus ones that only appear when enough objects are placed."),
@@ -159,7 +159,7 @@ namespace DSPRE.Avalonia
             Add("HgEngineFormEditorView", "Form Editor",
                 S("name:SpeciesBar", "Pick a Pokémon", "Pick a base Pokémon to see its alternate forms, such as Mega or regional forms."),
                 S("name:FormList", "Its forms", "Each row is one form and the species entry it uses. Tick Needs Reversion for forms that change back, like Mega Evolution."),
-                S("name:AddSlotButton", "Adding forms", "+ Add Form adds a row and ✕ removes one. A form's own stats, types and abilities are edited in the Pokémon Editor."),
+                S("name:AddSlotButton", "Adding forms", "Add Form adds a row and the cross removes one. A form's own stats, types and abilities are edited in the Pokémon Editor."),
                 S("name:SaveButton", "Saving", "Save writes your changes and Discard drops them; Ctrl+S saves too."));
         }
     }

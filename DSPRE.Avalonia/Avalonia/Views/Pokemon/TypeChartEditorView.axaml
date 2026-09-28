@@ -36,7 +36,7 @@
       <StackPanel x:Name="EditPanel" Margin="16,0,0,0" Spacing="8" Width="240" HorizontalAlignment="Left">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <Image Source="{Binding AttackerIcon}" Width="32" Height="16" IsVisible="{Binding AttackerIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <TextBlock Text="→" VerticalAlignment="Center" IsVisible="{Binding DefenderIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <controls:IconImage Key="right" IsVisible="{Binding DefenderIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>
           <Image Source="{Binding DefenderIcon}" Width="32" Height="16" IsVisible="{Binding DefenderIcon, Converter={x:Static ObjectConverters.IsNotNull}}"/>
         </StackPanel>
         <TextBlock Text="{Binding SelectedTitle}" FontWeight="SemiBold" TextWrapping="Wrap"/>
@@ -54,7 +54,7 @@
               <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1" RenderOptions.BitmapInterpolationMode="None">
                 <Image Source="{Binding From}" Width="32" Height="16" IsVisible="{Binding FromHasIcon}" ToolTip.Tip="{Binding FromName}"/>
                 <TextBlock Text="{Binding FromName}" IsVisible="{Binding !FromHasIcon}" VerticalAlignment="Center"/>
-                <TextBlock Text="→" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                <controls:IconImage Key="right"/>
                 <Image Source="{Binding To}" Width="32" Height="16" IsVisible="{Binding ToHasIcon}" ToolTip.Tip="{Binding ToName}"/>
                 <TextBlock Text="{Binding ToName}" IsVisible="{Binding !ToHasIcon}" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding Multiplier}" VerticalAlignment="Center" FontWeight="SemiBold"/>

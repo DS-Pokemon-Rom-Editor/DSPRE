@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia
                 S("tab:Sprite>name:PaletteColumn", "Tools and colours", "Switch between Pencil and Eyedropper and pick a colour. Double-click a colour, or press Edit colour, to change it."),
                 S("tab:Sprite>name:FrameStrip", "Frames", "Click a frame to paint on it. Frames that share parts change together."),
                 S("name:SpriteButtons", "Pictures in and out", "Export saves the sprite as a picture, and Import brings one back if its colours match. Open in Graphics shows it in the Graphics window."),
-                S("tab:Animations", "Animations", "Pick a sequence to see each frame's pose and how long it shows. ▶ Play once previews it."),
+                S("tab:Animations", "Animations", "Pick a sequence to see each frame's pose and how long it shows. Play once previews it."),
                 S("tab:Editor", "Changing an animation", "Where editing is allowed, add or remove sequences and frames, change poses and delays, and move frames with the arrows."),
                 S("tab:JSON", "As text", "The same animation written out as text, for editing by hand. Save Animation JSON keeps it."),
                 S("name:SaveButton", "Saving", "Save writes the sprite and its colours. Ctrl+S saves too, and closing with unsaved changes asks first."));
@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia
 
             Add("PokegearPhoneBookView", "Pokégear Phone Book",
                 S("list", "Contacts", "Everyone who can be in your Pokégear. Pick one to edit how and when they call, or filter the list above."),
-                S("name:ContactGrid", "Who they are", "Their call type, the title under their name, the trainer they are and the map they live on. Point at an ⓘ for details."),
+                S("name:ContactGrid", "Who they are", "Their call type, the title under their name, the trainer they are and the map they live on. Point at an i for details."),
                 S("name:RematchDayBox", "Calls and gifts", "Set the day and time a rematch can be arranged, plus the gift, greeting and how often they ring at random, in the rows around it."),
                 S("name:SortPanel", "Sort order", "The phone lists contacts by title, name or location. Drag a contact, use Alt+Up and Alt+Down, or press Auto Sort."),
                 S("name:SaveButton", "Saving", "Save writes the phone book. Ctrl+S saves too. A contact's name is edited in the Text Editor."));

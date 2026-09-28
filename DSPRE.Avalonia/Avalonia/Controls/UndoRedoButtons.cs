@@ -7,8 +7,8 @@ namespace DSPRE.Avalonia.Controls
     /// <summary>Undo and Redo buttons for whatever <see cref="ISupportsUndo"/> the DataContext is.</summary>
     public class UndoRedoButtons : StackPanel
     {
-        private readonly Button _undo = new Button { Content = "↶ Undo", IsEnabled = false };
-        private readonly Button _redo = new Button { Content = "↷ Redo", IsEnabled = false };
+        private readonly Button _undo = new Button { Content = Icon.Content("undo", "Undo"), IsEnabled = false };
+        private readonly Button _redo = new Button { Content = Icon.Content("redo", "Redo"), IsEnabled = false };
         private INotifyPropertyChanged _watched;
 
         public UndoRedoButtons()
@@ -17,6 +17,8 @@ namespace DSPRE.Avalonia.Controls
             Spacing = 4;
             VerticalAlignment = VerticalAlignment.Center;
             ToolTip.SetTip(_undo, "Undo (Ctrl+Z)");
+            global::Avalonia.Automation.AutomationProperties.SetName(_undo, "Undo");
+            global::Avalonia.Automation.AutomationProperties.SetName(_redo, "Redo");
             ToolTip.SetTip(_redo, "Redo (Ctrl+Y)");
             _undo.Click += (_, _) => { (DataContext as ISupportsUndo)?.Undo(); Refresh(); };
             _redo.Click += (_, _) => { (DataContext as ISupportsUndo)?.Redo(); Refresh(); };

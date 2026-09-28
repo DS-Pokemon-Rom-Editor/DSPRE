@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia
             Add("BpShopEditorView", "Battle Point Shop",
                 S("name:ItemCounter", "Item counter", "What the item counter sells for Battle Points, and each price. Right-click an item and pick Open, or Ctrl+click."),
                 S("name:TmCounter", "TM counter", "The same for the counter that sells TMs."),
-                S("name:ItemCounter", "Arranging", "▲ and ▼ move the selected entry. In Platinum you can also add and remove entries, or move them to the other counter."),
+                S("name:ItemCounter", "Arranging", "The arrow buttons move the selected entry. In Platinum you can also add and remove entries, or move them to the other counter."),
                 S("name:SaveButton", "Saving", "Save writes both counters. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("UndergroundMiningView", "Underground Mining",

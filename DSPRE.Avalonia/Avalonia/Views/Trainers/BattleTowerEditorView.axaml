@@ -33,7 +33,7 @@
       <TabItem Header="Trainers">
         <Grid ColumnDefinitions="280,*" Margin="6">
           <DockPanel Grid.Column="0" Margin="0,0,6,0">
-            <Button DockPanel.Dock="Top" Content="+ New Trainer" Click="NewTrainer_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
+            <Button DockPanel.Dock="Top" Content="New Trainer" controls:Icon.Key="addIcon" Click="NewTrainer_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding TrainerLabels}" SelectedIndex="{Binding SelectedTrainerIndex}"/>
           </DockPanel>
 
@@ -70,7 +70,7 @@
       <TabItem Header="Pokémon Sets">
         <Grid ColumnDefinitions="280,*" Margin="6">
           <DockPanel Grid.Column="0" Margin="0,0,6,0">
-            <Button DockPanel.Dock="Top" Content="+ New Set" Click="NewSet_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
+            <Button DockPanel.Dock="Top" Content="New Set" controls:Icon.Key="addIcon" Click="NewSet_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding SetLabels}" SelectedIndex="{Binding SelectedSetIndex}"/>
           </DockPanel>
 

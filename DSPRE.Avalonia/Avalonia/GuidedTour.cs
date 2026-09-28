@@ -131,7 +131,7 @@ namespace DSPRE.Avalonia
                 Tab(2, "Tab 3 of 9: Events",
                     "Everything placed ON the map: NPCs (overworlds), warps between maps, script " +
                     "triggers and ground items. This is where you populate the world.\n\n" +
-                    "Fields that show ↗ when you point at them, here and in other editors, lead to the " +
+                    "Fields that show a link button when you point at them, here and in other editors, lead to the " +
                     "editor they refer to: right-click and pick Open, or Ctrl+click."),
                 Tab(3, "Tab 4 of 9: Matrix",
                     "The grid that stitches individual maps into the seamless overworld. Each cell " +
@@ -429,10 +429,12 @@ namespace DSPRE.Avalonia
                 Text = step.Body, TextWrapping = TextWrapping.Wrap, LineHeight = 20, Opacity = 0.95,
             };
 
-            var backBtn = new Button { Content = "← Back", MinWidth = 70, IsEnabled = _index > 0 };
+            var backBtn = new Button { Content = Controls.Icon.Content("left", "Back"), MinWidth = 70, IsEnabled = _index > 0 };
+            global::Avalonia.Automation.AutomationProperties.SetName(backBtn, "Back");
             backBtn.Click += (_, _) => Back();
             bool last = _index == _steps.Count - 1;
-            var nextBtn = new Button { Content = last ? "Finish" : "Next →", MinWidth = 70 };
+            var nextBtn = new Button { Content = last ? "Finish" : Controls.Icon.Content("right", "Next", after: true), MinWidth = 70 };
+            global::Avalonia.Automation.AutomationProperties.SetName(nextBtn, last ? "Finish" : "Next");
             nextBtn.Click += (_, _) => Next();
             var skipBtn = new Button { Content = "Skip tour", Opacity = 0.75 };
             skipBtn.Click += (_, _) => End();

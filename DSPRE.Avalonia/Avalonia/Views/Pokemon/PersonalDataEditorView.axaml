@@ -24,7 +24,7 @@
   </UserControl.Styles>
   <DockPanel LastChildFill="True" Margin="10">
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
-      <Button Content="📤 Export CSV" Click="Export_Click" ToolTip.Tip="Export every Pokémon's personal data"/>
+      <Button Content="Export CSV" controls:Icon.Key="export" Click="Export_Click" ToolTip.Tip="Export every Pokémon's personal data"/>
     </StackPanel>
     <TextBlock DockPanel.Dock="Top" Text="{Binding HgLoadError}" IsVisible="{Binding HasHgLoadError}"
                Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap" Margin="0,0,0,8"/>
@@ -173,9 +173,15 @@
                           <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="label"/>
                           <controls:StarRange Grid.Column="1" Min="{Binding MinIndex}" Base="{Binding BaseIndex}" Max="{Binding MaxIndex}"
                                               VerticalAlignment="Center" ToolTip.Tip="Deep gold: minimum · gold: base · faint: up to maximum"/>
-                          <ComboBox Grid.Column="2" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MinIndex}"/>
-                          <ComboBox Grid.Column="3" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding BaseIndex}"/>
-                          <ComboBox Grid.Column="4" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MaxIndex}"/>
+                          <ComboBox Grid.Column="2" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MinIndex}">
+                            <ComboBox.ItemTemplate><DataTemplate x:DataType="x:Int32"><controls:StarRange Min="-1" Base="{Binding}" Max="{Binding}"/></DataTemplate></ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <ComboBox Grid.Column="3" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding BaseIndex}">
+                            <ComboBox.ItemTemplate><DataTemplate x:DataType="x:Int32"><controls:StarRange Min="-1" Base="{Binding}" Max="{Binding}"/></DataTemplate></ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <ComboBox Grid.Column="4" MinWidth="0" MaxWidth="150" Margin="4,0" HorizontalAlignment="Stretch" ItemsSource="{Binding StarOptions}" SelectedIndex="{Binding MaxIndex}">
+                            <ComboBox.ItemTemplate><DataTemplate x:DataType="x:Int32"><controls:StarRange Min="-1" Base="{Binding}" Max="{Binding}"/></DataTemplate></ComboBox.ItemTemplate>
+                          </ComboBox>
                         </Grid>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>

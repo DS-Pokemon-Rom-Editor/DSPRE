@@ -22,11 +22,11 @@
           <WrapPanel x:Name="TrainerToolbar" Classes="toolbar">
             <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-            <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+            <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+            <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Redo (Ctrl+Y)"/>
             <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-            <Button Content="+ Add Trainer" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
-            <Button Content="− Remove Last" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
+            <Button Content="Add Trainer" controls:Icon.Key="addIcon" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
+            <Button Content="Remove Last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
             <Button Content="Search…"        Click="Search_Click"/>
             <Button Content="Reorder party…" Click="Reorder_Click"/>
             <Button Content="DV Calc…"       Click="DVCalc_Click"/>

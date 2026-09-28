@@ -1,4 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.TilesetBuilderView"
@@ -32,7 +33,7 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button Content="📂 Open a PNG…" Click="Open_Click"/>
+        <Button Content="Open a PNG…" controls:Icon.Key="folder" Click="Open_Click"/>
         <TextBlock Text="{Binding PictureName}" VerticalAlignment="Center" FontWeight="SemiBold"/>
         <TextBlock Classes="hint" VerticalAlignment="Center" IsVisible="{Binding HasNoPicture}"
                    Text="Nothing is written until you save."/>
@@ -48,7 +49,7 @@
            thing this window is for is never below the fold. -->
       <StackPanel x:Name="SavePanel" DockPanel.Dock="Bottom" Margin="12,10,12,12" Spacing="8">
         <Separator Background="{DynamicResource Editor.Separator}"/>
-        <Button Content="💾 Save the three files…" Click="Save_Click"
+        <Button Content="Save the three files…" controls:Icon.Key="saveButton" Click="Save_Click"
                 IsEnabled="{Binding CanSave}" HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"/>
         <TextBlock Text="{Binding CannotSaveBecause}" Classes="hint"

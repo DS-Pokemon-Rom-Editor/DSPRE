@@ -18,6 +18,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     {
         public uint Id;
         public string Label;
+        public bool Fits;
         public override string ToString() => Label;
     }
 
@@ -77,8 +78,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// is shared on purpose (no write happens either way).</summary>
         public string SlotSectionLabel => HasImage ? "Format template (existing texture to copy dimensions/colors from)" : "Texture slot (this entry's art)";
         public string SlotSectionTooltip => HasImage
-            ? "Your image is written into a brand-new texture slot that's created just for this entry, nothing here gets modified. The template must match both the image and the chosen animation profile, including its dictionary and repeated-frame layout. Matching slots are marked ✓ and sorted first."
-            : "No image was picked, so this entry will point straight at the chosen slot's existing art. Its complete BTX structure must match the chosen animation profile; matching slots are marked ✓.";
+            ? "Your image is written into a brand-new texture slot that's created just for this entry, nothing here gets modified. The template must match both the image and the chosen animation profile, including its dictionary and repeated-frame layout. Matching slots say so and come first."
+            : "No image was picked, so this entry will point straight at the chosen slot's existing art. Its complete BTX structure must match the chosen animation profile; matching slots say so.";
 
         private Bitmap _imagePreview;
         public Bitmap ImagePreview { get => _imagePreview; private set => Set(ref _imagePreview, value); }
@@ -176,18 +177,18 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 bool fits = (haveTarget || haveProfile) && Fits(s);
                 string label = haveTarget || haveProfile
-                    ? $"{(fits ? "✓ " : "")}{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colors{(fits ? " (matches image and profile)" : " (different image/profile layout)")}"
+                    ? $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colors{(fits ? " (matches image and profile)" : " (different image/profile layout)")}"
                     : $"{s.BaseLabel}, {s.Width}×{s.Height}, up to {s.ColorLimit} colors";
-                SlotOptions.Add(new OwIdOption { Id = s.Id, Label = label });
+                SlotOptions.Add(new OwIdOption { Id = s.Id, Label = label, Fits = fits });
             }
 
             OwIdOption previous = previouslySelectedId.HasValue
                 ? SlotOptions.FirstOrDefault(o => o.Id == previouslySelectedId.Value)
                 : null;
-            if ((haveTarget || haveProfile) && previous != null && !previous.Label.StartsWith("✓ "))
+            if ((haveTarget || haveProfile) && previous != null && !previous.Fits)
                 previous = null;
             SelectedSlot = previous
-                ?? ((haveTarget || haveProfile) ? SlotOptions.FirstOrDefault(o => o.Label.StartsWith("✓ ")) : null)
+                ?? ((haveTarget || haveProfile) ? SlotOptions.FirstOrDefault(o => o.Fits) : null)
                 ?? SlotOptions.FirstOrDefault();
         }
 
@@ -221,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     _targetWidth = raw.Width; _targetHeight = raw.Height; _targetColors = CountColors(raw);
                     ImagePreview = ImageConverter.ToAvaloniaBitmap(raw);
-                    ImageInfoText = $"Your image: {_targetWidth}×{_targetHeight}, {_targetColors} unique colors. Pick a slot below marked ✓ (fits your image).";
+                    ImageInfoText = $"Your image: {_targetWidth}×{_targetHeight}, {_targetColors} unique colors. Pick a slot below that matches your image.";
                     StatusText = "";
                 }
             }
@@ -256,7 +257,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     _targetWidth = raw.Width; _targetHeight = raw.Height; _targetColors = BTX0.ColorCount;
                     ImagePreview = ImageConverter.ToAvaloniaBitmap(raw);
-                    ImageInfoText = $"Your texture: {_targetWidth}×{_targetHeight}, {_targetColors} colors (already ROM-native). Pick a slot below marked ✓ (fits your image).";
+                    ImageInfoText = $"Your texture: {_targetWidth}×{_targetHeight}, {_targetColors} colors (already ROM-native). Pick a slot below that matches your image.";
                     StatusText = "";
                 }
             }

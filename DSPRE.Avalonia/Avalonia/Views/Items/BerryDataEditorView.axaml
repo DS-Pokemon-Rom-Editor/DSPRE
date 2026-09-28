@@ -38,7 +38,7 @@
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:BerryDataEditorViewModel+BerryRow">
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <TextBlock Text="●" IsVisible="{Binding Changed}" ToolTip.Tip="Unsaved" VerticalAlignment="Center"/>
+              <controls:IconImage Key="dot" IsVisible="{Binding Changed}" ToolTip.Tip="Unsaved"/>
               <Image Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}" Width="32" Height="32"/>
               <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
             </StackPanel>

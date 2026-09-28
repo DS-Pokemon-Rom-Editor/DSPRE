@@ -15,7 +15,7 @@
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button Content="↻ Reload" Click="Reload_Click" IsEnabled="{Binding !IsLoading}"
+        <Button Content="Reload" controls:Icon.Key="reload" Click="Reload_Click" IsEnabled="{Binding !IsLoading}"
                 ToolTip.Tip="Read the project again, after editing scripts or events."/>
       </StackPanel>
     </Border>

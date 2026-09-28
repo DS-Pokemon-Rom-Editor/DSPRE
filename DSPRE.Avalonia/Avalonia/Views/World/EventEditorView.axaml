@@ -15,12 +15,12 @@
       <WrapPanel Classes="toolbar">
         <TextBlock Text="Event file:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
-        <Button Content="＋ Add"     Click="AddFile_Click"/>
-        <Button Content="🗑 Remove last" Click="RemFile_Click"/>
+        <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemFile_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button x:Name="SaveButton" Content="💾 Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="📥 Import" Click="Import_Click"/>
-        <Button Content="📤 Export" Click="Export_Click"/>
+        <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export" controls:Icon.Key="export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Border x:Name="Pegman" Background="Transparent" Cursor="Hand" Padding="2" IsVisible="{Binding ShowBetaFeatures}"
                 PointerPressed="Pegman_PointerPressed"
@@ -33,14 +33,14 @@
             <TextBlock Text="Drag to walk" VerticalAlignment="Center"/>
           </StackPanel>
         </Border>
-        <Button Content="▶ Step in here" Click="StepInHere_Click" IsVisible="{Binding ShowBetaFeatures}"
+        <Button Content="Step in here" controls:Icon.Key="play" Click="StepInHere_Click" IsVisible="{Binding ShowBetaFeatures}"
                 ToolTip.Tip="Walk the map from beside the selected event."/>
-        <Button Content="▶ Animate" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
+        <Button Content="Animate" controls:Icon.Key="play" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
                 ToolTip.Tip="Plays the map on its own: water, buildings and people moving. Scripts do not run."/>
-        <Button Content="📷 Screenshot" Click="Screenshot_Click"
+        <Button Content="Screenshot" controls:Icon.Key="camera" Click="Screenshot_Click"
                 ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="🐞 Report…" Click="ExportDebug_Click"
+        <Button Content="Report…" controls:Icon.Key="bug" Click="ExportDebug_Click"
                 ToolTip.Tip="Saves where every map and event was placed, plus a picture of the view, to attach to a bug report."/>
       </WrapPanel>
     </Border>
@@ -78,7 +78,7 @@
               <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" FontSize="12"
                         ToolTip.Tip="Stitch on a fixed 32-tile grid like the DS. Off lays maps out by their geometry."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <ToggleButton Content="✋ Move" IsChecked="{Binding EditMode3D}" FontSize="12" Padding="6,2"
+              <ToggleButton Content="Move" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}" FontSize="12" Padding="6,2"
                             ToolTip.Tip="3D edit mode: click an event to select it, then drag the red/green/blue handles to move it (X=tile, Y=height, Z=tile). Arrow keys nudge one tile."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <TextBlock Text="View:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
@@ -88,8 +88,8 @@
                       IsEnabled="{Binding !Flat2D}"/>
               <Button Content="Iso" Click="CamIso_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Isometric camera"
                       IsEnabled="{Binding !Flat2D}"/>
-              <Button Content="⟲" Click="CamReset_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Reset camera"/>
-              <Button Content="🎯 Centre" Click="CenterOnEvent_Click" FontSize="12" Padding="6,2"
+              <Button controls:Icon.Key="reset" Click="CamReset_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Reset camera"/>
+              <Button Content="Centre" controls:Icon.Key="target" Click="CenterOnEvent_Click" FontSize="12" Padding="6,2"
                       ToolTip.Tip="Moves the camera onto the selected event."/>
             </WrapPanel>
           </StackPanel>
@@ -129,8 +129,8 @@
                       ToolTip.Tip="Remove the selected overworld (Del while the list is focused)"/>
               <Button Content="Duplicate" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <Button Content="Sort ↑" Click="SortAsc_Click" ToolTip.Tip="Sort overworlds by OW id (ascending)"/>
-              <Button Content="Sort ↓" Click="SortDesc_Click" ToolTip.Tip="Sort overworlds by OW id (descending)"/>
+              <Button Content="Sort" controls:Icon.Key="sortAscending" Click="SortAsc_Click" ToolTip.Tip="Sort overworlds by OW id (ascending)"/>
+              <Button Content="Sort" controls:Icon.Key="sortDescending" Click="SortDesc_Click" ToolTip.Tip="Sort overworlds by OW id (descending)"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}"
@@ -243,7 +243,7 @@
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptHasCommonInfo}"/>
                     <Grid ColumnDefinitions="*,Auto">
                       <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
-                      <Button Grid.Column="1" Content="↪ Go to script" Margin="4,0,0,0" Click="GoToOwScript_Click"
+                      <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToOwScript_Click"
                               ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
                     </Grid>
                   </StackPanel>
@@ -278,7 +278,7 @@
               <Button Content="Remove" Click="RemoveWarp_Click" IsEnabled="{Binding HasWarp}"/>
               <Button Content="Duplicate" Click="DupWarp_Click" IsEnabled="{Binding HasWarp}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <Button Content="↪ Go to destination" Click="TestWarp_Click" IsEnabled="{Binding HasWarp}"
+              <Button Content="Go to destination" controls:Icon.Key="goto" Click="TestWarp_Click" IsEnabled="{Binding HasWarp}"
                       ToolTip.Tip="Show the destination header's event file here"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
@@ -351,7 +351,7 @@
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptHasCommonInfo}"/>
                   <Grid ColumnDefinitions="*,Auto">
                     <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
-                    <Button Grid.Column="1" Content="↪ Go to script" Margin="4,0,0,0" Click="GoToTrScript_Click"
+                    <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToTrScript_Click"
                             ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
                   </Grid>
                   <TextBlock Text="Width / height" FontWeight="Bold" Margin="0,4,0,0"/>
@@ -422,7 +422,7 @@
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptHasCommonInfo}"/>
                   <Grid ColumnDefinitions="*,Auto">
                     <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
-                    <Button Grid.Column="1" Content="↪ Go to script" Margin="4,0,0,0" Click="GoToSpScript_Click"
+                    <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToSpScript_Click"
                             ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
                   </Grid>
                   <TextBlock Text="Type / direction" FontWeight="Bold" Margin="0,4,0,0"/>

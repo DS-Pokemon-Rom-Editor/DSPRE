@@ -34,15 +34,15 @@
         <TextBlock Text="Font" VerticalAlignment="Center"/>
         <ComboBox Width="220" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding SelectedFontIndex}"
                   PlaceholderText="This ROM carries no fonts this editor can read"/>
-        <Button Content="↶ Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-        <Button Content="↷ Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+        <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+        <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Button Content="Save a picture…" Click="ExportPng_Click" IsEnabled="{Binding CanUsePictureCommand}"
                 ToolTip.Tip="Write this letter, or the whole font, out as a PNG"/>
         <Button Content="Read a picture…" Click="ImportPng_Click" IsEnabled="{Binding CanUsePictureCommand}"
                 ToolTip.Tip="Read a PNG back over this letter, or over the whole font"/>
         <CheckBox Content="the whole font" IsChecked="{Binding WholeFontForPictures}" VerticalAlignment="Center"
                   ToolTip.Tip="Off does just the letter you are on; on does every letter as one sheet"/>
-        <Button Content="💾 Save this font" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save this font" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <TextBlock Classes="hint" VerticalAlignment="Center"
                    Text="Nothing is written until you save."/>
       </StackPanel>

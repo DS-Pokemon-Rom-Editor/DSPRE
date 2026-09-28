@@ -1,4 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
         x:Class="DSPRE.Avalonia.Views.Tools.ProjectChecksView"
@@ -19,7 +20,7 @@
           <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
                   BorderThickness="0,0,0,1" Padding="6,4">
             <WrapPanel Classes="toolbar">
-              <Button Content="🔍 Run validation" Click="Run_Click" IsEnabled="{Binding !IsRunning}"/>
+              <Button Content="Run validation" controls:Icon.Key="lens" Click="Run_Click" IsEnabled="{Binding !IsRunning}"/>
               <TextBlock Text="{Binding ValidationStatus}" VerticalAlignment="Center"
                          Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
             </WrapPanel>
@@ -45,7 +46,7 @@
               <ComboBox Width="130" ItemsSource="{Binding RefKinds}" SelectedIndex="{Binding RefKindIndex}"/>
               <TextBlock Text="Id:" VerticalAlignment="Center"/>
               <NumericUpDown Width="110" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding LookupId}"/>
-              <Button Content="🔗 Find headers" Click="Find_Click"/>
+              <Button Content="Find headers" controls:Icon.Key="link" Click="Find_Click"/>
             </WrapPanel>
           </Border>
           <TextBlock DockPanel.Dock="Top" Text="{Binding FindStatus}" Foreground="{DynamicResource Editor.Subtle}"

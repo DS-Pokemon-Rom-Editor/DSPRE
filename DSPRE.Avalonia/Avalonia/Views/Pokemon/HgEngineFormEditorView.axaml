@@ -25,7 +25,7 @@
                                           SelectedIndex="{Binding SelectedSpeciesIndex}"
                                           Width="260" MaxDropDownHeight="300"/>
         </StackPanel>
-        <Button x:Name="AddSlotButton" Content="+ Add Form"/>
+        <Button x:Name="AddSlotButton" Content="Add Form" controls:Icon.Key="addIcon"/>
       </WrapPanel>
     </Border>
     <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F">
@@ -54,7 +54,7 @@
                     ItemsSource="{Binding $parent[ItemsControl].((vm:HgEngineFormEditorViewModel)DataContext).PokemonNames}"
                     SelectedIndex="{Binding PokemonIndex}" MaxDropDownHeight="260"/>
                 <CheckBox Grid.Column="1" Content="Needs Reversion" IsChecked="{Binding NeedsReversion}" Margin="12,0"/>
-                <Button Grid.Column="2" Content="✕" Click="RemoveSlot_Click" ToolTip.Tip="Remove this form"/>
+                <Button Grid.Column="2" controls:Icon.Key="cross" Click="RemoveSlot_Click" ToolTip.Tip="Remove this form"/>
               </Grid>
             </Border>
           </DataTemplate>

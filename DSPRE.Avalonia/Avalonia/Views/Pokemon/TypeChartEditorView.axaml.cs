@@ -87,7 +87,11 @@ namespace DSPRE.Avalonia.Views.Pokemon
                 Cells.RowDefinitions.Add(new RowDefinition(new GridLength(i == 0 ? 20 : size)));
             }
             _cells = new Border[n, n];
-            var corner = new TextBlock { Text = "Atk ↓  Def →", FontSize = 10, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+            var corner = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+            corner.Children.Add(new TextBlock { Text = "Atk", FontSize = 10, VerticalAlignment = VerticalAlignment.Center });
+            corner.Children.Add(DSPRE.Avalonia.Controls.Icon.Image("down"));
+            corner.Children.Add(new TextBlock { Text = "Def", FontSize = 10, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) });
+            corner.Children.Add(DSPRE.Avalonia.Controls.Icon.Image("right"));
             Cells.Children.Add(corner);
             for (int t = 0; t < n; t++)
             {

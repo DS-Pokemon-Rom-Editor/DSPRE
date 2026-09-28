@@ -1,4 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
@@ -53,21 +54,20 @@
         </ListBox.ItemsPanel>
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:MapTilesViewModel+ToolRow">
-            <TextBlock Text="{Binding Glyph}" ToolTip.Tip="{Binding Tip}" FontSize="16"
-                       Width="28" TextAlignment="Center"/>
+            <controls:IconImage Key="{Binding Icon}" ToolTip.Tip="{Binding Tip}" Margin="6,2"/>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
       <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
-      <Button Classes="small" Content="↶" Click="UndoPaint_Click" IsEnabled="{Binding CanUndoPaint}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-      <Button Classes="small" Content="↷" Click="RedoPaint_Click" IsEnabled="{Binding CanRedoPaint}" ToolTip.Tip="Redo (Ctrl+Y)" Margin="2,0,0,0"/>
+      <Button Classes="small" controls:Icon.Key="undo" Click="UndoPaint_Click" IsEnabled="{Binding CanUndoPaint}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+      <Button Classes="small" controls:Icon.Key="redo" Click="RedoPaint_Click" IsEnabled="{Binding CanRedoPaint}" ToolTip.Tip="Redo (Ctrl+Y)" Margin="2,0,0,0"/>
       <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
       <Button Classes="small" Content="Copy" Click="Copy_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+C"/>
       <Button Classes="small" Content="Cut" Click="Cut_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+X" Margin="2,0,0,0"/>
       <Button Classes="small" Content="Paste" Click="Paste_Click" IsEnabled="{Binding HasClipboard}" ToolTip.Tip="Ctrl+V" Margin="2,0,0,0"/>
       <Button Classes="small" Content="Delete" Click="Delete_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Delete" Margin="2,0,0,0"/>
       <Button Classes="small" Content="Fill" Click="FillSel_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+F" Margin="2,0,0,0"/>
-      <Button x:Name="RampButton" Classes="small" Content="Ramp ▾" IsEnabled="{Binding HasSelection}" Margin="2,0,0,0"
+      <Button x:Name="RampButton" Classes="small" Content="Ramp" controls:Icon.Key="dropdown" controls:Icon.After="True" IsEnabled="{Binding HasSelection}" Margin="2,0,0,0"
               ToolTip.Tip="Slope or stairs up to the higher side, built on Apply">
         <Button.Flyout>
           <Flyout Placement="BottomEdgeAlignedLeft">
@@ -84,9 +84,9 @@
           </Flyout>
         </Button.Flyout>
       </Button>
-      <Button Classes="small" Content="⟳" Click="Rotate_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Rotate" Margin="2,0,0,0"/>
-      <Button Classes="small" Content="⇆" Click="FlipAcross_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Flip horizontal" Margin="2,0,0,0"/>
-      <Button Classes="small" Content="⇅" Click="FlipDown_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Flip vertical" Margin="2,0,0,0"/>
+      <Button Classes="small" controls:Icon.Key="rotate" Click="Rotate_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Rotate" Margin="2,0,0,0"/>
+      <Button Classes="small" controls:Icon.Key="fliph" Click="FlipAcross_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Flip horizontal" Margin="2,0,0,0"/>
+      <Button Classes="small" controls:Icon.Key="flipv" Click="FlipDown_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Flip vertical" Margin="2,0,0,0"/>
       <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
       <TextBlock Text="Rotation" VerticalAlignment="Center" Margin="0,0,4,0"/>
       <NumericUpDown Value="{Binding Turn}" Minimum="-1" Maximum="4" Increment="1" Width="90"
@@ -143,8 +143,8 @@
           <StackPanel Spacing="4">
             <DockPanel>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
-                <Button Classes="small" Content="+" Click="AddSmart_Click" IsEnabled="{Binding Ready}" ToolTip.Tip="New smart drawing"/>
-                <Button Classes="small" Content="−" Click="RemoveSmart_Click" IsEnabled="{Binding HasSmartDrawing}" ToolTip.Tip="Remove smart drawing"/>
+                <Button Classes="small" controls:Icon.Key="addIcon" Click="AddSmart_Click" IsEnabled="{Binding Ready}" ToolTip.Tip="New smart drawing"/>
+                <Button Classes="small" controls:Icon.Key="deleteIcon" Click="RemoveSmart_Click" IsEnabled="{Binding HasSmartDrawing}" ToolTip.Tip="Remove smart drawing"/>
               </StackPanel>
               <TextBlock Text="Smart drawings" VerticalAlignment="Center" FontWeight="SemiBold"/>
             </DockPanel>
@@ -190,12 +190,12 @@
               <ComboBox ItemsSource="{Binding TilePictures}" SelectedItem="{Binding LookPicture}" HorizontalAlignment="Stretch"/>
               <TextBlock Text="Offset" FontWeight="SemiBold"/>
               <UniformGrid Columns="6">
-                <Button Classes="small" Content="←" Click="NudgeWest_Click" ToolTip.Tip="-X"/>
-                <Button Classes="small" Content="→" Click="NudgeEast_Click" ToolTip.Tip="+X"/>
-                <Button Classes="small" Content="↑" Click="NudgeNorth_Click" ToolTip.Tip="-Z"/>
-                <Button Classes="small" Content="↓" Click="NudgeSouth_Click" ToolTip.Tip="+Z"/>
-                <Button Classes="small" Content="▲" Click="NudgeUp_Click" ToolTip.Tip="+Y"/>
-                <Button Classes="small" Content="▼" Click="NudgeDown_Click" ToolTip.Tip="-Y"/>
+                <Button Classes="small" controls:Icon.Key="left" Click="NudgeWest_Click" ToolTip.Tip="-X"/>
+                <Button Classes="small" controls:Icon.Key="right" Click="NudgeEast_Click" ToolTip.Tip="+X"/>
+                <Button Classes="small" controls:Icon.Key="up" Click="NudgeNorth_Click" ToolTip.Tip="-Z"/>
+                <Button Classes="small" controls:Icon.Key="down" Click="NudgeSouth_Click" ToolTip.Tip="+Z"/>
+                <Button Classes="small" controls:Icon.Key="raise" Click="NudgeUp_Click" ToolTip.Tip="+Y"/>
+                <Button Classes="small" controls:Icon.Key="lower" Click="NudgeDown_Click" ToolTip.Tip="-Y"/>
               </UniformGrid>
               <UniformGrid Columns="2">
                 <Button Classes="small" Content="Rotate" Click="TurnShape_Click"/>
@@ -330,14 +330,14 @@
               </ListBox.ItemTemplate>
             </ListBox>
             <UniformGrid Columns="4">
-              <Button Classes="small" Content="↑" Click="ShiftUp_Click" ToolTip.Tip="Shift up"/>
-              <Button Classes="small" Content="↓" Click="ShiftDown_Click" ToolTip.Tip="Shift down"/>
-              <Button Classes="small" Content="←" Click="ShiftLeft_Click" ToolTip.Tip="Shift left"/>
-              <Button Classes="small" Content="→" Click="ShiftRight_Click" ToolTip.Tip="Shift right"/>
-              <Button Classes="small" Content="▲" Click="RaiseUp_Click" ToolTip.Tip="Raise layer"/>
-              <Button Classes="small" Content="▼" Click="RaiseDown_Click" ToolTip.Tip="Lower layer"/>
-              <Button Classes="small" Content="⎘" Click="CopyLayer_Click" ToolTip.Tip="Copy layer"/>
-              <Button Classes="small" Content="⎀" Click="PasteLayer_Click" IsEnabled="{Binding HasCopy}" ToolTip.Tip="Paste layer"/>
+              <Button Classes="small" controls:Icon.Key="up" Click="ShiftUp_Click" ToolTip.Tip="Shift up"/>
+              <Button Classes="small" controls:Icon.Key="down" Click="ShiftDown_Click" ToolTip.Tip="Shift down"/>
+              <Button Classes="small" controls:Icon.Key="left" Click="ShiftLeft_Click" ToolTip.Tip="Shift left"/>
+              <Button Classes="small" controls:Icon.Key="right" Click="ShiftRight_Click" ToolTip.Tip="Shift right"/>
+              <Button Classes="small" controls:Icon.Key="raise" Click="RaiseUp_Click" ToolTip.Tip="Raise layer"/>
+              <Button Classes="small" controls:Icon.Key="lower" Click="RaiseDown_Click" ToolTip.Tip="Lower layer"/>
+              <Button Classes="small" controls:Icon.Key="copyIcon_small" Click="CopyLayer_Click" ToolTip.Tip="Copy layer"/>
+              <Button Classes="small" controls:Icon.Key="paste" Click="PasteLayer_Click" IsEnabled="{Binding HasCopy}" ToolTip.Tip="Paste layer"/>
             </UniformGrid>
             <Button Classes="small" Content="Clear layer" Click="ClearLayer_Click" HorizontalAlignment="Stretch"/>
           </StackPanel>

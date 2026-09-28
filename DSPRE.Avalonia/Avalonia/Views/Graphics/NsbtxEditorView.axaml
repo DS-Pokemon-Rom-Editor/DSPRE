@@ -1,4 +1,5 @@
 <Window MinWidth="760" MinHeight="480" xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.NsbtxEditorView"
@@ -20,11 +21,11 @@
         <RadioButton Content="Map textures"      GroupName="tt" IsChecked="{Binding MapTextures}"/>
         <RadioButton Content="Building textures" GroupName="tt" IsChecked="{Binding BuildingTextures}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="＋ Add"     Click="AddPack_Click"/>
-        <Button Content="🗑 Remove last" Click="RemPack_Click"/>
+        <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddPack_Click"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemPack_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="📥 Import" Click="Import_Click"/>
-        <Button Content="📤 Export" Click="Export_Click"/>
+        <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export" controls:Icon.Key="export" Click="Export_Click"/>
       </WrapPanel>
     </Border>
 

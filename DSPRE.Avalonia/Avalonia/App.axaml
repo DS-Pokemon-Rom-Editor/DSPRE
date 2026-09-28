@@ -68,6 +68,9 @@
 			<Setter Property="Padding" Value="10,4"/>
 			<Setter Property="CornerRadius" Value="4"/>
 		</Style>
+		<Style Selector=":disabled Image.icon">
+			<Setter Property="Opacity" Value="0.4"/>
+		</Style>
 		<Style Selector="ComboBox">
 			<Setter Property="MinHeight" Value="28"/>
 			<!-- WinForms parity: typing in a focused/open combo jumps to the matching item.

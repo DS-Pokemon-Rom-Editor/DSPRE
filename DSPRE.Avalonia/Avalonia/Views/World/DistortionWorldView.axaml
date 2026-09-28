@@ -1,4 +1,5 @@
 <Window MinWidth="900" MinHeight="560" xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
              xmlns:world="clr-namespace:DSPRE.Avalonia.Views.World"
@@ -56,9 +57,9 @@
                           Value="{Binding OverlayHeight}" IsEnabled="{Binding ShowGravity}"
                           ToolTip.Tip="Overlay height"/>
                   <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
-                  <Button Content="▶ Animate" Click="Animate_Click"/>
+                  <Button Content="Animate" controls:Icon.Key="play" Click="Animate_Click"/>
                   <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
-                  <Button Content="✏ Edit map model" Click="EditModel_Click"
+                  <Button Content="Edit map model" controls:Icon.Key="pencil" Click="EditModel_Click"
                           />
                   <ComboBox Width="200" Margin="4,0,0,0" ItemsSource="{Binding MapCells}"
                             SelectedIndex="{Binding SelectedMapCell}">

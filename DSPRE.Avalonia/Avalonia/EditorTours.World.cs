@@ -5,7 +5,7 @@ namespace DSPRE.Avalonia
         static partial void RegisterWorld()
         {
             Add("MapEditorView", "Map Editor",
-                S("type:NsbmdGlControl", "The map", "Drag to pan, right-drag to orbit, wheel to zoom. Turn on 🖌 Paint to paint squares straight onto the map, or ✋ Move buildings to drag them."),
+                S("type:NsbmdGlControl", "The map", "Drag to pan, right-drag to orbit, wheel to zoom. Turn on Paint to paint squares straight onto the map, or Move buildings to drag them."),
                 S("name:ViewModeBox", "What you edit", "One map, the whole matrix, or every map of this header at once."),
                 S("toolbar", "Textures and overlays", "The second row picks this area's map and building textures and what is drawn over the map: collisions, square types or nothing."),
                 S("tab:Permissions", "Permissions", "Where the player can walk, and what each square is: grass, water, ledges, doors. Pick a value, then paint on the grids or the map."),
@@ -16,20 +16,20 @@ namespace DSPRE.Avalonia
                 S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S does too. Closing with unsaved edits asks first."));
 
             Add("EventEditorView", "Event Editor",
-                S("name:GlHost", "The map", "Every event on this header's maps. Click one to select it, or turn on ✋ Move and drag it. Drag to pan, right-drag to orbit, wheel to zoom."),
+                S("name:GlHost", "The map", "Every event on this header's maps. Click one to select it, or turn on Move and drag it. Drag to pan, right-drag to orbit, wheel to zoom."),
                 S("name:ShowBar", "What's shown", "Hide kinds of events, switch to a flat 2D view, or centre the camera on the selected event."),
                 S("tab:Overworlds", "People and objects", "Everyone and everything standing on the map. Pick one to set its sprite, script, movement and, for trainers, who they are."),
-                S("tab:Warps", "Warps", "Doors and exits. Each one sends the player to a warp in another header; ↪ Go to destination opens it."),
+                S("tab:Warps", "Warps", "Doors and exits. Each one sends the player to a warp in another header; Go to destination opens it."),
                 S("tab:Triggers", "Triggers", "Squares that run a script when stepped on, if a variable holds the right value."),
                 S("tab:Spawnables", "Spawnables", "Signs, hidden items and other things the player reads or finds by facing a square."),
-                S("name:EventTabs", "Jump to other editors", "Fields that show ↗ when you point at them lead to another editor: a person's trainer, a warp's destination. Right-click and pick Open, or Ctrl+click."),
+                S("name:EventTabs", "Jump to other editors", "Fields that show a link button when you point at them lead to another editor: a person's trainer, a warp's destination. Right-click and pick Open, or Ctrl+click."),
                 S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S does too. Closing with unsaved edits asks first."));
 
             Add("HeaderEditorView", "Header Editor",
                 S("list", "Headers", "Every place in the game, grouped by location. Search above the list, and right-click a header to open its map, events, scripts, text, wild Pokémon or matrix."),
                 S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon."),
                 S("name:SoundGroup", "Music and weather", "Day and night music, the weather and the camera angle. Type a number or pick from the list."),
-                S("name:LinkedFilesGroup", "Linked files", "The matrix, events, scripts, text and wild Pokémon this place uses. 🔗 Open takes you to each one."),
+                S("name:LinkedFilesGroup", "Linked files", "The matrix, events, scripts, text and wild Pokémon this place uses. Open takes you to each one."),
                 S("name:MapSettingsGroup", "Map settings", "Whether the player can ride the bike, run, use an Escape Rope or fly here, plus phone and radio in some games."),
                 S("name:HgssGroup", "Region settings", "Where the place sits on the town map, which Pokémon may follow you, Mom's call and whether it is Johto or Kanto."),
                 S("name:PreviewRail", "Previews", "See the area icon, the weather and the camera angle you picked."),
@@ -39,11 +39,11 @@ namespace DSPRE.Avalonia
             Add("HeaderFieldsView", "Header tab",
                 S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon."),
                 S("name:SoundGroup", "Music and weather", "Day and night music, the weather and the camera angle. Type a number or pick from the list."),
-                S("name:LinkedFilesGroup", "Linked files", "The matrix, events, scripts, text and wild Pokémon this place uses. 🔗 Open takes you to each one."),
+                S("name:LinkedFilesGroup", "Linked files", "The matrix, events, scripts, text and wild Pokémon this place uses. Open takes you to each one."),
                 S("name:MapSettingsGroup", "Map settings", "Whether the player can ride the bike, run, use an Escape Rope or fly here, plus phone and radio in some games."),
                 S("name:HgssGroup", "Region settings", "Where the place sits on the town map, which Pokémon may follow you, Mom's call and whether it is Johto or Kanto."),
                 S("name:PreviewRail", "Previews", "See the area icon, the weather and the camera angle you picked."),
-                S(null, "Saving", "💾 Save header above the tabs keeps these fields, and ↺ Reset goes back to the saved header. Each other tab saves its own data."));
+                S(null, "Saving", "Save header above the tabs keeps these fields, and Reset goes back to the saved header. Each other tab saves its own data."));
 
             Add("MatrixEditorView", "Matrix Editor",
                 S("toolbar", "The matrix", "A matrix is the grid that joins maps into one seamless world. Pick one here."),
@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia
                 S("tab:Headers", "Headers", "Which header each cell belongs to, and so its name, music and events. With Paint off, click a cell to open its header."),
                 S("tab:Heights", "Heights", "How high each map sits, so maps at different levels line up."),
                 S("tab:Sections", "Sections", "Add a headers or heights section to a matrix that has none, which shows its tab."),
-                S("name:PaintToggle", "Painting", "Turn on ✏ Paint, set the paint value on the tab, then click or drag across cells to fill them."),
+                S("name:PaintToggle", "Painting", "Turn on Paint, set the paint value on the tab, then click or drag across cells to fill them."),
                 S("name:SpawnButton", "Starting point", "Makes the selected cell the place a new game begins."),
                 S("toolbar", "Saving", "Save keeps the matrix; in its own window Ctrl+S does too. Import and Export move a matrix in and out as a file."));
 
@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia
             Add("DistortionWorldView", "Distortion World",
                 S("name:FloorList", "Floors", "Each floor of the Distortion World. Pick one to edit it."),
                 S("tab:Map>name:GlHost", "The map", "The floor in 3D. Drag to pan, right-drag to orbit, wheel to zoom."),
-                S("tab:Map>name:MapViewBar", "View", "Change the camera, show one floor or the whole world, or colour squares by gravity. ▶ Animate plays it; ✏ Edit map model edits the map picked beside it."),
+                S("tab:Map>name:MapViewBar", "View", "Change the camera, show one floor or the whole world, or colour squares by gravity. Animate plays it; Edit map model edits the map picked beside it."),
                 S("tab:Map>name:SurfaceBox", "Surfaces", "Pick the ground or a wall, floor or ceiling surface to paint."),
                 S("tab:Collision", "Collision", "Pick Walkable or Blocked and paint the grid for the chosen surface."),
                 S("tab:Tiles", "Tiles", "Pick a square type and paint it onto the chosen surface."),

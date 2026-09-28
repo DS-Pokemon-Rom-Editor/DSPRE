@@ -261,7 +261,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (var group in rateGroups)
             {
                 var indices = group.Select(x => x.Index + 1).ToArray();
-                warnings.Add($"⚠ Rate {group.Key} duplicated at entries {string.Join(", ", indices)} - only first triggers!");
+                warnings.Add($"Rate {group.Key} duplicated at entries {string.Join(", ", indices)} - only first triggers!");
             }
 
             for (int i = 1; i < set.Encounters.Count; i++)
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 int prevRate = set.Encounters[i - 1].Rate;
                 int currRate = set.Encounters[i].Rate;
                 if (currRate >= prevRate && currRate > 0)
-                    warnings.Add($"⚠ Entry {i + 1} (rate {currRate}) never triggers - rate must be < {prevRate}.");
+                    warnings.Add($"Entry {i + 1} (rate {currRate}) never triggers - rate must be < {prevRate}.");
             }
             return string.Join("\n", warnings);
         }

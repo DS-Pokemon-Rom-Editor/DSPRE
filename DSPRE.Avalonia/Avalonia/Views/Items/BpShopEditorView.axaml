@@ -39,9 +39,9 @@
         <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,6,0,0">
           <Button Content="Add" Click="AddLeft_Click" IsVisible="{Binding CanResize}"/>
           <Button Content="Remove" Click="RemoveLeft_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <Button Content="▲" Click="UpLeft_Click" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <Button Content="▼" Click="DownLeft_Click" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <Button Content="To TM counter →" Click="ToRight_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button controls:Icon.Key="up" Click="UpLeft_Click" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button controls:Icon.Key="down" Click="DownLeft_Click" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="To TM counter" controls:Icon.Key="right" controls:Icon.After="True" Click="ToRight_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
         </WrapPanel>
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,110" Margin="6,0,24,2">
           <TextBlock Text="Item" Foreground="{DynamicResource Editor.Subtle}"/>
@@ -67,9 +67,9 @@
         <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,6,0,0">
           <Button Content="Add" Click="AddRight_Click" IsVisible="{Binding CanResize}"/>
           <Button Content="Remove" Click="RemoveRight_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <Button Content="▲" Click="UpRight_Click" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <Button Content="▼" Click="DownRight_Click" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <Button Content="← To item counter" Click="ToLeft_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button controls:Icon.Key="up" Click="UpRight_Click" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button controls:Icon.Key="down" Click="DownRight_Click" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="To item counter" controls:Icon.Key="left" Click="ToLeft_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
         </WrapPanel>
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,110" Margin="6,0,24,2">
           <TextBlock Text="Item" Foreground="{DynamicResource Editor.Subtle}"/>

@@ -4,6 +4,7 @@
              xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
              xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Battle"
              xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:data="clr-namespace:DSPRE.Avalonia.Data"
              x:Class="DSPRE.Avalonia.Views.Battle.BattleScriptEditorView"
              x:DataType="vm:BattleScriptEditorViewModel">
   <Design.DataContext>
@@ -24,8 +25,8 @@
         <controls:FusionAutoCompleteBox ItemsSource="{Binding FileItems}" SelectedIndex="{Binding SelectedFileIndex}" Width="320" MaxDropDownHeight="420"/>
       </StackPanel>
       <StackPanel x:Name="ScriptButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
-        <Button Content="＋ Add command" Click="AddCommand_Click"/>
-        <Button Content="❓ Command guide" Click="CommandGuide_Click"/>
+        <Button Content="Add command" controls:Icon.Key="addIcon" Click="AddCommand_Click"/>
+        <Button Content="Command guide" controls:Icon.Key="help" Click="CommandGuide_Click"/>
       </StackPanel>
     </WrapPanel>
   </Border>
@@ -129,9 +130,9 @@
                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Stretch">
                       <TextBlock Grid.Column="0" Text="{Binding Summary}" TextTrimming="CharacterEllipsis"
                                  FontFamily="Consolas,monospace" FontSize="12" VerticalAlignment="Center"/>
-                      <Button Grid.Column="1" Content="↑" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
-                      <Button Grid.Column="2" Content="↓" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
-                      <Button Grid.Column="3" Content="🗑" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="12"/>
+                      <Button Grid.Column="1" controls:Icon.Key="up" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
+                      <Button Grid.Column="2" controls:Icon.Key="down" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
+                      <Button Grid.Column="3" controls:Icon.Key="deleteIcon" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="12"/>
                     </Grid>
                   </Expander.Header>
                   <StackPanel Spacing="3" Margin="0,4,0,2">
@@ -158,7 +159,7 @@
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsSound}" VerticalAlignment="Center">
                               <TextBlock Text="{Binding SoundName}" FontSize="11" VerticalAlignment="Center"
                                          Foreground="{DynamicResource Editor.Subtle}" MaxWidth="180" TextTrimming="CharacterEllipsis"/>
-                              <Button Content="🔊" Padding="6,2" Click="PreviewSound_Click" ToolTip.Tip="Play this sound"/>
+                              <Button controls:Icon.Key="speaker" Padding="6,2" Click="PreviewSound_Click" ToolTip.Tip="Play this sound"/>
                             </StackPanel>
                           </Grid>
                         </DataTemplate>
@@ -274,7 +275,7 @@
           </Viewbox>
         </Border>
         <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,4">
-          <Button Content="{Binding CellPlayButtonText}" Click="PlayCell_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"/>
+          <Button controls:Icon.Key="{Binding CellPlayButtonIcon}" controls:Icon.Text="{Binding CellPlayButtonText}" Click="PlayCell_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"/>
           <Button x:Name="EditParticlesButton" Content="Edit particles" Click="EditParticles_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"
                   ToolTip.Tip="This move's particle files"/>
           <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
@@ -323,9 +324,28 @@
         <TextBlock Grid.Row="3" Text="{Binding StoryboardTitle}" FontWeight="SemiBold" Margin="0,6,0,4"/>
         <Border Grid.Row="4" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
           <ScrollViewer>
-            <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True"
-                     TextWrapping="{Binding StoryboardWrap}" VerticalAlignment="Top"
-                     FontFamily="Consolas,monospace" FontSize="12" BorderThickness="0" Background="Transparent"/>
+            <StackPanel>
+              <TextBox Text="{Binding Storyboard}" IsReadOnly="True" AcceptsReturn="True"
+                       IsVisible="{Binding Storyboard, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       TextWrapping="{Binding StoryboardWrap}" VerticalAlignment="Top"
+                       FontFamily="Consolas,monospace" FontSize="12" BorderThickness="0" Background="Transparent"/>
+              <ItemsControl ItemsSource="{Binding StoryboardLines}" Margin="6,4">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="data:WestStoryboard+Line">
+                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1">
+                      <TextBlock Text="{Binding Frame}" FontFamily="Consolas,monospace" FontSize="12"
+                                 Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+                      <StackPanel Orientation="Horizontal" Spacing="6" Margin="{Binding Indent}">
+                        <Panel Width="16" Height="16">
+                          <controls:IconImage Key="{Binding Icon}"/>
+                        </Panel>
+                        <TextBlock Text="{Binding Text}" FontSize="12" VerticalAlignment="Center"/>
+                      </StackPanel>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
           </ScrollViewer>
         </Border>
       </Grid>

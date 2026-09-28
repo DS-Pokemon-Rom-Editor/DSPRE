@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public sealed class ToolRow
         {
             public TilePainter.Tool Tool { get; set; }
-            public string Glyph { get; set; }
+            public string Icon { get; set; }
             public string Tip { get; set; }
         }
 
@@ -135,18 +135,18 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public IReadOnlyList<ToolRow> Tools { get; } = new[]
         {
-            new ToolRow { Tool = TilePainter.Tool.Paint, Glyph = "✎", Tip = "Paint (right: pick, middle: fill) (B)" },
-            new ToolRow { Tool = TilePainter.Tool.Clear, Glyph = "⌫", Tip = "Erase (middle: erase area) (E)" },
-            new ToolRow { Tool = TilePainter.Tool.Smart, Glyph = "▦", Tip = "Smart fill (S)" },
-            new ToolRow { Tool = TilePainter.Tool.SmartInverted, Glyph = "▣", Tip = "Inverted smart fill (Shift+S)" },
-            new ToolRow { Tool = TilePainter.Tool.Bucket, Glyph = "◧", Tip = "Fill (G)" },
-            new ToolRow { Tool = TilePainter.Tool.Picker, Glyph = "⌖", Tip = "Picker (I)" },
-            new ToolRow { Tool = TilePainter.Tool.Line, Glyph = "╱", Tip = "Line (L)" },
-            new ToolRow { Tool = TilePainter.Tool.Rectangle, Glyph = "▭", Tip = "Rectangle (U)" },
-            new ToolRow { Tool = TilePainter.Tool.Ellipse, Glyph = "◯", Tip = "Ellipse (O)" },
-            new ToolRow { Tool = TilePainter.Tool.Select, Glyph = "⬚", Tip = "Select (M)" },
-            new ToolRow { Tool = TilePainter.Tool.Lasso, Glyph = "➰", Tip = "Lasso (Q)" },
-            new ToolRow { Tool = TilePainter.Tool.Wand, Glyph = "✦", Tip = "Magic wand (W)" },
+            new ToolRow { Tool = TilePainter.Tool.Paint, Icon = "pencil", Tip = "Paint (right: pick, middle: fill) (B)" },
+            new ToolRow { Tool = TilePainter.Tool.Clear, Icon = "eraser", Tip = "Erase (middle: erase area) (E)" },
+            new ToolRow { Tool = TilePainter.Tool.Smart, Icon = "smartfill", Tip = "Smart fill (S)" },
+            new ToolRow { Tool = TilePainter.Tool.SmartInverted, Icon = "smartfill_inv", Tip = "Inverted smart fill (Shift+S)" },
+            new ToolRow { Tool = TilePainter.Tool.Bucket, Icon = "bucket", Tip = "Fill (G)" },
+            new ToolRow { Tool = TilePainter.Tool.Picker, Icon = "picker", Tip = "Picker (I)" },
+            new ToolRow { Tool = TilePainter.Tool.Line, Icon = "line", Tip = "Line (L)" },
+            new ToolRow { Tool = TilePainter.Tool.Rectangle, Icon = "rectangle", Tip = "Rectangle (U)" },
+            new ToolRow { Tool = TilePainter.Tool.Ellipse, Icon = "ellipse", Tip = "Ellipse (O)" },
+            new ToolRow { Tool = TilePainter.Tool.Select, Icon = "select", Tip = "Select (M)" },
+            new ToolRow { Tool = TilePainter.Tool.Lasso, Icon = "lasso", Tip = "Lasso (Q)" },
+            new ToolRow { Tool = TilePainter.Tool.Wand, Icon = "wand", Tip = "Magic wand (W)" },
         };
 
         public MapTilesViewModel()
