@@ -8,7 +8,8 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// The battle type chart: 3-byte attacker, defender, tenths records; missing pairs are neutral, records after
-    /// <c>FE FE 00</c> are skipped by Foresight and Scrappy, and <c>FF FF 00</c> ends it.
+    /// <c>FE FE 00</c> are skipped by Foresight and Scrappy, and <c>FF FF 00</c> ends it. The game tests only the
+    /// attacker byte for both markers.
     /// </summary>
     public class TypeChart
     {
@@ -34,6 +35,7 @@ namespace DSPRE.ROMFiles
         private int _offset;
         private string _ovPath;
         private bool _countIsCompare;
+        private bool _modulusIsMovs;
 
         public const string Marker = "TYPECHARTXP1";
         /// <summary>Capped at 255 because Conversion 2's bound is a byte immediate.</summary>
@@ -58,8 +60,8 @@ namespace DSPRE.ROMFiles
             for (int at = chart._offset; at + RecordSize <= data.Length; at += RecordSize, records++)
             {
                 byte a = data[at], d = data[at + 1], m = data[at + 2];
-                if (a == End && d == End) { records++; break; }
-                if (a == Boundary && d == Boundary) { foresight = true; continue; }
+                if (a == End) { records++; break; }
+                if (a == Boundary) { foresight = true; continue; }
                 if (records > 4096) throw new InvalidDataException("The type chart has no end marker.");
                 var existing = chart.Matchups.FirstOrDefault(x => x.Attacker == a && x.Defender == d);
                 if (existing != null) throw new InvalidDataException($"The type chart lists types {a} and {d} twice; DSPRE can't edit it without changing damage.");
@@ -111,6 +113,20 @@ namespace DSPRE.ROMFiles
             byte imm = ov[sites.countCompare], op = ov[sites.countCompare + 1];
             _countIsCompare = (op & 0xF8) == 0x28;
             Capacity = _countIsCompare ? imm : 0;
+            _modulusIsMovs = ov[sites.countModulus + 1] == 0x21;
+        }
+
+        /// <summary>
+        /// Charts moved by older DSPRE builds left Conversion 2's random pick at the vanilla count, so it never
+        /// reached the added records. Sets it to the count compare's value.
+        /// </summary>
+        private void RepairModulus()
+        {
+            if (!InExpansion || !_countIsCompare || !_modulusIsMovs) return;
+            var sites = TypeChartPointerSites.Value;
+            byte[] ov = File.ReadAllBytes(_ovPath);
+            if (ov[sites.countModulus] == ov[sites.countCompare]) return;
+            DSUtils.WriteToFile(_ovPath, new[] { ov[sites.countCompare] }, (uint)sites.countModulus);
         }
 
         /// <summary>DP and Pt's Pokétch copy: an 18x18 grid of 1 (super effective), -1 (not very), -10 (none) and 0.</summary>
@@ -152,6 +168,7 @@ namespace DSPRE.ROMFiles
         {
             if (Problem() is string p) throw new InvalidOperationException(p);
             DSUtils.WriteToFile(_path, ToBytes(), (uint)_offset);
+            RepairModulus();
             if (SpotOf(GameTable.PoketchTypeChart) != null && GameTableFile.WhyNot(GameTable.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
                 GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
         }
@@ -163,7 +180,7 @@ namespace DSPRE.ROMFiles
             if (!SyntheticOverlaySpace.Available())
                 throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
             var sites = TypeChartPointerSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
-            if (!_countIsCompare) throw new InvalidOperationException("Conversion 2's count check doesn't look like the game's, so DSPRE won't move the chart.");
+            if (!_countIsCompare || !_modulusIsMovs) throw new InvalidOperationException("Conversion 2's count check doesn't look like the game's, so DSPRE won't move the chart.");
             int oldCapacity = Capacity;
             Capacity = ExpandedCapacity;
             if (Problem() is string p) { Capacity = oldCapacity; throw new InvalidOperationException(p); }
@@ -187,6 +204,7 @@ namespace DSPRE.ROMFiles
             foreach (int o in sites.col1) BitConverter.GetBytes(ram + 1).CopyTo(ov, o);
             foreach (int o in sites.col2) BitConverter.GetBytes(ram + 2).CopyTo(ov, o);
             ov[sites.countCompare] = ExpandedCapacity;
+            ov[sites.countModulus] = ExpandedCapacity;
             try
             {
                 File.WriteAllBytes(Filesystem.expArmPath, synth);

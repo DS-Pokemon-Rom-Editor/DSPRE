@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DSPRE;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -213,7 +214,8 @@ namespace DSPRE.Avalonia.Data
         // The icons are all one shape, and the game keeps one cell layout for the lot of them, so the
         // drawings themselves record no size. The games' own icon table says which of the
         // three banks of ST_TYPE_NCLR each one is painted with; without it they all came out in the
-        // first bank's colours.
+        // first bank's colours. The table is read from the ROM where it can be; these are the retail
+        // values, used when it cannot.
         private static readonly Dictionary<string, int> IconBank = new(StringComparer.Ordinal)
         {
             ["NORMAL"] = 0, ["FIGHT"] = 0, ["FLIGHT"] = 1, ["POISON"] = 1, ["GROUND"] = 0,
@@ -228,6 +230,42 @@ namespace DSPRE.Avalonia.Data
         {
             ["BUTURI"] = 0, ["TOKUSYU"] = 1, ["HENKA"] = 0,
         };
+
+        /// <summary>The icon tags in the order of the game's icon tables: 18 types, then the five contest conditions.</summary>
+        public static readonly string[] IconOrder =
+        {
+            "NORMAL", "FIGHT", "FLIGHT", "POISON", "GROUND", "ROCK", "INSECT", "GHOST", "STEEL",
+            "QUES", "FIRE", "WATER", "GRASS", "ELE", "ESP", "ICE", "DRAGON", "EVIL",
+            "STYLE", "BEAUTIFUL", "CUTE", "INTELLI", "STRONG",
+        };
+
+        // Physical, special, status: the order of the game's category icon table.
+        private static readonly string[] KindOrder = { "BUTURI", "TOKUSYU", "HENKA" };
+
+        private static readonly object BanksLock = new();
+        private static string _banksFor;
+        private static BattleUiTables.IconTables _banks;
+
+        /// <summary>
+        /// The ROM's own icon bank tables, or null. They are trusted only when the member table beside them
+        /// names the same archive files as the icon names do, which rules out a wrong address or a moved table.
+        /// </summary>
+        private static BattleUiTables.IconTables GameBanks()
+        {
+            lock (BanksLock)
+            {
+                string rom = RomInfo.workDir;
+                if (_banksFor == rom) return _banks;
+                _banksFor = rom;
+                _banks = null;
+                var t = BattleUiTables.ReadIconTables();
+                if (t == null) return null;
+                var names = Names();
+                for (int i = 0; i < IconOrder.Length; i++)
+                    if (IndexOf(names, "P_ST_TYPE_" + IconOrder[i], "Drawing") != t.TypeMembers[i]) return null;
+                return _banks = t;
+            }
+        }
 
         /// <summary>Whether this entry is one of the type, contest or move-category icons.</summary>
         private static bool IsIcon(string thing) =>
@@ -250,10 +288,21 @@ namespace DSPRE.Avalonia.Data
             string thing = names[index];
             if (!IsIcon(thing)) return 0;
             string tag = thing.Substring(0, thing.Length - "_NCGR_BIN".Length);
-            if (tag.StartsWith("P_ST_TYPE_", StringComparison.Ordinal)
-                && IconBank.TryGetValue(tag.Substring("P_ST_TYPE_".Length), out int bank)) return bank;
-            if (tag.StartsWith("P_ST_BUNRUI_", StringComparison.Ordinal)
-                && KindBank.TryGetValue(tag.Substring("P_ST_BUNRUI_".Length), out int kind)) return kind;
+            var game = GameBanks();
+            if (tag.StartsWith("P_ST_TYPE_", StringComparison.Ordinal))
+            {
+                string type = tag.Substring("P_ST_TYPE_".Length);
+                int at = Array.IndexOf(IconOrder, type);
+                if (game != null && at >= 0) return game.TypeBanks[at];
+                if (IconBank.TryGetValue(type, out int bank)) return bank;
+            }
+            if (tag.StartsWith("P_ST_BUNRUI_", StringComparison.Ordinal))
+            {
+                string kind = tag.Substring("P_ST_BUNRUI_".Length);
+                int at = Array.IndexOf(KindOrder, kind);
+                if (game != null && at >= 0) return game.CategoryBanks[at];
+                if (KindBank.TryGetValue(kind, out int bank)) return bank;
+            }
             return 0;
         }
 

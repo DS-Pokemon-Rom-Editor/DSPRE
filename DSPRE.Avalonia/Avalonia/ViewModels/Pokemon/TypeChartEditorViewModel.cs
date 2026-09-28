@@ -207,9 +207,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (_chart == null) return "";
                 var notes = _chart.Unusual.Select(m => $"{NameOf(m.Attacker)} → {NameOf(m.Defender)} {m.Tenths / 10m}×").ToList();
-                string unusual = notes.Count == 0 ? "" :
-                    "Battle messages and Conversion 2 only know 0×, ½× and 2×: " + string.Join(", ", notes.Take(6)) + (notes.Count > 6 ? "…" : "") + ".";
-                return unusual;
+                if (notes.Count == 0) return "";
+                return "Battle messages and Conversion 2 only know 0×, ½× and 2×: " + string.Join(", ", notes.Take(6)) + (notes.Count > 6 ? "…" : "") + ". "
+                    + "Stealth Rock only deals 0, ½, 1, 2 or 4 times its damage, and Wonder Guard, Filter, Solid Rock, Expert Belt "
+                    + "and Tinted Lens treat custom values as neutral.";
             }
         }
         public bool HasWarning => Warning.Length > 0;

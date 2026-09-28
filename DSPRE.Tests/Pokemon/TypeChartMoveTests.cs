@@ -101,6 +101,11 @@ namespace DSPRE.Tests.Pokemon
                 var moved = TypeChart.Load();
                 Assert.True(moved.InExpansion);
                 Assert.Equal(TypeChart.ExpandedCapacity, moved.Capacity);
+                // Conversion 2's random record pick has to reach the new records too.
+                var sites = RomInfo.TypeChartPointerSites.Value;
+                byte[] ov = File.ReadAllBytes(GameTableFile.PathOf(RomInfo.SpotOf(RomInfo.GameTable.TypeChart).Value));
+                Assert.Equal(TypeChart.ExpandedCapacity, ov[sites.countModulus]);
+                Assert.Equal(0x21, ov[sites.countModulus + 1]);
                 Assert.Equal(20, moved.Find(0, 10).Tenths);
                 Assert.Equal(111, moved.Matchups.Count);
                 Assert.Single(SyntheticOverlaySpace.Blocks(File.ReadAllBytes(Filesystem.expArmPath), TypeChart.Marker));

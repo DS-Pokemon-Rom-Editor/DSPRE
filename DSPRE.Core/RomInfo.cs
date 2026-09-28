@@ -212,6 +212,10 @@ namespace DSPRE
             BpShopTms,             // Pt right corner list, 0xFFFF-terminated
             HeldItemSameItemBranch, // the BNE after `cmp item1, item2` in WildMonSetRandomHeldItem
             FriendshipChanges,     // s8[10][3]: friendship change per event and friendship band
+            TypeIconBanks,         // u8[23]: palette bank of each type icon (18 types, then 5 contest conditions)
+            MoveCategoryIconBanks, // u8[3]: palette bank of the physical, special and status icons
+            TypeIconMembers,       // u32[23]: battle object archive member of each type or contest icon
+            MoveTypeButtonPalettes, // u32[18]: RAM pointers to each type's 16-colour move button palette
         }
 
         /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
@@ -253,18 +257,32 @@ namespace DSPRE
             [("IPKE", 0, GameTable.FriendshipChanges)] = new(-1, 0xFF524),
             [("CPUE", 1, GameTable.FriendshipChanges)] = new(-1, 0xF05A0),
             [("ADAE", 5, GameTable.FriendshipChanges)] = new(-1, 0xF7ED4),
+
+            [("IPKE", 0, GameTable.TypeIconBanks)] = new(-1, 0x1000A4),
+            [("CPUE", 1, GameTable.TypeIconBanks)] = new(-1, 0xF0B4C),
+            [("ADAE", 5, GameTable.TypeIconBanks)] = new(-1, 0xF843C),
+            [("IPKE", 0, GameTable.MoveCategoryIconBanks)] = new(-1, 0x100038),
+            [("CPUE", 1, GameTable.MoveCategoryIconBanks)] = new(-1, 0xF0AE0),
+            [("ADAE", 5, GameTable.MoveCategoryIconBanks)] = new(-1, 0xF83D0),
+            [("IPKE", 0, GameTable.TypeIconMembers)] = new(-1, 0x100048),
+            [("CPUE", 1, GameTable.TypeIconMembers)] = new(-1, 0xF0AF0),
+            [("ADAE", 5, GameTable.TypeIconMembers)] = new(-1, 0xF83E0),
+            [("IPKE", 0, GameTable.MoveTypeButtonPalettes)] = new(6, 0x3D0),
+            [("CPUE", 1, GameTable.MoveTypeButtonPalettes)] = new(11, 0x3D0),
+            [("ADAE", 5, GameTable.MoveTypeButtonPalettes)] = new(8, 0x18B84),
         };
 
-        // In the type chart's overlay: the literals holding the chart's address (column 0, +1 and +2), and the
-        // `cmp rN, #count` Conversion 2 bounds its record walk with.
-        private static readonly Dictionary<(string id, int rev), (int[] col0, int[] col1, int[] col2, int countCompare)> TypeChartSites = new()
+        // In the type chart's overlay: the literals holding the chart's address (column 0, +1 and +2), the
+        // `cmp rN, #count` Conversion 2 bounds its record walk with, and the `movs r1, #count` its random
+        // record pick is taken modulo.
+        private static readonly Dictionary<(string id, int rev), (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus)> TypeChartSites = new()
         {
-            [("IPKE", 0)] = (new[] { 0x1A78C, 0x1A8B4, 0x1AD80, 0x1ADD4 }, new[] { 0x1A460, 0x1A900, 0x1AD84 }, new[] { 0x1A464, 0x1A904, 0x1AD88 }, 0x1AD54),
-            [("CPUE", 1)] = (new[] { 0x1A18C, 0x1A2B4, 0x1A780, 0x1A7D4 }, new[] { 0x19E60, 0x1A300, 0x1A784 }, new[] { 0x19E64, 0x1A304, 0x1A788 }, 0x1A754),
-            [("ADAE", 5)] = (new[] { 0x18FD8, 0x19100, 0x195D0, 0x19624 }, new[] { 0x18CAC, 0x1914C, 0x195D4 }, new[] { 0x18CB0, 0x19150, 0x195D8 }, 0x195A4),
+            [("IPKE", 0)] = (new[] { 0x1A78C, 0x1A8B4, 0x1AD80, 0x1ADD4 }, new[] { 0x1A460, 0x1A900, 0x1AD84 }, new[] { 0x1A464, 0x1A904, 0x1AD88 }, 0x1AD54, 0x1AD5C),
+            [("CPUE", 1)] = (new[] { 0x1A18C, 0x1A2B4, 0x1A780, 0x1A7D4 }, new[] { 0x19E60, 0x1A300, 0x1A784 }, new[] { 0x19E64, 0x1A304, 0x1A788 }, 0x1A754, 0x1A75C),
+            [("ADAE", 5)] = (new[] { 0x18FD8, 0x19100, 0x195D0, 0x19624 }, new[] { 0x18CAC, 0x1914C, 0x195D4 }, new[] { 0x18CB0, 0x19150, 0x195D8 }, 0x195A4, 0x195AC),
         };
 
-        public static (int[] col0, int[] col1, int[] col2, int countCompare)? TypeChartPointerSites =>
+        public static (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus)? TypeChartPointerSites =>
             romID != null && TypeChartSites.TryGetValue((romID, romRevision), out var s) ? s : null;
 
         /// <summary>
