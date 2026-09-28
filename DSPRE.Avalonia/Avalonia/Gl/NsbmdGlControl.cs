@@ -459,11 +459,18 @@ namespace DSPRE.Avalonia.Gl
         }
 
         // ── GL lifecycle ───────────────────────────────────────────────────────────────
+        private static bool _glLogged;
+
         protected override void OnOpenGlInit(GlInterface gl)
         {
             try
             {
                 _f = new GlFunctions(gl);
+                if (!_glLogged)
+                {
+                    _glLogged = true;
+                    AppLogger.Info($"OpenGL {GlVersion.Type} {GlVersion.Major}.{GlVersion.Minor}: {gl.GetString(0x1F01)} ({gl.GetString(0x1F02)})");
+                }
                 bool es = GlVersion.Type == GlProfileType.OpenGLES;
                 string header = es ? "#version 300 es\nprecision highp float;\n" : "#version 330 core\n";
 

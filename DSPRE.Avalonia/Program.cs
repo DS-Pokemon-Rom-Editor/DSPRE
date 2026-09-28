@@ -44,9 +44,13 @@ namespace DSPRE.AvaloniaShell
 
         /// <summary>Avalonia app builder, also used by the AXAML previewer.</summary>
         public static AppBuilder BuildAvaloniaApp()
-            => AppBuilder.Configure<DSPRE.AvaloniaApp>()
+        {
+            var builder = AppBuilder.Configure<DSPRE.AvaloniaApp>()
                 .UsePlatformDetect()
                 .WithInterFont()
                 .LogToTrace();
+            global::Avalonia.Logging.Logger.Sink = new DSPRE.Avalonia.AvaloniaLogSink(global::Avalonia.Logging.Logger.Sink);
+            return builder;
+        }
     }
 }
