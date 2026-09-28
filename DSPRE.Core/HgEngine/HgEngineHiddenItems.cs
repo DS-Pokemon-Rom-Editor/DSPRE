@@ -76,7 +76,7 @@ namespace DSPRE.HgEngine
                 return false;
             string text = original.Substring(0, open) + newBlock + original.Substring(close + 1);
 
-            string consumerPath = Path.Combine(HgEngineProject.RepoPathUnc, ConsumerRelPath.Replace('/', '\\'));
+            string consumerPath = Path.Combine(HgEngineProject.RepoPathUnc, ConsumerRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(consumerPath)) { error = $"Source file not found: {consumerPath}"; return false; }
             string consumerText = HgEngineFileCache.GetText(consumerPath);
             if (!HgEngineHeaderEditor.TryReplaceDefineValue(ref consumerText, CountDefineName, entries.Count.ToString()))
@@ -176,7 +176,7 @@ namespace DSPRE.HgEngine
 
         private static string TryReadSource(out string path)
         {
-            path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
+            path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
             return File.Exists(path) ? HgEngineFileCache.GetText(path) : null;
         }
     }

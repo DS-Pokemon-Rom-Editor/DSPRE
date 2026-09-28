@@ -18,7 +18,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineDesignators.TryResolve(domain, id, out string designator))
             { error = $"No source name was found for {domain} {id}."; return false; }
 
-            string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', '\\'));
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
 
             string text = HgEngineFileCache.GetText(path);

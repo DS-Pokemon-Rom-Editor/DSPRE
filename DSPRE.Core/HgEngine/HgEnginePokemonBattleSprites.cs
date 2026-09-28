@@ -26,7 +26,7 @@ namespace DSPRE.HgEngine
             var full = new string[4];
             for (int i = 0; i < 4; i++)
             {
-                full[i] = Path.Combine(HgEngineProject.RepoPathUnc, relPaths[i].Replace('/', '\\'));
+                full[i] = Path.Combine(HgEngineProject.RepoPathUnc, relPaths[i].Replace('/', Path.DirectorySeparatorChar));
                 if (!File.Exists(full[i])) return null;
             }
             return full;
@@ -37,7 +37,7 @@ namespace DSPRE.HgEngine
             string repo = HgEngineProject.RepoPathUnc;
             if (_cache != null && _cachedForRepo == repo) return _cache;
 
-            string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', '\\'));
+            string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
 
             var map = ParseMap(File.ReadAllText(path));

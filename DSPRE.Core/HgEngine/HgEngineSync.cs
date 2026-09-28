@@ -71,7 +71,7 @@ namespace DSPRE.HgEngine
                 {
                     string[] inputPaths = new[] { domain.SourceFileRelPath }.Concat(ExtraInputsFor(domain)).ToArray();
                     currentMtimes = inputPaths
-                        .Select(p => SafeMtime(Path.Combine(HgEngineProject.RepoPathUnc, p.Replace('/', '\\'))))
+                        .Select(p => SafeMtime(Path.Combine(HgEngineProject.RepoPathUnc, p.Replace('/', Path.DirectorySeparatorChar))))
                         .ToArray();
 
                     bool unchanged = _lastSyncedMtimes.TryGetValue(domain.Domain, out var cached) && cached.SequenceEqual(currentMtimes);
@@ -94,7 +94,7 @@ namespace DSPRE.HgEngine
                     if (!gameDirs.TryGetValue(kv.Key, out (string packedDir, string unpackedDir) paths))
                         continue;
 
-                    string narcPath = Path.Combine(HgEngineProject.RepoPathUnc, kv.Value.Replace('/', '\\'));
+                    string narcPath = Path.Combine(HgEngineProject.RepoPathUnc, kv.Value.Replace('/', Path.DirectorySeparatorChar));
                     if (!File.Exists(narcPath))
                     {
                         error = $"Expected build output not found: {narcPath}";
@@ -150,7 +150,7 @@ namespace DSPRE.HgEngine
         {
             if (domain.NarcByDir.TryGetValue(DirNames.personalPokeData, out string personalRel))
             {
-                string personalPath = Path.Combine(HgEngineProject.RepoPathUnc, personalRel.Replace('/', '\\'));
+                string personalPath = Path.Combine(HgEngineProject.RepoPathUnc, personalRel.Replace('/', Path.DirectorySeparatorChar));
                 Narc personal = File.Exists(personalPath) ? Narc.Open(personalPath) : null;
                 if (personal != null) return personal.ElementCount;
             }

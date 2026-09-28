@@ -54,7 +54,7 @@ namespace DSPRE.HgEngine
             var domainInfo = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
             if (domainInfo == null) { error = $"Unknown hg-engine domain: {domain}"; return false; }
 
-            string sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, domainInfo.SourceFileRelPath.Replace('/', '\\'));
+            string sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, domainInfo.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(sourcePath)) { error = $"Source file not found: {sourcePath}"; return false; }
 
             if (!HgEngineDesignators.TryResolve(domain, id, out string designator))

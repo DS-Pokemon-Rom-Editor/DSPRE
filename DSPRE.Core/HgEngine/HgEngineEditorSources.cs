@@ -112,7 +112,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
             var info = HgEngineDomains.All.First(d => d.Domain == HgEngineDomain.Moves);
-            path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', '\\'));
+            path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(path)) return true;
             error = $"Source file not found: {path}";
             return false;

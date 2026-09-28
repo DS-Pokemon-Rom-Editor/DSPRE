@@ -34,8 +34,8 @@ namespace DSPRE.HgEngine
             var moveTable = HgEngineSymbolTable.Load(MovesHeaderRelPath);
             if (species == null || moveTable == null) { error = "Could not read species.h or moves.h from the checkout."; return false; }
 
-            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
-            string formPath = Path.Combine(HgEngineProject.RepoPathUnc, FormMapRelPath.Replace('/', '\\'));
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
+            string formPath = Path.Combine(HgEngineProject.RepoPathUnc, FormMapRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
             if (!File.Exists(formPath)) { error = $"Source file not found: {formPath}"; return false; }
 
@@ -216,7 +216,7 @@ namespace DSPRE.HgEngine
             var moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
             if (species == null || moves == null) { error = "Could not read species.h or moves.h from the checkout."; return false; }
 
-            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
 
             try

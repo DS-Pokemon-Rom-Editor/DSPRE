@@ -111,9 +111,9 @@ namespace DSPRE.HgEngine
             error = null;
             headerPath = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            headerPath = Path.Combine(HgEngineProject.RepoPathUnc, HeaderRelPath.Replace('/', '\\'));
+            headerPath = Path.Combine(HgEngineProject.RepoPathUnc, HeaderRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(headerPath)) { error = $"Source file not found: {headerPath}"; return false; }
-            sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
+            sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(sourcePath)) { error = $"Source file not found: {sourcePath}"; return false; }
             headerText = HgEngineFileCache.GetText(headerPath);
             sourceText = HgEngineFileCache.GetText(sourcePath);
@@ -263,7 +263,7 @@ namespace DSPRE.HgEngine
             var info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
             if (HgEngineProject.IsActive && info != null && HgEngineDesignators.TryResolve(domain, id, out string designator))
             {
-                string path = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', '\\'));
+                string path = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
                 if (File.Exists(path))
                 {
                     string text = HgEngineFileCache.GetText(path);

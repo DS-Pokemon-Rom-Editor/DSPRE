@@ -33,7 +33,7 @@ namespace DSPRE.HgEngine
         {
             var result = new Dictionary<string, List<FormSlot>>(StringComparer.Ordinal);
             if (!HgEngineProject.IsLinked) return result;
-            string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', '\\'));
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return result;
             string text = File.ReadAllText(path);
 
@@ -124,7 +124,7 @@ namespace DSPRE.HgEngine
             if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseSpeciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {baseSpeciesId}."; return false; }
 
-            string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', '\\'));
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
             string text = File.ReadAllText(path);
 

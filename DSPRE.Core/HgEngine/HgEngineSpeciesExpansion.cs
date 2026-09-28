@@ -122,8 +122,8 @@ namespace DSPRE.HgEngine
         private static bool TryGetPaths(out string headerPath, out string sourcePath, out string error)
         {
             error = null;
-            headerPath = Path.Combine(HgEngineProject.RepoPathUnc, HeaderRelPath.Replace('/', '\\'));
-            sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
+            headerPath = Path.Combine(HgEngineProject.RepoPathUnc, HeaderRelPath.Replace('/', Path.DirectorySeparatorChar));
+            sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(headerPath)) { error = $"Source file not found: {headerPath}"; return false; }
             if (!File.Exists(sourcePath)) { error = $"Source file not found: {sourcePath}"; return false; }
             return true;

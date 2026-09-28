@@ -29,7 +29,7 @@ namespace DSPRE.HgEngine
             int lookupId = HgEngineSpeciesExpansion.AdjustForPokegraMkLookup(speciesId);
             if (lookupId < 0 || !map.TryGetValue(lookupId, out string relPath)) return false;
 
-            string full = Path.Combine(HgEngineProject.RepoPathUnc, relPath.Replace('/', '\\'));
+            string full = Path.Combine(HgEngineProject.RepoPathUnc, relPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(full)) return false;
 
             absolutePngPath = full;
@@ -41,7 +41,7 @@ namespace DSPRE.HgEngine
             string repo = HgEngineProject.RepoPathUnc;
             if (_cache != null && _cachedForRepo == repo) return _cache;
 
-            string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', '\\'));
+            string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
 
             var map = ParseMap(File.ReadAllText(path));

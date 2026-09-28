@@ -186,7 +186,7 @@ namespace DSPRE.HgEngine
         // so it has to be located by prefix rather than assumed at a fixed path.
         private static string FindPalPath(int gfxIndex)
         {
-            string dir = Path.Combine(HgEngineProject.RepoPathUnc, SpriteDirRelPath.Replace('/', '\\'));
+            string dir = Path.Combine(HgEngineProject.RepoPathUnc, SpriteDirRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!Directory.Exists(dir)) return null;
             string prefix = gfxIndex.ToString("D4");
             foreach (var f in Directory.GetFiles(dir, prefix + "*.pal"))
@@ -195,11 +195,11 @@ namespace DSPRE.HgEngine
         }
 
         private static string SpritePath(int gfxIndex, string extension) =>
-            Path.Combine(HgEngineProject.RepoPathUnc, SpriteDirRelPath.Replace('/', '\\'), $"{gfxIndex:D4}.{extension}");
+            Path.Combine(HgEngineProject.RepoPathUnc, SpriteDirRelPath.Replace('/', Path.DirectorySeparatorChar), $"{gfxIndex:D4}.{extension}");
 
         private static string TryReadTable(out string path)
         {
-            path = Path.Combine(HgEngineProject.RepoPathUnc, TableRelPath.Replace('/', '\\'));
+            path = Path.Combine(HgEngineProject.RepoPathUnc, TableRelPath.Replace('/', Path.DirectorySeparatorChar));
             return File.Exists(path) ? HgEngineFileCache.GetText(path) : null;
         }
     }

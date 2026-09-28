@@ -102,7 +102,7 @@ namespace DSPRE.HgEngine
             var info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
             var species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (info == null || species == null) { error = "include/constants/species.h could not be read."; return false; }
-            string path = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', '\\'));
+            string path = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
             if (!System.IO.File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
 
             var abilityFields = All.Where(f => f.Path[1].Name == "abilities").ToArray();

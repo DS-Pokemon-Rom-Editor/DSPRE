@@ -94,7 +94,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsLinked) return null;
             if (_cache.TryGetValue(headerRelPath, out var cached)) return cached;
 
-            string path = Path.Combine(HgEngineProject.RepoPathUnc, headerRelPath.Replace('/', '\\'));
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, headerRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
             // #if conditions in other headers test config.h switches such as DISALLOW_DEXIT_GEN.
             var config = headerRelPath == ConfigHeaderRelPath ? null : Load(ConfigHeaderRelPath)?.ByName;

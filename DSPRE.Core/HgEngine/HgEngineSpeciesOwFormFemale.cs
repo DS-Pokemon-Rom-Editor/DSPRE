@@ -137,7 +137,7 @@ namespace DSPRE.HgEngine
 
         private static string TryReadSource(out string path)
         {
-            path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
+            path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
             return File.Exists(path) ? HgEngineFileCache.GetText(path) : null;
         }
     }

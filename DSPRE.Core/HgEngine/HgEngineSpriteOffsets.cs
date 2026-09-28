@@ -20,7 +20,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineDesignators.TryResolve(HgEngineDomain.SpriteOffsets, speciesId, out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
-            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', '\\'));
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
 
             string text = HgEngineFileCache.GetText(path);
