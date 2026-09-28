@@ -101,6 +101,9 @@ namespace DSPRE.Avalonia
                 Body = body,
             };
 
+            // Beta editors are hidden from the menus when off, so the menu steps only name them when on.
+            bool beta = BetaEditors.Enabled;
+
             _steps = new List<Step>
             {
                 new Step
@@ -166,7 +169,7 @@ namespace DSPRE.Avalonia
                     Target = () => main.FindControl<Control>("PokemonMenu"),
                     Title = "The Pokémon menu",
                     Body = "The creatures and their moves: species stats, learnsets and sprites (Pokémon " +
-                           "Editor), move data and animations, TM/HM and egg moves, trades and starters, " +
+                           $"Editor), move data{(beta ? " and animations" : "")}, TM/HM and egg moves, trades and starters, " +
                            "wild encounters, and the Special Encounters Editor for headbutt trees, the Bug " +
                            "Contest, the Safari Zone, honey trees, the Great Marsh and the Trophy Garden."
                 },
@@ -174,14 +177,17 @@ namespace DSPRE.Avalonia
                 {
                     Target = () => main.FindControl<Control>("TrainersMenu"),
                     Title = "The Trainers menu",
-                    Body = "Everyone the player battles: parties in the Trainer Editor, trainer sprites, " +
-                           "rematches, the Pokégear phone book, bulk trainer flags and the Battle Tower."
+                    Body = beta
+                        ? "Everyone the player battles: parties in the Trainer Editor, trainer sprites, " +
+                          "rematches, the Pokégear phone book, bulk trainer flags and the Battle Tower."
+                        : "Everyone the player battles: parties in the Trainer Editor, rematches, bulk " +
+                          "trainer flags and the Battle Tower."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("ItemsMenu"),
                     Title = "The Items menu",
-                    Body = "Each item's data and icon (Item Editor), what the marts sell, and where items " +
+                    Body = $"Each item's data and icon (Item Editor), {(beta ? "what the marts sell, " : "")}and where items " +
                            "come from: Pickup loot, hidden ground items and HGSS Rock Smash drops."
                 },
                 new Step
@@ -189,33 +195,30 @@ namespace DSPRE.Avalonia
                     Target = () => main.FindControl<Control>("TextMenu"),
                     Title = "The Text menu",
                     Body = "Words and logic: all game text, the Script and Level Script editors you saw as " +
-                           "tabs, custom script commands, the font and the character map."
+                           $"tabs, custom script commands, {(beta ? "the font and " : "")}the character map."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("WorldMenu"),
                     Title = "The World menu",
                     Body = "The map tools you just toured as tabs, as full windows, plus buildings, fly and " +
-                           "spawn points, Platinum's Distortion World and the Advanced Header Search."
+                           $"spawn points, {(beta ? "Platinum's Distortion World " : "")}and the Advanced Header Search."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("GraphicsMenu"),
                     Title = "The Graphics menu",
-                    Body = "Every picture and model in the game, plus editors for battle scenes, the title " +
-                           "screen, the trainer card, the game icon, overworld sprites, particles and more."
-                },
-                new Step
-                {
-                    Target = () => main.FindControl<Control>("AudioMenu"),
-                    Title = "The Audio menu",
-                    Body = "Cries, music, fanfares and sound effects: listen, export and replace them."
+                    Body = beta
+                        ? "Every picture and model in the game, plus editors for battle scenes, the title " +
+                          "screen, the trainer card, the game icon, overworld sprites, particles and more."
+                        : "Every picture and model in the game, plus the overworld sprites and the textures " +
+                          "of maps and buildings."
                 },
                 new Step
                 {
                     Target = () => main.FindControl<Control>("ToolsMenu"),
                     Title = "The Tools menu",
-                    Body = "Power tools: Validation & Where-Used, the ROM Patch Toolbox, overlays, music " +
+                    Body = $"Power tools: {(beta ? "Validation & Where-Used, " : "")}the ROM Patch Toolbox, overlays, music " +
                            "and battle tables, data exports, archive tools and Settings.\n\n" +
                            "Tip: press Ctrl+P anywhere and type an editor's name to open it instantly."
                 },
@@ -235,8 +238,15 @@ namespace DSPRE.Avalonia
 
             // Only when the unfinished editors are switched on. It goes second from last, so it is
             // the thing people read just before they start, and it has the status-bar line to point at.
-            if (BetaEditors.Enabled)
+            if (beta)
             {
+                // The Audio menu holds only the Audio Editor, so it is hidden with it.
+                _steps.Insert(_steps.FindIndex(s => s.Title == "The Tools menu"), new Step
+                {
+                    Target = () => main.FindControl<Control>("AudioMenu"),
+                    Title = "The Audio menu",
+                    Body = "Cries, music, fanfares and sound effects: listen, export and replace them."
+                });
                 _steps.Insert(_steps.Count - 1, new Step
                 {
                     Target = () => main.FindControl<Control>("BetaNoticeText"),

@@ -9,7 +9,7 @@ namespace DSPRE
     /// started with <c>--beta</c>, so a normal run only offers what is settled.
     ///
     /// This is the same shape as the hg-engine gating: the window's own CanUse property asks here as
-    /// well as asking whatever else it depends on, and the menu says why it is greyed out.
+    /// well as asking whatever else it depends on, and the menu leaves it out.
     /// </summary>
     public static class BetaEditors
     {

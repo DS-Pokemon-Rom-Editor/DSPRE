@@ -38,20 +38,24 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // ── editors still being tried out ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Whether an editor may be opened, by the name of its window class. Bound from the menu as
-        /// Beta[SomethingView] so a beta editor greys out with the rest of the disabled ones.
+        /// Whether an editor may be opened, by the name of its window class.
         /// </summary>
         public BetaLookup Beta { get; } = new BetaLookup();
 
         /// <summary>
-        /// The line in the status bar saying why a good few entries are greyed out. It says only that
-        /// they are not ready; how to switch them on is not something to put in front of everybody.
+        /// Beta editors are left out of the menus rather than greyed out, so an ordinary run does not
+        /// look like it is missing half its tools. A new instance on every read, so raising it re-reads
+        /// the indexer after a ROM lets an editor through because it needs it.
         /// </summary>
-        public string BetaNotice => BetaEditors.Enabled
-            ? $"Beta features on: {BetaEditors.Count} unfinished editors."
-            : $"{BetaEditors.Count} editors are not available yet.";
+        public BetaLookup Shown => new BetaLookup();
 
-        public bool HasBetaNotice => true;   // says which mode you are in, either way
+        /// <summary>Menu parts that only hold beta editors: separators around them and the Audio menu.</summary>
+        public bool BetaOn => BetaEditors.Enabled;
+
+        /// <summary>The status bar line when the unfinished editors are switched on.</summary>
+        public string BetaNotice => $"Beta features on: {BetaEditors.Count} unfinished editors.";
+
+        public bool HasBetaNotice => BetaEditors.Enabled;
 
         /// <summary>Why it is greyed out, or nothing when it is not.</summary>
         public BetaReason BetaNote { get; } = new BetaReason();
@@ -313,6 +317,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(HgeUnlinkedAllows));
             OnPropertyChanged(nameof(HgeUnlinkedNote));
             OnPropertyChanged(nameof(BlockedNote));
+            OnPropertyChanged(nameof(Shown));
             OnPropertyChanged(nameof(CanUseBattleScriptEditor));
             OnPropertyChanged(nameof(CanUseFontEditor));
             OnPropertyChanged(nameof(CanUseBattleSceneBrowser));
@@ -363,6 +368,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(HgeUnlinkedAllows));
             OnPropertyChanged(nameof(HgeUnlinkedNote));
             OnPropertyChanged(nameof(BlockedNote));
+            OnPropertyChanged(nameof(Shown));
             OnPropertyChanged(nameof(CanUseBattleScriptEditor));
             OnPropertyChanged(nameof(CanUseFontEditor));
             OnPropertyChanged(nameof(CanUseBattleSceneBrowser));
