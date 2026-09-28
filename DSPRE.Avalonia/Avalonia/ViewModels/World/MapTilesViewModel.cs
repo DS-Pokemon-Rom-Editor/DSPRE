@@ -2134,14 +2134,17 @@ namespace DSPRE.Avalonia.ViewModels.World
         public ObservableCollection<string> TypeChoices { get; } = new ObservableCollection<string>();
         private readonly List<int> _walkValues = new List<int>(), _typeValues = new List<int>();
 
-        private static void Choices(ObservableCollection<string> names, List<int> values, IDictionary<byte, string> table, int also)
+        private RomInfo.GameFamilies _choicesFamily;
+
+        private static void Choices(ObservableCollection<string> names, List<int> values, IEnumerable<(byte value, string label)> table,
+                                    int also, Func<byte, string> unknown)
         {
             if (names.Count == 0)
             {
                 names.Add("No default"); values.Add(-1);
-                foreach (var kv in table.OrderBy(kv => kv.Key)) { names.Add(kv.Value); values.Add(kv.Key); }
+                foreach (var (value, label) in table) { names.Add(label); values.Add(value); }
             }
-            if (also >= 0 && !values.Contains(also)) { names.Add($"[{also:X2}]"); values.Add(also); }
+            if (also >= 0 && !values.Contains(also)) { names.Add(unknown((byte)also)); values.Add(also); }
         }
 
         private int _chosenCell;
@@ -2207,17 +2210,25 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 var walk = Chosen.CollisionGrid(TileCollisions.CollisionLayer);
                 var type = Chosen.CollisionGrid(TileCollisions.TypeLayer);
-                string Name(IDictionary<byte, string> table, int v) => v < 0 ? "no default" : table.TryGetValue((byte)v, out var n) ? n : $"[{v:X2}]";
+                var family = RomInfo.gameFamily;
+                if (family != _choicesFamily)
+                {
+                    WalkChoices.Clear(); _walkValues.Clear();
+                    TypeChoices.Clear(); _typeValues.Clear();
+                    _choicesFamily = family;
+                }
+                string WalkName(byte v) => TilePermissions.CollisionLabel(v, family);
+                string TypeName(byte v) => TilePermissions.BehaviourLabel(v, family);
                 foreach (var cell in CollisionCells)
                 {
                     int w = walk[cell.X, cell.Y], t = type[cell.X, cell.Y];
-                    Choices(WalkChoices, _walkValues, PokeDatabase.System.MapCollisionPainters, w);
-                    Choices(TypeChoices, _typeValues, PokeDatabase.System.MapCollisionTypePainters, t);
+                    Choices(WalkChoices, _walkValues, TilePermissions.CollisionsFor(family).Select(c => (c.Value, c.Label)), w, WalkName);
+                    Choices(TypeChoices, _typeValues, TilePermissions.BehavioursFor(family).Select(b => (b.Value, b.Label)), t, TypeName);
                     cell.Text = (w switch { -1 => "-", 0x00 => "Walk", 0x80 => "Block", _ => w.ToString("X2") })
                               + "\n" + (t < 0 ? "-" : t.ToString("X2"));
                     cell.Fill = w < 0 ? NoDefault : PermissionColors.Brush((byte)w, true);
                     cell.Edge = cell.Index == _chosenCell ? global::Avalonia.Media.Brushes.White : CellEdge;
-                    cell.Tip = $"{Name(PokeDatabase.System.MapCollisionPainters, w)} / {Name(PokeDatabase.System.MapCollisionTypePainters, t)}";
+                    cell.Tip = $"{(w < 0 ? "no default" : WalkName((byte)w))} / {(t < 0 ? "no default" : TypeName((byte)t))}";
                 }
             }
             Raise(nameof(CollisionColumns));

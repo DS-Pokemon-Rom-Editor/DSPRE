@@ -29,6 +29,8 @@ namespace DSPRE.Avalonia.Views.World
             TypeGrid.IsCollision = false;
             CollisionGrid.Changed += (_, _) => { VM?.MarkDirty(); VM?.RebuildOverlay(); };
             TypeGrid.Changed += (_, _) => { VM?.MarkDirty(); VM?.RebuildOverlay(); };
+            CollisionGrid.Hovered += (_, at) => VM?.HoverPermission(at);
+            TypeGrid.Hovered += (_, at) => VM?.HoverPermission(at);
 
             // Left-drag pans, right-drag orbits, wheel zooms. In 3D edit mode a left-press grabs a
             // gizmo axis (to drag the building) or picks a building. See Gl3DPointerNavigation.

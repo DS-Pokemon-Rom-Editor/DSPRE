@@ -212,8 +212,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             bool blocked = CollisionCells[r, c] != 0;
             byte behaviour = BehaviourCells[r, c];
 
-            string name = behaviour.ToString();
-            foreach (var painter in BehaviourPainters) if (painter.Value == behaviour) { name = painter.Name; break; }
+            string name = TilePermissions.BehaviourLabel(behaviour, gameFamily);
 
             HoverNote = past
                 ? $"x {worldX}, y {worldY}, z {worldZ}  ·  outside"
@@ -253,14 +252,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void FillPainters()
         {
             BehaviourPainters.Clear();
-            try
-            {
-                foreach (var pair in PokeDatabase.System.MapCollisionTypePainters)
-                    BehaviourPainters.Add(new Painter(pair.Key, pair.Value));
-            }
-            catch (Exception ex) { AppLogger.Error("DistortionWorld.FillPainters: " + ex.Message); }
-
-            if (BehaviourPainters.Count == 0) BehaviourPainters.Add(new Painter(0, "[00] Ground"));
+            foreach (var b in TilePermissions.BehavioursFor(gameFamily))
+                BehaviourPainters.Add(new Painter(b.Value, b.Label));
             _behaviourPainterIndex = 0;
             Raise(nameof(BehaviourPainterIndex));
         }

@@ -132,11 +132,13 @@
                 <Button Content="Scan used types" controls:Icon.Key="lens" HorizontalAlignment="Left" Click="ScanTypes_Click"/>
               </StackPanel>
             </StackPanel>
-            <Grid RowDefinitions="Auto,*,Auto,*" IsVisible="{Binding IsSingleMap}">
+            <Grid RowDefinitions="Auto,*,Auto,*,Auto" IsVisible="{Binding IsSingleMap}">
               <TextBlock Grid.Row="0" Text="Collision" FontWeight="Bold" Margin="0,2"/>
               <gl:PermissionGridControl Grid.Row="1" x:Name="CollisionGrid" MinHeight="180"/>
               <TextBlock Grid.Row="2" Text="Type" FontWeight="Bold" Margin="0,4,0,2"/>
               <gl:PermissionGridControl Grid.Row="3" x:Name="TypeGrid" MinHeight="180"/>
+              <TextBlock Grid.Row="4" Margin="0,4,0,0" TextWrapping="Wrap" MinHeight="16"
+                         Foreground="{DynamicResource Editor.Subtle}" Text="{Binding PermissionHover}"/>
             </Grid>
           </DockPanel>
           </ScrollViewer>

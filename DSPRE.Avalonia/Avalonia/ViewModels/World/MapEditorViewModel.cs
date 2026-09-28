@@ -334,6 +334,17 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool UseRawType { get => _useRawType; set { if (Set(ref _useRawType, value)) OnPropertyChanged(nameof(TypePaintValue)); } }
         public decimal RawType { get => _rawType; set { if (Set(ref _rawType, value)) OnPropertyChanged(nameof(TypePaintValue)); } }
 
+        private string _permissionHover = "";
+        public string PermissionHover { get => _permissionHover; private set => Set(ref _permissionHover, value); }
+
+        /// <summary>Names the collision and behaviour of the permission tile under the pointer.</summary>
+        public void HoverPermission((int col, int row)? at)
+        {
+            if (_map == null || at is not (int col, int row)) { PermissionHover = ""; return; }
+            PermissionHover = $"{col}, {row}  ·  {TilePermissions.CollisionLabel(_map.collisions[row, col], gameFamily)}"
+                            + $"  ·  {TilePermissions.BehaviourLabel(_map.types[row, col], gameFamily)}";
+        }
+
         // 3D preview options. Pushed straight to NsbmdGlControl.ShowTextures by the view (no model
         // rebuild needed), see MapEditorView.OnVmPropertyChanged.
         private bool _showTextures = true;
@@ -1144,7 +1155,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private readonly Dictionary<int, EventFile> _eventsToSave = new Dictionary<int, EventFile>();
 
         private HashSet<byte> WaterTypes()
-            => new HashSet<byte>(TypePainters.Where(t => t.Name?.IndexOf("water", StringComparison.OrdinalIgnoreCase) >= 0).Select(t => t.Value));
+            => new HashSet<byte>(TilePermissions.BehavioursFor(gameFamily).Where(t => t.Surf).Select(t => t.Value));
 
         private EventFile EventsOf(int file) => _eventsToSave.TryGetValue(file, out var had) ? had : new EventFile(file);
 
@@ -1433,11 +1444,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             return kept;
         }
 
-        private string BehaviourName(byte value)
-        {
-            string name = TypePainters.FirstOrDefault(t => t.Value == value)?.Name;
-            return string.IsNullOrEmpty(name) ? $"behaviour {value:X2}" : name;
-        }
+        private string BehaviourName(byte value) => TilePermissions.BehaviourLabel(value, gameFamily);
 
         /// <summary>Moves the ticked events to the nearest open, dry, free square. Written with the map on Save.</summary>
         public int MoveEvents(IEnumerable<EventClash> clashes)
@@ -1610,9 +1617,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // the previous ROM's entries.
                 CollisionPainters.Clear();
                 TypePainters.Clear();
-                foreach (var kv in PokeDatabase.System.MapCollisionPainters) CollisionPainters.Add(new PainterOption(kv.Key, kv.Value));
-                foreach (var kv in PokeDatabase.System.MapCollisionTypePainters) TypePainters.Add(new PainterOption(kv.Key, kv.Value));
-                if (CollisionPainters.Count > 1) CollisionPainterIndex = 1;
+                foreach (var c in TilePermissions.CollisionsFor(gameFamily)) CollisionPainters.Add(new PainterOption(c.Value, c.Label));
+                foreach (var b in TilePermissions.BehavioursFor(gameFamily)) TypePainters.Add(new PainterOption(b.Value, b.Label));
+                CollisionPainterIndex = Math.Max(0, CollisionPainters.ToList().FindIndex(p => p.Value == TilePermissions.BlockedBit));
                 if (TypePainters.Count > 0) TypePainterIndex = 0;
 
                 _suppress = true;
@@ -2294,8 +2301,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             RebuildPreview();
         }
 
-        /// <summary>Scans every map .bin and returns the set of collision/movement-permission types
-        /// actually used, as a comma-separated hex report.</summary>
+        /// <summary>Scans every map .bin and returns the tile behaviours actually used, named, as one list.</summary>
         public string ScanUsedTypes()
         {
             var used = new SortedSet<byte>();
@@ -2306,7 +2312,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 catch { /* skip unreadable map */ }
             }
             var parts = new List<string>();
-            foreach (var b in used) parts.Add("0x" + b.ToString("X2"));
+            foreach (var b in used) parts.Add(TilePermissions.BehaviourLabel(b, gameFamily));
             StatusText = $"{used.Count} distinct type(s) used across all maps.";
             return string.Join(", ", parts);
         }

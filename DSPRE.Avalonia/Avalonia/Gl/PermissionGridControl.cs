@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.Gl
         }
     }
 
-    /// <summary>Deterministic colour mapping for permission values.</summary>
+    /// <summary>Colours for permission values, keyed by what the value means in the loaded game.</summary>
     public static class PermissionColors
     {
         public static IBrush Brush(byte value, bool isCollision)
@@ -146,29 +146,6 @@ namespace DSPRE.Avalonia.Gl
 
         /// <summary>Normalized (0 to 1) RGB for a permission value, shared by the 2D grid and the 3D overlay.</summary>
         public static (float r, float g, float b) Rgb(byte value, bool isCollision)
-        {
-            if (isCollision)
-            {
-                if (value == 0x00) return (60 / 255f, 160 / 255f, 70 / 255f);   // walkable
-                if (value == 0x80) return (180 / 255f, 60 / 255f, 60 / 255f);   // blocked
-            }
-            var c = FromHsv((value * 47) % 360, 0.55, 0.85);
-            return (c.R / 255f, c.G / 255f, c.B / 255f);
-        }
-
-        private static Color FromHsv(double h, double s, double v)
-        {
-            double c = v * s;
-            double x = c * (1 - Math.Abs((h / 60.0) % 2 - 1));
-            double m = v - c;
-            double r = 0, g = 0, b = 0;
-            if (h < 60) { r = c; g = x; }
-            else if (h < 120) { r = x; g = c; }
-            else if (h < 180) { g = c; b = x; }
-            else if (h < 240) { g = x; b = c; }
-            else if (h < 300) { r = x; b = c; }
-            else { r = c; b = x; }
-            return Color.FromRgb((byte)((r + m) * 255), (byte)((g + m) * 255), (byte)((b + m) * 255));
-        }
+            => DSPRE.ROMFiles.TilePermissions.Colour(value, isCollision, DSPRE.RomInfo.gameFamily);
     }
 }
