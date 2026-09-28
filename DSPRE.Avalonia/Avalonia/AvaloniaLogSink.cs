@@ -20,7 +20,6 @@ namespace DSPRE.Avalonia
             if (_inner?.IsEnabled(level, area) == true) _inner.Log(level, area, source, messageTemplate, propertyValues);
             if (level < LogEventLevel.Warning) return;
             string text = messageTemplate;
-            // Templates name their values in braces: {Name}. Fill them in order.
             foreach (var v in propertyValues ?? Array.Empty<object>())
             {
                 int a = text.IndexOf('{'), b = a < 0 ? -1 : text.IndexOf('}', a);

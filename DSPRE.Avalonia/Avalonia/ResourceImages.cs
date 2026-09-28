@@ -139,8 +139,7 @@ namespace DSPRE.Avalonia
             return source;
         }
 
-        // GifImage asks for the stream again each time it is shown, and a stream source hands back the
-        // one it already read to the end, so every request gets a fresh stream.
+        // GifImage re-reads its source whenever it is shown again, so each read needs a fresh stream.
         private sealed class GifBytesSource : IGifSource
         {
             private readonly byte[] _bytes;
@@ -154,7 +153,6 @@ namespace DSPRE.Avalonia
 
             public PixelSize Size { get; }
             public Stream GetStream() => new MemoryStream(_bytes, writable: false);
-            public void Dispose() { }
         }
 
         /// <summary>Loads the asset as a <see cref="RawImage"/> (for pixel-level use, e.g. GL upload). Null if unknown.</summary>

@@ -469,7 +469,7 @@ namespace DSPRE.Avalonia.Gl
                 if (!_glLogged)
                 {
                     _glLogged = true;
-                    AppLogger.Info($"OpenGL {GlVersion.Type} {GlVersion.Major}.{GlVersion.Minor}: {gl.GetString(0x1F01)} ({gl.GetString(0x1F02)})");
+                    AppLogger.Info($"OpenGL {GlVersion.Type} {GlVersion.Major}.{GlVersion.Minor}: {gl.GetString(GlConsts.GL_RENDERER)} ({gl.GetString(GlConsts.GL_VERSION)})");
                 }
                 bool es = GlVersion.Type == GlProfileType.OpenGLES;
                 string header = es ? "#version 300 es\nprecision highp float;\n" : "#version 330 core\n";
