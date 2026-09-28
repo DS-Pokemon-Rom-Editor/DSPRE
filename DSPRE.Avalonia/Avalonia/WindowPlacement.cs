@@ -42,7 +42,52 @@ namespace DSPRE.Avalonia
                 }
             }
             catch { /* positioning is best-effort, never block opening the window */ }
+            w.Opened += FitHeightOnOpen;
             w.Show();
+        }
+
+        /// <summary>No window insists on more height than this, so every editor still fits a small screen.</summary>
+        public const double MinimumHeightCap = 800;
+
+        // An editor whose own page scrolls at its opening size grows to show it all, as far as the screen
+        // allows, and keeps that as its minimum up to the cap. Lists scrolling inside their own box don't count.
+        private static void FitHeightOnOpen(object sender, EventArgs e)
+        {
+            if (sender is not Window w) return;
+            w.Opened -= FitHeightOnOpen;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                try
+                {
+                    var screen = w.Screens?.ScreenFromWindow(w) ?? w.Screens?.Primary;
+                    double scale = screen?.Scaling ?? 1;
+                    // Room for the title bar and frame, which ClientSize leaves out.
+                    double room = screen != null ? screen.WorkingArea.Height / scale - 40 : double.PositiveInfinity;
+                    double cap = Math.Min(MinimumHeightCap, room);
+                    if (w.MinHeight > cap) w.MinHeight = cap;
+
+                    double overflow = 0;
+                    foreach (var sv in global::Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(w))
+                    {
+                        if (sv is not ScrollViewer s || s.TemplatedParent != null || !s.IsEffectivelyVisible) continue;
+                        overflow = Math.Max(overflow, s.Extent.Height - s.Viewport.Height);
+                    }
+                    if (overflow < 1 || w.WindowState != WindowState.Normal) return;
+
+                    double height = Math.Min(w.ClientSize.Height + Math.Ceiling(overflow), room);
+                    if (height <= w.ClientSize.Height) return;
+                    w.Height = height;
+                    w.MinHeight = Math.Max(w.MinHeight, Math.Min(height, cap));
+
+                    if (screen != null)
+                    {
+                        int bottom = screen.WorkingArea.Bottom - (int)Math.Ceiling((height + 40) * scale);
+                        if (w.Position.Y > bottom)
+                            w.Position = new PixelPoint(w.Position.X, Math.Max(screen.WorkingArea.Y, bottom));
+                    }
+                }
+                catch (Exception ex) { AppLogger.Warn("Window height fit: " + ex.Message); }
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
         private static Window ActiveWindow()
