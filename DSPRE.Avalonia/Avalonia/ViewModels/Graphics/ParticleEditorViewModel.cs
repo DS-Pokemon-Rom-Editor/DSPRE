@@ -223,13 +223,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             SpaArchive arc;
             try { arc = _doc.Parse(); }
             catch (Exception ex) { StatusText = "This file cannot be played: " + ex.Message; return; }
+            var rng = new SplRandom(0x5EED);
             for (int i = 0; i < arc.Emitters.Count; i++)
             {
                 if (_onlySelected && i != _emitterIndex) continue;
                 var em = arc.Emitters[i];
                 var tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
                 double cx = AnchorX + em.PosX, cy = AnchorY - em.PosY;
-                var sim = new SpaSimulator(em, em.AxisX, em.AxisY) { AnchorX = cx, AnchorY = cy };
+                var sim = new SpaSimulator(em, em.AxisX, em.AxisY, rng: rng) { AnchorX = cx, AnchorY = cy };
                 _preview.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
                     em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
                     baseZ: em.PosZ, viewReversed: false, flipS: em.FlipS, flipT: em.FlipT, em: em, orthographic: _orthographic));

@@ -86,7 +86,7 @@ namespace DSPRE.Tests
             sim.Step();
             var p0 = sim.Particles().Single();
             Assert.Equal(200, p0.R);
-            Assert.Equal(2.0, p0.Scale);
+            Assert.Equal(2.0 * 255 / 256, p0.Scale, 9);   // DoubleScaledRange with no spread is 255/256
             double a0 = p0.Alpha;
 
             for (int i = 0; i < 5; i++) sim.Step();
@@ -109,6 +109,79 @@ namespace DSPRE.Tests
             double a0 = sim.Particles().Single().Alpha;
             for (int i = 0; i < 5; i++) sim.Step();
             Assert.True(sim.Particles().Single().Alpha < a0);   // fades via the curve
+        }
+
+        [Theory]
+        [InlineData(30, 128, 1, 15)]
+        [InlineData(31, 128, 1, 16)]   // 15.5 frames: the first whole frame past it
+        [InlineData(10, 0, 1, 0)]
+        [InlineData(40, 255, 1, 40)]
+        public void ChildrenStartAtTheDelayFractionOfTheParentsLife(int life, int delay, int interval, int firstAge)
+        {
+            int first = Enumerable.Range(0, life + 1).First(age => SpaSimulator.ChildEmitsAt(age, life, delay, interval));
+            Assert.Equal(firstAge, first);
+        }
+
+        [Fact]
+        public void ChildrenRepeatEveryIntervalAfterTheDelay()
+        {
+            var ages = Enumerable.Range(0, 31).Where(age => SpaSimulator.ChildEmitsAt(age, 30, 128, 4)).ToArray();
+            Assert.Equal(new[] { 15, 19, 23, 27 }, ages);
+        }
+
+        [Fact]
+        public void EveryParentEmitsChildrenWhateverItsRandomisedLife()
+        {
+            // Lives spread down to a frame or two; the delay is half of each particle's own life, so even
+            // parents far shorter than the emitter's life emit their child.
+            var e = new SpaEmitter
+            {
+                InitPosType = 0, GenNum = 40, EmitterLife = 1, GenInterval = 1, ParticleLife = 40, RndLife = 255,
+                AirResist = 128, BaseAlpha = 31, BaseScale = 1,
+                UseChild = true, ChildGenNum = 1, ChildGenDelay = 128, ChildGenIntvl = 255, ChildLife = 200,
+            };
+            var sim = new SpaSimulator(e);
+            sim.Step();
+            int parents = sim.Particles().Count(p => !p.IsChild);
+            for (int i = 0; i < 60; i++) sim.Step();
+            Assert.Equal(40, parents);
+            Assert.Equal(parents, sim.Particles().Count(p => p.IsChild));
+        }
+
+        [Fact]
+        public void TheSameSeedReplaysTheSameParticles()
+        {
+            var e = new SpaEmitter
+            {
+                InitPosType = 4, Radius = 8, GenNum = 5, EmitterLife = 3, GenInterval = 1, ParticleLife = 20,
+                InitVelPos = 1, RndVel = 100, RndScale = 100, AirResist = 128, BaseAlpha = 31, BaseScale = 1,
+            };
+            SpaParticleState[] Run()
+            {
+                var sim = new SpaSimulator(e);
+                for (int i = 0; i < 6; i++) sim.Step();
+                return sim.Particles().ToArray();
+            }
+            var a = Run(); var b = Run();
+            Assert.Equal(15, a.Length);
+            Assert.Equal(a.Select(p => (p.X, p.Y, p.Z, p.Scale)), b.Select(p => (p.X, p.Y, p.Z, p.Scale)));
+        }
+
+        [Fact]
+        public void EmittersSharingTheGeneratorDoNotMirrorEachOther()
+        {
+            var e = new SpaEmitter
+            {
+                InitPosType = 1, Radius = 8, GenNum = 3, EmitterLife = 1, GenInterval = 1, ParticleLife = 20,
+                AirResist = 128, BaseAlpha = 31, BaseScale = 1,
+            };
+            var rng = new SplRandom(0x5EED);
+            var first = new SpaSimulator(e, rng: rng); first.Step();
+            var second = new SpaSimulator(e, rng: rng); second.Step();
+            var a = first.Particles().Select(p => (p.X, p.Y, p.Z)).ToArray();
+            var b = second.Particles().Select(p => (p.X, p.Y, p.Z)).ToArray();
+            Assert.Equal(3, a.Length);
+            Assert.NotEqual(a, b);
         }
 
         [Fact]

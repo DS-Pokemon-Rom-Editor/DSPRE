@@ -327,6 +327,8 @@ namespace DSPRE.Avalonia
         public bool SecondTurnVariant { get; set; }
 
         private readonly bool _attackerIsEnemy;
+        // One generator per playback, shared by every emitter as in the library, so replays repeat exactly.
+        private readonly SplRandom _splRandom = new SplRandom(0x5EED);
         private readonly Dictionary<int, int> _wordToIndex = new Dictionary<int, int>();
 
         /// <summary>Fired when a WEST_SE-family opcode plays a sound during preview, with the sound ID from the
@@ -777,7 +779,7 @@ namespace DSPRE.Avalonia
             double axX, axY;
             if (ax != 0 || ay != 0) { axX = ax; axY = -ay; }
             else { axX = em.AxisX; axY = em.AxisY; }
-            var sim = new SpaSimulator(em, axX, axY) { AnchorX = cx, AnchorY = cy };   // spawn anchor (for EMIT_ROTATION re-centering)
+            var sim = new SpaSimulator(em, axX, axY, rng: _splRandom) { AnchorX = cx, AnchorY = cy };   // spawn anchor (for EMIT_ROTATION re-centering)
             // EmitCall_CameraReverse* (cb 1/2) with an enemy attacker, or a WEST_CAMERA_REVERCE on this
             // slot: the game turns the particle camera 180°, mirroring the layer (and rotation chirality).
             bool reversed = ((callback == 1 || callback == 2) && _attackerIsEnemy)
@@ -935,7 +937,7 @@ namespace DSPRE.Avalonia
             }
             else { opAxX = em.AxisX; opAxY = em.AxisY; }
             var sim = new SpaSimulator(em, opAxX, opAxY, driftX, driftY, magOX, magOY, convOX, convOY,
-                                       magOverrideZ: magOZ, convOverrideZ: convOZ);
+                                       magOverrideZ: magOZ, convOverrideZ: convOZ, rng: _splRandom);
             // Anchor-plane depth: the side the emitter actually sits on (the fixed-formation positions
             // 145/225/226 belong to the s_client side too).
             double opZ = ZOfVis(src == 0 ? _atVis : _dfVis) + em.PosZ;

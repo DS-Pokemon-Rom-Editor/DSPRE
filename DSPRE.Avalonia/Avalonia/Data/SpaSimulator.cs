@@ -31,17 +31,14 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public sealed class SpaSimulator
     {
-        private struct P { public double X, Y, Z, VX, VY, VZ; public int Age, Life, RndTex, ClrRnd, LrOff; public double OVX, OVY, Phase, Rot0, RotRate, Scl; }
+        private struct P { public double X, Y, Z, VX, VY, VZ; public int Age, Life, RndTex, ClrRnd, LrOff; public double OVX, OVY, Rot0, RotRate, Scl, AlpK; }
         // the child-resource block: a child particle spawned by a parent (trail/spark), its own life, decaying scale/alpha.
         private struct Child { public double X, Y, Z, VX, VY, VZ; public int Age, Life; public double Scale0, Rot, RotRate, Alpha0; }
-
-        // the random-range helper: uniform in [−num, num).
-        private double Rng(double num) => num == 0 ? 0 : num * (_rng.NextDouble() * 2.0 - 1.0);
 
         private readonly SpaEmitter _e;
         private readonly List<P> _ptcls = new List<P>();
         private readonly List<Child> _children = new List<Child>();
-        private readonly Random _rng;
+        private readonly SplRandom _rng;
         private readonly double _air;
         private readonly double _axisX, _axisY;   // unit travel direction (attacker↔defender) for init_vel_axis
         private readonly double _axisZ;           // depth component (only when the SPA's own 3D axis is in effect)
@@ -58,10 +55,12 @@ namespace DSPRE.Avalonia.Data
         public SpaSimulator(SpaEmitter e, double axisX = 0, double axisY = 0, double driftX = 0, double driftY = 0,
                             double magOverrideX = double.NaN, double magOverrideY = double.NaN,
                             double convOverrideX = double.NaN, double convOverrideY = double.NaN, int seed = 0x5EED,
-                            double axisZ = double.NaN, double magOverrideZ = double.NaN, double convOverrideZ = double.NaN)
+                            double axisZ = double.NaN, double magOverrideZ = double.NaN, double convOverrideZ = double.NaN,
+                            SplRandom rng = null)
         {
             _e = e;
-            _rng = new Random(seed);
+            // The library has one generator for every emitter; pass a shared one so emitters don't mirror each other.
+            _rng = rng ?? new SplRandom(unchecked((uint)seed));
             _air = AirResistMultiplier(e.AirResist);
             _delay = Math.Max(0, e.StartOffset);
             _axisX = axisX; _axisY = axisY;
@@ -132,8 +131,9 @@ namespace DSPRE.Avalonia.Data
             for (int i = _ptcls.Count - 1; i >= 0; i--)
             {
                 var p = _ptcls[i];
-                p.VX *= _air; p.VY *= _air; p.VZ *= _air;
-                // Field accelerations accumulate in 3D, then vel += acc (vel*=air; vel+=acc).
+                // SPLAnim_Alpha draws once per frame for every alpha-animated particle, before the behaviours.
+                if (_e.UseAlphaAnm) p.AlpK = _rng.ScaledRange(_e.AlpFlick);
+                // Behaviours read the undamped velocity; then vel = vel*air + acc (SPLEmitter_Update).
                 double accX = _e.GravityX, accY = _e.GravityY, accZ = _e.GravityZ;
                 if (_e.UseMagnet || _magOverride)   // spl_calc_magnet: acc += mag·((target − pos) − vel) → spring-pull
                 {
@@ -146,10 +146,11 @@ namespace DSPRE.Avalonia.Data
                 }
                 if (_e.RandIntvl > 0 && p.Age % _e.RandIntvl == 0)   // spl_calc_random: a velocity kick every intvl frames
                 {
-                    accX += (_rng.NextDouble() * 2.0 - 1.0) * _e.RandMagX;
-                    accY += (_rng.NextDouble() * 2.0 - 1.0) * _e.RandMagY;
-                    accZ += (_rng.NextDouble() * 2.0 - 1.0) * _e.RandMagZ;
+                    accX += _rng.Range(_e.RandMagX);
+                    accY += _rng.Range(_e.RandMagY);
+                    accZ += _rng.Range(_e.RandMagZ);
                 }
+                p.VX *= _air; p.VY *= _air; p.VZ *= _air;
                 p.VX += accX; p.VY += accY; p.VZ += accZ;
                 p.X += p.VX; p.Y += p.VY; p.Z += p.VZ;
                 if (_e.UseConv || _convOverride)   // spl_calc_convergence: lerp the POSITION toward the convergence point
@@ -180,22 +181,25 @@ namespace DSPRE.Avalonia.Data
                 // PLUS a ±randomInitVelMag kick per component; base scale = the parent's CURRENT animated
                 // scale × (scaleRatio+1)/64; initial alpha = the parent's CURRENT alpha; rotation per
                 // rotationType (1 = frozen at the parent's angle, 2 = keeps the parent's spin).
-                if (_e.UseChild && p.Age >= _e.ChildGenStart && (p.Age - _e.ChildGenStart) % _e.ChildGenIntvl == 0 && _children.Count < 4000)
+                if (_e.UseChild && ChildEmitsAt(p.Age, p.Life, _e.ChildGenDelay, _e.ChildGenIntvl) && _children.Count < 4000)
                 {
                     int lrNow = Math.Min(255, (int)(255.0 * p.Age / Math.Max(1, p.Life)));
                     int lrLoopNow = (p.LrOff + p.Age * 255 / _e.LoopFrames) & 0xFF;
                     double animNow = _e.UseScaleAnm ? SclCurve(_e.SclLoop ? lrLoopNow : lrNow) : 1.0;
-                    double alphaNow = (_e.UseAlphaAnm ? AlpCurve(_e.AlpLoop ? lrLoopNow : lrNow) : _e.BaseAlpha) / 31.0;
+                    double alphaNow = (_e.UseAlphaAnm ? AnimAlpha(_e.AlpLoop ? lrLoopNow : lrNow, p.AlpK) : _e.BaseAlpha) / 31.0;
                     double childScale = p.Scl * animNow * (_e.ChildSclRatioRaw + 1) / 64.0;
                     for (int k = 0; k < _e.ChildGenNum; k++)
-                        _children.Add(new Child { X = p.X, Y = p.Y, Z = p.Z,
-                                                  VX = p.VX * _e.ChildVelRatio + Rng(_e.ChildRandVel),
-                                                  VY = p.VY * _e.ChildVelRatio + Rng(_e.ChildRandVel),
-                                                  VZ = p.VZ * _e.ChildVelRatio + Rng(_e.ChildRandVel),
+                    {
+                        // x, y, z draw in that order (SPLEmitter_EmitChildren).
+                        double cvx = p.VX * _e.ChildVelRatio + _rng.Range(_e.ChildRandVel);
+                        double cvy = p.VY * _e.ChildVelRatio + _rng.Range(_e.ChildRandVel);
+                        double cvz = p.VZ * _e.ChildVelRatio + _rng.Range(_e.ChildRandVel);
+                        _children.Add(new Child { X = p.X, Y = p.Y, Z = p.Z, VX = cvx, VY = cvy, VZ = cvz,
                                                   Rot = _e.ChildRotType != 0 ? p.Rot0 + p.RotRate * p.Age : 0,
                                                   RotRate = _e.ChildRotType == 2 ? p.RotRate : 0,
                                                   Alpha0 = alphaNow,
                                                   Age = 0, Life = _e.ChildLife, Scale0 = childScale });
+                    }
                 }
                 p.Age++;
                 if (p.Age > p.Life) _ptcls.RemoveAt(i);
@@ -207,10 +211,10 @@ namespace DSPRE.Avalonia.Data
             for (int i = _children.Count - 1; i >= 0; i--)
             {
                 var c = _children[i];
-                c.VX *= _air; c.VY *= _air; c.VZ *= _air;
+                double aX = 0, aY = 0, aZ = 0;
                 if (_e.ChildUsesBehaviors)
                 {
-                    double aX = _e.GravityX, aY = _e.GravityY, aZ = _e.GravityZ;
+                    aX = _e.GravityX; aY = _e.GravityY; aZ = _e.GravityZ;
                     if (_e.UseMagnet)
                     {
                         aX += _e.MagnetMag * ((_e.MagnetX - c.X) - c.VX);
@@ -219,9 +223,12 @@ namespace DSPRE.Avalonia.Data
                     }
                     if (_e.RandIntvl > 0 && c.Age % _e.RandIntvl == 0)
                     {
-                        aX += Rng(_e.RandMagX); aY += Rng(_e.RandMagY); aZ += Rng(_e.RandMagZ);
+                        aX += _rng.Range(_e.RandMagX); aY += _rng.Range(_e.RandMagY); aZ += _rng.Range(_e.RandMagZ);
                     }
-                    c.VX += aX; c.VY += aY; c.VZ += aZ;
+                }
+                c.VX = c.VX * _air + aX; c.VY = c.VY * _air + aY; c.VZ = c.VZ * _air + aZ;
+                if (_e.ChildUsesBehaviors)
+                {
                     if (_e.UseConv)
                     {
                         c.X += _e.ConvRatio * (_e.ConvX - c.X);
@@ -249,8 +256,10 @@ namespace DSPRE.Avalonia.Data
         private void Emit(int emIdx, int emCount)
         {
             // Circles, cylinders and hemispheres lie on two axes across circle_axis; spheres ignore it.
+            // Draws follow SPLEmitter_EmitParticles: shape, velocity magnitudes, centre direction, scale,
+            // colour, angle, spin, life, texture, loop offset.
             var (c1, c2, up) = OrthogonalAxes();
-            double R() => _rng.NextDouble() * 2.0 - 1.0;
+            double R() => _rng.Range(1.0);
             (double, double, double) Tilt(double lx, double ly, double lz) =>
                 (lx * c1.X + ly * c2.X + lz * up.X, lx * c1.Y + ly * c2.Y + lz * up.Y, lx * c1.Z + ly * c2.Z + lz * up.Z);
             double posX, posY, posZ;
@@ -260,14 +269,14 @@ namespace DSPRE.Avalonia.Data
             {
                 case 1:   // SPHERE_SURFACE
                 {
-                    var (sx, sy, sz) = Sphere();
+                    var (sx, sy, sz) = _rng.Vec();
                     posX = sx * _e.Radius; posY = sy * _e.Radius; posZ = sz * _e.Radius;
                     break;
                 }
                 case 2:   // CIRCLE_BORDER
                 {
-                    double a = _rng.NextDouble() * Math.PI * 2.0;
-                    (posX, posY, posZ) = Tilt(Math.Cos(a) * _e.Radius, Math.Sin(a) * _e.Radius, 0);
+                    var (cx, cy) = _rng.VecXY();
+                    (posX, posY, posZ) = Tilt(cx * _e.Radius, cy * _e.Radius, 0);
                     break;
                 }
                 case 3:   // CIRCLE_BORDER_UNIFORM: evenly spaced, sine on the first axis
@@ -278,34 +287,36 @@ namespace DSPRE.Avalonia.Data
                 }
                 case 4:   // SPHERE: each component scaled by its own random factor
                 {
-                    var (sx, sy, sz) = Sphere();
+                    var (sx, sy, sz) = _rng.Vec();
                     posX = sx * _e.Radius * R(); posY = sy * _e.Radius * R(); posZ = sz * _e.Radius * R();
                     break;
                 }
                 case 5:   // CIRCLE
                 {
-                    double a = _rng.NextDouble() * Math.PI * 2.0;
-                    (posX, posY, posZ) = Tilt(Math.Cos(a) * _e.Radius * R(), Math.Sin(a) * _e.Radius * R(), 0);
+                    var (cx, cy) = _rng.VecXY();
+                    double lx = cx * _e.Radius * R(), ly = cy * _e.Radius * R();
+                    (posX, posY, posZ) = Tilt(lx, ly, 0);
                     break;
                 }
                 case 6:   // CYLINDER_SURFACE
                 {
-                    double a = _rng.NextDouble() * Math.PI * 2.0, cx = Math.Cos(a), cy = Math.Sin(a);
-                    (posX, posY, posZ) = Tilt(cx * _e.Radius, cy * _e.Radius, R() * _e.Length);
+                    var (cx, cy) = _rng.VecXY();
+                    (posX, posY, posZ) = Tilt(cx * _e.Radius, cy * _e.Radius, _rng.Range(_e.Length));
                     (tanX, tanY, tanZ) = Tilt(cx, cy, 0);
                     ringVelocity = true;
                     break;
                 }
                 case 7:   // CYLINDER
                 {
-                    double a = _rng.NextDouble() * Math.PI * 2.0, cx = Math.Cos(a), cy = Math.Sin(a);
-                    (posX, posY, posZ) = Tilt(cx * _e.Radius * R(), cy * _e.Radius * R(), R() * _e.Length);
+                    var (cx, cy) = _rng.VecXY();
+                    double lx = cx * _e.Radius * R(), ly = cy * _e.Radius * R();
+                    (posX, posY, posZ) = Tilt(lx, ly, _rng.Range(_e.Length));
                     break;
                 }
                 case 8:   // HEMISPHERE_SURFACE: flipped onto the side the axes face
                 case 9:   // HEMISPHERE
                 {
-                    var (sx, sy, sz) = Sphere();
+                    var (sx, sy, sz) = _rng.Vec();
                     double d = sx * up.X + sy * up.Y + sz * up.Z;
                     if (_e.InitPosType == 8 ? d <= 0 : d < 0) { sx = -sx; sy = -sy; sz = -sz; }
                     if (_e.InitPosType == 8) { posX = sx * _e.Radius; posY = sy * _e.Radius; posZ = sz * _e.Radius; }
@@ -321,34 +332,33 @@ namespace DSPRE.Avalonia.Data
                     posX = posY = posZ = 0;
                     break;
             }
-            // Velocity points away from the centre; a particle born at the centre gets a random direction.
+            // randomAttenuation: velocity magnitudes and base scale spread around the base (DoubleScaledRange);
+            // lifetime attenuates downward (ScaledRange) and is at least 1 frame.
+            double magPos = _e.InitVelPos * _rng.DoubleScaledRange(_e.RndVel);
+            double magAxis = _e.InitVelAxis * _rng.DoubleScaledRange(_e.RndVel);
+            // Velocity points away from the centre; a particle born exactly at the centre gets a random direction.
             double nx, ny, nz;
             if (ringVelocity) { (nx, ny, nz) = Norm(tanX, tanY, tanZ); }
-            else
-            {
-                double pl = Math.Sqrt(posX * posX + posY * posY + posZ * posZ);
-                if (pl > 1e-9) { nx = posX / pl; ny = posY / pl; nz = posZ / pl; }
-                else { var (sx, sy, sz) = Sphere(); nx = sx; ny = sy; nz = sz; }
-            }
-            // randomAttenuation: velocity magnitudes and base scale spread ±rnd/256 per particle
-            // (DoubleScaledRange); lifetime attenuates downward (ScaledRange), minimum 1 frame.
-            double magPos = _e.InitVelPos * DoubleScaled(_e.RndVel);
-            double magAxis = _e.InitVelAxis * DoubleScaled(_e.RndVel);
-            double pScale = _e.BaseScale * DoubleScaled(_e.RndScale);
-            int life = Math.Max(1, (int)((_e.ParticleLife <= 0 ? 1 : _e.ParticleLife) * Scaled(_e.RndLife)) + 1);
+            else if (posX == 0 && posY == 0 && posZ == 0) { (nx, ny, nz) = _rng.Vec(); }
+            else { (nx, ny, nz) = Norm(posX, posY, posZ); }
+            double pScale = _e.BaseScale * _rng.DoubleScaledRange(_e.RndScale);
+            // colour use_rndm: pick ONE of {start, base, end} at birth; the colour anim is not registered for
+            // such emitters, so the pick stays for life.
+            int clrRnd = _e.UseColorAnm && _e.ClrRndm ? (int)(_rng.U32(12) % 3) : 1;
+            // randomInitAngle takes a full u16 angle; the spin rate is per particle in [minRotation, maxRotation).
+            double rot0 = _e.UseInitRttRndm ? (_rng.Next() & 0xFFFF) / 65536.0 * 2.0 * Math.PI : _e.InitRot;
+            double rotRate = _e.UseRttAnm ? _rng.Between(_e.RttMinRot, _e.RttMaxRot) : 0.0;
+            int life = _rng.ScaledRange(Math.Max(0, _e.ParticleLife), _e.RndLife) + 1;
+            // A random tex-anim picks one tex_no at birth; otherwise the texture is chosen per frame by age.
+            int rndTex = (_e.UseTexAnm && _e.TexUseRndm && _e.TexSeq != null)
+                ? _e.TexSeq[(int)(_rng.U32(12) % (uint)Math.Max(1, _e.TexUseNum)) % _e.TexSeq.Length] : _e.TexNo;
+            int lrOff = _e.RandomLoopAnm ? (int)_rng.U32(8) : 0;   // lifeRateOffset for LOOPING anims
             (double mx, double my) = _emitterMotion?.Invoke(_frame) ?? (0.0, 0.0);   // emitter's path offset now
             // The emitter's travel direction at spawn, used to orient a DIRECTIONAL billboard (the needle/wave) whose
             // own velocity is ~0 because it rides the moving emitter (Pin Missile/Sonic Boom/Horn Drill: EMIT_STRAIGHT/
             // PARABOLIC sweep the emitter attacker→defender). Without this the needle has no velocity and points up.
             (double pmx, double pmy) = _emitterMotion?.Invoke(Math.Max(0, _frame - 1)) ?? (0.0, 0.0);
             double ovx = mx - pmx, ovy = my - pmy;
-            // Rotation: randomInitAngle → a FULLY random angle (not a min..max pick); the spin
-            // rate (hasRotation) is random in [minRotation, maxRotation] PER PARTICLE.
-            double rot0 = _e.UseInitRttRndm ? _rng.NextDouble() * 2.0 * Math.PI : _e.InitRot;
-            double rotRate = _e.UseRttAnm ? _e.RttMinRot + _rng.NextDouble() * (_e.RttMaxRot - _e.RttMinRot) : 0.0;
-            //: a random tex-anim picks one tex_no at birth; otherwise the texture is chosen per frame by age.
-            int rndTex = (_e.UseTexAnm && _e.TexUseRndm && _e.TexSeq != null)
-                ? _e.TexSeq[_rng.Next(Math.Max(1, _e.TexUseNum)) % _e.TexSeq.Length] : _e.TexNo;
             _ptcls.Add(new P
             {
                 RndTex = rndTex,
@@ -365,22 +375,25 @@ namespace DSPRE.Avalonia.Data
                 VY = ny * magPos + _axisY * magAxis + _driftY,
                 VZ = nz * magPos + _axisZ * magAxis,
                 OVX = ovx, OVY = ovy,   // emitter travel direction at spawn (orientation only)
-                Phase = _e.RandomLoopAnm ? _rng.NextDouble() : 0.0,
-                LrOff = _e.RandomLoopAnm ? _rng.Next(256) : 0,        // lifeRateOffset for LOOPING anims
-                // colour use_rndm: pick ONE of {start, base, end} at birth, a discrete 3-way
-                // pick, and the colour anim is NOT registered for such emitters (the pick stays for life).
-                ClrRnd = _e.ClrRndm ? _rng.Next(3) : 0,
+                LrOff = lrOff,
+                ClrRnd = clrRnd,
                 Rot0 = rot0, RotRate = rotRate,
                 Scl = pScale,
+                AlpK = 1.0,
                 Age = 0,
                 Life = life,
             });
         }
 
-        // the double-scaled random-range helper: uniform multiplier in [1 − r/256, 1 + r/256).
-        private double DoubleScaled(int rnd) => rnd == 0 ? 1.0 : 1.0 + (rnd / 256.0) * (_rng.NextDouble() * 2.0 - 1.0);
-        // the scaled random-range helper: uniform multiplier in [1 − r/256, 1].
-        private double Scaled(int rnd) => rnd == 0 ? 1.0 : 1.0 - (rnd / 256.0) * _rng.NextDouble();
+        /// <summary>
+        /// Whether a parent at <paramref name="age"/> emits children this frame: from
+        /// age &gt;= life * delay / 256 of its own randomised life, then every interval frames (SPLEmitter_Update).
+        /// </summary>
+        public static bool ChildEmitsAt(int age, int life, int delay, int interval)
+        {
+            long diff = (long)age * 4096 - (long)life * delay * 16;   // fx32: age - life*delay/256
+            return diff >= 0 && (diff >> 12) % Math.Max(1, interval) == 0;
+        }
 
         // Two unit axes spanning the plane across circle_axis, and their normal.
         private ((double X, double Y, double Z) c1, (double X, double Y, double Z) c2, (double X, double Y, double Z) up) OrthogonalAxes()
@@ -409,15 +422,6 @@ namespace DSPRE.Avalonia.Data
         {
             double l = Math.Sqrt(x * x + y * y + z * z);
             return l < 1e-12 ? (0.0, 0.0, 0.0) : (x / l, y / l, z / l);
-        }
-
-        // A random unit vector on a 3D sphere → (x, y, z).
-        private (double, double, double) Sphere()
-        {
-            double z = _rng.NextDouble() * 2.0 - 1.0;
-            double t = _rng.NextDouble() * Math.PI * 2.0;
-            double rr = Math.Sqrt(Math.Max(0, 1.0 - z * z));
-            return (rr * Math.Cos(t), rr * Math.Sin(t), z);
         }
 
         /// <summary>The alive particles this frame, with the SPA scale/colour/alpha animation curves applied over
@@ -467,14 +471,8 @@ namespace DSPRE.Avalonia.Data
                                   : (_e.ColorR, _e.ColorG, _e.ColorB);
                     else (r, g, b) = ClrCurve(lrClr, _e.ClrInterp);
                 }
-                double alpha = (_e.UseAlphaAnm ? AlpCurve(lrAlp) : _e.BaseAlpha) / 31.0;
-                // the alpha-animation curve randomRange: a per-frame downward jitter of the alpha (flicker). Deterministic
-                // per (particle, frame) hash so re-enumerating a frame renders identically.
-                if (_e.AlpFlick > 0)
-                {
-                    uint hh = (uint)(p.Age * 2654435761u + (uint)(p.LrOff * 97 + p.Life * 31 + p.ClrRnd * 13));
-                    alpha *= 1.0 - (_e.AlpFlick / 256.0) * (((hh >> 8) & 0xFF) / 255.0);
-                }
+                // The alpha curve's randomRange flicker was drawn in Step, so re-enumerating a frame is stable.
+                double alpha = (_e.UseAlphaAnm ? AnimAlpha(lrAlp, p.AlpK) : _e.BaseAlpha) / 31.0;
 
                 // Billboard orientation vector (renderer uses this ONLY for the directional quad angle, not motion):
                 // follow → the emitter's current travel; a needle riding a moving emitter (own velocity ~0) → its
@@ -540,6 +538,9 @@ namespace DSPRE.Avalonia.Data
             if (lr < _e.SclOut) return _e.SclN;
             return _e.SclE + (lr - 255) * (_e.SclE - _e.SclN) / Math.Max(1, 255 - _e.SclOut);
         }
+
+        // SPLAnim_Alpha: the curve value through ScaledRange(value, randomRange), k drawn once per frame.
+        private double AnimAlpha(int lr, double k) => AlpCurve(lr) * k;
 
         private double AlpCurve(int lr)   // → 0..31
         {

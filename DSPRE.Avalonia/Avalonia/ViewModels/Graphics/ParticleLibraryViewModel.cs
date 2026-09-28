@@ -41,8 +41,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         public const string Everything = "Everything";
-        private const string Moves = "Move animations", Effects = "Battle effects", Seals = "Ball seals",
-                             Bursts = "Poke Ball bursts", OtherBall = "Other ball particles";
 
         private readonly List<ParticleFileRow> _all = new();
 
@@ -66,7 +64,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             Categories.Clear();
             Categories.Add(Everything);
-            foreach (string c in _all.Select(r => r.Category).Distinct()) Categories.Add(c);
+            foreach (string c in ParticleFileNames.Order)
+                if (_all.Any(r => r.Category == c)) Categories.Add(c);
             _category = Everything;
             OnPropertyChanged(nameof(Category));
             Show();
@@ -140,8 +139,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     foreach (var c in cmds)
                     {
                         string op = WestOpcodes.Name(version, c.OpId);
-                        if (op is not ("WEST_LOAD_PARTICLE" or "WEST_LOAD_PARTICLE_EX") || c.Args.Length < 2) continue;
-                        if (!into.TryGetValue(c.Args[1], out var list)) into[c.Args[1]] = list = new List<int>();
+                        // The extended load names the archive before the file.
+                        int at = op == "WEST_LOAD_PARTICLE_EX" ? 2 : op == "WEST_LOAD_PARTICLE" ? 1 : -1;
+                        if (at < 0 || c.Args.Length <= at) continue;
+                        if (!into.TryGetValue(c.Args[at], out var list)) into[c.Args[at]] = list = new List<int>();
                         if (!list.Contains(i)) list.Add(i);
                     }
                 }
@@ -158,16 +159,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             for (int f = 0; f < particles.Count; f++)
             {
                 byte[] file = particles.Get(f);
-                if (usedByMove.TryGetValue(f, out var byMoves))
+                // The leading files belong to battle code and effect scripts, whatever move happens to reuse one.
+                if (ParticleFileNames.MoveArchive(gameFamily, f) is { } fixedName)
+                    Add(fixedName.Category, fixedName.Name, source, "Move particles", f, file);
+                else if (usedByMove.TryGetValue(f, out var byMoves))
                 {
                     var names = byMoves.Select(MoveName).ToList();
                     string name = names.Count <= 3 ? string.Join(", ", names) : $"{string.Join(", ", names.Take(3))} and {names.Count - 3} more";
-                    Add(Moves, name, source, "Move particles", f, file);
+                    Add(ParticleFileNames.Moves, name, source, "Move particles", f, file);
                 }
                 else if (usedByEffect.TryGetValue(f, out var byEffects))
-                    Add(Effects, "Battle effect " + string.Join(", ", byEffects), source, "Move particles", f, file);
+                    Add(ParticleFileNames.BattleEffects, "Battle effect " + string.Join(", ", byEffects), source, "Move particles", f, file);
                 else
-                    Add(Moves, $"Particle file {f}", source, "Move particles", f, file);
+                    Add(ParticleFileNames.Unused, $"Move particle file {f} (no move loads it)", source, "Move particles", f, file);
             }
         }
 
@@ -179,15 +183,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             var narc = new ScriptNarc(DirNames.ballParticles);
             var named = new Dictionary<int, (string Category, string Name, bool Ortho)>();
             foreach (var seal in BallSeals.Read())
-                if (seal != null) named[seal.Particle] = (Seals, seal.Name, true);
+                if (seal != null) named[seal.Particle] = (ParticleFileNames.Seals, "Seal: " + seal.Name, true);
+            var ballNames = new Dictionary<int, string>();
             foreach (var (ball, name) in SendOutGraphics.Balls())
             {
+                ballNames[ball] = name;
                 int entry = SendOutGraphics.BurstEntry(ball);
-                if (!named.ContainsKey(entry)) named[entry] = (Bursts, name + " opening", false);
+                if (!named.ContainsKey(entry)) named[entry] = (ParticleFileNames.Balls, name + " opening", false);
             }
             for (int f = 0; f < narc.Count; f++)
             {
-                var (category, name, ortho) = named.TryGetValue(f, out var n) ? n : (OtherBall, $"Ball particle file {f}", false);
+                (string category, string name, bool ortho) = named.TryGetValue(f, out var n) ? n
+                    : ParticleFileNames.BallArchive(gameFamily, f, ballNames) is { } b ? (b.Category, b.Name, false)
+                    : (ParticleFileNames.Other, $"Ball particle file {f}", false);
                 Add(category, name, source, "Ball particles", f, narc.Get(f), ortho);
             }
         }
@@ -214,29 +222,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 var source = ArchiveFiles.Loose(full, relative);
                 int count;
                 try { count = source.Count; } catch { continue; }
-                string category = CategoryOf(relative);
                 for (int f = 0; f < count; f++)
                 {
                     byte[] file;
                     try { file = source.Get(f); } catch { continue; }
-                    Add(category, $"{category}, file {f}", source, relative, f, file);
+                    var (category, name) = ParticleFileNames.Loose(gameFamily, relative, f);
+                    Add(category, name, source, relative, f, file);
                 }
             }
-        }
-
-        private static string CategoryOf(string relative)
-        {
-            string r = relative.ToLowerInvariant();
-            if (r.Contains("egg_demo")) return "Egg hatching";
-            if (r.Contains("shinka")) return "Evolution";
-            if (r.Contains("encounteffect")) return "Wild encounter";
-            if (r.Contains("frontier")) return "Battle Frontier";
-            if (r.Contains("pokelist")) return "Party menu";
-            if (r.Contains("wifi_lobby") || r.Contains("wlmngm")) return "Wi-Fi lobby minigames";
-            if (r.Contains("debug")) return "Debug";
-            if (r.Contains("pl_etc")) return "Other effects";
-            if (r.Contains("particledata")) return "Field and general";
-            return "Other particles";
         }
     }
 }

@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.Data
         public bool UseConv; public double ConvX, ConvY, ConvRatio;                 // convergence field: lerp pos→point/frame
         public bool UseColl; public double CollY, CollBounce; public int CollEvent; // collision plane: kill(0)/bounce(1)
         // the child-resource block: parent particles spawn child particles (trails/sparks); half of all emitters use this.
-        public int ChildLife, ChildGenNum, ChildGenStart, ChildGenIntvl, ChildTexNo;
+        public int ChildLife, ChildGenNum, ChildGenDelay, ChildGenIntvl, ChildTexNo;
         public double ChildVelRatio, ChildSclEnd;
         public byte ChildR, ChildG, ChildB; public bool ChildUseClr;
         public bool RepeatS, RepeatT;   // etc.tex_repeat_num ≥ 1 → texcoord spans 2× (quadrant tiles into full sprite)
@@ -477,9 +477,8 @@ namespace DSPRE.Avalonia.Data
             e.ChildR = Expand5(cc & 0x1F); e.ChildG = Expand5((cc >> 5) & 0x1F); e.ChildB = Expand5((cc >> 10) & 0x1F);
             int etc1 = U16l(p + 12) | (U16l(p + 14) << 16);
             e.ChildGenNum = etc1 & 0xFF;
-            // gen_start is a FRACTION of the parent's life (age ≥ life·gen_start/256), NOT an absolute
-            // frame. Treating the raw byte as a frame count silently skipped ALL children whenever gen_start > life.
-            e.ChildGenStart = e.ParticleLife * ((etc1 >> 8) & 0xFF) / 256;
+            // emissionDelay is a fraction of each parent's own randomised life (age >= life * delay / 256).
+            e.ChildGenDelay = (etc1 >> 8) & 0xFF;
             e.ChildGenIntvl = Math.Max(1, (etc1 >> 16) & 0xFF); e.ChildTexNo = (etc1 >> 24) & 0xFF;
             int cflag = U16l(p);                          // child-resource flags
             e.ChildUseClr = (cflag & (1 << 6)) != 0;      // useChildColor (bit 6)

@@ -1,3 +1,4 @@
+using DSPRE.Avalonia.Data;
 using System;
 using System.IO;
 using System.Linq;
@@ -40,15 +41,21 @@ namespace DSPRE.Tests
                 _out.WriteLine($"{name}: {group.Key} {group.Count()}, e.g. {group.First().Name}");
 
             Assert.Contains(ParticleLibraryViewModel.Everything, vm.Categories);
-            Assert.Equal(80, rows.Count(r => r.Category == "Ball seals"));
-            Assert.All(rows.Where(r => r.Category == "Ball seals"), r => Assert.True(r.Orthographic));
-            Assert.Contains(rows, r => r.Category == "Poke Ball bursts" && r.Name.Contains("Master Ball", StringComparison.OrdinalIgnoreCase));
-            Assert.True(rows.Count(r => r.Category == "Move animations") > 300, "move particle files should be named by their moves");
-            Assert.Contains(rows, r => r.Category == "Move animations" && r.Name.Contains("Ember", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(rows, r => r.Category == "Evolution" || r.Category == "Egg hatching" || r.Category == "Other particles");
+            Assert.Equal(80, rows.Count(r => r.Category == ParticleFileNames.Seals));
+            Assert.All(rows.Where(r => r.Category == ParticleFileNames.Seals), r => Assert.True(r.Orthographic));
+            Assert.Contains(rows, r => r.Category == ParticleFileNames.Balls && r.Name.Contains("Master Ball", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(rows, r => r.Name == "Pokémon returning to its ball");
+            Assert.True(rows.Count(r => r.Category == ParticleFileNames.Moves) > 300, "move particle files should be named by their moves");
+            Assert.Contains(rows, r => r.Category == ParticleFileNames.Moves && r.Name.Contains("Ember", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(rows, r => r.Name == "Level up" && r.Index == 2);
+            Assert.Contains(rows, r => r.Name == "Evolution: light and sparkles around the Pokémon");
+            if (code != "ADAE")
+                Assert.Equal(2, rows.Count(r => r.Name.StartsWith("VS intro, Elite Four and Champion")));
+            // Every file is accounted for: nothing is left without a known use.
+            Assert.Empty(rows.Where(r => r.Category == ParticleFileNames.Other).Select(r => r.Name));
 
             // Opening any row reads the same file the list counted.
-            var sample = rows.First(r => r.Category == "Move animations");
+            var sample = rows.First(r => r.Category == ParticleFileNames.Moves);
             var bytes = sample.Source.Get(sample.Index);
             Assert.Equal(sample.Emitters, bytes[8] | bytes[9] << 8);
         }
