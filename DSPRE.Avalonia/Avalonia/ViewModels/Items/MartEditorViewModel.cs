@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => _getTier?.Invoke() ?? 1;
             set
             {
-                if (_getTier == null || value < 1 || value > 6 || value == _getTier()) return;
+                if (_getTier == null || value < 0 || value > 6 || value == _getTier()) return;
                 _setTier((ushort)value);
                 Notify();
                 _changed();

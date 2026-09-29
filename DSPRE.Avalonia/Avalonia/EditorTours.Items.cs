@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia
 
             Add("MartEditorView", "Mart Editor",
                 S("list", "Marts", "The common mart, whose stock grows as the story goes on, and every specialty mart. Pick one to see what it sells."),
-                S("name:MartGrid", "Stock", "Each slot and its item. In the common mart, Stock tier sets how far into the story an item appears. Right-click an item and pick Open, or Ctrl+click."),
+                S("name:MartGrid", "Stock", "Each slot and its item. In the common mart, Stock tier sets how far into the story an item appears; tier 0 is always sold. Right-click an item and pick Open, or Ctrl+click."),
                 S("toolbar", "Slots and marts", "Add or remove slots, or add a custom mart. These need the expansion patch, which Apply ARM9 expansion adds if it is missing."),
                 S("name:MartNotes", "Showing a new mart", "A custom mart gets its own number. Call that number from an event script to open it in game."),
                 S("name:SaveButton", "Saving", "Save writes every mart, and Discard drops your changes. Ctrl+S saves too."));

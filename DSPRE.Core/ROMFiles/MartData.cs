@@ -293,8 +293,8 @@ namespace DSPRE.ROMFiles
             {
                 if (entry.ItemId == 0 || entry.ItemId == ushort.MaxValue)
                     throw new InvalidOperationException("Mart item IDs must be between 1 and 0xFFFE.");
-                if (entry.RequiredTier < 1 || entry.RequiredTier > 6)
-                    throw new InvalidOperationException("Common mart stock tiers must be between 1 and 6.");
+                if (entry.RequiredTier > 6)
+                    throw new InvalidOperationException("Common mart stock tiers must be between 0 and 6.");
             }
             foreach (SpecialtyShop shop in SpecialtyShops)
             {
@@ -446,8 +446,8 @@ namespace DSPRE.ROMFiles
             "Goldenrod Department Store 2F (Lower)", "Goldenrod Department Store 2F (Upper)",
             "Goldenrod Department Store 3F", "Goldenrod Department Store 4F",
             "Goldenrod Department Store 5F", "Goldenrod Herb Shop", "Ecruteak Secondary",
-            "Olivine Secondary", "Cianwood Pharmacy", "Blackthorn Secondary", "Unused Secondary",
-            "Safari Zone Gate Southwest", "Saffron Secondary", "Lavender Secondary",
+            "Olivine Secondary", "Cianwood Pharmacy", "Blackthorn Secondary", "Pokémon League Secondary",
+            "Vermilion Secondary", "Saffron Secondary", "Lavender Secondary",
             "Cerulean Secondary", "Celadon Department Store 2F (Left)",
             "Celadon Department Store 2F (Right)", "Celadon Department Store 3F",
             "Celadon Department Store 4F", "Celadon Department Store 5F (Left)",
