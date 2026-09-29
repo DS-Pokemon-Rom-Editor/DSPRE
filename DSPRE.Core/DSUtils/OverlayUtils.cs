@@ -178,6 +178,9 @@ namespace DSPRE
 
         public static bool IsCompressed(int ovNumber)
         {
+            // ds-rom extracts every overlay flat; its size there leaves out the BSS the table's size counts.
+            if (RomInfo.IsDsRomProject) return false;
+
             string overlayPath = GetPath(ovNumber);
 
             if (!File.Exists(overlayPath))

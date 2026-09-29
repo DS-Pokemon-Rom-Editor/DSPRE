@@ -61,7 +61,7 @@ namespace DSPRE {
         }
         public static int CheckNSBMDHeader(byte[] modelFile) {
             using (BinaryReader byteArrReader = new BinaryReader(new MemoryStream(modelFile))) {
-                if (byteArrReader.ReadUInt32() != NSBMD.NDS_TYPE_BMD0) {
+                if (modelFile.Length < 0x10 || byteArrReader.ReadUInt32() != NSBMD.NDS_TYPE_BMD0) {
                     AppMessages.Error("Please select an NSBMD file.", "Invalid File");
                     return -1;
                 }
@@ -69,6 +69,12 @@ namespace DSPRE {
                 byteArrReader.BaseStream.Position = 0xE;
                 return byteArrReader.ReadInt16() >= 2 ? NSBMD_HAS_TEXTURE : NSBMD_DOESNTHAVE_TEXTURE;
             }
+        }
+
+        // Length covers the block offset GetFirstBlock reads at 0x10.
+        public static bool IsNSBTX(byte[] file) {
+            return file != null && file.Length >= 0x14
+                && file[0] == (byte)'B' && file[1] == (byte)'T' && file[2] == (byte)'X' && file[3] == (byte)'0';
         }
 
         public static byte[] GetModelWithoutTextures(byte[] modelFile) {

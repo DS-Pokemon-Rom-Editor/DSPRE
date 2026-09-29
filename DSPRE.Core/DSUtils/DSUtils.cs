@@ -28,40 +28,60 @@ namespace DSPRE {
         // Advancing past each replacement instead of rescanning from 0 avoids looping forever when a
         // replacement text itself matches its own search text, e.g. renaming "PIKABLU" to "Pikablu".
         public static int ReplaceTextEverywhere(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements) {
+            return ReplaceTextInArchives(replacements, 0, Filesystem.GetTextArchivesCount()).Count;
+        }
+
+        /// <summary>
+        /// Replaces in archives <paramref name="first"/> up to, not including, <paramref name="last"/>, and
+        /// returns the ids it saved. <paramref name="skip"/> leaves an archive untouched.
+        /// </summary>
+        public static List<int> ReplaceTextInArchives(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements,
+            int first, int last, Func<int, bool> skip = null, object sender = null) {
+            var edited = new List<int>();
             var pairs = replacements.Where(r => !string.IsNullOrEmpty(r.searchString) && r.searchString != r.replaceString).ToList();
             if (pairs.Count == 0) {
-                return 0;
+                return edited;
             }
 
-            int archiveCount = Filesystem.GetTextArchivesCount();
-            int archivesChanged = 0;
+            last = Math.Min(last, Filesystem.GetTextArchivesCount());
+            for (int i = Math.Max(0, first); i < last; i++) {
+                if (skip != null && skip(i)) {
+                    continue;
+                }
 
-            for (int i = 0; i < archiveCount; i++) {
                 var archive = new DSPRE.ROMFiles.TextArchive(i);
                 bool changed = false;
 
                 for (int j = 0; j < archive.messages.Count; j++) {
                     string text = archive.messages[j];
                     foreach (var pair in pairs) {
-                        StringComparison comparison = pair.caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-                        int searchFrom = 0;
-                        int posFound;
-                        while ((posFound = text.IndexOf(pair.searchString, searchFrom, comparison)) >= 0) {
-                            text = text.Substring(0, posFound) + pair.replaceString + text.Substring(posFound + pair.searchString.Length);
-                            searchFrom = posFound + pair.replaceString.Length;
-                            changed = true;
-                        }
+                        text = ReplaceInText(text, pair.searchString, pair.replaceString, pair.caseSensitive, ref changed);
                     }
                     archive.messages[j] = text;
                 }
 
                 if (changed) {
-                    archive.SaveToExpandedDir(i, showSuccessMessage: false);
-                    archivesChanged++;
+                    archive.SaveToExpandedDir(i, showSuccessMessage: false, sender: sender);
+                    edited.Add(i);
                 }
             }
 
-            return archivesChanged;
+            return edited;
+        }
+
+        public static string ReplaceInText(string text, string searchString, string replaceString, bool caseSensitive, ref bool changed) {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(searchString)) {
+                return text;
+            }
+            StringComparison comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            int searchFrom = 0;
+            int posFound;
+            while ((posFound = text.IndexOf(searchString, searchFrom, comparison)) >= 0) {
+                text = text.Substring(0, posFound) + replaceString + text.Substring(posFound + searchString.Length);
+                searchFrom = posFound + (replaceString ?? "").Length;
+                changed = true;
+            }
+            return text;
         }
 
         // Anything longer than the 3-command "give item" template is the shared execution routine, not a pickable entry.
@@ -759,6 +779,9 @@ namespace DSPRE {
         /// with the original ndstool format; 0 if the conversion fails and no changes are made.</returns>
         public static int ConvertNdstoolToDsRom(string workDir)
         {
+            // RomInfo.workDir ends in a separator, which would put the backup and temp files inside the folder being zipped.
+            workDir = ProjectFolderPath(workDir);
+
             // 1. Verify project is ndstool format
             if (GetFolderType(workDir) != 1)
             {
@@ -929,6 +952,7 @@ namespace DSPRE {
 
     public static bool RestoreFromNdstoolBackup(string workDir)
     {
+        workDir = ProjectFolderPath(workDir);
         string backupPath = workDir + ".ndstool_backup.zip";
         
         if (!File.Exists(backupPath))
@@ -940,9 +964,10 @@ namespace DSPRE {
         
         try
         {
-            // Delete current contents
+            // Delete current contents, never the backup being restored
             foreach (var file in Directory.GetFiles(workDir))
             {
+                if (string.Equals(Path.GetFullPath(file), Path.GetFullPath(backupPath), StringComparison.OrdinalIgnoreCase)) continue;
                 File.Delete(file);
             }
             foreach (var dir in Directory.GetDirectories(workDir))
@@ -966,6 +991,9 @@ namespace DSPRE {
             return false;
         }
     }
+
+    private static string ProjectFolderPath(string workDir) =>
+        Path.TrimEndingDirectorySeparator(Path.GetFullPath(workDir));
 
     public static byte[] StringToByteArray(String hex) {
             //Ummm what?

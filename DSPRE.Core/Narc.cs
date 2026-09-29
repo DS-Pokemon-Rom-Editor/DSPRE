@@ -27,15 +27,14 @@ namespace NarcAPI {
 
         public static Narc Open(String filePath) {
             Narc narc = new Narc(Path.GetFileNameWithoutExtension(filePath));
-            BinaryReader br = new BinaryReader(File.OpenRead(filePath));
+            using (BinaryReader br = new BinaryReader(File.OpenRead(filePath))) {
+                if (br.BaseStream.Length < 4 || br.ReadUInt32() != NARC_FILE_MAGIC_NUM) {
+                    return null;
+                }
 
-            if (br.ReadUInt32() != NARC_FILE_MAGIC_NUM) {
-                return null;
+                narc.ReadOffsets(br);
+                narc.ReadElements(br);
             }
-
-            narc.ReadOffsets(br);
-            narc.ReadElements(br);
-            br.Close();
 
             AppLogger.Debug($"Loaded NARC \"{narc.Name}\" with {narc.Elements.Length} elements from file: {filePath}");
 
@@ -44,16 +43,11 @@ namespace NarcAPI {
 
         public static Narc FromFolder(String dirPath) {
             Narc narc = new Narc(Path.GetFileNameWithoutExtension(dirPath));
-            String[] fileNames = Directory.GetFiles(dirPath, "*.*", SearchOption.AllDirectories);
-
-            // Filter out *.bak and *.backup files
-            fileNames = Array.FindAll(fileNames, f => {
-                string ext = Path.GetExtension(f).ToLower();
-                return ext != ".bak" && ext != ".backup";
-            });
-            // Sort files by name in a case-insensitive manner to ensure consistent ordering#
-            // This step is crucial to maintain compatibility with files on other drives and filesystems (like WSL)
-            Array.Sort(fileNames, StringComparer.OrdinalIgnoreCase);
+            // Members are the folder's own files; subfolders, backups and OS clutter are not.
+            String[] fileNames = Directory.GetFiles(dirPath, "*", SearchOption.TopDirectoryOnly);
+            fileNames = Array.FindAll(fileNames, IsMemberFile);
+            // ExtractToFolder names members by index, and past 9999 a text sort would misplace them.
+            Array.Sort(fileNames, CompareMemberNames);
 
             uint numberOfElements = (uint)fileNames.Length;
             narc.Elements = new MemoryStream[numberOfElements];
@@ -71,6 +65,31 @@ namespace NarcAPI {
             AppLogger.Debug($"Loaded NARC \"{narc.Name}\" with {numberOfElements} elements from folder: {dirPath}");
 
             return narc;
+        }
+
+        private static bool IsMemberFile(string path) {
+            string name = Path.GetFileName(path);
+            string ext = Path.GetExtension(path).ToLowerInvariant();
+            if (ext == ".bak" || ext == ".backup") return false;
+            if (name.StartsWith(".")
+                || name.Equals("Thumbs.db", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("desktop.ini", StringComparison.OrdinalIgnoreCase)) return false;
+            try {
+                if ((File.GetAttributes(path) & (FileAttributes.Hidden | FileAttributes.System)) != 0) return false;
+            } catch (IOException) {
+                return false;
+            }
+            return true;
+        }
+
+        private static int CompareMemberNames(string a, string b) {
+            string na = Path.GetFileNameWithoutExtension(a), nb = Path.GetFileNameWithoutExtension(b);
+            bool numA = long.TryParse(na, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out long ia);
+            bool numB = long.TryParse(nb, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out long ib);
+            if (numA && numB && ia != ib) return ia.CompareTo(ib);
+            if (numA != numB) return numA ? -1 : 1;
+            // Case-insensitive so the order matches across filesystems such as WSL.
+            return StringComparer.OrdinalIgnoreCase.Compare(Path.GetFileName(a), Path.GetFileName(b));
         }
 
         public void Save(String filePath) {
@@ -167,6 +186,8 @@ namespace NarcAPI {
                                 "Do you want to delete its contents?", "Directory not empty")) {
                                 Directory.Delete(dirPath, true);
                                 AppLogger.Debug("Deleted non-DSPRE-related folder \"" + dirPath + "\" after user confirmation.");
+                            } else {
+                                return;
                             }
                         }
                     } catch (IOException) {

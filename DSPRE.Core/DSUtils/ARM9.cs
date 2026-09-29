@@ -50,7 +50,25 @@ namespace DSPRE {
             return new FileInfo(path).Length <= MAX_SIZE;
         }
         public static bool CheckCompressionMark() {
-            return BitConverter.ToInt32(ReadBytes((uint)(RomInfo.gameFamily == GameFamilies.DP ? 0xB7C : 0xBB4), 4), 0) != 0;
+            return BitConverter.ToInt32(ReadBytes(RomInfo.Arm9CompressionMarkOffset, 4), 0) != 0;
+        }
+
+        /// <summary>Decompresses arm9.bin in place if it is marked compressed. True when it is flat afterwards.</summary>
+        public static bool DecompressIfMarked() {
+            // The mark stays set until Save ROM clears it, so a flat file must not be decompressed or trimmed again.
+            if (!CheckCompressionMark() || IsFlatButMarked()) return true;
+            // An ndstool extraction keeps the 12-byte footer after the code, which blz can't read past.
+            if (!RomInfo.IsDsRomProject) EditSize(-12);
+            return Decompress(arm9Path);
+        }
+
+        /// <summary>Flat on disk but still marked compressed: the game would decompress it again at boot.</summary>
+        public static bool IsFlatButMarked() {
+            return CheckCompressionMark() && new FileInfo(arm9Path).Length > MAX_SIZE;
+        }
+
+        public static void ClearCompressionMark() {
+            WriteBytes(new byte[4], RomInfo.Arm9CompressionMarkOffset);
         }
 
         public static byte[] ReadBytes(uint startOffset, long numberOfBytes = 0) {
