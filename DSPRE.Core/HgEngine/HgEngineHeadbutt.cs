@@ -68,8 +68,8 @@ namespace DSPRE.HgEngine
             ReadSlots(mapBlock, "specialSlots", species, file.specialEncounters, 6);
             ReadGroups(mapBlock, normalTreeCount, specialTreeCount, file.normalTreeGroups, file.specialTreeGroups);
 
-            file.normalTreeGroupsCount = (byte)file.normalTreeGroups.Count;
-            file.specialTreeGroupsCount = (byte)file.specialTreeGroups.Count;
+            file.normalTreeGroupsCount = (ushort)file.normalTreeGroups.Count;
+            file.specialTreeGroupsCount = (ushort)file.specialTreeGroups.Count;
             return true;
         }
 

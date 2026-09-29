@@ -2,7 +2,7 @@ namespace DSPRE.ROMFiles
 {
     /// <summary>
     /// How HGSS picks a headbutt table: the 12 "normal" slots are common then rare, the 6 "special" slots are secret.
-    /// A normal tree's table depends on its list position and the trainer ID's last digit.
+    /// A normal tree's table depends on its list position and the ID key, (6 × secret ID + trainer ID) mod 10.
     /// </summary>
     public static class HeadbuttRules
     {

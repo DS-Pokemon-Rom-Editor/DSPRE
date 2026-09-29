@@ -687,9 +687,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             string Ends(HeadbuttRules.Table t) => byTable.TryGetValue(t, out var d) ? string.Join(", ", d) : null;
             var parts = new List<string>();
-            if (Ends(HeadbuttRules.Table.Common) is string c) parts.Add($"Common: IDs ending {c}");
-            if (Ends(HeadbuttRules.Table.Rare) is string r) parts.Add($"Rare: IDs ending {r}");
-            if (Ends(HeadbuttRules.Table.None) is string n) parts.Add($"Nothing: IDs ending {n}");
+            if (Ends(HeadbuttRules.Table.Common) is string c) parts.Add($"Common: ID key {c}");
+            if (Ends(HeadbuttRules.Table.Rare) is string r) parts.Add($"Rare: ID key {r}");
+            if (Ends(HeadbuttRules.Table.None) is string n) parts.Add($"Nothing: ID key {n}");
             var tables = new List<HoverTable>();
             if (byTable.ContainsKey(HeadbuttRules.Table.Common)) tables.Add(TableOf("Common", _file.normalEncounters, 0));
             if (byTable.ContainsKey(HeadbuttRules.Table.Rare)) tables.Add(TableOf("Rare", _file.normalEncounters, HeadbuttRules.SlotsPerTable));

@@ -155,6 +155,7 @@ namespace DSPRE.Avalonia
                 S("tab:Trophy Garden", "Trophy Garden", "The Pokémon that can turn up in the Trophy Garden. Pick a slot, then its species."),
                 S("tab:Headbutt", "Headbutt", "Pick a file, then set species and levels for normal and special trees. The 3D map shows where the trees are."),
                 S("tab:Headbutt>name:GlHost", "The trees", "Green trees are normal, yellow ones special. Turn on Move trees to drag them, or type their positions in the tree list."),
+                S("tab:Headbutt>name:GlHost", "ID key", "A normal tree's table depends on the player's ID key: (6 × secret ID + trainer ID) mod 10. Hover a tree to see which keys get the common table, the rare one or nothing."),
                 S("tab:Bug Contest", "Bug Contest", "The Pokémon of the Bug-Catching Contest, with levels, rate and score. Each set covers certain days once you have the National Pokédex."),
                 S("tab:Bug Contest Opponents", "Contest rivals", "What each rival enters with, on which day, and the score they finish with."),
                 S("tab:Safari Zone", "Safari Zone", "Pick an area, then grass, surfing or a rod. Each has Pokémon by time of day, plus ones that only appear when enough objects are placed."),

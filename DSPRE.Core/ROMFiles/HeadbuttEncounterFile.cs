@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 
 namespace DSPRE.ROMFiles {
     //https://hirotdk.neocities.org/FileSpecs.html#Headbutt
@@ -12,8 +13,8 @@ namespace DSPRE.ROMFiles {
         const int normalEncountersCount = 12;
         const int specialEncountersCount = 6;
 
-        public byte normalTreeGroupsCount;
-        public byte specialTreeGroupsCount;
+        public ushort normalTreeGroupsCount;
+        public ushort specialTreeGroupsCount;
         public List<HeadbuttEncounter> normalEncounters;
         public List<HeadbuttEncounter> specialEncounters;
         public BindingList<HeadbuttTreeGroup> normalTreeGroups;
@@ -42,10 +43,8 @@ namespace DSPRE.ROMFiles {
             FileStream fs = new FileStream(path, FileMode.Open);
             using (BinaryReader br = new BinaryReader(fs)) {
                 //get the number of tree group definitions
-                normalTreeGroupsCount = br.ReadByte();
-                br.ReadByte(); //padding
-                specialTreeGroupsCount = br.ReadByte();
-                br.ReadByte(); //padding
+                normalTreeGroupsCount = br.ReadUInt16();
+                specialTreeGroupsCount = br.ReadUInt16();
 
                 normalEncounters = new List<HeadbuttEncounter>();
                 specialEncounters = new List<HeadbuttEncounter>();
@@ -92,6 +91,11 @@ namespace DSPRE.ROMFiles {
             using (BinaryWriter writer = new BinaryWriter(newData)) {
                 writer.Write((ushort)normalTreeGroups.Count);
                 writer.Write((ushort)specialTreeGroups.Count);
+
+                // A map with no trees is only the counts; slots are kept once any are filled in.
+                bool empty = normalTreeGroups.Count == 0 && specialTreeGroups.Count == 0
+                    && normalEncounters.Concat(specialEncounters).All(e => e.pokemonID == 0 && e.minLevel == 0 && e.maxLevel == 0);
+                if (empty) { writer.Flush(); return newData.ToArray(); }
 
                 foreach (HeadbuttEncounter encounter in normalEncounters) {
                     writer.Write((ushort)encounter.pokemonID);
