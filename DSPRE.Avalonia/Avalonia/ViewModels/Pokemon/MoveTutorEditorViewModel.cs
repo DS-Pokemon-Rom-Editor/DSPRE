@@ -103,17 +103,37 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             private MoveTutorData.Tutor T => _o._data.Pool[_i];
 
             public int Number => _i + 1;
+
+            // HeartGold's Ilex Forest tutor always teaches Headbutt, whatever its entry says.
+            private const int HeadbuttTutor = 3;
+            private bool HeartGold => !_o._data.Platinum;
+            public bool Editable => !(HeartGold && T.Where == HeadbuttTutor);
+
             public int Move
             {
                 get => T.Move;
                 set
                 {
                     // "None" isn't a tutor move; put the box back to the stored one.
-                    if (value <= 0) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move)))); return; }
+                    if (value <= 0 || !Editable) { global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move)))); return; }
                     if (value != T.Move) { T.Move = (ushort)value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move))); _o.Changed(true); }
                 }
             }
-            public int Where { get => T.Where; set { if (value >= 0 && value != T.Where) { T.Where = value; _o.Changed(false); } } }
+            public int Where
+            {
+                get => T.Where;
+                set
+                {
+                    if (value < 0 || value == T.Where) return;
+                    if (!Editable || (HeartGold && value == HeadbuttTutor))
+                    {
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Where))));
+                        return;
+                    }
+                    T.Where = value;
+                    _o.Changed(false);
+                }
+            }
             public decimal Cost0 { get => T.Costs[0]; set => SetCost(0, value); }
             public decimal Cost1 { get => T.Costs.Length > 1 ? T.Costs[1] : 0; set => SetCost(1, value); }
             public decimal Cost2 { get => T.Costs.Length > 2 ? T.Costs[2] : 0; set => SetCost(2, value); }
@@ -121,7 +141,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             private void SetCost(int k, decimal v)
             {
-                if (k >= T.Costs.Length) return;
+                if (k >= T.Costs.Length || !Editable) return;
                 byte b = (byte)Math.Clamp(v, 0, 255);
                 if (T.Costs[k] == b) return;
                 T.Costs[k] = b;

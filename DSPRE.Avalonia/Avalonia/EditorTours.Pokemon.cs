@@ -56,6 +56,7 @@ namespace DSPRE.Avalonia
             Add("MoveTutorEditorView", "Move Tutors",
                 S("tab:Moves", "Tutor moves", "Every move the tutors teach, what it costs and where it is taught. Platinum pays in coloured shards, HeartGold in Battle Points."),
                 S("tab:Moves>list", "Jump to a move", "Right-click a move and pick Open, or Ctrl+click it, to open it in the Move Data Editor."),
+                S("tab:Moves>list", "Headbutt", "In HeartGold the Ilex Forest tutor always teaches Headbutt, so its row is locked and no other move can be given to that tutor."),
                 S("tab:By Pokémon", "By Pokémon", "Pick a Pokémon, then tick the tutor moves it can learn. Filter narrows the list."),
                 S("tab:By Move", "By Move", "Pick a tutor move, then tick every Pokémon that can learn it."),
                 S("toolbar", "Saving", "A red note at the bottom says what to fix before saving. Save or Ctrl+S writes, Ctrl+Z undoes."));

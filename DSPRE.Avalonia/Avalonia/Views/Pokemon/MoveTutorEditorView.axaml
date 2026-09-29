@@ -48,7 +48,7 @@
           <ListBox ItemsSource="{Binding Pool}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+PoolRow">
-                <Grid ColumnDefinitions="36,240,70,Auto,Auto,Auto,*">
+                <Grid ColumnDefinitions="36,240,70,Auto,Auto,Auto,*" IsEnabled="{Binding Editable}">
                   <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center"/>
                   <DockPanel Grid.Column="1" Margin="0,0,6,0">
                     <Image DockPanel.Dock="Left" Width="32" Height="16" Margin="0,0,4,0" RenderOptions.BitmapInterpolationMode="None"
