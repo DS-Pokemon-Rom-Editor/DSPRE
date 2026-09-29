@@ -194,12 +194,15 @@ public static class ScriptDatabaseJsonLoader
                 candidates.Add(Path.Combine(dir ?? "", "diamond_pearl_v2.json"));
 
             string v2 = candidates.FirstOrDefault(File.Exists);
+            ScriptDatabase.varNames.Clear();
             if (v2 == null) return 0;
 
             int renamed = 0;
             try
             {
                 using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(v2));
+                if (doc.RootElement.TryGetProperty("vars", out JsonElement vars))
+                    ReadVarNames(vars);
                 if (!doc.RootElement.TryGetProperty("commands", out JsonElement cmds)) return 0;
 
                 foreach (JsonProperty prop in cmds.EnumerateObject())
@@ -224,6 +227,21 @@ public static class ScriptDatabaseJsonLoader
                 AppLogger.Info("Could not read the rotom command names from " + v2 + ": " + ex.Message);
             }
             return renamed;
+        }
+
+        // A number can have a plain alias (VAR_0x800C) and a meaningful one (VAR_RESULT); the meaningful one wins.
+        // Range markers such as SPECIAL_VAR_BASE share an id with a variable but are not its name.
+        private static void ReadVarNames(JsonElement vars)
+        {
+            foreach (JsonProperty prop in vars.EnumerateObject())
+            {
+                if (!prop.Name.StartsWith("VAR_", StringComparison.Ordinal)) continue;
+                if (!prop.Value.TryGetProperty("id", out JsonElement idElem)) continue;
+                if (!idElem.TryGetInt32(out int id) || id < 0 || id > ushort.MaxValue) continue;
+                bool plain = System.Text.RegularExpressions.Regex.IsMatch(prop.Name, "^VAR_(SPECIAL_)?0?x[0-9A-Fa-f]+$");
+                if (plain && ScriptDatabase.varNames.ContainsKey((ushort)id)) continue;
+                ScriptDatabase.varNames[(ushort)id] = prop.Name;
+            }
         }
 }
 
@@ -253,6 +271,7 @@ namespace DSPRE.Resources
         public static Dictionary<ushort, string> moveNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, string> soundNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, string> trainerNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> varNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, MovementCommandInfo> movementsDict = new Dictionary<ushort, MovementCommandInfo>();
         public static Dictionary<ushort, string> movementsDictIDName => movementsDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name);
 

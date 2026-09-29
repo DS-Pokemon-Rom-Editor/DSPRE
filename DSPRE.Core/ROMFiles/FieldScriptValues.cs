@@ -5,36 +5,40 @@ namespace DSPRE.ROMFiles
     /// <summary>Tells a plain number in a script apart from a variable.</summary>
     public static class FieldScriptValues
     {
-        /// <summary>SVWK_START. Below this a number is just a number.</summary>
+        /// <summary>Below this a number is just a number.</summary>
         public const int SavedFirst = 0x4000;
 
-        /// <summary>SCWK_START. From here up it is one of the script's own slots.</summary>
+        /// <summary>From here up it is one of the script's own slots.</summary>
         public const int ScriptFirst = 0x8000;
 
-        private static readonly Dictionary<int, string> Named = new Dictionary<int, string>
-        {
-            [0x8000] = "PARAM0", [0x8001] = "PARAM1", [0x8002] = "PARAM2", [0x8003] = "PARAM3",
-            [0x8004] = "TEMP0",  [0x8005] = "TEMP1",  [0x8006] = "TEMP2",  [0x8007] = "TEMP3",
-            [0x8008] = "REG0",   [0x8009] = "REG1",   [0x800a] = "REG2",   [0x800b] = "REG3",
-            [0x800c] = "ANSWER",
-            [0x800d] = "TARGET_OBJID",
-        };
+        private const int LastSpecial = 0x800d;
 
         /// <summary>Whether this number names a variable rather than being a value on its own.</summary>
         public static bool IsVariable(int value) => value >= SavedFirst;
 
-        /// <summary>The script slot's own name, or null when the number is not one of them.</summary>
-        public static string NameOf(int value) => Named.TryGetValue(value, out string n) ? n : null;
+        /// <summary>The variable's name as the script database and rotom write it, or null when it has none.</summary>
+        public static string NameOf(int value)
+        {
+            if (value < 0 || value > ushort.MaxValue) return null;
+            if (DSPRE.Resources.ScriptDatabase.varNames.TryGetValue((ushort)value, out string n)) return n;
+            if (value < ScriptFirst || value > LastSpecial) return null;
+
+            // Spelled as the database spells them for each game, for when no database is loaded.
+            bool johto = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
+            return value switch
+            {
+                0x800c => johto ? "VAR_SPECIAL_RESULT" : "VAR_RESULT",
+                0x800d => johto ? "VAR_SPECIAL_LAST_TALKED" : "VAR_LAST_TALKED",
+                _ => johto ? $"VAR_SPECIAL_x{value:X4}" : $"VAR_0x{value:X4}",
+            };
+        }
 
         /// <summary>How to write a number that may be either. </summary>
         public static string Describe(int value)
         {
             if (!IsVariable(value)) return value.ToString();
 
-            string named = NameOf(value);
-            if (named != null) return named;
-            if (value >= ScriptFirst) return $"script slot 0x{value:X4}";
-            return $"variable 0x{value:X4}";
+            return NameOf(value) ?? $"VAR_0x{value:X4}";
         }
 
         /// <summary>What the two ends of a "put this there" command read as.</summary>
