@@ -12,10 +12,10 @@ namespace DSPRE.Tests
 {
     /// <summary>How wide the lines get, over every script in both games.</summary>
     [Collection("rom")]
-    public class WestViewWidthTests
+    public class BattleAnimViewWidthTests
     {
         private readonly ITestOutputHelper _out;
-        public WestViewWidthTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimViewWidthTests(ITestOutputHelper o) { _out = o; }
 
         private const int VisibleChars = 116;
 
@@ -42,7 +42,7 @@ namespace DSPRE.Tests
             Assert.True(dir != null, gameCode + ": the move-effect archive could not be unpacked, so nothing was checked");
 
             int scripts = 0;
-            foreach (var mode in new[] { WestViewMode.Guided, WestViewMode.Script })
+            foreach (var mode in new[] { BattleAnimViewMode.Guided, BattleAnimViewMode.Script })
             {
                 int lines = 0, over = 0, widest = 0;
                 string worst = "", worstFile = "";
@@ -53,12 +53,12 @@ namespace DSPRE.Tests
                 {
                     var bytes = File.ReadAllBytes(f);
                     if (bytes.Length == 0) continue;
-                    var cmds = WestScript.Parse(bytes, version);
+                    var cmds = BattleAnimScript.Parse(bytes, version);
                     if (cmds.Count == 0) continue;
                     int pos = 0; foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
                     scripts++;
 
-                    foreach (var l in WestScriptDisplay.Build(cmds, version, mode))
+                    foreach (var l in BattleAnimScriptDisplay.Build(cmds, version, mode))
                     {
                         lines++;
                         int w = l.Display.Length;

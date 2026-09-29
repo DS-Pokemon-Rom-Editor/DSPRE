@@ -22,33 +22,33 @@ namespace DSPRE.Tests
         [Fact]
         public void OpcodeTable_KnownIdsAndNames()
         {
-            // Stable low ids shared by every version (decoded from waza_seq_def.h DEF_CMD order).
-            Assert.Equal("WS_ENCOUNT_EFFECT", WazaSeqOpcodes.Name(WazaSeqVersion.Plat, 0));
+            // Stable low ids shared by every version.
+            Assert.Equal("PlayEncounterAnimation", WazaSeqOpcodes.Name(WazaSeqVersion.Plat, 0));
             Assert.Equal(0, WazaSeqOpcodes.ArgCount(WazaSeqVersion.Plat, 0));
-            Assert.Equal("WS_TRAINER_THROW", WazaSeqOpcodes.Name(WazaSeqVersion.Plat, 7));
+            Assert.Equal("ThrowPokeball", WazaSeqOpcodes.Name(WazaSeqVersion.Plat, 7));
             Assert.Equal(2, WazaSeqOpcodes.ArgCount(WazaSeqVersion.Plat, 7));
-            Assert.Equal(7, WazaSeqOpcodes.Id(WazaSeqVersion.HGSS, "WS_TRAINER_THROW"));
+            Assert.Equal(7, WazaSeqOpcodes.Id(WazaSeqVersion.HGSS, "ThrowPokeball"));
         }
 
         [Fact]
         public void OpcodeTable_VersionTailsDiverge()
         {
-            // Platinum ends at WS_SEQ_END (id 222); HGSS inserts two commands before it.
-            Assert.Equal("WS_SEQ_END", WazaSeqOpcodes.Name(WazaSeqVersion.Plat, 222));
-            Assert.Equal("WS_CHECK_TRAINER_MESSAGE", WazaSeqOpcodes.Name(WazaSeqVersion.HGSS, 222));
-            Assert.Equal("WS_MSG_WHITE_OUT", WazaSeqOpcodes.Name(WazaSeqVersion.HGSS, 223));
+            // Platinum ends at End (id 222); HGSS inserts two commands before it.
+            Assert.Equal("End", WazaSeqOpcodes.Name(WazaSeqVersion.Plat, 222));
+            Assert.Equal("CheckTrainerMessage", WazaSeqOpcodes.Name(WazaSeqVersion.HGSS, 222));
+            Assert.Equal("PrintWhiteOutMessage", WazaSeqOpcodes.Name(WazaSeqVersion.HGSS, 223));
 
-            // DP is the shared prefix (no Platinum additions) with WS_SEQ_END right after the last DP command.
+            // DP is the shared prefix (no Platinum additions) with End right after the last DP command.
             Assert.Equal(219, WazaSeqOpcodes.Count(WazaSeqVersion.DP));
-            Assert.Equal("WS_SEQ_END", WazaSeqOpcodes.Name(WazaSeqVersion.DP, 218));
-            Assert.Equal(-1, WazaSeqOpcodes.Id(WazaSeqVersion.DP, "WS_WAIT_NO_SKIP")); // Platinum-only
+            Assert.Equal("End", WazaSeqOpcodes.Name(WazaSeqVersion.DP, 218));
+            Assert.Equal(-1, WazaSeqOpcodes.Id(WazaSeqVersion.DP, "WaitTime")); // Platinum-only
         }
 
         [Fact]
         public void Parse_ReadsOpcodesAndFixedArgs()
         {
-            // WS_TRAINER_THROW(side=1,type=2) then WS_POKEMON_APPEAR(side=5).
-            int appear = WazaSeqOpcodes.Id(WazaSeqVersion.Plat, "WS_POKEMON_APPEAR");
+            // ThrowPokeball(side=1,type=2) then PokemonSendOut(side=5).
+            int appear = WazaSeqOpcodes.Id(WazaSeqVersion.Plat, "PokemonSendOut");
             var data = Words(7, 1, 2, appear, 5);
             var cmds = WazaSeqScript.Parse(data, WazaSeqVersion.Plat);
 
@@ -71,7 +71,7 @@ namespace DSPRE.Tests
         [Fact]
         public void Parse_StopsWhenArgsWouldOverrun()
         {
-            // WS_TRAINER_THROW claims 2 args but only 1 word follows.
+            // ThrowPokeball claims 2 args but only 1 word follows.
             var data = Words(7, 1);
             Assert.Empty(WazaSeqScript.Parse(data, WazaSeqVersion.Plat));
         }
@@ -79,8 +79,8 @@ namespace DSPRE.Tests
         [Fact]
         public void Serialize_RoundTripsParse()
         {
-            int ifop = WazaSeqOpcodes.Id(WazaSeqVersion.HGSS, "WS_IF");      // 4 args
-            int seqEnd = WazaSeqOpcodes.Id(WazaSeqVersion.HGSS, "WS_SEQ_END"); // 0 args
+            int ifop = WazaSeqOpcodes.Id(WazaSeqVersion.HGSS, "CompareVarToValue");      // 4 args
+            int seqEnd = WazaSeqOpcodes.Id(WazaSeqVersion.HGSS, "End"); // 0 args
             var cmds = new List<WazaSeqCommand>
             {
                 new WazaSeqCommand(ifop, new[] { 1, 2, 3, 4 }),

@@ -16,7 +16,7 @@ namespace DSPRE.Tests
         [Fact]
         public void TheBoxSitsWhereTheGamesPutIt()
         {
-            // talk_msg.c:79 with FLD_MSG_WIN_PX/PY/SX/SY from fld_bmp.h: tile 2,19 and 27 by 4 tiles.
+            // The field message window: tile 2,19 and 27 by 4 tiles.
             Assert.Equal(2, FieldMessageWindow.TileX);
             Assert.Equal(19, FieldMessageWindow.TileY);
             Assert.Equal(27, FieldMessageWindow.TilesWide);

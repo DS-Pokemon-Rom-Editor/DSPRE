@@ -12,7 +12,7 @@ namespace DSPRE.ROMFiles {
         #region Fields (2)
         public ushort buildingsTileset;
         public ushort mapTileset;
-        // Third field of the area's RESOURCE_PARAM. HGSS stores the terrain animation index here
+        // Third field of the area record. HGSS stores the terrain animation index here
         // (0xFFFF for none); DP/Pt stores a model set index that nothing in the game ever reads.
         public ushort groundAnimation;
         public ushort movingModelSet;

@@ -231,7 +231,7 @@ namespace DSPRE.Avalonia.Data
                     Archive = DirNames.battleObj,
                     Drawing = BattleObjects.Find(thing, "Drawing"),
                     Layout = BattleObjects.Find(thing, "As it appears"),
-                    Colours = BattleObjects.Find("GAGE_PALETTE", "Colours"),
+                    Colours = BattleObjects.Find("HpBar.Shared", "Colours"),
                     SharedNote = "Every battle in the game draws this same bar.",
                 };
                 try
@@ -348,7 +348,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One of the touch screen's layers: which arrangement it shows and how the hardware stacks it.</summary>
         private sealed record PanelLayer(string Screen, string Name, string What, int Priority, int BgNumber, bool Blended);
 
-        private static readonly PanelLayer Background = new("BATTLE_WBG0B_NSCR_BIN", "Touch screen background",
+        private static readonly PanelLayer Background = new("TouchScreen.Layer.Background:Screen", "Touch screen background",
             "The panel every menu sits on.", 3, 2, false);
 
         /// <summary>
@@ -363,24 +363,24 @@ namespace DSPRE.Avalonia.Data
             switch (menu)
             {
                 case TouchMenu.Command:
-                    yield return new("BATTLE_WBG2A_NSCR_BIN", "Command silhouette",
+                    yield return new("TouchScreen.Layer.CommandSilhouette:Screen", "Command silhouette",
                         "The shape behind the command buttons, see-through over the background.", 3, 1, true);
-                    yield return new("BATTLE_WBG1A_NSCR_BIN", "Command buttons", "Fight, Bag, Pokemon and Run.", 2, 0, false);
+                    yield return new("TouchScreen.Layer.CommandButtons:Screen", "Command buttons", "Fight, Bag, Pokemon and Run.", 2, 0, false);
                     break;
                 case TouchMenu.Fight:
-                    yield return new("BATTLE_WBG1B_NSCR_BIN", "Move buttons",
+                    yield return new("TouchScreen.Layer.MoveButtons:Screen", "Move buttons",
                         "The four move buttons. The game colours each one after its move's type.", 2, 0, false);
                     break;
                 case TouchMenu.Target:
-                    yield return new("BATTLE_WBG1C_NSCR_BIN", "Target buttons", "Which Pokemon a move is aimed at.", 2, 0, false);
-                    yield return new("BATTLE_WBG3A_NSCR_BIN", "Target outlines",
+                    yield return new("TouchScreen.Layer.TargetButtons:Screen", "Target buttons", "Which Pokemon a move is aimed at.", 2, 0, false);
+                    yield return new("TouchScreen.Layer.TargetOutlines:Screen", "Target outlines",
                         "The outlines over the target buttons, see-through.", 1, 1, true);
                     break;
                 case TouchMenu.YesNo:
-                    yield return new("BATTLE_WBG1D_NSCR_BIN", "Yes and No buttons", "Two buttons, for any yes or no question.", 2, 0, false);
+                    yield return new("TouchScreen.Layer.YesNoButtons:Screen", "Yes and No buttons", "Two buttons, for any yes or no question.", 2, 0, false);
                     break;
                 case TouchMenu.Playback:
-                    yield return new("BATTLE_WBG1STOP_NSCR_BIN", "Stop button", "Stops a recorded battle.", 2, 0, false);
+                    yield return new("TouchScreen.Layer.StopButton:Screen", "Stop button", "Stops a recorded battle.", 2, 0, false);
                     break;
             }
         }
@@ -408,7 +408,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// The touch screen for one menu. Higher priority numbers are further back, and within a priority the
         /// higher layer number is further back, so the pieces go down in that order. Every layer is drawn
-        /// from BATTLE_W_NCGR, not from BATTLE_WBG0A, which nothing in the battle code reads.
+        /// from the panel's drawing, not from the unused layer's own, which nothing in the battle code reads.
         /// </summary>
         private void AddTouchPanel(List<Piece> pieces, Options o)
         {
@@ -424,25 +424,24 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>
-        /// The colours the touch panel is drawn with. The game loads the whole of BATTLE_W_NCLR, then in
-        /// Platinum and HeartGold lays the first 16 colours of the backdrop's own scene palette over row 0
-        /// (pokeheartgold src/battle/battle_input.c sBackgroundPaletteIds): BATTLE_W_00 to _16 for backdrops
-        /// 0 to 16, BATTLE_W_YAB for backdrop 17, and nothing for the rest. Diamond and Pearl keep row 0.
+        /// The colours the touch panel is drawn with. The game loads the whole of the panel's colours, then in
+        /// Platinum and HeartGold lays the first 16 colours of the backdrop's own tint over row 0
+        /// (pokeheartgold src/battle/battle_input.c sBackgroundPaletteIds), for backdrops 0 to 17 and
+        /// nothing for the rest. Diamond and Pearl keep row 0.
         ///
         /// Rows 8 to 11 are placeholders in the file; the Fight menu fills them from the type palettes in
         /// its overlay, one row per move button.
         /// </summary>
         private (byte r, byte g, byte b)[] PanelColours(int backdrop, TouchMenu menu)
         {
-            var wide = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(BattleBgNames.Find("BATTLE_W_NCLR"))),
+            var wide = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(BattleBgNames.Find("TouchScreen.Panel:Colours"))),
                                                out int count);
             var all = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < all.Length && i < count; i++) all[i] = wide[i];
 
             if (RomInfo.gameFamily != GameFamilies.DP)
             {
-                string tint = backdrop >= 0 && backdrop <= 16 ? $"BATTLE_W_{backdrop:D2}_NCLR"
-                            : backdrop == 17 ? "BATTLE_W_YAB_NCLR" : null;
+                string tint = backdrop >= 0 && backdrop <= 17 ? $"TouchScreen.Tint.{backdrop}:Colours" : null;
                 int sceneAt = tint == null ? -1 : BattleBgNames.Find(tint);
                 if (sceneAt >= 0)
                 {
@@ -483,8 +482,8 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 int scr = BattleBgNames.Find(screenEntry);
-                int chr = BattleBgNames.Find("BATTLE_W_NCGR_BIN");
-                int pal = BattleBgNames.Find("BATTLE_W_NCLR");
+                int chr = BattleBgNames.Find("TouchScreen.Panel:Drawing");
+                int pal = BattleBgNames.Find("TouchScreen.Panel:Colours");
                 piece.Arrangement = scr; piece.Drawing = chr; piece.Colours = pal;
                 if (scr < 0 || chr < 0 || pal < 0)
                 {

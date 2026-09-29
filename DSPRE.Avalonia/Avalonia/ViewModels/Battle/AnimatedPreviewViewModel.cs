@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         /// <summary>
         /// The engine gives the variable-watching level scripts a chance on every step you take, in the
-        /// same check that does trainer line of sight (ev_check.c:505).
+        /// same check that does trainer line of sight.
         /// </summary>
         private void CheckLevelScriptWatchers()
         {
@@ -1492,7 +1492,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Rebuild();
 
             // Every step you take is also a chance for one of the map's own scripts to start
-            // (ev_check.c:505 checks these in the same pass as trainer line of sight).
+            // (checked in the same pass as trainer line of sight).
             if (result == StepResult.Walked) CheckLevelScriptWatchers();
 
             switch (result)

@@ -15,12 +15,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Battle
 {
-    /// <summary>
-    /// Standalone editor for the battle move-sequence scripts (waza_seq / be_seq / sub_seq) and the move
-    /// visual-effect scripts (WEST / we). Picks an archive + entry, decodes it into an editable opcode/args command
-    /// list (via <see cref="WazaSeqScript"/> / <see cref="WestScript"/> against the version's opcode table), and
-    /// writes it back to the unpacked NARC (repacked on the normal ROM save). HGSS + Platinum only.
-    /// </summary>
+    /// <summary>Battle scripts (waza_seq, be_seq, sub_seq) and move animations (we). Platinum and HGSS only.</summary>
     public sealed class BattleScriptEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -73,7 +68,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string[] ArchiveOptions { get; } =
         {
             "Move scripts (waza_seq)", "Move-effect scripts (be_seq)",
-            "Subroutines (sub_seq)", "Move animation (WEST)",
+            "Subroutines (sub_seq)", "Move animation (we)",
         };
 
         private int _archiveIndex = -1;
@@ -95,17 +90,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>Whether the move-animation archive is the one open. The three views are for it.</summary>
-        public bool IsWest => (Archive)_archiveIndex == Archive.MoveAnimation;
+        public bool IsAnimation => (Archive)_archiveIndex == Archive.MoveAnimation;
         private ScriptNarc CurrentNarc => _narcs[_archiveIndex];
         private readonly DirNames[] _dirs = new DirNames[4];
         private Dictionary<int, HgEngineOwnedFile> _sourceById;
         private List<int> _sourceOrder = new List<int>();
 
-        /// <summary>Builds the reference data for the command guide window, for whichever command set this
-        /// archive uses (WEST move-animation opcodes, or the waza/be/sub effect-sequence opcodes).</summary>
-        public ScriptCommandGuideViewModel BuildCommandGuideViewModel() => new ScriptCommandGuideViewModel(IsWest);
+        public ScriptCommandGuideViewModel BuildCommandGuideViewModel() => new ScriptCommandGuideViewModel(IsAnimation);
 
-        // ── Sound preview (WEST_SE and friends' "Sound" argument) ───────────────────────
+        // ── Sound preview (PlaySoundEffect and friends' "Sound" argument) ───────────────────────
         // Lazily loads and caches the ROM's own sound archive so scrubbing through several sound IDs in a
         // session only pays the parse cost once.
         private SdatArchive _sdat;
@@ -148,10 +141,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         ///
         /// Rendering (SSEQ interpretation + PCM mixdown) runs on a background thread, not inline on the caller:
         /// each render allocates several MB on the Large Object Heap, and doing that on the UI dispatcher thread
-        /// (which drives <see cref="WestPlayer"/>'s 60Hz preview timer) causes LOH-churn GC pauses that stall the
+        /// (which drives <see cref="BattleAnimPlayer"/>'s 60Hz preview timer) causes LOH-churn GC pauses that stall the
         /// animation loop.</summary>
         /// <summary>
-        /// The cry of whichever Pokemon the preview is showing as the attacker. WEST_VOICE_PLAY hands the
+        /// The cry of whichever Pokemon the preview is showing as the attacker. PlayPokemonCry hands the
         /// games a pan and a volume as well; neither is applied here.
         /// </summary>
         private void PreviewCry()
@@ -218,11 +211,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── the three ways of reading a script ──────────────────────────────────────
 
         /// <summary>The lines the chosen view shows. All three read the same commands.</summary>
-        public ObservableCollection<WestLine> ViewLines { get; } = new ObservableCollection<WestLine>();
+        public ObservableCollection<BattleAnimLine> ViewLines { get; } = new ObservableCollection<BattleAnimLine>();
 
-        private WestLine _pickedLine;
+        private BattleAnimLine _pickedLine;
         /// <summary>The line somebody clicked, which is what the panel beside it explains.</summary>
-        public WestLine PickedLine
+        public BattleAnimLine PickedLine
         {
             get => _pickedLine;
             set
@@ -267,13 +260,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void RefreshViewLines()
         {
             ViewLines.Clear();
-            if (!IsWest) { OnPropertyChanged(nameof(HasViewLines)); return; }
+            if (!IsAnimation) { OnPropertyChanged(nameof(HasViewLines)); return; }
 
             var cmds = Rows.Select(r => new WazaSeqCommand(r.OpId, r.Args.ToArray())).ToList();
             int pos = 0;
             foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
 
-            foreach (var l in WestScriptDisplay.Build(cmds, _version, (WestViewMode)ViewMode, SoundNameOf))
+            foreach (var l in BattleAnimScriptDisplay.Build(cmds, _version, (BattleAnimViewMode)ViewMode, SoundNameOf))
                 ViewLines.Add(l);
             OnPropertyChanged(nameof(HasViewLines));
             OnPropertyChanged(nameof(ViewSummary));
@@ -290,7 +283,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>The note about how to write a command belongs to the text view, not to the others.</summary>
-        public bool ShowTextHelp => _openTab == 2 || !IsWest;
+        public bool ShowTextHelp => _openTab == 2 || !IsAnimation;
 
         public string ViewSummary
         {
@@ -312,16 +305,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(ArchiveIndex));
 
             OpcodeNames.Clear();
-            if (IsWest)
-                foreach (var o in WestOpcodes.Table(_version)) OpcodeNames.Add(o.Name);
+            if (IsAnimation)
+                foreach (var o in BattleAnimCommands.Table(_version)) OpcodeNames.Add(o.Name);
             else
                 foreach (var o in WazaSeqOpcodes.Table(_version)) OpcodeNames.Add(o.Name);
             OpcodeDisplayNames.Clear();
-            foreach (var n in OpcodeNames) OpcodeDisplayNames.Add(DSPRE.Avalonia.Data.WestParamSchema.OpcodeDisplay(n));
+            foreach (var n in OpcodeNames) OpcodeDisplayNames.Add(DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDisplay(n, !IsAnimation));
             _nameToOp = null;   // opcode table changed → rebuild the text-parser's name→id map lazily
 
             BuildFileList();
-            OnPropertyChanged(nameof(IsWest));
+            OnPropertyChanged(nameof(IsAnimation));
             OnPropertyChanged(nameof(IsHgEngineSource));
             OnPropertyChanged(nameof(SourceNote));
             OnPropertyChanged(nameof(ShowTextHelp));
@@ -463,7 +456,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 var bytes = CurrentNarc.Get(_fileIndex);
                 var cmds = bytes == null ? null
-                         : IsWest ? WestScript.Parse(bytes, _version)
+                         : IsAnimation ? BattleAnimScript.Parse(bytes, _version)
                                   : WazaSeqScript.Parse(bytes, _version);
                 if (cmds != null) foreach (var c in cmds) AddRow(c.OpId, c.Args);
             }
@@ -479,7 +472,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void AddRow(int opId, int[] args)
         {
-            var row = new ScriptCmdRow { OpNameOf = OpNameOf, FixedArgCountOf = FixedArgCountOf, OnEdited = OnRowEdited, PreviewSound = TryPreviewSound, SoundNameOf = SoundNameOf };
+            var row = new ScriptCmdRow { Script = !IsAnimation, OpNameOf = OpNameOf, FixedArgCountOf = FixedArgCountOf, OnEdited = OnRowEdited, PreviewSound = TryPreviewSound, SoundNameOf = SoundNameOf };
             row.Args.AddRange(args ?? System.Array.Empty<int>());
             row._opIdSilent(opId);   // set without firing OnEdited during load
             row.Rebuild();
@@ -492,7 +485,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // The opcode's fixed parameter count (variable-length opcodes report only their fixed leading args).
         private int FixedArgCountOf(int opId)
         {
-            if (IsWest) return WestOpcodes.TryGet(_version, opId, out var op) ? op.ArgCount : 0;
+            if (IsAnimation) return BattleAnimCommands.TryGet(_version, opId, out var op) ? op.ArgCount : 0;
             return Math.Max(0, WazaSeqOpcodes.ArgCount(_version, opId));
         }
 
@@ -545,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 return;
             }
             var cmds = BuildCommands();
-            byte[] bytes = IsWest ? WestScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
+            byte[] bytes = IsAnimation ? BattleAnimScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
             CurrentNarc.Put(_fileIndex, bytes);
             LoadEntry();   // reflect the canonical form
         }
@@ -574,13 +567,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public IReadOnlyList<(int File, bool Orthographic)> ParticleFilesOfMove()
         {
             var found = new List<(int File, bool Orthographic)>();
-            if (!IsWest) return found;
+            if (!IsAnimation) return found;
             var projection = new Dictionary<int, int>();
             foreach (var c in BuildCommands())
             {
-                string op = WestOpcodes.Name(_version, c.OpId);
-                if (op == "WEST_CAMERA_CHG" && c.Args.Length >= 2) projection[c.Args[0]] = c.Args[1];
-                if (op is not ("WEST_LOAD_PARTICLE" or "WEST_LOAD_PARTICLE_EX") || c.Args.Length < 2) continue;
+                string op = BattleAnimCommands.Name(_version, c.OpId);
+                if (op == "SetCameraProjection" && c.Args.Length >= 2) projection[c.Args[0]] = c.Args[1];
+                if (op is not ("LoadParticleSystem" or "LoadDebugParticleSystem") || c.Args.Length < 2) continue;
                 bool ortho = !projection.TryGetValue(c.Args[0], out int p) || p != 0;
                 if (!found.Exists(f => f.File == c.Args[1])) found.Add((c.Args[1], ortho));
             }
@@ -596,9 +589,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (var row in Rows)
             {
                 int[] args;
-                if (IsWest)
+                if (IsAnimation)
                 {
-                    // WEST opcodes are variable-length; keep exactly the row's args.
+                    // Animation commands are variable-length; keep exactly the row's args.
                     args = row.Args.ToArray();
                 }
                 else
@@ -664,7 +657,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // The text format is a single-word command line: "CommandName label=value label=value ...", e.g.
         // "AddParticles slot=0 data=482 behavior=3". Every command/argument/enum-value token is a single
-        // camel/Pascal-case word (WestParamSchema.CommandName/ArgToken/Token) so it types and greps like a real
+        // camel/Pascal-case word (BattleAnimSchema.CommandName/ArgToken/Token) so it types and greps like a real
         // command line rather than a sentence. Args may be named (label=value, in any order; the label pins it
         // to that parameter's slot) or bare (a plain number/enum name; fills the next slot not already claimed
         // by a named arg, left to right). Raw internal opcode names and plain numbers still parse too.
@@ -674,20 +667,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (var row in Rows)
             {
                 string raw = OpNameOf(row.OpId);
-                sb.Append(DSPRE.Avalonia.Data.WestParamSchema.CommandName(raw));
+                sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.CommandName(raw, !IsAnimation));
                 for (int i = 0; i < row.Args.Count; i++)
                 {
                     sb.Append(' ');
                     int v = row.Args[i];
-                    string label = DSPRE.Avalonia.Data.WestParamSchema.ParamName(raw, i);
+                    string label = DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(raw, i, !IsAnimation);
                     // An enum parameter shows its friendly value token; a generic "Param N" label is dropped
                     // (bare number) since a made-up name would add no meaning.
-                    var opts = DSPRE.Avalonia.Data.WestParamSchema.EnumFor(raw, i);
+                    var opts = DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(raw, i);
                     string valText = v.ToString(CultureInfo.InvariantCulture);
                     if (opts != null)
-                        foreach (var o in opts) if (o.Value == v) { valText = DSPRE.Avalonia.Data.WestParamSchema.Token(o.Label, true); break; }
+                        foreach (var o in opts) if (o.Value == v) { valText = DSPRE.Avalonia.Data.BattleAnimSchema.Token(o.Label, true); break; }
                     if (label.StartsWith("Param ", StringComparison.Ordinal)) sb.Append(valText);
-                    else sb.Append(DSPRE.Avalonia.Data.WestParamSchema.ArgToken(raw, i)).Append('=').Append(valText);
+                    else sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ArgToken(raw, i, !IsAnimation)).Append('=').Append(valText);
                 }
                 sb.Append('\n');
             }
@@ -703,7 +696,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             for (int i = 0; i < OpcodeNames.Count; i++)
             {
                 d[OpcodeNames[i]] = i;   // index == opId
-                string cmd = DSPRE.Avalonia.Data.WestParamSchema.CommandName(OpcodeNames[i]);
+                string cmd = DSPRE.Avalonia.Data.BattleAnimSchema.CommandName(OpcodeNames[i], !IsAnimation);
                 if (!string.IsNullOrEmpty(cmd) && !d.ContainsKey(cmd)) d[cmd] = i;   // single-word name (first wins on collision)
             }
             return d;
@@ -722,12 +715,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static bool TryResolveEnum(string rawOpName, int argIndex, string token, out int value)
         {
             value = 0;
-            var opts = DSPRE.Avalonia.Data.WestParamSchema.EnumFor(rawOpName, argIndex);
+            var opts = DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(rawOpName, argIndex);
             if (opts == null) return false;
             foreach (var o in opts)
             {
                 if (string.Equals(o.Label, token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
-                if (string.Equals(DSPRE.Avalonia.Data.WestParamSchema.Token(o.Label, true), token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
+                if (string.Equals(DSPRE.Avalonia.Data.BattleAnimSchema.Token(o.Label, true), token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
             }
             return false;
         }
@@ -738,7 +731,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // Finds the argument index whose single-word label (or, for a payload slot with no known name, "paramN"/
         // "argN") matches the given token by scanning only the opcode's KNOWN fixed labels (stops at the first
         // generic "Param N" fallback, since anything past that is unnamed variable payload).
-        private static int ResolveArgIndex(string rawOpName, string label)
+        private static int ResolveArgIndex(string rawOpName, string label, bool script)
         {
             string digits = label.Length > 5 && label.StartsWith("param", StringComparison.OrdinalIgnoreCase) ? label.Substring(5)
                            : label.Length > 3 && label.StartsWith("arg", StringComparison.OrdinalIgnoreCase) ? label.Substring(3)
@@ -746,9 +739,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (digits != null && int.TryParse(digits, out int n) && n >= 1) return n - 1;
             for (int i = 0; i < 32; i++)
             {
-                string pn = DSPRE.Avalonia.Data.WestParamSchema.ParamName(rawOpName, i);
+                string pn = DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(rawOpName, i, script);
                 if (pn.StartsWith("Param ", StringComparison.Ordinal)) break;
-                if (string.Equals(DSPRE.Avalonia.Data.WestParamSchema.ArgToken(rawOpName, i), label, StringComparison.OrdinalIgnoreCase)) return i;
+                if (string.Equals(DSPRE.Avalonia.Data.BattleAnimSchema.ArgToken(rawOpName, i, script), label, StringComparison.OrdinalIgnoreCase)) return i;
             }
             return -1;
         }
@@ -798,7 +791,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
                     string label = tok.Substring(0, eq);
                     string valTok = tok.Substring(eq + 1);
-                    int idx = ResolveArgIndex(raw, label);
+                    int idx = ResolveArgIndex(raw, label, !IsAnimation);
                     if (idx < 0)
                     {
                         errors.Add(new TextError(lineStart + Math.Max(0, col), tok.Length, $"Unknown argument '{label}'"));
@@ -849,59 +842,56 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(EntryHeader));
         }
 
-        // ── WEST storyboard (readable timeline) ─────────────────────────────────────
         private string _storyboard = "";
         public string Storyboard { get => _storyboard; private set => Set(ref _storyboard, value); }
-        private IReadOnlyList<WestStoryboard.Line> _storyboardLines = Array.Empty<WestStoryboard.Line>();
-        public IReadOnlyList<WestStoryboard.Line> StoryboardLines { get => _storyboardLines; private set => Set(ref _storyboardLines, value); }
+        private IReadOnlyList<BattleAnimStoryboard.Line> _storyboardLines = Array.Empty<BattleAnimStoryboard.Line>();
+        public IReadOnlyList<BattleAnimStoryboard.Line> StoryboardLines { get => _storyboardLines; private set => Set(ref _storyboardLines, value); }
         public bool ShowStoryboard => IsAvailable && HasRows;
-        public string StoryboardTitle => IsWest ? "Animation storyboard" : "Effect summary";
+        public string StoryboardTitle => IsAnimation ? "Animation storyboard" : "Effect summary";
 
         // The animation storyboard is a column of frame numbers and reads best left alone; the effect
         // summary is prose and was running off the right-hand edge behind a scrollbar.
         public global::Avalonia.Media.TextWrapping StoryboardWrap =>
-            IsWest ? global::Avalonia.Media.TextWrapping.NoWrap : global::Avalonia.Media.TextWrapping.Wrap;
+            IsAnimation ? global::Avalonia.Media.TextWrapping.NoWrap : global::Avalonia.Media.TextWrapping.Wrap;
 
         private void RefreshStoryboard()
         {
             OnPropertyChanged(nameof(ShowStoryboard));
             OnPropertyChanged(nameof(StoryboardTitle));
             OnPropertyChanged(nameof(StoryboardWrap));
-            if (!HasRows) { Storyboard = ""; StoryboardLines = Array.Empty<WestStoryboard.Line>(); return; }
+            if (!HasRows) { Storyboard = ""; StoryboardLines = Array.Empty<BattleAnimStoryboard.Line>(); return; }
             var cmds = BuildCommands();
-            if (IsWest)
+            if (IsAnimation)
             {
-                var lines = WestStoryboard.Build(cmds, _version);
+                var lines = BattleAnimStoryboard.Build(cmds, _version);
                 StoryboardLines = lines;
                 Storyboard = lines.Count == 0 ? "(empty script)" : "";
             }
             else
             {
-                StoryboardLines = Array.Empty<WestStoryboard.Line>();
+                StoryboardLines = Array.Empty<BattleAnimStoryboard.Line>();
                 Storyboard = WazaSeqStoryboard.Build(cmds, _version);
             }
         }
 
-        // ── Animation preview: cell-anim (CATS, ~32 moves) + particles (SPA, ~425 moves) ──
         private readonly WeCellAnimRenderer _cellRenderer = new WeCellAnimRenderer();
         private IReadOnlyList<WeCellAnimRenderer.Frame> _cellFrames = Array.Empty<WeCellAnimRenderer.Frame>();
         private readonly ScriptNarc _particleNarc = new ScriptNarc(DirNames.wazaParticle);
-        private WestPlayer _west;                    // faithful timeline interpreter (built on Play)
+        private BattleAnimPlayer _animPlayer;
         private DispatcherTimer _previewTimer;
         private int _cellFrameIdx, _cellTick, _cellLoops, _previewFrames;
         private const int MaxPreviewFrames = 1200;   // safety cap (~20 s)
 
         public bool HasCellAnimation { get; private set; }
         public bool HasParticleAnimation { get; private set; }
-        // Any WEST entry shows the battle scene, even moves with no particles still animate (lunge/shake/fade).
-        public bool HasPreview => IsWest && _fileIndex >= 0;
+        public bool HasPreview => IsAnimation && _fileIndex >= 0;
         public string CellAnimNote { get; private set; } = "";
 
         /// <summary>
         /// What this move does that the preview does not show, gathered from the player while it runs.
         /// </summary>
-        public string PreviewNotes => _west == null || _west.Notes.Count == 0
-            ? "" : "Not shown here: " + string.Join(" ", _west.Notes);
+        public string PreviewNotes => _animPlayer == null || _animPlayer.Notes.Count == 0
+            ? "" : "Not shown here: " + string.Join(" ", _animPlayer.Notes);
 
         public bool HasPreviewNotes => PreviewNotes.Length > 0;
 
@@ -915,32 +905,28 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public Bitmap CellPreview { get => _cellPreview; private set => Set(ref _cellPreview, value); }
         private Bitmap _particlePreview;
         public Bitmap ParticlePreview { get => _particlePreview; private set => Set(ref _particlePreview, value); }
-        // HAIKEI scrolling background: drawn behind the mons (backdrop replace) or over them (effect overlay).
         private Bitmap _backgroundFrame;
         public Bitmap BackgroundFrame { get => _backgroundFrame; private set { if (Set(ref _backgroundFrame, value)) { OnPropertyChanged(nameof(BackgroundBehind)); OnPropertyChanged(nameof(BackgroundOver)); } } }
         private bool _bgOverlay;
         public bool BackgroundIsOverlay { get => _bgOverlay; private set { if (Set(ref _bgOverlay, value)) { OnPropertyChanged(nameof(BackgroundBehind)); OnPropertyChanged(nameof(BackgroundOver)); } } }
         public Bitmap BackgroundBehind => _bgOverlay ? null : _backgroundFrame;   // backdrop-replace (Fly/Dig/Cosmic)
         public Bitmap BackgroundOver => _bgOverlay ? _backgroundFrame : null;     // effect overlay (Surf water sweep)
-        // WE_057 wave transform (rise/wash + fade) applied to the cell-anim layer.
         private double _cellSX = 1, _cellSY = 1, _cellOpacity = 1, _cellOX, _cellOY;
         public double CellScaleX { get => _cellSX; private set => Set(ref _cellSX, value); }
         public double CellScaleY { get => _cellSY; private set => Set(ref _cellSY, value); }
         public double CellOpacity { get => _cellOpacity; private set => Set(ref _cellOpacity, value); }
         public double CellOffsetX { get => _cellOX; private set => Set(ref _cellOX, value); }
         public double CellOffsetY { get => _cellOY; private set => Set(ref _cellOY, value); }
-        // Scale pivot for the cell layer = the sprite's measured content centre (so WE_057 scales it in place).
+        // The sprite's content centre, so Surf's wave scales in place.
         private global::Avalonia.RelativePoint _cellOrigin = global::Avalonia.RelativePoint.Center;
         public global::Avalonia.RelativePoint CellOrigin { get => _cellOrigin; private set => Set(ref _cellOrigin, value); }
         public bool IsCellPlaying => _previewTimer != null && _previewTimer.IsEnabled;
         public string CellPlayButtonText => IsCellPlaying ? "Stop" : "Play animation";
         public string CellPlayButtonIcon => IsCellPlaying ? "stop" : "play";
-        // Scene-wide effects driven live by the timeline (WT_SHAKE, HAIKEI_PAL_FADE).
         private double _bgDarken; public double BackgroundDarken { get => _bgDarken; private set => Set(ref _bgDarken, value); }
         private IBrush _fadeBrush = Brushes.Black; public IBrush FadeBrush { get => _fadeBrush; private set => Set(ref _fadeBrush, value); }
         private double _shakeX; public double ShakeX { get => _shakeX; private set => Set(ref _shakeX, value); }
         private double _shakeY; public double ShakeY { get => _shakeY; private set => Set(ref _shakeY, value); }
-        // Per-Pokémon sprite transforms driven by the WEST_SP routines (rotate / scale / vanish / colour flash).
         private double _pRot, _pScaleX = 1, _pScaleY = 1, _pTintA, _eRot, _eScaleX = 1, _eScaleY = 1, _eTintA, _pDX, _pDY, _eDX, _eDY;
         private bool _pVis = true, _eVis = true;
         private IBrush _tintBrush = Brushes.Transparent;
@@ -979,8 +965,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // Emitter screen anchors = sprite centres (80×80 cell → +40), derived from the loaded positions.
         private double _atX = 63, _atY = 124, _dfX = 192, _dfY = 64;
 
-        // Who casts the move in the preview. In-game a move flips for an enemy caster (SIDE_JP, attacker-anchored
-        // emitters, lunges). Default: the player (bottom) attacks the enemy (top). Toggling re-runs from the top.
         private bool _attackerIsEnemy;
         public bool AttackerIsEnemy
         {
@@ -1005,7 +989,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 var cmds = BuildCommands();
                 if (cmds == null) return false;
                 foreach (var c in cmds)
-                    if (WestOpcodes.Name(_version, c.OpId) == "WEST_TURN_CHK") return true;
+                    if (BattleAnimCommands.Name(_version, c.OpId) == "JumpByTurn") return true;
                 return false;
             }
         }
@@ -1045,7 +1029,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
                 if (PlayerSprite != null) { var (px, pw, ph) = ToRgba(PlayerSprite); _compositor.SetPlayer(px, pw, ph, (int)PlayerLeft, (int)PlayerTop); }
                 if (EnemySprite != null) { var (ex, ew, eh) = ToRgba(EnemySprite); _compositor.SetEnemy(ex, ew, eh, (int)EnemyLeft, (int)EnemyTop); }
-                if (IsWest && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
+                if (IsAnimation && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
             }
             catch { /* no ROM / sprite, backdrop just shows the scene without the mons */ }
 
@@ -1063,9 +1047,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── Configurable battle background (real ROM data) ──────────────────────────────────────────────────────
         private DSPRE.Avalonia.Data.BattleBgRenderer _bgRenderer;
         private System.Collections.Generic.List<string> _backgroundOptions;
-        /// <summary>Dropdown: "Provided image" (the bundled PNG) + every REAL battle-scene backdrop decoded from
-        /// pl_batt_bg.narc (BATTLE_BG00 + bg_id, the scenery behind the platforms, NOT the move-effect backgrounds).
-        /// Picking one swaps the scene backdrop for the real ROM graphics.</summary>
         public System.Collections.Generic.List<string> BackgroundOptions => _backgroundOptions ??= BuildBackgroundOptions();
         private static System.Collections.Generic.List<string> BuildBackgroundOptions()
         {
@@ -1083,14 +1064,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (!Set(ref _backgroundIndex, value)) return;
                 ApplyBackdrop();
-                if (IsWest && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
+                if (IsAnimation && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
             }
         }
 
         // ── Configurable terrain ground platforms (real ROM data, battle/graphic/pl_batt_obj.narc) ──────────────
         private DSPRE.Avalonia.Data.BattleGroundRenderer _groundRenderer;
         private System.Collections.Generic.List<string> _terrainOptions;
-        /// <summary>Dropdown: "Placeholder" (the bundled platform PNGs) + each GROUND_ID terrain (Gravel, Sand, Lawn,
+        /// <summary>Dropdown: "Placeholder" (the bundled platform PNGs) + each terrain (Gravel, Sand, Lawn,
         /// Pool, Rock, Cave, Snow, Water, Ice, Floor). Picking one renders the real in-game ground "tray" the Pokémon
         /// stand on (battle/), which move animations interact with, from pl_batt_obj.narc.</summary>
         public System.Collections.Generic.List<string> TerrainOptions => _terrainOptions ??= BuildTerrainOptions();
@@ -1108,20 +1089,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (!Set(ref _terrainIndex, value)) return;
                 ApplyGround();
-                // Auto-populate a matching scene backdrop for the terrain (GROUND_ID and bg_id are independent per-zone
-                // in the data, so this is an editor convenience using the GROUND##↔BG## scene numbering; the Backdrop
+                // Auto-populate a matching scene backdrop for the terrain (terrain id and backdrop id are independent per-zone
+                // in the data, so this is an editor convenience using the platform and backdrop scene numbering; the Backdrop
                 // selector can still override). Index 0 (placeholder) leaves the backdrop untouched.
                 if (_terrainIndex > 0)
                 {
                     int bg = DSPRE.Avalonia.Data.BattleGroundRenderer.BackdropForTerrain(_terrainIndex - 1);
                     if (bg >= 0) BackgroundIndex = bg + 1;   // +1: option 0 is the bundled image
                 }
-                if (IsWest && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
+                if (IsAnimation && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
             }
         }
 
         /// <summary>Rebuilds the ground platforms: the bundled placeholder PNGs for index 0, otherwise the real
-        /// pl_batt_obj terrain "tray" (mine + enemy, at the game's GROUND_MINE/ENEMY positions). Falls back to the
+        /// pl_batt_obj terrain "tray" (mine + enemy, at the game's platform positions). Falls back to the
         /// placeholders if the ROM/NARC is unavailable so the scene always has a floor.</summary>
         private void ApplyGround()
         {
@@ -1147,9 +1128,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool HasRealGauges => _gaugePlayerImage != null || _gaugeEnemyImage != null;
         public bool ShowPlaceholderGauges => !HasRealGauges;
 
-        // CT_WazaEffectGaugeShadowOnOffCheck: during a move the gauges are hidden UNLESS the move's
-        // WazaData flag (byte 11) has FLAG_PUT_GAUGE(0x40); the soft-sprite shadow is hidden if FLAG_DEL_SHADOW(0x80).
-        // Re-shown when the effect ends. So most moves drop the HUD for their animation, exactly per the code.
+        // Move flag 0x40 keeps the gauges up during the animation; 0x80 hides the shadow.
         private bool _hideGaugesThisMove, _hideShadowThisMove;
         public bool GaugesVisible => !(IsCellPlaying && _hideGaugesThisMove);
         public bool ShadowHidden => IsCellPlaying && _hideShadowThisMove;
@@ -1344,16 +1323,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void SetupCellPreview()
         {
             StopCell();
-            if (IsWest) { EnsureScene(); SceneComposite = _compositor.Render(null); }   // static scene (backdrop + mons)
+            if (IsAnimation) { EnsureScene(); SceneComposite = _compositor.Render(null); }   // static scene (backdrop + mons)
             HasCellAnimation = false; HasParticleAnimation = false;
             CellPreview = null; ParticlePreview = null; CellAnimNote = "";
-            _west = null; ShakeX = ShakeY = 0; BackgroundDarken = 0;
-            if (IsWest && _fileIndex >= 0)
+            _animPlayer = null; ShakeX = ShakeY = 0; BackgroundDarken = 0;
+            if (IsAnimation && _fileIndex >= 0)
             {
                 var cmds = BuildCommands();
                 LoadCellResourcesForCommands(cmds, _fileIndex);
 
-                int emitters = WestParticles.Extract(cmds, _version, _attackerIsEnemy).Count;
+                int emitters = BattleAnimParticles.Extract(cmds, _version, _attackerIsEnemy).Count;
                 HasParticleAnimation = emitters > 0 && _particleNarc.Available;
 
                 CellAnimNote =
@@ -1365,23 +1344,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RaisePreviewProps();
         }
 
-        /// <summary>Loads (or explicitly unloads) the shared <see cref="_cellRenderer"/> for one move's parsed
-        /// commands, updating <see cref="HasCellAnimation"/>/<see cref="_cellFrames"/>/<see cref="CellOrigin"/>.
-        /// Factored out of <see cref="SetupCellPreview"/> so the Metronome "plays a randomly called move's real
-        /// animation" preview (see <see cref="StartChainedWest"/>) can load the CALLED move's own cell resource
-        /// the same correct way. Without this, the called move would render with whatever Metronome's own hand
-        /// graphics left loaded (the exact stale-cache bug already fixed once for ordinary move-to-move switches).</summary>
         private void LoadCellResourcesForCommands(List<WazaSeqCommand> cmds, int moveIdForLogging)
         {
             HasCellAnimation = false;
-            var res = WestCats.Extract(cmds, _version);
+            var res = BattleAnimSprites.Extract(cmds, _version);
             if (res.HasCellAnimation)
             {
                 bool loaded = _cellRenderer.Load(res.Char, res.Pltt, res.Cell, res.CellAnm);
                 if (loaded)
                 {
-                    // WE_057 picks the cell animation SEQUENCE by side (0=player /
-                    // 1=enemy), sequence 1 is the enemy-facing (flipped) wave.
+                    // Surf picks the sequence by side; 1 is the enemy's flipped wave.
                     int bank = _attackerIsEnemy && _cellRenderer.AnimationCount > 1 ? 1 : 0;
                     _cellFrames = _cellRenderer.RenderAnimation(bank);
                     if (_cellFrames.Count > 0)
@@ -1392,29 +1364,22 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                             global::Avalonia.RelativeUnit.Relative);
                     }
                 }
-                AppLogger.Info($"WEST cell-anim file {moveIdForLogging}: char={res.Char} pltt={res.Pltt} cell={res.Cell} " +
+                AppLogger.Info($"Move animation {moveIdForLogging} sprites: char={res.Char} pltt={res.Pltt} cell={res.Cell} " +
                     $"anm={res.CellAnm} → load={loaded} banks={_cellRenderer.AnimationCount} frames={_cellFrames.Count}");
             }
             else
             {
-                // _cellRenderer is shared across every move preview in this session (not recreated per
-                // move), without explicitly unloading here, a move with no CATS resource of its own
-                // would keep whatever the PREVIOUSLY previewed move loaded (e.g. Surf's wave sprite),
-                // and any later move whose script still fires a generic ACT_ADD-family opcode would
-                // render using that stale graphic instead of nothing.
+                // The renderer is shared between moves; without this a move would draw the previous move's sprite.
                 _cellRenderer.Unload();
                 _cellFrames = Array.Empty<WeCellAnimRenderer.Frame>();
-                AppLogger.Info($"WEST file {moveIdForLogging}: no CATS cell-anim (char={res.Char} pltt={res.Pltt} " +
+                AppLogger.Info($"Move animation {moveIdForLogging}: no sprites (char={res.Char} pltt={res.Pltt} " +
                     $"cell={res.Cell} anm={res.CellAnm})");
             }
         }
 
-        // Metronome's move id (118), consistent across DP/Platinum/HGSS. Its own WEST script is just the
-        // self-contained finger-wag flourish; the actual "call a random other move" behaviour lives in the
-        // battle engine's move-selection logic, not the animation script, so this preview picks one itself
-        // as a plausible-looking bonus once the finger-wag finishes.
+        // The game picks Metronome's move in battle code, so the preview picks one itself after the finger wag.
         private const int MetronomeMoveId = 118;
-        private bool IsMetronomePreview => IsWest && _fileIndex == MetronomeMoveId;
+        private bool IsMetronomePreview => IsAnimation && _fileIndex == MetronomeMoveId;
         private static readonly Random _metronomeRandom = new Random();
         private int _metronomeCalledMoveId = -1;
 
@@ -1441,59 +1406,49 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (!HasPreview) return;
             if (IsCellPlaying) { StopCell(); return; }
             _cellFrameIdx = 0; _cellTick = 0; _cellLoops = 0; _previewFrames = 0;
-            // Re-establish the CURRENTLY selected move's own cell resource on every fresh play, not just on
-            // selection: a previous play may have chained into a Metronome-called move (StartChainedWest)
-            // and left ITS graphics loaded, since SetupCellPreview only runs on selection, not on repeated
-            // Play clicks for the same move.
+            // A previous play may have chained into Metronome's move and left its sprites loaded.
             var cmds = BuildCommands();
             LoadCellResourcesForCommands(cmds, _fileIndex);
             if (HasCellAnimation && _cellFrames.Count > 0) CellPreview = _cellFrames[0].Bitmap;
-            // Fresh timeline interpreter each play: runs the WEST script, spawning emitters / firing shake+fade
-            // at the right frames.
-            // Anchor the attacker on the chosen side: player (bottom) by default, enemy (top) when toggled.
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
             double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
             _notesShown = 0;
-            _west = new WestPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
+            _animPlayer = new BattleAnimPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
                                    attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove())
             { SecondTurnVariant = _secondTurnVariant };
-            _west.Cells = _cellRenderer;   // general CATS engine: ACT_ADD opcodes spawn live cell actors from these
-            _west.PlaySound = PreviewSound;   // WEST_SE-family opcodes audibly play their sound during preview
-            _west.PlayCry = PreviewCry;       // WEST_VOICE_PLAY plays the attacking Pokemon's own cry
-            _west.StopSound = PreviewStopSound;
-            _west.MovePower = GetMovePower();   // real base power (MoveData.damage) for WE_222's power-scaled shake
-            int moveFlag = GetMoveFlagField();  // WazaData byte 11: hide gauges unless FLAG_PUT_GAUGE, shadow if DEL_SHADOW
+            _animPlayer.Cells = _cellRenderer;
+            _animPlayer.PlaySound = PreviewSound;
+            _animPlayer.PlayCry = PreviewCry;
+            _animPlayer.StopSound = PreviewStopSound;
+            _animPlayer.MovePower = GetMovePower();
+            int moveFlag = GetMoveFlagField();
             _hideGaugesThisMove = moveFlag >= 0 && (moveFlag & 0x40) == 0;
             _hideShadowThisMove = moveFlag >= 0 && (moveFlag & 0x80) != 0;
             _metronomeCalledMoveId = IsMetronomePreview ? PickRandomMetronomeTarget() : -1;
 
-            ParticlePreview = _west.RenderFrame();
+            ParticlePreview = _animPlayer.RenderFrame();
             _previewTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000.0 / 60) };
             _previewTimer.Tick -= PreviewTick; _previewTimer.Tick += PreviewTick;
             _previewTimer.Start();
             RaisePreviewProps();
         }
 
-        /// <summary>Swaps the live preview to a SECOND, independent WestPlayer for the move Metronome "called":
-        /// its own real WEST script (not the currently-edited grid), so an in-progress edit to Metronome's own
-        /// script can't affect it. Reloads the shared cell renderer for the called move's own CATS resource
-        /// (same fix as ordinary move-to-move switching, otherwise it would render with Metronome's hand).</summary>
-        private void StartChainedWest(int moveId)
+        private void StartChainedAnimation(int moveId)
         {
             var bytes = CurrentNarc.Get(moveId);
-            var cmds = bytes != null ? WestScript.Parse(bytes, _version) : new List<WazaSeqCommand>();
+            var cmds = bytes != null ? BattleAnimScript.Parse(bytes, _version) : new List<WazaSeqCommand>();
             LoadCellResourcesForCommands(cmds, moveId);
 
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
             double dX = _attackerIsEnemy ? _atX : _dfX, dY = _attackerIsEnemy ? _atY : _dfY;
-            _west = new WestPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
+            _animPlayer = new BattleAnimPlayer(cmds, _version, _particleNarc, aX, aY, dX, dY,
                                    attackerIsEnemy: _attackerIsEnemy, selfTarget: IsSelfTargetMove(moveId))
             { SecondTurnVariant = _secondTurnVariant };
-            _west.Cells = _cellRenderer;
-            _west.PlaySound = PreviewSound;
-            _west.PlayCry = PreviewCry;
-            _west.StopSound = PreviewStopSound;
-            _west.MovePower = GetMovePower(moveId);
+            _animPlayer.Cells = _cellRenderer;
+            _animPlayer.PlaySound = PreviewSound;
+            _animPlayer.PlayCry = PreviewCry;
+            _animPlayer.StopSound = PreviewStopSound;
+            _animPlayer.MovePower = GetMovePower(moveId);
             int moveFlag = GetMoveFlagField(moveId);
             _hideGaugesThisMove = moveFlag >= 0 && (moveFlag & 0x40) == 0;
             _hideShadowThisMove = moveFlag >= 0 && (moveFlag & 0x80) != 0;
@@ -1531,50 +1486,48 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void PreviewTick(object sender, EventArgs e)
         {
-            // When the WEST script drives CATS cell actors (incl. the Surf WE_057 wave) the cells are composited
-            // straight into SceneComposite; hide the legacy CellPreview overlay so it can't double-draw. Only a
-            // STANDALONE cell archive (no CATS actors) still previews through the overlay by cycling its frames.
-            bool cellsViaCats = _west != null && _west.CatsActors.Count > 0;
-            if (!cellsViaCats && HasCellAnimation && _cellFrames.Count > 0 && ++_cellTick >= _cellFrames[_cellFrameIdx].Duration)
+            // Actors are drawn into SceneComposite, so the standalone cell overlay would draw them twice.
+            bool cellsViaActors = _animPlayer != null && _animPlayer.SpriteActors.Count > 0;
+            if (!cellsViaActors && HasCellAnimation && _cellFrames.Count > 0 && ++_cellTick >= _cellFrames[_cellFrameIdx].Duration)
             {
                 _cellTick = 0;
                 if (_cellFrameIdx + 1 >= _cellFrames.Count) _cellLoops++;
                 _cellFrameIdx = (_cellFrameIdx + 1) % _cellFrames.Count;
                 CellPreview = _cellFrames[_cellFrameIdx].Bitmap;
             }
-            if (_west != null)
+            if (_animPlayer != null)
             {
-                if (cellsViaCats && CellOpacity != 0) CellOpacity = 0;
-                _west.Step();
+                if (cellsViaActors && CellOpacity != 0) CellOpacity = 0;
+                _animPlayer.Step();
                 // A note is only found when the command that earns it runs, which is partway through,
                 // so the panel has to be told again rather than only when the preview was built.
-                if (_west.Notes.Count != _notesShown)
+                if (_animPlayer.Notes.Count != _notesShown)
                 {
-                    _notesShown = _west.Notes.Count;
+                    _notesShown = _animPlayer.Notes.Count;
                     OnPropertyChanged(nameof(PreviewNotes));
                     OnPropertyChanged(nameof(HasPreviewNotes));
                 }
-                ParticlePreview = _west.RenderFrame();
-                SceneComposite = _compositor.Render(_west);   // backdrop + mons + cell actors + effect-BG, blended exactly
-                ShakeX = _west.ShakeX; ShakeY = _west.ShakeY;
-                BackgroundDarken = _west.FadeOpacity;
-                if (_west.FadeOpacity > 0) FadeBrush = new SolidColorBrush(Color.FromRgb(_west.FadeR, _west.FadeG, _west.FadeB));
-                PlayerOffsetX = _west.MonDX[0] + _west.MonShakeX[0]; PlayerOffsetY = _west.MonDY[0] + _west.MonShakeY[0];
-                PlayerRotation = _west.MonRot[0]; PlayerScaleX = _west.MonScaleX[0]; PlayerScaleY = _west.MonScaleY[0];
-                PlayerVisible = _west.MonVisible[0]; PlayerTintOpacity = _west.MonTintA[0];
-                EnemyOffsetX = _west.MonDX[1] + _west.MonShakeX[1]; EnemyOffsetY = _west.MonDY[1] + _west.MonShakeY[1];
-                EnemyRotation = _west.MonRot[1]; EnemyScaleX = _west.MonScaleX[1]; EnemyScaleY = _west.MonScaleY[1];
-                EnemyVisible = _west.MonVisible[1]; EnemyTintOpacity = _west.MonTintA[1];
-                if (_west.MonTintA[0] > 0 || _west.MonTintA[1] > 0)
-                    TintBrush = new SolidColorBrush(Color.FromRgb(_west.TintR, _west.TintG, _west.TintB));
+                ParticlePreview = _animPlayer.RenderFrame();
+                SceneComposite = _compositor.Render(_animPlayer);   // backdrop + mons + cell actors + effect-BG, blended exactly
+                ShakeX = _animPlayer.ShakeX; ShakeY = _animPlayer.ShakeY;
+                BackgroundDarken = _animPlayer.FadeOpacity;
+                if (_animPlayer.FadeOpacity > 0) FadeBrush = new SolidColorBrush(Color.FromRgb(_animPlayer.FadeR, _animPlayer.FadeG, _animPlayer.FadeB));
+                PlayerOffsetX = _animPlayer.MonDX[0] + _animPlayer.MonShakeX[0]; PlayerOffsetY = _animPlayer.MonDY[0] + _animPlayer.MonShakeY[0];
+                PlayerRotation = _animPlayer.MonRot[0]; PlayerScaleX = _animPlayer.MonScaleX[0]; PlayerScaleY = _animPlayer.MonScaleY[0];
+                PlayerVisible = _animPlayer.MonVisible[0]; PlayerTintOpacity = _animPlayer.MonTintA[0];
+                EnemyOffsetX = _animPlayer.MonDX[1] + _animPlayer.MonShakeX[1]; EnemyOffsetY = _animPlayer.MonDY[1] + _animPlayer.MonShakeY[1];
+                EnemyRotation = _animPlayer.MonRot[1]; EnemyScaleX = _animPlayer.MonScaleX[1]; EnemyScaleY = _animPlayer.MonScaleY[1];
+                EnemyVisible = _animPlayer.MonVisible[1]; EnemyTintOpacity = _animPlayer.MonTintA[1];
+                if (_animPlayer.MonTintA[0] > 0 || _animPlayer.MonTintA[1] > 0)
+                    TintBrush = new SolidColorBrush(Color.FromRgb(_animPlayer.TintR, _animPlayer.TintG, _animPlayer.TintB));
             }
-            bool done = _west != null ? _west.Finished : (_cellLoops >= 1);
+            bool done = _animPlayer != null ? _animPlayer.Finished : (_cellLoops >= 1);
             if (done && _metronomeCalledMoveId >= 0)
             {
                 int calledMoveId = _metronomeCalledMoveId;
                 _metronomeCalledMoveId = -1;   // only chain once; the called move doesn't itself call another
                 _previewFrames = 0;
-                StartChainedWest(calledMoveId);
+                StartChainedAnimation(calledMoveId);
                 return;   // keep the timer running for the chained move instead of stopping
             }
             if (done || ++_previewFrames >= MaxPreviewFrames) StopCell();
@@ -1589,7 +1542,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // Re-render the static scene: the last played frame may have mons hidden / dragged (Dark Void
             // vanishes the defender mid-effect). Without this the frozen composite keeps them invisible
             // after playback ends.
-            if (IsWest && _sceneLoaded) SceneComposite = _compositor.Render(null);
+            if (IsAnimation && _sceneLoaded) SceneComposite = _compositor.Render(null);
             CellScaleX = CellScaleY = CellOpacity = 1;
             ShakeX = ShakeY = 0; BackgroundDarken = 0;
             PlayerOffsetX = PlayerOffsetY = EnemyOffsetX = EnemyOffsetY = 0;
@@ -1633,6 +1586,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // Context wired by the view-model so the row can name its opcode/params and report edits.
         internal System.Func<int, string> OpNameOf;
+        internal bool Script;
         internal System.Func<int, int> FixedArgCountOf;
         internal System.Action<ScriptCmdRow> OnEdited;
         internal System.Func<int, string> PreviewSound;   // returns an error message, or null on success
@@ -1651,8 +1605,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // (variable-length opcodes); the user can trim them via the raw-args field.
         private void PadArgs() { int need = FixedArgCountOf?.Invoke(_opId) ?? 0; while (Args.Count < need) Args.Add(0); }
         public string OpName => OpNameOf?.Invoke(_opId) ?? ("op" + _opId);
-        public string OpDisplay => DSPRE.Avalonia.Data.WestParamSchema.OpcodeDisplay(OpName);
-        public string OpDoc => DSPRE.Avalonia.Data.WestParamSchema.OpcodeDoc(OpName);
+        public string OpDisplay => DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDisplay(OpName, Script);
+        public string OpDoc => DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDoc(OpName, Script);
         public bool HasDoc => !string.IsNullOrEmpty(OpDoc);
         // Set the opcode during load without rebuilding/raising an edit (the caller rebuilds + keeps the loaded args).
         internal void _opIdSilent(int id) { _opId = id; Raise(nameof(OpId)); Raise(nameof(OpName)); Raise(nameof(OpDisplay)); Raise(nameof(OpDoc)); Raise(nameof(HasDoc)); }
@@ -1670,7 +1624,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 for (int i = 0; i < Args.Count; i++)
                 {
                     if (i > 0) sb.Append("  ");
-                    sb.Append(DSPRE.Avalonia.Data.WestParamSchema.ParamName(OpName, i)).Append('=').Append(Args[i]);
+                    sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(OpName, i, Script)).Append('=').Append(Args[i]);
                 }
                 return sb.ToString();
             }
@@ -1700,8 +1654,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             Params.Clear();
             for (int i = 0; i < Args.Count; i++)
-                Params.Add(new ParamVM(DSPRE.Avalonia.Data.WestParamSchema.ParamName(OpName, i), Args[i], i, this,
-                                       DSPRE.Avalonia.Data.WestParamSchema.EnumFor(OpName, i)));
+                Params.Add(new ParamVM(DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(OpName, i, Script), Args[i], i, this,
+                                       DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(OpName, i)));
             Raise(nameof(Summary)); Raise(nameof(RawArgs)); Raise(nameof(HasParams));
         }
         public bool HasParams => Args.Count > 0;
@@ -1753,7 +1707,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        public ParamVM(string name, int value, int index, ScriptCmdRow row, DSPRE.Avalonia.Data.WestParamSchema.EnumOption[] options)
+        public ParamVM(string name, int value, int index, ScriptCmdRow row, DSPRE.Avalonia.Data.BattleAnimSchema.EnumOption[] options)
         {
             Name = name; _value = value; _index = index; _row = row;
             if (options != null)

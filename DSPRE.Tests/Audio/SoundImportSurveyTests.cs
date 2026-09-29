@@ -42,7 +42,7 @@ namespace DSPRE.Tests
 
             var vm = new DSPRE.Avalonia.ViewModels.Audio.AudioEditorViewModel(null);
 
-            // PLAYER_ME is 2 in both games, from snd_system.c and both .sadl files.
+            // PLAYER_ME is 2 in both games.
             int wantFanfares = sdat.SeqNames.Count(k => Player(k.Key) == 2
                                                      && k.Value != SoundArchive.CrySequenceName);
             int wantMusic = sdat.SeqNames.Count(k => (Player(k.Key) == 1 || Player(k.Key) == 7)

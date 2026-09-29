@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.Data
             return t;
         }
 
-        private readonly List<PastCommand> _cmds;
+        private readonly List<PokemonAnimCommand> _cmds;
         private readonly int _startDelay;
         private readonly Mf[] _mfs = new Mf[MaxMoveFuncs];
         private int _pc, _wait;
@@ -53,9 +53,9 @@ namespace DSPRE.Avalonia.Data
         public bool Reverse { get; set; }
 
         /// <param name="startDelay">Ticks to wait before the first command, the sprite record's start delay.</param>
-        public PokeAnimPlayer(IEnumerable<PastCommand> cmds, int startDelay = 0)
+        public PokeAnimPlayer(IEnumerable<PokemonAnimCommand> cmds, int startDelay = 0)
         {
-            _cmds = new List<PastCommand>(cmds ?? Array.Empty<PastCommand>());
+            _cmds = new List<PokemonAnimCommand>(cmds ?? Array.Empty<PokemonAnimCommand>());
             _startDelay = Math.Max(0, startDelay);
             Reset();
         }
@@ -127,69 +127,69 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private void RunCmd(PastCommand c, ref int next)
+        private void RunCmd(PokemonAnimCommand c, ref int next)
         {
             var a = c.Args;
             switch (c.Op)
             {
-                case PastOp.End: RunEnd(); break;
-                case PastOp.SetRequest: _request = true; break;
-                case PastOp.SetDefault: SetDefault(); break;
-                case PastOp.HoldCmd: _hold = true; break;
-                case PastOp.SetWait: _wait = Arg(a, 0); _request = true; break;
-                case PastOp.SetDyCorrect: _correctDy = Arg(a, 0) & 0xFF; break;
+                case PokemonAnimOp.End: RunEnd(); break;
+                case PokemonAnimOp.WaitFrame: _request = true; break;
+                case PokemonAnimOp.SetOriginalPosition: SetDefault(); break;
+                case PokemonAnimOp.WaitTransform: _hold = true; break;
+                case PokemonAnimOp.SetStartDelay: _wait = Arg(a, 0); _request = true; break;
+                case PokemonAnimOp.SetYNormalization: _correctDy = Arg(a, 0) & 0xFF; break;
 
-                case PastOp.StartLoop: _loopStart = next; _loopMax = Arg(a, 0); _loopCount = 0; break;
-                case PastOp.EndLoop:
+                case PokemonAnimOp.Loop: _loopStart = next; _loopMax = Arg(a, 0); _loopCount = 0; break;
+                case PokemonAnimOp.LoopEnd:
                     _loopCount++;
                     if (_loopCount < _loopMax && _loopStart >= 0) next = _loopStart;
                     else { _loopStart = -1; _loopCount = _loopMax = 0; }
                     break;
 
-                case PastOp.CallMfCurve:        AddMf(Mk.Curve, a, targetWork: 1, paramNum: 6); break;
-                case PastOp.CallMfCurveDivTime: AddMf(Mk.CurveDiv, a, targetWork: 1, paramNum: 6); break;
-                case PastOp.CallMfLine:         AddMf(Mk.Line, a, targetWork: 0, paramNum: 4); break;
-                case PastOp.CallMfLineDivTime:  AddMf(Mk.LineDiv, a, targetWork: 0, paramNum: 3); break;
-                case PastOp.CallMfLineDst:      AddMf(Mk.LineDst, a, targetWork: 0, paramNum: 4); break;
+                case PokemonAnimOp.TransformCurve:        AddMf(Mk.Curve, a, targetWork: 1, paramNum: 6); break;
+                case PokemonAnimOp.TransformCurveEven: AddMf(Mk.CurveDiv, a, targetWork: 1, paramNum: 6); break;
+                case PokemonAnimOp.TransformLinear:         AddMf(Mk.Line, a, targetWork: 0, paramNum: 4); break;
+                case PokemonAnimOp.TransformLinearEven:  AddMf(Mk.LineDiv, a, targetWork: 0, paramNum: 3); break;
+                case PokemonAnimOp.TransformLinearBounded:      AddMf(Mk.LineDst, a, targetWork: 0, paramNum: 4); break;
 
-                case PastOp.PaletteFade:
+                case PokemonAnimOp.Fade:
                     if (a.Length >= 4) StartFade(a[0], a[1], a[2], a[3]);
                     break;
-                case PastOp.WaitPaletteFade:
+                case PokemonAnimOp.WaitFade:
                     if (_fadeActive) { _fadeWaiting = true; _request = true; }
                     break;
 
-                case PastOp.SetWorkVal: SetW(a, 0, Arg(a, 1)); break;
-                case PastOp.CopyWorkVal: SetW(a, 0, GetW(Arg(a, 1))); break;
-                case PastOp.AddWorkVal: { (int v1, int v2) = AddMulOperands(a); SetW(a, 0, v1 + v2); break; }
-                case PastOp.MulWorkVal: { (int v1, int v2) = AddMulOperands(a); SetW(a, 0, v1 * v2); break; }
-                case PastOp.SubWorkVal: { (int v1, int v2) = SubDivOperands(a); SetW(a, 0, v1 - v2); break; }
-                case PastOp.DivWorkVal: { (int v1, int v2) = SubDivOperands(a); SetW(a, 0, v2 == 0 ? 0 : v1 / v2); break; }
-                case PastOp.ModWorkVal: { (int v1, int v2) = SubDivOperands(a); SetW(a, 0, v2 == 0 ? 0 : v1 % v2); break; }
-                case PastOp.SetWorkValSin: SetW(a, 0, TrigWork(a, Sin)); break;
-                case PastOp.SetWorkValCos: SetW(a, 0, TrigWork(a, Cos)); break;
-                case PastOp.SetIfWorkVal: RunSetIf(a); break;
+                case PokemonAnimOp.SetVar: SetW(a, 0, Arg(a, 1)); break;
+                case PokemonAnimOp.CopyVar: SetW(a, 0, GetW(Arg(a, 1))); break;
+                case PokemonAnimOp.Add: { (int v1, int v2) = AddMulOperands(a); SetW(a, 0, v1 + v2); break; }
+                case PokemonAnimOp.Multiply: { (int v1, int v2) = AddMulOperands(a); SetW(a, 0, v1 * v2); break; }
+                case PokemonAnimOp.Subtract: { (int v1, int v2) = SubDivOperands(a); SetW(a, 0, v1 - v2); break; }
+                case PokemonAnimOp.Divide: { (int v1, int v2) = SubDivOperands(a); SetW(a, 0, v2 == 0 ? 0 : v1 / v2); break; }
+                case PokemonAnimOp.Modulo: { (int v1, int v2) = SubDivOperands(a); SetW(a, 0, v2 == 0 ? 0 : v1 % v2); break; }
+                case PokemonAnimOp.Sin: SetW(a, 0, TrigWork(a, Sin)); break;
+                case PokemonAnimOp.Cos: SetW(a, 0, TrigWork(a, Cos)); break;
+                case PokemonAnimOp.SetVarIf: RunSetIf(a); break;
 
-                case PastOp.SetVal: SpriteAttr(Arg(a, 0), GetW(Arg(a, 1)), set: true); break;
-                case PastOp.AddVal: SpriteAttr(Arg(a, 0), GetW(Arg(a, 1)), set: false); break;
-                case PastOp.SetAddVal:
+                case PokemonAnimOp.SetSpriteAttribute: SpriteAttr(Arg(a, 0), GetW(Arg(a, 1)), set: true); break;
+                case PokemonAnimOp.AddSpriteAttribute: SpriteAttr(Arg(a, 0), GetW(Arg(a, 1)), set: false); break;
+                case PokemonAnimOp.UpdateSpriteAttribute:
                     if (a.Length >= 4) SpriteAttr(a[0], a[1] == USE_WORK ? GetW(a[2]) : a[2], set: a[3] == PARAM_SET);
                     break;
 
-                case PastOp.SetD:
+                case PokemonAnimOp.SetOffset:
                     if (a.Length >= 2) { int t = a[1], w = GetW(a[0]); if (t == PARAM_X || t == PARAM_DX) _dx = w; else if (t == PARAM_Y || t == PARAM_DY) _dy = w; }
                     break;
-                case PastOp.SetTrans:
+                case PokemonAnimOp.SetTranslation:
                     if (a.Length >= 2) { if (a[1] == PARAM_X) _transX = GetW(a[0]); else if (a[1] == PARAM_Y) _transY = GetW(a[0]); }
                     break;
-                case PastOp.AddTrans:
+                case PokemonAnimOp.AddTranslation:
                     if (a.Length >= 2) { if (a[1] == PARAM_X) _transX += GetW(a[0]); else if (a[1] == PARAM_Y) _transY += GetW(a[0]); }
                     break;
-                case PastOp.SetAddParam:
+                case PokemonAnimOp.UpdateAttribute:
                     if (a.Length >= 4) AccSet(a[0], a[1] == USE_WORK ? GetW(a[2]) : a[2], a[3] == PARAM_SET);
                     break;
-                case PastOp.ApplyTrans: ApplyTrans(); break;
-                case PastOp.ApplyAffine: ApplyAffine(); break;
+                case PokemonAnimOp.ApplyTranslation: ApplyTrans(); break;
+                case PokemonAnimOp.ApplyScaleAndRotation: ApplyAffine(); break;
             }
         }
 
@@ -306,7 +306,7 @@ namespace DSPRE.Avalonia.Data
             int v2 = Arg(a, 2) == CALC_WORK ? GetW(Arg(a, 4)) : Arg(a, 4);
             return (v1, v2);
         }
-        // SET_WORK_VAL_SIN/COS: [dst, rad_idx, use1, l, use2, ofs].
+        // Sine and cosine work values: [dst, rad_idx, use1, l, use2, ofs].
         private int TrigWork(int[] a, int[] table)
         {
             int rad = GetW(Arg(a, 1));
@@ -314,7 +314,7 @@ namespace DSPRE.Avalonia.Data
             int ofs = Arg(a, 4) == USE_WORK ? GetW(Arg(a, 5)) : Arg(a, 5);
             return (table[((rad + ofs) & 0xFFFF) >> 4] * l) >> 12;
         }
-        // SET_IF_WORK_VAL: [use1, v1, v2, comp, use2, v3(dst), v4].
+        // Conditional work value: [use1, v1, v2, comp, use2, v3(dst), v4].
         private void RunSetIf(int[] a)
         {
             if (a.Length < 7) return;

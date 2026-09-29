@@ -16,10 +16,10 @@ namespace DSPRE.Tests
     /// real game by a number rather than by eye.
     /// </summary>
     [Collection("rom")]
-    public class WestDurationTests
+    public class BattleAnimDurationTests
     {
         private readonly ITestOutputHelper _out;
-        public WestDurationTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimDurationTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string Platinum = TestRoms.Platinum;
 
@@ -36,12 +36,12 @@ namespace DSPRE.Tests
         {
             string f = Path.Combine(dir, move.ToString("D4"));
             if (!File.Exists(f)) return -1;
-            var cmds = WestScript.Parse(File.ReadAllBytes(f), WazaSeqVersion.Plat);
+            var cmds = BattleAnimScript.Parse(File.ReadAllBytes(f), WazaSeqVersion.Plat);
             if (cmds.Count == 0) return -1;
 
-            // With no particle archive every particle lives no time and WAIT_PARTICLE returns at once,
+            // With no particle archive every particle lives no time and WaitForAllEmitters returns at once,
             // so the whole move looks far shorter than it is.
-            var w = new WestPlayer(cmds, WazaSeqVersion.Plat, new ScriptNarc(DirNames.wazaParticle),
+            var w = new BattleAnimPlayer(cmds, WazaSeqVersion.Plat, new ScriptNarc(DirNames.wazaParticle),
                                    64, 120, 190, 60,
                                    attackerIsEnemy: true, selfTarget: false);
             int n = 0;

@@ -48,8 +48,7 @@
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
     </StackPanel>
 
-    <!-- Command list + (WEST) storyboard. 50/50 split so the command-arg column can't expand and crowd out the
-         preview-side controls (background selector etc.); each half scrolls independently. -->
+    <!-- 50/50 so the argument column can't crowd out the preview controls. -->
     <!-- The command list needs the room: its lines are wide and clipping them is what makes a script
          unreadable. The preview keeps a sensible minimum and the splitter lets either side win. -->
     <!-- With a checkout linked, these archives are assembled from its own sources every build, so the
@@ -76,10 +75,10 @@
         <TabControl x:Name="EditorTabs" Grid.Row="0" Padding="0" SelectionChanged="EditorTabs_SelectionChanged">
           <TabItem Header="Read">
             <Panel>
-            <TextBlock IsVisible="{Binding !IsWest}" Margin="16" TextWrapping="Wrap"
+            <TextBlock IsVisible="{Binding !IsAnimation}" Margin="16" TextWrapping="Wrap"
                        VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
                        Text="Only move animations can be read here. Use the Cards or Text tab."/>
-            <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsWest}">
+            <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsAnimation}">
               <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
                 <TextBlock Text="Show as:" VerticalAlignment="Center" FontSize="12"/>
                 <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center">
@@ -155,7 +154,7 @@
                                       ItemsSource="{Binding EnumItems}" SelectedIndex="{Binding SelectedEnumIndex}"/>
                             <NumericUpDown Grid.Column="1" IsVisible="{Binding IsInt}" Value="{Binding ValueDec}"
                                            FormatString="0" Increment="1" HorizontalAlignment="Stretch"/>
-                            <!-- Sound arguments (WEST_SE and friends): show the real sound name + a preview button. -->
+                            <!-- Sound arguments (PlaySoundEffect and friends): show the real sound name + a preview button. -->
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsSound}" VerticalAlignment="Center">
                               <TextBlock Text="{Binding SoundName}" FontSize="11" VerticalAlignment="Center"
                                          Foreground="{DynamicResource Editor.Subtle}" MaxWidth="180" TextTrimming="CharacterEllipsis"/>
@@ -195,7 +194,6 @@
         </Border>
       </Grid>
 
-      <!-- WEST side panel: cell-animation preview (Phase 2) + readable storyboard timeline -->
       <!-- The preview, its controls and the storyboard together are taller than a short window, and without
            this the bottom of them was simply cut off with nothing to say so. -->
       <GridSplitter Grid.Column="1" Width="6" Background="Transparent" ResizeDirection="Columns"
@@ -216,12 +214,7 @@
               <Canvas.RenderTransform>
                 <TranslateTransform X="{Binding ShakeX}" Y="{Binding ShakeY}"/>
               </Canvas.RenderTransform>
-              <!-- Software-composited scene: backdrop + platforms + the two mons (WEST transforms) + the effect BG,
-                   blended with the real NDS G2_SetBlendAlpha. Replaces the old stacked image layers. -->
-              <!-- SceneComposite already includes the HAIKEI_PAL_FADE background darken/flash (applied BG-only inside the
-                   compositor, so the mons stay lit); no full-screen overlay rectangle here any more. -->
               <Image Source="{Binding SceneComposite}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
-              <!-- cell-anim (CATS) + particle glow (SPA) overlays. WE_057 (Surf) scales/fades the wave sprite. -->
               <Image Source="{Binding CellPreview}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill"
                      RenderOptions.BitmapInterpolationMode="None" Opacity="{Binding CellOpacity}" RenderTransformOrigin="{Binding CellOrigin}">
                 <Image.RenderTransform>
@@ -232,8 +225,6 @@
                 </Image.RenderTransform>
               </Image>
               <Image Source="{Binding ParticlePreview}" Canvas.Left="0" Canvas.Top="0" Width="256" Height="192" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
-              <!-- chrome: real HP gauges (pl_batt_obj frames, placed so the cell origin lands on the game's gauge
-                   position) with fallback to the bundled placeholders; both hide during a move per the WazaData flag -->
               <Image Source="{Binding GaugeEnemyImage}"  Canvas.Left="-70" Canvas.Top="-92" Width="256" Height="256"
                      IsVisible="{Binding RealGaugesVisible}" RenderOptions.BitmapInterpolationMode="None"/>
               <Image Source="{Binding GaugePlayerImage}" Canvas.Left="{Binding PlayerGaugeImageLeft}" Canvas.Top="-12" Width="256" Height="256"
@@ -242,7 +233,7 @@
               <Image Source="{x:Static views:BattleSceneControl.HealthYouAsset}"      Canvas.Left="129" Canvas.Top="95"  IsVisible="{Binding PlaceholderGaugesVisible}"/>
               <!-- gauge readout overlay (name / level / HP bar) from the gauge config popup. Positioned inside the real
                    gauge boxes: enemy ≈ x[-6..122] y[4..68] (center 58,36); player ≈ x[128..256] y[84..148] (center 192,116).
-                   Values from gauge.c's gage_parts tile layout; pixel coords are TUNABLE. -->
+                   Pixel coords are tunable. -->
               <Canvas IsVisible="{Binding GaugesVisible}">
                 <!-- Positions measured off real battles; the frame graphic already carries the "HP" label and
                      the empty bar groove, so only the fill and the text go on top. The groove is drawn here
@@ -280,7 +271,7 @@
                   ToolTip.Tip="This move's particle files"/>
           <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
-                    ToolTip.Tip="Preview the move cast from the enemy (top) side: flips SIDE_JP branches, attacker-anchored emitters and lunges."/>
+                    ToolTip.Tip="Preview the move cast from the enemy (top) side: flips side branches, attacker-anchored emitters and lunges."/>
           <CheckBox Content="Second animation" IsChecked="{Binding SecondTurnVariant}"
                     IsVisible="{Binding HasTurnCheck}" VerticalAlignment="Center" Margin="0,2,6,2"
                     ToolTip.Tip="This move holds two animations and the game alternates them by the battle's turn count. Tick this to watch the second one."/>
@@ -331,7 +322,7 @@
                        FontFamily="Consolas,monospace" FontSize="12" BorderThickness="0" Background="Transparent"/>
               <ItemsControl ItemsSource="{Binding StoryboardLines}" Margin="6,4">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="data:WestStoryboard+Line">
+                  <DataTemplate x:DataType="data:BattleAnimStoryboard+Line">
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1">
                       <TextBlock Text="{Binding Frame}" FontFamily="Consolas,monospace" FontSize="12"
                                  Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>

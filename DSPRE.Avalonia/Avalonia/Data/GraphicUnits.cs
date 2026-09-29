@@ -85,11 +85,11 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>
         /// The touch screen panel is not a backdrop, and its files had no colours of their own, so
-        /// they were shown and put back in whatever palette came to hand. The battle menus load
-        /// BATTLE_W_NCLR, and every one of their layers is drawn from BATTLE_W_NCGR.
+        /// they were shown and put back in whatever palette came to hand. Every layer of the battle
+        /// menus is drawn from the panel's one drawing and colours.
         /// </summary>
         private static int PanelColours(int fileIndex) =>
-            IsPanelFile(fileIndex) ? BattleBgNames.Find("BATTLE_W_NCLR") : -1;
+            IsPanelFile(fileIndex) ? BattleBgNames.Find("TouchScreen.Panel:Colours") : -1;
 
         /// <summary>The tiles a touch screen panel layer is arranged from.</summary>
         public static int PanelDrawing(int fileIndex)
@@ -97,8 +97,8 @@ namespace DSPRE.Avalonia.Data
             var names = BattleBgNames.Names();
             if (fileIndex < 0 || fileIndex >= names.Length) return -1;
             string n = names[fileIndex];
-            return n != null && n.StartsWith("BATTLE_WBG", StringComparison.Ordinal) && n.Contains("_NSCR")
-                ? BattleBgNames.Find("BATTLE_W_NCGR_BIN") : -1;
+            return n != null && n.StartsWith("TouchScreen.Layer.", StringComparison.Ordinal) && n.EndsWith(":Screen", StringComparison.Ordinal)
+                ? BattleBgNames.Find("TouchScreen.Panel:Drawing") : -1;
         }
 
         private static bool IsPanelFile(int fileIndex)
@@ -107,8 +107,8 @@ namespace DSPRE.Avalonia.Data
             if (fileIndex < 0 || fileIndex >= names.Length) return false;
             string n = names[fileIndex];
             return n != null
-                && (n.StartsWith("BATTLE_WBG", StringComparison.Ordinal)
-                    || string.Equals(n, "BATTLE_W_NCGR_BIN", StringComparison.Ordinal));
+                && (n.StartsWith("TouchScreen.Layer.", StringComparison.Ordinal)
+                    || string.Equals(n, "TouchScreen.Panel:Drawing", StringComparison.Ordinal));
         }
 
         /// <summary>Every backdrop's tiles are arranged by the one file they all share.</summary>

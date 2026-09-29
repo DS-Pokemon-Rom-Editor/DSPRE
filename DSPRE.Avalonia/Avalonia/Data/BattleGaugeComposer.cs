@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.Data
         {
             [Kind.PlayerSingle] = new Layout           // the games call this AA
             {
-                Graphic = "SINGLE_GAGE2", X = 192, Y = 116,
+                Graphic = "HpBar.Yours", X = 192, Y = 116,
                 Name = new[] { (0x13, 5), (0x1b, 5), (0x50, 3), (0x58, 3) },
                 LvMark = new[] { (0x53, 2), (0x5B, 2) },
                 LvDigits = new[] { (0x55, 3), (0x5d, 3) },
@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.OpponentSingle] = new Layout          // BB
             {
-                Graphic = "SINGLE_GAGE1", X = 58, Y = 36,
+                Graphic = "HpBar.Theirs", X = 58, Y = 36,
                 Name = new[] { (0x11, 7), (0x19, 7), (0x50, 1), (0x58, 1) },
                 LvMark = new[] { (0x51, 2), (0x59, 2) },
                 LvDigits = new[] { (0x53, 3), (0x5b, 3) },
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.PlayerNear] = new Layout              // A
             {
-                Graphic = "DOUBLE_GAGE3", X = 192, Y = 103,
+                Graphic = "HpBar.YoursDouble", X = 192, Y = 103,
                 Name = new[] { (0x12, 6), (0x1a, 6), (0x50, 2), (0x58, 2) },
                 LvMark = new[] { (0x52, 2), (0x5a, 2) },
                 LvDigits = new[] { (0x54, 3), (0x5c, 3) },
@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.OpponentFar] = new Layout             // B
             {
-                Graphic = "DOUBLE_GAGE1", X = 64, Y = 16,
+                Graphic = "HpBar.TheirsDouble", X = 64, Y = 16,
                 Name = new[] { (0x11, 7), (0x19, 7), (0x50, 1), (0x58, 1) },
                 LvMark = new[] { (0x51, 2), (0x59, 2) },
                 LvDigits = new[] { (0x53, 3), (0x5b, 3) },
@@ -77,7 +77,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.PlayerFar] = new Layout               // C
             {
-                Graphic = "DOUBLE_GAGE4", X = 198, Y = 132,
+                Graphic = "HpBar.YourPartner", X = 198, Y = 132,
                 Name = new[] { (0x12, 6), (0x1a, 6), (0x50, 2), (0x58, 2) },
                 LvMark = new[] { (0x52, 2), (0x5a, 2) },
                 LvDigits = new[] { (0x54, 3), (0x5c, 3) },
@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.Data
             },
             [Kind.OpponentNear] = new Layout            // D
             {
-                Graphic = "DOUBLE_GAGE2", X = 58, Y = 45,
+                Graphic = "HpBar.TheirPartner", X = 58, Y = 45,
                 Name = new[] { (0x11, 7), (0x19, 7), (0x50, 1), (0x58, 1) },
                 LvMark = new[] { (0x51, 2), (0x59, 2) },
                 LvDigits = new[] { (0x53, 3), (0x5b, 3) },
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Data
         // Diamond and Pearl's name field is a tile narrower; their other gauges match Platinum.
         private static readonly Layout DiamondPearlPlayerSingle = new()
         {
-            Graphic = "SINGLE_GAGE2", X = 198, Y = 116,
+            Graphic = "HpBar.Yours", X = 198, Y = 116,
             Name = new[] { (0x12, 6), (0x1a, 6), (0x50, 2), (0x58, 2) },
             LvMark = new[] { (0x52, 2), (0x5a, 2) },
             LvDigits = new[] { (0x54, 3), (0x5c, 3) },
@@ -181,7 +181,7 @@ namespace DSPRE.Avalonia.Data
 
             int drawing = BattleObjects.Find(layout.Graphic, "Drawing");
             int cells = BattleObjects.Find(layout.Graphic, "As it appears");
-            int colours = BattleObjects.Find("GAGE_PALETTE", "Colours");
+            int colours = BattleObjects.Find("HpBar.Shared", "Colours");
             if (drawing < 0 || cells < 0 || colours < 0) return null;
 
             byte[] tiles;

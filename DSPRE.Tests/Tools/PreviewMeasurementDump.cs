@@ -38,9 +38,9 @@ namespace DSPRE.Tests
                         int particles, int actors)
             Run(System.Collections.Generic.List<WazaSeqCommand> cmds, ScriptNarc particlesNarc, bool second)
         {
-            var w = new WestPlayer(cmds, WazaSeqVersion.Plat, particlesNarc, 64, 120, 190, 60,
+            var w = new BattleAnimPlayer(cmds, WazaSeqVersion.Plat, particlesNarc, 64, 120, 190, 60,
                                    attackerIsEnemy: true, selfTarget: false) { SecondTurnVariant = second };
-            var res = WestCats.Extract(cmds, WazaSeqVersion.Plat);
+            var res = BattleAnimSprites.Extract(cmds, WazaSeqVersion.Plat);
             if (res.HasCellAnimation)
             {
                 var cells = new WeCellAnimRenderer();
@@ -52,7 +52,7 @@ namespace DSPRE.Tests
             while (frames < 900 && !w.Finished)
             {
                 w.Step(); frames++;
-                mostActors = Math.Max(mostActors, w.CatsActors.Count);
+                mostActors = Math.Max(mostActors, w.SpriteActors.Count);
                 mostParticles = Math.Max(mostParticles, w.LiveParticles().Count());
 
                 double moved = Math.Max(Math.Abs(w.MonDX[1]) + Math.Abs(w.MonShakeX[1]),
@@ -93,13 +93,13 @@ namespace DSPRE.Tests
             {
                 var bytes = narc.Get(move);
                 if (bytes == null || bytes.Length == 0) { _out.WriteLine($"move {move}: no script"); continue; }
-                var cmds = WestScript.Parse(bytes, WazaSeqVersion.Plat);
+                var cmds = BattleAnimScript.Parse(bytes, WazaSeqVersion.Plat);
                 int pos = 0; foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
 
                 // Cast by the enemy, matching the recordings, with the cell resources the script asks for.
                 // A move with a turn check holds two whole animations and the games alternate them by turn, so
                 // both are measured; everything else has one.
-                bool twoTurn = cmds.Any(c => WestOpcodes.Name(WazaSeqVersion.Plat, c.OpId) == "WEST_TURN_CHK");
+                bool twoTurn = cmds.Any(c => BattleAnimCommands.Name(WazaSeqVersion.Plat, c.OpId) == "013");
                 var runA = Run(cmds, particles, second: false);
                 var runB = twoTurn ? Run(cmds, particles, second: true) : runA;
 
@@ -109,16 +109,16 @@ namespace DSPRE.Tests
 
                 if (Environment.GetEnvironmentVariable("DSPRE_TRACE_MOVE") == move.ToString())
                 {
-                    var w2 = new WestPlayer(cmds, WazaSeqVersion.Plat, particles, 64, 120, 190, 60,
+                    var w2 = new BattleAnimPlayer(cmds, WazaSeqVersion.Plat, particles, 64, 120, 190, 60,
                                             attackerIsEnemy: true, selfTarget: false);
                     foreach (var c in cmds)
-                        _out.WriteLine($"    {WestOpcodes.Name(WazaSeqVersion.Plat, c.OpId)} "
+                        _out.WriteLine($"    {BattleAnimCommands.Name(WazaSeqVersion.Plat, c.OpId)} "
                                        + string.Join(" ", c.Args));
-                    int calls = cmds.Count(c => WestOpcodes.Name(WazaSeqVersion.Plat, c.OpId) == "WEST_FUNC_CALL");
+                    int calls = cmds.Count(c => BattleAnimCommands.Name(WazaSeqVersion.Plat, c.OpId) == "CallFunc");
                     _out.WriteLine($"  trace: {cmds.Count} commands, {calls} routine calls");
-                    foreach (var g in cmds.Where(c => WestOpcodes.Name(WazaSeqVersion.Plat, c.OpId) == "WEST_FUNC_CALL")
+                    foreach (var g in cmds.Where(c => BattleAnimCommands.Name(WazaSeqVersion.Plat, c.OpId) == "CallFunc")
                                           .GroupBy(c => c.Args[0]).OrderByDescending(g2 => g2.Count()))
-                        _out.WriteLine($"    routine {g.Key} ({WestScriptDisplay.RoutineName(g.Key)}) x{g.Count()}");
+                        _out.WriteLine($"    routine {g.Key} ({BattleAnimScriptDisplay.RoutineName(g.Key)}) x{g.Count()}");
                     for (int i = 0; i < 200 && !w2.Finished; i++)
                     {
                         w2.Step();

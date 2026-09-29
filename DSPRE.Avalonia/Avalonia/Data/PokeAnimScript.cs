@@ -8,90 +8,90 @@ namespace DSPRE.Avalonia.Data
     /// the bytecode). These drive the per-Pokémon entry/idle program animations referenced by the animation data
     /// table (the Pokémon animation NARC).
     /// </summary>
-    public enum PastOp
+    public enum PokemonAnimOp
     {
-        End = 0, SetRequest, SetDefault, SetIfWorkVal, SetWorkVal, CopyWorkVal,
-        AddWorkVal, MulWorkVal, SubWorkVal, DivWorkVal, ModWorkVal,
-        StartLoop, EndLoop, SetVal, AddVal, SetAddVal, SetWorkValSin, SetWorkValCos,
-        SetTrans, AddTrans, SetAddParam, ApplyTrans, ApplyAffine, SetD,
-        HoldCmd, SetDyCorrect, CallMfCurve, CallMfCurveDivTime,
-        CallMfLine, CallMfLineDivTime, CallMfLineDst,
-        SetWait, PaletteFade, WaitPaletteFade,
+        End = 0, WaitFrame, SetOriginalPosition, SetVarIf, SetVar, CopyVar,
+        Add, Multiply, Subtract, Divide, Modulo,
+        Loop, LoopEnd, SetSpriteAttribute, AddSpriteAttribute, UpdateSpriteAttribute, Sin, Cos,
+        SetTranslation, AddTranslation, UpdateAttribute, ApplyTranslation, ApplyScaleAndRotation, SetOffset,
+        WaitTransform, SetYNormalization, TransformCurve, TransformCurveEven,
+        TransformLinear, TransformLinearEven, TransformLinearBounded,
+        SetStartDelay, Fade, WaitFade,
     }
 
-    /// <summary>One decoded PAST command: an opcode plus its fixed-length argument words (each a 32-bit int).</summary>
-    public sealed class PastCommand
+    /// <summary>One decoded Pokémon animation command: an opcode plus its fixed-length argument words (each a 32-bit int).</summary>
+    public sealed class PokemonAnimCommand
     {
-        public PastOp Op;
+        public PokemonAnimOp Op;
         public int[] Args;
-        public PastCommand(PastOp op, int[] args) { Op = op; Args = args ?? Array.Empty<int>(); }
+        public PokemonAnimCommand(PokemonAnimOp op, int[] args) { Op = op; Args = args ?? Array.Empty<int>(); }
         public override string ToString() => Args.Length == 0 ? Op.ToString() : $"{Op} {string.Join(", ", Args)}";
     }
 
     /// <summary>
-    /// Reads/writes a single PAST animation script (one file in the pokeanime NARC). The bytecode is a stream
+    /// Reads/writes a single Pokémon animation script (one file in the pokeanime NARC). The bytecode is a stream
     /// of little-endian 32-bit words: an opcode word followed by that opcode's fixed argument words. Parsing
-    /// stops after <see cref="PastOp.End"/>.
+    /// stops after <see cref="PokemonAnimOp.End"/>.
     /// </summary>
     public static class PokeAnimScript
     {
-        // Argument-word count per opcode (index = (int)PastOp).
+        // Argument-word count per opcode (index = (int)PokemonAnimOp).
         private static readonly int[] ArgCount =
         {
-            /*End*/0, /*SetRequest*/0, /*SetDefault*/0, /*SetIfWorkVal*/7, /*SetWorkVal*/2, /*CopyWorkVal*/2,
-            /*AddWorkVal*/4, /*MulWorkVal*/4, /*SubWorkVal*/5, /*DivWorkVal*/5, /*ModWorkVal*/5,
-            /*StartLoop*/1, /*EndLoop*/0, /*SetVal*/2, /*AddVal*/2, /*SetAddVal*/4, /*SetWorkValSin*/6, /*SetWorkValCos*/6,
-            /*SetTrans*/2, /*AddTrans*/2, /*SetAddParam*/4, /*ApplyTrans*/0, /*ApplyAffine*/0, /*SetD*/2,
-            /*HoldCmd*/0, /*SetDyCorrect*/1, /*CallMfCurve*/8, /*CallMfCurveDivTime*/8,
-            /*CallMfLine*/6, /*CallMfLineDivTime*/5, /*CallMfLineDst*/6,
-            /*SetWait*/1, /*PaletteFade*/4, /*WaitPaletteFade*/0,
+            /*End*/0, /*WaitFrame*/0, /*SetOriginalPosition*/0, /*SetVarIf*/7, /*SetVar*/2, /*CopyVar*/2,
+            /*Add*/4, /*Multiply*/4, /*Subtract*/5, /*Divide*/5, /*Modulo*/5,
+            /*Loop*/1, /*LoopEnd*/0, /*SetSpriteAttribute*/2, /*AddSpriteAttribute*/2, /*UpdateSpriteAttribute*/4, /*Sin*/6, /*Cos*/6,
+            /*SetTranslation*/2, /*AddTranslation*/2, /*UpdateAttribute*/4, /*ApplyTranslation*/0, /*ApplyScaleAndRotation*/0, /*SetOffset*/2,
+            /*WaitTransform*/0, /*SetYNormalization*/1, /*TransformCurve*/8, /*TransformCurveEven*/8,
+            /*TransformLinear*/6, /*TransformLinearEven*/5, /*TransformLinearBounded*/6,
+            /*SetStartDelay*/1, /*Fade*/4, /*WaitFade*/0,
         };
 
-        public static int ArgsFor(PastOp op)
+        public static int ArgsFor(PokemonAnimOp op)
         {
             int i = (int)op;
             return (i >= 0 && i < ArgCount.Length) ? ArgCount[i] : 0;
         }
 
         // Friendly argument names per opcode, for the editor's hints.
-        private static readonly System.Collections.Generic.Dictionary<PastOp, string[]> ArgNamesTable = new()
+        private static readonly System.Collections.Generic.Dictionary<PokemonAnimOp, string[]> ArgNamesTable = new()
         {
-            [PastOp.SetIfWorkVal] = new[] { "use1", "v1", "v2", "comp", "use2", "dst", "v4" },
-            [PastOp.SetWorkVal] = new[] { "idx", "val" },
-            [PastOp.CopyWorkVal] = new[] { "dstIdx", "srcIdx" },
-            [PastOp.AddWorkVal] = new[] { "dst", "calc", "v1", "v2" },
-            [PastOp.MulWorkVal] = new[] { "dst", "calc", "v1", "v2" },
-            [PastOp.SubWorkVal] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
-            [PastOp.DivWorkVal] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
-            [PastOp.ModWorkVal] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
-            [PastOp.StartLoop] = new[] { "count" },
-            [PastOp.SetVal] = new[] { "ssParam", "idx" },
-            [PastOp.AddVal] = new[] { "ssParam", "idx" },
-            [PastOp.SetAddVal] = new[] { "ssParam", "use", "v", "ssCalc" },
-            [PastOp.SetWorkValSin] = new[] { "dst", "radIdx", "use1", "L", "use2", "ofs" },
-            [PastOp.SetWorkValCos] = new[] { "dst", "radIdx", "use1", "L", "use2", "ofs" },
-            [PastOp.SetTrans] = new[] { "idx", "trans" },
-            [PastOp.AddTrans] = new[] { "idx", "trans" },
-            [PastOp.SetAddParam] = new[] { "param", "use", "v", "calc" },
-            [PastOp.SetD] = new[] { "idx", "trans" },
-            [PastOp.SetDyCorrect] = new[] { "flag" },
-            [PastOp.CallMfCurve] = new[] { "apply", "wait", "type", "target", "L", "rad", "ofs", "loop" },
-            [PastOp.CallMfCurveDivTime] = new[] { "apply", "wait", "type", "target", "L", "rad", "ofs", "loop" },
-            [PastOp.CallMfLine] = new[] { "apply", "wait", "target", "vel", "accel", "loop" },
-            [PastOp.CallMfLineDivTime] = new[] { "apply", "wait", "target", "move", "loop" },
-            [PastOp.CallMfLineDst] = new[] { "apply", "wait", "target", "vel", "accel", "dst" },
-            [PastOp.SetWait] = new[] { "wait" },
-            [PastOp.PaletteFade] = new[] { "startEvy", "endEvy", "wait", "rgb" },
+            [PokemonAnimOp.SetVarIf] = new[] { "use1", "v1", "v2", "comp", "use2", "dst", "v4" },
+            [PokemonAnimOp.SetVar] = new[] { "idx", "val" },
+            [PokemonAnimOp.CopyVar] = new[] { "dstIdx", "srcIdx" },
+            [PokemonAnimOp.Add] = new[] { "dst", "calc", "v1", "v2" },
+            [PokemonAnimOp.Multiply] = new[] { "dst", "calc", "v1", "v2" },
+            [PokemonAnimOp.Subtract] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
+            [PokemonAnimOp.Divide] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
+            [PokemonAnimOp.Modulo] = new[] { "dst", "calc1", "calc2", "v1", "v2" },
+            [PokemonAnimOp.Loop] = new[] { "count" },
+            [PokemonAnimOp.SetSpriteAttribute] = new[] { "ssParam", "idx" },
+            [PokemonAnimOp.AddSpriteAttribute] = new[] { "ssParam", "idx" },
+            [PokemonAnimOp.UpdateSpriteAttribute] = new[] { "ssParam", "use", "v", "ssCalc" },
+            [PokemonAnimOp.Sin] = new[] { "dst", "radIdx", "use1", "L", "use2", "ofs" },
+            [PokemonAnimOp.Cos] = new[] { "dst", "radIdx", "use1", "L", "use2", "ofs" },
+            [PokemonAnimOp.SetTranslation] = new[] { "idx", "trans" },
+            [PokemonAnimOp.AddTranslation] = new[] { "idx", "trans" },
+            [PokemonAnimOp.UpdateAttribute] = new[] { "param", "use", "v", "calc" },
+            [PokemonAnimOp.SetOffset] = new[] { "idx", "trans" },
+            [PokemonAnimOp.SetYNormalization] = new[] { "flag" },
+            [PokemonAnimOp.TransformCurve] = new[] { "apply", "wait", "type", "target", "L", "rad", "ofs", "loop" },
+            [PokemonAnimOp.TransformCurveEven] = new[] { "apply", "wait", "type", "target", "L", "rad", "ofs", "loop" },
+            [PokemonAnimOp.TransformLinear] = new[] { "apply", "wait", "target", "vel", "accel", "loop" },
+            [PokemonAnimOp.TransformLinearEven] = new[] { "apply", "wait", "target", "move", "loop" },
+            [PokemonAnimOp.TransformLinearBounded] = new[] { "apply", "wait", "target", "vel", "accel", "dst" },
+            [PokemonAnimOp.SetStartDelay] = new[] { "wait" },
+            [PokemonAnimOp.Fade] = new[] { "startEvy", "endEvy", "wait", "rgb" },
         };
 
         /// <summary>Friendly argument names for an opcode (empty array if it takes no args / has no labels).</summary>
-        public static string[] ArgNames(PastOp op) => ArgNamesTable.TryGetValue(op, out var n) ? n : Array.Empty<string>();
+        public static string[] ArgNames(PokemonAnimOp op) => ArgNamesTable.TryGetValue(op, out var n) ? n : Array.Empty<string>();
 
         /// <summary>Parses a script blob into commands. Tolerant: stops at End, or when a word isn't a known
         /// opcode / the args would run past the end (returns what parsed so far).</summary>
-        public static List<PastCommand> Parse(byte[] data)
+        public static List<PokemonAnimCommand> Parse(byte[] data)
         {
-            var cmds = new List<PastCommand>();
+            var cmds = new List<PokemonAnimCommand>();
             if (data == null) return cmds;
             int pos = 0;
             int Words() => data.Length / 4;
@@ -100,20 +100,20 @@ namespace DSPRE.Avalonia.Data
             {
                 int opVal = ReadWord(pos);
                 if (opVal < 0 || opVal >= ArgCount.Length) break;   // not a valid opcode → stop
-                var op = (PastOp)opVal;
+                var op = (PokemonAnimOp)opVal;
                 int n = ArgCount[opVal];
                 if (pos + 1 + n > Words()) break;                   // args would overrun → stop
                 var args = new int[n];
                 for (int i = 0; i < n; i++) args[i] = ReadWord(pos + 1 + i);
-                cmds.Add(new PastCommand(op, args));
+                cmds.Add(new PokemonAnimCommand(op, args));
                 pos += 1 + n;
-                if (op == PastOp.End) break;
+                if (op == PokemonAnimOp.End) break;
             }
             return cmds;
         }
 
         /// <summary>Serializes commands back to a little-endian word blob (for the editor's save path).</summary>
-        public static byte[] Serialize(IReadOnlyList<PastCommand> cmds)
+        public static byte[] Serialize(IReadOnlyList<PokemonAnimCommand> cmds)
         {
             int words = 0;
             foreach (var c in cmds) words += 1 + c.Args.Length;

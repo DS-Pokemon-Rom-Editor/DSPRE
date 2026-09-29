@@ -24,10 +24,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private string _searchText = "";
         public string SearchText { get => _searchText; set { if (Set(ref _searchText, value)) Refresh(); } }
 
-        public ScriptCommandGuideViewModel(bool isWest)
+        public ScriptCommandGuideViewModel(bool isAnimation)
         {
-            Title = isWest ? "Move animation commands (WEST)" : "Move effect-sequence commands";
-            _all = new List<GuideEntry>(isWest ? ScriptCommandGuide.ForWest() : ScriptCommandGuide.ForWazaSeq());
+            Title = isAnimation ? "Move animation commands" : "Move effect-sequence commands";
+            _all = new List<GuideEntry>(isAnimation ? ScriptCommandGuide.ForWest() : ScriptCommandGuide.ForWazaSeq());
             Refresh();
         }
 

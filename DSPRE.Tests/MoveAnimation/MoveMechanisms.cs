@@ -14,55 +14,61 @@ namespace DSPRE.Tests
             var found = new SortedSet<string>(StringComparer.Ordinal);
             if (cmds == null || cmds.Count == 0) return found;
 
-            int funcCall = WestOpcodes.Id(version, "WEST_FUNC_CALL");
+            int funcCall = BattleAnimCommands.Id(version, "CallFunc");
             bool anyParticle = false, anyMotion = false;
 
             foreach (var c in cmds)
             {
-                string op = WestOpcodes.Name(version, c.OpId);
+                string op = BattleAnimCommands.Name(version, c.OpId);
                 if (op == null) continue;
 
                 // Every opcode counts as its own mechanism. This is what stops the list going stale.
                 found.Add("opcode: " + op);
 
-                if (op.StartsWith("WEST_ADD_PARTICLE", StringComparison.Ordinal)
-                    || op is "WEST_LOAD_PARTICLE" or "WEST_LOAD_PARTICLE_EX" or "WEST_WAIT_PARTICLE"
-                            or "WEST_EXIT_PARTICLE")
+                if (op.StartsWith("CreateEmitter", StringComparison.Ordinal)
+                    || op is "LoadParticleSystem" or "LoadDebugParticleSystem" or "WaitForAllEmitters"
+                            or "UnloadParticleSystem")
                 { anyParticle = true; found.Add("draws with: particles"); }
 
-                if (op.StartsWith("WEST_CATS", StringComparison.Ordinal)) found.Add("draws with: cell actors");
-                if (op.StartsWith("WEST_HAIKEI", StringComparison.Ordinal)) found.Add("draws with: a background swap");
-                if (op.StartsWith("WEST_POKEOAM", StringComparison.Ordinal)) found.Add("draws with: dropped sprite copies");
-                if (op is "WEST_POKEBG_DROP" or "WEST_POKEBG_DROP_RESET") found.Add("draws with: a Pokemon background");
-                if (op is "WEST_HENSIN_ON" or "WEST_HENSIN_ON_RC") found.Add("draws with: a replaced Pokemon graphic");
-                if (op == "WEST_FLASH") found.Add("screen: a flash");
+                if (op is "InitSpriteManager" or "LoadCharResObj" or "LoadPlttRes" or "LoadCellResObj" or "LoadAnimResObj"
+                        or "AddSpriteWithFunc" or "AddSprite" or "FreeSpriteManager")
+                    found.Add("draws with: cell actors");
+                if (op is "SwitchBg" or "SwitchBgEx" or "SwitchBgAnimated" or "SetBgSwitchVar" or "SetBg" or "RestoreBg"
+                        or "WaitForBgSwitch" or "WaitForPartialBgSwitch")
+                    found.Add("draws with: a background swap");
+                if (op is "InitPokemonSpriteManager" or "LoadPokemonSpriteDummyResources" or "AddPokemonSprite"
+                        or "RemovePokemonSprite" or "FreePokemonSpriteManager" or "CancelTrackingTask")
+                    found.Add("draws with: dropped sprite copies");
+                if (op is "LoadPokemonSpriteIntoBg" or "RemovePokemonSpriteFromBg") found.Add("draws with: a Pokemon background");
+                if (op is "StartTransform" or "StartTransformRecolour") found.Add("draws with: a replaced Pokemon graphic");
+                if (op == "FlashScreen") found.Add("screen: a flash");
 
-                if (op.StartsWith("WEST_SE", StringComparison.Ordinal) || op.StartsWith("WEST_VOICE", StringComparison.Ordinal))
+                if (op.Contains("SoundEffect", StringComparison.Ordinal) || op is "PlayPokemonCry" or "WaitForPokemonCries")
                     found.Add("plays: sound");
 
-                if (op is "WEST_LOOP" or "WEST_LOOP_LABEL") found.Add("structure: a loop");
-                if (op is "WEST_SEQ_CALL" or "WEST_END_CALL") found.Add("structure: a subroutine call");
-                if (op is "WEST_TURN_CHK" or "WEST_SIDE_JP" or "WEST_SEQ_JP" or "WEST_TENKI_JP"
-                        or "WEST_CONTEST_JP" or "WEST_PTAT_JP")
+                if (op is "EndLoop" or "BeginLoop") found.Add("structure: a loop");
+                if (op is "Call" or "Return") found.Add("structure: a subroutine call");
+                if (op is "JumpByTurn" or "JumpIfBattlerSide" or "Jump" or "JumpIfWeather"
+                        or "JumpIfContest" or "JumpIfFriendlyFire")
                     found.Add("structure: a branch");
 
                 // The operator settings, each value counted separately: a setting nothing uses is one the
                 // preview never has to get right, and a setting one move uses is easy to miss.
-                if (op == "WEST_EX_DATA")
+                if (op == "SetExtraParams")
                 {
                     for (int i = 0; i < c.Args.Length; i++)
                     {
-                        var options = WestParamSchema.EnumFor(op, i);
+                        var options = BattleAnimSchema.EnumFor(op, i);
                         if (options == null) continue;
                         foreach (var o in options)
                             if (o.Value == c.Args[i] && o.Label != "None")
-                                found.Add($"setting: {WestParamSchema.ParamName(op, i)} = {o.Label}");
+                                found.Add($"setting: {BattleAnimSchema.ParamName(op, i)} = {o.Label}");
                     }
                 }
 
                 if (c.OpId == funcCall && c.Args.Length > 0)
                 {
-                    var r = WestRoutines.Get(c.Args[0]);
+                    var r = BattleAnimFuncs.Get(c.Args[0]);
                     found.Add("routine: " + (r?.Name ?? c.Args[0].ToString()));
                     anyMotion = true;
                     if (c.Args[0] is 82 or 83) found.Add("draws with: a status overlay");

@@ -5,7 +5,7 @@ using Xunit;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// The three ways a message can break, which PokeFontPrint in pmfprint.c treats quite differently.
+    /// The three ways a message can break, which the game's text printer treats quite differently.
     /// </summary>
     public class FieldMessageScriptTests
     {
@@ -18,7 +18,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ALineBreakDoesNotStopToWaitForAnyone()
         {
-            // CR_ returns PRINT_RESULT_LOOP: it moves down a line and carries straight on.
+            // A line break moves down a line and carries straight on.
             var frames = Frames("first line\\nsecond line");
 
             Assert.Single(frames);
@@ -29,7 +29,7 @@ namespace DSPRE.Tests
         [Fact]
         public void TheClearCodeWaitsAndThenEmptiesTheBox()
         {
-            // NORMAL_WAIT_ goes to PRINTSEQ_TRGWAIT_CLEAR, which fills the window with the background
+            // A wait-then-clear break fills the window with the background
             // and puts the writing position back to the very start.
             var frames = Frames("page one\\rpage two");
 
@@ -45,7 +45,7 @@ namespace DSPRE.Tests
         [Fact]
         public void TheScrollCodeKeepsTheLastLineAndCarriesOnUnderneath()
         {
-            // SCROLL_WAIT_ goes to PRINTSEQ_TRGWAIT_SCROLL, which shifts the window up by one line
+            // A wait-then-scroll break shifts the window up by one line
             // height. The line that was at the bottom is still there, at the top.
             var frames = Frames("line one\\nline two\\fline three");
 

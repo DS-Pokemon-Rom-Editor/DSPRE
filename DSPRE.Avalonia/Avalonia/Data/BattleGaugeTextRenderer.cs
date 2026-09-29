@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.Data
             var narc = new ScriptNarc(RomInfo.DirNames.battleObj);
             if (!narc.Available) return null;
 
-            int colours = BattleObjects.Find("GAGE_PALETTE", "Colours");
+            int colours = BattleObjects.Find("HpBar.Shared", "Colours");
             if (colours < 0) return null;
 
             string temp = null;

@@ -1,42 +1,56 @@
-// Generated from the games' own archive index lists.
-
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>What each file in these archives is, in the games' own words.</summary>
+    /// <summary>DSPRE's key and part for each file in these archives, in member order.</summary>
     public static class ArchiveEntryNames
     {
         /// <summary>WeatherHeartGold: 59 entries.</summary>
         public const string WeatherHeartGold =
-            "BLOCK_NANR BLOCK_NCER BLOCK_NCGR BLOCK_NCLR RAIN_NANR RAIN_NCER RAIN_NCGR RAIN_NCLR RAINBOW_NCGR "
-            + "RAINBOW_NCLR RAINBOW_SC_NSCR RAIN_ST_NANR RAIN_ST_NCER RAIN_ST_NCGR SHINPI_NANR SHINPI_NCER "
-            + "SHINPI_NCGR SHINPI_NCLR SNOW_NANR SNOW_NCER SNOW_NCGR SNOW_NCLR SNOW_D_NANR SNOW_D_NCER SNOW_D_NCGR "
-            + "SNOW_D_NCLR SNOW_S_NANR SNOW_S_NCER SNOW_S_NCGR SPARK_NCGR SPARK_NCLR SPARK_NSCR STORM_NANR "
-            + "STORM_NCER STORM_NCGR STORM_NCLR STORM_BG_NCGR STORM_BG_NCLR STORM_SC_NSCR VOLCANO_NANR VOLCANO_NCER "
-            + "VOLCANO_NCGR VOLCANO_NCLR VOLCANO_NSCR VOLCANO_BG_NCGR CLOUDINESS_NCGR CLOUDINESS_NCLR "
-            + "CLOUDINESS_NSCR MYSTIC_NCGR MYSTIC_NCLR MYSTIC_NSCR FOG_BG_NCLR FLASH_NCLR FLASH_NCGR FLASH_NSCR "
-            + "WEATHER_CELL_RESDAT WEATHER_CELLANM_RESDAT WEATHER_CHAR_RESDAT WEATHER_PLTT_RESDAT";
+            "Weather.Ash:Animation Weather.Ash:Cells Weather.Ash:Drawing Weather.Ash:Colours Weather.Rain:Animation "
+            + "Weather.Rain:Cells Weather.Rain:Drawing Weather.Rain:Colours Weather.Rainbow:Drawing Weather.Rainbow:Colours "
+            + "Weather.Rainbow.Screen:Screen Weather.HeavyRain:Animation Weather.HeavyRain:Cells Weather.HeavyRain:Drawing "
+            + "Weather.Shimmer:Animation Weather.Shimmer:Cells Weather.Shimmer:Drawing Weather.Shimmer:Colours "
+            + "Weather.Snow:Animation Weather.Snow:Cells Weather.Snow:Drawing Weather.Snow:Colours "
+            + "Weather.DeepSnow:Animation Weather.DeepSnow:Cells Weather.DeepSnow:Drawing Weather.DeepSnow:Colours "
+            + "Weather.Blizzard:Animation Weather.Blizzard:Cells Weather.Blizzard:Drawing Weather.Sparks:Drawing "
+            + "Weather.Sparks:Colours Weather.Sparks:Screen Weather.Sandstorm:Animation Weather.Sandstorm:Cells "
+            + "Weather.Sandstorm:Drawing Weather.Sandstorm:Colours Weather.Sandstorm.Backdrop:Drawing "
+            + "Weather.Sandstorm.Backdrop:Colours Weather.Sandstorm.Screen:Screen Weather.VolcanicAsh:Animation "
+            + "Weather.VolcanicAsh:Cells Weather.VolcanicAsh:Drawing Weather.VolcanicAsh:Colours Weather.VolcanicAsh:Screen "
+            + "Weather.VolcanicAsh.Backdrop:Drawing Weather.Overcast:Drawing Weather.Overcast:Colours "
+            + "Weather.Overcast:Screen Weather.Haze:Drawing Weather.Haze:Colours Weather.Haze:Screen Weather.Fog:Colours "
+            + "Weather.Flash:Colours Weather.Flash:Drawing Weather.Flash:Screen Weather.SharedCells Weather.SharedAnimation "
+            + "Weather.SharedDrawing Weather.SharedColours";
 
         /// <summary>WeatherPlatinum: 65 entries.</summary>
         public const string WeatherPlatinum =
-            "BLOCK_NANR BLOCK_NCER BLOCK_NCGR BLOCK_NCLR RAIN_NANR RAIN_NCER RAIN_NCGR RAIN_NCLR RAINBOW_NCGR "
-            + "RAINBOW_NCLR RAINBOW_SC_NSCR RAIN_ST_NANR RAIN_ST_NCER RAIN_ST_NCGR SHINPI_NANR SHINPI_NCER "
-            + "SHINPI_NCGR SHINPI_NCLR SNOW_NANR SNOW_NCER SNOW_NCGR SNOW_NCLR SNOW_D_NANR SNOW_D_NCER SNOW_D_NCGR "
-            + "SNOW_D_NCLR SNOW_S_NANR SNOW_S_NCER SNOW_S_NCGR SPARK_NCGR SPARK_NCLR SPARK_NSCR STORM_NANR "
-            + "STORM_NCER STORM_NCGR STORM_NCLR STORM_BG_NCGR STORM_BG_NCLR STORM_SC_NSCR VOLCANO_NANR VOLCANO_NCER "
-            + "VOLCANO_NCGR VOLCANO_NCLR VOLCANO_NSCR VOLCANO_BG_NCGR CLOUDINESS_NCGR CLOUDINESS_NCLR "
-            + "CLOUDINESS_NSCR MYSTIC_NCGR MYSTIC_NCLR MYSTIC_NSCR FOG_BG_NCLR FLASH_NCLR FLASH_NCGR FLASH_NSCR "
-            + "KOGOREBI_NCLR KOGOREBI_NCGR KOGOREBI_NSCR DOUKUTU_NCLR DOUKUTU_NCGR DOUKUTU_NSCR WEATHER_CELL_RESDAT "
-            + "WEATHER_CELLANM_RESDAT WEATHER_CHAR_RESDAT WEATHER_PLTT_RESDAT";
+            "Weather.Ash:Animation Weather.Ash:Cells Weather.Ash:Drawing Weather.Ash:Colours Weather.Rain:Animation "
+            + "Weather.Rain:Cells Weather.Rain:Drawing Weather.Rain:Colours Weather.Rainbow:Drawing Weather.Rainbow:Colours "
+            + "Weather.Rainbow.Screen:Screen Weather.HeavyRain:Animation Weather.HeavyRain:Cells Weather.HeavyRain:Drawing "
+            + "Weather.Shimmer:Animation Weather.Shimmer:Cells Weather.Shimmer:Drawing Weather.Shimmer:Colours "
+            + "Weather.Snow:Animation Weather.Snow:Cells Weather.Snow:Drawing Weather.Snow:Colours "
+            + "Weather.DeepSnow:Animation Weather.DeepSnow:Cells Weather.DeepSnow:Drawing Weather.DeepSnow:Colours "
+            + "Weather.Blizzard:Animation Weather.Blizzard:Cells Weather.Blizzard:Drawing Weather.Sparks:Drawing "
+            + "Weather.Sparks:Colours Weather.Sparks:Screen Weather.Sandstorm:Animation Weather.Sandstorm:Cells "
+            + "Weather.Sandstorm:Drawing Weather.Sandstorm:Colours Weather.Sandstorm.Backdrop:Drawing "
+            + "Weather.Sandstorm.Backdrop:Colours Weather.Sandstorm.Screen:Screen Weather.VolcanicAsh:Animation "
+            + "Weather.VolcanicAsh:Cells Weather.VolcanicAsh:Drawing Weather.VolcanicAsh:Colours Weather.VolcanicAsh:Screen "
+            + "Weather.VolcanicAsh.Backdrop:Drawing Weather.Overcast:Drawing Weather.Overcast:Colours "
+            + "Weather.Overcast:Screen Weather.Haze:Drawing Weather.Haze:Colours Weather.Haze:Screen Weather.Fog:Colours "
+            + "Weather.Flash:Colours Weather.Flash:Drawing Weather.Flash:Screen Weather.SunThroughTrees:Colours "
+            + "Weather.SunThroughTrees:Drawing Weather.SunThroughTrees:Screen Weather.CaveDarkness:Colours "
+            + "Weather.CaveDarkness:Drawing Weather.CaveDarkness:Screen Weather.SharedCells Weather.SharedAnimation "
+            + "Weather.SharedDrawing Weather.SharedColours";
 
         /// <summary>FontHeartGold: 11 entries.</summary>
         public const string FontHeartGold =
-            "font_system font_message font_subscreen font_unown font_4 font_special_chars_NCGR "
-            + "screen_indicators_NCGR font_special_chars_NCLR screen_indicators_NCLR font_extra_NCLR font_5";
+            "Font.System Font.Message Font.TouchScreen Font.Unown Font.4 Font.SpecialCharacters:Drawing "
+            + "Font.ScreenIndicators:Drawing Font.SpecialCharacters:Colours Font.ScreenIndicators:Colours "
+            + "Font.Extra:Colours Font.5";
 
         /// <summary>FontPlatinum, also Diamond and Pearl: 8 entries.</summary>
         public const string FontPlatinum =
-            "font_system font_message font_subscreen font_unown font_special_chars_NCGR screen_indicators_NCGR "
-            + "font_special_chars_NCLR screen_indicators_NCLR";
+            "Font.System Font.Message Font.TouchScreen Font.Unown Font.SpecialCharacters:Drawing "
+            + "Font.ScreenIndicators:Drawing Font.SpecialCharacters:Colours Font.ScreenIndicators:Colours";
 
     }
 }

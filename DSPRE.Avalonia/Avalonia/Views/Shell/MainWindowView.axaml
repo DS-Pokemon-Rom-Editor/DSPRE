@@ -62,7 +62,7 @@
         <Separator/>
         <MenuItem Header="Move Data Editor…" Click="MoveDataEditor_Click" IsEnabled="{Binding CanUseMoveEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <MenuItem Header="Move Animations &amp; Battle Scripts…" Click="BattleScriptEditor_Click" IsVisible="{Binding Shown[BattleScriptEditorView]}"
-                  ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Edit move animations (WEST) and battle-effect scripts, with a live animation preview'}" IsEnabled="{Binding CanUseBattleScriptEditor}"/>
+                  ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Edit move animations and battle-effect scripts, with a live animation preview'}" IsEnabled="{Binding CanUseBattleScriptEditor}"/>
         <MenuItem Header="Type Chart…" Click="TypeChart_Click" IsVisible="{Binding Shown[TypeChartEditorView]}" IsEnabled="{Binding CanUseTypeChart}"
                   ToolTip.Tip="{Binding BlockedNote[TypeChartEditorView], TargetNullValue='How well each type hits each other type'}"/>
         <MenuItem Header="TM / HM Editor…"   Click="TMEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>

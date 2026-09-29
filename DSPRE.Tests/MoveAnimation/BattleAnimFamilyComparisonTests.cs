@@ -13,10 +13,10 @@ namespace DSPRE.Tests
 {
     /// <summary>One move of each animation family, against what Platinum actually did.</summary>
     [Collection("rom")]
-    public class WestFamilyComparisonTests
+    public class BattleAnimFamilyComparisonTests
     {
         private readonly ITestOutputHelper _out;
-        public WestFamilyComparisonTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimFamilyComparisonTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string Platinum = TestRoms.Platinum;
 
@@ -66,17 +66,17 @@ namespace DSPRE.Tests
                 var bytes = narc.Get(g.Move);
                 Assert.True(bytes != null && bytes.Length > 0, $"move {g.Move} has no script, so nothing was checked");
 
-                var cmds = WestScript.Parse(bytes, WazaSeqVersion.Plat);
+                var cmds = BattleAnimScript.Parse(bytes, WazaSeqVersion.Plat);
                 Assert.True(cmds.Count > 0, $"move {g.Move} decoded to nothing");
                 int pos = 0; foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
 
                 // The rival is the attacker in every one of these recordings.
-                var w = new WestPlayer(cmds, WazaSeqVersion.Plat, particles, 64, 120, 190, 60,
+                var w = new BattleAnimPlayer(cmds, WazaSeqVersion.Plat, particles, 64, 120, 190, 60,
                                        attackerIsEnemy: true, selfTarget: false);
 
                 // The cell-animation resources the script asks for, loaded the same way the editor loads
                 // them.
-                var res = WestCats.Extract(cmds, WazaSeqVersion.Plat);
+                var res = BattleAnimSprites.Extract(cmds, WazaSeqVersion.Plat);
                 if (res.HasCellAnimation)
                 {
                     var cells = new WeCellAnimRenderer();
@@ -88,7 +88,7 @@ namespace DSPRE.Tests
                 while (frames < 900 && !w.Finished)
                 {
                     w.Step(); frames++;
-                    mostActors = Math.Max(mostActors, w.CatsActors.Count);
+                    mostActors = Math.Max(mostActors, w.SpriteActors.Count);
                     double moved = Math.Max(Math.Abs(w.MonDX[1]) + Math.Abs(w.MonShakeX[1]),
                                             Math.Abs(w.MonDY[1]) + Math.Abs(w.MonShakeY[1]));
                     if (moved > 0.5 && movedAt < 0) movedAt = frames;

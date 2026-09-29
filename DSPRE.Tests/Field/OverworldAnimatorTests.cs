@@ -112,7 +112,7 @@ namespace DSPRE.Tests
         [Fact]
         public void MinusOneRangeMeansNoFence()
         {
-            // MOVE_LIMIT_NOT: the engine skips the range check entirely on that axis.
+            // With no movement limit the engine skips the range check entirely on that axis.
             var a = For(0x03, MoveFacing.Down, rx: OverworldAnimator.NoMoveLimit,
                         rz: OverworldAnimator.NoMoveLimit, seed: 6);
             a.Advance(6000);

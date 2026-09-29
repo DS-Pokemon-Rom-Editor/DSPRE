@@ -46,8 +46,8 @@ namespace DSPRE.Avalonia.Data
         private int _frame;
         private double _genAccum;
 
-        // FIELD_OPERATOR FLD_MAGNET / FLD_CONVERGENCE override: the SPA emitter's own field target is a local
-        // placeholder; the operator retargets it to a mon (FLD_AT/DF/SET_DF): Mega Drain magnet, BubbleBeam/Aurora
+        // Magnet and convergence override: the SPA emitter's own field target is a local
+        // placeholder; the operator retargets it to a mon : Mega Drain magnet, BubbleBeam/Aurora
         // convergence. NaN = keep the SPA's own target.
         private readonly bool _magOverride; private readonly double _magX, _magY, _magZ;
         private readonly bool _convOverride; private readonly double _convX, _convY, _convZ;
@@ -83,11 +83,11 @@ namespace DSPRE.Avalonia.Data
         private readonly bool _spin;
         private readonly double _spinCos = 1, _spinSin;
 
-        // Emitter motion (EMIT_ROTATION / STRAIGHT / PARABOLIC): the emitter's offset at a given frame. Captured at
+        // Emitter motion (RevolveEmitter, MoveEmitterA2BLinear, MoveEmitterA2BParabolic): the emitter's offset at a given frame. Captured at
         // spawn so particles are left along the moving emitter's path (orbit / stream / arc) and then move on their own.
         private Func<int, (double, double)> _emitterMotion;
         public void SetEmitterMotion(Func<int, (double, double)> m) => _emitterMotion = m;
-        public double AnchorX, AnchorY;   // the emitter's spawn screen position (so EMIT_ROTATION can re-centre its orbit)
+        public double AnchorX, AnchorY;   // the emitter's spawn screen position (so RevolveEmitter can re-centre its orbit)
         // The anchor's WORLD y in px-units (+Y up; particle-space origin projects to screen y 96): the
         // collision plane is a WORLD plane (the game tests emitterPos.y + particle.y), so local ys must
         // be offset by this. Derived from the screen anchor at the ≈1:1 plane.
@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.Data
         public int AliveCount => _ptcls.Count;
 
         private bool _stopped;
-        /// <summary>WEST_EXIT_PARTICLE (the emitter-stop routine): stop emitting now and let the live particles die out. Also the only
+        /// <summary>UnloadParticleSystem (the emitter-stop routine): stop emitting now and let the live particles die out. Also the only
         /// way an "emit forever" emitter (emtr_life == 0) ever finishes.</summary>
         public void Stop() => _stopped = true;
 
@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (_delay > 0 && !_stopped) { _delay--; return; }
 
-            // Emission while the emitter is alive (emtr_life == 0 means "forever") and not EXIT_PARTICLE-stopped.
+            // Emission while the emitter is alive (emtr_life == 0 means "forever") and not stopped by UnloadParticleSystem.
             bool emitting = !_stopped && (_e.EmitterLife == 0 || _frame < _e.EmitterLife);
             int intvl = Math.Max(1, _e.GenInterval);
             if (emitting && _frame % intvl == 0)
@@ -251,7 +251,7 @@ namespace DSPRE.Avalonia.Data
             _frame++;
         }
 
-        // Spawn one particle. emIdx/emCount are this tick's index/total so CIRCLE_RI rings come out evenly spaced
+        // Spawn one particle. emIdx/emCount are this tick's index/total so ring emissions come out evenly spaced
         // (uses idx = emission·16/total), instead of clumping into a wedge with random angles.
         private void Emit(int emIdx, int emCount)
         {
@@ -267,19 +267,19 @@ namespace DSPRE.Avalonia.Data
             bool ringVelocity = false;
             switch (_e.InitPosType)
             {
-                case 1:   // SPHERE_SURFACE
+                case 1:   // sphere surface
                 {
                     var (sx, sy, sz) = _rng.Vec();
                     posX = sx * _e.Radius; posY = sy * _e.Radius; posZ = sz * _e.Radius;
                     break;
                 }
-                case 2:   // CIRCLE_BORDER
+                case 2:   // circle border
                 {
                     var (cx, cy) = _rng.VecXY();
                     (posX, posY, posZ) = Tilt(cx * _e.Radius, cy * _e.Radius, 0);
                     break;
                 }
-                case 3:   // CIRCLE_BORDER_UNIFORM: evenly spaced, sine on the first axis
+                case 3:   // circle border, uniform: evenly spaced, sine on the first axis
                 {
                     double a = Math.PI * 2.0 * emIdx / Math.Max(1, emCount);
                     (posX, posY, posZ) = Tilt(Math.Sin(a) * _e.Radius, Math.Cos(a) * _e.Radius, 0);
@@ -298,7 +298,7 @@ namespace DSPRE.Avalonia.Data
                     (posX, posY, posZ) = Tilt(lx, ly, 0);
                     break;
                 }
-                case 6:   // CYLINDER_SURFACE
+                case 6:   // cylinder surface
                 {
                     var (cx, cy) = _rng.VecXY();
                     (posX, posY, posZ) = Tilt(cx * _e.Radius, cy * _e.Radius, _rng.Range(_e.Length));
@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.Data
                     (posX, posY, posZ) = Tilt(lx, ly, _rng.Range(_e.Length));
                     break;
                 }
-                case 8:   // HEMISPHERE_SURFACE: flipped onto the side the axes face
+                case 8:   // hemisphere surface: flipped onto the side the axes face
                 case 9:   // HEMISPHERE
                 {
                     var (sx, sy, sz) = _rng.Vec();
@@ -355,14 +355,14 @@ namespace DSPRE.Avalonia.Data
             int lrOff = _e.RandomLoopAnm ? (int)_rng.U32(8) : 0;   // lifeRateOffset for LOOPING anims
             (double mx, double my) = _emitterMotion?.Invoke(_frame) ?? (0.0, 0.0);   // emitter's path offset now
             // The emitter's travel direction at spawn, used to orient a DIRECTIONAL billboard (the needle/wave) whose
-            // own velocity is ~0 because it rides the moving emitter (Pin Missile/Sonic Boom/Horn Drill: EMIT_STRAIGHT/
-            // PARABOLIC sweep the emitter attacker→defender). Without this the needle has no velocity and points up.
+            // own velocity is ~0 because it rides the moving emitter (Pin Missile/Sonic Boom/Horn Drill: the linear and parabolic
+            // routines sweep the emitter attacker→defender). Without this the needle has no velocity and points up.
             (double pmx, double pmy) = _emitterMotion?.Invoke(Math.Max(0, _frame - 1)) ?? (0.0, 0.0);
             double ovx = mx - pmx, ovy = my - pmy;
             _ptcls.Add(new P
             {
                 RndTex = rndTex,
-                // Emitter position comes from the ADD_PARTICLE callback (the layer centre), which OVERRIDES the
+                // Emitter position comes from the CreateEmitter callback (the layer centre), which OVERRIDES the
                 // SPA's own base pos, so particles start at the shape offset (+ the moving emitter's path offset).
                 // follow_emtr particles TRACK the moving emitter (the current offset is added at render), so DON'T
                 // bake the spawn offset in, otherwise they'd double up. (Pin Missile/Sonic Boom needles travel this way.)

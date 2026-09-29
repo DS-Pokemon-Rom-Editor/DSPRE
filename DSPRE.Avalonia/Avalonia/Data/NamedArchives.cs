@@ -60,55 +60,51 @@ namespace DSPRE.Avalonia.Data
             return Pretty(thing);
         }
 
-        // The weather the field can put on the screen. The names are the game's own; these say what they
-        // look like in play.
+        // What each weather looks like in play.
         private static readonly (string Name, string Says)[] Weather =
         {
-            ("BLOCK", "Falling ash"),
-            ("RAIN", "Rain"),
-            ("RAIN_ST", "Heavy rain"),
-            ("RAINBOW", "Rainbow"),
-            ("SHINPI", "Mysterious shimmer"),
-            ("SNOW", "Snow"),
-            ("SNOW_D", "Deep snow"),
-            ("SNOW_S", "Blizzard"),
-            ("SPARK", "Sparks"),
-            ("STORM", "Sandstorm"),
-            ("STORM_BG", "Sandstorm backdrop"),
-            ("STORM_SC", "Sandstorm arrangement"),
-            ("VOLCANO", "Volcanic ash"),
-            ("VOLCANO_BG", "Volcanic ash backdrop"),
-            ("CLOUDINESS", "Overcast sky"),
-            ("MYSTIC", "Mystical haze"),
-            ("FOG_BG", "Fog colours"),
-            ("FLASH", "Lightning flash"),
-            ("WEATHER_CELL_RESDAT", "Shared layout data"),
-            ("WEATHER_CELLANM_RESDAT", "Shared animation data"),
-            ("WEATHER_CHAR_RESDAT", "Shared drawing data"),
-            ("WEATHER_PLTT_RESDAT", "Shared colour data"),
+            ("Weather.Ash", "Falling ash"),
+            ("Weather.Rain", "Rain"),
+            ("Weather.HeavyRain", "Heavy rain"),
+            ("Weather.Rainbow", "Rainbow"),
+            ("Weather.Rainbow.Screen", "Rainbow arrangement"),
+            ("Weather.Shimmer", "Mysterious shimmer"),
+            ("Weather.Snow", "Snow"),
+            ("Weather.DeepSnow", "Deep snow"),
+            ("Weather.Blizzard", "Blizzard"),
+            ("Weather.Sparks", "Sparks"),
+            ("Weather.Sandstorm", "Sandstorm"),
+            ("Weather.Sandstorm.Backdrop", "Sandstorm backdrop"),
+            ("Weather.Sandstorm.Screen", "Sandstorm arrangement"),
+            ("Weather.VolcanicAsh", "Volcanic ash"),
+            ("Weather.VolcanicAsh.Backdrop", "Volcanic ash backdrop"),
+            ("Weather.Overcast", "Overcast sky"),
+            ("Weather.Haze", "Mystical haze"),
+            ("Weather.Fog", "Fog colours"),
+            ("Weather.Flash", "Lightning flash"),
+            ("Weather.SunThroughTrees", "Sunlight through trees"),
+            ("Weather.CaveDarkness", "Cave darkness"),
+            ("Weather.SharedCells", "Shared layout data"),
+            ("Weather.SharedAnimation", "Shared animation data"),
+            ("Weather.SharedDrawing", "Shared drawing data"),
+            ("Weather.SharedColours", "Shared colour data"),
         };
 
         private static readonly (string Name, string Says)[] Fonts =
         {
-            ("font_system", "System font"),
-            ("font_message", "Dialogue font"),
-            ("font_subscreen", "Touch screen font"),
-            ("font_unown", "Unown font"),
-            ("font_special_chars", "Special characters"),
-            ("screen_indicators", "Screen indicators"),
-            ("font_extra", "Extra font colours"),
-            ("font_4", "Font 4"),
-            ("font_5", "Font 5"),
+            ("Font.System", "System font"),
+            ("Font.Message", "Dialogue font"),
+            ("Font.TouchScreen", "Touch screen font"),
+            ("Font.Unown", "Unown font"),
+            ("Font.SpecialCharacters", "Special characters"),
+            ("Font.ScreenIndicators", "Screen indicators"),
+            ("Font.Extra", "Extra font colours"),
+            ("Font.4", "Font 4"),
+            ("Font.5", "Font 5"),
         };
 
-        private static string Pretty(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return name;
-            var words = name.Split('_', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(w => w.Length <= 1 ? w
-                                        : char.ToUpperInvariant(w[0]) + w.Substring(1).ToLowerInvariant());
-            return string.Join(" ", words);
-        }
+        private static string Pretty(string name) =>
+            string.IsNullOrEmpty(name) ? name : name.Split('.')[^1];
 
         /// <summary>One row per thing, with its pieces together, in the order the game lists them.</summary>
         public static List<GraphicAssets.Unit> Units(GraphicAssets.Archive a, int fileCount)

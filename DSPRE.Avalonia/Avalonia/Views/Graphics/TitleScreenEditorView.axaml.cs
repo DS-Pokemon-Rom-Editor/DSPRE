@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private const double PreviewScale = 384.0 / 256.0;
 
         /// <summary>
-        /// Steps through the same integer frame counter as title.c's TitleLogoMove: a 3-frame delay, then
+        /// Steps through the same integer frame counter as the game's logo entrance: a 3-frame delay, then
         /// 31 frames where the logo's alpha climbs by 1/31 per frame while its vertical offset shrinks
         /// from 15px to 0, i.e. it starts invisible, slightly below its resting spot, and fades/rises up
         /// into place, rather than a smooth tween.

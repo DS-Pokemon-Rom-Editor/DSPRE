@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public static class DungeonCutinTable
     {
-        /// <summary>DUNGEON_CUTIN_NUM in the game's own source.</summary>
+        /// <summary>Rows in the retail table.</summary>
         public const int RowCount = 25;
 
         public enum TimeOfDay { Morning, Noon, Evening, Night }

@@ -12,10 +12,10 @@ namespace DSPRE.Tests
 {
     /// <summary>Folding a script into the shorthands it was written in, and back again.</summary>
     [Collection("rom")]
-    public class WestMacroFoldTests
+    public class BattleAnimMacroFoldTests
     {
         private readonly ITestOutputHelper _out;
-        public WestMacroFoldTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimMacroFoldTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
         private static readonly string Platinum = TestRoms.Platinum;
@@ -52,12 +52,12 @@ namespace DSPRE.Tests
                 if (bytes.Length == 0) continue;
                 string name = Path.GetFileName(f);
 
-                var cmds = WestScript.Parse(bytes, version);
+                var cmds = BattleAnimScript.Parse(bytes, version);
                 if (cmds.Count == 0) continue;
                 scripts++;
                 commands += cmds.Count;
 
-                var found = WestMacros.Find(cmds, version);
+                var found = BattleAnimMacros.Find(cmds, version);
                 folds += found.Count;
                 foreach (var fo in found)
                     perMacro[fo.Macro.Name] = perMacro.TryGetValue(fo.Macro.Name, out int n) ? n + 1 : 1;
@@ -73,7 +73,7 @@ namespace DSPRE.Tests
                 foreach (var fo in found)
                 {
                     for (; at < fo.From; at++) rebuilt.Add(cmds[at]);
-                    var back = WestMacros.Unfold(fo.Macro, fo.Settings, version);
+                    var back = BattleAnimMacros.Unfold(fo.Macro, fo.Settings, version);
                     Assert.True(back != null, $"{name}: {fo.Macro.Name} could not be put back");
                     rebuilt.AddRange(back);
                     at = fo.From + fo.Count;
@@ -91,7 +91,7 @@ namespace DSPRE.Tests
                 }
 
                 // And the bytes themselves, which is what actually gets written to the ROM.
-                var again = WestScript.Serialize(rebuilt);
+                var again = BattleAnimScript.Serialize(rebuilt);
                 if (!again.SequenceEqual(bytes)) problems.Add($"{name}: the bytes came back different");
             }
 

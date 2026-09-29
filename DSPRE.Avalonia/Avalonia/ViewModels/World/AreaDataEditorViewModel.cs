@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private decimal _mapTileset, _buildingsTileset, _thirdField, _lightType;
         public decimal MapTileset { get => _mapTileset; set { if (Set(ref _mapTileset, value) && _area != null) { _area.mapTileset = (ushort)value; if (!_suppress) Dirty(); } } }
         public decimal BuildingsTileset { get => _buildingsTileset; set { if (Set(ref _buildingsTileset, value) && _area != null) { _area.buildingsTileset = (ushort)value; if (!_suppress) Dirty(); } } }
-        /// <summary>Third field of the area's RESOURCE_PARAM. HGSS keeps the terrain animation index
+        /// <summary>Third field of the area record. HGSS keeps the terrain animation index
         /// here; DP/Pt keeps a model set index that nothing in the game reads, so the label follows the game.</summary>
         public string ThirdFieldLabel => IsHGSS ? "Terrain animation" : "Unused";
         public string ThirdFieldTip => IsHGSS

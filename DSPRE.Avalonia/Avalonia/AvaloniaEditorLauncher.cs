@@ -194,14 +194,11 @@ namespace DSPRE.Avalonia
             new EggMoveEditorView().ShowManaged();
         }
 
-        /// <summary>Opens the battle-script editor (waza_seq / be_seq / sub_seq / WEST move-animation). When opened
-        /// from the Move editor, <paramref name="archive"/>=0 + <paramref name="entryIndex"/>=move number jumps
-        /// straight to that move's script.</summary>
+        /// <summary>From the Move editor, archive 0 and the move number jump straight to that move's script.</summary>
         public static void OpenBattleScriptEditor(int archive = 0, int entryIndex = 0)
         {
             if (!IsRomLoaded || BlockedForUnlinkedHge("The Battle Script Editor")) return;
-            // waza/be/sub and the WEST animations are edited from the checkout's own sources instead of
-            // being refused; only the particle archive has no source view yet.
+            // Only the particle archive has no hg-engine source view yet.
             if (BlockedForHgeArchive("The Battle Script Editor", DirNames.wazaParticle)) return;
             var vm = new BattleScriptEditorViewModel();
             var view = new BattleScriptEditorView { DataContext = vm };
@@ -1574,7 +1571,7 @@ namespace DSPRE.Avalonia
             new() { Beta = "TypeChartEditorView", Name = "Type Chart",            Keywords = "type effectiveness matchup super effective resist immune weakness", Run = OpenTypeChart },
             new() { Beta = "MoveTutorEditorView", Name = "Move Tutors",           Keywords = "tutor tutors shards bp teach move compatibility", Run = OpenMoveTutors },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
-            new() { Beta = "BattleScriptEditorView", Name = "Move Animations & Battle Scripts", Keywords = "battle script editor move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
+            new() { Beta = "BattleScriptEditorView", Name = "Move Animations & Battle Scripts", Keywords = "battle script editor move sequence waza be_seq sub_seq effect animation", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
             new() { Beta = "BerryDataEditorView", Name = "Berry Data",            Keywords = "berry berries firmness flavour flavor growth yield poffin", Run = OpenBerryData },
             new() { Beta = "BpShopEditorView", Name = "Battle Point Shop",     Keywords = "battle point bp shop exchange frontier tower tm prize", Run = OpenBpShop },

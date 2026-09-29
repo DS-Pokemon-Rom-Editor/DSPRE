@@ -526,23 +526,23 @@ namespace DSPRE
             pokeHeight,             // DP+Plat /poketool/pokegra/height.narc, 4 files/mon (F-back,M-back,F-front,M-front), heights
             pokeHeightForms,        // /poketool/pokegra/height_o.narc, alt-form heights (record index matches the otherpoke sprite index)
             pokeAnim,               // DP /poketool/pokeanm/pokeanm.narc, 28 B/mon battle-animation table (POKE_ANM_DATA)
-            pokeAnimDefs,           // DP /pokeanime/poke_anm.narc, the PAST program-animation scripts (referenced by prg_anm)
+            pokeAnimDefs,           // DP /pokeanime/poke_anm.narc, the Pokémon animation scripts (referenced by prg_anm)
 
             wazaSeq,                // battle move sequence scripts (per move), battle/skill/waza_seq.narc (HGSS a/0/0/0)
             subSeq,                 // shared move-sequence subroutines, battle/skill/sub_seq.narc (HGSS a/0/0/1)
             beSeq,                  // per-effect move sequence scripts, battle/skill/be_seq.narc (HGSS a/0/3/0)
-            wazaEffectScripts,      // move VISUAL-effect (WEST) scripts, one per move, wazaeffect/we.arc (HGSS a/0/1/0)
-            wazaEffectSub,          // WEST subroutines / continuous animations, wazaeffect/we_sub.narc (HGSS a/0/6/1)
+            wazaEffectScripts,      // move animation scripts, one per move, wazaeffect/we.arc (HGSS a/0/1/0)
+            wazaEffectSub,          // move animation subroutines and continuous animations, wazaeffect/we_sub.narc (HGSS a/0/6/1)
             wazaEffectChar,         // effect cell graphics: NCGR char, wazaeffect/effectclact/wechar.narc (HGSS a/0/2/2)
             wazaEffectPltt,         // effect cell graphics: NCLR palette, wazaeffect/effectclact/wepltt.narc (HGSS a/0/2/3)
             wazaEffectCell,         // effect cell graphics: NCER cells, wazaeffect/effectclact/wecell.narc (HGSS a/0/2/4)
             wazaEffectCellAnm,      // effect cell graphics: NANR anims, wazaeffect/effectclact/wecellanm.narc (HGSS a/0/2/5)
             wazaParticle,           // effect SPA particle systems, wazaeffect/effectdata/waza_particle.narc (HGSS a/0/2/9)
-            battleBg,               // battle backgrounds + move-effect HAIKEI scroll BGs, pl_batt_bg.narc (HGSS a/0/0/7 = ARC_BATT_BG)
-            battleObj,              // battle OBJ cells incl. the terrain ground platforms, pl_batt_obj.narc (HGSS a/0/0/8 = ARC_BATT_OBJ)
+            battleBg,               // battle backgrounds + move-effect backgrounds, pl_batt_bg.narc (HGSS a/0/0/7)
+            battleObj,              // battle OBJ cells incl. the terrain ground platforms, pl_batt_obj.narc (HGSS a/0/0/8)
             ballParticles,          // Poke Ball open bursts, one SPA per ball, wazaeffect/effectdata/ball_particle.narc (HGSS a/0/9/5)
             trainerBackGraphics,    // player-side trainer back sprites, poketool/trgra/trbgra.narc (HGSS a/0/0/6)
-            battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (WEST_HAIKEI_CHG_EX), a/0/0/9 = ARC_BATT_BG_PLANM
+            battleBgPlanm,          // HGSS-ONLY animated BG palette-anim data (SwitchBgEx), a/0/0/9
             dungeonCutinGraphics,   // HGSS only. Dungeon cutin (location-preview splash) art, a/1/5/0.
             titleScreenGraphics,    // HGSS only. Main-menu title logo/palette/background, a/0/4/6.
             trainerCardGraphics,    // Trainer card face/back + trainer-pose art.
@@ -569,10 +569,10 @@ namespace DSPRE
             areaData,
 
             // Animation data the games play over the field.
-            groundAnimations,       // ARC_GROUND_ANM        HGSS(USA) a/1/4/0  ground_anm.narc  (2 NSBTA)
-            buildingAnimations,     // ARC_BM_ANM            HGSS(USA) a/1/0/6  bm_anime.narc   (NSBCA/NSBTA/NSBTP)
-            buildingAnimListOut,    // ARC_BM_INFO_OUT_LIST  HGSS(USA) a/1/0/7  bm_info_out.narc
-            buildingAnimListIn,     // ARC_BM_INFO_IN_LIST   HGSS(USA) a/1/0/8  bm_info_in.narc
+            groundAnimations,       // HGSS(USA) a/1/4/0  ground_anm.narc  (2 NSBTA)
+            buildingAnimations,     // HGSS(USA) a/1/0/6  bm_anime.narc   (NSBCA/NSBTA/NSBTP)
+            buildingAnimListOut,    // HGSS(USA) a/1/0/7  bm_info_out.narc
+            buildingAnimListIn,     // HGSS(USA) a/1/0/8  bm_info_in.narc
 
             eventFiles,
             OWSprites,
@@ -610,8 +610,8 @@ namespace DSPRE
 
             eggMoves,
 
-            fonts,                  // ARC_FONT   DP graphic/font.narc, Pt graphic/pl_font.narc, HGSS a/0/1/6
-            windowFrames,           // ARC_WINFRAME  the borders round a message box
+            fonts,                  // DP graphic/font.narc, Pt graphic/pl_font.narc, HGSS a/0/1/6
+            windowFrames,           // the borders round a message box
             poketch,                // Pt graphic/poketch.narc, the Pokétch on the bottom screen
             fieldTouchMenu,         // HGSS a/0/1/4, the touch menu panel on the bottom screen
             fieldTouchChoices,      // HGSS a/2/3/7, the Poké Ball screen and its touch buttons
@@ -2818,7 +2818,7 @@ namespace DSPRE
                         [DirNames.pokeHeight] = $@"{dataFolderName}\poketool\pokegra\height.narc",
                         [DirNames.pokeHeightForms] = $@"{dataFolderName}\poketool\pokegra\height_o.narc",
                         [DirNames.pokeAnim] = $@"{dataFolderName}\poketool\pokeanm\pl_pokeanm.narc",   // Platinum's animation table (pl_ prefix)
-                        [DirNames.pokeAnimDefs] = $@"{dataFolderName}\pokeanime\pl_poke_anm.narc",   // Platinum's PAST program-animation scripts
+                        [DirNames.pokeAnimDefs] = $@"{dataFolderName}\pokeanime\pl_poke_anm.narc",   // Platinum's Pokémon animation scripts
                         // Platinum keeps the move-sequence + effect scripts under shared (non-pl_) names.
                         [DirNames.wazaSeq] = $@"{dataFolderName}\battle\skill\waza_seq.narc",
                         [DirNames.subSeq] = $@"{dataFolderName}\battle\skill\sub_seq.narc",
@@ -2919,22 +2919,22 @@ namespace DSPRE
                         [DirNames.pokemonSpriteOffsets] = $@"{dataFolderName}\a\1\8\0",
                         [DirNames.pokeHeight] = $@"{dataFolderName}\a\0\0\5",
                         [DirNames.pokeAnim] = $@"{dataFolderName}\a\1\1\1",   // Pokeanm.narc (28 B/mon POKE_ANM_DATA table)
-                        [DirNames.pokeAnimDefs] = $@"{dataFolderName}\a\0\9\0",   // PAST program-animation scripts (poke_anm equivalent)
+                        [DirNames.pokeAnimDefs] = $@"{dataFolderName}\a\0\9\0",   // Pokémon animation scripts (poke_anm equivalent)
                         [DirNames.wazaSeq] = $@"{dataFolderName}\a\0\0\0",   // move-sequence scripts (waza_seq)
                         [DirNames.subSeq] = $@"{dataFolderName}\a\0\0\1",   // shared subroutines (sub_seq)
                         [DirNames.beSeq] = $@"{dataFolderName}\a\0\3\0",   // per-effect scripts (be_seq)
-                        [DirNames.wazaEffectScripts] = $@"{dataFolderName}\a\0\1\0",   // move animation (WEST we.arc equivalent)
+                        [DirNames.wazaEffectScripts] = $@"{dataFolderName}\a\0\1\0",   // move animations (we.arc)
                         [DirNames.wazaEffectSub] = $@"{dataFolderName}\a\0\6\1",   // continuous animations (we_sub)
                         [DirNames.wazaEffectChar] = $@"{dataFolderName}\a\0\2\2",   // wechar (NCGR)
                         [DirNames.wazaEffectPltt] = $@"{dataFolderName}\a\0\2\3",   // wepltt (NCLR)
                         [DirNames.wazaEffectCell] = $@"{dataFolderName}\a\0\2\4",   // wecell (NCER)
                         [DirNames.wazaEffectCellAnm] = $@"{dataFolderName}\a\0\2\5",   // wecellanm (NANR)
                         [DirNames.wazaParticle] = $@"{dataFolderName}\a\0\2\9",   // waza_particle (SPA)
-                        [DirNames.battleBg] = $@"{dataFolderName}\a\0\0\7",   // ARC_BATT_BG (battle backgrounds + HAIKEI scroll BGs)
-                        [DirNames.battleObj] = $@"{dataFolderName}\a\0\0\8",   // ARC_BATT_OBJ (battle OBJ / terrain ground platforms)
+                        [DirNames.battleBg] = $@"{dataFolderName}\a\0\0\7",   // battle and move-effect backgrounds
+                        [DirNames.battleObj] = $@"{dataFolderName}\a\0\0\8",   // battle OBJ / terrain ground platforms
                         [DirNames.ballParticles] = $@"{dataFolderName}\a\0\9\5",
                         [DirNames.trainerBackGraphics] = $@"{dataFolderName}\a\0\0\6",
-                        [DirNames.battleBgPlanm] = $@"{dataFolderName}\a\0\0\9",   // ARC_BATT_BG_PLANM (HGSS-only WEST_HAIKEI_CHG_EX anim data)
+                        [DirNames.battleBgPlanm] = $@"{dataFolderName}\a\0\0\9",   // HGSS-only SwitchBgEx anim data
 
                         [DirNames.battleTowerTrainers] = $@"{dataFolderName}\a\2\0\2",
                         [DirNames.battleTowerPokemon] = $@"{dataFolderName}\a\2\0\3",

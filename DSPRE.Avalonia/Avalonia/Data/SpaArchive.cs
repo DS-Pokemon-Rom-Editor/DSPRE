@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.Data
                     FollowEmtr = (flag & (1u << 15)) != 0,   // particle tracks the (moving) emitter each frame, not just at birth
                     UseChild = (flag & (1u << 16)) != 0,
                     RandomLoopAnm = (flag & (1u << 20)) != 0,   // ptcl_random_loop_anm: random per-particle anim phase
-                    // Spatial fields are in particle coordinates: 1 screen pixel = PT_LCD_DOT (172) units
+                    // Spatial fields are in particle coordinates: 1 screen pixel = 172 units
                     // (/), so divide by 172 to get pixels. gen_num/base_scl are plain fx32.
                     PosX = Px(I32(off + 4)),
                     PosY = Px(I32(off + 8)),
@@ -518,7 +518,7 @@ namespace DSPRE.Avalonia.Data
             int io = U16(p + 4); e.AlpIn = io & 0xFF; e.AlpOut = (io >> 8) & 0xFF;
         }
 
-        private const double PtPerPixel = 172.0;                         // PT_LCD_DOT: particle units per screen pixel
+        private const double PtPerPixel = 172.0;                         // Particle units per screen pixel
         private static double Fx32(int v) => v / 4096.0;                 // fx32: 1.0 == 0x1000 (counts / scale)
         private static double Px(int v) => v / PtPerPixel;               // particle coords → screen pixels
         private static byte Expand5(int c5) => (byte)((c5 * 255) / 31);  // 5-bit → 8-bit channel

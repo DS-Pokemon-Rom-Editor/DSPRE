@@ -273,7 +273,7 @@ namespace DSPRE.Avalonia.Views.Battle
             var sdat = Sdat();
             if (sdat == null) { _vm.SoundLength(kind, 0); return; }
 
-            // A fanfare holds the music (Snd_MePlay), and the music carries on once it is over.
+            // A fanfare holds the music , and the music carries on once it is over.
             bool holdsMusic = kind == ScriptEffectKind.Fanfare;
             if (holdsMusic && _music != null && _musicHolds++ == 0) AudioOutput.Current.SetPaused(_music, true);
 
@@ -283,7 +283,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 try
                 {
                     // A cry is not a sequence of its own: the games play the one shared sequence with the
-                    // Pokemon's own instruments in place of its (snd_play.c:1091), so the species number
+                    // Pokemon's own instruments in place of its, so the species number
                     // goes in as the bank.
                     pcm = _rendered.GetOrAdd((kind, id), key => key.Item1 == ScriptEffectKind.Cry
                         ? SoundArchive.RenderCry(key.Item2)

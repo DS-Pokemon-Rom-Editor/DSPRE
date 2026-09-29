@@ -14,10 +14,10 @@ namespace DSPRE.Tests
 {
     /// <summary>No command either game actually uses may be quietly skipped.</summary>
     [Collection("rom")]
-    public class WestOpcodeCoverageTests
+    public class BattleAnimCommandCoverageTests
     {
         private readonly ITestOutputHelper _out;
-        public WestOpcodeCoverageTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimCommandCoverageTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
         private static readonly string Platinum = TestRoms.Platinum;
@@ -37,8 +37,8 @@ namespace DSPRE.Tests
             while (d != null && !File.Exists(Path.Combine(d.FullName, "DS_Map.sln"))) d = d.Parent;
             Assert.True(d != null, "could not find the repository, so nothing was checked");
 
-            string src = File.ReadAllText(Path.Combine(d.FullName, "DSPRE.Avalonia", "Avalonia", "WestPlayer.cs"));
-            var set = new HashSet<string>(Regex.Matches(src, @"case\s+""(WEST_[A-Z0-9_]+)""")
+            string src = File.ReadAllText(Path.Combine(d.FullName, "DSPRE.Avalonia", "Avalonia", "BattleAnimPlayer.cs"));
+            var set = new HashSet<string>(Regex.Matches(src, @"case\s+""([A-Z][A-Za-z0-9]+)""")
                                                 .Select(m => m.Groups[1].Value));
             Assert.True(set.Count > 30, $"only {set.Count} cases were found, so the search itself is wrong");
             return set;
@@ -66,9 +66,9 @@ namespace DSPRE.Tests
                     var bytes = File.ReadAllBytes(f);
                     if (bytes.Length == 0) continue;
                     checkedScripts++;
-                    foreach (var c in WestScript.Parse(bytes, version))
+                    foreach (var c in BattleAnimScript.Parse(bytes, version))
                     {
-                        string name = WestOpcodes.Name(version, c.OpId);
+                        string name = BattleAnimCommands.Name(version, c.OpId);
                         if (name == null) continue;
                         seen.Add(name);
                         if (!handled.Contains(name))

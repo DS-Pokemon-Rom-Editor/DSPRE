@@ -15,17 +15,17 @@ namespace DSPRE.Tests
         private const int TARGET_DX = 35, TARGET_DY = 36, TARGET_RY = 38, CORRECT_ON_MINUS = 27, CORRECT_ON_NOT_EQ = 29;
         private const int PARAM_DX = 10, PARAM_RY = 13, USE_VAL = 20, PARAM_SET = 22;
 
-        private static PastCommand Cmd(PastOp op, params int[] args) => new PastCommand(op, args);
+        private static PokemonAnimCommand Cmd(PokemonAnimOp op, params int[] args) => new PokemonAnimCommand(op, args);
 
         [Fact]
         public void CurveDivTime_SineBob_MatchesRuntimeMath()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
                 // apply, wait, type, target, L, rad(total angle), ofs, loop
-                Cmd(PastOp.CallMfCurveDivTime, APPLY_SET, 0, CURVE_SIN, TARGET_DY, 100, 0x10000, 0, 4),
-                Cmd(PastOp.HoldCmd),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.TransformCurveEven, APPLY_SET, 0, CURVE_SIN, TARGET_DY, 100, 0x10000, 0, 4),
+                Cmd(PokemonAnimOp.WaitTransform),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds);
 
@@ -42,13 +42,13 @@ namespace DSPRE.Tests
         [Fact]
         public void SetWait_FreezesForGivenFrames()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.SetWait, 3),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.SetStartDelay, 3),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds);
-            p.Step();                       // runs SET_WAIT (wait=3, yields this frame)
+            p.Step();                       // runs the wait command (wait=3, yields this frame)
             Assert.False(p.Finished);
             p.Step(); p.Step(); p.Step();   // the 3 wait frames (3→2→1→0), no command runs
             Assert.False(p.Finished);
@@ -56,23 +56,23 @@ namespace DSPRE.Tests
             Assert.True(p.Finished);
         }
 
-        // SET_DY_CORRECT keeps a *scaling* sprite anchored: when ry<0 (shrinking) it nudges POS_Y by -ry/8.
-        // It does NOT touch X (the DY-correction only adjusts POS_Y).
+        // The Y correction keeps a *scaling* sprite anchored: when ry<0 (shrinking) it nudges the Y position by -ry/8.
+        // It does NOT touch X (the DY-correction only adjusts the Y position).
         [Fact]
         public void DyCorrect_AnchorsScalingSprite_NotX()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.SetDyCorrect, CORRECT_ON_MINUS),
+                Cmd(PokemonAnimOp.SetYNormalization, CORRECT_ON_MINUS),
                 // shrink vertically: CURVE_SIN_MINUS on RY, L=80 → at 90° ry = -80
-                Cmd(PastOp.CallMfCurveDivTime, APPLY_SET, 0, CURVE_SIN_MINUS, TARGET_RY, 80, 0x10000, 0, 4),
-                Cmd(PastOp.HoldCmd),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.TransformCurveEven, APPLY_SET, 0, CURVE_SIN_MINUS, TARGET_RY, 80, 0x10000, 0, 4),
+                Cmd(PokemonAnimOp.WaitTransform),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds);
             p.Step();                       // 90°: ry = -80
             Assert.Equal(0, p.OffsetX);     // correction never affects X
-            Assert.Equal(10, p.OffsetY);    // POS_Y nudged by -ry/8 = 80/8 = 10 to anchor the shrinking sprite
+            Assert.Equal(10, p.OffsetY);    // Y position nudged by -ry/8 = 80/8 = 10 to anchor the shrinking sprite
         }
 
         // The PokeReverse flag (set per-sprite by the caller) mirrors the X translation. Battle uses it off, but the
@@ -80,11 +80,11 @@ namespace DSPRE.Tests
         [Fact]
         public void Reverse_MirrorsXTranslation()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.CallMfCurveDivTime, APPLY_SET, 0, CURVE_SIN, TARGET_DX, 100, 0x10000, 0, 4),
-                Cmd(PastOp.HoldCmd),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.TransformCurveEven, APPLY_SET, 0, CURVE_SIN, TARGET_DX, 100, 0x10000, 0, 4),
+                Cmd(PokemonAnimOp.WaitTransform),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds) { Reverse = true };
             p.Step();                       // 90°: dx = 100
@@ -94,14 +94,14 @@ namespace DSPRE.Tests
         [Fact]
         public void EndPutsTheSpriteBackOnTheTickItRuns()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.SetAddParam, PARAM_DX, USE_VAL, 20, PARAM_SET),
-                Cmd(PastOp.SetAddParam, PARAM_RY, USE_VAL, -64, PARAM_SET),
-                Cmd(PastOp.ApplyTrans),
-                Cmd(PastOp.ApplyAffine),
-                Cmd(PastOp.SetRequest),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.UpdateAttribute, PARAM_DX, USE_VAL, 20, PARAM_SET),
+                Cmd(PokemonAnimOp.UpdateAttribute, PARAM_RY, USE_VAL, -64, PARAM_SET),
+                Cmd(PokemonAnimOp.ApplyTranslation),
+                Cmd(PokemonAnimOp.ApplyScaleAndRotation),
+                Cmd(PokemonAnimOp.WaitFrame),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds);
 
@@ -118,13 +118,13 @@ namespace DSPRE.Tests
         [Fact]
         public void WorkingValuesDoNotMoveTheSpriteUntilApplied()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.SetAddParam, PARAM_DX, USE_VAL, 20, PARAM_SET),
-                Cmd(PastOp.SetRequest),
-                Cmd(PastOp.ApplyTrans),
-                Cmd(PastOp.SetRequest),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.UpdateAttribute, PARAM_DX, USE_VAL, 20, PARAM_SET),
+                Cmd(PokemonAnimOp.WaitFrame),
+                Cmd(PokemonAnimOp.ApplyTranslation),
+                Cmd(PokemonAnimOp.WaitFrame),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds);
 
@@ -137,15 +137,15 @@ namespace DSPRE.Tests
         [Fact]
         public void YCorrectionAddsUpWhenScaleIsAppliedWithoutTranslation()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.SetDyCorrect, CORRECT_ON_NOT_EQ),
-                Cmd(PastOp.SetAddParam, PARAM_RY, USE_VAL, -80, PARAM_SET),
-                Cmd(PastOp.StartLoop, 3),
-                Cmd(PastOp.ApplyAffine),
-                Cmd(PastOp.SetRequest),
-                Cmd(PastOp.EndLoop),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.SetYNormalization, CORRECT_ON_NOT_EQ),
+                Cmd(PokemonAnimOp.UpdateAttribute, PARAM_RY, USE_VAL, -80, PARAM_SET),
+                Cmd(PokemonAnimOp.Loop, 3),
+                Cmd(PokemonAnimOp.ApplyScaleAndRotation),
+                Cmd(PokemonAnimOp.WaitFrame),
+                Cmd(PokemonAnimOp.LoopEnd),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds);
 
@@ -157,12 +157,12 @@ namespace DSPRE.Tests
         [Fact]
         public void StartDelayHoldsTheWholeScript()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.SetAddParam, PARAM_DX, USE_VAL, 5, PARAM_SET),
-                Cmd(PastOp.ApplyTrans),
-                Cmd(PastOp.SetRequest),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.UpdateAttribute, PARAM_DX, USE_VAL, 5, PARAM_SET),
+                Cmd(PokemonAnimOp.ApplyTranslation),
+                Cmd(PokemonAnimOp.WaitFrame),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds, startDelay: 2);
 
@@ -175,12 +175,12 @@ namespace DSPRE.Tests
         public void CurvesFloorTheFixedPointProductInsteadOfRounding()
         {
             // 0x2AAA is just under 60°: sin × 10 is 8.65, which the game's shift floors to 8.
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.CallMfCurve, APPLY_SET, 0, CURVE_SIN, TARGET_DX, 10, 0x2AAA, 0, 2),
-                Cmd(PastOp.CallMfCurve, APPLY_SET, 0, CURVE_SIN_MINUS, TARGET_DY, 10, 0x2AAA, 0, 2),
-                Cmd(PastOp.HoldCmd),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.TransformCurve, APPLY_SET, 0, CURVE_SIN, TARGET_DX, 10, 0x2AAA, 0, 2),
+                Cmd(PokemonAnimOp.TransformCurve, APPLY_SET, 0, CURVE_SIN_MINUS, TARGET_DY, 10, 0x2AAA, 0, 2),
+                Cmd(PokemonAnimOp.WaitTransform),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds);
 
@@ -192,11 +192,11 @@ namespace DSPRE.Tests
         [Fact]
         public void PaletteFadeStepsOnceEveryWaitPlusOneTicksAndHoldsTheScript()
         {
-            var cmds = new List<PastCommand>
+            var cmds = new List<PokemonAnimCommand>
             {
-                Cmd(PastOp.PaletteFade, 0, 2, 1, 0x7FFF),
-                Cmd(PastOp.WaitPaletteFade),
-                Cmd(PastOp.End),
+                Cmd(PokemonAnimOp.Fade, 0, 2, 1, 0x7FFF),
+                Cmd(PokemonAnimOp.WaitFade),
+                Cmd(PokemonAnimOp.End),
             };
             var p = new PokeAnimPlayer(cmds);
 

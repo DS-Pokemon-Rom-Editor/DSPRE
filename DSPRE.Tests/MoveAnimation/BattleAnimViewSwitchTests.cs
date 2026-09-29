@@ -12,15 +12,15 @@ namespace DSPRE.Tests
 {
     /// <summary>Switching views keeps the edit and keeps the bytes.</summary>
     [Collection("rom")]
-    public class WestViewSwitchTests
+    public class BattleAnimViewSwitchTests
     {
         private readonly ITestOutputHelper _out;
-        public WestViewSwitchTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimViewSwitchTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
 
-        private static readonly WestViewMode[] AllViews =
-            { WestViewMode.Guided, WestViewMode.Script, WestViewMode.Raw };
+        private static readonly BattleAnimViewMode[] AllViews =
+            { BattleAnimViewMode.Guided, BattleAnimViewMode.Script, BattleAnimViewMode.Raw };
 
         private static string ScriptDir()
         {
@@ -32,7 +32,7 @@ namespace DSPRE.Tests
 
         private static List<WazaSeqCommand> Load(byte[] bytes)
         {
-            var cmds = WestScript.Parse(bytes, WazaSeqVersion.HGSS);
+            var cmds = BattleAnimScript.Parse(bytes, WazaSeqVersion.HGSS);
             int pos = 0;
             foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
             return cmds;
@@ -56,7 +56,7 @@ namespace DSPRE.Tests
                 scripts++;
 
                 // Edit the first WAIT, which is a plain frame count that every view prints as a number.
-                int at = cmds.FindIndex(c => WestOpcodes.Name(WazaSeqVersion.HGSS, c.OpId) == "WEST_WAIT"
+                int at = cmds.FindIndex(c => BattleAnimCommands.Name(WazaSeqVersion.HGSS, c.OpId) == "Delay"
                                              && c.Args.Length == 1);
                 if (at < 0) continue;
 
@@ -67,7 +67,7 @@ namespace DSPRE.Tests
 
                 foreach (var mode in AllViews)
                 {
-                    var line = WestScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, mode)
+                    var line = BattleAnimScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, mode)
                                                 .FirstOrDefault(l => !l.IsHeading && l.Index == at && l.Covers == 1);
                     if (line == null) { lost.Add($"{Path.GetFileName(f)}: {mode} has no line for the edited command"); continue; }
                     if (!line.Text.Contains(after.ToString()))
@@ -75,11 +75,11 @@ namespace DSPRE.Tests
                 }
 
                 // And the bytes are the edit and nothing else.
-                var rebuilt = WestScript.Serialize(cmds);
+                var rebuilt = BattleAnimScript.Serialize(cmds);
                 var expected = (byte[])bytes.Clone();
                 var original = Load(bytes);
                 original[at].Args[0] = after;
-                if (!rebuilt.SequenceEqual(WestScript.Serialize(original)))
+                if (!rebuilt.SequenceEqual(BattleAnimScript.Serialize(original)))
                     lost.Add($"{Path.GetFileName(f)}: the bytes after the edit are not what the edit says");
             }
 
@@ -111,9 +111,9 @@ namespace DSPRE.Tests
 
                 // Walk through the views a few times over, the way somebody comparing them would.
                 foreach (var mode in AllViews.Concat(AllViews).Concat(AllViews))
-                    WestScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, mode);
+                    BattleAnimScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, mode);
 
-                if (!WestScript.Serialize(cmds).SequenceEqual(bytes))
+                if (!BattleAnimScript.Serialize(cmds).SequenceEqual(bytes))
                     changed.Add(Path.GetFileName(f));
             }
 

@@ -372,7 +372,7 @@ namespace DSPRE.ROMFiles
         public void Advance(int frames) => _at = Math.Min(_frames, _at + Math.Max(0, frames));
     }
 
-    /// <summary>Shakes the view the way EventCmd_ZishinEffect does. </summary>
+    /// <summary>Shakes the view the way the earthquake command does. </summary>
     public sealed class FieldCameraShake
     {
         private readonly float _width, _height;

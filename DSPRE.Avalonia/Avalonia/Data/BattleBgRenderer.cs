@@ -4,21 +4,15 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Decodes a move-effect HAIKEI background (the scrolling full-screen layer used by Surf, Fly, Dig, Cosmic
-    /// Power, …) from the battle-background NARC (<see cref="DirNames.battleBg"/> = pl_batt_bg.narc on Platinum).
-    /// Each background is a tile set (NCGR), a palette (NCLR) and a tilemap (NSCR), all little NITRO containers;
-    /// the NCGR/NSCR are usually LZ10-compressed (0x10 header). Produces a straight-RGBA image (typically 256×256)
-    /// that the timeline scrolls + alpha-blends over the battle scene, faithfully to WeSysHaikeiDataIDGet/WE_T02.
-    /// </summary>
+    /// <summary>A move's full-screen effect background (Surf, Fly, Dig, ...). Its NCGR and NSCR are usually LZ10.</summary>
     public sealed class BattleBgRenderer
     {
         public sealed class BgImage { public byte[] Rgba; public int Width, Height; public int Period; }
 
-        // BG_ID → (chr, pal, scr, scrReverse) file indices in the battle-background NARC, one table per game
-        // family: Platinum uses pl_batt_bg.narc, HGSS uses batt_bg_gs.narc (retail a/0/0/7, 351 entries).
-        // Index = the BG_ID the move-effect scripts pass to the background-change / background-scroll opcodes
-        // (BG_ID 48 → Surf; BG_ID 44 → Dark Void). −1 = no reverse-side tilemap. The two families' file layouts
+        // background id → (chr, pal, scr, scrReverse) file indices in the battle-background NARC, one table per game
+        // family: Platinum uses pl_batt_bg.narc, HGSS uses a/0/0/7 (, 351 entries).
+        // Index = the background id the move-effect scripts pass to the background-change / background-scroll opcodes
+        // (background id 48 → Surf; background id 44 → Dark Void). −1 = no reverse-side tilemap. The two families' file layouts
         // differ throughout, so using one family's table on the other decodes entirely wrong entries.
         private static readonly (int chr, int pal, int scr, int scrRev)[] PlatTable =
         {
@@ -86,7 +80,7 @@ namespace DSPRE.Avalonia.Data
         public static (int Drawing, int Tilemap, int PaletteDay) BackdropFiles(int bgId)
             => (BackdropChr0 + bgId, BackdropScr, BackdropPal0 + bgId * 3);
 
-        /// <summary>Builds the backdrop for a bg_id below <see cref="BackdropCount"/> (timeZone 0=day, 1=evening, 2=night), or null.</summary>
+        /// <summary>Builds the backdrop for a backdrop id below <see cref="BackdropCount"/> (timeZone 0=day, 1=evening, 2=night), or null.</summary>
         public BgImage BuildBackdrop(int bgId, int timeZone = 0)
         {
             if (bgId < 0 || bgId >= BackdropCount || !_narc.Available) return null;
@@ -102,7 +96,7 @@ namespace DSPRE.Avalonia.Data
 
         private readonly ScriptNarc _narc = new ScriptNarc(DirNames.battleBg);
 
-        /// <summary>Builds the BG image for a BG_ID; reverse=true uses the enemy-side tilemap. Null if unavailable.</summary>
+        /// <summary>Builds the BG image for a background id; reverse=true uses the enemy-side tilemap. Null if unavailable.</summary>
         public BgImage Build(int bgId, bool reverse = false)
         {
             if (!HasBg(bgId) || !_narc.Available) return null;

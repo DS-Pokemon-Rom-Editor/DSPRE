@@ -65,7 +65,7 @@ namespace DSPRE.Tests
             byte AlphaAt(int x, int y) => rgba[(y * w + x) * 4 + 3];
 
             // BmpTalkWinWriteMain lays out seventeen of the eighteen tiles and leaves number 8, the
-            // middle one, out. The middle is the bitmap window, which talk_msg.c fills itself.
+            // middle one, out. The middle is the bitmap window, which the game fills itself.
             for (int x = FieldMessageWindow.TextLeft; x < FieldMessageWindow.TextLeft + FieldMessageWindow.TextWidth; x++)
                 Assert.Equal(0, AlphaAt(x, h / 2));
 
@@ -77,7 +77,7 @@ namespace DSPRE.Tests
         [Fact]
         public void ThePaperTheWritingSitsOnIsTheColourTheGamesFillWith()
         {
-            // talk_msg.c:121 fills the box with colour 15 before writing in it.
+            // The game fills the box with colour 15 before writing in it.
             uint paper = Frame().PaperArgb;
             Assert.Equal(0xFFu, paper >> 24);      // solid, not see-through
         }

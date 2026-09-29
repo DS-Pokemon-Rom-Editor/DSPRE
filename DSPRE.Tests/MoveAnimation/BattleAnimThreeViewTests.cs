@@ -12,10 +12,10 @@ namespace DSPRE.Tests
 {
     /// <summary>The three ways of reading a move script.</summary>
     [Collection("rom")]
-    public class WestThreeViewTests
+    public class BattleAnimThreeViewTests
     {
         private readonly ITestOutputHelper _out;
-        public WestThreeViewTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimThreeViewTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
 
@@ -29,7 +29,7 @@ namespace DSPRE.Tests
 
         private static List<WazaSeqCommand> Load(string path)
         {
-            var cmds = WestScript.Parse(File.ReadAllBytes(path), WazaSeqVersion.HGSS);
+            var cmds = BattleAnimScript.Parse(File.ReadAllBytes(path), WazaSeqVersion.HGSS);
             int pos = 0;
             foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
             return cmds;
@@ -52,16 +52,16 @@ namespace DSPRE.Tests
                 if (cmds.Count == 0) continue;
                 scripts++;
 
-                foreach (var mode in new[] { WestViewMode.Guided, WestViewMode.Script })
+                foreach (var mode in new[] { BattleAnimViewMode.Guided, BattleAnimViewMode.Script })
                 {
-                    var lines = WestScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, mode);
+                    var lines = BattleAnimScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, mode);
                     foreach (var line in lines)
                     {
                         if (line.IsHeading || line.Index < 0 || line.Covers != 1) continue;
                         var c = cmds[line.Index];
-                        if (WestOpcodes.Name(WazaSeqVersion.HGSS, c.OpId) != "WEST_FUNC_CALL" || c.Args.Length < 1) continue;
+                        if (BattleAnimCommands.Name(WazaSeqVersion.HGSS, c.OpId) != "CallFunc" || c.Args.Length < 1) continue;
                         calls++;
-                        string want = WestScriptDisplay.RoutineName(c.Args[0]);
+                        string want = BattleAnimScriptDisplay.RoutineName(c.Args[0]);
                         if (line.Text.Contains(want)) named++;
                         else bare.Add($"{Path.GetFileName(f)}: {line.Text.Trim()}");
                     }
@@ -90,7 +90,7 @@ namespace DSPRE.Tests
                 if (cmds.Count == 0) continue;
                 scripts++;
 
-                var raw = WestScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, WestViewMode.Raw);
+                var raw = BattleAnimScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, BattleAnimViewMode.Raw);
                 // One line per command, in order, nothing folded and nothing dropped.
                 Assert.Equal(cmds.Count, raw.Count);
                 for (int i = 0; i < cmds.Count; i++)
@@ -113,33 +113,33 @@ namespace DSPRE.Tests
             string dir = ScriptDir();
             Assert.True(dir != null, "the move-effect archive could not be unpacked, so nothing was checked");
 
-            // WT_SHAKE, the routine the scripts call most after the loading one.
+            // Shake, the routine the scripts call most after the loading one.
             const int id = 36;
-            string original = WestScriptDisplay.RoutineName(id);
-            Assert.Equal("WT_SHAKE", original);
+            string original = BattleAnimScriptDisplay.RoutineName(id);
+            Assert.Equal("Shake", original);
 
             try
             {
-                LabelStore.SetLabel("west_routines", id, "Rattle the sprite", global: false);
-                Assert.Equal("Rattle the sprite", WestScriptDisplay.RoutineName(id));
+                LabelStore.SetLabel("battle_anim_funcs", id, "Rattle the sprite", global: false);
+                Assert.Equal("Rattle the sprite", BattleAnimScriptDisplay.RoutineName(id));
 
                 // And it has to reach the lines themselves, in the views that name things.
                 var cmds = new List<WazaSeqCommand>
                 {
-                    new WazaSeqCommand(WestOpcodes.Id(WazaSeqVersion.HGSS, "WEST_FUNC_CALL"),
+                    new WazaSeqCommand(BattleAnimCommands.Id(WazaSeqVersion.HGSS, "CallFunc"),
                                        new[] { id, 5, 1, 0, 2, 6, 264 }) { WordPos = 0 },
                 };
-                foreach (var mode in new[] { WestViewMode.Guided, WestViewMode.Script })
+                foreach (var mode in new[] { BattleAnimViewMode.Guided, BattleAnimViewMode.Script })
                 {
-                    var lines = WestScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, mode);
+                    var lines = BattleAnimScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, mode);
                     Assert.Contains(lines, l => l.Text.Contains("Rattle the sprite"));
                 }
             }
             finally
             {
-                LabelStore.SetLabel("west_routines", id, original, global: false);
+                LabelStore.SetLabel("battle_anim_funcs", id, original, global: false);
             }
-            Assert.Equal(original, WestScriptDisplay.RoutineName(id));
+            Assert.Equal(original, BattleAnimScriptDisplay.RoutineName(id));
         }
 
         /// <summary>The guided view reads front to back, and its ending is at the end.</summary>
@@ -160,7 +160,7 @@ namespace DSPRE.Tests
                 if (cmds.Count == 0) continue;
                 scripts++;
 
-                var headings = WestScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, WestViewMode.Guided)
+                var headings = BattleAnimScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, BattleAnimViewMode.Guided)
                                                 .Where(l => l.IsHeading).Select(l => l.Text).ToList();
                 int at = headings.IndexOf("Where it ends");
                 if (at < 0) continue;
@@ -169,7 +169,7 @@ namespace DSPRE.Tests
                     wrong.Add($"{Path.GetFileName(f)}: ending is heading {at + 1} of {headings.Count}");
             }
 
-            _out.WriteLine($"{scripts} scripts, {withEnding} of them end with a SEQEND, {wrong.Count} put the ending early");
+            _out.WriteLine($"{scripts} scripts, {withEnding} of them end with an End, {wrong.Count} put the ending early");
             Assert.True(scripts >= 500, $"only {scripts} scripts were read");
             Assert.True(withEnding >= 500, $"only {withEnding} scripts had an ending at all, so this checked almost nothing");
             Assert.True(wrong.Count == 0,
@@ -182,11 +182,11 @@ namespace DSPRE.Tests
         {
             var cmds = new List<WazaSeqCommand>
             {
-                new WazaSeqCommand(WestOpcodes.Id(WazaSeqVersion.HGSS, "WEST_WORK_SET"), new[] { 4, 1 }) { WordPos = 0 },
-                new WazaSeqCommand(WestOpcodes.Id(WazaSeqVersion.HGSS, "WEST_WAIT"), new[] { 10 }) { WordPos = 3 },
-                new WazaSeqCommand(WestOpcodes.Id(WazaSeqVersion.HGSS, "WEST_TURN_CHK"), new[] { 3, 8 }) { WordPos = 5 },
+                new WazaSeqCommand(BattleAnimCommands.Id(WazaSeqVersion.HGSS, "SetVar"), new[] { 4, 1 }) { WordPos = 0 },
+                new WazaSeqCommand(BattleAnimCommands.Id(WazaSeqVersion.HGSS, "Delay"), new[] { 10 }) { WordPos = 3 },
+                new WazaSeqCommand(BattleAnimCommands.Id(WazaSeqVersion.HGSS, "JumpByTurn"), new[] { 3, 8 }) { WordPos = 5 },
             };
-            var headings = WestScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, WestViewMode.Guided)
+            var headings = BattleAnimScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, BattleAnimViewMode.Guided)
                                             .Where(l => l.IsHeading).Select(l => l.Text).ToList();
             Assert.Contains("Settings for the next command", headings);
             Assert.Contains("How it is timed", headings);
@@ -196,13 +196,13 @@ namespace DSPRE.Tests
         [Fact]
         public void ATargetFlagReadsAsWhoItHitsRatherThanANumber()
         {
-            // WT_SHAKE's last word is a target flag; 264 is the defender's battle sprite.
+            // Shake's last word is a target flag; 264 is the defender's battle sprite.
             var cmds = new List<WazaSeqCommand>
             {
-                new WazaSeqCommand(WestOpcodes.Id(WazaSeqVersion.HGSS, "WEST_FUNC_CALL"),
+                new WazaSeqCommand(BattleAnimCommands.Id(WazaSeqVersion.HGSS, "CallFunc"),
                                    new[] { 36, 5, 1, 0, 2, 6, 264 }) { WordPos = 0 },
             };
-            var line = WestScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, WestViewMode.Script).Single();
+            var line = BattleAnimScriptDisplay.Build(cmds, WazaSeqVersion.HGSS, BattleAnimViewMode.Script).Single();
             Assert.Contains("defender", line.Text);
             Assert.DoesNotContain("264", line.Text);
             // The columnar views drop the "(as battle sprites)" half so the line fits the pane; the detail

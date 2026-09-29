@@ -4,7 +4,7 @@ using Xunit;
 namespace DSPRE.Tests
 {
     /// <summary>
-    /// Pins the CATS cell-actor playback timeline (NNS_G2dTickCellAnimation semantics): each frame is held for its
+    /// Pins the cell-actor playback timeline (NNS_G2dTickCellAnimation semantics): each frame is held for its
     /// duration, then the next plays; at the end a FORWARD_LOOP sequence wraps while a FORWARD (once) clamps to the
     /// last frame and reports Finished. Also checks per-frame SRT exposure and sequence switching.
     /// </summary>

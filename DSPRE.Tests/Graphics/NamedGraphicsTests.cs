@@ -89,7 +89,7 @@ namespace DSPRE.Tests
             _out.WriteLine($"{name}: {names.Count} font files, {checkedKinds} drawings and colours checked");
             // HeartGold keeps one more set of font colours than Diamond, Pearl and Platinum.
             Assert.Equal(name == "HeartGold" ? 5 : 4, checkedKinds);
-            Assert.True(NamedArchives.ColoursFor(DirNames.fonts, names.ToList().FindIndex(n => n == "font_special_chars_NCGR")) >= 0);
+            Assert.True(NamedArchives.ColoursFor(DirNames.fonts, names.ToList().FindIndex(n => n == "Font.SpecialCharacters:Drawing")) >= 0);
         }
 
         [SkippableTheory]

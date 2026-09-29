@@ -41,10 +41,10 @@ namespace DSPRE
 
         public struct OwRenderState
         {
-            public int DrawType;     // FLDOBJ_DRAWTYPE: 0=None 1=Billboard 2=3D model
-            public int ShadowType;   // FLDOBJ_SHADOWTYPE: 0=None 1=On
-            public int FootmarkType; // FLDOBJ_FOOTMARKTYPE: 0=None 1=Normal(2-leg) 2=Cycle(bike)
-            public int ReflectType;  // FLDOBJ_REFLECTTYPE: 0=None 1=On(billboard reflection)
+            public int DrawType;     // 0=None 1=Billboard 2=3D model
+            public int ShadowType;   // 0=None 1=On
+            public int FootmarkType; // 0=None 1=Normal(2-leg) 2=Cycle(bike)
+            public int ReflectType;  // 0=None 1=On(billboard reflection)
         }
 
         private struct TableLayout

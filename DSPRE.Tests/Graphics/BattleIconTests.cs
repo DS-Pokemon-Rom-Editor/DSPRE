@@ -32,8 +32,10 @@ namespace DSPRE.Tests
         {
             var names = BattleObjects.Names();
             for (int i = 0; i < names.Count; i++)
-                if (names[i] != null && names[i].StartsWith("P_ST_", StringComparison.Ordinal)
-                                     && names[i].EndsWith("_NCGR_BIN", StringComparison.Ordinal))
+                if (names[i] != null && names[i].EndsWith(":Drawing", StringComparison.Ordinal)
+                    && (names[i].StartsWith("TypeIcon.", StringComparison.Ordinal)
+                        || names[i].StartsWith("ContestIcon.", StringComparison.Ordinal)
+                        || names[i].StartsWith("MoveIcon.", StringComparison.Ordinal)))
                     yield return (i, names[i]);
         }
 
@@ -97,7 +99,7 @@ namespace DSPRE.Tests
         }
 
         /// <summary>
-        /// The icons are painted out of ST_TYPE's colours, in three banks of sixteen. If the set they
+        /// The icons are painted out of the shared icon colours, in three banks of sixteen. If the set they
         /// were paired with held only one bank, two thirds of them would come out in the wrong colours
         /// and still look like a picture, which is exactly what happened before this was wired up.
         /// </summary>
@@ -115,7 +117,7 @@ namespace DSPRE.Tests
                 var first = IconsIn().First();
                 int pal = BattleObjects.ColoursFor(first.index);
                 Assert.True(pal >= 0, $"{name}: the icons were paired with no colours at all");
-                Assert.Equal("ST_TYPE", BattleObjects.Split(names[pal]).Thing);
+                Assert.Equal("TypeIcon.Shared", BattleObjects.Split(names[pal]).Thing);
 
                 var narc = new ScriptNarc(RomInfo.DirNames.battleObj);
                 var colours = NitroBgCodec.ReadPalette(

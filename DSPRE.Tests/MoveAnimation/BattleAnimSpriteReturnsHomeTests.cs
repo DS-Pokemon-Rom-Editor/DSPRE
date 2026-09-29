@@ -15,10 +15,10 @@ namespace DSPRE.Tests
     /// No move leaves a Pokemon somewhere other than where it started, and none flings one off screen.
     /// </summary>
     [Collection("rom")]
-    public class WestSpriteReturnsHomeTests
+    public class BattleAnimSpriteReturnsHomeTests
     {
         private readonly ITestOutputHelper _out;
-        public WestSpriteReturnsHomeTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimSpriteReturnsHomeTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
         private static readonly string Platinum = TestRoms.Platinum;
@@ -56,7 +56,7 @@ namespace DSPRE.Tests
             {
                 var bytes = File.ReadAllBytes(f);
                 if (bytes.Length == 0) continue;
-                var cmds = WestScript.Parse(bytes, version);
+                var cmds = BattleAnimScript.Parse(bytes, version);
                 if (cmds.Count == 0) continue;
                 int pos = 0; foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
                 scripts++;
@@ -64,7 +64,7 @@ namespace DSPRE.Tests
 
                 foreach (bool asEnemy in new[] { false, true })
                 {
-                    var w = new WestPlayer(cmds, version, particles, 64, 120, 190, 60,
+                    var w = new BattleAnimPlayer(cmds, version, particles, 64, 120, 190, 60,
                                            attackerIsEnemy: asEnemy, selfTarget: false);
                     double travel = 0;
                     int frames = 0;

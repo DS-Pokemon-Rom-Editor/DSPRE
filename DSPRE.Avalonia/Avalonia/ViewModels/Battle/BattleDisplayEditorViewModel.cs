@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         // ── Arena type (real battle-scene backdrop + terrain platforms, preview-only) ─────────────
-        // One dropdown picks a GROUND_ID terrain (Gravel/Sand/Lawn/.../Floor); its matching backdrop is
+        // One dropdown picks a terrain (Gravel/Sand/Lawn/.../Floor); its matching backdrop is
         // auto-paired (BattleGroundRenderer.BackdropForTerrain). Same renderers the Battle Script Editor
         // already uses for its (separate, more granular) Background/Terrain selectors; see
         // DS_Map/Avalonia/Data/BattleGroundRenderer.cs + BattleBgRenderer.cs. Falls back to the bundled
@@ -1265,7 +1265,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private SendOutSequence _sendOut;
         private SendOutGraphics _gfx;
         private SpaParticlePreview _enemyBurst, _playerBurst;
-        private WestPlayer _enemySparkle, _playerSparkle;
+        private BattleAnimPlayer _enemySparkle, _playerSparkle;
         private CellActor _enemyBallActor, _playerBallActor;
         private bool _enemyBallRolling, _playerBallRolling;
         private readonly CellActor[] _enemyRowActors = new CellActor[6], _playerRowActors = new CellActor[6];
@@ -1626,7 +1626,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return image;
         }
 
-        private WestPlayer StartSparkle(bool enemySide)
+        private BattleAnimPlayer StartSparkle(bool enemySide)
         {
             // On the battler's centre, the way the effect's own emitters are placed.
             double x = enemySide ? EnemyLeft + 40 : PlayerLeft + 40;
@@ -1636,7 +1636,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             return player;
         }
 
-        private static void StepSparkle(ref WestPlayer sparkle, Action<Bitmap> show)
+        private static void StepSparkle(ref BattleAnimPlayer sparkle, Action<Bitmap> show)
         {
             if (sparkle == null) return;
             sparkle.Step();
@@ -1915,7 +1915,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private int PreviewFps => FrameRateIndex == 1 ? 60 : 30;
 
-        // ── Program-animation SCRIPT EDITOR (Phase B): editable PAST command list for the front script ──
+        // ── Program-animation SCRIPT EDITOR (Phase B): editable Pokémon animation command list for the front script ──
         // NOTE: this edits the shared animation script in the pokeanime NARC, so it affects every Pokémon that
         // uses this program-animation number, not just the current mon. Saved via its own "Save script" button.
         public ObservableCollection<ProgramCmdRow> ProgramRows { get; } = new ObservableCollection<ProgramCmdRow>();
@@ -1965,7 +1965,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(HasProgramScript)); OnPropertyChanged(nameof(ProgramScriptHeader));
         }
 
-        private void AddProgramRow(PastOp op, int[] args)
+        private void AddProgramRow(PokemonAnimOp op, int[] args)
         {
             var row = new ProgramCmdRow { Op = op, ArgsText = string.Join(", ", args) };
             row.PropertyChanged += OnProgramRowChanged;
@@ -1975,7 +1975,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public void AddProgramCmd()
         {
-            AddProgramRow(PastOp.SetWait, new[] { 1 });
+            AddProgramRow(PokemonAnimOp.SetStartDelay, new[] { 1 });
             ScriptDirty = true;
             OnPropertyChanged(nameof(HasProgramScript)); OnPropertyChanged(nameof(ProgramScriptHeader));
         }
@@ -1998,12 +1998,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Serializes the edited command list back to the pokeanime NARC file (args padded/truncated to
         /// each opcode's fixed count so the stream stays valid). Repacked into the ROM on the normal save.</summary>
         // Turns the editable rows into a valid command list (args padded/truncated to each opcode's fixed count).
-        private List<PastCommand> BuildCommandsFromRows()
+        private List<PokemonAnimCommand> BuildCommandsFromRows()
         {
             if (_animDefsNarc == null)
-                return new List<PastCommand>();   // return empty list
+                return new List<PokemonAnimCommand>();   // return empty list
 
-            var cmds = new List<PastCommand>();
+            var cmds = new List<PokemonAnimCommand>();
             foreach (var row in ProgramRows)
             {
                 int n = PokeAnimScript.ArgsFor(row.Op);
@@ -2012,7 +2012,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 for (int i = 0; i < n; i++)
                     args[i] = i < parsed.Count ? parsed[i] : 0;
 
-                cmds.Add(new PastCommand(row.Op, args));
+                cmds.Add(new PokemonAnimCommand(row.Op, args));
             }
             return cmds;
         }
@@ -2493,19 +2493,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int _verticalShift; public int VerticalShift { get => _verticalShift; set { if (_verticalShift != value) { _verticalShift = value; Raise(nameof(VerticalShift)); } } }
     }
 
-    /// <summary>One editable row of a PAST program-animation script: an opcode + its argument words (edited as
+    /// <summary>One editable row of a Pokémon animation scripts: an opcode + its argument words (edited as
     /// a comma/space-separated list; padded/truncated to the opcode's fixed arg count on save).</summary>
     public sealed class ProgramCmdRow : INotifyPropertyChanged
     {
-        private static readonly DSPRE.Avalonia.Data.PastOp[] _ops =
-            (DSPRE.Avalonia.Data.PastOp[])System.Enum.GetValues(typeof(DSPRE.Avalonia.Data.PastOp));
-        public System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Data.PastOp> Ops => _ops;
+        private static readonly DSPRE.Avalonia.Data.PokemonAnimOp[] _ops =
+            (DSPRE.Avalonia.Data.PokemonAnimOp[])System.Enum.GetValues(typeof(DSPRE.Avalonia.Data.PokemonAnimOp));
+        public System.Collections.Generic.IReadOnlyList<DSPRE.Avalonia.Data.PokemonAnimOp> Ops => _ops;
 
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        private DSPRE.Avalonia.Data.PastOp _op;
-        public DSPRE.Avalonia.Data.PastOp Op { get => _op; set { if (_op != value) { _op = value; Raise(nameof(Op)); Raise(nameof(ArgHint)); } } }
+        private DSPRE.Avalonia.Data.PokemonAnimOp _op;
+        public DSPRE.Avalonia.Data.PokemonAnimOp Op { get => _op; set { if (_op != value) { _op = value; Raise(nameof(Op)); Raise(nameof(ArgHint)); } } }
         private string _argsText = "";
         public string ArgsText { get => _argsText; set { if (_argsText != value) { _argsText = value; Raise(nameof(ArgsText)); } } }
         public string ArgHint

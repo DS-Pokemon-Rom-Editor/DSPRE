@@ -13,10 +13,10 @@ namespace DSPRE.ROMFiles
         public const int ScreenHeight = 192;
 
         public const int TileSize = 8;
-        public const int TileX = 2;      // FLD_MSG_WIN_PX
-        public const int TileY = 19;     // FLD_MSG_WIN_PY
-        public const int TilesWide = 27; // FLD_MSG_WIN_SX
-        public const int TilesHigh = 4;  // FLD_MSG_WIN_SY
+        public const int TileX = 2;
+        public const int TileY = 19;
+        public const int TilesWide = 27;
+        public const int TilesHigh = 4;
 
         public const int TextLeft = TileX * TileSize;
         public const int TextTop = TileY * TileSize;

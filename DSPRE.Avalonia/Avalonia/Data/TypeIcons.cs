@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Data
             {
                 try
                 {
-                    int index = BattleObjects.Find("P_ST_TYPE_" + BattleObjects.IconOrder[type], "Drawing");
+                    int index = BattleObjects.Find(BattleObjects.IconOrder[type], "Drawing");
                     var archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.battleObj);
                     if (index >= 0 && archive != null)
                     {

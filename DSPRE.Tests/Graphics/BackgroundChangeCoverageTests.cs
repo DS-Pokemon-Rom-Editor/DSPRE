@@ -43,10 +43,10 @@ namespace DSPRE.Tests
                 var bytes = File.ReadAllBytes(files[move]);
                 if (bytes.Length == 0) continue;
                 scripts++;
-                foreach (var c in WestScript.Parse(bytes, version))
+                foreach (var c in BattleAnimScript.Parse(bytes, version))
                 {
-                    string name = WestOpcodes.Name(version, c.OpId);
-                    if (name != "WEST_HAIKEI_CHG" && name != "WEST_HAIKEI_CHG_EX") continue;
+                    string name = BattleAnimCommands.Name(version, c.OpId);
+                    if (name != "SwitchBg" && name != "SwitchBgAnimated") continue;
                     if (c.Args.Length < 1) continue;
                     int bg = c.Args[0];
                     if (!asked.TryGetValue(bg, out var l)) asked[bg] = l = new List<int>();

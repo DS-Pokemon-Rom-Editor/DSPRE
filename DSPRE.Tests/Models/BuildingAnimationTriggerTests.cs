@@ -76,9 +76,9 @@ namespace DSPRE.Tests
         [Fact]
         public void APlayOnceAnimationDoesNotLoopAndWaitsToBeStarted()
         {
-            // In the games: a Suicide animation is entered with a loop count of one and stopped,
-            // while everything else is entered as LOOP_INFINIT and running.
-            var once = new BuildingAnimationInfo(Record(type: 0, suicide: 1));
+            // In the games: a play-once animation is entered with a loop count of one and stopped,
+            // while everything else is entered as looping forever and running.
+            var once = new BuildingAnimationInfo(Record(type: 0, once: 1));
             Assert.True(once.PlaysOnce);
             Assert.Equal(1, once.LoopCount);
             Assert.False(once.PlaysUnprompted);
@@ -107,12 +107,12 @@ namespace DSPRE.Tests
         }
 
         /// <summary>One list entry: animating, with a single animation, and the given type.</summary>
-        private static byte[] Record(int type, int door = 0, int suicide = 0)
+        private static byte[] Record(int type, int door = 0, int once = 0)
         {
             var b = new byte[BuildingAnimationInfo.Size];
             b[0] = 1;                 // Flag: it animates
             b[1] = (byte)type;
-            b[2] = (byte)suicide;
+            b[2] = (byte)once;
             b[4] = (byte)door;
             b[6] = 1;                 // AnimationCount
             for (int i = 0; i < BuildingAnimationInfo.MaxAnimations; i++)

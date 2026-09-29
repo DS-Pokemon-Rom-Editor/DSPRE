@@ -45,7 +45,7 @@ namespace DSPRE.Avalonia.Data
     /// INFO's per-category offset tables but each entry points at a null-terminated name string instead.
     /// This is the standard Nitro sound-archive format used by essentially every DS game, not something specific
     /// to this project; only the exact file paths and the fact a move script's "sound" argument is a raw sequence
-    /// number are project-specific findings (see WestPlayer.cs's WEST_SE handling).
+    /// number are project-specific findings (see BattleAnimPlayer.cs's PlaySoundEffect handling).
     /// </summary>
     public sealed class SdatArchive
     {

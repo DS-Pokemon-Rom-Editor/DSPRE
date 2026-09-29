@@ -12,10 +12,10 @@ namespace DSPRE.Tests
 {
     /// <summary>Every move-effect script in a real ROM, decoded with our own opcode table.</summary>
     [Collection("rom")]
-    public class WestCorpusSweepTests
+    public class BattleAnimCorpusSweepTests
     {
         private readonly ITestOutputHelper _out;
-        public WestCorpusSweepTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimCorpusSweepTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
         private static readonly string Platinum = TestRoms.Platinum;
@@ -30,21 +30,16 @@ namespace DSPRE.Tests
             return narc.Available ? gameDirs[DirNames.wazaEffectScripts].unpackedDir : null;
         }
 
-        /// <summary>The opcode west.h lists but neither game has.</summary>
         [Fact]
         public void TheOpcodeNeitherGameActuallyHasIsNotCounted()
         {
-            Assert.Equal(85, WestOpcodes.Count(WazaSeqVersion.Plat));
-            Assert.Equal(88, WestOpcodes.Count(WazaSeqVersion.HGSS));
-            for (int i = 0; i < WestOpcodes.Count(WazaSeqVersion.HGSS); i++)
-                Assert.NotEqual("WEST_POKEOAM_CHECK", WestOpcodes.Name(WazaSeqVersion.HGSS, i));
-
-            // The four that were shifted, at the ids the games really use.
-            Assert.Equal("WEST_KEY_WAIT", WestOpcodes.Name(WazaSeqVersion.HGSS, 84));
-            Assert.Equal("WEST_FLASH", WestOpcodes.Name(WazaSeqVersion.HGSS, 85));
-            Assert.Equal("WEST_HAIKEI_CHG_EX", WestOpcodes.Name(WazaSeqVersion.HGSS, 86));
-            Assert.Equal("WEST_BATONTATTI_JP", WestOpcodes.Name(WazaSeqVersion.HGSS, 87));
-            Assert.Equal("WEST_KEY_WAIT", WestOpcodes.Name(WazaSeqVersion.Plat, 84));
+            Assert.Equal(85, BattleAnimCommands.Count(WazaSeqVersion.Plat));
+            Assert.Equal(88, BattleAnimCommands.Count(WazaSeqVersion.HGSS));
+            Assert.Equal("WaitForLRX", BattleAnimCommands.Name(WazaSeqVersion.HGSS, 84));
+            Assert.Equal("FlashScreen", BattleAnimCommands.Name(WazaSeqVersion.HGSS, 85));
+            Assert.Equal("SwitchBgAnimated", BattleAnimCommands.Name(WazaSeqVersion.HGSS, 86));
+            Assert.Equal("JumpIfBatonPass", BattleAnimCommands.Name(WazaSeqVersion.HGSS, 87));
+            Assert.Equal("WaitForLRX", BattleAnimCommands.Name(WazaSeqVersion.Plat, 84));
         }
 
         [Fact]
@@ -73,11 +68,11 @@ namespace DSPRE.Tests
                 if (bytes.Length == 0) continue;
                 checkedFiles++;
 
-                var cmds = WestScript.Parse(bytes, version);
+                var cmds = BattleAnimScript.Parse(bytes, version);
                 totalCommands += cmds.Count;
                 foreach (var c in cmds)
                 {
-                    string n = WestOpcodes.Name(version, c.OpId);
+                    string n = BattleAnimCommands.Name(version, c.OpId);
                     used[n] = used.TryGetValue(n, out int k) ? k + 1 : 1;
                 }
 
@@ -91,8 +86,8 @@ namespace DSPRE.Tests
                     problems.Add($"{name}: stopped after {consumed} of {bytes.Length / 4} words");
 
                 // And every script says where it ends.
-                if (!cmds.Any(c => WestOpcodes.Name(version, c.OpId) == "WEST_SEQEND"))
-                    problems.Add($"{name}: no SEQEND anywhere in {cmds.Count} commands");
+                if (!cmds.Any(c => BattleAnimCommands.Name(version, c.OpId) == "End"))
+                    problems.Add($"{name}: no End anywhere in {cmds.Count} commands");
             }
 
             _out.WriteLine($"{gameCode}: {checkedFiles} scripts, {totalCommands} commands, {used.Count} distinct opcodes");

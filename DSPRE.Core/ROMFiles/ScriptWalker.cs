@@ -24,13 +24,13 @@ namespace DSPRE.ROMFiles
         Movement,
         /// <summary>A sound effect, Snd_SePlay. A is the sequence.</summary>
         SoundEffect,
-        /// <summary>A fanfare, Snd_MePlay, which pauses the music while it plays. A is the sequence.</summary>
+        /// <summary>A fanfare, which pauses the music while it plays. A is the sequence.</summary>
         Fanfare,
         /// <summary>Background music, Snd_BgmPlay. A is the sequence.</summary>
         Music,
         /// <summary>Stops the music.</summary>
         MusicStop,
-        /// <summary>A Pokémon's cry, Snd_PMVoicePlayEx. A is the species.</summary>
+        /// <summary>A Pokémon's cry. A is the species.</summary>
         Cry,
         /// <summary>Shakes the view: A and B are how far, C how many times, D over how many frames.</summary>
         CameraShake,

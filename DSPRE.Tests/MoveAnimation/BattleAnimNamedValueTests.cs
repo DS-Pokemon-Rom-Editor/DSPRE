@@ -12,10 +12,10 @@ namespace DSPRE.Tests
 {
     /// <summary>No bare number is left on screen where the games have a name for it.</summary>
     [Collection("rom")]
-    public class WestNamedValueTests
+    public class BattleAnimNamedValueTests
     {
         private readonly ITestOutputHelper _out;
-        public WestNamedValueTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimNamedValueTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
         private static readonly string Platinum = TestRoms.Platinum;
@@ -30,7 +30,7 @@ namespace DSPRE.Tests
 
         private static List<WazaSeqCommand> Load(byte[] bytes, WazaSeqVersion v)
         {
-            var cmds = WestScript.Parse(bytes, v);
+            var cmds = BattleAnimScript.Parse(bytes, v);
             int pos = 0;
             foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
             return cmds;
@@ -39,17 +39,17 @@ namespace DSPRE.Tests
         /// <summary>What should appear instead of the number, or null when nothing can name it.</summary>
         private static string NameFor(string opName, int[] args, int index, WazaSeqVersion version)
         {
-            if (opName is "WEST_FUNC_CALL" or "WEST_OLDACT_FUNC_CALL")
+            if (opName is "CallFunc" or "Nop11")
             {
-                if (index == 0) return WestScriptDisplay.RoutineName(args[0]);
+                if (index == 0) return BattleAnimScriptDisplay.RoutineName(args[0]);
                 if (index == 1) return null;                 // the word count, a plain number
-                string meaning = WestRoutines.WordMeaning(args[0], index - 2);
+                string meaning = BattleAnimFuncs.WordMeaning(args[0], index - 2);
                 if (meaning != null && meaning.Contains("target flag"))
-                    return WestTargetFlags.Describe(args[index], brief: true);
+                    return BattleAnimTargetFlags.Describe(args[index], brief: true);
                 return null;
             }
 
-            var options = WestParamSchema.EnumFor(opName, index);
+            var options = BattleAnimSchema.EnumFor(opName, index);
             if (options != null)
                 foreach (var o in options)
                     if (o.Value == args[index]) return o.Label;
@@ -80,16 +80,16 @@ namespace DSPRE.Tests
                 if (cmds.Count == 0) continue;
                 scripts++;
 
-                foreach (var mode in new[] { WestViewMode.Guided, WestViewMode.Script })
+                foreach (var mode in new[] { BattleAnimViewMode.Guided, BattleAnimViewMode.Script })
                 {
-                    var lines = WestScriptDisplay.Build(cmds, version, mode);
+                    var lines = BattleAnimScriptDisplay.Build(cmds, version, mode);
                     // Only the lines that stand for exactly one command: a folded shorthand shows its own
                     // settings instead, and is checked by the fold tests.
                     foreach (var line in lines)
                     {
                         if (line.IsHeading || line.Index < 0 || line.Covers != 1) continue;
                         var c = cmds[line.Index];
-                        string opName = WestOpcodes.Name(version, c.OpId);
+                        string opName = BattleAnimCommands.Name(version, c.OpId);
                         if (opName == null) continue;
 
                         for (int i = 0; i < c.Args.Length; i++)
@@ -98,14 +98,14 @@ namespace DSPRE.Tests
                             string want = NameFor(opName, c.Args, i, version);
                             if (want == null) continue;
                             nameable++;
-                            string source = opName is "WEST_FUNC_CALL" or "WEST_OLDACT_FUNC_CALL"
+                            string source = opName is "CallFunc" or "Nop11"
                                 ? (i == 0 ? "routine name" : "target flag") : "named setting";
                             perSource[source] = perSource.TryGetValue(source, out int n) ? n + 1 : 1;
 
                             // A named setting can be shown by its name, or left out entirely when it is
                             // switched off.
-                            string label = WestParamSchema.ParamName(opName, i);
-                            if (label != null && WestParamSchema.EnumFor(opName, i) != null)
+                            string label = BattleAnimSchema.ParamName(opName, i);
+                            if (label != null && BattleAnimSchema.EnumFor(opName, i) != null)
                             {
                                 if (line.Text.Contains($"{label}={want}")) { named++; continue; }
                                 if (!line.Text.Contains($"{label}=")) { omitted++; continue; }

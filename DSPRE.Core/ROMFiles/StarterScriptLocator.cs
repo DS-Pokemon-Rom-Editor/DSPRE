@@ -19,10 +19,10 @@ namespace DSPRE.ROMFiles
     /// </summary>
     public static class StarterScriptLocator
     {
-        /// <summary>Anything at or above this is a variable rather than a literal (SVWK_START).</summary>
+        /// <summary>Anything at or above this is a variable rather than a literal.</summary>
         public const int FirstVariable = 0x4000;
 
-        /// <summary>Anything at or above this is one of the script's own slots (SCWK_START).</summary>
+        /// <summary>Anything at or above this is one of the script's own slots.</summary>
         public const int FirstScriptSlot = 0x8000;
 
         /// <summary>Where a give-a-Pokemon command is, and what it is currently set to.</summary>

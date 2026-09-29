@@ -69,8 +69,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The routine names as the games' own source has them, before anybody renames one.</summary>
         private static string[] BuildRoutineDefaults()
         {
-            var names = new string[WestRoutines.TableSize];
-            for (int i = 0; i < names.Length; i++) names[i] = WestRoutines.Get(i)?.Name ?? ("Routine " + i);
+            var names = new string[BattleAnimFuncs.TableSize];
+            for (int i = 0; i < names.Length; i++) names[i] = BattleAnimFuncs.Get(i)?.Name ?? ("Routine " + i);
             return names;
         }
 
@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.Data
                 => Register(new LabelCategory { Key = key, DisplayName = name, Group = group, Singular = singular, Cap = 256, Defaults = defaults });
 
             // The routines a move animation can call.
-            Reg("west_routines", "Move animation routines", "Pokémon", "Routine",
+            Reg("battle_anim_funcs", "Move animation routines", "Pokémon", "Routine",
                 BuildRoutineDefaults());
 
             // Pokémon: combos bind by SelectedIndex == enum position (these enums are sequential).
@@ -341,17 +341,20 @@ namespace DSPRE.Avalonia.Data
                 var file = JsonSerializer.Deserialize<LabelFile>(json);
                 if (file?.labels != null)
                 {
-                    foreach (var kv in file.labels) labels[kv.Key] = IntKeyed(kv.Value);
-                    if (file.attrs != null) foreach (var kv in file.attrs) attrs[kv.Key] = IntKeyed(kv.Value);
+                    foreach (var kv in file.labels) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                    if (file.attrs != null) foreach (var kv in file.attrs) attrs[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
                 }
                 else   // old flat format (root = cat → idx → label)
                 {
                     var flat = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json);
-                    if (flat != null) foreach (var kv in flat) labels[kv.Key] = IntKeyed(kv.Value);
+                    if (flat != null) foreach (var kv in flat) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
                 }
             }
             catch (Exception ex) { AppLogger.Error("LabelStore.Load: " + ex.Message); }
         }
+
+        // Label files saved by earlier beta builds use the old key.
+        private static string CurrentKey(string key) => key == "west_routines" ? "battle_anim_funcs" : key;
 
         private static Dictionary<int, T> IntKeyed<T>(Dictionary<string, T> src)
         {

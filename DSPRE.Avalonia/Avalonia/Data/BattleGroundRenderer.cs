@@ -10,16 +10,16 @@ namespace DSPRE.Avalonia.Data
     /// <summary>
     /// Decodes the real in-game battle ground "tray" the Pokémon stand on (the terrain platforms) from
     /// <c>battle/graphic/pl_batt_obj.narc</c> (<see cref="DirNames.battleObj"/>, Platinum).
-    /// The OAM cell layout (NCER) is SHARED across every terrain (GROUND00's mine/enemy cell), only the tiles (NCGR)
-    /// and palette (NCLR, day/eve/night) change per <c>GROUND_ID</c>; the game's GroundResourceID_Mine/Enemy/Palette
-    /// tables remap the GROUND_ID to a GROUND## graphic set. Renders bank 0 of the shared cell with each terrain's
-    /// tiles + palette to a straight-RGBA platform, positioned at the game's GROUND_MINE/ENEMY screen coordinates.
+    /// The OAM cell layout (NCER) is SHARED across every terrain (platform 0's mine/enemy cell), only the tiles (NCGR)
+    /// and palette (NCLR, day/eve/night) change per <c>terrain id</c>; the game's own tables
+    /// remap the terrain id to a platform graphic set. Renders bank 0 of the shared cell with each terrain's
+    /// tiles + palette to a straight-RGBA platform, positioned at the game's platform screen coordinates.
     /// </summary>
     public sealed class BattleGroundRenderer
     {
         public sealed class GroundImage { public byte[] Rgba; public int Width, Height, Left, Top; }
 
-        // GROUND_ID to label.
+        // terrain id to label.
         private static readonly string[] DpTerrainNames =
             { "Gravel", "Sand", "Lawn", "Pool", "Rock", "Cave", "Snow", "Water", "Ice", "Floor", "Marsh" };
         private static readonly string[] PtTerrainNames =
@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Data
             _ => PtTerrainNames,
         };
 
-        // GROUND_ID to GROUND## graphic set per side. Id 11 draws your side from GROUND10 and theirs, with its colours, from GROUND08.
+        // terrain id to platform graphic set per side. Id 11 draws your side from platform 10 and theirs, with its colours, from platform 8.
         private static readonly int[] DpGroundGfx = { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8 };
         private static readonly int[] PtHgssMineGfx =
             { 2, 7, 0, 10, 4, 9, 5, 1, 3, 6, 8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
@@ -47,8 +47,7 @@ namespace DSPRE.Avalonia.Data
         private static int[] EnemyGfx => gameFamily == GameFamilies.DP ? DpGroundGfx : PtHgssEnemyGfx;
 
 
-        // GROUND_MINE_X/Y, GROUND_ENEMY_X/Y: the CATS actor screen position (the cell origin). Get_Image
-        // draws each OAM at canvasSize/2 + oam.xy, so a 256² render placed at (pos − 128) lands the origin on pos.
+        // Cell origin on screen; a 256 canvas drawn at pos - 128 puts its centre there.
         private const int MineX = 64, MineY = 128 + 8, EnemyX = 24 * 8, EnemyY = 8 * 11, Canvas = 256;
 
         public static int TerrainCount => TerrainNames.Length;
@@ -56,30 +55,30 @@ namespace DSPRE.Avalonia.Data
         /// <summary>
         /// Which files make up the ground one Pokemon stands on, found by the names the game gives
         /// them. The numbers differ per game, so a constant is right for one family and wrong for the
-        /// others. GROUND00 carries the layout every terrain is drawn with.
+        /// others. platform 0 carries the layout every terrain is drawn with.
         /// </summary>
         public static (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)?
             TerrainFiles(int terrainId)
         {
             if (terrainId < 0 || terrainId >= MineGfx.Length) return null;
             int mine = MineGfx[terrainId], enemy = EnemyGfx[terrainId];
-            int mineDraw = BattleObjects.Find($"GROUND{mine:D2}_M", "Drawing");
-            int enemyDraw = BattleObjects.Find($"GROUND{enemy:D2}_E", "Drawing");
-            int mineLayout = BattleObjects.Find("GROUND00_M", "As it appears");
-            int enemyLayout = BattleObjects.Find("GROUND00_E", "As it appears");
-            int palDay = BattleObjects.Find($"BATT_GROUND{enemy:D2}_D", "Colours");
+            int mineDraw = BattleObjects.Find($"Platform.{mine}.Yours", "Drawing");
+            int enemyDraw = BattleObjects.Find($"Platform.{enemy}.Theirs", "Drawing");
+            int mineLayout = BattleObjects.Find("Platform.0.Yours", "As it appears");
+            int enemyLayout = BattleObjects.Find("Platform.0.Theirs", "As it appears");
+            int palDay = BattleObjects.Find($"Platform.{enemy}.Day", "Colours");
             if (mineDraw < 0 || enemyDraw < 0 || mineLayout < 0 || enemyLayout < 0 || palDay < 0) return null;
             return (mineDraw, enemyDraw, mineLayout, enemyLayout, palDay);
         }
 
-        // A default only: backdrop and ground are set independently per zone, and GROUND## numbering parallels BATTLE_BG##.
+        // A default only: backdrop and ground are set independently per zone, and platform numbering parallels backdrop numbering.
         public static int BackdropForTerrain(int terrainId)
             => terrainId >= 0 && terrainId < MineGfx.Length ? Math.Min(MineGfx[terrainId], BattleBgRenderer.BackdropCount - 1) : -1;
 
         private readonly ScriptNarc _narc = new ScriptNarc(DirNames.battleObj);
         public bool Available => _narc.Available;
 
-        /// <summary>Builds the (mine, enemy) ground platforms for a terrain (a GROUND_ID), or (null,null) if the
+        /// <summary>Builds the (mine, enemy) ground platforms for a terrain (a terrain id), or (null,null) if the
         /// archive is unmapped/missing. <paramref name="timeZone"/> 0=day,1=evening,2=night selects the palette.</summary>
         public (GroundImage mine, GroundImage enemy) Build(int terrainId, int timeZone = 0)
         {
@@ -97,11 +96,11 @@ namespace DSPRE.Avalonia.Data
         public GroundImage BuildGauge(bool player)
         {
             if (!_narc.Available) return null;
-            // Found by name because file numbers differ per game. SINGLE_GAGE2 is your side, SINGLE_GAGE1 theirs.
-            string thing = player ? "SINGLE_GAGE2" : "SINGLE_GAGE1";
+            // Found by name because file numbers differ per game.
+            string thing = player ? "HpBar.Yours" : "HpBar.Theirs";
             int drawing = BattleObjects.Find(thing, "Drawing");
             int layout = BattleObjects.Find(thing, "As it appears");
-            int colours = BattleObjects.Find("GAGE_PALETTE", "Colours");
+            int colours = BattleObjects.Find("HpBar.Shared", "Colours");
             if (drawing < 0 || layout < 0 || colours < 0) return null;
             var at = BattleGaugeComposer.CentreOf(player ? BattleGaugeComposer.Kind.PlayerSingle : BattleGaugeComposer.Kind.OpponentSingle);
             return Render(drawing, colours, layout, at.X, at.Y);

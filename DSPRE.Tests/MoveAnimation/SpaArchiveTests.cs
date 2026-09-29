@@ -57,7 +57,7 @@ namespace DSPRE.Tests
             var e = a.Emitters[0];
             Assert.Equal(1, e.InitPosType);
             Assert.Equal(0, e.DrawType);
-            // Spatial fields are particle-coords → pixels (÷172 = PT_LCD_DOT); gen_num / base_scl stay fx32 (÷4096).
+            // Spatial fields are particle-coords → pixels (÷172); gen_num / base_scl stay fx32 (÷4096).
             Assert.Equal(0x2000 / 172.0, e.PosX, 3);
             Assert.Equal(0x1000 / 172.0, e.PosY, 3);
             Assert.Equal(8.0, e.GenNum);

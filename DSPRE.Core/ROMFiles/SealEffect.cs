@@ -20,7 +20,7 @@ namespace DSPRE.ROMFiles
             return RingDelays[ring];
         }
 
-        // Particle world units to screen pixels (FX32_ONE / PT_LCD_DOT).
+        // Particle world units to screen pixels (4096 / 172).
         private const double PixelsPerUnit = 4096.0 / 172.0;
 
         /// <summary>Where a seal's emitter sits on the 256 by 192 top screen.</summary>

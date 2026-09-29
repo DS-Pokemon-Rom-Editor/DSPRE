@@ -329,7 +329,7 @@ namespace DSPRE.Tests
             {
                 if (u.Name == null || u.First >= listed.Count) return false;
                 var (thing, _) = DSPRE.Avalonia.Data.BattleObjects.Split(listed[u.First]);
-                return thing != null && thing.StartsWith("BATT_BALL_");
+                return thing != null && thing.StartsWith("ThrownBall.") && char.IsDigit(thing[^1]);
             }).ToList();
             Assert.True(balls.Count >= 16,
                 $"{game}: only {balls.Count} thrown balls named, expected at least the sixteen shared ones");
@@ -388,7 +388,7 @@ namespace DSPRE.Tests
                 Assert.NotNull(row);
                 var names = DSPRE.Avalonia.Data.BattleObjects.Names();
                 var (thing, _) = DSPRE.Avalonia.Data.BattleObjects.Split(names[row.First]);
-                return int.Parse(thing.Substring("BATT_BALL_".Length));
+                return int.Parse(thing.Substring("ThrownBall.".Length));
             }
 
             int sinnoh = DrawingOfPlainBall("CPUE", Platinum);

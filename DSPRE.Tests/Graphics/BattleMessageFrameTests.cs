@@ -25,7 +25,7 @@ namespace DSPRE.Tests
 
         /// <summary>
         /// The frames carry no colours of their own, so without a rule for them they draw in whatever
-        /// palette happens to be reached for. The battle loads BATTLE_WOBJ_NCLR for the screen the frames
+        /// palette happens to be reached for. The battle loads the shared frame colours for the screen the frames
         /// are on.
         /// </summary>
         [Fact]
@@ -43,14 +43,15 @@ namespace DSPRE.Tests
                 var names = BattleObjects.Names();
                 int wobj = -1;
                 for (int i = 0; i < names.Count; i++)
-                    if (names[i] == "BATTLE_WOBJ_NCLR") { wobj = i; break; }
-                Assert.True(wobj >= 0, name + " has no BATTLE_WOBJ_NCLR");
+                    if (names[i] == "MessageFrame.Shared:Colours") { wobj = i; break; }
+                Assert.True(wobj >= 0, name + " has no shared message frame colours");
 
                 int frames = 0;
                 for (int i = 0; i < names.Count; i++)
                 {
-                    if (names[i] == null || !names[i].StartsWith("BATTLE_W_WAKU", StringComparison.Ordinal)) continue;
-                    if (names[i].EndsWith("_NCLR", StringComparison.Ordinal)) continue;
+                    var (thing, part) = BattleObjects.Split(names[i]);
+                    if (thing == null || !thing.StartsWith("MessageFrame.", StringComparison.Ordinal) || !char.IsDigit(thing[^1])) continue;
+                    if (part == "Colours") continue;
                     frames++;
                     Assert.Equal(wobj, BattleObjects.ColoursFor(i));
                 }
@@ -99,7 +100,7 @@ namespace DSPRE.Tests
         }
         /// <summary>
         /// The gauge files are found by name, not by number. The numbers differ per game: Diamond keeps
-        /// SINGLE_GAGE1 at 123/124 where Platinum and HeartGold keep it at 187/188, so a constant is right
+        /// their HP bar at 123/124 where Platinum and HeartGold keep it at 187/188, so a constant is right
         /// for two games and wrong for the third.
         /// </summary>
         [Fact]
@@ -124,7 +125,7 @@ namespace DSPRE.Tests
                     Assert.True(g.Rgba.Any(b => b != 0), $"{name}: the {(player ? "player" : "enemy")} gauge came out blank");
                 }
                 _out.WriteLine($"{name}: both gauges drew, from files "
-                    + $"{BattleObjects.Find("SINGLE_GAGE2", "Drawing")} and {BattleObjects.Find("SINGLE_GAGE1", "Drawing")}");
+                    + $"{BattleObjects.Find("HpBar.Yours", "Drawing")} and {BattleObjects.Find("HpBar.Theirs", "Drawing")}");
             }
             Assert.True(checkedGames > 0, "no game was unpacked here, so nothing was checked");
             _out.WriteLine($"{checkedGames} games checked");

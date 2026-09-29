@@ -222,12 +222,12 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>
-        /// The sound a door makes, which is what the Door field picks (GetDoorSE).
+        /// The sound a door makes, which the DoorKind byte picks.
         /// </summary>
         public static string DoorSound(int modelId, bool indoor, bool opening)
         {
             var info = InfoFor(modelId, indoor);
-            switch (info?.Door ?? 0)
+            switch (info?.DoorKind ?? 0)
             {
                 case 1: return opening ? "a door opening" : "a door closing";
                 case 2: return opening ? "an automatic door opening" : "an automatic door closing";

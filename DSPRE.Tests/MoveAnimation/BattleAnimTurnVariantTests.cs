@@ -13,10 +13,10 @@ namespace DSPRE.Tests
 {
     /// <summary>The second animation a move can hold.</summary>
     [Collection("rom")]
-    public class WestTurnVariantTests
+    public class BattleAnimTurnVariantTests
     {
         private readonly ITestOutputHelper _out;
-        public WestTurnVariantTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimTurnVariantTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
         private static readonly string Platinum = TestRoms.Platinum;
@@ -31,7 +31,7 @@ namespace DSPRE.Tests
 
         private static List<WazaSeqCommand> Load(byte[] bytes, WazaSeqVersion v)
         {
-            var cmds = WestScript.Parse(bytes, v);
+            var cmds = BattleAnimScript.Parse(bytes, v);
             int pos = 0;
             foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
             return cmds;
@@ -41,7 +41,7 @@ namespace DSPRE.Tests
         private static List<int> CommandsReached(List<WazaSeqCommand> cmds, WazaSeqVersion v,
                                                  ScriptNarc particles, bool secondVariant)
         {
-            var w = new WestPlayer(cmds, v, particles, 64, 120, 190, 60,
+            var w = new BattleAnimPlayer(cmds, v, particles, 64, 120, 190, 60,
                                    attackerIsEnemy: false, selfTarget: false)
             { SecondTurnVariant = secondVariant };
             for (int i = 0; i < 900 && !w.Finished; i++) w.Step();
@@ -74,7 +74,7 @@ namespace DSPRE.Tests
                 if (cmds.Count == 0) continue;
                 scripts++;
 
-                var checks = cmds.Where(c => WestOpcodes.Name(version, c.OpId) == "WEST_TURN_CHK").ToList();
+                var checks = cmds.Where(c => BattleAnimCommands.Name(version, c.OpId) == "JumpByTurn").ToList();
                 if (checks.Count == 0) continue;
 
                 // Where the two offsets actually land.

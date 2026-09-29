@@ -179,7 +179,7 @@ namespace DSPRE.Tests
             Assert.InRange(FieldCamera.FieldOfViewDegrees, 16.1f, 16.3f);
 
             // The camera does not turn with the player. It keeps up with them across the ground and
-            // lags six frames on height only, which is what CAM_TRACE_MASK_Y asks for.
+            // lags six frames on height only, which is what the camera trace mask asks for.
             Assert.Equal(0f, FieldCamera.YawDegrees);
             Assert.Equal(6, FieldCamera.TrailFrames);
             Assert.True(FieldCamera.HeightLagsBehind);
@@ -192,7 +192,7 @@ namespace DSPRE.Tests
         [Fact]
         public void EveryCameraInTheGamesTableIsReadableAndSane()
         {
-            // ZoneData_GetCameraID hands a header's camera number straight to this table, so every row
+            // The game hands a header's camera number straight to this table, so every row
             // has to come out usable, not just the one most maps use.
             Assert.Equal(17, FieldCamera.Count);
 

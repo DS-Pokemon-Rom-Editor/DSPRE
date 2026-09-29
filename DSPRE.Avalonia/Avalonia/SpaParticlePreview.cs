@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia
             public readonly double Aspect, DbbScale;   // base.aspect (sclX = sclY×aspect); directional stretch along vel
             public readonly double OffsetX, OffsetY;    // base.offset_x/offset_y: quad centre offset in half-size units
             // Depth of this emitter's anchor plane in px-units (+z toward the camera): the player mon sits at
-            // ≈0 (WET_PARTICLE_Z_A = 0x40) and the ENEMY at −30.5 (Z_BB = −5248/172), farther from the camera,
+            // ≈0 (0x40) and the ENEMY at −30.5 (−5248/172), farther from the camera,
             // so enemy-side effects render ≈75% the size (the real game's perspective).
             public readonly double BaseZ;
             // The camera-reverse emit callbacks (cb 1/2) with an enemy attacker turn the particle camera 180°,
@@ -56,10 +56,10 @@ namespace DSPRE.Avalonia
 
         public double WorldToPx { get; set; } = 1.0;      // particle pixels → screen pixels (positions already /172)
         // billboard half-size px = base_scl × this. The the particle library quad is ±FX32_ONE (±1.0 world) scaled by base_scl, and
-        // world→pixels is /PT_LCD_DOT, so the faithful factor is FX32_ONE/PT_LCD_DOT = 4096/172 ≈ 23.8.
+        // world→pixels is /172, so the faithful factor is 4096/172 = 4096/172 ≈ 23.8.
         public double ScalePx { get; set; } = 4096.0 / 172.0;
         // The real battle particle camera: eye at (0,0,0x4000) = z +4.0 world units,
-        // looking at the origin. PT_LCD_DOT (172) is exactly this camera's px-per-unit at the z=0 plane
+        // looking at the origin. 172 is exactly this camera's px-per-unit at the z=0 plane
         // (96px focal / 4.0 ≈ 24 px/unit = 4096/170.7 ≈ /172), which is why the flat mapping was "almost right":
         // it IS the projection at z=0; depth only matters off that plane (the enemy sits at z −1.28).
         private const double EyeDist = 4.0;
@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia
             _buf = new byte[width * height * 4];
         }
 
-        /// <summary>Adds an emitter layer (the timeline interpreter calls this as ADD_PARTICLE commands fire).</summary>
+        /// <summary>Adds an emitter layer (the timeline interpreter calls this as CreateEmitter commands fire).</summary>
         public void AddLayer(Layer l) => _layers.Add(l);
 
         public bool HasEmitters => _layers.Count > 0;
@@ -98,9 +98,9 @@ namespace DSPRE.Avalonia
             {
                 // The real battle particle camera: eye at
                 // (0,0,+4.0) world units looking at the origin, Y up. px-per-world-unit at the z=0 plane is
-                // 4096/172 (PT_LCD_DOT), so the perspective factor for a particle at depth z (px-units,
+                // 4096/172 , so the perspective factor for a particle at depth z (px-units,
                 // +z toward camera) is f = 4 / (4 − z/23.81): 1.0 exactly at the player plane, ≈0.757 at the
-                // enemy plane (Z_BB), matching the game's smaller enemy-side rendering.
+                // enemy plane , matching the game's smaller enemy-side rendering.
                 double fBase = layer.Orthographic ? 1.0 : EyeDist / (EyeDist - layer.BaseZ / PxPerUnit);
                 if (fBase <= 0) continue;   // anchor behind the camera, nothing sane to draw
                 double mirror = layer.ViewReversed ? -1.0 : 1.0;
@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia
                     // path as draw-type 3.
                     int drawType = p.IsChild && layer.Em != null ? layer.Em.ChildDrawType : layer.DrawType;
                     bool directional = drawType == 1;             // the directional-billboard draw type
-                    bool polygonType = drawType >= 2 && layer.Em != null;   // POLYGON / DIRECTIONAL_POLYGON(_CENTER)
+                    bool polygonType = drawType >= 2 && layer.Em != null;   // polygon draw types
                     // The quad spans tileS by tileT texture widths; the texture's repeat and flip bits decide what lies past the first.
                     var tex = layer.TexFor(p.TexNo);
                     bool textured = tex != null && tex.Rgba != null && tex.Width > 0 && tex.Height > 0;

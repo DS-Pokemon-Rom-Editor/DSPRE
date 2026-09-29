@@ -19,7 +19,7 @@ namespace DSPRE.Tests
         [Fact]
         public void CommonScriptsStartTheirOwnNumbering()
         {
-            // ID_COMMON_SCR_OFFSET is 2000, so script 2000 is the first one in the common file.
+            // Common scripts start at 2000, so script 2000 is the first one in the common file.
             var first = CommonScriptId.Resolve(RomInfo.GameFamilies.HGSS, 2000);
             Assert.Equal(CommonScriptId.Kind.Resolved, first.Kind);
             Assert.Equal(0, first.LocalScriptId);
@@ -66,7 +66,7 @@ namespace DSPRE.Tests
         [InlineData(10000)]  // HM
         public void EveryRangeStartFromTheEngineHeaderResolves(int scriptNumber)
         {
-            // These are the offsets scr_offset.h defines; each one must land on a real file.
+            // Each shared script offset must land on a real file.
             var r = CommonScriptId.Resolve(RomInfo.GameFamilies.HGSS, scriptNumber);
             Assert.Equal(CommonScriptId.Kind.Resolved, r.Kind);
             Assert.Equal(0, r.LocalScriptId);

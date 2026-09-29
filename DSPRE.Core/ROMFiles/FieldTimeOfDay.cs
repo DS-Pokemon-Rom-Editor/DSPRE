@@ -2,7 +2,7 @@ using System;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>The part of the day the games divide the clock into (system/timezone.h).</summary>
+    /// <summary>The part of the day the games divide the clock into.</summary>
     public enum FieldTimeZone
     {
         Morning = 0,
@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles
     public static class FieldTimeOfDay
     {
         /// <summary>
-        /// The hour of the day each part covers, straight from GF_RTC_ConvertHourToTimeZone: midnight until
+        /// The hour of the day each part covers: midnight until
         /// 4, morning until 10, noon until 17, evening until 20, then night.
         /// </summary>
         private static readonly FieldTimeZone[] ByHour =
@@ -52,7 +52,7 @@ namespace DSPRE.ROMFiles
         /// <summary>A readable name, for a picker to show.</summary>
         /// <summary>
         /// Whether the games count this as night, which decides which of a header's two music numbers
-        /// plays. GF_RTC_IsNightTime in pm_rtc.c:434 counts the small hours and the night, nothing else.
+        /// plays. The small hours and the night count, nothing else.
         /// </summary>
         public static bool IsNight(FieldTimeZone zone) =>
             zone == FieldTimeZone.Night || zone == FieldTimeZone.Midnight;

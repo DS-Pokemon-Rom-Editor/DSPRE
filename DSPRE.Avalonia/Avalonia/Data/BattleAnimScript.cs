@@ -3,14 +3,7 @@ using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>
-    /// Reads/writes a single move VISUAL-effect script: one <c>we_NNN</c> file in the effect NARC, where the file
-    /// index is the move number. The bytecode is a stream of little-endian 32-bit words: an opcode id (see
-    /// <see cref="WestOpcodes"/>) followed by its argument words. Most opcodes are fixed-length; the four variable
-    /// ones carry a count word (at <see cref="WestOp.CountIndex"/>) giving how many extra payload words trail the
-    /// fixed args. Reuses <see cref="WazaSeqCommand"/> (opcode id + flattened args). Linear, tolerant parse.
-    /// </summary>
-    public static class WestScript
+    public static class BattleAnimScript
     {
         public static List<WazaSeqCommand> Parse(byte[] data, WazaSeqVersion version)
         {
@@ -21,9 +14,9 @@ namespace DSPRE.Avalonia.Data
             while (pos < words)
             {
                 int op = BitConverter.ToInt32(data, pos * 4);
-                if (!WestOpcodes.TryGet(version, op, out var info)) break;   // unknown opcode → stop
+                if (!BattleAnimCommands.TryGet(version, op, out var info)) break;
                 int n = info.ArgCount;
-                if (pos + 1 + n > words) break;                             // fixed args overrun → stop
+                if (pos + 1 + n > words) break;
 
                 var args = new List<int>(n);
                 for (int i = 0; i < n; i++) args.Add(BitConverter.ToInt32(data, (pos + 1 + i) * 4));
@@ -32,7 +25,7 @@ namespace DSPRE.Avalonia.Data
                 if (info.IsVariable)
                 {
                     int count = (info.CountIndex >= 0 && info.CountIndex < n) ? args[info.CountIndex] : 0;
-                    if (count < 0 || pos + 1 + n + count > words) break;    // payload overrun / bad count → stop
+                    if (count < 0 || pos + 1 + n + count > words) break;
                     for (int i = 0; i < count; i++) args.Add(BitConverter.ToInt32(data, (pos + 1 + n + i) * 4));
                     total = n + count;
                 }
@@ -43,8 +36,6 @@ namespace DSPRE.Avalonia.Data
             return cmds;
         }
 
-        /// <summary>Serializes commands back to a little-endian word blob. The count word of a variable opcode is
-        /// just one of its args, so writing opcode + args round-trips correctly.</summary>
         public static byte[] Serialize(IReadOnlyList<WazaSeqCommand> cmds)
         {
             int words = 0;

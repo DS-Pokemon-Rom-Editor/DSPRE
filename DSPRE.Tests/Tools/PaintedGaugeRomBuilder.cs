@@ -17,7 +17,7 @@ namespace DSPRE.Tests
     /// Here a cell layout assembles the picture from pieces, so the paint has to be taken apart again
     /// and written back into whichever piece each pixel belongs to.
     ///
-    /// The enemy gauge is SINGLE_GAGE1, drawing 188 and layout 187, per gauge.c's GaugeObjParam_bb. A
+    /// The enemy gauge is drawing 188 and layout 187. A
     /// solid block is painted across the middle of it in a colour the gauge already has. A tool rather
     /// than a check, so it does nothing unless DSPRE_PAINT_ROM is set. The user's own project and ROM are
     /// never touched.

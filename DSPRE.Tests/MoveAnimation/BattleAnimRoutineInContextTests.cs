@@ -13,18 +13,18 @@ namespace DSPRE.Tests
 {
     /// <summary>The routines that need the rest of their script around them.</summary>
     [Collection("rom")]
-    public class WestRoutineInContextTests
+    public class BattleAnimRoutineInContextTests
     {
         private readonly ITestOutputHelper _out;
-        public WestRoutineInContextTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimRoutineInContextTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string HeartGold = TestRoms.HeartGold;
 
         // The seven the isolated harness cannot reach, with the name the table gives them.
         private static readonly (int Id, string Name)[] NeedContext =
         {
-            (49, "WE_057"), (56, "WE_T08"), (65, "EMIT_STRAIGHT"), (66, "EMIT_PARABOLIC"),
-            (72, "EMIT_ROTATION"), (73, "EMIT_SIMPLE_UD"), (75, "POKE_OAM_VIEW"),
+            (49, "Surf"), (56, "Superpower"), (65, "MoveEmitterA2BLinear"), (66, "MoveEmitterA2BParabolic"),
+            (72, "RevolveEmitter"), (73, "MoveEmitterViewportTop"), (75, "SetPokemonSpritePriority"),
         };
 
         private static string ScriptDir()
@@ -37,7 +37,7 @@ namespace DSPRE.Tests
 
         private static List<WazaSeqCommand> Load(byte[] bytes)
         {
-            var cmds = WestScript.Parse(bytes, WazaSeqVersion.HGSS);
+            var cmds = BattleAnimScript.Parse(bytes, WazaSeqVersion.HGSS);
             int pos = 0;
             foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
             return cmds;
@@ -46,7 +46,7 @@ namespace DSPRE.Tests
         private static List<WazaSeqCommand> Copy(List<WazaSeqCommand> cmds)
             => cmds.Select(c => new WazaSeqCommand(c.OpId, (int[])c.Args.Clone()) { WordPos = c.WordPos }).ToList();
 
-        private static string Frame(WestPlayer w)
+        private static string Frame(BattleAnimPlayer w)
         {
             var s = new System.Text.StringBuilder();
             for (int m = 0; m < 2; m++)
@@ -60,7 +60,7 @@ namespace DSPRE.Tests
             s.Append(w.ShakeX.ToString("F2")).Append(',').Append(w.ShakeY.ToString("F2")).Append(',')
              .Append(w.FadeOpacity.ToString("F3")).Append(',').Append(w.BgFlashAmount.ToString("F3")).Append(',')
              .Append(w.Grayscale).Append(',').Append(w.RasterActive).Append(',').Append(w.HasBackground).Append(',')
-             .Append(w.MonWarpAmp.ToString("F2")).Append(',').Append(w.Ghosts.Count).Append(',').Append(w.CatsActors.Count);
+             .Append(w.MonWarpAmp.ToString("F2")).Append(',').Append(w.Ghosts.Count).Append(',').Append(w.SpriteActors.Count);
 
             foreach (var g in w.Ghosts)
                 s.Append('/').Append(g.Dx.ToString("F2")).Append(',').Append(g.Dy.ToString("F2")).Append(',')
@@ -74,7 +74,7 @@ namespace DSPRE.Tests
                  .Append(c.RotDeg.ToString("F2")).Append(',').Append(c.Mosaic.ToString("F2")).Append(',')
                  .Append(c.TintA.ToString("F2")).Append(',').Append(c.Visible);
 
-            foreach (var act in w.CatsActors)
+            foreach (var act in w.SpriteActors)
                 s.Append('^').Append(act.X.ToString("F2")).Append(',').Append(act.Y.ToString("F2")).Append(',')
                  .Append(act.ScaleX.ToString("F2")).Append(',').Append(act.ScaleY.ToString("F2")).Append(',')
                  .Append(act.Alpha.ToString("F2")).Append(',').Append(act.Visible);
@@ -92,7 +92,7 @@ namespace DSPRE.Tests
         private static (string Trace, bool Reached) Run(List<WazaSeqCommand> cmds, ScriptNarc particles,
                                                        bool attackerIsEnemy, bool secondTurn, int lookFor)
         {
-            var w = new WestPlayer(cmds, WazaSeqVersion.HGSS, particles, 64, 120, 190, 60,
+            var w = new BattleAnimPlayer(cmds, WazaSeqVersion.HGSS, particles, 64, 120, 190, 60,
                                    attackerIsEnemy: attackerIsEnemy, selfTarget: false)
             { SecondTurnVariant = secondTurn };
             var sb = new System.Text.StringBuilder();
@@ -112,8 +112,8 @@ namespace DSPRE.Tests
             var particles = new ScriptNarc(DirNames.wazaParticle);
             Assert.True(particles.Available, "the particle archive is missing, so the runs would not be comparable");
 
-            int funcCall = WestOpcodes.Id(WazaSeqVersion.HGSS, "WEST_FUNC_CALL");
-            const int emptyRoutine = 0;   // TEST_1, one of the sample routines, empty
+            int funcCall = BattleAnimCommands.Id(WazaSeqVersion.HGSS, "CallFunc");
+            const int emptyRoutine = 0;   // Nop, empty
 
             var unchanged = new List<string>();
             var neverReached = new List<string>();
@@ -137,7 +137,7 @@ namespace DSPRE.Tests
 
                 foreach (var f in callers)
                 {
-                    // Both sides, and both of the two animations a TURN_CHK move alternates between, because
+                    // Both sides, and both of the two animations a JumpByTurn move alternates between, because
                     // a call can sit in a branch only one of those four combinations ever runs.
                     foreach (bool asEnemy in new[] { false, true })
                     foreach (bool secondTurn in new[] { false, true })

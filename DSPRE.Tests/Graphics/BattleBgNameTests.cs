@@ -29,11 +29,7 @@ namespace DSPRE.Tests
             _ => BattleBgNames.DiamondPearl,
         };
 
-        /// <summary>
-        /// A name list one entry out of step mislabels everything after the gap, silently. Platinum's
-        /// index list carries Diamond's 257 entries while Platinum's archive holds 342, so
-        /// the count is the check that catches using the wrong source.
-        /// </summary>
+        /// <summary>A name list one entry out of step mislabels everything after the gap, silently.</summary>
         [Fact]
         public void TheNameListIsExactlyAsLongAsTheArchive()
         {
@@ -64,8 +60,9 @@ namespace DSPRE.Tests
         {
             string[] wanted =
             {
-                "BATTLE_WBG0A_NCGR_BIN", "BATTLE_WBG0B_NSCR_BIN", "BATTLE_WBG1A_NSCR_BIN",
-                "BATTLE_WBG1B_NSCR_BIN", "BATTLE_WBG1C_NSCR_BIN", "BATTLE_WBG1D_NSCR_BIN",
+                "TouchScreen.Layer.Unused:Drawing", "TouchScreen.Layer.Background:Screen",
+                "TouchScreen.Layer.CommandButtons:Screen", "TouchScreen.Layer.MoveButtons:Screen",
+                "TouchScreen.Layer.TargetButtons:Screen", "TouchScreen.Layer.YesNoButtons:Screen",
             };
             int checkedGames = 0;
             foreach (var (code, path, name) in Games)
@@ -82,10 +79,9 @@ namespace DSPRE.Tests
             Assert.True(checkedGames > 0, "no game was unpacked here, so nothing was checked");
         }
         /// <summary>
-        /// The count matching is not enough. Platinum's build list holds exactly 342 entries, the same
-        /// as its archive, but in a different order, and every name was wrong while the count test
-        /// passed. BattleBgRenderer's tables were checked against the games, so if the names at those
-        /// numbers read as one thing's tiles, colours and screen, the list is in step.
+        /// The count matching is not enough: a list in the wrong order passes it. BattleBgRenderer's tables
+        /// were checked against the games, so if the names at those numbers read as one thing's tiles,
+        /// colours and screen, the list is in step.
         /// </summary>
         [Fact]
         public void TheNamesLineUpWithFilesAlreadyKnownToBeRight()
@@ -108,12 +104,12 @@ namespace DSPRE.Tests
                             name + ": the list is shorter than the numbers being checked");
 
                 // One backdrop's three files must name one thing, each of its own kind.
-                Assert.Contains("_NCGR", names[chr], StringComparison.Ordinal);
-                Assert.Contains("_NCLR", names[pal], StringComparison.Ordinal);
-                Assert.Contains("_NSCR", names[scr], StringComparison.Ordinal);
-                string stem = names[chr].Split("_NCGR")[0];
-                Assert.StartsWith(stem, names[pal], StringComparison.Ordinal);
-                Assert.StartsWith(stem, names[scr], StringComparison.Ordinal);
+                Assert.EndsWith(":Drawing", names[chr], StringComparison.Ordinal);
+                Assert.EndsWith(":Colours", names[pal], StringComparison.Ordinal);
+                Assert.EndsWith(":Screen", names[scr], StringComparison.Ordinal);
+                string stem = names[chr].Split(':')[0];
+                Assert.Equal(stem, names[pal].Split(':')[0]);
+                Assert.StartsWith(stem, names[scr].Split(':')[0], StringComparison.Ordinal);
                 _out.WriteLine($"{name}: {chr}/{pal}/{scr} all name {stem}");
             }
             Assert.True(checkedGames > 0, "no game was unpacked here, so nothing was checked");
@@ -136,12 +132,9 @@ namespace DSPRE.Tests
                     var files = BattleBgRenderer.BackdropFiles(bg);
                     Assert.True(files.Drawing < names.Length && files.PaletteDay < names.Length,
                                 $"{name}: backdrop {bg} points past the name list");
-                    string tag = $"BG{bg:D2}";
-                    Assert.True(names[files.Drawing].Contains(tag, StringComparison.Ordinal)
-                                && names[files.Drawing].Contains("_NCGR", StringComparison.Ordinal),
+                    Assert.True(names[files.Drawing] == $"Backdrop.{bg}:Drawing",
                                 $"{name}: backdrop {bg}'s drawing is {names[files.Drawing]}");
-                    Assert.True(names[files.PaletteDay].Contains(tag + "_D", StringComparison.Ordinal)
-                                && names[files.PaletteDay].Contains("_NCLR", StringComparison.Ordinal),
+                    Assert.True(names[files.PaletteDay] == $"Backdrop.{bg}.Day:Colours",
                                 $"{name}: backdrop {bg}'s day colours are {names[files.PaletteDay]}");
                 }
                 _out.WriteLine($"{name}: {BattleBgRenderer.BackdropCount} backdrops read their own files");

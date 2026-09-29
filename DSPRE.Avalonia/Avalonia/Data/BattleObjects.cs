@@ -49,24 +49,19 @@ namespace DSPRE.Avalonia.Data
                          .ToList();
         }
 
-        // The kind of file, taken off the end of the name. The games write it either bare or with _BIN
-        // after it, depending on which list the file came out of.
-        private static readonly (string Suffix, string Part)[] Kinds =
-        {
-            ("_NCGR_BIN", "Drawing"), ("_NCER_BIN", "As it appears"), ("_NANR_BIN", "Animation"),
-            ("_NCLR_BIN", "Colours"), ("_NSCR_BIN", "Arrangement"),
-            ("_NCGR", "Drawing"), ("_NCER", "As it appears"), ("_NANR", "Animation"),
-            ("_NCLR", "Colours"), ("_NSCR", "Arrangement"),
-        };
-
-        /// <summary>Splits a name into the thing it belongs to and which piece of it this is.</summary>
+        /// <summary>Splits an entry into the thing it belongs to and which piece of it this is.</summary>
         public static (string Thing, string Part) Split(string name)
         {
             if (string.IsNullOrEmpty(name)) return (null, null);
-            foreach (var (suffix, part) in Kinds)
-                if (name.EndsWith(suffix, StringComparison.Ordinal))
-                    return (name.Substring(0, name.Length - suffix.Length), part);
-            return (name, "File");
+            int at = name.LastIndexOf(':');
+            if (at < 0) return (name, "File");
+            string part = name[(at + 1)..] switch
+            {
+                "Cells" => "As it appears",
+                "Screen" => "Arrangement",
+                var p => p,
+            };
+            return (name[..at], part);
         }
 
         /// <summary>What to call a thing, in the words somebody looking for it would use.</summary>
@@ -74,51 +69,36 @@ namespace DSPRE.Avalonia.Data
         {
             if (string.IsNullOrEmpty(thing)) return null;
 
-            // The ones worth saying properly, longest first so GAUGE_NAME_AA beats GAUGE.
-            foreach (var (starts, says) in Spoken)
-                if (thing.Equals(starts, StringComparison.Ordinal)) return says;
+            foreach (var (name, says) in Spoken)
+                if (thing.Equals(name, StringComparison.Ordinal)) return says;
 
-            if (thing.StartsWith("BATT_GROUND", StringComparison.Ordinal))
+            string[] w = thing.Split('.');
+            switch (w[0])
             {
-                string rest = thing.Substring("BATT_GROUND".Length);
-                string when = rest.EndsWith("_D") ? "day" : rest.EndsWith("_E") ? "evening"
-                            : rest.EndsWith("_N") ? "night" : null;
-                string number = new string(rest.TakeWhile(char.IsDigit).ToArray());
-                return when == null ? $"Platform {number} colours" : $"Platform {number} colours, {when}";
+                case "Platform" when w.Length == 3:
+                    return w[2] switch
+                    {
+                        "Yours" => $"Platform {w[1]}, your side",
+                        "Theirs" => $"Platform {w[1]}, their side",
+                        _ => $"Platform {w[1]} colours, {w[2].ToLowerInvariant()}",
+                    };
+                case "ThrownBall" when w.Length == 2:
+                    return BallNamed(w[1], out _) ?? "Thrown ball " + w[1];
+                case "TypeIcon" when w.Length == 2:
+                    return (w[1] == "Mystery" ? "???" : w[1]) + " type icon";
+                case "ContestIcon" when w.Length == 2:
+                    return w[1] + " contest icon";
+                case "MoveIcon" when w.Length == 2:
+                    return w[1] + " move icon";
+                case "MessageFrame" when w.Length == 2:
+                    return "Message frame " + w[1];
+                case "TrainerBack" when w.Length == 2:
+                    return w[1] + " back sprite";
             }
-            if (thing.StartsWith("GROUND", StringComparison.Ordinal))
-            {
-                string rest = thing.Substring("GROUND".Length);
-                string number = new string(rest.TakeWhile(char.IsDigit).ToArray());
-                string side = rest.EndsWith("_M") ? "your side" : rest.EndsWith("_E") ? "their side" : null;
-                return side == null ? $"Platform {number}" : $"Platform {number}, {side}";
-            }
-            if (thing.StartsWith("BATT_BALL_", StringComparison.Ordinal))
-            {
-                string number = thing.Substring("BATT_BALL_".Length);
-                string ball = BallNamed(number, out _);
-                return ball ?? "Thrown ball " + number;
-            }
-            if (thing.StartsWith("P_ST_TYPE_", StringComparison.Ordinal))
-            {
-                string tag = thing.Substring("P_ST_TYPE_".Length);
-                if (ContestIcon.TryGetValue(tag, out string condition)) return condition + " contest icon";
-                return (TypeIcon.TryGetValue(tag, out string type) ? type : Pretty(tag)) + " type icon";
-            }
-            if (thing.StartsWith("P_ST_BUNRUI_", StringComparison.Ordinal))
-                return thing.EndsWith("BUTURI") ? "Physical move icon"
-                     : thing.EndsWith("HENKA") ? "Status move icon"
-                     : thing.EndsWith("TOKUSYU") ? "Special move icon"
-                     : Pretty(thing.Substring("P_ST_BUNRUI_".Length)) + " move icon";
-            if (thing.StartsWith("BATTLE_W_WAKU", StringComparison.Ordinal))
-                return "Message frame " + thing.Substring("BATTLE_W_WAKU".Length);
-            if (thing.StartsWith("SINGLE_ARROW_ANIMATION", StringComparison.Ordinal))
-                return "Pointing arrow " + thing.Substring("SINGLE_ARROW_ANIMATION".Length);
-
-            return Pretty(thing);
+            return Pretty(w[^1]);
         }
 
-        // Which drawing each row of MonsterBall_GRA_Table uses, in Diamond, Pearl and Platinum.
+        // Which drawing each row of the thrown-ball table uses, in Diamond, Pearl and Platinum.
         private static readonly int[] SinnohDrawingForRow =
         {
             1, 2, 3, 0, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 12, 15,   // the sixteen that are items
@@ -126,7 +106,6 @@ namespace DSPRE.Avalonia.Data
         };
 
         // The four at the end of the table are not items, so they have no name in the ROM to read.
-        // ball_effect.h calls them BALL_EFF_PARK_BALL, BALL_EFF_STONE, BALL_EFF_FOOD and BALL_EFF_BACK.
         private static readonly string[] NotItems = { "Park Ball", "Mud", "Bait", "Putting one back" };
 
         /// <summary>Which item a row of the ball table belongs to, or 0 when it is not an item.</summary>
@@ -177,70 +156,71 @@ namespace DSPRE.Avalonia.Data
 
         private static readonly (string Name, string Says)[] Spoken =
         {
-            ("GAUGE", "HP bar colours"),
-            ("GAGE_PALETTE", "HP bar colours, shared"),
+            ("HpBar.Debug", "HP bar colours"),
+            ("HpBar.Shared", "HP bar colours, shared"),
 
             // Which file is whose comes from the games' own gauge tables, not from the names.
-            ("SINGLE_GAGE2", "HP bar, your side"),
-            ("SINGLE_GAGE1", "HP bar, their side"),
-            ("DOUBLE_GAGE3", "HP bar, your side, two on two"),
-            ("DOUBLE_GAGE4", "HP bar, your partner, two on two"),
-            ("DOUBLE_GAGE1", "HP bar, their side, two on two"),
-            ("DOUBLE_GAGE2", "HP bar, their partner, two on two"),
+            ("HpBar.Yours", "HP bar, your side"),
+            ("HpBar.Theirs", "HP bar, their side"),
+            ("HpBar.YoursDouble", "HP bar, your side, two on two"),
+            ("HpBar.YourPartner", "HP bar, your partner, two on two"),
+            ("HpBar.TheirsDouble", "HP bar, their side, two on two"),
+            ("HpBar.TheirPartner", "HP bar, their partner, two on two"),
 
-            // These four sit in the archive and nothing in the games ever asks for them, in either the
-            // plain or the enum form, so the game never draws them.
-            ("GAUGE_AA", "Spare HP bar, unused"),
-            ("GAUGE_BB", "Spare HP bar, unused"),
-            ("GAUGE_NAME_AA", "Spare name box, unused"),
-            ("GAUGE_NAME_BB", "Spare name box, unused"),
-            ("GAUGE_M_BALL", "Caught ball on the bar"),
-            ("BATT_M_BALL", "Caught ball"),
-            ("BATTLE_STOCK_M", "Your six balls"),
-            ("BATTLE_STOCK_E", "Their six balls"),
-            ("BATT_WAKU", "Spare message frame colours, unused"),
-            ("BATTLE_WOBJ", "Message frame colours"),
-            ("BATTLE_CURSOR_OAM_SUB", "Choice cursor"),
-            ("LV_UP_PLATE", "Level up panel"),
-            ("SAFARI_GAUGE", "Safari counter"),
-            ("SAFARI_W", "Safari counter colours"),
-            ("POKE_OAM", "Pokemon slot"),
-            ("POKE_OAM128K", "Pokemon slot, large"),
-            ("ST_TYPE", "Type and contest icon colours"),
-            ("SPACE_COLOR", "Blank colours"),
-            ("SPACE_32K_32X16", "Blank piece"),
+            // Nothing in the games ever loads these four.
+            ("HpBar.SpareA", "Spare HP bar, unused"),
+            ("HpBar.SpareB", "Spare HP bar, unused"),
+            ("NameBox.SpareA", "Spare name box, unused"),
+            ("NameBox.SpareB", "Spare name box, unused"),
+            ("HpBar.CaughtBall", "Caught ball on the bar"),
+            ("CaughtBall.Unused", "Caught ball"),
+            ("PartyBalls.Yours", "Your six balls"),
+            ("PartyBalls.Theirs", "Their six balls"),
+            ("MessageFrame.Debug", "Spare message frame colours, unused"),
+            ("MessageFrame.Shared", "Message frame colours"),
+            ("Cursor.Choice", "Choice cursor"),
+            ("LevelUp.Panel", "Level up panel"),
+            ("Safari.Counter", "Safari counter"),
+            ("Safari.Shared", "Safari counter colours"),
+            ("PokemonSlot.Normal", "Pokemon slot"),
+            ("PokemonSlot.Large", "Pokemon slot, large"),
+            ("TypeIcon.Shared", "Type and contest icon colours"),
+            ("Blank.Shared", "Blank colours"),
+            ("Blank.Piece", "Blank piece"),
+            ("Arrows.Thin", "Pointing arrow 1"),
+            ("Arrows.Wide", "Pointing arrow 2"),
+            ("BugContest.Net", "Bug Contest net"),
         };
 
         // The icons are all one shape, and the game keeps one cell layout for the lot of them, so the
         // drawings themselves record no size. The games' own icon table says which of the
-        // three banks of ST_TYPE_NCLR each one is painted with; without it they all came out in the
-        // first bank's colours. The table is read from the ROM where it can be; these are the retail
-        // values, used when it cannot.
+        // three banks of the shared icon colours each one is painted with; without it they all came out
+        // in the first bank's colours. The table is read from the ROM where it can be; these are the
+        // retail values, used when it cannot.
         private static readonly Dictionary<string, int> IconBank = new(StringComparer.Ordinal)
         {
-            ["NORMAL"] = 0, ["FIGHT"] = 0, ["FLIGHT"] = 1, ["POISON"] = 1, ["GROUND"] = 0,
-            ["ROCK"] = 0, ["INSECT"] = 2, ["GHOST"] = 1, ["STEEL"] = 0, ["QUES"] = 2,
-            ["FIRE"] = 0, ["WATER"] = 1, ["GRASS"] = 2, ["ELE"] = 0, ["ESP"] = 1,
-            ["ICE"] = 1, ["DRAGON"] = 2, ["EVIL"] = 0,
-            ["STYLE"] = 0, ["BEAUTIFUL"] = 1, ["CUTE"] = 1, ["INTELLI"] = 2, ["STRONG"] = 0,
+            ["TypeIcon.Normal"] = 0, ["TypeIcon.Fighting"] = 0, ["TypeIcon.Flying"] = 1, ["TypeIcon.Poison"] = 1,
+            ["TypeIcon.Ground"] = 0, ["TypeIcon.Rock"] = 0, ["TypeIcon.Bug"] = 2, ["TypeIcon.Ghost"] = 1,
+            ["TypeIcon.Steel"] = 0, ["TypeIcon.Mystery"] = 2, ["TypeIcon.Fire"] = 0, ["TypeIcon.Water"] = 1,
+            ["TypeIcon.Grass"] = 2, ["TypeIcon.Electric"] = 0, ["TypeIcon.Psychic"] = 1, ["TypeIcon.Ice"] = 1,
+            ["TypeIcon.Dragon"] = 2, ["TypeIcon.Dark"] = 0,
+            ["ContestIcon.Cool"] = 0, ["ContestIcon.Beauty"] = 1, ["ContestIcon.Cute"] = 1,
+            ["ContestIcon.Smart"] = 2, ["ContestIcon.Tough"] = 0,
+            ["MoveIcon.Physical"] = 0, ["MoveIcon.Special"] = 1, ["MoveIcon.Status"] = 0,
         };
 
-        // The same table's banks for the move-category icons.
-        private static readonly Dictionary<string, int> KindBank = new(StringComparer.Ordinal)
-        {
-            ["BUTURI"] = 0, ["TOKUSYU"] = 1, ["HENKA"] = 0,
-        };
-
-        /// <summary>The icon tags in the order of the game's icon tables: 18 types, then the five contest conditions.</summary>
+        /// <summary>The icons in the order of the game's icon tables: 18 types, then the five contest conditions.</summary>
         public static readonly string[] IconOrder =
         {
-            "NORMAL", "FIGHT", "FLIGHT", "POISON", "GROUND", "ROCK", "INSECT", "GHOST", "STEEL",
-            "QUES", "FIRE", "WATER", "GRASS", "ELE", "ESP", "ICE", "DRAGON", "EVIL",
-            "STYLE", "BEAUTIFUL", "CUTE", "INTELLI", "STRONG",
+            "TypeIcon.Normal", "TypeIcon.Fighting", "TypeIcon.Flying", "TypeIcon.Poison", "TypeIcon.Ground",
+            "TypeIcon.Rock", "TypeIcon.Bug", "TypeIcon.Ghost", "TypeIcon.Steel", "TypeIcon.Mystery",
+            "TypeIcon.Fire", "TypeIcon.Water", "TypeIcon.Grass", "TypeIcon.Electric", "TypeIcon.Psychic",
+            "TypeIcon.Ice", "TypeIcon.Dragon", "TypeIcon.Dark",
+            "ContestIcon.Cool", "ContestIcon.Beauty", "ContestIcon.Cute", "ContestIcon.Smart", "ContestIcon.Tough",
         };
 
         // Physical, special, status: the order of the game's category icon table.
-        private static readonly string[] KindOrder = { "BUTURI", "TOKUSYU", "HENKA" };
+        private static readonly string[] KindOrder = { "MoveIcon.Physical", "MoveIcon.Special", "MoveIcon.Status" };
 
         private static readonly object BanksLock = new();
         private static string _banksFor;
@@ -262,15 +242,20 @@ namespace DSPRE.Avalonia.Data
                 if (t == null) return null;
                 var names = Names();
                 for (int i = 0; i < IconOrder.Length; i++)
-                    if (IndexOf(names, "P_ST_TYPE_" + IconOrder[i], "Drawing") != t.TypeMembers[i]) return null;
+                    if (IndexOf(names, IconOrder[i], "Drawing") != t.TypeMembers[i]) return null;
                 return _banks = t;
             }
         }
 
         /// <summary>Whether this entry is one of the type, contest or move-category icons.</summary>
-        private static bool IsIcon(string thing) =>
-            thing != null && thing.StartsWith("P_ST_", StringComparison.Ordinal)
-                          && thing.EndsWith("_NCGR_BIN", StringComparison.Ordinal);
+        private static bool IsIcon(string name)
+        {
+            var (thing, part) = Split(name);
+            return part == "Drawing" && thing != null
+                && (thing.StartsWith("TypeIcon.", StringComparison.Ordinal)
+                    || thing.StartsWith("ContestIcon.", StringComparison.Ordinal)
+                    || thing.StartsWith("MoveIcon.", StringComparison.Ordinal));
+        }
 
         /// <summary>The icons are thirty two by sixteen. Nothing in the file says so, so it is said here.</summary>
         public static int WidthFor(int index)
@@ -280,79 +265,45 @@ namespace DSPRE.Avalonia.Data
             return IsIcon(names[index]) ? 32 : 0;
         }
 
-        /// <summary>Which bank of ST_TYPE_NCLR an icon is painted with.</summary>
+        /// <summary>Which bank of the shared icon colours an icon is painted with.</summary>
         public static int ColourBankFor(int index)
         {
             var names = Names();
             if (index < 0 || index >= names.Count) return 0;
-            string thing = names[index];
-            if (!IsIcon(thing)) return 0;
-            string tag = thing.Substring(0, thing.Length - "_NCGR_BIN".Length);
+            if (!IsIcon(names[index])) return 0;
+            string thing = Split(names[index]).Thing;
             var game = GameBanks();
-            if (tag.StartsWith("P_ST_TYPE_", StringComparison.Ordinal))
-            {
-                string type = tag.Substring("P_ST_TYPE_".Length);
-                int at = Array.IndexOf(IconOrder, type);
-                if (game != null && at >= 0) return game.TypeBanks[at];
-                if (IconBank.TryGetValue(type, out int bank)) return bank;
-            }
-            if (tag.StartsWith("P_ST_BUNRUI_", StringComparison.Ordinal))
-            {
-                string kind = tag.Substring("P_ST_BUNRUI_".Length);
-                int at = Array.IndexOf(KindOrder, kind);
-                if (game != null && at >= 0) return game.CategoryBanks[at];
-                if (KindBank.TryGetValue(kind, out int bank)) return bank;
-            }
-            return 0;
+            int at = Array.IndexOf(IconOrder, thing);
+            if (game != null && at >= 0) return game.TypeBanks[at];
+            at = Array.IndexOf(KindOrder, thing);
+            if (game != null && at >= 0) return game.CategoryBanks[at];
+            return IconBank.TryGetValue(thing, out int bank) ? bank : 0;
         }
 
-        // The names the game writes on these icons, read off the drawings themselves. Several of the
-        // file names are abbreviations that do not match what the icon says.
-        private static readonly Dictionary<string, string> TypeIcon = new(StringComparer.Ordinal)
-        {
-            ["ELE"] = "Electric", ["ESP"] = "Psychic", ["EVIL"] = "Dark", ["FIGHT"] = "Fighting",
-            ["FLIGHT"] = "Flying", ["INSECT"] = "Bug", ["QUES"] = "???",
-        };
-
-        // Five of the files in the same group are contest conditions rather than types.
-        private static readonly Dictionary<string, string> ContestIcon = new(StringComparer.Ordinal)
-        {
-            ["STYLE"] = "Cool", ["BEAUTIFUL"] = "Beauty", ["CUTE"] = "Cute",
-            ["INTELLI"] = "Smart", ["STRONG"] = "Tough",
-        };
-
-        /// <summary>Turns a SHOUTED_NAME into something readable when there is nothing better to say.</summary>
+        /// <summary>Splits a PascalCase key segment into words.</summary>
         private static string Pretty(string name)
         {
             if (string.IsNullOrEmpty(name)) return name;
-            var words = name.Split('_', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(w => w.Length <= 1 ? w
-                                        : char.ToUpperInvariant(w[0]) + w.Substring(1).ToLowerInvariant());
-            return string.Join(" ", words);
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < name.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(name[i]) && !char.IsUpper(name[i - 1])) sb.Append(' ');
+                sb.Append(i > 0 && sb.Length > 0 && sb[^1] == ' ' ? char.ToLowerInvariant(name[i]) : name[i]);
+            }
+            return sb.ToString();
         }
 
         /// <summary>Which part of the battle screen a thing belongs to.</summary>
         public static Section SectionOf(string thing)
         {
             if (string.IsNullOrEmpty(thing)) return Section.Screen;
-
-            if (thing.StartsWith("GROUND", StringComparison.Ordinal)
-             || thing.StartsWith("BATT_GROUND", StringComparison.Ordinal)) return Section.Platforms;
-
-            if (thing.StartsWith("GAUGE", StringComparison.Ordinal)
-             || thing.StartsWith("GAGE", StringComparison.Ordinal)
-             || thing.StartsWith("SINGLE_GAGE", StringComparison.Ordinal)
-             || thing.StartsWith("DOUBLE_GAGE", StringComparison.Ordinal)
-             || thing.StartsWith("BATTLE_STOCK", StringComparison.Ordinal)
-             || thing.StartsWith("SAFARI", StringComparison.Ordinal)
-             || thing == "LV_UP_PLATE") return Section.Gauges;
-
-            if (thing.StartsWith("P_ST_", StringComparison.Ordinal)
-             || thing == "ST_TYPE"
-             || thing.StartsWith("BATT_BALL_", StringComparison.Ordinal)
-             || thing.EndsWith("M_BALL", StringComparison.Ordinal)) return Section.Icons;
-
-            return Section.Screen;
+            return thing.Split('.')[0] switch
+            {
+                "Platform" => Section.Platforms,
+                "HpBar" or "NameBox" or "PartyBalls" or "Safari" or "LevelUp" => Section.Gauges,
+                "TypeIcon" or "ContestIcon" or "MoveIcon" or "ThrownBall" or "CaughtBall" => Section.Icons,
+                _ => Section.Screen,
+            };
         }
 
         /// <summary>
@@ -447,15 +398,15 @@ namespace DSPRE.Avalonia.Data
             // the games load for all of them.
             if (IsIcon(names[fileIndex]))
             {
-                int icons = IndexOf(names, "ST_TYPE", "Colours");
+                int icons = IndexOf(names, "TypeIcon.Shared", "Colours");
                 if (icons >= 0) return icons;
             }
 
-            // The message frames carry no colours of their own; the battle loads BATTLE_WOBJ_NCLR for the
-            // screen they are drawn on.
-            if (thing.StartsWith("BATTLE_W_WAKU", StringComparison.Ordinal))
+            // The message frames carry no colours of their own; the battle loads the shared frame
+            // colours for the screen they are drawn on.
+            if (thing.StartsWith("MessageFrame.", StringComparison.Ordinal) && char.IsDigit(thing[^1]))
             {
-                int frame = IndexOf(names, "BATTLE_WOBJ", "Colours");
+                int frame = IndexOf(names, "MessageFrame.Shared", "Colours");
                 if (frame >= 0) return frame;
             }
 
@@ -463,9 +414,9 @@ namespace DSPRE.Avalonia.Data
             var section = SectionOf(thing);
             if (section == Section.Gauges)
             {
-                int shared = IndexOf(names, "GAGE_PALETTE", "Colours");
+                int shared = IndexOf(names, "HpBar.Shared", "Colours");
                 if (shared >= 0) return shared;
-                shared = IndexOf(names, "GAUGE", "Colours");
+                shared = IndexOf(names, "HpBar.Debug", "Colours");
                 if (shared >= 0) return shared;
             }
             return -1;

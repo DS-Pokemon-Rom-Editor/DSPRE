@@ -136,12 +136,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 for (int i = 0; i < narc.Count; i++)
                 {
                     List<WazaSeqCommand> cmds;
-                    try { cmds = WestScript.Parse(narc.Get(i), version); } catch { continue; }
+                    try { cmds = BattleAnimScript.Parse(narc.Get(i), version); } catch { continue; }
                     foreach (var c in cmds)
                     {
-                        string op = WestOpcodes.Name(version, c.OpId);
+                        string op = BattleAnimCommands.Name(version, c.OpId);
                         // The extended load names the archive before the file.
-                        int at = op == "WEST_LOAD_PARTICLE_EX" ? 2 : op == "WEST_LOAD_PARTICLE" ? 1 : -1;
+                        int at = op == "LoadDebugParticleSystem" ? 2 : op == "LoadParticleSystem" ? 1 : -1;
                         if (at < 0 || c.Args.Length <= at) continue;
                         if (!into.TryGetValue(c.Args[at], out var list)) into[c.Args[at]] = list = new List<int>();
                         if (!list.Contains(i)) list.Add(i);

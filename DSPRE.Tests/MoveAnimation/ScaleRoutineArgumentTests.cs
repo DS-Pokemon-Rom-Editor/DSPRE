@@ -23,7 +23,7 @@ namespace DSPRE.Tests
         private static readonly string HeartGold = TestRoms.HeartGold;
         private static readonly string Platinum = TestRoms.Platinum;
 
-        // The stretch routine (WestSp_WE_SSPPokeScaleUpDown, routine 42) takes its denominator in gp work 5,
+        // The stretch routine (ScaleBattlerSprite, routine 42) takes its denominator in gp work 5,
         // which is argument 7 of the call once the routine id and the word count are counted.
         private const int SspPokeScale = 42, DenominatorArg = 7;
 
@@ -45,9 +45,9 @@ namespace DSPRE.Tests
             {
                 var bytes = File.ReadAllBytes(files[move]);
                 if (bytes.Length == 0) continue;
-                foreach (var c in WestScript.Parse(bytes, version))
+                foreach (var c in BattleAnimScript.Parse(bytes, version))
                 {
-                    if (WestOpcodes.Name(version, c.OpId) != "WEST_FUNC_CALL") continue;
+                    if (BattleAnimCommands.Name(version, c.OpId) != "CallFunc") continue;
                     if (c.Args.Length < 1 || c.Args[0] != SspPokeScale) continue;
                     calls++;
                     if (c.Args.Length <= DenominatorArg) continue;
@@ -67,9 +67,9 @@ namespace DSPRE.Tests
             {
                 var bytes = File.ReadAllBytes(files[move]);
                 if (bytes.Length == 0) continue;
-                foreach (var c in WestScript.Parse(bytes, version))
+                foreach (var c in BattleAnimScript.Parse(bytes, version))
                 {
-                    if (WestOpcodes.Name(version, c.OpId) != "WEST_FUNC_CALL" || c.Args.Length < 1) continue;
+                    if (BattleAnimCommands.Name(version, c.OpId) != "CallFunc" || c.Args.Length < 1) continue;
                     int r = c.Args[0];
                     if (r != 4 && r != 35 && r != 42 && r != 60) continue;
                     if (!users.TryGetValue(r, out var l)) users[r] = l = new List<int>();

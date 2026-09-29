@@ -28,43 +28,47 @@ namespace DSPRE.Tests
         [InlineData(0, false)]
         [InlineData(5, false)]
         [InlineData(0x3FFF, false)]      // still just a number
-        [InlineData(0x4000, true)]       // SVWK_START: the first saved variable
+        [InlineData(0x4000, true)]       // the first saved variable
         [InlineData(0x7FFF, true)]
-        [InlineData(0x8000, true)]       // SCWK_START: the script's own slots
+        [InlineData(0x8000, true)]       // the script's own slots
         [InlineData(0x800C, true)]
         public void OnlyNumbersFromTheVariableRangeUpAreVariables(int value, bool isVar)
             => Assert.Equal(isVar, FieldScriptValues.IsVariable(value));
 
+        // DP and Platinum write VAR_RESULT, HeartGold VAR_SPECIAL_RESULT, as the script database has them.
         [Theory]
-        [InlineData(0x8000, "PARAM0")]
-        [InlineData(0x8004, "TEMP0")]
-        [InlineData(0x8008, "REG0")]
-        [InlineData(0x800C, "ANSWER")]
-        [InlineData(0x800D, "TARGET_OBJID")]
-        public void TheScriptsOwnSlotsAreKnownByName(int value, string name)
-            => Assert.Equal(name, FieldScriptValues.NameOf(value));
+        [InlineData(0x8000, "8000")]
+        [InlineData(0x8004, "8004")]
+        [InlineData(0x800C, "RESULT")]
+        [InlineData(0x800D, "LAST_TALKED")]
+        public void TheScriptsOwnSlotsAreKnownByTheDatabaseName(int value, string part)
+        {
+            string name = FieldScriptValues.NameOf(value);
+            Assert.StartsWith("VAR_", name);
+            Assert.Contains(part, name);
+        }
 
         [Fact]
         public void APlainNumberReadsAsItselfAndAVariableReadsAsWhatItIs()
         {
             Assert.Equal("2", FieldScriptValues.Describe(2));
-            Assert.Equal("ANSWER", FieldScriptValues.Describe(0x800C));
-            Assert.Equal("variable 0x4001", FieldScriptValues.Describe(0x4001));
-            Assert.Equal("script slot 0x8020", FieldScriptValues.Describe(0x8020));
+            Assert.Contains("RESULT", FieldScriptValues.Describe(0x800C));
+            Assert.StartsWith("VAR_", FieldScriptValues.Describe(0x4001));
+            Assert.Equal("VAR_0x8020", FieldScriptValues.Describe(0x8020));
         }
 
         // ── the commands that were wrong ────────────────────────────────────────────────
         [Fact]
         public void TheSharedArchiveCommandSaysWhichArchiveAndWhereItPutsIt()
         {
-            // GetCommonMessageArchive 2, 0x800c: archive 2 of four, stored in ANSWER. It shows nothing.
+            // GetCommonMessageArchive 2, 0x800c: archive 2 of four, stored in VAR_RESULT. It shows nothing.
             var w = Walker(new[] { Cmd("GetCommonMessageArchive 2 32780", 2, 0x800C), Cmd("End") });
             w.Start(1);
 
             var step = w.Steps.First(s => s.CommandName == "GetCommonMessageArchive");
             Assert.Equal(ScriptStepKind.Command, step.Kind);       // nothing is shown by it
             Assert.Contains("cameraman", step.Text);
-            Assert.Contains("ANSWER", step.Text);
+            Assert.Contains("RESULT", step.Text);
             Assert.DoesNotContain("32780", step.Text);             // not a raw number any more
         }
 
@@ -86,7 +90,7 @@ namespace DSPRE.Tests
             w.Start(1);
 
             var step = w.Steps.First(s => s.Kind == ScriptStepKind.Message);
-            Assert.Contains("ANSWER", step.Text);
+            Assert.Contains("RESULT", step.Text);
             Assert.DoesNotContain("line 32780", step.Text);
         }
 
@@ -117,7 +121,7 @@ namespace DSPRE.Tests
             w.Start(1);
 
             var step = w.Steps.First(s => s.Kind == ScriptStepKind.Message);
-            Assert.Contains("ANSWER", step.Text);
+            Assert.Contains("RESULT", step.Text);
             Assert.Contains("6", step.Text);
         }
 
@@ -150,7 +154,7 @@ namespace DSPRE.Tests
             var w = Walker(new[] { Cmd("CompareVarValue 32780 1", 0x800C, 1), Cmd("End") });
             w.Start(1);
             Assert.NotNull(w.Pending);
-            Assert.Contains("ANSWER", w.Pending.Prompt);
+            Assert.Contains("RESULT", w.Pending.Prompt);
         }
     }
 }

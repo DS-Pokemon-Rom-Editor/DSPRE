@@ -360,7 +360,7 @@ namespace DSPRE.Avalonia.Data
         private ScriptNarc _effectParticles;
 
         /// <summary>The shiny sparkle on the battler at (<paramref name="x"/>, <paramref name="y"/>), or null.</summary>
-        public WestPlayer Sparkle(bool enemySide, double x, double y)
+        public BattleAnimPlayer Sparkle(bool enemySide, double x, double y)
         {
             var version = gameFamily == GameFamilies.HGSS ? WazaSeqVersion.HGSS : WazaSeqVersion.Plat;
             if (!_sparkleTried)
@@ -369,10 +369,10 @@ namespace DSPRE.Avalonia.Data
                 _sparkleBytes = gameDirs.ContainsKey(DirNames.wazaEffectSub) ? new ScriptNarc(DirNames.wazaEffectSub).Get(ShinySparkleSubscript) : null;
             }
             if (_sparkleBytes == null) return null;
-            var cmds = WestScript.Parse(_sparkleBytes, version);
+            var cmds = BattleAnimScript.Parse(_sparkleBytes, version);
             if (cmds == null || cmds.Count == 0) return null;
             _effectParticles ??= new ScriptNarc(DirNames.wazaParticle);
-            return new WestPlayer(cmds, version, _effectParticles, x, y, x, y, 256, 192, attackerIsEnemy: enemySide, selfTarget: true);
+            return new BattleAnimPlayer(cmds, version, _effectParticles, x, y, x, y, 256, 192, attackerIsEnemy: enemySide, selfTarget: true);
         }
 
         // ── Sound ───────────────────────────────────────────────────────────────────────────────

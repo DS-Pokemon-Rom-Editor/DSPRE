@@ -13,10 +13,10 @@ namespace DSPRE.Tests
 {
     /// <summary>The preview measured against the real game, in numbers.</summary>
     [Collection("rom")]
-    public class WestAgainstTheGameTests
+    public class BattleAnimAgainstTheGameTests
     {
         private readonly ITestOutputHelper _out;
-        public WestAgainstTheGameTests(ITestOutputHelper o) { _out = o; }
+        public BattleAnimAgainstTheGameTests(ITestOutputHelper o) { _out = o; }
 
         private static readonly string Platinum = TestRoms.Platinum;
 
@@ -46,10 +46,10 @@ namespace DSPRE.Tests
                                    WazaSeqVersion version = WazaSeqVersion.Plat)
         {
             string f = Path.Combine(dir, move.ToString("D4"));
-            var cmds = WestScript.Parse(File.ReadAllBytes(f), version);
+            var cmds = BattleAnimScript.Parse(File.ReadAllBytes(f), version);
             // The particle archive has to be real: without it every particle lives no time at all and
-            // WAIT_PARTICLE returns straight away, which made the preview look four times too quick.
-            var w = new WestPlayer(cmds, version, new ScriptNarc(DirNames.wazaParticle),
+            // WaitForAllEmitters returns straight away, which made the preview look four times too quick.
+            var w = new BattleAnimPlayer(cmds, version, new ScriptNarc(DirNames.wazaParticle),
                                    64, 120, 190, 60,
                                    attackerIsEnemy: attackerIsEnemy, selfTarget: false);
             var r = new Run();

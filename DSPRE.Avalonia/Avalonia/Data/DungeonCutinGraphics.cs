@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public sealed class DungeonCutinGraphics
     {
-        public const int MaxPaletteColors = 176; // PALLETE_MAX(11) * 16
+        public const int MaxPaletteColors = 176; // 11 palettes of 16
         public const int MaxDimension = 256;      // keeps screen-block addressing a single 32x32-tile block
 
         private readonly ScriptNarc _narc = new ScriptNarc(DirNames.dungeonCutinGraphics);

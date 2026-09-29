@@ -15,8 +15,8 @@ using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChange
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
-    // One row of the real HGSS DUNGEON_CUTIN_DATA struct (dungeon_cutin_def.h): ZoneID, WipeType,
-    // Graphic[4][3] (Morning/Noon/Evening/Night x Palette/Tiles/Screen), Name.
+    // One row of the HGSS cut-in table: zone, wipe type, palette/tiles/screen for each of the four
+    // times of day, and name.
     public class DungeonCutinRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             set { if (Set(ref _headerIndex, value)) { OnPropertyChanged(nameof(HeaderName)); OnPropertyChanged(nameof(RowLabel)); } }
         }
 
-        // Unused in practice (always 0, never read by dungeon_cutin.c), but left editable so an
+        // Unused in practice (always 0, never read by the game), but left editable so an
         // import doesn't discard whatever value a ROM actually has here.
         private int _wipeType;
         public int WipeType { get => _wipeType; set => Set(ref _wipeType, value); }
@@ -92,8 +92,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private readonly Data.DungeonCutinGraphics _graphics = new();
 
-        public const int RowCount = 25;      // DUNGEON_CUTIN_NUM in the real source
-        private const int FieldsPerRow = 15;  // sizeof(DUNGEON_CUTIN_DATA) / 4
+        public const int RowCount = 25;
+        private const int FieldsPerRow = 15;
 
         private static uint ResolveTableOffset()
         {
