@@ -54,6 +54,12 @@ namespace DSPRE {
             }
             base.OnKeyPress(e);
         }
+        protected override void OnSelectedIndexChanged(EventArgs e) {
+            if (SelectedIndex >= 0) {
+                BackColor = normalColor;
+            }
+            base.OnSelectedIndexChanged(e);
+        }
         protected override void OnLeave(EventArgs e) {
             base.OnLeave(e);
             UpdateText();

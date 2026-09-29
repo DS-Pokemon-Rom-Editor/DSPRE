@@ -51,17 +51,14 @@ namespace DSPRE.ROMFiles
                     DirNames.trainerProperties
                 });
 
-                string metadataDir = RomInfo.gameDirs[DirNames.trainerClassMetadata].unpackedDir;
                 string graphicsDir = RomInfo.gameDirs[DirNames.trainerGraphics].unpackedDir;
-                if (!TryCountContiguousMembers(metadataDir, TrainerClassMetadataStore.RecordLength,
-                    out int metadataCount, out error)) return false;
                 if (!TryCountContiguousMembers(graphicsDir, null, out int graphicsCount, out error)) return false;
 
                 var names = new TextArchive(RomInfo.trainerClassMessageNumber);
                 var descriptions = new TextArchive(DescriptionArchiveId);
                 state = new TrainerClassDatasetState
                 {
-                    MetadataCount = metadataCount,
+                    MetadataCount = TrainerClassMetadataStore.RecordCount,
                     NameCount = names.messages.Count,
                     DescriptionCount = descriptions.messages.Count,
                     GraphicsMemberCount = graphicsCount,

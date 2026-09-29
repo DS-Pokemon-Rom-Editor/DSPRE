@@ -345,6 +345,12 @@ namespace DSPRE.ROMFiles
                     error = "The trainer-class metadata archive could not be unpacked.";
                     return false;
                 }
+
+                if (!TryInspectUnpackedRecords(unpackedDir, out int unpackedRecordCount, out error))
+                {
+                    return false;
+                }
+                recordCount = unpackedRecordCount;
                 return true;
             }
             catch (Exception ex)
@@ -607,97 +613,90 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
+            Narc archive = null;
             try
             {
                 using (var reader = new BinaryReader(File.OpenRead(paths.packedDir)))
                 {
-                    long fileLength = reader.BaseStream.Length;
-                    if (fileLength < 0x34 || reader.ReadUInt32() != 0x4352414E)
+                    if (reader.BaseStream.Length < 0x10)
                     {
-                        detail = "invalid NARC header";
+                        detail = "truncated NARC header";
                         return false;
                     }
-
                     reader.BaseStream.Position = 0x08;
-                    uint declaredLength = reader.ReadUInt32();
-                    ushort headerLength = reader.ReadUInt16();
-                    ushort sectionCount = reader.ReadUInt16();
-                    if (declaredLength != fileLength || headerLength != 0x10 || sectionCount != 3)
+                    if (reader.ReadUInt32() != reader.BaseStream.Length)
                     {
-                        detail = "invalid NARC size or section header";
+                        detail = "NARC size does not match its header";
                         return false;
                     }
-
-                    reader.BaseStream.Position = 0x10;
-                    if (reader.ReadUInt32() != 0x46415442)
-                    {
-                        detail = "missing FATB section";
-                        return false;
-                    }
-                    uint fatbLength = reader.ReadUInt32();
-                    uint count = reader.ReadUInt32();
-                    if (count < MinimumRecordCount || count > int.MaxValue || fatbLength != 12 + count * 8)
-                    {
-                        detail = "unexpected member count or FATB size";
-                        return false;
-                    }
-
-                    long fatEntriesOffset = 0x1C;
-                    long fntbOffset = 0x10 + fatbLength;
-                    if (fntbOffset + 8 > fileLength)
-                    {
-                        detail = "truncated FNTB section";
-                        return false;
-                    }
-                    reader.BaseStream.Position = fntbOffset;
-                    if (reader.ReadUInt32() != 0x464E5442)
-                    {
-                        detail = "missing FNTB section";
-                        return false;
-                    }
-                    uint fntbLength = reader.ReadUInt32();
-                    long fimgOffset = fntbOffset + fntbLength;
-                    if (fntbLength < 8 || fimgOffset + 8 > fileLength)
-                    {
-                        detail = "invalid FNTB size";
-                        return false;
-                    }
-                    reader.BaseStream.Position = fimgOffset;
-                    if (reader.ReadUInt32() != 0x46494D47)
-                    {
-                        detail = "missing FIMG section";
-                        return false;
-                    }
-                    uint fimgLength = reader.ReadUInt32();
-                    if (fimgLength < 8 || fimgOffset + fimgLength != fileLength)
-                    {
-                        detail = "invalid FIMG size";
-                        return false;
-                    }
-                    long imageDataLength = fimgLength - 8;
-
-                    reader.BaseStream.Position = fatEntriesOffset;
-                    for (uint i = 0; i < count; i++)
-                    {
-                        uint start = reader.ReadUInt32();
-                        uint end = reader.ReadUInt32();
-                        if (end < start || end - start != RecordLength || end > imageDataLength)
-                        {
-                            detail = "member " + i + " is not a bounded 0x34-byte record";
-                            return false;
-                        }
-                    }
-
-                    memberCount = (int)count;
-                    detail = memberCount + " valid records";
-                    return true;
                 }
+
+                archive = Narc.Open(paths.packedDir);
+                if (archive == null)
+                {
+                    detail = "invalid NARC archive";
+                    return false;
+                }
+
+                memberCount = archive.GetElementsLength();
+                if (memberCount < MinimumRecordCount)
+                {
+                    detail = "unexpected member count";
+                    return false;
+                }
+                for (int i = 0; i < memberCount; i++)
+                {
+                    if (archive[i].Length != RecordLength)
+                    {
+                        detail = "member " + i + " is not a 0x34-byte record";
+                        return false;
+                    }
+                }
+
+                detail = memberCount + " valid records";
+                return true;
             }
             catch (Exception ex)
             {
                 detail = ex.Message;
                 return false;
             }
+            finally
+            {
+                archive?.Free();
+            }
+        }
+
+        private static bool TryInspectUnpackedRecords(string directory, out int memberCount, out string error)
+        {
+            memberCount = 0;
+            error = null;
+            string[] files = Directory.GetFiles(directory);
+            memberCount = files.Length;
+            if (memberCount < MinimumRecordCount)
+            {
+                error = "The trainer-class metadata archive contains no records.";
+                return false;
+            }
+
+            var actual = new HashSet<string>(files.Select(Path.GetFullPath), StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < memberCount; i++)
+            {
+                string expected = Path.GetFullPath(Path.Combine(directory, i.ToString("D4")));
+                if (!actual.Contains(expected))
+                {
+                    error = "Trainer-class metadata member sequence is not contiguous at " + expected + ".";
+                    return false;
+                }
+                long length = new FileInfo(expected).Length;
+                if (length != RecordLength)
+                {
+                    error = "Trainer-class metadata member " + i + " is " + length +
+                        " bytes; expected " + RecordLength + ".";
+                    return false;
+                }
+            }
+            return true;
         }
 
         private static bool HasThumbVeneer(uint offset, byte byte0, byte byte1, byte byte2, byte byte3)

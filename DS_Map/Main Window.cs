@@ -352,7 +352,7 @@ namespace DSPRE
             EditorPanels.mapEditor.mapEditorIsReady = false;
 
             // Reset Trainer Editor
-            EditorPanels.trainerEditor.trainerEditorIsReady = false;
+            EditorPanels.trainerEditor.Reset();
 
             // Reset Level Script Editor
             EditorPanels.levelScriptEditor.levelScriptEditorIsReady = false;
@@ -1504,6 +1504,10 @@ namespace DSPRE
 
             Helpers.statusLabelMessage();
             this.Text += "  -  " + RomInfo.projectName;
+
+            // Showing an already-selected tab does not raise SelectedIndexChanged.
+            // Initialise the visible editor explicitly after switching projects.
+            mainTabControl_SelectedIndexChanged(mainTabControl, EventArgs.Empty);
         }
 
         private void saveRom_Click(object sender, EventArgs e)
