@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private List<int> _shown;
         private List<string> _shownNames;
         private List<int> Shown => _shown ??= Enumerable.Range(0, Species.Count)
-            .Where(i => _speciesFilter.Length == 0 || Species[i].Name.Contains(_speciesFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+            .Where(i => _speciesFilter.Length == 0 || SearchMatch.Contains(Species[i].Name, _speciesFilter)).ToList();
         public List<string> SpeciesNames => _shownNames ??= Shown.Select(i => Species[i].Name).ToList();
 
         private string _speciesFilter = "";

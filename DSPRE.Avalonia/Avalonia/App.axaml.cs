@@ -46,6 +46,7 @@ namespace DSPRE
             }, global::Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
             global::Avalonia.Input.InputElement.LostFocusEvent.AddClassHandler<NumericUpDown>((box, _) => RestoreIfEmpty(box),
                 global::Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
+            DSPRE.Avalonia.Controls.DropdownTextSearch.Install();
         }
 
         // Without GPU interop every 3D view stays blank, so say which one this machine got.

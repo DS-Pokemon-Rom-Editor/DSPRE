@@ -40,10 +40,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
             foreach (var e in _all)
             {
                 if (!string.IsNullOrEmpty(q)
-                    && e.Command.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && e.Title.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && e.Params.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0
-                    && e.Description.IndexOf(q, StringComparison.OrdinalIgnoreCase) < 0)
+                    && !SearchMatch.Contains(e.Command, q)
+                    && !SearchMatch.Contains(e.Title, q)
+                    && !SearchMatch.Contains(e.Params, q)
+                    && !SearchMatch.Contains(e.Description, q))
                     continue;
                 Entries.Add(e);
             }

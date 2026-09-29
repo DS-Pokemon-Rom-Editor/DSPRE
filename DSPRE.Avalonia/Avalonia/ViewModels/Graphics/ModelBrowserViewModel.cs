@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         {
                             Archive = a, In = g, Index = u.First, Unit = u,
                             Name = u.Name == a.Title ? null : u.Name,
-                            Search = (a.Title + " " + u.First + " " + a.What + " " + u.Name).ToLowerInvariant(),
+                            Search = SearchMatch.Fold(a.Title + " " + u.First + " " + a.What + " " + u.Name),
                         });
                 }
                 if (inGroup > 0)
@@ -230,7 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void ApplyFilter()
         {
             Shown.Clear();
-            string q = (_search ?? "").Trim().ToLowerInvariant();
+            string q = SearchMatch.Fold((_search ?? "").Trim());
             IEnumerable<Item> hits = _everything;
             if (_selectedTab?.OnlyUnclaimed == true) hits = hits.Where(i => i.Unclaimed);
             else if (_selectedTab?.Only != null) hits = hits.Where(i => i.In == _selectedTab.Only.Value);

@@ -159,7 +159,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         found.Add(new Item
                         {
                             Archive = a, In = g, Index = u.First, Name = u.Name, Unit = u,
-                            Search = (a.Title + " " + u.First + " " + a.What + " " + u.Name).ToLowerInvariant(),
+                            Search = SearchMatch.Fold(a.Title + " " + u.First + " " + a.What + " " + u.Name),
                         });
                     }
                 }
@@ -235,7 +235,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void ApplyFilter()
         {
             Shown.Clear();
-            string q = (_search ?? "").Trim().ToLowerInvariant();
+            string q = SearchMatch.Fold((_search ?? "").Trim());
             IEnumerable<Item> hits = _everything;
             if (_selectedTab?.Only != null) hits = hits.Where(i => i.In == _selectedTab.Only.Value);
             if (!string.IsNullOrEmpty(q)) hits = hits.Where(i => i.Search.Contains(q));

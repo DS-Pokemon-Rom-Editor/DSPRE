@@ -172,7 +172,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             foreach (var (classId, memberIds) in byClass)
             {
                 var matching = hasFilter
-                    ? memberIds.Where(id => TrainerLabel(id).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList()
+                    ? memberIds.Where(id => SearchMatch.Contains(TrainerLabel(id), filter)).ToList()
                     : memberIds;
                 if (matching.Count == 0) continue;
 

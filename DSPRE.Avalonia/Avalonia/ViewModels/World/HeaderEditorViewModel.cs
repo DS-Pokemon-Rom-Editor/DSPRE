@@ -772,10 +772,10 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static bool HeaderMatchesFilter(string q, HeaderSearchEntry entry, bool fuzzy)
         {
-            if (entry.Label.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
-                || entry.FolderName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
-                || entry.LocationName.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0
-                || entry.IdText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0)
+            if (SearchMatch.Contains(entry.Label, q)
+                || SearchMatch.Contains(entry.FolderName, q)
+                || SearchMatch.Contains(entry.LocationName, q)
+                || SearchMatch.Contains(entry.IdText, q))
                 return true;
             return fuzzy && (FuzzyMatches(q, entry.LocationName) || FuzzyMatches(q, entry.Label));
         }

@@ -63,13 +63,13 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         private static bool Match(CommandItem c, string q)
-            => c.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || c.Keywords.Contains(q, StringComparison.OrdinalIgnoreCase);
+            => SearchMatch.Contains(c.Name, q) || SearchMatch.Contains(c.Keywords, q);
 
         // Rank: name prefix > name contains > keyword match.
         private static int Score(CommandItem c, string q)
         {
-            if (c.Name.StartsWith(q, StringComparison.OrdinalIgnoreCase)) return 3;
-            if (c.Name.Contains(q, StringComparison.OrdinalIgnoreCase)) return 2;
+            if (SearchMatch.StartsWith(c.Name, q)) return 3;
+            if (SearchMatch.Contains(c.Name, q)) return 2;
             return 1;
         }
 

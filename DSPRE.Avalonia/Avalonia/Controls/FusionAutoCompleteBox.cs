@@ -297,12 +297,12 @@ namespace DSPRE.Avalonia.Controls
                 return true;
             }
 
-            if (string.IsNullOrEmpty(itemText) || itemText.IndexOf(searchText.Trim(), StringComparison.OrdinalIgnoreCase) >= 0)
+            if (string.IsNullOrEmpty(itemText) || global::DSPRE.SearchMatch.Contains(itemText, searchText.Trim()))
             {
                 return !string.IsNullOrEmpty(itemText);
             }
 
-            string query = searchText.Trim();
+            string query = global::DSPRE.SearchMatch.Fold(searchText.Trim());
             if (query.Length < 3)
             {
                 return false;
@@ -311,7 +311,7 @@ namespace DSPRE.Avalonia.Controls
             int threshold = Math.Max(1, query.Length / 4);
             foreach (string token in itemText.Split(new[] { ' ', '_', '-', '.', ',', '[', ']', '(', ')', '/' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                if (global::DSPRE.CoreExtensions.Levenshtein(query.ToLowerInvariant(), token.ToLowerInvariant()) <= threshold)
+                if (global::DSPRE.CoreExtensions.Levenshtein(query, global::DSPRE.SearchMatch.Fold(token)) <= threshold)
                 {
                     return true;
                 }

@@ -175,7 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (var fam in _families)
             {
                 var matching = hasFilter
-                    ? fam.MemberIds.Where(id => SpeciesLabel(id).IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0).ToList()
+                    ? fam.MemberIds.Where(id => SearchMatch.Contains(SpeciesLabel(id), filter)).ToList()
                     : fam.MemberIds;
                 if (matching.Count == 0) continue;
 

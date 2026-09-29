@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             IEnumerable<int> order = Enumerable.Range(0, _book.Entries.Count);
             string filter = _filterText?.Trim();
             if (!string.IsNullOrEmpty(filter))
-                order = order.Where(i => Label(i).Contains(filter, System.StringComparison.OrdinalIgnoreCase));
+                order = order.Where(i => SearchMatch.Contains(Label(i), filter));
 
             _listed = order.ToList();
             ContactLabels.Clear();

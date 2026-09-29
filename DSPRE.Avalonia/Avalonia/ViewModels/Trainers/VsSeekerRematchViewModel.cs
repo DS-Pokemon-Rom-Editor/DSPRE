@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _filteredIndices = new List<int>();
             for (int r = 0; r < _rows.Count; r++)
             {
-                if (hasFilter && RowLabel(r).IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                if (hasFilter && !SearchMatch.Contains(RowLabel(r), filter)) continue;
                 RowLabels.Add(RowLabel(r));
                 _filteredIndices.Add(r);
             }

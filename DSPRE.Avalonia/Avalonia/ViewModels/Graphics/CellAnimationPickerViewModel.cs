@@ -181,8 +181,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!string.IsNullOrWhiteSpace(_search))
             {
                 string q = _search.Trim();
-                rows = rows.Where(r => r.ArchiveName.Contains(q, StringComparison.OrdinalIgnoreCase)
-                                    || (r.Label?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+                rows = rows.Where(r => SearchMatch.Contains(r.ArchiveName, q)
+                                    || SearchMatch.Contains(r.Label, q)
                                     || r.Animation.ToString() == q);
             }
 

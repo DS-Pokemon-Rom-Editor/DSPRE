@@ -185,8 +185,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (!_doc.Has(_emitterIndex, field)) continue;
                 var row = new ParticleFieldRow(this, field);
-                if (_filter.Length > 0 && row.Label.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) < 0
-                    && row.Group.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                if (_filter.Length > 0 && !SearchMatch.Contains(row.Label, _filter) && !SearchMatch.Contains(row.Group, _filter)) continue;
                 Fields.Add(row);
             }
         }

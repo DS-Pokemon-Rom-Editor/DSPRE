@@ -71,16 +71,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (string.IsNullOrWhiteSpace(_searchText)) { Reset(); return; }
 
             Results.Clear();
-            var cmp = _caseSensitive ? StringComparison.InvariantCulture : StringComparison.InvariantCultureIgnoreCase;
+            // Case sensitive means exact; otherwise neither case nor accents count.
+            Func<string, bool> contains = _caseSensitive
+                ? s => s.Contains(_searchText, StringComparison.Ordinal)
+                : s => SearchMatch.Contains(s, _searchText);
+            Func<string, bool> equals = _caseSensitive
+                ? s => s.Equals(_searchText, StringComparison.Ordinal)
+                : s => SearchMatch.Fold(s) == SearchMatch.Fold(_searchText);
             for (int i = 0; i < _names.Length; i++)
             {
                 string s = _names[i];
                 bool match = _operatorIndex switch
                 {
-                    0 => s.IndexOf(_searchText, cmp) >= 0,
-                    1 => s.IndexOf(_searchText, cmp) < 0,
-                    2 => s.Equals(_searchText, cmp),
-                    3 => !s.Equals(_searchText, cmp),
+                    0 => contains(s),
+                    1 => !contains(s),
+                    2 => equals(s),
+                    3 => !equals(s),
                     _ => false
                 };
                 if (match) Results.Add(new TrainerSearchResult(i, s));

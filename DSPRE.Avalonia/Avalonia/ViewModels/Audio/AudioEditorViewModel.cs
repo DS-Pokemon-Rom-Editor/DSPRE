@@ -178,7 +178,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 into.Clear();
                 foreach (var i in from)
                     if (string.IsNullOrWhiteSpace(_search)
-                     || i.Name.IndexOf(_search, StringComparison.OrdinalIgnoreCase) >= 0
+                     || SearchMatch.Contains(i.Name, _search)
                      || i.Number.ToString().Contains(_search))
                         into.Add(i);
             }

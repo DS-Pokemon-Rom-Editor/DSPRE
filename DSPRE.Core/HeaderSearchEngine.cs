@@ -103,13 +103,13 @@ namespace DSPRE
                                 }
                                 break;
                             case (int)TextOperators.Contains:
-                                if (intNames[i].IndexOf(valToSearch, StringComparison.InvariantCultureIgnoreCase) >= 0)
+                                if (SearchMatch.Contains(intNames[i], valToSearch))
                                 {
                                     result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
                                 }
                                 break;
                             case (int)TextOperators.DoesNotContain:
-                                if (intNames[i].IndexOf(valToSearch, StringComparison.InvariantCultureIgnoreCase) < 0)
+                                if (!SearchMatch.Contains(intNames[i], valToSearch))
                                 {
                                     result.Add(i.ToString("D3") + MapHeader.nameSeparator + intNames[i]);
                                 }
