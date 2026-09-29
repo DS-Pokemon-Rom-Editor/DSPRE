@@ -11,6 +11,8 @@ namespace DSPRE.ROMFiles {
         public byte Nature { get; set; }
         public ushort Item { get; set; }
         public ushort Form { get; set; }
+        // A file too short to parse, written back unchanged until the set is edited.
+        public byte[] UnreadBytes { get; set; }
 
         public static readonly string[] NatureNames = {
             "Hardy", "Lonely", "Brave", "Adamant", "Naughty",
@@ -35,7 +37,11 @@ namespace DSPRE.ROMFiles {
             Form = br.ReadUInt16();
         }
 
-        public void Write(BinaryWriter bw) {
+        public void Write(BinaryWriter bw, bool keepUnread = true) {
+            if (keepUnread && UnreadBytes != null) {
+                bw.Write(UnreadBytes);
+                return;
+            }
             bw.Write(Species);
             for (int i = 0; i < 4; i++) {
                 bw.Write(Moves[i]);
@@ -78,8 +84,10 @@ namespace DSPRE.ROMFiles {
             foreach (string filePath in files) {
                 using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read))
                 using (BinaryReader br = new BinaryReader(fs)) {
-                    if (fs.Length < ENTRY_SIZE) continue;
-                    Sets.Add(new BattleTowerPokemonSet(br));
+                    // A short file still takes its slot, since trainers refer to sets by index.
+                    Sets.Add(fs.Length < ENTRY_SIZE
+                        ? new BattleTowerPokemonSet { UnreadBytes = br.ReadBytes((int)fs.Length) }
+                        : new BattleTowerPokemonSet(br));
                 }
             }
         }
@@ -88,7 +96,7 @@ namespace DSPRE.ROMFiles {
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
                 foreach (var set in Sets) {
-                    set.Write(bw);
+                    set.Write(bw, keepUnread: false);
                 }
                 return ms.ToArray();
             }

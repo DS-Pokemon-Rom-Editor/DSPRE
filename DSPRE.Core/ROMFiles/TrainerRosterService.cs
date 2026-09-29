@@ -179,6 +179,11 @@ namespace DSPRE.ROMFiles
 
             var sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
                 readFunctions: true, readActions: true);
+            if (sharedScripts.plaintextParseFailed)
+            {
+                error = "The shared trainer-script .script file has edits that do not parse. Fix it first.";
+                return false;
+            }
             if (sharedScripts.parseFailedDueToInvalidCommand ||
                 !TrainerScriptLayout.TryInsertGenericAliasBeforeSpecial(sharedScripts, out error))
             {
@@ -236,15 +241,11 @@ namespace DSPRE.ROMFiles
 
             var scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
             mutations.Add(new TrainerRosterFileMutation(scriptPaths.binPath, expandedScript));
-            string plaintext = sharedScripts.ToPlainText(includeActions: true);
-            if (string.IsNullOrWhiteSpace(plaintext))
+            if (!TryAddPlaintextMutation(mutations, sharedScripts, scriptPaths.txtPath, "expanded", out error))
             {
-                error = "The expanded trainer-script plaintext could not be serialized.";
                 trainerId = -1;
                 return false;
             }
-            mutations.Add(new TrainerRosterFileMutation(scriptPaths.txtPath,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(plaintext)));
 
             if (!TrainerRosterFileTransaction.TryCommit(mutations, out error))
             {
@@ -252,8 +253,33 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            ScriptFile.ClearPlaintextCache();
+            AfterCommit(scriptDescriptor.SharedScriptArchiveId);
             return true;
+        }
+
+        // A Rotom project's expanded/scripts is Rotom's source root: its source is regenerated from the
+        // binary instead, and a .script there would be converted over it.
+        private static bool TryAddPlaintextMutation(List<TrainerRosterFileMutation> mutations,
+            ScriptFile scripts, string txtPath, string what, out string error)
+        {
+            error = null;
+            if (RomInfo.hasRotomProject) return true;
+            string plaintext = scripts.ToPlainText(includeActions: true);
+            if (string.IsNullOrWhiteSpace(plaintext))
+            {
+                error = $"The {what} trainer-script plaintext could not be serialized.";
+                return false;
+            }
+            mutations.Add(new TrainerRosterFileMutation(txtPath,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(plaintext)));
+            return true;
+        }
+
+        private static void AfterCommit(int sharedScriptId)
+        {
+            ScriptFile.ClearPlaintextCache();
+            _ = ScriptSourceSync.BinaryWritten(sharedScriptId);
+            TextArchive.RaiseSaved(null, trainerNamesMessageNumber);
         }
 
         public static bool TryRemoveLastAddedTrainer(out int trainerId, out string error)
@@ -304,6 +330,12 @@ namespace DSPRE.ROMFiles
                 out TrainerScriptExecutableDescriptor executableDescriptor, out _);
             var sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
                 readFunctions: true, readActions: true);
+            if (sharedScripts.plaintextParseFailed)
+            {
+                error = "The shared trainer-script .script file has edits that do not parse. Fix it first.";
+                trainerId = -1;
+                return false;
+            }
             if (sharedScripts.parseFailedDueToInvalidCommand ||
                 !TrainerScriptLayout.TryRemoveGenericAliasBeforeSpecial(sharedScripts, out error))
             {
@@ -361,15 +393,11 @@ namespace DSPRE.ROMFiles
 
             var scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
             mutations.Add(new TrainerRosterFileMutation(scriptPaths.binPath, contractedScript));
-            string plaintext = sharedScripts.ToPlainText(includeActions: true);
-            if (string.IsNullOrWhiteSpace(plaintext))
+            if (!TryAddPlaintextMutation(mutations, sharedScripts, scriptPaths.txtPath, "contracted", out error))
             {
-                error = "The contracted trainer-script plaintext could not be serialized.";
                 trainerId = -1;
                 return false;
             }
-            mutations.Add(new TrainerRosterFileMutation(scriptPaths.txtPath,
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(plaintext)));
 
             if (!TrainerRosterFileTransaction.TryCommit(mutations, out error))
             {
@@ -377,7 +405,7 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            ScriptFile.ClearPlaintextCache();
+            AfterCommit(scriptDescriptor.SharedScriptArchiveId);
             return true;
         }
 

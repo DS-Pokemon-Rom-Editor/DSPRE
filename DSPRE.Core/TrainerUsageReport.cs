@@ -14,6 +14,8 @@ namespace DSPRE
     {
         public static void Generate(string csvFilePath)
         {
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty });
+
             string[] trcNames = RomInfo.GetTrainerClassNames();
             string[] pokeNames = RomInfo.GetPokemonNames();
             string[] trainerNames = GetSimpleTrainerNames();
@@ -24,29 +26,29 @@ namespace DSPRE
 
             Dictionary<string, Dictionary<string, int>> trainerUsage = new Dictionary<string, Dictionary<string, int>>();
 
-            for (int i = 0; i < trainerNames.Length; i++)
+            int trainerCount = Filesystem.GetTrainerPropertiesCount();
+            for (int i = 0; i < trainerCount; i++)
             {
-                if (trainerNames[i].Equals("Angelica") || trainerNames[i].Equals("Mickey"))
-                {
-                    continue;
-                }
                 string suffix = Path.DirectorySeparatorChar + i.ToString("D4");
 
-                TrainerFile f = new TrainerFile(
-                    new TrainerProperties(
-                        (ushort)i,
-                        new FileStream(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open)
-                    ),
-                    new FileStream(RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open),
-                    trainerNames[i]
-                );
+                TrainerFile f;
+                using (var propStream = new FileStream(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
+                using (var partyStream = new FileStream(RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
+                {
+                    f = new TrainerFile(
+                        new TrainerProperties((ushort)i, propStream),
+                        partyStream,
+                        i < trainerNames.Length ? trainerNames[i] : TrainerFile.NAME_NOT_FOUND
+                    );
+                }
 
                 if (f.party.CountNonEmptyMons() == 0)
                 {
                     continue;
                 }
 
-                string className = trcNames[f.trp.trainerClass];
+                int classId = f.trp.trainerClass;
+                string className = classId < trcNames.Length ? trcNames[classId] : $"Class {classId}";
 
 
                 if (trainerUsage.TryGetValue(className, out Dictionary<string, int> innerDict) == false)
@@ -54,14 +56,15 @@ namespace DSPRE
                     innerDict = trainerUsage[className] = new Dictionary<string, int>();
                 }
 
-                for (int p = 0; p < f.trp.partyCount; p++)
+                for (int p = 0; p < f.trp.partyCount && p < TrainerFile.POKE_IN_PARTY; p++)
                 {
                     PartyPokemon pp = f.party[p];
                     if (pp.CheckEmpty())
                     {
                         continue;
                     }
-                    string pokeName = pokeNames[(int)pp.pokeID];
+                    int species = (int)pp.pokeID;
+                    string pokeName = species < pokeNames.Length ? pokeNames[species] : $"Species {species}";
 
                     if (innerDict.TryGetValue(pokeName, out int occurrences))
                     {

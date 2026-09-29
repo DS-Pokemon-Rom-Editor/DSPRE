@@ -212,6 +212,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _prizeMulLoaded;
         public bool PrizeMulLoaded { get => _prizeMulLoaded; private set => Set(ref _prizeMulLoaded, value); }
 
+        // Only a changed gender is written, since an unexpanded table may refuse the write.
+        private int _loadedGender;
+
         private int _genderIndex;
         public int GenderIndex { get => _genderIndex; set { if (Set(ref _genderIndex, value)) MarkDirty(); } }
 
@@ -313,6 +316,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 GenderLoaded = HgEngineTrainerClassTables.TryGetGender(index, out int hgeGender);
                 if (GenderLoaded) GenderIndex = hgeGender;
+                _loadedGender = GenderIndex;
 
                 PrizeMulLoaded = HgEngineTrainerClassTables.TryGetPrizeMultiplier(index, out int hgePrize);
                 if (PrizeMulLoaded) PrizeMultiplier = hgePrize;
@@ -325,6 +329,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     GenderLoaded = true;
                     GenderIndex = gender;
                 }
+                _loadedGender = GenderIndex;
 
                 PrizeMulLoaded = TrainerClassTableExpansion.TryReadPrizeMul(index, out byte prizeMul, out _);
                 if (PrizeMulLoaded) PrizeMultiplier = prizeMul;
@@ -444,7 +449,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 try
                 {
-                    if (GenderLoaded && !HgEngineTrainerClassTables.TrySetGender(_selectedIndex, GenderIndex, out string hgeGenderErr)) failures.Add(hgeGenderErr);
+                    if (GenderLoaded && GenderIndex != _loadedGender)
+                    {
+                        if (HgEngineTrainerClassTables.TrySetGender(_selectedIndex, GenderIndex, out string hgeGenderErr)) _loadedGender = GenderIndex;
+                        else failures.Add(hgeGenderErr);
+                    }
                     if (PrizeMulLoaded && !HgEngineTrainerClassTables.TrySetPrizeMultiplier(_selectedIndex, PrizeMultiplier, out string hgePrizeErr)) failures.Add(hgePrizeErr);
                 }
                 catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { failures.Add(ex.Message); }
@@ -452,7 +461,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             else
             {
                 string genderErr = null, prizeErr = null;
-                if (GenderLoaded) TrainerClassTableExpansion.TryWriteGender(_selectedIndex, (byte)GenderIndex, out genderErr);
+                if (GenderLoaded && GenderIndex != _loadedGender && TrainerClassTableExpansion.TryWriteGender(_selectedIndex, (byte)GenderIndex, out genderErr))
+                    _loadedGender = GenderIndex;
                 if (PrizeMulLoaded) TrainerClassTableExpansion.TryWritePrizeMul(_selectedIndex, (byte)PrizeMultiplier, out prizeErr);
                 if (genderErr != null) failures.Add(genderErr);
                 if (prizeErr != null) failures.Add(prizeErr);

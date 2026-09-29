@@ -49,8 +49,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void SaveChanges()
         {
             if (_trainerFile == null || _setFile == null) return;
-            _trainerFile.SaveToNarc();
-            _setFile.SaveToNarc();
+            // Each save reports its own error; a failure leaves the edits unsaved.
+            bool trainersSaved = _trainerFile.SaveToNarc();
+            bool setsSaved = _setFile.SaveToNarc();
+            if (!trainersSaved || !setsSaved)
+            {
+                UpdateStatus();
+                StatusText += !trainersSaved && !setsSaved ? " Trainers and sets were not saved."
+                    : !trainersSaved ? " Trainers were not saved." : " Pokémon sets were not saved.";
+                return;
+            }
             _isDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -92,7 +100,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int TrainerClassIndex
         {
             get => _trainerClassIndex;
-            set { if (Set(ref _trainerClassIndex, value) && !_suppress) { CurrentTrainer.TrainerType = (ushort)Math.Max(0, value); MarkDirty(); } }
+            set
+            {
+                // A cleared list reports -1; an out-of-range class keeps its value as read.
+                if (Set(ref _trainerClassIndex, value) && !_suppress && value >= 0)
+                {
+                    CurrentTrainer.TrainerType = (ushort)value;
+                    CurrentTrainer.UnreadBytes = null;
+                    MarkDirty();
+                }
+            }
         }
 
         private string _trainerName = "";
@@ -137,30 +154,30 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private int _setSpeciesIndex = -1;
-        public int SetSpeciesIndex { get => _setSpeciesIndex; set { if (Set(ref _setSpeciesIndex, value) && !_suppress) SetFieldChanged(species: true); } }
+        public int SetSpeciesIndex { get => _setSpeciesIndex; set { if (Set(ref _setSpeciesIndex, value) && !_suppress) SetFieldChanged(SetField.Species); } }
 
         private int _move1 = -1, _move2 = -1, _move3 = -1, _move4 = -1;
-        public int Move1 { get => _move1; set { if (Set(ref _move1, value) && !_suppress) SetFieldChanged(); } }
-        public int Move2 { get => _move2; set { if (Set(ref _move2, value) && !_suppress) SetFieldChanged(); } }
-        public int Move3 { get => _move3; set { if (Set(ref _move3, value) && !_suppress) SetFieldChanged(); } }
-        public int Move4 { get => _move4; set { if (Set(ref _move4, value) && !_suppress) SetFieldChanged(); } }
+        public int Move1 { get => _move1; set { if (Set(ref _move1, value) && !_suppress) SetFieldChanged(SetField.Move1); } }
+        public int Move2 { get => _move2; set { if (Set(ref _move2, value) && !_suppress) SetFieldChanged(SetField.Move2); } }
+        public int Move3 { get => _move3; set { if (Set(ref _move3, value) && !_suppress) SetFieldChanged(SetField.Move3); } }
+        public int Move4 { get => _move4; set { if (Set(ref _move4, value) && !_suppress) SetFieldChanged(SetField.Move4); } }
 
         private int _natureIndex;
-        public int NatureIndex { get => _natureIndex; set { if (Set(ref _natureIndex, value) && !_suppress) SetFieldChanged(); } }
+        public int NatureIndex { get => _natureIndex; set { if (Set(ref _natureIndex, value) && !_suppress) SetFieldChanged(SetField.Nature); } }
 
         private int _itemIndex;
-        public int ItemIndex { get => _itemIndex; set { if (Set(ref _itemIndex, value) && !_suppress) SetFieldChanged(); } }
+        public int ItemIndex { get => _itemIndex; set { if (Set(ref _itemIndex, value) && !_suppress) SetFieldChanged(SetField.Item); } }
 
         private int _form;
-        public int Form { get => _form; set { if (Set(ref _form, value) && !_suppress) SetFieldChanged(); } }
+        public int Form { get => _form; set { if (Set(ref _form, value) && !_suppress) SetFieldChanged(SetField.Form); } }
 
         private bool _evHp, _evAtk, _evDef, _evSpe, _evSpa, _evSpd;
-        public bool EvHp { get => _evHp; set { if (Set(ref _evHp, value) && !_suppress) SetFieldChanged(); } }
-        public bool EvAtk { get => _evAtk; set { if (Set(ref _evAtk, value) && !_suppress) SetFieldChanged(); } }
-        public bool EvDef { get => _evDef; set { if (Set(ref _evDef, value) && !_suppress) SetFieldChanged(); } }
-        public bool EvSpe { get => _evSpe; set { if (Set(ref _evSpe, value) && !_suppress) SetFieldChanged(); } }
-        public bool EvSpa { get => _evSpa; set { if (Set(ref _evSpa, value) && !_suppress) SetFieldChanged(); } }
-        public bool EvSpd { get => _evSpd; set { if (Set(ref _evSpd, value) && !_suppress) SetFieldChanged(); } }
+        public bool EvHp { get => _evHp; set { if (Set(ref _evHp, value) && !_suppress) SetFieldChanged(SetField.Evs); } }
+        public bool EvAtk { get => _evAtk; set { if (Set(ref _evAtk, value) && !_suppress) SetFieldChanged(SetField.Evs); } }
+        public bool EvDef { get => _evDef; set { if (Set(ref _evDef, value) && !_suppress) SetFieldChanged(SetField.Evs); } }
+        public bool EvSpe { get => _evSpe; set { if (Set(ref _evSpe, value) && !_suppress) SetFieldChanged(SetField.Evs); } }
+        public bool EvSpa { get => _evSpa; set { if (Set(ref _evSpa, value) && !_suppress) SetFieldChanged(SetField.Evs); } }
+        public bool EvSpd { get => _evSpd; set { if (Set(ref _evSpd, value) && !_suppress) SetFieldChanged(SetField.Evs); } }
 
         private IImage _speciesIcon;
         public IImage SpeciesIcon { get => _speciesIcon; private set => Set(ref _speciesIcon, value); }
@@ -260,6 +277,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int setId = AddSetNumber;
             if (setId <= 0) return; // set 0 is the blank/unused placeholder entry
             trainer.SetIDs.Add((ushort)setId);
+            trainer.UnreadBytes = null;
             RefreshSetIdsList(trainer);
             MarkDirty();
         }
@@ -269,6 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             var trainer = CurrentTrainer;
             if (trainer == null || SelectedSetIdIndex < 0 || SelectedSetIdIndex >= trainer.SetIDs.Count) return;
             trainer.SetIDs.RemoveAt(SelectedSetIdIndex);
+            trainer.UnreadBytes = null;
             RefreshSetIdsList(trainer);
             MarkDirty();
         }
@@ -348,30 +367,41 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(IsSetSelected));
         }
 
-        private void SetFieldChanged(bool species = false)
+        private enum SetField { Species, Move1, Move2, Move3, Move4, Nature, Item, Form, Evs }
+
+        // Only the edited field is written, so a value with no list row keeps its value as read.
+        // A list reports -1 when cleared, which is not an edit.
+        private void SetFieldChanged(SetField field)
         {
             var set = CurrentSet;
             if (set == null) return;
 
-            set.Species = (ushort)Math.Max(0, SetSpeciesIndex);
-            set.Moves[0] = (ushort)Math.Max(0, Move1);
-            set.Moves[1] = (ushort)Math.Max(0, Move2);
-            set.Moves[2] = (ushort)Math.Max(0, Move3);
-            set.Moves[3] = (ushort)Math.Max(0, Move4);
-            set.Nature = (byte)Math.Max(0, NatureIndex);
-            set.Item = (ushort)Math.Max(0, ItemIndex);
-            set.Form = (ushort)Form;
-
-            byte flags = 0;
-            if (EvHp) flags |= 0x01;
-            if (EvAtk) flags |= 0x02;
-            if (EvDef) flags |= 0x04;
-            if (EvSpe) flags |= 0x08;
-            if (EvSpa) flags |= 0x10;
-            if (EvSpd) flags |= 0x20;
-            set.EvFlags = flags;
-
-            if (species) SpeciesIcon = _icons.Get(set.Species);
+            switch (field)
+            {
+                case SetField.Species:
+                    if (SetSpeciesIndex < 0) return;
+                    set.Species = (ushort)SetSpeciesIndex;
+                    SpeciesIcon = _icons.Get(set.Species);
+                    break;
+                case SetField.Move1: if (Move1 < 0) return; set.Moves[0] = (ushort)Move1; break;
+                case SetField.Move2: if (Move2 < 0) return; set.Moves[1] = (ushort)Move2; break;
+                case SetField.Move3: if (Move3 < 0) return; set.Moves[2] = (ushort)Move3; break;
+                case SetField.Move4: if (Move4 < 0) return; set.Moves[3] = (ushort)Move4; break;
+                case SetField.Nature: if (NatureIndex < 0) return; set.Nature = (byte)NatureIndex; break;
+                case SetField.Item: if (ItemIndex < 0) return; set.Item = (ushort)ItemIndex; break;
+                case SetField.Form: set.Form = (ushort)Form; break;
+                case SetField.Evs:
+                    byte flags = (byte)(set.EvFlags & ~0x3F);
+                    if (EvHp) flags |= 0x01;
+                    if (EvAtk) flags |= 0x02;
+                    if (EvDef) flags |= 0x04;
+                    if (EvSpe) flags |= 0x08;
+                    if (EvSpa) flags |= 0x10;
+                    if (EvSpd) flags |= 0x20;
+                    set.EvFlags = flags;
+                    break;
+            }
+            set.UnreadBytes = null;
 
             int index = _selectedSetIndex;
             if (index >= 0 && index < SetLabels.Count)

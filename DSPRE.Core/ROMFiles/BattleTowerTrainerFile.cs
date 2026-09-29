@@ -11,6 +11,8 @@ namespace DSPRE.ROMFiles {
         public List<ushort> SetIDs { get; set; } = new List<ushort>();
         public string Name { get; set; } = "";
         public string[] Messages { get; set; } = new string[3];
+        // A file too short to parse, written back unchanged until the trainer is edited.
+        public byte[] UnreadBytes { get; set; }
 
         public BattleTowerTrainer() { }
 
@@ -24,7 +26,11 @@ namespace DSPRE.ROMFiles {
             return t;
         }
 
-        public void Write(BinaryWriter bw) {
+        public void Write(BinaryWriter bw, bool keepUnread = true) {
+            if (keepUnread && UnreadBytes != null) {
+                bw.Write(UnreadBytes);
+                return;
+            }
             bw.Write(TrainerType);
             bw.Write((ushort)SetIDs.Count);
             foreach (ushort id in SetIDs) {
@@ -76,8 +82,10 @@ namespace DSPRE.ROMFiles {
             for (int i = 0; i < files.Length; i++) {
                 using (FileStream fs = new FileStream(files[i], FileMode.Open, FileAccess.Read))
                 using (BinaryReader br = new BinaryReader(fs)) {
-                    if (fs.Length < 4) continue;
-                    BattleTowerTrainer trainer = BattleTowerTrainer.Read(br);
+                    // A short file still takes its slot, so later trainers keep their ids.
+                    BattleTowerTrainer trainer = fs.Length < 4
+                        ? new BattleTowerTrainer { UnreadBytes = br.ReadBytes((int)fs.Length) }
+                        : BattleTowerTrainer.Read(br);
 
                     if (names != null && i < names.Count) {
                         trainer.Name = names[i];
@@ -98,7 +106,7 @@ namespace DSPRE.ROMFiles {
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
                 foreach (var trainer in Trainers) {
-                    trainer.Write(bw);
+                    trainer.Write(bw, keepUnread: false);
                 }
                 return ms.ToArray();
             }

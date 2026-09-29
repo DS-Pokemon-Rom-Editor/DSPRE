@@ -45,6 +45,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _suppress;
         private TrainerFile _trainer;
         private int _loadedTrainerId = -1;
+        // What the list row shows, so a save that changes either refreshes it.
+        private string _savedName;
+        private byte _savedClass;
 
         private string[] _abilityNames = Array.Empty<string>();
         private (int abi1, int abi2)[] _abilities = Array.Empty<(int, int)>();
@@ -108,8 +111,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }, global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
-        // hg-engine trainers may have no party at all.
-        public decimal PartyCountMinimum => IsHgeActive ? 0 : 1;
+        // hg-engine trainers may have no party at all; a vanilla one keeps an empty party only as read.
+        public decimal PartyCountMinimum => IsHgeActive || _emptyPartyAsRead ? 0 : 1;
+        private bool _emptyPartyAsRead;
+        private void SetEmptyPartyAsRead(bool value)
+        {
+            if (_emptyPartyAsRead == value) return;
+            _emptyPartyAsRead = value;
+            OnPropertyChanged(nameof(PartyCountMinimum));
+        }
 
         // What Trainers.c held that the editor could not read; saving leaves those values alone.
         private bool _hgeTrainerTypeKnown, _hgeAiFlagsKnown;
@@ -199,9 +209,21 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private async Task SwitchTrainerAsync(int requested)
         {
-            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "trainer")) return;
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(new TrainerSwitchTarget(this), _owner, "trainer")) return;
             SetClean();
             if (Set(ref _selectedTrainerIndex, requested)) await LoadTrainerWithBusyIndicatorAsync(requested);
+        }
+
+        // Only the trainer's edits belong to the selection: Save keeps both tabs, Discard keeps the class edits.
+        private sealed class TrainerSwitchTarget : IEditorWithUnsavedChanges
+        {
+            private readonly TrainerEditorViewModel _vm;
+            public TrainerSwitchTarget(TrainerEditorViewModel vm) => _vm = vm;
+            public bool HasUnsavedChanges => _vm._dirty;
+            public string UnsavedChangesDescription => _vm.UnsavedChangesDescription;
+            public void SaveChanges() => _vm.SaveChanges();
+            public async Task<bool> SaveChangesAsync() => await ((IEditorWithUnsavedChanges)_vm).SaveChangesAsync() && !_vm._dirty;
+            public void DiscardChanges() => _vm.DiscardTrainer();
         }
 
         private async Task LoadTrainerWithBusyIndicatorAsync(int index)
@@ -348,7 +370,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             return new TrainerSnapshot
             {
                 Trp   = _trainer.trp.ToByteArray(),
-                Party = _trainer.party.ToByteArray(),
+                // Every slot, including those past the party count, so undo brings hidden ones back.
+                Party = _trainer.party.ToByteArray(TrainerFile.POKE_IN_PARTY),
                 Name  = _trainerName,
             };
         }
@@ -357,10 +380,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (snap == null || _trainer == null || _loadedTrainerId < 0) return;
             _suppress = true;
-            _trainer = new TrainerFile(
-                new TrainerProperties((ushort)_loadedTrainerId, new MemoryStream(snap.Trp)),
-                new MemoryStream(snap.Party),
-                snap.Name);
+            var trp = new TrainerProperties((ushort)_loadedTrainerId, new MemoryStream(snap.Trp));
+            byte partyCount = trp.partyCount;
+            trp.partyCount = TrainerFile.POKE_IN_PARTY;
+            _trainer = new TrainerFile(trp, new MemoryStream(snap.Party), snap.Name);
+            trp.partyCount = partyCount;
             PopulateFromTrainer();
             _suppress = false;
 
@@ -394,7 +418,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             DSPRE.Avalonia.Data.ListSync.Apply(MoveNames,    GetAttackNames());
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    GetItemNames());
             string[] classNames = GetTrainerClassNames();
-            DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, TrainerListEntries(classNames));
+            // Replacing the selected row can clear the list's selection, as in RefreshTrainerListEntry.
+            int keep = _selectedTrainerIndex;
+            bool wasSuppressed = _suppress;
+            _suppress = true;
+            try
+            {
+                DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, TrainerListEntries(classNames));
+                if (keep >= 0 && keep < TrainerNames.Count)
+                {
+                    _selectedTrainerIndex = keep;
+                    OnPropertyChanged(nameof(SelectedTrainerIndex));
+                }
+            }
+            finally { _suppress = wasSuppressed; }
 
             var formatted = new System.Collections.Generic.List<string>(classNames.Length);
             for (int i = 0; i < classNames.Length; i++) formatted.Add($"[{i:D3}] {classNames[i]}");
@@ -568,6 +605,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         error ? TrainerFile.NAME_NOT_FOUND : trNames[index]);
                 }
                 _loadedTrainerId = index;
+                _savedName = _trainer.name;
+                _savedClass = _trainer.trp.trainerClass;
 
                 _suppress = true;
                 try { PopulateFromTrainer(); }
@@ -653,7 +692,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             for (int i = 0; i < TrainerItems.Count; i++)
             {
                 _hgeItemRaw[i] = i < itemsRaw.Count ? itemsRaw[i].Raw.Trim() : null;
-                TrainerItems[i].ItemIndex = _hgeItemRaw[i] != null && HgEngineSourceBlock.TryResolveToken(_hgeItemRaw[i], ItemHeader, out int itemVal) ? itemVal : -1;
+                TrainerItems[i].Load(_hgeItemRaw[i] != null && HgEngineSourceBlock.TryResolveToken(_hgeItemRaw[i], ItemHeader, out int itemVal) ? itemVal : -1);
             }
 
             var partyRaw = block.GetArrayElements(new[] { FieldPathSegment.Field("party") });
@@ -781,10 +820,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SetBattleType(trp.battleType);
             ChooseMoves = trp.chooseMoves;
             ChooseItems = trp.chooseItems;
-            PartyCount = Math.Max(1, (int)trp.partyCount);
+            // Lower the minimum before a 0 arrives and raise it after it leaves, so the spinner never clamps it.
+            if (trp.partyCount == 0) SetEmptyPartyAsRead(true);
+            PartyCount = trp.partyCount;
+            if (trp.partyCount > 0) SetEmptyPartyAsRead(false);
 
             for (int i = 0; i < TrainerItems.Count && i < trp.trainerItems.Length; i++)
-                TrainerItems[i].ItemIndex = trp.trainerItems[i];
+                TrainerItems[i].Load(trp.trainerItems[i]);
 
             for (int i = 0; i < AiFlags.Count; i++)
                 AiFlags[i].Checked = trp.AI != null && i < trp.AI.Count && trp.AI[i];
@@ -817,7 +859,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
                 _trainer.party[i].moves = _chooseMoves ? new ushort[4] : null;
 
-            for (int i = 0; i < (int)_partyCount; i++)
+            // Slots past the party count are synced too, so undo keeps them; the party file stops at the count.
+            for (int i = 0; i < Party.Count && i < TrainerFile.POKE_IN_PARTY; i++)
             {
                 var mon = Party[i];
                 var p = _trainer.party[i];
@@ -833,7 +876,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 p.difficulty = (byte)mon.Difficulty;
 
-                // Elsewhere this byte is the high half of the difficulty, which sets the IVs, so it is kept as read.
+                // In every other game this byte is the high half of the u16 difficulty, so it is kept as read.
                 if (_genderEditable)
                 {
                     var flags = PartyPokemon.GenderAndAbilityFlags.NO_FLAGS;
@@ -901,13 +944,33 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
 
             if (_trainer == null) return;
+
+            // The game reads every record up to the party count, so a blank one would battle as species 0.
+            for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
+            {
+                if (Party[i].SpeciesIndex > 0) continue;
+                string error = $"Party slot {i + 1} has no Pokémon.";
+                StatusText = $"Trainer {_selectedTrainerIndex} was not saved: {error}";
+                _ = DialogHelper.ShowError($"Trainer {_selectedTrainerIndex} was not saved:\n{error}", "Trainer Editor");
+                return;
+            }
+
             SyncToTrainer();
+            bool listChanged = _savedName != _trainerName || _savedClass != _trainer.trp.trainerClass;
 
             string indexStr = Path.DirectorySeparatorChar + _selectedTrainerIndex.ToString("D4");
             File.WriteAllBytes(gameDirs[DirNames.trainerProperties].unpackedDir + indexStr, _trainer.trp.ToByteArray());
             File.WriteAllBytes(gameDirs[DirNames.trainerParty].unpackedDir + indexStr, _trainer.party.ToByteArray());
 
             UpdateTrainerName(_trainerName);
+
+            _savedName = _trainerName;
+            _savedClass = _trainer.trp.trainerClass;
+            if (listChanged)
+            {
+                RefreshTrainerListEntry(_selectedTrainerIndex);
+                AppEvents.RaiseNamesChanged();
+            }
 
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -918,8 +981,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
-            if (IsHgeActive) await SaveHgEngineAsync();
-            else Save();
+            if (_dirty)
+            {
+                if (IsHgeActive) await SaveHgEngineAsync();
+                else Save();
+            }
+            if (_classes?.HasUnsavedChanges == true) _classes.Save();
             return !HasUnsavedChanges;
         }
 
@@ -1465,8 +1532,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void RefreshTrainerListEntry(int id)
         {
-            if (id < 0 || id >= TrainerNames.Count || !HgEngineTrainerSource.TryLoad(id, out var block, out _)) return;
-            string entry = DSPRE.TrainerNames.HgEngineEntry(id, block, GetTrainerClassNames());
+            if (id < 0 || id >= TrainerNames.Count) return;
+            string entry;
+            if (IsHgeActive)
+            {
+                if (!HgEngineTrainerSource.TryLoad(id, out var block, out _)) return;
+                entry = DSPRE.TrainerNames.HgEngineEntry(id, block, GetTrainerClassNames());
+            }
+            else
+            {
+                string[] classNames = GetTrainerClassNames();
+                string className = _savedClass < classNames.Length ? classNames[_savedClass] : $"Class {_savedClass}";
+                entry = "[" + id.ToString("D2") + "] " + className + " " + _savedName;
+            }
             if (TrainerNames[id] == entry) return;
             // Replacing the selected row can clear the list's selection.
             bool wasSuppressed = _suppress;
@@ -1522,8 +1600,26 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int ItemIndex
         {
             get => _itemIndex;
-            set { if (_itemIndex != value) { _itemIndex = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ItemIndex))); Changed?.Invoke(this, EventArgs.Empty); } }
+            set
+            {
+                // A ComboBox reports -1 while its list refills; only a load may clear the item.
+                if (value < 0)
+                {
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ItemIndex))));
+                    return;
+                }
+                if (_itemIndex != value) { _itemIndex = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ItemIndex))); Changed?.Invoke(this, EventArgs.Empty); }
+            }
         }
+
+        /// <summary>Sets the item as read, where -1 means one with no row.</summary>
+        public void Load(int index)
+        {
+            if (_itemIndex == index) return;
+            _itemIndex = index;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ItemIndex)));
+        }
+
         public TrainerItemSlotViewModel(ObservableCollection<string> itemNames) { ItemNames = itemNames; }
     }
 }

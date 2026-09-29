@@ -139,7 +139,28 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool HasUnsavedChanges => _dirtyRows.Count > 0;
         public string UnsavedChangesDescription => "Pokégear Rematch Editor";
         public void SaveChanges() => SaveAll();
-        public void DiscardChanges() { _dirtyRows.Clear(); OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void DiscardChanges()
+        {
+            if (_dirtyRows.Count > 0 && IsSupported)
+            {
+                var saved = PokegearRematchTable.ReadAll(out _, out _);
+                foreach (int r in _dirtyRows)
+                    if (r < saved.Count && r < _rows.Count) _rows[r] = saved[r];
+
+                int listPos = _selectedRowListIndex;
+                _suppress = true;
+                for (int i = 0; i < _filteredIndices.Count && i < RowLabels.Count; i++)
+                    if (_dirtyRows.Contains(_filteredIndices[i])) RowLabels[i] = RowLabel(_filteredIndices[i]);
+                _suppress = false;
+                if (_selectedRowListIndex != listPos) { _selectedRowListIndex = listPos; OnPropertyChanged(nameof(SelectedRowListIndex)); }
+                if (_currentRowIndex >= 0) LoadRowIntoDetail(_currentRowIndex);
+                UpdateReachability();
+                RowChanged();
+            }
+            _dirtyRows.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
 
         public PokegearRematchViewModel(int initialRowIndex = -1)
         {

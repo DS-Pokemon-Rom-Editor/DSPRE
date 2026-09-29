@@ -179,8 +179,14 @@ namespace DSPRE
             uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, GenderTablePointerOffset, 4), 0);
             if (ptr < RomInfo.synthOverlayLoadAddress)
             {
-                error = "The gender table hasn't been expanded yet. Add a trainer class first (or repoint it by hand).";
-                return false;
+                // Not repointed: the retail table is the one the game reads, and classId is inside it.
+                if (ptr != ARM9.address + VanillaGenderTableFileOffset)
+                {
+                    error = "The gender table was moved inside arm9, so it can't be written here.";
+                    return false;
+                }
+                DSUtils.WriteToFile(RomInfo.arm9Path, new[] { gender }, (uint)(VanillaGenderTableFileOffset + classId));
+                return true;
             }
 
             long start = ptr - RomInfo.synthOverlayLoadAddress;

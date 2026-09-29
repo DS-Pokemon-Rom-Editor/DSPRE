@@ -134,7 +134,18 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 using var fs = new FileStream(Path.Combine(dir, i.ToString("D4")), FileMode.Open);
                 _trainerData[i] = new TrainerProperties((ushort)i, fs);
+                _loadedFlags[i] = SnapshotFlags(_trainerData[i]);
             }
+        }
+
+        // Flags as last read or saved, so a save only touches the bits the user changed.
+        private readonly Dictionary<int, bool[]> _loadedFlags = new();
+
+        private bool[] SnapshotFlags(TrainerProperties tp)
+        {
+            var flags = new bool[FlagNames.Length];
+            for (int f = 0; f < flags.Length; f++) flags[f] = GetFlag(tp, f);
+            return flags;
         }
 
         private bool GetFlag(TrainerProperties tp, int flagIndex) =>
@@ -312,8 +323,24 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void SaveAllChanges()
         {
             string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
-            foreach (var kvp in _trainerData)
-                File.WriteAllBytes(Path.Combine(dir, kvp.Key.ToString("D4")), kvp.Value.ToByteArray());
+            foreach (var (id, tp) in _trainerData.ToList())
+            {
+                bool[] loaded = _loadedFlags[id];
+                bool[] current = SnapshotFlags(tp);
+                if (loaded.SequenceEqual(current)) continue;
+
+                // Other editors may have saved this trainer since it was read here.
+                string path = Path.Combine(dir, id.ToString("D4"));
+                TrainerProperties onDisk;
+                using (var fs = new FileStream(path, FileMode.Open))
+                    onDisk = new TrainerProperties((ushort)id, fs);
+                for (int f = 0; f < current.Length; f++)
+                    if (current[f] != loaded[f]) SetFlag(onDisk, f, current[f]);
+                File.WriteAllBytes(path, onDisk.ToByteArray());
+
+                _trainerData[id] = onDisk;
+                _loadedFlags[id] = SnapshotFlags(onDisk);
+            }
 
             _isDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);

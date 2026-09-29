@@ -17,7 +17,8 @@ namespace DSPRE.ROMFiles {
         public ushort formID = 0;
         public ushort level = 0;
         public byte difficulty = 0;
-        public GenderAndAbilityFlags genderAndAbilityFlags; //only used for HGSS, filler byte for the rest of the games
+        // Gender and ability in HGSS and the AI backport; elsewhere the high byte of the u16 difficulty, kept as read.
+        public GenderAndAbilityFlags genderAndAbilityFlags;
         public ushort ballSeals = 0;
 
         public ushort? heldItem = null;
@@ -47,14 +48,6 @@ namespace DSPRE.ROMFiles {
             this.moves = moves;
         }
 
-        public PartyPokemon(byte difficulty, ushort Level, ushort pokeNum, ushort? heldItem = null, ushort[] moves = null) {
-            // Simply adding a new constructor for Diamond and Pearl since they dont have ball seal config
-            pokeID = pokeNum;
-            level = Level;
-            this.difficulty = difficulty;
-            this.heldItem = heldItem;
-            this.moves = moves;
-        }
         public PartyPokemon(byte difficulty, GenderAndAbilityFlags genderAndAbilityFlags, ushort Level, ushort pokeNum, ushort formNum, ushort ballSealConfig, ushort? heldItem = null, ushort[] moves = null) :
             this(difficulty, genderAndAbilityFlags, Level, pokeNum, ballSealConfig, heldItem, moves) {
 
@@ -210,9 +203,10 @@ namespace DSPRE.ROMFiles {
         }
 
         public Party(bool readFirstByte, int maxPoke, Stream partyData, TrainerProperties traipr) {
+            this.trp = traipr;
+            this.content = new PartyPokemon[maxPoke];
             using (BinaryReader reader = new BinaryReader(partyData)) {
                 try {
-                    this.trp = traipr;
                     if (readFirstByte) {
                         byte flags = reader.ReadByte();
 
@@ -221,17 +215,18 @@ namespace DSPRE.ROMFiles {
                         trp.partyCount = (byte)((flags & 28) >> 2);
                     }
 
-                    int dividend = 8;
+                    bool hasBallSeals = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS || RomInfo.gameFamily == RomInfo.GameFamilies.Plat;
+                    int recordSize = 6 + (hasBallSeals ? sizeof(ushort) : 0);
 
                     if (trp.chooseMoves) {
-                        dividend += Party.MOVES_PER_POKE * sizeof(ushort);
+                        recordSize += Party.MOVES_PER_POKE * sizeof(ushort);
                     }
                     if (trp.chooseItems) {
-                        dividend += sizeof(ushort);
+                        recordSize += sizeof(ushort);
                     }
 
-                    int endval = Math.Min((int)(partyData.Length - 1 / dividend), trp.partyCount);
-                    this.content = new PartyPokemon[maxPoke];
+                    long recordCount = (partyData.Length - partyData.Position) / recordSize;
+                    int endval = (int)Math.Min(Math.Min(recordCount, trp.partyCount), maxPoke);
                     for (int i = 0; i < endval; i++) {
                         byte difficulty = reader.ReadByte();
                         GenderAndAbilityFlags genderAndAbilityFlags = (GenderAndAbilityFlags)reader.ReadByte();
@@ -256,18 +251,16 @@ namespace DSPRE.ROMFiles {
                         }
 
 
-                        if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS || RomInfo.gameFamily == RomInfo.GameFamilies.Plat)
-                            content[i] = new PartyPokemon(difficulty, genderAndAbilityFlags, level, pokemon, form_no, reader.ReadUInt16(), heldItem, moves);
-                        else
-                            content[i] = new PartyPokemon(difficulty, level, pokemon, heldItem, moves); // Diamond and Pearl apparently dont save ball capsule data in enemy trainer pokedata!!!
-
+                        // Diamond and Pearl records have no ball seal field.
+                        ushort ballSeals = hasBallSeals ? reader.ReadUInt16() : (ushort)0;
+                        content[i] = new PartyPokemon(difficulty, genderAndAbilityFlags, level, pokemon, form_no, ballSeals, heldItem, moves);
                     }
-                    for (int i = endval; i < maxPoke; i++) {
-                        content[i] = new PartyPokemon();
-                    };
                 } catch (EndOfStreamException) {
                     AppMessages.Error("There was a problem reading the party data of this " + this.GetType().Name + ".", "Read Error");
                 }
+            }
+            for (int i = 0; i < content.Length; i++) {
+                content[i] ??= new PartyPokemon(trp.chooseItems, trp.chooseMoves);
             }
         }
 
@@ -307,7 +300,11 @@ namespace DSPRE.ROMFiles {
             return nonEmptyCtr;
         }
 
-        public override byte[] ToByteArray() {
+        // The game reads exactly partyCount records, so slots past it are not written.
+        public override byte[] ToByteArray() => ToByteArray(trp?.partyCount);
+
+        /// <summary>Writes the first recordCount slots, empty ones included; null writes every non-empty slot.</summary>
+        public byte[] ToByteArray(int? recordCount) {
             MemoryStream newData = new MemoryStream();
             using (BinaryWriter writer = new BinaryWriter(newData)) {
                 if (this.exportCondensedData && trp != null) {
@@ -315,9 +312,16 @@ namespace DSPRE.ROMFiles {
                     writer.Write(condensedTrData);
                 }
 
-                foreach (PartyPokemon poke in this.content) {
-                    if (!poke.CheckEmpty()) {
+                if (recordCount is int count) {
+                    for (int i = 0; i < count && i < this.content.Length; i++) {
+                        PartyPokemon poke = this.content[i] ?? new PartyPokemon(trp?.chooseItems ?? false, trp?.chooseMoves ?? false);
                         writer.Write(poke.ToByteArray());
+                    }
+                } else {
+                    foreach (PartyPokemon poke in this.content) {
+                        if (!poke.CheckEmpty()) {
+                            writer.Write(poke.ToByteArray());
+                        }
                     }
                 }
             }

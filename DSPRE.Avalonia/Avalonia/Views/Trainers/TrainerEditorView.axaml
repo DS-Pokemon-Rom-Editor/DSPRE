@@ -352,7 +352,8 @@
     </TabItem>
 
     <TabItem Header="Classes">
-      <views:TrainerClassesView x:Name="ClassesTabView"/>
+      <!-- Null until its own view model is set after loading, instead of inheriting the trainer one. -->
+      <views:TrainerClassesView x:Name="ClassesTabView" DataContext="{x:Null}"/>
     </TabItem>
   </TabControl>
 </Window>
