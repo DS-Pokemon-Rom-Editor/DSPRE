@@ -13,8 +13,8 @@ namespace DSPRE.Avalonia.Controls
 {
     /// <summary>
     /// Something from the game walking across the loading card: a random following Pokémon in HeartGold and
-    /// SoulSilver, the hero in Diamond, Pearl and Platinum. Shown only when the overworld sprites are already
-    /// unpacked, so the card never waits on reading them.
+    /// SoulSilver, a random walking character in Diamond, Pearl and Platinum, a new one each time across.
+    /// Shown only when the overworld sprites are already unpacked, so the card never waits on reading them.
     /// </summary>
     public class LoadingWalker : Control
     {
@@ -26,6 +26,7 @@ namespace DSPRE.Avalonia.Controls
         private readonly FieldWalkCycle _cycle = new();
         private readonly Dictionary<int, Bitmap> _pictures = new();
         private static readonly Random Pick = new();
+        private const int OverworldEntriesToTry = 256;
         private ushort _entry;
         private int _frames;
         private double _x;
@@ -66,15 +67,19 @@ namespace DSPRE.Avalonia.Controls
                 if (!Directory.Exists(dirs.unpackedDir) || Directory.GetFiles(dirs.unpackedDir).Length == 0) return false;
 
                 bool hgss = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
-                for (int tries = 0; tries < 8; tries++)
+                // DP and Platinum have no followers, so anyone with a full walk comes by instead.
+                for (int tries = 0; tries < 16; tries++)
                 {
                     _entry = hgss
                         ? (ushort)(HgssFollowers.FirstSprite + Pick.Next(HgssFollowers.SpeciesCount))
-                        : (ushort)0;
+                        : (ushort)Pick.Next(OverworldEntriesToTry);
                     _frames = OverworldSprites.FrameCount(_entry);
-                    if (_frames > 0) return true;
-                    if (!hgss) break;
+                    if (hgss ? _frames > 0 : _frames >= 16) return true;
                 }
+                if (hgss) return false;
+                _entry = 0;
+                _frames = OverworldSprites.FrameCount(_entry);
+                return _frames > 0;
             }
             catch (Exception ex) { AppLogger.Warn("Loading walker: " + ex.Message); }
             return false;
@@ -82,13 +87,25 @@ namespace DSPRE.Avalonia.Controls
 
         private void Step()
         {
+            // Two-picture sprites (the HGSS followers) change on the always-running clock, not the walk.
+            _cycle.Tick();
             _cycle.Walk(OverworldAnimator.WalkFrames);
             // Walking speed: one tile of sixteen pixels per step.
             _x += OverworldSprites.PixelsPerTile * Scale / (double)OverworldAnimator.WalkFrames;
-            if (_x > Bounds.Width) _x = -32 * Scale;
+            if (_x > Bounds.Width) NextWalker();
             int picture = FieldSpriteAnimation.PictureFor(_frames, FacingRight, _cycle);
             _shown = PictureAt(picture);
             InvalidateVisual();
+        }
+
+        // Off the far edge: someone new comes on from the left.
+        private void NextWalker()
+        {
+            _x = -32 * Scale;
+            foreach (var b in _pictures.Values) b.Dispose();
+            _pictures.Clear();
+            _shown = null;
+            if (!Choose()) { _timer.Stop(); IsVisible = false; }
         }
 
         private Bitmap PictureAt(int picture)
