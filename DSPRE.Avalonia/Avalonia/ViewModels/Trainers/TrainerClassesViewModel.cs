@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // A class added here and not written yet. It is the last list entry; Save adds it, Discard drops it.
         private sealed class PendingClass
         {
-            public string Name, Description;
+            public string Name, NameWithArticle;
             public byte Gender, Prize;
             public bool AddMusic;
             public ushort MusicMain, MusicNight;
@@ -385,7 +385,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool SavePendingClass()
         {
             var p = _pendingClass;
-            if (!TrainerClassTableExpansion.AddTrainerClass(p.Name, p.Description, p.Gender, p.Prize, p.AddMusic, p.MusicMain, p.MusicNight, out string error))
+            if (!TrainerClassTableExpansion.AddTrainerClass(p.Name, p.NameWithArticle, p.Gender, p.Prize, p.AddMusic, p.MusicMain, p.MusicNight, out string error))
             {
                 StatusText = "The new trainer class was not added.";
                 _ = DialogHelper.ShowError(error, "Add Trainer Class");
@@ -539,10 +539,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             StatusText = "Eye-contact music added. Save to keep it.";
         }
 
-        /// <summary>Holds a new trainer class (name, description, gender, prize multiplier and an optional
+        /// <summary>Holds a new trainer class (name, name with article, gender, prize multiplier and an optional
         /// music entry) as the last list entry and selects it. Nothing is written until Save. Returns null,
         /// or why it can't be added.</summary>
-        public string AddTrainerClass(string name, string description, byte gender, byte prizeMultiplier,
+        public string AddTrainerClass(string name, string nameWithArticle, byte gender, byte prizeMultiplier,
             bool addMusic, ushort musicMain, ushort musicNight)
         {
             if (_pendingClass != null) return "Save or discard the new trainer class first.";
@@ -551,7 +551,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             _pendingClass = new PendingClass
             {
-                Name = name, Description = description ?? "", Gender = gender, Prize = prizeMultiplier,
+                Name = name, NameWithArticle = nameWithArticle ?? "", Gender = gender, Prize = prizeMultiplier,
                 AddMusic = addMusic, MusicMain = musicMain, MusicNight = musicNight,
             };
             _suppress = true;

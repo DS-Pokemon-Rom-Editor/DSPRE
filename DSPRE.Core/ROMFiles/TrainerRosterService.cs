@@ -217,9 +217,10 @@ namespace DSPRE.ROMFiles
             string index = trainerId.ToString("D4");
             mutations.Add(new TrainerRosterFileMutation(
                 Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, index),
-                new TrainerProperties((ushort)trainerId).ToByteArray()));
+                new TrainerProperties((ushort)trainerId, 1) { trainerClass = TrainerProperties.NewTrainerClass }.ToByteArray()));
+            // One Pokemon, so battling the new trainer never reads an empty party.
             mutations.Add(new TrainerRosterFileMutation(Path.Combine(partyDir, index),
-                new PartyPokemon().ToByteArray()));
+                new PartyPokemon { pokeID = 1, level = 5 }.ToByteArray()));
 
             var trainerNames = new TextArchive(trainerNamesMessageNumber);
             if (trainerNames.messages.Count != trainerId ||

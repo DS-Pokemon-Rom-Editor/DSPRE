@@ -10,7 +10,7 @@ namespace DSPRE
     /// <summary>
     /// Lets DSPRE perform the "add a new trainer class" repoint documented in a community write-up
     /// (repoint+extend sTrainerClassGender, sTrainerClassPrizeMul, sTrainerEncounterBGMs into the
-    /// synthetic overlay, then append name/description text-archive entries) instead of requiring
+    /// synthetic overlay, then append name and name-with-article text-archive entries) instead of requiring
     /// manual hex editing. Platinum-English only: sTrainerClassPrizeMul and the gender-table pointer
     /// slot only have confirmed offsets for that version. Every other language/family is refused
     /// outright rather than guessed at, since neither array has any bounds checking in the game.
@@ -311,13 +311,17 @@ namespace DSPRE
 
         // ── Add a whole new trainer class ─────────────────────────────────────────────────────────
         /// <summary>Why a class with this name can't be added, or null. Checked when the user adds it, before Save.</summary>
+        // Class adding is English only, so a blank entry gets the English article.
+        private static string WithArticle(string name) =>
+            ("AEIOU".IndexOf(char.ToUpperInvariant(name.TrimStart().FirstOrDefault())) >= 0 ? "an " : "a ") + name.Trim();
+
         public static string AddRefusal(string name)
         {
             if (!IsSupportedForCurrentRom) return "Adding trainer classes is only supported for Platinum (English) right now.";
             return string.IsNullOrWhiteSpace(name) ? "Enter a class name." : null;
         }
 
-        public static bool AddTrainerClass(string name, string description, byte gender, byte prizeMultiplier,
+        public static bool AddTrainerClass(string name, string nameWithArticle, byte gender, byte prizeMultiplier,
             bool addEncounterMusic, ushort musicMain, ushort musicNight, out string error)
         {
             error = AddRefusal(name);
@@ -350,9 +354,9 @@ namespace DSPRE
                 nameArchive.messages.Add(name);
                 nameArchive.SaveToExpandedDir(RomInfo.trainerClassMessageNumber, showSuccessMessage: false);
 
-                var descArchive = new TextArchive(RomInfo.trainerClassDescriptionMessageNumber);
-                descArchive.messages.Add(description ?? "");
-                descArchive.SaveToExpandedDir(RomInfo.trainerClassDescriptionMessageNumber, showSuccessMessage: false);
+                var articleArchive = new TextArchive(RomInfo.trainerClassWithArticleMessageNumber);
+                articleArchive.messages.Add(string.IsNullOrWhiteSpace(nameWithArticle) ? WithArticle(name) : nameWithArticle);
+                articleArchive.SaveToExpandedDir(RomInfo.trainerClassWithArticleMessageNumber, showSuccessMessage: false);
 
                 Detect();
                 return true;

@@ -103,6 +103,8 @@ namespace DSPRE.ROMFiles {
     public class TrainerProperties : RomFile {
         public const int AI_COUNT = 11;
         public const int TRAINER_ITEMS = 4;
+        // Youngster, the same id in all three games.
+        public const byte NewTrainerClass = 2;
 
         #region Fields
         public ushort trainerID;
@@ -111,7 +113,12 @@ namespace DSPRE.ROMFiles {
         public byte trainerClass = 0;
         public byte partyCount = 0;
 
-        public bool doubleBattle = false;
+        // The game ORs the whole value into the battle type, so bits other than 2 are kept as read.
+        public uint battleType;
+        public bool doubleBattle {
+            get => (battleType & 2) != 0;
+            set => battleType = value ? battleType | 2u : battleType & ~2u;
+        }
         public bool chooseMoves = false;
         public bool chooseItems = false;
 
@@ -122,6 +129,7 @@ namespace DSPRE.ROMFiles {
         #region Constructor
         public TrainerProperties(ushort ID, byte partyCount = 0) {
             trainerID = ID;
+            this.partyCount = partyCount;
             trainerItems = new ushort[TRAINER_ITEMS];
             AI = new BitArray(new bool[AI_COUNT] { true, false, false, false, false, false, false, false, false, false, false });
             trDataUnknown = 0;
@@ -142,7 +150,7 @@ namespace DSPRE.ROMFiles {
                 }
 
                 AI = new BitArray(BitConverter.GetBytes(reader.ReadUInt32()));
-                doubleBattle = reader.ReadUInt32() == 2;
+                battleType = reader.ReadUInt32();
             }
         }
         #endregion
@@ -172,7 +180,7 @@ namespace DSPRE.ROMFiles {
                 }
 
                 writer.Write(AIflags);
-                writer.Write((uint)(doubleBattle ? 2 : 0));
+                writer.Write(battleType);
             }
             return newData.ToArray();
         }
@@ -320,7 +328,7 @@ namespace DSPRE.ROMFiles {
         }
     }
     public class TrainerFile : RomFile {
-        public const int defaultNameLen = 10; //Does not include special \0 end character!
+        public const int defaultNameLen = 7; // battle copies the name into an 8-character buffer with its end mark
         public const int POKE_IN_PARTY = 6;
         public static readonly string NAME_NOT_FOUND = "NAME READ ERROR";
 

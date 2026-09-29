@@ -444,7 +444,7 @@ namespace DSPRE
         public static int itemScriptFileNumber { get; internal set; }
         public static int trainerClassMessageNumber { get; private set; }
         /// <summary>Trainer-class description text archive. </summary>
-        public static int trainerClassDescriptionMessageNumber { get; private set; }
+        public static int trainerClassWithArticleMessageNumber { get; private set; }
         public static int trainerNamesMessageNumber { get; private set; }
         public static int moveDescriptionsTextNumbers { get; private set; }
         public static int moveNamesTextNumbers { get; private set; }
@@ -2109,7 +2109,7 @@ namespace DSPRE
                     break;
             }
 
-            trainerClassDescriptionMessageNumber = trainerClassMessageNumber + 1;
+            trainerClassWithArticleMessageNumber = trainerClassMessageNumber + 1;
         }
         // US-version text archive numbers only; not yet confirmed for other localizations.
         private static void SetBattleTowerTextNumbers()
@@ -2470,9 +2470,9 @@ namespace DSPRE
             {
                 using (ARM9.Reader ar = new ARM9.Reader(trainerNameLenOffset))
                 {
-                    maxLength = ar.ReadByte();
+                    // The byte is the battle's name buffer size, end mark included.
+                    maxLength = ar.ReadByte() - 1;
                 }
-                maxLength += ((maxLength - 4) / 2);
             }
             return maxLength;
         }

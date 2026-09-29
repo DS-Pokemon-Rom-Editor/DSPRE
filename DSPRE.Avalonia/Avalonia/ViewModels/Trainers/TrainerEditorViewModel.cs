@@ -160,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private static readonly string[] AiFlagLabels =
         {
-            "AI 0", "Basic", "Evaluate Attack", "Expert", "Setup", "Risky",
+            "Basic", "Evaluate Attack", "Expert", "Setup", "Risky",
             "Prioritize Extremes", "Baton Pass", "Tag Strategy", "Check HP", "Weather", "Harassment"
         };
 
@@ -214,6 +214,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private string _trainerName = "";
         public string TrainerName { get => _trainerName; set { if (Set(ref _trainerName, value) && !_suppress) SetDirty(); } }
+        public int TrainerNameMaxLength { get; } = SafeNameMax();
+        private static int SafeNameMax() { try { return trainerNameMaxLen; } catch { return TrainerFile.defaultNameLen; } }
 
         private int _trainerClassIndex = -1;
         public int TrainerClassIndex
@@ -231,7 +233,25 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
 
-        private bool _doubleBattle; public bool DoubleBattle { get => _doubleBattle; set { if (Set(ref _doubleBattle, value) && !_suppress) SetDirty(); } }
+        private uint _battleType;
+        public bool DoubleBattle
+        {
+            get => (_battleType & 2) != 0;
+            set => SetBattleType(value ? _battleType | 2u : _battleType & ~2u);
+        }
+        public string BattleTypeRaw
+        {
+            get => _battleType.ToString();
+            set { if (uint.TryParse(value?.Trim(), out uint v)) SetBattleType(v); }
+        }
+        private void SetBattleType(uint value)
+        {
+            if (value == _battleType) return;
+            _battleType = value;
+            OnPropertyChanged(nameof(DoubleBattle));
+            OnPropertyChanged(nameof(BattleTypeRaw));
+            if (!_suppress) SetDirty();
+        }
         private bool _chooseMoves;
         public bool ChooseMoves
         {
@@ -758,7 +778,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             var trp = _trainer.trp;
             TrainerName = _trainer.name;
             TrainerClassIndex = trp.trainerClass;
-            DoubleBattle = trp.doubleBattle;
+            SetBattleType(trp.battleType);
             ChooseMoves = trp.chooseMoves;
             ChooseItems = trp.chooseItems;
             PartyCount = Math.Max(1, (int)trp.partyCount);
@@ -785,7 +805,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             trp.partyCount = (byte)_partyCount;
             trp.chooseMoves = _chooseMoves;
             trp.chooseItems = _chooseItems;
-            trp.doubleBattle = _doubleBattle;
+            trp.battleType = _battleType;
             trp.trainerClass = (byte)Math.Max(0, _trainerClassIndex);
 
             for (int i = 0; i < trp.trainerItems.Length && i < TrainerItems.Count; i++)
@@ -813,15 +833,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 p.difficulty = (byte)mon.Difficulty;
 
-                var flags = PartyPokemon.GenderAndAbilityFlags.NO_FLAGS;
+                // Elsewhere this byte is the high half of the difficulty, which sets the IVs, so it is kept as read.
                 if (_genderEditable)
                 {
+                    var flags = PartyPokemon.GenderAndAbilityFlags.NO_FLAGS;
                     if (mon.GenderIndex == 1) flags = PartyPokemon.GenderAndAbilityFlags.FORCE_MALE;
                     else if (mon.GenderIndex == 2) flags = PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE;
+                    if (mon.AbilityIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1;
+                    else if (mon.AbilityIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
+                    p.genderAndAbilityFlags = flags;
                 }
-                if (mon.AbilityIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1;
-                else if (mon.AbilityIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
-                p.genderAndAbilityFlags = flags;
 
                 p.ballSeals = (ushort)mon.BallSeals;
             }

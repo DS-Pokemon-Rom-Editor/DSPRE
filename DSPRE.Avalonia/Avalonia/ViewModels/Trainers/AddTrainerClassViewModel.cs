@@ -19,8 +19,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string _className = "";
         public string ClassName { get => _className; set => Set(ref _className, value); }
 
-        private string _description = "";
-        public string Description { get => _description; set => Set(ref _description, value); }
+        private string _nameWithArticle = "";
+        public string NameWithArticle { get => _nameWithArticle; set => Set(ref _nameWithArticle, value); }
 
         private int _genderIndex;
         public int GenderIndex { get => _genderIndex; set => Set(ref _genderIndex, value); }

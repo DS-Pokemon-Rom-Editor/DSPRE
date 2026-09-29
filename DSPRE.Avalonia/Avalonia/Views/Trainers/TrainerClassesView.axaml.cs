@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
             if (!dlgVm.Confirmed) return;
 
-            string error = VM.AddTrainerClass(dlgVm.ClassName, dlgVm.Description, (byte)dlgVm.GenderIndex, (byte)dlgVm.PrizeMultiplier,
+            string error = VM.AddTrainerClass(dlgVm.ClassName, dlgVm.NameWithArticle, (byte)dlgVm.GenderIndex, (byte)dlgVm.PrizeMultiplier,
                 dlgVm.AddMusic, (ushort)dlgVm.MusicMain, 0);
             if (error != null)
                 await DialogHelper.ShowError(error, "Add Trainer Class");
