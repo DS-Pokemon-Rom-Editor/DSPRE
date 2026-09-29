@@ -36,6 +36,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _canEditObjectSlotCount = true;
         public bool CanEditObjectSlotCount { get => _canEditObjectSlotCount; set => Set(ref _canEditObjectSlotCount, value); }
 
+        // Set on the surfing group: with no bonus slots the game hands surfing and every rod ten level 5 Magikarp.
+        public bool WarnWhenNoSlots { get; set; }
+        public bool NoSlotsWarning => WarnWhenNoSlots && _group != null && _group.ObjectRequirements.Count == 0;
+        public bool RequirementTypeWarning => _group != null && _objectIndex >= 0 && _reqType == 0;
+
         public ObservableCollection<string> SpeciesNames { get; }
         public ObservableCollection<string> ObjectTypeNames { get; } = new ObservableCollection<string>();
 
@@ -62,6 +67,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RebuildNormal(NightItems, group?.NightEncounters);
             RebuildObjects();
             _suppress = false;
+            OnPropertyChanged(nameof(NoSlotsWarning));
 
             MorningIndex = MorningItems.Count > 0 ? 0 : -1;
             DayIndex = DayItems.Count > 0 ? 0 : -1;
@@ -154,14 +160,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public decimal ObjNightLevel { get => _objNightLevel; set { if (Set(ref _objNightLevel, value) && !_suppress) ApplyObjectEncounter(_group?.NightEncountersObject, _objNightSpecies, (int)value); } }
 
         private int _reqType = -1;
-        public int ReqType { get => _reqType; set { if (Set(ref _reqType, value) && !_suppress) ApplyRequirement(_group?.ObjectRequirements, value, (int)_reqQty); } }
-        private decimal _reqQty;
-        public decimal ReqQty { get => _reqQty; set { if (Set(ref _reqQty, value) && !_suppress) ApplyRequirement(_group?.ObjectRequirements, _reqType, (int)value); } }
+        public int ReqType
+        {
+            get => _reqType;
+            set
+            {
+                if (!Set(ref _reqType, value)) return;
+                OnPropertyChanged(nameof(RequirementTypeWarning));
+                if (!_suppress) ApplyRequirement(_group?.ObjectRequirements, value, (int)_reqPoints);
+            }
+        }
+        private decimal _reqPoints;
+        public decimal ReqPoints { get => _reqPoints; set { if (Set(ref _reqPoints, value) && !_suppress) ApplyRequirement(_group?.ObjectRequirements, _reqType, (int)value); } }
 
         private int _optReqType = -1;
-        public int OptReqType { get => _optReqType; set { if (Set(ref _optReqType, value) && !_suppress) ApplyRequirement(_group?.OptionalObjectRequirements, value, (int)_optReqQty); } }
-        private decimal _optReqQty;
-        public decimal OptReqQty { get => _optReqQty; set { if (Set(ref _optReqQty, value) && !_suppress) ApplyRequirement(_group?.OptionalObjectRequirements, _optReqType, (int)value); } }
+        public int OptReqType { get => _optReqType; set { if (Set(ref _optReqType, value) && !_suppress) ApplyRequirement(_group?.OptionalObjectRequirements, value, (int)_optReqPoints); } }
+        private decimal _optReqPoints;
+        public decimal OptReqPoints { get => _optReqPoints; set { if (Set(ref _optReqPoints, value) && !_suppress) ApplyRequirement(_group?.OptionalObjectRequirements, _optReqType, (int)value); } }
 
         private void LoadObject(int index)
         {
@@ -174,9 +189,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             ObjNightSpecies = SpeciesOf(_group.NightEncountersObject, index);
             ObjNightLevel = LevelOf(_group.NightEncountersObject, index);
             ReqType = _group.ObjectRequirements[index].typeID;
-            ReqQty = _group.ObjectRequirements[index].quantity;
+            ReqPoints = _group.ObjectRequirements[index].quantity;
             OptReqType = _group.OptionalObjectRequirements[index].typeID;
-            OptReqQty = _group.OptionalObjectRequirements[index].quantity;
+            OptReqPoints = _group.OptionalObjectRequirements[index].quantity;
             _suppress = false;
         }
 
@@ -194,12 +209,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Touch();
         }
 
-        private void ApplyRequirement(BindingList<SafariZoneObjectRequirement> list, int type, int qty)
+        private void ApplyRequirement(BindingList<SafariZoneObjectRequirement> list, int type, int points)
         {
             int i = _objectIndex;
             if (list == null || i < 0 || i >= list.Count) return;
             list[i].typeID = (byte)Math.Max(0, type);
-            list[i].quantity = (byte)Math.Max(0, Math.Min(255, qty));
+            list[i].quantity = (byte)Math.Max(0, Math.Min(255, points));
             Touch();
         }
 
@@ -214,6 +229,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _group.OptionalObjectRequirements.Add(new SafariZoneObjectRequirement(0, 0));
             _group.ObjectSlots = (byte)_group.ObjectRequirements.Count;
             _suppress = true; RebuildObjects(); _suppress = false;
+            OnPropertyChanged(nameof(NoSlotsWarning));
             ObjectIndex = ObjectItems.Count - 1;
             Touch();
         }
@@ -229,6 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _group.OptionalObjectRequirements.RemoveAt(last);
             _group.ObjectSlots = (byte)_group.ObjectRequirements.Count;
             _suppress = true; RebuildObjects(); _suppress = false;
+            OnPropertyChanged(nameof(NoSlotsWarning));
             ObjectIndex = ObjectItems.Count > 0 ? ObjectItems.Count - 1 : -1;
             Touch();
         }

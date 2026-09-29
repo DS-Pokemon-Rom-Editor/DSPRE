@@ -82,6 +82,8 @@
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
           <Button Content="Add slot"    Click="AddObject_Click"    IsEnabled="{Binding CanEditObjectSlotCount}"/>
           <Button Content="Remove slot" Click="RemoveObject_Click" IsEnabled="{Binding CanEditObjectSlotCount}"/>
+          <TextBlock Text="!" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"
+                     IsVisible="{Binding NoSlotsWarning}" ToolTip.Tip="No bonus slots: surfing and every rod here give level 5 Magikarp"/>
         </StackPanel>
         <ListBox DockPanel.Dock="Top" Height="90"
                  ItemsSource="{Binding ObjectItems}" SelectedIndex="{Binding ObjectIndex}"/>
@@ -97,12 +99,16 @@
             <TextBlock Text="Night" FontWeight="Bold"/>
             <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjNightSpecies}"/>
             <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjNightLevel}"/>
-            <TextBlock Text="Requirement" FontWeight="Bold" Margin="0,4,0,0"/>
+            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
+              <TextBlock Text="Requirement" FontWeight="Bold"/>
+              <TextBlock Text="!" FontWeight="Bold" Foreground="{DynamicResource Editor.Warn}"
+                         IsVisible="{Binding RequirementTypeWarning}" ToolTip.Tip="The game reads type 0 out of bounds"/>
+            </StackPanel>
             <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding ReqType}"/>
-            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding ReqQty}"/>
+            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding ReqPoints}" ToolTip.Tip="Points"/>
             <TextBlock Text="Optional requirement" FontWeight="Bold" Margin="0,4,0,0"/>
             <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding OptReqType}"/>
-            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding OptReqQty}"/>
+            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding OptReqPoints}" ToolTip.Tip="Points"/>
           </StackPanel>
         </ScrollViewer>
       </DockPanel>

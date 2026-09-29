@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public SafariZoneEncounterViewModel()
         {
             GrassVM = new SafariZoneGroupViewModel(SpeciesNames);
-            SurfVM = new SafariZoneGroupViewModel(SpeciesNames);
+            SurfVM = new SafariZoneGroupViewModel(SpeciesNames) { WarnWhenNoSlots = true };
             OldRodVM = new SafariZoneGroupViewModel(SpeciesNames);
             GoodRodVM = new SafariZoneGroupViewModel(SpeciesNames);
             SuperRodVM = new SafariZoneGroupViewModel(SpeciesNames);

@@ -12,6 +12,7 @@ namespace DSPRE.ROMFiles {
     };
 
     public byte typeID;
+    // Points of this object type, not a count of objects; each object earns 1 to 7 by how long its area has been placed.
     public byte quantity;
 
     public SafariZoneObjectRequirement(byte typeID = 0, byte quantity = 0) {

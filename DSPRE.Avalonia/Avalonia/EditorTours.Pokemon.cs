@@ -159,6 +159,7 @@ namespace DSPRE.Avalonia
                 S("tab:Bug Contest", "Bug Contest", "The Pokémon of the Bug-Catching Contest, with levels, rate and score. Each set covers certain days once you have the National Pokédex."),
                 S("tab:Bug Contest Opponents", "Contest rivals", "What each rival enters with, on which day, and the score they finish with."),
                 S("tab:Safari Zone", "Safari Zone", "Pick an area, then grass, surfing or a rod. Each has Pokémon by time of day, plus ones that only appear when enough objects are placed."),
+                S("tab:Safari Zone", "Object points", "A bonus slot needs points of an object type, not a number of objects. Each object placed earns 1 to 7 points, more the longer the area has been in the layout."),
                 S("tab:Swarms", "Swarms", "Where a swarm can happen and which Pokémon it brings. Every destination is equally likely."),
                 S(null, "Saving", "Each tab has its own Save, and Ctrl+S saves every tab with changes. Right-click a Pokémon and pick Open, or Ctrl+click, to open it."));
 
