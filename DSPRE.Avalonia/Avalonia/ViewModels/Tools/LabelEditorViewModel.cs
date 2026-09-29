@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
     /// Edits <see cref="LabelStore"/> categories: renaming hardcoded dropdown entries and adding entries
     /// beyond the game's defaults (up to the field's data-type cap). Scope is per-project or global.
     /// </summary>
-    public class LabelEditorViewModel : INotifyPropertyChanged
+    public class LabelEditorViewModel : INotifyPropertyChanged, global::DSPRE.Editors.IEditorWithUnsavedChanges
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -80,6 +80,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private bool _dirty;
         public bool HasUnsavedChanges { get => _dirty; private set => Set(ref _dirty, value); }
+
+        public string UnsavedChangesDescription => "Dropdown labels";
+        void global::DSPRE.Editors.IEditorWithUnsavedChanges.SaveChanges() => Save();
+        void global::DSPRE.Editors.IEditorWithUnsavedChanges.DiscardChanges() => Discard();
 
         private string _status = "Pick a category to rename its entries, or add entries a ROM hack introduces.";
         public string StatusText { get => _status; set => Set(ref _status, value); }

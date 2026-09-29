@@ -82,17 +82,17 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private List<int> GetOverlayNumbersFromAddress(int address)
         {
             var list = new List<int>();
-            for (int i = 0; i < _overlaysSize - 1; i++)
+            for (int i = 0; i < _overlaysSize; i++)
             {
-                uint ramAddr = OverlayUtils.OverlayTable.GetRAMAddress(i);
-                if (ramAddr >= address && address < ramAddr + OverlayUtils.OverlayTable.GetUncompressedSize(i))
+                long ramAddr = OverlayUtils.OverlayTable.GetRAMAddress(i);
+                if (address >= ramAddr && address < ramAddr + OverlayUtils.OverlayTable.GetUncompressedSize(i))
                     list.Add(i);
             }
             return list;
         }
 
         private static string GetOffsetInOverlay(int address, int ovlNumber)
-            => $"0x{OverlayUtils.OverlayTable.GetRAMAddress(ovlNumber) - address:X4}";
+            => $"0x{address - (long)OverlayUtils.OverlayTable.GetRAMAddress(ovlNumber):X4}";
     }
 
     public class AddressRow

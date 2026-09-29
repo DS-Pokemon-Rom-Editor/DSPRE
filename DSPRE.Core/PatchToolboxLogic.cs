@@ -101,7 +101,7 @@ namespace DSPRE
         /// <summary>Human-readable status of a synthetic-overlay byte range, for confirmation prompts.</summary>
         public static string GetSyntheticOverlayRangeStatus(uint offset, byte[] expectedBytes)
         {
-            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            string expandedPath = Filesystem.expArmPath;
             if (!File.Exists(expandedPath))
             {
                 return "Synthetic overlay range status: synthetic overlay file was not found.";
@@ -334,7 +334,8 @@ namespace DSPRE
             BDHCAMPatchData data = new BDHCAMPatchData();
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
-            string expandedCheckPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            if (AlreadyApplied(RomPatchState.flag_BDHCamPatchApplied || Probe(CheckFilesBDHCamPatchApplied))) return false;
+            string expandedCheckPath = Filesystem.expArmPath;
             if (!File.Exists(expandedCheckPath) || new FileInfo(expandedCheckPath).Length < 0x16000)
             {
                 ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
@@ -420,7 +421,7 @@ namespace DSPRE
             }
 
             uint payloadOffset = targetAddress - synthOverlayLoadAddress;
-            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            string expandedPath = Filesystem.expArmPath;
             if (!File.Exists(expandedPath))
             {
                 return false;
@@ -469,7 +470,8 @@ namespace DSPRE
             }
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
-            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            if (AlreadyApplied(RomPatchState.flag_BuildingRotationPatchApplied || Probe(CheckFilesBuildingRotationPatchApplied))) return false;
+            string expandedPath = Filesystem.expArmPath;
             if (!File.Exists(expandedPath) || new FileInfo(expandedPath).Length < 0x16000)
             {
                 ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
@@ -543,11 +545,7 @@ namespace DSPRE
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eventFiles });
 
-            if (RomPatchState.flag_standardizedItems)
-            {
-                ShowInfo("This patch has already been applied.", "Can't reapply patch");
-                return false;
-            }
+            if (AlreadyApplied(RomPatchState.flag_standardizedItems || Probe(CheckScriptsStandardizedItemNumbers))) return false;
 
             // Load item script file data
             ScriptFile itemScriptFile = new ScriptFile(RomInfo.itemScriptFileNumber);
@@ -643,6 +641,8 @@ namespace DSPRE
         /// <summary>Expand the ARM9's usable memory (synthetic overlay). Enables BDHCam on Plat/HGSS.</summary>
         public static bool ApplyARM9ExpansionPatch()
         {
+            if (AlreadyApplied(RomPatchState.flag_arm9Expanded || Probe(CheckFilesArm9ExpansionApplied))) return false;
+
             ARM9PatchData data = new ARM9PatchData();
 
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
@@ -709,6 +709,8 @@ namespace DSPRE
         /// <summary>Expand Matrix 0 up to twice its size (HGSS EN/ES).</summary>
         public static bool ApplyMatrixExpansionPatch()
         {
+            if (AlreadyApplied(RomPatchState.flag_MatrixExpansionApplied || Probe(CheckFilesMatrixExpansionApplied))) return false;
+
             string listOfChanges = "";
             int languageOffset = 0;
 
@@ -764,6 +766,9 @@ namespace DSPRE
         /// <summary>Dynamically allocate map headers in memory (Plat/HGSS).</summary>
         public static bool ApplyDynamicHeadersPatch()
         {
+            // A second run would split the already-patched table over the headers it moved out.
+            if (AlreadyApplied(RomPatchState.flag_DynamicHeadersPatchApplied || Probe(CheckFilesDynamicHeadersPatchApplied))) return false;
+
             DynamicHeadersPatchData data = new DynamicHeadersPatchData();
             var headersDir = RomInfo.gameDirs[DirNames.dynamicHeaders];
 
@@ -780,7 +785,7 @@ namespace DSPRE
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
                 "- Backup ARM9 file (arm9.bin" + BackupSuffix + " will be created)." + "\n\n" +
                 "- NARC file at " + headersDir.packedDir + " will become the new header container." + "\n\n" +
-                "- The default ARM9 header table will be split into multiple files (one per header), each one saved into NARC" + headersDir.packedDir + " upon saving the ROM." + "\n\n" +
+                "- The default ARM9 header table will be split into multiple files (one per header), each one saved into NARC " + headersDir.packedDir + " upon saving the ROM." + "\n\n" +
                 "- Replace " + (data.initString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.initOffset.ToString("X") + " with " + '\n' + data.initString + "\n\n" +
                 "- Neutralize instances of (HeaderID * 0x18) so the base offset which the data is read from is always 0x0." + "\n\n" +
                 "- Change pointers to header fields, from(ARM9_HEADER_TABLE_OFFSET + n) to simply(0 + n)" + "\n\n" +
@@ -894,6 +899,8 @@ namespace DSPRE
         /// <summary>Extend the Trainer Name max length.</summary>
         public static bool ApplyExpandTrainerNamesPatch()
         {
+            if (AlreadyApplied(RomPatchState.flag_TrainerNamesExpanded || RomInfo.trainerNameMaxLen > TrainerFile.defaultNameLen)) return false;
+
             if (!ConfirmYesNo($"Applying this patch will set the Trainer Name max length to {RomPatchState.expandedTrainerNameLength - 1} usable characters.\n" +
                 "Are you sure you want to proceed?", "Confirm to proceed"))
             {
@@ -935,7 +942,7 @@ namespace DSPRE
         public static bool ApplyScrcmdRepointPatch()
         {
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
-            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            string expandedPath = Filesystem.expArmPath;
             if (!File.Exists(expandedPath))
             {
                 ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing.", "ARM9 not expanded");
@@ -1019,7 +1026,7 @@ namespace DSPRE
                     }
 
                     uint offset = cmdTable - synthOverlayLoadAddress;
-                    string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+                    string expandedPath = Filesystem.expArmPath;
                     if (File.Exists(expandedPath))
                     {
                         long fileLength = new FileInfo(expandedPath).Length;
@@ -1064,7 +1071,7 @@ namespace DSPRE
 
         private static bool CheckScrcmdBlockMarkers(int blockOffset)
         {
-            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            string expandedPath = Filesystem.expArmPath;
             if (!File.Exists(expandedPath))
             {
                 return false;
@@ -1122,7 +1129,7 @@ namespace DSPRE
 
         private static void RepointCommandTable(uint blockOffset, byte[] commandTablePayload)
         {
-            string expandedPath = Path.Combine(RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir, "0000");
+            string expandedPath = Filesystem.expArmPath;
             DSUtils.WriteToFile(expandedPath, commandTablePayload, blockOffset);
 
             using (ARM9.Writer wr = new ARM9.Writer())
@@ -1300,6 +1307,19 @@ namespace DSPRE
         }
 
         private static bool Arm9Expanded() => RomPatchState.flag_arm9Expanded || CheckFilesArm9ExpansionApplied();
+
+        private static bool AlreadyApplied(bool applied)
+        {
+            if (applied) ShowInfo("This patch has already been applied.", "Can't reapply patch");
+            return applied;
+        }
+
+        // A check that can't read its files counts as not applied, like the status probes.
+        private static bool Probe(Func<bool> check)
+        {
+            try { return check(); }
+            catch { return false; }
+        }
 
         // Language/version gate shared by BDHCam and the script-command patches (Plat/HGSS, EN or ES).
         private static bool ScrcmdLikeLangOk() =>

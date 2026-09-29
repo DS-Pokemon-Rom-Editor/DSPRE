@@ -219,6 +219,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     OverlayUtils.Decompress(ovl.Number);
             }
 
+            // Compressing is off, and a decompress can fail, so each row shows what is on disk now.
+            foreach (var ovl in modified)
+                ovl.IsCompressed = OverlayUtils.IsCompressed(ovl.Number);
+            RefreshMismatch();
+
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
 
@@ -241,7 +246,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 var row = new OverlayRow
                 {
                     Number             = i,
-                    IsCompressed       = OverlayUtils.IsCompressed(i),
+                    IsCompressed       = CompressedNow(i),
                     IsMarkedCompressed = OverlayUtils.OverlayTable.IsDefaultCompressed(i),
                     RAMAddressHex      = $"0x{OverlayUtils.OverlayTable.GetRAMAddress(i):X}",
                     UncompressedSize   = OverlayUtils.OverlayTable.GetUncompressedSize(i),
@@ -252,6 +257,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             RefreshMismatch();
         }
 
+        // ds-rom keeps overlays flat on disk and compresses the ones its config marks when it builds.
+        private bool CompressedNow(int ovNumber) =>
+            _isDsRomProject ? OverlayUtils.OverlayTable.IsDefaultCompressed(ovNumber) : OverlayUtils.IsCompressed(ovNumber);
+
         private List<OverlayRow> BuildOriginalList()
         {
             int count = OverlayUtils.OverlayTable.GetNumberOfOverlays();
@@ -261,7 +270,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 list.Add(new OverlayRow
                 {
                     Number             = i,
-                    IsCompressed       = OverlayUtils.IsCompressed(i),
+                    IsCompressed       = CompressedNow(i),
                     IsMarkedCompressed = OverlayUtils.OverlayTable.IsDefaultCompressed(i),
                     RAMAddressHex      = string.Empty,
                     UncompressedSize   = 0,

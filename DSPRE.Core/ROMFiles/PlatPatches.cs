@@ -262,8 +262,107 @@ namespace DSPRE.ROMFiles
     /// </summary>
     public static class ItemTable
     {
-        /// <summary>Vanilla rows in the ARM9 table (items 0 to 467 in DP, Pt and HGSS).</summary>
-        public const int VanillaCount = 468;
+        /// <summary>How far the ARM9 table runs, and why.</summary>
+        public sealed class TableLimits
+        {
+            /// <summary>Rows <see cref="Read"/> and <see cref="Write"/> accept.</summary>
+            public int Count { get; init; }
+            /// <summary>The highest id the game's item loader lets through, or -1 when its code didn't match.</summary>
+            public int CodeLimit { get; init; } = -1;
+            /// <summary>The first row within the game's limit that can't be an item row, or -1.</summary>
+            public int FirstBadRow { get; init; } = -1;
+        }
+
+        private static (string key, TableLimits limits) _limits;
+
+        /// <summary>Drops the cached limits, for callers that changed the item archives.</summary>
+        public static void Forget() => _limits = default;
+
+        /// <summary>Vanilla rows in the ARM9 table: the game's own item limit, cut short at the first row that can't be real.</summary>
+        public static int VanillaCount => Limits().Count;
+
+        public static TableLimits Limits()
+        {
+            if (string.IsNullOrEmpty(arm9Path) || !File.Exists(arm9Path)) return new TableLimits();
+            string key = arm9Path + "|" + File.GetLastWriteTimeUtc(arm9Path).Ticks + "|" + itemTableOffset;
+            if (_limits.key == key && _limits.limits != null) return _limits.limits;
+            var limits = ComputeLimits(File.ReadAllBytes(arm9Path));
+            _limits = (key, limits);
+            return limits;
+        }
+
+        private static TableLimits ComputeLimits(byte[] arm9)
+        {
+            int codeLimit = ReadCodeLimit(arm9);
+            int cap = codeLimit >= 0 ? codeLimit + 1 : ItemNameCount();
+            int dataCount = MemberCount(DirNames.itemData);
+            int iconCount = MemberCount(DirNames.itemIcons);
+
+            int rows = 0;
+            while (rows < cap && itemTableOffset + (rows + 1) * 8L <= arm9.Length)
+            {
+                int o = (int)itemTableOffset + rows * 8;
+                int data = BitConverter.ToUInt16(arm9, o), icon = BitConverter.ToUInt16(arm9, o + 2), palette = BitConverter.ToUInt16(arm9, o + 4);
+                if (data >= dataCount || icon >= iconCount || palette >= iconCount) break;
+                rows++;
+            }
+            if (codeLimit >= 0 && rows < cap)
+                AppLogger.Error($"Item table: row {rows} points past the item archives, below the game's limit of {codeLimit}; items from {rows} on are left alone.");
+            return new TableLimits { Count = rows, CodeLimit = codeLimit, FirstBadRow = codeLimit >= 0 && rows < cap ? rows : -1 };
+        }
+
+        /// <summary>The limit the game's item loader clamps ids to, when its code is where RomInfo expects; -1 otherwise.</summary>
+        private static int ReadCodeLimit(byte[] arm9)
+        {
+            uint site = itemLimitSite;
+            string[] parts = (itemLimitSignature ?? "").Replace(" ", "") is string hex && hex.Length % 2 == 0
+                ? Enumerable.Range(0, hex.Length / 2).Select(i => hex.Substring(i * 2, 2)).ToArray()
+                : Array.Empty<string>();
+            if (site == 0 || parts.Length == 0 || site + parts.Length > arm9.Length) return -1;
+            for (int i = 0; i < parts.Length; i++)
+                if (parts[i] != "??" && arm9[site + i] != Convert.ToByte(parts[i], 16)) return -1;
+
+            ushort load = BitConverter.ToUInt16(arm9, (int)site + 4);
+            if ((load & 0xFF00) == 0x2000)
+            {
+                // mov r0, #imm8; lsl r0, r0, #n
+                ushort shift = BitConverter.ToUInt16(arm9, (int)site + 6);
+                if ((shift & 0xF83F) != 0) return -1;
+                return (load & 0xFF) << ((shift >> 6) & 0x1F);
+            }
+            if ((load & 0xFF00) == 0x4800)
+            {
+                // ldr r0, [pc, #imm8 * 4]
+                long literal = ((site + 4 + 4) & ~3u) + (load & 0xFF) * 4L;
+                if (literal + 4 > arm9.Length) return -1;
+                uint value = BitConverter.ToUInt32(arm9, (int)literal);
+                return value <= ushort.MaxValue ? (int)value : -1;
+            }
+            return -1;
+        }
+
+        /// <summary>Members in an archive, from the unpacked copy DSPRE edits, else the packed NARC; int.MaxValue when neither can be read.</summary>
+        private static int MemberCount(DirNames dir)
+        {
+            try
+            {
+                if (gameDirs == null || !gameDirs.TryGetValue(dir, out var dirs)) return int.MaxValue;
+                if (Directory.Exists(dirs.unpackedDir))
+                {
+                    int n = Directory.GetFiles(dirs.unpackedDir).Length;
+                    if (n > 0) return n;
+                }
+                if (File.Exists(dirs.packedDir)) return new Editors.Utils.NarcReader(dirs.packedDir).Entrys;
+            }
+            catch (Exception ex) { AppLogger.Error($"Item table: {dir} member count: {ex.Message}"); }
+            return int.MaxValue;
+        }
+
+        private static int ItemNameCount()
+        {
+            try { return GetItemNames().Length; }
+            catch (Exception ex) { AppLogger.Error("Item table: item names: " + ex.Message); return 0; }
+        }
 
         public static ItemNarcTableEntry Read(int itemId)
         {
@@ -289,6 +388,7 @@ namespace DSPRE.ROMFiles
             ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.itemPalette), o + 4);
             ARM9.WriteBytes(BitConverter.GetBytes((ushort)e.itemAGB), o + 6);
             PlatPatches.Forget();
+            Forget();
         }
 
         /// <summary>Whether the id has a row the game reads: vanilla, or covered by the overflow table.</summary>
@@ -299,11 +399,12 @@ namespace DSPRE.ROMFiles
         public static int[] DataMembers(int itemCount)
         {
             var members = new int[itemCount];
-            byte[] table = ARM9.ReadBytes(itemTableOffset, VanillaCount * 8);
+            int vanilla = VanillaCount;
+            byte[] table = ARM9.ReadBytes(itemTableOffset, vanilla * 8);
             var expansion = PlatPatches.Items();
             for (int i = 0; i < itemCount; i++)
             {
-                if (i < VanillaCount) members[i] = BitConverter.ToUInt16(table, i * 8);
+                if (i < vanilla) members[i] = BitConverter.ToUInt16(table, i * 8);
                 else members[i] = expansion != null && expansion.Covers(i) && PlatPatches.TryReadItem(i, out var e) ? (int)e.itemData : -1;
             }
             return members;
