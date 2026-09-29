@@ -1236,8 +1236,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             for (int y = 0; y < _flatHeight; y++)
                 for (int x = 0; x < _flatWidth; x++)
                 {
-                    var c = ColorAt(pal, _flatIndices[y * _flatWidth + x]);
-                    raw.SetPixel(x, y, c.R, c.G, c.B, 255);
+                    // Colour 0 is the background: kept in the file, shown see-through like the cell sprites.
+                    int index = _flatIndices[y * _flatWidth + x];
+                    var c = ColorAt(pal, index);
+                    raw.SetPixel(x, y, c.R, c.G, c.B, index == 0 ? (byte)0 : (byte)255);
                 }
             CanvasBitmap = ImageConverter.ToAvaloniaBitmap(ZoomRaw(raw, ZoomFactor));
         }
