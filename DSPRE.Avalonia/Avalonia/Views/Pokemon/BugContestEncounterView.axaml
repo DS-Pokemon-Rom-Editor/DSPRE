@@ -61,7 +61,7 @@
             <TextBlock Grid.Row="1" Grid.Column="0" Text="Max Level" VerticalAlignment="Center" Margin="0,0,6,2"/>
             <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" Increment="1" Value="{Binding MaxLevel}" Margin="0,0,0,2"/>
             <TextBlock Grid.Row="2" Grid.Column="0" Text="Rate" VerticalAlignment="Center" Margin="0,0,6,2"/>
-            <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="99" Increment="1" Value="{Binding Rate}" Margin="0,0,0,2"/>
+            <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" Increment="1" Value="{Binding Rate}" Margin="0,0,0,2"/>
             <TextBlock Grid.Row="3" Grid.Column="0" Text="Score" VerticalAlignment="Center" Margin="0,0,6,2"/>
             <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="255" Increment="1" Value="{Binding Score}" Margin="0,0,0,2"/>
             <TextBlock Grid.Row="4" Grid.Column="0" Text="Terminator*" VerticalAlignment="Center" Margin="0,0,6,2"/>

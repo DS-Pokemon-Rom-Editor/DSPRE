@@ -15,10 +15,7 @@ namespace DSPRE.ROMFiles {
         public byte MaxLevel { get; set; }
         public byte Rate { get; set; }
         public byte Score { get; set; }
-        /// <summary>
-        /// Believed to be an end-of-encounter-data terminator or padding.
-        /// Purpose not fully researched yet.
-        /// </summary>
+        /// <summary>Padding, 0 in every retail record; kept as read.</summary>
         public ushort Dummy { get; set; }
 
         public BugContestEncounter() {
@@ -80,11 +77,8 @@ namespace DSPRE.ROMFiles {
     /// 
     /// Set selection logic from game code:
     /// - Without National Dex: Always Set 0
-    /// - With National Dex: set = day_of_week / 2
-    ///   - Sunday(0)/Monday(1) -> Set 0
-    ///   - Tuesday(2)/Wednesday(3) -> Set 1  
-    ///   - Thursday(4)/Friday(5) -> Set 2
-    ///   - Saturday(6) -> Set 3
+    /// - With National Dex: set = day_of_week / 2, and the contest only runs on
+    ///   Tuesday (Set 1), Thursday (Set 2) and Saturday (Set 3)
     /// </summary>
     public class BugContestEncounterFile : RomFile {
         public const int ENTRY_SIZE = 8;
@@ -114,14 +108,10 @@ namespace DSPRE.ROMFiles {
         /// </summary>
         public BugContestEncounterFile() {
             Sets = new List<BugContestEncounterSet> {
-                new BugContestEncounterSet("Set 0: No National Dex / Sun-Mon", 
-                    "Used when player doesn't have National Dex,\nor with National Dex on Sunday/Monday."),
-                new BugContestEncounterSet("Set 1: Nat Dex - Tue/Wed", 
-                    "Used with National Dex on Tuesday/Wednesday."),
-                new BugContestEncounterSet("Set 2: Nat Dex - Thu/Fri", 
-                    "Used with National Dex on Thursday/Friday."),
-                new BugContestEncounterSet("Set 3: Nat Dex - Saturday", 
-                    "Used with National Dex on Saturday only.")
+                new BugContestEncounterSet("Before National Dex", "Every contest before the National Dex."),
+                new BugContestEncounterSet("National Dex, Tuesday", "Tuesday contests after the National Dex."),
+                new BugContestEncounterSet("National Dex, Thursday", "Thursday contests after the National Dex."),
+                new BugContestEncounterSet("National Dex, Saturday", "Saturday contests after the National Dex.")
             };
         }
 
@@ -171,6 +161,21 @@ namespace DSPRE.ROMFiles {
                     }
                 }
             }
+        }
+
+        /// <summary>What would crash or misread in game, or null.</summary>
+        public string Problem() {
+            foreach (var set in Sets) {
+                var list = set.Encounters;
+                for (int i = 0; i < list.Count; i++) {
+                    var e = list[i];
+                    if (e.MaxLevel == 0) return $"{set.Name}, entry {i + 1}: the maximum level can't be 0; the score divides by it.";
+                    if (e.MaxLevel < e.MinLevel) return $"{set.Name}, entry {i + 1}: the maximum level is below the minimum.";
+                }
+                if (list.Count > 0 && list[list.Count - 1].Rate != 0)
+                    return $"{set.Name}: the last entry's rate must be 0, or low rolls read past the list.";
+            }
+            return null;
         }
 
         public override byte[] ToByteArray() {

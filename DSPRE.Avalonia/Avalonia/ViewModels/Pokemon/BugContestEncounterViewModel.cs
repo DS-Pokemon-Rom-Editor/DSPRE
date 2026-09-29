@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : 0;
             MinLevel = Clamp(enc.MinLevel, 0, 100);
             MaxLevel = Clamp(enc.MaxLevel, 0, 100);
-            Rate = Math.Min(99, (int)enc.Rate);
+            Rate = enc.Rate;
             Score = enc.Score;
             DummyValue = enc.Dummy;
             _suppress = false;
@@ -264,6 +264,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 warnings.Add($"Rate {group.Key} duplicated at entries {string.Join(", ", indices)} - only first triggers!");
             }
 
+            if (set.Encounters.Count > 0 && set.Encounters[set.Encounters.Count - 1].Rate != 0)
+                warnings.Add("The last entry's rate must be 0, or low rolls read past the list.");
+
             for (int i = 1; i < set.Encounters.Count; i++)
             {
                 int prevRate = set.Encounters[i - 1].Rate;
@@ -294,6 +297,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Bug Contest"); return; }
             _file.SaveToFile();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);

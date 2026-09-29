@@ -104,9 +104,11 @@ namespace DSPRE.ROMFiles
         private const int FirstNameLine = 78;
 
         public static readonly string[] DayNames = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
+        /// <summary>The contest only runs on Tuesday, Thursday and Saturday.</summary>
+        public static readonly int[] ContestDays = { 2, 4, 6 };
 
         /// <summary>What would make the game divide by zero: a variation of 0, or an opponent with no row allowed
-        /// on some day.</summary>
+        /// on a contest day.</summary>
         public List<string> Problems(Func<int, string> name)
         {
             var problems = new List<string>();
@@ -119,7 +121,7 @@ namespace DSPRE.ROMFiles
                 foreach (bool hasNationalDex in new[] { false, true })
                 {
                     var missing = new List<string>();
-                    for (int day = 0; day < DayNames.Length; day++)
+                    foreach (int day in ContestDays)
                     {
                         bool any = false;
                         for (int r = 0; r < RowsPerOpponent && !any; r++) any = Rows[o, r].AllowedOn(day, hasNationalDex);

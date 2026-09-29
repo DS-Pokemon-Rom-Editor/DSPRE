@@ -87,7 +87,7 @@ namespace DSPRE.Tests.Pokemon
         }
 
         [Fact]
-        public void AnOpponentWithNoRowForADayIsRefused()
+        public void AnOpponentWithNoRowForAContestDayIsRefused()
         {
             var file = AnyDayFile();
             for (int r = 0; r < BugContestTrainerFile.RowsPerOpponent; r++) file.Rows[2, r].Day = 1;   // Monday only
@@ -96,8 +96,16 @@ namespace DSPRE.Tests.Pokemon
 
             var problems = file.Problems(o => $"#{o}");
             Assert.Equal(2, problems.Count);
-            Assert.Contains("#2 has no row for Sunday, Tuesday, Wednesday, Thursday, Friday, Saturday before", problems[0]);
-            Assert.Contains("#2 has no row for Sunday, Tuesday, Wednesday, Friday, Saturday after", problems[1]);
+            Assert.Contains("#2 has no row for Tuesday, Thursday, Saturday before", problems[0]);
+            Assert.Contains("#2 has no row for Tuesday, Saturday after", problems[1]);
+        }
+
+        [Fact]
+        public void DaysWithoutAContestNeedNoRow()
+        {
+            var file = AnyDayFile();
+            for (int r = 0; r < BugContestTrainerFile.RowsPerOpponent; r++) file.Rows[2, r].Day = (byte)(2 + 2 * (r % 3));   // Tuesday, Thursday, Saturday only
+            Assert.Empty(file.Problems(o => $"#{o}"));
         }
 
         [Fact]
