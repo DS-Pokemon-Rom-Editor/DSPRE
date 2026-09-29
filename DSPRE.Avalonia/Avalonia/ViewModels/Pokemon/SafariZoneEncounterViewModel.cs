@@ -45,7 +45,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int SelectedFileIndex
         {
             get => _selectedFileIndex;
-            set { if (Set(ref _selectedFileIndex, value) && !_suppress && value >= 0) LoadFile(value); }
+            set
+            {
+                if (value == _selectedFileIndex) return;
+                if (_dirty && !_suppress && value >= 0 && _selectedFileIndex >= 0)
+                {
+                    // Snap the list back to the area still loaded until the user has answered.
+                    int requested = value;
+                    OnPropertyChanged(nameof(SelectedFileIndex));
+                    _ = SwitchFileAsync(requested);
+                    return;
+                }
+                if (Set(ref _selectedFileIndex, value) && !_suppress && value >= 0) LoadFile(value);
+            }
+        }
+
+        private async Task SwitchFileAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "area")) return;
+            SetClean();
+            if (Set(ref _selectedFileIndex, requested, nameof(SelectedFileIndex))) LoadFile(requested);
         }
 
         // ── Dirty tracking ───────────────────────────────────────────────────────
@@ -246,7 +265,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                _file = new SafariZoneEncounterFile(path);
+                // The imported file saves over the area it was imported into.
+                _file = new SafariZoneEncounterFile(path) { ID = _file.ID };
                 BindGroups();
                 SetDirty();
                 await DialogHelper.ShowInfo("Safari Zone file imported successfully!", "Import Complete");

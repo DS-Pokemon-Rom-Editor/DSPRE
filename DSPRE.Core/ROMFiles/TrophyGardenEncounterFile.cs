@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 
@@ -44,6 +45,16 @@ namespace DSPRE.ROMFiles {
             while (Encounters.Count < SLOT_COUNT) {
                 Encounters.Add(new GreatMarshEncounter());
             }
+        }
+
+        /// <summary>What would hang in game, or null.</summary>
+        public string Problem() {
+            // The daily pick rerolls until it differs from both active picks, comparing whole 4-byte entries.
+            var distinct = new HashSet<uint>();
+            foreach (var e in Encounters) distinct.Add(e.Species | ((uint)e.Padding << 16));
+            return distinct.Count < 3
+                ? "The pool needs at least 3 different species, or the game freezes picking a new daily Pokemon."
+                : null;
         }
 
         public override byte[] ToByteArray() {

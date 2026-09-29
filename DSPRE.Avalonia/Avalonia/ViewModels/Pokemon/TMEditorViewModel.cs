@@ -125,6 +125,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => Pos(_selectedMachineIndex);
             set
             {
+                // Replacing or refilling the rows pushes -1 back through the binding.
+                if (_machineListChanging) return;
                 int machine = value >= 0 && value < _order.Length ? _order[value] : -1;
                 if (machine == _selectedMachineIndex) return;
                 _selectedMachineIndex = machine;
@@ -145,7 +147,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 _curMachineMoves[_selectedMachineIndex] = value;
                 string label = TMEditor.MachineLabelFromIndex(_selectedMachineIndex);
-                MachineItems[Pos(_selectedMachineIndex)] = new MachineRow { Text = $"{label} - {GetMoveNameFromID(value)}", Move = value };
+                var row = new MachineRow { Text = $"{label} - {GetMoveNameFromID(value)}", Move = value };
+                ChangeMachineList(() => MachineItems[Pos(_selectedMachineIndex)] = row);
                 SetDirty(true);
             }
         }
@@ -345,6 +348,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
 
                 RefreshMachineMoveList();
+                OnMachineSelected(_selectedMachineIndex);
                 SetDirty(true);
                 await DialogHelper.ShowInfo(skipped == 0 ? "Machine data imported successfully."
                     : $"Machine data imported. {skipped} row(s) name machines this ROM doesn't have and were skipped.", "Import Complete");
@@ -377,11 +381,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void RefreshMachineMoveList()
         {
-            MachineItems.Clear();
             string[] names = TMEditor.GetMachineMoveNames(_curMachineMoves);
-            _order = _order.Length == names.Length ? _order : TMEditor.DisplayOrder().Where(i => i < names.Length).ToArray();
-            foreach (int i in _order)
-                MachineItems.Add(new MachineRow { Text = $"{TMEditor.MachineLabelFromIndex(i)} - {names[i]}", Move = _curMachineMoves[i] });
+            ChangeMachineList(() =>
+            {
+                MachineItems.Clear();
+                _order = _order.Length == names.Length ? _order : TMEditor.DisplayOrder().Where(i => i < names.Length).ToArray();
+                foreach (int i in _order)
+                    MachineItems.Add(new MachineRow { Text = $"{TMEditor.MachineLabelFromIndex(i)} - {names[i]}", Move = _curMachineMoves[i] });
+            });
+        }
+
+        private bool _machineListChanging;
+
+        /// <summary>Changes the machine rows, then puts the list's selection back on the machine being edited.</summary>
+        private void ChangeMachineList(Action change)
+        {
+            bool was = _machineListChanging;
+            _machineListChanging = true;
+            try { change(); }
+            finally { _machineListChanging = was; }
+            OnPropertyChanged(nameof(SelectedMachineIndex));
         }
 
         private void PopulateMoveNames()

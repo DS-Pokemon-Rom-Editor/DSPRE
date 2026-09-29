@@ -41,7 +41,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int TargetIndex
         {
             get => _targetIndex;
-            set { if (_targetIndex != value) { _targetIndex = value; OnPropertyChanged(); Changed?.Invoke(); } }
+            set
+            {
+                // The ComboBox reports -1 for a target it doesn't list; the stored value is kept and Save names it.
+                if (value < 0) return;
+                if (_targetIndex != value) { _targetIndex = value; OnPropertyChanged(); Changed?.Invoke(); }
+            }
         }
 
         private int _param;
@@ -321,7 +326,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string[] moveNames = RomInfo.GetAttackNames();
 
             ReloadMethodNames();
-            foreach (var n in pokemonNames) PokemonNames.Add(n);
+            // Only real species can be evolution targets; on hg-engine every entry is one.
+            _lastTarget = UseHgEngineSource ? pokemonNames.Length - 1 : Math.Min(RomInfo.LastVanillaSpecies, pokemonNames.Length - 1);
+            for (int i = 0; i <= _lastTarget; i++) PokemonNames.Add(pokemonNames[i]);
 
             // Live refresh: when dropdown labels are customised (Tools ▸ Edit Dropdown Labels), reload.
             AppEvents.LabelsChanged += OnLabelsChanged;
@@ -345,6 +352,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         private string _hgLoadError;
+        private int _lastTarget = int.MaxValue;
 
         // ─── Load ─────────────────────────────────────────────────────────────────
         public void LoadMon(int id)
@@ -420,16 +428,25 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var newFile = new EvolutionFile();
             var data = new System.Collections.Generic.List<EvolutionData>();
 
-            foreach (var row in EvoRows)
+            for (int i = 0; i < EvoRows.Count; i++)
             {
-                var method = (EvolutionMethod)row.MethodIndex;
+                var row = EvoRows[i];
                 var ed = new EvolutionData
                 {
-                    method = method,
+                    method = (EvolutionMethod)row.MethodIndex,
                     param  = (short)row.Param,
                     target = (short)row.TargetIndex
                 };
-                if (ed.isValid()) data.Add(ed);
+                if (ed.method == EvolutionMethod.None) continue;
+                string problem = ed.Problem(row.IsTargetEnabled);
+                if (problem == null && row.IsTargetEnabled && row.TargetIndex > _lastTarget)
+                    problem = $"targets #{row.TargetIndex}, which is not a species";
+                if (problem != null)
+                {
+                    _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved: evolution {i + 1} {problem}.", "Evolutions");
+                    return;
+                }
+                data.Add(ed);
             }
 
             newFile.data = data.ToArray();

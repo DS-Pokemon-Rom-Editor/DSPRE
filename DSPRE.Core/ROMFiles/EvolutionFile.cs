@@ -51,23 +51,26 @@ namespace DSPRE {
         public short param;
         public short target;
 
-        public bool isValid() {
+        public bool isValid() => method != EvolutionMethod.None && Problem() == null;
+
+        /// <summary>Why this evolution can't be written, or null. An empty slot (no method) has none.
+        /// A method whose target is handled by the hack's own code passes <paramref name="needsTarget"/> false.</summary>
+        public string Problem(bool needsTarget = true) {
             if (method == EvolutionMethod.None) {
-                return false;
+                return null;
             }
 
-            if (method == EvolutionMethod.LevelingUp || 
-                method == EvolutionMethod.LevelingUp_Male || 
-                method == EvolutionMethod.LevelingUp_Female) { 
-
-                return param > 0 && param <= 100;
+            if ((method == EvolutionMethod.LevelingUp ||
+                 method == EvolutionMethod.LevelingUp_Male ||
+                 method == EvolutionMethod.LevelingUp_Female) && (param <= 0 || param > 100)) {
+                return "needs a level from 1 to 100";
             }
 
-            if (target <= 0) {
-                return false;
+            if (needsTarget && target <= 0) {
+                return "has no target Pokémon";
             }
 
-            return true;
+            return null;
         }
     }
     public class EvolutionFile : RomFile {
@@ -133,8 +136,9 @@ namespace DSPRE {
         public override byte[] ToByteArray() {
             using (MemoryStream memoryStream = new MemoryStream()) {
                 using (BinaryWriter writer = new BinaryWriter(memoryStream)) {
+                    // Callers check Problem() first, so only empty slots are left out.
                     foreach (EvolutionData evData in data) {
-                        if (evData.isValid()) {
+                        if (evData.method != EvolutionMethod.None) {
                             writer.Write((short)evData.method);
                             writer.Write(evData.param);
                             writer.Write(evData.target);

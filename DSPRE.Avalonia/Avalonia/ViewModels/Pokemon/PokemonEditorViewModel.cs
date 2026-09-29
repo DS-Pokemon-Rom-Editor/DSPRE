@@ -364,7 +364,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var yes = await DialogHelper.AskYesNo(
                 "There are unsaved changes. Switch Pokémon and discard them?",
                 "Unsaved Changes", _owner);
-            if (!yes) return;
+            if (!yes)
+            {
+                // The selector already shows the other Pokémon; put it back on the one still loaded.
+                OnPropertyChanged(nameof(SelectedMonIndex));
+                return;
+            }
             DiscardChanges();
             _selectedMonIndex = pendingIndex;
             OnPropertyChanged(nameof(SelectedMonIndex));

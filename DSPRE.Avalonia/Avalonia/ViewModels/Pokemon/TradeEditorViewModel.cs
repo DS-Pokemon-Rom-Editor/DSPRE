@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (snap == null || _cur == null) return;
             _loading = true;
-            _cur = new TradeData(TradeID, new MemoryStream(snap.Data));
+            _cur = new TradeData(_cur.id, new MemoryStream(snap.Data));
             PopulateFromCur();
             OtName = snap.OtName;
             Nickname = snap.Nickname;
@@ -412,7 +412,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_cur == null) return;
             SyncTradeFieldsToCur();
 
-            _cur.SaveToFileDefaultDir(TradeID, false);
+            // TradeID may already hold the next trade: the spinner updates it before the save prompt.
+            _cur.SaveToFileDefaultDir(_cur.id, false);
             _tradeDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
             if (!_textDirty) Title = "Trade Editor";
@@ -422,15 +423,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void SaveTextCore()
         {
-            if (_tradeArchive == null) return;
+            if (_tradeArchive == null || _cur == null) return;
+            int id = _cur.id;
             int count = TradeData.GetTradeCount();
-            if (TradeID < 0 || TradeID + count > _tradeArchive.messages.Count)
+            if (id < 0 || id + count >= _tradeArchive.messages.Count)
             {
                 AppLogger.Error("TradeEditor: Can't save to text bank. Index is out of range.");
                 return;
             }
-            _tradeArchive.messages[TradeID]         = Nickname;
-            _tradeArchive.messages[TradeID + count] = OtName;
+            _tradeArchive.messages[id]         = Nickname;
+            _tradeArchive.messages[id + count] = OtName;
             _tradeArchive.SaveToExpandedDir(GetTextBankIndex(), false);
             _textDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));

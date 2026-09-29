@@ -138,6 +138,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Private state ─────────────────────────────────────────────────
         private EncounterFileHGSS _current;
         private string _dirPath;
+        private int _totalHeaders;
         private bool _loading;
         private bool _rowsHooked;
         private readonly PokemonIconCache _pokemonIcons = new();
@@ -198,6 +199,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public WildEditorHGSSViewModel(string dirPath, string[] pokemonNames, int encToOpen, int totalHeaders)
         {
             _dirPath = dirPath;
+            _totalHeaders = totalHeaders;
             SetMonIconsPalTableAddress();
             foreach (var n in pokemonNames) PokemonNames.Add(n);
             BuildEncounterNameList(totalHeaders);
@@ -330,17 +332,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var locationNames = GetLocationNames();
             for (ushort i = 0; i < totalHeaders; i++)
             {
-                MapHeader h;
-                if (RomPatchState.flag_DynamicHeadersPatchApplied ||
-                    PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied())
-                    h = MapHeader.LoadFromFile(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, i.ToString("D4")), i, 0);
-                else
-                    h = MapHeader.LoadFromARM9(i);
+                MapHeader h = ReadHeader(i);
 
                 if (h.wildPokemon != MapHeader.HGSS_NULL_ENCOUNTER_FILE_ID)
                 {
                     if (!locationMap.ContainsKey(h.wildPokemon)) locationMap[h.wildPokemon] = new System.Collections.Generic.List<string>();
-                    locationMap[h.wildPokemon].Add(locationNames[((HeaderHGSS)h).locationName]);
+                    int locIdx = ((HeaderHGSS)h).locationName;
+                    locationMap[h.wildPokemon].Add(locIdx < locationNames.Count ? locationNames[locIdx] : "Unknown");
                 }
             }
             for (int i = 0; i < files.Length; i++)
@@ -348,6 +346,22 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 string label = locationMap.ContainsKey(i) ? string.Join(" + ", locationMap[i]) : "Unused";
                 EncounterNames.Add($"[{i}] {label}");
             }
+        }
+
+        private static MapHeader ReadHeader(ushort id) => HeaderLabels.DynamicHeaders
+            ? MapHeader.LoadFromFile(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, id.ToString("D4")), id, 0)
+            : MapHeader.LoadFromARM9(id);
+
+        /// <summary>Headers whose wild Pokémon come from this encounter file, read fresh.</summary>
+        private List<ushort> HeadersUsing(int file)
+        {
+            var users = new List<ushort>();
+            for (ushort i = 0; i < _totalHeaders; i++)
+            {
+                MapHeader h = ReadHeader(i);
+                if (h != null && h.wildPokemon != MapHeader.HGSS_NULL_ENCOUNTER_FILE_ID && h.wildPokemon == file) users.Add(i);
+            }
+            return users;
         }
 
         private void LoadFile(int id)
@@ -421,11 +435,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task RemoveLastEncounterFileAsync()
         {
             int count = EncounterNames.Count;
-            if (count == 0) return;
+            if (count <= 1) return;
             int last = count - 1;
+            var users = HeadersUsing(last);
+            if (users.Count > 0)
+            {
+                await DialogHelper.ShowError(
+                    $"Encounter file {last} is used by header{(users.Count > 1 ? "s" : "")} {string.Join(", ", users)}. Point {(users.Count > 1 ? "them" : "it")} elsewhere first.",
+                    "Encounter file in use");
+                return;
+            }
+            bool leaving = _selectedEncounterIndex == last;
+            if (leaving && _dirty && !await DialogHelper.AskYesNo("There are unsaved changes. Discard and proceed?", "Unsaved Changes")) return;
             if (!await DialogHelper.AskYesNo($"Delete the last encounter file ({last})?", "Confirm deletion")) return;
             File.Delete(Path.Combine(_dirPath, last.ToString("D4")));
-            if (_selectedEncounterIndex == last) SelectedEncounterIndex = last - 1;
+            if (leaving)
+            {
+                _selectedEncounterIndex = last - 1;
+                OnPropertyChanged(nameof(SelectedEncounterIndex));
+                LoadFile(last - 1);
+            }
             EncounterNames.RemoveAt(last);
         }
 

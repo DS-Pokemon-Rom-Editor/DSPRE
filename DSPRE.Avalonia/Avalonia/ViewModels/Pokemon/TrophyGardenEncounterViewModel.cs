@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             var encounter = _file.Encounters[index];
-            SpeciesIndex = encounter.Species < PokemonNames.Count ? encounter.Species : 0;
+            SpeciesIndex = encounter.Species < PokemonNames.Count ? encounter.Species : -1;
             SlotInfoText = $"Slot number: {index:D2}";
             PokemonIcon = _icons.Get(encounter.Species);
             _suppress = false;
@@ -133,10 +133,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ApplySpeciesChange()
         {
-            if (_file == null || _selectedSlotIndex < 0 || _selectedSlotIndex >= _file.Encounters.Count) return;
+            if (_file == null || SpeciesIndex < 0 || _selectedSlotIndex < 0 || _selectedSlotIndex >= _file.Encounters.Count) return;
 
             var encounter = _file.Encounters[_selectedSlotIndex];
-            encounter.Species = (ushort)(SpeciesIndex >= 0 ? SpeciesIndex : 0);
+            encounter.Species = (ushort)SpeciesIndex;
 
             int slot = _selectedSlotIndex;
             RefreshSlotLabels();
@@ -150,7 +150,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            _file.SaveToNarc();
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Trophy Garden"); return; }
+            // The file reports its own write error.
+            if (!_file.SaveToNarc(showSuccessMessage: false)) return;
             _isDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -168,6 +170,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file.ImportFromFile(path))
             {
                 RefreshSlotLabels();
+                // Reset first so slot 0 still reloads from the imported file.
+                _selectedSlotIndex = -1;
                 if (SlotLabels.Count > 0) SelectedSlotIndex = 0;
                 _isDirty = true;
                 OnPropertyChanged(nameof(HasUnsavedChanges));

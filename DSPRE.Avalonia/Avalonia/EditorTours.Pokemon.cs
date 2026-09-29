@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia
                 S("tab:Pokéathlon", "Pokéathlon", "Its star ranges for each Pokéathlon stat."),
                 S("tab:hg-engine", "Extra data", "Hidden ability, baby form, regional Pokédex number, icon colours and its overworld follower."),
                 S("tab:Learnset", "Learnset", "The moves it learns by level. Add, remove and reorder them at the bottom; Bulk edit all changes many Pokémon at once."),
-                S("tab:Evolutions", "Evolutions", "What it evolves into, and how: level, item, trade, friendship and more."),
+                S("tab:Evolutions", "Evolutions", "What it evolves into, and how: level, item, trade, friendship and more. A row with a method needs a target, and a level method needs a level; Save says which row is missing one."),
                 S("tab:Sprites", "Sprites", "Its battle sprites and colours. Import or export pictures, click a colour to change it, or open them in the Graphics window to paint by hand."),
                 S("tab:Battle Display", "Battle display", "Where it stands in battle, its shadow, its party icon and how it moves when it appears. The preview plays it."),
                 S("name:SaveButton", "Saving", "Save or Ctrl+S writes every tab, Ctrl+Z undoes. Moves and items that show a link button open in their own editor from the right-click menu, or with Ctrl+click."));
@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia
                 S("name:MonPanel", "Adding Pokémon", "Pick a Pokémon in the box under the list, then Add, Replace or Delete."),
                 S("name:MovePanel", "Egg moves", "The moves the selected Pokémon passes to its eggs. Pick a move under the list, then Add, Replace or Delete."),
                 S("name:BulkPanel", "Bulk changes", "Swap one move for another, or remove a move, in every Pokémon at once."),
-                S("toolbar", "Space left", "The toolbar shows how full the table is, amber when full and red when over. The move count under the list does the same for one Pokémon."),
+                S("toolbar", "Space left", "The toolbar shows how full the table is, amber when full and red when over, and a table over the limit is not saved. In HeartGold the game only looks for a Pokémon in the first 2045 entries, so the count runs up to the last Pokémon. The move count under the list does the same for one Pokémon."),
                 S("toolbar", "Saving", "Export CSV and Import CSV use a spreadsheet. Save or Ctrl+S writes, Discard drops unsaved edits."));
 
             Add("TradeEditorView", "Trade Editor",

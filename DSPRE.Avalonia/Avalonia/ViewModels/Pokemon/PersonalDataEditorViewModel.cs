@@ -116,6 +116,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int _eggGroup1Index;   public int EggGroup1Index   { get => _eggGroup1Index;   set { if (Set(ref _eggGroup1Index,   value) && !_loading && _current != null) { _current.eggGroup1   = (byte)value; SetDirty(); } } }
         private int _eggGroup2Index;   public int EggGroup2Index   { get => _eggGroup2Index;   set { if (Set(ref _eggGroup2Index,   value) && !_loading && _current != null) { _current.eggGroup2   = (byte)value; SetDirty(); } } }
         private int _hatchResultIndex; public int HatchResultIndex { get => _hatchResultIndex; set { if (Set(ref _hatchResultIndex, value) && !_loading)                     SetDirty(); } }
+        // pms.narc has one entry per personal file, and form entries hatch as themselves.
+        public int HatchResultMaximum => Math.Max(0, PokemonNames.Count - 1);
 
         // ── Bool ──────────────────────────────────────────────────────────────
         private bool _flipFlag;
@@ -622,6 +624,52 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             DSPRE.Avalonia.Data.LabelStore.Sync(EggGroupNames,    "pokemon_egg_groups");
             AppEvents.LabelsChanged -= OnLabelsChanged;   // idempotent (re)subscribe so live edits refresh
             AppEvents.LabelsChanged += OnLabelsChanged;
+            AppEvents.PersonalDataSaved -= OnPersonalDataSaved;
+            AppEvents.PersonalDataSaved += OnPersonalDataSaved;
+        }
+
+        /// <summary>Another editor wrote this species: reload it when clean, otherwise take only its machine
+        /// changes so neither side's edits are lost.</summary>
+        private void OnPersonalDataSaved(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this) || _current == null || id != _currentId) return;
+            if (!global::Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPersonalDataSaved(sender, id));
+                return;
+            }
+            if (!_dirty) { LoadMon(id); return; }
+
+            PokemonPersonalData onDisk;
+            try { onDisk = new PokemonPersonalData(id); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                AppLogger.Warn($"Personal Data: could not re-read species {id}: {e.Message}");
+                return;
+            }
+
+            var saved = new PokemonPersonalData(new MemoryStream(_savedSnapshot.Data));
+            var was = new SortedSet<byte>(saved.machines.Where(m => m < FirstMaskMachine));
+            var now = new SortedSet<byte>(onDisk.machines.Where(m => m < FirstMaskMachine));
+            foreach (byte m in was) if (!now.Contains(m)) _current.machines.Remove(m);
+            foreach (byte m in now) if (!was.Contains(m)) _current.machines.Add(m);
+            saved.machines = new SortedSet<byte>(now.Concat(saved.machines.Where(m => m >= FirstMaskMachine)));
+
+            var t = PlatPatches.Tms();
+            if (t != null)
+            {
+                var maskNow = PlatPatches.Compatibility(t, new[] { id }, PlatPatches.PersonalMaskRows)
+                    .Select(c => TMEditor.VanillaMachineCount + c.Row).ToHashSet();
+                foreach (int m in _extraMaskTmsSaved.Except(maskNow)) _extraMaskTms.Remove(m);
+                foreach (int m in maskNow.Except(_extraMaskTmsSaved)) _extraMaskTms.Add(m);
+                _extraMaskTmsSaved = maskNow;
+            }
+
+            _savedSnapshot.Data = saved.ToByteArray();
+            _savedSnapshot.ExtraTms = _extraMaskTmsSaved.OrderBy(i => i).ToArray();
+            RebuildMachineLists();
+            _history.Capture(Snapshot(), coalesce: true);
+            RaiseUndoState();
         }
 
         private void OnLabelsChanged(object sender, EventArgs e)
@@ -647,7 +695,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Unsubscribes from app-wide events; called when the host window closes.</summary>
-        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; _owFrameTimer.Stop(); }
+        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.PersonalDataSaved -= OnPersonalDataSaved; _owFrameTimer.Stop(); }
 
         // ── Commands ──────────────────────────────────────────────────────────
 
@@ -711,6 +759,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
+            AppEvents.RaisePersonalDataSaved(this, _currentId);
             // hg-engine rebuilds pms.narc from data/BabyMons.c, which the Baby Pokémon picker edits.
             if (!HgEngineProject.IsActive) WriteHatchResult(_currentId, HatchResultIndex);
             var saved = Snapshot();
@@ -910,6 +959,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (Enum.TryParse(p[3].Trim(),  out PokemonType t2)) d.type2 = t2;
                     if (toSource && !HgEngineSpeciesPersonalFields.TryWriteSource(id, d, out string writeError)) { failed.Add($"{id}: {writeError}"); continue; }
                     d.SaveToFileDefaultDir(id, showSuccessMessage: false);
+                    AppEvents.RaisePersonalDataSaved(this, id);
                     imported++;
                 }
                 if (_currentId >= 0) LoadMon(_currentId);
@@ -1482,7 +1532,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!File.Exists(path)) return 0;
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
             int offset = monId * 2;
-            if (offset + 1 > stream.Length) return 0;
+            if (offset + 2 > stream.Length) return 0;
             stream.Seek(offset, SeekOrigin.Begin);
             using var reader = new BinaryReader(stream);
             return reader.ReadUInt16();
@@ -1494,7 +1544,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!File.Exists(path)) return;
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Write);
             int offset = monId * 2;
-            if (offset + 1 > stream.Length) return;
+            if (offset + 2 > stream.Length) return;
             stream.Seek(offset, SeekOrigin.Begin);
             using var writer = new BinaryWriter(stream);
             writer.Write((ushort)value);

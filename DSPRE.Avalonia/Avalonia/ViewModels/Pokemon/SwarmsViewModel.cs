@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private SwarmTable _table;
         private byte[] _saved;
-        private readonly Dictionary<ushort, (string Text, int[] Ids)> _speciesCache = new();
+        private readonly Dictionary<ushort, (string Text, int[] Ids, bool Read)> _speciesCache = new();
         private string[] _pokemonNames = Array.Empty<string>();
 
         public string[] HeaderNames { get; private set; } = Array.Empty<string>();
@@ -89,13 +89,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Read from the destination header's encounter file.</summary>
-        internal (string Text, int[] Ids) SpeciesFor(SwarmTable.Row row)
+        internal (string Text, int[] Ids, bool Read) SpeciesFor(SwarmTable.Row row)
         {
             ushort file = EncounterFileOf(row.Header);
-            if (file == ushort.MaxValue) return ("No wild encounters", Array.Empty<int>());
+            if (file == ushort.MaxValue) return ("No wild encounters", Array.Empty<int>(), false);
             if (_speciesCache.TryGetValue((ushort)(file * 4 + row.Method), out var cached)) return cached;
             string text;
             int[] ids = Array.Empty<int>();
+            bool read = false;
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters });
@@ -109,10 +110,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ids = mons.Where(m => m != 0).Select(m => (int)m).ToArray();
                 text = string.Join(", ", mons.Select(m => m == 0 ? "none" : m < _pokemonNames.Length ? _pokemonNames[m] : $"#{m}"))
                     + $" (file {file})";
+                read = true;
             }
             catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { text = $"file {file} unreadable"; }
-            _speciesCache[(ushort)(file * 4 + row.Method)] = (text, ids);
-            return (text, ids);
+            _speciesCache[(ushort)(file * 4 + row.Method)] = (text, ids, read);
+            return (text, ids, read);
+        }
+
+        // An unreadable file is left to the other checks rather than reported as empty.
+        private bool HasSwarmSpecies(SwarmTable.Row row)
+        {
+            var s = SpeciesFor(row);
+            return !s.Read || s.Ids.Length > 0;
         }
 
         private static ushort EncounterFileOf(ushort header)
@@ -170,7 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             : _table.InExpansion ? $"{Rows.Count} destinations · in the expanded ARM9 area"
             : $"{Rows.Count} destinations";
 
-        public string Problem => _table?.Problem(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue) ?? "";
+        public string Problem => _table?.Problem(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies) ?? "";
         public bool HasProblem => Problem.Length > 0;
 
         internal void Changed()
@@ -187,8 +196,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_table == null) return true;
             if (_table.NeedsExpansion && await Arm9ExpansionOffer.EnsureAsync("More swarm rows", "Swarms")) Changed();
+            // The Wild editor may have changed a swarm species since the rows were read.
+            _speciesCache.Clear();
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Swarms"); return false; }
-            try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue); }
+            try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
             {
                 await DialogHelper.ShowError("The swarms were not saved:\n" + e.Message, "Swarms");

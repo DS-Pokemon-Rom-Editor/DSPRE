@@ -30,23 +30,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DiscardChanges()
         {
             if (!_dirty || _saved == null) return;
-            _loading = true;
-            _starterLevel = _savedLevel; OnPropertyChanged(nameof(StarterLevel));
-            _loading = false;
             _history.Reset(_saved);
             _lastCaptureUtc = System.DateTime.MinValue;
             ApplyState(_saved);
         }
 
-        // What is on disk, for Discard. The level is not part of the undo snapshot.
+        // What is on disk, for Discard and for telling whether an edit or undo left anything changed.
         private Snapshot _saved;
-        private int _savedLevel;
-        private void MarkClean() { _saved = TakeSnapshot(); _savedLevel = _starterLevel; }
+        private void MarkClean() { _saved = TakeSnapshot(); }
 
         // ── Undo / redo (ISupportsUndo) ─────────────────────────────────────────
-        // Only the 4 field values are snapshotted; the byte patches (ASM/rival scripts/text) run once, on
-        // Save, not per undo step.
-        private sealed class Snapshot { public int S1, S2, S3, HeldItem; }
+        // Only the field values are snapshotted; the byte patches (ASM/rival scripts/text) run once, on
+        // Save, not per undo step. A record, so states compare by value.
+        private sealed record Snapshot(int S1, int S2, int S3, int HeldItem, int Level);
         private readonly DSPRE.Avalonia.UndoHistory<Snapshot> _history = new();
         private System.DateTime _lastCaptureUtc = System.DateTime.MinValue;
         private const int CoalesceMs = 500;
@@ -57,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
-        private Snapshot TakeSnapshot() => new Snapshot { S1 = _starter1, S2 = _starter2, S3 = _starter3, HeldItem = _heldItem };
+        private Snapshot TakeSnapshot() => new Snapshot(_starter1, _starter2, _starter3, _heldItem, _starterLevel);
 
         private void ApplyState(Snapshot snap)
         {
@@ -67,10 +63,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _starter2 = snap.S2; OnPropertyChanged(nameof(Starter2));
             _starter3 = snap.S3; OnPropertyChanged(nameof(Starter3));
             _heldItem = snap.HeldItem; OnPropertyChanged(nameof(HeldItem));
+            _starterLevel = snap.Level; OnPropertyChanged(nameof(StarterLevel));
             RefreshStarterIcon(1); RefreshStarterIcon(2); RefreshStarterIcon(3); RefreshHeldItemIcon();
             _loading = false;
 
-            _dirty = _history.IsDirty;
+            _dirty = !Equals(snap, _saved);
             Title = _dirty ? "● Starter Pokémon Editor" : "Starter Pokémon Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseUndoState();
@@ -325,7 +322,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (chosen == null || SettingsManager.Settings == null) return;
             _command = chosen;
-            _savedLevel = chosen.Level;   // the level this command holds on disk
+            if (_saved != null) _saved = _saved with { Level = chosen.Level };   // the level this command holds on disk
             StarterLevel = chosen.Level;
             SettingsManager.Settings.starterCommandChoice ??= new System.Collections.Generic.Dictionary<string, string>();
             SettingsManager.Settings.starterCommandChoice[ProjectKey()] = chosen.Key;
@@ -447,8 +444,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_loading) return;
             RecordUndoSnapshot();
-            _dirty = true;
-            Title = "● Starter Pokémon Editor";
+            _dirty = !Equals(TakeSnapshot(), _saved);
+            Title = _dirty ? "● Starter Pokémon Editor" : "Starter Pokémon Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
     }

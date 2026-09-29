@@ -121,7 +121,7 @@
                 <ComboBox  Grid.Row="0" Grid.Column="3" ItemsSource="{Binding EggGroupNames}" SelectedIndex="{Binding EggGroup2Index}"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Hatch Result:" Classes="label" IsVisible="{Binding !ShowHgEngineExtras}"
                            ToolTip.Tip="Babies that need an incense are set in Pokémon > Breeding Items"/>
-                <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding HatchResultIndex}" Minimum="0" Maximum="65535" IsVisible="{Binding !ShowHgEngineExtras}"/>
+                <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding HatchResultIndex}" Minimum="0" Maximum="{Binding HatchResultMaximum}" FormatString="0" IsVisible="{Binding !ShowHgEngineExtras}"/>
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="Flip:"         Classes="label"/>
                 <CheckBox  Grid.Row="4" Grid.Column="1" IsChecked="{Binding FlipFlag}"/>
               </Grid>

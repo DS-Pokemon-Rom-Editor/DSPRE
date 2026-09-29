@@ -80,7 +80,7 @@
               <DataGridTemplateColumn Header="Level" Width="110">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
-                    <NumericUpDown Value="{Binding Level}" Minimum="1" Maximum="100"/>
+                    <NumericUpDown Value="{Binding Level}" Minimum="0" Maximum="100"/>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
               </DataGridTemplateColumn>
@@ -196,12 +196,12 @@
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
                     <DataGridTemplateColumn Header="Min Lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Max Lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                   </DataGrid.Columns>
@@ -214,12 +214,12 @@
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
                     <DataGridTemplateColumn Header="Min Lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Max Lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                   </DataGrid.Columns>
@@ -232,12 +232,12 @@
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
                     <DataGridTemplateColumn Header="Min Lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Max Lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                   </DataGrid.Columns>
@@ -250,12 +250,12 @@
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
                     <DataGridTemplateColumn Header="Min Lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Max Lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="1" Maximum="100"/></DataTemplate>
+                        <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                   </DataGrid.Columns>

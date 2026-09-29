@@ -46,7 +46,7 @@ namespace DSPRE.ROMFiles
         {
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {
-                if (ARM9.CheckCompressionMark()) ARM9.Decompress(RomInfo.arm9Path);
+                ARM9.DecompressIfMarked();
                 byte[] arm9 = ARM9.ReadBytes(0);
                 var matches = DSUtils.SearchBytes(arm9, RomInfo.starterArm9SearchSuffix);
                 if (matches.Count != 1)
@@ -182,7 +182,7 @@ namespace DSPRE.ROMFiles
         {
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {
-                if (ARM9.CheckCompressionMark()) ARM9.Decompress(RomInfo.arm9Path);
+                ARM9.DecompressIfMarked();
                 byte[] arm9 = ARM9.ReadBytes(0);
                 var matches = DSUtils.SearchBytes(arm9, RomInfo.starterArm9SearchSuffix);
                 if (matches.Count != 1)
@@ -223,7 +223,7 @@ namespace DSPRE.ROMFiles
         /// of UPR-FVX's <c>Gen4RomHandler.setStarters</c> DP/Pt graphics block, without this, the minigame
         /// keeps rendering the vanilla starter model even though the player ends up receiving the right species.
         /// </summary>
-        private static void PatchDpPtSelectionSceneAsm(byte[] starterData, int[] newSpecies)
+        internal static void PatchDpPtSelectionSceneAsm(byte[] starterData, int[] newSpecies)
         {
             if (string.IsNullOrEmpty(RomInfo.starterGraphicsPrefix)) return;
             byte[] prefix = DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefix);
@@ -231,20 +231,27 @@ namespace DSPRE.ROMFiles
             if (matches.Count == 0 || matches[0] <= 0) return;
             int offset = matches[0] + prefix.Length;
 
-            // Move a section of instructions down to make room for the add/sub pair inserted below, and shift
-            // the pointer's base address so the immediate offsets that follow can be repointed to any species.
-            WriteWord(starterData, offset + 0xC, ReadWord(starterData, offset + 0xA));
-            if (offset % 4 == 0)
+            // The shift below is one-shot: running it on already patched code shifts it again and breaks
+            // the scene, so a patched routine only gets its species immediates rewritten.
+            bool alreadyPatched = IsDpPtSelectionScenePatched(starterData, offset);
+
+            if (!alreadyPatched)
             {
-                starterData[offset + 0xC] = (byte)(starterData[offset + 0xC] - 1);
+                // Move a section of instructions down to make room for the add/sub pair inserted below, and shift
+                // the pointer's base address so the immediate offsets that follow can be repointed to any species.
+                WriteWord(starterData, offset + 0xC, ReadWord(starterData, offset + 0xA));
+                if (offset % 4 == 0)
+                {
+                    starterData[offset + 0xC] = (byte)(starterData[offset + 0xC] - 1);
+                }
+                WriteWord(starterData, offset + 0xA, ReadWord(starterData, offset + 0x8));
+                starterData[offset + 0xA] = (byte)(starterData[offset + 0xA] - 1);
+                WriteWord(starterData, offset + 0x8, ReadWord(starterData, offset + 0x6));
+                WriteWord(starterData, offset + 0x6, ReadWord(starterData, offset + 0x4));
+                WriteWord(starterData, offset + 0x4, ReadWord(starterData, offset + 0x2));
+                WriteWord(starterData, offset + 0x2, 0x6828);
+                WriteWord(starterData, offset, 0x182D);
             }
-            WriteWord(starterData, offset + 0xA, ReadWord(starterData, offset + 0x8));
-            starterData[offset + 0xA] = (byte)(starterData[offset + 0xA] - 1);
-            WriteWord(starterData, offset + 0x8, ReadWord(starterData, offset + 0x6));
-            WriteWord(starterData, offset + 0x6, ReadWord(starterData, offset + 0x4));
-            WriteWord(starterData, offset + 0x4, ReadWord(starterData, offset + 0x2));
-            WriteWord(starterData, offset + 0x2, 0x6828);
-            WriteWord(starterData, offset, 0x182D);
 
             offset += 0x16;
             WriteWord(starterData, offset, 0x6828);
@@ -274,7 +281,8 @@ namespace DSPRE.ROMFiles
                 instr1 |= starterDiff & 0xFF;
 
                 starterData[offset] = (byte)(4 * (i + 1));
-                WriteWord(starterData, offset + 2, ReadWord(starterData, offset + 4));
+                if (!alreadyPatched)
+                    WriteWord(starterData, offset + 2, ReadWord(starterData, offset + 4));
                 WriteWord(starterData, offset + 4, instr1);
                 WriteWord(starterData, offset + 8, instr2);
 
@@ -294,6 +302,11 @@ namespace DSPRE.ROMFiles
                 }
             }
         }
+
+        private static bool IsDpPtSelectionScenePatched(byte[] data, int offset) =>
+            offset + 4 <= data.Length
+            && ReadWord(data, offset) == 0x182D
+            && ReadWord(data, offset + 2) == 0x6828;
 
         // ── HGSS starter cries table ────────────────────────────────────────────────────────────────────────
 
@@ -456,30 +469,8 @@ namespace DSPRE.ROMFiles
         /// Best-effort throughout: a failure here only affects the Script Editor's display / future
         /// recompiles, not the ROM data itself (already correctly patched by the time this runs).
         /// </summary>
-        public static async Task RefreshRotomSourcesAsync(IEnumerable<int> fileIds)
-        {
-            if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || fileIds == null) return;
-
-            // Project mode, not the single-file mode this used to use. Single-file decompile flattens
-            // the whole file to raw numbers: SPECIES_EEVEE becomes 133, ITEM_NONE becomes 0. Project
-            // mode keeps the species and item names.
-            //
-            // It is not free: it rewrites every source, and variable names come back numeric
-            // (VAR_RESULT reads as 0x800C afterwards). That is the accepted trade for sources that
-            // still say the right thing, because a stale source is worse: the next save in the Script
-            // Editor would compile it and undo the edit that was just made.
-            try
-            {
-                var result = await RotomTool.RunAsync("decompile");
-                if (!result.Success)
-                    AppLogger.Warn("StarterPokemonData: could not refresh the script sources: "
-                                 + RotomTool.FormatResult(result));
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Warn("StarterPokemonData: could not refresh the script sources: " + ex.Message);
-            }
-        }
+        public static Task RefreshRotomSourcesAsync(IEnumerable<int> fileIds)
+            => ScriptSourceSync.RefreshAsync(fileIds);
 
         // ── Dialogue text ───────────────────────────────────────────────────────────────────────────────────
 

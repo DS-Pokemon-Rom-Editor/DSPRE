@@ -125,7 +125,8 @@ namespace DSPRE.ROMFiles
         public bool NeedsExpansion => !FitsWhereItIs && !InExpansion && !SyntheticOverlaySpace.Available();
 
         /// <summary>Why the table can't be saved, or null.</summary>
-        public string Problem(int headerCount, Func<ushort, bool> hasEncounters)
+        /// <param name="hasSwarmSpecies">HGSS: whether the row's method has a swarm species in its header's encounter file.</param>
+        public string Problem(int headerCount, Func<ushort, bool> hasEncounters, Func<Row, bool> hasSwarmSpecies = null)
         {
             if (Rows.Count == 0) return "The swarm table needs at least one row.";
             if (Rows.Count > 255) return "The game can pick from up to 255 swarm rows.";
@@ -136,15 +137,18 @@ namespace DSPRE.ROMFiles
                 if (Rows[i].Header >= headerCount) return $"Row {i + 1} points at a header that doesn't exist.";
                 if (hasEncounters != null && !hasEncounters(Rows[i].Header)) return $"Row {i + 1}: header {Rows[i].Header} has no wild encounters, so its swarm would have no Pokémon.";
                 if (HasMethod && Rows[i].Method > 2) return $"Row {i + 1} has an encounter method the game doesn't know.";
+                // HGSS asserts the picked swarm species isn't 0.
+                if (HasMethod && hasSwarmSpecies != null && !hasSwarmSpecies(Rows[i]))
+                    return $"Row {i + 1}: header {Rows[i].Header} has no {MethodNames[Rows[i].Method].ToLowerInvariant()} swarm Pokémon.";
             }
             return null;
         }
 
         public bool FitsWhereItIs => Rows.Count <= Capacity;
 
-        public void Save(int headerCount, Func<ushort, bool> hasEncounters)
+        public void Save(int headerCount, Func<ushort, bool> hasEncounters, Func<Row, bool> hasSwarmSpecies = null)
         {
-            if (Problem(headerCount, hasEncounters) is string p) throw new InvalidOperationException(p);
+            if (Problem(headerCount, hasEncounters, hasSwarmSpecies) is string p) throw new InvalidOperationException(p);
             byte[] code = ReadCode(), codeBefore = (byte[])code.Clone();
             byte[] rows = RowBytes();
 

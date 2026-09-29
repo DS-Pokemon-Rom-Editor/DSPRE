@@ -103,8 +103,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // DP's personalPokeData NARC has fewer files than the species-name text archive, which still
             // lists Platinum-introduced forms (501-507) DP never got data files for.
             _speciesCount = Math.Min(pokemonNames.Length, GetPersonalFilesCount());
-            for (int i = 0; i < _speciesCount; i++) _personalData[i] = new PokemonPersonalData(i);
+            for (int i = 0; i < _speciesCount; i++)
+            {
+                _personalData[i] = new PokemonPersonalData(i);
+                _savedFileMachines[i] = FileMachines(_personalData[i].machines);
+            }
             LoadExtraMaskTms();
+            AppEvents.PersonalDataSaved += OnPersonalDataSaved;
 
             _families = BuildFamilies();
 
@@ -389,31 +394,104 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (var (row, id) in _maskLoaded) _personalData[id].machines.Add((byte)(TMEditor.VanillaMachineCount + row));
         }
 
-        /// <summary>Writes only the TM121+ bits changed here, so edits saved elsewhere since opening survive.</summary>
-        private void SaveExtraMaskTms()
+        /// <summary>Writes only the TM121+ bits changed here, so edits saved elsewhere since opening survive.
+        /// Returns the species it wrote.</summary>
+        private HashSet<int> SaveExtraMaskTms()
         {
             var t = PlatPatches.Tms();
-            if (t == null) return;
+            if (t == null) return new HashSet<int>();
             var now = new HashSet<(int Row, int PersonalId)>();
             foreach (var (id, data) in _personalData)
                 foreach (byte m in data.machines)
-                    if (m >= TMEditor.VanillaMachineCount + PlatPatches.PersonalMaskRows) now.Add((m - TMEditor.VanillaMachineCount, id));
+                    if (m >= FirstMaskMachine) now.Add((m - TMEditor.VanillaMachineCount, id));
             var changes = now.Except(_maskLoaded).Select(c => (c.Item1, c.Item2, true))
                 .Concat(_maskLoaded.Except(now).Select(c => (c.Row, c.PersonalId, false))).ToList();
             if (changes.Count > 0) PlatPatches.SetCanLearn(t, changes);
             _maskLoaded = now;
+            return changes.Select(c => c.Item2).ToHashSet();
         }
+
+        // Machines below this are bits in the personal file; the rest live in the TM121+ mask.
+        private static int FirstMaskMachine => TMEditor.VanillaMachineCount + PlatPatches.PersonalMaskRows;
+
+        // The personal-file machine bits as last read or written, so a save applies only what changed here.
+        private readonly Dictionary<int, SortedSet<byte>> _savedFileMachines = new();
+
+        private static SortedSet<byte> FileMachines(IEnumerable<byte> machines) =>
+            new SortedSet<byte>(machines.Where(m => m < FirstMaskMachine));
+
+        private static void ApplyDelta(SortedSet<byte> target, SortedSet<byte> from, SortedSet<byte> to)
+        {
+            foreach (byte m in from) if (!to.Contains(m)) target.Remove(m);
+            foreach (byte m in to) if (!from.Contains(m)) target.Add(m);
+        }
+
+        /// <summary>Another editor saved a species: take its machine changes while keeping the ones made here.</summary>
+        private void OnPersonalDataSaved(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this) || !_personalData.TryGetValue(id, out var data)) return;
+            if (!global::Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+            {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPersonalDataSaved(sender, id));
+                return;
+            }
+            try
+            {
+                var onDisk = FileMachines(new PokemonPersonalData(id).machines);
+                ApplyDelta(data.machines, _savedFileMachines[id], onDisk);
+                _savedFileMachines[id] = onDisk;
+
+                var t = PlatPatches.Tms();
+                if (t != null)
+                {
+                    var maskOnDisk = PlatPatches.Compatibility(t, new[] { id }, PlatPatches.PersonalMaskRows);
+                    var maskWas = _maskLoaded.Where(c => c.PersonalId == id).ToHashSet();
+                    foreach (var (row, _) in maskWas.Except(maskOnDisk)) data.machines.Remove((byte)(TMEditor.VanillaMachineCount + row));
+                    foreach (var (row, _) in maskOnDisk.Except(maskWas)) data.machines.Add((byte)(TMEditor.VanillaMachineCount + row));
+                    _maskLoaded.ExceptWith(maskWas);
+                    _maskLoaded.UnionWith(maskOnDisk);
+                }
+            }
+            catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException)
+            {
+                AppLogger.Warn($"TM/HM Bulk Editor: could not re-read species {id}: {e.Message}");
+                return;
+            }
+            RebuildTree();
+            if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
+            UpdateStatus();
+        }
+
+        /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
+        public void Detach() => AppEvents.PersonalDataSaved -= OnPersonalDataSaved;
 
         public void SaveAllChanges()
         {
-            try { SaveExtraMaskTms(); }
+            var written = new HashSet<int>();
+            try
+            {
+                written.UnionWith(SaveExtraMaskTms());
+
+                // Each file is re-read just before writing and only the machine bits changed here are applied,
+                // so edits other editors saved since this one opened survive.
+                foreach (var (id, data) in _personalData)
+                {
+                    var now = FileMachines(data.machines);
+                    if (now.SetEquals(_savedFileMachines[id])) continue;
+                    var fresh = new PokemonPersonalData(id);
+                    ApplyDelta(fresh.machines, _savedFileMachines[id], now);
+                    fresh.SaveToFileDefaultDir(id, false);
+                    _savedFileMachines[id] = FileMachines(fresh.machines);
+                    written.Add(id);
+                }
+            }
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is ArgumentException)
             {
-                _ = DialogHelper.ShowError("Nothing was saved: the TM121+ compatibility couldn't be written.\n" + e.Message, "TM/HM Bulk Editor");
+                foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);
+                _ = DialogHelper.ShowError("Not everything was saved: the TM/HM compatibility couldn't be written.\n" + e.Message, "TM/HM Bulk Editor");
                 return;
             }
-            foreach (var kvp in _personalData)
-                kvp.Value.SaveToFileDefaultDir(kvp.Key, false);
+            foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);
 
             _isDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);

@@ -219,7 +219,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            _file.SaveToNarc();
+            // The file reports its own write error.
+            if (!_file.SaveToNarc(showSuccessMessage: false)) return;
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
         }

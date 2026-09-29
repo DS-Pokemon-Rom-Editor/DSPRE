@@ -19,6 +19,9 @@ namespace DSPRE {
         public readonly UniqueList<(byte level, ushort move)> list;
         public bool IsWide { get; }
 
+        // Bytes after the terminator when they aren't the usual zero padding to 4 bytes; written back as read.
+        private byte[] _trailing;
+
         public ushort[] GetLearnsetAtLevel(int atLevel)
         {
             List<ushort> moves = new List<ushort>();
@@ -82,6 +85,11 @@ namespace DSPRE {
                 for (int i = 0; i < numEntries; i++) {
                     ushort entry = reader.ReadUInt16();
                     if (entry == 0xFFFF) {
+                        byte[] trailing = reader.ReadBytes((int)(stream.Length - stream.Position));
+                        // Retail files pad the terminator to 4 bytes; anything else is kept as it was.
+                        if (stream.Length % 4 != 0 || trailing.Length >= 4 || trailing.Any(b => b != 0)) {
+                            _trailing = trailing;
+                        }
                         return;
                     }
 
@@ -129,9 +137,12 @@ namespace DSPRE {
                         ushort entry = (ushort)(move | (level << bitsMove));
                         writer.Write(entry);
                     }
-                    // Add the termination entry
                     writer.Write((ushort)0xFFFF);
-                    writer.Write((ushort)0x0000);
+                    if (_trailing != null) {
+                        writer.Write(_trailing);
+                    } else {
+                        while (memoryStream.Length % 4 != 0) writer.Write((byte)0);
+                    }
                 }
                 return memoryStream.ToArray();
             }

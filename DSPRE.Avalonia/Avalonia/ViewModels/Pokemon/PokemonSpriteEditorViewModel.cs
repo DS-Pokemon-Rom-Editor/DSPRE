@@ -239,34 +239,54 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selectedVariantIndex;
             set
             {
-                if (!Set(ref _selectedVariantIndex, value)) return;
-                if (_currentFormData == null || value < 0 || value >= _currentFormData.Length) return;
-
-                // hg-engine-native form entry (Mega/Gigantamax/etc, no otherpoke equivalent at all): jump straight there. Its own species id (index 0, "no transformation") is a no-op, already loaded.
-                int nativeId = _currentFormData[value].HgEngineSpeciesId;
-                if (nativeId >= 0)
+                if (value == _selectedVariantIndex) return;
+                // LoadMon resets the index to -1 first, so only a user's pick reaches the guard.
+                if (HasUnsavedChanges && value >= 0 && _selectedVariantIndex >= 0)
                 {
-                    if (nativeId != _currentId) JumpToSpecies(nativeId);
+                    // Snap the list back to the form still loaded until the user has answered.
+                    OnPropertyChanged(nameof(SelectedVariantIndex));
+                    _ = SwitchVariantAsync(value);
                     return;
                 }
-
-                // hg-engine may have moved this form to its own real species; if so, follow it there instead of reading its now-dead otherpoke entry.
-                int migratedId = HgEngineProject.IsActive ? ResolveHgEngineMigratedFormId(_currentFormFamilyBaseId, value) : -1;
-                if (migratedId >= 0)
-                {
-                    JumpToSpecies(migratedId);
-                    return;
-                }
-
-                IsAlternateForms = true;
-                SelectedFormIndex = value;
-                LoadAlternateForm(value);
-                int pseudoId = ResolveFormPseudoId(_currentId, _currentFormData[value].Name);
-                // Index 0 is the species' own default form, so its stats are the base species' stats and
-                // the note only confuses there.
-                FormSharesBaseData = value > 0 && pseudoId < 0;
-                FormPseudoIdSelected?.Invoke(pseudoId >= 0 ? pseudoId : _currentId);
+                ApplyVariant(value);
             }
+        }
+
+        private async Task SwitchVariantAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "form")) return;
+            ApplyVariant(requested);
+        }
+
+        private void ApplyVariant(int value)
+        {
+            if (!Set(ref _selectedVariantIndex, value, nameof(SelectedVariantIndex))) return;
+            if (_currentFormData == null || value < 0 || value >= _currentFormData.Length) return;
+
+            // hg-engine-native form entry (Mega/Gigantamax/etc, no otherpoke equivalent at all): jump straight there. Its own species id (index 0, "no transformation") is a no-op, already loaded.
+            int nativeId = _currentFormData[value].HgEngineSpeciesId;
+            if (nativeId >= 0)
+            {
+                if (nativeId != _currentId) JumpToSpecies(nativeId);
+                return;
+            }
+
+            // hg-engine may have moved this form to its own real species; if so, follow it there instead of reading its now-dead otherpoke entry.
+            int migratedId = HgEngineProject.IsActive ? ResolveHgEngineMigratedFormId(_currentFormFamilyBaseId, value) : -1;
+            if (migratedId >= 0)
+            {
+                JumpToSpecies(migratedId);
+                return;
+            }
+
+            IsAlternateForms = true;
+            SelectedFormIndex = value;
+            LoadAlternateForm(value);
+            int pseudoId = ResolveFormPseudoId(_currentId, _currentFormData[value].Name);
+            // Index 0 is the species' own default form, so its stats are the base species' stats and
+            // the note only confuses there.
+            FormSharesBaseData = value > 0 && pseudoId < 0;
+            FormPseudoIdSelected?.Invoke(pseudoId >= 0 ? pseudoId : _currentId);
         }
 
         // Called from inside a ComboBox item click that is still resolving selection against the old
@@ -431,55 +451,24 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                string packedPath = RomInfo.gameDirs[DirNames.otherPokemonBattleSprites].packedDir;
-                if (!File.Exists(packedPath))
+                var narc = SpriteArchive.Open(DirNames.otherPokemonBattleSprites);
+                if (narc == null)
                 {
                     StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
                     return;
                 }
 
-                var narc = new NarcReader(packedPath);
                 var form = _currentFormData[formIndex];
                 var rawBmps = new byte[4][];
 
-                // Load back sprite
-                if (form.BackSpriteIndex >= 0 && form.BackSpriteIndex < narc.fe.Length
-                    && narc.fe[form.BackSpriteIndex].Size == 6448)
-                {
-                    narc.OpenEntry(form.BackSpriteIndex);
-                    var backSprite = MakeImage(narc.fs);
-                    narc.Close();
-                    rawBmps[0] = backSprite;
-                    rawBmps[1] = backSprite;
-                }
+                byte[] backSprite = narc.ReadSprite(form.BackSpriteIndex);
+                if (backSprite != null) { rawBmps[0] = backSprite; rawBmps[1] = backSprite; }
 
-                // Load front sprite
-                if (form.FrontSpriteIndex >= 0 && form.FrontSpriteIndex < narc.fe.Length
-                    && narc.fe[form.FrontSpriteIndex].Size == 6448)
-                {
-                    narc.OpenEntry(form.FrontSpriteIndex);
-                    var frontSprite = MakeImage(narc.fs);
-                    narc.Close();
-                    rawBmps[2] = frontSprite;
-                    rawBmps[3] = frontSprite;
-                }
+                byte[] frontSprite = narc.ReadSprite(form.FrontSpriteIndex);
+                if (frontSprite != null) { rawBmps[2] = frontSprite; rawBmps[3] = frontSprite; }
 
-                // Load palettes
-                uint[] normalPal = null, shinyPal = null;
-                if (form.NormalPaletteIndex >= 0 && form.NormalPaletteIndex < narc.fe.Length
-                    && narc.fe[form.NormalPaletteIndex].Size == 72)
-                {
-                    narc.OpenEntry(form.NormalPaletteIndex);
-                    normalPal = ReadPalette(narc.fs);
-                    narc.Close();
-                }
-                if (form.ShinyPaletteIndex >= 0 && form.ShinyPaletteIndex < narc.fe.Length
-                    && narc.fe[form.ShinyPaletteIndex].Size == 72)
-                {
-                    narc.OpenEntry(form.ShinyPaletteIndex);
-                    shinyPal = ReadPalette(narc.fs);
-                    narc.Close();
-                }
+                uint[] normalPal = narc.ReadPalette(form.NormalPaletteIndex);
+                uint[] shinyPal = narc.ReadPalette(form.ShinyPaletteIndex);
 
                 if (normalPal == null)
                 {
@@ -615,48 +604,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                string packedPath = RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir;
-                if (!File.Exists(packedPath))
+                var narc = SpriteArchive.Open(DirNames.pokemonBattleSprites);
+                if (narc == null)
                 {
                     StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
                     return;
                 }
 
-                var narc = new NarcReader(packedPath);
                 int baseOffset = id * 6;
 
-                // Load 4 sprites
                 var rawBmps = new byte[4][];
                 var hasRealSprite = new bool[4];
                 for (int i = 0; i < 4; i++)
                 {
-                    int idx = baseOffset + i;
-                    hasRealSprite[i] = idx < narc.fe.Length && narc.fe[idx].Size == 6448;
-                    if (hasRealSprite[i])
-                    {
-                        narc.OpenEntry(idx);
-                        rawBmps[i] = MakeImage(narc.fs);
-                        narc.Close();
-                    }
+                    rawBmps[i] = narc.ReadSprite(baseOffset + i);
+                    hasRealSprite[i] = rawBmps[i] != null;
                 }
                 UpdateOppositeGenderGap(hasRealSprite);
 
-                // Load palettes
-                uint[] normalPal = null, shinyPal = null;
-                int palIdx = baseOffset + 4;
-                int shinyIdx = baseOffset + 5;
-                if (palIdx < narc.fe.Length && narc.fe[palIdx].Size == 72)
-                {
-                    narc.OpenEntry(palIdx);
-                    normalPal = ReadPalette(narc.fs);
-                    narc.Close();
-                }
-                if (shinyIdx < narc.fe.Length && narc.fe[shinyIdx].Size == 72)
-                {
-                    narc.OpenEntry(shinyIdx);
-                    shinyPal = ReadPalette(narc.fs);
-                    narc.Close();
-                }
+                uint[] normalPal = narc.ReadPalette(baseOffset + 4);
+                uint[] shinyPal = narc.ReadPalette(baseOffset + 5);
 
                 if (normalPal == null)
                 {
@@ -1509,9 +1476,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// Clones the existing gender's back+front sprites into the currently-missing gender's slots,
         /// so the species has graphics for both genders (needed before its gender ratio can be widened
         /// in the Personal Data editor). The clones are byte-identical to the source until the user
-        /// re-imports something different over them. Writes straight to the packed NARC (via an
-        /// unpack/copy/repack round trip, since the placeholder slot is a different size than a real
-        /// sprite entry) so the fix is immediately visible without requiring a full ROM save.
+        /// re-imports something different over them. Copies the members in the unpacked folder, the
+        /// copy every sprite edit writes, then repacks it so the packed file agrees.
         /// </summary>
         public async Task AddOppositeGenderSprites(Window owner)
         {
@@ -1542,8 +1508,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 CopyEntryFile(unpackedDir, srcBack, dstBack);
                 CopyEntryFile(unpackedDir, srcFront, dstFront);
 
-                // Re-sync the packed NARC immediately (rather than waiting for the next full "Save ROM"),
-                // since every other read in this editor, LoadMon included, goes through the packed file.
+                // The placeholder is a different size, so the packed file can't be patched in place.
                 Narc.FromFolder(unpackedDir).Save(packedPath);
 
                 // Sprites alone aren't enough: without height data too, the new gender renders at the wrong Y.
@@ -1586,7 +1551,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // --- Ported from PokemonSpriteEditor: MakeImage / ReadPalette ----------------
 
         /// <summary>Decrypts one 6448-byte battle sprite entry to 160×80 4bpp palette indices.</summary>
-        private static byte[] MakeImage(FileStream fs)
+        private static byte[] MakeImage(Stream fs)
         {
             fs.Seek(48L, SeekOrigin.Current);
             using var reader = new BinaryReader(fs, System.Text.Encoding.Default, leaveOpen: true);
@@ -1623,7 +1588,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Reads one 72-byte palette entry as 16 packed-BGRA colors (opaque).</summary>
-        private static uint[] ReadPalette(FileStream fs)
+        private static uint[] ReadPalette(Stream fs)
         {
             fs.Seek(40L, SeekOrigin.Current);
             using var reader = new BinaryReader(fs, System.Text.Encoding.Default, leaveOpen: true);
@@ -1651,40 +1616,56 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             if (HgEngineProject.IsActive && SaveToHgEngineSource()) return;
 
-            string packedPath = RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir;
-            if (!File.Exists(packedPath))
+            var narc = SpriteArchive.Open(DirNames.pokemonBattleSprites);
+            if (narc == null)
             {
                 StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
                 return;
             }
 
-            var narc = new NarcReader(packedPath);
             int baseOffset = _currentId * 6;
-
-            for (int i = 0; i < 4; i++)
+            var failed = new List<string>();
+            try
             {
-                if (_rawSprites[i] == null) continue;
-                int idx = baseOffset + i;
-                if (idx >= narc.fe.Length || narc.fe[idx].Size != 6448) continue;
-                narc.OpenEntry(idx);
-                WriteSpriteEntry(narc.fs, _rawSprites[i]);
-                narc.Close();
+                for (int i = 0; i < 4; i++)
+                {
+                    if (_rawSprites[i] != null && !narc.WriteSprite(baseOffset + i, _rawSprites[i]))
+                        failed.Add($"{SpriteLabels[i]}: {MissingSlotReason(i)}");
+                }
+                if (_normalPal != null && !narc.WritePalette(baseOffset + 4, _normalPal))
+                    failed.Add("Normal palette: its file is not a 16-color palette.");
+                if (_shinyPal != null && !narc.WritePalette(baseOffset + 5, _shinyPal))
+                    failed.Add("Shiny palette: its file is not a 16-color palette.");
             }
-            if (_normalPal != null)
+            catch (Exception ex)
             {
-                int idx = baseOffset + 4;
-                if (idx < narc.fe.Length && narc.fe[idx].Size == 72) { narc.OpenEntry(idx); WritePaletteEntry(narc.fs, _normalPal); narc.Close(); }
-            }
-            if (_shinyPal != null)
-            {
-                int idx = baseOffset + 5;
-                if (idx < narc.fe.Length && narc.fe[idx].Size == 72) { narc.OpenEntry(idx); WritePaletteEntry(narc.fs, _shinyPal); narc.Close(); }
+                failed.Add(ex.Message);
             }
 
-            _dirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            StatusText = "Saved.";
+            FinishSave(failed);
+        }
+
+        private string MissingSlotReason(int slot)
+        {
+            bool female = slot == 0 || slot == 2;
+            if (CanAddOppositeGenderSprites && female == _missingGenderIsFemale)
+                return $"this Pokémon has no {(female ? "female" : "male")} sprite slot yet. Use {AddOppositeGenderLabel} first.";
+            return "its file is not a battle sprite.";
+        }
+
+        // Anything not written keeps the editor dirty, so unsaved work is never reported as saved.
+        private void FinishSave(List<string> failed)
+        {
+            if (failed.Count == 0)
+            {
+                _dirty = false;
+                SaveNotice.Saved(UnsavedChangesDescription);
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                StatusText = "Saved.";
+                return;
+            }
+            AppLogger.Error($"Sprite save for Mon {_currentId} incomplete: {string.Join("; ", failed)}");
+            StatusText = "Not saved:\n" + string.Join("\n", failed);
         }
 
         // Writes back into otherPokemonBattleSprites at this form's own indices; Male Back/Front (_rawSprites[1]/[3]) are the only slots actually persisted, matching ShowFemaleFormImport.
@@ -1693,39 +1674,137 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_currentFormData == null || _selectedFormIndex < 0 || _selectedFormIndex >= _currentFormData.Length) return;
             var form = _currentFormData[_selectedFormIndex];
 
-            string packedPath = RomInfo.gameDirs[DirNames.otherPokemonBattleSprites].packedDir;
-            if (!File.Exists(packedPath))
+            var narc = SpriteArchive.Open(DirNames.otherPokemonBattleSprites);
+            if (narc == null)
             {
                 StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
                 return;
             }
 
-            var narc = new NarcReader(packedPath);
-            WriteFormSprite(narc, form.BackSpriteIndex, _rawSprites[1]);
-            WriteFormSprite(narc, form.FrontSpriteIndex, _rawSprites[3]);
-            WriteFormPalette(narc, form.NormalPaletteIndex, _normalPal);
-            WriteFormPalette(narc, form.ShinyPaletteIndex, _shinyPal);
+            var failed = new List<string>();
+            try
+            {
+                if (_rawSprites[1] != null && !narc.WriteSprite(form.BackSpriteIndex, _rawSprites[1]))
+                    failed.Add("Back: this form has no battle sprite file of its own.");
+                if (_rawSprites[3] != null && !narc.WriteSprite(form.FrontSpriteIndex, _rawSprites[3]))
+                    failed.Add("Front: this form has no battle sprite file of its own.");
+                if (_normalPal != null && !narc.WritePalette(form.NormalPaletteIndex, _normalPal))
+                    failed.Add("Normal palette: this form has no palette file of its own.");
+                if (_shinyPal != null && !narc.WritePalette(form.ShinyPaletteIndex, _shinyPal))
+                    failed.Add("Shiny palette: this form has no palette file of its own.");
+            }
+            catch (Exception ex)
+            {
+                failed.Add(ex.Message);
+            }
 
-            _dirty = false;
-            SaveNotice.Saved(UnsavedChangesDescription);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            StatusText = "Saved.";
+            FinishSave(failed);
         }
 
-        private static void WriteFormSprite(NarcReader narc, int idx, byte[] indices)
-        {
-            if (indices == null || idx < 0 || idx >= narc.fe.Length || narc.fe[idx].Size != 6448) return;
-            narc.OpenEntry(idx);
-            WriteSpriteEntry(narc.fs, indices);
-            narc.Close();
-        }
+        private const int SpriteEntrySize = 6448;
+        private const int PaletteEntrySize = 72;
 
-        private static void WriteFormPalette(NarcReader narc, int idx, uint[] palette)
+        /// <summary>
+        /// One battle-sprite archive. Reads and writes go to the unpacked copy that Save ROM repacks and the
+        /// Graphics browser reads, and each write also patches the packed file in place so both agree.
+        /// An hg-engine-owned archive is rebuilt from the checkout and skipped by Save ROM, so it is only
+        /// used unpacked when it already is.
+        /// </summary>
+        private sealed class SpriteArchive
         {
-            if (palette == null || idx < 0 || idx >= narc.fe.Length || narc.fe[idx].Size != 72) return;
-            narc.OpenEntry(idx);
-            WritePaletteEntry(narc.fs, palette);
-            narc.Close();
+            private readonly string _packed;
+            private readonly string _unpacked;
+
+            private SpriteArchive(string packed, string unpacked) { _packed = packed; _unpacked = unpacked; }
+
+            public static SpriteArchive Open(DirNames dir)
+            {
+                if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out var paths)) return null;
+                if (!HgEngineDomains.IsOwned(dir))
+                    DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { dir });
+                string unpacked = Directory.Exists(paths.unpackedDir) && Directory.EnumerateFiles(paths.unpackedDir).Any()
+                    ? paths.unpackedDir : null;
+                string packed = File.Exists(paths.packedDir) ? paths.packedDir : null;
+                return unpacked == null && packed == null ? null : new SpriteArchive(packed, unpacked);
+            }
+
+            private string MemberPath(int idx) => Path.Combine(_unpacked, idx.ToString("D4"));
+
+            private byte[] Read(int idx, int size)
+            {
+                if (idx < 0) return null;
+                if (_unpacked != null)
+                {
+                    var file = new FileInfo(MemberPath(idx));
+                    return file.Exists && file.Length == size ? File.ReadAllBytes(file.FullName) : null;
+                }
+                var narc = new NarcReader(_packed);
+                if (idx >= narc.fe.Length || narc.fe[idx].Size != size) return null;
+                narc.OpenEntry(idx);
+                try
+                {
+                    var buffer = new byte[size];
+                    narc.fs.ReadExactly(buffer);
+                    return buffer;
+                }
+                finally { narc.Close(); }
+            }
+
+            // False when the member is missing or not the size of the record being written.
+            private bool Write(int idx, byte[] data)
+            {
+                if (idx < 0) return false;
+                bool written = false;
+                if (_unpacked != null)
+                {
+                    var file = new FileInfo(MemberPath(idx));
+                    if (!file.Exists || file.Length != data.Length) return false;
+                    File.WriteAllBytes(file.FullName, data);
+                    written = true;
+                }
+                if (_packed != null)
+                {
+                    var narc = new NarcReader(_packed);
+                    if (idx < narc.fe.Length && narc.fe[idx].Size == data.Length)
+                    {
+                        narc.OpenEntry(idx);
+                        try { narc.fs.Write(data, 0, data.Length); }
+                        finally { narc.Close(); }
+                        written = true;
+                    }
+                }
+                return written;
+            }
+
+            public byte[] ReadSprite(int idx)
+            {
+                byte[] bytes = Read(idx, SpriteEntrySize);
+                if (bytes == null) return null;
+                using var ms = new MemoryStream(bytes);
+                return MakeImage(ms);
+            }
+
+            public uint[] ReadPalette(int idx)
+            {
+                byte[] bytes = Read(idx, PaletteEntrySize);
+                if (bytes == null) return null;
+                using var ms = new MemoryStream(bytes);
+                return PokemonSpriteEditorViewModel.ReadPalette(ms);
+            }
+
+            public bool WriteSprite(int idx, byte[] indices)
+            {
+                using var ms = new MemoryStream();
+                WriteSpriteEntry(ms, indices);
+                return Write(idx, ms.ToArray());
+            }
+
+            public bool WritePalette(int idx, uint[] palette)
+            {
+                using var ms = new MemoryStream();
+                WritePaletteEntry(ms, palette);
+                return Write(idx, ms.ToArray());
+            }
         }
 
         // Writes straight to hg-engine's source PNGs (front = Normal palette, back = Shiny), mirroring LoadMonFromHgEngineSource, so the edit survives the next make.
@@ -1758,7 +1837,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Encrypts 160×80 4bpp palette indices into one 6448-byte battle sprite entry. Ported from PokemonSpriteEditor.SaveBin.</summary>
-        private static void WriteSpriteEntry(FileStream fs, byte[] indices)
+        private static void WriteSpriteEntry(Stream fs, byte[] indices)
         {
             ushort[] packed = new ushort[3200];
             for (int i = 0; i < 3200; i++)
@@ -1803,7 +1882,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Packs 16 ARGB colors into one 72-byte RGB555 palette entry. Ported from PokemonSpriteEditor.SavePal.</summary>
-        private static void WritePaletteEntry(FileStream fs, uint[] palette)
+        private static void WritePaletteEntry(Stream fs, uint[] palette)
         {
             byte[] header = {
                 82, 76, 67, 78, 255, 254, 0, 1, 72, 0, 0, 0, 16, 0, 1, 0,
@@ -1848,7 +1927,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int p = 0; p < n; p++)
             {
                 int o = p * 4;
-                uint c = 0xFF000000u | ((uint)img.Bgra[o + 2] << 16) | ((uint)img.Bgra[o + 1] << 8) | img.Bgra[o];
+                uint c = OpaqueOrClear(img.Bgra, o);
                 if (!seen.TryGetValue(c, out byte idx))
                 {
                     if (seen.Count >= 16) { indices = null; palette = null; usedCount = 0; return false; }
@@ -1862,6 +1941,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int i = usedCount; i < 16; i++) palette[i] = 0xFF000000u;
             return true;
         }
+
+        // Fully transparent pixels are one colour whatever RGB they carry.
+        private static uint OpaqueOrClear(byte[] bgra, int o) =>
+            bgra[o + 3] == 0 ? 0u : 0xFF000000u | ((uint)bgra[o + 2] << 16) | ((uint)bgra[o + 1] << 8) | bgra[o];
 
         private static bool PaletteEqualsUpTo(uint[] existing, uint[] candidate, int count)
         {
@@ -1886,7 +1969,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 int idx = oldIndices[p] & 0xF;
                 int o = p * 4;
-                uint c = 0xFF000000u | ((uint)newImg.Bgra[o + 2] << 16) | ((uint)newImg.Bgra[o + 1] << 8) | newImg.Bgra[o];
+                uint c = OpaqueOrClear(newImg.Bgra, o);
                 if (!used[idx]) { palette[idx] = c; used[idx] = true; }
                 else if (palette[idx] != c) return false; // same old index shows two colors -> real shape change
             }

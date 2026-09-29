@@ -73,13 +73,14 @@ namespace DSPRE.Tests
         // ── the editor's own mapping, which is where this went wrong ──────────────────
 
         [Fact]
-        public void TheUnownListOffersNoUnownFirstSoZeroHasSomewhereToGo()
+        public void TheUnownListNamesZeroAsMostFormsLikeTheGame()
         {
             var vm = new DSPRE.Avalonia.ViewModels.Pokemon.WildEditorDPPtViewModel();
 
-            // Nine entries: no Unown, then the eight letter tables the games define.
+            // Nine entries: 0, which Platinum reads as table 0, then the eight letter tables.
             Assert.Equal(9, vm.UnownTableNames.Count);
-            Assert.Equal("No Unown", vm.UnownTableNames[0]);
+            Assert.Equal("Most Forms (0)", vm.UnownTableNames[0]);
+            Assert.Equal("Most Forms", vm.UnownTableNames[1]);
         }
 
         [Theory]

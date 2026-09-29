@@ -28,9 +28,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private readonly Action _changed;
         public HeadbuttEncRow(string name, HeadbuttEncounter e, ObservableCollection<string> species, Action changed)
         { Name = name; _e = e; Species = species; _changed = changed; }
-        public int SpeciesIndex { get => _e.pokemonID; set { if (_e.pokemonID == value) return; _e.pokemonID = (ushort)value; On(nameof(SpeciesIndex)); _changed(); } }
-        public decimal MinLevel { get => _e.minLevel; set { if (_e.minLevel == value) return; _e.minLevel = (byte)value; On(nameof(MinLevel)); _changed(); } }
-        public decimal MaxLevel { get => _e.maxLevel; set { if (_e.maxLevel == value) return; _e.maxLevel = (byte)value; On(nameof(MaxLevel)); _changed(); } }
+        // Out-of-range values show clamped so the boxes never coerce, and are only replaced when the user picks another value.
+        private const int MaxShownLevel = 100;
+        public int SpeciesIndex { get => _e.pokemonID < Species.Count ? _e.pokemonID : -1; set { if (value < 0 || value == SpeciesIndex) return; _e.pokemonID = (ushort)value; On(nameof(SpeciesIndex)); _changed(); } }
+        public decimal MinLevel { get => Math.Min((int)_e.minLevel, MaxShownLevel); set { if (value == MinLevel) return; _e.minLevel = (byte)value; On(nameof(MinLevel)); _changed(); } }
+        public decimal MaxLevel { get => Math.Min((int)_e.maxLevel, MaxShownLevel); set { if (value == MaxLevel) return; _e.maxLevel = (byte)value; On(nameof(MaxLevel)); _changed(); } }
     }
 
     /// <summary>One tree's global (x,y) position within a tree group.</summary>

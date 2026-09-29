@@ -238,14 +238,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task SaveCommand()
         {
-            int total = TotalSize;
-            if (!_useSpecialFormat && total > _maxTableSize)
+            int used = UsedSize;
+            if (!_useSpecialFormat && used > _maxTableSize)
             {
-                bool proceed = await DialogHelper.AskYesNo(
-                    "The egg move data exceeds the maximum allowed size. " +
-                    "Saving now will corrupt the game data. Do you want to proceed?",
-                    "Warning");
-                if (!proceed) return;
+                await DialogHelper.ShowError(
+                    $"Nothing was saved: the egg move table uses {used} of {_maxTableSize} bytes. Remove some moves or Pokémon first.",
+                    "Egg Move Editor");
+                return;
             }
 
             foreach (var entry in _eggMoveData)
@@ -259,7 +258,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
             }
 
-            SaveEggMoveData();
+            string error = SaveEggMoveData();
+            if (error != null)
+            {
+                await DialogHelper.ShowError("The egg moves were not saved:\n" + error, "Egg Move Editor");
+                return;
+            }
             SaveNotice.Saved(UnsavedChangesDescription);
         }
 
@@ -456,6 +460,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        /// <summary>The bytes counted against <see cref="_maxTableSize"/>: the whole table, or on HGSS only up
+        /// to the last Pokémon header, since the game searches a fixed number of entries for it.</summary>
+        private int UsedSize
+        {
+            get
+            {
+                if (!RomInfo.EggMoveLimitCountsHeadersOnly) return TotalSize;
+                if (_eggMoveData.Count == 0) return 0;
+                int s = 2; // the last header
+                for (int i = 0; i < _eggMoveData.Count - 1; i++) s += _eggMoveData[i].GetSizeInBytes();
+                return s;
+            }
+        }
+
         private void OnMonSelected(int idx)
         {
             if (idx < 0 || idx >= _eggMoveData.Count)
@@ -545,7 +563,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ListSizeBrush = StatusBrushes.Good;
                 return;
             }
-            int total = TotalSize;
+            int total = UsedSize;
             ListSizeText  = $"List Size: {total} / {_maxTableSize} bytes";
             ListSizeBrush = total > _maxTableSize ? StatusBrushes.Bad : total == _maxTableSize ? StatusBrushes.Warn : StatusBrushes.None;
         }
@@ -590,13 +608,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eggMoves });
                 var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
-                _maxTableSize = 4126;
+                _maxTableSize = RomInfo.GetEggMoveTableMaxBytes();
                 return new EndianBinaryReader(File.OpenRead(path), Endianness.LittleEndian);
             }
             else
             {
                 int offset = RomInfo.GetEggMoveTableOffset();
-                _maxTableSize = 0xEEC;
+                _maxTableSize = RomInfo.GetEggMoveTableMaxBytes();
                 var reader = new EndianBinaryReader(File.OpenRead(OverlayUtils.GetPath(EGG_MOVE_OVERLAY_NUMBER)), Endianness.LittleEndian);
                 reader.BaseStream.Seek(offset, SeekOrigin.Begin);
                 int magic = reader.ReadInt32();
@@ -645,7 +663,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        private void SaveEggMoveData()
+        /// <summary>Writes the table; returns why it couldn't, or null.</summary>
+        private string SaveEggMoveData()
         {
             try
             {
@@ -667,8 +686,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     WriteNormal(w);
                 }
                 SetDirty(false);
+                return null;
             }
-            catch (Exception ex) { AppLogger.Error($"Failed to save egg move data: {ex.Message}"); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Error($"Failed to save egg move data: {ex.Message}");
+                return ex.Message;
+            }
         }
 
         private void WriteNormal(BinaryWriter w)
@@ -688,7 +712,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var hasFile = new HashSet<int>();
             foreach (var e in _eggMoveData)
             {
-                using var w = new BinaryWriter(File.OpenWrite(Path.Combine(folder, e.speciesID.ToString("D4"))));
+                using var w = new BinaryWriter(File.Create(Path.Combine(folder, e.speciesID.ToString("D4"))));
                 foreach (var m in e.moveIDs) w.Write(m);
                 w.Write((ushort)0xFFFF);
                 hasFile.Add(e.speciesID);
@@ -696,7 +720,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int i = 0; i < _monNames.Length; i++)
             {
                 if (hasFile.Contains(i)) continue;
-                using var w = new BinaryWriter(File.OpenWrite(Path.Combine(folder, i.ToString("D4"))));
+                using var w = new BinaryWriter(File.Create(Path.Combine(folder, i.ToString("D4"))));
                 w.Write((ushort)0xFFFF);
             }
         }

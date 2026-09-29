@@ -132,6 +132,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 foreach (var g in _file.Groups) GroupNames.Add(g.Name);
                 _suppress = false;
 
+                _selectedGroupIndex = -1;
                 if (GroupNames.Count > 0) SelectedGroupIndex = 0;
             }
             catch (Exception ex)
@@ -152,7 +153,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 EncounterSlots.Add($"Slot {i:D2}: {group.Encounters[i]}");
             _suppress = false;
 
+            // Reset first so slot 0 of the new list still loads its species.
+            _selectedSlotIndex = -1;
             if (EncounterSlots.Count > 0) SelectedSlotIndex = 0;
+            else { OnPropertyChanged(nameof(SelectedSlotIndex)); ClearFields(); }
         }
 
         private void LoadSlot(int slot)
@@ -163,7 +167,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             var enc = group.Encounters[slot];
             _suppress = true;
-            SelectedSpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : 0;
+            SelectedSpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : -1;
             SlotInfoText = $"Slot number: {slot:D2}";
             _suppress = false;
             UpdateIcon(enc.Species);
@@ -180,11 +184,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void OnSpeciesChanged(int species)
         {
-            if (_file == null || _selectedGroupIndex < 0 || _selectedSlotIndex < 0) return;
+            if (_file == null || _selectedGroupIndex < 0 || _selectedSlotIndex < 0 || species < 0) return;
             var group = _file.Groups[_selectedGroupIndex];
             if (_selectedSlotIndex >= group.Encounters.Count) return;
 
-            group.Encounters[_selectedSlotIndex].Species = (ushort)(species >= 0 ? species : 0);
+            group.Encounters[_selectedSlotIndex].Species = (ushort)species;
             SetDirty();
 
             int slot = _selectedSlotIndex;
@@ -192,7 +196,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             EncounterSlots[slot] = $"Slot {slot:D2}: {group.Encounters[slot]}";
             _suppress = false;
 
-            if (species >= 0) UpdateIcon(species);
+            UpdateIcon(species);
         }
 
         private void UpdateIcon(int species)
@@ -210,7 +214,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Save()
         {
             if (_file == null) return;
-            _file.SaveToNarc();
+            // The file reports its own write error.
+            if (!_file.SaveToNarc(showSuccessMessage: false)) return;
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
         }
@@ -241,6 +246,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     foreach (var g in _file.Groups) GroupNames.Add(g.Name);
                     _suppress = false;
 
+                    _selectedGroupIndex = -1;
                     if (GroupNames.Count > 0) SelectedGroupIndex = 0;
                     SetDirty();
                     await DialogHelper.ShowInfo("Great Marsh encounters imported successfully!", "Import Complete");

@@ -76,19 +76,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         private int _speciesIndex = -1;
-        public int SpeciesIndex { get => _speciesIndex; set { if (Set(ref _speciesIndex, value) && !_suppress) ApplyEdit(); } }
+        public int SpeciesIndex { get => _speciesIndex; set { if (Set(ref _speciesIndex, value) && !_suppress && value >= 0) ApplyEdit(e => e.Species = (ushort)value); } }
 
         private decimal _minLevel = 1;
-        public decimal MinLevel { get => _minLevel; set { if (Set(ref _minLevel, value) && !_suppress) ApplyEdit(); } }
+        public decimal MinLevel { get => _minLevel; set { if (Set(ref _minLevel, value) && !_suppress) ApplyEdit(e => e.MinLevel = (byte)value); } }
 
         private decimal _maxLevel = 1;
-        public decimal MaxLevel { get => _maxLevel; set { if (Set(ref _maxLevel, value) && !_suppress) ApplyEdit(); } }
+        public decimal MaxLevel { get => _maxLevel; set { if (Set(ref _maxLevel, value) && !_suppress) ApplyEdit(e => e.MaxLevel = (byte)value); } }
 
         private decimal _rate;
-        public decimal Rate { get => _rate; set { if (Set(ref _rate, value) && !_suppress) { ApplyEdit(); UpdateRateDisplay(); } } }
+        public decimal Rate { get => _rate; set { if (Set(ref _rate, value) && !_suppress) { ApplyEdit(e => e.Rate = (byte)value); UpdateRateDisplay(); } } }
 
         private decimal _score;
-        public decimal Score { get => _score; set { if (Set(ref _score, value) && !_suppress) ApplyEdit(); } }
+        public decimal Score { get => _score; set { if (Set(ref _score, value) && !_suppress) ApplyEdit(e => e.Score = (byte)value); } }
 
         // ── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
@@ -144,6 +144,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SetNames.Clear();
                 foreach (var s in _file.Sets) SetNames.Add(s.ToString());
                 _suppress = false;
+                // Reset first so set 0 of a newly imported file still refreshes.
+                _selectedSetIndex = -1;
                 if (SetNames.Count > 0) SelectedSetIndex = 0;
                 SetClean();
             }
@@ -168,7 +170,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (var enc in set.Encounters) EncounterRows.Add(enc.ToString());
             _suppress = false;
 
+            // Reset first so entry 0 of the new set still loads its fields.
+            _selectedEncounterIndex = -1;
             if (EncounterRows.Count > 0) SelectedEncounterIndex = 0;
+            else { OnPropertyChanged(nameof(SelectedEncounterIndex)); ClearFields(); }
             UpdateRateDisplay();
         }
 
@@ -179,7 +184,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var enc = set.Encounters[index];
 
             _suppress = true;
-            SpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : 0;
+            SpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : -1;
+            // Shown clamped to the boxes' range; only an edit to that box writes it back.
             MinLevel = Clamp(enc.MinLevel, 0, 100);
             MaxLevel = Clamp(enc.MaxLevel, 0, 100);
             Rate = enc.Rate;
@@ -202,18 +208,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _suppress = false;
         }
 
-        private void ApplyEdit()
+        // Only the edited field is written, so a value the boxes can't show survives other edits.
+        private void ApplyEdit(Action<BugContestEncounter> change)
         {
             var set = CurrentSet;
             if (set == null || _selectedEncounterIndex < 0 || _selectedEncounterIndex >= set.Encounters.Count) return;
             var enc = set.Encounters[_selectedEncounterIndex];
-
-            enc.Species = (ushort)(_speciesIndex >= 0 ? _speciesIndex : 0);
-            enc.MinLevel = (byte)_minLevel;
-            enc.MaxLevel = (byte)_maxLevel;
-            enc.Rate = (byte)_rate;
-            enc.Score = (byte)_score;
-            // Dummy/Terminator is read-only.
+            change(enc);
 
             SetDirty();
 
@@ -298,7 +299,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null) return;
             if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Bug Contest"); return; }
-            _file.SaveToFile();
+            // The file reports its own write error.
+            if (!_file.SaveToFile(showSuccessMessage: false)) return;
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
         }

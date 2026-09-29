@@ -221,16 +221,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void MoveEntryUp()
         {
             if (!CanMoveUp) return;
-            SwapEntries(_selectedEntryIndex, _selectedEntryIndex - 1);
-            SelectedEntryIndex--;
+            int from = _selectedEntryIndex;
+            SwapEntries(from, from - 1);
+            Reselect(from - 1);
             SetDirty();
         }
 
         public void MoveEntryDown()
         {
             if (!CanMoveDown) return;
-            SwapEntries(_selectedEntryIndex, _selectedEntryIndex + 1);
-            SelectedEntryIndex++;
+            int from = _selectedEntryIndex;
+            SwapEntries(from, from + 1);
+            Reselect(from + 1);
             SetDirty();
         }
 
@@ -283,6 +285,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             EntryCount = Entries.Count;
             OnPropertyChanged(nameof(ExceedsVanillaLimit));
             UpdateCanAdd();
+        }
+
+        // Refilling Entries pushes -1 back through the list's binding, so the row is selected again afterwards.
+        private void Reselect(int index)
+        {
+            SelectedEntryIndex = index;
+            OnPropertyChanged(nameof(SelectedEntryIndex));
         }
 
         private void SwapEntries(int a, int b)

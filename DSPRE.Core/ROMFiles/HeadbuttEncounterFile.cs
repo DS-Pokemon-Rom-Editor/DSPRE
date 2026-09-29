@@ -52,9 +52,10 @@ namespace DSPRE.ROMFiles {
                 normalTreeGroups = new BindingList<HeadbuttTreeGroup>();
                 specialTreeGroups = new BindingList<HeadbuttTreeGroup>();
 
-                //if there are no trees defined in either section, there are no encounters or trees defined
+                // A tree-less map is only the counts unless its slots were filled in, which the writer keeps.
                 bool hasTrees = normalTreeGroupsCount > 0 || specialTreeGroupsCount > 0;
-                if (!hasTrees) {
+                bool hasSlots = hasTrees || br.BaseStream.Length >= 4 + (normalEncountersCount + specialEncountersCount) * 4;
+                if (!hasSlots) {
                     for (int i = 0; i < normalEncountersCount; i++) {
                         normalEncounters.Add(new HeadbuttEncounter());
                     }

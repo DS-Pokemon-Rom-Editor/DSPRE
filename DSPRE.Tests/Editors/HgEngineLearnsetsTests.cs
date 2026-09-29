@@ -94,9 +94,8 @@ namespace DSPRE.Tests
             Assert.False(data.IsWide);
             Assert.Equal(new (byte, ushort)[] { (5, 33), (12, 511) }, Enumerable.Range(0, data.list.Count).Select(i => data.list[i]));
 
-            byte[] expected = new[] { (ushort)((5 << 9) | 33), (ushort)((12 << 9) | 511), (ushort)0xFFFF, (ushort)0 }
-                .SelectMany(BitConverter.GetBytes).ToArray();
-            Assert.Equal(expected, data.ToByteArray());
+            // Written back as read: no padding the file didn't have.
+            Assert.Equal(file, data.ToByteArray());
         }
 
         [Fact]
