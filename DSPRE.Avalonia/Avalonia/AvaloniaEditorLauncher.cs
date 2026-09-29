@@ -888,6 +888,29 @@ namespace DSPRE.Avalonia
             if (at >= 0) vm.SelectedApp = at + 1;
         }
 
+        /// <summary>The naming screen's icons, painted like trainer sprites, with the screen's top bar as a preview.</summary>
+        public static void OpenNamingScreenEditor() => _ = OpenNamingScreenEditorAsync();
+
+        public static async System.Threading.Tasks.Task OpenNamingScreenEditorAsync()
+        {
+            if (!IsRomLoaded || BlockedForUnlinkedHge("The Naming Screen Editor")) return;
+            if (!BetaEditors.Allows("NamingScreenEditor"))
+            {
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("NamingScreenEditor")!, "Naming Screen Editor");
+                return;
+            }
+            try
+            {
+                await RunBusyAsync("Opening Naming Screen Editor…", "Reading the naming screen's graphics.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.nameInputGraphics }));
+                new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(48, TrainerSpriteSet.NamingIcons)).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Naming Screen Editor: " + ex.Message, "Naming Screen Editor");
+            }
+        }
+
         public static void OpenTrainerCardEditor()
         {
             if (!IsRomLoaded || BlockedForUnlinkedHge("The Trainer Card Editor")) return;

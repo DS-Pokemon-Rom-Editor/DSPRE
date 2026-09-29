@@ -617,6 +617,7 @@ namespace DSPRE
             fieldTouchChoices,      // HGSS a/2/3/7, the Poké Ball screen and its touch buttons
             fieldTextureAnimations, // Pt data/fldtanime.narc, HGSS a/1/3/9 (HGSS data/fldtanime.narc is unused): member 0 names textures, the rest hold frames
             encounterEffectGraphics, // DP/Pt graphic/field_encounteffect.narc, HGSS a/1/0/9: special trainer battle intro art
+            nameInputGraphics,      // DP/Pt data/namein.narc, HGSS a/0/3/1: the naming screen's backgrounds and icons
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -2733,6 +2734,7 @@ namespace DSPRE
                         [DirNames.poketch] = $@"{dataFolderName}\graphic\poketch.narc",
                         [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
                         [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\graphic\field_encounteffect.narc",
+                        [DirNames.nameInputGraphics] = $@"{dataFolderName}\data\namein.narc",
                         [DirNames.moveData] = $@"{dataFolderName}\poketool\waza\waza_tbl.narc",
 
                         [DirNames.monIcons] = $@"{dataFolderName}\poketool\icongra\poke_icon.narc",
@@ -2834,6 +2836,7 @@ namespace DSPRE
                         [DirNames.trainerBackGraphics] = $@"{dataFolderName}\poketool\trgra\trbgra.narc",
                         [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
                         [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\graphic\field_encounteffect.narc",
+                        [DirNames.nameInputGraphics] = $@"{dataFolderName}\data\namein.narc",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
@@ -2999,6 +3002,7 @@ namespace DSPRE
                         [DirNames.titleScreenGraphics] = $@"{dataFolderName}\a\0\4\6",
                         [DirNames.trainerCardGraphics] = $@"{dataFolderName}\a\0\4\9",
                         [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\a\1\0\9",
+                        [DirNames.nameInputGraphics] = $@"{dataFolderName}\a\0\3\1",
                         [DirNames.weatherGraphics] = $@"{dataFolderName}\a\0\6\3"
                     };
 

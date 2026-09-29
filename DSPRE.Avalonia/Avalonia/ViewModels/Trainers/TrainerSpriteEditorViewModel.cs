@@ -32,6 +32,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public string ItemLabel { get; private init; }
         public Func<int, List<string>> Names { get; private init; }
 
+        /// <summary>The naming screen's icons: one drawing, frames picked per animation, files packed.</summary>
+        public bool NamingScreen { get; private init; }
+
         public static readonly TrainerSpriteSet Classes = new()
         {
             Archive = DirNames.trainerGraphics, NameDigits = 3,
@@ -44,6 +47,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             Archive = DirNames.trainerBackGraphics, NameDigits = 2,
             Title = "Trainer Back Sprite Editor", Noun = "back sprite", ItemLabel = "Sprite:",
             Names = count => DSPRE.ROMFiles.TrainerBackSprites.Names(count),
+        };
+
+        public static readonly TrainerSpriteSet NamingIcons = new()
+        {
+            Archive = DirNames.nameInputGraphics, NameDigits = 2, NamingScreen = true,
+            Title = "Naming Screen Editor", Noun = "icon", ItemLabel = "Icon:",
+            Names = _ => DSPRE.ROMFiles.NamingScreenIcons.All.Select(i => i.Name).ToList(),
         };
 
         public string FileStem(int id) => id.ToString("D" + NameDigits);
@@ -198,13 +208,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private Bank[] _jsonBanks;
         private uint _jsonBlockSize;
 
-        private int BankCount => _jsonBanks?.Length ?? _sprite?.Banks.Length ?? 0;
-        private Bank GetBank(int i) => _jsonBanks != null ? _jsonBanks[i] : _sprite.Banks[i];
+        private int BankCount => _jsonBanks?.Length ?? _bankMap?.Length ?? _sprite?.Banks.Length ?? 0;
+        private Bank GetBank(int i) => _jsonBanks != null ? _jsonBanks[i] : _sprite.Banks[MapBank(i)];
+
+        // The naming screen shows only the cells one icon's animation uses.
+        private int[] _bankMap;
+        private int MapBank(int frame) => _bankMap != null && frame >= 0 && frame < _bankMap.Length ? _bankMap[frame] : frame;
         private uint BlockSize => _jsonBanks != null ? _jsonBlockSize : (_sprite?.BlockSize ?? 0);
         private DSPRE.RawImage GetCompositedRawImage(int bankIndex, int width, int height, int[] drawIndex, bool trans = true) =>
             _jsonBanks != null
                 ? Actions.Get_RawImage(_jsonBanks[bankIndex], _jsonBlockSize, _tile, _pal, width, height, trans, -1, 1, drawIndex)
-                : _sprite.Get_RawImage(_tile, _pal, bankIndex, width, height, trans: trans, currOAM: -1, draw_index: drawIndex);
+                : _sprite.Get_RawImage(_tile, _pal, MapBank(bankIndex), width, height, trans: trans, currOAM: -1, draw_index: drawIndex);
 
         // ── Mode A: composited cell editing (Plat/HGSS) ─────────────────────────
         private sealed class EditCell
@@ -803,6 +817,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public TrainerSpriteEditorViewModel(int id, TrainerSpriteSet set)
         {
             _set = set;
+            if (set.NamingScreen)
+            {
+                foreach (var icon in DSPRE.ROMFiles.NamingScreenIcons.All)
+                {
+                    _entryIds.Add(icon.Animation);
+                    ClassNames.Add(icon.Name);
+                }
+                Load(_entryIds.Contains(id) ? id : _entryIds[0]);
+                return;
+            }
+
             var names = set.Names(SpriteCount());
             bool linking = set.IsBack && !HgEngineProject.IsActive;
             for (int i = 0; i < names.Count; i++)
@@ -827,6 +852,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public string Load(int trClassID)
         {
             _trClassID = trClassID;
+            _bankMap = null;
+            if (_set.NamingScreen) return LoadNamingIcon(trClassID);
             try
             {
                 string dir = RomInfo.gameDirs[_set.Archive].unpackedDir;
@@ -1164,7 +1191,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _paletteDirty = true;
             HasUnsavedChanges = true;
             if (bank == ActivePaletteBank) BuildPaletteSwatches(bank);
-            if (BankCount > 0) { RebuildCompositedCanvas(); BuildFrameThumbnails(); } else RebuildFlatCanvas();
+            if (BankCount > 0) { RebuildCompositedCanvas(); BuildFrameThumbnails(); RebuildTopBar(); } else RebuildFlatCanvas();
         }
 
         private void BuildPaletteSwatches(int bankIndex)
@@ -1252,6 +1279,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             RebuildCompositedCanvas();
             QueueFrameThumbnailRefresh();
+            RebuildTopBar();
             HasUnsavedChanges = true;
         }
 
@@ -1341,6 +1369,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             foreach (var kv in perCell) EncodeCell(kv.Key, kv.Value);
             RebuildCompositedCanvas();
             QueueFrameThumbnailRefresh();
+            RebuildTopBar();
             HasUnsavedChanges = true;
             return null;
         }
@@ -1459,6 +1488,200 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
 
+        // ── Naming screen ──────────────────────────────────────────────────────
+        // The drawing and cells are stored packed, so they are opened out into working files and packed
+        // back on save.
+        private string _packedTilesPath;
+        private byte _packedTilesMarker;
+        private DSPRE.Avalonia.Data.NanrFile _namingAnimations;
+        private byte[] _topBarBackground;
+
+        private string LoadNamingIcon(int animation)
+        {
+            try
+            {
+                string dir = RomInfo.gameDirs[_set.Archive].unpackedDir;
+                string File4(int i) => Path.Combine(dir, i.ToString("D4"));
+                string work = Path.Combine(Path.GetTempPath(), "DSPRE", "NamingScreen");
+                Directory.CreateDirectory(work);
+                string Opened(int i)
+                {
+                    string path = Path.Combine(work, i.ToString("D4"));
+                    File.WriteAllBytes(path, Data.GraphicAssets.Unsqueeze(File.ReadAllBytes(File4(i))));
+                    return path;
+                }
+
+                var files = DSPRE.ROMFiles.NamingScreenIcons.SpriteTilesFile;
+                _packedTilesPath = File4(files);
+                _packedTilesMarker = Data.GraphicAssets.SqueezeMarker(File.ReadAllBytes(_packedTilesPath));
+                _tilesPath = Opened(files);
+                _tile = new NCGR(_tilesPath, files, files.ToString("D4"));
+                int colours = DSPRE.ROMFiles.NamingScreenIcons.SpriteColoursFile;
+                _palPath = File4(colours);
+                _pal = new NCLR(_palPath, colours, colours.ToString("D4"));
+                int cells = DSPRE.ROMFiles.NamingScreenIcons.SpriteCellsFile;
+                _sprite = new NCER(Opened(cells), cells, cells.ToString("D4"));
+                _jsonBanks = null;
+                _sourcePngPath = null;
+                _namingAnimations = Data.NanrFile.Read(Data.GraphicAssets.Unsqueeze(File.ReadAllBytes(File4(DSPRE.ROMFiles.NamingScreenIcons.SpriteAnimationsFile))));
+                _bankMap = FramesOfAnimation(animation);
+
+                _parts.Clear();
+                _parts.Add(new SpritePart { Entry = animation, Tile = _tile, Pal = _pal, Sprite = _sprite, TilesPath = _tilesPath, PalPath = _palPath });
+                Activate(0);
+                OnPropertyChanged(nameof(HasLinkedSets));
+                OnPropertyChanged(nameof(SelectedClassIndex));
+
+                ZoomFactor = 4;
+                BuildFrameThumbnails();
+                _activePaletteBank = -1;
+                _selectedStripFrame = -1;
+                SelectedFrameIndex = 0;
+                OnPropertyChanged(nameof(IsFlatSheetMode));
+                OnPropertyChanged(nameof(FrameCount));
+                HasUnsavedChanges = false;
+                _paletteDirty = false;
+                StatusText = $"{ClassNames[Math.Max(0, _entryIds.IndexOf(animation))]}: {FrameCount} frame(s)";
+                _topBarFrame = 0; _topBarHold = 0;
+                BuildTopBarBackground(dir);
+                RebuildTopBar();
+                StartTopBar();
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _tile = null; _pal = null; _sprite = null;
+                StatusText = "Load failed: " + ex.Message;
+                AppLogger.Error("TrainerSpriteEditorViewModel.LoadNamingIcon failed: " + ex.Message);
+                return ex.Message;
+            }
+        }
+
+        // Each cell the animation shows, once, in the order it first appears.
+        private int[] FramesOfAnimation(int animation)
+        {
+            var seen = new List<int>();
+            if (_namingAnimations != null && animation < _namingAnimations.Sequences.Count)
+                for (int f = 0; f < _namingAnimations.Sequences[animation].Frames.Count; f++)
+                {
+                    int cell = _namingAnimations.CellOf(animation, f);
+                    if (cell >= 0 && cell < _sprite.Banks.Length && !seen.Contains(cell)) seen.Add(cell);
+                }
+            if (seen.Count == 0) seen.Add(0);
+            return seen.ToArray();
+        }
+
+        public bool HasTopBar => _set.NamingScreen;
+        public bool ShowsAnimationsTab => !_set.NamingScreen;
+
+        private Bitmap _topBarPreview;
+        public Bitmap TopBarPreview { get => _topBarPreview; private set => Set(ref _topBarPreview, value); }
+
+        private string _sampleName = "Name";
+        public string SampleName
+        {
+            get => _sampleName;
+            set { if (Set(ref _sampleName, value ?? "")) RebuildTopBar(); }
+        }
+
+        private void BuildTopBarBackground(string dir)
+        {
+            _topBarBackground = null;
+            try
+            {
+                byte[] Read(int i) => Data.GraphicAssets.Unsqueeze(File.ReadAllBytes(Path.Combine(dir, i.ToString("D4"))));
+                var bg = Data.NitroBgCodec.Composite(
+                    Read(DSPRE.ROMFiles.NamingScreenIcons.BackgroundTilesFile),
+                    Read(DSPRE.ROMFiles.NamingScreenIcons.BackgroundColoursFile),
+                    Read(DSPRE.ROMFiles.NamingScreenIcons.TopScreenMapFile), transparentZero: false);
+                if (bg != null && bg.Width == Data.DsBgScreen.Width && bg.Height >= TopBarHeight) _topBarBackground = bg.Rgba;
+            }
+            catch (Exception ex) { AppLogger.Error("Naming screen top bar: " + ex.Message); }
+        }
+
+        private const int TopBarHeight = 48;
+        private int _topBarFrame, _topBarHold;
+        private global::Avalonia.Threading.DispatcherTimer _topBarTimer;
+        private DSPRE.ROMFiles.FieldFont _topBarFont;
+
+        private void StartTopBar()
+        {
+            if (_topBarTimer != null) return;
+            _topBarTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.0 / 60) };
+            _topBarTimer.Tick += (_, _) => StepTopBar();
+            _topBarTimer.Start();
+        }
+
+        public void StopTopBar() { _topBarTimer?.Stop(); _topBarTimer = null; }
+
+        private void StepTopBar()
+        {
+            if (_namingAnimations == null || _trClassID >= _namingAnimations.Sequences.Count) return;
+            var frames = _namingAnimations.Sequences[_trClassID].Frames;
+            if (frames.Count < 2) return;
+            if (++_topBarHold < Math.Max(1, (int)frames[_topBarFrame].Delay)) return;
+            _topBarHold = 0;
+            _topBarFrame = (_topBarFrame + 1) % frames.Count;
+            RebuildTopBar();
+        }
+
+        // The top of the naming screen as the game draws it: its own background, the icon playing in place,
+        // an underline for each letter and the sample name in the ROM's font.
+        private void RebuildTopBar()
+        {
+            if (!_set.NamingScreen || _sprite == null) return;
+            int w = Data.DsBgScreen.Width, h = Data.DsBgScreen.Height;
+            var rgba = new byte[w * h * 4];
+            if (_topBarBackground != null) Array.Copy(_topBarBackground, rgba, rgba.Length);
+            else for (int i = 3; i < rgba.Length; i += 4) rgba[i] = 255;
+
+            var icons = DSPRE.ROMFiles.NamingScreenIcons.All;
+            int letters = icons.FirstOrDefault(i => i.Animation == _trClassID)?.Letters ?? 7;
+            int slotCell = _namingAnimations?.CellOf(DSPRE.ROMFiles.NamingScreenIcons.LetterSlotAnimation, 0) ?? -1;
+            for (int i = 0; i < letters && slotCell >= 0; i++)
+                BlitCell(rgba, slotCell, DSPRE.ROMFiles.NamingScreenIcons.NameX + i * DSPRE.ROMFiles.NamingScreenIcons.LetterStep, DSPRE.ROMFiles.NamingScreenIcons.NameY);
+
+            int iconCell = _namingAnimations?.CellOf(_trClassID, _topBarFrame) ?? -1;
+            bool gender = DSPRE.ROMFiles.NamingScreenIcons.IsGender(_trClassID);
+            if (iconCell >= 0)
+                BlitCell(rgba, iconCell,
+                    gender ? DSPRE.ROMFiles.NamingScreenIcons.GenderX : DSPRE.ROMFiles.NamingScreenIcons.IconX,
+                    gender ? DSPRE.ROMFiles.NamingScreenIcons.GenderY : DSPRE.ROMFiles.NamingScreenIcons.IconY);
+
+            try { _topBarFont ??= DSPRE.ROMFiles.FieldFont.LoadSystemFont(); } catch { }
+            for (int i = 0; i < _sampleName.Length && i < letters; i++)
+            {
+                string ch = _sampleName[i].ToString();
+                int x = DSPRE.ROMFiles.NamingScreenIcons.NameX + i * DSPRE.ROMFiles.NamingScreenIcons.LetterStep - Data.DsBgScreen.MeasureText(_topBarFont, ch) / 2;
+                Data.DsBgScreen.DrawText(rgba, _topBarFont, ch, x, DSPRE.ROMFiles.NamingScreenIcons.NameY - 15, 0x294A, 0x5EF7);
+            }
+
+            var bgra = new byte[w * TopBarHeight * 4];
+            for (int i = 0; i < bgra.Length; i += 4)
+            {
+                bgra[i] = rgba[i + 2]; bgra[i + 1] = rgba[i + 1]; bgra[i + 2] = rgba[i]; bgra[i + 3] = 255;
+            }
+            TopBarPreview = ImageConverter.ToAvaloniaBitmap(new DSPRE.RawImage(w, TopBarHeight, bgra));
+        }
+
+        // Draws a whole cell (any of the archive's, not just this icon's frames) with its origin at x, y.
+        private void BlitCell(byte[] rgba, int cell, int x, int y)
+        {
+            if (cell < 0 || cell >= _sprite.Banks.Length) return;
+            var raw = _sprite.Get_RawImage(_tile, _pal, cell, CanvasSize, CanvasSize, trans: true, currOAM: -1, draw_index: null);
+            int w = Data.DsBgScreen.Width, h = Data.DsBgScreen.Height;
+            for (int py = 0; py < CanvasSize; py++)
+                for (int px = 0; px < CanvasSize; px++)
+                {
+                    int s = (py * CanvasSize + px) * 4;
+                    if (raw.Bgra[s + 3] == 0) continue;
+                    int X = x - CanvasSize / 2 + px, Y = y - CanvasSize / 2 + py;
+                    if (X < 0 || Y < 0 || X >= w || Y >= h) continue;
+                    int d = (Y * w + X) * 4;
+                    rgba[d] = raw.Bgra[s + 2]; rgba[d + 1] = raw.Bgra[s + 1]; rgba[d + 2] = raw.Bgra[s]; rgba[d + 3] = 255;
+                }
+        }
+
         // The scan copy (file 4) is what the HGSS slide-in, the Hall of Fame and the friend roster draw:
         // frames 0 and 1, the middle 80x80 of each, side by side, scrambled like a Pokemon sprite.
         private const int ScanFrame = 80;
@@ -1546,7 +1769,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         if (_parts.Count > 0) Activate(p);
                         // The built archive is kept in step too, so other previews show the edit before a compile.
                         _tile.Write(_tilesPath, _pal);
-                        if (BankCount > 0 && _sourcePngPath == null)
+                        if (_packedTilesPath != null)
+                            File.WriteAllBytes(_packedTilesPath, Data.GraphicAssets.Squeeze(File.ReadAllBytes(_tilesPath), _packedTilesMarker));
+                        if (BankCount > 0 && _sourcePngPath == null && !_set.NamingScreen)
                         {
                             string scanError = WriteScan(_parts.Count > 0 ? _parts[p].Entry : _trClassID);
                             if (scanError != null) { StatusText = "Save failed: " + scanError; return scanError; }

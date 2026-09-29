@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             InitializeComponent();
             Loaded += (_, _) => SetupAnimEditor();
             DataContextChanged += (_, _) => HookVm();
-            Closing += (_, _) => VM?.StopAnimPreview();
+            Closing += (_, _) => { VM?.StopAnimPreview(); VM?.StopTopBar(); };
         }
 
         public TrainerSpriteEditorView(TrainerSpriteEditorViewModel vm) : this()

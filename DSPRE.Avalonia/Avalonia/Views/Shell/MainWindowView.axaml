@@ -185,6 +185,8 @@
         <MenuItem Header="Title Screen Editor…" Click="TitleScreenEditor_Click" IsVisible="{Binding Shown[TitleScreenEditorView]}" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding TitleScreenEditorNote}"/>
         <MenuItem Header="Dungeon Cutin Editor…" Click="DungeonCutinEditor_Click" IsVisible="{Binding Shown[DungeonCutinEditorView]}" IsEnabled="{Binding CanUseDungeonCutinEditor}" ToolTip.Tip="{Binding DungeonCutinEditorNote}"/>
         <MenuItem Header="Trainer Card Editor…" Click="TrainerCardEditor_Click" IsVisible="{Binding Shown[TrainerCardEditorView]}" IsEnabled="{Binding CanUseTrainerCardEditor}" ToolTip.Tip="{Binding TrainerCardEditorNote}"/>
+        <MenuItem Header="Naming Screen…" Click="NamingScreenEditor_Click" IsVisible="{Binding Shown[NamingScreenEditor]}" IsEnabled="{Binding CanUseNamingScreenEditor}"
+                  ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='The icons beside a name being typed: the player, rival, box and more'}"/>
         <MenuItem Header="Game Icon &amp; Banner…" Click="BannerEditor_Click" IsVisible="{Binding Shown[BannerEditorView]}" IsEnabled="{Binding CanUseBannerEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Edit the 32×32 icon and menu titles shown in the DS system menu (ds-rom projects)'}"/>
         <Separator/>

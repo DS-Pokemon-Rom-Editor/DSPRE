@@ -777,6 +777,9 @@ namespace DSPRE.Avalonia.Views.Shell
         private void TrainerCardEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenTrainerCardEditor();
 
+        private void NamingScreenEditor_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenNamingScreenEditor();
+
         private void OverlayEditor_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenOverlayEditor();
 
