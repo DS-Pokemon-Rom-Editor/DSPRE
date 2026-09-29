@@ -359,9 +359,9 @@ namespace DSPRE {
             superRodOneMaxLevelUpDown.Value = currentFile.superRodMaxLevels[4];
 
             /* Form data controls setup */
-            shellosComboBox.SelectedIndex = (currentFile.regionalForms[0] == 0) ? (int)ShellosForm.WestSea : (int)ShellosForm.EastSea;
-            gastrodonComboBox.SelectedIndex = (currentFile.regionalForms[1] == 0) ? (int)ShellosForm.WestSea : (int)ShellosForm.EastSea;
-            unownComboBox.SelectedIndex = (int)currentFile.unknownTable;
+            shellosComboBox.SelectedIndex = (currentFile.formRates[0] == 0) ? (int)ShellosForm.WestSea : (int)ShellosForm.EastSea;
+            gastrodonComboBox.SelectedIndex = (currentFile.formRates[1] == 0) ? (int)ShellosForm.WestSea : (int)ShellosForm.EastSea;
+            unownComboBox.SelectedIndex = (int)currentFile.unownTable;
 
             SetDirtyWalking(false);
             SetDirtyWater(false);
@@ -580,9 +580,9 @@ namespace DSPRE {
             /* Form Data */
             // The file holds a chance out of a hundred but the games only ask whether it is zero, so a
             // number already there is kept rather than flattened to one.
-            currentFile.regionalForms[0] = EastWestValue(shellosComboBox.SelectedIndex, currentFile.regionalForms[0]);
-            currentFile.regionalForms[1] = EastWestValue(gastrodonComboBox.SelectedIndex, currentFile.regionalForms[1]);
-            currentFile.unknownTable = (uint)unownComboBox.SelectedIndex;
+            currentFile.formRates[0] = EastWestValue(shellosComboBox.SelectedIndex, currentFile.formRates[0]);
+            currentFile.formRates[1] = EastWestValue(gastrodonComboBox.SelectedIndex, currentFile.formRates[1]);
+            currentFile.unownTable = (uint)unownComboBox.SelectedIndex;
 
             /* Levels */
             currentFile.walkingLevels[0] = (byte)walkingTwentyFirstUpDown.Value;

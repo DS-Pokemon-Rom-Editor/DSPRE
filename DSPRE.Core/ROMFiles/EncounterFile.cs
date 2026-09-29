@@ -73,8 +73,8 @@ namespace DSPRE.ROMFiles {
     /// The wild Pokemon a map holds, across all four Gen IV games.
     ///
     /// The block above documents the map header, which is a different file; it is kept because the header
-    /// is what points at the wild file. The wild file itself is GS_ENCOUNT_DATA in HeartGold
-    /// (encount_dat.h, 196 bytes) and ENCOUNT_DATA in Diamond, Pearl and Platinum (424 bytes), and the
+    /// is what points at the wild file. The wild file itself is 196 bytes in HeartGold and 424 bytes in
+    /// Diamond, Pearl and Platinum, and the
     /// two are laid out quite differently: HeartGold writes each fishing entry as min level, max level,
     /// species, while Platinum writes max level, min level, species.
     /// </summary>
@@ -155,8 +155,8 @@ namespace DSPRE.ROMFiles {
         public uint[] leafGreenPokemon = new uint[2];
 
         /* Form Data */
-        public uint[] regionalForms = new uint[5];
-        public uint unknownTable = 0;
+        public uint[] formRates = new uint[5];
+        public uint unownTable = 0;
 
         #endregion
 
@@ -193,7 +193,7 @@ namespace DSPRE.ROMFiles {
                         dayPokemon[i] = reader.ReadUInt32();
                     } catch {
                         dayPokemon[i] = 0x00;
-                        fieldsWithErrors.Add("Morning encounters" + ' ' + '[' + i + ']' + msgFixed);
+                        fieldsWithErrors.Add("Day encounters" + ' ' + '[' + i + ']' + msgFixed);
                     }
                 }
 
@@ -219,20 +219,20 @@ namespace DSPRE.ROMFiles {
                 /* Form data */
                 for (int i = 0; i < 5; i++) {
                     try {
-                        regionalForms[i] = reader.ReadUInt32();
+                        formRates[i] = reader.ReadUInt32();
                     } catch {
-                        regionalForms[i] = 0x00;
+                        formRates[i] = 0x00;
                         fieldsWithErrors.Add("Form data" + ' ' + '[' + i + ']' + msgFixed);
                     }
                 }
 
                 try
                 {
-                    unknownTable = reader.ReadUInt32();
+                    unownTable = reader.ReadUInt32();
                 }
                 catch
                 {
-                    unknownTable = 0x00;
+                    unownTable = 0x00;
                     fieldsWithErrors.Add("Unknown table" + msgFixed);
                 }
 
@@ -384,11 +384,11 @@ namespace DSPRE.ROMFiles {
 
                 /* Form data */
                 for (int i = 0; i < 5; i++) {
-                    writer.Write(regionalForms[i]);
+                    writer.Write(formRates[i]);
                 }
 
                 /* Unknown table */
-                writer.Write(unknownTable);
+                writer.Write(unownTable);
 
                 /* Dual-slot encounters */
                 for (int i = 0; i < 2; i++) {
@@ -601,7 +601,7 @@ namespace DSPRE.ROMFiles {
                     try {
                         surfPokemon[i] = reader.ReadUInt16();
                     } catch {
-                        surfMinLevels[i] = 0x00;
+                        surfPokemon[i] = 0x00;
                         fieldsWithErrors.Add("Surf Encounters" + ' ' + '[' + i + ']' + " Pokémon" + msgFixed);
                     }
                 }

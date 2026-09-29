@@ -186,7 +186,7 @@ namespace DSPRE
                     leafGreen = ExportU32SpeciesNamed(enc.leafGreenPokemon, pokeNames)
                 },
 
-                // (keep regionalForms/unknownTable as-is; those are not species ids in DSPRE’s UI)
+                // (keep formRates/unownTable as-is; those are not species ids in DSPRE’s UI)
 
                 swarms = ExportU16Named(enc.swarmPokemon, pokeNames),
 
@@ -194,8 +194,8 @@ namespace DSPRE
 
                 forms = new
                 {
-                    regionalForms = ExportU32(enc.regionalForms), // 5
-                    unknownTable = enc.unknownTable
+                    formRates = ExportU32(enc.formRates), // 5
+                    unownTable = enc.unownTable
                 },
 
                 surf = ExportMinMaxU16Named(enc.surfPokemon, enc.surfMinLevels, enc.surfMaxLevels, pokeNames),

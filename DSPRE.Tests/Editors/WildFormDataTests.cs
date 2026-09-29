@@ -20,9 +20,9 @@ namespace DSPRE.Tests
         public void AFileWithNoUnownStaysThatWayThroughASave()
         {
             var f = Blank();
-            f.unknownTable = 0;
+            f.unownTable = 0;
             var again = new EncounterFileDPPt(new System.IO.MemoryStream(f.ToByteArray()));
-            Assert.Equal(0u, again.unknownTable);
+            Assert.Equal(0u, again.unownTable);
         }
 
         [Theory]
@@ -32,9 +32,9 @@ namespace DSPRE.Tests
         public void EveryUnownTableValueSurvivesARoundTrip(uint table)
         {
             var f = Blank();
-            f.unknownTable = table;
+            f.unownTable = table;
             var again = new EncounterFileDPPt(new System.IO.MemoryStream(f.ToByteArray()));
-            Assert.Equal(table, again.unknownTable);
+            Assert.Equal(table, again.unownTable);
         }
 
         [Theory]
@@ -44,29 +44,29 @@ namespace DSPRE.Tests
         public void ShellosReadsEastWhenTheChanceIsAnythingButZero(uint stored, bool east)
         {
             var f = Blank();
-            f.regionalForms[0] = stored;
+            f.formRates[0] = stored;
             var again = new EncounterFileDPPt(new System.IO.MemoryStream(f.ToByteArray()));
-            Assert.Equal(stored, again.regionalForms[0]);
-            Assert.Equal(east, again.regionalForms[0] != 0);
+            Assert.Equal(stored, again.formRates[0]);
+            Assert.Equal(east, again.formRates[0] != 0);
         }
 
         [Fact]
         public void GastrodonHasItsOwnSlotSoTheTwoDoNotShare()
         {
             var f = Blank();
-            f.regionalForms[0] = 0;     // Shellos west
-            f.regionalForms[1] = 100;   // Gastrodon east
+            f.formRates[0] = 0;     // Shellos west
+            f.formRates[1] = 100;   // Gastrodon east
             var again = new EncounterFileDPPt(new System.IO.MemoryStream(f.ToByteArray()));
-            Assert.Equal(0u, again.regionalForms[0]);
-            Assert.Equal(100u, again.regionalForms[1]);
+            Assert.Equal(0u, again.formRates[0]);
+            Assert.Equal(100u, again.formRates[1]);
         }
 
         [Fact]
         public void TheLastThreeFormSlotsAreNotUsedByTheGames()
         {
-            // encount_dat.h marks FormProb[2..4] unused, and every Platinum file holds zero there.
+            // Form slots 2 to 4 are unused, and every Platinum file holds zero there.
             var f = Blank();
-            for (int i = 2; i < 5; i++) Assert.Equal(0u, f.regionalForms[i]);
+            for (int i = 2; i < 5; i++) Assert.Equal(0u, f.formRates[i]);
         }
 
 

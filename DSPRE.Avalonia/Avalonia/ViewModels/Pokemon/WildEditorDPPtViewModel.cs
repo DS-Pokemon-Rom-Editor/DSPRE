@@ -204,14 +204,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int ShellosFormIndex
         {
             get => _shellosFormIndex;
-            set { if (Set(ref _shellosFormIndex, value) && !_loading) { _current.regionalForms[0] = EastWest(value, _shellosRaw); SetDirty(); } }
+            set { if (Set(ref _shellosFormIndex, value) && !_loading) { _current.formRates[0] = EastWest(value, _shellosRaw); SetDirty(); } }
         }
 
         private int _gastrodonFormIndex;
         public int GastrodonFormIndex
         {
             get => _gastrodonFormIndex;
-            set { if (Set(ref _gastrodonFormIndex, value) && !_loading) { _current.regionalForms[1] = EastWest(value, _gastrodonRaw); SetDirty(); } }
+            set { if (Set(ref _gastrodonFormIndex, value) && !_loading) { _current.formRates[1] = EastWest(value, _gastrodonRaw); SetDirty(); } }
         }
 
         /// <summary>West sea is zero; east sea is anything else, so a number already there is kept.</summary>
@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int UnownTableIndex
         {
             get => _unownTableIndex;
-            set { if (Set(ref _unownTableIndex, value) && !_loading) { _current.unknownTable = (uint)value; SetDirty(); } }
+            set { if (Set(ref _unownTableIndex, value) && !_loading) { _current.unownTable = (uint)value; SetDirty(); } }
         }
 
         // ── Title ────────────────────────────────────────────────────────
@@ -446,15 +446,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             GoodRodRate  = _current.goodRodRate;
             SuperRodRate = _current.superRodRate;
 
-            // Form data: regionalForms[0]=Shellos, [1]=Gastrodon (0=West, anything else=East)
-            // unknownTable: 0 is no Unown, 1..8 are the letter tables, so the list index is the value.
-            _shellosRaw = _current.regionalForms[0];
-            _gastrodonRaw = _current.regionalForms[1];
-            _shellosFormIndex  = (int)(_current.regionalForms[0] == 0 ? 0 : 1);
+            // Form data: formRates[0]=Shellos, [1]=Gastrodon (0=West, anything else=East)
+            // unownTable: 0 is no Unown, 1..8 are the letter tables, so the list index is the value.
+            _shellosRaw = _current.formRates[0];
+            _gastrodonRaw = _current.formRates[1];
+            _shellosFormIndex  = (int)(_current.formRates[0] == 0 ? 0 : 1);
             OnPropertyChanged(nameof(ShellosFormIndex));
-            _gastrodonFormIndex = (int)(_current.regionalForms[1] == 0 ? 0 : 1);
+            _gastrodonFormIndex = (int)(_current.formRates[1] == 0 ? 0 : 1);
             OnPropertyChanged(nameof(GastrodonFormIndex));
-            _unownTableIndex = (int)_current.unknownTable;
+            _unownTableIndex = (int)_current.unownTable;
             if (_unownTableIndex < 0) _unownTableIndex = 0;
             if (_unownTableIndex >= UnownTableNames.Count) _unownTableIndex = 0;
             OnPropertyChanged(nameof(UnownTableIndex));
@@ -556,9 +556,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int i = 0; i < LeafGreenRows.Count && i < 2; i++) _current.leafGreenPokemon[i] = (uint)LeafGreenRows[i].PokemonIndex;
 
             // Form data
-            _current.regionalForms[0] = EastWest(_shellosFormIndex, _shellosRaw);
-            _current.regionalForms[1] = EastWest(_gastrodonFormIndex, _gastrodonRaw);
-            _current.unknownTable     = (uint)_unownTableIndex;
+            _current.formRates[0] = EastWest(_shellosFormIndex, _shellosRaw);
+            _current.formRates[1] = EastWest(_gastrodonFormIndex, _gastrodonRaw);
+            _current.unownTable     = (uint)_unownTableIndex;
         }
 
         private void WriteWaterRowsToFile()
