@@ -34,7 +34,8 @@ namespace DSPRE.Tests
 
             // Diamond has 422 animation files; three are the shared party icon animations.
             Assert.InRange(files, 400, 419);
-            Assert.True(loose > 250, $"only {loose} rows came from archives DSPRE does not map");
+            // 193 since the naming screen's archive, 64 animations, became a mapped one.
+            Assert.True(loose > 180, $"only {loose} rows came from archives DSPRE does not map");
             Assert.DoesNotContain(found, f => f.Source.Dir == DirNames.dynamicHeaders);
 
             Assert.Equal(540 - (PokemonIconFiles.SharedFiles + 1), icons.Count);

@@ -894,9 +894,10 @@ namespace DSPRE.Avalonia
         public static async System.Threading.Tasks.Task OpenNamingScreenEditorAsync()
         {
             if (!IsRomLoaded || BlockedForUnlinkedHge("The Naming Screen Editor")) return;
-            if (!BetaEditors.Allows("NamingScreenEditor"))
+            // It opens in the Trainer Sprite editor's window, so it is gated with it.
+            if (!BetaEditors.Allows("TrainerSpriteEditorView"))
             {
-                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("NamingScreenEditor")!, "Naming Screen Editor");
+                _ = DialogHelper.ShowInfo(BetaEditors.WhyNot("TrainerSpriteEditorView")!, "Naming Screen Editor");
                 return;
             }
             try
@@ -1252,7 +1253,7 @@ namespace DSPRE.Avalonia
         /// <summary>Opens the Ctrl+P quick-open palette over the given window.</summary>
         public static void OpenCommandPalette(global::Avalonia.Controls.Window owner)
         {
-            var vm = new CommandPaletteViewModel(BuildCommands(), DynamicCommands);
+            var vm = new CommandPaletteViewModel(PaletteCommands(), DynamicCommands);
             var view = new CommandPaletteView(vm);
             if (owner != null) view.ShowDialog(owner); else view.ShowManaged();
         }
@@ -1541,50 +1542,54 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>The editor list shown in the command palette (mirrors the main menu).</summary>
+        // Beta editors are left out, as in the menus.
+        public static IEnumerable<CommandItem> PaletteCommands() => BuildCommands().Where(c => c.Beta == null || BetaEditors.Allows(c.Beta));
+
         public static List<CommandItem> BuildCommands() => new()
         {
             new() { Name = "All graphics",          Keywords = "sprite picture image texture palette colour color icon font paint draw", Run = OpenGraphicsBrowser },
             new() { Name = "All models and textures", Keywords = "3d model nsbmd nsbtx building overworld map mesh", Run = OpenModelBrowser },
-            new() { Name = "Battle Screen",         Keywords = "battle screen gauge hp bar backdrop platform message box touch command", Run = OpenBattleScreenEditor },
-            new() { Name = "Battle Scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
-            new() { Name = "Picture to Background", Keywords = "png tiles tilemap palette background", Run = OpenTilesetBuilder },
-            new() { Name = "Title Screen Editor",   Keywords = "logo copyright intro hgss", Run = OpenTitleScreenEditor },
-            new() { Name = "Bottom Screen",         Keywords = "touch menu poketch pokétch bottom screen field panel icons poke ball", Run = () => OpenBottomScreenEditor() },
-            new() { Name = "Cell Animations",       Keywords = "nanr animation frames cell sprite sequence playback timing", Run = OpenCellAnimationPicker },
-            new() { Name = "Dungeon Cutin Editor",  Keywords = "dungeon location splash hgss", Run = OpenDungeonCutinEditor },
-            new() { Name = "Trainer Card Editor",   Keywords = "rank front back graphics", Run = OpenTrainerCardEditor },
-            new() { Name = "Particles",             Keywords = "spa particle emitter effect move animation seal burst sparkle", Run = OpenParticleLibrary },
-            new() { Name = "Ball Capsules",         Keywords = "seal sticker capsule poke ball send out particles effect", Run = OpenBallCapsuleEditor },
-            new() { Name = "Audio Editor",          Keywords = "sound cry cries music bgm fanfare sfx song", Run = () => { _ = OpenAudioEditorAsync(); } },
+            new() { Beta = "BattleScreenEditorView", Name = "Battle Screen",         Keywords = "battle screen gauge hp bar backdrop platform message box touch command", Run = OpenBattleScreenEditor },
+            new() { Beta = "BattleSceneBrowserView", Name = "Battle Scenes",         Keywords = "battle scene backdrop terrain platform ground", Run = OpenBattleSceneBrowser },
+            new() { Beta = "TilesetBuilderView", Name = "Picture to Background", Keywords = "png tiles tilemap palette background", Run = OpenTilesetBuilder },
+            new() { Beta = "TitleScreenEditorView", Name = "Title Screen Editor",   Keywords = "logo copyright intro hgss", Run = OpenTitleScreenEditor },
+            new() { Beta = "BottomScreenEditorView", Name = "Bottom Screen",         Keywords = "touch menu poketch pokétch bottom screen field panel icons poke ball", Run = () => OpenBottomScreenEditor() },
+            new() { Beta = "CellAnimationEditorView", Name = "Cell Animations",       Keywords = "nanr animation frames cell sprite sequence playback timing", Run = OpenCellAnimationPicker },
+            new() { Beta = "DungeonCutinEditorView", Name = "Dungeon Cutin Editor",  Keywords = "dungeon location splash hgss", Run = OpenDungeonCutinEditor },
+            new() { Beta = "TrainerSpriteEditorView", Name = "Naming Screen", Keywords = "name entry player rival box icon keyboard", Run = OpenNamingScreenEditor },
+            new() { Beta = "TrainerCardEditorView", Name = "Trainer Card Editor",   Keywords = "rank front back graphics", Run = OpenTrainerCardEditor },
+            new() { Beta = "ParticleLibraryView", Name = "Particles",             Keywords = "spa particle emitter effect move animation seal burst sparkle", Run = OpenParticleLibrary },
+            new() { Beta = "BallCapsuleEditorView", Name = "Ball Capsules",         Keywords = "seal sticker capsule poke ball send out particles effect", Run = OpenBallCapsuleEditor },
+            new() { Beta = "AudioEditorView", Name = "Audio Editor",          Keywords = "sound cry cries music bgm fanfare sfx song", Run = () => { _ = OpenAudioEditorAsync(); } },
             new() { Name = "Pokémon Editor",        Keywords = "species personal learnset evolution sprite", Run = () => { _ = OpenPokemonEditorAsync(); } },
-            new() { Name = "Wild Pokémon Intro Editor", Keywords = "legendary wild battle intro music transition", Run = OpenWildIntroEditor },
-            new() { Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
+            new() { Beta = "WildIntroEditorView", Name = "Wild Pokémon Intro Editor", Keywords = "legendary wild battle intro music transition", Run = OpenWildIntroEditor },
+            new() { Beta = "HgEngineFormEditorView", Name = "Form Editor (hg-engine)", Keywords = "mega regional alolan galarian gmax gigantamax primal reversion form", Run = OpenHgEngineFormEditor },
             new() { Name = "Move Data Editor",      Keywords = "attack",   Run = () => OpenMoveDataEditor() },
             new() { Name = "TM / HM Editor",        Keywords = "machine",  Run = () => OpenTMEditor() },
             new() { Name = "TM/HM Bulk Editor",     Keywords = "machine compatibility bulk family sync copy", Run = OpenTmHmBulkEditor },
-            new() { Name = "Growth Curves",         Keywords = "exp experience level growth rate curve", Run = OpenGrowthCurves },
-            new() { Name = "Friendship Changes",    Keywords = "friendship happiness walking level up faint soothe bell luxury", Run = OpenFriendshipChanges },
-            new() { Name = "Encounter Slot Odds",   Keywords = "encounter slot odds chance percent wild rate fishing surf headbutt rock smash", Run = OpenEncounterSlotOdds },
-            new() { Name = "Breeding Items",        Keywords = "incense baby egg hatch breeding wynaut azurill munchlax", Run = OpenBreedingItems },
-            new() { Name = "Type Chart",            Keywords = "type effectiveness matchup super effective resist immune weakness", Run = OpenTypeChart },
-            new() { Name = "Move Tutors",           Keywords = "tutor tutors shards bp teach move compatibility", Run = OpenMoveTutors },
+            new() { Beta = "GrowthCurveEditorView", Name = "Growth Curves",         Keywords = "exp experience level growth rate curve", Run = OpenGrowthCurves },
+            new() { Beta = "FriendshipChangesView", Name = "Friendship Changes",    Keywords = "friendship happiness walking level up faint soothe bell luxury", Run = OpenFriendshipChanges },
+            new() { Beta = "EncounterSlotOddsView", Name = "Encounter Slot Odds",   Keywords = "encounter slot odds chance percent wild rate fishing surf headbutt rock smash", Run = OpenEncounterSlotOdds },
+            new() { Beta = "BreedingItemsView", Name = "Breeding Items",        Keywords = "incense baby egg hatch breeding wynaut azurill munchlax", Run = OpenBreedingItems },
+            new() { Beta = "TypeChartEditorView", Name = "Type Chart",            Keywords = "type effectiveness matchup super effective resist immune weakness", Run = OpenTypeChart },
+            new() { Beta = "MoveTutorEditorView", Name = "Move Tutors",           Keywords = "tutor tutors shards bp teach move compatibility", Run = OpenMoveTutors },
             new() { Name = "Egg Move Editor",       Keywords = "breeding", Run = OpenEggMoveEditor },
-            new() { Name = "Move Animations & Battle Scripts", Keywords = "battle script editor move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
+            new() { Beta = "BattleScriptEditorView", Name = "Move Animations & Battle Scripts", Keywords = "battle script editor move sequence waza be_seq sub_seq effect animation west", Run = () => OpenBattleScriptEditor() },
             new() { Name = "Item Editor",           Run = () => OpenItemEditor() },
-            new() { Name = "Berry Data",            Keywords = "berry berries firmness flavour flavor growth yield poffin", Run = OpenBerryData },
-            new() { Name = "Battle Point Shop",     Keywords = "battle point bp shop exchange frontier tower tm prize", Run = OpenBpShop },
-            new() { Name = "Underground Mining",    Keywords = "underground mining dig treasure sphere fossil plate wall", Run = OpenUndergroundMining },
-            new() { Name = "Mart Editor",           Keywords = "shop store inventory stock poke mart", Run = OpenMartEditor },
+            new() { Beta = "BerryDataEditorView", Name = "Berry Data",            Keywords = "berry berries firmness flavour flavor growth yield poffin", Run = OpenBerryData },
+            new() { Beta = "BpShopEditorView", Name = "Battle Point Shop",     Keywords = "battle point bp shop exchange frontier tower tm prize", Run = OpenBpShop },
+            new() { Beta = "UndergroundMiningView", Name = "Underground Mining",    Keywords = "underground mining dig treasure sphere fossil plate wall", Run = OpenUndergroundMining },
+            new() { Beta = "MartEditorView", Name = "Mart Editor",           Keywords = "shop store inventory stock poke mart", Run = OpenMartEditor },
             new() { Name = "Item Tables (Pickup, Hidden, Rock Smash)", Keywords = "pickup hidden ground rock smash item table hgss", Run = OpenItemTableEditor },
             new() { Name = "Trade Editor",          Keywords = "in-game",  Run = () => OpenTradeEditor() },
             new() { Name = "Starter Pokémon Editor", Keywords = "turtwig chimchar piplup chikorita cyndaquil totodile rival professor", Run = OpenStarterEditor },
             new() { Name = "Trainer Editor",        Keywords = "battle party", Run = () => OpenTrainerEditor() },
-            new() { Name = "VS Intro Editor",       Keywords = "vs mugshot cut-in gym leader elite four battle intro music transition class", Run = OpenVsIntroEditor },
-            new() { Name = "Trainer Sprite Editor", Keywords = "class pixel paint", Run = () => OpenTrainerSpriteEditor() },
-            new() { Name = "Trainer Back Sprite Editor", Keywords = "player back sprite throw palette animation", Run = () => OpenTrainerBackSpriteEditor() },
+            new() { Beta = "VsIntroEditorView", Name = "VS Intro Editor",       Keywords = "vs mugshot cut-in gym leader elite four battle intro music transition class", Run = OpenVsIntroEditor },
+            new() { Beta = "TrainerSpriteEditorView", Name = "Trainer Sprite Editor", Keywords = "class pixel paint", Run = () => OpenTrainerSpriteEditor() },
+            new() { Beta = "TrainerSpriteEditorView", Name = "Trainer Back Sprite Editor", Keywords = "player back sprite throw palette animation", Run = () => OpenTrainerBackSpriteEditor() },
             new() { Name = "Vs. Seeker Rematch Editor", Keywords = "rematch trainer encounter chain", Run = () => OpenVsSeekerRematchEditor() },
             new() { Name = "Pokégear Rematch Editor", Keywords = "rematch trainer phone pokegear call hgss", Run = () => OpenPokegearRematchEditor() },
-            new() { Name = "Pokégear Phone Book", Keywords = "phone contact number call gift greeting pokegear hgss", Run = () => OpenPokegearPhoneBook() },
+            new() { Beta = "PokegearPhoneBookView", Name = "Pokégear Phone Book", Keywords = "phone contact number call gift greeting pokegear hgss", Run = () => OpenPokegearPhoneBook() },
             new() { Name = "hg-engine Patches", Keywords = "hook bytereplacement repoint arm9 overlay patch asm", Run = OpenHgEnginePatches },
             new() { Name = "Trainer Flag Bulk Editor", Keywords = "ai double battle bulk", Run = OpenTrainerFlagBulkEditor },
             new() { Name = "Text Editor",           Keywords = "string archive message", Run = () => OpenTextEditor() },
@@ -1605,19 +1610,19 @@ namespace DSPRE.Avalonia
             new() { Name = "Area Data Editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
             new() { Name = "Map & Building Textures", Keywords = "texture nsbtx tileset", Run = OpenNsbtxEditor },
             new() { Name = "Wild Pokémon Editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
-            new() { Name = "Wild Held Items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },
+            new() { Beta = "WildHeldItemOddsView", Name = "Wild Held Items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },
             new() { Name = "Special Encounters Editor", Keywords = "headbutt tree bug contest opponents great marsh honey safari trophy garden daily swarm", Run = () => OpenSpecialEncountersEditor() },
             new() { Name = "Battle Tower Editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },
             new() { Name = "Address Helper",        Run = OpenAddressHelper },
             new() { Name = "Research Helper",       Run = OpenResearchHelper },
-            new() { Name = "hg-engine ROM Review",  Keywords = "hge binary icons sprites palettes archive", Run = OpenHgeRomReview },
-            new() { Name = "Distortion World",      Keywords = "giratina platinum gravity platforms torn world", Run = OpenDistortionWorldEditor },
+            new() { Beta = "HgeRomReviewView", Name = "hg-engine ROM Review",  Keywords = "hge binary icons sprites palettes archive", Run = OpenHgeRomReview },
+            new() { Beta = "DistortionWorldView", Name = "Distortion World",      Keywords = "giratina platinum gravity platforms torn world", Run = OpenDistortionWorldEditor },
             new() { Name = "Char Map Manager",      Keywords = "text encoding", Run = OpenCharMapManager },
             new() { Name = "Custom Script Command Manager", Keywords = "scrcmd script commands database", Run = OpenCustomCommandManager },
-            new() { Name = "Font Editor",           Keywords = "font letter glyph character typeface text", Run = OpenFontEditor },
-            new() { Name = "Game Icon & Banner",    Keywords = "rom icon ds menu title", Run = () => { _ = OpenBannerEditorAsync(); } },
+            new() { Beta = "FontEditorView", Name = "Font Editor",           Keywords = "font letter glyph character typeface text", Run = OpenFontEditor },
+            new() { Beta = "BannerEditorView", Name = "Game Icon & Banner",    Keywords = "rom icon ds menu title", Run = () => { _ = OpenBannerEditorAsync(); } },
             new() { Name = "Edit Dropdown Labels",  Keywords = "enum custom", Run = OpenLabelEditor },
-            new() { Name = "Validation & Where-Used", Keywords = "check broken references project health", Run = OpenProjectChecks },
+            new() { Beta = "ProjectChecksView", Name = "Validation & Where-Used", Keywords = "check broken references project health", Run = OpenProjectChecks },
             new() { Name = "Settings",              Run = OpenSettings },
             // ── Actions (not editors) ──
             new() { Name = "Toggle theme (Dark / Light)", Keywords = "dark light appearance", Run = ThemeManager.Toggle },

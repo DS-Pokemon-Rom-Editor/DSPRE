@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public bool CanUseAudioEditor        => HgAllows && Beta["AudioEditorView"];
         public bool CanUseProjectChecks      => HgAllows && Beta["ProjectChecksView"];
         public bool CanUseBannerEditor       => HgAllows && Beta["BannerEditorView"];
-        public bool CanUseNamingScreenEditor => IsRomLoaded && HgAllows && Beta["NamingScreenEditor"];
+        public bool CanUseNamingScreenEditor => IsRomLoaded && HgAllows && Beta["TrainerSpriteEditorView"];
         public bool CanUseDataExports        => IsRomLoaded && HgAllows;
         // The one editor that stays open on an hg-engine ROM with no checkout linked: it only reads,
         // and reading the ROM is the point of it.

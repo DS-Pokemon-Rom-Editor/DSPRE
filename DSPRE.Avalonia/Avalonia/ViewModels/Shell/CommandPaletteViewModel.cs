@@ -12,6 +12,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
     {
         public string Name { get; init; }
         public string Keywords { get; init; } = "";   // extra search terms
+
+        // The BetaEditors key, or null.
+        public string Beta { get; init; }
         public Action Run { get; init; }
         public override string ToString() => Name;
     }

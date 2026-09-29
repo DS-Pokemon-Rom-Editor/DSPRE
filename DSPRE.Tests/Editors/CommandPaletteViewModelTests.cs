@@ -104,7 +104,7 @@ namespace DSPRE.Tests
             {
                 "Battle Screen", "Battle Scenes", "Picture to Background", "Title Screen Editor",
                 "Dungeon Cutin Editor", "Trainer Card Editor", "Overworld Editor",
-                "NSBTX Texture Editor", "Font Editor", "Audio Editor", "Trainer Sprite Editor",
+                "Map & Building Textures", "Font Editor", "Audio Editor", "Trainer Sprite Editor",
                 "Game Icon & Banner",
             };
 

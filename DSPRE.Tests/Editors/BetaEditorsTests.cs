@@ -112,6 +112,25 @@ namespace DSPRE.Tests
             Assert.Null(BetaEditors.WhyNot("TilesetBuilderView"));
         }
 
+        /// <summary>The Ctrl+P palette hides the same editors the menus hide, and every tag it uses is a real gate.</summary>
+        [Fact]
+        public void ThePaletteLeavesOutBetaEditorsWithoutTheSwitch()
+        {
+            var all = DSPRE.Avalonia.AvaloniaEditorLauncher.BuildCommands();
+            var tagged = all.Where(c => c.Beta != null).ToList();
+            Assert.True(tagged.Count > 0, "no palette command is tagged as beta");
+            Assert.All(tagged, c => Assert.True(BetaEditors.IsBeta(c.Beta), $"{c.Name} is tagged {c.Beta}, which is not in the beta list"));
+
+            BetaEditors.Set(false);
+            var shown = DSPRE.Avalonia.AvaloniaEditorLauncher.PaletteCommands().ToList();
+            Assert.DoesNotContain(shown, c => c.Beta != null);
+            Assert.Equal(all.Count - tagged.Count, shown.Count);
+
+            BetaEditors.Set(true);
+            Assert.Equal(all.Count, DSPRE.Avalonia.AvaloniaEditorLauncher.PaletteCommands().Count());
+            _out.WriteLine($"{tagged.Count} of {all.Count} palette commands are beta");
+        }
+
         // ── what the welcome guide and the tour say about it ──────────────────────────
 
         /// <summary>
