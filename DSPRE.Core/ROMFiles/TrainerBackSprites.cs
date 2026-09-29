@@ -26,8 +26,17 @@ namespace DSPRE.ROMFiles
             "Ethan", "Lyra", "Silver", "Lance", "Cheryl", "Riley", "Marley", "Buck", "Mira",
             "Lucas (Diamond and Pearl)", "Dawn (Diamond and Pearl)", "Barry (Diamond and Pearl)",
             "Lucas (Platinum)", "Dawn (Platinum)", "Barry (Platinum)",
-            "Ethan, open-hand throw", "Lyra, open-hand throw",
+            "Ethan, single battles", "Lyra, single battles",
         };
+
+        /// <summary>
+        /// HGSS draws the player from 15/16 in single battles and from 0/1 in double battles and the
+        /// slide-in. The two drawings share a palette, so the editor shows them as one sprite.
+        /// </summary>
+        public static int LinkedSet(int id) =>
+            gameFamily == GameFamilies.HGSS ? id switch { 0 => 15, 1 => 16, _ => -1 } : -1;
+
+        public static bool IsLinkedSet(int id) => gameFamily == GameFamilies.HGSS && (id == 15 || id == 16);
 
         /// <summary>A name for each back sprite; entries past the retail list are numbered.</summary>
         public static List<string> Names(int count)

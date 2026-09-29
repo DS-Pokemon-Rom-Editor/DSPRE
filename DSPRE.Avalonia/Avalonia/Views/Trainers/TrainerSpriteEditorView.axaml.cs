@@ -125,6 +125,12 @@ namespace DSPRE.Avalonia.Views.Trainers
                 await DialogHelper.ShowError($"Import failed: {error}", owner: this);
         }
 
+        private async void CopyFrameToOtherSet_Click(object sender, RoutedEventArgs e)
+        {
+            string error = VM?.CopyFrameToOtherSet();
+            if (error != null) await DialogHelper.ShowError(error, owner: this);
+        }
+
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions

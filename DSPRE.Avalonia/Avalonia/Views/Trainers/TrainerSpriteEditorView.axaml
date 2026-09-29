@@ -56,7 +56,12 @@
         <DockPanel Margin="0,8,0,0">
           <StackPanel x:Name="FrameStrip" DockPanel.Dock="Bottom" Spacing="4" Margin="0,8,0,0" IsVisible="{Binding HasFrames}"
                       ToolTip.Tip="Frames that share tiles change together.">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" Height="84">
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasLinkedSets}">
+              <TextBlock Text="{Binding SelectedSetLabel, StringFormat='Painting: {0}'}" VerticalAlignment="Center"/>
+              <Button Content="Copy frame to other set" Click="CopyFrameToOtherSet_Click"
+                      ToolTip.Tip="Paints this frame over the same frame of the other set"/>
+            </StackPanel>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MinHeight="84">
               <ItemsControl ItemsSource="{Binding FrameThumbnails}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
@@ -68,7 +73,11 @@
                     <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}"
                             PointerPressed="Frame_PointerPressed" Tag="{Binding Index}" Cursor="Hand"
                             ToolTip.Tip="{Binding Index, StringFormat='Frame {0}'}">
-                      <Image Source="{Binding Image}" Width="80" Height="80" Stretch="Uniform"/>
+                      <StackPanel>
+                        <Image Source="{Binding Image}" Width="80" Height="80" Stretch="Uniform"/>
+                        <TextBlock Text="{Binding Caption}" IsVisible="{Binding HasCaption}" FontSize="10"
+                                   HorizontalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                      </StackPanel>
                     </Border>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

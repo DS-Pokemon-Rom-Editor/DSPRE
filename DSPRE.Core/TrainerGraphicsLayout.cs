@@ -21,6 +21,12 @@ namespace DSPRE
         /// <summary>-1 where the class has no animation.</summary>
         public static int AnimationEntry(int trClassID) => HasCells ? trClassID * Stride + 3 : -1;
 
+        /// <summary>The plain two-frame copy some screens draw instead of the cells; -1 where there is none.</summary>
+        public static int ScanEntry(int trClassID) => HasCells ? trClassID * Stride + 4 : -1;
+
+        /// <summary>HGSS keys its trainer scans from the last word like DP; Platinum from the first.</summary>
+        public static bool ScanScrambledFromEnd => gameFamily != GameFamilies.Plat;
+
         public static int ClassOf(int fileIndex) => fileIndex / Stride;
     }
 }
