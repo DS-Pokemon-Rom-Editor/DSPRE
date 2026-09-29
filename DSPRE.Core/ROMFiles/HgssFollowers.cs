@@ -10,7 +10,7 @@ namespace DSPRE.ROMFiles
     /// <summary>
     /// HGSS walking Pokémon. Each follower model has a row in the overlay 1 object graphics table, whose third
     /// u16 picks the sprite size and shadow, and a 4-byte entry in a/1/4/1: byte 1 keeps it out of maps that
-    /// restrict tall followers, byte 2 sets how it moves (high nibble stops the walking hop).
+    /// restrict tall followers, byte 2 is its motion (0, 0x10, 0x11 or 0x01 in retail).
     /// </summary>
     public static class HgssFollowers
     {
@@ -21,7 +21,8 @@ namespace DSPRE.ROMFiles
         public const ushort SmallBits = 0x4E27, SmallNoShadowBits = 0x4E26, LargeBits = 0x5208;
         public enum Size { Small, SmallNoShadow, Large, Other }
 
-        public const byte Walks = 0x00, Hovers = 0x10, Flies = 0x11;
+        public const byte Walks = 0x00, Hovers = 0x10, Flies = 0x11, Unknown01 = 0x01;
+        public const string FemaleLabel = "Female";
 
         public static Size SizeOf(ushort bits) => bits switch
         {
@@ -83,7 +84,7 @@ namespace DSPRE.ROMFiles
             if (species < 1 || species > SpeciesCount) return list;
             int first = Lut(FollowerModelTableOffset + species * 2, 1)[0];
             list.Add((first, "Normal"));
-            if (Lut(FollowerFemaleTableOffset + (species - 1) * 2, 1)[0] != 0) list.Add((first + 1, "Female"));
+            if (Lut(FollowerFemaleTableOffset + (species - 1) * 2, 1)[0] != 0) list.Add((first + 1, FemaleLabel));
             else
                 for (int f = 1, forms = Lut(FollowerFormCountTableOffset + (species - 1) * 2, 1)[0]; f <= forms; f++)
                     list.Add((first + f, $"Form {f}"));
@@ -105,6 +106,21 @@ namespace DSPRE.ROMFiles
                 reader.BaseStream.Position += 4;
             }
             return -1;
+        }
+
+        private static List<long> RowsUsingModelFile(ushort modelFile)
+        {
+            var rows = new List<long>();
+            using var reader = new BinaryReader(File.OpenRead(OWtablePath));
+            reader.BaseStream.Position = OWTableOffset;
+            while (reader.BaseStream.Position + 6 <= reader.BaseStream.Length)
+            {
+                long at = reader.BaseStream.Position;
+                if (reader.ReadUInt16() == 0xFFFF) break;
+                if (reader.ReadUInt16() == modelFile) rows.Add(at);
+                reader.BaseStream.Position += 2;
+            }
+            return rows;
         }
 
         private static string ParamPath(int model)
@@ -145,6 +161,10 @@ namespace DSPRE.ROMFiles
             long row = RowOffset(FirstSprite + m.Index);
             if (row < 0) throw new InvalidOperationException($"No overworld row for follower model {m.Index}.");
             DSUtils.WriteToFile(OWtablePath, BitConverter.GetBytes(m.Bits), (uint)(row + 4));
+            // The standing-still sprites used in scenes have rows of their own on the same model file.
+            ushort modelFile = BitConverter.ToUInt16(DSUtils.ReadFromFile(OWtablePath, row + 2, 2), 0);
+            foreach (long other in RowsUsingModelFile(modelFile))
+                if (other != row) DSUtils.WriteToFile(OWtablePath, BitConverter.GetBytes(m.Bits), (uint)(other + 4));
 
             var param = (byte[])m.Param.Clone();
             param[1] = (byte)(m.TooTall ? 1 : 0);

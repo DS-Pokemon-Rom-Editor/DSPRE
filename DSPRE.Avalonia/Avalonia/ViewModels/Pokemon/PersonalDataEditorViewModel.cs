@@ -1010,7 +1010,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<string> FollowerModelNames { get; } = new();
         public bool HasFollowerModelChoice => FollowerModelNames.Count > 1;
         public string[] FollowerSizeOptions { get; } = { "Small", "Small, no shadow", "Large" };
-        public string[] FollowerMotionOptions { get; } = { "No", "Hovers", "Flies" };
+        public string[] FollowerMotionOptions { get; } = { "No", "Hovers", "Flies", "Unknown (01)" };
+
+        // The game reads motion from the base or form model, never a female one, and too tall from the base model only.
+        private bool OnBaseModel => _followerModelIndex == 0;
+        private bool OnFemaleModel => _followerModelIndex < _followerModels.Length && _followerModels[_followerModelIndex].Label == HgssFollowers.FemaleLabel;
+        public bool FollowerTooTallEditable => OnBaseModel;
+        public bool FollowerMotionEditable => !OnFemaleModel;
+        public string FollowerTooTallTip => OnBaseModel ? "Stays in its ball on maps that keep tall followers out" : BaseModelUsed;
+        public string FollowerMotionTip => OnFemaleModel ? BaseModelUsed : null;
+        private const string BaseModelUsed = "The game uses the base model's value";
 
         private int _followerModelIndex;
         public int FollowerModelIndex
@@ -1039,7 +1048,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (Staged == null || value < 0 || value > 2) return;
                 var size = value == 0 ? HgssFollowers.Size.Small : value == 1 ? HgssFollowers.Size.SmallNoShadow : HgssFollowers.Size.Large;
-                Stage(Staged with { Bits = HgssFollowers.BitsOf(size, Staged.Bits) });
+                // Too tall also picks the large art in the Hall of Fame, so it follows the size on the model the game reads it from.
+                bool tooTall = OnBaseModel ? size == HgssFollowers.Size.Large : Staged.TooTall;
+                Stage(Staged with { Bits = HgssFollowers.BitsOf(size, Staged.Bits), TooTall = tooTall });
             }
         }
 
@@ -1056,16 +1067,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool FollowerTooTall
         {
             get => Staged?.TooTall ?? false;
-            set { if (Staged != null) Stage(Staged with { TooTall = value }); }
+            set { if (Staged != null && FollowerTooTallEditable) Stage(Staged with { TooTall = value }); }
         }
 
         public int FollowerMotionIndex
         {
-            get => Staged?.Motion switch { HgssFollowers.Walks => 0, HgssFollowers.Hovers => 1, HgssFollowers.Flies => 2, _ => -1 };
+            get => Staged?.Motion switch { HgssFollowers.Walks => 0, HgssFollowers.Hovers => 1, HgssFollowers.Flies => 2, HgssFollowers.Unknown01 => 3, _ => -1 };
             set
             {
-                if (Staged == null || value < 0 || value > 2) return;
-                Stage(Staged with { Motion = value == 0 ? HgssFollowers.Walks : value == 1 ? HgssFollowers.Hovers : HgssFollowers.Flies });
+                if (Staged == null || !FollowerMotionEditable || value < 0 || value > 3) return;
+                Stage(Staged with { Motion = value switch { 0 => HgssFollowers.Walks, 1 => HgssFollowers.Hovers, 2 => HgssFollowers.Flies, _ => HgssFollowers.Unknown01 } });
             }
         }
 
@@ -1086,7 +1097,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (var name in new[] { nameof(FollowerModelIndex), nameof(FollowerSizeIndex), nameof(FollowerRawBits), nameof(FollowerTooTall),
                                          nameof(FollowerMotionIndex), nameof(FollowerArtWarning), nameof(HasFollowerArtWarning),
                                          nameof(RetailFollowerEditable), nameof(RetailFollowerNote), nameof(HasRetailFollowerNote),
-                                         nameof(HasFollowerModelChoice) })
+                                         nameof(HasFollowerModelChoice), nameof(FollowerTooTallEditable), nameof(FollowerMotionEditable),
+                                         nameof(FollowerTooTallTip), nameof(FollowerMotionTip) })
                 OnPropertyChanged(name);
         }
 
