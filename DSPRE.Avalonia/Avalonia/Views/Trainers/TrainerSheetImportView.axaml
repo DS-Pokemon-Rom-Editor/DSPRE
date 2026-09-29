@@ -1,0 +1,100 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
+        x:Class="DSPRE.Avalonia.Views.Trainers.TrainerSheetImportView"
+        x:DataType="vm:TrainerSheetImportViewModel"
+        Title="{Binding Title}"
+        Width="640" Height="620" MinWidth="480" MinHeight="360"
+        WindowStartupLocation="CenterOwner">
+  <DockPanel Margin="16">
+
+    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,12,0,0">
+      <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Warning}"/>
+      <TextBlock Text="{Binding Outcome}" IsVisible="{Binding !HasProblem}" TextWrapping="Wrap"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Content="Cancel" Click="Cancel_Click"/>
+        <Button Content="Apply" Click="Apply_Click" IsDefault="True" IsEnabled="{Binding CanApply}" FontWeight="SemiBold"/>
+      </StackPanel>
+    </StackPanel>
+
+    <StackPanel DockPanel.Dock="Top" Spacing="12">
+      <TextBlock Text="{Binding SheetName}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+
+      <StackPanel Spacing="6">
+        <TextBlock Text="Colours" FontWeight="SemiBold"/>
+        <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding CanUseSheetColours}">
+          <RadioButton GroupName="colours" Content="The sheet's colours" IsChecked="{Binding UseSheetColours}" Width="170"/>
+          <ItemsControl ItemsSource="{Binding SheetSwatches}" VerticalAlignment="Center">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate><DataTemplate x:DataType="IBrush"><Border Width="14" Height="14" Background="{Binding}" Margin="0,0,2,2"/></DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <RadioButton GroupName="colours" Content="The sprite's colours" IsChecked="{Binding UseSpriteColours}" Width="170"/>
+          <ItemsControl ItemsSource="{Binding SpriteSwatches}" VerticalAlignment="Center">
+            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate><DataTemplate x:DataType="IBrush"><Border Width="14" Height="14" Background="{Binding}" Margin="0,0,2,2"/></DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+
+      <StackPanel Spacing="6" IsVisible="{Binding IsAnimation}">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="Animation" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <ComboBox ItemsSource="{Binding Animations}" SelectedItem="{Binding Animation}" MinWidth="220"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasSetChoice}">
+          <TextBlock Text="Set" FontWeight="SemiBold" VerticalAlignment="Center"/>
+          <ComboBox ItemsSource="{Binding Sets}" SelectedIndex="{Binding SelectedSet}" MinWidth="220"/>
+        </StackPanel>
+      </StackPanel>
+
+      <TextBlock Text="Not in the sheet" FontWeight="SemiBold" IsVisible="{Binding HasLeftovers}"/>
+    </StackPanel>
+
+    <ScrollViewer>
+      <StackPanel>
+        <ItemsControl ItemsSource="{Binding Leftovers}" IsVisible="{Binding IsDrawings}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TrainerSheetImportViewModel+Leftover">
+              <Grid ColumnDefinitions="72,*,Auto" Margin="0,0,0,6">
+                <Border Width="64" Height="64" Background="{DynamicResource Editor.Border}">
+                  <Image Source="{Binding Thumbnail}" Width="64" Height="64" RenderOptions.BitmapInterpolationMode="None"/>
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                  <TextBlock Text="{Binding Label}"/>
+                  <TextBlock Text="{Binding Uses}" IsVisible="{Binding HasUses}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Warning}"/>
+                </StackPanel>
+                <CheckBox Grid.Column="2" Content="Keep" IsChecked="{Binding Keep}" VerticalAlignment="Center"/>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ItemsControl ItemsSource="{Binding Steps}" IsVisible="{Binding IsAnimation}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TrainerSheetImportViewModel+StepRow">
+              <Grid ColumnDefinitions="56,90,*,Auto" Margin="0,0,0,4">
+                <Border Width="48" Height="48" Background="{DynamicResource Editor.Border}">
+                  <Image Source="{Binding Thumbnail}" Width="48" Height="48"/>
+                </Border>
+                <TextBlock Grid.Column="1" Text="{Binding Number, StringFormat='Step {0}'}" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" Text="{Binding Shows}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <TextBlock Text="Hold" VerticalAlignment="Center" ToolTip.Tip="In sixtieths of a second"/>
+                  <NumericUpDown Value="{Binding Hold}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" Width="110"/>
+                  <TextBlock Text="X" VerticalAlignment="Center" IsVisible="{Binding $parent[ItemsControl].((vm:TrainerSheetImportViewModel)DataContext).ShowsPosition}"/>
+                  <NumericUpDown Value="{Binding X}" Minimum="-128" Maximum="127" Increment="1" FormatString="0" Width="100"
+                                 IsVisible="{Binding $parent[ItemsControl].((vm:TrainerSheetImportViewModel)DataContext).ShowsPosition}"/>
+                  <TextBlock Text="Y" VerticalAlignment="Center" IsVisible="{Binding $parent[ItemsControl].((vm:TrainerSheetImportViewModel)DataContext).ShowsPosition}"/>
+                  <NumericUpDown Value="{Binding Y}" Minimum="-128" Maximum="127" Increment="1" FormatString="0" Width="100"
+                                 IsVisible="{Binding $parent[ItemsControl].((vm:TrainerSheetImportViewModel)DataContext).ShowsPosition}"/>
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</Window>

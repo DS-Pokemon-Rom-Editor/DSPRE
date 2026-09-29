@@ -35,6 +35,8 @@
           <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="Import PNG…" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
           <Button Content="Export PNG…" Click="Export_Click"/>
+          <Button Content="Export sheet…" Click="ExportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
+          <Button Content="Import sheet…" Click="ImportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
           <Button Content="Open in Graphics…" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
         </StackPanel>
         <StackPanel x:Name="SpritePicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">

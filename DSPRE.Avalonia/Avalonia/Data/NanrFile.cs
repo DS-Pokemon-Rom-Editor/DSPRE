@@ -317,8 +317,14 @@ namespace DSPRE.Avalonia.Data
                 if (_uaat != null) _uaat = BuildExtended();
             }
 
+            // The extended block has to stay four-byte aligned.
+            int resultsEnd = bank + (int)animContents + _results.Length;
+            byte[] padding = (resultsEnd + _padding.Length) % 4 == 0
+                ? _padding
+                : Enumerable.Repeat(PadByte, (4 - resultsEnd % 4) % 4).ToArray();
+
             int blockSize = 8 + 24 + sequences * 0x10 + totalFrames * 8
-                          + _results.Length + _padding.Length + (_uaat?.Length ?? 0);
+                          + _results.Length + padding.Length + (_uaat?.Length ?? 0);
 
             int lablSize = _labl == null ? 0 : 8 + _labl.Length;
             int txeuSize = _txeu == null ? 0 : 8 + _txeu.Length;
@@ -365,8 +371,8 @@ namespace DSPRE.Avalonia.Data
             int resultsAt = bank + (int)animContents;
             _results.CopyTo(d, resultsAt);
             int after = resultsAt + _results.Length;
-            _padding.CopyTo(d, after);
-            after += _padding.Length;
+            padding.CopyTo(d, after);
+            after += padding.Length;
             if (_uaat != null)
             {
                 PutU32(d, bank + 0x14, (uint)(after - bank));

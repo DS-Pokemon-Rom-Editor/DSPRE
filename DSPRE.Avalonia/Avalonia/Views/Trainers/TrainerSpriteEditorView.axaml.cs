@@ -150,6 +150,74 @@ namespace DSPRE.Avalonia.Views.Trainers
                 await DialogHelper.ShowError("Export failed.", owner: this);
         }
 
+        private void ExportSheet_Click(object sender, RoutedEventArgs e) => ShowSheetMenu((Control)sender, export: true);
+        private void ImportSheet_Click(object sender, RoutedEventArgs e) => ShowSheetMenu((Control)sender, export: false);
+
+        private void ShowSheetMenu(Control anchor, bool export)
+        {
+            if (VM == null) return;
+            var flyout = new MenuFlyout();
+            var frames = new MenuItem { Header = "Frames…" };
+            frames.Click += async (_, _) => { if (export) await ExportSheetAsync(null); else await ImportSheetAsync(false); };
+            flyout.Items.Add(frames);
+            if (VM.CanUseAnimationSheets)
+            {
+                if (export)
+                {
+                    var animations = new MenuItem { Header = "Animation" };
+                    foreach (var choice in VM.AnimationSheetChoices(false))
+                    {
+                        var item = new MenuItem { Header = choice.Label + "…" };
+                        item.Click += async (_, _) => await ExportSheetAsync(choice.Index);
+                        animations.Items.Add(item);
+                    }
+                    flyout.Items.Add(animations);
+                }
+                else
+                {
+                    var animation = new MenuItem { Header = "Animation…" };
+                    animation.Click += async (_, _) => await ImportSheetAsync(true);
+                    flyout.Items.Add(animation);
+                }
+            }
+            flyout.ShowAt(anchor);
+        }
+
+        private async System.Threading.Tasks.Task ExportSheetAsync(int? animation)
+        {
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = animation == null ? "Export frames sheet" : "Export animation sheet",
+                DefaultExtension = "png",
+                SuggestedFileName = VM.SheetFileName(animation),
+                FileTypeChoices = new List<FilePickerFileType> { new FilePickerFileType("PNG Image") { Patterns = new[] { "*.png" } } }
+            });
+            string path = file?.TryGetLocalPath();
+            if (path == null) return;
+            string error = animation == null ? VM.ExportFramesSheet(path) : VM.ExportAnimationSheet(animation.Value, path);
+            if (error != null) await DialogHelper.ShowError($"Export failed: {error}", owner: this);
+        }
+
+        private async System.Threading.Tasks.Task ImportSheetAsync(bool animation)
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = animation ? "Open animation sheet" : "Open frames sheet",
+                AllowMultiple = false,
+                FileTypeFilter = new List<FilePickerFileType> { new FilePickerFileType("PNG Image") { Patterns = new[] { "*.png" } } }
+            });
+            string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
+            if (path == null) return;
+
+            var wizard = VM.OpenSheetImport(animation, path, out string why);
+            if (wizard == null)
+            {
+                await DialogHelper.ShowError($"Import failed: {why}", owner: this);
+                return;
+            }
+            if (await new TrainerSheetImportView(wizard).ShowDialog<bool>(this)) VM.ApplySheetImport(wizard);
+        }
+
         // The outer "Animations" tab and its inner "JSON" sub-tab lazily realize content only once
         // selected, so AnimJsonEditor can still be null at window load. Retry on either tab strip's
         // selection change; SetupAnimEditor is a no-op once already wired.

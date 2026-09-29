@@ -242,6 +242,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             public PaletteBase Pal;
             public SpriteBase Sprite;
             public string TilesPath, PalPath;
+
+            // A sheet import can change the cells and animations too; they wait here until saved.
+            public byte[] Ncgr, Ncer, Nanr;
         }
         private readonly List<SpritePart> _parts = new();
         private int _activePart;
@@ -944,6 +947,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 OnPropertyChanged(nameof(IsFlatSheetMode));
                 OnPropertyChanged(nameof(FrameCount));
+                OnPropertyChanged(nameof(CanUseSheets));
+                OnPropertyChanged(nameof(CanUseAnimationSheets));
                 HasUnsavedChanges = false;
                 _paletteDirty = false;
                 _palPath = Path.Combine(dir, paletteFilename);
@@ -1541,6 +1546,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SelectedFrameIndex = 0;
                 OnPropertyChanged(nameof(IsFlatSheetMode));
                 OnPropertyChanged(nameof(FrameCount));
+                OnPropertyChanged(nameof(CanUseSheets));
+                OnPropertyChanged(nameof(CanUseAnimationSheets));
                 HasUnsavedChanges = false;
                 _paletteDirty = false;
                 StatusText = $"{ClassNames[Math.Max(0, _entryIds.IndexOf(animation))]}: {FrameCount} frame(s)";
@@ -1734,6 +1741,293 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             return -1;
         }
 
+        // ── Sprite sheets ─────────────────────────────────────────────────────
+        public bool CanUseSheets => _tile != null && !_set.NamingScreen && !HgEngineProject.IsActive && _jsonBanks == null;
+        public bool CanUseAnimationSheets => CanUseSheets && !IsFlatSheetMode;
+
+        private string EntryPath(int entry) => Path.Combine(RomInfo.gameDirs[_set.Archive].unpackedDir, entry.ToString("D4"));
+
+        private Data.TrainerSpriteFrames OpenFrames(int part)
+        {
+            var p = _parts[part];
+            var frames = Data.TrainerSpriteFrames.Read(
+                p.Ncgr ?? File.ReadAllBytes(p.TilesPath),
+                p.Ncer ?? File.ReadAllBytes(EntryPath(TrainerGraphicsLayout.CellsEntry(p.Entry))),
+                p.Nanr ?? File.ReadAllBytes(EntryPath(TrainerGraphicsLayout.AnimationEntry(p.Entry))), out string why);
+            if (frames == null) throw new InvalidOperationException(why);
+            frames.ReplaceTiles(p.Tile.Tiles);
+            return frames;
+        }
+
+        private Data.ISheetFrames OpenSheetFrames(int part) =>
+            IsFlatSheetMode ? new FlatFrames((int[])_flatIndices.Clone(), _flatWidth, _flatHeight) : OpenFrames(part);
+
+        private int SheetPartCount => IsFlatSheetMode ? 1 : Math.Max(1, _parts.Count);
+
+        // Only the palettes the pieces use.
+        private uint[][] SheetPalettes(IEnumerable<Data.ISheetFrames> frames)
+        {
+            int used = 1;
+            foreach (var f in frames)
+                for (int i = 0; i < f.FrameCount; i++)
+                    foreach (int mask in f.PalettesOf(i))
+                        for (int b = 0; b < 16; b++) if ((mask & (1 << b)) != 0) used = Math.Max(used, b + 1);
+            used = Math.Min(used, _pal.Palette.Length);
+            var result = new uint[used][];
+            for (int b = 0; b < used; b++)
+                result[b] = Enumerable.Range(0, 16).Select(i => SwatchColor(b, i)).ToArray();
+            return result;
+        }
+
+        public string SheetFileName(int? animation) =>
+            $"{_set.Noun} {_set.FileStem(_trClassID)} {(animation == null ? "frames" : (SheetLabel(_activePart) is string set ? set.ToLowerInvariant() + " " : "") + "animation " + animation)}.png";
+
+        private string SheetLabel(int part) => SheetPartCount > 1 ? _parts[part].Label : null;
+
+        /// <summary>One row per set. Returns why not, or null.</summary>
+        public string ExportFramesSheet(string path)
+        {
+            try
+            {
+                var sets = Enumerable.Range(0, SheetPartCount).Select(OpenSheetFrames).ToList();
+                var rows = sets.Select(f => (IReadOnlyList<Data.TrainerSpriteSheet.Cell>)Enumerable.Range(0, f.FrameCount)
+                    .Select(i => new Data.TrainerSpriteSheet.Cell(f.Draw(i))).ToList()).ToList();
+                var (px, colours, w, h) = Data.TrainerSpriteSheet.Compose(rows, SheetPalettes(sets));
+                File.WriteAllBytes(path, IndexedPng.Write(px, colours, w, h));
+
+                var file = new Data.TrainerSpriteSheet.FramesFile();
+                for (int p = 0; p < sets.Count; p++)
+                    file.Rows.Add(new Data.TrainerSpriteSheet.FramesRow
+                    {
+                        Set = SheetLabel(p),
+                        Frames = Enumerable.Range(0, sets[p].FrameCount).Select(i => new Data.TrainerSpriteSheet.FrameJson { Frame = i, Blank = sets[p].IsBlank(i) }).ToList(),
+                    });
+                File.WriteAllText(Path.ChangeExtension(path, ".json"), Data.TrainerSpriteSheet.WriteFrames(file));
+                StatusText = $"Exported {rows.Sum(r => r.Count)} frames.";
+                return null;
+            }
+            catch (Exception ex) { return ex.Message; }
+        }
+
+        private const int AnimationSheetColumns = 8;
+
+        public string ExportAnimationSheet(int animation, string path)
+        {
+            try
+            {
+                var frames = OpenFrames(_activePart);
+                var steps = frames.StepsOf(animation);
+                if (steps.Count == 0) return $"This sprite has no animation {animation}.";
+                var cells = steps.Select(st => new Data.TrainerSpriteSheet.Cell(frames.Draw(st.Frame))).ToList();
+                var rows = cells.Chunk(AnimationSheetColumns).Select(r => (IReadOnlyList<Data.TrainerSpriteSheet.Cell>)r).ToList();
+                var (px, colours, w, h) = Data.TrainerSpriteSheet.Compose(rows, SheetPalettes(new[] { frames }));
+                File.WriteAllBytes(path, IndexedPng.Write(px, colours, w, h));
+
+                bool shifts = frames.SequenceShifts(animation);
+                var file = new Data.TrainerSpriteSheet.StepsFile
+                {
+                    Set = SheetLabel(_activePart),
+                    Animation = animation,
+                    Steps = steps.Select(st => new Data.TrainerSpriteSheet.StepJson { Frame = st.Frame, Hold = st.Hold, X = shifts ? st.X : null, Y = shifts ? st.Y : null }).ToList(),
+                };
+                File.WriteAllText(Path.ChangeExtension(path, ".json"), Data.TrainerSpriteSheet.WriteSteps(file));
+                StatusText = $"Exported {steps.Count} steps of animation {animation}.";
+                return null;
+            }
+            catch (Exception ex) { return ex.Message; }
+        }
+
+        public List<TrainerSheetImportViewModel.AnimationChoice> AnimationSheetChoices(bool includeNew)
+        {
+            int count;
+            try { count = OpenFrames(_activePart).Animations.Sequences.Count; }
+            catch { return new(); }
+            string Name(int i) => i switch
+            {
+                0 => "Standing",
+                1 => _set.IsBack ? "Throwing the ball" : "Intro, after sliding in",
+                2 when !_set.IsBack => "While sliding in",
+                _ => $"Animation {i}",
+            };
+            var list = Enumerable.Range(0, count).Select(i => new TrainerSheetImportViewModel.AnimationChoice(i, $"{i}: {Name(i)}")).ToList();
+            // A front plays 2 while sliding in and 1 on arrival; a back throws with 1.
+            int most = _set.IsBack ? 2 : 3;
+            if (includeNew && count < most) list.Add(new TrainerSheetImportViewModel.AnimationChoice(count, $"{count}: {Name(count)} (new)"));
+            return list;
+        }
+
+        public TrainerSheetImportViewModel OpenSheetImport(bool animation, string pngPath, out string why)
+        {
+            why = null;
+            try
+            {
+                var sheet = Data.TrainerSpriteSheet.Open(File.ReadAllBytes(pngPath), out why);
+                if (sheet == null) return null;
+                Data.TrainerSpriteSheet.StepsFile steps = null;
+                string json = Path.ChangeExtension(pngPath, ".json");
+                if (animation && File.Exists(json))
+                {
+                    steps = Data.TrainerSpriteSheet.ReadSteps(File.ReadAllText(json), out string jsonWhy);
+                    if (steps == null) { why = $"{Path.GetFileName(json)} could not be read: {jsonWhy}"; return null; }
+                }
+
+                var targets = new List<TrainerSheetImportViewModel.Target>();
+                for (int p = 0; p < SheetPartCount; p++)
+                {
+                    int part = p;
+                    targets.Add(new TrainerSheetImportViewModel.Target { Label = SheetLabel(p) ?? "", Open = () => OpenSheetFrames(part) });
+                }
+                var palettes = SheetPalettes(targets.Select(t => t.Open()));
+                return new TrainerSheetImportViewModel(
+                    animation ? TrainerSheetImportViewModel.Jobs.Animation : TrainerSheetImportViewModel.Jobs.Drawings,
+                    targets, palettes, sheet, Path.GetFileName(pngPath), steps, animation ? AnimationSheetChoices(true) : new(), _activePart);
+            }
+            catch (Exception ex) { why = ex.Message; return null; }
+        }
+
+        // Nothing is written until Save.
+        public void ApplySheetImport(TrainerSheetImportViewModel wizard)
+        {
+            var result = wizard.Outcomes;
+            if (result == null) return;
+            int keep = _activePart;
+            for (int p = 0; p < result.Frames.Count; p++)
+            {
+                switch (result.Frames[p])
+                {
+                    case FlatFrames flat:
+                        _flatIndices = flat.Indices;
+                        break;
+                    case Data.TrainerSpriteFrames frames:
+                        var part = _parts[p];
+                        (part.Ncgr, part.Ncer, part.Nanr) = frames.Write();
+                        // The readers close their files, so one folder per set is reused.
+                        string dir = Path.Combine(Path.GetTempPath(), "DSPRE", "TrainerSheets", $"{_set.Archive}-{part.Entry}");
+                        Directory.CreateDirectory(dir);
+                        string tiles = Path.Combine(dir, "tiles"), cells = Path.Combine(dir, "cells");
+                        File.WriteAllBytes(tiles, part.Ncgr);
+                        File.WriteAllBytes(cells, part.Ncer);
+                        int t = TrainerGraphicsLayout.DrawingEntry(part.Entry), c = TrainerGraphicsLayout.CellsEntry(part.Entry);
+                        part.Tile = new NCGR(tiles, t, t.ToString("D4"));
+                        part.Sprite = new NCER(cells, c, c.ToString("D4"));
+                        break;
+                }
+            }
+
+            if (result.Palettes != null)
+            {
+                for (int b = 0; b < result.Palettes.Length; b++)
+                    for (int i = 0; i < 16; i++)
+                    {
+                        uint argb = result.Palettes[b][i];
+                        var color = System.Drawing.Color.FromArgb((int)((argb >> 16) & 0xF8), (int)((argb >> 8) & 0xF8), (int)(argb & 0xF8));
+                        if (b < _pal.Palette.Length && i < _pal.Palette[b].Length) _pal.Palette[b][i] = color;
+                        foreach (var part in _parts)
+                            if (b < part.Pal.Palette.Length && i < part.Pal.Palette[b].Length) part.Pal.Palette[b][i] = color;
+                    }
+                _paletteDirty = true;
+            }
+
+            HasUnsavedChanges = true;
+            if (IsFlatSheetMode)
+            {
+                BuildPaletteSwatches(0);
+                RebuildFlatCanvas();
+                StatusText = wizard.Outcome;
+                return;
+            }
+
+            Activate(Math.Min(keep, _parts.Count - 1));
+            BuildFrameThumbnails();
+            _activePaletteBank = -1;
+            _selectedStripFrame = -1;
+            SelectedFrameIndex = 0;
+            OnPropertyChanged(nameof(FrameCount));
+            RebuildAnimCellChoices();
+            StopAnimPreview();
+            SetAnimJsonTextSilent(AnimationJsonOf(OpenFrames(0)) ?? "");
+            OnPropertyChanged(nameof(HasAnimation));
+            StatusText = wizard.Outcome;
+        }
+
+        // Mirrors RomAnimationJson for animations not yet saved.
+        private static string AnimationJsonOf(Data.TrainerSpriteFrames frames)
+        {
+            var root = new AnimJsonRoot();
+            for (int seq = 0; seq < frames.Animations.Sequences.Count; seq++)
+            {
+                var model = new AnimSequenceJson { AnimationType = 1, PlaybackMode = 2 };
+                foreach (var st in frames.StepsOf(seq))
+                    model.FrameData.Add(new AnimFrameDataJson { CellIndex = st.Frame, FrameDelay = Math.Max(1, st.Hold) });
+                root.Sequences.Add(model);
+            }
+            return root.Sequences.Count == 0 ? null : root.Serialize();
+        }
+
+        private void WriteStagedSheetFiles(SpritePart part)
+        {
+            if (part.Ncer != null) File.WriteAllBytes(EntryPath(TrainerGraphicsLayout.CellsEntry(part.Entry)), part.Ncer);
+            if (part.Nanr != null) File.WriteAllBytes(EntryPath(TrainerGraphicsLayout.AnimationEntry(part.Entry)), part.Nanr);
+            part.Ncgr = part.Ncer = part.Nanr = null;
+        }
+
+        /// <summary>Diamond and Pearl's two frames in one flat drawing, side by side or stacked.</summary>
+        private sealed class FlatFrames : Data.ISheetFrames
+        {
+            public int[] Indices { get; }
+            private readonly int _w, _fw, _fh, _count;
+            private readonly bool _across;
+            private const int N = Data.TrainerSpriteFrames.Canvas;
+
+            public FlatFrames(int[] indices, int w, int h)
+            {
+                Indices = indices; _w = w;
+                _across = w == 2 * h;
+                _count = _across || h == 2 * w ? 2 : 1;
+                _fw = _across ? w / 2 : w;
+                _fh = _count == 2 && !_across ? h / 2 : h;
+            }
+
+            public int FrameCount => _count;
+            public bool CanChangeFrameCount => false;
+            public bool IsBlank(int frame) => false;
+
+            private (int X, int Y) Corner(int frame) => _across ? (frame * _fw, 0) : (0, frame * _fh);
+            private int Left => (N - _fw) / 2;
+            private int Top => (N - _fh) / 2;
+
+            public int[] Draw(int frame)
+            {
+                var canvas = new int[N * N];
+                var (cx, cy) = Corner(frame);
+                for (int y = 0; y < _fh && y < N; y++)
+                    for (int x = 0; x < _fw && x < N; x++)
+                        canvas[(Top + y) * N + Left + x] = Indices[(cy + y) * _w + cx + x];
+                return canvas;
+            }
+
+            public int[] PalettesOf(int frame)
+            {
+                var canvas = new int[N * N];
+                for (int y = 0; y < _fh && y < N; y++)
+                    for (int x = 0; x < _fw && x < N; x++) canvas[(Top + y) * N + Left + x] = 1;
+                return canvas;
+            }
+
+            public string SetDrawing(int frame, int[] canvas)
+            {
+                for (int y = 0; y < N; y++)
+                    for (int x = 0; x < N; x++)
+                        if (canvas[y * N + x] != 0 && (x < Left || x >= Left + _fw || y < Top || y >= Top + _fh))
+                            return $"Frame {frame} draws outside the middle {_fw}x{_fh}, which is all a frame holds here.";
+                var (cx, cy) = Corner(frame);
+                for (int y = 0; y < _fh; y++)
+                    for (int x = 0; x < _fw; x++)
+                        Indices[(cy + y) * _w + cx + x] = canvas[(Top + y) * N + Left + x] & 0xF;
+                return null;
+            }
+        }
+
         // ── Save ──────────────────────────────────────────────────────────────
         // On a linked hg-engine project the drawing and colours come from, and go back to, the source PNG.
         private string _sourcePngPath;
@@ -1771,6 +2065,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         if (_parts.Count > 0) Activate(p);
                         // The built archive is kept in step too, so other previews show the edit before a compile.
                         _tile.Write(_tilesPath, _pal);
+                        if (_parts.Count > 0) WriteStagedSheetFiles(_parts[p]);
                         if (_packedTilesPath != null)
                             File.WriteAllBytes(_packedTilesPath, Data.GraphicAssets.Squeeze(File.ReadAllBytes(_tilesPath), _packedTilesMarker));
                         if (BankCount > 0 && _sourcePngPath == null && !_set.NamingScreen)

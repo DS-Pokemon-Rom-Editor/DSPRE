@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia
                 S("tab:Sprite>name:CanvasImage", "Paint", "Click or drag on the sprite to paint with the selected colour."),
                 S("tab:Sprite>name:PaletteColumn", "Tools and colours", "Switch between Pencil and Eyedropper and pick a colour. Double-click a colour, or press Edit colour, to change it."),
                 S("tab:Sprite>name:FrameStrip", "Frames", "Click a frame to paint on it. Frames that share parts change together."),
-                S("name:SpriteButtons", "Pictures in and out", "Export saves the sprite as a picture, and Import brings one back if its colours match. Open in Graphics shows it in the Graphics window."),
+                S("name:SpriteButtons", "Pictures in and out", "Export saves the sprite as a picture, and Import brings one back if its colours match. Export sheet and Import sheet do every frame, or one animation's steps, with a JSON file for their order and holds. Open in Graphics shows it in the Graphics window."),
                 S("tab:Animations", "Animations", "Pick a sequence to see each frame's pose and how long it shows. Play once previews it."),
                 S("tab:Editor", "Changing an animation", "Where editing is allowed, add or remove sequences and frames, change poses and delays, and move frames with the arrows."),
                 S("tab:JSON", "As text", "The same animation written out as text, for editing by hand. Save Animation JSON keeps it."),
