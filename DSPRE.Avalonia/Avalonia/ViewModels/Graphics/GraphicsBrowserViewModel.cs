@@ -62,7 +62,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 "Arrangement" => "Tile map",
                 "As it appears" => "Cell layout",
                 "Animation" => "Cell animation",
-                "Second picture" => "Second picture",
+                "Still picture" => "Still picture",
                 _ => Name,
             };
         }

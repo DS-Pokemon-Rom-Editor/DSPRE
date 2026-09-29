@@ -59,6 +59,12 @@ namespace DSPRE.Avalonia.Data
             /// <summary>Whether the pixels are scrambled, when that differs by game.</summary>
             public Func<bool> ScrambledNow;
 
+            /// <summary>Whether one file is scrambled, when only some files of an archive are.</summary>
+            public Func<int, bool> ScrambledEntry;
+
+            /// <summary>Whether the key walks back from the last word, when that is not the game's usual way.</summary>
+            public Func<bool> ScrambleFromEnd;
+
             // Several of these files hold more than one picture: a party icon is two frames of an animation
             // stacked up, a battle sprite is two side by side.
             public int FrameWidth, FrameHeight; // 0 for both when the file holds a single picture
@@ -380,11 +386,15 @@ namespace DSPRE.Avalonia.Data
                 What = "Every trainer class as it appears when a battle starts.",
                 DeepEditor = "Trainer Sprite Editor",
                 Stride = 5,
-                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" },
+                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Still picture" },
                 StrideNow = () => TrainerGraphicsLayout.Stride,
                 ScrambledNow = () => TrainerGraphicsLayout.PixelsAreScrambled,
+                // Platinum and HGSS scramble only the still picture, and HGSS keys it from the end like DP.
+                ScrambledEntry = i => TrainerGraphicsLayout.PixelsAreScrambled
+                    || (TrainerGraphicsLayout.HasCells && TrainerGraphicsLayout.ScanEntry(TrainerGraphicsLayout.ClassOf(i)) == i),
+                ScrambleFromEnd = () => TrainerGraphicsLayout.ScanScrambledFromEnd,
                 PartNamesNow = () => TrainerGraphicsLayout.HasCells
-                    ? new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" }
+                    ? new[] { "Drawing", "Colours", "As it appears", "Animation", "Still picture" }
                     : new[] { "Drawing", "Colours" },
                 ColourEntry = i => TrainerGraphicsLayout.ColoursEntry(TrainerGraphicsLayout.ClassOf(i)),
                 DrawingEntry = i => TrainerGraphicsLayout.DrawingEntry(TrainerGraphicsLayout.ClassOf(i)),
@@ -393,11 +403,15 @@ namespace DSPRE.Avalonia.Data
                 What = "The player and partners seen from behind, throwing a Poké Ball.",
                 DeepEditor = "Trainer Back Sprite Editor",
                 Stride = 5,
-                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" },
+                PartNames = new[] { "Drawing", "Colours", "As it appears", "Animation", "Still picture" },
                 StrideNow = () => TrainerGraphicsLayout.Stride,
                 ScrambledNow = () => TrainerGraphicsLayout.PixelsAreScrambled,
+                // Platinum and HGSS scramble only the still picture, and HGSS keys it from the end like DP.
+                ScrambledEntry = i => TrainerGraphicsLayout.PixelsAreScrambled
+                    || (TrainerGraphicsLayout.HasCells && TrainerGraphicsLayout.ScanEntry(TrainerGraphicsLayout.ClassOf(i)) == i),
+                ScrambleFromEnd = () => TrainerGraphicsLayout.ScanScrambledFromEnd,
                 PartNamesNow = () => TrainerGraphicsLayout.HasCells
-                    ? new[] { "Drawing", "Colours", "As it appears", "Animation", "Second picture" }
+                    ? new[] { "Drawing", "Colours", "As it appears", "Animation", "Still picture" }
                     : new[] { "Drawing", "Colours" },
                 ColourEntry = i => TrainerGraphicsLayout.ColoursEntry(TrainerGraphicsLayout.ClassOf(i)),
                 DrawingEntry = i => TrainerGraphicsLayout.DrawingEntry(TrainerGraphicsLayout.ClassOf(i)),

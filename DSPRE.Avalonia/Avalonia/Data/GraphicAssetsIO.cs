@@ -57,7 +57,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             var (dataOff, dataSize, bpp, width, height, tiled) = shape.Value;
-            if (Scrambled(a)) SpriteScrambling.Unscramble(raw, dataOff, dataSize);
+            if (Scrambled(a, index)) SpriteScrambling.Unscramble(raw, dataOff, dataSize, FromEnd(a));
 
             int pixels = width * height;
             var idx = new byte[pixels];
@@ -103,7 +103,11 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>Whether this archive's pixels are scrambled in the game being edited.</summary>
-        private static bool Scrambled(Archive a) => a.ScrambledNow?.Invoke() ?? a.ScrambledPixels;
+        private static bool Scrambled(Archive a, int index) =>
+            a.ScrambledEntry?.Invoke(index) ?? a.ScrambledNow?.Invoke() ?? a.ScrambledPixels;
+
+        private static bool FromEnd(Archive a) =>
+            a.ScrambleFromEnd?.Invoke() ?? RomInfo.gameFamily == RomInfo.GameFamilies.DP;
 
         /// <summary>
         /// Where the pixels are in a drawing, what shape they make, and whether they are stored in eight by
@@ -385,7 +389,7 @@ namespace DSPRE.Avalonia.Data
 
             var tiled = isTiled ? Retile(straightIndices, width, height) : straightIndices;
             var outp = (byte[])stored.Clone();
-            ushort seed = Scrambled(a) ? SpriteScrambling.Seed(stored, dataOff, dataSize) : (ushort)0;
+            ushort seed = Scrambled(a, index) ? SpriteScrambling.Seed(stored, dataOff, dataSize, FromEnd(a)) : (ushort)0;
 
             if (bpp == 8)
             {
@@ -399,7 +403,7 @@ namespace DSPRE.Avalonia.Data
                     outp[dataOff + i / 2] = (byte)((tiled[i] & 0x0F) | ((tiled[i + 1] & 0x0F) << 4));
             }
 
-            if (Scrambled(a)) SpriteScrambling.Scramble(outp, dataOff, dataSize, seed);
+            if (Scrambled(a, index)) SpriteScrambling.Scramble(outp, dataOff, dataSize, seed, FromEnd(a));
 
             if (marker != 0)
             {

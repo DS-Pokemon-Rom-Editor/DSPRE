@@ -150,6 +150,57 @@ namespace DSPRE.Tests
             Assert.Equal(allowed, noisy.ToArray());
         }
 
+        /// <summary>
+        /// Every trainer's still picture (the scrambled fifth file) reads as a picture, fronts and backs, in
+        /// both games that have one; read the plain way, the same files are noise.
+        /// </summary>
+        public static IEnumerable<object[]> StillPictureGames => new[]
+        {
+            // Platinum keys them from the first word, HeartGold from the last like Diamond.
+            new object[] { "CPUE", TestRoms.Platinum, "Platinum" },
+            new object[] { "IPKE", TestRoms.HeartGold, "HeartGold" },
+        };
+
+        [SkippableTheory]
+        [MemberData(nameof(StillPictureGames))]
+        public void EveryTrainerStillPictureReadsAsAPicture(string code, string path, string game)
+        {
+            Skip.If(!Directory.Exists(path), $"{game} is not unpacked here");
+            new RomInfo(code, path);
+            GraphicAssets.Forget();
+
+            int looked = 0;
+            var noisy = new List<string>();
+            var plainNoise = 0;
+            foreach (var dir in new[] { DirNames.trainerGraphics, DirNames.trainerBackGraphics })
+            {
+                var archive = GraphicAssets.All.First(a => a.Dir == dir);
+                var plain = new GraphicAssets.Archive
+                {
+                    Dir = archive.Dir, Title = archive.Title, In = archive.In, What = archive.What,
+                    Colours = archive.Colours, ColourEntry = archive.ColourEntry, ScrambledPixels = false,
+                };
+                int count = GraphicAssets.Count(archive);
+                for (int i = 0; i < count; i++)
+                {
+                    if (TrainerGraphicsLayout.ScanEntry(TrainerGraphicsLayout.ClassOf(i)) != i) continue;
+                    GraphicAssets.Forget();
+                    var ix = GraphicAssets.ReadIndexed(archive, i, out string why);
+                    Assert.True(ix != null, $"{game} {dir} file {i}: {why}");
+                    looked++;
+                    if (!LooksDrawn(ix.Indices)) noisy.Add($"{dir} {i}");
+                    GraphicAssets.Forget();
+                    var raw = GraphicAssets.ReadIndexed(plain, i, out _);
+                    if (raw != null && !LooksDrawn(raw.Indices)) plainNoise++;
+                }
+            }
+
+            _out.WriteLine($"{game}: {looked} still pictures read, {noisy.Count} noisy; {plainNoise} noisy when read plain");
+            Assert.True(looked > 100, $"{game}: only {looked} still pictures were read");
+            Assert.Empty(noisy);
+            Assert.Equal(looked, plainNoise);
+        }
+
         /// <summary>A drawn picture repeats itself: most pixels match the one before them, because shapes
         /// are made of runs of one colour. Static does not.</summary>
         private static bool LooksDrawn(byte[] pixels)
