@@ -62,7 +62,7 @@ u32 GetMonIconNaixEx(u32 species, BOOL isEgg, u32 form) {
 }
 ```
 
-`sub_02070438` is the exact same form-clamp helper used by the battle-sprite otherpoke redirect (see `AltFormSpritesLogic.md`). A plain species with form 0 lands on `species + 7`: the icon sheet reserves the first 7 slots for non-species icons (egg placeholders and similar) before the per-species entries begin.
+`sub_02070438` is the exact same form-clamp helper used by the battle-sprite otherpoke redirect (see `AltFormSpritesLogic.md`). A plain species with form 0 lands on `species + 7`: the archive begins with 7 files every icon shares, the palettes and the cell and animation files, before the per-species entries; the two eggs are files 501 and 502.
 
 `GetBattleMonIconNaixEx` wraps the same function, only adding two more form-aware cases on top for the battle-only icon set:
 
@@ -124,13 +124,13 @@ const u8 GetMonIconPaletteEx(u32 species, u32 form, u32 isEgg) {
 }
 ```
 
-The palette index is not a formula on its own, it is a lookup into a real array, `sPokemonPalNoBySpeciesAndForm` (`src/pokemon_icon_idx.c`), keyed by the same remapped species/form/egg index built above. The array is fully decompiled, around 546 entries long, one byte per icon slot.
+The palette index is not a formula on its own, it is a lookup into a real array, `sPokemonPalNoBySpeciesAndForm` (`src/pokemon_icon_idx.c`), keyed by the same remapped species/form/egg index built above. The array is fully decompiled, 544 entries long, one byte per icon slot.
 
 `GetBattleMonIconPaletteEx` mirrors `GetBattleMonIconNaixEx`: Castform and Cherrim index straight into `sPokemonPalNoBySpeciesAndForm` at their own offsets (`540 + form - 1` and `543 + form - 1`) when they have a nonzero form, otherwise it falls through to `GetMonIconPaletteEx`.
 
 ## What DSPRE already does
 
-The archive is found through the `monIcons` entry of `SetNarcDirs` in `DSPRE.Core/RomInfo.cs`: `poketool\icongra\poke_icon.narc` in HeartGold and SoulSilver, `pl_poke_icon.narc` in Platinum, and the raw archive path `a\0\2\0` for the Diamond and Pearl layout.
+The archive is found through the `monIcons` entry of `SetNarcDirs` in `DSPRE.Core/RomInfo.cs`: `poketool\icongra\poke_icon.narc` in Diamond and Pearl, `pl_poke_icon.narc` in Platinum, and `a\0\2\0` in HeartGold and SoulSilver.
 
 The per species palette byte is the same table as `sPokemonPalNoBySpeciesAndForm` above. DSPRE reads and writes it at `RomInfo.monIconPalTableAddress` through `GetMonIconPaletteId` and `SetMonIconPaletteId` in `DSPRE.Core/DSUtils/DSUtils.cs`, after `TryResolveMonIconPalTable` works out whether that address falls in the ARM9 or in the overlay the table was moved to.
 

@@ -36,7 +36,7 @@ collision: tw_arc_attr grid per platform, column major, index vert + horiz * til
   behaviours: 0x08 cave floor (grid 8), 0x15 sea water (grid 10, B4F ceiling surfable), 0x5A/0x5B two-tile jumps (grid 7)
   code blocks (DistWorld_DynamicMapFeaturesCheckCollision): Giratina Room (15,26), B7F (89,56)
   Cynthia block (15,1,15) only while progress == 14 (DistWorld_IsBlockedByCynthia)
-  bg events only checked in normal avatar state, so skipped on every platform (field_control.c)
+  bg events only checked in AVATAR_DISTORTION_STATE_NONE/_ACTIVE (ACTIVE = ordinary ground), so skipped on floor/wall/ceiling platforms (field_control.c)
 
 camera: CameraInit config in overlay: dist 0x29AEC1, angle (-10750,0,0), perspective, fov 1473 (+0xC0 outside Giratina Room)
   header camera type ignored; roll path via Camera_ComputeViewMatrixWithRoll (fieldmap.c)

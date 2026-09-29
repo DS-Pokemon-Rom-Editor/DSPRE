@@ -35,7 +35,7 @@ A level is unlocked by a system flag, and the two games unlock them in different
 | 4 | `0x982` | Hall of Fame | `0x97F` | Viridian Gym, after Blue |
 | 5 | `0x983` | Stark Mountain, deepest room | `0x980` | nothing sets it |
 
-Platinum's flags are read in `src/system_flags.c` and HeartGold's in `src/sys_flags.c`; Diamond checks the same flags in `arm9/src/unk_0205EC84.c` and sets them in the same five places. So in HeartGold slot 1 can only work as a copy of slot 0, slot 5 is never reached, and a `0xFFFF` left in a slot that is still chosen is returned as a trainer id. In Diamond, Pearl and Platinum all five levels are live.
+Platinum's flags are read in `src/system_flags.c` and HeartGold's in `src/sys_flags.c`; Diamond checks the same flags in `arm9/src/unk_0205EC84.c`; where it sets them is not visible, since its scripts are binary in pokediamond. So in HeartGold slot 1 can only work as a copy of slot 0, slot 5 is never reached, and a `0xFFFF` left in a slot that is still chosen is returned as a trainer id. In Diamond, Pearl and Platinum all five levels are live.
 
 ## HeartGold and SoulSilver: the phone
 
@@ -89,7 +89,7 @@ A call header is a condition, a chance out of 100, a script kind and a script nu
 
 ### What DSPRE does
 
-Both are on the Pokégear menu, behind the beta gate.
+Both are on the Trainers menu; the Phone Book is behind the beta gate and the Rematch Editor is not.
 
 | What | Edited in DSPRE | Written | Left untouched |
 |---|---|---|---|

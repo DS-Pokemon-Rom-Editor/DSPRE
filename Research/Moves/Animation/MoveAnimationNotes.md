@@ -11,13 +11,13 @@ PlayMoveAnimationOnMons (opcode 24) -> BtlCmd_PlayMoveAnimationOnMons (battle_co
   same gate, calls ov12_0226343C(battleSystem, ctx, move, attacker, defender) instead
 
 BattleController_SetMoveAnimation: declared battle_controller.h, void, args (BattleSystem*, BattleContext*, u16 move)
-  NOT DEFINED anywhere in src/ - declaration only
+  body in asm/overlay_12_battle_controller.s (0x0226340C): builds and sends a controller message only
 
-ov12_0226343C: address-named stub, unmatched, not decompiled
+ov12_0226343C: same shape, asm, two-target version
 
 PlayBattleAnimation/OnMons/FromVar (opcodes 69/70/71) -> battle_command.c onward
   separate simpler trigger, explicit animation id arg, used for non-move animations (status/faint/encounter)
-  gated on BattleSystem_AreBattleAnimationsOn + specific ctx status values (15/16/25/26)
+  gated on BattleSystem_AreBattleAnimationsOn; animation ids 15/16/25/26 also checked against a substitute (CheckStatusEffectsSubstitute)
 
 PlayFaintAnimation = opcode 29, own dedicated opcode, no animation id arg
 
@@ -26,7 +26,7 @@ particle library, fully decompiled, generic (not battle-specific):
   struct SPLResBase (spl_resource.h): pos, gen_num, radius, length, axis, clr_n, init_vel_mag_pos, init_vel_mag_axis, base_scl, emtr_life, ptcl_life
   SPLResBaseFlag bitfield: init_pos_type, draw_type, circle_axis, use_scl_anm, use_clr_anm, use_alp_anm, use_tex_anm, use_fld_grvt, use_fld_rndm, use_fld_mgnt, use_fld_spin, ...
   used in: src/overlay_06.c, src/overlay_94.c, src/intro_movie_scene_4.c, src/register_hall_of_fame.c
-  battle loads a/0/2/9 (NARC 29) through the particle loader in asm/overlay_07.s; Pt names it waza_particle (battle_particle_util.c)
+  HG move particles are a/0/2/9, loader not named yet; Pt loads waza_particle (battle_particle_util.c)
   format + archives: Graphics/Particles/ParticlesLogic.md
 
 not decompiled:

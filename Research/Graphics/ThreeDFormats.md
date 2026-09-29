@@ -1,9 +1,10 @@
+[Research](../ResearchNotes.md) / Nintendo DS 3D formats
+
 # The seven 3D files, and how a viewer binds them together
 
-Written before changing DSPRE's model browser, from two references: `turtleisaac/Nds4j`, which is the
-format library, and `turtleisaac/NitroViewer`, the app built on it. The app is where the decisions about
-what to show live; the library is where the byte layouts live. Every claim below carries the file and
-line it came from. Anything not verified says so.
+Source: [`turtleisaac/Nds4j`](https://github.com/turtleisaac/Nds4j), the format library, and [`turtleisaac/NitroViewer`](https://github.com/turtleisaac/NitroViewer), the app built on it, cited by file and line; the DSPRE section cites DSPRE's own code. This was structured into a document with AI.
+
+The app is where the decisions about what to show live; the library is where the byte layouts live. Anything not verified says so.
 
 Fetch either with `gh api repos/<owner>/<repo>/contents/<path> --jq .content | base64 -d`.
 

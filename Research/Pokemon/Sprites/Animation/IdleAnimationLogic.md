@@ -14,7 +14,7 @@ Species count: 494 (`include/constants/species.h`, `SPECIES_ARCEUS = 493`, last 
 
 13832 / 494 = 28 exact. One 28-byte record per species.
 
-`a/0/9/0` is a NARC with 143 files inside, sizes ranging from 44 to 768 bytes each.
+`a/0/9/0` is a NARC with 143 files inside, sizes ranging from 44 to 768 bytes each: the Pokémon animation scripts, the same bytecode as Platinum's `pl_poke_anm.narc` (read by `src/pokemon_anim.c` in pokeplatinum, and by DSPRE's `PokeAnimScript`).
 
 ## The per-species record struct
 
@@ -125,7 +125,7 @@ No function in `src/` reads or writes `Pokeanm`, `PokeanmSub`, or `UnkStruct_020
 
 No symbolic archive name exists for `a/1/1/1`, `a/0/9/0`, or `a/1/8/0`.
 
-The format of the 143 files in `a/0/9/0` is unknown.
+In Diamond and Pearl the 28-byte record is not dead: pokediamond's assembly calls its reader (`sub_02069038`) and has the nature table beside it (`UNK_020ED64C`), located but not traced here. Platinum's battle opens its own copy of the 89-byte archive, `pl_poke_data.narc`, when it sets up a battler (`battle_io_command.c`).
 
 No table linking nature to the `unk0[4]` array has been found.
 

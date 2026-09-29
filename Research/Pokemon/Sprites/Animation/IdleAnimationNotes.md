@@ -9,7 +9,7 @@ a/1/1/1 = single NARC, 1 file, 13832 bytes
 species.h: SPECIES_ARCEUS = 493, 494 species total (0-493)
 13832 / 494 = 28 exact -> 28 byte record per species
 
-a/0/9/0 = NARC, 143 files, sizes 44-768 bytes, not fixed length
+a/0/9/0 = NARC, 143 files, sizes 44-768 bytes, not fixed length: Pokemon animation scripts (pokeplatinum pokemon_anim.c; DSPRE PokeAnimScript)
 
 pokemon_types_def.h:
 struct PokeanmSub { s8 unk0; u8 unk1; }                       2 bytes
@@ -44,7 +44,6 @@ Pokepic also used in src/battle/battle_command.c, inside Task_GetPokemon (post-c
 not decompiled:
 - loader/consumer function for Pokeanm (a/1/1/1) - still unconfirmed, NOT the same as Pokepic above
 - archive name/constant for a/1/1/1, a/0/9/0, a/1/8/0
-- format of the 143 files in a/0/9/0
 - nature -> unk0[4] link
 
 possible loader locations (address-named / partial, battle overlay):

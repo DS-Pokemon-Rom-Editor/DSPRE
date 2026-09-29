@@ -28,11 +28,11 @@ Checked in Platinum `include/map_header_data.h`, HeartGold `include/map_events_i
 | 0x1A | 2 | tile Z |
 | 0x1C | 4 | height, tiles shifted left by sixteen |
 
-The type is copied into the live map object unchanged when the object is created (Platinum `src/map_object.c`), and every reader of it is listed below.
+The type is copied into the live map object unchanged when the object is created (Platinum `src/map_object.c`), and the readers found are listed below.
 
 ## Types
 
-Platinum names twelve values, 0 to 11 (`generated/trainer_types.txt`), and the per type step tables have twelve entries in all three games. The types that make a trainer are resolved by `GetTrainerType` in `src/overlay005/trainer_see.c`, which folds 4 to 8 into an ordinary trainer.
+Platinum names twelve values, 0 to 11 (`generated/trainer_types.txt`), and the per type step tables have twelve entries in all three games. The types that make a trainer are resolved by `GetTrainerType` in `src/trainer_encounter.c`, which folds 4 to 8 into an ordinary trainer.
 
 | Type | What it does | Games | Fields it reads |
 |---|---|---|---|
@@ -49,7 +49,7 @@ Platinum names twelve values, 0 to 11 (`generated/trainer_types.txt`), and the p
 | 10 | Jumps on the spot instead of taking its next step when the player is within data 0 tiles ahead of it; never starts a battle | Platinum | data 0 |
 | 11 | Named, never read | Platinum | none |
 
-**Sight.** A trainer sees the player when the player is within data 0 tiles in the direction it looks and nothing blocks the tiles between them (`IsPathInterrupted` in `trainer_see.c`); type 2 tries all four directions. A sight of 0 means the trainer is never seen coming and only fights when talked to, which is how 57 Diamond, 49 Platinum and 27 HeartGold trainers are set. Retail sights run from 0 to 6 in Diamond and Platinum and to 7 in HeartGold.
+**Sight.** A trainer sees the player when the player is within data 0 tiles in the direction it looks and nothing blocks the tiles between them (`IsPathInterrupted` in `trainer_encounter.c`); type 2 tries all four directions. A sight of 0 means the trainer is never seen coming and only fights when talked to, which is how 57 Diamond, 49 Platinum and 27 HeartGold trainers are set. Retail sights run from 0 to 6 in Diamond and Platinum and to 7 in HeartGold.
 
 **Looking around, 4 to 6.** The look sequence is set off by walking, not by time: it counts steps actually taken and only then stops to look, four turns of eight frames each, before restoring the facing (the type 4 to 6 step functions in Platinum `src/unk_020673B8.c`). A trainer of these types that never moves never looks.
 
@@ -99,7 +99,7 @@ The groups share their numbers in all three games: 0 none, 1 the player marker, 
 
 No retail events file uses 55 or above. 67 is used by Cyrus on B4F of the Distortion World, whose objects are in overlay 9 rather than an events file (see [Distortion World Logic](../DistortionWorld/DistortionWorldLogic.md)).
 
-**HeartGold 55 and 56** follow the player with no delay, 56 also copying the player's actions. The walking Pokémon is switched to them after warps and some item uses. This comes from non-public material and is not yet confirmed in the decomp.
+**HeartGold 55 and 56** are used by the walking Pokémon: it is switched to 55 on a map change (pokeheartgold `src/unk_02055BF0.c`) and to 56 while the player cycles or surfs (`src/follow_mon.c`). How the two follow differently from each other is not yet confirmed.
 
 Movement range X and Z fence the object to its starting tile plus or minus the range on each axis, and -1 means no fence (Platinum `src/map_object_move.c`).
 
@@ -122,16 +122,16 @@ Talking to an object runs its script, except for type 9 (see "Types"). For the r
 | Trainer, first battler | 3000 + trainer id - 1 | `Script_GetTrainerID`; `tools/jsoncnv/convert.py` |
 | Trainer, second battler | 5000 + trainer id - 1 | the same |
 | Item ball | 7000 + index, with a hidden flag of its own | `res/field/scripts/scripts_visible_items.s` |
-| Berry patch, Diamond and Platinum | 2800, movement 47, data 0 the patch | `src/berry_patch_manager.c` |
+| Berry patch, Diamond and Platinum | 2800, movement 47, data 0 the patch | retail maps: 118 Platinum objects |
 | Apricorn tree, HeartGold | 2800, type 0, movement 0, data 0 the tree | `src/unk_02055418.c` |
 
-A trainer in sight is found once per step by `FieldSystem_CheckForTrainersWantingBattle` (`trainer_see.c`), which takes the first undefeated trainer that can see the player and starts the approach script, 3928 in Platinum. Whether the battle is double is decided by the trainer's data; the partner is the other object of type 1 or 2 with the same trainer id (`FindTrainerPartner`). Some trainers carry a script of their own map instead of a trainer number, 22 in Platinum and 30 in Diamond; no object that is not a trainer type carries a trainer number.
+A trainer in sight is found once per step by `FieldSystem_CheckForTrainersWantingBattle` (`trainer_encounter.c`), which takes the first undefeated trainer that can see the player and starts the approach script, 3928 in Platinum. Whether the battle is double is decided by the trainer's data; the partner is the other object of type 1 or 2 with the same trainer id (`FindTrainerPartner`). Some trainers carry a script of their own map instead of a trainer number, 22 in Platinum, 30 in Diamond and 3 in HeartGold; no object that is not a trainer type carries a trainer number.
 
 ## In retail maps
 
 | Type | Diamond | Platinum | HeartGold | For example |
 |---|---|---|---|---|
-| 0 | 2711 | 3109 | 2260 | |
+| 0 | 2711 | 3109 | 2260 | including alias records; without them 2663, 3062 and 2250 |
 | 1 | 411 | 407 | 403 | Platinum Route 203 |
 | 2 | 11 | 11 | 0 | Platinum Route 210 south, on the disguise movements |
 | 3 | 6 | 7 | 0 | Platinum Route 203 item balls |

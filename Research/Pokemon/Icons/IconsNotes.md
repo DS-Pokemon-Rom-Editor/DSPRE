@@ -18,7 +18,7 @@ GetMonIconNaixEx:
   isEgg: Manaphy->502, else->501
   form = sub_02070438(species, form) (same clamp helper as sprite otherpoke redirect)
   form!=0: Deoxys+503-1, Unown+507-1, Burmy+534-1, Wormadam+536-1, Shellos+538-1, Gastrodon+539-1, Giratina+540-1, Shaymin+541-1, Rotom+542-1
-  else: species+7 (first 7 slots = non-species icons, egg placeholders etc)
+  else: species+7 (first 7 files = the shared palettes, cells and animations; eggs are files 501, 502)
 
 GetBattleMonIconNaixEx : adds Castform(+547-1) and Cherrim(+550-1) on top, else falls to GetMonIconNaixEx
   Castform/Cherrim only get alt icon frames in the battle-only set, not the party/box set
@@ -30,7 +30,7 @@ GetMonIconPaletteEx:
   return sPokemonPalNoBySpeciesAndForm[species] (pokemon_icon_idx.c) - real lookup table, not a formula
 
 DSPRE side:
-  RomInfo.SetNarcDirs, monIcons: poketool/icongra/poke_icon.narc (HGSS), pl_poke_icon.narc (Pt), a/0/2/0 (DP layout)
+  RomInfo.SetNarcDirs, monIcons: poketool/icongra/poke_icon.narc (DP), pl_poke_icon.narc (Pt), a/0/2/0 (HGSS)
   palette byte table = sPokemonPalNoBySpeciesAndForm, at RomInfo.monIconPalTableAddress
     DSUtils.GetMonIconPaletteId / SetMonIconPaletteId, TryResolveMonIconPalTable picks ARM9 vs moved-to overlay
   PokemonIconFiles (ROMFiles/PokemonIconFiles.cs) = GetMonIconNaixEx as data:
@@ -40,7 +40,7 @@ DSPRE side:
     Describe(file) -> species/form/owning editor entry
   pictures: DSUtils.GetMonIconGraphicRaw / ValidateMonIconGraphic / SetMonIconGraphic, per unpacked file
 
-sPokemonPalNoBySpeciesAndForm (pokemon_icon_idx.c) = real array, fully decompiled, ~546 entries, one byte per icon slot
+sPokemonPalNoBySpeciesAndForm (pokemon_icon_idx.c) = real array, fully decompiled, 544 entries, one byte per icon slot
 
 GetBattleMonIconPaletteEx  mirrors GetBattleMonIconNaixEx
   Castform: sPokemonPalNoBySpeciesAndForm[540+form-1] if form!=0

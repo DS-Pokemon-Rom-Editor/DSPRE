@@ -7,7 +7,7 @@ record 32 B, same DP/Pt/HG (Pt map_header_data.h, HG map_events_internal.h, DP m
   every retail events file = bg*20 + obj*32 + warp*12 + coord*16 exactly
 
 type (u16 +6), copied unchanged into the map object (Pt map_object.c); 12 values named in Pt generated/trainer_types.txt
-  GetTrainerType (trainer_see.c) folds 4-8 into NORMAL
+  GetTrainerType (trainer_encounter.c) folds 4-8 into NORMAL
   0 plain, runs own script
   1 trainer, looks along facing, data0 sight
   2 trainer, all four directions, data0 sight
@@ -30,7 +30,7 @@ movement types: DP 55 (0-54, arm9/src/map_object.c), Pt 68 (0-67, unk_020EDBAC.c
     55-58 copy player's steps (one handler), 59-62 same but only inside very tall grass,
     63/64 follow wall on left/right, 65/66 same + turn round at range edge, 67 wander L/R stopped only by range (walks through walls; DW B4F Cyrus)
   route legs (unk_0206450C.c lists): 25 and 26 are both L R D U; full list in the Logic page
-  HG 55/56 follow with no delay (/ + copy player's actions), walking Pokemon after warps/items: non-public source, unconfirmed in decomp
+  HG 55/56: walking Pokemon set to 55 on map change (unk_02055BF0.c), 56 while cycling or surfing (follow_mon.c); how they differ unconfirmed
   range X/Z fence start +/- range; -1 = no fence (map_object_move.c)
 
 data0: sight (trainers, type 10), berry patch id (movement 47), HG apricorn tree, sign graphic when sign command gets 0 (scrcmd.c)
@@ -43,7 +43,7 @@ scripts: trainer 3000 + id - 1, partner slot 5000 + id - 1 (Script_GetTrainerID)
   double battle from trainer data; partner = other type 1/2 with same trainer id (FindTrainerPartner)
   trainers with a local map script: Pt 22, DP 30, HG 3; no non-trainer type holds 3000-6999
 
-retail type counts (DP / Pt / HG): 0 2711/3109/2260, 1 411/407/403, 2 11/11/0, 3 6/7/0, 4 13/13/3, 5 3/3/0, 6 2/2/0, 7 3/3/1, 8-11 none
+retail type counts (DP / Pt / HG): 0 2711/3109/2260 (incl. aliases; 2663/3062/2250 without), 1 411/407/403, 2 11/11/0, 3 6/7/0, 4 13/13/3, 5 3/3/0, 6 2/2/0, 7 3/3/1, 8-11 none
   no retail movement >= 55
 
 hand example Pt Route 201 obj 0 (events +0x08): -> trainer 4, face west, sight 3:

@@ -32,7 +32,7 @@ The first class row that matches wins; a class with no row gets combo 41, the or
 | Elite Four and Champion | 29 to 33 | 20 to 24 | from the record, and the player's |
 | Legendary Pokémon | 34 to 36 | 25, 26 | no |
 | Poké Ball zoom, four Poké Balls | 37, 38 | 29, 30 | no |
-| Team Rocket or Galactic | 39 grunt, 40 to 44 executives and Giovanni | 27 grunt, 28 commanders and Cyrus | HeartGold executives only |
+| Team Rocket or Galactic | 39 grunt, 40 to 44 executives and Giovanni | 27 grunt, 28 commanders and Cyrus | HeartGold executives and Giovanni |
 | Kimono Girls' doors, Red's old-style Poké Ball | 45, 46 | | no |
 
 The routines are picked by a function table in an overlay (HeartGold overlay 1, 47 entries; Platinum and Diamond overlay 5, 31 entries). Each gym, league and executive routine is a small wrapper holding a pointer to its own record, so which record an intro reads is fixed in code while the record itself is data.
@@ -46,13 +46,13 @@ The routines are picked by a function table in an overlay (HeartGold overlay 1, 
 | 0x00 | 4 | where the face stops, `fx32` (214) |
 | 0x04 | 4 | trainer whose name is printed |
 | 0x08 | 2 | class: in Platinum the class whose palette colours the face; in HeartGold 23 prints the rival's name instead |
-| 0x0A | 2 | a face column offset read by Diamond and Pearl only |
+| 0x0A | 2 | unused (`.unused` in pokeplatinum) |
 | 0x0C | 4 | face palette, tiles, cells and animation, archive members |
 | 0x10 | 3 | banner palette, tiles and screen, archive members |
 
-**Elite Four and Champion**, 8 bytes (HeartGold overlay 115 at `0x02260388`; Platinum overlay 5 at `0x28F8C`; `EncounterEffect_EliteFourChampion`): the face palette member (`u16`, the tiles, cells and animation must be the next three members), the frame palette member, the length of the clash shake in frames, the class and the trainer whose name is printed.
+**Elite Four and Champion**, 8 bytes (HeartGold overlay 115 at `0x02260388`; Platinum overlay 5 at `0x28F8C`; `EncounterEffect_EliteFourChampion`): the face palette member (`u16`, the tiles, cells and animation must be the next three members), the frame palette member, the length of the face pan in frames (`facePanFrames`), the class and the trainer whose name is printed.
 
-**HeartGold Rocket executives**, 8 bytes (overlay 117 at `0x0225FACC`, 5 rows): the four face members and the trainer whose name is printed.
+**HeartGold Rocket executives and Giovanni**, 8 bytes (overlay 117 at `0x0225FACC`, 5 rows, the fifth Giovanni's): the four face members and the trainer whose name is printed.
 
 **Diamond and Pearl** have no mugshot art. Their gym record (overlay 5 at `0x20458`, 8 bytes) is where the face stops, the class and a column offset: the face is cut at runtime as a 64 by 64 block from that class's battle sprite. Their league record (overlay 5 at `0x20430`) is a camera turn, its length in frames, the class and the banner palette; the intro ends by panning the field camera.
 
@@ -62,7 +62,7 @@ The art is in the encounter effect archive: HeartGold `a/1/0/9` (242 members), P
 
 The face is a fixed set of archive members per record; it does not follow the trainer being fought. The name under "VS" is text: the name of the trainer stored in the record, printed from message bank 189 (HeartGold) or 359 (Platinum), so a record's banner shows its own trainer's name whoever is fought. The "VS" itself is a sprite.
 
-In Platinum the face's colours are not the face's own palette member: the game loads the palette of the record's class from the trainer battle sprites (`EncounterEffect_BlendTrainerSpritePltt`), so recolouring a face means recolouring that class's battle sprite. Checked in game: with the class left at a gym leader's own, a different leader's face drew in the first leader's colours.
+In Platinum the face's colours are not the face's own palette member: the game loads the palette of the record's class from the trainer battle sprites (`EncounterEffect_BlendTrainerSpritePltt`), so recolouring a face means recolouring that class's battle sprite.
 
 ## Fixed in code
 
@@ -74,9 +74,9 @@ Music is the second half of each combo or pair row. HeartGold swaps the wild and
 
 ## Changing one by hand
 
-- **Reassign a class, HeartGold:** change its row in the class table. The Youngster, class 2, has no row in retail; replacing a row with `0x0002` (class 2, combo 0) gives Youngsters Falkner's intro. Checked in game.
-- **Reassign a class, Platinum:** point its jump table entry at another entry's stub. Entry `i` is at `0x51C34 + 2i` for class `62 + i`, and jumps to `0x02051C36` plus its value; copying Roark's entry (class 62, value 80) into the rival's (class 63) gives the rival Roark's intro. Checked in game.
-- **Change a mugshot:** edit the record. Setting Roark's face members to 59 to 62, the trainer to 315 and the class to 74 shows Gardenia, in her colours and with her name, in Roark's intro. Checked in game.
+- **Reassign a class, HeartGold:** change its row in the class table. The Youngster, class 2, has no row in retail; replacing a row with `0x0002` (class 2, combo 0) gives Youngsters Falkner's intro.
+- **Reassign a class, Platinum:** point its jump table entry at another entry's stub. Entry `i` is at `0x51C34 + 2i` for class `62 + i`, and jumps to `0x02051C36` plus its value; copying Roark's entry (class 62, value 80) into the rival's (class 63) gives the rival Roark's intro.
+- **Change a mugshot:** edit the record. Setting Roark's face members to 59 to 62, the trainer to 315 and the class to 74 shows Gardenia, in her colours and with her name, in Roark's intro.
 - **More class rows, HeartGold:** the class table cannot grow where it is. Copy it somewhere free with room for more rows, point `0x02051890` at it and raise the count byte at `0x02051886`, up to 255. Unused rows hold class 1023, which matches nothing.
 
 A brand new intro needs code: a copy of a wrapper routine pointing at a new record, a longer routine table and, in Diamond, Pearl and Platinum, a new stub or hook for the class.

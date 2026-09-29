@@ -22,6 +22,20 @@
 
 - [Rematches Logic: the Pokégear phone and the Vs. Seeker](Rematches/RematchesLogic.md)
 
+## Encounters
+
+- [Encounter Slots Logic](Encounters/EncounterSlotsLogic.md)
+- [Swarms Logic](Encounters/SwarmsLogic.md)
+- [Special Encounters Logic](Encounters/SpecialEncountersLogic.md)
+
+## Bug-Catching Contest
+
+- [Bug-Catching Contest Logic](BugContest/BugContestLogic.md)
+
+## Underground
+
+- [Underground Mining Logic](Underground/MiningLogic.md)
+
 ## Distortion World
 
 - [Distortion World Logic](DistortionWorld/DistortionWorldLogic.md)

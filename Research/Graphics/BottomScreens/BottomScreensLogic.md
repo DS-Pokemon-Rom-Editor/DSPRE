@@ -27,7 +27,7 @@ The battle backdrop archive holds the touch screen too: `battle/graphic/batt_bg.
 | Background tint per backdrop, row 0 | | 243 + backdrop | 247 + backdrop |
 | Touch and hold palette | 202 | 267 + backdrop | 271 + backdrop |
 
-Frontier battles use their own sheet, background and palettes (Platinum 169, 170 and 340 to 341; HeartGold 173, 174 and 349 to 350). Backdrop 17 has its own tint and hold palettes (Platinum 284 and 285, HeartGold 288 and 289), and backdrops 18 to 22 have no tint. Some members in the same range are never loaded by the touch code, among them Platinum 29 to 41 and 50 and 51.
+Frontier battles use their own sheet, background and palettes (Platinum 169, 170 and 340 to 341; HeartGold 173, 174 and 349 to 350). Backdrop 17 has its own tint and hold palettes (Platinum 284 and 285, HeartGold 288 and 289), and backdrops 18 to 22 have no tint and no hold palette of their own (`0xFFFF`), so Platinum uses backdrop 0's hold palette, 267, for them (`battle_cursor.c`). Some members in the same range are never loaded by the touch code, among them Platinum 29 to 41 and 50 and 51.
 
 The sheet is 1024 tiles, but only the first 768 are loaded, and tile 767 is the blank every layer is cleared with. All of these are LZ10 compressed 16 colour files; the screens are 256 by 256.
 

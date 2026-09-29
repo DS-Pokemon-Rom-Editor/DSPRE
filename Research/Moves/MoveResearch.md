@@ -9,10 +9,12 @@
 ## Animation
 
 - [Move Animation Logic](Animation/MoveAnimationLogic.md)
-- [Move Animation Test Coverage](Animation/MoveAnimationTestCoverage.md)
 - [Move Animation Routines](Animation/MoveAnimationRoutines.md)
-- [Move Animation Particle Fields](Animation/MoveAnimationParticleFields.md)
 
 ## Types
 
 - [Type Chart Logic](Types/TypeChartLogic.md)
+
+## Tutors
+
+- [Move Tutors Logic](Tutors/MoveTutorsLogic.md)

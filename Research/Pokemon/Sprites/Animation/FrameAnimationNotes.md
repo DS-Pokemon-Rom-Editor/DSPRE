@@ -25,5 +25,5 @@ DSPRE side: DSPRE.Avalonia/Avalonia/Data/CellAnim.cs (CFrame, CellSequence, Cell
   same shape as SpriteAnimationData/NNSG2dCellAnimation, parsed straight from ROM NANR/NCER instead of loaded via g2d lib
 
 not decompiled:
+(struct layouts: lib/include/nnsys/g2d/g2d_CellAnimation.h)
 - NNS_G2dTickCellAnimation/NNS_G2dTickMCAnimation bodies (actual per-frame delay/loop math) - g2d lib source not in this project
-- NNSG2dCellAnimation/NNSG2dAnimSequenceData/NNSG2dCellDataBank struct layouts - no g2d header in include/

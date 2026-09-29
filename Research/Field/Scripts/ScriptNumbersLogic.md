@@ -114,9 +114,9 @@ Diamond's chain, decoded from `LoadScriptsAndMessagesByMapId` in `arm9/asm/unk_0
 | | | | | | | 2500 | 1 | 13 |
 | | | | | | | 2000 | 205 | 199 |
 
-Message archive 199 is the common text that Platinum keeps in 213, 9000 is the communication club in both, and 9100 loads script archive 0 with the "take your designated position" text in both games.
+Message archive 199 is the common text that Platinum keeps in 213, 9000 is the Pokémon Center 2F reception and 9100 the Communication Club, which loads script archive 0 with the "take your designated position" text, in both games.
 
-Several bases kept their number and changed their meaning, which matters when reading a number out of one game with another game's names to hand. 2800 is a berry tree in Diamond and Platinum and an apricorn tree in HeartGold. 9000, 9100 and 9200 are Pokémon Center floors and the communication club in Diamond and Platinum, and wireless reception, the Colosseum and Wi-Fi reception in HeartGold. 2500 is called bookshelves in HeartGold and BG events in Platinum, but it is the same nine scenery scripts, 2500 to 2508, in all three.
+Several bases kept their number and changed their meaning, which matters when reading a number out of one game with another game's names to hand. 2800 is a berry tree in Diamond and Platinum and an apricorn tree in HeartGold. 9000, 9100 and 9200 look different only by name: HeartGold's wireless reception, Colosseum and Wi-Fi reception are the same scripts Platinum calls the Pokémon Center 2F attendants, the Communication Club and the Pokémon Center B1F attendants. 2500 is called bookshelves in HeartGold and BG events in Platinum, but it is the same nine scenery scripts, 2500 to 2508, in all three.
 
 Two individual common scripts also moved in HeartGold: the Pokémon Center PC is 2018 in Diamond and Platinum and 2010 in HeartGold (`include/constants/std_script.h`), and the bike rack is 2030 there against 2020 here.
 
@@ -124,9 +124,9 @@ Two individual common scripts also moved in HeartGold: the Pokémon Center PC is
 
 A trainer script number is the trainer id plus a base. The arithmetic is the same everywhere: `scriptId - base + 1`, with 3000 for the first battler and 5000 for the second, so script 3001 is trainer 1 and script 5001 is the same trainer as the partner in a double battle (`ScriptNumToTrainerNum`, HeartGold `src/script_manager.c`; `Script_GetTrainerID`, Platinum `src/script_manager.c`; Diamond `arm9/asm/unk_02038C78.s`). Which slot a number belongs to is simply whether it is 5000 or more, and whether the battle is double at all comes from the trainer's own data rather than from the number.
 
-One script past the last trainer is the approach script, run when a trainer notices the player, and that number differs because the trainer counts do: 3850 in Diamond, 3928 in Platinum and 3739 in HeartGold.
+After the trainers' entries comes the approach script, run when a trainer notices the player, and its number differs because the trainer counts do: 3850 in Diamond and 3928 in Platinum, the entry at the trainer count, and 3739 in HeartGold, whose bank keeps two spare trainer entries before it. See [Trainer Data Logic](../../Trainers/TrainerDataLogic.md).
 
-Item balls take 7000 plus an index. Hidden items take 8000 plus an index, and their flag is that index plus a flag base, which is 730 in Diamond and Platinum and 800 in HeartGold (`include/constants/flags.h`). Trainer defeated flags use base 0x550 in all three.
+Item balls take 7000 plus an index. Hidden items take 8000 plus an index, and their flag is that index plus a flag base, which is 730 in Diamond and Platinum (`FLAG_OFFSET_HIDDEN_ITEMS` in pokeplatinum `include/script_manager.h`) and 800 in HeartGold (`include/constants/flags.h`). Trainer defeated flags use base 0x550 in all three.
 
 ## What each event kind passes in
 

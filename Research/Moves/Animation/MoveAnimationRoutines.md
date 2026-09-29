@@ -1,63 +1,60 @@
 [Research](../../ResearchNotes.md) / [Move Research](../MoveResearch.md) / Move Animation Routines
 
-# The move-effect support routines
+# The move animation routines
 
-What each routine a move-effect script can call reads out of the words handed to it, taken from what
-the routine itself does rather than from inference. This file is written from `WestRoutines.cs`, which
-is what the editor itself reads, so the two cannot drift apart.
+What each routine a move animation script can call reads out of the words handed to it. The names
+are pokeplatinum's (`sBattleAnimScriptFuncs` in `src/battle_anim/script_func_tables.c`); the page is
+written from DSPRE's `BattleAnimFuncs.cs`, which is what the editor reads, so the two cannot drift
+apart.
 
-A script calls one with `FUNC_CALL id, count, words`. The id is the routine's index in
-`WeSysSP_FuncTable`, which is indexed directly with no offset, and the words land in
-`waza_eff_gp_wk`. `WEST_FUNC_CALL` copies `count` words in and then **zeros the rest** of the ten, so
-a routine handed fewer words than it reads still runs and sees zeros; it is never skipped. The routine
-ids are identical in Platinum and HeartGold, checked by comparing every `WEST_SP_DEF_CMD` entry in
-both games.
+A script calls one with `CallFunc id, count, words`. The id indexes the 84-entry table directly.
+`BattleAnimScriptCmd_CallFunc` (`src/battle_anim/battle_anim_system.c`) copies `count` words into the
+ten `scriptVars` (`BATTLE_ANIM_SCRIPT_VAR_COUNT`) and zeroes the rest, so a routine handed fewer words
+than it reads still runs and sees zeros; it is never skipped. HeartGold's scripts call the same ids
+with the same word layouts.
 
-A word shown as never read is one the scripts hand over that the routine never looks at. Those are left
-blank on purpose rather than invented.
+A word shown as never read is one the scripts hand over that the routine never looks at. Those are
+left blank on purpose rather than invented.
 
-Where a word picks out Pokemon it is a target flag. Those names are relative to the move, not to the
-sides of the field: M1 is the attacker and E1 the defender, M2 and E2 are their allies and only exist in
-a double battle, STAGE is everybody and OTHER is everybody but the attacker.
+Where a word picks out Pokemon it is a target flag, pokeplatinum's `BATTLE_ANIM_*` masks in
+`include/constants/battle/battle_anim.h`. `BATTLE_ANIM_ATTACKER` and `BATTLE_ANIM_DEFENDER` are relative
+to the move, not to the sides of the field; the `_PARTNER` flags only exist in a double battle;
+`BATTLE_ANIM_ALL_BATTLERS` is everybody and `BATTLE_ANIM_NOT_ATTACKER` everybody but the attacker. With
+`BATTLE_ANIM_SPECIFIC_BATTLER` set the same bits name fixed slots instead (`BATTLE_ANIM_BATTLER_PLAYER_1`,
+`BATTLE_ANIM_BATTLER_ENEMY_1`), whoever is attacking; Cosmic Power, Lava Plume and Muddy Water fade those.
 
-### 0. `TEST_1`
+### 0. `Nop`
 
-A sample routine the games left in. Does nothing.  
-_WestSp_Sample_
+A sample routine the games left in. Does nothing.
 
-### 1. `TEST_2`
+### 1. `AnimExample`
 
-A sample routine the games left in. Does nothing.  
-_WestSp_SampleEffectTCB_
+A sample routine the games left in. Does nothing.
 
-### 2. `TEST_3`
+### 2. `SoundExample`
 
-A sample routine the games left in. Does nothing.  
-_WestSp_SampleSoundTCB_
+A sample routine the games left in. Does nothing.
 
-### 3. `TEST_4`
+### 3. `GenericExample`
 
-A sample routine the games left in. Does nothing.  
-_WestSp_SampleTCB_
+A sample routine the games left in. Does nothing.
 
-### 4. `POKEROTA_00`
+### 4. `RotateMon`
 
-Turns the attacker on the spot.  
-_WestSp_EffectTCBPokeRota00_
+Turns a Pokemon on the spot.
 
 | word | meaning |
 |---:|---|
 | 0 | angle to start at |
 | 1 | angle to end at |
 | 2 | how many frames the turn takes |
-| 3 | 1 to turn around the point given below, anything else around the middle of the sprite |
+| 3 | 0 turns the defender, 1 the attacker around the point given below, 2 the defender the other way |
 | 4 | the point to turn around, across |
 | 5 | the point to turn around, down |
 
-### 5. `WE_070`
+### 5. `Strength`
 
-Squashes the attacker down (Strength).  
-_WestSp_WE_070_
+Squashes the attacker down (Strength).
 
 | word | meaning |
 |---:|---|
@@ -66,140 +63,119 @@ _WestSp_WE_070_
 | 2 | how many frames the squash takes |
 | 3 | _never read_ |
 
-### 6. `WE_339`
+### 6. `BulkUp`
 
-One move's own effect.  
-_WestSp_WE_339_
-
-| word | meaning |
-|---:|---|
-| 0 | _never read_ |
-
-### 7. `WE_104`
-
-One move's own effect.  
-_WestSp_WE_104_
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | _never read_ |
 
-### 8. `WE_098`
+### 7. `DoubleTeam`
 
-One move's own effect.  
-_WestSp_WE_098_
-
-### 9. `WE_065`
-
-One move's own effect.  
-_WestSp_WE_065_
-
-### 10. `WE_066`
-
-Turns the attacker while moving it.  
-_WestSp_WE_066_
-
-| word | meaning |
-|---:|---|
-| 0 | where the turn starts |
-| 1 | where it ends |
-| 2 | which of the routine's ways of doing it |
-
-### 11. `WE_093`
-
-One move's own effect.  
-_WestSp_WE_093_
-
-### 12. `WE_151`
-
-One move's own effect.  
-_WestSp_WE_151_
-
-### 13. `WE_074`
-
-One move's own effect.  
-_WestSp_WE_074_
-
-### 14. `WE_096`
-
-One move's own effect.  
-_WestSp_WE_096_
-
-### 15. `WE_100`
-
-One move's own effect.  
-_WestSp_WE_100_
-
-### 16. `WE_148`
-
-Whitens the background and darkens the attacker together, holds, then brings both back.  
-_WestSp_WE_148_
-
-### 17. `WE_101AT`
-
-One move's own effect, on the attacker.  
-_WestSp_WE_101AT_
-
-### 18. `WE_101DF`
-
-One move's own effect, on the defender.  
-_WestSp_WE_101DF_
-
-### 19. `WE_150`
-
-One move's own effect.  
-_WestSp_WE_150_
-
-### 20. `WE_180`
-
-One move's own effect.  
-_WestSp_WE_180_
-
-### 22. `WE_107`
-
-One move's own effect.  
-_WestSp_WE_107_
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | _never read_ |
 
-### 23. `WE_185`
+### 8. `QuickAttack`
 
-One move's own effect.  
-_WestSp_WE_185_
+One move's own effect.
 
-### 24. `WE_089`
+### 9. `DrillPeck`
 
-One move's own effect.  
-_WestSp_WE_089_
+One move's own effect.
+
+### 10. `Submission`
+
+Spins a Pokemon round (Submission).
+
+| word | meaning |
+|---:|---|
+| 0 | how many times it goes round |
+| 1 | how many frames each turn takes |
+| 2 | which battler it spins |
+
+### 11. `Confusion`
+
+One move's own effect.
+
+### 12. `AcidArmor`
+
+One move's own effect.
+
+### 13. `Growth`
+
+One move's own effect.
+
+### 14. `Meditate`
+
+One move's own effect.
+
+### 15. `Teleport`
+
+One move's own effect.
+
+### 16. `Flash`
+
+Whitens the background and darkens the attacker together, holds, then brings both back.
+
+### 17. `NightShadeAttacker`
+
+One move's own effect, on the attacker.
+
+### 18. `NightShadeDefender`
+
+One move's own effect, on the defender.
+
+### 19. `Splash`
+
+One move's own effect.
+
+### 20. `Spite`
+
+One move's own effect.
+
+### 22. `Minimize`
+
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | _never read_ |
 
-### 25. `WE_204`
+### 23. `FaintAttack`
 
-One move's own effect.  
-_WestSp_WE_204_
+One move's own effect.
+
+### 24. `Earthquake`
+
+One move's own effect.
+
+| word | meaning |
+|---:|---|
+| 0 | _never read_ |
+
+### 25. `PlayfulHops`
+
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | which of the routine's ways of doing it |
 
-### 26. `WE_171`
+### 26. `Nightmare`
 
-One move's own effect.  
-_WestSp_WE_171_
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | which of the routine's ways of doing it |
 
-### 27. `WE_175 / SHAKE`
+### 27. `Flail`
 
-Shakes a Pokemon, in one of two ways.  
-_WestSp_WE_175_
+Shakes a Pokemon, in one of two ways.
 
 | word | meaning |
 |---:|---|
@@ -210,39 +186,33 @@ _WestSp_WE_175_
 | 4 | how many shakes |
 | 5 | who it acts on (a target flag) |
 
-### 28. `WE_222`
+### 28. `Magnitude`
 
-One move's own effect.  
-_WestSp_WE_222_
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | _never read_ |
 
-### 29. `WE_216`
+### 29. `Return`
 
-One move's own effect.  
-_WestSp_WE_216_
+One move's own effect.
 
-### 30. `WE_233`
+### 30. `VitalThrow`
 
-One move's own effect.  
-_WestSp_WE_233_
+One move's own effect.
 
-### 31. `WE_207_MAIN`
+### 31. `Swagger`
 
-One move's own effect.  
-_WestSp_WE_207_MAIN_
+One move's own effect.
 
-### 32. `WE_262`
+### 32. `Memento`
 
-One move's own effect.  
-_WestSp_WE_262_
+One move's own effect.
 
-### 33. `HAIKEI_PAL_FADE`
+### 33. `FadeBg`
 
-Fades the background's colours toward one colour and back.  
-_WestSp_WE_HaikeiPalFade_
+Fades the background's colours toward one colour and back.
 
 | word | meaning |
 |---:|---|
@@ -252,10 +222,9 @@ _WestSp_WE_HaikeiPalFade_
 | 3 | how strong it ends, out of 16 |
 | 4 | the colour to fade toward |
 
-### 34. `SSP_POKE_PAL_FADE`
+### 34. `FadeBattlerSprite`
 
-Flashes a Pokemon a colour, over and over.  
-_WestSp_WE_SSPPokePalFade_
+Flashes a Pokemon a colour, over and over.
 
 | word | meaning |
 |---:|---|
@@ -266,10 +235,9 @@ _WestSp_WE_SSPPokePalFade_
 | 4 | how strong the flash gets, out of 16 |
 | 5 | how many frames it holds at full strength |
 
-### 35. `CAP_POKE_SCALE_UPDOWN`
+### 35. `ScalePokemonSprite`
 
-Grows and shrinks a dropped copy of a Pokemon.  
-_WestSp_WE_CAPPokeScaleUpDown_
+Grows and shrinks a dropped copy of a Pokemon.
 
 | word | meaning |
 |---:|---|
@@ -282,10 +250,9 @@ _WestSp_WE_CAPPokeScaleUpDown_
 | 6 | how many frames each step takes |
 | 7 | which of the four dropped copies |
 
-### 36. `WT_SHAKE`
+### 36. `Shake`
 
-Shakes a Pokemon, a dropped copy, or the background.  
-_WestSp_WE_T01_
+Shakes a Pokemon, a dropped copy, or the background.
 
 | word | meaning |
 |---:|---|
@@ -295,15 +262,13 @@ _WestSp_WE_T01_
 | 3 | how many shakes |
 | 4 | who it acts on (a target flag) |
 
-### 37. `WE_326`
+### 37. `Extrasensory`
 
-One move's own effect.  
-_WestSp_WE_326DF_
+One move's own effect.
 
-### 38. `CAP_ALPHA_FADE`
+### 38. `AlphaFadePokemonSprite`
 
-Fades dropped copies in or out.  
-_WestSp_WE_CAP_NormalAlphaFade_
+Fades dropped copies in or out.
 
 | word | meaning |
 |---:|---|
@@ -314,25 +279,22 @@ _WestSp_WE_CAP_NormalAlphaFade_
 | 4 | how solid that ends |
 | 5 | how many frames the fade takes |
 
-### 40. `SSP_POKE_VANISH`
+### 40. `HideBattler`
 
-Hides or shows a Pokemon.  
-_WestSp_WE_SSP_PokeVanish_
+Hides or shows a Pokemon.
 
 | word | meaning |
 |---:|---|
 | 0 | who it acts on (a target flag) |
 | 1 | 0 to show it, anything else to hide it |
 
-### 41. `WE_252_BACK`
+### 41. `FakeOutCurtain`
 
-One move's own effect, on the background.  
-_WestSp_WE_252Back_
+One move's own effect, on the background.
 
-### 42. `SSP_POKE_SCALE_UPDOWN`
+### 42. `ScaleBattlerSprite`
 
-Squashes and stretches a Pokemon, over and over.  
-_WestSp_WE_SSPPokeScaleUpDown_
+Squashes and stretches a Pokemon, over and over.
 
 | word | meaning |
 |---:|---|
@@ -345,15 +307,13 @@ _WestSp_WE_SSPPokeScaleUpDown_
 | 6 | packed: the low half is how many times, the high half is how many frames it holds |
 | 7 | how many frames each step takes |
 
-### 43. `WE_252_POKE`
+### 43. `FakeOut`
 
-One move's own effect, on a Pokemon.  
-_WestSp_WE_252SSPPoke_
+One move's own effect, on a Pokemon.
 
-### 44. `WE_T02`
+### 44. `ScrollCustomBg`
 
-Slides a background across the screen behind the battle.  
-_WestSp_WE_T02_
+Slides a background across the screen behind the battle.
 
 | word | meaning |
 |---:|---|
@@ -364,12 +324,11 @@ _WestSp_WE_T02_
 | 4 | how fast it moves down |
 | 5 | whether to turn it around when the enemy is attacking |
 | 6 | how solid it is |
-| 7 | how many frames it lasts |
+| 7 | how many frames between each slowing down |
 
-### 45. `WE_T22`
+### 45. `MuddyWater`
 
-Slides a background across the screen behind the battle.  
-_WestSp_WE_T22_
+Slides a background across the screen behind the battle.
 
 | word | meaning |
 |---:|---|
@@ -379,53 +338,37 @@ _WestSp_WE_T22_
 | 3 | how fast it moves across |
 | 4 | how fast it moves down |
 | 5 | whether to turn it around when the enemy is attacking |
-| 6 | how solid it is |
-| 7 | how many frames it lasts |
+| 6 | _never read_ |
+| 7 | how many frames between each slowing down |
 
-### 47. `WE_224AT`
+### 47. `MegahornAttacker`
 
-One move's own effect, on the attacker.  
-_WestSp_WE_224AT_
+One move's own effect, on the attacker.
 
-### 48. `WE_224DF`
+### 48. `MegahornDefender`
 
-One move's own effect, on the defender.  
-_WestSp_WE_224DF_
+One move's own effect, on the defender.
 
-### 49. `WE_057`
+### 49. `Surf`
 
-The Surf wave.  
-_WestSp_WE_057_
+The Surf wave.
 
 | word | meaning |
 |---:|---|
 | 0 | which of the routine's ways of doing it |
 
-### 50. `WE_T03`
+### 50. `BlinkAttacker`
 
-Blinks a Pokemon in and out.  
-_WestSp_WE_T03_
+Blinks a Pokemon in and out.
 
 | word | meaning |
 |---:|---|
 | 0 | how many times it blinks (the routine doubles this) |
 | 1 | how many frames each blink takes |
 
-### 51. `WE_T04`
+### 51. `MoveBattlerX`
 
-Slides a Pokemon sideways and back.  
-_WestSp_WE_T04_
-
-| word | meaning |
-|---:|---|
-| 0 | how many frames the slide takes |
-| 1 | how far it goes across |
-| 2 | who it acts on (a target flag) |
-
-### 52. `WE_T05`
-
-Slides a Pokemon sideways and back.  
-_WestSp_WE_T05_
+Slides a Pokemon sideways and back.
 
 | word | meaning |
 |---:|---|
@@ -433,39 +376,45 @@ _WestSp_WE_T05_
 | 1 | how far it goes across |
 | 2 | who it acts on (a target flag) |
 
-### 53. `WE_T06`
+### 52. `MoveBattlerX2`
 
-Slides a Pokemon and holds it there.  
-_WestSp_WE_T06_
+Slides a Pokemon sideways and back.
 
 | word | meaning |
 |---:|---|
-| 0 | where the slide starts |
-| 1 | _never read_ |
-| 2 | where it ends |
-| 3 | _never read_ |
+| 0 | how many frames the slide takes |
+| 1 | how far it goes across |
+| 2 | who it acts on (a target flag) |
+
+### 53. `ShakeAndScaleAttacker`
+
+Shakes and stretches the attacker, then holds it.
+
+| word | meaning |
+|---:|---|
+| 0 | the first stretch |
+| 1 | the second stretch |
+| 2 | how many frames the first takes |
+| 3 | how many frames the second takes |
 | 4 | how many frames to hold before coming back |
-| 5 | who it acts on (a target flag) |
+| 5 | _never read_ |
 
-### 55. `WE_293`
+### 55. `Camouflage`
 
-One move's own effect.  
-_WestSp_WE_293_
+One move's own effect.
 
-### 56. `WE_T08`
+### 56. `Superpower`
 
-Puts a glow around the attacker (Superpower).  
-_WestSp_WE_T08_
+Puts a glow around the attacker (Superpower).
 
 | word | meaning |
 |---:|---|
-| 0 | which of the routine's ways of doing it |
+| 0 | _never read_ |
 | 1 | _never read_ |
 
-### 57. `WE_T10`
+### 57. `MoveBattler`
 
-Slides a Pokemon and brings it back.  
-_WestSp_WE_T10_
+Slides a Pokemon and brings it back.
 
 | word | meaning |
 |---:|---|
@@ -474,85 +423,65 @@ _WestSp_WE_T10_
 | 2 | how far it goes down |
 | 3 | who it acts on (a target flag) |
 
-### 58. `WE_102`
+### 58. `Mimic`
 
-One move's own effect.  
-_WestSp_WE_102_
+One move's own effect.
 
-### 59. `WE_325`
+### 59. `ShadowPunch`
 
-One move's own effect.  
-_WestSp_WE_325_
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | _never read_ |
 
-### 60. `WE_KAITEN`
+### 60. `RevolveBattler`
 
-Swings a Pokemon around in a circle.  
-_WestSp_WE_Kaiten_
+Swings a Pokemon around in a circle.
 
 | word | meaning |
 |---:|---|
 | 0 | who it acts on (a target flag) |
-| 1 | where the swing starts |
-| 2 | where it ends |
+| 1 | how many times it goes round |
+| 2 | how many frames each turn takes |
 
-### 61. `WE_DISP_OUT`
+### 61. `MoveBattlerOffScreen`
 
-Slides a Pokemon off the screen.  
-_WestSp_WE_DispOut_
+Slides a Pokemon off the screen.
 
 | word | meaning |
 |---:|---|
 | 0 | who it acts on (a target flag) |
 | 1 | how many frames it takes |
 
-### 62. `WE_DISP_DEF`
+### 62. `MoveBattlerToDefaultPos`
 
-Puts a Pokemon straight back where it belongs.  
-_WestSp_WE_DispDef_
+Puts a Pokemon straight back where it belongs.
 
 | word | meaning |
 |---:|---|
 | 0 | who it acts on (a target flag) |
 
-### 63. `WE_OAM_PAL_FADE`
+### 63. `FadePokemonSprite`
 
-Fades the colours of dropped copies toward one colour.  
-_WestSp_WE_OAM_PalFade_
+Fades the colours of dropped copies toward one colour.
 
 | word | meaning |
 |---:|---|
 | 0 | which of the four dropped copies, one bit each |
 | 1 | how many frames each step takes |
-| 2 | how the fade is applied |
+| 2 | how much each step changes it |
 | 3 | how strong it starts |
 | 4 | how strong it ends |
 | 5 | the colour to fade toward |
 
-### 65. `EMIT_STRAIGHT`
+### 65. `MoveEmitterA2BLinear`
 
-Moves a particle emitter in a straight line.  
-_WSP_Emitter_Straight_
+Moves a particle emitter in a straight line.
 
-| word | meaning |
-|---:|---|
-| 0 | which emitter to move |
-| 1 | how far past the target it ends up, across |
-| 2 | how far past the target it ends up, down |
-| 3 | how many frames to wait before starting |
-| 4 | how many frames the move takes |
-| 5 | how high the arc goes |
-| 6 | 0 from the attacker toward the defender, 1 the other way |
-| 7 | packed: the low half is when to stop looping, the high half a spare loop count |
-| 8 | how much the path curves |
+### 66. `MoveEmitterA2BParabolic`
 
-### 66. `EMIT_PARABOLIC`
-
-Moves a particle emitter along an arc.  
-_WSP_Emitter_Parabolic_
+Moves a particle emitter along an arc.
 
 | word | meaning |
 |---:|---|
@@ -563,27 +492,25 @@ _WSP_Emitter_Parabolic_
 | 4 | how many frames the move takes |
 | 5 | how high the arc goes |
 | 6 | 0 from the attacker toward the defender, 1 the other way |
-| 7 | packed: the low half is when to stop looping, the high half a spare loop count |
+| 7 | packed: the low half caps the move at that many frames, the high half skips that many frames at the start |
 | 8 | how much the path curves |
 
-### 67. `RECT_VIEW`
+### 67. `BattlerPartialDraw`
 
-Wipes a Pokemon in or out behind a moving edge.  
-_WSP_RectView_
+Wipes a Pokemon in or out behind a moving edge.
 
 | word | meaning |
 |---:|---|
 | 0 | who it acts on (a target flag) |
 | 1 | _never read_ |
-| 2 | where the edge starts |
-| 3 | where the edge ends |
-| 4 | how many frames the wipe takes |
-| 5 | 0 to wipe one way, anything else the other |
+| 2 | _never read_ |
+| 3 | how far the edge moves each step, its sign choosing in or out |
+| 4 | how many frames between steps |
+| 5 | 1 to draw it the way Sketch does |
 
-### 68. `BG_SHAKE`
+### 68. `ShakeBg`
 
-Shakes the background.  
-_WestSp_WE_BgShake_
+Shakes the background.
 
 | word | meaning |
 |---:|---|
@@ -594,10 +521,9 @@ _WestSp_WE_BgShake_
 | 4 | how many extra times to run the whole thing |
 | 5 | 0 for one background frame, anything else for the other |
 
-### 69. `MOSAIC`
+### 69. `PixelatePokemonSprite`
 
-Breaks a dropped copy into blocks and back.  
-_WSP_Mosaic_
+Breaks a dropped copy into blocks and back.
 
 | word | meaning |
 |---:|---|
@@ -606,28 +532,25 @@ _WSP_Mosaic_
 | 2 | block size across |
 | 3 | block size down |
 
-### 70. `WSP_272`
+### 70. `RolePlay`
 
-One move's own effect.  
-_WSP_272_
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | _never read_ |
 
-### 71. `WSP_289`
+### 71. `Snatch`
 
-One move's own effect.  
-_WSP_289_
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | who it acts on (a target flag) |
 
-### 72. `EMIT_ROTATION`
+### 72. `RevolveEmitter`
 
-Swings a particle emitter around a Pokemon.  
-_WSP_Emitter_Rotation_
+Swings a particle emitter around a Pokemon.
 
 | word | meaning |
 |---:|---|
@@ -642,10 +565,9 @@ _WSP_Emitter_Rotation_
 | 8 | 0 to swing around the attacker, anything else around the defender |
 | 9 | which set of particles to swing |
 
-### 73. `EMIT_SIMPLE_UD`
+### 73. `MoveEmitterViewportTop`
 
-Moves a particle emitter up or down.  
-_WSP_Emitter_SimpleUD_
+Moves a particle emitter up or down.
 
 | word | meaning |
 |---:|---|
@@ -654,21 +576,19 @@ _WSP_Emitter_SimpleUD_
 | 2 | 0 comes down onto the Pokemon from above the screen, anything else rises away from it |
 | 3 | how many frames the move takes |
 | 4 | how many frames to wait before starting |
-| 5 | packed: the low half is when to stop looping, the high half a spare loop count |
+| 5 | packed: the low half caps the move at that many frames, the high half skips that many frames at the start |
 
-### 74. `PALCOL_CHANGE`
+### 74. `SetBgGrayscale`
 
-Drains the colour out of the scene, or puts it back.  
-_WSP_PalColChange_
+Drains the colour out of the scene, or puts it back.
 
 | word | meaning |
 |---:|---|
 | 0 | 0 to put the colours back, anything else to drain them |
 
-### 75. `POKE_OAM_VIEW`
+### 75. `SetPokemonSpritePriority`
 
-Changes how a dropped copy is drawn and where it sits in the stack.  
-_WSP_PokeOAM_View_
+Changes how a dropped copy is drawn and where it sits in the stack.
 
 | word | meaning |
 |---:|---|
@@ -676,23 +596,21 @@ _WSP_PokeOAM_View_
 | 1 | how many frames it lasts |
 | 2 | which background layer to sit against |
 | 3 | where it sits among the sprites |
-| 4 | which copy is being dropped |
+| 4 | which battler it is |
 | 5 | which of the routine's ways of doing it |
-| 6 | 0 for the attacker's side, anything else for the defender's |
+| 6 | the window type, used only by Dark Void |
 
-### 76. `LASTER`
+### 76. `ScrollSwitchedBg`
 
-Ripples the screen line by line.  
-_WestSp_WE_Laster_
+Ripples the screen line by line.
 
 | word | meaning |
 |---:|---|
 | 0 | how many frames the ripple lasts |
 
-### 77. `DISP_MOVE`
+### 77. `MoveBattlerOnOrOffScreen`
 
-Slides a Pokemon off the screen or back on.  
-_WestSp_WE_DispMove_
+Slides a Pokemon off the screen or back on.
 
 | word | meaning |
 |---:|---|
@@ -702,41 +620,42 @@ _WestSp_WE_DispMove_
 | 3 | _never read_ |
 | 4 | _never read_ |
 
-### 78. `ALL_DROP`
+### 78. `RenderPokemonSprites`
 
-Keeps all four Pokemon drawn as sprites while the particle data loads.  
-_WSP_AllPokeDrop_
+Keeps all four Pokemon drawn as sprites while the particle data loads.
 
 | word | meaning |
 |---:|---|
 | 0 | how many frames to keep them drawn, or 0 for the usual loading wait |
 
-### 79. `WSP_166`
+### 79. `Sketch`
 
-One move's own effect.  
-_WSP_166_
+One move's own effect.
 
 | word | meaning |
 |---:|---|
 | 0 | _never read_ |
 
-### 82. `ST_EFF_RECOVER`
+### 82. `StatChangeHeal`
 
-Scrolls an overlay upward behind a Pokemon, for getting its health back.  
-_StatusEffect_Recover_
-
-| word | meaning |
-|---:|---|
-| 0 | which background graphic to scroll |
-| 1 | 0 behind the attacker, anything else behind the defender |
-
-### 83. `ST_EFF_METAL`
-
-Scrolls an overlay downward behind a Pokemon, for turning metallic.  
-_StatusEffect_Metal_
+Scrolls an overlay upward behind a Pokemon, for getting its health back.
 
 | word | meaning |
 |---:|---|
 | 0 | which background graphic to scroll |
 | 1 | 0 behind the attacker, anything else behind the defender |
 
+### 83. `StatChangeMetal`
+
+Scrolls an overlay downward behind a Pokemon, for turning metallic.
+
+| word | meaning |
+|---:|---|
+| 0 | which background graphic to scroll |
+| 1 | 0 behind the attacker, anything else behind the defender |
+
+## Not described yet
+
+DSPRE has no word layout for these routines yet; the editor shows their words as plain numbers:
+
+21 `Harden`, 39 `OdorSleuth`, 46 `Megahorn`, 54 `ShakeAndScaleAttacker2`, 64 `BattlerPartialDrawTest`, 80 `StatChangeUp`, 81 `StatChangeDown`.

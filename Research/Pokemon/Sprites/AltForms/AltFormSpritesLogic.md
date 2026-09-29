@@ -32,9 +32,9 @@ void GetMonSpriteCharAndPlttNarcIdsEx(PokepicTemplate *pokepicTemplate, u16 spec
 }
 ```
 
-13 species redirect to `NARC_poketool_pokegra_otherpoke` instead of the default `NARC_poketool_pokegra_pokegra`: Burmy, Wormadam, Shellos, Gastrodon, Cherrim, Arceus, Castform, Deoxys, Unown, Shaymin, Rotom, Giratina, Pichu. Two more entries in the same switch, `SPECIES_EGG` and `SPECIES_MANAPHY_EGG`, also point at `otherpoke` for the egg placeholder graphics. Every other species falls through to the `default` case and reads `pokegra.narc` directly by `species * 6 + whichFacing + gender` arithmetic.
+13 species redirect to `NARC_poketool_pokegra_otherpoke` instead of the default `NARC_poketool_pokegra_pokegra`: Burmy, Wormadam, Shellos, Gastrodon, Cherrim, Arceus, Castform, Deoxys, Unown, Shaymin, Rotom, Giratina, Pichu. Two more entries in the same switch also point at `otherpoke`: `SPECIES_EGG`, which covers the egg and, by form, the Manaphy egg, and `SPECIES_MANAPHY_EGG`, which pokeheartgold marks as the bad egg. Every other species falls through to the `default` case and reads `pokegra.narc` directly by `species * 6 + whichFacing + gender` arithmetic.
 
-Each of the 13 species has its own fixed `charDataID`/`palDataID` base offset plus `form * 2` or `form` added on top, so forms of the same species sit at consecutive indices inside `otherpoke.narc`. Spinda is called out as a special case in the `default` branch: it sets `pokepicTemplate->isAnimated = TRUE` and carries the personality value through, for its personality-seeded spot pattern.
+Each of the 13 species has its own fixed `charDataID`/`palDataID` base offset plus `form * 2` or `form` added on top, so forms of the same species sit at consecutive indices inside `otherpoke.narc`. Spinda is called out as a special case in the `default` branch, for its front picture only: it sets `pokepicTemplate->isAnimated = FALSE` and carries the personality value through, for its personality-seeded spot pattern.
 
 ## Form clamping
 
@@ -58,15 +58,15 @@ u8 sub_02070438(u16 species, u8 form) {
 }
 ```
 
-Each of the 13 species (minus the two egg entries) has its own `<SPECIES>_FORM_MAX` constant. A form value past that constant is silently reset to 0 (the base form) rather than reading out of bounds.
+Each of the 13 species has its own `<SPECIES>_FORM_MAX` constant; the clamp also handles `SPECIES_EGG`. A form value past that constant is silently reset to 0 (the base form) rather than reading out of bounds.
 
 ## What DSPRE already does
 
-DSPRE's Sprite Editor already implements the same otherpoke redirect independently. `AlternateFormSprites.Form` in `DSPRE.Avalonia/Avalonia/Data/AlternateFormSprites.cs` holds one entry per alternate form: a name, back/front sprite indices, normal/shiny palette indices, and a separate `HgEngineSpeciesId` field used only for hg-engine-native forms (Mega/Gigantamax/regional forms with no vanilla otherpoke equivalent at all).
+DSPRE's Sprite Editor already implements the same otherpoke redirect independently. `AlternateFormSprites.Form` in `DSPRE.Avalonia/Avalonia/Data/AlternateFormSprites.cs` holds one entry per alternate form: a name, back/front sprite indices and normal/shiny palette indices.
 
-`IsAlternateForms`, `VariantNames` and `SelectedVariantIndex` in `PokemonSpriteEditorViewModel` drive the form picker, and `AlternateFormSprites.WhoOwns` answers which form owns a given file of the archive. Picking a variant with `HgEngineSpeciesId >= 0` jumps straight to that species id instead of reading otherpoke at all; otherwise it checks whether hg-engine has migrated that form to its own real species (`ResolveHgEngineMigratedFormId`) before falling back to reading the vanilla otherpoke entry.
+`IsAlternateForms`, `VariantNames` and `SelectedVariantIndex` in `PokemonSpriteEditorViewModel` drive the form picker, and `AlternateFormSprites.WhoOwns` answers which form owns a given file of the archive.
 
-The `otherPokemonBattleSprites` entry of `SetNarcDirs` in `DSPRE.Core/RomInfo.cs` points at `poketool\pokegra\otherpoke.narc` for HGSS and `poketool\pokegra\pl_otherpoke.narc` for Platinum.
+The `otherPokemonBattleSprites` entry of `SetNarcDirs` in `DSPRE.Core/RomInfo.cs` points at `poketool\pokegra\otherpoke.narc` for Diamond and Pearl, `poketool\pokegra\pl_otherpoke.narc` for Platinum and `a\1\1\4` for HeartGold and SoulSilver.
 
 ## Form height lookup
 
@@ -97,4 +97,4 @@ u8 GetMonPicHeightBySpeciesGenderForm(u16 species, u8 gender, u8 whichFacing, u8
 
 `NARC_poketool_pokegra_height_o` is the height-table counterpart to `otherpoke.narc`, holding one byte per facing/form for the same 13 alt-form species (plus the two egg entries). Every other species reads `NARC_poketool_pokegra_height` (the default per-species table) at `species * 4 + whichFacing + gender`.
 
-`GetMonPicHeightBySpeciesGenderForm_PBR` is the Pokemon Battle Revolution equivalent, reading `NARC_pbr_dp_height_o`/`NARC_pbr_dp_height` instead. For Shaymin, Rotom, and Giratina it only uses its own PBR-specific `height_o` table when `form != 0`; at form 0 it falls back to `NARC_pbr_dp_height` with the plain `species * 4 + whichFacing + gender` formula, the same shape as the `default` case. Pichu's spiky-ear form is present as a commented-out case in this function, `narcId = NARC_pbr_dp_height_o; fileId = 0x9C + whichFacing / 2 + form * 2;`, disabled rather than removed.
+`GetMonPicHeightBySpeciesGenderForm_PBR` is the Pokemon Battle Revolution equivalent, reading `NARC_pbr_dp_height_o`/`NARC_pbr_dp_height` instead. For Shaymin, Rotom, and Giratina it reads the DS `height_o` table, `NARC_poketool_pokegra_height_o`, when `form != 0`; at form 0 it falls back to `NARC_pbr_dp_height` with the plain `species * 4 + whichFacing + gender` formula, the same shape as the `default` case. Pichu's spiky-ear form is present as a commented-out case in this function, `narcId = NARC_pbr_dp_height_o; fileId = 0x9C + whichFacing / 2 + form * 2;`, disabled rather than removed.

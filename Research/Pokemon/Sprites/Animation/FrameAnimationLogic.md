@@ -101,4 +101,4 @@ DSPRE has its own reimplementation of this same cell/frame model, built directly
 
 ## Not decompiled yet
 
-The actual per-frame delay countdown and looping logic live inside `NNS_G2dTickCellAnimation`/`NNS_G2dTickMCAnimation` and the rest of the `NNS_G2d*` functions. None of the g2d library's own source is part of `pokeheartgold`; only the calls into it are decompiled. `include/` has no `g2d`-named header, so the `NNSG2dCellAnimation`/`NNSG2dAnimSequenceData`/`NNSG2dCellDataBank` struct layouts are not visible in this project either.
+The actual per-frame delay countdown and looping logic live inside `NNS_G2dTickCellAnimation`/`NNS_G2dTickMCAnimation` and the rest of the `NNS_G2d*` functions. The bodies of those g2d functions are not decompiled in `pokeheartgold`, only the calls into them. The struct layouts are there: `NNSG2dCellAnimation` and its companions are in `lib/include/nnsys/g2d/g2d_CellAnimation.h`.

@@ -9,33 +9,33 @@ name says what somebody meant an archive for and not what ended up in it. Files 
 squeezed down are unsqueezed first. Up to forty files spread through each archive are read,
 which is enough to notice an archive holding more than one kind of thing.
 
-Games read: Diamond, Platinum, HeartGold. Archives found: 67.
+Games read: Diamond, Platinum, HeartGold. Archives found: 67. DSPRE has added archives since, such as the trainer back sprites, which are not in this table. The editor column names DSPRE editors; some rows still carry the WinForms editor names they had when the census ran.
 
 | archive | what is in it | entries | editor |
 |---|---|---|---|
 | OWSprites | 3D texture bundle, 3D model, raw data | 414 / 470 / 863 | AddOverworldEntry, BtxEditor, EventEditor |
 | areaData | raw data | 59 / 75 / 106 | AreaDataEditor, EventEditor, HeadbuttEncounter, MapEditor, HeadbuttEncounterEditor, NsbtxEditor |
-| battleBg | palette, tile map, tile graphic | 257 / 342 / 351 | **none** |
-| battleBgPlanm | palette, raw data | 32 | **none** |
-| battleObj | tile graphic, palette, cell layout, cell animation | 279 / 343 / 346 | **none** |
+| battleBg | palette, tile map, tile graphic | 257 / 342 / 351 | Graphics Browser, Battle Screen editor, Battle Script editor, Battle Display editor |
+| battleBgPlanm | palette, raw data | 32 | Graphics Browser |
+| battleObj | tile graphic, palette, cell layout, cell animation | 279 / 343 / 346 | Graphics Browser, Battle Display editor, Battle Screen editor, Battle Script editor, type pictures |
 | battleTowerPokemon | raw data | 951 / 952 / 951 | BattleTowerEditor |
 | battleTowerTrainers | raw data | 307 / 315 / 315 | BattleTowerEditor |
 | beSeq | raw data | 277 / 277 / 277 | BattleScriptEditor |
-| buildingAnimListIn | raw data | 222 | **none** |
-| buildingAnimListOut | raw data | 535 / 590 / 340 | **none** |
-| buildingAnimations | 3D texture animation, 3D joint animation, 3D texture swap, 3D material anim | 64 / 98 / 273 | **none** |
+| buildingAnimListIn | raw data | 222 | building animations in the map views |
+| buildingAnimListOut | raw data | 535 / 590 / 340 | building animations in the map views |
+| buildingAnimations | 3D texture animation, 3D joint animation, 3D texture swap, 3D material anim | 64 / 98 / 273 | Model Browser, building animations in the map views |
 | buildingConfigFiles | raw data, too short to tell | 55 / 71 / 104 | NsbtxEditor, EventEditor, MapEditor |
 | buildingTextures | 3D texture bundle, raw data | 55 / 71 / 104 | BuildingEditor, EventEditor, HeadbuttEncounter, MapEditor, NsbtxEditor, HeadbuttEncounterEditor |
-| dungeonCutinGraphics | palette, tile graphic, tile map | 228 | **none** |
+| dungeonCutinGraphics | palette, tile graphic, tile map | 228 | Dungeon Cut-in editor, Graphics Browser |
 | dynamicHeaders | tile map, palette, tile graphic, cell animation, cell layout | 12 / 3 | EventEditor, HeadbuttEncounter, HeaderEditor, MapEditor, SpawnEditor, WildEditorDPPt, WildEditorHGSS, HeadbuttEncounterEditor, LevelScriptEditor, MatrixEditor |
 | eggMoves | raw data | 1 | EggMoveEditor |
-| encounterExtended | raw data | 12 / 12 | GreatMarshEncounter, HoneyTreeEncounter, TrophyGardenEditor, GreatMarshEncounterEditor, HoneyTreeEncounterEditor |
-| encounters | raw data | 183 / 183 / 142 | **none** |
+| encounterExtended | raw data | 12 / 12 | GreatMarshEncounter, HoneyTreeEncounter, Special Encounters Editor, GreatMarshEncounterEditor, HoneyTreeEncounterEditor |
+| encounters | raw data | 183 / 183 / 142 | Wild Pokémon Editor, Swarms |
 | eventFiles | raw data | 512 / 534 / 491 | EventEditor |
 | evolutions | raw data | 501 / 508 / 508 | PokemonEditor, TmHmBulkEditor |
 | exteriorBuildingModels | 3D model | 535 / 590 / 340 | BuildingEditor, EventEditor, HeadbuttEncounter, MapEditor, HeadbuttEncounterEditor |
 | fonts | raw data, palette, tile graphic | 8 / 8 / 11 | FontEditor |
-| groundAnimations | 3D texture animation | 2 | **none** |
+| groundAnimations | 3D texture animation | 2 | Model Browser, terrain animation in the map views |
 | headbutt | raw data | 540 | HeadbuttEncounter, HeadbuttEncounterEditor |
 | interiorBuildingModels | 3D model | 222 | BuildingEditor, EventEditor, HeadbuttEncounter, MapEditor, HeadbuttEncounterEditor |
 | itemData | raw data | 442 / 446 / 514 | ItemEditor |
@@ -44,7 +44,7 @@ Games read: Diamond, Platinum, HeartGold. Archives found: 67.
 | mapTextures | 3D texture bundle | 58 / 74 / 106 | EventEditor, HeadbuttEncounter, MapEditor, NsbtxEditor, HeadbuttEncounterEditor |
 | maps | raw data | 578 / 666 / 676 | EventEditor, HeadbuttEncounter, MapEditor, HeadbuttEncounterEditor |
 | matrices | raw data | 245 / 289 / 288 | EventEditor, HeadbuttEncounter, MapEditor, MatrixEditor, HeadbuttEncounterEditor |
-| monIcons | tile graphic, palette | 540 / 547 / 551 | BattleTowerEditor, BugContestEncounter, GreatMarshEncounter, HoneyTreeEncounter, StarterEditor, TableEditor, TrainerEditor, TrophyGardenEditor, BugContestEncounterEditor, GreatMarshEncounterEditor, HoneyTreeEncounterEditor |
+| monIcons | tile graphic, palette | 540 / 547 / 551 | BattleTowerEditor, BugContestEncounter, GreatMarshEncounter, HoneyTreeEncounter, StarterEditor, TableEditor, TrainerEditor, Special Encounters Editor, BugContestEncounterEditor, GreatMarshEncounterEditor, HoneyTreeEncounterEditor |
 | moveData | raw data | 471 / 471 / 471 | MoveDataEditor, TMEditor, LearnsetEditor |
 | otherPokemonBattleSprites | tile graphic, palette | 213 / 253 / 261 | PokemonSpriteEditor |
 | personalPokeData | raw data, unknown (#U-K), unknown (((#F), unknown ((-#F), unknown ((2(Z), unknown (-#-#), unknown (-K%S), unknown (0000), unknown (118B), unknown (2--2), unknown (:@:P), unknown (<(2_), unknown (<-2F), unknown (<0-*), unknown (<72-), unknown (<P2(), unknown (<UEP), unknown (A_d2), unknown (C}(:), unknown (DZAR), unknown (F77-), unknown (FZF(), unknown (GR@p), unknown (Id<A), unknown (KK?_), unknown (K}d-), unknown (NF=d), unknown (PPPZ), unknown (U2_P), unknown (ZUdU), unknown (_FI<), unknown (dddd), unknown (i?Z_), unknown (2AkV) | 501 / 508 / 508 | PokemonEditor, PokemonSpriteEditor, TmHmBulkEditor, TrainerEditor, LearnsetEditor |
@@ -63,23 +63,23 @@ Games read: Diamond, Platinum, HeartGold. Archives found: 67.
 | subSeq | raw data | 293 / 297 / 297 | BattleScriptEditor |
 | synthOverlay | tile graphic, palette, cell animation, cell layout, tile map, raw data | 59 / 65 / 7 | HeaderEditor, MapEditor |
 | textArchives | raw data | 624 / 724 / 829 | BattleMessageEditor, EventEditor, HeaderEditor, SafariZoneEncounter, TableEditor, TextEditor, TrainerEditor, HeadbuttEncounterEditor, SafariZoneEditor, ScriptEditor, TrainerMessageEditor |
-| titleScreenGraphics | tile graphic, tile map, palette, 3D model, 3D joint animation, 3D texture animation, 3D texture swap, 3D material anim | 44 | **none** |
-| tradeData | raw data | 4 / 4 / 13 | **none** |
-| trainerCardGraphics | palette, tile graphic, tile map, cell animation, cell layout | 66 / 78 | **none** |
+| titleScreenGraphics | tile graphic, tile map, palette, 3D model, 3D joint animation, 3D texture animation, 3D texture swap, 3D material anim | 44 | Title Screen editor, Model Browser |
+| tradeData | raw data | 4 / 4 / 13 | Trade editor |
+| trainerCardGraphics | palette, tile graphic, tile map, cell animation, cell layout | 66 / 78 | Trainer Card editor, Graphics Browser |
 | trainerGraphics | tile graphic, cell animation, cell layout, palette | 196 / 525 / 645 | BattleMessageEditor, TableEditor, TrainerEditor, TrainerSpriteEditor, TrainerMessageEditor |
 | trainerParty | raw data | 850 / 928 / 738 | TrainerEditor |
 | trainerProperties | raw data | 850 / 928 / 738 | BattleMessageEditor, EventEditor, TrainerEditor, TrainerFlagBulkEditor, VsSeekerRematch, TrainerMessageEditor |
 | trainerTextOffset | raw data | 1 / 1 / 1 | BattleMessageEditor, TrainerMessageEditor |
 | trainerTextTable | raw data | 1 / 1 / 1 | BattleMessageEditor, TrainerMessageEditor |
-| wazaEffectCell | cell layout | 37 / 37 / 37 | **none** |
-| wazaEffectCellAnm | cell animation | 37 / 37 / 37 | **none** |
-| wazaEffectChar | tile graphic | 37 / 37 / 37 | **none** |
-| wazaEffectPltt | palette | 39 / 39 / 39 | **none** |
+| wazaEffectCell | cell layout | 37 / 37 / 37 | Graphics Browser, Battle Script editor |
+| wazaEffectCellAnm | cell animation | 37 / 37 / 37 | Graphics Browser, Battle Script editor |
+| wazaEffectChar | tile graphic | 37 / 37 / 37 | Graphics Browser, Battle Script editor |
+| wazaEffectPltt | palette | 39 / 39 / 39 | Graphics Browser, Battle Script editor |
 | wazaEffectScripts | raw data | 501 / 501 / 501 | BattleScriptEditor |
-| wazaEffectSub | raw data, empty | 50 / 50 / 50 | **none** |
+| wazaEffectSub | raw data, empty | 50 / 50 / 50 | Battle Script editor, Particle Library |
 | wazaParticle | SPA particle files, see [Particles Logic](Particles/ParticlesLogic.md) | 485 / 485 / 486 | BattleScriptEditor, ParticleEditor |
 | wazaSeq | raw data | 501 / 501 / 501 | BattleScriptEditor |
-| windowFrames | tile graphic, palette, cell animation, cell layout | 50 / 50 / 51 | **none** |
+| windowFrames | tile graphic, palette, cell animation, cell layout | 50 / 50 / 51 | Graphics Browser, Battle Screen editor, the animated preview's message box |
 
 Entry counts are listed in the order the games are named above, for the games that have
 that archive.

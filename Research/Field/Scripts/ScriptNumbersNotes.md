@@ -35,9 +35,9 @@ range count: DP 27, Pt 30, HG 30
 
 same number, different meaning:
   2800 berry (DP/Pt) vs apricorn (HG)
-  9000 PC 2F common (DP/Pt) vs comm reception (HG)
-  9100 communication club (DP/Pt) vs Colosseum (HG)
-  9200 PC B1F common (DP/Pt) vs wifi reception (HG)
+  9000 PC 2F reception (DP/Pt) = comm reception (HG), same scripts
+  9100 communication club (DP/Pt) = Colosseum (HG), same scripts
+  9200 PC B1F attendants (DP/Pt) = wifi reception (HG), same scripts
   2500 bookshelves (HG) vs BG events (Pt), same 9 scripts 2500-2508 in all three
 
 individual common scripts HG moved:

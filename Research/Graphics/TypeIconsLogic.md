@@ -34,6 +34,7 @@ Each screen that shows a type picture loads the shared palette into its own spri
 | Battle party and summary menus, with contest pictures | 4 | `battle_party_sprites.c` |
 | Battle move buttons | | `battle_cursor.c`, through `TypeIcon_NewTypeIconSprite` |
 | PC box preview | 10 | `pc_boxes` |
+| An overlay 70 screen, drawn as background tiles rather than sprites | 11 | `overlay070/ov70_0225D9A4.c` |
 
 HeartGold draws them from its battle input code, its battle sub menus, the PC, the bag and the move relearner through the same helpers.
 
@@ -53,7 +54,7 @@ The rows of the battle touch screen's palette file that these land in are placeh
 
 ## A nineteenth type
 
-The pictures are the first eighteen entries of a 23 entry table, guarded by an assertion that only stops the game during communication. A type 18 therefore draws the Cool contest picture, 19 to 22 draw Beauty, Cute, Smart and Tough, and 23 or more reads past the tables. The move button palettes stop at eighteen, and the Pokédex lookup has no default case. A new type needs new entries in all of these, not only a picture. See [Type Chart Logic](../Moves/Types/TypeChartLogic.md#adding-a-type) for the rest.
+The pictures are the first eighteen entries of a 23 entry table, guarded by an assertion that only stops the game during communication. A type 18 therefore draws the Cool contest picture, 19 to 22 draw Beauty, Cute, Smart and Tough, and 23 or more reads past the picture table. The move button palettes stop at eighteen, and the Pokédex lookup has no default case. A new type needs new entries in all of these, not only a picture. See [Type Chart Logic](../Moves/Types/TypeChartLogic.md#adding-a-type) for the rest.
 
 ## What DSPRE does
 
@@ -61,6 +62,6 @@ The pictures are the first eighteen entries of a 23 entry table, guarded by an a
 |---|---|---|---|
 | The eighteen type pictures and the shared palette | Graphics Browser, as in [Battle Icons Logic](BattleIconsLogic.md) | the battle object archive members | |
 | Type pictures elsewhere in DSPRE | shown by `TypeIcons.For` in the Type Chart editor and wherever a move's type is shown; types 18 to 22 show the contest pictures, as the game does | | |
-| ARM9 picture and bank tables | read (`BattleUiTables`) and used for each picture's bank when all 23 members match the archive's names, otherwise the retail banks | | untouched |
+| ARM9 picture and bank tables | read (`BattleUiTables`) and used for each picture's bank when all 23 members it names are the icon files DSPRE expects, otherwise the retail banks | | untouched |
 | Move button palettes | read from the battle overlay and shown on the Battle Screen editor's Fight menu | | untouched |
 | Pokédex type pictures | | | untouched |

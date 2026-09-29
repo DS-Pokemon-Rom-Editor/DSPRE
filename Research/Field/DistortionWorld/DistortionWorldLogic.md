@@ -27,7 +27,7 @@ Ten headers make up the place, 573 to 583 without 578:
 | 582 | Giratina Room | 9 | 278 | 1 by 1 |
 | 583 | Turnback Cave room | 10 | 279 | 2 by 2 |
 
-The first eight are a chain, 1F down to B7F, held in `sDistWorldMapConnectionList` (`src/overlay009/ov9_02249960.c`); the Giratina Room and the Turnback Cave room have no neighbours. Headers 570 and 578 carry the same label and music, with matrices 268 and 274, but appear in no table of the overlay, so nothing shows they are reachable.
+The first eight are a chain, 1F down to B7F, held in `sDistWorldMapConnectionList` (`src/overlay009/ov9_02249960.c`); the Giratina Room and the Turnback Cave room have no neighbours. Headers 570 and 578 carry the same label and music, with matrices 268 and 274, but appear in no table of the overlay. Header 578 does have scripts of its own, and they run the Distortion World setup command (`InitPersistedMapFeaturesForDistortionWorld`), so how it is reached is an open question.
 
 The headers themselves are unremarkable. They share `area_data_074`, say `MAP_TYPE_CAVE`, have clear weather, and the one field specific to the place is `.battleBG = BACKGROUND_DISTORTION_WORLD` (`include/data/map_headers.h` for 1F). Only 1F has an events file; the other nine point at `events_empty`, because their objects live in the overlay (see "Objects"). None of the matrices has a header list or an altitude list.
 
@@ -112,7 +112,7 @@ The grid is column major over the platform's `tileCountVertical`, and a world ti
 
 Outside the box the lookup answers out of bounds, which counts as blocked. Inside it the entry is read with the ordinary masks, so a platform tile can carry any behaviour: the B4F ceiling is surfable water (`0x15`), and one B2F floor section has the two tile jumps (`0x5A`, `0x5B`).
 
-A few tiles are blocked in code. Giratina Room tile (15, 26) and B7F tile (89, 56) always are (`DistWorld_DynamicMapFeaturesCheckCollision`), and Giratina Room tile (15, 1, 15) is blocked only while the progress variable is 14 (`DistWorld_IsBlockedByCynthia`). Background events, signs included, are only checked when the avatar is in its normal state, so they are skipped on any platform, floor sections included (`src/overlay005/field_control.c`).
+A few tiles are blocked in code. Giratina Room tile (15, 26) and B7F tile (89, 56) always are (`DistWorld_DynamicMapFeaturesCheckCollision`), and Giratina Room tile (15, 1, 15) is blocked only while the progress variable is 14 (`DistWorld_IsBlockedByCynthia`). Background events, signs included, are only checked in the avatar states `AVATAR_DISTORTION_STATE_NONE` and `_ACTIVE`, ordinary ground inside the Distortion World being `_ACTIVE`, so they are skipped while the avatar is on a floor, wall or ceiling platform (`src/overlay005/field_control.c`).
 
 **By hand.** Each `tw_arc_attr` member is one platform's grid, `tileCountVertical` by `tileCountHorizontal` little endian `u16` values ([layout](DistortionWorldFiles.md#tw_arc_attrnarc)). Blocking a wall tile is setting bit 15 of its entry. In retail every grid is 32 by 32, members 0 and 1 are all zero and unused, and ids 2 to 11 belong to the ten platforms in order. The code-blocked tiles are compare immediates in overlay 9, listed on the files page.
 
@@ -228,4 +228,4 @@ The editor is World menu, Distortion World, Platinum only and behind the beta ga
 | Overlay 9 triggers, commands, objects, chain, code tiles | no | no | no |
 | `tw_arc_etc` sky | no | no | no |
 
-Save writes the unpacked members only; they reach the ROM when the ROM is saved, like every other archive. Discard reloads the unpacked files. The tests in `DSPRE.Tests/Field` read the retail archives back byte for byte (`TornWorldFileTests`), check the overlay tables against the retail overlay (`TornWorldCodeTablesTests`), and walk the surfaces of B2F, B4F and the Turnback Cave room (`TornWorldSurfacesTests`).
+Save writes the unpacked members only; they reach the ROM when the ROM is saved, like every other archive. Discard reloads the unpacked files.

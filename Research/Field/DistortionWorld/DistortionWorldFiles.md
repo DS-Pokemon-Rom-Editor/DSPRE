@@ -4,7 +4,7 @@
 
 Source: [pokeplatinum decomp](https://github.com/pret/pokeplatinum), the same names as [Distortion World Logic](DistortionWorldLogic.md); overlay 9 names are in `src/overlay009/ov9_02249960.c`. This was structured into a document with AI.
 
-The byte layouts behind the Distortion World, for editing it by hand. Everything is little endian. Offsets inside overlay 9 are file offsets in the decompressed overlay; overlay 9 is stored uncompressed in Platinum and loads at RAM `0x02249960`, so a RAM address is that base plus the file offset, and every pointer inside the overlay's tables is such a RAM address. The overlay is the same in both US revisions of Platinum, and the archives are the same files. Other languages have not been checked.
+The byte layouts behind the Distortion World, for editing it by hand. Everything is little endian. Offsets inside overlay 9 are file offsets in the decompressed overlay; overlay 9 is stored uncompressed in Platinum and loads at RAM `0x02249960`, so a RAM address is that base plus the file offset, and every pointer inside the overlay's tables is such a RAM address. Everything was measured on US Platinum revision 1; revision 0 and other languages have not been checked.
 
 Units: tiles are whole tiles on every axis, facing is 0 up, 1 down, 2 left, 3 right, and `fx32` is 20.12 fixed point.
 
@@ -70,7 +70,7 @@ A size of 0 means the section is absent, and the header stays 20 bytes. The four
 
 #### Floating platforms, 20 bytes
 
-`DistWorldFloatingPlatformTemplate`,.
+`DistWorldFloatingPlatformTemplate`.
 
 | Offset | Type | Field |
 |---|---|---|
@@ -179,7 +179,7 @@ Values can be changed in place. Growing a list means writing it somewhere unused
 | Prop behaviours | `sPropAnimFuncsByKind` | `0x960C` | | 25 pointers, fixed |
 | Prop animation members | `sPropAnimSetNARCIndexByKind` | `0x7B44` | | 5 x u32, fixed |
 | Platform bob | `sPlatformPropAnimOffsets` | `0x8884` | | 8 x fx32 |
-| Camera start | `CameraInit` | `0x7B6C` | `0x022514CC` | 20 bytes |
+| Camera start | the settings `CameraInit` uses | `0x7B6C` | `0x022514CC` | 20 bytes |
 
 The floor chain rows are current, previous and next header, in that order; 593 means none. The camera start reads `c1 ae 29 00 02 d6 00 00 00 00 00 00 00 00 c1 05 00 00`: distance, angle (-10750, 0, 0), perspective, field of view 1473.
 

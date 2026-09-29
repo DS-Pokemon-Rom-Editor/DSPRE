@@ -10,7 +10,7 @@ Every map tile carries one `u16` that says whether the player can step on it and
 
 The game reads a tile as one `u16` at index `z * 32 + x` of the map's 32 by 32 grid. The low byte is the behaviour (`TerrainCollisionManager_GetTileBehavior`) and bit 15 alone blocks the tile (`TerrainCollisionManager_CheckCollision`, both in Platinum `src/terrain_collision_manager.c`). Diamond, Pearl and Platinum read nothing else from the high byte, and retail maps only use `00` and `80` there.
 
-HeartGold keeps bit 15 as the block, and uses bits 8 to 14 as a footstep sound, 0 to 15 (`sub_020548EC` in `asm/unk_02054648.s` returns the high byte with bit 15 masked off; the sixteen sounds are a table in `asm/unk_0205CB48.s`). A blocked tile can still carry a sound, and retail HeartGold maps use `81`, `82`, `84`, `85`, `86` and `8A` as well as `00` to `0D` and `80`.
+HeartGold keeps bit 15 as the block, and uses the other seven bits as a footstep sound (`sub_020548EC` in `asm/unk_02054648.s` returns the high byte with bit 15 masked off). The sound table has sixteen entries, so only 0 to 15 mean anything (`asm/unk_0205CB48.s`). A blocked tile can still carry a sound, and retail HeartGold maps use `81`, `82`, `84`, `85`, `86` and `8A` as well as `00` to `07`, `09`, `0A`, `0B`, `0D` and `80`; `08` and `0C` never occur.
 
 ## Where it is in a map
 
@@ -24,6 +24,10 @@ A land data file starts with four `u32` section lengths: permissions (always 204
 ## What each value means
 
 The names below are plain descriptions of what the game does with each value. Platinum's are from `include/constants/field/map_tile_behaviors.h` and the checks in `src/map_tile_behavior.c`, HeartGold's from `include/constants/metatile_behavior.h` and `src/metatile_behavior.c`. The Diamond decomp has no list; Diamond's values are Platinum's without the ones Platinum added, which the retail maps agree with. "No effect" marks a value the game registers but no code reads, and "(unused)" one that no retail map uses. "same" means the same meaning as the game to its left.
+
+"(unused)" is not marked on every value retail maps leave out. Also unused in retail are `34` to `37` and `EA` to `EC` in all three games, `32`, `33`, `74`, `77` and `78` in Diamond, Pearl and Platinum, `3C` and `3D` in Diamond, and `23`, `49`, `64` and `A9` in HeartGold.
+
+Some values are listed by the decomps only as unused or unknown, so the descriptions given for them here are DSPRE's reading and are not confirmed publicly: in Platinum `0A`, `44` to `48`, `50` to `55`, `60`, `61`, `66`, `68`, `84`, `87` to `8B`, `8D` to `8F`, `90` to `92`, `D0` and `D1`; in HeartGold `22` (only its blocking of interaction is public), `24` and `2E`.
 
 | Value | Diamond/Pearl | Platinum | HeartGold/SoulSilver |
 |---|---|---|---|
@@ -96,7 +100,7 @@ The names below are plain descriptions of what the game does with each value. Pl
 | `5D` |  | Jump 2 tiles right |  |
 | `5E` | Stairs warp, right | same | same |
 | `5F` | Stairs warp, left | same | same |
-| `60` | Warp, then step down (unused) | same |  |
+| `60` | Warp, then step down | same |  |
 | `61` | Warp, keep facing (unused) | same |  |
 | `62` | Warp mat, right | same | same |
 | `63` | Warp mat, left | same | same |
@@ -186,10 +190,10 @@ Values that appear in retail land data: Platinum 666 maps, Diamond 578, HeartGol
 | 3 | twigs | 11 | hollow floor |
 | 4 | soft grass | 12 | splashing |
 | 5 | sand | 13 | wooden planks |
-| 6 | hard floor | 14 | spare, unused |
-| 7 | metal | 15 | spare, unused |
+| 6 | hard floor | 14 | unused in retail maps |
+| 7 | metal | 15 | unused in retail maps |
 
-The collision byte is the sound, plus `0x80` if the tile is blocked.
+The collision byte is the sound, plus `0x80` if the tile is blocked. The sound names are DSPRE's descriptions; pokeheartgold lists only the sound effect each entry plays.
 
 ## Changing one by hand
 
@@ -201,7 +205,7 @@ Find the land data member of the map, then the tile's offset from the table abov
 |---|---|---|---|
 | Type, the low byte | the Map editor's Type painter, the Distortion World editor's Tiles painter and the map tileset editor, each offering every value this game gives a meaning, named for the game (`TilePermissions`) | the tile's low byte in the land data | |
 | Collision, the high byte | the Collision painter: Walkable and Blocked in Diamond, Pearl and Platinum; every sound, walkable and blocked, in HeartGold | the tile's high byte | |
-| Any other value | "Raw value" beside each painter paints a number as is; the grids and a hover line name any value, and one the game does not define shows as "Unknown (0xNN)" | | a value read from the file is never rewritten unless painted over |
+| Any other value | "Raw value" beside the Map editor's painters paints a number as is; the grids and a hover line name any value, and one the game does not define shows as "Unknown (0xNN)" | | a value read from the file is never rewritten unless painted over |
 | Warnings | an event or warp on open water is flagged using the game's surf water values only | | |
 
 Colours on the grids follow the meaning, so the same kind of ground looks the same in every game.

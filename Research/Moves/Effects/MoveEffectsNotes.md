@@ -12,7 +12,7 @@ TrainerAIData.moveData[NUM_MOVES + 1] (battle.h)
 
 == effect logic ==
 btlcmd.inc = 225 macros, shared bytecode format for move_script/effect_script/subscript
-each macro = 4-byte opcode word + one 4-byte word per param
+each macro = 4-byte opcode word + one 4-byte word per param (BufferMessage/BufferLocalMessage, opcodes 21/22: 0-6 extra words by tag)
 opcode numbers sequential from 0 in source order:
   0 PlayEncounterAnimation
   1 SetPokemonEncounter
@@ -46,4 +46,4 @@ GoToSubscript (opcode 35) reaches subscript.narc the same way, also called direc
 
 subscript_0000_StartEncounter.s = long real example: encounter setup, PrintGlobalMessage/PrintMessage, party gauge, Poke Ball throw
 
-not decompiled: no EFFECT_* name enum for the effect field, effect_script files numbered only
+effect names: MOVE_EFFECT_* in include/constants/move_effects.h; effect_script files numbered only

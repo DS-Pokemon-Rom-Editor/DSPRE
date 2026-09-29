@@ -2,180 +2,101 @@
 
 # What makes things move on a field map
 
-Everything the games animate on an overworld map, worked out from what the games themselves do, with
-what the animated preview does about each one. Nothing here is left as "not looked at": where the
-preview does not handle something, the reason is written down.
+Source: the [pokeheartgold](https://github.com/pret/pokeheartgold), [pokeplatinum](https://github.com/pret/pokeplatinum) and [pokediamond](https://github.com/pret/pokediamond) decomps, cited by file and function. This was structured into a document with AI.
 
-Frame rate is **30 per second** throughout. `GF_RTC` aside, every timing in the field code is
-written against it: a one frame wait is documented as a thirtieth of a second, and the standard
-walking step of eight frames as 3.75 tiles per second.
+Everything the games animate on an overworld map, and what DSPRE's animated preview does about each. The page follows HeartGold and SoulSilver, whose field has the most moving parts; where Platinum differs it says so. Many of HeartGold's field functions are still unnamed in pokeheartgold and are cited by their addresses.
 
-## Why this list is complete
+The field runs at 30 frames a second: the main loop in `src/main.c` waits for two vertical blanks each frame. A normal walking step takes eight frames (`MovementAction_WalkNormalNorth_Step0` and its siblings in pokeplatinum, which move two units a frame for eight frames), so walking covers 3.75 tiles a second.
 
-The list is not a reading of every module that looked relevant. It is four closed sets, each one
-taken from a single point every member of it has to pass through, so anything missing from a set
-cannot run at all.
+## What runs every frame
 
-**Every 3D animation on a field map.** All of them are attached by `G3dAnimeData_Add`, which lives in
-the 3D animation manager. It has seven call sites in the whole of the field code, in three modules:
-five in the map object animator, one in the terrain animator, and one in the time of day animator.
-Only two animation managers are ever created, the map object animator for map objects and the
-terrain animator for terrain, and both are stepped from a single call to `G3dAnime_Main` in the
-field map's own code. So 3D scenery animation is map objects and terrain, and there is no third
-thing.
+The field map's per-frame function, `ov01_021E5FC0` in pokeheartgold `src/field/fieldmap.c`, runs once a frame from `FieldMap_Main`. It calls nine things:
 
-**Everything the map steps each frame.** `FieldMap_Update` in the field map's own code is the field
-map's per frame function and it is called from exactly one place, `FieldMapProc_Main`. It calls nine
-things and no others: `EVTIME_Update`, `MainLightCont`, `TM_ANM_Main`, `SMLS_CamCnt_Main`,
-`BoardMain`, `FieldAnimeMain`, `G3dAnime_Main`, `DivMapLoadMain` and `Map3Dwrite`.
+| Call | What it does |
+|---|---|
+| `FieldSystem_StartBugContestTimer` | the clock events (the name is a misnomer) |
+| `AreaLightManager_UpdateActiveTemplate` | the area lighting |
+| `ov01_022047DC` | the time-of-day animation swap |
+| `ov01_021EAD8C` | a camera controller |
+| `Signpost_DoCurrentCommand` | signposts and notice boards |
+| `FieldTextureManager_Free` | the map texture frame swaps (the name is a misnomer) |
+| `ov01_02204350` | the building and terrain animations |
+| `MapLoadManager_Tick` | map streaming |
+| `ov01_021E6220` | the draw |
 
-**Every scenery animation something has to set off.** These all go through `F3DASub_StartAnimation`,
-which has eight call sites in the whole of the field code, listed in their own table below.
+Platinum's per-frame function (`ov5_021D134C` in `src/overlay005/fieldmap.c`) has seven of these: no time-of-day swap and no camera controller.
 
-**Every field effect sprite.** These come from `DATA_FE_SubProcDataTbl` in the field effect table,
-the table the effect system dispatches from, so an effect absent from it cannot run. It holds twenty
-three entries and all twenty three also appear in `DATA_FE_GroundProcRegistTbl` at , the list
-registered on an outdoor map, so on the field the two sets are identical.
-
-Two effect files sit outside that table and were found by searching for their own entry points
-instead, so they are named separately rather than folded in. the snowball effect is driven from the
-player event code when the player pushes a snowball, and the flashlight effect is reached only from
-a debug menu, which is a debug menu, so the flashlight cone is not something a retail map shows.
-
-Beware one name collision. the notice board effect is the field effect version of the notice board
-and it is commented out of the ground register table in the field effect table, marked 金銀で削除,
-"removed in Gold and Silver". The notice board itself is alive and well in the notice board code,
-whose `BoardMain` runs every frame from the field map's own code. The effect was dropped, the board
-was not.
+**Every 3D animation on a field model** is attached through `MapPropAnimation_AddToRenderObj` (pokeheartgold `src/field/overlay_01_02204004.c`), called from six places in HeartGold: four in the building animator (`map_prop_animation.c`), one for the terrain animation and one for the time-of-day swap. Two animation pools are created, one for buildings (`MapPropAnimationManager_Init`) and one for the terrain, and both are advanced by the one call per frame above (`MapPropAnimationManager_AdvanceAnimations` in Platinum).
 
 ## Scenery that animates on its own
 
 | What | Where it lives | What drives it | Preview |
 |---|---|---|---|
-| Terrain texture scrolling | the terrain animator, `ARC_GROUND_ANM` | The area's `RESOURCE_PARAM.ground_anm`, looped forever | Yes. This is the moving water |
-| Map model | the map model loader | Texture scrolling and nothing else, see below | Yes, by the same path |
-| Moving model set | the map model loader | The same terrain animation, under the same map check | Not separately |
-| Building texture scrolling | `bm_anime` archive, NSBTA | The building's list entry | Yes |
-| Building texture swapping | same archive, NSBTP | same | Yes. Lanterns, lit windows |
-| Building joint movement | same archive, NSBCA | same | Yes. Windmills, waterwheels |
-| Building material fading | same archive, NSBMA | same | Yes |
+| Terrain texture scrolling, HeartGold | `a/1/4/0`, NSBTA | the area's terrain animation number, looped forever | yes; this is the moving water |
+| Map texture frame swaps | `a/1/3/9` in HeartGold, `fldtanime.narc` in Platinum | a list of texture names and frame timings | yes, in both games |
+| Building texture scrolling | the building animation archive, NSBTA | the building's list entry | yes |
+| Building texture swapping | same archive, NSBTP | same | yes: lanterns, lit windows |
+| Building joint movement | same archive, NSBCA | same | yes: windmills, waterwheels |
+| Building material fading | same archive, NSBMA | same | yes |
 
-A building's list entry (`F3D_MDL_INFO`) decides whether any of that runs at all.
-`CheckAddConditional` in the map object animator reads the bottom bit of `Type`: set means something
-has to start it off, and those are registered stopped. `Suicide` means it plays once instead of
-looping. `Type == 8` means it changes with the clock.
+**The terrain animation, HeartGold.** An area can name one texture scroll from `a/1/4/0`, `0xFFFF` for none. `AreaDataManager_Load` passes it to `ov01_0220463C`, which loops it forever. The map loader attaches it to each loaded map model (`ov01_021F4C6C`) and to a second render object (`ov01_021F6620`), except on three maps listed in `asm/unk_02054648.s`. `ov01_02204678` is the only call that puts it on a map model and `ov01_02204688` the only one that takes it off.
 
-### What a map's own model can and cannot do
+The terrain animator builds its animation object itself (`ov01_022046A4`) and always installs the texture scroll handler, `NNS_G3dFuncAnmMatNsBtaDefault`, with no check of the animation's type (`overlay_01_02204004.c`). Only an NSBTA works there: a joint, visibility, pattern or material animation would be read as a texture scroll.
 
-The floor gets exactly one animation and it can only ever be a texture scroll. Two things fix that.
+**The map texture frame swaps.** Map textures named in `a/1/3/9` (HeartGold) or `fldtanime.narc` (Platinum) change frame on a timer: the field copies the next frame's texels into texture memory (`TextureResourceManager_Free` in pokeplatinum `src/overlay005/texture_resource_manager.c`, which, despite its name, advances the frames).
 
-The first is that `GrndAnm_AddAnm` in the map model loader is the only call that ever attaches an
-animation to a `FloorData`, with the matching removal at . The function's only other use, at , hands
-the same terrain animation to the moving model set's render object rather than to a floor, under the
-same `MPTL_IsNotGroundAnimeMap` check and with the same assertion that `anmMat` starts empty (,
-matching the floor's at ). Everything else the map model loader animates goes to
-`M3DO_LoadArc3DObjData` with `Field3DAnmPtr`, which is the map object path.
+**Buildings.** Building animations are in `a/1/0/6` in HeartGold and `bm_anime.narc` in Platinum, one list entry per building model, `MapPropAnimListFile` (24 bytes in HeartGold, `include/field/map_prop_animation.h`; 20 bytes in Platinum, `MapPropAnimeListFile`). Its first three bytes are public:
 
-The second is what that call builds. the terrain animator does not use `NNS_G3dInitAnmObj`. It
-carries its own copy with the resource type switch taken out, so it always casts the resource to
-`NNSG3dResTexSRTAnm`, always calls `CSTM_NNSi_G3dAnmObjInitNsBta`, and always sets `funcAnm` to
-`NNS_G3dFuncAnmMatNsBtaDefault`. Hand it a joint or a visibility animation and it would read it as a
-texture scroll and produce nonsense, so no joint or visibility animation can be on a map's own
-model. It cannot take NSBMA material fading either, which is narrower than just ruling out joints.
+- `hasAnimations`.
+- `flags`: bit 0 means the animation is not loaded with the map but loaded paused when something asks for it (`MapPropAnimation_CheckDeferredLoadingFlag`); in HeartGold the value 8 marks a time-of-day animation.
+- `isBicycleSlope`: when set, the animation is loaded to play once and starts paused.
+
+Building models get their animations when the area loads (`AreaDataManager_Load` calling `ov01_021E8F3C`).
 
 ## Scenery that waits to be set off
 
-Every one of these, and only these, calls `F3DASub_StartAnimation`.
+Most of these start through `MapPropOneShotAnimationManager_PlayAnimation` or its variant with a sound, `MapPropOneShotAnimationManager_PlayAnimationWithSoundEffect`. Some also attach or unpause animations directly: gym gimmicks in overlay 4, the legendary bird cutscene camera and the shop menu, so this is not a closed list.
 
-| What | Where | What sets it off | Preview |
+| What | Where (HeartGold) | Platinum | Preview |
 |---|---|---|---|
-| Door, walking in | the map object animator's event side | Stepping onto the warp | Yes, played once |
-| Door, walking out | the map object animator's event side | Arriving through it | Yes, played once |
-| Door, from a script | the map object animator's event side | The door script command | No. The viewer reports scripts rather than running them |
-| Escalator, stepping off | the map object animator's event side | Reaching the end | No, not handled at all |
-| Escalator, stepping on | the map object animator's event side | Stepping onto it | No, not handled at all |
-| Map jump white fade | the map object animator's event side | Changing map | No, screen effect rather than scenery |
-| Lift | the lift code | A script | No, script-driven |
-| Pokémon Centre healing | the Pokemon Centre healing code,  | A script | No, script-driven |
-| Hall of Fame ball | the Hall of Fame code | A script | No, script-driven |
-| PC | the PC code,  | A script | No, script-driven |
-| Bugsy's gym scenery | Bugsy's gym code | The gym's own task | No, one room only |
-| Unconditional start | the map object animator | The building list itself, for anything not registered stopped | Yes, this is the ordinary building animation |
+| Door, stepping onto a warp | `ov01_021E90E4`, from the warp code | `src/overlay005/ov5_021D431C.c` | yes, played once |
+| Door, arriving through it | `ov01_021E9374` | same file | yes, played once |
+| Door, from a script | `ov01_021E9BB8`, script command 310 | same file | no: the viewer reports scripts rather than running them |
+| Escalators | two more starters in `asm/overlay_01_021E90C0.s`; which one is stepping on and which off is not named publicly | same file | no |
+| A white fade on changing map | a further starter in the same file; its role is not named publicly | | no |
+| Lift | `ScrCmd_ElevatorAnim` | `src/overlay006/elevator_animation.c` | no, script-driven |
+| Pokémon Center healing machine | `ScrCmd_PokeCenAnim` | `src/overlay006/healing_machine_animation/pokecenter.c` | no, script-driven |
+| Hall of Fame machine | `ScrCmd_HallOfFameAnim` | `.../hall_of_fame.c` | no, script-driven |
+| PC switching on and off | script commands 501 and 502 | `src/overlay006/pc_animation.c` | no, script-driven |
+| A gym gimmick | a task in overlay 4 (`ov04_02254724`); which gym is not named publicly | | no |
+| Everything not loaded paused | `ov01_021E8F3C`, when the area loads | `MapPropAnimationManager_LoadPropAnimations` | yes; this is the ordinary building animation |
 
-`Door` in the building's list entry picks the sound: door, automatic, glass, sliding.
+Platinum also starts building animations from the Great Marsh tram (`great_marsh_tram.c`) and the boat cutscene.
 
-## Scenery that changes with the clock
+DSPRE reads byte 4 of the HeartGold list entry as the door sound (door, automatic, glass or sliding); the decomps name that part `unk4`, so the meaning is DSPRE's reading, not a public one.
 
-the time of day animator, stepped by `TM_ANM_Main` from the field map's own code, and binding
-through `G3dAnimeData_Add` in the time of day animator. A model carries up to four animations and
-the current part of the day picks one, through `TimeZoneAnmIdxTbl`: morning takes the first, day the
-second, evening the third, and both night and the small hours the fourth. The hours come from
-`GF_RTC_ConvertHourToTimeZone`: the small hours until 04:00, morning until 10:00, day until 17:00,
-evening until 20:00, night after that.
+## Scenery that changes with the clock, HeartGold
+
+`ov01_022047DC` swaps time-of-day animations once a frame. A model carries up to four and `sTimeOfDayVisualState` (`overlay_01_02204004.c`) picks one: morning the first, day the second, evening the third, night and late night the fourth. The hour table is `sTimeOfDayByHour` in `src/gf_rtc.c`, the same in all three games (`TimeOfDayForHour` in pokeplatinum `src/rtc.c`, `GF_RTC_GetTimeOfDayByHour` in pokediamond): late night 00 to 03, morning 04 to 09, day 10 to 16, evening 17 to 19, night 20 to 23.
 
 The preview handles this, with a picker that starts at the computer's clock.
 
-The map's lighting also changes through the day, in the map lighting code, stepped by
-`MainLightCont` from the field map's own code. That is a light colour rather than an animation, and
-the preview does not tint the scene for it.
+The area lighting also changes through the day (`AreaLightManager_UpdateActiveTemplate` every frame). That is a light colour rather than an animation, and the preview does not tint the scene for it.
 
 ## Things that move because somebody moved
 
-Walking and turning are in `fieldobj_move*.c` and the preview does them, on the tile grid, one tile
-per eight frames. Everything else in this section is a field effect sprite and the preview draws
-none of them, because they need the effect graphics, which are a separate archive from anything it
-reads. The whole registered set is below so that the gap is a known size rather than an open one.
+Walking and turning are map object movement actions (pokeplatinum `src/unk_020655F4.c`; HeartGold's are still assembly), and the preview does them on the tile grid, one tile per eight frames.
 
-| Effect | File | What it is |
-|---|---|---|
-| `FE_FLD_SHADOW` | the shadow effect | The shadow under a person |
-| `FE_FLD_REFLECT` | the reflect effect | Reflections in water |
-| `FE_FLD_FOOTMARK` | the footmark effect | Footprints left in sand |
-| `FE_FLD_ARROW` | the arrow effect | The arrow marking the way out |
-| `FE_FLD_NAMIPOKE` | the namipoke effect | The Pokémon you surf on |
-| `FE_FLD_ROCKRIDE` | the rockride effect | The Pokémon you climb walls with |
-| `FE_FLD_RIPPLE` | the ripple effect | Ripples in water |
-| `FE_FLD_NRIPPLE` | the nripple effect | Ripples in marshland |
-| `FE_FLD_GRASS` | the grass effect | Grass rustling as you step in it |
-| `FE_FLD_GYOE` | the gyoe effect | The surprise mark over a trainer |
-| `FE_FLD_SPLASH` | the splash effect | Water thrown up |
-| `FE_FLD_KEMURI` | the kemuri effect | Dust kicked up |
-| `FE_FLD_LGRASS` | the lgrass effect | Tall grass |
-| `FE_FLD_NGRASS` | the ngrass effect | Marsh grass |
-| `FE_FLD_HIDE` | the hide effect | Someone lying in wait |
-| `FE_FLD_HKEMURI` | the hkemuri effect | The dust they throw up coming out |
-| `FE_FLD_SEED_EFF` | the seed effect | Berry tree effects |
-| `FE_FLD_MBIO` | the bike gate effect | A Pokémon going into and out of its ball |
-| `FE_FLD_P_BALLON` | the pokeballon effect | A Pokémon let out on the field |
-| `FE_FLD_FLASH` | the flash effect | Flash lighting a cave |
-| `FE_FLD_FLDROBJ` | the fldrobj effect | The generic 3D object an effect draws with |
-| `FE_UG_REDFRAME` | the redframe effect | The red frame, Underground only |
-| `FE_FLD_FCHG` | the fchg effect | A Pokémon changing form |
-| not registered | the snowball effect | The snowball the player pushes, from the player event code |
-| not registered | the flashlight effect | A flashlight cone, reachable only from the debug menu |
-| removed | the notice board effect | The effect version of the notice board, commented out in the field effect table |
+Everything else here is a field effect renderer, and the preview draws none of them, because they need the effect graphics, a separate archive from anything it reads. HeartGold has 23 (`FIELD_EFFECT_RENDERER_COUNT` in `include/constants/field/field_effect_renderer.h`), all registered when the field map loads (`defaultFieldEffectRenderers`, passed to `FieldEffectManager_InitRenderers` in `src/field/fieldmap.c`). The decomps name them only by number, so what each one draws is not given here. Platinum has 34 (`sFieldEffectRendererHandlers` in `src/overlay005/field_effect_renderer.c`), registered in three sets: 20 for the ordinary field, 11 for the Underground and 5 for the Distortion World.
 
 ## Not scenery at all
 
-The remaining per frame entries from `FieldMap_Update` are the transfer animation (`FieldAnimeMain`,
-the field animation code), the seamless camera (`SMLS_CamCnt_Main`), map streaming
-(`DivMapLoadMain`) and the draw itself (`Map3Dwrite`), none of which move anything on the map by
-themselves.
+Of the per-frame calls, the camera controller, map streaming and the draw move nothing on the map by themselves. Weather is its own manager (`WeatherManager_*`), set from the map header's weather id; the encounter run-ins, poisoning, the warp point marker and Strength are screen-wide or battle-entry effects. The preview attempts none of these.
 
-Outside that loop sit weather (the weather system, the per map weather table), the encounter run ins
-(the encounter effect code and its seven companions for gyms, legendaries, the dancers, Rocket,
-trainers and wild battles), poisoning (the poison effect code), the warp point marker (the warp
-point effect) and Strength (the Strength effect). These are screen wide or battle entry effects and
-the preview does not attempt them. Weather is the one that would be visible on a static map, and it
-is driven by the header's weather id rather than by any animation archive.
+## Known gaps in the preview
 
-## Known gaps
-
-- No field effect sprite is drawn, which is the whole table above bar walking and turning.
+- No field effect is drawn, which is everything in the section above bar walking and turning.
 - Escalators are not handled, in either direction.
-- The moving model set is not animated separately, though the games give it the same terrain animation
-  the floor gets.
-- Weather is not shown, and the time of day does not tint the scene the way the map lighting code does.
-- Lifts, healing machines, the Hall of Fame ball, PCs, Bugsy's gym and the script door command all
-  animate only when a script says so. The script viewer reports what a script would do rather than
-  running it, so these stay still.
+- The terrain animation's second render object is not animated separately.
+- Weather is not shown, and the time of day does not tint the scene the way the area lighting does.
+- Lifts, healing machines, the Hall of Fame machine, PCs, the gym gimmick and the script door command animate only when a script says so; the script viewer reports what a script would do rather than running it.

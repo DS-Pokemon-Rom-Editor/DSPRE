@@ -30,7 +30,7 @@ Platinum's four readers, all in `src/battle/battle_lib.c` (HeartGold's are the s
 
 **Stealth Rock and switching, `BattleSystem_TypeMatchupMultiplier`.** Starts from 40, walks the whole table with no separator handling, so the Ghost immunities always count, and returns the product. The Stealth Rock damage in `battle_script.c` switches on exactly 160, 80, 40, 20, 10 or 0; any other result, from a Rock row with a custom multiplier, lands on an assertion and divides by a stale value.
 
-**Conversion 2, `BattleSystem_TypeMatchup`.** Picks records at random, up to 1000 tries, then falls back to a linear scan, and accepts a record whose attacker matches and whose multiplier is 5 or less. This is the only reader that uses the table's size rather than its terminator: the count is compiled in as an immediate, compared and used as the modulus.
+**Conversion 2.** Its script command in `battle_script.c` picks records at random through `BattleSystem_TypeMatchup`, up to 1000 tries, then falls back to a linear scan, and accepts a record whose attacker matches and whose multiplier is 5 or less. This is the only reader that uses the table's size rather than its terminator: the count is compiled in as an immediate, compared and used as the modulus.
 
 Only 0, 5 and 20 set the flags the rest of the battle keys off. `ApplyTypeMultiplier` sets "super effective", "not very effective" and "no effect" for exactly those values, and Wonder Guard, Filter, Solid Rock, Expert Belt and Tinted Lens all read those flags. A custom multiplier such as 15 changes the damage but shows no message and triggers none of those effects.
 
@@ -58,8 +58,6 @@ The table takes any type number but `0xFE` and `0xFF`. Everything around it is s
 - The Pokédex's type icon lookup has no default case (`PokedexGraphics_GetAnimIDfromType` in Platinum's Pokédex `infomain.c`).
 - The Pokétch grid is fixed at 18 by 18.
 - Hidden Power's type formula skips ??? and assumes eighteen types.
-
-hg-engine reuses slot 9 for Fairy and keeps its own chart elsewhere; DSPRE does not treat that case specially.
 
 ## What DSPRE does
 

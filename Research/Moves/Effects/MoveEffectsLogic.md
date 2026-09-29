@@ -36,7 +36,7 @@ typedef struct MoveTbl {
 
 ## Three script domains, one bytecode format
 
-`asm/macros/btlcmd.inc` defines 225 macros shared by all three script domains below. Each macro assembles to a 4-byte opcode word followed by a fixed number of 4-byte argument words, one word per macro parameter. Opcode numbers are assigned in source order starting at 0: `PlayEncounterAnimation` is 0, `SetPokemonEncounter` is 1, `GoToSubscript` is 35, `GoToEffectScript` is 36, `GoToMoveScript` is 37.
+`asm/macros/btlcmd.inc` defines 225 macros shared by all three script domains below. Each macro assembles to a 4-byte opcode word followed by one 4-byte argument word per macro parameter, except `BufferMessage` and `BufferLocalMessage` (opcodes 21 and 22), which add 0 to 6 more words depending on their tag. Opcode numbers are assigned in source order starting at 0: `PlayEncounterAnimation` is 0, `SetPokemonEncounter` is 1, `GoToSubscript` is 35, `GoToEffectScript` is 36, `GoToMoveScript` is 37.
 
 `files/battledata/script/move_script/` holds 501 files, one per move ID, human named (`move_script_0000_None.s`, `move_script_0001_Pound.s`, ...). Built into `NARC_a_0_0_0` (`files/battledata/script/move_script.narc`, mapped in `filesystem.mk`).
 
@@ -88,4 +88,4 @@ _000:
 
 ## Not decompiled yet
 
-No table linking a move's `effect` value to a human readable name (an `EFFECT_*` style enum) exists in `include/`. The 277 `effect_script_*.s` files are numbered only, with no descriptive suffix.
+pokeheartgold names the move effects in `include/constants/move_effects.h` (`MOVE_EFFECT_*`, starting `MOVE_EFFECT_HIT` 0), but the 277 `effect_script_*.s` files are numbered only, with no descriptive suffix.
