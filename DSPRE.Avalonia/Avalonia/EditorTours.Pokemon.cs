@@ -127,6 +127,7 @@ namespace DSPRE.Avalonia
                 S("toolbar", "Pick a curve", "Each Pokémon uses one of these curves. The EXP needed for level 100 shows beside it."),
                 S("list", "EXP per level", "Type the total EXP needed to reach each level. To next shows the gap to the following one."),
                 S("name:Chart", "The chart", "The curve from level 1 to 100. Point at it to read a level's EXP."),
+                S(null, "Existing saves", "Pokémon in a save keep their EXP, so a new curve can change their level. Raising the level 100 total turns old level 100s into 99s in the box."),
                 S("toolbar", "Saving", "A red note at the bottom says what to fix before saving. Save or Ctrl+S writes, Ctrl+Z undoes."));
 
             Add("BreedingItemsView", "Breeding Items",
