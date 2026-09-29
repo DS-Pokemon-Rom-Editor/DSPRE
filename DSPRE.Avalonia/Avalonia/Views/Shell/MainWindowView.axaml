@@ -221,8 +221,8 @@
         <MenuItem Header="Music &amp; Battle Tables…" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Misc game-wide tables: conditional map music (HGSS), battle-effect combos (Plat/HGSS) and the VS Trainer / VS Pokémon posters (HGSS)'}"/>
         <Separator/>
-        <MenuItem Header="Address Helper…"  Click="AddressHelper_Click"/>
-        <MenuItem Header="Research Helper…" Click="ResearchHelper_Click"/>
+        <MenuItem Header="Address Helper…"  Click="AddressHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Research Helper…" Click="ResearchHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <Separator/>
         <MenuItem Header="Export Docs…" Click="ExportDocs_Click" IsEnabled="{Binding CanUseDataExports}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Export Pokémon/learnset/evolution/trainer/move/TM/egg-move/header/encounter data as CSV, TXT and JSON'}"/>

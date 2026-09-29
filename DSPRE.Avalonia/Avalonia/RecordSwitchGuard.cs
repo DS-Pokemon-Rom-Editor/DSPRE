@@ -24,10 +24,13 @@ namespace DSPRE.Avalonia
         /// leave the current record loaded and put the selection control back where it was.
         /// </summary>
         /// <param name="what">What is being switched, for the prompt: "header", "trainer", "script".</param>
+        /// <param name="question">Replaces "Save them before switching to another ...?" when the record is
+        /// being reloaded rather than left.</param>
         public static async Task<bool> ConfirmLeaveAsync(
             IEditorWithUnsavedChanges editor,
             Window owner = null,
-            string what = "record")
+            string what = "record",
+            string question = null)
         {
             if (editor == null || !editor.HasUnsavedChanges) return true;
 
@@ -36,7 +39,7 @@ namespace DSPRE.Avalonia
                 : editor.UnsavedChangesDescription;
 
             var choice = await DialogHelper.AskThreeWay(
-                $"{subject} has unsaved changes.\n\nSave them before switching to another {what}?",
+                $"{subject} has unsaved changes.\n\n{question ?? $"Save them before switching to another {what}?"}",
                 "Unsaved Changes", "Save", "Discard");
 
             if (choice == DialogHelper.MsgResult.Cancel) return false;
@@ -57,5 +60,14 @@ namespace DSPRE.Avalonia
                 "Save Error", owner);
             return false;
         }
+
+        /// <summary>
+        /// Another editor saved a record this one holds unsaved edits to. True to load the saved
+        /// version, false to keep the edits here, which then overwrite it when saved.
+        /// </summary>
+        public static Task<bool> TakeSavedVersionAsync(string subject)
+            => DialogHelper.AskTwoWay(
+                $"{subject} was saved in another editor, and has unsaved changes here.\n\nWhich version do you want to keep?",
+                "Saved Elsewhere", "The saved one", "Mine");
     }
 }

@@ -11,6 +11,18 @@ namespace DSPRE.Avalonia
     /// <summary>Enumerates Avalonia's embedded and standalone editors for project-change guards.</summary>
     public static class OpenEditors
     {
+        // Every window opened on a ROM, editor or not, so none outlives it and acts on the next one.
+        private static readonly HashSet<Window> RomWindows = new();
+
+        /// <summary>Closes <paramref name="window"/> with the ROM that is open now, unless it needs no ROM.</summary>
+        internal static void TrackRomWindow(Window window)
+        {
+            if (window == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
+            if (window is Views.Shell.SettingsWindowView || window is Views.Shell.CommandPaletteView) return;
+            if (!RomWindows.Add(window)) return;
+            window.Closed += (_, _) => RomWindows.Remove(window);
+        }
+
         public static IReadOnlyList<UnsavedChangesDialog.UnsavedEditorInfo> GetUnsavedEditors(
             MainWindowView mainWindow = null)
         {
@@ -58,7 +70,7 @@ namespace DSPRE.Avalonia
             foreach (var window in desktop.Windows.ToList())
             {
                 if (ReferenceEquals(window, mainWindow)) continue;
-                if (GetEditor(window) != null) window.Close();
+                if (GetEditor(window) != null || RomWindows.Contains(window)) window.Close();
             }
         }
 
@@ -82,14 +94,6 @@ namespace DSPRE.Avalonia
                 ?? (window?.Content as Control)?.DataContext as IEditorWithUnsavedChanges;
 
         private static string GetWindowEditorName(Window window, IEditorWithUnsavedChanges editor)
-        {
-            string title = window?.Title?.Trim() ?? string.Empty;
-            while (title.StartsWith("●", StringComparison.Ordinal))
-            {
-                title = title.Substring(1).TrimStart();
-            }
-
-            return string.IsNullOrWhiteSpace(title) ? editor.GetType().Name : title;
-        }
+            => UnsavedChangesDialog.NameWithoutMarker(window?.Title, editor);
     }
 }

@@ -332,6 +332,7 @@ namespace DSPRE.Avalonia
             // Diamond and Pearl have only the effect combos, and only on supported ROMs.
             if (!IsRomLoaded || BlockedForUnlinkedHge("Music & Battle Tables")
                 || (gameFamily == GameFamilies.DP && !DSPRE.ROMFiles.BattleMusicTables.IsSupported)) return;
+            if (BringForwardWindow<TableEditorView>()) return;
             new TableEditorView(new TableEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
         }
 
@@ -423,7 +424,9 @@ namespace DSPRE.Avalonia
                 await RunBusyAsync("Opening TM/HM Bulk Editor…", "Reading which Pokémon learn each TM and HM.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions }));
                 var vm = new TmHmBulkEditorViewModel(GetPokemonNames());
-                new EditorHostWindow("TM/HM Bulk Editor", new TmHmBulkEditorView(vm), 1050, 700).ShowManaged();
+                var window = new EditorHostWindow("TM/HM Bulk Editor", new TmHmBulkEditorView(vm), 1050, 700);
+                window.Closed += (_, _) => vm.Detach();
+                window.ShowManaged();
             }
             catch (System.Exception ex)
             {
@@ -490,6 +493,18 @@ namespace DSPRE.Avalonia
             var window = new EditorHostWindow("Header Editor", new HeaderEditorView(model));
             window.Closed += (_, _) => model.Detach();
             window.ShowManaged();
+        }
+
+        // Each copy of these windows saves everything it shows, so a second one would save over the first.
+        private static bool BringForwardWindow<TWindow>() where TWindow : global::Avalonia.Controls.Window
+        {
+            var open = (global::Avalonia.Application.Current?.ApplicationLifetime
+                        as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
+            var window = open?.OfType<TWindow>().FirstOrDefault();
+            if (window == null) return false;
+            if (window.WindowState == global::Avalonia.Controls.WindowState.Minimized) window.WindowState = global::Avalonia.Controls.WindowState.Normal;
+            window.Activate();
+            return true;
         }
 
         // One standalone window per world editor, since a second copy of the same file would go stale and save over the first.
@@ -717,6 +732,11 @@ namespace DSPRE.Avalonia
         public static void OpenFlyWarpEditor()
         {
             if (!IsRomLoaded || BlockedForUnlinkedHge("The Fly / Warp Editor")) return;
+            if (RomInfo.FlyTableUnverified)
+            {
+                _ = DialogHelper.ShowError("The Fly / Warp Editor isn't checked against Japanese Pearl yet, so it stays closed rather than risk writing the wrong place.", "Fly / Warp Editor");
+                return;
+            }
             new FlyEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
         }
 
@@ -1118,6 +1138,7 @@ namespace DSPRE.Avalonia
         public static void OpenOverlayEditor()
         {
             if (!IsRomLoaded || BlockedForUnlinkedHge("The Overlay Editor")) return;
+            if (BringForwardWindow<OverlayEditorView>()) return;
             new OverlayEditorView().ShowManaged();
         }
 
@@ -1208,6 +1229,7 @@ namespace DSPRE.Avalonia
         public static void OpenSettings()
         {
             // Settings do not require a loaded ROM.
+            if (BringForwardWindow<SettingsWindowView>()) return;
             new SettingsWindowView().ShowManaged();
         }
 
@@ -1235,6 +1257,7 @@ namespace DSPRE.Avalonia
             // Writes to the ROM binary (ARM9 / overlays / NARCs). Native Avalonia UI over the shared
             // PatchToolboxDialog apply-logic, so it runs identical code to the WinForms dialog.
             if (!IsRomLoaded || BlockedForUnlinkedHge("The ROM Patch Toolbox")) return;
+            if (BringForwardWindow<PatchToolboxView>()) return;
             new PatchToolboxView().ShowManaged();
         }
 

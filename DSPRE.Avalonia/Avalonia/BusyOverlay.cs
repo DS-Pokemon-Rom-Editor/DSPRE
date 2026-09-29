@@ -35,6 +35,20 @@ namespace DSPRE.Avalonia
             finally { OneAtATime.Release(); }
         }
 
+        /// <summary>Whether file work is running behind any busy card, in any window.</summary>
+        public static bool IsWorking => OneAtATime.CurrentCount == 0;
+
+        /// <summary>
+        /// Runs <paramref name="work"/> off the UI thread under the same lock as <see cref="RunAsync"/>, with
+        /// no card of its own, so a ROM load or build never overlaps an editor's unpacking.
+        /// </summary>
+        public static async Task<T> RunLockedAsync<T>(Func<T> work)
+        {
+            await OneAtATime.WaitAsync();
+            try { return await Task.Run(work); }
+            finally { OneAtATime.Release(); }
+        }
+
         private static async Task RunOneAsync(string text, string hint, Action work, Window owner)
         {
             owner ??= OwnerWindow.Current;

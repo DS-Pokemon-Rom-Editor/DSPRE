@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using NarcAPI;
 
@@ -38,6 +39,18 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(destParent)) return;
 
             string finalExtractedPath = Path.Combine(destParent, Path.GetFileNameWithoutExtension(narcPath));
+            if (Directory.Exists(finalExtractedPath) && Directory.EnumerateFileSystemEntries(finalExtractedPath).Any())
+            {
+                if (!await DialogHelper.AskYesNo("Folder \"" + finalExtractedPath + "\" already exists and is not empty.\n" +
+                    "Delete its contents and unpack here?", "Folder not empty", owner))
+                    return;
+                try { Directory.Delete(finalExtractedPath, true); }
+                catch (System.Exception ex) when (ex is IOException || ex is System.UnauthorizedAccessException)
+                {
+                    await DialogHelper.ShowError("Could not delete \"" + finalExtractedPath + "\":\n" + ex.Message, "Archive not unpacked", owner);
+                    return;
+                }
+            }
             userFile.ExtractToFolder(finalExtractedPath);
             await DialogHelper.ShowInfo("The contents of " + narcPath + " have been extracted to:\n" + finalExtractedPath, "Archive unpacked");
         }
@@ -62,7 +75,9 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(modelPath)) return;
 
             byte[] modelFile = DSUtils.ReadFromFile(modelPath);
-            if (NSBUtils.CheckNSBMDHeader(modelFile) == NSBUtils.NSBMD_DOESNTHAVE_TEXTURE)
+            int header = NSBUtils.CheckNSBMDHeader(modelFile);
+            if (header < 0) return;
+            if (header == NSBUtils.NSBMD_DOESNTHAVE_TEXTURE)
             {
                 await DialogHelper.ShowInfo("This model has no textures.", "No textures to extract");
                 return;
@@ -72,7 +87,7 @@ namespace DSPRE.Avalonia
                 Path.GetFileNameWithoutExtension(modelPath) + ".nsbtx");
             if (string.IsNullOrEmpty(dest)) return;
 
-            DSUtils.WriteToFile(dest, NSBUtils.GetTexturesFromTexturedNSBMD(modelFile));
+            DSUtils.WriteToFile(dest, NSBUtils.GetTexturesFromTexturedNSBMD(modelFile), fmode: FileMode.Create);
             await DialogHelper.ShowInfo("The textures of " + modelPath + " have been extracted and saved.", "Textures saved");
         }
 
@@ -82,7 +97,9 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(modelPath)) return;
 
             byte[] modelFile = DSUtils.ReadFromFile(modelPath);
-            if (NSBUtils.CheckNSBMDHeader(modelFile) == NSBUtils.NSBMD_DOESNTHAVE_TEXTURE)
+            int header = NSBUtils.CheckNSBMDHeader(modelFile);
+            if (header < 0) return;
+            if (header == NSBUtils.NSBMD_DOESNTHAVE_TEXTURE)
             {
                 await DialogHelper.ShowInfo("This model already has no textures.", "No textures to remove");
                 return;
@@ -95,7 +112,7 @@ namespace DSPRE.Avalonia
                     Path.GetFileNameWithoutExtension(modelPath) + ".nsbtx");
                 if (!string.IsNullOrEmpty(texDest))
                 {
-                    DSUtils.WriteToFile(texDest, NSBUtils.GetTexturesFromTexturedNSBMD(modelFile));
+                    DSUtils.WriteToFile(texDest, NSBUtils.GetTexturesFromTexturedNSBMD(modelFile), fmode: FileMode.Create);
                     extramsg = " exported and";
                 }
             }
@@ -104,7 +121,7 @@ namespace DSPRE.Avalonia
                 Path.GetFileNameWithoutExtension(modelPath) + "_untextured.nsbmd");
             if (string.IsNullOrEmpty(dest)) return;
 
-            DSUtils.WriteToFile(dest, NSBUtils.GetModelWithoutTextures(modelFile));
+            DSUtils.WriteToFile(dest, NSBUtils.GetModelWithoutTextures(modelFile), fmode: FileMode.Create);
             await DialogHelper.ShowInfo("Textures correctly" + extramsg + " removed!", "Success!");
         }
 
@@ -114,7 +131,9 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(modelPath)) return;
 
             byte[] modelFile = File.ReadAllBytes(modelPath);
-            if (NSBUtils.CheckNSBMDHeader(modelFile) == NSBUtils.NSBMD_HAS_TEXTURE)
+            int header = NSBUtils.CheckNSBMDHeader(modelFile);
+            if (header < 0) return;
+            if (header == NSBUtils.NSBMD_HAS_TEXTURE)
             {
                 if (!await DialogHelper.AskYesNo("This model already has textures.\nDo you want to replace them?", "Textures found"))
                 {
@@ -126,6 +145,11 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrEmpty(nsbtxPath)) return;
 
             byte[] textureFile = File.ReadAllBytes(nsbtxPath);
+            if (!NSBUtils.IsNSBTX(textureFile))
+            {
+                await DialogHelper.ShowError("Please select an NSBTX file.", "Invalid File", owner);
+                return;
+            }
 
             string baseName = Path.GetFileNameWithoutExtension(modelPath);
             if (baseName.EndsWith("_untextured"))

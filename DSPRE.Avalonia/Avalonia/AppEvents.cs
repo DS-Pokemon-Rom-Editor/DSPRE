@@ -45,5 +45,18 @@ namespace DSPRE.Avalonia
         public static void RaiseMatrixSaved(object sender, int id) => MatrixSaved?.Invoke(sender, id);
         public static event EventHandler<int> AreaDataSaved;
         public static void RaiseAreaDataSaved(object sender, int id) => AreaDataSaved?.Invoke(sender, id);
+
+        /// <summary>A personal data file (or its TM121+ compatibility) was written; the sender is the editor that wrote it.</summary>
+        public static event EventHandler<int> PersonalDataSaved;
+        public static void RaisePersonalDataSaved(object sender, int id) => PersonalDataSaved?.Invoke(sender, id);
+
+        /// <summary>A level-script binary was written; the sender is the editor that wrote it.</summary>
+        public static event EventHandler<int> LevelScriptSaved;
+        public static void RaiseLevelScriptSaved(object sender, int id) => LevelScriptSaved?.Invoke(sender, id);
+
+        /// <summary>A Rotom script source was written; the sender is the editor that wrote it. The path is
+        /// the file, or null when every source was regenerated.</summary>
+        public static event EventHandler<string> ScriptSourceSaved;
+        public static void RaiseScriptSourceSaved(object sender, string path) => ScriptSourceSaved?.Invoke(sender, path);
     }
 }

@@ -67,6 +67,8 @@ namespace DSPRE.Avalonia
 
             string gameCode = ReadGameCode(folder, type);
             if (string.IsNullOrEmpty(gameCode)) { error = "Could not read the game code from the ROM header."; return false; }
+            // Refused before anything is reset, so the ROM already open keeps working.
+            if (!RomInfo.IsSupportedGameCode(gameCode)) { error = UnsupportedMessage(gameCode); return false; }
 
             // Sprites are kept by overworld number, which means a different ROM's are a different
             // picture under the same number.
@@ -83,6 +85,8 @@ namespace DSPRE.Avalonia
             Views.Controls.HgssTouchScreenView.IconFont = null;
             Data.SoundArchive.Reset();
             ROMFiles.FieldFontCharacters.Reset();
+            // Unsaved label edits were made for the project being closed.
+            Data.LabelStore.DiscardDraft();
 
             try { _ = new RomInfo(gameCode, folder); }   // populates the static RomInfo.* (gameFamily, workDir, gameDirs, …)
             catch (Exception ex) { error = "Failed to initialise ROM data: " + ex.Message; AppLogger.Error(error); return false; }
@@ -92,6 +96,38 @@ namespace DSPRE.Avalonia
             if (recordRecent) SettingsManager.RecordRecentProject(folder);
             return true;
         }
+
+        /// <summary>
+        /// Why a .nds file or extracted folder can't be opened, read from its header alone, or null when it
+        /// can. Lets the caller refuse before closing anything of the project that is open now.
+        /// </summary>
+        public static string WhyUnsupported(string path)
+        {
+            string gameCode = null;
+            try
+            {
+                if (File.Exists(path))
+                {
+                    using var fs = File.OpenRead(path);
+                    var b = new byte[4];
+                    fs.Position = 0x0C;
+                    if (fs.Read(b, 0, 4) == 4) gameCode = Encoding.ASCII.GetString(b);
+                }
+                else if (Directory.Exists(path))
+                {
+                    int type = DSUtils.GetFolderType(path);
+                    if (type == -1) return null;   // the loader says what is wrong with the folder
+                    gameCode = ReadGameCode(path, type);
+                }
+            }
+            catch (IOException) { return null; }
+            catch (UnauthorizedAccessException) { return null; }
+            if (string.IsNullOrEmpty(gameCode)) return null;
+            return RomInfo.IsSupportedGameCode(gameCode) ? null : UnsupportedMessage(gameCode);
+        }
+
+        private static string UnsupportedMessage(string gameCode) =>
+            $"This ROM ({gameCode.Trim('\0')}) is not supported. DSPRE opens Gen IV Pokémon ROMs only.";
 
         private static string ReadGameCode(string folder, int folderType)
         {

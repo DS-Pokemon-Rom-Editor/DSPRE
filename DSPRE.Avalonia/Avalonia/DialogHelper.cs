@@ -130,6 +130,10 @@ namespace DSPRE.Avalonia
                                                             string never = "Don't show this again")
             => await ShowMsg(message, title, MsgButtons.YesNo, labels: (dismiss, never, null)) == MsgResult.No;
 
+        /// <summary>Two-way question whose buttons say what they do. True for <paramref name="yes"/>.</summary>
+        public static async Task<bool> AskTwoWay(string message, string title, string yes, string no)
+            => await ShowMsg(message, title, MsgButtons.YesNo, labels: (yes, no, null)) == MsgResult.Yes;
+
         /// <summary>Three-way question whose buttons say what they do instead of Yes and No.</summary>
         public static Task<MsgResult> AskThreeWay(string message, string title,
                                                   string yes, string no, string cancel = "Cancel")
@@ -317,8 +321,8 @@ namespace DSPRE.Avalonia
                     AddBtn("OK", MsgResult.Ok, enterOrEscape: true);
                     break;
                 case MsgButtons.YesNo:
-                    AddBtn("Yes", MsgResult.Yes);
-                    AddBtn("No", MsgResult.No);
+                    AddBtn(labels?.Yes ?? "Yes", MsgResult.Yes);
+                    AddBtn(labels?.No ?? "No", MsgResult.No);
                     break;
                 case MsgButtons.YesNoCancel:
                     AddBtn(labels?.Yes ?? "Yes", MsgResult.Yes);

@@ -129,11 +129,23 @@ namespace DSPRE.Avalonia
             {
                 new UnsavedEditorInfo
                 {
-                    EditorName = string.IsNullOrWhiteSpace(editorName) ? editor.GetType().Name : editorName,
+                    EditorName = NameWithoutMarker(editorName, editor),
                     Description = editor.UnsavedChangesDescription,
                     Editor = editor,
                 },
             });
+        }
+
+        /// <summary>An editor's name from its window title, without the unsaved-changes marker the title carries.</summary>
+        internal static string NameWithoutMarker(string title, IEditorWithUnsavedChanges editor)
+        {
+            string name = title?.Trim() ?? string.Empty;
+            while (name.StartsWith("●", StringComparison.Ordinal))
+            {
+                name = name.Substring(1).TrimStart();
+            }
+
+            return string.IsNullOrWhiteSpace(name) ? editor.GetType().Name : name;
         }
 
         /// <summary>
