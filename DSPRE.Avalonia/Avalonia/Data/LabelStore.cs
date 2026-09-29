@@ -100,9 +100,13 @@ namespace DSPRE.Avalonia.Data
             Reg("pokemon_dex_colors",     "Pokédex Colors",    "Pokémon", "Color",  Enum.GetNames<PokemonDexColor>());
             // Items: combos bind by SelectedIndex == raw byte VALUE, so register VALUE-indexed defaults
             // (NaturalGiftType is non-sequential: gaps become generated "Type N" labels you can rename).
-            Reg("item_hold_effects",      "Item Hold Effects",       "Items", "Effect", ByValue<HoldEffect>());
+            // Hold effects and field-use funcs differ per game, so each game has its own category.
+            Reg("item_hold_effects",      "Item Hold Effects (Pt, HGSS)", "Items", "Effect", ItemLabels.HoldEffects(GameFamilies.Plat));
+            Reg("item_hold_effects_dp",   "Item Hold Effects (DP)",  "Items", "Effect", ItemLabels.HoldEffects(GameFamilies.DP));
             Reg("item_field_pockets",     "Item Field Pockets",      "Items", "Pocket", ByValue<FieldPocket>());
-            Reg("item_field_use",         "Item Field Use Funcs",    "Items", "Func",   ByValue<FieldUseFunc>());
+            Reg("item_field_use",         "Item Field Use Funcs (HGSS)", "Items", "Func", ItemLabels.FieldUse(GameFamilies.HGSS));
+            Reg("item_field_use_pt",      "Item Field Use Funcs (Pt)", "Items", "Func",   ItemLabels.FieldUse(GameFamilies.Plat));
+            Reg("item_field_use_dp",      "Item Field Use Funcs (DP)", "Items", "Func",   ItemLabels.FieldUse(GameFamilies.DP));
             Reg("item_battle_use",        "Item Battle Use Funcs",   "Items", "Func",   ByValue<BattleUseFunc>());
             Reg("item_natural_gift",      "Item Natural Gift Types", "Items", "Type",   ByValue<NaturalGiftType>());
             // Moves / trades

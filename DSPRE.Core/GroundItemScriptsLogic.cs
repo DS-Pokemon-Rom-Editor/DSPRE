@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using DSPRE.ROMFiles;
 
 namespace DSPRE
@@ -59,7 +61,32 @@ namespace DSPRE
                 }
             }
 
+            int? hardcoded = ReadDistortionWorldItemScript();
+            if (hardcoded != null) used.Add(hardcoded.Value);
+
             return used;
+        }
+
+        private static bool IsItemScriptNumber(int n) => n >= ItemScrMin && n <= ItemScrMax;
+
+        /// <summary>Platinum's Distortion World Griseous Orb, which overlay 9 names by script number rather than through an event file.</summary>
+        private static int? ReadDistortionWorldItemScript()
+        {
+            uint offset = RomInfo.distortionWorldItemScriptOffset;
+            if (offset == 0) return null;
+            if (OverlayUtils.IsCompressed(9)) OverlayUtils.Decompress(9);
+            string path = OverlayUtils.GetPath(9);
+            if (!File.Exists(path) || new FileInfo(path).Length < offset + 2) return null;
+            ushort value;
+            using (DSUtils.EasyReader reader = new DSUtils.EasyReader(path, offset))
+                value = reader.ReadUInt16();
+            return IsItemScriptNumber(value) ? value : null;
+        }
+
+        private static void WriteDistortionWorldItemScript(int value)
+        {
+            using (DSUtils.EasyWriter writer = new DSUtils.EasyWriter(OverlayUtils.GetPath(9), RomInfo.distortionWorldItemScriptOffset))
+                writer.Write((ushort)value);
         }
 
         public static void AddEntry(int itemId, int quantity)
@@ -78,6 +105,9 @@ namespace DSPRE
             itemScript.allScripts.Insert(insertAt, newEntry);
             itemScript.RenumberContainers();
             itemScript.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
+
+            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eventFiles });
+            RemapItemReferences(n => n - ItemScrMin >= insertAt ? n + 1 : n);
         }
 
         /// <returns>null on success, or a user-facing error message if the entry is still in use.</returns>
@@ -103,13 +133,12 @@ namespace DSPRE
 
         // Entries after the removed one shifted down a slot, so references past it must shift too.
         private static void ShiftOverworldReferencesAfterRemoval(int removedScriptNumber) =>
-            ShiftOverworldReferences(new[] { removedScriptNumber });
+            RemapItemReferences(n => n > removedScriptNumber ? n - 1 : n);
 
-        /// <summary>Shifts item events (and Platinum's overlay 9 reference) down past removed entries' original script numbers.</summary>
-        private static void ShiftOverworldReferences(IReadOnlyCollection<int> removed)
+        /// <summary>Moves item events and Platinum's overlay 9 reference to their entries' new script numbers.</summary>
+        private static void RemapItemReferences(Func<int, int> remap)
         {
-            if (removed.Count == 0) return;
-            int Shifted(int n) { int k = 0; foreach (int r in removed) if (r < n) k++; return n - k; }
+            int Shifted(int n) => remap(n);
 
             int fileCount = Filesystem.GetEventFileCount();
             for (int i = 0; i < fileCount; i++)
@@ -131,25 +160,11 @@ namespace DSPRE
                 }
             }
 
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.Plat)
+            int? hardcoded = ReadDistortionWorldItemScript();
+            if (hardcoded != null)
             {
-                string ow9path = OverlayUtils.GetPath(9);
-                int ow9offs = 0x8E20 + 10;
-
-                ushort currentValue;
-                using (DSUtils.EasyReader reader = new DSUtils.EasyReader(ow9path, ow9offs))
-                {
-                    currentValue = reader.ReadUInt16();
-                }
-
-                int moved = Shifted(currentValue);
-                if (moved != currentValue)
-                {
-                    using (DSUtils.EasyWriter writer = new DSUtils.EasyWriter(ow9path, ow9offs))
-                    {
-                        writer.Write((ushort)moved);
-                    }
-                }
+                int moved = Shifted(hardcoded.Value);
+                if (moved != hardcoded.Value) WriteDistortionWorldItemScript(moved);
             }
         }
 
@@ -217,9 +232,24 @@ namespace DSPRE
             public void Save()
             {
                 if (!HasChanges) return;
+                // Every surviving entry's original script number to its new one. An add lands before any
+                // later scripts in the file, so moves go both ways.
+                var moved = new Dictionary<int, int>();
+                for (int i = 0; i < _origin.Count; i++)
+                    if (_origin[i] != null) moved[ItemScrMin + _origin[i].Value] = ItemScrMin + i;
+                var removed = new List<int>(_removed);
+                int Remap(int n)
+                {
+                    if (moved.TryGetValue(n, out int m)) return m;
+                    // Removed or past the end: slide down past removed entries only, as before.
+                    int below = 0;
+                    foreach (int r in removed) if (r < n) below++;
+                    return n - below;
+                }
+
                 _script.RenumberContainers();
                 _script.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
-                ShiftOverworldReferences(_removed);
+                RemapItemReferences(Remap);
                 _removed.Clear();
                 for (int i = 0; i < _origin.Count; i++) _origin[i] = i;
                 _used.Clear();

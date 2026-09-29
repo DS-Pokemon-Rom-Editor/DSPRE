@@ -61,7 +61,7 @@ namespace DSPRE.ROMFiles
             if (!RomInfo.IsMartEditorAvailable())
                 throw new InvalidOperationException("The Mart Editor is not available for this ROM.");
 
-            if (ARM9.CheckCompressionMark() && !ARM9.Decompress(RomInfo.arm9Path))
+            if (!ARM9.DecompressIfMarked())
                 throw new InvalidOperationException("The ARM9 could not be decompressed.");
 
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.synthOverlay });

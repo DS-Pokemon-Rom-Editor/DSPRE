@@ -1,6 +1,6 @@
 ﻿﻿using System;
 using System.IO;
-using System.Net.Sockets;
+using System.Linq;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
@@ -318,6 +318,48 @@ namespace DSPRE.ROMFiles
         //HearthflameMask = 219
     }
 
+    /// <summary>Per-game labels for the item fields whose values differ between DP, Pt and HGSS.</summary>
+    public static class ItemLabels
+    {
+        /// <summary>Pt and HGSS hold effects, value-indexed. DP has no GiratinaBoost, so its values from 2 on are one lower.</summary>
+        public static string[] HoldEffects(GameFamilies family)
+        {
+            var names = new string[(int)HoldEffect.EvolveDusclops + 1];
+            foreach (HoldEffect e in Enum.GetValues(typeof(HoldEffect))) names[(int)e] = e.ToString();
+            if (family != GameFamilies.DP) return names;
+            // pokediamond items.h: DIALGA_BOOST 2 through EVOLVE_DUSCLOPS 145.
+            var dp = new string[names.Length - 1];
+            for (int i = 0; i < dp.Length; i++) dp[i] = names[i < (int)HoldEffect.GiratinaBoost ? i : i + 1];
+            return dp;
+        }
+
+        // pokeplatinum sItemUseFuncs, ITEM_USE_FUNC_* names.
+        private static readonly string[] PtFieldUse =
+        {
+            "None", "Healing", "TownMap", "ExplorerKit", "Bicycle", "Journal", "TMHM", "Mail", "Berry",
+            "PoffinCase", "PalPad", "PokeRadar", "SprayDuck", "Mulch", "Honey", "VsSeeker", "OldRod",
+            "GoodRod", "SuperRod", "BagMessage", "EvoStone", "EscapeRope", "AzureFlute", "VsRecorder", "Gracidea",
+        };
+
+        /// <summary>The field-use functions the loaded game's table holds, value-indexed.</summary>
+        public static string[] FieldUse(GameFamilies family)
+        {
+            switch (family)
+            {
+                case GameFamilies.DP:
+                    // pokediamond UNK_020F7260 has 23 entries, the same routines as Pt's first 23.
+                    return PtFieldUse.Take(23).ToArray();
+                case GameFamilies.Plat:
+                    return (string[])PtFieldUse.Clone();
+                default:
+                    // pokeheartgold sItemFieldUseFuncs.
+                    var names = new string[(int)FieldUseFunc.VSRecorder + 1];
+                    foreach (FieldUseFunc f in Enum.GetValues(typeof(FieldUseFunc))) names[(int)f] = f.ToString();
+                    return names;
+            }
+        }
+    }
+
     #endregion
     public class ItemData : RomFile
     {
@@ -348,6 +390,10 @@ namespace DSPRE.ROMFiles
         public byte priceHigh;
         public const int MaxHgEnginePrice = 0xFFFFF;
         private readonly bool hgEngineLayout;
+
+        /// <summary>Retail members end at byte 34; hg-engine's carry two more.</summary>
+        public const int RetailSize = 34;
+        private readonly int memberLength = RetailSize + 2;
 
         public int FullPrice
         {
@@ -388,6 +434,7 @@ namespace DSPRE.ROMFiles
 
                 byte[] tail = reader.ReadBytes(2); // padding_22, price_high on hg-engine
                 if (hgEngineLayout && tail.Length > 0) priceHigh = (byte)(tail[0] & 0xF);
+                memberLength = RetailSize + tail.Length;
             }
         }
 
@@ -423,8 +470,9 @@ namespace DSPRE.ROMFiles
 
                 PartyUseParam.WriteTo(writer);
 
-                writer.Write(hgEngineLayout ? (byte)(priceHigh & 0xF) : (byte)0); // padding, price_high on hg-engine
-                writer.Write((byte)0);
+                // padding, price_high on hg-engine
+                byte[] tail = { hgEngineLayout ? (byte)(priceHigh & 0xF) : (byte)0, 0 };
+                writer.Write(tail, 0, memberLength - RetailSize);
 
                 return stream.ToArray();
             }
@@ -468,19 +516,19 @@ namespace DSPRE.ROMFiles
                 ReviveAll = (b1 & (1 << 1)) != 0;
                 LevelUp = (b1 & (1 << 2)) != 0;
                 Evolve = (b1 & (1 << 3)) != 0;
-                AtkStages = (sbyte)((b1 >> 4) & 0xF); // signed 4-bit from high nibble
+                AtkStages = (b1 >> 4) & 0xF; // u8 :4
 
                 byte b2 = reader.ReadByte(); // byte 2
-                DefStages = (sbyte)(b2 & 0xF);
-                SpAtkStages = (sbyte)((b2 >> 4) & 0xF);
+                DefStages = b2 & 0xF;
+                SpAtkStages = (b2 >> 4) & 0xF;
 
                 byte b3 = reader.ReadByte(); // byte 3
-                SpDefStages = (sbyte)(b3 & 0xF);
-                SpeedStages = (sbyte)((b3 >> 4) & 0xF);
+                SpDefStages = b3 & 0xF;
+                SpeedStages = (b3 >> 4) & 0xF;
 
                 byte b4 = reader.ReadByte(); // byte 4
-                AccuracyStages = (sbyte)(b4 & 0xF);
-                CritRateStages = (sbyte)((b4 >> 4) & 0x3);
+                AccuracyStages = b4 & 0xF;
+                CritRateStages = (b4 >> 4) & 0x3;
                 PPUps = (b4 & (1 << 6)) != 0;
                 PPMax = (b4 & (1 << 7)) != 0;
 
@@ -538,7 +586,7 @@ namespace DSPRE.ROMFiles
                 b1 |= (byte)(ReviveAll ? 1 << 1 : 0);
                 b1 |= (byte)(LevelUp ? 1 << 2 : 0);
                 b1 |= (byte)(Evolve ? 1 << 3 : 0);
-                b1 |= (byte)((AtkStages & 0x0F) << 4); // signed 4-bit
+                b1 |= (byte)((AtkStages & 0x0F) << 4);
                 writer.Write(b1);
 
                 // Byte 2
@@ -606,9 +654,6 @@ namespace DSPRE.ROMFiles
                 if (on) val |= 1UL << bit;
                 else val &= ~(1UL << bit);
             }
-
-            private static byte EncodeStage(sbyte val) => (byte)((val + 6 < 0) ? 0 : (val + 6 > 15) ? 15 : val + 6);
-            private static sbyte DecodeStage(byte val) => (sbyte)(val - 6);
 
             public override string ToString()
             {

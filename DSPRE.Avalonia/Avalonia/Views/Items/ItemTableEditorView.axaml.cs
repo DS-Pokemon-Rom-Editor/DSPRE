@@ -21,6 +21,6 @@ namespace DSPRE.Avalonia.Views.Items
         private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
 
         private void HiddenAdd_Click(object sender, RoutedEventArgs e)    => VM?.AddHiddenItem();
-        private void HiddenRemove_Click(object sender, RoutedEventArgs e) => VM?.RemoveSelectedHiddenItem();
+        private async void HiddenRemove_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveSelectedHiddenItemAsync(); }
     }
 }

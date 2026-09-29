@@ -15,7 +15,7 @@
     <DockPanel>
         <!-- ── Top: Item Selector ── -->
         <Border DockPanel.Dock="Top" Padding="6,4" BorderThickness="0,0,0,1" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}">
-            <StackPanel x:Name="ItemBar" Orientation="Horizontal" Spacing="6">
+            <WrapPanel x:Name="ItemBar" Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
                 <Button x:Name="SaveAllButton" Content="Save" IsEnabled="{Binding HasUnsavedChanges}"/>
                 <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
                 <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
@@ -35,9 +35,11 @@
                         ToolTip.Tip="Open this item's icon in the Graphics window, where it can be painted by hand."/>
                 <Button x:Name="AddItemButton" Content="Add New Item…" controls:Icon.Key="addIcon" IsVisible="{Binding ShowHgEngineBanner}"
                         ToolTip.Tip="Mint a brand new item in the linked hg-engine checkout"/>
-            </StackPanel>
+            </WrapPanel>
         </Border>
         <TextBlock DockPanel.Dock="Top" Margin="8,3" Text="{Binding SharedDataNote}" IsVisible="{Binding HasSharedDataNote}"
+                   Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+        <TextBlock x:Name="TableLimitNote" DockPanel.Dock="Top" Margin="8,3" Text="{Binding TableLimitNote}" IsVisible="{Binding HasTableLimitNote}"
                    Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
         <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
             <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
@@ -238,19 +240,19 @@
                                 <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                       Margin="4" ColumnSpacing="8" RowSpacing="4">
                                     <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">Attack:</TextBlock>
-                                    <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding AtkStages}" Minimum="-6" Maximum="6" Width="90"/>
+                                    <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding AtkStages}" Minimum="0" Maximum="15" Width="90"/>
                                     <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Defense:</TextBlock>
-                                    <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding DefStages}" Minimum="-6" Maximum="6" Width="90"/>
+                                    <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding DefStages}" Minimum="0" Maximum="15" Width="90"/>
 
                                     <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">Sp. Attack:</TextBlock>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding SpAtkStages}" Minimum="-6" Maximum="6" Width="90"/>
+                                    <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding SpAtkStages}" Minimum="0" Maximum="15" Width="90"/>
                                     <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Sp. Defense:</TextBlock>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding SpDefStages}" Minimum="-6" Maximum="6" Width="90"/>
+                                    <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding SpDefStages}" Minimum="0" Maximum="15" Width="90"/>
 
                                     <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Speed:</TextBlock>
-                                    <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding SpeedStages}" Minimum="-6" Maximum="6" Width="90"/>
+                                    <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding SpeedStages}" Minimum="0" Maximum="15" Width="90"/>
                                     <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Accuracy:</TextBlock>
-                                    <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding AccuracyStages}" Minimum="-6" Maximum="6" Width="90"/>
+                                    <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding AccuracyStages}" Minimum="0" Maximum="15" Width="90"/>
 
                                     <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">Crit Rate:</TextBlock>
                                     <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding CritRateStages}" Minimum="0" Maximum="3" Width="90"/>

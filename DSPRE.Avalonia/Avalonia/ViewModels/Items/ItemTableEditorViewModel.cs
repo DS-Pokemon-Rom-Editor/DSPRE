@@ -319,12 +319,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // ── Hidden Items ──────────────────────────────────────────────────────
         public bool ShowHiddenItemsTab { get; }
         private const int HIDDEN_ENTRY_SIZE = 8;
-        private const int HIDDEN_TABLE_OFFSET = 0xFA558;
-        private const int HIDDEN_LENGTH_OFFSET1 = 0x405A8;
-        private const int HIDDEN_LENGTH_OFFSET2 = 0x40610;
-        private const int HIDDEN_TABLE_LEN_OFFSET = 0x405E4;
-        private const int HIDDEN_MAX_OFFSET  = 0x405E8;
+        // Hidden-item bg events run script 8000 + the entry's index (_std_hidden_item).
+        private const int HIDDEN_SCRIPT_BASE = 8000;
         private int _hiddenMaxCapacity = 256;
+        // False when a count site isn't the expected cmp, so nothing is patched.
+        private bool _hiddenSitesValid = true;
 
         public ObservableCollection<HiddenItemRowVM> HiddenItems { get; } = new();
 
@@ -472,7 +471,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
             if (ShowHiddenItemsTab)
             {
-                if (!HgEngineProject.IsActive && ARM9.CheckCompressionMark()) ARM9.Decompress(RomInfo.arm9Path);
+                if (!HgEngineProject.IsActive) ARM9.DecompressIfMarked();
                 LoadHiddenItems();
             }
             if (ShowRockSmashTab)
@@ -623,22 +622,23 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return;
             }
 
-            byte[] lenData = ARM9.ReadBytes(HIDDEN_TABLE_LEN_OFFSET, 1);
-            int tableLen = lenData[0];
+            _hiddenMaxCapacity = RomInfo.hiddenItemTableCapacity;
+            int tableLen = ReadHiddenItemCount();
+            if (tableLen < 0)
+            {
+                _hiddenSitesValid = false;
+                AppLogger.Error("Hidden items: the ARM9 count checks aren't where expected; the table is left alone.");
+                OnPropertyChanged(nameof(HiddenEntryCount));
+                return;
+            }
+            tableLen = Math.Min(tableLen, _hiddenMaxCapacity);
 
-            byte[] maxData = ARM9.ReadBytes(HIDDEN_MAX_OFFSET, 1);
-            _hiddenMaxCapacity = maxData[0];
-
-            if (tableLen < 0 || tableLen > _hiddenMaxCapacity)
-                tableLen = Math.Min(256, _hiddenMaxCapacity);
-
-            byte[] table = ARM9.ReadBytes(HIDDEN_TABLE_OFFSET, tableLen * HIDDEN_ENTRY_SIZE);
+            byte[] table = ARM9.ReadBytes(RomInfo.hiddenItemTableOffset, tableLen * HIDDEN_ENTRY_SIZE);
 
             for (int i = 0; i < tableLen; i++)
             {
                 int off = i * HIDDEN_ENTRY_SIZE;
                 ushort itemID   = BitConverter.ToUInt16(table, off);
-                if (itemID == 0) break;
                 ushort amount   = table[off + 2];
                 ushort scriptID = BitConverter.ToUInt16(table, off + 6);
                 HiddenItems.Add(new HiddenItemRowVM(itemID, amount, scriptID, _rawItemNames));
@@ -646,6 +646,33 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             if (HiddenItems.Count > 0) SelectedHiddenItem = HiddenItems[0];
             OnPropertyChanged(nameof(HiddenEntryCount));
+        }
+
+        // The table has no terminator: every scan loops to the count its cmp holds. DSPRE used to patch
+        // only one of them, so the smallest is the real count.
+        private static int ReadHiddenItemCount()
+        {
+            var sites = RomInfo.hiddenItemCountSites;
+            if (sites.Length == 0) return -1;
+            int count = int.MaxValue;
+            foreach (uint site in sites)
+            {
+                byte[] ins = ARM9.ReadBytes(site, 2);
+                if ((ins[1] & 0xF8) != 0x28) return -1;   // Thumb cmp rN, #imm8
+                count = Math.Min(count, ins[0]);
+            }
+            return count;
+        }
+
+        private static List<int> HiddenItemUsers(int index)
+        {
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.eventFiles });
+            var files = new List<int>();
+            int script = HIDDEN_SCRIPT_BASE + index;
+            int fileCount = Filesystem.GetEventFileCount();
+            for (int i = 0; i < fileCount; i++)
+                if (new EventFile(i).spawnables.Any(sp => sp.scriptNumber == script)) files.Add(i);
+            return files;
         }
 
         private void BuildHiddenDummyRows()
@@ -668,9 +695,17 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(HiddenEntryCount));
         }
 
-        public void RemoveSelectedHiddenItem()
+        public async System.Threading.Tasks.Task RemoveSelectedHiddenItemAsync()
         {
             if (_selectedHiddenItem == null) return;
+            var users = HiddenItemUsers(_selectedHiddenItem.ScriptID);
+            if (users.Count > 0)
+            {
+                await DialogHelper.ShowError(
+                    $"Event file {string.Join(", ", users.Take(5))}{(users.Count > 5 ? " and more" : "")} still uses this entry. Change or delete those events first.",
+                    "Hidden Items");
+                return;
+            }
             int idx = HiddenItems.IndexOf(_selectedHiddenItem);
             HiddenItems.Remove(_selectedHiddenItem);
             SelectedHiddenItem = HiddenItems.Count > 0
@@ -797,6 +832,17 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return;
             }
 
+            var empty = HiddenItems.FirstOrDefault(h => h.ItemID == 0);
+            string refusal = !_hiddenSitesValid ? "The ARM9 count checks aren't where expected."
+                : HiddenItems.Count > _hiddenMaxCapacity ? $"There is room for {_hiddenMaxCapacity} entries."
+                : empty != null ? $"Script {empty.ScriptID} has no item. Pick one or remove the entry."
+                : null;
+            if (refusal != null)
+            {
+                _ = DialogHelper.ShowError($"Hidden items were not saved.\n{refusal}", "Item Tables");
+                return;
+            }
+
             int tableLen = HiddenItems.Count;
             byte[] table = new byte[_hiddenMaxCapacity * HIDDEN_ENTRY_SIZE];
 
@@ -809,8 +855,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 BitConverter.GetBytes(e.ScriptID).CopyTo(table, off + 6);
             }
 
-            ARM9.WriteBytes(table, HIDDEN_TABLE_OFFSET);
-            ARM9.WriteBytes(new byte[] { (byte)tableLen }, HIDDEN_TABLE_LEN_OFFSET);
+            ARM9.WriteBytes(table, RomInfo.hiddenItemTableOffset);
+            foreach (uint site in RomInfo.hiddenItemCountSites)
+                ARM9.WriteBytes(new byte[] { (byte)tableLen }, site);
 
             _hiddenDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);

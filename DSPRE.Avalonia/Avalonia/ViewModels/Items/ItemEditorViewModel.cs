@@ -80,13 +80,20 @@ namespace DSPRE.Avalonia.ViewModels.Items
             MaxItemDataId = GetItemDataFileCount() - 1;
             PopulateIconPaletteDropdowns();
 
-            // (GiratinaBoost is no longer hidden for DP; the combos bind by index == byte value, so the
-            //  list must stay value-aligned. It's just a harmless unused entry there; relabel it if desired.)
+            if (!RomInfo.isHGE)
+            {
+                int bad = ItemTable.Limits().FirstBadRow;
+                if (bad >= 0) TableLimitNote = $"Items from {bad} on have no valid table row.";
+            }
 
             _selectedItemIndex = 1;
             OnPropertyChanged(nameof(SelectedItemIndex));
-            LoadFile(1);
+            if (!LoadFile(1)) _selectedItemIndex = -1;
         }
+
+        // Set when the ARM9 table has a row pointing past the item archives before the game's own limit.
+        public string TableLimitNote { get; }
+        public bool HasTableLimitNote => TableLimitNote != null;
 
         // ── Collections ─────────────────────────────────────────────────────
         public ObservableCollection<string> ItemNames          { get; } = new();
@@ -109,12 +116,35 @@ namespace DSPRE.Avalonia.ViewModels.Items
             set
             {
                 if (_selectedItemIndex == value || _syncingList) return;
-                if (_pendingItem != null && !_isLoading && value >= 0 && value < ItemNames.Count) { _ = ConfirmDropPendingAsync(value); return; }
-                _selectedItemIndex = value;
-                OnPropertyChanged();
-                if (!_isLoading && value >= 0 && value < ItemNames.Count)
-                    LoadFile(value);
+                if (_isLoading || value < 0 || value >= ItemNames.Count)
+                {
+                    _selectedItemIndex = value;
+                    OnPropertyChanged();
+                    return;
+                }
+                if (_pendingItem != null) { _ = ConfirmDropPendingAsync(value); return; }
+                if (_dataDirty || _entryDirty)
+                {
+                    // Snap the picker back to the item still loaded until the user has answered.
+                    OnPropertyChanged();
+                    _ = SwitchItemAsync(value);
+                    return;
+                }
+                SwitchTo(value);
             }
+        }
+
+        private async Task SwitchItemAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "item")) return;
+            if (requested < ItemNames.Count) SwitchTo(requested);
+        }
+
+        /// <summary>Loads an item, leaving the current one selected and loaded when it can't be read.</summary>
+        private void SwitchTo(int index)
+        {
+            if (LoadFile(index)) _selectedItemIndex = index;
+            OnPropertyChanged(nameof(SelectedItemIndex));
         }
 
         // ── Item Table Entry ─────────────────────────────────────────────────
@@ -154,13 +184,42 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 // A new item's data is its own template until it is saved, so the box can't point it elsewhere.
                 if (_pendingItem != null && !_isLoading && value != _itemDataId) { OnPropertyChanged(); return; }
+                // Pointing at other data replaces the loaded data, so its unsaved edits are settled first.
+                if (_dataDirty && !_isLoading && value != _itemDataId && value >= 0 && value <= MaxItemDataId)
+                {
+                    OnPropertyChanged();
+                    _ = SwitchItemDataAsync(value);
+                    return;
+                }
                 if (!Set(ref _itemDataId, value)) return;
                 if (_isLoading || value < 0 || value > MaxItemDataId) return;
-                _currentEntry.itemData = (uint)value;
-                LoadItemData(value);
-                UpdateSharedDataNote(_selectedItemIndex);
-                SetEntryDirty();
+                PointAtItemData(value);
             }
+        }
+
+        private async Task SwitchItemDataAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "item data")) return;
+            if (_dataDirty || !Set(ref _itemDataId, requested, nameof(ItemDataId))) return;
+            PointAtItemData(requested);
+        }
+
+        private void PointAtItemData(int dataId)
+        {
+            ItemData data;
+            string loadError;
+            try { (data, loadError) = ReadItemData(dataId); }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Item Editor: item data {dataId} could not be read: {ex}");
+                _itemDataId = (int)_currentEntry.itemData;
+                OnPropertyChanged(nameof(ItemDataId));
+                return;
+            }
+            _currentEntry.itemData = (uint)dataId;
+            ApplyItemData(data, loadError);
+            UpdateSharedDataNote(_selectedItemIndex);
+            SetEntryDirty();
         }
 
         private AvaBitmap _itemIcon;
@@ -647,16 +706,32 @@ namespace DSPRE.Avalonia.ViewModels.Items
         }
 
         // ── Load ──────────────────────────────────────────────────────────────
-        private void LoadFile(int id)
+        /// <summary>False, with nothing changed, when the item's row or data can't be read.</summary>
+        private bool LoadFile(int id)
         {
+            ItemNarcTableEntry entry;
+            ItemData data;
+            string loadError;
+            try
+            {
+                entry = ReadTableEntry(id);
+                (data, loadError) = ReadItemData((int)entry.itemData);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Item Editor: item {id} could not be read: {ex}");
+                _ = DialogHelper.ShowError($"Item {id} could not be read.\n{ex.Message}", "Item Editor");
+                return false;
+            }
+
             _isLoading = true;
             try
             {
-                _currentEntry = ReadTableEntry(id);
+                _currentEntry = entry;
                 RefreshEntryBoundProps();
                 UpdateSharedDataNote(id);
 
-                LoadItemData((int)_currentEntry.itemData);
+                ApplyItemData(data, loadError);
                 UpdateIcon();
 
                 _dataDirty = _entryDirty = false;
@@ -667,24 +742,24 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 RaiseUndoState();
             }
             finally { _isLoading = false; }
+            return true;
         }
 
         private const int ItemDataSize = 36;
 
-        private void LoadItemData(int dataId)
+        private static (ItemData data, string loadError) ReadItemData(int dataId)
         {
             string path = Path.Combine(RomInfo.gameDirs[DirNames.itemData].unpackedDir, dataId.ToString("D4"));
-            string loadError = null;
-            if (HgEngineProject.IsActive)
-            {
-                // The built copy only fills a field the entry lacks, which the save then reports.
-                _currentData = File.Exists(path) ? ReadBuiltItemData(path, dataId) : new ItemData(new MemoryStream(new byte[ItemDataSize]), dataId);
-                HgEngineItemSource.TryLoad(dataId, _currentData, out loadError);
-            }
-            else
-            {
-                _currentData = ReadBuiltItemData(path, dataId);
-            }
+            if (!HgEngineProject.IsActive) return (ReadBuiltItemData(path, dataId), null);
+            // The built copy only fills a field the entry lacks, which the save then reports.
+            var data = File.Exists(path) ? ReadBuiltItemData(path, dataId) : new ItemData(new MemoryStream(new byte[ItemDataSize]), dataId);
+            HgEngineItemSource.TryLoad(dataId, data, out string loadError);
+            return (data, loadError);
+        }
+
+        private void ApplyItemData(ItemData data, string loadError)
+        {
+            _currentData = data;
             SourceLoadError = loadError;
             PopulateFromCurrentData();
         }
@@ -699,8 +774,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             // Hold effect: combo bound by index == byte value; extend the list if the value is beyond the
             // known labels (a hacked/undefined effect) so it still has a slot.
+            // Resynced before the index is set, since shrinking the list can push -1 through the binding.
+            ResetAndCover(HoldEffectNames, HoldEffectKey, (int)_currentData.holdEffect);
             _holdEffectIndex = (int)_currentData.holdEffect;
-            EnsureCovers(HoldEffectNames, "item_hold_effects", _holdEffectIndex);
             _holdEffectParam = _currentData.HoldEffectParam;
             OnPropertyChanged(nameof(HoldEffectIndex));
             OnPropertyChanged(nameof(HoldEffectParam));
@@ -750,8 +826,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(PluckEffect));
 
             // Functions: combos bound by index == byte value; extend lists for unknown/raw values.
+            ResetAndCover(FieldUseFuncNames, FieldUseKey, (int)_currentData.fieldUseFunc);
             _fieldUseFuncIndex = (int)_currentData.fieldUseFunc;
-            EnsureCovers(FieldUseFuncNames, "item_field_use", _fieldUseFuncIndex);
             OnPropertyChanged(nameof(FieldUseFuncIndex));
 
             _battleUseFuncIndex = (int)_currentData.battleUseFunc;
@@ -905,12 +981,28 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // customisable LabelStore (Tools ▸ Edit Dropdown Labels). Synced in place to keep the selection.
         private void PopulateEnumCollections()
         {
-            DSPRE.Avalonia.Data.LabelStore.Sync(HoldEffectNames,      "item_hold_effects");
+            DSPRE.Avalonia.Data.LabelStore.Sync(HoldEffectNames,      HoldEffectKey);
             DSPRE.Avalonia.Data.LabelStore.Sync(FieldPocketNames,     "item_field_pockets");
-            DSPRE.Avalonia.Data.LabelStore.Sync(FieldUseFuncNames,    "item_field_use");
+            DSPRE.Avalonia.Data.LabelStore.Sync(FieldUseFuncNames,    FieldUseKey);
             DSPRE.Avalonia.Data.LabelStore.Sync(BattleUseFuncNames,   "item_battle_use");
             DSPRE.Avalonia.Data.LabelStore.Sync(NaturalGiftTypeNames, "item_natural_gift");
             AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
+        }
+
+        // DP has no GiratinaBoost and a shorter field-use table than Pt, which is shorter than HGSS's.
+        private static string HoldEffectKey => RomInfo.gameFamily == GameFamilies.DP ? "item_hold_effects_dp" : "item_hold_effects";
+        private static string FieldUseKey => RomInfo.gameFamily switch
+        {
+            GameFamilies.DP => "item_field_use_dp",
+            GameFamilies.Plat => "item_field_use_pt",
+            _ => "item_field_use",
+        };
+
+        /// <summary>Back to the game's own labels, plus a slot for a value read beyond them.</summary>
+        private static void ResetAndCover(System.Collections.ObjectModel.ObservableCollection<string> coll, string key, int index)
+        {
+            if (coll.Count > DSPRE.Avalonia.Data.LabelStore.Count(key)) DSPRE.Avalonia.Data.LabelStore.Sync(coll, key);
+            EnsureCovers(coll, key, index);
         }
 
         /// <summary>Extends a combo list so it has a slot at <paramref name="index"/> (for a raw byte value
@@ -926,9 +1018,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
             PopulateEnumCollections();   // re-sync labels
             if (_currentData != null)    // re-extend for the current item's (possibly raw) values
             {
-                EnsureCovers(HoldEffectNames,      "item_hold_effects",  (int)_currentData.holdEffect);
+                EnsureCovers(HoldEffectNames,      HoldEffectKey,        (int)_currentData.holdEffect);
                 EnsureCovers(FieldPocketNames,     "item_field_pockets", (int)_currentData.fieldPocket);
-                EnsureCovers(FieldUseFuncNames,    "item_field_use",     (int)_currentData.fieldUseFunc);
+                EnsureCovers(FieldUseFuncNames,    FieldUseKey,          (int)_currentData.fieldUseFunc);
                 EnsureCovers(BattleUseFuncNames,   "item_battle_use",    (int)_currentData.battleUseFunc);
                 EnsureCovers(NaturalGiftTypeNames, "item_natural_gift",  (int)_currentData.naturalGiftType);
             }

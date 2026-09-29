@@ -115,6 +115,23 @@ namespace DSPRE
 
         // Item Table offset (in ARM9)
         public static uint itemTableOffset { get; private set; }
+        /// <summary>
+        /// ARM9 offset of the game's item loader (LoadItemDataOrGfx, Pt Item_Load), which clamps any id above
+        /// its item limit to 0. Zero when unknown. Retail limits: DP 464, Pt 467, HGSS 536.
+        /// </summary>
+        public static uint itemLimitSite { get; private set; }
+        /// <summary>The loader's opening bytes as hex, ?? for the limit's own bytes. Checked before the limit is read.</summary>
+        public static string itemLimitSignature { get; private set; }
+
+        /// <summary>HGSS hidden-item table in ARM9 (sHiddenItemParam). Zero when unknown.</summary>
+        public static uint hiddenItemTableOffset { get; private set; }
+        /// <summary>Rows the ARM9 reserves for the hidden-item table (NUM_HIDDEN_ITEMS).</summary>
+        public static int hiddenItemTableCapacity { get; private set; }
+        /// <summary>The immediate byte of each <c>cmp rN, #count</c> that bounds a scan of the hidden-item table.</summary>
+        public static uint[] hiddenItemCountSites { get; private set; } = System.Array.Empty<uint>();
+
+        /// <summary>Pt overlay 9's Distortion World Griseous Orb item, which names its ground-item script directly. Zero when unknown.</summary>
+        public static uint distortionWorldItemScriptOffset { get; private set; }
 
         // Standard Poké Mart tables in ARM9. Zero count means this ROM has no verified layout.
         public static uint martCommonCountOffset { get; private set; }
@@ -145,6 +162,12 @@ namespace DSPRE
         private const uint PTdeOffset  = 0xE980C, PTitOffset  = 0xE97D0, PTspOffset = 0xE9848;
         private const uint HGSSjpOffset = 0xF9630, HGSSusOffset = 0xF9E80, HGSSfrOffset = 0xF9E64;
         private const uint HGSSdeOffset = 0xF9E34, HGSSitOffset = 0xF9DF8, HGSSspOffset = 0xF9E68;
+
+        /// <summary>
+        /// Japanese Diamond and Pearl share one fly table offset, but their header tables sit 4 bytes apart,
+        /// so Pearl's is likely elsewhere; unchecked without a Japanese Pearl ROM.
+        /// </summary>
+        public static bool FlyTableUnverified => gameVersion == GameVersions.Pearl && gameLanguage == GameLanguages.Japanese;
 
         public static uint FlyTableOffset
         {
@@ -467,6 +490,8 @@ namespace DSPRE
         public static string internalNamesPath { get; private set; }
 
         public static int cameraSize { get; private set; }
+        /// <summary>Entries in the field camera table: 16 in DP, 17 in Pt and HGSS.</summary>
+        public static int cameraCount { get; private set; }
 
         public Dictionary<List<uint>, (Color background, Color foreground)> MapCellsColorDictionary;
         public static SortedDictionary<uint, (uint spriteID, ushort properties)> OverworldTable { get; private set; }
@@ -629,12 +654,21 @@ namespace DSPRE
 
         public RomInfo(string id, string romFolderName)
         {
+            // Refused before any static state changes, so the ROM already open stays intact.
+            if (!IsSupportedGameCode(id))
+            {
+                ShowWarning?.Invoke("The ROM you attempted to load is not supported.\nYou can only load Gen IV Pokémon ROMS, for now.", "Unsupported ROM");
+                return;
+            }
+
             // These are only ever (re)populated lazily elsewhere, behind an "if (x == null)" check, without
             // resetting them here first, switching to a different ROM mid-session would leave the
             // FIRST-loaded ROM's overworld-sprite table/dict silently in effect forever.
             OverworldTable = null;
             overworldTableKeys = null;
             ow3DSpriteDict = null;
+            OWtablePath = null;
+            OWTableOffset = 0;
             OverlayUtils.ForgetOverlayTable();
 
             string path = Path.GetFullPath(romFolderName);
@@ -681,15 +715,7 @@ namespace DSPRE
             unpackedPath = Path.Combine(workDir, @"unpacked");
             internalNamesPath = Path.Combine(dataPath, "fielddata", "maptable", "mapname.bin");
 
-            try
-            {
-                gameVersion = PokeDatabase.System.versionsDict[id];
-            }
-            catch (KeyNotFoundException)
-            {
-                ShowWarning?.Invoke("The ROM you attempted to load is not supported.\nYou can only load Gen IV Pokémon ROMS, for now.", "Unsupported ROM");
-                return;
-            }
+            gameVersion = PokeDatabase.System.versionsDict[id];
 
             romID = id;
             romRevision = ReadRomRevision(workDir);
@@ -723,9 +749,16 @@ namespace DSPRE
             // The synthetic overlay's member (HGSS 0, DP/Pt 9) and the patch flags belong to this ROM, not the last one.
             RomPatchState.ResetFlags();
             SetHeaderTableOffset();
+            // Every header reader trusts this flag, and only applying the patch would otherwise set it.
+            if (gameFamily != GameFamilies.DP)
+            {
+                try { RomPatchState.flag_DynamicHeadersPatchApplied = PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied(); }
+                catch (Exception ex) { AppLogger.Warn("Dynamic headers check failed: " + ex.Message); }
+            }
             SetNullEncounterID();
             SetPickupTableOffsets();
             SetItemTableOffset();
+            SetItemReferenceOffsets();
             SetMartOffsets();
             SetStarterOffsets();
             SetRematchTableOffsets();
@@ -761,7 +794,16 @@ namespace DSPRE
             ScriptActionNamesReverseDict = ScriptActionNamesDict.Reverse();
             ScriptComparisonOperatorsReverseDict = ScriptComparisonOperatorsDict.Reverse();
 
+            try { SetOWtable(); }
+            catch (Exception ex) { AppLogger.Warn("Overworld table not located: " + ex.Message); }
         }
+
+        /// <summary>Whether DSPRE can open a ROM with this game code.</summary>
+        public static bool IsSupportedGameCode(string id) =>
+            id != null && PokeDatabase.System.versionsDict.ContainsKey(id);
+
+        /// <summary>Where the ARM9 records the end of its compressed code; zero there means uncompressed.</summary>
+        public static uint Arm9CompressionMarkOffset => gameFamily == GameFamilies.DP ? 0xB7Cu : 0xBB4u;
 
         #endregion Constructors (1)
 
@@ -1379,6 +1421,20 @@ namespace DSPRE
 
         public static void SetItemTableOffset()
         {
+            // push {r3, lr}; mov r3, r0; <limit into r0>; cmp r3, r0; bls; mov r3, #0; cmp r1, #0.
+            // DP and HGSS build the limit with mov r0, #imm; lsl r0, #n, Pt loads it from the literal pool.
+            itemLimitSite = (gameFamily, gameLanguage) switch
+            {
+                (GameFamilies.DP, GameLanguages.English) => 0x6E710,
+                (GameFamilies.Plat, GameLanguages.English) => 0x7CF48,
+                (GameFamilies.Plat, GameLanguages.French) => 0x7CFE8,
+                (GameFamilies.HGSS, GameLanguages.English) => 0x77CE8,
+                _ => 0,
+            };
+            itemLimitSignature = gameFamily == GameFamilies.Plat
+                ? "08B5031C ??48 8342 00D9 0023 0029"
+                : "08B5031C ??20 ???? 8342 00D9 0023 0029";
+
             switch (gameFamily)
             {
                 case GameFamilies.DP:
@@ -1465,6 +1521,26 @@ namespace DSPRE
             }
         }
 
+        public static void SetItemReferenceOffsets()
+        {
+            hiddenItemTableOffset = 0;
+            hiddenItemTableCapacity = 0;
+            hiddenItemCountSites = System.Array.Empty<uint>();
+            distortionWorldItemScriptOffset = 0;
+
+            // HeartGold US: sub_02040578 and GetHiddenItemParams each loop to 231 and test the index after.
+            if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
+            {
+                hiddenItemTableOffset = 0xFA558;
+                hiddenItemTableCapacity = 231;
+                hiddenItemCountSites = new uint[] { 0x4058E, 0x40592, 0x405E4, 0x405E8 };
+            }
+
+            // SCRIPT_ID(VISIBLE_ITEMS, 321) in sMapObjectEventTurnbackCaveRoom_GriseousOrbItem; seen in US and French.
+            if (gameFamily == GameFamilies.Plat && gameLanguage != GameLanguages.Japanese)
+                distortionWorldItemScriptOffset = 0x8E2A;
+        }
+
         public static void SetMartOffsets()
         {
             martCommonCountOffset = 0;
@@ -1507,17 +1583,20 @@ namespace DSPRE
                     cameraTblOverlayNumber = 5;
                     cameraTblOffsetsToRAMaddress = gameLanguage.Equals(GameLanguages.Japanese) ? (new uint[] { 0x4C50 }) : (new uint[] { 0x4908 });
                     cameraSize = 24;
+                    cameraCount = 16;
                     break;
 
                 case GameFamilies.Plat:
                     cameraTblOverlayNumber = 5;
                     cameraTblOffsetsToRAMaddress = new uint[] { 0x4E24 };
                     cameraSize = 24;
+                    cameraCount = 17;
                     break;
 
                 case GameFamilies.HGSS:
                     cameraTblOverlayNumber = 1;
                     cameraSize = 36;
+                    cameraCount = 17;
                     switch (gameLanguage)
                     {
                         case GameLanguages.English:
@@ -2420,6 +2499,16 @@ namespace DSPRE
             }
         }
 
+        /// <summary>Whether the egg move limit counts only up to the last Pokémon header rather than the whole table.</summary>
+        public static bool EggMoveLimitCountsHeadersOnly => gameFamily == GameFamilies.HGSS;
+
+        /// <summary>
+        /// Egg move table limit in bytes. DP/Pt: the space the table has in overlay 5, end marker included.
+        /// HGSS: LoadEggMoves (get_egg.c) searches only the first 2045 entries for a Pokémon's header, so
+        /// every header must sit inside them; the moves after the last one may run past.
+        /// </summary>
+        public static int GetEggMoveTableMaxBytes() => gameFamily == GameFamilies.HGSS ? 2045 * 2 : 0xEEC;
+
         public static int GetEggMoveTableOffset()
         {
             switch (RomInfo.gameFamily)
@@ -2535,6 +2624,9 @@ namespace DSPRE
             TextArchive itemNames = new TextArchive(itemNamesTextNumber);
             return itemNames.messages.GetRange(startIndex, count == null ? itemNames.messages.Count - 1 : (int)count).ToArray();
         }
+
+        /// <summary>The last real species id in the retail games; name entries after it are Egg, Bad Egg and forms.</summary>
+        public const int LastVanillaSpecies = 493;
 
         public static string[] GetPokemonNames()
         {
