@@ -4,6 +4,29 @@
 
 ---
 
+## 2.3.2
+- Fixed the trainer class picture never appearing in Diamond and Pearl. Those two games keep only a
+  drawing and its colours for each class, where Platinum and HeartGold keep five files and animate
+  them, so the editor was reading another class's files. Their artwork is also stored scrambled, the
+  same way Pokémon battle sprites are. The picture now appears in the Trainer Editor, in the battle
+  message editor and beside the Table Editor's VS Trainer list. Diamond and Pearl classes have no
+  animation, so the frame box and Animate stay switched off for them.
+
+---
+
+## 2.3.1
+- Fixed the Starter Pokémon Editor breaking the script that gives you your starter in Diamond, Pearl
+  and Platinum. Those games keep the held item in that script rather than in a table, so the Held
+  Item box was writing somewhere it should not. The box is now only offered on HeartGold and
+  SoulSilver, and the editor points you at the script instead: on Platinum that is script file 427.
+- Fixed the Battle Display preview drawing the front (enemy) sprite one pixel too low, reverting an
+  adjustment made in 2.2.3 that turned out to be wrong.
+- Fixed the Table Editor's VS Pokémon panel never saving. Save This Entry did nothing at all, so the
+  species and effect combo you picked were never written to the ROM. Closing the Table Editor with
+  unsaved changes in that panel also asked you nothing; it now does.
+
+---
+
 ## 2.3
 
 ### Sprite Editor

@@ -404,8 +404,7 @@ namespace DSPRE.Editors {
             int frontH = female ? frontHeightF : frontHeightM;
             int backH = female ? backHeightF : backHeightM;
 
-            // Base 11, not the 10 the engine source implies: measured against real battles.
-            double enemyTop = 11 + (hasHeights ? frontH : 0) - spriteY;
+            double enemyTop = 10 + (hasHeights ? frontH : 0) - spriteY;
             double playerTop = 72 + (hasHeights ? backH : 0);
 
             Bitmap enemy = PokemonSpriteEditor.CropBattleFrame(battleSprites[female ? 2 : 3], frameIndex);
