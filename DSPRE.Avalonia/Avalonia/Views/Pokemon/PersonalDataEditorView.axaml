@@ -192,20 +192,20 @@
               </GroupBox>
               <GroupBox Header="In the events">
                 <controls:CappedWidth Cap="520"><Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto" Margin="4">
-                  <CheckBox Grid.Row="0" Grid.ColumnSpan="2" Content="Large sprite" IsChecked="{Binding AthlonLargeSprite}"
-                            ToolTip.Tip="For Pokémon drawn 64 px tall: Lamp Jump and Pennant Capture put the status icon 24 px up instead of 16"/>
+                  <CheckBox Grid.Row="0" Grid.ColumnSpan="2" Content="Raised" IsChecked="{Binding AthlonRaised}"
+                            ToolTip.Tip="A sprite above it sits 24 px up instead of 16"/>
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Hitbox" Classes="label" Margin="0,0,12,0"
                              ToolTip.Tip="One of three collision circles, sized per event"/>
                   <ComboBox Grid.Row="2" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
-                            ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonHitIndex}"/>
-                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Icon height" Classes="label" Margin="0,0,12,0"
-                             ToolTip.Tip="How high the status icon floats in Circle Push and Goal Roll; tapping range doesn't change"/>
+                            ItemsSource="{Binding AthlonSizeOptions}" SelectedIndex="{Binding AthlonHitboxIndex}"/>
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Lift" Classes="label" Margin="0,0,12,0"
+                             ToolTip.Tip="How far a sprite above it is raised"/>
                   <ComboBox Grid.Row="4" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
-                            ItemsSource="{Binding AthlonTouchOptions}" SelectedIndex="{Binding AthlonTouchIndex}"/>
-                  <TextBlock Grid.Row="6" Grid.Column="0" Text="Shadow height" Classes="label" Margin="0,0,12,0"
-                             ToolTip.Tip="Shadow and player marker, above the sprite's bottom edge, in every event"/>
+                            ItemsSource="{Binding AthlonLiftOptions}" SelectedIndex="{Binding AthlonLiftIndex}"/>
+                  <TextBlock Grid.Row="6" Grid.Column="0" Text="Offset" Classes="label" Margin="0,0,12,0"
+                             ToolTip.Tip="Its bottom edge against the sprites drawn with it"/>
                   <ComboBox Grid.Row="6" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
-                            ItemsSource="{Binding AthlonShadowOptions}" SelectedIndex="{Binding AthlonShadowIndex}"/>
+                            ItemsSource="{Binding AthlonOffsetOptions}" SelectedIndex="{Binding AthlonOffsetIndex}"/>
                 </Grid></controls:CappedWidth>
               </GroupBox>
               <TextBlock Text="{Binding PokeathlonProblem}" IsVisible="{Binding HasPokeathlonProblem}"

@@ -1164,15 +1164,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasPokeathlonFormChoice => PokeathlonFormNames.Count > 1;
         public ObservableCollection<PokeathlonStatRow> PokeathlonStats { get; } = new();
         public int[] StarOptions { get; } = { 0, 1, 2, 3, 4 };
-        public string[] AthlonCellOptions { get; } = { "Small sprite", "Large sprite" };
-        public string[] AthlonSizeOptions { get; } = { "Small", "Medium", "Large" };
-        public string[] AthlonTouchOptions { get; } = { "Small · 8 px", "Medium · 8 px", "Large · 16 px" };
-        public string[] AthlonShadowOptions { get; } = { "Small · 3 px", "Medium · 4 px", "Large · 5 px" };
+        public string[] AthlonSizeOptions { get; } = { "Circle 1", "Circle 2", "Circle 3" };
+        public string[] AthlonLiftOptions { get; } = { "1 · 8 px", "2 · 8 px", "3 · 16 px" };
+        public string[] AthlonOffsetOptions { get; } = { "1 · 3 px", "2 · 4 px", "3 · 5 px" };
 
-        public bool AthlonLargeSprite
+        public bool AthlonRaised
         {
-            get => AthlonCellIndex == 1;
-            set => AthlonCellIndex = value ? 1 : 0;
+            get => AthlonRaisedIndex == 1;
+            set => AthlonRaisedIndex = value ? 1 : 0;
         }
 
         private int _athlonFormIndex;
@@ -1198,25 +1197,25 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetDirty();
         }
 
-        public int AthlonCellIndex
+        public int AthlonRaisedIndex
         {
-            get => AthlonRecord == null ? -1 : AthlonRecord.Cell == 0 ? 0 : 1;
-            set { if (value is >= 0 and <= 1 && value != AthlonCellIndex) StageAthlon(r => r.Cell = (byte)value); }
+            get => AthlonRecord == null ? -1 : AthlonRecord.Raised == 0 ? 0 : 1;
+            set { if (value is >= 0 and <= 1 && value != AthlonRaisedIndex) StageAthlon(r => r.Raised = (byte)value); }
         }
-        public int AthlonHitIndex
+        public int AthlonHitboxIndex
         {
-            get => (AthlonRecord?.Hit ?? 0) - 1;
-            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Hit = (byte)(value + 1)); }
+            get => (AthlonRecord?.Hitbox ?? 0) - 1;
+            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Hitbox = (byte)(value + 1)); }
         }
-        public int AthlonTouchIndex
+        public int AthlonLiftIndex
         {
-            get => (AthlonRecord?.Touch ?? 0) - 1;
-            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Touch = (byte)(value + 1)); }
+            get => (AthlonRecord?.Lift ?? 0) - 1;
+            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Lift = (byte)(value + 1)); }
         }
-        public int AthlonShadowIndex
+        public int AthlonOffsetIndex
         {
-            get => (AthlonRecord?.Shadow ?? 0) - 1;
-            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Shadow = (byte)(value + 1)); }
+            get => (AthlonRecord?.Offset ?? 0) - 1;
+            set { if (value is >= 0 and <= 2) StageAthlon(r => r.Offset = (byte)(value + 1)); }
         }
 
         public string PokeathlonProblem => AthlonRecord?.Problem() ?? "";
@@ -1261,8 +1260,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void ShowPokeathlonForm()
         {
             foreach (var row in PokeathlonStats) row.Refresh();
-            foreach (var name in new[] { nameof(PokeathlonFormIndex), nameof(AthlonCellIndex), nameof(AthlonLargeSprite), nameof(AthlonHitIndex), nameof(AthlonTouchIndex),
-                                         nameof(AthlonShadowIndex), nameof(PokeathlonProblem), nameof(HasPokeathlonProblem),
+            foreach (var name in new[] { nameof(PokeathlonFormIndex), nameof(AthlonRaisedIndex), nameof(AthlonRaised), nameof(AthlonHitboxIndex), nameof(AthlonLiftIndex),
+                                         nameof(AthlonOffsetIndex), nameof(PokeathlonProblem), nameof(HasPokeathlonProblem),
                                          nameof(PokeathlonEditable), nameof(PokeathlonNote), nameof(HasPokeathlonNote),
                                          nameof(HasPokeathlonFormChoice) })
                 OnPropertyChanged(name);

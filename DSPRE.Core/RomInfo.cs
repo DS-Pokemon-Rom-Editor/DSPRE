@@ -429,6 +429,9 @@ namespace DSPRE
         public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : -1;
         public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : -1;
 
+        /// <summary>HGSS arm9 file offset of sPokeathlonPerformanceArcIdxs, the first Pokéathlon record of each species; -1 elsewhere.</summary>
+        public static int PokeathlonMemberTableOffset => romID == "IPKE" ? 0xFF7B4 : -1;
+
         /// <summary>Text archive whose lines 78-87 name the ten Bug-Catching Contest opponents; -1 where unknown.</summary>
         public static int BugContestTextNumber => gameFamily == GameFamilies.HGSS && gameLanguage != GameLanguages.Japanese ? 246 : -1;
         public static string OWtablePath { get; private set; }

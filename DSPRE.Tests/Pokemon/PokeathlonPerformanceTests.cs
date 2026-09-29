@@ -57,6 +57,19 @@ namespace DSPRE.Tests.Pokemon
             Assert.Equal((species, form), PersonalDataEditorViewModel.AthlonSpeciesOf(personalId));
         }
 
+        [SkippableFact]
+        public void TheRomsOwnTableGivesTheSameMembers()
+        {
+            OpenHeartGold();
+            Assert.True(PokeathlonPerformance.UsesRomTable());
+            Assert.Equal(171, PokeathlonPerformance.MemberOf(172, 0));
+            Assert.Equal(228, PokeathlonPerformance.MemberOf(201, 27));
+            Assert.Equal(553, PokeathlonPerformance.MemberOf(493, 17));
+            var members = Enumerable.Range(1, PokeathlonPerformance.LastSpecies)
+                .SelectMany(s => Enumerable.Range(0, PokeathlonPerformance.FormsOf(s)).Select(f => PokeathlonPerformance.MemberOf(s, f)));
+            Assert.Equal(Enumerable.Range(0, PokeathlonPerformance.RecordCount), members);
+        }
+
         private static void OpenHeartGold()
         {
             Skip.If(!Directory.Exists(TestRoms.HeartGold), "HeartGold test project not configured");
