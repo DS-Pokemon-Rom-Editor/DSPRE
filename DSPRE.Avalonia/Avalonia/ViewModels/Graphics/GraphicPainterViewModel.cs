@@ -300,6 +300,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             string err = Save();
             Status = err ?? "Saved. Save the ROM to keep it.";
+            // The unsaved-changes prompts show a thrown message as the reason the save failed.
+            if (err != null) throw new InvalidOperationException(err);
         }
         public void DiscardChanges() { while (_undo.Count > 0) Undo(); }
 

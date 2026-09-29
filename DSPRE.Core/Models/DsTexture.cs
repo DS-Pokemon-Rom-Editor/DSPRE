@@ -173,7 +173,8 @@ namespace DSPRE.Models
             name = (name ?? "").Trim();
             var kept = new string(name.Where(c => c > 32 && c < 127).ToArray());
             if (kept.Length == 0) kept = "texture";
-            return kept.Length > 15 ? kept.Substring(0, 15) : kept;
+            // Same 16-character rule as NsbmdWriter, or material and texture names stop matching.
+            return NitroDictionary.Fit(kept);
         }
     }
 }

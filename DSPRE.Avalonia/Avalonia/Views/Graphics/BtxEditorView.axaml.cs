@@ -61,11 +61,16 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
             else
             {
-                string warning = VM.GetSelectedMemberUsageWarning();
-                if (warning != null && !await DialogHelper.AskYesNo(warning, "Shared texture slot", this))
-                    return;
+                // Refuse an unusable picture before asking about the shared slot.
+                error = VM.ImportPng(path, apply: false);
+                if (error == null)
+                {
+                    string warning = VM.GetSelectedMemberUsageWarning();
+                    if (warning != null && !await DialogHelper.AskYesNo(warning, "Shared texture slot", this))
+                        return;
 
-                error = VM.ImportPng(path);
+                    error = VM.ImportPng(path);
+                }
             }
             if (error != null)
                 await DialogHelper.ShowError($"Import failed: {error}");

@@ -95,6 +95,71 @@ namespace DSPRE.Tests
             Assert.Equal(replacement.Bgra, roundTripped.Bgra);
         }
 
+        // Same layout with a normal and a shiny palette (palette size 8<<3 = 64 bytes). Pixels use
+        // only slots 0-7, normal slot 5 repeats slot 3's colour, and shiny holds different colours.
+        private static byte[] BuildTwoPaletteFile()
+        {
+            byte[] one = BuildFile();
+            var f = new byte[256];
+            Array.Copy(one, f, 192);
+            BitConverter.GetBytes(8u).CopyTo(f, 68);
+            f[151] = 2;
+            for (int j = 0; j < 32; j++)
+                f[160 + j] = (byte)(((2 * j) % 8) | (((2 * j + 1) % 8) << 4));
+            for (int k = 0; k < 16; k++)
+            {
+                int n = k == 5 ? 3 : k;
+                BitConverter.GetBytes((ushort)(R5(n) | (G5(n) << 5) | (B5(n) << 10))).CopyTo(f, 192 + k * 2);
+                BitConverter.GetBytes((ushort)(B5(k) | (R5(k) << 5) | (G5(k) << 10))).CopyTo(f, 224 + k * 2);
+            }
+            return f;
+        }
+
+        [Theory]
+        [InlineData(0u)]
+        [InlineData(1u)]
+        public void WriteKeepingPalette_UnchangedExportIsByteIdentical(uint paletteIndex)
+        {
+            byte[] file = BuildTwoPaletteFile();
+            RawImage exported = BTX0.ReadRaw(file, paletteIndex);
+            Assert.NotNull(exported);
+
+            byte[] written = BTX0.WriteKeepingPalette(file, exported, paletteIndex, out string error);
+
+            Assert.Null(error);
+            Assert.Equal(file, written);
+        }
+
+        [Fact]
+        public void WriteKeepingPalette_NewColourTakesAnUnusedSlotAndLeavesTheOtherPaletteAlone()
+        {
+            byte[] file = BuildTwoPaletteFile();
+            RawImage edited = BTX0.ReadRaw(file, 0);
+            edited.SetPixel(1, 0, 248, 0, 0, 255);
+
+            byte[] written = BTX0.WriteKeepingPalette(file, edited, 0, out string error);
+
+            Assert.Null(error);
+            Assert.Equal(file[160] & 0xF, written[160] & 0xF);
+            Assert.Equal(8, written[160] >> 4);
+            Assert.Equal(file[161..192], written[161..192]);
+            Assert.Equal((ushort)31, BitConverter.ToUInt16(written, 192 + 8 * 2));
+            Assert.Equal(file[224..256], written[224..256]);
+            Assert.Equal(edited.Bgra, BTX0.ReadRaw(written, 0).Bgra);
+        }
+
+        [Fact]
+        public void WriteKeepingPalette_RefusesColoursThatDoNotFit()
+        {
+            byte[] file = BuildTwoPaletteFile();
+            RawImage edited = BTX0.ReadRaw(file, 0);
+            for (int i = 0; i < 9; i++)
+                edited.SetPixel(i % 8, i / 8, (byte)(i * 8), 0, 248, 255);
+
+            Assert.Null(BTX0.WriteKeepingPalette(file, edited, 0, out string error));
+            Assert.NotNull(error);
+        }
+
 #if NET8_0_WINDOWS
         [Fact]
         public void GdiRead_MatchesReadRaw()

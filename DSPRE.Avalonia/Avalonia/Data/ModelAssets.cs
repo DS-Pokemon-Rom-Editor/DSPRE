@@ -639,11 +639,17 @@ namespace DSPRE.Avalonia.Data
             if (mesh == null) return whynot;
 
             var textures = new List<DsTexture>();
+            var unread = new List<string>();
             foreach (var m in mesh.Materials)
             {
                 if (m.TexturePath == null) continue;
                 byte[] png;
-                try { png = File.ReadAllBytes(m.TexturePath); } catch { continue; }
+                try { png = File.ReadAllBytes(m.TexturePath); }
+                catch (Exception ex)
+                {
+                    unread.Add($"{Path.GetFileName(m.TexturePath)} ({ex.Message})");
+                    continue;
+                }
                 if (!AnyPng.TryReadRgba(png, out var rgba, out int w, out int h, out string pngWhy))
                     return $"{Path.GetFileName(m.TexturePath)} could not be read: {pngWhy}";
                 var t = DsTexture.From(rgba, w, h, m.Name);
@@ -655,7 +661,8 @@ namespace DSPRE.Avalonia.Data
             if (made.Whynot != null) return made.Whynot;
 
             narc.Put(index, made.Bytes);
-            note = made.Summary + (made.Notes.Count > 0 ? " " + string.Join(" ", made.Notes) : "");
+            note = made.Summary + (made.Notes.Count > 0 ? " " + string.Join(" ", made.Notes) : "")
+                 + (unread.Count > 0 ? " Left untextured, could not read: " + string.Join(", ", unread) + "." : "");
             return null;
         }
 
@@ -689,6 +696,19 @@ namespace DSPRE.Avalonia.Data
             if (was != Kind.NotThreeD && was != Kind.Empty && now != was)
                 return $"This entry holds {ShortName(was)} and that file holds {ShortName(now)}. Put a "
                      + "file of the same kind in, or pick the entry that kind belongs in.";
+
+            // The game draws an overworld through the entry's own frame and palette layout, the same check the Overworld editor makes.
+            if (a.Dir == DirNames.OWSprites)
+            {
+                if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(there, out var target, out string targetWhy))
+                    return "This entry could not be read as an overworld texture: " + targetWhy;
+                if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(file, out var source, out string sourceWhy))
+                    return "That file could not be read as an overworld texture: " + sourceWhy;
+                if (!target.HasSameProfileAs(source))
+                    return "That texture uses a different dictionary, frame-reuse, texture, or palette layout than this entry.";
+                if (DSPRE.LibNDSFormats.BTX0.ReadRaw(file, 0) == null)
+                    return "That file isn't a texture DSPRE can write (BTX0, 16-color format).";
+            }
 
             narc.Put(index, file);
             return null;

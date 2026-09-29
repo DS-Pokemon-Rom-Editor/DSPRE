@@ -212,7 +212,9 @@ namespace DSPRE.Avalonia.Data
         /// unchanged. Returns the reason when there is no picture to save, and writes nothing then.</summary>
         public static string ExportPng(Archive a, int index, string path)
         {
-            var ix = ReadIndexed(a, index, out string whynot);
+            // A picture Replace takes as a whole is saved whole too, so the two sizes always agree.
+            string whynot = null;
+            var ix = SavedAsWholePicture(a, index) ? null : ReadIndexed(a, index, out whynot);
             if (ix != null)
             {
                 // Only the colours this drawing is allowed.
@@ -228,23 +230,66 @@ namespace DSPRE.Avalonia.Data
             var p = Render(a, index);
             if (p.Rgba == null) return whynot ?? p.Whynot ?? "There is no picture in this entry to save.";
 
-            var seen = new Dictionary<uint, byte>();
-            var pal = new List<uint>();
-            var idx = new byte[p.Width * p.Height];
-            for (int i = 0; i < idx.Length; i++)
+            // Replace reads colour 0 as see-through, so clear pixels take it and nothing else does. The
+            // rest follow the game's own colour order, keeping the exact colours that were drawn.
+            var gameOrder = new Dictionary<int, int>();
+            try
             {
-                uint argb = (uint)((p.Rgba[i * 4 + 3] << 24) | (p.Rgba[i * 4] << 16)
-                                 | (p.Rgba[i * 4 + 1] << 8) | p.Rgba[i * 4 + 2]);
-                if (!seen.TryGetValue(argb, out byte v))
-                {
-                    if (pal.Count >= 256) v = 0;
-                    else { v = (byte)pal.Count; pal.Add(argb); seen[argb] = v; }
-                }
-                idx[i] = v;
+                var narc = new ScriptNarc(a.Dir);
+                byte[] palFile = narc.Available ? FindColours(a, narc, index) : null;
+                int count = 0;
+                var colours = palFile != null ? NitroBgCodec.ReadPalette(Unsqueeze(palFile), out count) : null;
+                for (int i = 0; colours != null && i < count && i < colours.Length; i++)
+                    gameOrder.TryAdd(Key555(colours[i].r, colours[i].g, colours[i].b), i);
             }
-            if (pal.Count == 0) return "There is no picture in this entry to save.";
-            File.WriteAllBytes(path, IndexedPng.Write(idx, pal.ToArray(), p.Width, p.Height));
+            catch { }
+
+            int pixels = p.Width * p.Height;
+            var drawn = new List<uint>();
+            var seen = new HashSet<uint>();
+            for (int i = 0; i < pixels; i++)
+            {
+                if (p.Rgba[i * 4 + 3] == 0) continue;
+                uint argb = 0xFF000000u | (uint)((p.Rgba[i * 4] << 16) | (p.Rgba[i * 4 + 1] << 8) | p.Rgba[i * 4 + 2]);
+                if (seen.Add(argb)) drawn.Add(argb);
+            }
+            if (drawn.Count == 0) return "There is no picture in this entry to save.";
+            if (drawn.Count > 255) return $"This picture has {drawn.Count} colours, more than a PNG can number.";
+
+            var ordered = drawn
+                .Select((c, first) => (c, first, at: gameOrder.TryGetValue(Key555((byte)(c >> 16), (byte)(c >> 8), (byte)c), out int g) ? g : int.MaxValue))
+                .OrderBy(t => t.at).ThenBy(t => t.first)
+                .Select(t => t.c)
+                .ToList();
+            var pal = new uint[ordered.Count + 1];
+            var number = new Dictionary<uint, byte>();
+            for (int i = 0; i < ordered.Count; i++) { pal[i + 1] = ordered[i]; number[ordered[i]] = (byte)(i + 1); }
+
+            var idx = new byte[pixels];
+            for (int i = 0; i < pixels; i++)
+            {
+                if (p.Rgba[i * 4 + 3] == 0) continue;
+                uint argb = 0xFF000000u | (uint)((p.Rgba[i * 4] << 16) | (p.Rgba[i * 4 + 1] << 8) | p.Rgba[i * 4 + 2]);
+                idx[i] = number[argb];
+            }
+            File.WriteAllBytes(path, IndexedPng.Write(idx, pal, p.Width, p.Height));
             return null;
+        }
+
+        private static int Key555(byte r, byte g, byte b) => (r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10);
+
+        /// <summary>Whether Replace takes this entry as the whole picture it draws rather than its tiles.</summary>
+        private static bool SavedAsWholePicture(Archive a, int index)
+        {
+            try
+            {
+                var narc = new ScriptNarc(a.Dir);
+                if (!narc.Available) return false;
+                var kind = Identify(narc.Get(index));
+                if (kind == Kind.CellLayout) return true;
+                return kind == Kind.TileGraphic && (a.ArrangementEntry?.Invoke(index) ?? -1) >= 0;
+            }
+            catch { return false; }
         }
 
         /// <summary>Saves the entry exactly as it sits in the ROM. Always possible, and the only way to
@@ -442,8 +487,12 @@ namespace DSPRE.Avalonia.Data
             var narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
 
-            // Where in the file this entry's colours start, matching what ReadIndexed took out.
-            int startAt = (a.ColourBank?.Invoke(index) ?? 0) * 16;
+            // Where in the file this entry's colours start, matching what ReadIndexed took out: a bank is
+            // 256 colours for an 8bpp drawing.
+            byte[] drawing = narc.Get(index);
+            var shape = drawing != null ? ReadShape(Unsqueeze(drawing), WidthFor(a, index)) : null;
+            int bankSize = shape?.bpp == 8 ? 256 : 16;
+            int startAt = (a.ColourBank?.Invoke(index) ?? 0) * bankSize;
 
             // Find the very file the colours came from, so the right one is written back.
             byte[] palStored = null;

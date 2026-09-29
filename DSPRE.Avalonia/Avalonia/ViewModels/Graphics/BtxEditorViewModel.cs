@@ -391,7 +391,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// once the user confirms it). If an image was picked, it is NEVER written into
         /// <paramref name="templateMember"/> (the slot the user chose in the dropdown); that slot
         /// is only read as a structural template (matching width/height/color-count), which
-        /// <see cref="LibNDSFormats.BTX0.Write"/> requires. The actual pixels are written into a
+        /// <see cref="LibNDSFormats.BTX0.WriteNewPalette"/> requires. The actual pixels are written into a
         /// brand-new mmodel NARC member (<see cref="OverworldSpriteTableExpansion.AllocateNewMmodelSlot"/>)
         /// so no existing overworld's art is ever touched. Without an image, the entry just points at
         /// <paramref name="templateMember"/> directly and shares that art on purpose, no write happens.
@@ -472,7 +472,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!targetStructure.HasSameProfileAs(sourceStructure))
                 { error = "The raw BTX uses a different dictionary, frame-reuse, texture, or palette layout than the selected profile."; return false; }
 
-                var source = BTX0.ReadRaw(sourceData);
+                var source = BTX0.ReadRaw(sourceData, 0);
                 if (source == null) { error = "Source file isn't a texture DSPRE can write (BTX0, 16-color format)."; return false; }
 
                 stagedImage = sourceData;
@@ -497,22 +497,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!File.Exists(templatePath)) { error = "Template texture slot file not found."; return false; }
             try
             {
-                byte[] btxData = File.ReadAllBytes(templatePath); // fresh read every call, safe for BTX0.Write to mutate in place
+                byte[] btxData = File.ReadAllBytes(templatePath);
                 RawImage import;
                 using (var fs = File.OpenRead(pngPath))
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null) { error = "Image could not be decoded."; return false; }
-                var current = BTX0.ReadRaw(btxData);
+                var current = BTX0.ReadRaw(btxData, 0);
                 if (current == null) { error = "Template texture slot is unreadable."; return false; }
                 if (import.Width != current.Width || import.Height != current.Height)
                 { error = $"Size mismatch. Template slot: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}"; return false; }
 
-                uint colors = CountColors(import);
-                if (colors > BTX0.ColorCount)
-                { error = $"Too many colors. Limit: {BTX0.ColorCount}, PNG: {colors}"; return false; }
-
-                stagedImage = BTX0.Write(btxData, import);
-                return true;
+                // New art has no palette of its own to keep, so it gets one in the template's normal slot.
+                stagedImage = BTX0.WriteNewPalette(btxData, import, 0, out error);
+                return stagedImage != null;
             }
             catch (Exception ex)
             {
@@ -604,15 +601,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_btxData == null) { CurrentImage = null; return; }
             try
             {
-                BTX0.PaletteIndex = 0;
-                var raw = BTX0.ReadRaw(_btxData);
+                var raw = BTX0.ReadRaw(_btxData, 0);
                 HasShinyPalette = raw != null && BTX0.PaletteSize == 64 && BTX0.PaletteCount == 2;
                 OnPropertyChanged(nameof(ShinyPaletteNote));
-                if (_isShiny && HasShinyPalette)
-                {
-                    BTX0.PaletteIndex = 1;
-                    raw = BTX0.ReadRaw(_btxData);
-                }
+                if (CurrentPaletteIndex != 0)
+                    raw = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
                 CurrentImage = raw != null ? ImageConverter.ToAvaloniaBitmap(raw) : null;
                 StatusText = CurrentImage != null
                     ? $"{CurrentImage.PixelSize.Width}×{CurrentImage.PixelSize.Height}, {BTX0.ColorCount} colors"
@@ -625,9 +618,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
+        private uint CurrentPaletteIndex => _isShiny && HasShinyPalette ? 1u : 0u;
+
         // ── Import PNG ─────────────────────────────────────────────────────────
         /// Returns null on success, error message on failure.
-        public string ImportPng(string filePath)
+        /// <summary>Imports a PNG into the selected entry, or with <paramref name="apply"/> false only
+        /// reports why it would fail, so a caller can ask its questions before anything changes.</summary>
+        public string ImportPng(string filePath, bool apply = true)
         {
             if (_btxData == null || _selectedIndex < 0) return "No entry selected.";
             try
@@ -636,16 +633,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 using (var fs = File.OpenRead(filePath))
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null) return "Image could not be decoded.";
-                var current = BTX0.ReadRaw(_btxData);
+                var current = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
                 if (current == null) return "This entry's texture file isn't a readable image (it may be a 3D model, not a flat texture).";
                 if (import.Width != current.Width || import.Height != current.Height)
                     return $"Size mismatch. Existing texture: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
 
-                uint colors = CountColors(import);
-                if (colors > BTX0.ColorCount)
-                    return $"Too many colors. Limit: {BTX0.ColorCount}, PNG: {colors}";
-
-                byte[] newData = BTX0.Write(_btxData, import);
+                // Both palettes share the pixels, so the imported one keeps its slot order.
+                byte[] newData = BTX0.WriteKeepingPalette(_btxData, import, CurrentPaletteIndex, out string writeError);
+                if (newData == null) return writeError;
+                if (!apply) return null;
                 _btxData = newData;
 
                 uint key = _owKeys[_selectedIndex];
@@ -691,7 +687,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     return false;
                 }
 
-                RawImage current = BTX0.ReadRaw(_btxData);
+                RawImage current = BTX0.ReadRaw(_btxData, 0);
                 if (current == null)
                 {
                     error = "This entry's texture file isn't a readable 16-color BTX image.";
@@ -755,6 +751,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return "The selected profile is no longer present in the overworld table.";
 
             uint targetAppearanceId = _owKeys[_selectedIndex];
+            // Only this appearance's animation row takes the profile, so another one sharing the texture would break.
+            uint targetMember = RomInfo.OverworldTable[targetAppearanceId].spriteID;
+            int sharers = RomInfo.OverworldTable.Count(kv => kv.Value.spriteID == targetMember);
+            if (sharers > 1)
+                return $"Texture slot {targetMember} is shared by {sharers} appearances, and a new profile would break the others. Give this appearance its own texture slot first.";
             try
             {
                 RawImage import;
@@ -780,15 +781,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     targetAppearanceId, sourceAppearanceId, out OverworldSpriteProfileMetadataPatch metadataPatch, out string metadataError))
                     return metadataError;
 
-                byte[] newData = (byte[])sourceData.Clone();
-                BTX0.PaletteIndex = 0;
-                RawImage profileImage = BTX0.ReadRaw(newData);
+                RawImage profileImage = BTX0.ReadRaw(sourceData, 0);
                 if (profileImage == null || profileImage.Width != import.Width || profileImage.Height != import.Height)
                     return "The selected profile is not writable by DSPRE's 16-color importer.";
-                if (colors > BTX0.ColorCount)
-                    return $"Too many colors. Profile limit: {BTX0.ColorCount}, PNG: {colors}.";
 
-                newData = BTX0.Write(newData, import);
+                // The profile's own art is replaced, so its palette is rebuilt from the picture.
+                byte[] newData = BTX0.WriteNewPalette(sourceData, import, 0, out string writeError);
+                if (newData == null) return writeError;
                 _btxData = newData;
                 _modifiedFiles[targetAppearanceId] = newData;
                 _metadataPatches[targetAppearanceId] = metadataPatch;
@@ -824,7 +823,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_btxData == null) return false;
             try
             {
-                var raw = BTX0.ReadRaw(_btxData);
+                var raw = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
                 if (raw == null) return false;
                 ImageConverter.ToAvaloniaBitmap(raw).Save(filePath, PngBitmapEncoderOptions.Default);
                 return true;
@@ -907,12 +906,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
-        private static uint CountColors(RawImage img)
-        {
-            var seen = new HashSet<uint>();
-            for (int i = 0; i < img.Bgra.Length; i += 4)
-                seen.Add(BitConverter.ToUInt32(img.Bgra, i));
-            return (uint)seen.Count;
-        }
+        private static uint CountColors(RawImage img) => (uint)BTX0.CountColors(img);
     }
 }
