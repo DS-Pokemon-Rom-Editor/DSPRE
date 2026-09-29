@@ -225,7 +225,7 @@ namespace DSPRE.Models
                     if ((collisions[r, c] & 0x80) != 0) continue;
                     float x = -HalfMap + (c + 0.5f) * SquareSize, z = -HalfMap + (r + 0.5f) * SquareSize;
                     if (plates.Any(p => p.Covers(x, z))) continue;
-                    collisions[r, c] = 0x80;
+                    collisions[r, c] |= 0x80;
                     blocked++;
                 }
             return blocked;

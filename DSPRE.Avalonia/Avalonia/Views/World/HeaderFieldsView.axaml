@@ -75,14 +75,14 @@
             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Weather"/>
               <Grid ColumnDefinitions="90,6,*">
-                <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding WeatherValue}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="{Binding WeatherMax}" Value="{Binding WeatherValue}"/>
                 <ComboBox Grid.Column="2" ItemsSource="{Binding Weather.Names}" SelectedIndex="{Binding WeatherComboIndex}"/>
               </Grid>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Camera angle"/>
               <Grid ColumnDefinitions="90,6,*">
-                <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding CameraValue}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="{Binding CameraMax}" Value="{Binding CameraValue}"/>
                 <ComboBox Grid.Column="2" ItemsSource="{Binding Camera.Names}" SelectedIndex="{Binding CameraComboIndex}"/>
               </Grid>
             </StackPanel>
@@ -132,7 +132,7 @@
             </StackPanel>
             <TextBlock Grid.Row="6" Grid.Column="3" Classes="inlinelabel" Text="Battle BG"/>
             <StackPanel Grid.Row="6" Grid.Column="4" Orientation="Horizontal" Spacing="6">
-              <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding BattleBackground}"/>
+              <NumericUpDown Width="90" Minimum="0" Maximum="{Binding BattleBackgroundMax}" Value="{Binding BattleBackground}"/>
               <Button Content="Open" controls:Icon.Key="link" Click="OpenBattleScenery_Click" Padding="8,2"
                       ToolTip.Tip="Show this scenery and every place that fights on it"/>
             </StackPanel>

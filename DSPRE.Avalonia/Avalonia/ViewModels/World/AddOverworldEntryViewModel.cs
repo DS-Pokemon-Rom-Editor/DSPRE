@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             RawBtxPath = path;
             try
             {
-                var raw = BTX0.ReadRaw(File.ReadAllBytes(path));
+                var raw = BTX0.ReadRaw(File.ReadAllBytes(path), 0);
                 if (raw == null)
                 {
                     RawBtxPath = null;
@@ -304,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 byte[] data = File.ReadAllBytes(path);
                 if (!Btx0Structure.TryInspect(data, out structure, out _)) return false;
-                var raw = BTX0.ReadRaw(data);
+                var raw = BTX0.ReadRaw(data, 0);
                 if (raw == null) return false;
                 width = raw.Width; height = raw.Height; colorLimit = BTX0.ColorCount;
                 return true;
@@ -312,12 +312,6 @@ namespace DSPRE.Avalonia.ViewModels.World
             catch { return false; }
         }
 
-        private static uint CountColors(RawImage img)
-        {
-            var seen = new HashSet<uint>();
-            for (int i = 0; i < img.Bgra.Length; i += 4)
-                seen.Add(System.BitConverter.ToUInt32(img.Bgra, i));
-            return (uint)seen.Count;
-        }
+        private static uint CountColors(RawImage img) => (uint)BTX0.CountColors(img);
     }
 }

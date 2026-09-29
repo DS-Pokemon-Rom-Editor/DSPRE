@@ -768,7 +768,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             Remember();
             _map.ImportTerrain(made);
-            BdhcBuild.BlockUngrounded(_map.bdhc, _map.collisions);
+            int blocked = BdhcBuild.BlockUngrounded(_map.bdhc, _map.collisions);
+            if (blocked > 0) Note = $"Terrain rebuilt. {blocked} squares without ground blocked.";
             Dirty = true;
             Warning = null;
             CheckTerrain();

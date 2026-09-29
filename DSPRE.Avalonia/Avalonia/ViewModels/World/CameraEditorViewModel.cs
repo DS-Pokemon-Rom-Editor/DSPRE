@@ -47,7 +47,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             var names = RomInfo.gameFamily switch
             {
                 RomInfo.GameFamilies.HGSS => PokeDatabase.CameraAngles.HGSSCameraDict,
-                RomInfo.GameFamilies.DP or RomInfo.GameFamilies.Plat => PokeDatabase.CameraAngles.DPPtCameraDict,
+                RomInfo.GameFamilies.DP => PokeDatabase.CameraAngles.DPPtCameraDict,
+                RomInfo.GameFamilies.Plat => PokeDatabase.CameraAngles.PtCameraDict,
                 _ => null,
             };
             string name = null;
@@ -202,7 +203,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 // Load cameras
                 Cameras.Clear();
-                int camCount = IsHgss ? 17 : 16;
+                int camCount = RomInfo.cameraCount;
 
                 using (DSUtils.EasyReader br = new DSUtils.EasyReader(camOverlayPath, _overlayCameraTblOffset))
                 {

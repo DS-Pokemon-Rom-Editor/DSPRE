@@ -412,6 +412,7 @@ namespace DSPRE.ROMFiles {
 
             header = toCopy.header;
             anchor = toCopy.anchor;
+            height = toCopy.height;
 
             xMapPosition = toCopy.xMapPosition;
             yMapPosition = toCopy.yMapPosition;
@@ -500,7 +501,8 @@ namespace DSPRE.ROMFiles {
             heightY = toCopy.heightY;
 
             xMapPosition = toCopy.xMapPosition;
-            yMapPosition = toCopy.xMapPosition;
+            yMapPosition = toCopy.yMapPosition;
+            zPosition = toCopy.zPosition;
             this.xMatrixPosition = toCopy.xMatrixPosition;
             this.yMatrixPosition = toCopy.yMatrixPosition;
         }

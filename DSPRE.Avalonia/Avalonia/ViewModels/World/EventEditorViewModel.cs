@@ -456,7 +456,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
 
         /// <summary>For a standalone window closing; the Maps workspace's instance keeps listening while its tab is hidden.</summary>
-        public void DetachSaves() => AppEvents.EventFileSaved -= OnSavedElsewhere;
+        public void DetachSaves()
+        {
+            AppEvents.EventFileSaved -= OnSavedElsewhere;
+            AppEvents.MapSaved -= OnMapSavedElsewhere;
+        }
 
         private void PopulateOwItemEntries()
         {
@@ -513,6 +517,25 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int SelectedWarpIndex { get => _selWarp; set { if (Set(ref _selWarp, value)) LoadWarp(value); } }
         public int SelectedTriggerIndex { get => _selTrig; set { if (Set(ref _selTrig, value)) LoadTrigger(value); } }
 
+        // Tab order in the view: Overworlds, Warps, Triggers, Spawnables.
+        private int _tabIndex;
+        public int SelectedTabIndex
+        {
+            get => _tabIndex;
+            set
+            {
+                if (!Set(ref _tabIndex, value)) return;
+                // The position boxes are shared by every tab, so they follow the tab's own selection.
+                Event e = value switch { 0 => _ow, 1 => _warp, 2 => _trig, 3 => _spawn, _ => null };
+                bool was = _suppress;
+                _suppress = true;
+                LoadPosition(e);
+                _suppress = was;
+                OnPropertyChanged(nameof(HasSelectedEvent));
+                RefreshMarkers();
+            }
+        }
+
         public bool HasSpawn => _spawn != null;
         public bool HasOw => _ow != null;
         public bool HasWarp => _warp != null;
@@ -555,7 +578,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         private static bool ZIsFixedPointFor(Event e) => e is Overworld;
         private bool ZIsFixedPoint => ZIsFixedPointFor(_current);
         private decimal ToDisplayZ(int raw) => ZIsFixedPoint ? raw / 65536m : raw;
-        private int FromDisplayZ(decimal v) => ZIsFixedPoint ? (int)(v * 65536m) : (int)v;
+        // Clamped to what the field holds: overworlds a signed 16.16 word, triggers an unsigned halfword.
+        private int FromDisplayZ(decimal v) => _current switch
+        {
+            Overworld => (int)Math.Clamp(v * 65536m, int.MinValue, int.MaxValue),
+            Trigger => (int)Math.Clamp(v, ushort.MinValue, ushort.MaxValue),
+            _ => (int)Math.Clamp(v, int.MinValue, int.MaxValue),
+        };
         /// <summary>The event's height in the same units the 3D scene uses, whichever way its z is stored.</summary>
         private static float HeightHint(Event e) => ZIsFixedPointFor(e) ? e.zPosition / 262144f : e.zPosition * 0.25f;
         /// <summary>What the height would be in tiles if it were read the way an overworld's is. </summary>
@@ -980,13 +1009,39 @@ namespace DSPRE.Avalonia.ViewModels.World
         private NsbmdGeometry.MatrixStitchMode StitchMode => _stitchGrid ? NsbmdGeometry.MatrixStitchMode.Grid : NsbmdGeometry.MatrixStitchMode.Continuous;
 
         public EventEditorViewModel() { if (Design.IsDesignMode) EventNames.Add("Event 0"); }
-        public EventEditorViewModel(bool _) { AppEvents.EventFileSaved += OnSavedElsewhere; }
+        public EventEditorViewModel(bool _)
+        {
+            AppEvents.EventFileSaved += OnSavedElsewhere;
+            AppEvents.MapSaved += OnMapSavedElsewhere;
+        }
+
+        // A saved map can move buildings and terrain under the events, so the scene is drawn again.
+        private void OnMapSavedElsewhere(object sender, int mapIndex)
+        {
+            if (_matrix?.maps == null || Model3D == null || !_matrix.maps.Cast<ushort>().Contains((ushort)mapIndex)) return;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                DisplayMap();
+                StatusText = $"Map {mapIndex} was saved in another window and redrawn.";
+            });
+        }
 
         // Another open copy of this event file saved: show it, unless this copy holds its own edits.
         private void OnSavedElsewhere(object sender, int id)
         {
             if (ReferenceEquals(sender, this) || id != _selectedIndex) return;
-            if (_dirty) { StatusText = $"Event file {id} was saved in another window. Save or discard here to see it."; return; }
+            if (_dirty) { _ = OfferReloadAsync(id); return; }
+            LoadFile(id);
+            StatusText = $"Event file {id} was saved in another window and reloaded.";
+        }
+
+        // Keeping these edits means saving them over what the other window wrote, so ask.
+        private async Task OfferReloadAsync(int id)
+        {
+            bool reload = await DialogHelper.AskYesNo(
+                $"Event file {id} was saved in another window.\n\nLoad it and drop the changes made here?", "Event File Changed", _owner);
+            if (id != _selectedIndex) return;
+            if (!reload) { StatusText = $"Event file {id} was saved in another window. Saving here will overwrite it."; return; }
             LoadFile(id);
             StatusText = $"Event file {id} was saved in another window and reloaded.";
         }
@@ -1035,6 +1090,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 _file = new EventFile(index);
+                // The old file's events must not stay editable through the shared boxes or the gizmo.
+                _current = null; _spawn = null; _ow = null; _warp = null; _trig = null;
+                _selSpawn = _selOw = _selWarp = _selTrig = -1;
+                foreach (var n in new[] { nameof(HasSelectedEvent), nameof(HasSpawn), nameof(HasOw), nameof(HasWarp), nameof(HasTrig),
+                                          nameof(SelectedSpawnableIndex), nameof(SelectedOverworldIndex), nameof(SelectedWarpIndex), nameof(SelectedTriggerIndex) })
+                    OnPropertyChanged(n);
                 RefreshLists();
                 ResolveMatrixForFile(index);
                 SetClean();
@@ -1071,7 +1132,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _spawn = (_file != null && i >= 0 && i < _file.spawnables.Count) ? _file.spawnables[i] : null;
             OnPropertyChanged(nameof(HasSpawn));
-            if (_spawn == null) return;
+            if (_spawn == null) { if (_current is Spawnable) _current = null; return; }
             _suppress = true;
             LoadPosition(_spawn);
             SpScript = _spawn.scriptNumber; SpType = _spawn.type; SpDir = _spawn.dir;
@@ -1084,7 +1145,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _ow = (_file != null && i >= 0 && i < _file.overworlds.Count) ? _file.overworlds[i] : null;
             OnPropertyChanged(nameof(HasOw));
-            if (_ow == null) { UpdateOwSpritePreview(); return; }
+            if (_ow == null) { if (_current is Overworld) _current = null; UpdateOwSpritePreview(); return; }
             _suppress = true;
             LoadPosition(_ow);
             OwId = _ow.owID; OwSprite = _ow.overlayTableEntry; OwMovement = _ow.movement; OwType = _ow.type;
@@ -1132,7 +1193,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _warp = (_file != null && i >= 0 && i < _file.warps.Count) ? _file.warps[i] : null;
             OnPropertyChanged(nameof(HasWarp));
-            if (_warp == null) return;
+            if (_warp == null) { if (_current is Warp) _current = null; return; }
             _suppress = true;
             LoadPosition(_warp);
             WarpHeader = _warp.header; WarpAnchor = _warp.anchor; WarpHeight = _warp.height;
@@ -1144,7 +1205,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _trig = (_file != null && i >= 0 && i < _file.triggers.Count) ? _file.triggers[i] : null;
             OnPropertyChanged(nameof(HasTrig));
-            if (_trig == null) return;
+            if (_trig == null) { if (_current is Trigger) _current = null; return; }
             _suppress = true;
             LoadPosition(_trig);
             TrScript = _trig.scriptNumber; TrWidth = _trig.widthX; TrHeight = _trig.heightY;
@@ -1970,6 +2031,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 case 2: SelectedTriggerIndex = index; break;
                 case 3: SelectedSpawnableIndex = index; break;
             }
+            // Picked types number the same as the tabs.
+            SelectedTabIndex = type;
         }
 
         // Event positions are INTEGER tiles (no fraction field), so a mouse drag accumulates sub-tile
@@ -2000,7 +2063,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     if (step == 0) return;
                     _dragAccumY -= step;
                     long nz = _current.zPosition + step;
-                    _current.zPosition = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
+                    _current.zPosition = _current is Trigger
+                        ? (int)Math.Clamp(nz, ushort.MinValue, ushort.MaxValue)
+                        : (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
                 }
             }
             else if (m.TryCellPlacement(_current.xMatrixPosition, _current.yMatrixPosition, out var p))

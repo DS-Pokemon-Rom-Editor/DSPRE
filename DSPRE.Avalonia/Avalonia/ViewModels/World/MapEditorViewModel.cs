@@ -105,6 +105,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _viewModeIndex;
             set
             {
+                if (value != _viewModeIndex && _dirty && !_suppress)
+                {
+                    // Every view reloads from disk, so ask first and leave the picker where it was.
+                    OnPropertyChanged(nameof(ViewModeIndex));
+                    if (!_switchPending) _ = SwitchAfterGuardAsync("view", () => ViewModeIndex = value);
+                    return;
+                }
                 if (Set(ref _viewModeIndex, value))
                 {
                     OnPropertyChanged(nameof(IsSingleMap)); OnPropertyChanged(nameof(IsMatrixView));
@@ -286,13 +293,27 @@ namespace DSPRE.Avalonia.ViewModels.World
             AppEvents.RaiseAreaDataSaved(this, _areaId);
         }
 
-        // Another editor saved this area: show its textures, unless this one holds its own edits.
+        // Another editor saved this area (the model editor's added textures among them). Map edits are
+        // separate, so only area edits made here stand in the way of taking it.
         private void OnAreaSavedElsewhere(object sender, int id)
         {
             if (ReferenceEquals(sender, this) || !HasArea || id != _areaId) return;
-            if (HasUnsavedChanges) { StatusText = $"Area {id} was saved in another window. Save or discard here to see it."; return; }
-            if (IsHeaderView) BuildHeaderPreview();
-            else if (_selectedMapIndex >= 0) LoadMap(_selectedMapIndex);
+            _ = TakeAreaSavedElsewhereAsync((byte)id);
+        }
+
+        private async Task TakeAreaSavedElsewhereAsync(byte id)
+        {
+            if (_areaDirty && !await DialogHelper.AskYesNo(
+                    $"Area {id} was saved in another window.\n\nLoad it and drop the area changes made here?", "Area Data Changed", _owner))
+            {
+                StatusText = $"Area {id} was saved in another window. Saving here will overwrite it.";
+                return;
+            }
+            if (id != _areaId) return;
+            LoadArea(id);
+            SyncTilesetsToArea();
+            RebuildPreview();
+            StatusText = $"Area {id} was saved in another window and reloaded.";
         }
         public ObservableCollection<PainterOption> CollisionPainters { get; } = new ObservableCollection<PainterOption>();
         public ObservableCollection<PainterOption> TypePainters { get; } = new ObservableCollection<PainterOption>();
@@ -305,7 +326,31 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int SelectedMapIndex
         {
             get => _selectedMapIndex;
-            set { if (Set(ref _selectedMapIndex, value) && !_suppress && value >= 0) LoadMap(value); }
+            set
+            {
+                if (value != _selectedMapIndex && value >= 0 && _dirty && !_suppress)
+                {
+                    OnPropertyChanged(nameof(SelectedMapIndex));
+                    if (!_switchPending) _ = SwitchAfterGuardAsync("map", () => SelectedMapIndex = value);
+                    return;
+                }
+                if (Set(ref _selectedMapIndex, value) && !_suppress && value >= 0) LoadMap(value);
+            }
+        }
+
+        private bool _switchPending;
+
+        /// <summary>Asks to save or discard before a switch that would reload, then makes the switch.</summary>
+        private async Task SwitchAfterGuardAsync(string what, Action change)
+        {
+            _switchPending = true;
+            try
+            {
+                if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, what)) return;
+                SetClean();
+                change();
+            }
+            finally { _switchPending = false; }
         }
 
         private int _collisionPainterIndex;
@@ -681,6 +726,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
             AppEvents.MapSaved -= OnMapSavedElsewhere;
             AppEvents.AreaDataSaved -= OnAreaSavedElsewhere;
+            AppEvents.EventFileSaved -= OnEventFileSavedElsewhere;
         }
 
         /// <summary>Shows a map another editor saved, unless this one holds its own unsaved edits.</summary>
@@ -742,8 +788,21 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         /// <summary>
+        /// How many maps over a building at this position stands. Building positions are tiles from the
+        /// map's centre, so a map spans -16 to 16 and only a position beyond that belongs to a neighbour.
+        /// </summary>
+        public static int CellsCrossed(short position, ushort fraction)
+        {
+            int half = MapFile.mapSize / 2;
+            double at = position + fraction / 65536.0;
+            if (at > half) return (int)Math.Ceiling((at - half) / MapFile.mapSize);
+            if (at < -half) return -(int)Math.Ceiling((-half - at) / MapFile.mapSize);
+            return 0;
+        }
+
+        /// <summary>
         /// In "This header" view, each map only renders (and the game only reads) its own buildings
-        /// list, so a building dragged/typed past its own map's 0..32 tile bounds would silently do
+        /// list, so a building dragged/typed past its own map's -16..16 tile bounds would silently do
         /// nothing in-game unless it's actually moved into the neighbouring map's building list, in
         /// that map's local coordinates. Detects any whole-tile overflow and, if a header cell exists
         /// there, re-homes the building: removes it from the source map, rewrites its position into
@@ -759,11 +818,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (srcCell.Map?.buildings == null || bi < 0 || bi >= srcCell.Map.buildings.Count) return;
             var b = srcCell.Map.buildings[bi];
 
-            int dCellX = (int)Math.Floor(b.xPosition / 32.0);
-            int dCellZ = (int)Math.Floor(b.zPosition / 32.0);
+            int dCellX = CellsCrossed(b.xPosition, b.xFraction);
+            int dCellZ = CellsCrossed(b.zPosition, b.zFraction);
             if (dCellX == 0 && dCellZ == 0) return;   // still within its own map's tile bounds
 
-            // Buildings can legitimately sit a little outside their own map's 0..32 bounds on one axis
+            // Buildings can legitimately sit a little outside their own map's -16..16 bounds on one axis
             // (a decorative overhang near the edge) without that meaning anything about which map owns
             // them, so resolve X and Z independently and only rebase whichever axis actually found a
             // real neighbouring map; a combined-axis lookup is a last resort for a genuine diagonal
@@ -778,8 +837,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             var targetCell = _headerCells[targetIndex];
             srcCell.Map.buildings.RemoveAt(bi);
-            b.xPosition = (short)(b.xPosition - usedDCellX * 32);
-            b.zPosition = (short)(b.zPosition - usedDCellZ * 32);
+            b.xPosition = (short)(b.xPosition - usedDCellX * MapFile.mapSize);
+            b.zPosition = (short)(b.zPosition - usedDCellZ * MapFile.mapSize);
             targetCell.Map.buildings.Add(b);
             srcCell.Dirty = true; targetCell.Dirty = true;
 
@@ -1061,7 +1120,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void DiscardChanges()
         {
             _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges));
-            _eventsToSave.Clear();
+            ClearPendingEvents();
             _areaDirty = false;
 
             if (IsHeaderView) BuildHeaderPreview();               // reloads every cell's map fresh from disk
@@ -1154,6 +1213,69 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Event files changed here, written with the map on Save.
         private readonly Dictionary<int, EventFile> _eventsToSave = new Dictionary<int, EventFile>();
 
+        // Each move made to those files, so they can be redone on a copy another editor saved meanwhile.
+        private readonly record struct EventMove(string Kind, int Index, short FromX, short FromY, short ToX, short ToY);
+        private readonly Dictionary<int, List<EventMove>> _eventMoves = new Dictionary<int, List<EventMove>>();
+
+        private void MoveEvent(int file, EventFile events, string kind, int index, Event e, short x, short y)
+        {
+            if (!_eventMoves.TryGetValue(file, out var moves)) _eventMoves[file] = moves = new List<EventMove>();
+            moves.Add(new EventMove(kind, index, e.xMapPosition, e.yMapPosition, x, y));
+            e.xMapPosition = x;
+            e.yMapPosition = y;
+            _eventsToSave[file] = events;
+        }
+
+        private void ClearPendingEvents()
+        {
+            _eventsToSave.Clear();
+            _eventMoves.Clear();
+        }
+
+        private void SavePendingEvents()
+        {
+            foreach (var (file, events) in _eventsToSave.ToList())
+            {
+                events.SaveToFileDefaultDir(file, showSuccessMessage: false);
+                AppEvents.RaiseEventFileSaved(this, file);
+            }
+            ClearPendingEvents();
+        }
+
+        private static Event EventAt(EventFile events, string kind, int index)
+        {
+            IList<Event> list = kind switch
+            {
+                "Overworld" => events.overworlds.Cast<Event>().ToList(),
+                "Warp" => events.warps.Cast<Event>().ToList(),
+                "Sign/item" => events.spawnables.Cast<Event>().ToList(),
+                _ => events.triggers.Cast<Event>().ToList(),
+            };
+            return index >= 0 && index < list.Count ? list[index] : null;
+        }
+
+        // Another editor saved an event file this one holds moves for: redo them on what it saved.
+        private void OnEventFileSavedElsewhere(object sender, int file)
+        {
+            if (ReferenceEquals(sender, this) || !_eventsToSave.ContainsKey(file)) return;
+            EventFile fresh;
+            try { fresh = new EventFile(file); }
+            catch (Exception ex) { AppLogger.Error("Reloading event file after another save failed: " + ex.Message); return; }
+            int dropped = 0;
+            if (_eventMoves.TryGetValue(file, out var moves))
+                foreach (var m in moves)
+                {
+                    var e = EventAt(fresh, m.Kind, m.Index);
+                    if (e == null || e.xMapPosition != m.FromX || e.yMapPosition != m.FromY) { dropped++; continue; }
+                    e.xMapPosition = m.ToX;
+                    e.yMapPosition = m.ToY;
+                }
+            _eventsToSave[file] = fresh;
+            StatusText = dropped == 0
+                ? $"Event file {file} was saved in another window. The events moved here still move on Save."
+                : $"Event file {file} was saved in another window. {dropped} event move(s) made here no longer match and were dropped.";
+        }
+
         private HashSet<byte> WaterTypes()
             => new HashSet<byte>(TilePermissions.BehavioursFor(gameFamily).Where(t => t.Surf).Select(t => t.Value));
 
@@ -1181,18 +1303,17 @@ namespace DSPRE.Avalonia.ViewModels.World
                     if (header == null || !seen.Add((header.eventFileID, mx, my))) continue;
                     EventFile events;
                     try { events = EventsOf(header.eventFileID); } catch { continue; }
-                    bool any = false;
-                    foreach (var w in events.warps)
+                    for (int i = 0; i < events.warps.Count; i++)
                     {
+                        var w = events.warps[i];
                         if (w.xMatrixPosition != mx || w.yMatrixPosition != my) continue;
                         double cx = w.xMapPosition + 0.5, cz = w.yMapPosition + 0.5;
                         if (cx < was.x0 || cx > was.x1 || cz < was.z0 || cz > was.z1 + 1) continue;
-                        w.xMapPosition = (short)Math.Clamp(w.xMapPosition + dx, 0, n - 1);
-                        w.yMapPosition = (short)Math.Clamp(w.yMapPosition + dz, 0, n - 1);
-                        any = true;
+                        MoveEvent(header.eventFileID, events, "Warp", i, w,
+                                  (short)Math.Clamp(w.xMapPosition + dx, 0, n - 1),
+                                  (short)Math.Clamp(w.yMapPosition + dz, 0, n - 1));
                         moved++;
                     }
-                    if (any) _eventsToSave[header.eventFileID] = events;
                 }
             }
             catch (Exception ex) { AppLogger.Error("Moving warps with a building failed: " + ex.Message); }
@@ -1270,7 +1391,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             var warps = WarpSquares(events, mx, my);
             try
             {
-                foreach (var point in SpawnPoints.Read().Where(pt => pt.Header == h))
+                foreach (var point in RomInfo.FlyTableUnverified ? Enumerable.Empty<SpawnPoints.Point>() : SpawnPoints.Read().Where(pt => pt.Header == h))
                 {
                     int px = point.Global ? point.X - mx * n : point.X, pz = point.Global ? point.Z - my * n : point.Z;
                     if (px < 0 || pz < 0 || px >= n || pz >= n) continue;
@@ -1507,9 +1628,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         }
                     }
                     if (to is not (int tx, int ty)) { c.Result = "no open square on this map"; continue; }
-                    e.xMapPosition = (short)tx;
-                    e.yMapPosition = (short)ty;
-                    _eventsToSave[group.Key] = events;
+                    MoveEvent(group.Key, events, c.Kind, c.Index, e, (short)tx, (short)ty);
                     c.Result = $"moved to {tx},{ty}";
                     c.Move = false;
                     moved++;
@@ -1536,10 +1655,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (shown >= 0 && shown < Buildings.Count) SelectedBuildingIndex = shown;
             }
 
-            // Adding textures makes a new pack and points the area at it.
-            int packs = Filesystem.GetMapTexturesCount();
-            for (int i = MapTilesets.Count; i < packs; i++) MapTilesets.Add("Map Tileset " + i);
-            if (IsSingleMap) ResolveTilesetForMap(_selectedMapIndex);
+            // Adding textures makes a new pack and points the area at it. Rereading the area would drop
+            // area edits still pending here.
+            if (IsSingleMap && !_areaDirty) ResolveTilesetForMap(_selectedMapIndex);
+            else SyncTilesetsToArea();
 
             RebuildPreview();
             OnPropertyChanged(nameof(Collisions));
@@ -1610,6 +1729,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
                     AppEvents.MapSaved += OnMapSavedElsewhere;
                     AppEvents.AreaDataSaved += OnAreaSavedElsewhere;
+                    AppEvents.EventFileSaved += OnEventFileSavedElsewhere;
                 }
 
                 // All of the below are rebuilt fresh on every ROM load (including switching to a
@@ -1664,7 +1784,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void LoadMap(int index)
         {
-            _eventsToSave.Clear();
+            ClearPendingEvents();
             try
             {
                 _map = new MapFile(index, gameFamily);
@@ -1870,21 +1990,31 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_mapToArea == null || !_mapToArea.TryGetValue(mapIndex, out byte areaId)) { _area = null; RaiseArea(); return; }
             LoadArea(areaId);
+            SyncTilesetsToArea();
+        }
+
+        /// <summary>Points the tileset pickers at the loaded area's packs.</summary>
+        private void SyncTilesetsToArea()
+        {
+            if (_area == null) return;
+            bool was = _suppress;
+            _suppress = true;
             try
             {
-                var area = new AreaData(areaId);
-                _suppress = true;
+                // Adding textures makes a new pack.
+                int packs = Filesystem.GetMapTexturesCount();
+                for (int i = MapTilesets.Count; i < packs; i++) MapTilesets.Add("Map Tileset " + i);
                 if (MapTilesets.Count > 0)
                 {
-                    _mapTilesetIndex = Math.Min(area.mapTileset, MapTilesets.Count - 1);
+                    _mapTilesetIndex = Math.Min(_area.mapTileset, MapTilesets.Count - 1);
                     OnPropertyChanged(nameof(MapTilesetIndex));
                 }
-                int bld = area.buildingsTileset + 1; // building combo has "None" at index 0
+                int bld = _area.buildingsTileset + 1; // building combo has "None" at index 0
                 _buildingTilesetIndex = bld >= 0 && bld < BuildingTilesets.Count ? bld : 0;
                 OnPropertyChanged(nameof(BuildingTilesetIndex));
-                _suppress = false;
             }
-            catch (Exception ex) { _suppress = false; AppLogger.Error("Tileset resolve failed: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Error("Tileset resolve failed: " + ex.Message); }
+            finally { _suppress = was; }
         }
 
         /// <summary>
@@ -2035,6 +2165,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             Buildings.Clear();
             _headerBuildingIndex.Clear();
+            RaiseBuildingLimit();
             if (IsHeaderView)
             {
                 for (int ci = 0; ci < _headerCells.Count; ci++)
@@ -2052,6 +2183,29 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_map?.buildings == null) return;
             for (int i = 0; i < _map.buildings.Count; i++)
                 Buildings.Add($"Building {i:D2}");
+        }
+
+        /// <summary>pokeplatinum MAX_LOADED_MAP_PROPS: buildings past this many on one map are not loaded.</summary>
+        public const int MaxLoadedBuildings = 32;
+
+        /// <summary>Which shown maps hold more buildings than the game loads, or empty.</summary>
+        public string BuildingLimitWarning
+        {
+            get
+            {
+                var over = IsHeaderView
+                    ? _headerCells.Where(c => (c.Map?.buildings?.Count ?? 0) > MaxLoadedBuildings)
+                                  .Select(c => $"Map {c.MapIndex}: {c.Map.buildings.Count}")
+                    : (_map?.buildings?.Count ?? 0) > MaxLoadedBuildings ? new[] { $"{_map.buildings.Count} buildings" } : Array.Empty<string>();
+                return string.Join(", ", over);
+            }
+        }
+        public bool HasBuildingLimitWarning => BuildingLimitWarning.Length > 0;
+
+        private void RaiseBuildingLimit()
+        {
+            OnPropertyChanged(nameof(BuildingLimitWarning));
+            OnPropertyChanged(nameof(HasBuildingLimitWarning));
         }
 
         // ── Save / import / export ─────────────────────────────────────────────────────
@@ -2079,8 +2233,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 // Warps moved with a refused map's buildings wait for it, so events and maps stay in step.
                 if (refused) return;
-                foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
-                _eventsToSave.Clear();
+                SavePendingEvents();
                 bool areaSaved = _areaDirty;
                 SaveArea();
                 SetClean();
@@ -2099,8 +2252,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             KeptPlatesFile.Save(_selectedMapIndex, _map.KeptPlates);
             AppEvents.RaiseMapSaved(this, _selectedMapIndex);
             SaveArea();
-            foreach (var (file, events) in _eventsToSave) events.SaveToFileDefaultDir(file, showSuccessMessage: false);
-            _eventsToSave.Clear();
+            SavePendingEvents();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved map {_selectedMapIndex}.";

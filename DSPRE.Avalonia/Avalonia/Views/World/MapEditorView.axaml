@@ -153,6 +153,9 @@
               <Button Content="Import" controls:Icon.Key="import" Click="ImportBuildings_Click" IsEnabled="{Binding IsSingleMap}"
                       ToolTip.Tip="Replaces one map's whole building list, single map view only. In 'This header' view, use the per-building Add/Remove/Duplicate/gizmo instead."/>
               <Button Content="Export" controls:Icon.Key="export" Click="ExportBuildings_Click" IsEnabled="{Binding IsSingleMap}"/>
+              <TextBlock Text="{Binding BuildingLimitWarning}" IsVisible="{Binding HasBuildingLimitWarning}"
+                         Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="6,0,0,0"
+                         ToolTip.Tip="The game loads only 32 per map"/>
             </StackPanel>
             <Grid ColumnDefinitions="*,200">
               <ListBox Grid.Column="0" ItemsSource="{Binding Buildings}" SelectedIndex="{Binding SelectedBuildingIndex}"/>

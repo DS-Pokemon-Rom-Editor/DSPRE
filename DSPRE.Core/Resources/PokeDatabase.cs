@@ -7,30 +7,31 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Resources {
     public static class PokeDatabase {
         public static class Area {
+            // The place-name banner style, pokeplatinum MapLabelWindowID. HGSS uses the same numbering.
             public static string[] PtAreaIconValues = new string[] {
                 "[00] None",
                 "[01] City",
-                "[02] Town 1",
-                "[03] Town 2",
+                "[02] Town",
+                "[03] Route",
                 "[04] Cave",
                 "[05] Forest",
                 "[06] Water",
-                "[07] Field",
-                "[08] Island",
-                "[09] Wood"
+                "[07] Park",
+                "[08] Lake",
+                "[09] Indoors"
             };
 
             public static Dictionary<byte, string> HGSSAreaIconsDict = new Dictionary<byte, string>() {
                 [00] = "Not displayed",
-                [01] = "Wall",
-                [02] = "Wood",
-                [03] = "Town",
+                [01] = "City",
+                [02] = "Town",
+                [03] = "Route",
                 [04] = "Cave",
                 [05] = "Forest",
                 [06] = "Water",
-                [07] = "Field",
+                [07] = "Park",
                 [08] = "Lake",
-                [09] = "Gray"
+                [09] = "Indoors"
             };
 
             public static string[] HGSSAreaProperties = new string[] {
@@ -50,7 +51,6 @@ namespace DSPRE.Resources {
                 "[13] Unknown/Unused",
                 "[14] Unknown/Unused",
                 "[15] Unknown/Unused",
-                "[16] Unknown/Unused",
             };
         }
         // Decides the place-name banner, Teleport and Pokémon Center checks.
@@ -171,6 +171,10 @@ namespace DSPRE.Resources {
                 [13] = "Front 3D",
                 [14] = "3D Top - Wide FOV",
                 [15] = "3D Front Low"
+            };
+            // Platinum's table has a 17th entry that no map uses.
+            public static Dictionary<int, string> PtCameraDict = new Dictionary<int, string>(DPPtCameraDict) {
+                [16] = "3D Normal - Close (unused)"
             };
             public static Dictionary<int, string> HGSSCameraDict = new Dictionary<int, string>() {
                 [00] = "3D Top View [00]",

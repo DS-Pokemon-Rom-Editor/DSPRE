@@ -66,6 +66,8 @@ namespace DSPRE.ROMFiles {
         public static readonly byte[] blankBGS = new byte[] { 0x34, 0x12, 0x00, 0x00 };
 
         public List<Building> buildings;
+        /// <summary>Bytes after the last whole building record, written back unchanged.</summary>
+        public byte[] buildingsTail = Array.Empty<byte>();
         public NSBMD mapModel;
         public byte[,] collisions = new byte[mapSize, mapSize];
         public byte[,] types = new byte[mapSize, mapSize];
@@ -129,29 +131,12 @@ namespace DSPRE.ROMFiles {
 
         #region Methods
         public byte[] BuildingsToByteArray() {
-            MemoryStream newData = new MemoryStream(buildingHeaderSize * buildings.Count);
+            MemoryStream newData = new MemoryStream(buildingHeaderSize * buildings.Count + buildingsTail.Length);
             using (BinaryWriter writer = new BinaryWriter(newData)) {
                 for (int i = 0; i < buildings.Count; i++) {
-                    writer.Write(buildings[i].modelID);
-                    writer.Write(buildings[i].xFraction);
-                    writer.Write(buildings[i].xPosition);
-                    writer.Write(buildings[i].yFraction);
-                    writer.Write(buildings[i].yPosition);
-                    writer.Write(buildings[i].zFraction);
-                    writer.Write(buildings[i].zPosition);
-
-                    writer.Write((int)buildings[i].xRotation);
-                    writer.Write((int)buildings[i].yRotation);
-                    writer.Write((int)buildings[i].zRotation);
-
-                    writer.BaseStream.Position += 1;
-
-                    writer.Write(buildings[i].width);
-                    writer.Write(buildings[i].height);
-                    writer.Write(buildings[i].length);
-
-                    writer.Write(new byte[0x7]); // Second filler section
+                    writer.Write(buildings[i].ToRecord());
                 }
+                writer.Write(buildingsTail);
             }
             return newData.ToArray();
         }
@@ -173,6 +158,7 @@ namespace DSPRE.ROMFiles {
                 for (int i = 0; i < newData.Length / buildingHeaderSize; i++) {
                     buildings.Add(new Building(new MemoryStream(reader.ReadBytes(buildingHeaderSize))));
                 }
+                buildingsTail = reader.ReadBytes(newData.Length % buildingHeaderSize);
             }
         }
 
@@ -239,7 +225,7 @@ namespace DSPRE.ROMFiles {
                 /* Write section lengths */
                 writer.Write(collisions.Length + types.Length);
 
-                writer.Write(buildings.Count * buildingHeaderSize);
+                writer.Write(buildings.Count * buildingHeaderSize + buildingsTail.Length);
                 writer.Write(mapModelData.Length);
                 writer.Write(bdhc.Length);
 
@@ -297,11 +283,21 @@ namespace DSPRE.ROMFiles {
         public uint width { get; set; }
         public uint height { get; set; }
         public uint length { get; set; }
+
+        // The record as read, so bytes DSPRE does not edit (the scales' fractions and the trailing
+        // pokeplatinum MapPropFile.dummy28 words) are written back unchanged.
+        private byte[] record;
         #endregion Fields
 
         #region Constructors (2)
         public Building(Stream data) {
-            using (BinaryReader reader = new BinaryReader(data)) {
+            using (BinaryReader source = new BinaryReader(data)) {
+                record = source.ReadBytes(MapFile.buildingHeaderSize);
+            }
+            if (record.Length < MapFile.buildingHeaderSize) {
+                Array.Resize(ref record, MapFile.buildingHeaderSize);
+            }
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(record))) {
                 modelID = reader.ReadUInt32();
 
                 xFraction = reader.ReadUInt16();
@@ -360,8 +356,36 @@ namespace DSPRE.ROMFiles {
             width = toCopy.width;
             height = toCopy.height;
             length = toCopy.length;
+            record = (byte[])toCopy.record?.Clone();
         }
         #endregion Constructors
+
+        /// <summary>The 48-byte record: the edited fields laid over the bytes it was read from.</summary>
+        public byte[] ToRecord() {
+            byte[] bytes = record != null ? (byte[])record.Clone() : new byte[MapFile.buildingHeaderSize];
+            using (BinaryWriter writer = new BinaryWriter(new MemoryStream(bytes))) {
+                writer.Write(modelID);
+                writer.Write(xFraction);
+                writer.Write(xPosition);
+                writer.Write(yFraction);
+                writer.Write(yPosition);
+                writer.Write(zFraction);
+                writer.Write(zPosition);
+
+                writer.Write((int)xRotation);
+                writer.Write((int)yRotation);
+                writer.Write((int)zRotation);
+
+                // Each scale is read as the whole part of its fx32, one byte into the word.
+                writer.BaseStream.Position = 0x1D;
+                writer.Write((ushort)width);
+                writer.BaseStream.Position = 0x21;
+                writer.Write((ushort)height);
+                writer.BaseStream.Position = 0x25;
+                writer.Write((ushort)length);
+            }
+            return bytes;
+        }
         public static ushort DegToU16(float deg) {
             return (ushort)(deg * 65536 / 360);
         }

@@ -95,6 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 case 1: return PlaceKind.Town;
                 case 2:
+                    // Banner styles as in PokeDatabase.Area: 5 Forest, 6 Water, 7 Park, 8 Lake.
                     return popup switch { 5 => PlaceKind.Forest, 6 => PlaceKind.Sea, 7 => PlaceKind.Park, 8 => PlaceKind.Lake, _ => PlaceKind.Route };
                 case 3: return PlaceKind.Cave;
                 case 4: case 5: return PlaceKind.Building;
@@ -172,7 +173,28 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int SelRow => _selRow;
         public void SetSelectedCell(int c, int r) { _selCol = c; _selRow = r; }
         public bool InBounds => _matrix != null && _selCol >= 0 && _selRow >= 0 && _selCol < _matrix.width && _selRow < _matrix.height;
-        public ushort SpawnHeaderNumber => (InBounds && _matrix.hasHeadersSection) ? (ushort)_matrix.headers[_selRow, _selCol] : (ushort)0;
+
+        /// <summary>
+        /// The header the selected cell belongs to. Without a header section that is the header using this
+        /// matrix, or null when none or several do.
+        /// </summary>
+        public ushort? SpawnHeaderNumber
+        {
+            get
+            {
+                if (!InBounds) return null;
+                if (_matrix.hasHeadersSection) return (ushort)_matrix.headers[_selRow, _selCol];
+                var users = new List<int>();
+                try
+                {
+                    for (int h = 0; h < GetHeaderCount(); h++)
+                        if (MapHeader.GetMapHeader((ushort)h)?.matrixID == _selectedIndex) users.Add(h);
+                }
+                catch { return null; }
+                if (_focusHeader >= 0 && users.Contains(_focusHeader)) return (ushort)_focusHeader;
+                return users.Count == 1 ? (ushort)users[0] : null;
+            }
+        }
 
         private decimal _mapPaint, _headerPaint, _heightPaint;
         public decimal MapPaint { get => _mapPaint; set => Set(ref _mapPaint, value); }

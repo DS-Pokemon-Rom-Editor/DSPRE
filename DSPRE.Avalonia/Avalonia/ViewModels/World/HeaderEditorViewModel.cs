@@ -89,6 +89,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool CanAddRemove { get; private set; }
         public decimal WildPokeMax { get; private set; } = 65535;
 
+        // Widths of the packed header fields, so a box cannot hold a value the save would mask.
+        public decimal BattleBackgroundMax => IsDp ? 15 : 31;
+        public decimal WeatherMax => IsHgss ? 127 : 255;
+        public decimal CameraMax => IsHgss ? 63 : 255;
+
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
@@ -132,9 +137,31 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // Hiding the TreeView while a filter is active can make its binding briefly report
                 // null. Keep the logical selection stable instead of reloading or losing the header.
                 if (value == null && !_suppress && _selectedTreeNode != null) return;
+                if (!_suppress && value is HeaderTreeLeaf pick && _dirty && _header != null && pick.HeaderId != _header.ID)
+                {
+                    // Leave the tree on the loaded header until the user answers.
+                    Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(SelectedTreeNode)));
+                    if (!_switchPending) _ = SwitchHeaderAsync(pick.HeaderId);
+                    return;
+                }
                 if (!Set(ref _selectedTreeNode, value) || _suppress) return;
                 if (value is HeaderTreeLeaf leaf) { SelectedHeaderId = leaf.HeaderId; LoadHeader(leaf.HeaderId); }
             }
+        }
+
+        private bool _switchPending;
+
+        private async Task SwitchHeaderAsync(ushort id)
+        {
+            _switchPending = true;
+            try
+            {
+                if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "header")) return;
+                SetClean();
+                if (!string.IsNullOrWhiteSpace(TreeFilterText) && FindLeaf(id) is { IsVisible: false }) TreeFilterText = "";
+                SelectHeader(id);
+            }
+            finally { _switchPending = false; }
         }
 
         private ushort _selectedHeaderId;
@@ -421,7 +448,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     WildPokeMax = 65535;
                     break;
                 case GameFamilies.Plat:
-                    Camera.Load(PokeDatabase.CameraAngles.DPPtCameraDict);
+                    Camera.Load(PokeDatabase.CameraAngles.PtCameraDict);
                     MusicDay.Load(PokeDatabase.MusicDB.PtMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.PtMusicDict);
                     Weather.Load(PokeDatabase.Weather.PtWeatherDict);
@@ -443,6 +470,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             OnPropertyChanged(nameof(ShowAreaIcon));
             OnPropertyChanged(nameof(WildPokeMax));
+            OnPropertyChanged(nameof(BattleBackgroundMax));
+            OnPropertyChanged(nameof(WeatherMax));
+            OnPropertyChanged(nameof(CameraMax));
         }
 
         private void LoadLocationNames()
@@ -931,6 +961,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 LoadFlags();
                 SyncCameraCombo(); UpdateCameraImage();
                 SyncWeatherCombo(); UpdateWeatherImage();
+                // Refilled combos drop their selection, and an unchanged value skips the setter's sync.
+                SyncMusicCombo(MusicDay, (int)_musicDayValue, i => _musicDayComboIndex = i, nameof(MusicDayComboIndex));
+                SyncMusicCombo(MusicNight, (int)_musicNightValue, i => _musicNightComboIndex = i, nameof(MusicNightComboIndex));
                 UpdateAreaIconImage();
             }
             finally { _suppress = false; }
@@ -1098,19 +1131,21 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Copy / paste / reset / import / export / go-to / quick-open ──────────────────
-        private static byte[] _clipboard;
+        // Kept across ROM loads, so it carries the family whose layout its bytes are in.
+        private static (byte[] Bytes, GameFamilies Family) _clipboard;
 
         public void Copy()
         {
             if (_header == null) return;
-            _clipboard = _header.ToByteArray();
+            _clipboard = (_header.ToByteArray(), gameFamily);
             StatusText = $"Copied header {_header.ID}.";
         }
 
         public void Paste()
         {
-            if (_header == null || _clipboard == null) { StatusText = "Nothing to paste."; return; }
-            var h = MapHeader.LoadFromByteArray(_clipboard, (ushort)_header.ID, gameFamily);
+            if (_header == null || _clipboard.Bytes == null) { StatusText = "Nothing to paste."; return; }
+            if (_clipboard.Family != gameFamily) { StatusText = $"The copied header is from a {_clipboard.Family} ROM and can't be pasted here."; return; }
+            var h = MapHeader.LoadFromByteArray(_clipboard.Bytes, (ushort)_header.ID, gameFamily);
             if (h == null) { StatusText = "Clipboard header is incompatible."; return; }
             _header = h;
             PopulateFromHeader();
@@ -1158,6 +1193,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void GoToHeader(int id)
         {
             if (id < 0 || id >= _headerListNames.Count) return;
+            if (_dirty && _header != null && id != _header.ID)
+            {
+                if (!_switchPending) _ = SwitchHeaderAsync((ushort)id);
+                return;
+            }
             if (!string.IsNullOrWhiteSpace(TreeFilterText)) TreeFilterText = "";
             SelectHeader((ushort)id);
         }

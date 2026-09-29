@@ -1123,6 +1123,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         var area = new AreaData(a);
                         area.mapTileset = (ushort)newPack;
                         area.SaveToFileDefaultDir(a, showSuccessMessage: false);
+                        AppEvents.RaiseAreaDataSaved(this, a);
                     }
                     wrote.Add($"pack {newPack} for area{(packAreas.Count > 1 ? "s" : "")} {string.Join(", ", packAreas)}");
                 }

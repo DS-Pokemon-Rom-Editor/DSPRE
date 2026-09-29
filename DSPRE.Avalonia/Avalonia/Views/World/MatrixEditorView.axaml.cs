@@ -44,11 +44,18 @@ namespace DSPRE.Avalonia.Views.World
             VM.SetSelectedCell(e.col, e.row);
         }
 
-        private void SetSpawn_Click(object sender, RoutedEventArgs e)
+        private async void SetSpawn_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null || !VM.InBounds || AvaloniaEditorLauncher.BlockedForUnlinkedHge("The Spawn Point Editor")) return;
+            if (VM.SpawnHeaderNumber is not ushort header)
+            {
+                await DialogHelper.ShowError(
+                    "This matrix has no header section, and no single header uses it.\n\nOpen the matrix from the header the spawn belongs to.",
+                    "No header for this cell");
+                return;
+            }
             var names = HeaderLists.GetHeaderListBoxNames();
-            new SpawnEditorView(null, names, VM.SpawnHeaderNumber, VM.SelCol, VM.SelRow).ShowManaged();
+            new SpawnEditorView(null, names, header, VM.SelCol, VM.SelRow).ShowManaged();
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)

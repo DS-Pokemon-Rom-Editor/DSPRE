@@ -123,7 +123,7 @@
 
       <!-- Editing panels -->
       <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" Background="Transparent"/>
-      <TabControl x:Name="EventTabs" Grid.Column="2" Margin="0,4,4,4">
+      <TabControl x:Name="EventTabs" Grid.Column="2" Margin="0,4,4,4" SelectedIndex="{Binding SelectedTabIndex}">
 
         <!-- ── Overworlds (NPCs/trainers) ─────────────────────────────────────── -->
         <TabItem Header="Overworlds">
@@ -150,9 +150,9 @@
                     <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Top" Margin="0,5,0,0"/>
                     <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,6,3">
-                      <NumericUpDown Minimum="-32768" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                      <NumericUpDown Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
                       <TextBlock Text="{Binding ZPosNote}" FontSize="11" Margin="2,1,0,0"
                                  TextWrapping="Wrap"
                                  ToolTip.Tip="{Binding ZPosNoteTip}"
@@ -338,9 +338,9 @@
                     <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Top" Margin="0,5,0,0"/>
                     <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,6,3">
-                      <NumericUpDown Minimum="-32768" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
+                      <NumericUpDown Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
                       <TextBlock Text="{Binding ZPosNote}" FontSize="11" Margin="2,1,0,0"
                                  TextWrapping="Wrap"
                                  ToolTip.Tip="{Binding ZPosNoteTip}"
@@ -409,7 +409,7 @@
                     <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,0,6,3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding XMap}"/>
                     <TextBlock Grid.Row="0" Grid.Column="2" Text="Map Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="3" Minimum="-32768" Maximum="32767" Increment="1" FormatString="0" Value="{Binding YMap}"/>
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Z" VerticalAlignment="Top" Margin="0,5,0,0"/>
                     <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,6,3">
                       <NumericUpDown Minimum="-32768" Maximum="2147483647" Increment="1" FormatString="0" Value="{Binding ZPos}"/>
                       <TextBlock Text="{Binding ZPosNote}" FontSize="11" Margin="2,1,0,0"
