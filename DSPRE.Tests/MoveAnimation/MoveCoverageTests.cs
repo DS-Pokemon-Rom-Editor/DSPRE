@@ -46,7 +46,7 @@ namespace DSPRE.Tests
                 var bytes = File.ReadAllBytes(f);
                 if (bytes.Length == 0) continue;
                 if (!int.TryParse(Path.GetFileNameWithoutExtension(f), out int id)) continue;
-                var cmds = WestScript.Parse(bytes, version);
+                var cmds = BattleAnimScript.Parse(bytes, version);
                 if (cmds.Count == 0) continue;
                 int pos = 0; foreach (var x in cmds) { x.WordPos = pos; pos += 1 + x.Args.Length; }
                 c.Length[id] = cmds.Count;
@@ -123,76 +123,6 @@ namespace DSPRE.Tests
                            + $"{MoveTestSet.OpcodeCover.Length} moves miss {missing.Count}");
             Assert.True(checkedPairs > 100, $"only {checkedPairs} pairs were checked, so this proves little");
             Assert.True(missing.Count == 0, "the opening set misses: " + string.Join(", ", missing.Take(10)));
-        }
-
-        private static string Document(List<Census> games)
-        {
-            var order = MoveTestSet.InOrder();
-            var all = new SortedSet<string>(games.SelectMany(g => g.Moves.Keys), StringComparer.Ordinal);
-            var names = games[0].Names;
-
-            string Name(int id) => id >= 0 && id < names.Length && !string.IsNullOrWhiteSpace(names[id])
-                                   ? $"{id} {names[id]}" : id.ToString();
-
-            var sb = new StringBuilder();
-            sb.Append("[Research](../../ResearchNotes.md) / [Move Research](../MoveResearch.md) / Move Animation Test Coverage\n\n");
-            sb.Append("# Which moves to record, and what each one is for\n\n");
-            sb.Append("Generated from both ROMs by `MoveCoverageTests`. Do not edit by hand.\n\n");
-            sb.Append("Comparing DSPRE's animation preview against the real game means recording moves, and ")
-              .Append("recording every move is not practical. These are the moves that between them exercise ")
-              .Append("everything a move animation can do.\n\n");
-            sb.Append("A mechanism is counted once per game, because most scripts differ between HeartGold ")
-              .Append("and Platinum, so covering one says nothing about the other.\n\n");
-
-            foreach (var g in games)
-                sb.Append($"- **{g.Game}**: {g.Length.Count} scripts, {g.Moves.Count} distinct mechanisms\n");
-            int pairs = games.Sum(g => g.Moves.Count);
-            sb.Append($"- **Together**: {all.Count} distinct mechanisms, {pairs} game-and-mechanism pairs, ")
-              .Append($"covered by {order.Length} moves\n\n");
-
-            sb.Append("## The order to record them in\n\n");
-            sb.Append($"The first {MoveTestSet.OpcodeCover.Length} cover every opcode and every drawing path ")
-              .Append("between them, so an error affecting many moves at once shows up early. The rest fill in ")
-              .Append("the operator settings and the routines only one or two moves ever call.\n\n");
-            sb.Append("| # | move | first covers |\n|---:|---|---|\n");
-
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < order.Length; i++)
-            {
-                int mv = order[i];
-                var firsts = new SortedSet<string>(StringComparer.Ordinal);
-                foreach (var g in games)
-                    foreach (var kv in g.Moves)
-                        if (kv.Value.Contains(mv) && seen.Add(g.Game + "|" + kv.Key)) firsts.Add(kv.Key);
-
-                string what = firsts.Count == 0 ? "nothing new"
-                            : string.Join(", ", firsts.Take(4)) + (firsts.Count > 4 ? $" and {firsts.Count - 4} more" : "");
-                sb.Append($"| {i + 1} | {Name(mv)} | {what} |\n");
-            }
-
-            sb.Append("\n## What these moves do not cover\n\n");
-            sb.Append("Every mechanism the sweep can see is covered, so what is listed here is what the "
-                    + "sweep cannot see or the recordings cannot reach.\n\n");
-            sb.Append("- A move has to actually happen in a staged battle to be recorded. Whirlwind has "
-                    + "nothing to force out and Baton Pass has nobody to pass to when the other side holds "
-                    + "one Pokemon, so both need a second one on the other side.\n");
-            sb.Append("- Moves are counted by what their script asks for. A routine that behaves "
-                    + "differently depending on the Pokemon, the damage or the weather is counted once, so "
-                    + "covering it proves the routine runs, not that it runs right in every case.\n");
-            sb.Append("- The second half of a move that has two animations is reached only by the turn "
-                    + "check. Five of the chosen moves have one; the other moves with a turn check in the "
-                    + "two games are not in this set.\n");
-            sb.Append("- Only these two games are swept. Diamond and Pearl share the format but are not "
-                    + "read here.\n");
-
-            sb.Append("\n## Every mechanism, and how many moves use it\n\n");
-            sb.Append("| mechanism | HeartGold | Platinum |\n|---|---:|---:|\n");
-            foreach (var m in all)
-            {
-                string Cell(Census g) => g.Moves.TryGetValue(m, out var l) ? l.Count.ToString() : "-";
-                sb.Append($"| {m} | {Cell(games[0])} | {Cell(games[1])} |\n");
-            }
-            return sb.ToString();
         }
     }
 }
