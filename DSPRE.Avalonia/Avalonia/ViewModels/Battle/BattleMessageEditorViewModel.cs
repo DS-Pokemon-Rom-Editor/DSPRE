@@ -595,7 +595,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void WriteTable(List<Entry> entries)
         {
-            using var writer = new DSUtils.EasyWriter(TablePath);
+            // Truncate so entries deleted since the last save don't survive past the new end.
+            using var writer = new DSUtils.EasyWriter(TablePath, 0, FileMode.Create);
             using var offsetWriter = new DSUtils.EasyWriter(OffsetPath);
 
             var idToOffset = new Dictionary<uint, ushort>();

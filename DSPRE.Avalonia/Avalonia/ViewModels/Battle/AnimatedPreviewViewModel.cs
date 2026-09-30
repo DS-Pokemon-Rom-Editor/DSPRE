@@ -294,7 +294,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         /// <summary>
-        /// What the games run as you arrive on a map: the two field-setup passes and then the map change,
+        /// What the games run as you arrive on a map: the map change and then the two field-setup passes,
         /// in that order.
         /// </summary>
         private void RunArrivalLevelScripts()
@@ -323,9 +323,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (var t in FieldLevelScripts.Watchers(_levelScripts))
             {
                 if (_firedWatchers.Contains(t)) continue;
-                if (VariableValue(t.variableToWatch) != t.expectedValue) continue;
+                if (!FieldLevelScripts.IsSatisfied(t, VariableValue)) continue;
                 _firedWatchers.Add(t);
-                ScriptLines.Add($"{FieldScriptValues.Describe(t.variableToWatch)} holds {t.expectedValue}, "
+                ScriptLines.Add($"{FieldScriptValues.Describe(t.variableToWatch)} holds {VariableValue(t.variableToWatch)}, "
                                 + $"so the map starts script {t.scriptTriggered}.");
                 RunScript(t.scriptTriggered, "");
                 return;                          // the engine takes the first one and stops
