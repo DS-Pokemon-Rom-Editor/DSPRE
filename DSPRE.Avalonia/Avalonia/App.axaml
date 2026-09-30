@@ -55,7 +55,7 @@
 		<SimpleTheme/>
 		<StyleInclude Source="Themes/Controls.axaml"/>
 		<StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Simple.xaml"/>
-		<StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml"/>
+		<StyleInclude Source="avares://AvaloniaEdit/Themes/Simple/AvaloniaEdit.xaml"/>
 
 		<!-- ── Crisp, consistent control sizing across every editor (from feature/avalonia) ── -->
 		<Style Selector="Button">

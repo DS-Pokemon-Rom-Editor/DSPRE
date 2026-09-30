@@ -311,7 +311,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (!Design.IsDesignMode) return;
             ScriptNames.Add("0000.rotom");
             _selectedIndex = 0;
-            _scriptText = "script Main #0:\n\tEnd\n";
+            _scriptText = "script Main #1:\n\tEnd\n";
             _statusText = "Design preview";
             _isBusy = false;
             _isReadOnly = false;
@@ -323,6 +323,71 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int savedThemeIndex = Array.FindIndex(EditorThemeNames,
                 theme => string.Equals(theme, savedTheme, StringComparison.OrdinalIgnoreCase));
             _selectedEditorThemeIndex = savedThemeIndex >= 0 ? savedThemeIndex : 0;
+            AppEvents.ScriptSourceSaved += OnSourceSavedElsewhere;
+            DSPRE.ROMFiles.ScriptSourceSync.SourcesRefreshed += OnSourcesRefreshed;
+        }
+
+        /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
+        public void Detach()
+        {
+            AppEvents.ScriptSourceSaved -= OnSourceSavedElsewhere;
+            DSPRE.ROMFiles.ScriptSourceSync.SourcesRefreshed -= OnSourcesRefreshed;
+        }
+
+        private bool _askingAboutSavedElsewhere;
+
+        private void OnSourceSavedElsewhere(object sender, string path)
+        {
+            if (ReferenceEquals(sender, this)) return;
+            Dispatcher.UIThread.Post(() => _ = ReloadSavedElsewhereAsync(path));
+        }
+
+        // Another editor wrote these binaries and their sources were regenerated.
+        private void OnSourcesRefreshed(IReadOnlyCollection<int> fileIds)
+        {
+            string dir = System.IO.Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts");
+            var paths = fileIds.SelectMany(id => new[] { System.IO.Path.Combine(dir, id.ToString("D4") + ".rotom"), System.IO.Path.Combine(dir, id.ToString("D4") + ".json") })
+                               .Where(System.IO.File.Exists).ToList();
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (paths.Count > 0 && _lsp != null) _ = _lsp.DidChangeWatchedFilesAsync(paths);
+                foreach (string path in paths) _ = ReloadSavedElsewhereAsync(path);
+            });
+        }
+
+        /// <summary>
+        /// Shows what another editor wrote to the open source, or asks first when it holds edits here.
+        /// Saving the old text instead would compile it over the other write.
+        /// </summary>
+        private async Task ReloadSavedElsewhereAsync(string path)
+        {
+            if (_askingAboutSavedElsewhere || _saving) return;
+            if (path == null && _currentPath != null && ManagedSource == null) RefreshScriptList();
+            if (_currentPath == null || _selectedIndex < 0) return;
+            if (path == null ? ManagedSource != null : !SamePath(path, _currentPath)) return;
+
+            string onDisk;
+            try { onDisk = System.IO.File.ReadAllText(_currentPath); }
+            catch { return; }
+            if (string.Equals(onDisk, ScriptText ?? "", StringComparison.Ordinal))
+            {
+                if (_dirty) SetClean();
+                return;
+            }
+
+            if (_dirty)
+            {
+                _askingAboutSavedElsewhere = true;
+                try
+                {
+                    if (!await RecordSwitchGuard.TakeSavedVersionAsync(UnsavedChangesDescription)) return;
+                }
+                finally { _askingAboutSavedElsewhere = false; }
+            }
+
+            SetClean();
+            LoadSelectedFile();
+            StatusText = DisplayPath(_currentPath) + " was saved elsewhere and reloaded.";
         }
 
         private static bool _warnedAboutDPRotomSupport;
@@ -362,9 +427,16 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
                 if (LegacyScriptsExist())
                 {
+                    // convert decompiles each binary and only backs the .script up, so unbuilt edits must reach the binary first.
+                    StatusText = "Building edited legacy scripts...";
+                    string buildFailure = await Task.Run(() => DSPRE.ROMFiles.ScriptFile.BuildRequiredBins(out string error) ? null : error);
+                    if (buildFailure != null)
+                        throw new InvalidOperationException("These legacy scripts don't build, so they were not converted:\n" + buildFailure);
+
                     StatusText = "Converting legacy scripts to Rotom...";
                     await RunRequiredRotomCommand("convert", "--non-interactive");
                     RefreshRotomProjectState();
+                    AppLogger.Info("rotom kept the replaced .script files under " + Path.Combine(RotomTool.ProjectRoot, ".rotom", "backups"));
                 }
 
                 RefreshScriptList();
@@ -374,6 +446,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     await RunRequiredRotomCommand("decompile");
                     RefreshScriptList();
                 }
+
+                await UpgradeRotomProjectAsync();
 
                 IsReadOnly = ScriptNames.Count == 0;
 
@@ -632,7 +706,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 IsBusy = true;
                 StatusText = "Compiling Rotom project...";
 
-                var result = await RotomTool.RunAsync("compile", "--json");
+                var result = await RotomTool.CompileProjectAsync();
                 string summary = RotomTool.FormatResult(result);
                 int diagnostics = UpdateCompileDiagnostics(result);
 
@@ -641,6 +715,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     StatusText = diagnostics == 0
                         ? "Compile successful: " + summary
                         : "Compile successful with " + diagnostics + " warning(s): " + summary;
+                    if (result.KeptBinaries.Count > 0)
+                        await DialogHelper.ShowInfo(KeptBinariesMessage(result.KeptBinaries), "Compile");
                 }
                 else
                 {
@@ -840,7 +916,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     id++;
                 } while (System.IO.File.Exists(path));
 
-                System.IO.File.WriteAllText(path, "script Main #0:\n\tEnd\n");
+                // rotom numbers script slots from #1.
+                System.IO.File.WriteAllText(path, "script Main #1:\n\tEnd\n");
                 RefreshScriptList();
                 SelectedScriptIndex = _sourceFiles.FindIndex(p => SamePath(p, path));
                 StatusText = "Added " + DisplayPath(path) + ".";
@@ -906,6 +983,45 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             SetClean();
             LoadSelectedFile();
+        }
+
+        // A project last built by another rotom is rebuilt in full on the next compile; stale sources are
+        // regenerated from their binaries first so nothing written outside rotom is lost.
+        private async Task UpgradeRotomProjectAsync()
+        {
+            var assessment = await DSPRE.ROMFiles.RotomProjectUpgrade.AssessAsync();
+            if (assessment == null) return;
+
+            bool keepBinaries = true;
+            if (assessment.BothChanged.Count > 0)
+            {
+                string files = string.Join(", ", assessment.BothChanged.Select(i => i.ToString("D4")));
+                keepBinaries = await DialogHelper.AskTwoWay(
+                    $"These scripts changed both in the game data and in their source since they were last compiled: {files}. Which should win?",
+                    "Update Rotom project", "Game data", "Source");
+            }
+            // Diamond/Pearl sources don't all decompile back to the game's bytes yet, so they are never regenerated wholesale.
+            bool regenerateAll = RomInfo.gameFamily != RomInfo.GameFamilies.DP && await DialogHelper.AskTwoWay(
+                $"This project was last built with rotom {assessment.RecordedVersion}; DSPRE now uses {assessment.CurrentVersion}. " +
+                "Regenerate every script source in the new style? All current sources are backed up under .rotom/backups first; " +
+                "names and comments you wrote by hand stay only in that backup.",
+                "Update Rotom project", "Regenerate all", "Keep sources");
+
+            StatusText = "Updating the Rotom project...";
+            var (problem, kept) = await DSPRE.ROMFiles.RotomProjectUpgrade.ApplyAsync(assessment, keepBinaries, regenerateAll);
+            if (problem != null) await DialogHelper.ShowError(problem, "Update Rotom project");
+            else if (kept.Count > 0) await DialogHelper.ShowInfo(KeptBinariesMessage(kept), "Update Rotom project");
+            RefreshScriptList();
+        }
+
+        private static string KeptBinariesMessage(List<int> kept)
+        {
+            string ids = string.Join(", ", kept.Select(i => i.ToString("D4")));
+            return kept.Count == 1
+                ? $"Rotom builds script {ids} differently from the game, although nobody edited it, so the game's version was kept. " +
+                  "Its source doesn't build back to those bytes, so editing it here would change more than your edit."
+                : $"Rotom builds scripts {ids} differently from the game, although nobody edited them, so the game's versions were kept. " +
+                  "Their sources don't build back to those bytes, so editing them here would change more than your edit.";
         }
 
         private async Task RunRequiredRotomCommand(params string[] args)
@@ -1111,6 +1227,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 System.IO.File.WriteAllText(_currentPath, ScriptText ?? "");
             }
             SetClean();
+            AppEvents.RaiseScriptSourceSaved(this, _currentPath);
             if (showStatus) StatusText = "Saved " + (managed?.RelPath ?? DisplayPath(_currentPath)) + ".";
             // rotom-lsp never opens hg-engine's own sources.
             if (managed == null) _ = SendCurrentDocumentSavedToLsp();
@@ -1118,7 +1235,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private async Task OpenCurrentDocumentInLsp()
         {
-            if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
+            var lsp = _lsp;
+            if (lsp == null || !lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
 
             try
             {
@@ -1127,19 +1245,22 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     if (SamePath(_lspOpenPath, _currentPath))
                     {
                         _documentVersion++;
-                        await _lsp.DidChangeAsync(_currentPath, _documentVersion, ScriptText ?? "");
+                        await lsp.DidChangeAsync(_currentPath, _documentVersion, ScriptText ?? "");
                         return;
                     }
 
-                    await _lsp.DidCloseAsync(_lspOpenPath);
+                    await lsp.DidCloseAsync(_lspOpenPath);
                 }
 
                 _documentVersion = 1;
                 _lspOpenPath = _currentPath;
-                await _lsp.DidOpenAsync(_currentPath, LanguageIdForPath(_currentPath), _documentVersion, ScriptText ?? "");
+                await lsp.DidOpenAsync(_currentPath, LanguageIdForPath(_currentPath), _documentVersion, ScriptText ?? "");
+                ScheduleDocumentExtras();
             }
             catch (Exception ex)
             {
+                // Closing the editor shuts the server down under a request still in flight.
+                if (!ReferenceEquals(lsp, _lsp)) return;
                 AppLogger.Warn("rotom-lsp open failed: " + ex.Message);
             }
         }
@@ -1158,10 +1279,89 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
                 _documentVersion++;
                 await _lsp.DidChangeAsync(_currentPath, _documentVersion, ScriptText ?? "");
+                ScheduleDocumentExtras();
             }
             catch (Exception ex)
             {
                 AppLogger.Warn("rotom-lsp change failed: " + ex.Message);
+            }
+        }
+
+        // ── Outline, code lenses and inlay hints ─────────────────────────────
+
+        /// <summary>The open file's scripts, functions and actions, as rotom-lsp lists them.</summary>
+        public ObservableCollection<OutlineEntry> Outline { get; } = new();
+
+        /// <summary>Code lenses and inlay hints for the open file, drawn inline by the view.</summary>
+        internal IReadOnlyList<RotomLspInlineText> InlineTexts { get; private set; } = Array.Empty<RotomLspInlineText>();
+        public event EventHandler InlineTextsChanged;
+
+        private CancellationTokenSource _extrasCts;
+
+        // Asked for half a second after typing settles, so the server is not queried on every key.
+        private void ScheduleDocumentExtras()
+        {
+            _extrasCts?.Cancel();
+            var cts = _extrasCts = new CancellationTokenSource();
+            _ = Task.Delay(500, cts.Token).ContinueWith(t =>
+            {
+                if (!t.IsCanceled) Dispatcher.UIThread.Post(() => _ = RefreshDocumentExtrasAsync(cts.Token));
+            }, TaskScheduler.Default);
+        }
+
+        private async Task RefreshDocumentExtrasAsync(CancellationToken token)
+        {
+            string path = _currentPath;
+            if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(path) || ManagedSource != null) return;
+            try
+            {
+                int lastLine = (ScriptText ?? "").Count(c => c == '\n') + 1;
+                var symbols = await _lsp.DocumentSymbolsAsync(path);
+                var lenses = await _lsp.CodeLensAsync(path);
+                var hints = await _lsp.InlayHintsAsync(path, lastLine);
+                if (token.IsCancellationRequested || !SamePath(path, _currentPath)) return;
+
+                Outline.Clear();
+                foreach (var symbol in symbols) Outline.Add(new OutlineEntry(symbol.Name, symbol.Line, symbol.Depth));
+                InlineTexts = lenses.Concat(hints).ToList();
+                InlineTextsChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex) when (ex is TimeoutException || ex is InvalidOperationException || ex is System.IO.IOException)
+            {
+                AppLogger.Warn("rotom-lsp outline failed: " + ex.Message);
+            }
+        }
+
+        // Typing reaches the server after a delay; completion and signature help must see the current text.
+        private async Task FlushLspDocumentAsync()
+        {
+            if (_lspChangeDelay == null) return;
+            CancelPendingDocumentChange();
+            await SendCurrentDocumentChangedToLsp();
+        }
+
+        internal async Task<List<RotomLspCompletion>> CompletionAsync(int line, int column)
+        {
+            if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath) || ManagedSource != null)
+                return new List<RotomLspCompletion>();
+            await FlushLspDocumentAsync();
+            try { return await _lsp.CompletionAsync(_currentPath, line, column); }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("rotom-lsp completion failed: " + ex.Message);
+                return new List<RotomLspCompletion>();
+            }
+        }
+
+        internal async Task<RotomLspSignature> SignatureHelpAsync(int line, int column)
+        {
+            if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath) || ManagedSource != null) return null;
+            await FlushLspDocumentAsync();
+            try { return await _lsp.SignatureHelpAsync(_currentPath, line, column); }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("rotom-lsp signature help failed: " + ex.Message);
+                return null;
             }
         }
 
@@ -1437,5 +1637,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public int Line { get; }
         public int Column { get; }
         public int SelectionLength { get; }
+    }
+
+    /// <summary>One outline row: indented by nesting, jumps to <see cref="Line"/> when picked.</summary>
+    public sealed record OutlineEntry(string Name, int Line, int Depth)
+    {
+        public string Display => new string(' ', Depth * 2) + Name;
     }
 }

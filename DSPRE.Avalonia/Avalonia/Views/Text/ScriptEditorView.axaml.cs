@@ -87,6 +87,7 @@ namespace DSPRE.Avalonia.Views.Text
             RotomEditor.TextArea.TextView.LineTransformers.Add(_ctrlHoverUnderline);
             ApplyTheme();
             ApplyGrammar();
+            SetupLspFeatures();
 
             RotomEditor.TextChanged += (_, _) =>
             {
@@ -155,6 +156,7 @@ namespace DSPRE.Avalonia.Views.Text
                     RotomEditor.TextArea.TextView.LineTransformers.Remove(_ctrlHoverUnderline);
                     VM?.DetachEditorDocument(RotomEditor.Document);
                     VM?.ShutdownLsp();
+                    VM?.Detach();
                     _textMate?.Dispose();
                 };
                 vm.PropertyChanged += OnVmPropertyChanged;
@@ -311,7 +313,10 @@ namespace DSPRE.Avalonia.Views.Text
             {
                 e.Handled = true;
                 await GoToDefinitionAtCaret();
+                return;
             }
+
+            await HandleCompletionShortcut(e);
         }
 
         private void RotomEditor_KeyUp(object sender, KeyEventArgs e)

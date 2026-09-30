@@ -102,6 +102,19 @@
             </ListBox>
           </DockPanel>
         </TabItem>
+
+        <TabItem Header="Outline">
+          <ListBox x:Name="OutlineList"
+                   ItemsSource="{Binding Outline}"
+                   DoubleTapped="Outline_DoubleTapped"
+                   KeyDown="Outline_KeyDown">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:OutlineEntry">
+                <TextBlock Text="{Binding Display}" FontFamily="monospace" FontSize="12"/>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </TabItem>
       </TabControl>
     </Border>
 

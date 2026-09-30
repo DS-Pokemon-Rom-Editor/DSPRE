@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -91,7 +92,12 @@ namespace DSPRE.Avalonia
                     textDocument = new
                     {
                         synchronization = new { didSave = true, dynamicRegistration = false },
-                        publishDiagnostics = new { relatedInformation = false }
+                        publishDiagnostics = new { relatedInformation = false },
+                        completion = new { completionItem = new { snippetSupport = false } },
+                        signatureHelp = new { signatureInformation = new { parameterInformation = new { labelOffsetSupport = true } } },
+                        documentSymbol = new { hierarchicalDocumentSymbolSupport = true },
+                        codeLens = new { },
+                        inlayHint = new { }
                     }
                 },
                 workspaceFolders = new[]
@@ -144,6 +150,13 @@ namespace DSPRE.Avalonia
                 textDocument = new { uri = FileUri(path) }
             });
 
+        /// <summary>Files changed outside the editor; rotom-lsp drops its cached project state for them.</summary>
+        public Task DidChangeWatchedFilesAsync(System.Collections.Generic.IEnumerable<string> paths)
+            => SendNotificationAsync("workspace/didChangeWatchedFiles", new
+            {
+                changes = paths.Select(p => new { uri = FileUri(p), type = 2 }).ToArray()
+            });
+
         public Task DidCloseAsync(string path)
             => SendNotificationAsync("textDocument/didClose", new
             {
@@ -178,6 +191,113 @@ namespace DSPRE.Avalonia
                 return null;
 
             return ReadHoverText(contents)?.Trim();
+        }
+
+        public async Task<List<RotomLspCompletion>> CompletionAsync(string path, int line, int column)
+        {
+            var items = new List<RotomLspCompletion>();
+            JsonElement response = await SendRequestAsync("textDocument/completion", PositionParams(path, line, column));
+            if (!response.TryGetProperty("result", out var result) || result.ValueKind == JsonValueKind.Null) return items;
+            if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("items", out var list)) result = list;
+            if (result.ValueKind != JsonValueKind.Array) return items;
+            foreach (var item in result.EnumerateArray())
+            {
+                string label = item.ReadString("label");
+                if (string.IsNullOrEmpty(label)) continue;
+                string insert = item.TryGetProperty("textEdit", out var edit) ? edit.ReadString("newText") : null;
+                items.Add(new RotomLspCompletion(label, insert ?? item.ReadString("insertText") ?? label,
+                    item.ReadString("detail"), ReadMarkup(item, "documentation")));
+            }
+            return items;
+        }
+
+        public async Task<RotomLspSignature> SignatureHelpAsync(string path, int line, int column)
+        {
+            JsonElement response = await SendRequestAsync("textDocument/signatureHelp", PositionParams(path, line, column));
+            if (!response.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Object) return null;
+            if (!result.TryGetProperty("signatures", out var signatures) || signatures.GetArrayLength() == 0) return null;
+            int active = Math.Clamp(result.ReadInt("activeSignature"), 0, signatures.GetArrayLength() - 1);
+            var signature = signatures[active];
+            string label = signature.ReadString("label") ?? "";
+            int parameter = signature.TryGetProperty("activeParameter", out _) ? signature.ReadInt("activeParameter") : result.ReadInt("activeParameter");
+            int start = -1, end = -1;
+            if (signature.TryGetProperty("parameters", out var parameters) && parameter >= 0 && parameter < parameters.GetArrayLength()
+                && parameters[parameter].TryGetProperty("label", out var p))
+            {
+                if (p.ValueKind == JsonValueKind.Array && p.GetArrayLength() == 2) { start = p[0].GetInt32(); end = p[1].GetInt32(); }
+                else if (p.ValueKind == JsonValueKind.String)
+                {
+                    start = label.IndexOf(p.GetString(), StringComparison.Ordinal);
+                    end = start < 0 ? -1 : start + p.GetString().Length;
+                }
+            }
+            return new RotomLspSignature(label, ReadMarkup(signature, "documentation"), start, end);
+        }
+
+        public async Task<List<RotomLspSymbol>> DocumentSymbolsAsync(string path)
+        {
+            var symbols = new List<RotomLspSymbol>();
+            JsonElement response = await SendRequestAsync("textDocument/documentSymbol", new { textDocument = new { uri = FileUri(path) } });
+            if (!response.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array) return symbols;
+            void Walk(JsonElement list, int depth)
+            {
+                foreach (var symbol in list.EnumerateArray())
+                {
+                    JsonElement range = default;
+                    if (symbol.TryGetProperty("selectionRange", out var sel)) range = sel;
+                    else if (symbol.TryGetProperty("range", out var r)) range = r;
+                    else if (symbol.TryGetProperty("location", out var loc) && loc.TryGetProperty("range", out var lr)) range = lr;
+                    int line = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("start", out var st) ? st.ReadInt("line") + 1 : 1;
+                    symbols.Add(new RotomLspSymbol(symbol.ReadString("name") ?? "", symbol.ReadInt("kind"), line, depth));
+                    if (symbol.TryGetProperty("children", out var children) && children.ValueKind == JsonValueKind.Array) Walk(children, depth + 1);
+                }
+            }
+            Walk(result, 0);
+            return symbols;
+        }
+
+        public async Task<List<RotomLspInlineText>> CodeLensAsync(string path)
+        {
+            var lenses = new List<RotomLspInlineText>();
+            JsonElement response = await SendRequestAsync("textDocument/codeLens", new { textDocument = new { uri = FileUri(path) } });
+            if (!response.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array) return lenses;
+            foreach (var lens in result.EnumerateArray())
+            {
+                if (!lens.TryGetProperty("command", out var command) || !lens.TryGetProperty("range", out var range)) continue;
+                string title = command.ReadString("title");
+                if (string.IsNullOrWhiteSpace(title) || !range.TryGetProperty("start", out var start)) continue;
+                lenses.Add(new RotomLspInlineText(start.ReadInt("line") + 1, -1, title));
+            }
+            return lenses;
+        }
+
+        public async Task<List<RotomLspInlineText>> InlayHintsAsync(string path, int lastLine)
+        {
+            var hints = new List<RotomLspInlineText>();
+            JsonElement response = await SendRequestAsync("textDocument/inlayHint", new
+            {
+                textDocument = new { uri = FileUri(path) },
+                range = new { start = new { line = 0, character = 0 }, end = new { line = Math.Max(0, lastLine), character = 0 } }
+            });
+            if (!response.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array) return hints;
+            foreach (var hint in result.EnumerateArray())
+            {
+                if (!hint.TryGetProperty("position", out var position) || !hint.TryGetProperty("label", out var label)) continue;
+                string text = label.ValueKind == JsonValueKind.String ? label.GetString()
+                            : label.ValueKind == JsonValueKind.Array ? string.Concat(label.EnumerateArray().Select(part => part.ReadString("value")))
+                            : null;
+                if (string.IsNullOrEmpty(text)) continue;
+                if (hint.TryGetProperty("paddingLeft", out var pl) && pl.ValueKind == JsonValueKind.True) text = " " + text;
+                if (hint.TryGetProperty("paddingRight", out var pr) && pr.ValueKind == JsonValueKind.True) text += " ";
+                hints.Add(new RotomLspInlineText(position.ReadInt("line") + 1, position.ReadInt("character") + 1, text));
+            }
+            return hints;
+        }
+
+        private static string ReadMarkup(JsonElement element, string property)
+        {
+            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value)) return null;
+            return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ReadString("value");
         }
 
         private static object PositionParams(string path, int line, int column)
@@ -535,6 +655,16 @@ namespace DSPRE.Avalonia
         public int Column { get; }
         public int SelectionLength { get; }
     }
+
+    internal sealed record RotomLspCompletion(string Label, string InsertText, string Detail, string Documentation);
+
+    /// <summary>A signature with the active parameter's span in <see cref="Label"/>, or -1 when none.</summary>
+    internal sealed record RotomLspSignature(string Label, string Documentation, int ActiveStart, int ActiveEnd);
+
+    internal sealed record RotomLspSymbol(string Name, int Kind, int Line, int Depth);
+
+    /// <summary>Text drawn in the editor at a 1-based line and column, or at the end of the line when Column is -1.</summary>
+    internal sealed record RotomLspInlineText(int Line, int Column, string Text);
 
     internal static class JsonElementExtensions
     {

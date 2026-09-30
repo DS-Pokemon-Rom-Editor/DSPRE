@@ -106,12 +106,7 @@
         <Setter Property="Foreground" Value="{DynamicResource ABrush.Glyph.Selected}"/>
     </Style>
 
-    <!-- Selected text in the script and JSON editors. AvaloniaEdit is themed from
-         avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml, but the app runs on SimpleTheme, so the
-         Fluent selection keys that theme reaches for do not resolve and TextArea.SelectionBrush ends up
-         fully transparent (#00000000). Selecting text then highlights nothing at all, in either theme.
-         Same class of gap as the SystemControl* aliases in App.axaml, fixed the same way: point it at
-         the palette the rest of the app already selects with. -->
+    <!-- Selected text in the script and JSON editors, in the palette the rest of the app selects with. -->
     <Style Selector="ae|TextArea">
         <Setter Property="SelectionBrush" Value="{DynamicResource TextBox.Selection}"/>
         <Setter Property="SelectionForeground" Value="{DynamicResource ABrush.Glyph.Selected}"/>
