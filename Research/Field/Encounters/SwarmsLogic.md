@@ -48,4 +48,4 @@ The table is edited on the Swarms tab of the Special Encounters Editor (`SwarmsV
 | Places | the rows, each a map header and, in HeartGold, a method | the table in place while it fits |
 | More places than fit | the table moves | a block marked `SWARMTABLEX1` in the synthetic overlay (a 0x20-byte header with its version, length and row count), the table's address words, and both count bytes |
 
-The count is an 8-bit immediate, so a table holds at most 255 rows, and an empty table is refused because the game divides by the count. DSPRE checks that each place has a wild file, not that its swarm species is set.
+The count is an 8-bit immediate, so a table holds at most 255 rows, and an empty table is refused because the game divides by the count. DSPRE checks that each place has a wild file. In HeartGold it also refuses a row whose wild file has no swarm species for the row's method, since the game asserts on it; Diamond, Pearl and Platinum are not checked for the species.

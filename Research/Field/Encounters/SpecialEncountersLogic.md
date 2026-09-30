@@ -64,7 +64,9 @@ All of these are edited in the Special Encounters Editor (`SpecialEncountersEdit
 
 | What | Edited in DSPRE | Written |
 |---|---|---|
-| Headbutt | the slots, and the trees drawn on the map; the counts are read as u16 | the header's headbutt file; a file with no trees and empty slots stays 4 bytes |
+| Headbutt | the slots, and the trees drawn on the map; the counts are read as u16, and slots filled in on a map with no trees read back | the header's headbutt file; a file with no trees and empty slots stays 4 bytes |
 | Tree tables | a tree's hover shows which ID keys, (6 × secret ID + trainer ID) mod 10, get the common table, the rare one or nothing (`HeadbuttRules`, which matches the game's tables) | |
 | Safari Zone | each area's base and bonus slots and the object requirements, as a type and the points needed; a warning shows on object type 0 and on a surfing bonus count of 0 | the area file |
 | Honey trees, Great Marsh, Trophy Garden | the species lists | the `encdata_ex` members |
+
+The Trophy Garden list is refused with fewer than three different entries, since the game would never finish picking a new daily Pokémon.

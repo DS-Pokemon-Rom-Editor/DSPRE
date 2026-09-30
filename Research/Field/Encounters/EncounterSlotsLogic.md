@@ -56,7 +56,7 @@ The same selectors are reused elsewhere, so a change reaches them too:
 | `0x74` | night species, 2 |
 | `0x7C` | Poké Radar species, 4 |
 | `0x8C` | form rates, 5 × u32: only the first two are read, Shellos and Gastrodon, nonzero meaning the East Sea form |
-| `0xA0` | Unown table: 0 for none, 1 to 8 for table 0 to 7 |
+| `0xA0` | Unown table: 1 to 8 pick tables 0 to 7, and 0 also picks table 0, most forms (`WildEncounters_UnownTables`, pokeplatinum `wild_encounters.c`); above 8 asserts |
 | `0xA4` | Game Boy Advance slot species: Ruby, Sapphire, Emerald, FireRed, LeafGreen, 2 each |
 | `0xCC` | surfing rate, then 5 slots of s8 max level, s8 min level, 2 bytes padding, u32 species |
 | `0xF8` | 44 bytes the code never reads; zero in every retail file |
