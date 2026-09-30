@@ -77,8 +77,12 @@ namespace DSPRE.ROMFiles
             return (binPath, jsonPath);
         }
 
-        public static bool BuildRequiredBins()
+        public static bool BuildRequiredBins() => BuildRequiredBins(out _);
+
+        /// <param name="error">What stopped the build, naming the archive and line of any unknown control code.</param>
+        public static bool BuildRequiredBins(out string error)
         {
+            error = null;
             string expandedDir = TextConverter.GetExpandedFolderPath();
 
             if (!Directory.Exists(expandedDir))
@@ -99,12 +103,18 @@ namespace DSPRE.ROMFiles
                 {
                     AppMessages.Error("One or more legacy text files could not be converted. " +
                         "The build will be aborted.", "Legacy Text Conversion Failed");
+                    error = "One or more legacy text files could not be converted.";
                     return false;
                 }
             }
-            
+
             AppLogger.Info("Building .bin files for Text Archives from expanded directory...");
-            TextConverter.FolderToBin(expandedDir, gameDirs[DirNames.textArchives].unpackedDir, CharMapManager.GetCharMapPath());
+            if (!TextConverter.FolderToBin(expandedDir, gameDirs[DirNames.textArchives].unpackedDir,
+                    CharMapManager.GetCharMapPath(), out string encodeError))
+            {
+                error = "Text archives could not be encoded:\n" + encodeError;
+                return false;
+            }
 
             return true;
         }
@@ -391,7 +401,20 @@ namespace DSPRE.ROMFiles
             return string.Join(Environment.NewLine, messages);
         }
 
-        public void SaveToExpandedDir(int IDtoReplace, bool showSuccessMessage = true)
+        /// <summary>
+        /// An archive's expanded JSON was written. The sender is the editor that wrote it, or null, so
+        /// an editor can tell its own saves from another one's. Raised on the writer's thread.
+        /// </summary>
+        public static event EventHandler<int> Saved;
+
+        /// <summary>For writers that put the JSON on disk without <see cref="SaveToExpandedDir"/>.</summary>
+        public static void RaiseSaved(object sender, int id)
+        {
+            try { Saved?.Invoke(sender, id); }
+            catch (Exception ex) { AppLogger.Warn($"A text archive listener failed: {ex.Message}"); }
+        }
+
+        public void SaveToExpandedDir(int IDtoReplace, bool showSuccessMessage = true, object sender = null)
         {
             string jsonPath = GetFilePaths(IDtoReplace).jsonPath;
 
@@ -402,6 +425,7 @@ namespace DSPRE.ROMFiles
 
             File.WriteAllBytes(jsonPath, ToExpandedJsonBytes(IDtoReplace));
             AppLogger.Debug($"Saved {messages.Count} messages to {jsonPath}");
+            RaiseSaved(sender, IDtoReplace);
 
             if (showSuccessMessage)
             {

@@ -55,6 +55,9 @@ namespace DSPRE.ROMFiles
             var frames = new List<FieldMessageFrame>();
             if (string.IsNullOrEmpty(text)) return frames;
 
+            // A compressed trainer name is stored as {TRAINER_NAME:...}; the game shows just the name.
+            text = DSPRE.TextConverter.GetSimpleTrainerName(text);
+
             var parts = Tokenise(text);
 
             // Script text that carries none of the games' own breaks has nothing to say about how it

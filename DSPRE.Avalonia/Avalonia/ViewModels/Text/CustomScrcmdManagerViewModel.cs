@@ -117,6 +117,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 return;
             }
 
+            // Reloading would apply another ROM's database to this one and rewrite that ROM's name files.
+            if (!DSPRE.ROMFiles.ScriptFile.IsCurrentRomDatabaseFolder(Path.GetDirectoryName(databasePath)))
+            {
+                await DialogHelper.ShowInfo("That database belongs to another ROM. It will be used when that ROM is loaded.", "Reload skipped");
+                return;
+            }
+
             IsBusy = true;
             try
             {

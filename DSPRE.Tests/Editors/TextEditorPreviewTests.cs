@@ -117,7 +117,7 @@ namespace DSPRE.Tests
 
             vm.ShowPreview = false;
             Assert.False(vm.HasPreview);
-            Assert.Null(vm.PreviewText);
+            Assert.Equal("", vm.PreviewText);
 
             vm.ShowPreview = true;
             Assert.True(vm.HasPreview);
@@ -128,7 +128,7 @@ namespace DSPRE.Tests
         {
             var vm = WithLines("");
             Assert.False(vm.HasPreview);
-            Assert.Null(vm.PreviewText);
+            Assert.Equal("", vm.PreviewText);
         }
     }
 }

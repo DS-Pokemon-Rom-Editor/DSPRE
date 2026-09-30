@@ -282,7 +282,45 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public TextEditorViewModel(bool _)
         {
             _hexNumbering = SettingsManager.Settings.textEditorPreferHex;
+            TextArchive.Saved += OnArchiveSavedElsewhere;
         }
+
+        /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
+        public void Detach() => TextArchive.Saved -= OnArchiveSavedElsewhere;
+
+        // Saving the old list over another editor's write would undo it, so the open archive follows it.
+        private void OnArchiveSavedElsewhere(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this)) return;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ReloadSavedElsewhereAsync(id));
+        }
+
+        private bool _askingAboutSavedElsewhere;
+
+        private async Task ReloadSavedElsewhereAsync(int id)
+        {
+            // An hg-engine archive is edited from its own source, not the JSON that was written.
+            if (_current == null || _current.ID != id || _managedSource != null || _askingAboutSavedElsewhere) return;
+            if (_dirty)
+            {
+                _askingAboutSavedElsewhere = true;
+                try
+                {
+                    if (!await RecordSwitchGuard.TakeSavedVersionAsync(UnsavedChangesDescription)) return;
+                }
+                finally { _askingAboutSavedElsewhere = false; }
+                if (_current == null || _current.ID != id) return;
+            }
+            LoadArchive(id);
+            StatusText = $"Text Archive {id} was saved in another editor and reloaded.";
+        }
+
+        /// <summary>Saves or discards unsaved edits before an action that reloads the archive.
+        /// False when the user cancelled or the save did not go through.</summary>
+        private Task<bool> SaveOrDiscardBeforeReloadAsync(string action)
+            => RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "text archive",
+                $"{action} reloads it. Save them first?");
+
         public int InitialIndex { get; set; }
 
         // ── Setup ────────────────────────────────────────────────────────────────
@@ -468,7 +506,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             int newId = ArchiveNames.Count;
             var archive = new TextArchive(newId, new List<string> { "Your text here." });
-            archive.SaveToExpandedDir(newId);
+            archive.SaveToExpandedDir(newId, sender: this);
 
             (string binPath, string jsonPath) = TextArchive.GetFilePaths(newId);
             TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
@@ -513,7 +551,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_managedSource != null) { _ = SaveToHgEngineSourceAsync(); return; }
             if (_generatedSource != null) { _ = RefusedForManagedArchive("Saving"); return; }
 
-            _current.SaveToExpandedDir(_current.ID);
+            _current.SaveToExpandedDir(_current.ID, sender: this);
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved Text Archive {_current.ID}.";
@@ -614,6 +652,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             };
             string path = await DialogHelper.OpenFile(_owner, "Import Text Archive", filters);
             if (path == null) return;
+            if (_current == null || !await SaveOrDiscardBeforeReloadAsync("Importing")) return;
 
             string binPath = TextArchive.GetFilePaths(_current.ID).binPath;
             string jsonPath = TextArchive.GetFilePaths(_current.ID).jsonPath;
@@ -631,6 +670,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     File.Copy(path, jsonPath, true);
                 }
                 LoadArchive(_current.ID);
+                TextArchive.RaiseSaved(this, _current.ID);
+                AppEvents.RaiseNamesChanged();
                 await DialogHelper.ShowInfo("Text Archive imported successfully!", "Import");
             }
             catch (Exception ex)
@@ -680,7 +721,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             int first, last;
             if (SearchAllArchives) { first = 0; last = Filesystem.GetTextArchivesCount(); }
             else { first = SelectedArchiveIndex; last = first + 1; }
-            last = Math.Min(last, 828);
+            if (first < 0) return;
 
             SearchResults.Clear();
             Func<string, bool> match = CaseSensitive
@@ -712,59 +753,43 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (SearchAllArchives)
             {
                 first = 0; last = Filesystem.GetTextArchivesCount();
-                specify = $" in every Text Bank of the game ({first} to {last})";
+                specify = $" in every Text Bank of the game ({first} to {last - 1})";
             }
             else
             {
+                if (_current == null) return;
+                if (await RefusedForManagedArchive("Replacing")) return;
                 first = SelectedArchiveIndex; last = first + 1;
                 specify = $" in the current text bank only ({first})";
             }
+            if (first < 0) return;
 
             string message = $"You are about to replace every occurrence of \"{SearchText}\" with \"{ReplaceText}\"{specify}." +
                              "\nThe operation can't be interrupted nor undone.\n\nProceed?";
             if (!await DialogHelper.AskYesNo(message, "Confirm to proceed")) return;
+            if (!await SaveOrDiscardBeforeReloadAsync("Replacing")) return;
 
-            last = Math.Min(last, 828);
             SearchResults.Clear();
-            int edited = 0;
 
-            for (int cur = first; cur < last; cur++)
+            // hg-engine builds these from its own files, which a replace here would not reach.
+            int skipped = 0;
+            bool OwnedByHgEngine(int id)
             {
-                var archive = new TextArchive(cur);
-                bool found = false;
-                for (int j = 0; j < archive.messages.Count; j++)
-                {
-                    if (CaseSensitive)
-                    {
-                        if (archive.messages[j].IndexOf(SearchText, StringComparison.Ordinal) >= 0)
-                        {
-                            archive.messages[j] = archive.messages[j].Replace(SearchText, ReplaceText);
-                            found = true;
-                        }
-                    }
-                    else
-                    {
-                        int pos;
-                        while ((pos = archive.messages[j].IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase)) >= 0)
-                        {
-                            archive.messages[j] = archive.messages[j].Substring(0, pos) + ReplaceText +
-                                                  archive.messages[j].Substring(pos + SearchText.Length);
-                            found = true;
-                        }
-                    }
-                }
-
-                if (found)
-                {
-                    archive.SaveToExpandedDir(cur, showSuccessMessage: false);
-                    SearchResults.Add(new TextSearchResultVM(cur, 0, $"Text archive ({cur}) - Successfully edited"));
-                    edited++;
-                }
+                if (HgEngineOwnedFiles.Get(TextArchivePath, id) == null) return false;
+                skipped++;
+                return true;
             }
+
+            List<int> edited = DSUtils.ReplaceTextInArchives(
+                new[] { (SearchText, ReplaceText ?? "", CaseSensitive) }, first, last, OwnedByHgEngine, this);
+            foreach (int cur in edited)
+                SearchResults.Add(new TextSearchResultVM(cur, 0, $"Text archive ({cur}) - Successfully edited"));
 
             // Reload the currently displayed archive so edits are visible.
             if (SelectedArchiveIndex >= 0) LoadArchive(SelectedArchiveIndex);
-            StatusText = $"Replace complete: {edited} archive(s) edited.";
+            if (edited.Count > 0) AppEvents.RaiseNamesChanged();
+            StatusText = $"Replace complete: {edited.Count} archive(s) edited"
+                         + (skipped > 0 ? $", {skipped} hg-engine archive(s) skipped." : ".");
             await DialogHelper.ShowInfo("Operation completed.", "Replace All Text");
         }
 

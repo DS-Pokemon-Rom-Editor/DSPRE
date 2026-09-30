@@ -122,8 +122,31 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         public LevelScriptEditorViewModel() { if (Design.IsDesignMode) ScriptNames.Add("Script 0"); }
-        public LevelScriptEditorViewModel(bool _) { }
+        public LevelScriptEditorViewModel(bool _) { AppEvents.LevelScriptSaved += OnSavedElsewhere; }
         public int InitialIndex { get; set; }
+
+        /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
+        public void Detach() => AppEvents.LevelScriptSaved -= OnSavedElsewhere;
+
+        private bool _askingAboutSavedElsewhere;
+
+        // The other open copy saved this file: show it, or ask when this copy holds its own edits.
+        private async void OnSavedElsewhere(object sender, int id)
+        {
+            if (ReferenceEquals(sender, this) || id != _selScript || _askingAboutSavedElsewhere) return;
+            if (_dirty)
+            {
+                _askingAboutSavedElsewhere = true;
+                try
+                {
+                    if (!await RecordSwitchGuard.TakeSavedVersionAsync(UnsavedChangesDescription)) return;
+                }
+                finally { _askingAboutSavedElsewhere = false; }
+                if (id != _selScript) return;
+            }
+            LoadFile(id);
+            StatusText = $"Level script {id} was saved in another editor and reloaded.";
+        }
 
         public async Task SetupAsync(Window owner)
         {
@@ -200,10 +223,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_file == null || _selScript < 0) return;
             try
             {
-                _file.write_file(Filesystem.GetScriptPath(_selScript), _padding);
+                _file.SaveToFileDefaultDir(_selScript, _padding);
                 SetClean();
                 SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = $"Saved level script {_selScript}.";
+                AppEvents.RaiseLevelScriptSaved(this, _selScript);
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Level Script Editor"); }
         }

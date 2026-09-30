@@ -16,17 +16,31 @@ namespace DSPRE.Tests
         }
 
         [Fact]
-        public void ArrivingRunsTheSetupScriptsBeforeTheMapChangeOne()
+        public void ArrivingRunsTheMapChangeScriptBeforeTheSetupOnes()
         {
             var file = FileWith(
-                new MapScreenLoadTrigger(LevelScriptTrigger.MAPCHANGE, 100),
+                new MapScreenLoadTrigger(LevelScriptTrigger.SCREENRESET, 300),
                 new MapScreenLoadTrigger(LevelScriptTrigger.LOADGAME, 200),
-                new MapScreenLoadTrigger(LevelScriptTrigger.SCREENRESET, 300));
+                new MapScreenLoadTrigger(LevelScriptTrigger.MAPCHANGE, 100));
 
             var order = FieldLevelScripts.OnArrival(file).Select(t => t.scriptTriggered).ToArray();
 
-            // Field setup first (init, then objects), and the map change last.
-            Assert.Equal(new[] { 200, 300, 100 }, order);
+            // ON_TRANSITION during the warp, then ON_LOAD and ON_RESUME as the field map sets up.
+            Assert.Equal(new[] { 100, 200, 300 }, order);
+        }
+
+        [Fact]
+        public void AnExpectedValueThatIsAVariableIsComparedWithThatVariable()
+        {
+            // The game reads both halves through VarGet, so 0x4002 here means "whatever 0x4002 holds".
+            var file = FileWith(new VariableValueTrigger(60, 0x4001, 0x4002));
+            var values = new Dictionary<int, int> { [0x4001] = 5, [0x4002] = 7 };
+            int Value(int v) => values.TryGetValue(v, out int x) ? x : 0;
+
+            Assert.Empty(FieldLevelScripts.ReadyToFire(file, Value));
+
+            values[0x4002] = 5;
+            Assert.Equal(60, FieldLevelScripts.ReadyToFire(file, Value).Single().scriptTriggered);
         }
 
         [Fact]
@@ -83,9 +97,9 @@ namespace DSPRE.Tests
         }
 
         [Theory]
-        [InlineData(LevelScriptTrigger.MAPCHANGE, "As you arrive on the map")]
+        [InlineData(LevelScriptTrigger.MAPCHANGE, "On warping in, before the map loads")]
         [InlineData(LevelScriptTrigger.SCREENRESET, "While the map sets up, once the music starts")]
-        [InlineData(LevelScriptTrigger.LOADGAME, "While the map sets up, before anything else")]
+        [InlineData(LevelScriptTrigger.LOADGAME, "While the map sets up, before its data loads")]
         public void EachArrivalKindSaysWhenItRuns(int kind, string expected)
             => Assert.Equal(expected, FieldLevelScripts.WhenItRuns(new MapScreenLoadTrigger(kind, 1)));
 

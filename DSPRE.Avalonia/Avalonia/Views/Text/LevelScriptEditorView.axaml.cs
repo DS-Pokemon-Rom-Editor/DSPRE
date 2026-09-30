@@ -42,6 +42,7 @@ namespace DSPRE.Avalonia.Views.Text
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
             var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
+            if (!_setupDone) owner.Closed += (_, _) => vm.Detach();
             _setupDone = true;
             await vm.SetupAsync(owner);
         }

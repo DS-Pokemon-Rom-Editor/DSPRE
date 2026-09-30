@@ -10,12 +10,17 @@ namespace DSPRE.ROMFiles
     /// </summary>
     public static class FieldLevelScripts
     {
-        /// <summary>The order the engine runs the arrival scripts in: field setup first, then the map change.</summary>
+        /// <summary>
+        /// The order the engine runs the arrival scripts in: the map change during the warp, then the two
+        /// passes of field setup. Platinum field_map_change.c runs ON_TRANSITION before the field map
+        /// starts, and fieldmap.c runs ON_LOAD during graphics setup and ON_RESUME after the music;
+        /// HeartGold does the same in field_warp_tasks.c and fieldmap.c.
+        /// </summary>
         public static readonly int[] ArrivalOrder =
         {
+            LevelScriptTrigger.MAPCHANGE,     // 2
             LevelScriptTrigger.LOADGAME,      // 4
             LevelScriptTrigger.SCREENRESET,   // 3
-            LevelScriptTrigger.MAPCHANGE,     // 2
         };
 
         /// <summary>Everything that runs on arriving at the map, in the order the engine runs it.</summary>
@@ -45,9 +50,22 @@ namespace DSPRE.ROMFiles
             var ready = new List<VariableValueTrigger>();
             if (valueOf == null) return ready;
             foreach (var t in Watchers(file))
-                if (valueOf(t.variableToWatch) == t.expectedValue) ready.Add(t);
+                if (IsSatisfied(t, valueOf)) ready.Add(t);
             return ready;
         }
+
+        /// <summary>
+        /// Whether a watcher would fire. The game compares VarGet of both halves, so the expected value
+        /// is itself a variable when it is 0x4000 or above, and a plain number below that.
+        /// </summary>
+        public static bool IsSatisfied(VariableValueTrigger t, Func<int, int> valueOf)
+            => t != null && valueOf != null
+               && Resolve(t.variableToWatch, valueOf) == Resolve(t.expectedValue, valueOf);
+
+        private static int Resolve(int operand, Func<int, int> valueOf)
+            => operand >= FirstVariable ? valueOf(operand) : operand;
+
+        private const int FirstVariable = 0x4000;
 
         /// <summary>Plain wording for when one of these runs, for showing somebody what the map does.</summary>
         public static string WhenItRuns(LevelScriptTrigger trigger)
@@ -59,10 +77,11 @@ namespace DSPRE.ROMFiles
                     var v = trigger as VariableValueTrigger;
                     return v == null
                         ? "Every step, once a variable holds the right value"
-                        : $"Every step, once {FieldScriptValues.Describe(v.variableToWatch)} holds {v.expectedValue}";
-                case LevelScriptTrigger.MAPCHANGE: return "As you arrive on the map";
+                        : $"Every step, once {FieldScriptValues.Describe(v.variableToWatch)} holds "
+                          + (v.expectedValue >= FirstVariable ? $"the value of {FieldScriptValues.Describe(v.expectedValue)}" : v.expectedValue.ToString());
+                case LevelScriptTrigger.MAPCHANGE: return "On warping in, before the map loads";
                 case LevelScriptTrigger.SCREENRESET: return "While the map sets up, once the music starts";
-                case LevelScriptTrigger.LOADGAME: return "While the map sets up, before anything else";
+                case LevelScriptTrigger.LOADGAME: return "While the map sets up, before its data loads";
                 default: return "Under something this editor does not recognise";
             }
         }

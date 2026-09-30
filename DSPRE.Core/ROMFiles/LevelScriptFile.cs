@@ -22,7 +22,7 @@ namespace DSPRE.ROMFiles
 
         public void parse_file(string path)
         {
-            FileStream fs = new FileStream(path, FileMode.Open);
+            FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             // Basic implementation to check if the file is a level script or not from ScriptFile.cs
             /* Read script offsets from the header */
             bool isLevelScript = true; // Is Level Script as long as magic number FD13 doesn't exist
@@ -149,9 +149,18 @@ namespace DSPRE.ROMFiles
             }
         }
 
+        /// <summary>Writes script file <paramref name="id"/> and keeps its Rotom source in step.</summary>
+        public long SaveToFileDefaultDir(int id, bool word_alignment_padding = false)
+        {
+            long written = write_file(Filesystem.GetScriptPath(id), word_alignment_padding);
+            _ = ScriptSourceSync.BinaryWritten(id);
+            return written;
+        }
+
         public long write_file(string path, bool word_alignment_padding = false)
         {
-            FileStream fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write);
+            // Create truncates: a shorter file written over a longer one must not keep its tail.
+            FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write);
             using (BinaryWriter bw = new BinaryWriter(fs))
             {
                 HashSet<MapScreenLoadTrigger> mapScreenLoadTriggers = new HashSet<MapScreenLoadTrigger>();
