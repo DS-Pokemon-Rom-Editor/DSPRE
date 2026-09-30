@@ -75,7 +75,12 @@ dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=win-x64
   both platforms from the `Tools/chatot-src` submodule, DSPRE's fork of chatot at
   https://github.com/DS-Pokemon-Rom-Editor/chatot. The checked-in `Tools/apicula.exe`, rotom and
   chatot binaries remain available for ordinary local builds; release workflows replace them with
-  builds from source.
+  builds from source. Each rotom and chatot binary set has a `Tools/<tool>.<os>.stamp` naming the
+  submodule commit it was built from. A local DSPRE build warns (DSPRE001) when a submodule has moved
+  past its stamp or has local edits, and fails (DSPRE002) when a binary is missing. The bundled
+  binaries are always used as they are; `dotnet build -p:RebuildNativeTools=true` rebuilds them from the
+  submodules and updates the stamps, and fails (DSPRE003) naming anything missing from the toolchain:
+  cargo, the `x86_64-pc-windows-gnu` Rust target, MinGW `gcc` and `make`, or a POSIX `sh` on Windows.
 - `databases/` is a clone of https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database. It is copied to
   the per-user data directory on first run. Without it and without network access, ROM loading still
   works but script editing is limited.

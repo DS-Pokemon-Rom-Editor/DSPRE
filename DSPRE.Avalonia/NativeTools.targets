@@ -1,0 +1,328 @@
+<Project>
+  <!--
+    rotom and chatot ship as committed binaries in Tools/, built from the Tools/rotom-src and
+    Tools/chatot-src submodules. Each binary set has a stamp naming the submodule commit it was built
+    from. A build warns when a submodule has moved on or has local edits, fails when a binary is
+    missing, and rebuilds only when asked: dotnet build -p:RebuildNativeTools=true
+  -->
+  <PropertyGroup>
+    <RebuildNativeTools Condition="'$(RebuildNativeTools)' == ''">false</RebuildNativeTools>
+    <DspreRepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</DspreRepoRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <DspreNativeTool Include="rotom"
+                     Submodule="Tools/rotom-src"
+                     WindowsFiles="rotom.exe;rotom-lsp.exe;nitroarc_ffi.dll"
+                     LinuxFiles="rotom;rotom-lsp;libnitroarc_ffi.so"
+                     Workspace="true"
+                     WindowsTarget="x86_64-pc-windows-gnu"
+                     NeedsCCompiler="true" />
+    <DspreNativeTool Include="chatot"
+                     Submodule="Tools/chatot-src"
+                     WindowsFiles="chatot.exe"
+                     LinuxFiles="chatot" />
+  </ItemGroup>
+
+  <UsingTask TaskName="CheckDspreNativeTools"
+             TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <RepoRoot ParameterType="System.String" Required="true" />
+      <IntermediateDir ParameterType="System.String" Required="true" />
+      <Rebuild ParameterType="System.Boolean" Required="true" />
+      <Tools ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <AddedFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Class" Language="cs"><![CDATA[
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+
+public class CheckDspreNativeTools : Microsoft.Build.Utilities.Task
+{
+    [Required] public string RepoRoot { get; set; }
+    [Required] public string IntermediateDir { get; set; }
+    [Required] public bool Rebuild { get; set; }
+    [Required] public ITaskItem[] Tools { get; set; }
+    [Output] public ITaskItem[] AddedFiles { get; set; }
+
+    private static readonly bool OnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    private readonly List<ITaskItem> _added = new List<ITaskItem>();
+
+    public override bool Execute()
+    {
+        if (!OnWindows && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return true;
+        string os = OnWindows ? "windows" : "linux";
+
+        foreach (var tool in Tools)
+        {
+            string name = tool.ItemSpec;
+            string submodule = tool.GetMetadata("Submodule");
+            string[] files = tool.GetMetadata(OnWindows ? "WindowsFiles" : "LinuxFiles")
+                .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            string toolsDir = Path.Combine(RepoRoot, "Tools");
+            string stampPath = Path.Combine(toolsDir, name + "." + os + ".stamp");
+
+            if (Rebuild)
+            {
+                BuildTool(tool, name, submodule, files, toolsDir, stampPath);
+                continue;
+            }
+
+            var missing = files.Where(f => !File.Exists(Path.Combine(toolsDir, f))).ToList();
+            if (missing.Count > 0)
+            {
+                Log.LogError(null, "DSPRE002", null, null, 0, 0, 0, 0,
+                    "Tools/{0} is missing. Restore it with 'git checkout -- Tools' or rebuild it with 'dotnet build -p:RebuildNativeTools=true'.",
+                    string.Join(", Tools/", missing));
+                continue;
+            }
+
+            string current = SubmoduleCommit(submodule, out bool dirty);
+            if (current == null) continue;
+            string built = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : null;
+
+            if (built == null)
+            {
+                Log.LogWarning(null, "DSPRE001", null, null, 0, 0, 0, 0,
+                    "Tools/{0} has no build stamp, so it cannot be matched to {1}. The bundled binaries are still used. Rebuild with 'dotnet build -p:RebuildNativeTools=true'.",
+                    files[0], submodule);
+            }
+            else if (!string.Equals(built, current, StringComparison.OrdinalIgnoreCase))
+            {
+                Log.LogWarning(null, "DSPRE001", null, null, 0, 0, 0, 0,
+                    "Tools/{0} was built from {1} {2}, but the submodule is at {3}. The bundled binaries are still used. Rebuild with 'dotnet build -p:RebuildNativeTools=true'.",
+                    files[0], submodule, Short(built), Short(current));
+            }
+            else if (dirty)
+            {
+                Log.LogWarning(null, "DSPRE001", null, null, 0, 0, 0, 0,
+                    "{0} has local edits that Tools/{1} does not include. The bundled binaries are still used. Rebuild with 'dotnet build -p:RebuildNativeTools=true'.",
+                    submodule, files[0]);
+            }
+        }
+
+        AddedFiles = _added.ToArray();
+        return !Log.HasLoggedErrors;
+    }
+
+    private void BuildTool(ITaskItem tool, string name, string submodule, string[] files, string toolsDir, string stampPath)
+    {
+        string manifest = Path.Combine(RepoRoot, submodule, "Cargo.toml");
+        var problems = new List<string>();
+
+        if (!File.Exists(manifest))
+            problems.Add(submodule + " is not checked out: run 'git submodule update --init " + submodule + "'.");
+
+        string cargo = FindTool("cargo", CargoDirs());
+        if (cargo == null)
+            problems.Add("cargo was not found: install Rust from https://rustup.rs.");
+
+        string target = OnWindows ? tool.GetMetadata("WindowsTarget") : "";
+        if (cargo != null && target.Length > 0)
+        {
+            string rustup = FindTool("rustup", CargoDirs());
+            string installed = rustup == null ? "" : Run(rustup, "target list --installed", null, null, out _);
+            if (!installed.Split('\n').Any(t => t.Trim() == target))
+                problems.Add(name + " needs the Rust target " + target + ": run 'rustup target add " + target + "'.");
+        }
+
+        string compilerDir = null;
+        if (tool.GetMetadata("NeedsCCompiler") == "true")
+        {
+            string gcc = FindTool("gcc", CompilerDirs());
+            string make = FindTool("make", CompilerDirs());
+            if (gcc == null || make == null)
+            {
+                problems.Add(OnWindows
+                    ? name + " needs MinGW gcc and make: install MSYS2 with 'pacman -S mingw-w64-x86_64-gcc make', or 'scoop install mingw make'."
+                    : name + " needs gcc and make: install your distribution's build-essential package.");
+            }
+            else compilerDir = Path.GetDirectoryName(gcc);
+
+            // The Makefile's recipes are POSIX shell; without sh, MinGW make falls back to cmd and fails.
+            if (OnWindows)
+            {
+                string sh = FindTool("sh", ShellDirs());
+                if (sh == null)
+                    problems.Add(name + " needs a POSIX sh for make, which Git for Windows and MSYS2 both provide: install either.");
+                else if (compilerDir != null)
+                    compilerDir += Path.PathSeparator + Path.GetDirectoryName(sh);
+            }
+        }
+
+        if (problems.Count > 0)
+        {
+            foreach (string problem in problems)
+                Log.LogError(null, "DSPRE003", null, null, 0, 0, 0, 0, "Cannot rebuild {0}: {1}", name, problem);
+            return;
+        }
+
+        string commit = SubmoduleCommit(submodule, out bool dirty);
+        string targetDir = Path.Combine(IntermediateDir, "native-tools", name);
+        string args = "build --release --locked"
+            + (tool.GetMetadata("Workspace") == "true" ? " --workspace" : "")
+            + (target.Length > 0 ? " --target " + target : "")
+            + " --manifest-path \"" + manifest + "\"";
+
+        Log.LogMessage(MessageImportance.High, "Building {0} from {1} {2}{3}", name, submodule, Short(commit), dirty ? " with local edits" : "");
+        var env = new Dictionary<string, string> { { "CARGO_TARGET_DIR", targetDir } };
+        if (compilerDir != null)
+            env["PATH"] = compilerDir + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH");
+
+        string cargoOutput = Run(cargo, args, env, line => Log.LogMessage(MessageImportance.Normal, line), out int exit);
+        if (exit != 0)
+        {
+            // A default-verbosity build hides the cargo log, so the error carries its end.
+            var tail = cargoOutput.Split('\n').Select(l => l.TrimEnd('\r')).Where(l => l.Trim().Length > 0).Reverse().Take(15).Reverse();
+            Log.LogError(null, "DSPRE003", null, null, 0, 0, 0, 0, "cargo could not build {0} (exit code {1}):\n{2}", name, exit, string.Join("\n", tail));
+            return;
+        }
+
+        string builtDir = Path.Combine(targetDir, target.Length > 0 ? target : "", "release");
+        foreach (string file in files)
+        {
+            string destination = Path.Combine(toolsDir, file);
+            bool existed = File.Exists(destination);
+            File.Copy(Path.Combine(builtDir, file), destination, true);
+            if (!existed) _added.Add(new TaskItem(destination));
+        }
+        if (commit != null) File.WriteAllText(stampPath, commit + (dirty ? "+local-edits" : "") + "\n");
+        Log.LogMessage(MessageImportance.High, "Rebuilt {0} into Tools", name);
+    }
+
+    // The checked-out commit when the submodule is initialised, else the commit the repository records.
+    private string SubmoduleCommit(string submodule, out bool dirty)
+    {
+        dirty = false;
+        string git = FindTool("git", new string[0]);
+        if (git == null)
+        {
+            Log.LogWarning(null, "DSPRE004", null, null, 0, 0, 0, 0, "git was not found, so Tools cannot be checked against {0}.", submodule);
+            return null;
+        }
+
+        string path = Path.Combine(RepoRoot, submodule);
+        if (File.Exists(Path.Combine(path, "Cargo.toml")))
+        {
+            string head = Run(git, "-C \"" + path + "\" rev-parse HEAD", null, null, out int code).Trim();
+            if (code == 0 && head.Length > 0)
+            {
+                dirty = Run(git, "-C \"" + path + "\" status --porcelain", null, null, out _).Trim().Length > 0;
+                return head;
+            }
+        }
+
+        string entry = Run(git, "-C \"" + RepoRoot + "\" ls-files -s -- " + submodule, null, null, out int lsCode).Trim();
+        string[] parts = entry.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        return lsCode == 0 && parts.Length >= 2 ? parts[1] : null;
+    }
+
+    private static string Short(string commit) => commit != null && commit.Length > 8 ? commit.Substring(0, 8) + (commit.Contains("+") ? " with local edits" : "") : commit;
+
+    private static IEnumerable<string> CargoDirs()
+    {
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        yield return Path.Combine(home, ".cargo", "bin");
+    }
+
+    private static IEnumerable<string> CompilerDirs()
+    {
+        if (!OnWindows) yield break;
+        string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        yield return Path.Combine(home, "scoop", "apps", "mingw", "current", "bin");
+        yield return Path.Combine(home, "scoop", "shims");
+        yield return @"C:\msys64\mingw64\bin";
+        yield return @"C:\msys64\usr\bin";
+    }
+
+    // Git for Windows keeps sh in usr\bin beside the cmd or mingw64\bin folder that holds git.
+    private static IEnumerable<string> ShellDirs()
+    {
+        string git = FindTool("git", new string[0]);
+        for (var dir = git == null ? null : Directory.GetParent(git); dir != null; dir = dir.Parent)
+        {
+            string candidate = Path.Combine(dir.FullName, "usr", "bin");
+            if (Directory.Exists(candidate)) { yield return candidate; break; }
+        }
+        yield return @"C:\Program Files\Git\usr\bin";
+        yield return @"C:\msys64\usr\bin";
+    }
+
+    private static string FindTool(string name, IEnumerable<string> extraDirs)
+    {
+        string exe = OnWindows ? name + ".exe" : name;
+        var dirs = (Environment.GetEnvironmentVariable("PATH") ?? "")
+            .Split(new[] { Path.PathSeparator }, StringSplitOptions.RemoveEmptyEntries)
+            .Concat(extraDirs);
+        foreach (string dir in dirs)
+        {
+            try
+            {
+                string candidate = Path.Combine(dir.Trim('"'), exe);
+                if (File.Exists(candidate)) return candidate;
+            }
+            catch (ArgumentException) { }
+        }
+        return null;
+    }
+
+    private static string Run(string file, string args, Dictionary<string, string> env, Action<string> onLine, out int exitCode)
+    {
+        var info = new ProcessStartInfo(file, args)
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+        if (env != null) foreach (var pair in env) info.Environment[pair.Key] = pair.Value;
+
+        var output = new System.Text.StringBuilder();
+        using (var process = new Process { StartInfo = info })
+        {
+            DataReceivedEventHandler handler = (s, e) =>
+            {
+                if (e.Data == null) return;
+                lock (output) output.AppendLine(e.Data);
+                onLine?.Invoke(e.Data);
+            };
+            process.OutputDataReceived += handler;
+            process.ErrorDataReceived += handler;
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+            process.WaitForExit();
+            exitCode = process.ExitCode;
+        }
+        return output.ToString();
+    }
+}
+]]></Code>
+    </Task>
+  </UsingTask>
+
+  <!-- CI builds these tools itself, and design-time builds must stay fast. -->
+  <Target Name="CheckDspreNativeTools"
+          BeforeTargets="PrepareForBuild"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(CI)' != 'true' and '$(GITHUB_ACTIONS)' != 'true'">
+    <CheckDspreNativeTools RepoRoot="$(DspreRepoRoot)"
+                           IntermediateDir="$([System.IO.Path]::GetFullPath('$(BaseIntermediateOutputPath)'))"
+                           Rebuild="$(RebuildNativeTools)"
+                           Tools="@(DspreNativeTool)">
+      <Output TaskParameter="AddedFiles" ItemName="_DspreAddedNativeTool" />
+    </CheckDspreNativeTools>
+
+    <!-- A binary built into Tools during this build missed the Tools glob, so it is copied here. -->
+    <ItemGroup>
+      <Content Include="@(_DspreAddedNativeTool)" Link="Tools\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>

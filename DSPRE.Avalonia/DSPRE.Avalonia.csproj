@@ -101,9 +101,10 @@
     </Content>
     <!-- Native tools (Windows builds; swap per-OS binaries in later). -->
     <!-- rotom-src and chatot-src are source submodules; only their built binaries belong in Tools. -->
-    <Content Include="../Tools/**" Exclude="../Tools/rotom-src/**;../Tools/chatot-src/**" LinkBase="Tools">
+    <Content Include="../Tools/**" Exclude="../Tools/rotom-src/**;../Tools/chatot-src/**;../Tools/*.stamp" LinkBase="Tools">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
+  <Import Project="NativeTools.targets" />
 </Project>
