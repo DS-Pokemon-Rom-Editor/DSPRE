@@ -67,8 +67,15 @@ dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=win-x64
   prefers a native binary off Windows. CI builds `dsrom` from
   https://github.com/DS-Pokemon-Rom-Editor/ds-rom and builds the 0BSD-licensed `apicula` for Windows
   and Linux from https://github.com/scurest/apicula at pinned revision
-  `3d4e91e14045392a49c89e86dab8cb936225588c`. The checked-in `Tools/apicula.exe` remains available
-  for ordinary local builds; release workflows replace it with the pinned source build.
+  `3d4e91e14045392a49c89e86dab8cb936225588c`. It also builds `rotom`, `rotom-lsp` and the
+  `nitroarc_ffi` library they load for Windows and Linux from the `Tools/rotom-src` submodule,
+  DSPRE's fork of rotom at https://github.com/DS-Pokemon-Rom-Editor/rotom (clone with
+  `--recurse-submodules`, or run `git submodule update --init`). The Windows build uses MSYS2 MinGW
+  and the `x86_64-pc-windows-gnu` target, as rotom's own CI does. `chatot` is built with plain cargo on
+  both platforms from the `Tools/chatot-src` submodule, DSPRE's fork of chatot at
+  https://github.com/DS-Pokemon-Rom-Editor/chatot. The checked-in `Tools/apicula.exe`, rotom and
+  chatot binaries remain available for ordinary local builds; release workflows replace them with
+  builds from source.
 - `databases/` is a clone of https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database. It is copied to
   the per-user data directory on first run. Without it and without network access, ROM loading still
   works but script editing is limited.

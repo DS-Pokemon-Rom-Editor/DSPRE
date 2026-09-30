@@ -54,6 +54,16 @@ jobs:
       uses: ./.github/actions/build-apicula
       with:
         output-directory: DS_Map/bin/Release/Tools
+
+    - name: Build rotom.exe
+      uses: ./.github/actions/build-rotom
+      with:
+        output-directory: DS_Map/bin/Release/Tools
+
+    - name: Build chatot
+      uses: ./.github/actions/build-chatot
+      with:
+        output-directory: DS_Map/bin/Release/Tools
     
     - name: Prepare Release Files
       run: |

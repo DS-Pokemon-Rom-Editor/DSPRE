@@ -1,0 +1,71 @@
+name: Build rotom
+description: Build rotom (CLI, language server and nitroarc library) from the Tools/rotom-src submodule, DSPRE's fork, and copy it into a DSPRE Tools directory.
+
+inputs:
+  output-directory:
+    description: Repository-relative Tools directory that receives the rotom executables and nitroarc library.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # The fork is pinned by the submodule commit DSPRE records, so the build follows it.
+    - name: Checkout rotom submodule
+      shell: bash
+      run: git submodule update --init Tools/rotom-src
+
+    # uxie builds nitroarc with make and gcc; on Windows that means MinGW and the GNU target, as rotom's own CI does.
+    - name: Set up MinGW
+      if: runner.os == 'Windows'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        install: base-devel mingw-w64-x86_64-gcc
+        path-type: inherit
+
+    - name: Build rotom (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
+      env:
+        OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
+      run: |
+        set -euo pipefail
+        echo "Building rotom $(git -C Tools/rotom-src rev-parse HEAD)"
+
+        rustup target add x86_64-pc-windows-gnu
+        cargo build --release --locked --workspace --target x86_64-pc-windows-gnu --manifest-path Tools/rotom-src/Cargo.toml
+
+        built=Tools/rotom-src/target/x86_64-pc-windows-gnu/release
+        mkdir -p "$OUTPUT_DIRECTORY"
+        cp "$built/rotom.exe" "$built/rotom-lsp.exe" "$built/nitroarc_ffi.dll" "$OUTPUT_DIRECTORY/"
+
+    - name: Build rotom (Linux)
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
+      run: |
+        set -euo pipefail
+        echo "Building rotom $(git -C Tools/rotom-src rev-parse HEAD)"
+
+        cargo build --release --locked --workspace --manifest-path Tools/rotom-src/Cargo.toml
+
+        built=Tools/rotom-src/target/release
+        mkdir -p "$OUTPUT_DIRECTORY"
+        cp "$built/rotom" "$built/rotom-lsp" "$built/libnitroarc_ffi.so" "$OUTPUT_DIRECTORY/"
+        chmod +x "$OUTPUT_DIRECTORY/rotom" "$OUTPUT_DIRECTORY/rotom-lsp"
+
+    - name: Check rotom version
+      shell: bash
+      env:
+        ROTOM_VERSION: rotom 0.6.0
+        OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
+      run: |
+        set -euo pipefail
+        if [ "$RUNNER_OS" = "Windows" ]; then exe="$OUTPUT_DIRECTORY/rotom.exe"; else exe="$OUTPUT_DIRECTORY/rotom"; fi
+        actual_version="$("$exe" --version)"
+        if [ "$actual_version" != "$ROTOM_VERSION" ]; then
+          echo "Expected '$ROTOM_VERSION', got '$actual_version'" >&2
+          exit 1
+        fi
+        echo "Built $actual_version"

@@ -50,9 +50,19 @@ jobs:
       with:
         output-directory: publish-linux/Tools
 
+    - name: Build rotom (Linux)
+      uses: ./.github/actions/build-rotom
+      with:
+        output-directory: publish-linux/Tools
+
+    - name: Build chatot
+      uses: ./.github/actions/build-chatot
+      with:
+        output-directory: publish-linux/Tools
+
     # TODO: drop the remaining Linux tool binaries into publish-linux/Tools/ with these exact
-    # names (no extension): ndstool, blz, rotom, rotom-lsp.
-    # ndstool + blz build from source (devkitPro / CUE tools); rotom / rotom-lsp build like dsrom above.
+    # names (no extension): ndstool, blz.
+    # ndstool + blz build from source (devkitPro / CUE tools).
 
     - name: Bundle Databases
       run: |
@@ -106,6 +116,16 @@ jobs:
 
     - name: Build apicula.exe
       uses: ./.github/actions/build-apicula
+      with:
+        output-directory: DS_Map/bin/Release/Tools
+
+    - name: Build rotom.exe
+      uses: ./.github/actions/build-rotom
+      with:
+        output-directory: DS_Map/bin/Release/Tools
+
+    - name: Build chatot
+      uses: ./.github/actions/build-chatot
       with:
         output-directory: DS_Map/bin/Release/Tools
     

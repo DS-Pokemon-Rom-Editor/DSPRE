@@ -132,6 +132,18 @@ jobs:
         with:
           output-directory: publish/Tools
 
+      - name: Build rotom.exe
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        uses: ./.github/actions/build-rotom
+        with:
+          output-directory: publish/Tools
+
+      - name: Build chatot
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        uses: ./.github/actions/build-chatot
+        with:
+          output-directory: publish/Tools
+
       - name: Create Velopack Release
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
         run: |
@@ -263,8 +275,20 @@ jobs:
         with:
           output-directory: publish-linux/Tools
 
+      - name: Build rotom (Linux)
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        uses: ./.github/actions/build-rotom
+        with:
+          output-directory: publish-linux/Tools
+
+      - name: Build chatot
+        if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}
+        uses: ./.github/actions/build-chatot
+        with:
+          output-directory: publish-linux/Tools
+
       # TODO: drop the remaining Linux tool binaries into publish-linux/Tools/ with these exact
-      # names (no extension): ndstool, blz, rotom, rotom-lsp.
+      # names (no extension): ndstool, blz.
 
       - name: Bundle Databases
         if: ${{ needs.get_latest_tag.outputs.latest_tag != steps.get_version.outputs.release_tag }}

@@ -100,7 +100,8 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <!-- Native tools (Windows builds; swap per-OS binaries in later). -->
-    <Content Include="../Tools/**" LinkBase="Tools">
+    <!-- rotom-src and chatot-src are source submodules; only their built binaries belong in Tools. -->
+    <Content Include="../Tools/**" Exclude="../Tools/rotom-src/**;../Tools/chatot-src/**" LinkBase="Tools">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

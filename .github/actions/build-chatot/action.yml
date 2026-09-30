@@ -1,0 +1,49 @@
+name: Build chatot
+description: Build chatot, the text archive encoder, from the Tools/chatot-src submodule, DSPRE's fork, and copy it into a DSPRE Tools directory.
+
+inputs:
+  output-directory:
+    description: Repository-relative Tools directory that receives the chatot executable.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # The fork is pinned by the submodule commit DSPRE records, so the build follows it.
+    - name: Checkout chatot submodule
+      shell: bash
+      run: git submodule update --init Tools/chatot-src
+
+    - name: Build chatot
+      shell: bash
+      env:
+        OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
+      run: |
+        set -euo pipefail
+        echo "Building chatot $(git -C Tools/chatot-src rev-parse HEAD)"
+
+        cargo build --release --locked --manifest-path Tools/chatot-src/Cargo.toml
+
+        built=Tools/chatot-src/target/release
+        mkdir -p "$OUTPUT_DIRECTORY"
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          cp "$built/chatot.exe" "$OUTPUT_DIRECTORY/"
+        else
+          cp "$built/chatot" "$OUTPUT_DIRECTORY/"
+          chmod +x "$OUTPUT_DIRECTORY/chatot"
+        fi
+
+    - name: Check chatot version
+      shell: bash
+      env:
+        CHATOT_VERSION: chatot 0.7.0
+        OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
+      run: |
+        set -euo pipefail
+        if [ "$RUNNER_OS" = "Windows" ]; then exe="$OUTPUT_DIRECTORY/chatot.exe"; else exe="$OUTPUT_DIRECTORY/chatot"; fi
+        actual_version="$("$exe" --version)"
+        if [ "$actual_version" != "$CHATOT_VERSION" ]; then
+          echo "Expected '$CHATOT_VERSION', got '$actual_version'" >&2
+          exit 1
+        fi
+        echo "Built $actual_version"
