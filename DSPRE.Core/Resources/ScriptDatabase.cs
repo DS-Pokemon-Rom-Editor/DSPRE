@@ -144,7 +144,7 @@ public static class ScriptDatabaseJsonLoader
             }
 
             // The names come from the old database, where command 0 is "Nop".
-            ApplyRotomNames(expandedPath, commandInfoDict);
+            ApplyRotomNames(expandedPath, commandInfoDict, gameVersion);
 
             // Load sounds
             if (root.TryGetProperty("sounds", out JsonElement soundsRoot))
@@ -174,24 +174,46 @@ public static class ScriptDatabaseJsonLoader
         }
     }
 
+        /// <summary>The Rotom v2 database for a game, as the scrcmd-database checkout names it.</summary>
+        internal static string V2FileName(GameVersions gameVersion)
+        {
+            switch (gameVersion)
+            {
+                case GameVersions.Diamond:
+                case GameVersions.Pearl:
+                    return "diamond_pearl_v2.json";
+                case GameVersions.Platinum:
+                    return "platinum_v2.json";
+                case GameVersions.HeartGold:
+                case GameVersions.SoulSilver:
+                    return "hgss_v2.json";
+                default:
+                    return null;
+            }
+        }
+
         /// <summary>
-        /// Swaps in the rotom command names from <c>&lt;game&gt;_v2.json</c>, if it is there.
+        /// Swaps in the rotom command names from <c>&lt;game&gt;_v2.json</c>, if it is there. The app loads
+        /// the per-ROM copy in <c>edited_databases/&lt;rom&gt;/scrcmd_database.json</c>, which has no v2 file
+        /// beside it, so the shared one in <see cref="AppPaths.DatabasePath"/> is looked for by game.
         /// </summary>
-        internal static int ApplyRotomNames(string legacyJsonPath, Dictionary<ushort, ScriptCommandInfo> commands)
+        internal static int ApplyRotomNames(string legacyJsonPath, Dictionary<ushort, ScriptCommandInfo> commands,
+            GameVersions gameVersion)
         {
             string dir = Path.GetDirectoryName(legacyJsonPath);
             string file = Path.GetFileNameWithoutExtension(legacyJsonPath) ?? "";
-            // heartgold_soulsilver_scrcmd_database -> hgss_v2 is not derivable, so try the obvious pairs.
             string stem = file.Replace("_scrcmd_database", "");
+            string byGame = V2FileName(gameVersion);
             var candidates = new List<string>
             {
                 Path.Combine(dir ?? "", stem + "_v2.json"),
                 Path.Combine(dir ?? "", file + "_v2.json"),
             };
-            if (stem.StartsWith("heartgold", StringComparison.OrdinalIgnoreCase))
-                candidates.Add(Path.Combine(dir ?? "", "hgss_v2.json"));
-            if (stem.StartsWith("diamond", StringComparison.OrdinalIgnoreCase))
-                candidates.Add(Path.Combine(dir ?? "", "diamond_pearl_v2.json"));
+            if (byGame != null)
+            {
+                candidates.Add(Path.Combine(dir ?? "", byGame));
+                candidates.Add(Path.Combine(AppPaths.DatabasePath, byGame));
+            }
 
             string v2 = candidates.FirstOrDefault(File.Exists);
             ScriptDatabase.varNames.Clear();
@@ -230,18 +252,35 @@ public static class ScriptDatabaseJsonLoader
         }
 
         // A number can have a plain alias (VAR_0x800C) and a meaningful one (VAR_RESULT); the meaningful one wins.
-        // Range markers such as SPECIAL_VAR_BASE share an id with a variable but are not its name.
+        // Range markers such as VAR_OBJ_GFX_BASE share an id with a variable (VAR_OBJ_0) but are not its
+        // name, so they lose to both, whichever order the file lists them in.
         private static void ReadVarNames(JsonElement vars)
         {
+            var rankOf = new Dictionary<ushort, int>();
             foreach (JsonProperty prop in vars.EnumerateObject())
             {
                 if (!prop.Name.StartsWith("VAR_", StringComparison.Ordinal)) continue;
                 if (!prop.Value.TryGetProperty("id", out JsonElement idElem)) continue;
                 if (!idElem.TryGetInt32(out int id) || id < 0 || id > ushort.MaxValue) continue;
-                bool plain = System.Text.RegularExpressions.Regex.IsMatch(prop.Name, "^VAR_(SPECIAL_)?0?x[0-9A-Fa-f]+$");
-                if (plain && ScriptDatabase.varNames.ContainsKey((ushort)id)) continue;
+
+                int rank = VarNameRank(prop.Name);
+                bool known = rankOf.TryGetValue((ushort)id, out int existing);
+                // Equal meaningful names: the later one wins, as before. Otherwise the first stays.
+                if (known && (rank < existing || (rank == existing && rank != MeaningfulName))) continue;
+                rankOf[(ushort)id] = rank;
                 ScriptDatabase.varNames[(ushort)id] = prop.Name;
             }
+        }
+
+        private const int RangeMarker = 0, PlainName = 1, MeaningfulName = 2;
+
+        internal static int VarNameRank(string name)
+        {
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, "_(BASE|START|END|FIRST|LAST|COUNT)$"))
+                return RangeMarker;
+            if (System.Text.RegularExpressions.Regex.IsMatch(name, "^VAR_(SPECIAL_)?0?x[0-9A-Fa-f]+$"))
+                return PlainName;
+            return MeaningfulName;
         }
 }
 
@@ -321,30 +360,36 @@ namespace DSPRE.Resources
 
         public static void InitializePokemonNames()
         {
-            string[] names = GetPokemonNames();
-            pokemonNames = names.Select((name, index) => new { name, index })
-                             .ToDictionary(
-                                 x => (ushort)x.index,
-                                 x => "SPECIES_" + FormatStringForScripting(x.name)
-                             );
+            pokemonNames = UnambiguousNames(GetPokemonNames(), "SPECIES_");
         }
         public static void InitializeItemNames()
         {
-            string[] names = GetItemNames();
-            itemNames = names.Select((name, index) => new { name, index })
-                             .ToDictionary(
-                                 x => (ushort)x.index,
-                                 x => "ITEM_" + FormatStringForScripting(x.name)
-                             );
+            itemNames = UnambiguousNames(GetItemNames(), "ITEM_");
         }
         public static void InitializeMoveNames()
         {
-            string[] names = GetAttackNames();
-            moveNames = names.Select((name, index) => new { name, index })
-                             .ToDictionary(
-                                 x => (ushort)x.index,
-                                 x => "MOVE_" + FormatStringForScripting(x.name)
-                             );
+            moveNames = UnambiguousNames(GetAttackNames(), "MOVE_");
+        }
+
+        /// <summary>
+        /// Script names by id. A name the ROM repeats (HeartGold has 23 items called "???") would read
+        /// back as the first id that has it, so only that first one keeps it; the others are left out and
+        /// show as their number, which reads back to the same id.
+        /// </summary>
+        internal static Dictionary<ushort, string> UnambiguousNames(IEnumerable<string> names, string prefix)
+        {
+            var result = new Dictionary<ushort, string>();
+            if (names == null) return result;
+            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            int index = 0;
+            foreach (string name in names)
+            {
+                string scriptName = prefix + FormatStringForScripting(name ?? "");
+                if (taken.Add(scriptName) && index <= ushort.MaxValue)
+                    result[(ushort)index] = scriptName;
+                index++;
+            }
+            return result;
         }
         public static void InitializeTrainerNames()
         {

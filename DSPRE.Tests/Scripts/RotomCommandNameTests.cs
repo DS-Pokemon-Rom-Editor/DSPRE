@@ -123,5 +123,48 @@ namespace DSPRE.Tests
             // The old name is kept so a project written before the rename can still be read back.
             Assert.All(loaded.Values, v => Assert.False(string.IsNullOrEmpty(v.LegacyName)));
         }
+
+        [SkippableFact]
+        public void APerRomDatabaseStillGetsTheRotomNames()
+        {
+            string legacy = Path.Combine(Databases, "hgss_scrcmd_database.json");
+            string v2 = Path.Combine(AppPaths.DatabasePath, "hgss_v2.json");
+            Skip.If(!File.Exists(legacy) || !File.Exists(v2), "the HeartGold databases are not on this machine");
+
+            // The app loads edited_databases/<rom>/scrcmd_database.json, with no v2 file beside it.
+            string root = Path.Combine(Path.GetTempPath(), "dspre_perrom_db_" + Guid.NewGuid().ToString("N"));
+            string perRom = Path.Combine(root, "edited_databases", "HeartGold (USA)", "scrcmd_database.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(perRom));
+            File.Copy(legacy, perRom);
+            try
+            {
+                ScriptDatabaseJsonLoader.InitializeFromJson(perRom, RomInfo.GameVersions.HeartGold);
+                var loaded = ScriptDatabase.HGSSScrCmdInfo;
+                var rotom = RotomNames(v2);
+
+                int renamed = loaded.Count(kv => kv.Value.LegacyName != kv.Value.Name
+                                                 && rotom.TryGetValue(kv.Key, out var want) && kv.Value.Name == want);
+                _out.WriteLine($"{loaded.Count} commands loaded from the per-ROM copy; {renamed} carry their v2 name");
+                Assert.True(renamed > 0, "no command took its v2 name, so the v2 file was not found from the per-ROM path");
+
+                // 0x4020 is VAR_OBJ_0; VAR_OBJ_GFX_BASE is the start of that range, not its name.
+                Assert.True(ScriptDatabase.varNames.TryGetValue(0x4020, out string var4020), "0x4020 has no name");
+                Assert.Equal("VAR_OBJ_0", var4020);
+            }
+            finally
+            {
+                try { Directory.Delete(root, recursive: true); } catch { }
+            }
+        }
+
+        [Theory]
+        [InlineData("VAR_OBJ_GFX_BASE", 0)]
+        [InlineData("VAR_BASE", 0)]
+        [InlineData("VAR_0x4020", 1)]
+        [InlineData("VAR_SPECIAL_0x8000", 1)]
+        [InlineData("VAR_OBJ_0", 2)]
+        [InlineData("VAR_FOLLOWER_TRAINER_NUM", 2)]
+        public void RangeMarkersRankBelowRealNames(string name, int expected)
+            => Assert.Equal(expected, ScriptDatabaseJsonLoader.VarNameRank(name));
     }
 }

@@ -66,6 +66,10 @@ namespace DSPRE.ROMFiles
         public bool isLevelScript = new bool();
         public bool parseFailedDueToInvalidCommand = false;
 
+        /// <summary>A plaintext export newer than the binary was there but did not parse, so the
+        /// binary was read instead. That text holds edits and must not be overwritten.</summary>
+        public bool plaintextParseFailed;
+
         public bool hasNoScripts { get { return fileID == int.MaxValue; } }
 
         public static readonly char[] specialChars = { 'x', 'X', '#', '.', '_' };
@@ -255,6 +259,14 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
+            if (!File.Exists(Filesystem.GetScriptPath(fileID)))
+            {
+                // Reads as an empty file did, without leaving one behind.
+                AppLogger.Warn($"Script file {fileID:D4} does not exist.");
+                isLevelScript = true;
+                return;
+            }
+
             using (var fs = getFileStream(fileID))
             {
                 // Copy the logic from the Stream constructor
@@ -270,7 +282,7 @@ namespace DSPRE.ROMFiles
         static FileStream getFileStream(int fileID)
         {
             string path = Filesystem.GetScriptPath(fileID);
-            return new FileStream(path, FileMode.OpenOrCreate);
+            return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         }
 
         /// <summary>
@@ -379,10 +391,10 @@ namespace DSPRE.ROMFiles
             {
                 if (cached.timestamp == txtTimestamp && cached.cached != null)
                 {
-                    // Cache hit! Copy the parsed data
-                    this.allScripts = cached.cached.allScripts;
-                    this.allFunctions = cached.cached.allFunctions;
-                    this.allActions = cached.cached.allActions;
+                    // Callers edit these lists in place, so each one gets its own copy.
+                    this.allScripts = CloneContainers(cached.cached.allScripts);
+                    this.allFunctions = CloneContainers(cached.cached.allFunctions);
+                    this.allActions = CloneActions(cached.cached.allActions);
                     this.isLevelScript = cached.cached.isLevelScript;
                     return true;
                 }
@@ -392,13 +404,36 @@ namespace DSPRE.ROMFiles
 
             if (success)
             {
-                var cacheEntry = new ScriptFile(this.allScripts, this.allFunctions, this.allActions, fileID);
+                var cacheEntry = new ScriptFile(CloneContainers(this.allScripts), CloneContainers(this.allFunctions),
+                    CloneActions(this.allActions), fileID);
                 cacheEntry.isLevelScript = this.isLevelScript;
                 plaintextCache[txtPath] = (txtTimestamp, cacheEntry);
+            }
+            else
+            {
+                plaintextParseFailed = true;
             }
 
             return success;
         }
+
+        private static List<ScriptCommandContainer> CloneContainers(List<ScriptCommandContainer> source)
+            => source?.Select(c => new ScriptCommandContainer(c.manualUserID, c.containerType, c.usedScriptID,
+                c.commands?.Select(CloneCommand).ToList())).ToList();
+
+        private static ScriptCommand CloneCommand(ScriptCommand c)
+        {
+            if (c == null) return null;
+            var copy = new ScriptCommand(c.name, null, c.id);
+            copy.cmdParams = c.cmdParams?.Select(p => (byte[])p?.Clone()).ToList();
+            return copy;
+        }
+
+        private static List<ScriptActionContainer> CloneActions(List<ScriptActionContainer> source)
+            => source?.Select(a => new ScriptActionContainer(a.manualUserID,
+                a.commands?.Select(x => x == null ? null
+                    : new ScriptAction { id = x.id, repetitionCount = x.repetitionCount, name = x.name }).ToList()))
+                .ToList();
 
         /// <summary>
         /// Core parsing logic for reading plaintext script files
@@ -674,9 +709,20 @@ namespace DSPRE.ROMFiles
             if (fileID < 0)
                 return;
 
+            // expanded/scripts is Rotom's source root there, and a .script in it gets converted over
+            // the Rotom source on the next Script Editor open.
+            if (RomInfo.hasRotomProject)
+                return;
+
             if (parseFailedDueToInvalidCommand)
             {
                 AppLogger.Warn($"Script file {fileID:D4} was not fully parsed due to invalid commands. Skipping plaintext export to prevent data loss.");
+                return;
+            }
+
+            if (plaintextParseFailed)
+            {
+                AppLogger.Warn($"Script file {fileID:D4}: its .script did not parse, so it is left as it is rather than regenerated.");
                 return;
             }
 
@@ -685,45 +731,51 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                StringBuilder content = new StringBuilder();
-
-                // Add file header
-                content.AppendLine("/*");
-                content.AppendLine(" * DSPRE Script File");
-
-                string romFileName = Path.GetFileNameWithoutExtension(RomInfo.projectName);
-                string romFileNameClean = romFileName.EndsWith("_DSPRE_contents")
-                    ? romFileName.Substring(0, romFileName.Length - "_DSPRE_contents".Length)
-                    : romFileName;
-                content.AppendLine(" * Rom ID: " + romFileNameClean);
-                content.AppendLine(" * Game: " + RomInfo.gameFamily);
-                content.AppendLine($" * File: {fileID:D4}");
-                content.AppendLine($" * Generated: {DateTime.Now}");
-                content.AppendLine(" */");
-                content.AppendLine();
-
-                // Renumber containers and update references before writing
-                RenumberContainers();
-
-                // Add Scripts section
-                content.AppendLine("//===== SCRIPTS =====//");
-                AppendContainerList(content, allScripts, ScriptFile.ContainerTypes.Script);
-
-                // Add Functions section
-                content.AppendLine("//===== FUNCTIONS =====//");
-                AppendContainerList(content, allFunctions, ScriptFile.ContainerTypes.Function);
-
-                // Add Actions section
-                content.AppendLine("//===== ACTIONS =====//");
-                AppendActionList(content, allActions, ScriptFile.ContainerTypes.Action);
-
-                File.WriteAllText(txtPath, content.ToString());
+                File.WriteAllText(txtPath, BuildPlainTextFile());
                 AppLogger.Info($"Script file {fileID:D4} written to plaintext: {txtPath}");
             }
             catch (Exception ex)
             {
                 AppLogger.Error($"Failed to write plaintext script file {txtPath}: {ex.Message}");
             }
+        }
+
+        /// <summary>The whole .script export, header included, as <see cref="WritePlainTextFile()"/> writes it.</summary>
+        public string BuildPlainTextFile()
+        {
+            StringBuilder content = new StringBuilder();
+
+            // Add file header
+            content.AppendLine("/*");
+            content.AppendLine(" * DSPRE Script File");
+
+            string romFileName = Path.GetFileNameWithoutExtension(RomInfo.projectName);
+            string romFileNameClean = romFileName.EndsWith("_DSPRE_contents")
+                ? romFileName.Substring(0, romFileName.Length - "_DSPRE_contents".Length)
+                : romFileName;
+            content.AppendLine(" * Rom ID: " + romFileNameClean);
+            content.AppendLine(" * Game: " + RomInfo.gameFamily);
+            content.AppendLine($" * File: {fileID:D4}");
+            content.AppendLine($" * Generated: {DateTime.Now}");
+            content.AppendLine(" */");
+            content.AppendLine();
+
+            // Renumber containers and update references before writing
+            RenumberContainers();
+
+            // Add Scripts section
+            content.AppendLine("//===== SCRIPTS =====//");
+            AppendContainerList(content, allScripts, ScriptFile.ContainerTypes.Script);
+
+            // Add Functions section
+            content.AppendLine("//===== FUNCTIONS =====//");
+            AppendContainerList(content, allFunctions, ScriptFile.ContainerTypes.Function);
+
+            // Add Actions section
+            content.AppendLine("//===== ACTIONS =====//");
+            AppendActionList(content, allActions, ScriptFile.ContainerTypes.Action);
+
+            return content.ToString();
         }
 
         /// <summary>
@@ -735,12 +787,20 @@ namespace DSPRE.ROMFiles
         /// <returns>List of remaining invalid commands after reload, empty if all successful</returns>
         public static List<(int fileID, ushort commandID, long offset)> ReloadDatabaseAndReparseAll(string databasePath, Action<int, int> progressCallback = null)
         {
+            // Get the ROM database folder (parent directory of scrcmd_database.json)
+            string romDatabaseFolder = Path.GetDirectoryName(databasePath);
+
+            // Another ROM's database would be applied to this ROM's scripts, and its name files
+            // rewritten with this ROM's names.
+            if (!IsCurrentRomDatabaseFolder(romDatabaseFolder))
+            {
+                AppLogger.Warn($"Script: {databasePath} belongs to another ROM, so it was not loaded into this one.");
+                return new List<(int, ushort, long)>();
+            }
+
             ScriptDatabaseJsonLoader.InitializeFromJson(databasePath, RomInfo.gameVersion);
 
             RomInfo.ReloadScriptCommandDictionaries();
-
-            // Get the ROM database folder (parent directory of scrcmd_database.json)
-            string romDatabaseFolder = Path.GetDirectoryName(databasePath);
 
             // Unpack text archives NARC if needed - required for reading Pokemon/Item/Move/Trainer names
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.textArchives });
@@ -755,16 +815,114 @@ namespace DSPRE.ROMFiles
             // Always regenerate to ensure they match current ROM data
             Resources.ScriptDatabase.ExportEnumJsons(romDatabaseFolder);
 
-            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
-            if (Directory.Exists(expandedDir))
+            ClearInvalidCommands();
+            SetSuppressInvalidCommandErrors(true);
+            try
             {
-                Directory.Delete(expandedDir, true);
+                RegenerateLegacyExports(progressCallback);
+                WriteDatabaseHashMarker();
+            }
+            finally
+            {
+                SetSuppressInvalidCommandErrors(false);
             }
 
-            ClearInvalidCommands();
-            ExportAllScripts(suppressErrors: true, progressCallback: progressCallback);
-
             return GetInvalidCommands();
+        }
+
+        /// <summary>
+        /// Rewrites the legacy <c>.script</c> exports so they are named by the current command database.
+        /// Nothing is deleted: Rotom sources are never touched, an export edited outside DSPRE (newer than
+        /// its binary) is its own source and is kept, and a file that no longer decompiles keeps its
+        /// previous text. In a Rotom project every binary is still parsed, to report unknown commands.
+        /// </summary>
+        private static void RegenerateLegacyExports(Action<int, int> progressCallback)
+        {
+            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
+            bool writeExports = !RomInfo.hasRotomProject;
+            if (writeExports) Directory.CreateDirectory(expandedDir);
+
+            int scriptCount = Filesystem.GetScriptCount();
+            int rewritten = 0, kept = 0;
+
+            for (int i = 0; i < scriptCount; i++)
+            {
+                try
+                {
+                    var (binPath, txtPath) = GetFilePaths(i);
+                    if (!File.Exists(binPath))
+                    {
+                        progressCallback?.Invoke(i + 1, scriptCount);
+                        continue;
+                    }
+
+                    ScriptFile fromBinary;
+                    using (var fs = getFileStream(i))
+                        fromBinary = new ScriptFile(fs, true, true, i);
+
+                    if (writeExports)
+                    {
+                        bool edited = File.Exists(txtPath)
+                            && File.GetLastWriteTimeUtc(txtPath) > File.GetLastWriteTimeUtc(binPath);
+                        string text = edited ? null : fromBinary.ToPlainText(includeActions: true);
+
+                        if (string.IsNullOrEmpty(text))
+                        {
+                            kept++;
+                            if (!edited)
+                                AppLogger.Warn($"Script {i:D4} no longer decompiles with this database; its previous text is kept.");
+                        }
+                        else
+                        {
+                            File.WriteAllText(txtPath, text);
+                            // Newer than the export, so it reads as unedited.
+                            File.SetLastWriteTimeUtc(binPath, DateTime.UtcNow.AddSeconds(1));
+                            rewritten++;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error($"Failed to regenerate script {i:D4}: {ex.Message}");
+                }
+
+                progressCallback?.Invoke(i + 1, scriptCount);
+            }
+
+            ClearPlaintextCache();
+            AppLogger.Info($"Script: {rewritten} .script export(s) regenerated, {kept} kept as they were.");
+        }
+
+        private static void WriteDatabaseHashMarker()
+        {
+            if (RomInfo.hasRotomProject) return;
+            string currentDbHash = GetDatabaseHash();
+            if (string.IsNullOrEmpty(currentDbHash)) return;
+            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
+            Directory.CreateDirectory(expandedDir);
+            File.WriteAllText(Path.Combine(expandedDir, ".database_hash"), currentDbHash);
+        }
+
+        /// <summary>The loaded ROM's folder under <c>edited_databases</c>.</summary>
+        public static string CurrentRomDatabaseFolder()
+        {
+            string baseFileName = Path.GetFileNameWithoutExtension(RomInfo.projectName ?? "");
+            string romFileNameClean = baseFileName.EndsWith(RomInfo.folderSuffix)
+                ? baseFileName.Substring(0, baseFileName.Length - RomInfo.folderSuffix.Length)
+                : baseFileName;
+            return Path.Combine(AppPaths.DatabasePath, "edited_databases", romFileNameClean);
+        }
+
+        public static bool IsCurrentRomDatabaseFolder(string folder)
+        {
+            if (string.IsNullOrWhiteSpace(folder) || string.IsNullOrWhiteSpace(RomInfo.projectName)) return false;
+            try
+            {
+                return string.Equals(Path.GetFullPath(folder).TrimEnd('\\', '/'),
+                    Path.GetFullPath(CurrentRomDatabaseFolder()).TrimEnd('\\', '/'),
+                    StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return false; }
         }
 
         /// <summary>
@@ -772,12 +930,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         private static string GetDatabaseHash()
         {
-            string baseFileName = Path.GetFileNameWithoutExtension(RomInfo.projectName);
-            string romFileNameClean = baseFileName.EndsWith("_DSPRE_contents")
-                ? baseFileName.Substring(0, baseFileName.Length - "_DSPRE_contents".Length)
-                : baseFileName;
-            string romDatabaseFolder = Path.Combine(AppPaths.DatabasePath, "edited_databases", romFileNameClean);
-            string databasePath = Path.Combine(romDatabaseFolder, "scrcmd_database.json");
+            string databasePath = Path.Combine(CurrentRomDatabaseFolder(), "scrcmd_database.json");
 
             if (!File.Exists(databasePath))
                 return string.Empty;
@@ -801,6 +954,12 @@ namespace DSPRE.ROMFiles
         /// <returns>True if export completed, false if cancelled or failed</returns>
         public static bool ExportAllScripts(bool suppressErrors = false, Action<int, int> progressCallback = null)
         {
+            // expanded/scripts holds Rotom's sources there; legacy exports would be converted over them.
+            if (RomInfo.hasRotomProject)
+            {
+                return true;
+            }
+
             string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
             string dbHashMarkerPath = Path.Combine(expandedDir, ".database_hash");
 
@@ -817,9 +976,19 @@ namespace DSPRE.ROMFiles
 
                     if (!string.IsNullOrEmpty(currentDbHash) && currentDbHash != lastDbHash)
                     {
-                        AppLogger.Info($"Script: Database has changed since last export (hash mismatch). Re-exporting all scripts to sync with new database.");
-                        Directory.Delete(expandedDir, true);
-                        Directory.CreateDirectory(expandedDir);
+                        AppLogger.Info($"Script: Database has changed since last export (hash mismatch). Regenerating the unedited exports.");
+                        ClearInvalidCommands();
+                        SetSuppressInvalidCommandErrors(suppressErrors);
+                        try
+                        {
+                            RegenerateLegacyExports(progressCallback);
+                            WriteDatabaseHashMarker();
+                        }
+                        finally
+                        {
+                            SetSuppressInvalidCommandErrors(false);
+                        }
+                        return true;
                     }
                     else
                     {
@@ -905,8 +1074,12 @@ namespace DSPRE.ROMFiles
         /// Scans expanded/scripts/ directory and rebuilds binary script files that are older than their plaintext versions
         /// Call this during ROM save, similar to TextArchive.BuildRequiredBins()
         /// </summary>
-        public static bool BuildRequiredBins()
+        public static bool BuildRequiredBins() => BuildRequiredBins(out _);
+
+        /// <param name="error">Names every .script that could not be built, which were all left untouched.</param>
+        public static bool BuildRequiredBins(out string error)
         {
+            error = null;
             // Unpack text archives NARC if needed - required for reading Pokemon/Item/Move/Trainer names
             // The InitializeXxxNames() methods below depend on TextArchive being readable
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.textArchives });
@@ -930,6 +1103,7 @@ namespace DSPRE.ROMFiles
             var expandedScriptFiles = Directory.GetFiles(expandedDir, "*.script", SearchOption.AllDirectories);
             int newerBinCount = 0;
             int rebuiltCount = 0;
+            var failed = new List<string>();
 
             for (int i = 0; i < expandedScriptFiles.Length; i++)
             {
@@ -960,7 +1134,19 @@ namespace DSPRE.ROMFiles
                 try
                 {
                     var scriptFile = new ScriptFile(scriptID);
-                    scriptFile.SaveToFileDefaultDir(scriptID, false);
+                    // Falling back to the binary here would rebuild the old script and then regenerate
+                    // the .script from it, throwing the edit away.
+                    if (scriptFile.plaintextParseFailed)
+                    {
+                        failed.Add(Path.GetFileName(expandedScriptFile) + " does not parse");
+                        continue;
+                    }
+
+                    if (!scriptFile.SaveToFileDefaultDir(scriptID, false))
+                    {
+                        failed.Add(Path.GetFileName(expandedScriptFile) + " could not be compiled");
+                        continue;
+                    }
                     rebuiltCount++;
 
                     // Update .script last write time to prevent it being overwritten when reopening the ROM
@@ -969,10 +1155,18 @@ namespace DSPRE.ROMFiles
                 catch (Exception ex)
                 {
                     AppLogger.Error($"Failed to rebuild script {scriptID:D4} from plaintext: {ex.Message}");
+                    failed.Add(Path.GetFileName(expandedScriptFile) + ": " + ex.Message);
                 }
             }
 
             AppLogger.Info($"Script: {rebuiltCount} .bin files built from .script, {newerBinCount} .bin files skipped because they were newer than the .script");
+
+            if (failed.Count > 0)
+            {
+                error = "These script files could not be built and were left as they are:\n" + string.Join("\n", failed);
+                AppLogger.Error(error);
+                return false;
+            }
 
             return true;
         }
@@ -1650,6 +1844,7 @@ namespace DSPRE.ROMFiles
                     int scriptsCount = scriptOffsets.Count;
                     foreach (ScriptCommandContainer caller in useScriptCallers)
                     {
+                        bool resolved = false;
                         for (int i = 0; i < scriptsCount; i++)
                         {
                             ContainerReference scriptReference = scriptOffsets[i];
@@ -1661,7 +1856,17 @@ namespace DSPRE.ROMFiles
                                     ID = caller.manualUserID,
                                     offsetInFile = scriptReference.offsetInFile
                                 }); // If script has UseScript, copy offset
+                                resolved = true;
+                                break;
                             }
+                        }
+
+                        // A missing header entry would shift every later script id by one.
+                        if (!resolved)
+                        {
+                            AppMessages.Error($"Script #{caller.manualUserID} refers to Script {caller.usedScriptID}, which does not exist.\n" +
+                                            $"This Script File can't be saved.", "Can't resolve UseScript reference");
+                            return null;
                         }
                     }
 
@@ -1916,6 +2121,7 @@ namespace DSPRE.ROMFiles
             if (success)
             {
                 WritePlainTextFile();
+                _ = ScriptSourceSync.BinaryWritten(IDtoReplace);
             }
 
             return success;

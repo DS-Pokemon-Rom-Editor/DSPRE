@@ -185,8 +185,19 @@ namespace DSPRE.ROMFiles
             if (!File.Exists(path)) return Path.GetFileName(path) + " is not there any more.";
 
             string[] lines;
-            try { lines = File.ReadAllLines(path); }
+            string newline;
+            bool endsWithNewline;
+            try
+            {
+                string text = File.ReadAllText(path);
+                // Written back with the file's own line endings rather than the platform's.
+                newline = text.Contains("\r\n") ? "\r\n" : "\n";
+                endsWithNewline = text.EndsWith("\n");
+                lines = text.Replace("\r\n", "\n").Split('\n');
+                if (endsWithNewline) lines = lines.Take(lines.Length - 1).ToArray();
+            }
             catch (Exception ex) { return "Could not read the script source: " + ex.Message; }
+            void Write() => File.WriteAllText(path, string.Join(newline, lines) + (endsWithNewline ? newline : ""));
 
             if (m.LineNumber < 1 || m.LineNumber > lines.Length)
                 return "That line is no longer in the file.";
@@ -203,14 +214,14 @@ namespace DSPRE.ROMFiles
             lines[m.LineNumber - 1] =
                 $"{indent}GivePokemon {give.Groups[1].Value.Trim()}, {newLevel}, {newItem}{tail}";
 
-            try { File.WriteAllLines(path, lines); }
+            try { Write(); }
             catch (Exception ex) { return "Could not write the script source: " + ex.Message; }
 
-            string failure = await CompileProjectAsync();
+            string failure = await CompileProjectAsync(path);
             if (failure != null)
             {
                 lines[m.LineNumber - 1] = original;
-                try { File.WriteAllLines(path, lines); } catch { }
+                try { Write(); } catch { }
                 return failure;
             }
 
@@ -225,15 +236,16 @@ namespace DSPRE.ROMFiles
         /// where rotom.toml is and how it finds its database and constants. It only rebuilds what
         /// changed, so this costs one file.
         /// </summary>
-        private static async Task<string> CompileProjectAsync()
+        private static async Task<string> CompileProjectAsync(string sourcePath)
         {
             if (!RotomTool.IsAvailable) return "The rotom tool is not available, so nothing was saved.";
             try
             {
-                var result = await RotomTool.RunAsync("compile", "--json");
-                if (!result.Success)
-                    return "The script did not compile, so it was put back as it was: "
-                         + RotomTool.FormatResult(result);
+                // Only this file decides: another source failing must not undo the starter edit.
+                var result = await RotomTool.CompileProjectAsync();
+                string failure = RotomTool.FailureFor(result, sourcePath);
+                if (failure != null)
+                    return "The script did not compile, so it was put back as it was: " + failure;
             }
             catch (Exception ex)
             {
