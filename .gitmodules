@@ -1,0 +1,6 @@
+[submodule "Tools/rotom-src"]
+	path = Tools/rotom-src
+	url = https://github.com/DS-Pokemon-Rom-Editor/rotom.git
+[submodule "Tools/chatot-src"]
+	path = Tools/chatot-src
+	url = https://github.com/DS-Pokemon-Rom-Editor/chatot.git
