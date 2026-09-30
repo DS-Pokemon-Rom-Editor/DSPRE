@@ -32,6 +32,8 @@ namespace DSPRE.Avalonia.Controls
         private bool _showAllItems;
         private bool _refreshingDropDown;
         private bool _textChangedSinceLastOpen;
+        private bool _selectionPending;
+        private bool _anyContainsText;
         private object _lastCommittedItem;
         private INotifyCollectionChanged _itemsSourceCollection;
 
@@ -118,6 +120,7 @@ namespace DSPRE.Avalonia.Controls
                 _editingText = true;
                 _showAllItems = false;
                 _textChangedSinceLastOpen = true;
+                _anyContainsText = AnyItemContains(Text);
                 SetCurrentValue(TextFilterProperty, FilterText);
             }
 
@@ -176,6 +179,14 @@ namespace DSPRE.Avalonia.Controls
 
         private void OnSelectedItemChanged(object item)
         {
+            // AutoCompleteBox selects an item as soon as the typed text equals it, so "Mew" would load on
+            // the way to "Mewtwo". Hold it until the edit is committed or the list closes.
+            if (item != null && _editingText && IsDropDownOpen)
+            {
+                _selectionPending = true;
+                return;
+            }
+
             if (item != null)
             {
                 _lastCommittedItem = item;
@@ -189,6 +200,18 @@ namespace DSPRE.Avalonia.Controls
             }
             // AutoCompleteBox clears SelectedItem while the user has only typed a prefix. Keep the
             // index and last committed value until CommitText decides whether that edit is valid.
+        }
+
+        private void ApplyPendingSelection()
+        {
+            if (!_selectionPending)
+            {
+                return;
+            }
+
+            _selectionPending = false;
+            _editingText = false;
+            OnSelectedItemChanged(SelectedItem);
         }
 
         private void ApplySelectedIndex()
@@ -221,6 +244,8 @@ namespace DSPRE.Avalonia.Controls
         {
             if (!isOpen)
             {
+                ApplyPendingSelection();
+
                 if (!_refreshingDropDown)
                 {
                     _showAllItems = false;
@@ -250,6 +275,8 @@ namespace DSPRE.Avalonia.Controls
 
         private void CommitText()
         {
+            ApplyPendingSelection();
+
             if (SelectedItem != null && FindItemIndex(SelectedItem) >= 0)
             {
                 _lastCommittedItem = SelectedItem;
@@ -302,6 +329,12 @@ namespace DSPRE.Avalonia.Controls
                 return !string.IsNullOrEmpty(itemText);
             }
 
+            // Near misses only help when nothing holds the text, or "729" would list 29, 72 and 79 above it.
+            if (_anyContainsText)
+            {
+                return false;
+            }
+
             string query = global::DSPRE.SearchMatch.Fold(searchText.Trim());
             if (query.Length < 3)
             {
@@ -312,6 +345,26 @@ namespace DSPRE.Avalonia.Controls
             foreach (string token in itemText.Split(new[] { ' ', '_', '-', '.', ',', '[', ']', '(', ')', '/' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 if (global::DSPRE.CoreExtensions.Levenshtein(query, global::DSPRE.SearchMatch.Fold(token)) <= threshold)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool AnyItemContains(string text)
+        {
+            if (ItemsSource == null || string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            string query = text.Trim();
+            foreach (object item in ItemsSource)
+            {
+                string itemText = FormatValue(item);
+                if (!string.IsNullOrEmpty(itemText) && global::DSPRE.SearchMatch.Contains(itemText, query))
                 {
                     return true;
                 }
