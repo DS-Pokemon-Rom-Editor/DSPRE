@@ -1,8 +1,8 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vc="clr-namespace:DSPRE.Avalonia.Views.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
-        xmlns:gif="clr-namespace:Avalonia.Labs.Gif;assembly=Avalonia.Labs.Gif"
         x:Class="DSPRE.Avalonia.Views.World.HeaderFieldsView"
         x:DataType="vm:HeaderEditorViewModel">
   <!-- The header detail form. Shared by the standalone Header editor and the Maps workspace's Header tab.
@@ -74,10 +74,28 @@
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Weather"/>
-              <Grid ColumnDefinitions="90,6,*">
+              <Grid ColumnDefinitions="90,6,*,4,Auto">
                 <NumericUpDown Width="90" Minimum="0" Maximum="{Binding WeatherMax}" Value="{Binding WeatherValue}"/>
                 <ComboBox Grid.Column="2" ItemsSource="{Binding Weather.Names}" SelectedIndex="{Binding WeatherComboIndex}"/>
+                <Button Grid.Column="4" Classes="small" controls:Icon.Key="help" ToolTip.Tip="Weather and map memory"
+                        IsVisible="{Binding WeatherRoomChecked}">
+                  <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                      <StackPanel Spacing="6" Width="300">
+                        <TextBlock TextWrapping="Wrap"
+                                   Text="Large weather backgrounds share memory with the area's buildings and textures. Arriving by door, Fly or a loaded save with too little left shows a black screen. Walking in from the next map is fine."/>
+                        <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"
+                                   Text="Estimated from the area data. Platinum only."/>
+                        <TextBlock TextWrapping="Wrap" Text="{Binding WeatherRoomDetail}" IsVisible="{Binding WeatherRoomDetail, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                      </StackPanel>
+                    </Flyout>
+                  </Button.Flyout>
+                </Button>
               </Grid>
+              <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasWeatherRoomWarning}" ToolTip.Tip="{Binding WeatherRoomDetail}">
+                <controls:IconImage Key="warning"/>
+                <TextBlock Text="{Binding WeatherRoomWarning}" Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+              </StackPanel>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Camera angle"/>
@@ -133,7 +151,7 @@
             <TextBlock Grid.Row="6" Grid.Column="3" Classes="inlinelabel" Text="Battle BG"/>
             <StackPanel Grid.Row="6" Grid.Column="4" Orientation="Horizontal" Spacing="6">
               <NumericUpDown Width="90" Minimum="0" Maximum="{Binding BattleBackgroundMax}" Value="{Binding BattleBackground}"/>
-              <Button Content="Open" controls:Icon.Key="link" Click="OpenBattleScenery_Click" Padding="8,2"
+              <Button x:Name="OpenBattleSceneryButton" Content="Open" controls:Icon.Key="link" Click="OpenBattleScenery_Click" Padding="8,2"
                       ToolTip.Tip="Show this scenery and every place that fights on it"/>
             </StackPanel>
           </Grid>
@@ -184,35 +202,19 @@
 
       </StackPanel>
 
-      <!-- ── Right: preview rail. The images are DS-resolution (256x192) screenshots and
-           ~130x37 pixel banners, so they get big fixed frames instead of thumbnails. ── -->
-      <StackPanel x:Name="PreviewRail" Grid.Column="1" Width="260" Spacing="10">
+      <!-- ── Right: preview rail. The area icon is a ~130x37 pixel banner, so it gets a big fixed frame. ── -->
+      <StackPanel x:Name="PreviewRail" Grid.Column="1" Width="290" Spacing="10">
         <GroupBox Header="Area Icon" IsVisible="{Binding ShowAreaIcon}">
           <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
                   BorderThickness="1" Height="56" Padding="3">
             <Image Source="{Binding AreaIconImage}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
           </Border>
         </GroupBox>
-        <GroupBox Header="Weather">
+        <!-- The header's camera and weather at the top screen's own size, 256 by 192. -->
+        <GroupBox Header="Field View">
           <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
-                  BorderThickness="1" Height="176">
-            <Grid>
-              <Image Source="{Binding WeatherImage}" Stretch="Uniform" IsVisible="{Binding !WeatherIsAnimated}"/>
-              <!-- An empty GifImage still tries to decode under software rendering, so it only exists with a source. -->
-              <ContentControl Content="{Binding WeatherGifSource}" IsVisible="{Binding WeatherIsAnimated}">
-                <ContentControl.ContentTemplate>
-                  <DataTemplate x:DataType="gif:IGifSource">
-                    <gif:GifImage Source="{Binding}" Stretch="Uniform" StretchDirection="Both"/>
-                  </DataTemplate>
-                </ContentControl.ContentTemplate>
-              </ContentControl>
-            </Grid>
-          </Border>
-        </GroupBox>
-        <GroupBox Header="Camera Angle">
-          <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
-                  BorderThickness="1" Height="176">
-            <Image Source="{Binding CameraImage}" Stretch="Uniform"/>
+                  BorderThickness="1" Width="258" Height="194" HorizontalAlignment="Center">
+            <vc:CameraPreview x:Name="CameraPreviewBox"/>
           </Border>
         </GroupBox>
       </StackPanel>

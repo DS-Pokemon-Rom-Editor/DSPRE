@@ -13,7 +13,6 @@ using global::Avalonia.Controls;
 using global::Avalonia.Threading;
 using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
-using global::Avalonia.Labs.Gif;
 using DSPRE.Avalonia;
 using DSPRE.Avalonia.Models;
 using DSPRE.Editors;
@@ -212,7 +211,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string InternalNameLen { get => _internalNameLen; set => Set(ref _internalNameLen, value); }
 
         private decimal _matrixId; public decimal MatrixId { get => _matrixId; set { if (Set(ref _matrixId, value)) Apply(h => h.matrixID = (ushort)value); } }
-        private decimal _areaDataId; public decimal AreaDataId { get => _areaDataId; set { if (Set(ref _areaDataId, value)) Apply(h => h.areaDataID = (byte)value); } }
+        private decimal _areaDataId; public decimal AreaDataId { get => _areaDataId; set { if (Set(ref _areaDataId, value)) { Apply(h => h.areaDataID = (byte)value); UpdateWeatherRoom(); } } }
         private decimal _scriptFileId; public decimal ScriptFileId { get => _scriptFileId; set { if (Set(ref _scriptFileId, value)) Apply(h => h.scriptFileID = (ushort)value); } }
         private decimal _levelScriptId; public decimal LevelScriptId { get => _levelScriptId; set { if (Set(ref _levelScriptId, value)) Apply(h => h.levelScriptID = (ushort)value); } }
         private decimal _eventFileId; public decimal EventFileId { get => _eventFileId; set { if (Set(ref _eventFileId, value)) Apply(h => h.eventFileID = (ushort)value); } }
@@ -225,12 +224,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         private int NullEncounterId => IsHgss ? MapHeader.HGSS_NULL_ENCOUNTER_FILE_ID : MapHeader.DPPT_NULL_ENCOUNTER_FILE_ID;
         public bool CanOpenEncounters => _header != null && (int)_wildPokemon != NullEncounterId;
 
-        // ── Camera (combo + numeric + image) ─────────────────────────────────────────
+        // ── Camera (combo + numeric) ─────────────────────────────────────────────────
         private decimal _cameraValue;
         public decimal CameraValue
         {
             get => _cameraValue;
-            set { if (Set(ref _cameraValue, value)) { Apply(h => h.cameraAngleID = (byte)value); SyncCameraCombo(); UpdateCameraImage(); } }
+            set { if (Set(ref _cameraValue, value)) { Apply(h => h.cameraAngleID = (byte)value); SyncCameraCombo(); } }
         }
         private int _cameraComboIndex = -1;
         public int CameraComboIndex
@@ -238,14 +237,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _cameraComboIndex;
             set { if (Set(ref _cameraComboIndex, value) && !_suppress && value >= 0) CameraValue = Camera.KeyAt(value); }
         }
-        private Bitmap _cameraImage; public Bitmap CameraImage { get => _cameraImage; set => Set(ref _cameraImage, value); }
 
-        // ── Weather (combo + numeric + image) ────────────────────────────────────────
+        // ── Weather (combo + numeric) ────────────────────────────────────────────────
         private decimal _weatherValue;
         public decimal WeatherValue
         {
             get => _weatherValue;
-            set { if (Set(ref _weatherValue, value)) { Apply(h => h.weatherID = (byte)value); SyncWeatherCombo(); UpdateWeatherImage(); } }
+            set { if (Set(ref _weatherValue, value)) { Apply(h => h.weatherID = (byte)value); SyncWeatherCombo(); UpdateWeatherRoom(); } }
         }
         private int _weatherComboIndex = -1;
         public int WeatherComboIndex
@@ -253,14 +251,25 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _weatherComboIndex;
             set { if (Set(ref _weatherComboIndex, value) && !_suppress && value >= 0) WeatherValue = Weather.KeyAt(value); }
         }
-        private Bitmap _weatherImage; public Bitmap WeatherImage { get => _weatherImage; set => Set(ref _weatherImage, value); }
-        private IGifSource _weatherGifSource;
-        public IGifSource WeatherGifSource
+
+        public bool WeatherRoomChecked => RomInfo.gameFamily == GameFamilies.Plat;
+
+        private string _weatherRoomWarning;
+        /// <summary>Set when the weather's background is estimated not to fit next to this header's area data.</summary>
+        public string WeatherRoomWarning { get => _weatherRoomWarning; private set { if (Set(ref _weatherRoomWarning, value)) OnPropertyChanged(nameof(HasWeatherRoomWarning)); } }
+        public bool HasWeatherRoomWarning => _weatherRoomWarning != null;
+
+        private string _weatherRoomDetail;
+        public string WeatherRoomDetail { get => _weatherRoomDetail; private set => Set(ref _weatherRoomDetail, value); }
+
+        private void UpdateWeatherRoom()
         {
-            get => _weatherGifSource;
-            set { if (Set(ref _weatherGifSource, value)) OnPropertyChanged(nameof(WeatherIsAnimated)); }
+            OnPropertyChanged(nameof(WeatherRoomChecked));
+            var room = FieldWeatherRoom.Check((int)_weatherValue, (int)_areaDataId);
+            WeatherRoomDetail = room == null ? null
+                : $"Background needs {room.Needed:N0} bytes. Area {(int)_areaDataId} leaves about {Math.Max(0, room.Free):N0}.";
+            WeatherRoomWarning = room == null || room.Fits ? null : "May black-screen on door, Fly or save loads";
         }
-        public bool WeatherIsAnimated => _weatherGifSource != null;
 
         // ── Music day / night (combo + numeric) ──────────────────────────────────────
         private decimal _musicDayValue;
@@ -386,7 +395,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public HeaderEditorViewModel(bool _) { AppEvents.HeaderSaved += OnSavedElsewhere; }
 
         /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
-        public void Detach() => AppEvents.HeaderSaved -= OnSavedElsewhere;
+        public void Detach()
+        {
+            AppEvents.HeaderSaved -= OnSavedElsewhere;
+            AppEvents.LabelsChanged -= OnLabelsChanged;
+        }
 
         // Another open copy of this header saved: show it, unless this copy holds its own edits.
         private void OnSavedElsewhere(object sender, int id)
@@ -448,35 +461,37 @@ namespace DSPRE.Avalonia.ViewModels.World
             switch (gameFamily)
             {
                 case GameFamilies.DP:
-                    Camera.Load(PokeDatabase.CameraAngles.DPPtCameraDict);
+                    Camera.LoadLabels(LabelStore.CameraKey);
                     MusicDay.Load(PokeDatabase.MusicDB.DPMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.DPMusicDict);
-                    Weather.Load(PokeDatabase.Weather.DPWeatherDict);
+                    Weather.LoadLabels(LabelStore.WeatherKey);
                     foreach (var s in PokeDatabase.MapType.DPPtValues) AreaSettingsItems.Add(s);
                     ShowAreaIcon = false;
                     WildPokeMax = 65535;
                     break;
                 case GameFamilies.Plat:
-                    Camera.Load(PokeDatabase.CameraAngles.PtCameraDict);
+                    Camera.LoadLabels(LabelStore.CameraKey);
                     MusicDay.Load(PokeDatabase.MusicDB.PtMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.PtMusicDict);
-                    Weather.Load(PokeDatabase.Weather.PtWeatherDict);
+                    Weather.LoadLabels(LabelStore.WeatherKey);
                     foreach (var s in PokeDatabase.MapType.DPPtValues) AreaSettingsItems.Add(s);
                     foreach (var s in PokeDatabase.Area.PtAreaIconValues) AreaIconItems.Add(s);
                     ShowAreaIcon = true;
                     WildPokeMax = 65535;
                     break;
                 default:
-                    Camera.Load(PokeDatabase.CameraAngles.HGSSCameraDict);
+                    Camera.LoadLabels(LabelStore.CameraKey);
                     MusicDay.Load(PokeDatabase.MusicDB.HGSSMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.HGSSMusicDict);
-                    Weather.Load(PokeDatabase.Weather.HGSSWeatherDict);
+                    Weather.LoadLabels(LabelStore.WeatherKey);
                     foreach (var s in PokeDatabase.Area.HGSSAreaProperties) AreaSettingsItems.Add(s);
                     foreach (var s in PokeDatabase.Area.HGSSAreaIconsDict.Values) AreaIconItems.Add(s);
                     ShowAreaIcon = true;
                     WildPokeMax = 255;
                     break;
             }
+            AppEvents.LabelsChanged -= OnLabelsChanged;
+            AppEvents.LabelsChanged += OnLabelsChanged;
             OnPropertyChanged(nameof(ShowAreaIcon));
             OnPropertyChanged(nameof(WildPokeMax));
             OnPropertyChanged(nameof(BattleBackgroundMax));
@@ -932,6 +947,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 BattleBackground = _header.battleBackground;
                 CameraValue = _header.cameraAngleID;
                 WeatherValue = _header.weatherID;
+                UpdateWeatherRoom();
                 MusicDayValue = _header.musicDayID;
                 MusicNightValue = _header.musicNightID;
 
@@ -968,8 +984,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(ShowHgssOnly));
 
                 LoadFlags();
-                SyncCameraCombo(); UpdateCameraImage();
-                SyncWeatherCombo(); UpdateWeatherImage();
+                SyncCameraCombo();
+                SyncWeatherCombo();
                 // Refilled combos drop their selection, and an unchanged value skips the setter's sync.
                 SyncMusicCombo(MusicDay, (int)_musicDayValue, i => _musicDayComboIndex = i, nameof(MusicDayComboIndex));
                 SyncMusicCombo(MusicNight, (int)_musicNightValue, i => _musicNightComboIndex = i, nameof(MusicNightComboIndex));
@@ -1076,26 +1092,22 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Combo / image sync ───────────────────────────────────────────────────────
+        // A renamed camera or weather shows at once; the closed combos are poked on a later frame, since an
+        // in-place relabel of the selected item otherwise leaves a stale display.
+        private void OnLabelsChanged(object sender, EventArgs e)
+        {
+            Camera.LoadLabels(LabelStore.CameraKey);
+            Weather.LoadLabels(LabelStore.WeatherKey);
+            _cameraComboIndex = -1; OnPropertyChanged(nameof(CameraComboIndex));
+            _weatherComboIndex = -1; OnPropertyChanged(nameof(WeatherComboIndex));
+            Dispatcher.UIThread.Post(() => { SyncCameraCombo(); SyncWeatherCombo(); }, DispatcherPriority.Background);
+        }
+
         private void SyncCameraCombo() { _cameraComboIndex = Camera.IndexOf((int)_cameraValue); OnPropertyChanged(nameof(CameraComboIndex)); }
         private void SyncWeatherCombo() { _weatherComboIndex = Weather.IndexOf((int)_weatherValue); OnPropertyChanged(nameof(WeatherComboIndex)); }
         private void SyncMusicCombo(MappedCombo combo, int value, Action<int> setBacking, string propName)
         { setBacking(combo.IndexOf(value)); OnPropertyChanged(propName); }
 
-        private void UpdateCameraImage()
-        {
-            string prefix = gameFamily == GameFamilies.DP ? "dpcamera" : gameFamily == GameFamilies.Plat ? "ptcamera" : "hgsscamera";
-            CameraImage = ResImage(prefix + ((int)_cameraValue));
-        }
-        private void UpdateWeatherImage()
-        {
-            Dictionary<byte[], string> dict = gameFamily == GameFamilies.DP ? PokeDatabase.System.WeatherPics.dpWeatherImageDict
-                : gameFamily == GameFamilies.Plat ? PokeDatabase.System.WeatherPics.ptWeatherImageDict
-                : PokeDatabase.System.WeatherPics.hgssweatherImageDict;
-            string name = null;
-            foreach (var e in dict) if (Array.IndexOf(e.Key, (byte)_weatherValue) >= 0) { name = e.Value; break; }
-            WeatherGifSource = name != null ? ResourceImages.GetGifSource(name) : null;
-            WeatherImage = WeatherGifSource == null && name != null ? ResImage(name) : null;
-        }
         private void UpdateAreaIconImage()
         {
             string name = null;

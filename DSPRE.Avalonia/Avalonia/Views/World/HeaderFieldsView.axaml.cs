@@ -9,7 +9,63 @@ namespace DSPRE.Avalonia.Views.World
     {
         private HeaderEditorViewModel VM => DataContext as HeaderEditorViewModel;
 
-        public HeaderFieldsView() => InitializeComponent();
+        public HeaderFieldsView()
+        {
+            InitializeComponent();
+            OpenBattleSceneryButton.IsVisible = BetaEditors.Allows("BattleSceneBrowserView");
+            DataContextChanged += (_, _) => Watch(VM);
+            AttachedToVisualTree += (_, _) =>
+            {
+                DSPRE.GameCameraTable.Saved += OnPreviewSourceSaved;
+                DSPRE.FlyTable.Saved += OnPreviewSourceSaved;
+                AppEvents.MapSaved += OnMapSaved;
+                ShowCamera();
+            };
+            DetachedFromVisualTree += (_, _) =>
+            {
+                DSPRE.GameCameraTable.Saved -= OnPreviewSourceSaved;
+                DSPRE.FlyTable.Saved -= OnPreviewSourceSaved;
+                AppEvents.MapSaved -= OnMapSaved;
+            };
+        }
+
+        private HeaderEditorViewModel _watched;
+
+        private void Watch(HeaderEditorViewModel vm)
+        {
+            if (_watched != null) _watched.PropertyChanged -= OnVmChanged;
+            _watched = vm;
+            if (_watched != null) _watched.PropertyChanged += OnVmChanged;
+            ShowCamera();
+        }
+
+        private void OnVmChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is null or nameof(HeaderEditorViewModel.CameraValue) or nameof(HeaderEditorViewModel.WeatherValue)
+                or nameof(HeaderEditorViewModel.CurrentHeaderId))
+                ShowCamera();
+        }
+
+        private void OnPreviewSourceSaved(object sender, System.EventArgs e) => global::Avalonia.Threading.Dispatcher.UIThread.Post(ShowCamera);
+
+        private void OnMapSaved(object sender, int map) =>
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { CameraPreviewBox.Reload(); ShowCamera(); });
+
+        private void ShowCamera()
+        {
+            var vm = VM;
+            if (vm == null || !IsAttachedToVisualTree()) return;
+            var camera = DSPRE.ROMFiles.FieldCamera.Entry((int)vm.CameraValue, RomInfo.gameFamily);
+            CameraPreviewBox.ShowWeather((int)vm.WeatherValue);
+            // Framed where you arrive by Fly; a place without a fly spot borrows the starting town's.
+            var spots = DSPRE.FlyTable.Spots();
+            int own = spots.FindIndex(s => s.HeaderId == vm.CurrentHeaderId);
+            if (own >= 0) CameraPreviewBox.Show(spots[own].HeaderId, camera, (spots[own].X, spots[own].Z));
+            else if (spots.Count > 0) CameraPreviewBox.Show(spots[0].HeaderId, camera, (spots[0].X, spots[0].Z));
+            else CameraPreviewBox.Show(vm.CurrentHeaderId, camera);
+        }
+
+        private bool IsAttachedToVisualTree() => TopLevel.GetTopLevel(this) != null;
 
         private void OpenMatrix_Click(object sender, RoutedEventArgs e) => VM?.OpenMatrix();
         private void OpenAreaData_Click(object sender, RoutedEventArgs e) => VM?.OpenAreaData();
