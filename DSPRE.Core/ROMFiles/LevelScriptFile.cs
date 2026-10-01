@@ -149,6 +149,19 @@ namespace DSPRE.ROMFiles
             }
         }
 
+        /// <summary>Why the game cannot run this level script as it stands, or null.</summary>
+        public string Problem()
+        {
+            int n = 0;
+            foreach (LevelScriptTrigger t in bufferSet)
+            {
+                n++;
+                if (t is VariableValueTrigger v && v.Problem() is string why)
+                    return $"Trigger {n} {why}.";
+            }
+            return null;
+        }
+
         /// <summary>Writes script file <paramref name="id"/> and keeps its Rotom source in step.</summary>
         public long SaveToFileDefaultDir(int id, bool word_alignment_padding = false)
         {
@@ -201,11 +214,7 @@ namespace DSPRE.ROMFiles
 
                 if (word_alignment_padding)
                 {
-                    long missing_bytes = bw.BaseStream.Position % 4;
-                    for (int i = 0; i < 4 - missing_bytes; i++)
-                    {
-                        bw.Write((byte)0);
-                    }
+                    while (bw.BaseStream.Position % 4 != 0) bw.Write((byte)0);
                 }
 
                 return bw.BaseStream.Position;

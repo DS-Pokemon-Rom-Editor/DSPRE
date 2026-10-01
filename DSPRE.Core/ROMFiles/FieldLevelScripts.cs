@@ -63,9 +63,7 @@ namespace DSPRE.ROMFiles
                && Resolve(t.variableToWatch, valueOf) == Resolve(t.expectedValue, valueOf);
 
         private static int Resolve(int operand, Func<int, int> valueOf)
-            => operand >= FirstVariable ? valueOf(operand) : operand;
-
-        private const int FirstVariable = 0x4000;
+            => operand >= VariableValueTrigger.FirstVariable ? valueOf(operand) : operand;
 
         /// <summary>Plain wording for when one of these runs, for showing somebody what the map does.</summary>
         public static string WhenItRuns(LevelScriptTrigger trigger)
@@ -78,7 +76,7 @@ namespace DSPRE.ROMFiles
                     return v == null
                         ? "Every step, once a variable holds the right value"
                         : $"Every step, once {FieldScriptValues.Describe(v.variableToWatch)} holds "
-                          + (v.expectedValue >= FirstVariable ? $"the value of {FieldScriptValues.Describe(v.expectedValue)}" : v.expectedValue.ToString());
+                          + (v.expectedValue >= VariableValueTrigger.FirstVariable ? $"the value of {FieldScriptValues.Describe(v.expectedValue)}" : v.expectedValue.ToString());
                 case LevelScriptTrigger.MAPCHANGE: return "On warping in, before the map loads";
                 case LevelScriptTrigger.SCREENRESET: return "While the map sets up, once the music starts";
                 case LevelScriptTrigger.LOADGAME: return "While the map sets up, before its data loads";

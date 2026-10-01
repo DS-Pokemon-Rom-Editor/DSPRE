@@ -46,13 +46,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public int TriggerTypeIndex { get => _typeIndex; set { if (Set(ref _typeIndex, value)) OnPropertyChanged(nameof(IsVariableType)); } }
         public bool IsVariableType => _typeIndex == 0;
 
-        private decimal _newScriptId, _newVariable, _newValue;
+        private decimal _newScriptId, _newVariable = VariableValueTrigger.FirstVariable, _newValue;
         public decimal NewScriptId
         {
             get => _newScriptId;
             set { if (Set(ref _newScriptId, value)) { OnPropertyChanged(nameof(NewScriptCommonInfo)); OnPropertyChanged(nameof(NewScriptHasCommonInfo)); } }
         }
         public decimal NewVariable { get => _newVariable; set => Set(ref _newVariable, value); }
+        public decimal FirstVariable => VariableValueTrigger.FirstVariable;
+        public decimal LastVariable => VariableValueTrigger.LastVariable;
         public decimal NewValue { get => _newValue; set => Set(ref _newValue, value); }
 
         /// <summary>A script number of 2000+ on Platinum/HGSS may be a "common"/global script rather than
@@ -76,7 +78,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
         public bool NewScriptHasCommonInfo => !string.IsNullOrEmpty(NewScriptCommonInfo);
 
-        private bool _padding;
+        // The game's level scripts end on a 4-byte boundary.
+        private bool _padding = true;
         public bool WordAlignmentPadding { get => _padding; set => Set(ref _padding, value); }
 
         private int _selScript = -1;
@@ -221,6 +224,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public void Save()
         {
             if (_file == null || _selScript < 0) return;
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Level Script Editor"); return; }
             try
             {
                 _file.SaveToFileDefaultDir(_selScript, _padding);

@@ -917,6 +917,14 @@ namespace DSPRE
 
         public const uint FirstVariableOverworld = 101, LastVariableOverworld = 116;
 
+        /// <summary>
+        /// How many save variables follow 0x4000; an id past them reads outside the game's table. The
+        /// decompilations give 0x120 for Diamond, Pearl and Platinum and 0x170 for HeartGold and SoulSilver.
+        /// hg-engine's layout is not pinned down, so it is only held to the script-memory boundary.
+        /// </summary>
+        public static int SaveVariableCount =>
+            isHGE ? 0x4000 : gameFamily == GameFamilies.HGSS ? 0x170 : 0x120;
+
         /// <summary>Whether an overworld id takes its picture from a map variable rather than the sprite table.</summary>
         public static bool IsVariableOverworld(uint id) =>
             (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)

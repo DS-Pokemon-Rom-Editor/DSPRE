@@ -46,9 +46,10 @@
                      IsVisible="{Binding NewScriptHasCommonInfo}"/>
           <StackPanel Spacing="6" IsVisible="{Binding IsVariableType}">
             <TextBlock Text="Variable to watch" FontSize="12"/>
-            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewVariable}"/>
+            <NumericUpDown Minimum="{Binding FirstVariable}" Maximum="{Binding LastVariable}" Increment="1" Value="{Binding NewVariable}"/>
             <TextBlock Text="Expected value" FontSize="12"/>
-            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding NewValue}"/>
+            <NumericUpDown Minimum="0" Maximum="{Binding LastVariable}" Increment="1" Value="{Binding NewValue}"
+                           ToolTip.Tip="{Binding FirstVariable, StringFormat='From {0} this is another variable to compare with'}"/>
           </StackPanel>
           <Button Content="Add trigger" HorizontalAlignment="Stretch" Click="Add_Click" Margin="0,4,0,0"/>
         </StackPanel>
