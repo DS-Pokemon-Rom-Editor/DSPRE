@@ -790,7 +790,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (edited.Count > 0) AppEvents.RaiseNamesChanged();
             StatusText = $"Replace complete: {edited.Count} archive(s) edited"
                          + (skipped > 0 ? $", {skipped} hg-engine archive(s) skipped." : ".");
-            await DialogHelper.ShowInfo("Operation completed.", "Replace All Text");
         }
 
         /// <summary>Navigate to a search result (used on double-click).</summary>

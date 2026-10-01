@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 CharMapManager.SaveCharMap(_currentMap, saveToCustomPath: true);
                 SetDirty(false);
-                await DialogHelper.ShowInfo("Charmap saved successfully!", "Success");
+                SaveNotice.Show("Character map saved.");
             }
             catch (Exception ex)
             {

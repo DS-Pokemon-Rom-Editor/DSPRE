@@ -16,7 +16,7 @@ namespace DSPRE.ROMFiles {
             File.WriteAllBytes(path, romFileToByteArray);
 
             if (showSuccessMessage) {
-                AppMessages.Info(GetType().Name + " saved successfully!");
+                AppMessages.Info($"Saved {GetType().Name} {Path.GetFileName(path)}.");
             }
 
             return true;

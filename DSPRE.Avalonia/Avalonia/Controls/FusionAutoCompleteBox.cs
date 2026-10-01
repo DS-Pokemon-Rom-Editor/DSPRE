@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.Controls
 
             if (e.Key == Key.Enter || e.Key == Key.Escape)
             {
-                CommitText();
+                CommitText(e.Key == Key.Enter);
                 e.Handled = true;
             }
         }
@@ -273,7 +273,7 @@ namespace DSPRE.Avalonia.Controls
             _refreshingDropDown = false;
         }
 
-        private void CommitText()
+        private void CommitText(bool entered = false)
         {
             ApplyPendingSelection();
 
@@ -285,7 +285,7 @@ namespace DSPRE.Avalonia.Controls
             }
 
             string text = Text ?? string.Empty;
-            object exactItem = FindExactItem(text);
+            object exactItem = FindExactItem(text) ?? (entered ? FindTypedItem(text) : null);
 
             if (exactItem != null)
             {
@@ -412,6 +412,49 @@ namespace DSPRE.Avalonia.Controls
 
             return -1;
         }
+
+        // Enter on a typed name with nothing highlighted: the item that name can only mean, or none.
+        private object FindTypedItem(string text)
+        {
+            string query = text.Trim();
+            if (ItemsSource == null || query.Length == 0)
+            {
+                return null;
+            }
+
+            object named = null, containing = null;
+            int namedCount = 0, containingCount = 0;
+            foreach (object item in ItemsSource)
+            {
+                string value = FormatValue(item);
+                if (string.IsNullOrEmpty(value))
+                {
+                    continue;
+                }
+
+                if (string.Equals(LeadingNumber.Replace(value, ""), query, StringComparison.OrdinalIgnoreCase))
+                {
+                    named = item;
+                    namedCount++;
+                }
+
+                if (global::DSPRE.SearchMatch.Contains(value, query))
+                {
+                    containing = item;
+                    containingCount++;
+                }
+            }
+
+            if (namedCount == 1)
+            {
+                return named;
+            }
+
+            return namedCount == 0 && containingCount == 1 ? containing : null;
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex LeadingNumber =
+            new System.Text.RegularExpressions.Regex(@"^\s*(\[\d+\]|#?\d+)\s*[-:]?\s*");
 
         private object FindExactItem(string text)
         {

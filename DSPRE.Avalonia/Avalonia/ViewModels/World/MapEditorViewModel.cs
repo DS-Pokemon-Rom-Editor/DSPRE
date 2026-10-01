@@ -2304,7 +2304,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 int newId = MapNames.Count;
-                new MapFile(0, gameFamily, discardMoveperms: true).SaveToFileDefaultDir(newId);
+                new MapFile(0, gameFamily, discardMoveperms: true).SaveToFileDefaultDir(newId, showSuccessMessage: false);
                 MapNames.Add("Map " + newId);
                 SelectedMapIndex = newId;
                 StatusText = $"Added map file {newId}.";

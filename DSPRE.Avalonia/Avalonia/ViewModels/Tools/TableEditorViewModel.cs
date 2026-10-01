@@ -379,8 +379,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             // Writes go back to wherever the tables were read from.
             _fromSource = gameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource;
-            // Only hand the tables over where the intro editors can open this ROM; elsewhere they stay editable here.
-            ShowIntroLinks = !_fromSource && !isHGE && DSPRE.ROMFiles.VsIntroTables.WhyNot() == null;
+            // Only hand the tables over where the intro editors are enabled and can open this ROM; elsewhere they stay editable here.
+            ShowIntroLinks = !_fromSource && !isHGE && DSPRE.ROMFiles.VsIntroTables.WhyNot() == null
+                && BetaEditors.Allows("VsIntroEditorView") && BetaEditors.Allows("WildIntroEditorView");
             if (ShowIntroLinks)
             {
                 ShowEffectsCombos = false;
