@@ -189,19 +189,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool HasSelectedEntry => _selectedIndex >= 0 && _selectedIndex < _owKeys.Count;
 
+        // Render properties wait for Save like the sprites do, so Discard can still drop them.
+        private readonly Dictionary<uint, OverworldSpriteTableExpansion.OwRenderState> _pendingRender = new();
+        private int ModifiedEntries => _modifiedFiles.Keys.Union(_pendingRender.Keys).Count();
+
         public string ModifiedCount =>
-            _modifiedFiles.Count > 0 ? $"{_modifiedFiles.Count} unsaved" : "";
+            ModifiedEntries > 0 ? $"{ModifiedEntries} unsaved" : "";
 
         // ── IEditorWithUnsavedChanges ──────────────────────────────────────────
-        public bool HasUnsavedChanges => _modifiedFiles.Count > 0;
+        public bool HasUnsavedChanges => ModifiedEntries > 0;
         public string UnsavedChangesDescription =>
-            $"BTX Editor ({_modifiedFiles.Count} modified file{(_modifiedFiles.Count != 1 ? "s" : "")})";
+            $"BTX Editor ({ModifiedEntries} modified overworld{(ModifiedEntries != 1 ? "s" : "")})";
 
         public void SaveChanges() => SaveAll();
         public void DiscardChanges()
         {
             _modifiedFiles.Clear();
             _metadataPatches.Clear();
+            _pendingRender.Clear();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
             LoadEntry(_selectedIndex);
@@ -340,7 +345,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             IsSelectedEntryCustom = OverworldSpriteTableExpansion.IsCustomEntry(key);
 
             _loadingRenderState = true;
-            if (OverworldSpriteTableExpansion.TryReadRenderState(key, out var state))
+            if (_pendingRender.TryGetValue(key, out var state) || OverworldSpriteTableExpansion.TryReadRenderState(key, out state))
             {
                 DrawTypeIndex = state.DrawType;
                 ShadowTypeIndex = state.ShadowType;
@@ -382,8 +387,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 FootmarkType = _footmarkTypeIndex,
                 ReflectType = _reflectTypeIndex,
             };
+            _pendingRender[key] = state;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ModifiedCount));
+        }
+
+        private bool SaveRenderState(uint key)
+        {
+            if (!_pendingRender.TryGetValue(key, out var state)) return true;
             if (!OverworldSpriteTableExpansion.TryWriteRenderState(key, state, out string error))
+            {
                 StatusText = "Render-state write failed: " + error;
+                return false;
+            }
+            _pendingRender.Remove(key);
+            return true;
         }
 
         // ── Add / Delete custom entries (expansion patch only) ───────────────────
@@ -563,6 +581,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             _modifiedFiles.Remove(key);
             _metadataPatches.Remove(key);
+            _pendingRender.Remove(key);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ModifiedCount));
 
             RomInfo.ReadOWTable();
             LoadEntryList();
@@ -845,21 +866,28 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_selectedIndex < 0 || _selectedIndex >= _owKeys.Count) return 0;
             uint key = _owKeys[_selectedIndex];
-            if (!_modifiedFiles.TryGetValue(key, out byte[] data)) return 0;
-
-            return SaveEntry(key, data) ? 1 : 0;
+            bool hadRender = _pendingRender.ContainsKey(key);
+            bool hadFile = _modifiedFiles.TryGetValue(key, out byte[] data);
+            bool ok = SaveRenderState(key);
+            if (ok && hadFile) ok = SaveEntry(key, data);
+            else if (ok && hadRender) StatusText = "Saved.";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ModifiedCount));
+            return ok && (hadRender || hadFile) ? 1 : 0;
         }
 
         public int SaveAll()
         {
             int saved = 0;
+            foreach (uint key in _pendingRender.Keys.ToList())
+                if (SaveRenderState(key) && !_modifiedFiles.ContainsKey(key)) saved++;
             foreach (var kvp in _modifiedFiles.ToList())
             {
                 if (SaveEntry(kvp.Key, kvp.Value)) saved++;
             }
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
-            if (saved > 0) SaveNotice.Show($"Saved {saved} overworld sprite file{(saved == 1 ? "" : "s")}.");
+            if (saved > 0) SaveNotice.Show($"Saved {saved} overworld{(saved == 1 ? "" : "s")}.");
             return saved;
         }
 
