@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void BattleMessages_Click(object sender, RoutedEventArgs e)
         {
             // hg-engine builds the message table from Trainers.c, which only a linked checkout can edit.
-            if (AvaloniaEditorLauncher.BlockedForHge("The Battle Message Editor", DSPRE.HgEngine.HgEngineDomain.Trainers)) return;
+            if (AvaloniaEditorLauncher.Refused("BattleMessageEditorView")) return;
 
             int trainerId = VM?.SelectedTrainerIndex ?? 0;
             new BattleMessageEditorView(new BattleMessageEditorViewModel(trainerId)).ShowManaged();

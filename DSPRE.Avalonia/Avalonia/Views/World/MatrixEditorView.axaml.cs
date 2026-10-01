@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private async void SetSpawn_Click(object sender, RoutedEventArgs e)
         {
-            if (VM == null || !VM.InBounds || AvaloniaEditorLauncher.BlockedForUnlinkedHge("The Spawn Point Editor")) return;
+            if (VM == null || !VM.InBounds || AvaloniaEditorLauncher.Refused("SpawnEditorView")) return;
             if (VM.SpawnHeaderNumber is not ushort header)
             {
                 await DialogHelper.ShowError(

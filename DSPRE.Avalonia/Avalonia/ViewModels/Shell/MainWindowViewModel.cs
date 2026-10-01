@@ -86,101 +86,69 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             private readonly string _hge;
             public BlockedReason(string hge) { _hge = hge; }
-            public string this[string window] => _hge ?? BetaEditors.WhyNot(window);
+            public string this[string window] => _hge ?? EditorAvailability.WhyNot(window);
         }
 
-        public bool CanUseBattleScriptEditor => HgAllows && Beta["BattleScriptEditorView"];
-        public bool CanUseFontEditor         => HgAllows && Beta["FontEditorView"];
-        public bool CanUseBattleSceneBrowser => HgAllows && Beta["BattleSceneBrowserView"];
-        public bool CanUseCellAnimations     => HgAllows && Beta["CellAnimationEditorView"];
-        public bool CanUseParticles          => HgAllows && Beta["ParticleLibraryView"];
-        public bool CanUseBallCapsules       => HgAllows && Beta["BallCapsuleEditorView"];
-        public bool CanUseTilesetBuilder     => HgAllows && Beta["TilesetBuilderView"];
-        public bool CanUseAudioEditor        => HgAllows && Beta["AudioEditorView"];
-        public bool CanUseProjectChecks      => HgAllows && Beta["ProjectChecksView"];
-        public bool CanUseBannerEditor       => HgAllows && Beta["BannerEditorView"];
-        public bool CanUseNamingScreenEditor => IsRomLoaded && HgAllows && Beta["TrainerSpriteEditorView"];
-        public bool CanUseDataExports        => IsRomLoaded && HgAllows;
+        public bool CanUseBattleScriptEditor => EditorAvailability.Allows("BattleScriptEditorView");
+        public bool CanUseFontEditor => EditorAvailability.Allows("FontEditorView");
+        public bool CanUseBattleSceneBrowser => EditorAvailability.Allows("BattleSceneBrowserView");
+        public bool CanUseCellAnimations => EditorAvailability.Allows("CellAnimationEditorView");
+        public bool CanUseParticles => EditorAvailability.Allows("ParticleLibraryView");
+        public bool CanUseBallCapsules => EditorAvailability.Allows("BallCapsuleEditorView");
+        public bool CanUseTilesetBuilder => EditorAvailability.Allows("TilesetBuilderView");
+        public bool CanUseAudioEditor => EditorAvailability.Allows("AudioEditorView");
+        public bool CanUseProjectChecks => EditorAvailability.Allows("ProjectChecksView");
+        public bool CanUseBannerEditor => EditorAvailability.Allows("BannerEditorView");
+        public bool CanUseNamingScreenEditor => EditorAvailability.Allows("NamingScreenEditor");
+        public bool CanUseDataExports => EditorAvailability.Allows("DataExports");
         // The one editor that stays open on an hg-engine ROM with no checkout linked: it only reads,
         // and reading the ROM is the point of it.
-        public bool CanUseHgeRomReview       => IsRomLoaded && RomInfo.isHGE && Beta["HgeRomReviewView"];
-        public bool CanUseDistortionWorld    => IsRomLoaded && gameFamily == GameFamilies.Plat && Beta["DistortionWorldView"];
-        public bool CanUseWildHeldItems => IsRomLoaded && !isHGE && Beta["WildHeldItemOddsView"];
-        public bool CanUseGrowthCurves => IsRomLoaded && !isHGE && Beta["GrowthCurveEditorView"];
-        public bool CanUseBreedingItems => IsRomLoaded && !isHGE && Beta["BreedingItemsView"];
-        public bool CanUseBerryData => IsRomLoaded && !isHGE && Beta["BerryDataEditorView"];
-        public bool CanUseTypeChart => IsRomLoaded && !isHGE && Beta["TypeChartEditorView"];
-        public bool CanUseVsIntroEditor => IsRomLoaded && !isHGE && Beta["VsIntroEditorView"];
-        public bool CanUseWildIntroEditor => IsRomLoaded && !isHGE && Beta["WildIntroEditorView"];
-        public bool CanUseMoveTutors => IsRomLoaded && !isHGE && (gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.HGSS) && Beta["MoveTutorEditorView"];
-        public bool CanUseMining => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["UndergroundMiningView"];
-        public bool CanUseBpShop => IsRomLoaded && (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat) && Beta["BpShopEditorView"];
-        public bool CanUseFriendship => IsRomLoaded && !isHGE && Beta["FriendshipChangesView"];
-        public bool CanUseSlotOdds => IsRomLoaded && !isHGE && Beta["EncounterSlotOddsView"];
+        public bool CanUseHgeRomReview => EditorAvailability.Allows("HgeRomReviewView");
+        public bool CanUseDistortionWorld => EditorAvailability.Allows("DistortionWorldView");
+        public bool CanUseWildHeldItems => EditorAvailability.Allows("WildHeldItemOddsView");
+        public bool CanUseGrowthCurves => EditorAvailability.Allows("GrowthCurveEditorView");
+        public bool CanUseBreedingItems => EditorAvailability.Allows("BreedingItemsView");
+        public bool CanUseBerryData => EditorAvailability.Allows("BerryDataEditorView");
+        public bool CanUseTypeChart => EditorAvailability.Allows("TypeChartEditorView");
+        public bool CanUseVsIntroEditor => EditorAvailability.Allows("VsIntroEditorView");
+        public bool CanUseWildIntroEditor => EditorAvailability.Allows("WildIntroEditorView");
+        public bool CanUseMoveTutors => EditorAvailability.Allows("MoveTutorEditorView");
+        public bool CanUseMining => EditorAvailability.Allows("UndergroundMiningView");
+        public bool CanUseBpShop => EditorAvailability.Allows("BpShopEditorView");
+        public bool CanUseFriendship => EditorAvailability.Allows("FriendshipChangesView");
+        public bool CanUseSlotOdds => EditorAvailability.Allows("EncounterSlotOddsView");
         // Tables a game family doesn't have are hidden rather than greyed out.
         public bool HasMoveTutors => !IsRomLoaded || gameFamily != GameFamilies.DP;
         public bool IsDpOrPlatinum => !IsRomLoaded || gameFamily != GameFamilies.HGSS;
-        public bool CanUsePokemonEditor => IsRomLoaded && HgAllows;
+        public bool CanUsePokemonEditor => EditorAvailability.Allows("PokemonEditorView");
         // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.
-        public bool CanUseHgEngineFormEditor => IsRomLoaded && HgEngineProject.IsActive
-            && BetaEditors.Allows("HgEngineFormEditorView");
-        public bool CanUseBattleScreen  => IsRomLoaded && HgAllows && Beta["BattleScreenEditorView"];
+        public bool CanUseHgEngineFormEditor => EditorAvailability.Allows("HgEngineFormEditorView");
+        public bool CanUseBattleScreen => EditorAvailability.Allows("BattleScreenEditorView");
 
-        public bool CanUseMoveEditor    => IsRomLoaded && HgAllows;
-        public bool CanUseItemEditor    => IsRomLoaded && HgAllows;
-        public bool CanUseMartEditor => IsRomLoaded && !isHGE && RomInfo.IsMartEditorAvailable()
-            && BetaEditors.Allows("MartEditorView");
-        public string MartEditorNote
-        {
-            get
-            {
-                if (!IsRomLoaded) return "Open a ROM first.";
-                if (isHGE) return "The Mart Editor is disabled for hg-engine ROMs.";
-                if (!RomInfo.IsMartEditorAvailable())
-                    return "The Mart Editor currently supports English Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs.";
-                return BetaEditors.WhyNot("MartEditorView");
-            }
-        }
-        public bool CanUseTrainerEditor => IsRomLoaded && HgAllows;
+        public bool CanUseMoveEditor => EditorAvailability.Allows("MoveDataEditorView");
+        public bool CanUseItemEditor => EditorAvailability.Allows("ItemEditorView");
+        public bool CanUseMartEditor => EditorAvailability.Allows("MartEditorView");
+        public string MartEditorNote => EditorAvailability.WhyNot("MartEditorView");
+        public bool CanUseTrainerEditor => EditorAvailability.Allows("TrainerEditorView");
         // hg-engine keeps trainer sprites in its source, which the editor reads and writes once a checkout is linked.
-        public bool CanUseTrainerSpriteEditor => IsRomLoaded && (!isHGE || HgEngineProject.IsActive)
-            && BetaEditors.Allows("TrainerSpriteEditorView");
-        public bool CanUseVsSeekerRematchEditor => IsRomLoaded && HgAllows && VsSeekerRematchTable.IsSupported;
-        public bool CanUsePokegearRematchEditor => IsRomLoaded && HgAllows && PokegearRematchTable.IsSupported;
-        public bool CanUsePokegearPhoneBook => IsRomLoaded && HgAllows && PokegearPhoneBook.IsSupported && BetaEditors.Allows("PokegearPhoneBookView");
-        public bool CanUseTrainerFlagBulkEditor => IsRomLoaded && HgAllows;
-        public bool CanUseBattleTowerEditor => IsRomLoaded && HgAllows && DSPRE.ROMFiles.BattleTowerTrainerFile.IsAvailable() && DSPRE.ROMFiles.BattleTowerPokemonSetFile.IsAvailable();
-        public bool CanUseStarterEditor => IsRomLoaded && !isHGE && RomInfo.IsStarterEditorAvailable();
-        public bool CanUseDungeonCutinEditor => IsRomLoaded && HgAllows && RomInfo.IsDungeonCutinEditorAvailable()
-            && BetaEditors.Allows("DungeonCutinEditorView");
-        public bool CanUseTitleScreenEditor => IsRomLoaded && HgAllows && RomInfo.IsTitleScreenEditorAvailable()
-            && BetaEditors.Allows("TitleScreenEditorView");
-        public bool CanUseTrainerCardEditor => IsRomLoaded && HgAllows && RomInfo.IsTrainerCardEditorAvailable()
-            && BetaEditors.Allows("TrainerCardEditorView");
-        public string TitleScreenEditorNote => EditorNote(
-            "TitleScreenEditorView", RomInfo.IsTitleScreenEditorAvailable(),
-            "The Title Screen editor is available for HeartGold and SoulSilver ROMs.");
-        public string DungeonCutinEditorNote => EditorNote(
-            "DungeonCutinEditorView", RomInfo.IsDungeonCutinEditorAvailable(),
-            "The Dungeon Cut-in editor is available for English and Spanish HeartGold and SoulSilver ROMs.");
-        public string TrainerCardEditorNote => EditorNote(
-            "TrainerCardEditorView", RomInfo.IsTrainerCardEditorAvailable(),
-            "The Trainer Card editor is not available for this ROM.");
-        public bool CanUseBottomScreenEditor => IsRomLoaded && HgAllows && RomInfo.IsBottomScreenEditorAvailable()
-            && BetaEditors.Allows("BottomScreenEditorView");
-        public string BottomScreenEditorNote => EditorNote(
-            "BottomScreenEditorView", RomInfo.IsBottomScreenEditorAvailable(),
-            "The Bottom Screen editor is not available for this ROM.");
+        public bool CanUseTrainerSpriteEditor => EditorAvailability.Allows("TrainerSpriteEditorView");
+        public bool CanUseVsSeekerRematchEditor => EditorAvailability.Allows("VsSeekerRematchView");
+        public bool CanUsePokegearRematchEditor => EditorAvailability.Allows("PokegearRematchView");
+        public bool CanUsePokegearPhoneBook => EditorAvailability.Allows("PokegearPhoneBookView");
+        public bool CanUseTrainerFlagBulkEditor => EditorAvailability.Allows("TrainerFlagBulkEditorView");
+        public bool CanUseBattleTowerEditor => EditorAvailability.Allows("BattleTowerEditorView");
+        public bool CanUseStarterEditor => EditorAvailability.Allows("StarterEditorView");
+        public bool CanUseDungeonCutinEditor => EditorAvailability.Allows("DungeonCutinEditorView");
+        public bool CanUseTitleScreenEditor => EditorAvailability.Allows("TitleScreenEditorView");
+        public bool CanUseTrainerCardEditor => EditorAvailability.Allows("TrainerCardEditorView");
+        public string TitleScreenEditorNote => EditorAvailability.WhyNot("TitleScreenEditorView");
+        public string DungeonCutinEditorNote => EditorAvailability.WhyNot("DungeonCutinEditorView");
+        public string TrainerCardEditorNote => EditorAvailability.WhyNot("TrainerCardEditorView");
+        public bool CanUseBottomScreenEditor => EditorAvailability.Allows("BottomScreenEditorView");
+        public string BottomScreenEditorNote => EditorAvailability.WhyNot("BottomScreenEditorView");
 
-        private string EditorNote(string window, bool supported, string unsupported)
-        {
-            if (!IsRomLoaded) return "Open a ROM first.";
-            if (!HgAllows) return HgEngineNote;
-            string beta = BetaEditors.WhyNot(window);
-            return beta ?? (supported ? null : unsupported);
-        }
-        public bool CanUseWildEditors   => IsRomLoaded && HgAllows;
+        public bool CanUseWildEditors => EditorAvailability.Allows("WildEditorView");
         // With a linked hg-engine checkout only its Headbutt tab is safe; hg-engine builds the rest itself.
         public bool CanUseSpecialEncountersEditor => IsRomLoaded && (!isHGE || (IsHgssRom && HgEngineProject.IsActive));
         public bool IsHgEngineLinked    => HgEngineProject.IsActive;
@@ -212,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         /// <summary>The Headbutt editor needs an HGSS ROM, and it is still being tried out.</summary>
         // Diamond and Pearl only have the battle music table, where it is supported.
-        public bool CanUseMiscTables    => IsRomLoaded && HgAllows && (gameFamily != GameFamilies.DP || DSPRE.ROMFiles.BattleMusicTables.IsSupported);
+        public bool CanUseMiscTables => EditorAvailability.Allows("TableEditorView");
 
         // ── Busy state while a ROM is being opened/unpacked/saved, or an editor is unpacking its own data ──
         private bool _isBusy;

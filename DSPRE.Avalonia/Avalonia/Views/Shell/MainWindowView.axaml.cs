@@ -947,7 +947,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private async void ExportDocs_Click(object sender, RoutedEventArgs e)
         {
-            if (!AvaloniaEditorLauncher.IsRomLoaded || AvaloniaEditorLauncher.BlockedForUnlinkedHge("Export Docs")) return;
+            if (AvaloniaEditorLauncher.Refused("ExportDocs")) return;
             string folder = await DialogHelper.OpenFolder(this, "Choose where to export the docs");
             if (string.IsNullOrEmpty(folder)) return;
             string error = null;
@@ -962,7 +962,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private async void TrainerUsageCsv_Click(object sender, RoutedEventArgs e)
         {
-            if (!AvaloniaEditorLauncher.IsRomLoaded || AvaloniaEditorLauncher.BlockedForUnlinkedHge("The trainer usage report")) return;
+            if (AvaloniaEditorLauncher.Refused("TrainerUsageReport")) return;
             string path = await DialogHelper.SaveFile(this, "Save trainer usage report",
                 new[] { DialogHelper.CsvFilter }, "TrainerUsage.csv");
             if (string.IsNullOrEmpty(path)) return;

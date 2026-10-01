@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             // Opened straight from the Pokémon editor, not the launcher. Its writes reach only the unpacked
             // learnsets, which hg-engine rebuilds from data/learnsets/learnsets.json.
-            if (AvaloniaEditorLauncher.BlockedForHge("The Bulk Learnset Editor")) { owner?.Close(); return; }
+            if (AvaloniaEditorLauncher.Refused("BulkLearnsetEditorView")) { owner?.Close(); return; }
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.learnsets });
