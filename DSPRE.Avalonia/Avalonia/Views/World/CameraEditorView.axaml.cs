@@ -17,6 +17,8 @@ namespace DSPRE.Avalonia.Views.World
             // VM arrives via the (vm) constructor or via DataContext binding when the
             // control is embedded as a tab in the Avalonia MainWindow.
             Loaded += OnLoadedSetup;
+            DetachedFromVisualTree += (_, _) => VM?.Detach();
+            AttachedToVisualTree += (_, _) => { if (_setupDone) VM?.Reattach(); };
         }
 
         public CameraEditorView(CameraEditorViewModel vm) : this()
@@ -35,26 +37,38 @@ namespace DSPRE.Avalonia.Views.World
             if (owner == null) return;
 
             _setupDone = true;
+            vm.PropertyChanged += OnVmChanged;
             await vm.SetupAsync(owner);
-
-            if (!vm.IsHgss)
-                HideHgssColumns();
+            WatchRow(vm.SelectedCamera);
+            ShowPreview();
         }
 
-        private void HideHgssColumns()
+        private CameraRowVM _watchedRow;
+
+        private void OnVmChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            // Avalonia's compiled-XAML name generator does not emit fields for
-            // DataGridColumn elements (they live outside the control name scope),
-            // so the HGSS-only X/Y/Z offset columns are addressed by matching their
-            // Header text instead of by x:Name.
-            foreach (var col in CamerasGrid.Columns)
-            {
-                if (col.Header is string h &&
-                    (h == "X Offset" || h == "Y Offset" || h == "Z Offset"))
-                {
-                    col.IsVisible = false;
-                }
-            }
+            if (e.PropertyName == nameof(CameraEditorViewModel.SelectedCamera)) WatchRow(VM?.SelectedCamera);
+            if (e.PropertyName is nameof(CameraEditorViewModel.SelectedCamera) or nameof(CameraEditorViewModel.PreviewSpot))
+                ShowPreview();
+            if (e.PropertyName == nameof(CameraEditorViewModel.PreviewWeatherValue))
+                CameraPreviewBox.ShowWeather(VM.PreviewWeatherValue);
+        }
+
+        // Edits show as they are typed, before anything is saved.
+        private void WatchRow(CameraRowVM row)
+        {
+            if (_watchedRow != null) _watchedRow.PropertyChanged -= OnRowChanged;
+            _watchedRow = row;
+            if (_watchedRow != null) _watchedRow.PropertyChanged += OnRowChanged;
+        }
+
+        private void OnRowChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) => ShowPreview();
+
+        private void ShowPreview()
+        {
+            var vm = VM;
+            if (vm?.SelectedEntry == null || vm.PreviewSpot is not DSPRE.FlyTable.Spot spot) return;
+            CameraPreviewBox.Show(spot.HeaderId, vm.SelectedEntry, (spot.X, spot.Z));
         }
 
         // ── Toolbar handlers ─────────────────────────────────────────────────
@@ -68,6 +82,15 @@ namespace DSPRE.Avalonia.Views.World
 
         private async void ImportTable_Click(object sender, RoutedEventArgs e)
             => await RunSafe(() => VM?.ImportTableAsync());
+
+        private async void Rename_Click(object sender, RoutedEventArgs e)
+            => await RunSafe(() => VM?.RenameSelectedAsync());
+
+        private async void ExportCamera_Click(object sender, RoutedEventArgs e)
+            => await RunSafe(() => VM?.ExportCameraAsync());
+
+        private async void ImportCamera_Click(object sender, RoutedEventArgs e)
+            => await RunSafe(() => VM?.ImportCameraAsync());
 
         private static async Task RunSafe(System.Func<Task> action)
         {

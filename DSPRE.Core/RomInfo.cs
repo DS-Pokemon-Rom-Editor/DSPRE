@@ -46,6 +46,9 @@ namespace DSPRE
         public static string overlayTablePath { get; set; }
         public static string y7Path { get; set; }
         public static string dataPath { get; set; }
+
+        /// <summary>The field weather graphics, a named file in all three games.</summary>
+        public static string WeatherSysNarcPath => dataPath == null ? null : Path.Combine(dataPath, "data", "weather_sys.narc");
         public static string overlayPath { get; set; }
         public static string unpackedPath { get; set; }
         public static string bannerPath { get; set; }
@@ -584,7 +587,7 @@ namespace DSPRE
 
             tornWorld,              // Pt only: Distortion World map data.
             tornWorldAttributes,    // Pt only: platform collision grids.
-            fieldEffectModels,      // DP/Pt field effect models.
+            fieldEffectModels,
 
             textArchives,
             matrices,
@@ -3043,6 +3046,7 @@ namespace DSPRE
                         [DirNames.battleTowerPokemon] = $@"{dataFolderName}\a\2\0\3",
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
+                        [DirNames.fieldEffectModels] = $@"{dataFolderName}\a\1\0\3",   // field effect models, Flash's light spot among them
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",
                         [DirNames.areaWindowGraphics] = $@"{dataFolderName}\a\1\6\3",
                         [DirNames.sealGraphics] = $@"{dataFolderName}\a\0\8\7",

@@ -42,6 +42,11 @@ namespace DSPRE.Avalonia.Gl
         public delegate void UniformMatrix4fvDelegate(int location, int count, bool transpose, float[] value);
         public delegate void UniformMatrix3fvDelegate(int location, int count, bool transpose, float[] value);
         public delegate void Uniform3fDelegate(int location, float x, float y, float z);
+        public delegate void Uniform4fDelegate(int location, float x, float y, float z, float w);
+        public delegate void Uniform1fvDelegate(int location, int count, float[] value);
+        public delegate void Uniform2iDelegate(int location, int x, int y);
+        public delegate void Uniform4fvDelegate(int location, int count, float[] value);
+        public delegate void BlendFuncSeparateDelegate(int srcRgb, int dstRgb, int srcAlpha, int dstAlpha);
 
         public delegate void Uniform1iDelegate(int location, int v);
         public delegate void DrawArraysDelegate(int mode, int first, int count);
@@ -91,6 +96,11 @@ namespace DSPRE.Avalonia.Gl
         public readonly UniformMatrix4fvDelegate UniformMatrix4fv;
         public readonly UniformMatrix3fvDelegate UniformMatrix3fv;
         public readonly Uniform3fDelegate Uniform3f;
+        public readonly Uniform4fDelegate Uniform4f;
+        public readonly Uniform1fvDelegate Uniform1fv;
+        public readonly Uniform2iDelegate Uniform2i;
+        public readonly Uniform4fvDelegate Uniform4fv;
+        public readonly BlendFuncSeparateDelegate BlendFuncSeparate;
         public readonly Uniform1iDelegate Uniform1i;
         public readonly DrawArraysDelegate DrawArrays;
         public readonly ClearColorDelegate ClearColor;
@@ -148,9 +158,11 @@ namespace DSPRE.Avalonia.Gl
         public const int GL_MIRRORED_REPEAT = 0x8370;
         public const int GL_TEXTURE0 = 0x84C0;
         public const int GL_TEXTURE1 = 0x84C1;
+        public const int GL_TEXTURE2 = 0x84C2;
         public const int GL_SRC_ALPHA = 0x0302;
         public const int GL_ONE_MINUS_SRC_ALPHA = 0x0303;
         public const int GL_ZERO = 0x0000;
+        public const int GL_ONE = 0x0001;
         public const int GL_DST_COLOR = 0x0306;
 
         private T Bind<T>(GlInterface gl, string name) where T : Delegate
@@ -186,6 +198,11 @@ namespace DSPRE.Avalonia.Gl
             UniformMatrix4fv = Bind<UniformMatrix4fvDelegate>(gl, "glUniformMatrix4fv");
             UniformMatrix3fv = Bind<UniformMatrix3fvDelegate>(gl, "glUniformMatrix3fv");
             Uniform3f = Bind<Uniform3fDelegate>(gl, "glUniform3f");
+            Uniform4f = Bind<Uniform4fDelegate>(gl, "glUniform4f");
+            Uniform1fv = Bind<Uniform1fvDelegate>(gl, "glUniform1fv");
+            Uniform2i = Bind<Uniform2iDelegate>(gl, "glUniform2i");
+            Uniform4fv = Bind<Uniform4fvDelegate>(gl, "glUniform4fv");
+            BlendFuncSeparate = Bind<BlendFuncSeparateDelegate>(gl, "glBlendFuncSeparate");
             Uniform1i = Bind<Uniform1iDelegate>(gl, "glUniform1i");
             GenTextures = Bind<GenTexturesDelegate>(gl, "glGenTextures");
             DeleteTextures = Bind<DeleteTexturesDelegate>(gl, "glDeleteTextures");

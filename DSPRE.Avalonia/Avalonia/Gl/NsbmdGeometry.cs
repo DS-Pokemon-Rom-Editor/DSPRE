@@ -22,6 +22,9 @@ namespace DSPRE.Avalonia.Gl
         /// the front, 2 drops the back, 3 draws both.
         /// </summary>
         public int CullMode = NsbmdCull.None;
+
+        /// <summary>The material lets fog fall on it, polygon attribute bit 15.</summary>
+        public bool Fog;
     }
 
     /// <summary>Which faces of a polygon the hardware draws, straight out of GXCull.</summary>
@@ -54,6 +57,7 @@ namespace DSPRE.Avalonia.Gl
         public Dictionary<int, float> MaterialAlphaByKey = new Dictionary<int, float>();
         /// <summary>Which faces each material draws, so a backdrop does not show its inside.</summary>
         public Dictionary<int, int> MaterialCullByKey = new Dictionary<int, int>();
+        public Dictionary<int, bool> MaterialFogByKey = new Dictionary<int, bool>();
         // Material names, so a terrain animation (which targets materials by name, e.g. "river")
         // can be matched to the parts it should move.
         public Dictionary<int, string> MaterialNameByKey = new Dictionary<int, string>();
@@ -736,6 +740,9 @@ namespace DSPRE.Avalonia.Gl
                     if (!target.MaterialCullByKey.ContainsKey(key))
                         target.MaterialCullByKey[key] = NsbmdCull.FromPolyAttrib(mat.PolyAttrib, mat.PolyAttribMask);
 
+                    if (!target.MaterialFogByKey.ContainsKey(key))
+                        target.MaterialFogByKey[key] = (mat.PolyAttribMask & 0x8000) != 0 && (mat.PolyAttrib & 0x8000) != 0;
+
                     if (!target.Textures.ContainsKey(key))
                     {
                         var tex = NsbmdTextureDecoder.Decode(mat);
@@ -790,7 +797,8 @@ namespace DSPRE.Avalonia.Gl
                 if (kv.Value.Count == 0) continue;
                 float alpha = result.MaterialAlphaByKey.TryGetValue(kv.Key, out var a) ? a : 1f;
                 int cull = result.MaterialCullByKey.TryGetValue(kv.Key, out var c) ? c : NsbmdCull.None;
-                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha, CullMode = cull });
+                bool fog = result.MaterialFogByKey.TryGetValue(kv.Key, out var f) && f;
+                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha, CullMode = cull, Fog = fog });
                 result.TotalVertices += kv.Value.Count / 8;
             }
         }
@@ -970,8 +978,10 @@ namespace DSPRE.Avalonia.Gl
                 int material = kv.Key.Material;
                 float alpha = result.MaterialAlphaByKey.TryGetValue(material, out var a) ? a : 1f;
                 int cull = result.MaterialCullByKey.TryGetValue(material, out var c) ? c : NsbmdCull.None;
+                bool fog = result.MaterialFogByKey.TryGetValue(material, out var f) && f;
                 result.Parts.Add(new NsbmdMeshPart
                 {
+                    Fog = fog,
                     MaterialIndex = material,
                     NodeIndex = kv.Key.Node,
                     Vertices = kv.Value.ToArray(),

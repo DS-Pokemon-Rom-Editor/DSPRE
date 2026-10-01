@@ -6,8 +6,10 @@ namespace DSPRE.ROMFiles
     /// <summary>One row of the games' field camera table.</summary>
     public sealed class FieldCameraEntry
     {
-        private const float FixedPointOne = 4096f;
-        private const float TurnDegrees = 360f / 65536f;
+        public const float FixedPointOne = 4096f;
+
+        /// <summary>Degrees in one step of the games' 65536-step turn.</summary>
+        public const float TurnDegrees = 360f / 65536f;
 
         /// <summary>One tile is sixteen units in the games' own field coordinates.</summary>
         public const float GameUnitsPerTile = 16f;
@@ -16,6 +18,11 @@ namespace DSPRE.ROMFiles
         public string Name { get; }
         public int RawDistance { get; }
         public int RawPitch { get; }
+        public int RawYaw { get; }
+
+        /// <summary>The stored roll, already zero for Diamond and Pearl, which never apply it.</summary>
+        public int RawRoll { get; }
+
         public bool Orthographic { get; }
 
         /// <summary>PerspWay. </summary>
@@ -30,10 +37,11 @@ namespace DSPRE.ROMFiles
         public int ShiftZ { get; }
 
         internal FieldCameraEntry(int id, string name, int distance, int pitch, bool ortho,
-                                  int halfFov, int near, int far, int sx, int sy, int sz)
+                                  int halfFov, int near, int far, int sx, int sy, int sz, int yaw = 0, int roll = 0)
         {
             Id = id; Name = name;
             RawDistance = distance; RawPitch = pitch; Orthographic = ortho;
+            RawYaw = yaw; RawRoll = roll;
             RawHalfFieldOfView = halfFov; NearClip = near; FarClip = far;
             ShiftX = sx; ShiftY = sy; ShiftZ = sz;
         }
@@ -43,6 +51,15 @@ namespace DSPRE.ROMFiles
 
         /// <summary>How far the camera looks down, in degrees. The stored angle is negative.</summary>
         public float PitchDegrees => -RawPitch * TurnDegrees;
+
+        /// <summary>Which way the camera turns about the player; at zero it looks north.</summary>
+        public float YawDegrees => RawYaw * TurnDegrees;
+
+        /// <summary>
+        /// How far the picture tilts. Platinum and HGSS add the rolled up vector to the upright one, so the
+        /// screen turns half the stored angle.
+        /// </summary>
+        public float RollDegrees => RawRoll * TurnDegrees / 2f;
 
         /// <summary>Half the vertical view angle, which is what the table actually stores.</summary>
         public float HalfFieldOfViewDegrees => RawHalfFieldOfView * TurnDegrees;
@@ -124,17 +141,59 @@ namespace DSPRE.ROMFiles
         public static IReadOnlyList<FieldCameraEntry> EntriesFor(RomInfo.GameFamilies family) =>
             family == RomInfo.GameFamilies.HGSS ? Table : PlatinumTable;
 
-        /// <summary>The row a header's camera number picks in the given game.</summary>
+        /// <summary>
+        /// The row a header's camera number picks in the given game: the open ROM's own table when it is
+        /// that game, so edited cameras show as edited, else the built-in copy.
+        /// </summary>
         public static FieldCameraEntry Entry(int cameraId, RomInfo.GameFamilies family)
         {
             var table = EntriesFor(family);
+            if (family == RomInfo.gameFamily)
+            {
+                var rom = RomRows();
+                if (rom != null && rom.Count > 0)
+                {
+                    int id = cameraId >= 0 && cameraId < rom.Count ? cameraId : 0;
+                    return FromGameCamera(id, NameFor(id, family), rom[id], family);
+                }
+            }
             return cameraId >= 0 && cameraId < table.Count ? table[cameraId] : table[0];
+        }
+
+        /// <summary>A camera table row as the preview reads it.</summary>
+        public static FieldCameraEntry FromGameCamera(int id, string name, GameCamera c, RomInfo.GameFamilies family) =>
+            new FieldCameraEntry(id, name, (int)c.distance, c.vertRot, c.perspMode == GameCamera.ORTHO,
+                c.fov, (int)(c.nearClip >> 12), (int)(c.farClip >> 12), c.xOffset ?? 0, c.yOffset ?? 0, c.zOffset ?? 0,
+                c.horiRot, family == RomInfo.GameFamilies.DP ? 0 : c.zRot);
+
+        /// <summary>The built-in name for a row; Diamond and Pearl's rows have none of their own.</summary>
+        public static string NameFor(int id, RomInfo.GameFamilies family)
+        {
+            if (family == RomInfo.GameFamilies.DP) return "Camera " + id;
+            var table = EntriesFor(family);
+            return id >= 0 && id < table.Count ? table[id].Name : "Camera " + id;
+        }
+
+        private static List<GameCamera> _romRows;
+        private static string _romRowsFor;
+
+        static FieldCamera() => GameCameraTable.Saved += (_, _) => _romRows = null;
+
+        private static List<GameCamera> RomRows()
+        {
+            string project = RomInfo.workDir;
+            if (_romRows == null || _romRowsFor != project)
+            {
+                _romRows = GameCameraTable.TryRead();
+                _romRowsFor = project;
+            }
+            return _romRows;
         }
 
         /// <summary>The ordinary walking-about camera, which is what most maps use.</summary>
         public static FieldCameraEntry Normal => Table[0];
 
-        /// <summary>Which way the camera faces. </summary>
+        /// <summary>Which way the normal camera faces; every retail row has no turn.</summary>
         public const float YawDegrees = 0f;
 
         /// <summary>

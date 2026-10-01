@@ -1089,7 +1089,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 var c = CameraEntry;
                 string kind = c.Orthographic ? "flat" : $"{c.FieldOfViewDegrees:0.#} degrees";
-                return $"Camera {c.Id}, {c.Name}: {c.DistanceInTiles:0.#} tiles back, "
+                string name = DSPRE.Avalonia.Data.LabelStore.GetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKeyFor(_family), c.Id);
+                return $"Camera {c.Id}, {name}: {c.DistanceInTiles:0.#} tiles back, "
                      + $"{c.PitchDegrees:0.#} degrees down, {kind}";
             }
         }

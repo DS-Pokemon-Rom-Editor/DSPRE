@@ -4,11 +4,9 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia;
-using DSPRE.Resources;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.World
@@ -17,8 +15,6 @@ namespace DSPRE.Avalonia.ViewModels.World
     public class CameraRowVM : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
-        void Notify([CallerMemberName] string p = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(p));
 
         public int Index { get; }
 
@@ -26,34 +22,108 @@ namespace DSPRE.Avalonia.ViewModels.World
         internal short Unk1 { get; private set; }
         internal byte  Unk2 { get; private set; }
 
-        private uint   _distance; public uint   Distance { get => _distance; set { _distance = value; Notify(); } }
-        private short  _vertRot;  public short  VertRot  { get => _vertRot;  set { _vertRot  = value; Notify(); } }
-        private short  _horiRot;  public short  HoriRot  { get => _horiRot;  set { _horiRot  = value; Notify(); } }
-        private short  _zRot;     public short  ZRot     { get => _zRot;     set { _zRot     = value; Notify(); } }
-        private bool   _isOrtho;  public bool   IsOrtho  { get => _isOrtho;  set { _isOrtho  = value; Notify(); } }
-        private ushort _fov;      public ushort Fov      { get => _fov;      set { _fov      = value; Notify(); } }
-        private uint   _nearClip; public uint   NearClip { get => _nearClip; set { _nearClip = value; Notify(); } }
-        private uint   _farClip;  public uint   FarClip  { get => _farClip;  set { _farClip  = value; Notify(); } }
-        private int    _xOffset;  public int    XOffset  { get => _xOffset;  set { _xOffset  = value; Notify(); } }
-        private int    _yOffset;  public int    YOffset  { get => _yOffset;  set { _yOffset  = value; Notify(); } }
-        private int    _zOffset;  public int    ZOffset  { get => _zOffset;  set { _zOffset  = value; Notify(); } }
+        private uint   _distance;
+        private short  _vertRot, _horiRot, _zRot;
+        private bool   _isOrtho;
+        private ushort _fov;
+        private uint   _nearClip, _farClip;
+        private int    _xOffset, _yOffset, _zOffset;
+
+        // The table in tiles and degrees. Each value is rounded to what its box shows, and a setter that gets
+        // the shown value back leaves the raw one alone, so tabbing through never rewrites the table.
+        private const decimal RawPerTile = 4096m * 16m;
+        private const decimal RawPerDegree = 65536m / 360m;
+
+        private static decimal Tiles(long raw) => Math.Round(raw / RawPerTile, 3, MidpointRounding.AwayFromZero);
+        private static long FromTiles(decimal tiles) => (long)Math.Round(tiles * RawPerTile);
+        private static decimal Degrees(int raw) => Math.Round(raw / RawPerDegree, 2, MidpointRounding.AwayFromZero);
+        private static int FromDegrees(decimal deg) => (int)Math.Round(deg * RawPerDegree);
+        private static short Angle(decimal deg) => (short)Math.Clamp(FromDegrees(deg), short.MinValue, short.MaxValue);
+
+        private void Changed() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+
+        public decimal Distance
+        {
+            get => Tiles(_distance);
+            set { if (value != Distance) { _distance = (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue); Changed(); } }
+        }
+
+        /// <summary>How far the camera looks down. The table stores it negated.</summary>
+        public decimal Tilt
+        {
+            get => -Degrees(_vertRot);
+            set { if (value != Tilt) { _vertRot = Angle(-value); Changed(); } }
+        }
+
+        public decimal Turn
+        {
+            get => Degrees(_horiRot);
+            set { if (value != Turn) { _horiRot = Angle(value); Changed(); } }
+        }
+
+        /// <summary>How far the picture tilts, which is half the stored angle.</summary>
+        public decimal Roll
+        {
+            get => Math.Round(Degrees(_zRot) / 2m, 2, MidpointRounding.AwayFromZero);
+            set { if (value != Roll) { _zRot = Angle(value * 2m); Changed(); } }
+        }
+
+        /// <summary>0 perspective, 1 flat.</summary>
+        public int ViewIndex
+        {
+            get => _isOrtho ? 1 : 0;
+            set { if (value >= 0 && value != ViewIndex) { _isOrtho = value == 1; Changed(); } }
+        }
+
+        /// <summary>The whole vertical view angle; the table stores half of it.</summary>
+        public decimal FieldOfView
+        {
+            get => Math.Round(_fov * 2m / RawPerDegree, 2, MidpointRounding.AwayFromZero);
+            set { if (value != FieldOfView) { _fov = (ushort)Math.Clamp((int)Math.Round(value / 2m * RawPerDegree), 0, ushort.MaxValue); Changed(); } }
+        }
+
+        public decimal NearClip
+        {
+            get => Tiles(_nearClip);
+            set { if (value != NearClip) { _nearClip = (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue); Changed(); } }
+        }
+
+        public decimal FarClip
+        {
+            get => Tiles(_farClip);
+            set { if (value != FarClip) { _farClip = (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue); Changed(); } }
+        }
+
+        public decimal ShiftX
+        {
+            get => Tiles(_xOffset);
+            set { if (value != ShiftX) { _xOffset = (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue); Changed(); } }
+        }
+
+        public decimal ShiftY
+        {
+            get => Tiles(_yOffset);
+            set { if (value != ShiftY) { _yOffset = (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue); Changed(); } }
+        }
+
+        public decimal ShiftZ
+        {
+            get => Tiles(_zOffset);
+            set { if (value != ShiftZ) { _zOffset = (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue); Changed(); } }
+        }
+
+        /// <summary>The camera's name, which the header editor shows beside the number.</summary>
+        public string Name => DSPRE.Avalonia.Data.LabelStore.GetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKey, Index);
 
         /// <summary>The number the header editor asks for, with the name it shows beside it.</summary>
-        public string Label { get; }
+        public string Label => Index.ToString("D2") + "  " + Name;
 
-        public CameraRowVM(int index)
+        public CameraRowVM(int index) { Index = index; }
+
+        public void RefreshName()
         {
-            Index = index;
-            var names = RomInfo.gameFamily switch
-            {
-                RomInfo.GameFamilies.HGSS => PokeDatabase.CameraAngles.HGSSCameraDict,
-                RomInfo.GameFamilies.DP => PokeDatabase.CameraAngles.DPPtCameraDict,
-                RomInfo.GameFamilies.Plat => PokeDatabase.CameraAngles.PtCameraDict,
-                _ => null,
-            };
-            string name = null;
-            if (names != null && names.TryGetValue(index, out string n)) name = n;
-            Label = name == null ? index.ToString("D2") : index.ToString("D2") + "  " + name;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Label)));
         }
 
         public void LoadFrom(GameCamera cam)
@@ -71,8 +141,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _xOffset  = cam.xOffset ?? 0;
             _yOffset  = cam.yOffset ?? 0;
             _zOffset  = cam.zOffset ?? 0;
-            // Raise all at once
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+            Changed();
         }
 
         public GameCamera ToGameCamera(bool isHgss) => new GameCamera(
@@ -101,7 +170,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Public state ─────────────────────────────────────────────────────
         public ObservableCollection<CameraRowVM> Cameras { get; } = new ObservableCollection<CameraRowVM>();
-        public bool IsHgss { get; private set; }
+        private bool _isHgss;
+        public bool IsHgss { get => _isHgss; private set { _isHgss = value; Notify(); Notify(nameof(ShowsRoll)); } }
+
+        /// <summary>Diamond and Pearl never apply the roll.</summary>
+        public bool ShowsRoll => RomInfo.gameFamily != GameFamilies.DP;
 
         private bool _isReady;
         public bool IsReady { get => _isReady; private set { _isReady = value; Notify(); } }
@@ -118,20 +191,95 @@ namespace DSPRE.Avalonia.ViewModels.World
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set { _statusText = value; Notify(); } }
 
+        // ── Preview ──────────────────────────────────────────────────────────
+        private CameraRowVM _selectedCamera;
+        public CameraRowVM SelectedCamera
+        {
+            get => _selectedCamera;
+            set { if (_selectedCamera != value) { _selectedCamera = value; Notify(); } }
+        }
+
+        // The towns you can fly to, starting town first; the preview looks from the chosen one's fly spot.
+        private System.Collections.Generic.List<FlyTable.Spot> _spots = new();
+        public ObservableCollection<string> PreviewPlaces { get; } = new();
+
+        private int _previewPlaceIndex;
+        public int PreviewPlaceIndex
+        {
+            get => _previewPlaceIndex;
+            set { if (_previewPlaceIndex != value && value >= 0) { _previewPlaceIndex = value; Notify(); Notify(nameof(PreviewSpot)); } }
+        }
+
+        public FlyTable.Spot? PreviewSpot =>
+            _previewPlaceIndex >= 0 && _previewPlaceIndex < _spots.Count ? _spots[_previewPlaceIndex] : null;
+
+        private void LoadPreviewPlaces()
+        {
+            _spots = FlyTable.Spots();
+            PreviewPlaces.Clear();
+            foreach (var spot in _spots)
+            {
+                string name;
+                try { name = HeaderLabels.LocationNameOf(DSPRE.ROMFiles.MapHeader.GetMapHeader((ushort)spot.HeaderId)); }
+                catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is IndexOutOfRangeException)
+                {
+                    AppLogger.Warn($"Fly spot header {spot.HeaderId} has no readable name: {ex.Message}");
+                    name = "";
+                }
+                PreviewPlaces.Add(string.IsNullOrEmpty(name) ? $"Header {spot.HeaderId}" : name);
+            }
+            // A ComboBox drops its selection while its items fill without telling the binding, so the
+            // starting town is picked once the list has settled, through -1 so the value really changes.
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                _previewPlaceIndex = -1;
+                Notify(nameof(PreviewPlaceIndex));
+                _previewPlaceIndex = 0;
+                Notify(nameof(PreviewPlaceIndex));
+                Notify(nameof(PreviewSpot));
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        /// <summary>The weather the preview plays, from the header weather list.</summary>
+        public MappedCombo PreviewWeather { get; } = new MappedCombo();
+
+        private int _previewWeatherIndex;
+        public int PreviewWeatherIndex
+        {
+            get => _previewWeatherIndex;
+            set { if (_previewWeatherIndex != value && value >= 0) { _previewWeatherIndex = value; Notify(); Notify(nameof(PreviewWeatherValue)); } }
+        }
+
+        public int PreviewWeatherValue => Math.Max(0, PreviewWeather.KeyAt(_previewWeatherIndex));
+
+        private void LoadPreviewWeathers()
+        {
+            PreviewWeather.LoadLabels(DSPRE.Avalonia.Data.LabelStore.WeatherKey);
+            AppEvents.LabelsChanged -= OnLabelsChanged;
+            AppEvents.LabelsChanged += OnLabelsChanged;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                _previewWeatherIndex = -1;
+                Notify(nameof(PreviewWeatherIndex));
+                _previewWeatherIndex = Math.Max(0, PreviewWeather.IndexOf(0));
+                Notify(nameof(PreviewWeatherIndex));
+                Notify(nameof(PreviewWeatherValue));
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        /// <summary>The selected row as the game would read it, unsaved values included.</summary>
+        public DSPRE.ROMFiles.FieldCameraEntry SelectedEntry =>
+            _selectedCamera == null ? null
+            : DSPRE.ROMFiles.FieldCamera.FromGameCamera(_selectedCamera.Index, _selectedCamera.Name,
+                _selectedCamera.ToGameCamera(IsHgss), RomInfo.gameFamily);
+
         // ── Internal state ───────────────────────────────────────────────────
         private uint   _overlayCameraTblOffset;
         private Window _owner;
 
-        // ── Commands ─────────────────────────────────────────────────────────
-        public ICommand ExportCameraCommand { get; }
-        public ICommand ImportCameraCommand { get; }
-
         // ── Design-time constructor ───────────────────────────────────────────
         public CameraEditorViewModel()
         {
-            ExportCameraCommand = new AsyncRelayCommand<int>(_ => Task.CompletedTask);
-            ImportCameraCommand = new AsyncRelayCommand<int>(_ => Task.CompletedTask);
-
             if (!global::Avalonia.Controls.Design.IsDesignMode) return;
 
             IsHgss = true;
@@ -141,15 +289,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 row.LoadFrom(new GameCamera());
                 Cameras.Add(row);
             }
+            SelectedCamera = Cameras[0];
             StatusText = "Design mode";
         }
 
         // ── Runtime constructor ───────────────────────────────────────────────
-        public CameraEditorViewModel(bool _)
-        {
-            ExportCameraCommand = new AsyncRelayCommand<int>(ExportCameraAsync);
-            ImportCameraCommand = new AsyncRelayCommand<int>(ImportCameraAsync);
-        }
+        public CameraEditorViewModel(bool _) { }
 
         // ── Setup ─────────────────────────────────────────────────────────────
         public async Task SetupAsync(Window owner)
@@ -173,62 +318,32 @@ namespace DSPRE.Avalonia.ViewModels.World
                     return;
                 }
 
-                // Read RAM addresses from overlay to find camera table offset
-                uint[] ramAddresses = new uint[RomInfo.cameraTblOffsetsToRAMaddress.Length];
-                string camOverlayPath = OverlayUtils.GetPath(RomInfo.cameraTblOverlayNumber);
-
-                using (DSUtils.EasyReader br = new DSUtils.EasyReader(camOverlayPath))
+                var location = GameCameraTable.Locate();
+                if (!location.PointersAgree)
                 {
-                    for (int i = 0; i < RomInfo.cameraTblOffsetsToRAMaddress.Length; i++)
-                    {
-                        br.BaseStream.Position = RomInfo.cameraTblOffsetsToRAMaddress[i];
-                        ramAddresses[i] = br.ReadUInt32();
-                    }
+                    await DialogHelper.ShowInfo(
+                        "The game keeps more than one pointer to the camera table and they disagree.\n" +
+                        "Camera values might be wrong.",
+                        "Possible Errors");
                 }
+                _overlayCameraTblOffset = location.Offset;
 
-                uint referenceAddr = ramAddresses[0];
-                for (int i = 1; i < ramAddresses.Length; i++)
-                {
-                    if (ramAddresses[i] != referenceAddr)
-                    {
-                        await DialogHelper.ShowInfo(
-                            $"RAM pointer mismatch between offset #1 and offset #{i + 1}.\n" +
-                            "Camera values might be wrong.",
-                            "Possible Errors");
-                    }
-                }
-
-                _overlayCameraTblOffset = referenceAddr -
-                    OverlayUtils.OverlayTable.GetRAMAddress(RomInfo.cameraTblOverlayNumber);
-
-                // Load cameras
                 Cameras.Clear();
-                int camCount = RomInfo.cameraCount;
-
-                using (DSUtils.EasyReader br = new DSUtils.EasyReader(camOverlayPath, _overlayCameraTblOffset))
+                var cameras = GameCameraTable.Read(location);
+                for (int i = 0; i < cameras.Count; i++)
                 {
-                    for (int i = 0; i < camCount; i++)
-                    {
-                        GameCamera cam;
-                        if (IsHgss)
-                            cam = new GameCamera(br.ReadUInt32(), br.ReadInt16(), br.ReadInt16(), br.ReadInt16(),
-                                                 br.ReadInt16(), br.ReadByte(), br.ReadByte(),
-                                                 br.ReadUInt16(), br.ReadUInt32(), br.ReadUInt32(),
-                                                 br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
-                        else
-                            cam = new GameCamera(br.ReadUInt32(), br.ReadInt16(), br.ReadInt16(), br.ReadInt16(),
-                                                 br.ReadInt16(), br.ReadByte(), br.ReadByte(),
-                                                 br.ReadUInt16(), br.ReadUInt32(), br.ReadUInt32());
-
-                        var row = new CameraRowVM(i);
-                        row.LoadFrom(cam);
-                        row.PropertyChanged += OnRowChanged;
-                        Cameras.Add(row);
-                    }
+                    var row = new CameraRowVM(i);
+                    row.LoadFrom(cameras[i]);
+                    row.PropertyChanged += OnRowChanged;
+                    Cameras.Add(row);
                 }
+                int camCount = cameras.Count;
 
                 IsReady = true;
                 IsDirty = false;
+                SelectedCamera = Cameras.Count > 0 ? Cameras[0] : null;
+                LoadPreviewPlaces();
+                LoadPreviewWeathers();
                 StatusText = $"Loaded {camCount} cameras ({(IsHgss ? "HGSS" : "DP/Plat")})";
             }
             catch (Exception ex)
@@ -246,8 +361,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 string overlayPath = OverlayUtils.GetPath(RomInfo.cameraTblOverlayNumber);
                 WriteCameraTable(overlayPath, _overlayCameraTblOffset);
                 IsDirty = false;
+                GameCameraTable.RaiseSaved();
                 StatusText = "Camera table saved.";
-                await DialogHelper.ShowInfo("Camera table saved.", "Success");
+                SaveNotice.Saved(UnsavedChangesDescription);
             }
             catch (Exception ex)
             {
@@ -266,7 +382,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 WriteCameraTable(path, 0);
-                await DialogHelper.ShowInfo("Camera table exported.", "Success");
+                StatusText = "Camera table exported.";
+                SaveNotice.Show(StatusText);
             }
             catch (Exception ex)
             {
@@ -301,7 +418,6 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 IsDirty = true;
                 StatusText = $"Imported {nCameras} cameras from file.";
-                await DialogHelper.ShowInfo("Camera table imported.", "Success");
             }
             catch (Exception ex)
             {
@@ -310,8 +426,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Per-camera Export / Import ────────────────────────────────────────
-        private async Task ExportCameraAsync(int index)
+        public async Task ExportCameraAsync()
         {
+            int index = SelectedCamera?.Index ?? -1;
             if (index < 0 || index >= Cameras.Count) return;
             var filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
             string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.projectName) + $" - Camera {index}.bin";
@@ -322,7 +439,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 byte[] data = Cameras[index].ToGameCamera(IsHgss).ToByteArray();
                 DSUtils.WriteToFile(path, data, fmode: FileMode.Create);
-                await DialogHelper.ShowInfo($"Camera {index} exported.", "Success");
+                StatusText = $"Camera {index} exported.";
+                SaveNotice.Show(StatusText);
             }
             catch (Exception ex)
             {
@@ -330,8 +448,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
-        private async Task ImportCameraAsync(int index)
+        public async Task ImportCameraAsync()
         {
+            int index = SelectedCamera?.Index ?? -1;
             if (index < 0 || index >= Cameras.Count) return;
             var filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.OpenFile(_owner, $"Import Camera {index}", new[] { filter });
@@ -344,7 +463,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Cameras[index].LoadFrom(cam);
                 IsDirty = true;
                 StatusText = $"Camera {index} imported.";
-                await DialogHelper.ShowInfo($"Camera {index} imported.", "Success");
             }
             catch (Exception ex)
             {
@@ -364,37 +482,45 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void OnRowChanged(object sender, PropertyChangedEventArgs e)
         {
+            // A name lives with the project's labels, not in the table.
+            if (e.PropertyName is nameof(CameraRowVM.Name) or nameof(CameraRowVM.Label)) return;
             if (IsReady) IsDirty = true;
         }
-    }
 
-    // ── Minimal async command ─────────────────────────────────────────────────
-    internal sealed class AsyncRelayCommand<T> : ICommand
-    {
-        private readonly Func<T, Task> _execute;
-        private bool _running;
-        public event EventHandler CanExecuteChanged;
-
-        public AsyncRelayCommand(Func<T, Task> execute) { _execute = execute; }
-
-        public bool CanExecute(object parameter) => !_running;
-
-        public async void Execute(object parameter)
+        // ── Names ─────────────────────────────────────────────────────────────
+        /// <summary>Renames the selected camera everywhere its name shows; a blank name restores the original.</summary>
+        public async Task RenameSelectedAsync()
         {
-            if (_running) return;
-            _running = true;
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-            try
+            var row = SelectedCamera;
+            if (row == null) return;
+            string name = await DialogHelper.PromptText($"Camera {row.Index}", "Rename Camera", row.Name, _owner);
+            if (name == null || name.Trim() == row.Name) return;
+            DSPRE.Avalonia.Data.LabelStore.SetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKey, row.Index, name, global: false);
+            DSPRE.Avalonia.Data.LabelStore.Save(global: false);
+            AppEvents.RaiseLabelsChanged();
+        }
+
+        private void OnLabelsChanged(object sender, EventArgs e)
+        {
+            foreach (var row in Cameras) row.RefreshName();
+            PreviewWeather.LoadLabels(DSPRE.Avalonia.Data.LabelStore.WeatherKey);
+            int keep = _previewWeatherIndex;
+            _previewWeatherIndex = -1;
+            Notify(nameof(PreviewWeatherIndex));
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                T arg = (T)Convert.ChangeType(parameter, typeof(T));
-                await _execute(arg);
-            }
-            catch { /* swallow, errors handled inside execute delegates */ }
-            finally
-            {
-                _running = false;
-                CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-            }
+                _previewWeatherIndex = keep;
+                Notify(nameof(PreviewWeatherIndex));
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        public void Detach() => AppEvents.LabelsChanged -= OnLabelsChanged;
+
+        public void Reattach()
+        {
+            AppEvents.LabelsChanged -= OnLabelsChanged;
+            AppEvents.LabelsChanged += OnLabelsChanged;
+            OnLabelsChanged(this, EventArgs.Empty);
         }
     }
 }

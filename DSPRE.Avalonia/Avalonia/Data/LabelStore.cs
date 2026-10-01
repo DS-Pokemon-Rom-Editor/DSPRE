@@ -114,6 +114,17 @@ namespace DSPRE.Avalonia.Data
             Reg("move_contest_conditions","Move Contest Conditions", "Moves", "Condition", Enum.GetNames<MoveData.ContestCondition>());
             Reg("trade_languages",        "Trade Origin Languages", "Trades", "Language", Enum.GetNames<TradeOriginLang>());
 
+            // Field cameras and weathers, per game: the header picks them by number and ROM hacks repurpose them.
+            void RegField(string key, string name, string singular, int cap, Dictionary<int, string> defaults) =>
+                Register(new LabelCategory { Key = key, DisplayName = name, Group = "World", Cap = cap, Defaults = Dense(defaults),
+                                             Singular = singular });
+            RegField("field_cameras_dp", "Cameras (DP)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.DPPtCameraDict);
+            RegField("field_cameras_pt", "Cameras (Pt)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.PtCameraDict);
+            RegField("field_cameras_hgss", "Cameras (HGSS)", "Camera", 256, DSPRE.Resources.PokeDatabase.CameraAngles.HGSSCameraDict);
+            RegField("field_weather_dp", "Weather (DP)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.DPWeatherDict);
+            RegField("field_weather_pt", "Weather (Pt)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.PtWeatherDict);
+            RegField("field_weather_hgss", "Weather (HGSS)", "Weather", 128, DSPRE.Resources.PokeDatabase.Weather.HGSSWeatherDict);
+
             // Overworld sprite entries. The games hold no names for these, so they start as numbers
             // and are worth naming per project: which entry is the player, which is a shop keeper.
             Register(new LabelCategory
@@ -122,6 +133,29 @@ namespace DSPRE.Avalonia.Data
                 Singular = "OW Entry", Cap = 4096, Defaults = Array.Empty<string>(),
             });
         }
+
+        private static string[] Dense(Dictionary<int, string> byValue)
+        {
+            int n = 0;
+            foreach (var k in byValue.Keys) n = Math.Max(n, k + 1);
+            var arr = new string[n];
+            foreach (var kv in byValue) arr[kv.Key] = kv.Value;
+            return arr;
+        }
+
+        /// <summary>The open game's camera label category.</summary>
+        public static string CameraKey => CameraKeyFor(gameFamily);
+
+        public static string CameraKeyFor(GameFamilies family) => family switch
+        {
+            GameFamilies.DP => "field_cameras_dp", GameFamilies.Plat => "field_cameras_pt", _ => "field_cameras_hgss",
+        };
+
+        /// <summary>The open game's weather label category.</summary>
+        public static string WeatherKey => gameFamily switch
+        {
+            GameFamilies.DP => "field_weather_dp", GameFamilies.Plat => "field_weather_pt", _ => "field_weather_hgss",
+        };
 
         /// <summary>Default "param meaning" per evolution method (method index → EvolutionParamMeaning value),
         /// from EvolutionFile.evoDescriptions, the attribute defaults for the evolution_methods category.</summary>

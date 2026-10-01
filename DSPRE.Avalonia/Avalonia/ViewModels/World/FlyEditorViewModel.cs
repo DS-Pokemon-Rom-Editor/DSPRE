@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using static DSPRE.RomInfo;
@@ -80,9 +81,6 @@ namespace DSPRE.Avalonia.ViewModels.World
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
-
-        private static uint FlyTableOffset => RomInfo.FlyTableOffset;
-        private static int TableSize => RomInfo.FlyTableRows;
 
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
         private bool _dirty;
@@ -175,7 +173,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                 WriteRows();
                 SetClean();
                 SaveNotice.Saved(UnsavedChangesDescription);
-                await DialogHelper.ShowInfo("Fly table saved successfully.", "Save");
             }
             catch (Exception ex)
             {
@@ -194,38 +191,16 @@ namespace DSPRE.Avalonia.ViewModels.World
             Rows.Clear();
             try
             {
-                using var reader = new ARM9.Reader(FlyTableOffset);
-                for (int i = 0; i < TableSize; i++)
+                foreach (var r in FlyTable.Read())
                 {
-                    var row = new FlyRow();
-                    if (IsHgss)
+                    var row = new FlyRow
                     {
-                        row.FlagIdx         = ReadByte(reader);
-                        byte flags          = ReadByte(reader);
-                        row.IsBlackoutSpawn = (flags & 0x01) != 0;
-                        row.IsFlyPoint      = (flags & 0x02) != 0;
-                        row.HeaderIdGameOver = ReadUInt16(reader);
-                        row.LocalX           = ReadByte(reader);
-                        row.LocalY           = ReadByte(reader);
-                        row.HeaderIdFly      = ReadUInt16(reader);
-                        row.GlobalX          = ReadUInt16(reader);
-                        row.GlobalY          = ReadUInt16(reader);
-                        row.HeaderIdUnlockWarp = ReadUInt16(reader);
-                        row.GlobalXUnlock    = ReadUInt16(reader);
-                        row.GlobalYUnlock    = ReadUInt16(reader);
-                    }
-                    else
-                    {
-                        row.HeaderIdGameOver  = ReadUInt16(reader);
-                        row.LocalX            = ReadUInt16(reader);
-                        row.LocalY            = ReadUInt16(reader);
-                        row.HeaderIdFly       = ReadUInt16(reader);
-                        row.GlobalX           = ReadUInt16(reader);
-                        row.GlobalY           = ReadUInt16(reader);
-                        row.IsTeleportPos     = ReadByte(reader) != 0;
-                        row.UnlockOnMapEntry  = ReadByte(reader) != 0;
-                        row.UnlockId          = ReadUInt16(reader);
-                    }
+                        HeaderIdGameOver = r.HeaderIdGameOver, LocalX = r.LocalX, LocalY = r.LocalY,
+                        HeaderIdFly = r.HeaderIdFly, GlobalX = r.GlobalX, GlobalY = r.GlobalY,
+                        IsTeleportPos = r.IsTeleportPos, UnlockOnMapEntry = r.UnlockOnMapEntry, UnlockId = r.UnlockId,
+                        FlagIdx = r.FlagIdx, IsBlackoutSpawn = r.IsBlackoutSpawn, IsFlyPoint = r.IsFlyPoint,
+                        HeaderIdUnlockWarp = r.HeaderIdUnlockWarp, GlobalXUnlock = r.GlobalXUnlock, GlobalYUnlock = r.GlobalYUnlock,
+                    };
                     row.PropertyChanged += (_, __) => SetDirty();
                     Rows.Add(row);
                 }
@@ -239,42 +214,16 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void WriteRows()
         {
-            using var writer = new ARM9.Writer(FlyTableOffset);
-            for (int i = 0; i < Rows.Count; i++)
+            FlyTable.Write(Rows.Select(row => new FlyTable.Row
             {
-                var row = Rows[i];
-                if (IsHgss)
-                {
-                    writer.Write(row.FlagIdx);
-                    byte flags = (byte)((row.IsBlackoutSpawn ? 0x01 : 0x00) | (row.IsFlyPoint ? 0x02 : 0x00));
-                    writer.Write(flags);
-                    writer.Write((ushort)row.HeaderIdGameOver);
-                    writer.Write((byte)row.LocalX);
-                    writer.Write((byte)row.LocalY);
-                    writer.Write((ushort)row.HeaderIdFly);
-                    writer.Write(row.GlobalX);
-                    writer.Write(row.GlobalY);
-                    writer.Write((ushort)row.HeaderIdUnlockWarp);
-                    writer.Write(row.GlobalXUnlock);
-                    writer.Write(row.GlobalYUnlock);
-                }
-                else
-                {
-                    writer.Write((ushort)row.HeaderIdGameOver);
-                    writer.Write(row.LocalX);
-                    writer.Write(row.LocalY);
-                    writer.Write((ushort)row.HeaderIdFly);
-                    writer.Write(row.GlobalX);
-                    writer.Write(row.GlobalY);
-                    writer.Write(row.IsTeleportPos     ? (byte)1 : (byte)0);
-                    writer.Write(row.UnlockOnMapEntry  ? (byte)1 : (byte)0);
-                    writer.Write(row.UnlockId);
-                }
-            }
+                HeaderIdGameOver = row.HeaderIdGameOver, LocalX = row.LocalX, LocalY = row.LocalY,
+                HeaderIdFly = row.HeaderIdFly, GlobalX = row.GlobalX, GlobalY = row.GlobalY,
+                IsTeleportPos = row.IsTeleportPos, UnlockOnMapEntry = row.UnlockOnMapEntry, UnlockId = row.UnlockId,
+                FlagIdx = row.FlagIdx, IsBlackoutSpawn = row.IsBlackoutSpawn, IsFlyPoint = row.IsFlyPoint,
+                HeaderIdUnlockWarp = row.HeaderIdUnlockWarp, GlobalXUnlock = row.GlobalXUnlock, GlobalYUnlock = row.GlobalYUnlock,
+            }).ToList());
+            FlyTable.RaiseSaved();
         }
 
-        // synchronous wrappers (ARM9.Reader inherits BinaryReader)
-        private static byte   ReadByte(BinaryReader r)   => r.ReadByte();
-        private static ushort ReadUInt16(BinaryReader r)  => r.ReadUInt16();
     }
 }

@@ -18,10 +18,13 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public class NsbmdGlControl : OpenGlControlBase
     {
-        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int NodeIndex; public int CullMode; }
+        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int NodeIndex; public int CullMode; public bool Fog; }
 
         private GlFunctions _f;
         private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc, _matColorLoc;
+        private int _viewLoc, _fogOnLoc, _fogColorLoc, _fogLoc, _fogClipLoc, _fogTableLoc;
+        private int _spotOnLoc, _spotCenterLoc, _spotScaleLoc, _spotTrisLoc, _spotTriCountLoc,
+                    _spotTexLoc, _spotSizeLoc, _camPosLoc, _camDirLoc;
         private int _tintLoc, _tileOriginLoc, _tileSizeLoc, _collLoc;
         private string _error;
 
@@ -321,6 +324,212 @@ namespace DSPRE.Avalonia.Gl
             RequestNextFrameRendering();
         }
 
+        private (float Offset, float Step, (float r, float g, float b) Colour, float Near, float Far, float PerUnit, float[] Table)? _fog;
+
+        /// <summary>
+        /// Field fog as G3X_SetFog takes it, over the materials that allow it. <paramref name="near"/> and
+        /// <paramref name="far"/> are the game camera's clip planes in game units, and
+        /// <paramref name="unitsPerScene"/> turns this view's distances into game units. Null clears it.
+        /// </summary>
+        public void SetFog(FieldWeather.Fog fog, float near, float far, float unitsPerScene)
+        {
+            if (fog == null) { _fog = null; RequestNextFrameRendering(); return; }
+            // Fog alpha below full lets the layer under the 3D show through, which in the field is the black
+            // backdrop, so the fog colour is scaled towards black.
+            float a = Math.Clamp(fog.Alpha, 0, 31) / 31f;
+            var table = new float[32];
+            for (int i = 0; i < 32; i++) table[i] = fog.Density(i);
+            _fog = (fog.Offset, 0x400 >> fog.Slope,
+                    ((fog.Colour & 31) / 31f * a, ((fog.Colour >> 5) & 31) / 31f * a, ((fog.Colour >> 10) & 31) / 31f * a),
+                    near, far, unitsPerScene, table);
+            RequestNextFrameRendering();
+        }
+
+        /// <summary>
+        /// A 256 by 192 picture laid over the whole view the way the DS mixes a 2D layer with the 3D one:
+        /// out = (layer * eva + under * evb) / 16, each factor capped at 16. See-through pixels are skipped.
+        /// </summary>
+        public sealed class ScreenLayer
+        {
+            public byte[] Rgba;
+            public int Eva = 16, Evb;
+
+            /// <summary>Drawn before the 3D, so it shows only where nothing is in front.</summary>
+            public bool Behind;
+        }
+
+        private IReadOnlyList<ScreenLayer> _screenLayers;
+        private bool _screenDirty;
+        private readonly List<int> _screenTex = new();
+        private int _screenVbo;
+
+        /// <summary>Sets the 2D layers drawn with the view, back to front, or null for none.</summary>
+        public void SetScreenLayers(IReadOnlyList<ScreenLayer> layers)
+        {
+            _screenLayers = layers;
+            _screenDirty = true;
+            RequestNextFrameRendering();
+        }
+
+        private static readonly float[] ScreenQuad =
+        {
+            -1, -1, 0, 0, 1, 1, 1, 1,   1, -1, 0, 1, 1, 1, 1, 1,   1, 1, 0, 1, 0, 1, 1, 1,
+            -1, -1, 0, 0, 1, 1, 1, 1,   1, 1, 0, 1, 0, 1, 1, 1,   -1, 1, 0, 0, 0, 1, 1, 1,
+        };
+
+        private void RenderScreenLayers(bool behind, int stride)
+        {
+            var layers = _screenLayers;
+            if (layers == null || layers.Count == 0) return;
+
+            if (_screenDirty)
+            {
+                while (_screenTex.Count < layers.Count) { var t = new int[1]; _f.GenTextures(1, t); _screenTex.Add(t[0]); }
+                for (int i = 0; i < layers.Count; i++)
+                {
+                    if (layers[i]?.Rgba == null) continue;
+                    _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _screenTex[i]);
+                    _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, 256, 192, 0, GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, layers[i].Rgba);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MIN_FILTER, GlFunctions.GL_NEAREST);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MAG_FILTER, GlFunctions.GL_NEAREST);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_S, GlFunctions.GL_CLAMP_TO_EDGE);
+                    _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_WRAP_T, GlFunctions.GL_CLAMP_TO_EDGE);
+                }
+                _screenDirty = false;
+            }
+
+            if (_screenVbo == 0)
+            {
+                var a = new int[1]; _f.GenBuffers(1, a); _screenVbo = a[0];
+                _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _screenVbo);
+                var h = GCHandle.Alloc(ScreenQuad, GCHandleType.Pinned);
+                try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(ScreenQuad.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
+                finally { h.Free(); }
+            }
+
+            _f.BindVertexArray(_vao);
+            _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _screenVbo);
+            _f.EnableVertexAttribArray(0); _f.VertexAttribPointer(0, 3, GlFunctions.GL_FLOAT, false, stride, IntPtr.Zero);
+            _f.EnableVertexAttribArray(1); _f.VertexAttribPointer(1, 2, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(3 * sizeof(float)));
+            _f.EnableVertexAttribArray(2); _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
+
+            var identity = Mat4.Identity();
+            _f.UniformMatrix4fv(_mvpLoc, 1, false, identity);
+            if (_viewLoc >= 0) _f.UniformMatrix4fv(_viewLoc, 1, false, identity);
+            if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
+            if (_fogOnLoc >= 0) _f.Uniform1i(_fogOnLoc, 0);
+            if (_spotOnLoc >= 0) _f.Uniform1i(_spotOnLoc, 0);
+            _f.Uniform1f(_tintLoc, 0f);
+            _f.Uniform1i(_texLoc, 0);
+            _f.Uniform1i(_hasTexLoc, 1);
+            _f.ActiveTexture(GlFunctions.GL_TEXTURE0);
+
+            _f.Disable(GlFunctions.GL_DEPTH_TEST);
+            _f.DepthMask(false);
+            _f.Enable(GlFunctions.GL_BLEND);
+            // The layer arrives already scaled by eva and carries evb as its alpha. The picture stays opaque,
+            // or the panel behind the view would show through.
+            _f.BlendFuncSeparate(GlFunctions.GL_ONE, GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ZERO, GlFunctions.GL_ONE);
+
+            for (int i = 0; i < layers.Count; i++)
+            {
+                var l = layers[i];
+                if (l?.Rgba == null || l.Behind != behind) continue;
+                float eva = Math.Clamp(l.Eva, 0, 16) / 16f, evb = Math.Clamp(l.Evb, 0, 16) / 16f;
+                if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, eva, eva, eva);
+                _f.Uniform1f(_alphaLoc, evb);
+                _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _screenTex[i]);
+                _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, 6);
+            }
+
+            _f.Disable(GlFunctions.GL_BLEND);
+            _f.DepthMask(true);
+            _f.Enable(GlFunctions.GL_DEPTH_TEST);
+            if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, 1f, 1f, 1f);
+            _f.Uniform1f(_alphaLoc, 1f);
+            _f.Uniform1i(_hasTexLoc, 0);
+        }
+
+        /// <summary>
+        /// The HGSS Flash light: the upright field effect model at <see cref="Center"/> in this view's space,
+        /// its triangles and texture coordinates in model units, which the scale turns into this view's units.
+        /// </summary>
+        public sealed class LightSpot
+        {
+            public float[] Center;
+            public float ScaleX, ScaleY;
+            public float[] Triangles;            // x, y, u, v for each corner, three corners a triangle
+            public byte[] Rgba;
+            public int Width, Height;
+        }
+
+        // The shader's uSpotTris array holds three corners for each of this many triangles.
+        private const int MaxSpotTriangles = 32;
+        private readonly float[] _spotTris = new float[MaxSpotTriangles * 3 * 4];
+
+        private LightSpot _spot;
+        private int _spotTex;
+        private bool _spotDirty;
+
+        public void SetLightSpot(LightSpot spot)
+        {
+            _spot = spot;
+            _spotDirty = true;
+            RequestNextFrameRendering();
+        }
+
+        /// <summary>Where the camera sits in this view's space.</summary>
+        public (float x, float y, float z) EyePosition()
+        {
+            var view = Mat4.Multiply(Mat4.Multiply(Mat4.RotateZ(_roll * (float)Math.PI / 180f), Mat4.OrbitView(_distance, _yaw, _pitch)),
+                                     Mat4.Translate(-_targetX, -_targetY, -_targetZ));
+            var inv = Mat4.Invert(view);
+            return inv == null ? (_targetX, _targetY, _targetZ) : (inv[12], inv[13], inv[14]);
+        }
+
+        private void ApplySpot(float[] view)
+        {
+            var spot = _spot;
+            if (_spotOnLoc < 0) return;
+            if (spot == null || spot.Triangles == null) { _f.Uniform1i(_spotOnLoc, 0); return; }
+            var inv = Mat4.Invert(view);
+            if (inv == null) { _f.Uniform1i(_spotOnLoc, 0); return; }
+            // The model draws its front face only, so from behind it lights nothing.
+            float camZ = inv[14];
+            if (!_orthographic && camZ <= spot.Center[2]) { _f.Uniform1i(_spotOnLoc, 0); return; }
+
+            if (_spotDirty)
+            {
+                if (_spotTex == 0) { var t = new int[1]; _f.GenTextures(1, t); _spotTex = t[0]; }
+                _f.ActiveTexture(GlFunctions.GL_TEXTURE2);
+                _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _spotTex);
+                _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, spot.Width, spot.Height, 0, GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, spot.Rgba);
+                _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MIN_FILTER, GlFunctions.GL_NEAREST);
+                _f.TexParameteri(GlFunctions.GL_TEXTURE_2D, GlFunctions.GL_TEXTURE_MAG_FILTER, GlFunctions.GL_NEAREST);
+                _f.ActiveTexture(GlFunctions.GL_TEXTURE0);
+                _spotDirty = false;
+            }
+
+            _f.ActiveTexture(GlFunctions.GL_TEXTURE2);
+            _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _spotTex);
+            _f.ActiveTexture(GlFunctions.GL_TEXTURE0);
+            _f.Uniform1i(_spotTexLoc, 2);
+            _f.Uniform1i(_spotOnLoc, 1);
+            _f.Uniform3f(_spotCenterLoc, spot.Center[0], spot.Center[1], spot.Center[2]);
+            _f.Uniform2f(_spotScaleLoc, spot.ScaleX, spot.ScaleY);
+            Array.Clear(_spotTris);
+            Array.Copy(spot.Triangles, _spotTris, Math.Min(_spotTris.Length, spot.Triangles.Length));
+            _f.Uniform4fv(_spotTrisLoc, MaxSpotTriangles * 3, _spotTris);
+            _f.Uniform1i(_spotTriCountLoc, Math.Min(MaxSpotTriangles, spot.Triangles.Length / 12));
+            _f.Uniform2f(_spotSizeLoc, spot.Width, spot.Height);
+            _f.Uniform3f(_camPosLoc, inv[12], inv[13], inv[14]);
+            // The view looks down its own -z, which is the third row of the view matrix.
+            _f.Uniform4f(_camDirLoc, -view[2], -view[6], -view[10], _orthographic ? 1f : 0f);
+        }
+
+        /// <summary>What shows where nothing is drawn.</summary>
+        public (float r, float g, float b) ClearColour { get; set; } = (0.12f, 0.12f, 0.14f);
+
         /// <summary>Recentres the camera pivot.</summary>
         public void ResetView() { _targetX = _targetY = _targetZ = 0f; RequestNextFrameRendering(); }
 
@@ -487,8 +696,9 @@ namespace DSPRE.Avalonia.Gl
                     // Terrain animation (NSBTA) scrolls a material's texture coordinates.
                     // Identity for every material the animation does not target.
                     "uniform mat3 uTexMtx;\n" +
-                    "out vec2 vUv;\nout vec3 vColor;\nout vec2 vWorld;\n" +
-                    "void main(){ vUv = (uTexMtx * vec3(aUv, 1.0)).xy; vColor = aColor; vWorld = aPos.xz; gl_Position = uMvp * vec4(aPos, 1.0); }\n";
+                    "uniform mat4 uView;\n" +
+                    "out vec2 vUv;\nout vec3 vColor;\nout vec2 vWorld;\nout float vEye;\nout vec3 vPos;\n" +
+                    "void main(){ vUv = (uTexMtx * vec3(aUv, 1.0)).xy; vColor = aColor; vWorld = aPos.xz; vEye = -(uView * vec4(aPos, 1.0)).z; vPos = aPos; gl_Position = uMvp * vec4(aPos, 1.0); }\n";
                 string fs = header +
                     "uniform sampler2D uTex;\nuniform int uHasTex;\nuniform float uAlpha;\n" +
                     // Per-tile permission tint (uTint>0): sample a 32x32 collision-colour texture by the fragment's
@@ -497,7 +707,49 @@ namespace DSPRE.Avalonia.Gl
                     "uniform float uTint;\nuniform vec2 uTileOrigin;\nuniform vec2 uTileSize;\nuniform sampler2D uColl;\n" +
                     // A material-colour animation (NSBMA) recolours a surface over time. White leaves it alone.
                     "uniform vec3 uMatColor;\n" +
-                    "in vec2 vUv;\nin vec3 vColor;\nin vec2 vWorld;\nout vec4 fragColor;\n" +
+                    // DS fog: the 15-bit depth the Z-buffer holds, 0x3FFF + 0x4000 z/w under the game camera's own clip
+                    // planes, read through the weather's 32-entry density table, entries (0x400 >> slope) apart.
+                    "uniform int uFogOn;\nuniform vec3 uFogColor;\nuniform vec4 uFog;\nuniform vec3 uFogClip;\nuniform float uFogTable[32];\n" +
+                    "in vec2 vUv;\nin vec3 vColor;\nin vec2 vWorld;\nin float vEye;\nin vec3 vPos;\nout vec4 fragColor;\n" +
+                    "uniform int uSpotOn;\nuniform vec3 uSpotCenter;\nuniform vec2 uSpotScale;\nuniform vec4 uSpotTris[" + MaxSpotTriangles * 3 + "];\nuniform int uSpotTriCount;\n" +
+                    "uniform sampler2D uSpotTex;\nuniform vec2 uSpotSize;\n" +
+                    "uniform vec3 uCamPos;\nuniform vec4 uCamDir;\n" +
+                    "float spotAlpha(){\n" +
+                    "  vec3 o = uCamDir.w > 0.5 ? vPos - uCamDir.xyz * 1000.0 : uCamPos;\n" +
+                    "  vec3 d = vPos - o;\n" +
+                    "  if (abs(d.z) < 1e-6) return -1.0;\n" +
+                    "  float t = (uSpotCenter.z - o.z) / d.z;\n" +
+                    "  if (t <= 0.0 || t >= 1.0) return -1.0;\n" +
+                    "  vec2 l = ((o + d * t).xy - uSpotCenter.xy) / uSpotScale;\n" +
+                    "  for (int i = 0; i < " + MaxSpotTriangles + "; i++) {\n" +
+                    "    if (i >= uSpotTriCount) break;\n" +
+                    "    vec4 p0 = uSpotTris[3 * i], p1 = uSpotTris[3 * i + 1], p2 = uSpotTris[3 * i + 2];\n" +
+                    "    vec2 e1 = p1.xy - p0.xy, e2 = p2.xy - p0.xy, q = l - p0.xy;\n" +
+                    "    float det = e1.x * e2.y - e1.y * e2.x;\n" +
+                    "    if (abs(det) < 1e-9) continue;\n" +
+                    "    float b1 = (q.x * e2.y - q.y * e2.x) / det, b2 = (e1.x * q.y - e1.y * q.x) / det;\n" +
+                    "    if (b1 < -1e-5 || b2 < -1e-5 || b1 + b2 > 1.0 + 1e-5) continue;\n" +
+                    "    vec2 uv = (p0.zw + (p1.zw - p0.zw) * b1 + (p2.zw - p0.zw) * b2) * uSpotSize;\n" +
+                    "    ivec2 tx = ivec2(clamp(floor(uv), vec2(0.0), uSpotSize - 1.0));\n" +
+                    // A5I3 keeps five bits of alpha, 31 of them opaque, which the decoder stores shifted by three.
+                    "    float a = floor(texelFetch(uSpotTex, tx, 0).a * 255.0 / 8.0 + 0.5) / 31.0;\n" +
+                    "    return a > 0.0 ? a : -1.0;\n" +
+                    "  }\n" +
+                    "  return -1.0;\n" +
+                    "}\n" +
+                    "vec3 fogged(vec3 c){\n" +
+                    "  float s = uSpotOn == 1 ? spotAlpha() : -1.0;\n" +
+                    "  if (s >= 0.0) return c * (1.0 - s);\n" +
+                    "  if (uFogOn == 0) return c;\n" +
+                    "  float z = vEye * uFog.w, n = uFogClip.x, f = uFogClip.y;\n" +
+                    "  float ndc = uFogClip.z > 0.5 ? (2.0 * z - (f + n)) / (f - n) : (f + n) / (f - n) - 2.0 * f * n / ((f - n) * max(z, 0.001));\n" +
+                    "  float depth = 16383.0 + 16384.0 * clamp(ndc, -1.0, 1.0);\n" +
+                    "  float at = clamp((depth - uFog.x) / uFog.y, 0.0, 31.0);\n" +
+                    "  int i0 = int(floor(at)); int i1 = min(i0 + 1, 31);\n" +
+                    "  float d = mix(uFogTable[i0], uFogTable[i1], at - float(i0));\n" +
+                    "  float k = d >= 127.0 ? 1.0 : d / 128.0;\n" +
+                    "  return mix(c, uFogColor, k);\n" +
+                    "}\n" +
                     "vec3 tintRgb(vec3 c){\n" +
                     "  if (uTint <= 0.0) return c;\n" +
                     "  vec2 tc = (vWorld - uTileOrigin) / uTileSize;\n" +
@@ -507,8 +759,8 @@ namespace DSPRE.Avalonia.Gl
                     "  return mix(c, t.rgb, uTint * t.a);\n" +
                     "}\n" +
                     "void main(){\n" +
-                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); if (t.a < 0.5) discard; fragColor = vec4(tintRgb(t.rgb) * uMatColor, uAlpha); }\n" +
-                    "  else { fragColor = vec4(tintRgb(vColor) * uMatColor, uAlpha); }\n" +
+                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); if (t.a < 0.5) discard; fragColor = vec4(fogged(tintRgb(t.rgb) * uMatColor), uAlpha); }\n" +
+                    "  else { fragColor = vec4(fogged(tintRgb(vColor) * uMatColor), uAlpha); }\n" +
                     "}\n";
 
                 int v = _f.CompileShaderOrThrow(GlFunctions.GL_VERTEX_SHADER, vs);
@@ -524,6 +776,21 @@ namespace DSPRE.Avalonia.Gl
                 _tileOriginLoc = _f.GetUniformLocation(_program, "uTileOrigin");
                 _tileSizeLoc = _f.GetUniformLocation(_program, "uTileSize");
                 _collLoc = _f.GetUniformLocation(_program, "uColl");
+                _viewLoc = _f.GetUniformLocation(_program, "uView");
+                _fogOnLoc = _f.GetUniformLocation(_program, "uFogOn");
+                _fogColorLoc = _f.GetUniformLocation(_program, "uFogColor");
+                _fogLoc = _f.GetUniformLocation(_program, "uFog");
+                _fogClipLoc = _f.GetUniformLocation(_program, "uFogClip");
+                _fogTableLoc = _f.GetUniformLocation(_program, "uFogTable");
+                _spotOnLoc = _f.GetUniformLocation(_program, "uSpotOn");
+                _spotCenterLoc = _f.GetUniformLocation(_program, "uSpotCenter");
+                _spotScaleLoc = _f.GetUniformLocation(_program, "uSpotScale");
+                _spotTrisLoc = _f.GetUniformLocation(_program, "uSpotTris");
+                _spotTriCountLoc = _f.GetUniformLocation(_program, "uSpotTriCount");
+                _spotTexLoc = _f.GetUniformLocation(_program, "uSpotTex");
+                _spotSizeLoc = _f.GetUniformLocation(_program, "uSpotSize");
+                _camPosLoc = _f.GetUniformLocation(_program, "uCamPos");
+                _camDirLoc = _f.GetUniformLocation(_program, "uCamDir");
 
                 var arr = new int[1];
                 _f.GenVertexArrays(1, arr); _vao = arr[0];
@@ -645,7 +912,7 @@ namespace DSPRE.Avalonia.Gl
 
                 _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId,
                     Alpha = part.Alpha, MaterialKey = part.MaterialIndex, NodeIndex = part.NodeIndex,
-                    CullMode = part.CullMode });
+                    CullMode = part.CullMode, Fog = part.Fog });
             }
             _uploadPending = false;
         }
@@ -743,7 +1010,7 @@ namespace DSPRE.Avalonia.Gl
             int ph = Math.Max(1, (int)(Bounds.Height * scaling));
 
             _f.Viewport(0, 0, pw, ph);
-            _f.ClearColor(0.12f, 0.12f, 0.14f, 1f);
+            _f.ClearColor(ClearColour.r, ClearColour.g, ClearColour.b, 1f);
             _f.Enable(GlFunctions.GL_DEPTH_TEST);
             _f.Clear(GlFunctions.GL_COLOR_BUFFER_BIT | GlFunctions.GL_DEPTH_BUFFER_BIT);
 
@@ -762,9 +1029,20 @@ namespace DSPRE.Avalonia.Gl
             _lastMvp = mvp; _lastLogW = (float)Math.Max(1.0, Bounds.Width); _lastLogH = (float)Math.Max(1.0, Bounds.Height);
 
             _f.UseProgram(_program);
+            RenderScreenLayers(behind: true, stride: 8 * sizeof(float));
             _f.UniformMatrix4fv(_mvpLoc, 1, false, mvp);
+            if (_viewLoc >= 0) _f.UniformMatrix4fv(_viewLoc, 1, false, view);
             _f.Uniform1i(_texLoc, 0);
             _f.Uniform1f(_alphaLoc, 1f);
+            if (_fogOnLoc >= 0) _f.Uniform1i(_fogOnLoc, 0);
+            if (_fog is { } fog && _fogLoc >= 0)
+            {
+                _f.Uniform3f(_fogColorLoc, fog.Colour.r, fog.Colour.g, fog.Colour.b);
+                _f.Uniform4f(_fogLoc, fog.Offset, fog.Step, 0f, fog.PerUnit);
+                _f.Uniform3f(_fogClipLoc, fog.Near, fog.Far, _orthographic ? 1f : 0f);
+                if (_fogTableLoc >= 0) _f.Uniform1fv(_fogTableLoc, 32, fog.Table);
+            }
+            ApplySpot(view);
 
             // Per-tile permission tint of the map textures (mesh overlay mode): upload the 32×32 collision-colour
             // texture to unit 1 and hand the shader the tile grid. uTint>0 mixes it into each opaque texel.
@@ -859,6 +1137,8 @@ namespace DSPRE.Avalonia.Gl
                     _f.CullFace(part.CullMode == NsbmdCull.Front ? GlFunctions.GL_FRONT : GlFunctions.GL_BACK);
                 }
 
+                if (_fogOnLoc >= 0) _f.Uniform1i(_fogOnLoc, _fog != null && part.Fog ? 1 : 0);
+
                 if (part.CullMode != NsbmdCull.Nothing)
                     _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, part.VertexCount);
 
@@ -867,15 +1147,18 @@ namespace DSPRE.Avalonia.Gl
             }
             if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
             if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, 1f, 1f, 1f);
+            if (_fogOnLoc >= 0) _f.Uniform1i(_fogOnLoc, 0);
             _f.Uniform1f(_alphaLoc, 1f);  // don't affect the overlay/marker/gizmo passes below
             _f.Uniform1f(_tintLoc, 0f);   // don't tint the overlay/marker/gizmo passes
 
             RenderHighlight(stride);
             RenderOverlay(stride);
             RenderSprites(stride);
+            if (_spotOnLoc >= 0) _f.Uniform1i(_spotOnLoc, 0);
             RenderMarkers(stride);
             if (_showGizmos) RenderGizmos(stride);
             if (_editMode && _gizmoTargetVisible) RenderEditGizmo(stride);
+            RenderScreenLayers(behind: false, stride);
 
             if ((_fieldFrame != null && _fieldFrame.Count > 0) || (_groundMatrices != null && _groundMatrices.Count > 0)) RequestNextFrameRendering();
 

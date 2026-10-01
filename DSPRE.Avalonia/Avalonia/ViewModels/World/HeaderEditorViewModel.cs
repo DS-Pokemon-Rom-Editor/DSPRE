@@ -39,6 +39,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             Names.Clear(); Keys.Clear();
             foreach (var kv in dict) { Keys.Add(Convert.ToInt32(kv.Key)); Names.Add(kv.Value); }
         }
+        /// <summary>Fills from a label category, value = position, updating in place so selections hold.</summary>
+        public void LoadLabels(string category)
+        {
+            var labels = LabelStore.Get(category);
+            ListSync.Apply(Names, labels);
+            Keys.Clear();
+            for (int i = 0; i < labels.Count; i++) Keys.Add(i);
+        }
+
         public int IndexOf(int value) => Keys.IndexOf(value);
         public int KeyAt(int index) => index >= 0 && index < Keys.Count ? Keys[index] : -1;
     }

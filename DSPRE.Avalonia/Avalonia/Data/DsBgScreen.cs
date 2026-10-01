@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.Data
                 }
         }
 
-        private static byte Expand(int five) => (byte)((five << 3) | (five >> 2));
+        internal static byte Expand(int five) => (byte)((five << 3) | (five >> 2));
 
         private static void Put(byte[] rgba, int at, ushort c)
         {
