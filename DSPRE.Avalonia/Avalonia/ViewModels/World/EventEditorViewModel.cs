@@ -1232,9 +1232,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_file == null) return;
             var (cx, cy) = NewEventCell();
-            int newID = 0;                                   // smallest id nothing else is using
-            while (_file.overworlds.Any(o => o.owID == newID)) newID++;
-            _file.overworlds.Add(new Overworld(newID, cx, cy));
+            _file.overworlds.Add(new Overworld(FreeOverworldId(), cx, cy));
             RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1;
         }
         public void RemoveOverworld() { if (_file == null || _selOw < 0 || _selOw >= _file.overworlds.Count) return; _file.overworlds.RemoveAt(_selOw); RefreshLists(); Dirty(); SelectedOverworldIndex = -1; RefreshMarkers(); }
@@ -1245,7 +1243,15 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Duplicate selected (copy ctors) ──────────────────────────────────────────────
         public void DuplicateSpawnable() { if (_file == null || _spawn == null) return; _file.spawnables.Add(new Spawnable(_spawn)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.spawnables.Count - 1; }
-        public void DuplicateOverworld() { if (_file == null || _ow == null) return; _file.overworlds.Add(new Overworld(_ow)); RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1; }
+        // Scripts and hide flags find an overworld by its id, so a copy needs its own.
+        public void DuplicateOverworld() { if (_file == null || _ow == null) return; _file.overworlds.Add(new Overworld(_ow) { owID = (ushort)FreeOverworldId() }); RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1; }
+
+        private int FreeOverworldId()
+        {
+            int id = 0;
+            while (_file.overworlds.Any(o => o.owID == id)) id++;
+            return id;
+        }
         public void DuplicateWarp() { if (_file == null || _warp == null) return; _file.warps.Add(new Warp(_warp)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.warps.Count - 1; }
         public void DuplicateTrigger() { if (_file == null || _trig == null) return; _file.triggers.Add(new Trigger(_trig)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
 
@@ -1455,16 +1461,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// The matrix cells belonging to this event file's header, or null when the matrix has no
         /// headers section to identify them by.
         /// </summary>
-        private HashSet<(int x, int y)> HeaderCells()
-        {
-            if (_matrix == null || !_matrix.hasHeadersSection || _headerId < 0) return null;
-            var set = new HashSet<(int x, int y)>();
-            for (int y = 0; y < _matrix.height; y++)
-                for (int x = 0; x < _matrix.width; x++)
-                    if (_matrix.headers[y, x] == _headerId)
-                        set.Add((x, y));
-            return set.Count > 0 ? set : null;
-        }
+        private HashSet<(int x, int y)> HeaderCells() => _matrix?.CellsOfHeader(_headerId);
 
         /// <summary>The box around every cell with an event, so the maps between them stitch without holes; capped against a stray far-off event.</summary>
         private HashSet<(int x, int y)> EventCells()

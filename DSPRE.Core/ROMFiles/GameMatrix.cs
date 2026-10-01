@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using static DSPRE.RomInfo;
@@ -39,6 +40,18 @@ namespace DSPRE.ROMFiles {
 
         public static readonly ushort EMPTY = 65535;
         #endregion Fields
+
+        /// <summary>The squares this header owns, or null when the matrix has no headers section to say.</summary>
+        public HashSet<(int x, int y)> CellsOfHeader(int headerId)
+        {
+            if (!hasHeadersSection || headerId < 0) return null;
+            var set = new HashSet<(int x, int y)>();
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    if (headers[y, x] == headerId)
+                        set.Add((x, y));
+            return set.Count > 0 ? set : null;
+        }
 
         #region Constructors(1)
         public GameMatrix(Stream data) {

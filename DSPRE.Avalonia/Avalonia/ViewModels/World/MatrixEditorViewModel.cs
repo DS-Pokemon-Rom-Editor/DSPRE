@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Which header a cell belongs to; without a header section only the focus header's matrix counts.</summary>
         public int HeaderOfCell(int c, int r)
         {
-            if (_matrix == null) return -1;
+            if (_matrix == null || c < 0 || r < 0 || c >= _matrix.width || r >= _matrix.height) return -1;
             if (_matrix.hasHeadersSection) return _matrix.headers[r, c];
             if (_matrix.maps[r, c] == GameMatrix.EMPTY || _focusHeader < 0) return -1;
             try { return MapHeader.GetMapHeader((ushort)_focusHeader)?.matrixID == _selectedIndex ? _focusHeader : -1; }

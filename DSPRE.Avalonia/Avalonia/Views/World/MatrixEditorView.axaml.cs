@@ -94,8 +94,11 @@ namespace DSPRE.Avalonia.Views.World
             HeaderGrid.PaintValue = (int)VM.HeaderPaint;
             HeightGrid.PaintValue = (int)VM.HeightPaint;
             MapGrid.SetSource(VM.Width, VM.Height, VM.GetMap, VM.SetMap);
+            // A matrix without a section clears its grid, which would otherwise keep the previous matrix's size.
             if (VM.HasHeaders) HeaderGrid.SetSource(VM.Width, VM.Height, VM.GetHeader, VM.SetHeader);
+            else HeaderGrid.SetSource(0, 0, null, null);
             if (VM.HasHeights) HeightGrid.SetSource(VM.Width, VM.Height, VM.GetHeight, VM.SetHeight);
+            else HeightGrid.SetSource(0, 0, null, null);
             ApplyFocus();
         }
 

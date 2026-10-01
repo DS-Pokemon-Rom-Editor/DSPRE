@@ -48,8 +48,11 @@ namespace DSPRE.Tests
             vm.DuplicateOverworld();
 
             Assert.Equal(2, events.overworlds.Count);
-            Assert.NotSame(original, events.overworlds[1]);
-            Assert.Equal(original.ToByteArray(), events.overworlds[1].ToByteArray());
+            Overworld copy = events.overworlds[1];
+            Assert.NotSame(original, copy);
+            // Scripts and hide flags find an overworld by its id, so the copy takes the smallest free one.
+            Assert.Equal(0, copy.owID);
+            Assert.Equal(original.ToByteArray()[2..], copy.ToByteArray()[2..]);
             Assert.Equal(1, vm.SelectedOverworldIndex);
             Assert.True(vm.HasUnsavedChanges);
         }
