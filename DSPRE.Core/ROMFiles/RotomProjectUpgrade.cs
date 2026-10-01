@@ -44,13 +44,34 @@ namespace DSPRE.ROMFiles
             if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || !File.Exists(StatePath)) return null;
             string current = await CurrentVersionAsync().ConfigureAwait(false);
 
-            using var doc = JsonDocument.Parse(File.ReadAllText(StatePath));
-            var state = doc.RootElement;
-            string recorded = state.TryGetProperty("compiler_version", out var v) ? v.GetString() : null;
+            var recordedScripts = RecordedScripts(out string recorded);
             if (string.Equals(recorded, current, StringComparison.Ordinal)) return null;
 
             var assessment = new Assessment { RecordedVersion = recorded, CurrentVersion = current };
-            if (!state.TryGetProperty("entries", out var entries)) return assessment;
+            foreach (var script in recordedScripts)
+            {
+                bool binaryChanged = Hash(script.Binary) != script.OutputHash;
+                bool sourceChanged = Hash(script.Source) != script.SourceHash;
+                if (binaryChanged && sourceChanged) assessment.BothChanged.Add(script.Id);
+                else if (binaryChanged) assessment.BinaryChanged.Add(script.Id);
+                else if (sourceChanged) assessment.SourceChanged.Add(script.Id);
+            }
+            return assessment;
+        }
+
+        /// <summary>A script rotom's compile state records, with the hashes of its last compile.</summary>
+        internal sealed record RecordedScript(int Id, string Source, string Binary, ulong SourceHash, ulong OutputHash);
+
+        /// <summary>The scripts the project's compile state records whose source and binary both exist.</summary>
+        internal static List<RecordedScript> RecordedScripts(out string compilerVersion)
+        {
+            compilerVersion = null;
+            var scripts = new List<RecordedScript>();
+            if (!File.Exists(StatePath)) return scripts;
+            using var doc = JsonDocument.Parse(File.ReadAllText(StatePath));
+            var state = doc.RootElement;
+            compilerVersion = state.TryGetProperty("compiler_version", out var v) ? v.GetString() : null;
+            if (!state.TryGetProperty("entries", out var entries)) return scripts;
 
             foreach (var entry in entries.EnumerateObject())
             {
@@ -58,17 +79,13 @@ namespace DSPRE.ROMFiles
                 if (!int.TryParse(Path.GetFileNameWithoutExtension(source), out int id)) continue;
                 string binary = Filesystem.GetScriptPath(id);
                 if (!File.Exists(source) || !File.Exists(binary)) continue;
-
-                bool binaryChanged = Hash(binary) != entry.Value.GetProperty("output_hash").GetUInt64();
-                bool sourceChanged = Hash(source) != entry.Value.GetProperty("source_hash").GetUInt64();
-                if (binaryChanged && sourceChanged) assessment.BothChanged.Add(id);
-                else if (binaryChanged) assessment.BinaryChanged.Add(id);
-                else if (sourceChanged) assessment.SourceChanged.Add(id);
+                scripts.Add(new RecordedScript(id, source, binary,
+                    entry.Value.GetProperty("source_hash").GetUInt64(), entry.Value.GetProperty("output_hash").GetUInt64()));
             }
-            return assessment;
+            return scripts;
         }
 
-        private static ulong Hash(string path) => XxHash3.HashToUInt64(File.ReadAllBytes(path));
+        internal static ulong Hash(string path) => XxHash3.HashToUInt64(File.ReadAllBytes(path));
 
         /// <summary>
         /// Regenerates the stale sources, then compiles, which rebuilds every binary on the new rotom from

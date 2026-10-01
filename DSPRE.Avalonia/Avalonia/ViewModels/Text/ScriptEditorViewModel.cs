@@ -440,14 +440,24 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
 
                 RefreshScriptList();
+                string undecompiled = null;
                 if (_rotomFileCount == 0)
                 {
                     StatusText = "Decompiling binary scripts to Rotom...";
-                    await RunRequiredRotomCommand("decompile");
+                    var decompiled = await RotomTool.RunAsync("decompile");
                     RefreshScriptList();
+                    // One file rotom can't read must not cost every other script; its binary stays as it is.
+                    if (!decompiled.Success)
+                    {
+                        if (_rotomFileCount == 0)
+                            throw new InvalidOperationException("rotom decompile failed:\n" + RotomTool.FormatDetails(decompiled));
+                        undecompiled = UndecompiledScripts();
+                        AppLogger.Warn("rotom decompile left files out:\n" + RotomTool.FormatDetails(decompiled));
+                    }
                 }
 
                 await UpgradeRotomProjectAsync();
+                await OfferDatabaseUpdateAsync();
 
                 IsReadOnly = ScriptNames.Count == 0;
 
@@ -463,6 +473,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _suppress = false;
                 LoadSelectedFile();
                 await StartLanguageServerAsync();
+                if (undecompiled != null) StatusText = undecompiled;
             }
             catch (Exception ex)
             {
@@ -1014,6 +1025,34 @@ namespace DSPRE.Avalonia.ViewModels.Text
             RefreshScriptList();
         }
 
+        // The project's own database copy can fall behind DSPRE's; whether to take the newer one is the user's call.
+        private async Task OfferDatabaseUpdateAsync()
+        {
+            var offer = await Task.Run(DSPRE.ROMFiles.RotomDatabaseUpdate.Check);
+            if (offer == null) return;
+
+            var names = offer.ChangedCommands;
+            string what = names.Count == 0 ? "variable and movement names"
+                : string.Join(", ", names.Take(6)) + (names.Count > 6 ? $" and {names.Count - 6} more" : "")
+                  + (offer.OtherChanges ? ", plus variable and movement names" : "");
+            bool update = await DialogHelper.AskTwoWay(
+                $"DSPRE has a newer script command database than this project. It changes {what}. " +
+                "Updating fixes how these are read and written, and remakes the scripts you haven't edited from the game data. " +
+                "Keeping leaves the project exactly as it is.",
+                "Script command database", "Update", "Keep");
+            if (!update)
+            {
+                DSPRE.ROMFiles.RotomDatabaseUpdate.Decline(offer);
+                return;
+            }
+
+            StatusText = "Updating the script command database...";
+            var (problem, kept) = await DSPRE.ROMFiles.RotomDatabaseUpdate.ApplyAsync(offer);
+            if (problem != null) await DialogHelper.ShowError(problem, "Script command database");
+            else if (kept.Count > 0) await DialogHelper.ShowInfo(KeptBinariesMessage(kept), "Script command database");
+            RefreshScriptList();
+        }
+
         private static string KeptBinariesMessage(List<int> kept)
         {
             string ids = string.Join(", ", kept.Select(i => i.ToString("D4")));
@@ -1022,6 +1061,22 @@ namespace DSPRE.Avalonia.ViewModels.Text
                   "Its source doesn't build back to those bytes, so editing it here would change more than your edit."
                 : $"Rotom builds scripts {ids} differently from the game, although nobody edited them, so the game's versions were kept. " +
                   "Their sources don't build back to those bytes, so editing them here would change more than your edit.";
+        }
+
+        // Binaries with no source after a decompile are the ones rotom could not read. An empty file
+        // holds no script (retail Diamond ships one), so it has nothing to decompile.
+        private string UndecompiledScripts()
+        {
+            var sourced = new HashSet<int>(_scriptIdByPath.Values);
+            var left = new List<int>();
+            foreach (string path in System.IO.Directory.EnumerateFiles(Filesystem.scripts))
+                if (int.TryParse(Path.GetFileName(path), out int id) && !sourced.Contains(id) && new FileInfo(path).Length > 0)
+                    left.Add(id);
+            left.Sort();
+            if (left.Count == 0) return null;
+            if (left.Count == 1) return $"Script {left[0]} could not be decompiled and keeps its binary.";
+            string ids = string.Join(", ", left.Take(10)) + (left.Count > 10 ? $" and {left.Count - 10} more" : "");
+            return $"Scripts {ids} could not be decompiled and keep their binaries.";
         }
 
         private async Task RunRequiredRotomCommand(params string[] args)

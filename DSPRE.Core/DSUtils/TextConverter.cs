@@ -201,6 +201,8 @@ namespace DSPRE
             chatot.StartInfo.CreateNoWindow = true;
             chatot.StartInfo.RedirectStandardError = true;
             chatot.StartInfo.RedirectStandardOutput = true;
+            chatot.StartInfo.StandardErrorEncoding = Encoding.UTF8;
+            chatot.StartInfo.StandardOutputEncoding = Encoding.UTF8;
 
             if (isJson)
             {

@@ -123,11 +123,32 @@ namespace DSPRE.ROMFiles
                 File.Copy(source, Path.Combine(backup, Path.GetFileName(source)), overwrite: true);
 
             binaryOf ??= Filesystem.GetScriptPath;
+            // Windows refuses a command line past 32767 characters, which a whole project's paths exceed.
+            const int MaxArgumentLength = 24000;
+            // "--file", the separating spaces and a pair of quotes around the path.
+            const int PerFileOverhead = 12;
             var args = new List<string> { "decompile" };
-            foreach (var (id, _) in targets) { args.Add("--file"); args.Add(binaryOf(id)); }
+            int length = 0;
+            foreach (var (id, _) in targets)
+            {
+                string binary = binaryOf(id);
+                if (args.Count > 1 && length + binary.Length + PerFileOverhead > MaxArgumentLength)
+                {
+                    await DecompileAsync(root, args).ConfigureAwait(false);
+                    args = new List<string> { "decompile" };
+                    length = 0;
+                }
+                args.Add("--file"); args.Add(binary);
+                length += binary.Length + PerFileOverhead;
+            }
+            await DecompileAsync(root, args).ConfigureAwait(false);
+            return targets.Select(t => t.id).ToList();
+        }
+
+        private static async Task DecompileAsync(string root, List<string> args)
+        {
             var result = await RotomTool.RunInAsync(root, args.ToArray()).ConfigureAwait(false);
             if (!result.Success) throw new InvalidOperationException("rotom decompile failed: " + RotomTool.FormatResult(result));
-            return targets.Select(t => t.id).ToList();
         }
     }
 }
