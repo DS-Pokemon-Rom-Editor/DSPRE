@@ -846,6 +846,7 @@ namespace DSPRE
             StreamWriter sw = new StreamWriter(trainerDataPath);
 
             int trainerCount = Directory.GetFiles(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir).Length;
+            bool shinyPatch = TrainerShinyPatch.DetectCurrentProject();
 
             for (int i = 1; i < trainerCount; i++)
             {
@@ -915,7 +916,7 @@ namespace DSPRE
                 // This function sets the monGenders, abilities and natures arrays
                 // We hide this away in a function because it's a bit complex
                 // and we don't want to clutter the main function more than it already is
-                SetMonGendersAndAbilitiesAndNature(i, curTrainerProperties.trainerClass, partyPokemon, monFlags, ref abilityNames, ref monGenders, ref abilities, ref natures);
+                SetMonGendersAndAbilitiesAndNature(i, curTrainerProperties.trainerClass, partyPokemon, monFlags, ref abilityNames, ref monGenders, ref abilities, ref natures, shinyPatch);
 
 
                 sw.Write(TrainerToDocFormat(i, trainerName, trainerClass, trainerItems, monNames, monGenders, items, abilities, levels, natures, ivs, moves));
@@ -1060,7 +1061,7 @@ namespace DSPRE
 
         private static void SetMonGendersAndAbilitiesAndNature(int trainerID, int trainerClassID, PartyPokemon[] partyPokemon,
             PartyPokemon.GenderAndAbilityFlags[] monFlags, ref string[] abilityNames,
-            ref string[] monGenders, ref string[] abilities, ref string[] natures)
+            ref string[] monGenders, ref string[] abilities, ref string[] natures, bool shinyPatch)
         {
             bool trainerMale = false;
 
@@ -1073,7 +1074,7 @@ namespace DSPRE
 
                 byte baseGenderRatio = new PokemonPersonalData((int)partyPokemon[j].pokeID).genderVec;
                 byte genderOverride = (byte)((byte)monFlags[j] & 0x0F); // Get the lower 4 bits
-                byte abilityOverride = (byte)((byte)monFlags[j] >> 4); // Get the upper 4 bits
+                byte abilityOverride = (byte)TrainerShinyPatch.AbilityOverride((byte)monFlags[j], shinyPatch);
 
                 uint PID = DVCalculator.generatePID((uint)trainerID, (uint)trainerClassID, (uint)partyPokemon[j].pokeID, (byte)partyPokemon[j].level, baseGenderRatio, genderOverride, abilityOverride, partyPokemon[j].difficulty);
                 natures[j] = DVCalculator.Natures[DVCalculator.getNatureFromPID(PID)].Split(':')[0];

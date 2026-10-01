@@ -53,6 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private (int abi1, int abi2)[] _abilities = Array.Empty<(int, int)>();
         private bool _abilityEditable;
         private bool _genderEditable;
+        private bool _shinyPatch;
         private bool _ballEnabled;
         private bool _formVisible;
 
@@ -465,6 +466,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetMonIconsPalTableAddress();
 
                 _genderEditable = gameFamily == GameFamilies.HGSS || AIBackportEnabled;
+                _shinyPatch = gameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
                 _abilityEditable = _genderEditable;
                 _ballEnabled = gameFamily != GameFamilies.DP;
                 _formVisible = gameFamily != GameFamilies.DP;
@@ -879,12 +881,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 // In every other game this byte is the high half of the u16 difficulty, so it is kept as read.
                 if (_genderEditable)
                 {
-                    var flags = PartyPokemon.GenderAndAbilityFlags.NO_FLAGS;
-                    if (mon.GenderIndex == 1) flags = PartyPokemon.GenderAndAbilityFlags.FORCE_MALE;
-                    else if (mon.GenderIndex == 2) flags = PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE;
+                    // Bits the editor has no field for stay as they were read.
+                    const PartyPokemon.GenderAndAbilityFlags Edited = PartyPokemon.GenderAndAbilityFlags.FORCE_MALE | PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE
+                        | PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1 | PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
+                    var flags = p.genderAndAbilityFlags & ~Edited;
+                    if (mon.GenderIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.FORCE_MALE;
+                    else if (mon.GenderIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE;
                     if (mon.AbilityIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1;
                     else if (mon.AbilityIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
                     p.genderAndAbilityFlags = flags;
+                    if (_shinyPatch) p.ForceShiny = mon.ForceShiny;
                 }
 
                 p.ballSeals = (ushort)mon.BallSeals;
@@ -908,7 +914,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 for (int j = 0; j < 4 && j < p.moves.Length; j++) moves[j] = p.moves[j];
             }
 
-            mon.Load(p.pokeID ?? 0, p.formID, Math.Max(1, (int)p.level), moves, p.heldItem ?? 0, gender, ability, p.difficulty, p.ballSeals);
+            mon.Load(p.pokeID ?? 0, p.formID, Math.Max(1, (int)p.level), moves, p.heldItem ?? 0, gender, ability, p.difficulty, p.ballSeals,
+                     _genderEditable && p.ForceShiny);
+            mon.ShinyVisible = _genderEditable && gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
+            mon.ShinyEnabled = _shinyPatch;
         }
 
         private void ApplyMovesEnabled() { foreach (var m in Party) m.MovesEnabled = _chooseMoves; }

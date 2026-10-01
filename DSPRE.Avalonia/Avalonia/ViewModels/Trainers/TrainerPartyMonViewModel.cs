@@ -236,6 +236,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private int _itemIndex = -1; public int ItemIndex { get => _itemIndex; set { if (RejectCleared(value, nameof(ItemIndex))) return; if (Set(ref _itemIndex, value)) Touch(); } }
         private int _genderIndex; public int GenderIndex { get => _genderIndex; set { if (RejectCleared(value, nameof(GenderIndex))) return; if (Set(ref _genderIndex, value)) Touch(); } }
         private int _abilityIndex; public int AbilityIndex { get => _abilityIndex; set { if (RejectCleared(value, nameof(AbilityIndex))) return; if (Set(ref _abilityIndex, value)) Touch(); } }
+
+        // HeartGold and SoulSilver: the flag the external trainer shiny patch reads, editable only with the patch applied.
+        private bool _forceShiny; public bool ForceShiny { get => _forceShiny; set { if (Set(ref _forceShiny, value)) Touch(); } }
+        private bool _shinyVisible; public bool ShinyVisible { get => _shinyVisible; set => Set(ref _shinyVisible, value); }
+        private bool _shinyEnabled; public bool ShinyEnabled { get => _shinyEnabled; set { if (Set(ref _shinyEnabled, value)) OnPropertyChanged(nameof(ShinyNote)); } }
+        public string ShinyNote => _shinyEnabled ? null : "Needs the trainer shiny patch";
         private decimal _difficulty; public decimal Difficulty { get => _difficulty; set { if (Set(ref _difficulty, value)) Touch(); } }
         private decimal _ballSeals;
         public decimal BallSeals
@@ -279,9 +285,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void Touch() { if (!_suppress) Changed?.Invoke(this, EventArgs.Empty); }
 
         // ── Load from model (suppress change events) ────────────────────────────────
-        public void Load(int species, int form, int level, int[] moves, int item, int genderIndex, int abilityIndex, int difficulty, int ballSeals)
+        public void Load(int species, int form, int level, int[] moves, int item, int genderIndex, int abilityIndex, int difficulty, int ballSeals,
+                         bool forceShiny = false)
         {
             _suppress = true;
+            ForceShiny = forceShiny;
             SpeciesIndex = species;
             FormId = form;
             Level = level;

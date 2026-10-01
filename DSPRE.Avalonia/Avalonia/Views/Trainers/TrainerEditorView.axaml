@@ -179,6 +179,9 @@
                           <TextBlock Text="Ability" FontSize="10"/>
                           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AbilityItems}" SelectedIndex="{Binding AbilityIndex}" IsEnabled="{Binding AbilityEnabled}"/>
                         </StackPanel>
+                        <CheckBox Content="Shiny" VerticalAlignment="Bottom" Margin="0,0,6,4"
+                                  IsVisible="{Binding ShinyVisible}" IsEnabled="{Binding ShinyEnabled}" IsChecked="{Binding ForceShiny}"
+                                  ToolTip.Tip="{Binding ShinyNote}" ToolTip.ShowOnDisabled="True"/>
                         <StackPanel Width="90" Margin="0,0,6,0">
                           <TextBlock Text="IV (diff.)" FontSize="10"/>
                           <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding Difficulty}"/>
