@@ -216,14 +216,7 @@ namespace DSPRE.ROMFiles {
                     }
 
                     bool hasBallSeals = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS || RomInfo.gameFamily == RomInfo.GameFamilies.Plat;
-                    int recordSize = 6 + (hasBallSeals ? sizeof(ushort) : 0);
-
-                    if (trp.chooseMoves) {
-                        recordSize += Party.MOVES_PER_POKE * sizeof(ushort);
-                    }
-                    if (trp.chooseItems) {
-                        recordSize += sizeof(ushort);
-                    }
+                    int recordSize = RecordSize();
 
                     long recordCount = (partyData.Length - partyData.Position) / recordSize;
                     int endval = (int)Math.Min(Math.Min(recordCount, trp.partyCount), maxPoke);
@@ -317,6 +310,10 @@ namespace DSPRE.ROMFiles {
                         PartyPokemon poke = this.content[i] ?? new PartyPokemon(trp?.chooseItems ?? false, trp?.chooseMoves ?? false);
                         writer.Write(poke.ToByteArray());
                     }
+                    // A trainer with no party still has one zeroed record in the game's own data.
+                    if (count == 0 && !this.exportCondensedData) {
+                        writer.Write(new byte[RecordSize()]);
+                    }
                 } else {
                     foreach (PartyPokemon poke in this.content) {
                         if (!poke.CheckEmpty()) {
@@ -331,6 +328,13 @@ namespace DSPRE.ROMFiles {
             }
             return newData.ToArray();
         }
+        private int RecordSize() {
+            bool hasBallSeals = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS || RomInfo.gameFamily == RomInfo.GameFamilies.Plat;
+            return 6 + (hasBallSeals ? sizeof(ushort) : 0)
+                + (trp != null && trp.chooseMoves ? MOVES_PER_POKE * sizeof(ushort) : 0)
+                + (trp != null && trp.chooseItems ? sizeof(ushort) : 0);
+        }
+
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true) {
             SaveToFileExplorePath("Gen IV Party Data", "pdat", suggestedFileName, showSuccessMessage);
         }
