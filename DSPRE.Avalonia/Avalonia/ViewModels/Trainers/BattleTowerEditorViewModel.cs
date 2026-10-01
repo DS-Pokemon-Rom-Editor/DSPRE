@@ -50,8 +50,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_trainerFile == null || _setFile == null) return;
             // Each save reports its own error; a failure leaves the edits unsaved.
-            bool trainersSaved = _trainerFile.SaveToNarc();
-            bool setsSaved = _setFile.SaveToNarc();
+            bool trainersSaved = _trainerFile.SaveToNarc(showSuccessMessage: false);
+            bool setsSaved = _setFile.SaveToNarc(showSuccessMessage: false);
             if (!trainersSaved || !setsSaved)
             {
                 UpdateStatus();

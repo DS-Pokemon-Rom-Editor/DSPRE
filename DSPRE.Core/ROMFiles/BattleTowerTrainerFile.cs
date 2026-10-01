@@ -42,6 +42,8 @@ namespace DSPRE.ROMFiles {
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
                 Write(bw);
+                // The game's trainer files end on a 4-byte boundary; keeping it leaves unedited trainers byte for byte.
+                while (ms.Length % 4 != 0) bw.Write((byte)0);
                 return ms.ToArray();
             }
         }

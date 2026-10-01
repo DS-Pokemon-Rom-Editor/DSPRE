@@ -114,7 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int PhoneEntry => _currentRowIndex >= 0 &&
             _phoneEntryByTrainer.TryGetValue(_rows[_currentRowIndex].BaseTrainerId, out int entry) ? entry : -1;
 
-        public bool HasPhoneEntry => PhoneEntry >= 0;
+        public bool HasPhoneEntry => PhoneEntry >= 0 && BetaEditors.Allows("PokegearPhoneBookView");
 
         /// <summary>Row layouts the game mishandles, one per line.</summary>
         public string RowProblems => _currentRowIndex < 0 ? ""

@@ -324,6 +324,10 @@ namespace DSPRE.ROMFiles {
                         }
                     }
                 }
+                // The game's party files end on a 4-byte boundary; keeping it leaves unedited parties byte for byte.
+                if (!this.exportCondensedData) {
+                    while (newData.Length % 4 != 0) writer.Write((byte)0);
+                }
             }
             return newData.ToArray();
         }
