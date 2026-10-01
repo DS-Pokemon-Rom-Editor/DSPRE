@@ -64,6 +64,13 @@ namespace DSPRE
             return cameras;
         }
 
+        /// <summary>Writes the rows one after another at <paramref name="offset"/> in <paramref name="path"/>.</summary>
+        public static void Write(IReadOnlyList<GameCamera> cameras, string path, uint offset)
+        {
+            for (int i = 0; i < cameras.Count; i++)
+                DSUtils.WriteToFile(path, cameras[i].ToByteArray(), (uint)(offset + i * RomInfo.cameraSize));
+        }
+
         /// <summary>The table as the game has it now, or null when it cannot be read.</summary>
         public static List<GameCamera> TryRead()
         {

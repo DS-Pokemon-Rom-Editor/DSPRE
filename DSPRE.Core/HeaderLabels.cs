@@ -84,7 +84,7 @@ namespace DSPRE
         /// <summary>Whether headers are read from their own files rather than out of arm9. Having a
         /// folder for them is not the same as the patch being applied.</summary>
         public static bool DynamicHeaders =>
-            RomPatchState.flag_DynamicHeadersPatchApplied || PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied();
+            ROMFiles.MapHeader.UsesDynamicHeaders;
 
         /// <summary>Drops the cache, for when a different ROM is opened.</summary>
         public static void Forget() { _friendly = null; _forRom = null; }

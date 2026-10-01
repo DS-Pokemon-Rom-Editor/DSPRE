@@ -426,7 +426,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives, DirNames.dynamicHeaders });
 
-                _dynamicHeaders = RomPatchState.flag_DynamicHeadersPatchApplied || PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied();
+                _dynamicHeaders = MapHeader.UsesDynamicHeaders;
                 CanAddRemove = _dynamicHeaders;
                 OnPropertyChanged(nameof(CanAddRemove));
 
@@ -913,9 +913,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (headerId >= _headerListNames.Count) return;
 
-            _header = _dynamicHeaders
-                ? MapHeader.LoadFromFile(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, headerId.ToString("D4")), headerId, 0)
-                : MapHeader.LoadFromARM9(headerId);
+            _header = MapHeader.GetMapHeader(headerId);
             if (_header == null) return;
 
             PopulateFromHeader();
@@ -1136,11 +1134,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Save()
         {
             if (_header == null) return;
-            if (_dynamicHeaders)
-                DSUtils.WriteToFile(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, _header.ID.ToString("D4")),
-                    _header.ToByteArray(), 0, 0, fmode: FileMode.Create);
-            else
-                ARM9.WriteBytes(_header.ToByteArray(), (uint)(headerTableOffset + MapHeader.length * _header.ID));
+            MapHeader.Save(_header);
 
             UpdateCurrentInternalName();
             SetClean();
@@ -1239,30 +1233,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void UpdateCurrentInternalName()
         {
             ushort id = _header.ID;
-            using (var writer = new DSUtils.EasyWriter(internalNamesPath, id * internalNameLength))
-                writer.Write(StringToInternalName(_internalName));
+            MapHeader.WriteInternalName(id, _internalName);
 
             if (id < _internalNames.Count) _internalNames[id] = _internalName;
             if (id < _headerListNames.Count) _headerListNames[id] = id.ToString("D3") + MapHeader.nameSeparator + _internalName;
             RebuildTree();   // refresh the leaf's label (and any active search)
         }
 
-        private byte[] StringToInternalName(string text)
-        {
-            text ??= "";
-            return Encoding.ASCII.GetBytes(text.Substring(0, Math.Min(text.Length, internalNameLength)).PadRight(internalNameLength, '\0'));
-        }
-
         // ── Add / remove header (dynamic-headers patch only; no associated files) ─────
         public async Task AddHeaderAsync()
         {
             if (!_dynamicHeaders) return;
-            string dir = gameDirs[DirNames.dynamicHeaders].unpackedDir;
-            int newId = GetHeaderCount();
-            File.Copy(Path.Combine(dir, "0000"), Path.Combine(dir, newId.ToString("D4")));
-
             const string newmap = "NEWMAP";
-            DSUtils.WriteToFile(internalNamesPath, StringToInternalName(newmap), (uint)newId * internalNameLength);
+            int newId = MapHeader.AddDynamicHeader(newmap);
 
             _headerListNames.Add(newId.ToString("D3") + MapHeader.nameSeparator + newmap);
             _internalNames.Add(newmap);
@@ -1285,8 +1268,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
 
-            File.Delete(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, lastIndex.ToString("D4")));
-            using (var ew = new DSUtils.EasyWriter(internalNamesPath)) ew.EditSize(-internalNameLength);
+            MapHeader.RemoveLastDynamicHeader();
 
             _internalNames.RemoveAt(lastIndex);
             _headerListNames.RemoveAt(lastIndex);

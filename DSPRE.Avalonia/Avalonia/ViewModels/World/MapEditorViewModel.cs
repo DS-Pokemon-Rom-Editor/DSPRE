@@ -2305,6 +2305,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 int newId = MapNames.Count;
                 new MapFile(0, gameFamily, discardMoveperms: true).SaveToFileDefaultDir(newId, showSuccessMessage: false);
+                KeptPlatesFile.Save(newId, null);   // a removed map's plates must not land on the new one
                 MapNames.Add("Map " + newId);
                 SelectedMapIndex = newId;
                 StatusText = $"Added map file {newId}.";
@@ -2320,6 +2321,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 File.Delete(Path.Combine(gameDirs[DirNames.maps].unpackedDir, last.ToString("D4")));
+                KeptPlatesFile.Save(last, null);
                 if (_selectedMapIndex == last) SelectedMapIndex = last - 1;
                 MapNames.RemoveAt(last);
                 StatusText = $"Removed map file {last}.";
@@ -2354,7 +2356,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_map == null) return;
             string path = await DialogHelper.OpenFile(_owner, "Import terrain", new[] { new FilePickerFileType("Terrain (.bdhc)") { Patterns = new[] { "*.bdhc", "*.bin", "*.*" } } });
             if (path == null) return;
-            try { _map.ImportTerrain(File.ReadAllBytes(path)); MarkDirty(); StatusText = $"Imported terrain ({_map.bdhc.Length} B)."; }
+            // Kept plates belong to the terrain being replaced.
+            try { _map.ImportTerrain(File.ReadAllBytes(path)); _map.KeptPlates.Clear(); MarkDirty(); StatusText = $"Imported terrain ({_map.bdhc.Length} B)."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
         }
         public async Task ExportTerrainAsync()

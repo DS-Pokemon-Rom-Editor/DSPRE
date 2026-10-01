@@ -170,13 +170,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             SetDirty();
         }
 
-        private static decimal ReadMoney()
-        {
-            if (OverlayUtils.IsStillCompressed(RomInfo.initialMoneyOverlayNumber))
-                OverlayUtils.Decompress(RomInfo.initialMoneyOverlayNumber);
-            string moneyPath = OverlayUtils.GetPath(RomInfo.initialMoneyOverlayNumber);
-            return BitConverter.ToUInt32(DSUtils.ReadFromFile(moneyPath, RomInfo.initialMoneyOverlayOffset, 4), 0);
-        }
+        private static decimal ReadMoney() => SpawnPoint.ReadMoney();
 
         // ── Load from ROM ──────────────────────────────────────────────────────
         public void LoadFromRom()
@@ -184,10 +178,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             _isLoading = true;
             try
             {
-                ushort headerNumber = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset, 2), 0);
-                ushort globalX      = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 8, 2), 0);
-                ushort globalY      = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 12, 2), 0);
-                ushort playerDir    = BitConverter.ToUInt16(ARM9.ReadBytes(RomInfo.arm9spawnOffset + 16, 2), 0);
+                var spawn = SpawnPoint.Read();
+                ushort headerNumber = spawn.Header, globalX = spawn.GlobalX, globalY = spawn.GlobalY, playerDir = spawn.Direction;
 
                 // First update header index (triggers UpdateHeaderDependents to set MaxX/MaxY)
                 _selectedHeaderIndex = Math.Min(headerNumber, HeaderNames.Count - 1);
@@ -200,7 +192,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _localY  = globalY % 32;
                 _playerDirIndex = Math.Min(playerDir, (ushort)3);
 
-                _initialMoney = ReadMoney();
+                _initialMoney = spawn.Money;
             }
             catch { /* leave defaults */ }
             finally
@@ -223,14 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 ushort headerNumber = (ushort)headerIndex;
-                MapHeader currentHeader;
-                if (RomPatchState.flag_DynamicHeadersPatchApplied ||
-                    PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied())
-                    currentHeader = MapHeader.LoadFromFile(
-                        Path.Combine(RomInfo.gameDirs[DirNames.dynamicHeaders].unpackedDir, headerNumber.ToString("D4")),
-                        headerNumber, 0);
-                else
-                    currentHeader = MapHeader.LoadFromARM9(headerNumber);
+                MapHeader currentHeader = MapHeader.GetMapHeader(headerNumber);
 
                 var matrix = new GameMatrix(currentHeader.matrixID);
                 MatrixXMax = matrix.maps.GetLength(1) - 1;

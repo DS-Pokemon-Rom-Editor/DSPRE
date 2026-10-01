@@ -139,7 +139,7 @@ namespace DSPRE
                         return null;
                     }
 
-                    bool dynamicHeaders = RomPatchState.flag_DynamicHeadersPatchApplied || PatchToolboxLogic.CheckFilesDynamicHeadersPatchApplied();
+                    bool dynamicHeaders = ROMFiles.MapHeader.UsesDynamicHeaders;
                     byte[] arm9Headers = null;
                     if (!dynamicHeaders && finalID > startID)
                     {

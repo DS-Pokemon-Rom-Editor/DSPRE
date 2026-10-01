@@ -471,14 +471,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────
-        private void WriteCameraTable(string path, uint startOffset)
-        {
-            for (int i = 0; i < Cameras.Count; i++)
-            {
-                byte[] data = Cameras[i].ToGameCamera(IsHgss).ToByteArray();
-                DSUtils.WriteToFile(path, data, (uint)(startOffset + i * RomInfo.cameraSize));
-            }
-        }
+        private void WriteCameraTable(string path, uint startOffset) =>
+            GameCameraTable.Write(System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select(Cameras, c => c.ToGameCamera(IsHgss))), path, startOffset);
 
         private void OnRowChanged(object sender, PropertyChangedEventArgs e)
         {

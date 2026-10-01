@@ -97,7 +97,7 @@ namespace DSPRE.Avalonia.Data
             for (ushort i = 0; i < headers; i++)
             {
                 MapHeader h;
-                try { h = MapHeader.LoadFromARM9(i); } catch { continue; }
+                try { h = MapHeader.GetMapHeader(i); } catch { continue; }
                 if (h == null) continue;
 
                 int id = h.battleBackground;

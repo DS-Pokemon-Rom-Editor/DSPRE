@@ -411,9 +411,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        private static MapHeader ReadHeader(ushort id) => HeaderLabels.DynamicHeaders
-            ? MapHeader.LoadFromFile(Path.Combine(gameDirs[DirNames.dynamicHeaders].unpackedDir, id.ToString("D4")), id, 0)
-            : MapHeader.LoadFromARM9(id);
+        private static MapHeader ReadHeader(ushort id) => MapHeader.GetMapHeader(id);
 
         /// <summary>Headers whose wild Pokémon come from this encounter file, read fresh.</summary>
         private List<ushort> HeadersUsing(int file)

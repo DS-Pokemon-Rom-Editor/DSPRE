@@ -217,13 +217,7 @@ namespace DSPRE.ROMFiles {
 
             MapHeader mapHeader;
 
-            //Dynamic headers patch unsupported in DP
-            if (RomInfo.gameFamily.Equals(RomInfo.GameFamilies.DP)) {
-                return MapHeader.LoadFromARM9(headerNumber);
-            }
-
-            /* Check if dynamic headers patch has been applied, and load header from arm9 or a/0/5/0 accordingly */
-            if (RomPatchState.flag_DynamicHeadersPatchApplied) {
+            if (UsesDynamicHeaders) {
                 string path = Filesystem.GetDynamicHeaderPath(headerNumber);
                 mapHeader = MapHeader.LoadFromFile(path, headerNumber, 0);
             } else {
@@ -233,9 +227,50 @@ namespace DSPRE.ROMFiles {
             return mapHeader;
         }
 
+        /// <summary>
+        /// Whether headers live in the dynamic-headers archive instead of the ARM9 table. The flag is set from the
+        /// ARM9 when a project loads and when the patch is applied; Diamond and Pearl have no such patch.
+        /// </summary>
+        public static bool UsesDynamicHeaders =>
+            RomInfo.gameFamily != RomInfo.GameFamilies.DP && RomPatchState.flag_DynamicHeadersPatchApplied;
+
+        /// <summary>Writes a header where the game reads it: the dynamic-headers archive or the ARM9 table.</summary>
+        public static void Save(MapHeader header) {
+            byte[] bytes = header.ToByteArray();
+            if (UsesDynamicHeaders)
+                DSUtils.WriteToFile(Filesystem.GetDynamicHeaderPath(header.ID), bytes, 0, 0, fmode: FileMode.Create);
+            else
+                ARM9.WriteBytes(bytes, (uint)(RomInfo.headerTableOffset + length * header.ID));
+        }
+
+        /// <summary>A header's internal name as the names file stores it: ASCII, cut or zero-padded to its fixed length.</summary>
+        public static byte[] InternalNameBytes(string name) {
+            name ??= "";
+            name = name.Substring(0, System.Math.Min(name.Length, RomInfo.internalNameLength));
+            return System.Text.Encoding.ASCII.GetBytes(name.PadRight(RomInfo.internalNameLength, '\0'));
+        }
+
+        public static void WriteInternalName(int id, string name) =>
+            DSUtils.WriteToFile(RomInfo.internalNamesPath, InternalNameBytes(name), (uint)(id * RomInfo.internalNameLength));
+
+        /// <summary>Appends a header copied from header 0 with this internal name; dynamic headers only. Returns its id.</summary>
+        public static int AddDynamicHeader(string internalName) {
+            int id = GetHeaderCount();
+            File.Copy(Filesystem.GetDynamicHeaderPath(0), Filesystem.GetDynamicHeaderPath(id));
+            WriteInternalName(id, internalName);
+            return id;
+        }
+
+        /// <summary>Removes the last header and its internal name; dynamic headers only.</summary>
+        public static void RemoveLastDynamicHeader() {
+            int last = GetHeaderCount() - 1;
+            File.Delete(Filesystem.GetDynamicHeaderPath(last));
+            using (var writer = new DSUtils.EasyWriter(RomInfo.internalNamesPath)) writer.EditSize(-RomInfo.internalNameLength);
+        }
+
         public static int GetHeaderCount() {
             int headerCount;
-            if (RomPatchState.flag_DynamicHeadersPatchApplied) {
+            if (UsesDynamicHeaders) {
                 headerCount = Filesystem.GetDynamicHeadersCount();
             } else {
                 headerCount = RomInfo.GetHeaderCount();
@@ -246,7 +281,7 @@ namespace DSPRE.ROMFiles {
 
         public void SaveFile() {
             /* Check if dynamic headers patch has been applied, and save header to arm9 or a/0/5/0 accordingly */
-            if (RomPatchState.flag_DynamicHeadersPatchApplied) {
+            if (UsesDynamicHeaders) {
                 string path = Filesystem.GetDynamicHeaderPath(ID);
                 DSUtils.WriteToFile(path, this.ToByteArray(), 0, 0, fmode: FileMode.Create);
             } else {
