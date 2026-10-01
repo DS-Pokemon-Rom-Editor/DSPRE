@@ -9,10 +9,10 @@ inputs:
 runs:
   using: composite
   steps:
-    # The fork is pinned by the submodule commit DSPRE records, so the build follows it.
+    # Builds take the fork's dspre branch, where DSPRE's fixes land ahead of upstream.
     - name: Checkout rotom submodule
       shell: bash
-      run: git submodule update --init Tools/rotom-src
+      run: git submodule update --init --remote Tools/rotom-src
 
     # uxie builds nitroarc with make and gcc; on Windows that means MinGW and the GNU target, as rotom's own CI does.
     - name: Set up MinGW

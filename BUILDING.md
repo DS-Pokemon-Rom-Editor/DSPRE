@@ -73,7 +73,9 @@ dotnet publish DSPRE.Avalonia/DSPRE.Avalonia.csproj -p:PublishProfile=win-x64
   `--recurse-submodules`, or run `git submodule update --init`). The Windows build uses MSYS2 MinGW
   and the `x86_64-pc-windows-gnu` target, as rotom's own CI does. `chatot` is built with plain cargo on
   both platforms from the `Tools/chatot-src` submodule, DSPRE's fork of chatot at
-  https://github.com/DS-Pokemon-Rom-Editor/chatot. The checked-in `Tools/apicula.exe`, rotom and
+  https://github.com/DS-Pokemon-Rom-Editor/chatot. Both submodules track their fork's `dspre` branch,
+  where DSPRE's fixes land ahead of upstream: release workflows build its latest commit, and
+  `git submodule update --remote` brings a local checkout up to it. The checked-in `Tools/apicula.exe`, rotom and
   chatot binaries remain available for ordinary local builds; release workflows replace them with
   builds from source. Each rotom and chatot binary set has a `Tools/<tool>.<os>.stamp` naming the
   submodule commit it was built from. A local DSPRE build warns (DSPRE001) when a submodule has moved

@@ -9,10 +9,10 @@ inputs:
 runs:
   using: composite
   steps:
-    # The fork is pinned by the submodule commit DSPRE records, so the build follows it.
+    # Builds take the fork's dspre branch, where DSPRE's fixes land ahead of upstream.
     - name: Checkout chatot submodule
       shell: bash
-      run: git submodule update --init Tools/chatot-src
+      run: git submodule update --init --remote Tools/chatot-src
 
     - name: Build chatot
       shell: bash
@@ -22,6 +22,8 @@ runs:
         set -euo pipefail
         echo "Building chatot $(git -C Tools/chatot-src rev-parse HEAD)"
 
+        # The C runtime goes into the executable, so it runs without the Visual C++ redistributable.
+        if [ "$RUNNER_OS" = "Windows" ]; then export RUSTFLAGS="-C target-feature=+crt-static"; fi
         cargo build --release --locked --manifest-path Tools/chatot-src/Cargo.toml
 
         built=Tools/chatot-src/target/release
@@ -36,7 +38,7 @@ runs:
     - name: Check chatot version
       shell: bash
       env:
-        CHATOT_VERSION: chatot 0.7.0
+        CHATOT_VERSION: chatot 0.8.0
         OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
       run: |
         set -euo pipefail
