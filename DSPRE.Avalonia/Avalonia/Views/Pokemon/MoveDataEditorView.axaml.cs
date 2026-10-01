@@ -12,6 +12,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public MoveDataEditorView()
         {
             InitializeComponent();
+            EditMoveScriptButton.IsVisible = BetaEditors.Allows("BattleScriptEditorView");
             DataContext = new MoveDataEditorViewModel();
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
             EditorWindowChrome.Attach(this, ViewModel, manageTitle: false, onClosed: ViewModel.Detach);

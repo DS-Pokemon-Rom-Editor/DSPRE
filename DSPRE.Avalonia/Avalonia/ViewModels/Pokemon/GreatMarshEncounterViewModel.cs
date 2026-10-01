@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int SelectedSlotIndex
         {
             get => _selectedSlotIndex;
-            set { if (Set(ref _selectedSlotIndex, value)) LoadSlot(value); }
+            set { if (Set(ref _selectedSlotIndex, value) && !_suppress) LoadSlot(value); }
         }
 
         private int _selectedSpeciesIndex = -1;
@@ -194,6 +194,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int slot = _selectedSlotIndex;
             _suppress = true;
             EncounterSlots[slot] = $"Slot {slot:D2}: {group.Encounters[slot]}";
+            // Replacing the selected row clears the list's selection, and every later pick would then miss the slot.
+            _selectedSlotIndex = slot;
+            OnPropertyChanged(nameof(SelectedSlotIndex));
             _suppress = false;
 
             UpdateIcon(species);

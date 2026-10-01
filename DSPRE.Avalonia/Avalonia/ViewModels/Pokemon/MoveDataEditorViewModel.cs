@@ -364,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 foreach (var (importId, imported) in records)
                     if (importId != id) imported.SaveToFileDefaultDir(importId, showSuccessMessage: false);
-                move.SaveToFileDefaultDir(id, showSuccessMessage: !HgEngineProject.IsActive);
+                move.SaveToFileDefaultDir(id, showSuccessMessage: false);
                 _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
             }
             SetClean();

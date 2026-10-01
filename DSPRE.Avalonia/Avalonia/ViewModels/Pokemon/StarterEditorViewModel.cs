@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -352,14 +353,21 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void SaveChanges()
         {
             var newStarters = new[] { Starter1, Starter2, Starter3 };
-            bool ok = StarterPokemonData.ApplyStarters(newStarters, out var touchedScripts);
-            if (!ok)
+            var touchedScripts = new List<int>();
+            // Applying starters also patches the selection scene, the rival's teams and the dialogue,
+            // which a level or held item change has no business touching.
+            bool speciesChanged = _saved == null
+                || newStarters[0] != _saved.S1 || newStarters[1] != _saved.S2 || newStarters[2] != _saved.S3;
+            if (speciesChanged)
             {
-                AppMessages.Error(
-                    "Couldn't safely locate the starter species table on this ROM (it may already be modified " +
-                    "by another tool); nothing was changed.",
-                    "Starter Pokémon Editor");
-                return;
+                if (!StarterPokemonData.ApplyStarters(newStarters, out touchedScripts))
+                {
+                    AppMessages.Error(
+                        "Couldn't safely locate the starter species table on this ROM (it may already be modified " +
+                        "by another tool); nothing was changed.",
+                        "Starter Pokémon Editor");
+                    return;
+                }
             }
 
             // With the sources in front of us, the held item and the level go through the script the

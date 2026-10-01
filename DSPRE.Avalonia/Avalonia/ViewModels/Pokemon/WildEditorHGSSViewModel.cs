@@ -274,7 +274,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     return;
                 }
             }
-            _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: !HgEngineProject.IsActive);
+            _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: false);
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             _history.MarkSaved();

@@ -758,7 +758,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DSPRE.Avalonia.DialogHelper.ShowError($"The TM121+ compatibility of species {_currentId} was not saved:\n{maskError}", "Personal Data");
                 return;
             }
-            _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: true);
+            _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
             AppEvents.RaisePersonalDataSaved(this, _currentId);
             // hg-engine rebuilds pms.narc from data/BabyMons.c, which the Baby Pokémon picker edits.
             if (!HgEngineProject.IsActive) WriteHatchResult(_currentId, HatchResultIndex);

@@ -16,6 +16,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public WildEditorDPPtView(WildEditorDPPtViewModel vm)
         {
             InitializeComponent();
+            SlotOddsButton.IsVisible = BetaEditors.Allows("EncounterSlotOddsView");
             DataContext = vm;
         }
 
