@@ -151,17 +151,42 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static FieldFont LoadSystemFont() => LoadFromArchive(SystemFontEntry);
 
+        // The unpacked copy is what the editor saves and Save ROM repacks, so it wins over the packed archive.
         public static FieldFont LoadFromArchive(int entry)
         {
             try
             {
                 if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out var dirs)) return null;
+                string member = EntryPath(entry);
+                if (member != null) return Read(File.ReadAllBytes(member));
                 string path = dirs.packedDir;
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
                 byte[] blob = ReadNarcEntry(File.ReadAllBytes(path), entry);
                 return blob == null ? null : Read(blob);
             }
             catch { return null; }
+        }
+
+        /// <summary>The unpacked font archive's members in entry order, or none when it is not unpacked.</summary>
+        public static string[] UnpackedEntries()
+        {
+            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out var dirs)) return Array.Empty<string>();
+            string dir = dirs.unpackedDir;
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return Array.Empty<string>();
+            return Directory.GetFiles(dir).OrderBy(x => x).ToArray();
+        }
+
+        private static string EntryPath(int entry)
+        {
+            var files = UnpackedEntries();
+            return entry >= 0 && entry < files.Length ? files[entry] : null;
+        }
+
+        /// <summary>Writes this font over an unpacked archive entry.</summary>
+        public void Save(int entry)
+        {
+            string path = EntryPath(entry) ?? throw new FileNotFoundException($"Font archive entry {entry} is not unpacked.");
+            File.WriteAllBytes(path, Write());
         }
 
         /// <summary>How wide a letter is, which is how far along the next one starts.</summary>

@@ -146,11 +146,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 for (int id = 0; id < _learnsetCount; id++)
                 {
                     var ls = new LearnsetData(id);
+                    byte[] was = ls.ToByteArray();
                     ls.list.Clear();
+                    // Rows keep their order: the game does not need levels sorted (retail Pt species 354 isn't),
+                    // and its default moveset follows the file order.
                     if (bySpecies.TryGetValue(id, out var rows))
-                        foreach (var r in rows.OrderBy(x => x.Level).ThenBy(x => x.MoveIndex))
+                        foreach (var r in rows)
                             if (!ls.list.Contains(((byte)r.Level, (ushort)r.MoveIndex)))
                                 ls.list.Add(((byte)r.Level, (ushort)r.MoveIndex));
+                    if (ls.ToByteArray().AsSpan().SequenceEqual(was)) continue;
                     ls.SaveToFileDefaultDir(id, showSuccessMessage: false);
                 }
                 SetClean();

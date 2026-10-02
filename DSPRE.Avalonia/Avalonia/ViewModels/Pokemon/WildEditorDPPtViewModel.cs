@@ -494,8 +494,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddEncounterFile()
         {
             int count = EncounterNames.Count;
-            using (var w = new BinaryWriter(new FileStream(Path.Combine(_dirPath, count.ToString("D4")), FileMode.Create)))
-                w.Write(new EncounterFileDPPt().ToByteArray());
+            new EncounterFileDPPt().SaveToFileDefaultDir(count, showSuccessMessage: false);
             EncounterNames.Add($"[{count}] (new)");
             SelectedEncounterIndex = count;
         }

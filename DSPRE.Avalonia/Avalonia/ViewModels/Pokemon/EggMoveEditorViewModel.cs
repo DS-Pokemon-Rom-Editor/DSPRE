@@ -27,8 +27,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Constants
         // ----------------------------------------------------------------
 
-        private const int EGG_MOVE_OVERLAY_NUMBER = 5;
-        private const int EGG_MOVES_SPECIES_CONSTANT = 20000;
 
         // ----------------------------------------------------------------
         // IEditorWithUnsavedChanges
@@ -585,81 +583,21 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
-        // ---- ROM I/O (ported 1:1 from original) ----
+        // ---- ROM I/O ----
 
         private void PopulateEggMoveData()
         {
             try
             {
-                EndianBinaryReader reader = GetEggDataReader();
-                if (_useSpecialFormat) ReadEggMoveDataSpecial();
-                else ReadEggMoveDataNormal(reader);
-                reader?.Close();
+                var (expanded, maxMoves) = EggMoveData.Layout();
+                _useSpecialFormat = expanded;
+                if (expanded) _maxEggMoves = maxMoves;
+                _maxTableSize = expanded ? ushort.MaxValue : RomInfo.GetEggMoveTableMaxBytes();
+                _eggMoveData.AddRange(EggMoveData.ReadFromRom());
             }
             catch (Exception ex)
             {
                 AppLogger.Error($"Failed to populate egg move data: {ex.Message}");
-            }
-        }
-
-        private EndianBinaryReader GetEggDataReader()
-        {
-            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
-            {
-                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eggMoves });
-                var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
-                _maxTableSize = RomInfo.GetEggMoveTableMaxBytes();
-                return new EndianBinaryReader(File.OpenRead(path), Endianness.LittleEndian);
-            }
-            else
-            {
-                int offset = RomInfo.GetEggMoveTableOffset();
-                _maxTableSize = RomInfo.GetEggMoveTableMaxBytes();
-                var reader = new EndianBinaryReader(File.OpenRead(OverlayUtils.GetPath(EGG_MOVE_OVERLAY_NUMBER)), Endianness.LittleEndian);
-                reader.BaseStream.Seek(offset, SeekOrigin.Begin);
-                int magic = reader.ReadInt32();
-                int maxMoves = reader.ReadInt32();
-                reader.BaseStream.Seek(-8, SeekOrigin.Current);
-                if (magic == 4671301) { _useSpecialFormat = true; _maxEggMoves = maxMoves; _maxTableSize = ushort.MaxValue; }
-                return reader;
-            }
-        }
-
-        private void ReadEggMoveDataNormal(EndianBinaryReader reader)
-        {
-            int idx = -1;
-            while (reader.BaseStream.Position < reader.BaseStream.Length)
-            {
-                ushort read = reader.ReadUInt16();
-                if (read == 0xFFFF) break;
-                if (read > EGG_MOVES_SPECIES_CONSTANT)
-                {
-                    _eggMoveData.Add(new EggMoveEntry(read - EGG_MOVES_SPECIES_CONSTANT, new List<ushort>()));
-                    idx++;
-                }
-                else if (idx >= 0)
-                {
-                    var e = _eggMoveData[idx]; e.moveIDs.Add(read); _eggMoveData[idx] = e;
-                }
-            }
-        }
-
-        private void ReadEggMoveDataSpecial()
-        {
-            DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eggMoves });
-            string folder = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
-            foreach (var file in Directory.GetFiles(folder))
-            {
-                if (!int.TryParse(Path.GetFileName(file), out int speciesID)) continue;
-                var moves = new List<ushort>();
-                using var r = new EndianBinaryReader(File.OpenRead(file), Endianness.LittleEndian);
-                while (r.BaseStream.Position < r.BaseStream.Length)
-                {
-                    ushort id = r.ReadUInt16();
-                    if (id == 0xFFFF) break;
-                    moves.Add(id);
-                }
-                _eggMoveData.Add(new EggMoveEntry(speciesID, moves));
             }
         }
 
@@ -668,23 +606,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
-                {
-                    var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
-                    using var stream = File.OpenWrite(path);
-                    using var w = new BinaryWriter(stream);
-                    WriteNormal(w);
-                    if (stream.Position < stream.Length) stream.SetLength(stream.Position);
-                }
-                else if (_useSpecialFormat) WriteSpecial();
-                else
-                {
-                    int offset = RomInfo.GetEggMoveTableOffset();
-                    using var stream = File.OpenWrite(OverlayUtils.GetPath(EGG_MOVE_OVERLAY_NUMBER));
-                    using var w = new BinaryWriter(stream);
-                    stream.Seek(offset, SeekOrigin.Begin);
-                    WriteNormal(w);
-                }
+                EggMoveData.Write(_eggMoveData, _useSpecialFormat, _monNames.Length);
                 SetDirty(false);
                 return null;
             }
@@ -692,36 +614,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 AppLogger.Error($"Failed to save egg move data: {ex.Message}");
                 return ex.Message;
-            }
-        }
-
-        private void WriteNormal(BinaryWriter w)
-        {
-            foreach (var e in _eggMoveData)
-            {
-                w.Write((ushort)(e.speciesID + EGG_MOVES_SPECIES_CONSTANT));
-                foreach (var m in e.moveIDs) w.Write(m);
-            }
-            w.Write((ushort)0xFFFF);
-        }
-
-        private void WriteSpecial()
-        {
-            string folder = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
-            Directory.CreateDirectory(folder);
-            var hasFile = new HashSet<int>();
-            foreach (var e in _eggMoveData)
-            {
-                using var w = new BinaryWriter(File.Create(Path.Combine(folder, e.speciesID.ToString("D4"))));
-                foreach (var m in e.moveIDs) w.Write(m);
-                w.Write((ushort)0xFFFF);
-                hasFile.Add(e.speciesID);
-            }
-            for (int i = 0; i < _monNames.Length; i++)
-            {
-                if (hasFile.Contains(i)) continue;
-                using var w = new BinaryWriter(File.Create(Path.Combine(folder, i.ToString("D4"))));
-                w.Write((ushort)0xFFFF);
             }
         }
 

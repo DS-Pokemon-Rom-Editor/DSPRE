@@ -146,6 +146,8 @@ namespace DSPRE.ROMFiles
                 throw new ArgumentException("Starters must be exactly 3 species.", nameof(newSpecies));
 
             int[] oldSpecies = GetStarters();
+            // The DP/Pt selection-scene patch rewrites code, so the same three species must not touch anything.
+            if (oldSpecies != null && oldSpecies.SequenceEqual(newSpecies)) return true;
 
             if (!SetSpeciesAndGraphics(newSpecies))
                 return false; // couldn't safely locate the species table, leave everything else untouched

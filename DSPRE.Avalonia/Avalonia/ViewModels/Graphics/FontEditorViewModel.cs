@@ -90,11 +90,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             FontNames.Clear();
             _fontEntries.Clear();
-            if (!gameDirs.TryGetValue(DirNames.fonts, out var dirs)) return;
-            string dir = dirs.unpackedDir;
-            if (!Directory.Exists(dir)) return;
-
-            var files = Directory.GetFiles(dir).OrderBy(x => x).ToArray();
+            var files = FieldFont.UnpackedEntries();
             for (int i = 0; i < files.Length; i++)
             {
                 FieldFont f;
@@ -447,10 +443,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_font == null || _selectedFontIndex < 0) return;
             try
             {
-                string dir = gameDirs[DirNames.fonts].unpackedDir;
-                var files = Directory.GetFiles(dir).OrderBy(x => x).ToArray();
-                int entry = _fontEntries[_selectedFontIndex];
-                File.WriteAllBytes(files[entry], _font.Write());
+                _font.Save(_fontEntries[_selectedFontIndex]);
                 _dirty = false;
                 SaveNotice.Saved(UnsavedChangesDescription);
                 OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -480,9 +473,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (which < 0 || which >= _fontEntries.Count) return;
             try
             {
-                string dir = gameDirs[DirNames.fonts].unpackedDir;
-                var files = Directory.GetFiles(dir).OrderBy(x => x).ToArray();
-                _font = FieldFont.Read(File.ReadAllBytes(files[_fontEntries[which]]));
+                _font = FieldFont.LoadFromArchive(_fontEntries[which]);
                 _dirty = false;
 
                 _all.Clear();

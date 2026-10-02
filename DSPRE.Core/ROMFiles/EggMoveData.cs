@@ -15,6 +15,70 @@ namespace DSPRE
         public const int OVERLAY_NUMBER = 5;
         public const int SPECIES_CONSTANT = 20000;
 
+        /// <summary>Whether DP or Platinum use the expanded one-file-per-species layout, and its moves-per-species limit.</summary>
+        public static (bool Expanded, int MaxMoves) Layout()
+        {
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return (false, 0);
+            using var reader = new BinaryReader(File.OpenRead(OverlayUtils.GetPath(OVERLAY_NUMBER)));
+            reader.BaseStream.Seek(RomInfo.GetEggMoveTableOffset(), SeekOrigin.Begin);
+            int magic = reader.ReadInt32(), maxMoves = reader.ReadInt32();
+            return magic == ExpandedMagic ? (true, maxMoves) : (false, 0);
+        }
+
+        private const int ExpandedMagic = 4671301;
+
+        /// <summary>
+        /// Writes the table back where it was read from: HGSS's archive member, DP and Platinum's overlay table, or one
+        /// file per species when the expanded layout is in use (species without moves get an empty list).
+        /// </summary>
+        public static void Write(IReadOnlyList<EggMoveEntry> entries, bool expandedLayout, int speciesCount)
+        {
+            if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
+            {
+                var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
+                using var stream = File.OpenWrite(path);
+                using var w = new BinaryWriter(stream);
+                WriteTable(w, entries);
+                if (stream.Position < stream.Length) stream.SetLength(stream.Position);
+            }
+            else if (expandedLayout)
+            {
+                string folder = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
+                Directory.CreateDirectory(folder);
+                var hasFile = new HashSet<int>();
+                foreach (var e in entries)
+                {
+                    using var w = new BinaryWriter(File.Create(Path.Combine(folder, e.speciesID.ToString("D4"))));
+                    foreach (var m in e.moveIDs) w.Write(m);
+                    w.Write((ushort)0xFFFF);
+                    hasFile.Add(e.speciesID);
+                }
+                for (int i = 0; i < speciesCount; i++)
+                {
+                    if (hasFile.Contains(i)) continue;
+                    using var w = new BinaryWriter(File.Create(Path.Combine(folder, i.ToString("D4"))));
+                    w.Write((ushort)0xFFFF);
+                }
+            }
+            else
+            {
+                using var stream = File.OpenWrite(OverlayUtils.GetPath(OVERLAY_NUMBER));
+                using var w = new BinaryWriter(stream);
+                stream.Seek(RomInfo.GetEggMoveTableOffset(), SeekOrigin.Begin);
+                WriteTable(w, entries);
+            }
+        }
+
+        private static void WriteTable(BinaryWriter w, IReadOnlyList<EggMoveEntry> entries)
+        {
+            foreach (var e in entries)
+            {
+                w.Write((ushort)(e.speciesID + SPECIES_CONSTANT));
+                foreach (var m in e.moveIDs) w.Write(m);
+            }
+            w.Write((ushort)0xFFFF);
+        }
+
         public static List<EggMoveEntry> ReadFromRom()
         {
             const int overlayNum = OVERLAY_NUMBER;
@@ -38,7 +102,7 @@ namespace DSPRE
                     int magic    = reader.ReadInt32();
                     int maxMoves = reader.ReadInt32();
                     reader.BaseStream.Seek(-8, SeekOrigin.Current);
-                    if (magic == 4671301) useSpecial = true;
+                    if (magic == ExpandedMagic) useSpecial = true;
                 }
 
                 if (useSpecial)

@@ -451,7 +451,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                var narc = SpriteArchive.Open(DirNames.otherPokemonBattleSprites);
+                var narc = PokemonBattleSpriteArchive.Open(DirNames.otherPokemonBattleSprites);
                 if (narc == null)
                 {
                     StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
@@ -604,7 +604,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                var narc = SpriteArchive.Open(DirNames.pokemonBattleSprites);
+                var narc = PokemonBattleSpriteArchive.Open(DirNames.pokemonBattleSprites);
                 if (narc == null)
                 {
                     StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
@@ -1548,65 +1548,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             => File.Copy(Path.Combine(unpackedDir, srcIdx.ToString("D4")),
                           Path.Combine(unpackedDir, dstIdx.ToString("D4")), overwrite: true);
 
-        // --- Ported from PokemonSpriteEditor: MakeImage / ReadPalette ----------------
-
-        /// <summary>Decrypts one 6448-byte battle sprite entry to 160×80 4bpp palette indices.</summary>
-        private static byte[] MakeImage(Stream fs)
-        {
-            fs.Seek(48L, SeekOrigin.Current);
-            using var reader = new BinaryReader(fs, System.Text.Encoding.Default, leaveOpen: true);
-
-            ushort[] arr = new ushort[3200];
-            for (int i = 0; i < 3200; i++) arr[i] = reader.ReadUInt16();
-
-            uint num = arr[0];
-            if (gameFamily != GameFamilies.DP)
-            {
-                for (int j = 0; j < 3200; j++)
-                {
-                    unchecked { arr[j] = (ushort)(arr[j] ^ (ushort)(num & 0xFFFF)); num *= 1103515245; num += 24691; }
-                }
-            }
-            else
-            {
-                num = arr[3199];
-                for (int j = 3199; j >= 0; j--)
-                {
-                    unchecked { arr[j] = (ushort)(arr[j] ^ (ushort)(num & 0xFFFF)); num *= 1103515245; num += 24691; }
-                }
-            }
-
-            byte[] pixels = new byte[SpriteWidth * SpriteHeight];
-            for (int k = 0; k < 3200; k++)
-            {
-                pixels[k * 4]     = (byte)(arr[k] & 0xF);
-                pixels[k * 4 + 1] = (byte)((arr[k] >> 4) & 0xF);
-                pixels[k * 4 + 2] = (byte)((arr[k] >> 8) & 0xF);
-                pixels[k * 4 + 3] = (byte)((arr[k] >> 12) & 0xF);
-            }
-            return pixels;
-        }
-
-        /// <summary>Reads one 72-byte palette entry as 16 packed-BGRA colors (opaque).</summary>
-        private static uint[] ReadPalette(Stream fs)
-        {
-            fs.Seek(40L, SeekOrigin.Current);
-            using var reader = new BinaryReader(fs, System.Text.Encoding.Default, leaveOpen: true);
-            var pal = new uint[16];
-            for (int j = 0; j < 16; j++)
-            {
-                ushort v = reader.ReadUInt16();
-                uint r = (uint)((v & 0x1F) << 3);
-                uint g = (uint)(((v >> 5) & 0x1F) << 3);
-                uint b = (uint)(((v >> 10) & 0x1F) << 3);
-                pal[j] = 0xFF000000u | (r << 16) | (g << 8) | b;
-            }
-            return pal;
-        }
-
-        // --- Save: writes every loaded pose plus both palettes back into the ROM's battle-sprite
-        // NARC, in place (fixed-size entries, same shape MakeImage/ReadPalette already expect to
-        // read back). Ported from PokemonSpriteEditor's SaveChanges_Click/SaveBin/SavePal. ---------
+        // Writes every loaded pose plus both palettes back into the battle-sprite archive in place.
 
         public void Save()
         {
@@ -1616,7 +1558,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             if (HgEngineProject.IsActive && SaveToHgEngineSource()) return;
 
-            var narc = SpriteArchive.Open(DirNames.pokemonBattleSprites);
+            var narc = PokemonBattleSpriteArchive.Open(DirNames.pokemonBattleSprites);
             if (narc == null)
             {
                 StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
@@ -1674,7 +1616,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_currentFormData == null || _selectedFormIndex < 0 || _selectedFormIndex >= _currentFormData.Length) return;
             var form = _currentFormData[_selectedFormIndex];
 
-            var narc = SpriteArchive.Open(DirNames.otherPokemonBattleSprites);
+            var narc = PokemonBattleSpriteArchive.Open(DirNames.otherPokemonBattleSprites);
             if (narc == null)
             {
                 StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
@@ -1699,112 +1641,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             FinishSave(failed);
-        }
-
-        private const int SpriteEntrySize = 6448;
-        private const int PaletteEntrySize = 72;
-
-        /// <summary>
-        /// One battle-sprite archive. Reads and writes go to the unpacked copy that Save ROM repacks and the
-        /// Graphics browser reads, and each write also patches the packed file in place so both agree.
-        /// An hg-engine-owned archive is rebuilt from the checkout and skipped by Save ROM, so it is only
-        /// used unpacked when it already is.
-        /// </summary>
-        private sealed class SpriteArchive
-        {
-            private readonly string _packed;
-            private readonly string _unpacked;
-
-            private SpriteArchive(string packed, string unpacked) { _packed = packed; _unpacked = unpacked; }
-
-            public static SpriteArchive Open(DirNames dir)
-            {
-                if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out var paths)) return null;
-                if (!HgEngineDomains.IsOwned(dir))
-                    DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { dir });
-                string unpacked = Directory.Exists(paths.unpackedDir) && Directory.EnumerateFiles(paths.unpackedDir).Any()
-                    ? paths.unpackedDir : null;
-                string packed = File.Exists(paths.packedDir) ? paths.packedDir : null;
-                return unpacked == null && packed == null ? null : new SpriteArchive(packed, unpacked);
-            }
-
-            private string MemberPath(int idx) => Path.Combine(_unpacked, idx.ToString("D4"));
-
-            private byte[] Read(int idx, int size)
-            {
-                if (idx < 0) return null;
-                if (_unpacked != null)
-                {
-                    var file = new FileInfo(MemberPath(idx));
-                    return file.Exists && file.Length == size ? File.ReadAllBytes(file.FullName) : null;
-                }
-                var narc = new NarcReader(_packed);
-                if (idx >= narc.fe.Length || narc.fe[idx].Size != size) return null;
-                narc.OpenEntry(idx);
-                try
-                {
-                    var buffer = new byte[size];
-                    narc.fs.ReadExactly(buffer);
-                    return buffer;
-                }
-                finally { narc.Close(); }
-            }
-
-            // False when the member is missing or not the size of the record being written.
-            private bool Write(int idx, byte[] data)
-            {
-                if (idx < 0) return false;
-                bool written = false;
-                if (_unpacked != null)
-                {
-                    var file = new FileInfo(MemberPath(idx));
-                    if (!file.Exists || file.Length != data.Length) return false;
-                    File.WriteAllBytes(file.FullName, data);
-                    written = true;
-                }
-                if (_packed != null)
-                {
-                    var narc = new NarcReader(_packed);
-                    if (idx < narc.fe.Length && narc.fe[idx].Size == data.Length)
-                    {
-                        narc.OpenEntry(idx);
-                        try { narc.fs.Write(data, 0, data.Length); }
-                        finally { narc.Close(); }
-                        written = true;
-                    }
-                }
-                return written;
-            }
-
-            public byte[] ReadSprite(int idx)
-            {
-                byte[] bytes = Read(idx, SpriteEntrySize);
-                if (bytes == null) return null;
-                using var ms = new MemoryStream(bytes);
-                return MakeImage(ms);
-            }
-
-            public uint[] ReadPalette(int idx)
-            {
-                byte[] bytes = Read(idx, PaletteEntrySize);
-                if (bytes == null) return null;
-                using var ms = new MemoryStream(bytes);
-                return PokemonSpriteEditorViewModel.ReadPalette(ms);
-            }
-
-            public bool WriteSprite(int idx, byte[] indices)
-            {
-                using var ms = new MemoryStream();
-                WriteSpriteEntry(ms, indices);
-                return Write(idx, ms.ToArray());
-            }
-
-            public bool WritePalette(int idx, uint[] palette)
-            {
-                using var ms = new MemoryStream();
-                WritePaletteEntry(ms, palette);
-                return Write(idx, ms.ToArray());
-            }
         }
 
         // Writes straight to hg-engine's source PNGs (front = Normal palette, back = Shiny), mirroring LoadMonFromHgEngineSource, so the edit survives the next make.
@@ -1834,69 +1670,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 AppLogger.Error("hg-engine sprite save failed: " + ex.Message);
             }
             return true;
-        }
-
-        /// <summary>Encrypts 160×80 4bpp palette indices into one 6448-byte battle sprite entry. Ported from PokemonSpriteEditor.SaveBin.</summary>
-        private static void WriteSpriteEntry(Stream fs, byte[] indices)
-        {
-            ushort[] packed = new ushort[3200];
-            for (int i = 0; i < 3200; i++)
-            {
-                packed[i] = (ushort)((indices[i * 4] & 0xF) | ((indices[i * 4 + 1] & 0xF) << 4) |
-                                      ((indices[i * 4 + 2] & 0xF) << 8) | ((indices[i * 4 + 3] & 0xF) << 12));
-            }
-
-            // MakeImage reads its seed straight back from this position, so it must literally BE the
-            // seed, not the seed XORed with a pixel value, or every position after it decodes wrong.
-            if (gameFamily != GameFamilies.DP)
-            {
-                uint num = 0u;
-                packed[0] = (ushort)(num & 0xFFFF);
-                num = num * 1103515245 + 24691;
-                for (int j = 1; j < 3200; j++)
-                {
-                    unchecked { packed[j] = (ushort)(packed[j] ^ (ushort)(num & 0xFFFF)); num = num * 1103515245 + 24691; }
-                }
-            }
-            else
-            {
-                uint seed = 31315u;
-                for (int k = 3199; k >= 0; k--) seed += packed[k];
-                uint num = seed;
-                packed[3199] = (ushort)(num & 0xFFFF);
-                num = num * 1103515245 + 24691;
-                for (int k = 3198; k >= 0; k--)
-                {
-                    unchecked { packed[k] = (ushort)(packed[k] ^ (ushort)(num & 0xFFFF)); num = num * 1103515245 + 24691; }
-                }
-            }
-
-            byte[] header = {
-                82, 71, 67, 78, 255, 254, 0, 1, 48, 25, 0, 0, 16, 0, 1, 0,
-                82, 65, 72, 67, 32, 25, 0, 0, 10, 0, 20, 0, 3, 0, 0, 0,
-                0, 0, 0, 0, 1, 0, 0, 0, 0, 25, 0, 0, 24, 0, 0, 0
-            };
-            var bw = new BinaryWriter(fs);
-            bw.Write(header, 0, 48);
-            for (int l = 0; l < 3200; l++) bw.Write(packed[l]);
-        }
-
-        /// <summary>Packs 16 ARGB colors into one 72-byte RGB555 palette entry. Ported from PokemonSpriteEditor.SavePal.</summary>
-        private static void WritePaletteEntry(Stream fs, uint[] palette)
-        {
-            byte[] header = {
-                82, 76, 67, 78, 255, 254, 0, 1, 72, 0, 0, 0, 16, 0, 1, 0,
-                84, 84, 76, 80, 56, 0, 0, 0, 4, 0, 10, 0, 0, 0, 0, 0,
-                32, 0, 0, 0, 16, 0, 0, 0
-            };
-            var bw = new BinaryWriter(fs);
-            bw.Write(header, 0, 40);
-            for (int i = 0; i < 16; i++)
-            {
-                byte r = (byte)(palette[i] >> 16), g = (byte)(palette[i] >> 8), b = (byte)palette[i];
-                ushort v = (ushort)(((r >> 3) & 0x1F) | (((g >> 3) & 0x1F) << 5) | (((b >> 3) & 0x1F) << 10));
-                bw.Write(v);
-            }
         }
 
         // --- Reading an image's colors and matching palettes, ported from IndexedBitmapHandler ------
