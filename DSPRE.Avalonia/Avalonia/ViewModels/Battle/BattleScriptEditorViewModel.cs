@@ -77,11 +77,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             get => _archiveIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _archiveIndex) return;
                 if (Dirty && _fileIndex >= 0)
                 {
                     int requested = value;
-                    OnPropertyChanged(nameof(ArchiveIndex));
+                    RecordSwitchGuard.SnapBack(() => _archiveIndex, v => _archiveIndex = v, () => OnPropertyChanged(nameof(ArchiveIndex)));
                     _ = SwitchEntryAsync(() => SelectArchive(requested));
                     return;
                 }
@@ -395,12 +396,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             get => _fileIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _fileIndex) return;
                 if (Dirty && _fileIndex >= 0)
                 {
                     // Snap the list back to the entry still loaded until the user has answered.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedFileIndex));
+                    RecordSwitchGuard.SnapBack(() => _fileIndex, v => _fileIndex = v, () => OnPropertyChanged(nameof(SelectedFileIndex)));
                     _ = SwitchEntryAsync(() => { if (Set(ref _fileIndex, requested, nameof(SelectedFileIndex))) LoadEntry(); });
                     return;
                 }

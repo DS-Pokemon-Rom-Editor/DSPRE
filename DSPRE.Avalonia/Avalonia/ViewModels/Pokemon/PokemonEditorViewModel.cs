@@ -74,13 +74,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selectedMonIndex;
             set
             {
-                if (value == _selectedMonIndex || value < 0 || value >= PokemonNames.Count) return;
+                if (RecordSwitchGuard.IsSnappingBack || value == _selectedMonIndex || value < 0 || value >= PokemonNames.Count) return;
                 if (_pendingSpecies != null && value == _pendingListIndex)
                 {
-                    // Put the selector back once the control has finished applying the pick.
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(
-                        () => OnPropertyChanged(nameof(SelectedMonIndex)),
-                        global::Avalonia.Threading.DispatcherPriority.Background);
+                    PutSelectorBack();
                     return;
                 }
                 if (HasUnsavedChanges) { _ = ConfirmDiscardAsync(value); return; }
@@ -359,18 +356,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return written.SpeciesId;
         }
 
+        private void PutSelectorBack()
+            => RecordSwitchGuard.SnapBack(() => _selectedMonIndex, v => _selectedMonIndex = v, () => OnPropertyChanged(nameof(SelectedMonIndex)));
+
         private async System.Threading.Tasks.Task ConfirmDiscardAsync(int pendingIndex)
         {
-            var yes = await DialogHelper.AskYesNo(
-                "There are unsaved changes. Switch Pokémon and discard them?",
-                "Unsaved Changes", _owner);
-            if (!yes)
+            // The same Save / Discard / Cancel prompt every other editor shows when switching records.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "Pokémon"))
             {
-                // The selector already shows the other Pokémon; put it back on the one still loaded.
-                OnPropertyChanged(nameof(SelectedMonIndex));
+                PutSelectorBack();
                 return;
             }
-            DiscardChanges();
             _selectedMonIndex = pendingIndex;
             OnPropertyChanged(nameof(SelectedMonIndex));
             LoadMon(pendingIndex);

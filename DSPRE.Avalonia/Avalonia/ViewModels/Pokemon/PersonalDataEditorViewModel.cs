@@ -1410,9 +1410,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private async Task ConfirmDiscardAsync(int newId)
         {
-            bool discard = await DialogHelper.AskYesNo(
-                "There are unsaved changes. Discard and proceed?", "Unsaved Changes");
-            if (!discard) return;
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "Pokémon")) return;
             _dirty = false;
             LoadMon(newId);
         }

@@ -105,10 +105,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _viewModeIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value != _viewModeIndex && _dirty && !_suppress)
                 {
                     // Every view reloads from disk, so ask first and leave the picker where it was.
-                    OnPropertyChanged(nameof(ViewModeIndex));
+                    RecordSwitchGuard.SnapBack(() => _viewModeIndex, v => _viewModeIndex = v, () => OnPropertyChanged(nameof(ViewModeIndex)));
                     if (!_switchPending) _ = SwitchAfterGuardAsync("view", () => ViewModeIndex = value);
                     return;
                 }
@@ -148,7 +149,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _headerId;
             set
             {
-                if (_headerId == value) return;
+                if (RecordSwitchGuard.IsSnappingBack || _headerId == value) return;
                 if (!IsValidHeaderId(value))
                 {
                     OnPropertyChanged(nameof(SelectedHeaderIndex));
@@ -157,7 +158,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 if (HasUnsavedChanges)
                 {
-                    OnPropertyChanged(nameof(SelectedHeaderIndex));
+                    RecordSwitchGuard.SnapBack(() => _headerId, v => _headerId = v, () => OnPropertyChanged(nameof(SelectedHeaderIndex)));
                     if (!_headerNavigationPending)
                     {
                         _ = ConfirmHeaderNavigationAsync(value);
@@ -328,9 +329,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _selectedMapIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value != _selectedMapIndex && value >= 0 && _dirty && !_suppress)
                 {
-                    OnPropertyChanged(nameof(SelectedMapIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedMapIndex, v => _selectedMapIndex = v, () => OnPropertyChanged(nameof(SelectedMapIndex)));
                     if (!_switchPending) _ = SwitchAfterGuardAsync("map", () => SelectedMapIndex = value);
                     return;
                 }

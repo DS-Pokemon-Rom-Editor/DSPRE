@@ -110,12 +110,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             get => _selectedTrainerIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedTrainerIndex) return;
                 if (_dirty && !_suppress && value >= 0 && _selectedTrainerIndex >= 0)
                 {
                     // Snap the list back to the trainer still loaded until the user has answered.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedTrainerIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedTrainerIndex, v => _selectedTrainerIndex = v, () => OnPropertyChanged(nameof(SelectedTrainerIndex)));
                     _ = SwitchTrainerAsync(requested);
                     return;
                 }
@@ -127,7 +128,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "trainer")) return;
             SetClean();
-            if (Set(ref _selectedTrainerIndex, requested)) LoadTrainer(requested);
+            if (Set(ref _selectedTrainerIndex, requested, nameof(SelectedTrainerIndex))) LoadTrainer(requested);
         }
 
         private int _selectedTriggerIndex = -1;

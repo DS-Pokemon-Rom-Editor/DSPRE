@@ -76,12 +76,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get => _selectedIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedIndex) return;
                 if (!_suppress && _pendingClass != null && _selectedIndex == PendingIndex) CapturePending();
                 if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0)
                 {
                     // Snap the list back to the class still loaded until the user has answered.
-                    OnPropertyChanged(nameof(SelectedClassIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedIndex, v => _selectedIndex = v, () => OnPropertyChanged(nameof(SelectedClassIndex)));
                     _ = SwitchClassAsync(value);
                     return;
                 }
@@ -92,7 +93,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private async Task SwitchClassAsync(int requested)
         {
             if (!await ConfirmLeaveAsync()) return;
-            if (Set(ref _selectedIndex, requested)) LoadClass(requested);
+            if (Set(ref _selectedIndex, requested, nameof(SelectedClassIndex))) LoadClass(requested);
         }
 
         /// <summary>True once the loaded class has no unsaved edits, having asked to save or discard them.</summary>

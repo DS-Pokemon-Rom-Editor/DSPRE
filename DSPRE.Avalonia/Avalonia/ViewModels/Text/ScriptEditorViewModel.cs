@@ -126,11 +126,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
             get => _selectedIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedIndex) return;
                 if (!_suppress && _dirty && value >= 0 && _selectedIndex >= 0)
                 {
                     // Snap the list back to the file still loaded until the user has answered.
-                    OnPropertyChanged(nameof(SelectedScriptIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedIndex, v => _selectedIndex = v, () => OnPropertyChanged(nameof(SelectedScriptIndex)));
                     _ = SelectScriptAsync(value);
                     return;
                 }

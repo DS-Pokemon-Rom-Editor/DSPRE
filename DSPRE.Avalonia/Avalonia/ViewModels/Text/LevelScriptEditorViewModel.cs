@@ -88,12 +88,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             get => _selScript;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selScript) return;
                 if (_dirty && !_suppress && value >= 0 && _selScript >= 0)
                 {
                     // Snap the list back to the file still loaded until the user has answered.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedScriptIndex));
+                    RecordSwitchGuard.SnapBack(() => _selScript, v => _selScript = v, () => OnPropertyChanged(nameof(SelectedScriptIndex)));
                     _ = SwitchScriptAsync(requested);
                     return;
                 }
@@ -105,7 +106,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "level script")) return;
             SetClean();
-            if (Set(ref _selScript, requested)) LoadFile(requested);
+            if (Set(ref _selScript, requested, nameof(SelectedScriptIndex))) LoadFile(requested);
         }
 
         private int _selTrigger = -1;

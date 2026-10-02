@@ -144,11 +144,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 // Hiding the TreeView while a filter is active can make its binding briefly report
                 // null. Keep the logical selection stable instead of reloading or losing the header.
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == null && !_suppress && _selectedTreeNode != null) return;
                 if (!_suppress && value is HeaderTreeLeaf pick && _dirty && _header != null && pick.HeaderId != _header.ID)
                 {
                     // Leave the tree on the loaded header until the user answers.
-                    Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(SelectedTreeNode)));
+                    RecordSwitchGuard.SnapBack(() => _selectedTreeNode, v => _selectedTreeNode = v, () => OnPropertyChanged(nameof(SelectedTreeNode)), _ => null);
                     if (!_switchPending) _ = SwitchHeaderAsync(pick.HeaderId);
                     return;
                 }

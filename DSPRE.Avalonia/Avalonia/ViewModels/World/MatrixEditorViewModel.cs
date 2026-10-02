@@ -221,13 +221,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _selectedIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedIndex) return;
                 if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0)
                 {
                     // Snap the list back to the matrix still loaded, so the answer decides where we
                     // end up rather than the click already having moved us.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedMatrixIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedIndex, v => _selectedIndex = v, () => OnPropertyChanged(nameof(SelectedMatrixIndex)));
                     _ = SwitchMatrixAsync(requested);
                     return;
                 }
@@ -239,7 +240,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "matrix")) return;
             SetClean();
-            if (Set(ref _selectedIndex, requested)) LoadMatrix(requested);
+            if (Set(ref _selectedIndex, requested, nameof(SelectedMatrixIndex))) LoadMatrix(requested);
         }
 
         public MatrixEditorViewModel() { if (Design.IsDesignMode) MatrixNames.Add("Matrix 0"); }

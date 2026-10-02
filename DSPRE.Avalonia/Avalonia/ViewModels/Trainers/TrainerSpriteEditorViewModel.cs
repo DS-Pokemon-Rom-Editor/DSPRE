@@ -316,7 +316,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             // Covers both halves of this editor's dirty state: the painted sprite and the animation
             // JSON, since HasUnsavedChanges is the OR of the two.
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "trainer class")) return;
-            if (Set(ref _trClassID, requested)) Load(requested);
+            if (Set(ref _trClassID, requested, nameof(SelectedClassIndex))) Load(requested);
         }
 
         public ObservableCollection<PaletteSwatchViewModel> PaletteSwatches { get; } = new();

@@ -942,11 +942,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _selectedIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0 && value != _selectedIndex)
                 {
                     // Ask before dropping edits. Snap the box back to the current file until they answer.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedEventIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedIndex, v => _selectedIndex = v, () => OnPropertyChanged(nameof(SelectedEventIndex)));
                     _ = ConfirmEventFileSwitchAsync(requested);
                     return;
                 }
@@ -961,7 +962,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             // the habit the prompt exists to make unnecessary.
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "event file")) return;
             SetClean();
-            if (Set(ref _selectedIndex, requested)) LoadFile(requested);
+            if (Set(ref _selectedIndex, requested, nameof(SelectedEventIndex))) LoadFile(requested);
         }
 
         public int InitialIndex { get; set; }

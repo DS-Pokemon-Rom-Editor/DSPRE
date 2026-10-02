@@ -96,12 +96,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selFile;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selFile) return;
                 if (_dirty && !_suppress && value >= 0 && _selFile >= 0)
                 {
                     // Snap the list back to the file still loaded until the user has answered.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedFileIndex));
+                    RecordSwitchGuard.SnapBack(() => _selFile, v => _selFile = v, () => OnPropertyChanged(nameof(SelectedFileIndex)));
                     _ = SwitchFileAsync(requested);
                     return;
                 }
@@ -113,7 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "headbutt file")) return;
             SetClean();
-            if (Set(ref _selFile, requested)) LoadFile(requested);
+            if (Set(ref _selFile, requested, nameof(SelectedFileIndex))) LoadFile(requested);
         }
 
         private bool _specialGroupActive;

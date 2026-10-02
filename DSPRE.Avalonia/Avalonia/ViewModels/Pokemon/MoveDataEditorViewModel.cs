@@ -107,6 +107,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selectedMoveIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (_syncingList || value == _selectedMoveIndex || value < 0 || value >= MoveNames.Count) return;
                 if (_dirty || _pendingMove != null) { _ = ConfirmDiscardAsync(value); return; }
                 _selectedMoveIndex = value;
@@ -534,10 +535,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private async Task ConfirmDiscardAsync(int newIndex)
         {
-            bool discard = await DialogHelper.AskYesNo(
-                _pendingMove != null ? "The new move is not saved. Discard it and proceed?" : "There are unsaved changes to the current move. Discard and proceed?",
-                "Unsaved Changes");
-            if (!discard) { OnPropertyChanged(nameof(SelectedMoveIndex)); return; }
+            bool discard = _pendingMove != null
+                ? await DialogHelper.AskYesNo("The new move is not saved. Discard it and proceed?", "Unsaved Changes")
+                : await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "move");
+            if (!discard) { RecordSwitchGuard.SnapBack(() => _selectedMoveIndex, v => _selectedMoveIndex = v, () => OnPropertyChanged(nameof(SelectedMoveIndex))); return; }
             _dirty = false;
             if (_pendingMove != null)
             {

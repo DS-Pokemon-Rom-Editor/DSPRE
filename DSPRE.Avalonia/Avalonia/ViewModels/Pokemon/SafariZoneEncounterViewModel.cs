@@ -47,12 +47,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selectedFileIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedFileIndex) return;
                 if (_dirty && !_suppress && value >= 0 && _selectedFileIndex >= 0)
                 {
                     // Snap the list back to the area still loaded until the user has answered.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedFileIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedFileIndex, v => _selectedFileIndex = v, () => OnPropertyChanged(nameof(SelectedFileIndex)));
                     _ = SwitchFileAsync(requested);
                     return;
                 }

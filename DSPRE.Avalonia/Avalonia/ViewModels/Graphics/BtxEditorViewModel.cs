@@ -66,12 +66,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get => _selectedIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedIndex) return;
                 if (HasUnsavedChanges && value >= 0 && _selectedIndex >= 0)
                 {
                     // Snap the list back to the entry still loaded until the user has answered.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedIndex, v => _selectedIndex = v, () => OnPropertyChanged(nameof(SelectedIndex)));
                     _ = SwitchEntryAsync(requested);
                     return;
                 }
@@ -84,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             // Dirty here means edited sprite files, not one record, so Discard drops them all. The
             // guard names that through UnsavedChangesDescription, which reports the count.
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "sprite entry")) return;
-            if (Set(ref _selectedIndex, requested)) LoadEntry(requested);
+            if (Set(ref _selectedIndex, requested, nameof(SelectedIndex))) LoadEntry(requested);
         }
 
         private Bitmap _currentImage;

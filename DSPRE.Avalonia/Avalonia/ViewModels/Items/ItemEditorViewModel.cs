@@ -115,6 +115,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => _selectedItemIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (_selectedItemIndex == value || _syncingList) return;
                 if (_isLoading || value < 0 || value >= ItemNames.Count)
                 {
@@ -126,7 +127,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 if (_dataDirty || _entryDirty)
                 {
                     // Snap the picker back to the item still loaded until the user has answered.
-                    OnPropertyChanged();
+                    RecordSwitchGuard.SnapBack(() => _selectedItemIndex, v => _selectedItemIndex = v, () => OnPropertyChanged(nameof(SelectedItemIndex)));
                     _ = SwitchItemAsync(value);
                     return;
                 }
@@ -182,12 +183,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => _itemDataId;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 // A new item's data is its own template until it is saved, so the box can't point it elsewhere.
                 if (_pendingItem != null && !_isLoading && value != _itemDataId) { OnPropertyChanged(); return; }
                 // Pointing at other data replaces the loaded data, so its unsaved edits are settled first.
                 if (_dataDirty && !_isLoading && value != _itemDataId && value >= 0 && value <= MaxItemDataId)
                 {
-                    OnPropertyChanged();
+                    RecordSwitchGuard.SnapBack(() => _itemDataId, v => _itemDataId = v, () => OnPropertyChanged(nameof(ItemDataId)));
                     _ = SwitchItemDataAsync(value);
                     return;
                 }
@@ -522,7 +524,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (!await DialogHelper.AskYesNo("The new item is not saved. Discard it and proceed?", "Unsaved Changes"))
             {
-                OnPropertyChanged(nameof(SelectedItemIndex));
+                RecordSwitchGuard.SnapBack(() => _selectedItemIndex, v => _selectedItemIndex = v, () => OnPropertyChanged(nameof(SelectedItemIndex)));
                 return;
             }
             _dataDirty = _entryDirty = false;

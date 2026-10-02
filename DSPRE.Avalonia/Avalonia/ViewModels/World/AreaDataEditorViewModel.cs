@@ -43,12 +43,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _selectedIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedIndex) return;
                 if (_dirty && !_suppress && value >= 0 && _selectedIndex >= 0)
                 {
                     // Snap the list back to the area still loaded until the user has answered.
                     int requested = value;
-                    OnPropertyChanged(nameof(SelectedIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedIndex, v => _selectedIndex = v, () => OnPropertyChanged(nameof(SelectedIndex)));
                     _ = SwitchAreaAsync(requested);
                     return;
                 }
@@ -60,7 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "area")) return;
             SetClean();
-            if (Set(ref _selectedIndex, requested)) LoadArea(requested);
+            if (Set(ref _selectedIndex, requested, nameof(SelectedIndex))) LoadArea(requested);
         }
 
         /// <summary>Area data entry to select once loaded (e.g. from the Header editor's "Open" button).</summary>

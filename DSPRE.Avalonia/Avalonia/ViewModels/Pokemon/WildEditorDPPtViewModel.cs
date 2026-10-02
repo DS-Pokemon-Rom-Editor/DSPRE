@@ -150,6 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selectedEncounterIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedEncounterIndex || value < 0 || value >= EncounterNames.Count) return;
                 if (_dirty) { _ = ConfirmDiscardAsync(value); return; }
                 _selectedEncounterIndex = value;
@@ -373,9 +374,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private async Task ConfirmDiscardAsync(int newId)
         {
-            bool discard = await DialogHelper.AskYesNo(
-                "There are unsaved changes. Discard and proceed?", "Unsaved Changes");
-            if (!discard) { OnPropertyChanged(nameof(SelectedEncounterIndex)); return; }
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "encounter file")) { RecordSwitchGuard.SnapBack(() => _selectedEncounterIndex, v => _selectedEncounterIndex = v, () => OnPropertyChanged(nameof(SelectedEncounterIndex))); return; }
             _dirty = false;
             _selectedEncounterIndex = newId;
             OnPropertyChanged(nameof(SelectedEncounterIndex));

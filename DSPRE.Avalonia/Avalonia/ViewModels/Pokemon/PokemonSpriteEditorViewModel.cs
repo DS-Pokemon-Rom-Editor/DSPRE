@@ -239,12 +239,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selectedVariantIndex;
             set
             {
+                if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == _selectedVariantIndex) return;
                 // LoadMon resets the index to -1 first, so only a user's pick reaches the guard.
                 if (HasUnsavedChanges && value >= 0 && _selectedVariantIndex >= 0)
                 {
                     // Snap the list back to the form still loaded until the user has answered.
-                    OnPropertyChanged(nameof(SelectedVariantIndex));
+                    RecordSwitchGuard.SnapBack(() => _selectedVariantIndex, v => _selectedVariantIndex = v, () => OnPropertyChanged(nameof(SelectedVariantIndex)));
                     _ = SwitchVariantAsync(value);
                     return;
                 }
