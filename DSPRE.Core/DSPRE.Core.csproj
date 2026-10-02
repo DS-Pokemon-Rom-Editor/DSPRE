@@ -32,6 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources\ROMToolboxDB\TrainerClassMetadataPatch.bin" LogicalName="DSPRE.Resources.ROMToolboxDB.TrainerClassMetadataPatch.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ekona\Ekona.csproj" />
     <ProjectReference Include="..\Images\Images\Images.csproj" />
   </ItemGroup>

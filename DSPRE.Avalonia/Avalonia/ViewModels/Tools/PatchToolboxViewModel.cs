@@ -62,6 +62,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public string Key { get; }
         public string Title { get; }
         public string Description { get; }
+        public string AuthorText { get; }
+        public bool HasAuthor => AuthorText != null;
         public string StatusText { get; }
         public bool CanApply { get; }
         public string ButtonText { get; }
@@ -72,6 +74,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             Key = p.Key;
             Title = p.Title;
             Description = p.Description;
+            AuthorText = string.IsNullOrEmpty(p.Author) ? null : "by " + p.Author;
 
             switch (p.State)
             {

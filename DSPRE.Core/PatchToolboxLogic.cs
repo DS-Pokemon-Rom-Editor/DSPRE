@@ -525,6 +525,150 @@ namespace DSPRE
             return true;
         }
 
+        /// <summary>The external trainer shiny patch from PR #271 (US HeartGold/SoulSilver, Italian HeartGold).</summary>
+        public static bool ApplyTrainerShinyPatch()
+        {
+            if (!RomInfo.IsDsRomProject)
+            {
+                ShowError("Convert this project to ds-rom format before applying the trainer shiny patch.", "ds-rom project required");
+                return false;
+            }
+            if (!TrainerShinyPatch.SupportsCurrentRom)
+            {
+                ShowError("The trainer shiny patch supports US HeartGold and SoulSilver and Italian HeartGold.", "Unsupported");
+                return false;
+            }
+            if (!RomPatchState.flag_arm9Expanded && !CheckFilesArm9ExpansionApplied())
+            {
+                ShowError("Apply the ARM9 Expansion patch before applying the trainer shiny patch.", "ARM9 Expansion Required");
+                return false;
+            }
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
+            if (AlreadyApplied(Probe(TrainerShinyPatch.DetectCurrentProject))) return false;
+            if (TrainerShinyPatch.WhyNotApplicable(File.ReadAllBytes(RomInfo.arm9Path)) is string why)
+            {
+                ShowError(why, "Trainer shiny patch");
+                return false;
+            }
+
+            string expandedPath = Filesystem.expArmPath;
+            if (!File.Exists(expandedPath) || new FileInfo(expandedPath).Length < 0x16000)
+            {
+                ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
+                return false;
+            }
+
+            byte[] template = TrainerShinyPatch.Template;
+            uint? picked = PickSyntheticOverlayOffset("Trainer shiny routine", expandedPath, TrainerShinyPatch.DefaultPayloadOffset, template, synthOverlayLoadAddress);
+            if (picked == null)
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+            uint offset = picked.Value;
+            if ((offset & 3) != 0)
+            {
+                ShowError("The routine has to start on a four-byte boundary.", "Trainer shiny patch");
+                return false;
+            }
+
+            if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
+                "- Insert the trainer shiny routine (" + template.Length + " bytes) at synthetic overlay offset 0x" + offset.ToString("X") +
+                " (runtime address 0x" + (synthOverlayLoadAddress + offset).ToString("X8") + ").\n" +
+                GetSyntheticOverlayRangeStatus(offset, template) + "\n\n" +
+                "- Point the ARM9's trainer party setup at it and leave flag 0x40 out of the ability.\n\n" +
+                "Party members ticked Shiny in the Trainer editor then battle shiny.\n\nDo you wish to continue?", "Confirm to proceed"))
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+
+            ARM9.DecompressIfMarked();
+            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            try { TrainerShinyPatch.Apply(offset); }
+            catch
+            {
+                ShowError("Operation failed. It is strongly advised that you restore the ARM9 backup.", "Something went wrong");
+                return false;
+            }
+            ShowInfo("The trainer shiny patch has been applied.\n\nSynthetic overlay offset: 0x" + offset.ToString("X"), "Operation successful.");
+            return true;
+        }
+
+        /// <summary>The external Trainer Class Metadata patch from PR #272 (US HeartGold/SoulSilver).</summary>
+        public static bool ApplyTrainerClassMetadataPatch()
+        {
+            if (!RomInfo.IsDsRomProject)
+            {
+                ShowError("Convert this project to ds-rom format before applying the trainer class metadata patch.", "ds-rom project required");
+                return false;
+            }
+            if (!TrainerClassMetadataPatch.SupportsCurrentRom)
+            {
+                ShowError("The trainer class metadata patch supports US HeartGold and SoulSilver.", "Unsupported");
+                return false;
+            }
+            if (!RomPatchState.flag_arm9Expanded && !CheckFilesArm9ExpansionApplied())
+            {
+                ShowError("Apply the ARM9 Expansion patch before applying the trainer class metadata patch.", "ARM9 Expansion Required");
+                return false;
+            }
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
+            if (AlreadyApplied(Probe(() => TrainerClassMetadataStore.DetectCurrentRom(out _) == TrainerClassMetadataDetectionState.SchemaV1))) return false;
+            if (TrainerClassMetadataPatch.WhyNotApplicable() is string why)
+            {
+                ShowError(why, "Trainer class metadata patch");
+                return false;
+            }
+
+            string expandedPath = Filesystem.expArmPath;
+            if (!File.Exists(expandedPath) || new FileInfo(expandedPath).Length < 0x16000)
+            {
+                ShowError("Apply the ARM9 expansion patch first, the synthetic overlay file is missing or not fully expanded.", "ARM9 Expansion Required");
+                return false;
+            }
+
+            byte[] footprint = TrainerClassMetadataPatch.Footprint;
+            uint? picked = PickSyntheticOverlayOffset("Trainer class metadata routines", expandedPath, TrainerClassMetadataPatch.DefaultPayloadOffset, footprint, synthOverlayLoadAddress);
+            if (picked == null)
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+            uint offset = picked.Value;
+            if ((offset & 3) != 0 || offset + footprint.Length > new FileInfo(expandedPath).Length)
+            {
+                ShowError("The routines need 0x" + footprint.Length.ToString("X") + " bytes starting on a four-byte boundary inside the synthetic overlay.", "Trainer class metadata patch");
+                return false;
+            }
+            string rangeStatus = GetSyntheticOverlayRangeStatus(offset, footprint);
+
+            if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
+                "- Build one record per trainer class in a/1/5/5 from the game's own gender, prize, music and intro tables.\n\n" +
+                "- Insert the patch routines (0x" + footprint.Length.ToString("X") + " bytes) at synthetic overlay offset 0x" + offset.ToString("X") +
+                " (runtime address 0x" + (synthOverlayLoadAddress + offset).ToString("X8") + ").\n" + rangeStatus + "\n\n" +
+                "- Hook the ARM9 and overlays 1, 12, 80, 115, 117, 118, 119 and 120 to them (backups are made).\n\n" +
+                "Each trainer class then owns its gender, prize, music and VS intro, edited in the Trainer Classes window. " +
+                "Not compatible with hg-engine.\n\nDo you wish to continue?", "Confirm to proceed"))
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+
+            ARM9.DecompressIfMarked();
+            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            foreach (int overlay in new[] { 1, 12, 80, 115, 117, 118, 119, 120 })
+                File.Copy(OverlayUtils.GetPath(overlay), OverlayUtils.GetPath(overlay) + BackupSuffix, overwrite: true);
+            try { TrainerClassMetadataPatch.Apply(offset); }
+            catch (Exception ex)
+            {
+                ShowError("Operation failed: " + ex.Message + "\nIt is strongly advised that you restore the ARM9 and overlay backups.", "Something went wrong");
+                return false;
+            }
+            ShowInfo("The trainer class metadata patch has been applied.\n\nSynthetic overlay offset: 0x" + offset.ToString("X"), "Operation successful.");
+            return true;
+        }
+
         /// <summary>Rearrange item scripts to ascending index order and fix ground-item references. Not supported on hg-engine ROMs.</summary>
         public static bool ApplyItemStandardizePatch()
         {
@@ -1156,6 +1300,7 @@ namespace DSPRE
             public PatchState State;
             public string Reason;       // shown for Unsupported (why) or Applied (optional note)
             public string ActionLabel;  // button caption when Available (defaults to "Apply")
+            public string Author;       // credited beside the title for patches written outside DSPRE
         }
 
         /// <summary>
@@ -1223,6 +1368,33 @@ namespace DSPRE
                     bool applied = RomPatchState.flag_BuildingRotationPatchApplied || CheckFilesBuildingRotationPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
+
+            list.Add(Status("trainerShiny", "Shiny trainer Pokémon",
+                "Lets party members ticked Shiny in the Trainer editor battle shiny (US HeartGold/SoulSilver, Italian HeartGold). Requires the ARM9 expansion patch and a ds-rom-format project.",
+                () =>
+                {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!TrainerShinyPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
+                    if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
+                    return TrainerShinyPatch.DetectCurrentProject() ? PatchState.Applied : PatchState.Available;
+                }));
+
+            list.Add(Status("trainerClassMetadata", "Trainer class metadata",
+                "Gives every trainer class its own record for gender, prize, eye-contact and battle music and VS intro, edited in the Trainer Classes window (US HeartGold/SoulSilver). Requires the ARM9 expansion patch and a ds-rom-format project.",
+                () =>
+                {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!TrainerClassMetadataPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
+                    if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
+                    return TrainerClassMetadataStore.DetectCurrentRom(out _) switch
+                    {
+                        TrainerClassMetadataDetectionState.SchemaV1 => PatchState.Applied,
+                        TrainerClassMetadataDetectionState.Inconsistent => Unsupported("Partly applied"),
+                        _ => PatchState.Available,
+                    };
+                }, author: "darm"));
 
             list.Add(Status("dynamicHeaders", "Dynamic map headers",
                 "Move the ARM9 header table into a NARC so headers are dynamically allocated (Platinum / HGSS).",
@@ -1331,9 +1503,9 @@ namespace DSPRE
         [ThreadStatic] private static string _reason_text;
         private static PatchState Unsupported(string reason) { _reason_text = reason; return PatchState.Unsupported; }
 
-        private static PatchInfo Status(string key, string title, string desc, Func<PatchState> probe, string actionLabel = null)
+        private static PatchInfo Status(string key, string title, string desc, Func<PatchState> probe, string actionLabel = null, string author = null)
         {
-            var info = new PatchInfo { Key = key, Title = title, Description = desc, ActionLabel = actionLabel };
+            var info = new PatchInfo { Key = key, Title = title, Description = desc, ActionLabel = actionLabel, Author = author };
             try
             {
                 _reason_text = null;
@@ -1368,6 +1540,8 @@ namespace DSPRE
                 case "arm9": return ApplyARM9ExpansionPatch();
                 case "bdhcam": return ApplyBDHCamPatch();   // caller re-queries statuses afterwards
                 case "buildingRotation": return ApplyBuildingRotationPatch();
+                case "trainerShiny": return ApplyTrainerShinyPatch();
+                case "trainerClassMetadata": return ApplyTrainerClassMetadataPatch();
                 case "dynamicHeaders": return ApplyDynamicHeadersPatch();
                 case "matrix": return ApplyMatrixExpansionPatch();
                 case "scrcmdRepoint": return ApplyScrcmdRepointPatch();
