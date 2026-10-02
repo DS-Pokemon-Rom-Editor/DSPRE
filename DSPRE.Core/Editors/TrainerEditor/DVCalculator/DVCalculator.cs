@@ -226,6 +226,17 @@ namespace DSPRE
 
             public static bool GetTrainerClassGender(int trainerClassID)
             {
+                // The trainer class metadata patch (PR #272) reads the gender from its own record instead.
+                var metadata = ROMFiles.TrainerClassMetadataStore.DetectCurrentRom(out string metadataDetail);
+                if (metadata == ROMFiles.TrainerClassMetadataDetectionState.SchemaV1
+                    && ROMFiles.TrainerClassMetadataStore.TryReadCommonFields(trainerClassID, out var fields, out metadataDetail))
+                    return fields.Gender != 1;
+                if (metadata != ROMFiles.TrainerClassMetadataDetectionState.Stock)
+                {
+                    AppLogger.Warn($"Trainer class {trainerClassID} gender read as male: {metadataDetail}");
+                    return true;
+                }
+
                 if (TrainerClassTableExpansion.TryReadGender(trainerClassID, out byte gender, out _))
                 {
                     return gender != 1;

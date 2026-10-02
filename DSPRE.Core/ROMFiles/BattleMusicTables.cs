@@ -246,6 +246,8 @@ namespace DSPRE.ROMFiles
         // A row is an id in the low 10 bits and a combo in the high 6.
         private static void ReadPacked(Table<(int, int)> table, uint pointerOffset, int count)
         {
+            // An emptied table may keep a null pointer, as the trainer class metadata patch (PR #272) leaves the class table.
+            if (count == 0) return;
             Locate(table, pointerOffset);
             using var r = new DSUtils.EasyReader(table.Path, table.Start);
             for (int i = 0; i < count; i++)

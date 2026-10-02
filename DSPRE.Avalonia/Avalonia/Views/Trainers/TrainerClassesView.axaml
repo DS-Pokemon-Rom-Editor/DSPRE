@@ -71,6 +71,45 @@
           <Button Content="Enable eye-contact music for this class" Click="EnableMusic_Click"
                   IsVisible="{Binding !MusicEnabled}" IsEnabled="{Binding CanEnableMusic}" HorizontalAlignment="Left"/>
 
+          <StackPanel Spacing="8" IsVisible="{Binding ShowMetadata}">
+            <StackPanel Spacing="2">
+              <TextBlock Text="Battle music"/>
+              <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleMusic}"/>
+            </StackPanel>
+            <StackPanel Spacing="2">
+              <TextBlock Text="VS style"/>
+              <ComboBox ItemsSource="{Binding StyleNames}" SelectedIndex="{Binding VsStyle}" HorizontalAlignment="Stretch"/>
+            </StackPanel>
+            <CheckBox Content="Use the rival's saved name" IsChecked="{Binding SavedRivalName}" IsVisible="{Binding RivalChoiceVisible}"/>
+            <StackPanel Spacing="2" IsVisible="{Binding TrainerNameVisible}">
+              <TextBlock Text="Name shown"/>
+              <ComboBox ItemsSource="{Binding TrainerNameChoices}" SelectedIndex="{Binding TrainerNameId}" HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
+            </StackPanel>
+            <StackPanel Spacing="2" IsVisible="{Binding Style1MotionVisible}">
+              <TextBlock Text="Motion"/>
+              <NumericUpDown Minimum="0" Maximum="4294967295" Increment="1" Value="{Binding Style1Motion}"/>
+            </StackPanel>
+            <StackPanel Spacing="2" IsVisible="{Binding Style2TimingVisible}">
+              <TextBlock Text="Timing"/>
+              <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding Style2Timing}"/>
+            </StackPanel>
+            <TextBlock Text="Intro graphics"/>
+            <ItemsControl ItemsSource="{Binding MetadataAssets}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TrainerClassesViewModel+MetadataAsset">
+                  <StackPanel Width="96" Margin="0,0,6,6" Spacing="1" IsEnabled="{Binding Used}">
+                    <TextBlock Text="{Binding Group}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
+                    <TextBlock Text="{Binding Label}" FontSize="11"/>
+                    <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding Value}" FormatString="0"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
           <StackPanel Orientation="Horizontal" Spacing="6">
             <Button Content="Save trainer class" Click="Save_Click"/>
             <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>

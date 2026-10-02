@@ -649,6 +649,7 @@ namespace DSPRE
             fieldTextureAnimations, // Pt data/fldtanime.narc, HGSS a/1/3/9 (HGSS data/fldtanime.narc is unused): member 0 names textures, the rest hold frames
             encounterEffectGraphics, // DP/Pt graphic/field_encounteffect.narc, HGSS a/1/0/9: special trainer battle intro art
             nameInputGraphics,      // DP/Pt data/namein.narc, HGSS a/0/3/1: the naming screen's backgrounds and icons
+            trainerClassMetadata,   // HGSS a/1/5/5, only used by the external trainer class metadata patch
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -3048,6 +3049,8 @@ namespace DSPRE
                         [DirNames.synthOverlay] = $@"{dataFolderName}\a\0\2\8",
                         [DirNames.fieldEffectModels] = $@"{dataFolderName}\a\1\0\3",   // field effect models, Flash's light spot among them
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\a\0\5\0",
+                        // An empty placeholder in retail; the external trainer class metadata patch (PR #272) keeps its records here.
+                        [DirNames.trainerClassMetadata] = $@"{dataFolderName}\a\1\5\5",
                         [DirNames.areaWindowGraphics] = $@"{dataFolderName}\a\1\6\3",
                         [DirNames.sealGraphics] = $@"{dataFolderName}\a\0\8\7",
                         [DirNames.trainerCapsules] = $@"{dataFolderName}\a\1\8\5",

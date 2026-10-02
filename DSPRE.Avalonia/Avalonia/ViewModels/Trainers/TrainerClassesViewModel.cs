@@ -176,7 +176,116 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             _musicDict.Clear();
             _musicAdded = false;
-            if (!isHGE || _musicFromSource) SetupEncounterMusicTable();
+            if ((!isHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();
+        }
+
+        // The external trainer class metadata patch (PR #272) moves gender, prize, eye-contact and battle music into
+        // one record per class; a half-applied patch leaves neither those records nor the stock tables trustworthy.
+        private TrainerClassMetadataDetectionState _metadata = TrainerClassMetadataDetectionState.Stock;
+        private string _metadataNote;
+        private TrainerClassMetadataCommonFields _metadataFields;
+
+        // ── Class metadata record (trainer class metadata patch) ─────────────────────
+        public sealed class MetadataAsset : INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler PropertyChanged;
+            public TrainerClassMetadataAssetField Field { get; init; }
+            public string Label { get; init; }
+            public string Group { get; init; }
+            private int _value;
+            public int Value { get => _value; set { if (_value == value) return; _value = value; PropertyChanged?.Invoke(this, new(nameof(Value))); Changed?.Invoke(); } }
+            private bool _used;
+            public bool Used { get => _used; set { if (_used == value) return; _used = value; PropertyChanged?.Invoke(this, new(nameof(Used))); } }
+            public Action Changed;
+        }
+
+        public bool ShowMetadata => _metadataFields != null;
+        public IReadOnlyList<string> StyleNames => TrainerClassMetadataSchema.StyleNames;
+        public ObservableCollection<string> TrainerNameChoices { get; } = new ObservableCollection<string>();
+        public ObservableCollection<MetadataAsset> MetadataAssets { get; } = new ObservableCollection<MetadataAsset>();
+
+        private int _battleMusic;
+        public int BattleMusic { get => _battleMusic; set { if (Set(ref _battleMusic, value)) MarkDirty(); } }
+        private int _vsStyle;
+        public int VsStyle { get => _vsStyle; set { if (Set(ref _vsStyle, value)) { MarkDirty(); RefreshStyleFields(); } } }
+        private bool _savedRivalName;
+        public bool SavedRivalName { get => _savedRivalName; set { if (Set(ref _savedRivalName, value)) { MarkDirty(); RefreshStyleFields(); } } }
+        private int _trainerNameId;
+        public int TrainerNameId { get => _trainerNameId; set { if (value >= 0 && Set(ref _trainerNameId, value)) MarkDirty(); } }
+        private decimal _style1Motion;
+        public decimal Style1Motion { get => _style1Motion; set { if (Set(ref _style1Motion, value)) MarkDirty(); } }
+        private decimal _style2Timing;
+        public decimal Style2Timing { get => _style2Timing; set { if (Set(ref _style2Timing, value)) MarkDirty(); } }
+
+        public bool RivalChoiceVisible => _vsStyle == 1;
+        public bool TrainerNameVisible => _vsStyle is 2 or 3 or 13 || (_vsStyle == 1 && !_savedRivalName);
+        public bool Style1MotionVisible => _vsStyle == 1;
+        public bool Style2TimingVisible => _vsStyle == 2;
+
+        private TrainerClassMetadataRecord _metadataRecord;
+
+        private void RefreshStyleFields()
+        {
+            foreach (var a in MetadataAssets) a.Used = TrainerClassMetadataSchema.IsAssetConsumed((ushort)_vsStyle, a.Field);
+            OnPropertyChanged(nameof(RivalChoiceVisible));
+            OnPropertyChanged(nameof(TrainerNameVisible));
+            OnPropertyChanged(nameof(Style1MotionVisible));
+            OnPropertyChanged(nameof(Style2TimingVisible));
+        }
+
+        private void LoadMetadataRecord(int index)
+        {
+            _metadataRecord = null;
+            MetadataAssets.Clear();
+            if (_metadataFields != null)
+            {
+                if (TrainerClassMetadataStore.TryReadRecord(index, out var record, out string error)) _metadataRecord = record;
+                else StatusText = error;
+            }
+            if (_metadataRecord != null)
+            {
+                if (TrainerNameChoices.Count == 0)
+                {
+                    string[] names = GetSimpleTrainerNames();
+                    for (int i = 0; i < names.Length; i++) TrainerNameChoices.Add($"[{i}] {names[i]}");
+                }
+                BattleMusic = _metadataRecord.BattleMusic;
+                VsStyle = _metadataRecord.VsStyle;
+                SavedRivalName = _metadataRecord.UseSavedRivalName == 1;
+                TrainerNameId = _metadataRecord.TrainerNameId;
+                Style1Motion = _metadataRecord.Style1Motion;
+                Style2Timing = _metadataRecord.Style2Timing;
+                foreach (var field in TrainerClassMetadataSchema.AssetFields)
+                {
+                    string label = TrainerClassMetadataSchema.GetAssetLabel(field);
+                    MetadataAssets.Add(new MetadataAsset
+                    {
+                        Field = field, Group = label.Substring(0, 7), Label = label.Substring(8),
+                        Value = _metadataRecord.GetAsset(field), Changed = () => { if (!_suppress) MarkDirty(); },
+                    });
+                }
+                RefreshStyleFields();
+            }
+            OnPropertyChanged(nameof(ShowMetadata));
+            OnPropertyChanged(nameof(ShowGender));
+        }
+
+        /// <summary>Writes the presentation half of the record, or says why it can't.</summary>
+        private string SaveMetadataRecord(int index)
+        {
+            if (_metadataRecord == null) return null;
+            var record = _metadataRecord;
+            record.VsStyle = (ushort)_vsStyle;
+            if (_vsStyle == 1) record.UseSavedRivalName = (byte)(_savedRivalName ? 1 : 0);
+            record.TrainerNameId = (ushort)_trainerNameId;
+            record.Style1Motion = (uint)_style1Motion;
+            record.Style2Timing = (ushort)_style2Timing;
+            foreach (var a in MetadataAssets) record.SetAsset(a.Field, (ushort)a.Value);
+            var check = TrainerClassMetadataStore.ValidatePresentation(record, TrainerNameChoices.Count);
+            if (!check.IsValid) return string.Join("\n", check.Errors);
+            if (!TrainerClassMetadataStore.TryWritePresentationFields(index, record, out string error)) return error;
+            if (check.Warnings.Count > 0) StatusText = check.Warnings[0];
+            return null;
         }
 
         private string _className = "";
@@ -199,7 +308,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool IsExpansionSupported => TrainerClassTableExpansion.IsSupportedForCurrentRom;
 
         /// <summary>Gender editing: only known for Platinum (English) via TrainerClassTableExpansion, or hg-engine via source.</summary>
-        public bool ShowGender => IsExpansionSupported || HgEngineProject.IsActive;
+        public bool ShowGender => IsExpansionSupported || HgEngineProject.IsActive || ShowMetadata;
 
         /// <summary>Prize-multiplier editing: known for Plat/DP/HGSS (English) via TrainerClassTableExpansion,
         /// or hg-engine via source. Wider than <see cref="ShowGender"/> since the gender table's offsets
@@ -244,10 +353,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 string[] names = GetTrainerClassNames();
                 for (int i = 0; i < names.Length; i++) ClassNames.Add($"[{i:D3}] {names[i]}");
 
-                // hg-engine repoints the eye-contact music table into its own code, so only its source can be read.
-                if (!isHGE || _musicFromSource) SetupEncounterMusicTable();
+                if (!HgEngineProject.IsActive) _metadata = TrainerClassMetadataStore.DetectCurrentRom(out _metadataNote);
 
-                StatusText = $"{ClassNames.Count} trainer classes.";
+                // hg-engine repoints the eye-contact music table into its own code, so only its source can be read.
+                if ((!isHGE || _musicFromSource) && _metadata == TrainerClassMetadataDetectionState.Stock) SetupEncounterMusicTable();
+
+                StatusText = _metadata == TrainerClassMetadataDetectionState.Inconsistent ? _metadataNote : $"{ClassNames.Count} trainer classes.";
                 if (ClassNames.Count > 0)
                     SelectedClassIndex = Math.Min(Math.Max(0, initialClass), ClassNames.Count - 1);
             }
@@ -312,7 +423,27 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             MusicAltEnabled = MusicEnabled && gameFamily == GameFamilies.HGSS;
 
-            if (HgEngineProject.IsActive)
+            if (_metadata != TrainerClassMetadataDetectionState.Stock)
+            {
+                _metadataFields = null;
+                if (_metadata == TrainerClassMetadataDetectionState.SchemaV1)
+                {
+                    if (TrainerClassMetadataStore.TryReadCommonFields(index, out var fields, out string metadataError)) _metadataFields = fields;
+                    else StatusText = metadataError;
+                }
+                bool known = _metadataFields != null;
+                MusicEnabled = known;
+                MusicMain = known ? _metadataFields.MainEyeContactMusic : 0;
+                MusicAlt = known ? _metadataFields.AlternateEyeContactMusic : 0;
+                MusicAltEnabled = known;
+                GenderLoaded = known;
+                if (known) GenderIndex = _metadataFields.Gender;
+                _loadedGender = GenderIndex;
+                PrizeMulLoaded = known;
+                if (known) PrizeMultiplier = _metadataFields.PrizeCoefficient;
+                LoadMetadataRecord(index);
+            }
+            else if (HgEngineProject.IsActive)
             {
                 GenderLoaded = HgEngineTrainerClassTables.TryGetGender(index, out int hgeGender);
                 if (GenderLoaded) GenderIndex = hgeGender;
@@ -422,7 +553,30 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             var failures = new List<string>();
             bool hasMusic = _musicDict.TryGetValue(idx, out var entry);
-            if (hasMusic && _musicAdded && !_musicFromSource)
+            if (_metadata != TrainerClassMetadataDetectionState.Stock)
+            {
+                // Battle music has no field here and goes back as it was read.
+                if (_metadataFields != null)
+                {
+                    if (SaveMetadataRecord(_selectedIndex) is string presentationError) failures.Add(presentationError);
+                    else
+                    {
+                        var fields = new TrainerClassMetadataCommonFields
+                        {
+                            Gender = (ushort)GenderIndex, PrizeCoefficient = (ushort)PrizeMultiplier,
+                            MainEyeContactMusic = (ushort)MusicMain, AlternateEyeContactMusic = (ushort)MusicAlt,
+                            BattleMusic = (ushort)BattleMusic,
+                        };
+                        if (TrainerClassMetadataStore.TryWriteCommonFields(_selectedIndex, fields, out string metadataError))
+                        {
+                            _metadataFields = fields;
+                            _loadedGender = GenderIndex;
+                        }
+                        else failures.Add(metadataError);
+                    }
+                }
+            }
+            else if (hasMusic && _musicAdded && !_musicFromSource)
             {
                 // The ROM table has no row for this class until the add, so the add carries the values.
                 if (TrainerClassTableExpansion.AddEncounterMusicEntry(idx, (ushort)MusicMain, (ushort)MusicAlt, out string addErr)) ReloadMusicTable();
@@ -445,7 +599,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _musicDict[idx] = (entry.entryOffset, main, gameFamily == GameFamilies.HGSS ? alt : entry.musicN);
             }
 
-            if (HgEngineProject.IsActive)
+            if (_metadata != TrainerClassMetadataDetectionState.Stock)
+            {
+                // Written with the record above.
+            }
+            else if (HgEngineProject.IsActive)
             {
                 try
                 {
