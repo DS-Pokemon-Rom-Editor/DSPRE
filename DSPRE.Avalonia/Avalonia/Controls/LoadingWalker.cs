@@ -12,8 +12,8 @@ using DSPRE.ROMFiles;
 namespace DSPRE.Avalonia.Controls
 {
     /// <summary>
-    /// Something from the game walking across the loading card: a random following Pokémon in HeartGold and
-    /// SoulSilver, a random walking character in Diamond, Pearl and Platinum, a new one each time across.
+    /// Something from the game crossing the loading card, a new one each time across: a random following Pokémon
+    /// in HeartGold and SoulSilver; the player in Diamond, Pearl and Platinum, either one, running, cycling or surfing.
     /// Shown only when the overworld sprites are already unpacked, so the card never waits on reading them.
     /// </summary>
     public class LoadingWalker : Control
@@ -26,7 +26,17 @@ namespace DSPRE.Avalonia.Controls
         private readonly FieldWalkCycle _cycle = new();
         private readonly Dictionary<int, Bitmap> _pictures = new();
         private static readonly Random Pick = new();
-        private const int OverworldEntriesToTry = 256;
+
+        private enum Pace { Walk, Run, Bike }
+
+        // The same entries in Diamond, Pearl and Platinum (SPRITE_HERO, CYCLEHERO, HEROINE, CYCLEHEROINE, SWIMHERO
+        // and SWIMHEROINE in pokediamond; OBJ_EVENT_GFX_PLAYER_* in pokeplatinum).
+        private static readonly (ushort Entry, Pace Pace)[] Players =
+        {
+            (0, Pace.Run), (97, Pace.Run), (21, Pace.Bike), (98, Pace.Bike), (178, Pace.Walk), (179, Pace.Walk),
+        };
+        private const int BikeFrames = 4;
+        private Pace _pace;
         private ushort _entry;
         private int _frames;
         private double _x;
@@ -66,20 +76,28 @@ namespace DSPRE.Avalonia.Controls
                 if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.OWSprites, out var dirs)) return false;
                 if (!Directory.Exists(dirs.unpackedDir) || Directory.GetFiles(dirs.unpackedDir).Length == 0) return false;
 
-                bool hgss = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
-                // DP and Platinum have no followers, so anyone with a full walk comes by instead.
+                _pace = Pace.Walk;
+                if (RomInfo.gameFamily != RomInfo.GameFamilies.HGSS)
+                {
+                    // DP and Platinum have no followers, so the player comes by instead.
+                    int first = Pick.Next(Players.Length);
+                    for (int i = 0; i < Players.Length; i++)
+                    {
+                        var (entry, pace) = Players[(first + i) % Players.Length];
+                        int frames = OverworldSprites.FrameCount(entry);
+                        if (frames <= 0) continue;
+                        _entry = entry; _frames = frames; _pace = pace;
+                        return true;
+                    }
+                    return false;
+                }
                 for (int tries = 0; tries < 16; tries++)
                 {
-                    _entry = hgss
-                        ? (ushort)(HgssFollowers.FirstSprite + Pick.Next(HgssFollowers.SpeciesCount))
-                        : (ushort)Pick.Next(OverworldEntriesToTry);
+                    _entry = (ushort)(HgssFollowers.FirstSprite + Pick.Next(HgssFollowers.SpeciesCount));
                     _frames = OverworldSprites.FrameCount(_entry);
-                    if (hgss ? _frames > 0 : _frames >= 16) return true;
+                    if (_frames > 0) return true;
                 }
-                if (hgss) return false;
-                _entry = 0;
-                _frames = OverworldSprites.FrameCount(_entry);
-                return _frames > 0;
+                return false;
             }
             catch (Exception ex) { AppLogger.Warn("Loading walker: " + ex.Message); }
             return false;
@@ -89,9 +107,10 @@ namespace DSPRE.Avalonia.Controls
         {
             // Two-picture sprites (the HGSS followers) change on the always-running clock, not the walk.
             _cycle.Tick();
-            _cycle.Walk(OverworldAnimator.WalkFrames);
-            // Walking speed: one tile of sixteen pixels per step.
-            _x += OverworldSprites.PixelsPerTile * Scale / (double)OverworldAnimator.WalkFrames;
+            int stepFrames = _pace == Pace.Run ? FieldMovementScript.RunFrames : _pace == Pace.Bike ? BikeFrames : OverworldAnimator.WalkFrames;
+            if (_pace == Pace.Run) _cycle.Dash(); else _cycle.Walk(stepFrames);
+            // One tile of sixteen pixels per step.
+            _x += OverworldSprites.PixelsPerTile * Scale / (double)stepFrames;
             if (_x > Bounds.Width) NextWalker();
             int picture = FieldSpriteAnimation.PictureFor(_frames, FacingRight, _cycle);
             _shown = PictureAt(picture);
