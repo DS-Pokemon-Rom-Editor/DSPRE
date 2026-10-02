@@ -618,7 +618,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _history.Reset(Snapshot());   // loaded state is the clean undo baseline for this trainer
                 _lastCaptureUtc = DateTime.MinValue;
                 RaiseUndoState();
-                StatusText = $"Trainer {index} loaded.";
+                StatusText = _statusAfterLoad ?? $"Trainer {index} loaded.";
+                _statusAfterLoad = null;
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
             catch (Exception ex)
@@ -1193,6 +1194,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         // ── Add / Export / Import ─────────────────────────────────────────────────────
         /// <summary>Atomically appends a trainer and expands every verified dependent resource.</summary>
+        // The add and remove report the roster's room; the trainer they select loads afterwards and would replace it.
+        private string _statusAfterLoad;
+
         public void AddTrainer()
         {
             // Adding a brand-new trainer entry to Trainers.c isn't built yet. Writing a blank trainer
@@ -1221,11 +1225,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
 
                 AppEvents.RaiseNamesChanged();
-                SelectedTrainerIndex = newIndex;
                 TrainerRosterAnalysis after = TrainerRosterService.AnalyzeCurrentProject();
-                StatusText = after.CanAdd
+                StatusText = _statusAfterLoad = after.CanAdd
                     ? $"Added trainer {newIndex}. {after.RemainingAdditions} more can be added safely."
                     : $"Added trainer {newIndex}. {after.RefusalReason}";
+                SelectedTrainerIndex = newIndex;
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add trainer:\n{ex.Message}", "Trainer Editor"); }
         }
@@ -1282,10 +1286,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
 
                 AppEvents.RaiseNamesChanged();
-                SelectedTrainerIndex = Math.Max(0, removedId - 1);
                 TrainerRosterAnalysis after = TrainerRosterService.AnalyzeCurrentProject();
-                StatusText = $"Removed trainer {removedId}. " +
+                StatusText = _statusAfterLoad = $"Removed trainer {removedId}. " +
                     $"{after.RemainingAdditions} trainer slots are available.";
+                SelectedTrainerIndex = Math.Max(0, removedId - 1);
             }
             catch (Exception ex)
             {
