@@ -267,7 +267,14 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
-            using (var fs = getFileStream(fileID))
+            using (var file = getFileStream(fileID))
+            using (var copy = new MemoryStream())
+            {
+                file.CopyTo(copy);
+                _read = copy.ToArray();
+            }
+            _readFull = readFunctions && readActions;
+            using (var fs = new MemoryStream(_read))
             {
                 // Copy the logic from the Stream constructor
                 var tempScript = new ScriptFile(fs, readFunctions, readActions, fileID);
@@ -2114,9 +2121,34 @@ namespace DSPRE.ROMFiles
             return false;
         }
 
+        // The binary this file was read from. The writer lays a file out its own way (script order, shared tails,
+        // padding), so a file whose scripts did not change is written back as these bytes instead.
+        private byte[] _read;
+        private bool _readFull;
+
+        private byte[] ReadBytesIfUnchanged(int id)
+        {
+            if (_read == null || !_readFull || id != fileID) return null;
+            byte[] now = ToByteArray();
+            if (now == null) return null;
+            using var ms = new MemoryStream(_read);
+            byte[] asRead = new ScriptFile(ms, true, true, fileID).ToByteArray();
+            return asRead != null && now.AsSpan().SequenceEqual(asRead) ? _read : null;
+        }
+
         public bool SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true)
         {
-            bool success = SaveToFileDefaultDir(RomInfo.DirNames.scripts, IDtoReplace, showSuccessMessage);
+            bool success;
+            if (ReadBytesIfUnchanged(IDtoReplace) is byte[] read)
+            {
+                string path = Filesystem.GetScriptPath(IDtoReplace);
+                if (showSuccessMessage) AppMessages.Info($"Saved {GetType().Name} {IDtoReplace:D4}.");
+                // Still the file on disk: nothing to write, and no Rotom source to regenerate.
+                if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(read)) return true;
+                File.WriteAllBytes(path, read);
+                success = true;
+            }
+            else success = SaveToFileDefaultDir(RomInfo.DirNames.scripts, IDtoReplace, showSuccessMessage);
 
             if (success)
             {

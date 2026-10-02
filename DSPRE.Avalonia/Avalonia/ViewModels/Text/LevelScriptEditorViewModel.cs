@@ -225,6 +225,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_file == null || _selScript < 0) return;
             if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Level Script Editor"); return; }
+            // A file that failed to load as a level script may be an ordinary script; saving would replace it.
+            var onDisk = new ScriptFile(_selScript, readFunctions: false, readActions: false);
+            if (!onDisk.isLevelScript && !onDisk.hasNoScripts)
+            {
+                _ = DialogHelper.ShowError($"File {_selScript} holds ordinary scripts, so it was not saved as a level script.", "Level Script Editor");
+                return;
+            }
             try
             {
                 _file.SaveToFileDefaultDir(_selScript, _padding);

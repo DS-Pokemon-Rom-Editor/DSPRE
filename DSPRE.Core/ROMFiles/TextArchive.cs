@@ -433,6 +433,37 @@ namespace DSPRE.ROMFiles
             }
         }
 
+        private static string JoinedText(JsonElement value) => value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Array => string.Concat(value.EnumerateArray().Select(e => e.GetString())),
+            _ => null,
+        };
+
+        // serde_json's escaping, which chatot uses.
+        private static string JsonQuote(string text)
+        {
+            var sb = new System.Text.StringBuilder(text.Length + 2).Append('"');
+            foreach (char c in text)
+            {
+                switch (c)
+                {
+                    case '"': sb.Append("\\\""); break;
+                    case '\\': sb.Append("\\\\"); break;
+                    case '\n': sb.Append("\\n"); break;
+                    case '\r': sb.Append("\\r"); break;
+                    case '\t': sb.Append("\\t"); break;
+                    case '\b': sb.Append("\\b"); break;
+                    case '\f': sb.Append("\\f"); break;
+                    default:
+                        if (c < 0x20) sb.Append("\\u").Append(((int)c).ToString("x4"));
+                        else sb.Append(c);
+                        break;
+                }
+            }
+            return sb.Append('"').ToString();
+        }
+
         /// <summary>Serializes the expanded multilingual JSON without writing it.</summary>
         public byte[] ToExpandedJsonBytes(int IDtoReplace)
         {
@@ -481,9 +512,12 @@ namespace DSPRE.ROMFiles
             // Create JSON structure using System.Text.Json's native types with Unicode support
             using (var stream = new MemoryStream())
             {
-                var options = new JsonWriterOptions 
-                { 
+                // Keep the file's own line ending; chatot writes LF.
+                bool crlf = File.Exists(jsonPath) && File.ReadAllText(jsonPath).Contains("\r\n");
+                var options = new JsonWriterOptions
+                {
                     Indented = true,
+                    NewLine = crlf ? "\r\n" : "\n",
                     // Don't escape Unicode characters, this is primarily for readability by humans
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping 
                 };
@@ -507,60 +541,70 @@ namespace DSPRE.ROMFiles
                         {
                             JsonElement existingMessage = existingMessages[msgId];
                             
-                            // Copy all properties except "id" and the current language
+                            // Copy all properties except "id" and the current language, exactly as the file has them
                             foreach (JsonProperty prop in existingMessage.EnumerateObject())
                             {
                                 if (prop.Name != "id" && prop.Name != langCode)
                                 {
-                                    prop.WriteTo(writer);
+                                    writer.WritePropertyName(prop.Name);
+                                    writer.WriteRawValue(prop.Value.GetRawText(), skipInputValidation: true);
                                 }
                             }
                         }
 
-                        // Now write the current language
-                        // Check if message contains any newline control characters
-                        if (message.Contains("\\n") || message.Contains("\\r") || message.Contains("\\f"))
+                        // An unchanged message keeps the exact JSON it was read from, whichever tool wrote it.
+                        if (existingMessages.TryGetValue(msgId, out JsonElement had)
+                            && had.TryGetProperty(langCode, out JsonElement hadText) && JoinedText(hadText) == message)
                         {
-                            // Split by newline types but preserve the delimiter in the output
-                            List<string> lines = new List<string>();
-                            string currentLine = "";
-                            
-                            for (int i = 0; i < message.Length; i++)
+                            writer.WritePropertyName(langCode);
+                            writer.WriteRawValue(hadText.GetRawText(), skipInputValidation: true);
+                            writer.WriteEndObject();
+                            messageIndex++;
+                            continue;
+                        }
+
+                        // Otherwise as chatot writes it: split after each \n, \r and \f; one piece is a plain string,
+                        // anything else (an empty message too) is an array, with only quotes, backslashes and
+                        // control characters escaped.
+                        List<string> lines = new List<string>();
+                        string currentLine = "";
+                        for (int i = 0; i < message.Length; i++)
+                        {
+                            if (i < message.Length - 1 && message[i] == '\\')
                             {
-                                if (i < message.Length - 1 && message[i] == '\\')
+                                char nextChar = message[i + 1];
+                                if (nextChar == 'n' || nextChar == 'r' || nextChar == 'f')
                                 {
-                                    char nextChar = message[i + 1];
-                                    if (nextChar == 'n' || nextChar == 'r' || nextChar == 'f')
-                                    {
-                                        // Add the escape sequence to current line
-                                        currentLine += message.Substring(i, 2);
-                                        lines.Add(currentLine);
-                                        currentLine = "";
-                                        i++; // Skip the next character since we already processed it
-                                        continue;
-                                    }
+                                    currentLine += message.Substring(i, 2);
+                                    lines.Add(currentLine);
+                                    currentLine = "";
+                                    i++;
+                                    continue;
                                 }
-                                currentLine += message[i];
                             }
-                            
-                            // Add any remaining text
-                            if (currentLine.Length > 0)
-                            {
-                                lines.Add(currentLine);
-                            }
-                            
-                            // Write as array
-                            writer.WriteStartArray(langCode);
-                            foreach (string line in lines)
-                            {
-                                writer.WriteStringValue(line);
-                            }
-                            writer.WriteEndArray();
+                            currentLine += message[i];
+                        }
+                        if (currentLine.Length > 0) lines.Add(currentLine);
+
+                        writer.WritePropertyName(langCode);
+                        // A single piece ending in a break is a string in most retail messages and a one-element
+                        // array in some, so it keeps whichever shape the message already had.
+                        bool wasArray = existingMessages.TryGetValue(msgId, out JsonElement before)
+                            && before.TryGetProperty(langCode, out JsonElement beforeText) && beforeText.ValueKind == JsonValueKind.Array;
+                        if (lines.Count == 1 && !wasArray)
+                        {
+                            writer.WriteRawValue(JsonQuote(message), skipInputValidation: true);
+                        }
+                        else if (lines.Count == 0)
+                        {
+                            writer.WriteRawValue("[]", skipInputValidation: true);
                         }
                         else
                         {
-                            // Write as simple string
-                            writer.WriteString(langCode, message);
+                            // Raw values skip the writer's indentation, so lay the array out as chatot does.
+                            string nl = options.NewLine;
+                            writer.WriteRawValue("[" + nl + string.Join("," + nl, lines.Select(l => "        " + JsonQuote(l))) + nl + "      ]",
+                                skipInputValidation: true);
                         }
 
                         writer.WriteEndObject();
