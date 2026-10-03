@@ -225,10 +225,10 @@
               <ListBox ItemsSource="{Binding AddedMachines}" SelectedIndex="{Binding SelectedAddedMachineIndex}"/>
             </DockPanel>
             <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="6">
-              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveMachine_Click" Width="90"/>
-              <Button Content="Remove all" controls:Icon.Key="deleteIcon" Click="RemoveAll_Click" Width="90"/>
-              <Button Content="Add" controls:Icon.Key="addIcon" Click="AddMachine_Click" Width="90"/>
-              <Button Content="Add all" controls:Icon.Key="addIcon" Click="AddAll_Click" Width="90"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveMachine_Click" MinWidth="90"/>
+              <Button Content="Remove all" controls:Icon.Key="deleteIcon" Click="RemoveAll_Click" MinWidth="90"/>
+              <Button Content="Add" controls:Icon.Key="addIcon" Click="AddMachine_Click" MinWidth="90"/>
+              <Button Content="Add all" controls:Icon.Key="addIcon" Click="AddAll_Click" MinWidth="90"/>
             </StackPanel>
             <DockPanel Grid.Column="4">
               <TextBlock DockPanel.Dock="Top" Text="Cannot Learn:" FontWeight="SemiBold" Margin="0,0,0,4"/>

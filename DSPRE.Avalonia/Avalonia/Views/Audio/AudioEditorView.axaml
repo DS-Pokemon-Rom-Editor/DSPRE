@@ -63,9 +63,9 @@
         </Border>
 
         <Grid x:Name="PlayBar" ColumnDefinitions="Auto,6,Auto,10,Auto,12,Auto,*">
-          <Button Grid.Column="0" Content="Play" controls:Icon.Key="play" Click="Play_Click" Width="86" IsEnabled="{Binding CanPlay}"
+          <Button Grid.Column="0" Content="Play" controls:Icon.Key="play" Click="Play_Click" MinWidth="86" IsEnabled="{Binding CanPlay}"
                   ToolTip.Tip="Space plays or stops, Enter plays from the start"/>
-          <Button Grid.Column="2" x:Name="StopButton" Content="Stop" controls:Icon.Key="stop" Click="Stop_Click" Width="86" IsEnabled="False"/>
+          <Button Grid.Column="2" x:Name="StopButton" Content="Stop" controls:Icon.Key="stop" Click="Stop_Click" MinWidth="86" IsEnabled="False"/>
           <CheckBox Grid.Column="4" x:Name="LoopBox" Content="Loop"
                     ToolTip.Tip="Keep playing it round until you press Stop."/>
           <TextBlock Grid.Column="6" x:Name="TimeText" Text="0:00.0 / 0:00.0" VerticalAlignment="Center"

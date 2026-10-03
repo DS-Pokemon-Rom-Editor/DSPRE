@@ -19,8 +19,8 @@
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="Export table…" controls:Icon.Key="export" Click="ExportTable_Click" IsEnabled="{Binding IsReady}" Width="100"/>
-        <Button Content="Import table…" controls:Icon.Key="import" Click="ImportTable_Click" IsEnabled="{Binding IsReady}" Width="100"/>
+        <Button Content="Export table…" controls:Icon.Key="export" Click="ExportTable_Click" IsEnabled="{Binding IsReady}" MinWidth="100"/>
+        <Button Content="Import table…" controls:Icon.Key="import" Click="ImportTable_Click" IsEnabled="{Binding IsReady}" MinWidth="100"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Rename…" controls:Icon.Key="pencil" Click="Rename_Click" IsEnabled="{Binding IsReady}"/>
         <Button Content="Export camera…" controls:Icon.Key="export" Click="ExportCamera_Click" IsEnabled="{Binding IsReady}"/>

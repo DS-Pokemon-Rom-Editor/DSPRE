@@ -61,7 +61,7 @@
           <CheckBox Content="Case sensitive"          IsChecked="{Binding CaseSensitive}"/>
           <CheckBox Content="Search all archives"     IsChecked="{Binding SearchAllArchives}"/>
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Content="Search" controls:Icon.Key="lens"  Click="Search_Click"  Width="90"/>
+            <Button Content="Search" controls:Icon.Key="lens"  Click="Search_Click"  MinWidth="90"/>
             <Button Content="Replace" Click="Replace_Click" Width="90"/>
           </StackPanel>
           <TextBlock Text="Results (double-click to go):" Margin="0,6,0,0"/>

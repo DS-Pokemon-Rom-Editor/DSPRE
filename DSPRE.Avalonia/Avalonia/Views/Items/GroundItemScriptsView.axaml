@@ -31,7 +31,7 @@
                     Width="260" HorizontalAlignment="Left"/>
           <TextBlock Text="Qty:" VerticalAlignment="Center" Margin="8,0,0,0"/>
           <NumericUpDown Value="{Binding NewQuantity}" Minimum="1" Maximum="99" FormatString="0" Width="90"/>
-          <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" Width="70"/>
+          <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" MinWidth="70"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
           <Button Content="Remove selected" controls:Icon.Key="deleteIcon" Click="Remove_Click" IsEnabled="{Binding CanRemove}"/>

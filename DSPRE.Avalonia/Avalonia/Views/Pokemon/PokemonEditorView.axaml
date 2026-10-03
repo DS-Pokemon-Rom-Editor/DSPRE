@@ -72,10 +72,10 @@
               <TextBlock Grid.Column="0" Text="Level:" Classes="lbl"/>
               <NumericUpDown Grid.Column="2" Value="{Binding AddLevel}" Minimum="1" Maximum="100" FormatString="0" Width="80"/>
               <ComboBox controls:EditorLink.To="Move" Grid.Column="4" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding AddMoveIndex}" HorizontalAlignment="Stretch"/>
-              <Button Grid.Column="6"  Content="Add" controls:Icon.Key="addIcon"    Click="Learnset_Add_Click"      Width="60" IsEnabled="{Binding CanAdd}"/>
-              <Button Grid.Column="8"  Content="Delete" controls:Icon.Key="deleteIcon" Click="Learnset_Delete_Click"   Width="60" IsEnabled="{Binding CanEdit}"/>
-              <Button Grid.Column="10" Content="Up" controls:Icon.Key="arrowup"     Click="Learnset_MoveUp_Click"   Width="44" IsEnabled="{Binding CanMoveUp}"/>
-              <Button Grid.Column="12" Content="Down" controls:Icon.Key="arrowdown"   Click="Learnset_MoveDown_Click" Width="44" IsEnabled="{Binding CanMoveDown}"/>
+              <Button Grid.Column="6"  Content="Add" controls:Icon.Key="addIcon"    Click="Learnset_Add_Click"      MinWidth="60" IsEnabled="{Binding CanAdd}"/>
+              <Button Grid.Column="8"  Content="Delete" controls:Icon.Key="deleteIcon" Click="Learnset_Delete_Click"   MinWidth="60" IsEnabled="{Binding CanEdit}"/>
+              <Button Grid.Column="10" Content="Up" controls:Icon.Key="arrowup"     Click="Learnset_MoveUp_Click"   MinWidth="44" IsEnabled="{Binding CanMoveUp}"/>
+              <Button Grid.Column="12" Content="Down" controls:Icon.Key="arrowdown"   Click="Learnset_MoveDown_Click" MinWidth="44" IsEnabled="{Binding CanMoveDown}"/>
             </Grid>
           </Border>
           <ListBox ItemsSource="{Binding Entries}" SelectedIndex="{Binding SelectedEntryIndex}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">

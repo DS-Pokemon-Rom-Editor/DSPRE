@@ -28,7 +28,7 @@
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
           <Button Content="{Binding DeepEditorName}" Click="DeepEditor_Click"
                   IsVisible="{Binding HasDeepEditor}"/>
-          <Button Content="Open" controls:Icon.Key="OpenLink" Click="Open_Click" Width="90"/>
+          <Button Content="Open" controls:Icon.Key="OpenLink" Click="Open_Click" MinWidth="90"/>
         </StackPanel>
         <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
       </DockPanel>

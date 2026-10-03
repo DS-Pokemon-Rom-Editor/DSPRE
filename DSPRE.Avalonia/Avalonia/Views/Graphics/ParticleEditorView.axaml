@@ -16,7 +16,7 @@
         <ComboBox x:Name="EmitterPicker" ItemsSource="{Binding EmitterNames}" SelectedIndex="{Binding EmitterIndex}" Width="160"/>
         <CheckBox Content="Only this emitter" IsChecked="{Binding OnlySelected}" Margin="8,0"/>
         <Button Content="Replay" Click="Replay_Click" Width="80"/>
-        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" MinWidth="70"/>
         <Button Content="Revert" Click="Revert_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"/>
       </WrapPanel>
     </Border>

@@ -187,8 +187,8 @@
           <!-- Left: list -->
           <DockPanel Grid.Column="0">
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
-              <Button Content="Add" controls:Icon.Key="addIcon"    Click="HiddenAdd_Click"    Width="70"/>
-              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="HiddenRemove_Click" Width="70"
+              <Button Content="Add" controls:Icon.Key="addIcon"    Click="HiddenAdd_Click"    MinWidth="70"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="HiddenRemove_Click" MinWidth="70"
                       IsEnabled="{Binding HiddenItemSelected}"/>
             </StackPanel>
             <TextBlock DockPanel.Dock="Top" Text="{Binding HiddenEntryCount}"

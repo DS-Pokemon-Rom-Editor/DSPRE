@@ -18,8 +18,8 @@
       <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
     </StackPanel>
     <StackPanel DockPanel.Dock="Right" Spacing="6" Margin="8,0,0,0" VerticalAlignment="Center">
-      <Button Content="Up" controls:Icon.Key="arrowup"   Click="Up_Click"   IsEnabled="{Binding CanMoveUp}"   Width="64"/>
-      <Button Content="Down" controls:Icon.Key="arrowdown" Click="Down_Click" IsEnabled="{Binding CanMoveDown}" Width="64"/>
+      <Button Content="Up" controls:Icon.Key="arrowup"   Click="Up_Click"   IsEnabled="{Binding CanMoveUp}"   MinWidth="64"/>
+      <Button Content="Down" controls:Icon.Key="arrowdown" Click="Down_Click" IsEnabled="{Binding CanMoveDown}" MinWidth="64"/>
     </StackPanel>
     <ListBox ItemsSource="{Binding Items}" SelectedIndex="{Binding SelectedIndex}"/>
   </DockPanel>
