@@ -74,6 +74,7 @@ namespace DSPRE
         /// <summary>The table as the game has it now, or null when it cannot be read.</summary>
         public static List<GameCamera> TryRead()
         {
+            if (string.IsNullOrEmpty(RomInfo.workDir)) return null;   // no project open, nothing to read
             try
             {
                 // A compressed overlay holds packed bytes, not the table; ds-rom projects keep it unpacked.

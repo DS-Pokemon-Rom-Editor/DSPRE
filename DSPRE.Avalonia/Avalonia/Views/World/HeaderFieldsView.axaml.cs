@@ -54,7 +54,8 @@ namespace DSPRE.Avalonia.Views.World
         private void ShowCamera()
         {
             var vm = VM;
-            if (vm == null || !IsAttachedToVisualTree()) return;
+            // The Maps workspace is built at startup, before any project is open.
+            if (vm == null || !IsAttachedToVisualTree() || !AvaloniaEditorLauncher.IsRomLoaded) return;
             var camera = DSPRE.ROMFiles.FieldCamera.Entry((int)vm.CameraValue, RomInfo.gameFamily);
             CameraPreviewBox.ShowWeather((int)vm.WeatherValue);
             // Framed where you arrive by Fly; a place without a fly spot borrows the starting town's.
