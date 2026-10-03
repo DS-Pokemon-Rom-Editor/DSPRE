@@ -36,8 +36,15 @@ namespace DSPRE.ROMFiles {
       parse_file(path);
     }
 
-    public void parse_file(string path) {
-      FileStream fs = new FileStream(path, FileMode.Open);
+    /// <summary>A file read from bytes already in memory, laid out as on disk.</summary>
+    public SafariZoneEncounterFile(int id, byte[] data) {
+      this.ID = id;
+      parse(new MemoryStream(data));
+    }
+
+    public void parse_file(string path) => parse(new FileStream(path, FileMode.Open));
+
+    private void parse(Stream fs) {
       using (BinaryReader br = new BinaryReader(fs)) {
         if (br.BaseStream.Length < 5){ return; }
         //#1 Section - Object Arrangement Allocation

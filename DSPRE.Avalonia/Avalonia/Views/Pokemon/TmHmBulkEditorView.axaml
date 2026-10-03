@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         xmlns:models="clr-namespace:DSPRE.Avalonia.Models"
         x:Class="DSPRE.Avalonia.Views.Pokemon.TmHmBulkEditorView"
@@ -22,6 +23,7 @@
                   Width="220" Margin="0,0,12,4" IsVisible="{Binding IsByMachineMode}"/>
 
         <Button Content="Save All" Click="SaveAll_Click" Margin="0,0,12,4"/>
+        <controls:UndoRedoButtons/>
 
         <Button Content="{Binding SelectAllLabel}" Click="SelectAll_Click" Margin="0,0,6,4"/>
         <Button Content="{Binding SelectNoneLabel}" Click="SelectNone_Click" Margin="0,0,12,4"/>

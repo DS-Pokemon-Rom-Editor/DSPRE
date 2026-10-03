@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// One tab per special encounter system: Honey Tree, Great Marsh and Trophy Garden in DPPt, Headbutt, Bug Contest
     /// and Safari Zone in HGSS, and Swarms in both.
     /// </summary>
-    public class SpecialEncountersEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class SpecialEncountersEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public const string Title = "Special Encounters Editor";
 
@@ -77,6 +77,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             foreach (var c in Children) c?.DiscardChanges();
         }
+
+        // Undo and redo act on the tab that is showing; the window sets it.
+        private DSPRE.Avalonia.ISupportsUndo _activeTab;
+        public object ActiveTab { set { _activeTab = value as DSPRE.Avalonia.ISupportsUndo; OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); } }
+        public bool CanUndo => _activeTab?.CanUndo == true;
+        public bool CanRedo => _activeTab?.CanRedo == true;
+        public void Undo() => _activeTab?.Undo();
+        public void Redo() => _activeTab?.Redo();
 
         // Design-time constructor.
         public SpecialEncountersEditorViewModel()

@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// special tree groups (each a set of trees positioned by a global x/y). The on-map 3D tree
     /// placement from WinForms is deferred; coordinates are editable numerically.
     /// </summary>
-    public class HeadbuttEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class HeadbuttEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -130,7 +130,53 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string UnsavedChangesDescription => $"Headbutt file {_selFile}";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selFile >= 0) LoadFile(_selFile); }
-        private void Dirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void Dirty()
+        {
+            _undo?.Record();
+            bool dirty = _undo?.IsDirty ?? true;
+            if (_dirty == dirty) return;
+            _dirty = dirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        // ── Undo / redo: the loaded file, as it is stored ──
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private void ResetUndo()
+        {
+            if (_file == null) return;
+            _undo = new DSPRE.Avalonia.ByteStateUndo(() => _file.ToByteArray(), ApplyState, RaiseUndo);
+            RaiseUndo();
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            int group = _selGroup;
+            bool special = _specialGroupActive;
+            _file = new HeadbuttEncounterFile((ushort)System.Math.Max(0, _selFile), state);
+            BuildEncounterRows();
+            RefreshGroups();
+            _selGroup = group;
+            _specialGroupActive = special;
+            ShowGroupTrees();
+            bool dirty = _undo.IsDirty;
+            if (_dirty != dirty) { _dirty = dirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        }
+
+        private void BuildEncounterRows()
+        {
+            NormalEncounters.Clear();
+            for (int i = 0; i < _file.normalEncounters.Count; i++)
+                NormalEncounters.Add(new HeadbuttEncRow($"Normal {i + 1}", _file.normalEncounters[i], Species, Dirty));
+            SpecialEncounters.Clear();
+            for (int i = 0; i < _file.specialEncounters.Count; i++)
+                SpecialEncounters.Add(new HeadbuttEncRow($"Special {i + 1}", _file.specialEncounters[i], Species, Dirty));
+        }
         private void OnTreeChanged() { Dirty(); RefreshTreeMarkers(); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
@@ -186,14 +232,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     _file = new HeadbuttEncounterFile((ushort)index);
                 }
-                NormalEncounters.Clear();
-                for (int i = 0; i < _file.normalEncounters.Count; i++)
-                    NormalEncounters.Add(new HeadbuttEncRow($"Normal {i + 1}", _file.normalEncounters[i], Species, Dirty));
-                SpecialEncounters.Clear();
-                for (int i = 0; i < _file.specialEncounters.Count; i++)
-                    SpecialEncounters.Add(new HeadbuttEncRow($"Special {i + 1}", _file.specialEncounters[i], Species, Dirty));
+                BuildEncounterRows();
                 RefreshGroups();
                 SetClean();
+                ResetUndo();
                 StatusText = $"Loaded headbutt file {index} ({_file.normalTreeGroups.Count} normal / {_file.specialTreeGroups.Count} special tree groups).";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
                 // Resolve + render the map ONCE per file, exactly like the event editor (full matrix when
@@ -854,6 +896,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void MarkSaved(int fileId)
         {
+            _undo?.MarkSaved();
             SetClean();
             StatusText = $"Saved headbutt file {fileId}.";
             SaveNotice.Saved(UnsavedChangesDescription);

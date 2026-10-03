@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// one grid. Rows are (species, level, move); a species filter narrows the view, and Save writes
     /// each species' rows back to its learnset file (sorted by level).
     /// </summary>
-    public class BulkLearnsetEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BulkLearnsetEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -64,7 +64,36 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string UnsavedChangesDescription => "Bulk learnsets";
         public void SaveChanges() => SaveAll();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); Load(); }
-        private void Dirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void Dirty()
+        {
+            _undo?.Record();
+            bool dirty = _undo?.IsDirty ?? true;
+            if (_dirty == dirty) return;
+            _dirty = dirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        // ── Undo / redo: every row ──
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_all.Select(r => new[] { r.SpeciesIndex, r.Level, r.MoveIndex }).ToArray());
+
+        private void ApplyState(byte[] state)
+        {
+            var rows = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
+            int keep = _selectedRow;
+            _all.Clear();
+            foreach (var r in rows) _all.Add(new BulkLearnsetRow(SpeciesNames, MoveNames, r[0], r[1], r[2], Dirty));
+            ApplyFilter();
+            if (keep >= 0 && keep < Rows.Count) { _selectedRow = -1; SelectedRow = keep; }
+            bool dirty = _undo.IsDirty;
+            if (_dirty != dirty) { _dirty = dirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         public BulkLearnsetEditorViewModel() { }
@@ -107,6 +136,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             catch (Exception ex) { AppLogger.Error("Bulk learnset load failed: " + ex.Message); }
             ApplyFilter();
             SetClean();
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
             StatusText = $"{_all.Count} learnset rows across {_learnsetCount} species.";
         }
 
@@ -157,6 +188,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (ls.ToByteArray().AsSpan().SequenceEqual(was)) continue;
                     ls.SaveToFileDefaultDir(id, showSuccessMessage: false);
                 }
+                _undo?.MarkSaved();
                 SetClean();
                 SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = "Saved all learnsets.";

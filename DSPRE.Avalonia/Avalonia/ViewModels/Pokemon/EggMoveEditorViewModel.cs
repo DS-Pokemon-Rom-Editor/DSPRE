@@ -13,7 +13,7 @@ using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChange
 using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    public class EggMoveEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class EggMoveEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -56,7 +56,39 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int target = Math.Min(keep, _eggMoveData.Count - 1);
             if (target >= 0) SelectedMonIndex = target; else OnMonSelected(-1);
             SetDirty(false);
+            ResetUndo();
         }
+
+        // ----------------------------------------------------------------
+        // Undo / redo: the whole table
+        // ----------------------------------------------------------------
+
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(
+            _eggMoveData.Select(en => new[] { en.speciesID }.Concat(en.moveIDs.Select(m => (int)m)).ToArray()).ToArray());
+
+        private void ApplyState(byte[] state)
+        {
+            var rows = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
+            int keep = _selectedMonIndex;
+            _eggMoveData = rows.Select(r => new EggMoveEntry(r[0], r.Skip(1).Select(m => (ushort)m).ToList())).ToList();
+            RefreshMonList();
+            UpdateEntryCountLabel();
+            UpdateListSizeLabel();
+            _selectedMonIndex = -1;
+            OnPropertyChanged(nameof(SelectedMonIndex));
+            int target = Math.Min(keep, _eggMoveData.Count - 1);
+            if (target >= 0) SelectedMonIndex = target; else OnMonSelected(-1);
+            SetDirty(_undo.IsDirty);
+        }
+
+        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
 
         // ----------------------------------------------------------------
         // ROM data
@@ -220,6 +252,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             // Start on the first Pokemon, so the moves list shows one rather than sitting empty.
             if (MonList.Count > 0) SelectedMonIndex = 0;
+            ResetUndo();
         }
 
         private void OnNamesChanged(object sender, System.EventArgs e)
@@ -578,6 +611,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void SetDirty(bool d)
         {
+            // An edit is a step; undoing back to the saved table is clean again.
+            if (d && _undo != null) { _undo.Record(); d = _undo.IsDirty; }
             _dirty = d;
             Title  = d ? "● Egg Move Editor" : "Egg Move Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -607,6 +642,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 EggMoveData.Write(_eggMoveData, _useSpecialFormat, _monNames.Length);
+                _undo?.MarkSaved();
                 SetDirty(false);
                 return null;
             }

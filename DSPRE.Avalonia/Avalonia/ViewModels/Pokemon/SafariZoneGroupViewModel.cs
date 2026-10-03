@@ -77,6 +77,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             ObjectIndex = ObjectItems.Count > 0 ? 0 : -1;
         }
 
+        /// <summary>Rebinds to a group read again (an undo), staying on the rows that were picked.</summary>
+        public void SetData(SafariZoneEncounterGroup group, bool keepSelection)
+        {
+            int morning = _morningIndex, day = _dayIndex, night = _nightIndex, obj = _objectIndex;
+            SetData(group);
+            if (!keepSelection) return;
+            if (morning >= 0 && morning < MorningItems.Count) MorningIndex = morning;
+            if (day >= 0 && day < DayItems.Count) DayIndex = day;
+            if (night >= 0 && night < NightItems.Count) NightIndex = night;
+            if (obj >= 0 && obj < ObjectItems.Count) ObjectIndex = obj;
+        }
+
         private static void RebuildNormal(ObservableCollection<string> col, BindingList<SafariZoneEncounter> src)
         {
             col.Clear();

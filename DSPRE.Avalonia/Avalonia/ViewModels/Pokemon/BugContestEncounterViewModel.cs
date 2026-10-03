@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// Edits the Bug-Catching Contest encounter sets (species, level range, the
     /// threshold-based Rate, and Score). Embedded as a tab in the Encounters editor.
     /// </summary>
-    public class BugContestEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BugContestEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -95,9 +95,51 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Bug Contest Encounter Editor";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // Edits live in the loaded file, so discarding reads it again.
+        public void DiscardChanges() { if (_dirty && _file != null) LoadFile(() => new BugContestEncounterFile(true)); SetClean(); }
         private void SetDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo: every set's encounters ─────────────────────────────────
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_file.Sets.Select(s => s.Encounters
+            .Select(en => new int[] { en.Species, en.MinLevel, en.MaxLevel, en.Rate, en.Score, en.Dummy }).ToArray()).ToArray());
+
+        private void ApplyState(byte[] state)
+        {
+            var sets = DSPRE.Avalonia.UndoJson.Read<int[][][]>(state);
+            for (int s = 0; s < sets.Length && s < _file.Sets.Count; s++)
+                for (int i = 0; i < sets[s].Length && i < _file.Sets[s].Encounters.Count; i++)
+                {
+                    var en = _file.Sets[s].Encounters[i];
+                    var v = sets[s][i];
+                    en.Species = (ushort)v[0]; en.MinLevel = (byte)v[1]; en.MaxLevel = (byte)v[2];
+                    en.Rate = (byte)v[3]; en.Score = (byte)v[4]; en.Dummy = (ushort)v[5];
+                }
+            int row = _selectedEncounterIndex;
+            RefreshSetDisplay();
+            if (row >= 0 && row < EncounterRows.Count) { _selectedEncounterIndex = -1; SelectedEncounterIndex = row; }
+            if (_undo.IsDirty) SetDirty(); else SetClean();
+        }
+
+        private void ResetUndo()
+        {
+            if (_file == null) return;
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
+        }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            if (_undo == null || _undo.IsDirty) SetDirty(); else SetClean();
+        }
 
         // ── Constructors ──────────────────────────────────────────────────────────
         public BugContestEncounterViewModel()
@@ -135,7 +177,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             LoadFile(() => new BugContestEncounterFile(true));
         }
 
-        private void LoadFile(Func<BugContestEncounterFile> factory)
+        private void LoadFile(Func<BugContestEncounterFile> factory, bool newHistory = true)
         {
             try
             {
@@ -148,6 +190,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _selectedSetIndex = -1;
                 if (SetNames.Count > 0) SelectedSetIndex = 0;
                 SetClean();
+                if (newHistory || _undo == null) ResetUndo();
             }
             catch (Exception ex)
             {
@@ -216,7 +259,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var enc = set.Encounters[_selectedEncounterIndex];
             change(enc);
 
-            SetDirty();
+            Edited();
 
             int sel = _selectedEncounterIndex;
             _suppress = true;
@@ -306,6 +349,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Bug Contest"); return; }
             // The file reports its own write error.
             if (!_file.SaveToFile(showSuccessMessage: false)) return;
+            _undo?.MarkSaved();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
         }
@@ -328,8 +372,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                LoadFile(() => new BugContestEncounterFile(path));
-                SetDirty();
+                // An import is one undoable step over what was shown.
+                LoadFile(() => new BugContestEncounterFile(path), newHistory: false);
+                Edited();
                 await DialogHelper.ShowInfo("Bug Contest encounters imported successfully!", "Import Complete");
             }
             catch (Exception ex)

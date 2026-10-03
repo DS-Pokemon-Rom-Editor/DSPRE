@@ -17,6 +17,7 @@
         <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <ToggleButton Content="Move trees" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}"
                       ToolTip.Tip="3D edit mode: click a tree to select it, then drag the red/blue handles to move it across the map. Arrow keys nudge one tile."/>

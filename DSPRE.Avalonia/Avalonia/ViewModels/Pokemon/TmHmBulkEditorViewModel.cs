@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// or by picking one machine and checking/unchecking it per species (By TM/HM). Also carries the
     /// evolution-family "Sync" helper (union/intersection) and "Copy Compatibility To…".
     /// </summary>
-    public class TmHmBulkEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TmHmBulkEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -91,7 +91,62 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _isDirty;
         public string UnsavedChangesDescription => "TM/HM Bulk Editor";
         public void SaveChanges() => SaveAllChanges();
-        public void DiscardChanges() { _isDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void DiscardChanges()
+        {
+            _carriedDirty = false;
+            LoadAll();
+            RebuildTree();
+            if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
+            ResetUndo();
+            UpdateStatus();
+        }
+
+        // ── Undo / redo: every species' machine set ──
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private bool _pendingEdit;
+        // Unsaved edits that predate the history, kept when another editor's save restarts it.
+        private bool _carriedDirty;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_personalData.OrderBy(kv => kv.Key).Select(kv => kv.Value.machines.ToArray()).ToArray());
+
+        private void ApplyState(byte[] state)
+        {
+            var sets = DSPRE.Avalonia.UndoJson.Read<byte[][]>(state);
+            foreach (var (id, data) in _personalData)
+                if (id < sets.Length) data.machines = new SortedSet<byte>(sets[id]);
+            RebuildTree();
+            if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
+            RecountDirty();
+            UpdateStatus();
+        }
+
+        private void ResetUndo()
+        {
+            _pendingEdit = false;
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RecountDirty();
+            RaiseUndo();
+        }
+
+        private void RecountDirty()
+        {
+            _isDirty = _carriedDirty || _undo?.IsDirty == true;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        // One history step per user action, however many species it touched.
+        private void FlushEdit()
+        {
+            if (!_pendingEdit) return;
+            _pendingEdit = false;
+            _undo?.Record();
+            RecountDirty();
+        }
 
         public TmHmBulkEditorViewModel(string[] pokemonNames)
         {
@@ -103,12 +158,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // DP's personalPokeData NARC has fewer files than the species-name text archive, which still
             // lists Platinum-introduced forms (501-507) DP never got data files for.
             _speciesCount = Math.Min(pokemonNames.Length, GetPersonalFilesCount());
-            for (int i = 0; i < _speciesCount; i++)
-            {
-                _personalData[i] = new PokemonPersonalData(i);
-                _savedFileMachines[i] = FileMachines(_personalData[i].machines);
-            }
-            LoadExtraMaskTms();
+            LoadAll();
             AppEvents.PersonalDataSaved += OnPersonalDataSaved;
 
             _families = BuildFamilies();
@@ -118,7 +168,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             RebuildTree();
             RefreshMachineChecklistFromSelection();
+            ResetUndo();
             UpdateStatus();
+        }
+
+        private void LoadAll()
+        {
+            for (int i = 0; i < _speciesCount; i++)
+            {
+                _personalData[i] = new PokemonPersonalData(i);
+                _savedFileMachines[i] = FileMachines(_personalData[i].machines);
+            }
+            LoadExtraMaskTms();
         }
 
         private static string[] BuildMachineLabels()
@@ -225,6 +286,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (group != null) UpdateGroupDisplay(group);
 
             if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
+            FlushEdit();
             UpdateStatus();
         }
 
@@ -242,6 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             UpdateGroupDisplay(group);
 
             if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
+            FlushEdit();
             UpdateStatus();
         }
 
@@ -262,7 +325,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             var data = _personalData[speciesId];
             bool changed = enabled ? data.machines.Add((byte)CurrentMachine) : data.machines.Remove((byte)CurrentMachine);
-            if (changed) { _isDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+            if (changed) _pendingEdit = true;
         }
 
         public void SetAllVisibleLeavesChecked(bool value)
@@ -288,6 +351,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _suppressTreeEvents = false;
 
             if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
+            FlushEdit();
             UpdateStatus();
         }
 
@@ -324,9 +388,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 var data = _personalData[id];
                 bool changed = enable ? data.machines.Add((byte)machineIndex) : data.machines.Remove((byte)machineIndex);
-                if (changed) _isDirty = true;
+                if (changed) _pendingEdit = true;
             }
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            FlushEdit();
 
             RefreshMachineChecklistFromSelection();
             UpdateStatus();
@@ -374,8 +438,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void AfterBulkFamilyChange(string message)
         {
-            _isDirty = true;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            _pendingEdit = true;
+            FlushEdit();
             RebuildTree();
             if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
             UpdateStatus(message);
@@ -457,8 +521,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 AppLogger.Warn($"TM/HM Bulk Editor: could not re-read species {id}: {e.Message}");
                 return;
             }
+            _carriedDirty = _isDirty;
             RebuildTree();
             if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
+            ResetUndo();
             UpdateStatus();
         }
 
@@ -493,7 +559,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             foreach (int id in written) AppEvents.RaisePersonalDataSaved(this, id);
 
-            _isDirty = false;
+            _carriedDirty = false;
+            _undo?.MarkSaved();
+            RecountDirty();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus("All TM/HM compatibility changes have been saved.");

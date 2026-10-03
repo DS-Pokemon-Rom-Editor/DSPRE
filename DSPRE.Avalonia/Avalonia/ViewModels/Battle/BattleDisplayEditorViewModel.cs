@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     /// icon uses, 1 byte per species in the ARM9 icon-palette table) and battle-sprite coordinates
     /// (/a/1/8/0). Supported on Diamond/Pearl, Platinum, and HeartGold/SoulSilver; see <see cref="IsAvailable"/>.
     /// </summary>
-    public class BattleDisplayEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BattleDisplayEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -2146,7 +2146,63 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string UnsavedChangesDescription => $"Battle Display (Mon {_currentId})";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); _src?.Invalidate(); _formHeightNarc?.Invalidate(); _animNarc?.Invalidate(); if (_currentId >= 0) LoadMon(_currentId); }   // drop in-memory edits → reload from disk
-        private void SetDirty() { if (_loading || _dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty()
+        {
+            if (_loading) return;
+            _undo?.Record();
+            // An imported icon picture is not part of undo; it stays unsaved until Save or Discard.
+            bool dirty = (_undo?.IsDirty ?? true) || _pendingIconGraphic != null;
+            if (_dirty == dirty) return;
+            _dirty = dirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        // ── Undo / redo: the shown Pokémon's offsets, heights, palette and animation ──
+        private sealed record DisplayState(int[] Values, int[][] Back, int[][] Pattern, int[][] Front, int[][] BackRuns);
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(new DisplayState(
+            new[] { _partyPaletteIndex, _spriteY, _shadowX, _shadowSize, _frontHeightM, _frontHeightF, _backHeightM, _backHeightF,
+                    _formFrontH, _formBackH, _animFrontProg, _animFrontWait, _animFrontCryDelay, _animBackCryDelay },
+            AnimBack.Select(s => new[] { s.Number, s.Wait }).ToArray(),
+            AnimSteps.Select(s => new[] { s.Frame, s.Wait }).ToArray(),
+            FrontFrameEntries.Select(f => new[] { f.FrameNo, f.Duration, f.HorizontalShift, f.VerticalShift }).ToArray(),
+            BackFrameEntries.Select(f => new[] { f.FrameNo, f.Duration, f.HorizontalShift, f.VerticalShift }).ToArray()));
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<DisplayState>(state);
+            var v = s.Values;
+            _loading = true;
+            try
+            {
+                if (v[0] >= 0 && v[0] < PartyPalettes.Count) PartyPaletteIndex = v[0];
+                SpriteY = v[1]; ShadowX = v[2]; ShadowSize = v[3];
+                FrontHeightM = v[4]; FrontHeightF = v[5]; BackHeightM = v[6]; BackHeightF = v[7];
+                FormFrontHeight = v[8]; FormBackHeight = v[9];
+                AnimFrontProgNum = v[10]; AnimFrontWait = v[11]; AnimFrontCryDelay = v[12]; AnimBackCryDelay = v[13];
+                foreach (var st in AnimBack) st.PropertyChanged -= OnAnimStepChanged;
+                AnimBack.Clear();
+                foreach (var b in s.Back) AddBackStep(b[0], b[1]);
+                foreach (var st in AnimSteps) st.PropertyChanged -= OnAnimStepChanged;
+                AnimSteps.Clear();
+                foreach (var p in s.Pattern) AddPatternStep(p[0], p[1]);
+                OnPropertyChanged(nameof(CanAddAnimStep));
+                if (RecordFamily)
+                    LoadFrameEntries(s.Front.Select(f => new SpriteFrameSlot(f[0], f[1], f[2], f[3])), s.BackRuns.Select(f => new SpriteFrameSlot(f[0], f[1], f[2], f[3])));
+                else RecomputePatternSlots();
+                RaiseLayout();
+                RefreshPreview();
+            }
+            finally { _loading = false; }
+            bool dirty = _undo.IsDirty || _pendingIconGraphic != null;
+            if (_dirty != dirty) { _dirty = dirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         public BattleDisplayEditorViewModel() { }
@@ -2190,6 +2246,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void LoadMon(int id)
         {
             _loading = true;
+            // The last Pokémon's history must never apply to this one.
+            _undo = null;
+            RaiseUndo();
             _currentId = id;
             OnPropertyChanged(nameof(GaugeNameText));
             OnPropertyChanged(nameof(GaugeNameImage));
@@ -2223,6 +2282,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RaiseSprites();
             SetClean();
             _loading = false;
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
         }
 
         public void Save()
@@ -2285,6 +2346,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
             _savedPartyPaletteIndex = _partyPaletteIndex;
             _pendingIconGraphic = null;
+            _undo?.MarkSaved();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             RefreshPreview();   // now reflects what was actually written (disk read), not the staged import

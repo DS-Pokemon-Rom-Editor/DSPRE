@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// encounter groups (Grass / Surf / Old Rod / Good Rod / Super Rod) of a selected
     /// Safari Zone area file. Embedded as a tab in the Encounters editor.
     /// </summary>
-    public class SafariZoneEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class SafariZoneEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -75,9 +75,49 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void SaveChanges() => Save();
         // Closing the window goes through here, so that path reports a failed save rather than logging it.
         public async Task<bool> SaveChangesAsync() { await SaveAsync(); return !HasUnsavedChanges; }
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // Edits live in the loaded area, so discarding reads it again.
+        public void DiscardChanges() { if (_dirty && _selectedFileIndex >= 0) LoadFile(_selectedFileIndex); SetClean(); }
         private void SetDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo: the loaded area, as its file stores it ─────────────────
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState()
+        {
+            var f = new SafariZoneEncounterFile(_selectedFileIndex, System.Array.Empty<byte>())
+            {
+                grassEncounterGroup = GrassVM.CurrentGroup, surfEncounterGroup = SurfVM.CurrentGroup,
+                oldRodEncounterGroup = OldRodVM.CurrentGroup, goodRodEncounterGroup = GoodRodVM.CurrentGroup,
+                superRodEncounterGroup = SuperRodVM.CurrentGroup,
+            };
+            return f.ToByteArray();
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            var f = new SafariZoneEncounterFile(_selectedFileIndex, state);
+            if (_file != null) _file = f;
+            GrassVM.SetData(f.grassEncounterGroup, keepSelection: true);
+            SurfVM.SetData(f.surfEncounterGroup, keepSelection: true);
+            OldRodVM.SetData(f.oldRodEncounterGroup, keepSelection: true);
+            GoodRodVM.SetData(f.goodRodEncounterGroup, keepSelection: true);
+            SuperRodVM.SetData(f.superRodEncounterGroup, keepSelection: true);
+            if (_undo.IsDirty) SetDirty(); else SetClean();
+        }
+
+        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            if (_undo == null || _undo.IsDirty) SetDirty(); else SetClean();
+        }
 
         // ── Constructors ──────────────────────────────────────────────────────────
         public SafariZoneEncounterViewModel()
@@ -92,7 +132,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public SafariZoneEncounterViewModel(bool _) : this()
         {
-            foreach (var g in Groups) g.Changed += (s, e) => SetDirty();
+            foreach (var g in Groups) g.Changed += (s, e) => Edited();
         }
 
         // ── Setup ────────────────────────────────────────────────────────────────
@@ -136,6 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     BindGroups();
                 }
                 SetClean();
+                ResetUndo();
             }
             catch (Exception ex)
             {
@@ -206,6 +247,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 DSPRE.HgEngine.HgEngineSafariEncounters.TrySaveGroups(area, groups, out string sourceError) ? null : sourceError);
             if (saved)
             {
+                _undo?.MarkSaved();
                 SetClean();
                 SaveNotice.Saved(UnsavedChangesDescription);
             }
@@ -228,6 +270,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     failure = "the encounter data could not be turned into a file.";
                     return false;
                 }
+                _undo?.MarkSaved();
                 SetClean();
                 SaveNotice.Saved(UnsavedChangesDescription);
                 return true;
@@ -269,7 +312,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 // The imported file saves over the area it was imported into.
                 _file = new SafariZoneEncounterFile(path) { ID = _file.ID };
                 BindGroups();
-                SetDirty();
+                Edited();
                 await DialogHelper.ShowInfo("Safari Zone file imported successfully!", "Import Complete");
             }
             catch (Exception ex)

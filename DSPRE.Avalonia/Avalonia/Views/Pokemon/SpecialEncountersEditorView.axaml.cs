@@ -31,6 +31,13 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
             if (vm.StartOnHeadbutt) Tabs.SelectedItem = HeadbuttTab;
             TabDefault.SelectFirstVisible(Tabs);
+            Tabs.SelectionChanged += (_, _) => TellActiveTab();
+            TellActiveTab();
+        }
+
+        private void TellActiveTab()
+        {
+            if (VM != null) VM.ActiveTab = (Tabs.SelectedItem as TabItem)?.Content is Control c ? c.DataContext : null;
         }
     }
 }

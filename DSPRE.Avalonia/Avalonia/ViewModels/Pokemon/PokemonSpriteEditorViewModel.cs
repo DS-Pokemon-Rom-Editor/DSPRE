@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// from the pokemonBattleSprites NARC and displays them with normal / shiny palettes.
     /// Supports alternate forms via the otherPokemonBattleSprites NARC.
     /// </summary>
-    public class PokemonSpriteEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class PokemonSpriteEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -43,6 +43,38 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string UnsavedChangesDescription => $"Sprites (Mon {_currentId})";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo: the four sprites and both palettes ──
+        private sealed record SpriteState(byte[][] Raw, uint[] Normal, uint[] Shiny, bool[] NormalUsed, bool[] ShinyUsed);
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(new SpriteState(_rawSprites, _normalPal, _shinyPal, _normalPalUsed, _shinyPalUsed));
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<SpriteState>(state);
+            _rawSprites = s.Raw ?? new byte[4][];
+            _normalPal = s.Normal;
+            _shinyPal = s.Shiny;
+            _normalPalUsed = s.NormalUsed ?? AllUsed();
+            _shinyPalUsed = s.ShinyUsed ?? AllUsed();
+            ApplyPalettesAndPublish();
+            _dirty = _undo.IsDirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            _dirty = _undo?.IsDirty ?? true;
+        }
 
         // --- Sprite bitmaps (Avalonia bitmaps for the View) --------------------------
         private AvaBitmap _femaleBackNormal;  public AvaBitmap FemaleBackNormal  { get => _femaleBackNormal;  private set => Set(ref _femaleBackNormal,  value); }
@@ -441,6 +473,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void LoadAlternateForm(int formIndex)
         {
+            _undo = null;
+            RaiseUndo();
             ClearBitmaps();
             StatusText = "";
 
@@ -487,6 +521,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 ApplyPalettesAndPublish();
                 _dirty = false;
+                ResetUndo();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
             }
             catch (Exception ex)
@@ -554,6 +589,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // --- Load --------------------------------------------------------------------
         public void LoadMon(int id)
         {
+            // The last Pokémon's history must never apply to this one.
+            _undo = null;
+            RaiseUndo();
             ClearBitmaps();
             StatusText = "";
             IsAlternateForms = false;
@@ -641,6 +679,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 ApplyPalettesAndPublish();
                 _dirty = false;
+                ResetUndo();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
             }
             catch (Exception ex)
@@ -693,6 +732,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _shinyPalUsed = AllUsed();
                 ApplyPalettesAndPublish();
                 _dirty = false;
+                ResetUndo();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = "Loaded from hg-engine source.";
             }
@@ -742,7 +782,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     uint[] pal = _normalPal ??= new uint[16];
                     for (int i = 0; i < 16; i++) if (recolorUsed[i]) { pal[i] = recolorPal[i]; _normalPalUsed[i] = true; }
                     ApplyPalettesAndPublish();
-                    _dirty = true;
+                    Edited();
                     OnPropertyChanged(nameof(HasUnsavedChanges));
                     StatusText = $"{SpriteLabels[slot]}'s artwork didn't change, just the colors, so only the palette was updated.";
                     return;
@@ -792,7 +832,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 _rawSprites[slot] = newIndices;
                 ApplyPalettesAndPublish();
-                _dirty = true;
+                Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Imported {SpriteLabels[slot]}. Save to write it to the ROM.";
             }
@@ -858,7 +898,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (derivedUsed[i]) { pal[i] = derived[i]; used[i] = true; }
                 }
                 ApplyPalettesAndPublish();
-                _dirty = true;
+                Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Got the {label} palette from {SpriteLabels[slot]}'s reference image. Save to write it to the ROM.";
             }
@@ -1020,7 +1060,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     uint[] pal = _normalPal ??= new uint[16];
                     for (int i = 0; i < 16; i++) if (recolorUsed[i]) { pal[i] = recolorPal[i]; _normalPalUsed[i] = true; }
                     ApplyPalettesAndPublish();
-                    _dirty = true;
+                    Edited();
                     OnPropertyChanged(nameof(HasUnsavedChanges));
                     StatusText = $"{genderLabel}'s artwork didn't change, just the colors, so only the palette was updated.";
                     return;
@@ -1069,7 +1109,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 WriteGenderSheetIndices(female, newIndices);
                 ApplyPalettesAndPublish();
-                _dirty = true;
+                Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Imported {genderLabel}'s Back and Front from the sheet. Save to write it to the ROM.";
             }
@@ -1105,7 +1145,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (derivedUsed[i]) { pal[i] = derived[i]; _shinyPalUsed[i] = true; }
                 }
                 ApplyPalettesAndPublish();
-                _dirty = true;
+                Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Got {genderLabel}'s shiny palette from the reference sheet. Save to write it to the ROM.";
             }
@@ -1126,7 +1166,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     uint[] pal = _normalPal ??= new uint[16];
                     for (int i = 0; i < 16; i++) if (recolorUsed[i]) { pal[i] = recolorPal[i]; _normalPalUsed[i] = true; }
                     ApplyPalettesAndPublish();
-                    _dirty = true;
+                    Edited();
                     OnPropertyChanged(nameof(HasUnsavedChanges));
                     StatusText = "The artwork didn't change, just the colors, so only the palette was updated.";
                     return;
@@ -1175,7 +1215,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 WriteFullSheetIndices(newIndices);
                 ApplyPalettesAndPublish();
-                _dirty = true;
+                Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = "Imported both genders' Back and Front from the sheet. Save to write it to the ROM.";
             }
@@ -1210,7 +1250,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (derivedUsed[i]) { pal[i] = derived[i]; _shinyPalUsed[i] = true; }
                 }
                 ApplyPalettesAndPublish();
-                _dirty = true;
+                Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = "Got both genders' shiny palette from the reference sheet. Save to write it to the ROM.";
             }
@@ -1306,7 +1346,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (pal == null || index < 0 || index >= pal.Length) return;
             pal[index] = argb;
             ApplyPalettesAndPublish();
-            _dirty = true;
+            Edited();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -1601,6 +1641,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (failed.Count == 0)
             {
+                _undo?.MarkSaved();
                 _dirty = false;
                 SaveNotice.Saved(UnsavedChangesDescription);
                 OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -1660,6 +1701,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     byte[] png = IndexedPng.Write(_rawSprites[i], pal, SpriteWidth, SpriteHeight);
                     File.WriteAllBytes(posePaths[i], png);
                 }
+                _undo?.MarkSaved();
                 _dirty = false;
                 SaveNotice.Saved(UnsavedChangesDescription);
                 OnPropertyChanged(nameof(HasUnsavedChanges));

@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
     }
 
-    public class LearnsetEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class LearnsetEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -162,6 +162,37 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             UpdateCanAdd();
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            _undo = _current == null ? null : new ByteStateUndo(LearnsetState, ApplyLearnsetState, RaiseUndoState);
+            RaiseUndoState();
+        }
+
+        // ─── Undo / redo ──────────────────────────────────────────────────────────
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() { _undo?.Undo(); SyncDirtyWithUndo(); }
+        public void Redo() { _undo?.Redo(); SyncDirtyWithUndo(); }
+        private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+        private void SyncDirtyWithUndo()
+        {
+            if (_undo == null || _undo.IsDirty == _dirty) return;
+            _dirty = _undo.IsDirty; OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private byte[] LearnsetState()
+        {
+            var bytes = new byte[_current.list.Count * 3];
+            int i = 0;
+            foreach (var (level, move) in _current.list) { bytes[i++] = level; bytes[i++] = (byte)move; bytes[i++] = (byte)(move >> 8); }
+            return bytes;
+        }
+
+        private void ApplyLearnsetState(byte[] state)
+        {
+            _current.list.Clear();
+            for (int i = 0; i + 2 < state.Length; i += 3) _current.list.Add((state[i], (ushort)(state[i + 1] | state[i + 2] << 8)));
+            RefreshEntries();
+            SelectedEntryIndex = -1;
         }
 
         /// <summary>On hg-engine the list comes from learnsets.json, not the last built copy.</summary>
@@ -268,6 +299,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
             StatusText = "";
             _dirty = false;
+            _undo?.MarkSaved();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -311,6 +343,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void SetDirty()
         {
+            _undo?.Record();
             if (!_dirty) { _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         }
     }

@@ -19,6 +19,7 @@
         <ComboBox Width="200" ItemsSource="{Binding SpeciesFilter}" SelectedIndex="{Binding FilterIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Save all" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <Button Content="Add row" controls:Icon.Key="addIcon"  Click="Add_Click"/>
         <Button Content="Remove" controls:Icon.Key="deleteIcon"   Click="Remove_Click"/>
       </WrapPanel>

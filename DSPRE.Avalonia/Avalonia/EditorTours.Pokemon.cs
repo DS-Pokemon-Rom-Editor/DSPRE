@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia
                 S("name:MachinePanel", "Machines", "Tick or untick a machine for every ticked Pokémon at once. A filled box means only some of them learn it."),
                 S("name:SyncUnionButton", "Families", "Sync Family gives every member what any of them learns, or keeps only what all share. Copy Compatibility To copies one Pokémon's machines to others."),
                 S("name:FilterBox", "Filter", "Type part of a name to narrow the list. The Select and Enable buttons tick or clear the list."),
-                S("toolbar", "Saving", "Save All writes every change; Ctrl+S does the same."));
+                S("toolbar", "Saving", "Save All writes every change; Ctrl+S does the same, Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("MoveTutorEditorView", "Move Tutors",
                 S("tab:Moves", "Tutor moves", "Every move the tutors teach, what it costs and where it is taught. Platinum pays in coloured shards, HeartGold in Battle Points."),
@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia
                 S("name:MovePanel", "Egg moves", "The moves the selected Pokémon passes to its eggs. Pick a move under the list, then Add, Replace or Delete."),
                 S("name:BulkPanel", "Bulk changes", "Swap one move for another, or remove a move, in every Pokémon at once."),
                 S("toolbar", "Space left", "The toolbar shows how full the table is, amber when full and red when over, and a table over the limit is not saved. In HeartGold the game only looks for a Pokémon in the first 2045 entries, so the count runs up to the last Pokémon. The move count under the list does the same for one Pokémon."),
-                S("toolbar", "Saving", "Export CSV and Import CSV use a spreadsheet. Save or Ctrl+S writes, Discard drops unsaved edits."));
+                S("toolbar", "Saving", "Export CSV and Import CSV use a spreadsheet. Save or Ctrl+S writes, Ctrl+Z undoes, Discard drops unsaved edits."));
 
             Add("TradeEditorView", "Trade Editor",
                 S("name:TradePicker", "Pick a trade", "Each in-game trade has a number. Change it to load another trade."),
@@ -156,14 +156,14 @@ namespace DSPRE.Avalonia
                 S("tab:Great Marsh", "Great Marsh", "The Great Marsh Pokémon before and after the National Pokédex. Pick a list, a slot, then its species."),
                 S("tab:Trophy Garden", "Trophy Garden", "The Pokémon that can turn up in the Trophy Garden. Pick a slot, then its species."),
                 S("tab:Headbutt", "Headbutt", "Pick a file, then set species and levels for normal and special trees. The 3D map shows where the trees are."),
-                S("tab:Headbutt>name:GlHost", "The trees", "Green trees are normal, yellow ones special. Turn on Move trees to drag them, or type their positions in the tree list."),
+                S("tab:Headbutt>name:GlHost", "The trees", "Green trees are normal, yellow ones special. Turn on Move trees to drag them, or type their positions in the tree list. With a tree picked and Move trees on, the arrow keys move it one square."),
                 S("tab:Headbutt>name:GlHost", "ID key", "A normal tree's table depends on the player's ID key: (6 × secret ID + trainer ID) mod 10. Hover a tree to see which keys get the common table, the rare one or nothing."),
                 S("tab:Bug Contest", "Bug Contest", "The Pokémon of the Bug-Catching Contest, with levels, rate and score. Each set covers certain days once you have the National Pokédex."),
                 S("tab:Bug Contest Opponents", "Contest rivals", "What each rival enters with, on which day, and the score they finish with."),
                 S("tab:Safari Zone", "Safari Zone", "Pick an area, then grass, surfing or a rod. Each has Pokémon by time of day, plus ones that only appear when enough objects are placed."),
                 S("tab:Safari Zone", "Object points", "A bonus slot needs points of an object type, not a number of objects. Each object placed earns 1 to 7 points, more the longer the area has been in the layout."),
-                S("tab:Swarms", "Swarms", "Where a swarm can happen and which Pokémon it brings. Every destination is equally likely."),
-                S(null, "Saving", "Each tab has its own Save, and Ctrl+S saves every tab with changes. Right-click a Pokémon and pick Open, or Ctrl+click, to open it."));
+                S("tab:Swarms", "Swarms", "Where a swarm can happen and which Pokémon it brings. Every destination is equally likely. Delete in the list removes the picked one."),
+                S(null, "Saving", "Each tab has its own Save, and Ctrl+S saves every tab with changes. Ctrl+Z and Ctrl+Y undo and redo on the open tab. Right-click a Pokémon and pick Open, or Ctrl+click, to open it."));
 
             Add("HgEngineFormEditorView", "Form Editor",
                 S("name:SpeciesBar", "Pick a Pokémon", "Pick a base Pokémon to see its alternate forms, such as Mega or regional forms."),

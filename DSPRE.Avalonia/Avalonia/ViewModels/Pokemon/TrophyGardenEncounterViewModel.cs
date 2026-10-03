@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -14,7 +15,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// <summary>
     /// The 16-species pool Trophy Garden picks its daily Pokémon from (DP/Pt); the active two live in the save file.
     /// </summary>
-    public class TrophyGardenEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TrophyGardenEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -69,7 +70,42 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _isDirty;
         public string UnsavedChangesDescription => "Trophy Garden Encounter Editor";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _isDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // Edits live in the loaded file, so discarding reads it again.
+        public void DiscardChanges()
+        {
+            if (_isDirty && _file != null) LoadEncounterFile();
+            _isDirty = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        // ── Undo / redo: every slot's species ──
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_file.Encounters.Select(en => (int)en.Species).ToArray());
+
+        private void ApplyState(byte[] state)
+        {
+            var species = DSPRE.Avalonia.UndoJson.Read<int[]>(state);
+            for (int i = 0; i < species.Length && i < _file.Encounters.Count; i++) _file.Encounters[i].Species = (ushort)species[i];
+            int slot = _selectedSlotIndex;
+            RefreshSlotLabels();
+            _selectedSlotIndex = -1;
+            if (slot >= 0 && slot < SlotLabels.Count) SelectedSlotIndex = slot;
+            _isDirty = _undo.IsDirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            _isDirty = _undo?.IsDirty ?? true;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
 
         public TrophyGardenEncounterViewModel()
         {
@@ -99,7 +135,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             _file = new TrophyGardenEncounterFile(true);
             RefreshSlotLabels();
+            _selectedSlotIndex = -1;
             if (SlotLabels.Count > 0) SelectedSlotIndex = 0;
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
             UpdateStatus();
         }
 
@@ -143,8 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SelectedSlotIndex = slot;
             PokemonIcon = _icons.Get(encounter.Species);
 
-            _isDirty = true;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            Edited();
         }
 
         public void Save()
@@ -154,6 +192,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // The file reports its own write error.
             if (!_file.SaveToNarc(showSuccessMessage: false)) return;
             _isDirty = false;
+            _undo?.MarkSaved();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus();
@@ -173,8 +212,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 // Reset first so slot 0 still reloads from the imported file.
                 _selectedSlotIndex = -1;
                 if (SlotLabels.Count > 0) SelectedSlotIndex = 0;
-                _isDirty = true;
-                OnPropertyChanged(nameof(HasUnsavedChanges));
+                Edited();
                 AppMessages.Info("Trophy Garden encounters imported successfully!", "Import Complete");
             }
         }

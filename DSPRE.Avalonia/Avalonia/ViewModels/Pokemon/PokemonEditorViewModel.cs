@@ -128,7 +128,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private ISupportsUndo ActiveUndo => _selectedTabIndex switch
         {
             0 => PersonalVM,
+            1 => LearnsetVM,
             2 => EvolutionsVM,
+            3 => SpriteVM,
+            4 => BattleDisplayVM as ISupportsUndo,
             _ => null,
         };
         public bool CanUndo => ActiveUndo?.CanUndo ?? false;
@@ -178,7 +181,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     RaiseUndoState();
             }
             PersonalVM.PropertyChanged   += OnChildUndoState;
+            LearnsetVM.PropertyChanged   += OnChildUndoState;
             EvolutionsVM.PropertyChanged += OnChildUndoState;
+            SpriteVM.PropertyChanged     += OnChildUndoState;
+            BattleDisplayVM.PropertyChanged += OnChildUndoState;
 
             // Picking a form in the Sprites tab that has its own main-list entry (e.g. Deoxys - Attack) should
             // move the main selector there too, so Personal Data/Learnset/Evolutions and Save all agree on

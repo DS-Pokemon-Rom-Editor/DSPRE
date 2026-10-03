@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -20,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// Edits the honey-tree encounter groups (fixed slot rates; only the species
     /// per slot is editable). Embedded as a tab in the Encounters editor.
     /// </summary>
-    public class HoneyTreeEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class HoneyTreeEncounterViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -75,9 +76,46 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Honey Tree Encounter Editor";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // Edits live in the loaded file, so discarding reads it again.
+        public void DiscardChanges() { if (_dirty && _file != null) LoadFile(); SetClean(); }
         private void SetDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        // ── Undo / redo: every slot's species ───────────────────────────────────
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(
+            _file.Groups.Select(g => g.Encounters.Select(en => (int)en.Species).ToArray()).ToArray());
+
+        private void ApplyState(byte[] state)
+        {
+            var species = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
+            for (int g = 0; g < species.Length && g < _file.Groups.Count; g++)
+                for (int s = 0; s < species[g].Length && s < _file.Groups[g].Encounters.Count; s++)
+                    _file.Groups[g].Encounters[s].Species = (ushort)species[g][s];
+            int slot = _selectedSlotIndex;
+            RefreshGroupDisplay();
+            if (slot >= 0 && slot < EncounterSlots.Count) { _selectedSlotIndex = -1; SelectedSlotIndex = slot; }
+            if (_undo.IsDirty) SetDirty(); else SetClean();
+        }
+
+        private void ResetUndo()
+        {
+            if (_file == null) return;
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
+        }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            if (_undo == null || _undo.IsDirty) SetDirty(); else SetClean();
+        }
+
 
         // ── Constructors ──────────────────────────────────────────────────────────
         public HoneyTreeEncounterViewModel()
@@ -133,6 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _suppress = false;
 
                 if (GroupNames.Count > 0) SelectedGroupIndex = 0;
+                ResetUndo();
             }
             catch (Exception ex)
             {
@@ -191,7 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_selectedSlotIndex >= group.Encounters.Count) return;
 
             group.Encounters[_selectedSlotIndex].Species = (ushort)(species >= 0 ? species : 0);
-            SetDirty();
+            Edited();
 
             // Refresh the slot label without losing selection.
             int slot = _selectedSlotIndex;
@@ -224,6 +263,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_file == null) return;
             // The file reports its own write error.
             if (!_file.SaveToNarc(showSuccessMessage: false)) return;
+            _undo?.MarkSaved();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
         }
@@ -255,7 +295,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     _suppress = false;
 
                     if (GroupNames.Count > 0) SelectedGroupIndex = 0;
-                    SetDirty();
+                    Edited();
                     await DialogHelper.ShowInfo("Honey Tree encounters imported successfully!", "Import Complete");
                 }
             }
