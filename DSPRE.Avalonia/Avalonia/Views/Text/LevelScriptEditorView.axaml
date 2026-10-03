@@ -31,7 +31,10 @@
       <!-- Trigger list -->
       <DockPanel Grid.Column="0" Margin="0,0,6,0">
         <TextBlock DockPanel.Dock="Top" Text="Triggers" FontWeight="Bold" Margin="0,0,0,4"/>
-        <Button DockPanel.Dock="Bottom" Content="Remove selected" Click="Remove_Click" IsEnabled="{Binding HasTrigger}" Margin="0,4,0,0"/>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+          <Button Content="Go to script" controls:Icon.Key="goto" Click="GoToScript_Click" IsEnabled="{Binding HasTrigger}"/>
+          <Button Content="Remove selected" Click="Remove_Click" IsEnabled="{Binding HasTrigger}"/>
+        </StackPanel>
         <ListBox ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
       </DockPanel>
 

@@ -350,6 +350,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public bool HiddenItemSelected => _selectedHiddenItem != null;
 
+        /// <summary>Opens the common script a hidden item runs, 8000 plus its script ID.</summary>
+        public void GoToHiddenItemScript()
+        {
+            if (_selectedHiddenItem == null) return;
+            string message = AvaloniaEditorLauncher.GoToScript(8000 + _selectedHiddenItem.ScriptID, null, out bool opened);
+            if (!opened) AppMessages.Info(message, "Hidden item script");
+        }
+
         public int SelectedItemID
         {
             get => _selectedHiddenItem?.ItemID ?? 0;

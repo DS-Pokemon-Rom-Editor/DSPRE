@@ -276,6 +276,33 @@ namespace DSPRE.Avalonia
                 980, 760).ShowManaged();
         }
 
+        /// <summary>
+        /// Opens the Script Editor on a stored script number: a common script in the file that holds it, any other
+        /// number in the paired script file, which is only looked up when needed. Returns a status line.
+        /// </summary>
+        public static string GoToScript(int scriptNumber, System.Func<int> pairedScriptFile) =>
+            GoToScript(scriptNumber, pairedScriptFile, out _);
+
+        public static string GoToScript(int scriptNumber, System.Func<int> pairedScriptFile, out bool opened)
+        {
+            opened = false;
+            var result = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            if (result.Kind == CommonScriptId.Kind.Discrepancy)
+                return $"Script {scriptNumber} is a Common Script in an ambiguous range ({result.RangeLower}-{result.RangeUpper}); it is one of: {string.Join(", ", result.CandidateArchives)}.";
+            if (result.Kind == CommonScriptId.Kind.Resolved)
+            {
+                OpenScriptEditor(result.ScriptArchiveId, result.ManualUserId);
+                opened = true;
+                return $"Common Script {result.ManualUserId} lives in script file {result.ScriptArchiveId}.";
+            }
+            // Below the common-script ranges the number is the paired file's own jump-table slot.
+            int file = pairedScriptFile?.Invoke() ?? -1;
+            if (file < 0) return $"No header links a script file here, so script {scriptNumber} can't be opened.";
+            OpenScriptEditor(file, scriptNumber);
+            opened = true;
+            return $"Opened script {scriptNumber} of script file {file}.";
+        }
+
         public static void OpenLevelScriptEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;

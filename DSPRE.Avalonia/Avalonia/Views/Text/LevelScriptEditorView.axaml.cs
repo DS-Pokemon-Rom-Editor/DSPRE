@@ -52,6 +52,7 @@ namespace DSPRE.Avalonia.Views.Text
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddTrigger();
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveTrigger();
+        private void GoToScript_Click(object sender, RoutedEventArgs e) => VM?.GoToTriggerScript();
 
         private static async Task Safe(Task task)
         {

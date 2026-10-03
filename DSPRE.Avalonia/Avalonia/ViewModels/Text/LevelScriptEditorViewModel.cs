@@ -240,6 +240,22 @@ namespace DSPRE.Avalonia.ViewModels.Text
             SelectedTriggerIndex = _file.bufferSet.Count - 1;
         }
 
+        /// <summary>Opens the selected trigger's script, in the script file of the first header using this level script.</summary>
+        public void GoToTriggerScript()
+        {
+            if (!HasTrigger) return;
+            int levelScript = _selScript;
+            StatusText = AvaloniaEditorLauncher.GoToScript(_file.bufferSet[_selTrigger].scriptTriggered, () =>
+            {
+                foreach (ushort id in DSPRE.Avalonia.Data.ProjectIndex.HeadersUsing(DSPRE.Avalonia.Data.RefKind.LevelScript, levelScript))
+                {
+                    try { return MapHeader.GetMapHeader(id).scriptFileID; }
+                    catch (Exception ex) { AppLogger.Warn($"Level script {levelScript}: header {id} unreadable: {ex.Message}"); }
+                }
+                return -1;
+            });
+        }
+
         public void RemoveTrigger()
         {
             if (!HasTrigger) return;

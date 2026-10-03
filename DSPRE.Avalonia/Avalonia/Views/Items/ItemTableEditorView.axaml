@@ -225,8 +225,12 @@
                                  Minimum="0" Maximum="255" FormatString="0"/>
                 </StackPanel>
               </Grid>
-              <TextBlock Text="{Binding SelectedScriptLabel}"
-                         FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding SelectedScriptLabel}" VerticalAlignment="Center"
+                           FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+                <Button Content="Go to script" controls:Icon.Key="goto" Click="GoToHiddenScript_Click"
+                        IsVisible="{Binding HiddenItemSelected}"/>
+              </StackPanel>
             </StackPanel>
           </Border>
         </Grid>

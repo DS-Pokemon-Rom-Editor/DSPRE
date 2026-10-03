@@ -765,20 +765,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void GoToScript(int scriptNumber)
         {
             if (scriptNumber == EventFile.NoScript) { StatusText = "This event has no script."; return; }
-            var result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
-            if (result.Kind == CommonScriptId.Kind.Resolved)
-            {
-                AvaloniaEditorLauncher.OpenScriptEditor(result.ScriptArchiveId, result.ManualUserId);
-                StatusText = $"Common Script {result.ManualUserId} lives in script file {result.ScriptArchiveId}.";
-                return;
-            }
-            if (result.Kind == CommonScriptId.Kind.Discrepancy)
-            {
-                StatusText = $"Script {scriptNumber} is a Common Script in an ambiguous range ({result.RangeLower}-{result.RangeUpper}); it is one of: {string.Join(", ", result.CandidateArchives)}.";
-                return;
-            }
-            // Below the common-script ranges the number is the paired file's own jump-table slot.
-            AvaloniaEditorLauncher.OpenScriptEditor(_pairedScriptFileId, scriptNumber);
+            StatusText = AvaloniaEditorLauncher.GoToScript(scriptNumber, () => _pairedScriptFileId);
         }
 
         /// <summary>Shows one overworld of one event file, asked for from another editor.</summary>
