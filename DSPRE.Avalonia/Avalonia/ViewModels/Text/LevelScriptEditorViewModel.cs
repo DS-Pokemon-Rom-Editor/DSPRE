@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
     /// a script while a variable holds a value). Lets you pick a script file, list its triggers,
     /// add/remove them, and save / import / export. Files that aren't level scripts load empty.
     /// </summary>
-    public class LevelScriptEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class LevelScriptEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -122,8 +122,32 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public string UnsavedChangesDescription => $"Level script {_selScript}";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selScript >= 0) LoadFile(_selScript); }
-        private void Dirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void Dirty() { _undo?.Record(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo ────────────────────────────────────────────────────────────
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() { _undo?.Undo(); SyncDirtyWithUndo(); }
+        public void Redo() { _undo?.Redo(); SyncDirtyWithUndo(); }
+        private void SyncDirtyWithUndo()
+        {
+            if (_undo == null || _undo.IsDirty == _dirty) return;
+            _dirty = _undo.IsDirty; OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void StartUndo()
+        {
+            _undo = _file == null ? null : new ByteStateUndo(_file.TriggerState, state =>
+            {
+                _file.RestoreTriggers(state);
+                RefreshTriggers();
+                Dirty();
+            }, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+        }
+        private void SetClean() { _undo?.MarkSaved(); if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         public LevelScriptEditorViewModel() { if (Design.IsDesignMode) ScriptNames.Add("Script 0"); }
         public LevelScriptEditorViewModel(bool _) { AppEvents.LevelScriptSaved += OnSavedElsewhere; }
@@ -178,6 +202,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _file = new LevelScriptFile(index);
                 RefreshTriggers();
                 SetClean();
+                StartUndo();
                 StatusText = $"Loaded level script {index} ({_file.bufferSet.Count} trigger(s)).";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
@@ -186,6 +211,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _file = new LevelScriptFile { ID = index };
                 RefreshTriggers();
                 SetClean();
+                StartUndo();
                 StatusText = $"Script {index} is not a level script (empty). Add a trigger to make it one.";
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load level script {index}:\n{ex.Message}", "Level Script Editor"); }

@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
     /// (dual binary/JSON format): archive selection, per-line editing, add/remove
     /// strings &amp; archives, reorder, import/export, and search &amp; replace.
     /// </summary>
-    public class TextEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TextEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -247,10 +247,17 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public string UnsavedChangesDescription => _current != null ? $"Text Archive {_current.ID}" : "Text Archive";
 
         public void SaveChanges() => Save();
-        public void DiscardChanges() => SetClean();
+        // The edited lines live in the loaded archive, so dropping them means reading it again.
+        public void DiscardChanges()
+        {
+            bool reload = _dirty && _current != null;
+            SetClean();
+            if (reload) LoadArchive(_current.ID);
+        }
 
         private void SetDirty()
         {
+            _undo?.Record();
             if (_dirty) return;
             _dirty = true;
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -258,6 +265,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
         private void SetClean()
         {
+            _undo?.MarkSaved();
             if (!_dirty) return;
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -393,6 +401,57 @@ namespace DSPRE.Avalonia.ViewModels.Text
             LoadArchive(index);
         }
 
+        // ── Undo / redo ──────────────────────────────────────────────────────────
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() { _undo?.Undo(); SyncDirtyWithUndo(); }
+        public void Redo() { _undo?.Redo(); SyncDirtyWithUndo(); }
+        private void SyncDirtyWithUndo()
+        {
+            if (_undo == null || _undo.IsDirty == _dirty) return;
+            _dirty = _undo.IsDirty; OnPropertyChanged(nameof(HasUnsavedChanges)); OnPropertyChanged(nameof(Title));
+        }
+
+        private byte[] MessagesState()
+        {
+            using var ms = new MemoryStream();
+            using (var w = new BinaryWriter(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+                foreach (string m in _current.messages) w.Write(m ?? "");
+            return ms.ToArray();
+        }
+
+        private void RestoreMessages(byte[] state)
+        {
+            var messages = new List<string>();
+            using (var r = new BinaryReader(new MemoryStream(state), System.Text.Encoding.UTF8))
+                while (r.BaseStream.Position < r.BaseStream.Length) messages.Add(r.ReadString());
+            _current.messages.Clear();
+            _current.messages.AddRange(messages);
+            ShowLines();
+            SetDirty();
+            RefreshPreview();
+        }
+
+        private void ShowLines()
+        {
+            bool wasLoading = _isLoading;
+            _isLoading = true;
+            try
+            {
+                foreach (var l in Lines) l.PropertyChanged -= OnLineChanged;
+                Lines.Clear();
+                for (int i = 0; i < _current.messages.Count; i++)
+                {
+                    var line = new TextLineVM(i, _current.messages[i]);
+                    line.PropertyChanged += OnLineChanged;
+                    Lines.Add(line);
+                }
+                RenumberLines();
+            }
+            finally { _isLoading = wasLoading; }
+        }
+
         private void LoadArchive(int id)
         {
             _isLoading = true;
@@ -420,16 +479,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 OnPropertyChanged(nameof(HasHgEngineNote));
                 OnPropertyChanged(nameof(ManagedNote));
 
-                foreach (var l in Lines) l.PropertyChanged -= OnLineChanged;
-                Lines.Clear();
-                for (int i = 0; i < _current.messages.Count; i++)
-                {
-                    var line = new TextLineVM(i, _current.messages[i]);
-                    line.PropertyChanged += OnLineChanged;
-                    Lines.Add(line);
-                }
-                RenumberLines();
+                ShowLines();
                 SetClean();
+                _undo = new ByteStateUndo(MessagesState, RestoreMessages,
+                    () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(CanRedo));
                 RefreshPreview();
                 StatusText = _managedSource != null
                     ? $"Loaded {_managedSource.RelPath} ({_current.messages.Count} lines) from the hg-engine checkout."

@@ -19,6 +19,7 @@
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemFile_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export" controls:Icon.Key="export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>

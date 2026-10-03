@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// export of the map .bin. Building placement-by-picking and tileset texture binding
     /// for the preview are deferred.
     /// </summary>
-    public class MapEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class MapEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         /// <summary>
         /// Whether the parts of this editor that are still being tried out are shown: walking the map,
@@ -1559,7 +1559,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 bool isOpen = (_map.collisions[b, a] & 0x80) == 0 && !waterTypes.Contains(_map.types[b, a]);
                 if (wasOpen && !isOpen) Restore(a, b);
             }
-            _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges));
+            MarkDirty();
             string kept = restored == 0 ? "already as it was" : $"kept: {restored} square{(restored > 1 ? "s" : "")} put back";
             var others = new HashSet<(int x, int y)>(_beforeImportWarps ?? new HashSet<(int x, int y)>());
             if (DeadEnd(x, y, waterTypes, others) is string stuck) return $"{kept}, but {stuck}; move the building or paint a way out";
@@ -1581,7 +1581,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 var (collisions, types) = _beforeImport;
                 if (collisions == null) { c.Result = "not kept: the map before the import is not known"; continue; }
                 foreach (var (x, y) in c.Squares) { _map.collisions[y, x] = collisions[y, x]; _map.types[y, x] = types[y, x]; }
-                _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges));
+                MarkDirty();
                 c.Result = $"{c.Squares.Count} put back";
                 moved++;
             }
@@ -1668,8 +1668,155 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(UnsavedChangesDescription));
         }
 
-        public void MarkDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void MarkDirty() { RecordUndo(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo ────────────────────────────────────────────────────────────
+        // A step holds every loaded map's permissions and buildings, the area, and the event moves waiting for Save.
+        // Model, terrain and sound bytes are only ever replaced whole, so a step keeps the arrays themselves.
+        private sealed class MapPart
+        {
+            public MapFile Map;
+            public byte[] Permissions, Buildings, Model, Terrain, Sound;
+            public NSBMD Parsed;
+            public bool CellDirty;
+        }
+
+        private sealed class MapStep
+        {
+            public MapPart[] Maps;
+            public byte[] Area;
+            public bool AreaDirty;
+            public (int File, EventMove[] Moves)[] Moves;
+
+            public bool SameAs(MapStep o) =>
+                Maps.Length == o.Maps.Length
+                && Maps.Zip(o.Maps).All(p => ReferenceEquals(p.First.Map, p.Second.Map)
+                    && p.First.Permissions.AsSpan().SequenceEqual(p.Second.Permissions)
+                    && p.First.Buildings.AsSpan().SequenceEqual(p.Second.Buildings)
+                    && ReferenceEquals(p.First.Model, p.Second.Model) && ReferenceEquals(p.First.Terrain, p.Second.Terrain)
+                    && ReferenceEquals(p.First.Sound, p.Second.Sound))
+                && (Area ?? Array.Empty<byte>()).AsSpan().SequenceEqual(o.Area ?? Array.Empty<byte>())
+                && Moves.Sum(m => m.Moves.Length) == o.Moves.Sum(m => m.Moves.Length);
+        }
+
+        private readonly UndoHistory<MapStep> _history = new UndoHistory<MapStep>(100);
+        private MapStep _lastStep;
+        private DateTime _lastStepAt = DateTime.MinValue;
+        private bool _applyingStep;
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() { if (CanUndo) ApplyStep(_history.Undo()); }
+        public void Redo() { if (CanRedo) ApplyStep(_history.Redo()); }
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private MapStep TakeStep()
+        {
+            var parts = IsHeaderView
+                ? _headerCells.Select(c => (c.Map, c.Dirty)).ToList()
+                : new List<(MapFile Map, bool Dirty)> { (_map, false) };
+            return new MapStep
+            {
+                Maps = parts.Where(p => p.Map != null).Select(p => new MapPart
+                {
+                    Map = p.Map, Permissions = p.Map.CollisionsToByteArray(), Buildings = p.Map.BuildingsToByteArray(),
+                    Model = p.Map.mapModelData, Parsed = p.Map.mapModel, Terrain = p.Map.bdhc, Sound = p.Map.bgs, CellDirty = p.Dirty,
+                }).ToArray(),
+                Area = _area?.ToByteArray(),
+                AreaDirty = _areaDirty,
+                Moves = _eventMoves.Select(kv => (kv.Key, kv.Value.ToArray())).ToArray(),
+            };
+        }
+
+        /// <summary>Starts the history over from what is loaded now.</summary>
+        private void ResetUndo()
+        {
+            _lastStep = TakeStep();
+            _history.Reset(_lastStep);
+            _lastStepAt = DateTime.MinValue;
+            RaiseUndo();
+        }
+
+        private void RecordUndo()
+        {
+            if (_applyingStep || _lastStep == null) return;
+            var now = TakeStep();
+            if (now.SameAs(_lastStep)) return;
+            // A different set of loaded maps is a new history, not a step.
+            if (now.Maps.Length != _lastStep.Maps.Length || now.Maps.Zip(_lastStep.Maps).Any(p => !ReferenceEquals(p.First.Map, p.Second.Map)))
+            {
+                ResetUndo();
+                return;
+            }
+            bool burst = (DateTime.UtcNow - _lastStepAt).TotalMilliseconds < 500;
+            _history.Capture(now, burst);
+            _lastStep = now;
+            _lastStepAt = DateTime.UtcNow;
+            RaiseUndo();
+        }
+
+        private void ApplyStep(MapStep step)
+        {
+            _applyingStep = true;
+            try
+            {
+                foreach (var part in step.Maps)
+                {
+                    var map = part.Map;
+                    map.ImportPermissions(part.Permissions);
+                    map.ImportBuildings(part.Buildings);
+                    // The model and terrain windows edit these too; only what this history recorded goes back.
+                    var known = _lastStep?.Maps.FirstOrDefault(p => ReferenceEquals(p.Map, map));
+                    if (known == null || ReferenceEquals(map.mapModelData, known.Model)) { map.mapModelData = part.Model; map.mapModel = part.Parsed; }
+                    if (known == null || ReferenceEquals(map.bdhc, known.Terrain)) map.bdhc = part.Terrain;
+                    if (known == null || ReferenceEquals(map.bgs, known.Sound)) map.bgs = part.Sound;
+                    var cell = _headerCells.FirstOrDefault(c => ReferenceEquals(c.Map, map));
+                    // A map this step changes must be written again, even when undo goes back past a save.
+                    bool changed = known == null
+                        || !known.Permissions.AsSpan().SequenceEqual(part.Permissions) || !known.Buildings.AsSpan().SequenceEqual(part.Buildings)
+                        || !ReferenceEquals(known.Model, part.Model) || !ReferenceEquals(known.Terrain, part.Terrain) || !ReferenceEquals(known.Sound, part.Sound);
+                    if (cell != null) cell.Dirty = part.CellDirty || changed;
+                }
+                if (_area != null && step.Area != null)
+                {
+                    using var ms = new MemoryStream(step.Area);
+                    _area = new AreaData(ms);
+                    SyncTilesetsToArea();
+                }
+                _areaDirty = step.AreaDirty
+                    || (_lastStep?.Area != null && step.Area != null && !_lastStep.Area.AsSpan().SequenceEqual(step.Area));
+
+                // Put every waiting event back where it was, then make this step's moves again.
+                foreach (var (file, moves) in _eventMoves)
+                    if (_eventsToSave.TryGetValue(file, out var events))
+                        for (int i = moves.Count - 1; i >= 0; i--)
+                            if (EventAt(events, moves[i].Kind, moves[i].Index) is Event e) { e.xMapPosition = moves[i].FromX; e.yMapPosition = moves[i].FromY; }
+                _eventMoves.Clear();
+                foreach (var (file, moves) in step.Moves)
+                {
+                    if (!_eventsToSave.TryGetValue(file, out var events)) continue;
+                    _eventMoves[file] = moves.ToList();
+                    foreach (var m in moves)
+                        if (EventAt(events, m.Kind, m.Index) is Event e) { e.xMapPosition = m.ToX; e.yMapPosition = m.ToY; }
+                }
+
+                _lastStep = step;
+                _lastStepAt = DateTime.MinValue;
+                // Undoing back to the saved state leaves nothing to save.
+                if (_dirty != _history.IsDirty) { _dirty = _history.IsDirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+                int keepBuilding = _selectedBuildingIndex;
+                RefreshBuildings();
+                // Rebuilding the list drops its selection; stay on the building being edited.
+                if (keepBuilding >= 0 && keepBuilding < Buildings.Count) { SelectedBuildingIndex = -1; SelectedBuildingIndex = keepBuilding; }
+                OnPropertyChanged(nameof(Collisions));
+                OnPropertyChanged(nameof(Types));
+                RaiseArea();
+                RebuildPreview();
+            }
+            finally { _applyingStep = false; }
+            RaiseUndo();
+        }
+        private void SetClean() { _history.MarkSaved(); if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private async Task ConfirmHeaderNavigationAsync(int newHeaderId)
         {
@@ -1797,6 +1944,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OpenModelEditor(index, AreaForMap(index) ?? 0);
 
                 SetClean();
+                ResetUndo();
                 StatusText = $"Loaded map {index}.";
                 OnPropertyChanged(nameof(CanEditModel));
                 OnPropertyChanged(nameof(FocusedMapIndex));
@@ -1850,6 +1998,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             foreach (var c in _headerCells) HeaderMapNames.Add($"Map {c.MapIndex}");
             _selectedHeaderMap = -1;
             SelectedHeaderMapIndex = _headerCells.Count == 0 ? -1 : Math.Clamp(keep, 0, _headerCells.Count - 1);
+            ResetUndo();
         }
 
         private void BuildHeaderPreview()

@@ -46,6 +46,54 @@ namespace DSPRE.Avalonia.Views.World
                 EditorTours.Attach(tab, tab.GetType().Name);
         }
 
+        // Ctrl+Z / Ctrl+Y undo the tab on show. Listened for on the window, so it also works while nothing
+        // inside the tab has focus; the main window has no undo of its own.
+        private TopLevel _undoTop;
+        protected override void OnAttachedToVisualTree(global::Avalonia.VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+            _undoTop = TopLevel.GetTopLevel(this);
+            _undoTop?.AddHandler(KeyDownEvent, RouteUndo, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        }
+
+        protected override void OnDetachedFromVisualTree(global::Avalonia.VisualTreeAttachmentEventArgs e)
+        {
+            _undoTop?.RemoveHandler(KeyDownEvent, RouteUndo);
+            _undoTop = null;
+            base.OnDetachedFromVisualTree(e);
+        }
+
+        private object SelectedTabEditor() =>
+            ((MapTabs.SelectedItem as TabItem) is TabItem t ? global::Avalonia.Automation.AutomationProperties.GetName(t) : null) switch
+            {
+                "Header" => VM,
+                "Map" => MapVM,
+                "Events" => EventVM,
+                "Matrix" => MatrixVM,
+                "Area Data" => AreaDataVM,
+                "Encounters" => _encountersVm,
+                "Scripts" => ScriptsVM,
+                "Level Scripts" => LevelScriptsVM,
+                "Text" => TextVM,
+                _ => null,
+            };
+
+        private void RouteUndo(object sender, global::Avalonia.Input.KeyEventArgs e)
+        {
+            if (!IsEffectivelyVisible || e.KeyModifiers != global::Avalonia.Input.KeyModifiers.Control
+                || (e.Key != global::Avalonia.Input.Key.Z && e.Key != global::Avalonia.Input.Key.Y)) return;
+            // A text box keeps its own undo.
+            if (e.Source is TextBox || e.Source is AvaloniaEdit.Editing.TextArea) return;
+            object editor = SelectedTabEditor();
+            if (editor == null) return;
+            e.Handled = true;
+            if (editor is DSPRE.Avalonia.ISupportsUndo undo)
+            {
+                if (e.Key == global::Avalonia.Input.Key.Z && undo.CanUndo) undo.Undo();
+                else if (e.Key == global::Avalonia.Input.Key.Y && undo.CanRedo) undo.Redo();
+            }
+        }
+
         public IEnumerable<(string EditorName, IEditorWithUnsavedChanges Editor)> GetEmbeddedEditors()
         {
             var editors = new List<(string, IEditorWithUnsavedChanges)>();

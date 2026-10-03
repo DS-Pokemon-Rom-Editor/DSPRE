@@ -37,6 +37,7 @@
                   ToolTip.Tip="Build or edit this map from tiles"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <controls:UndoRedoButtons/>
           <Button Content="Import" controls:Icon.Key="import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Export" controls:Icon.Key="export"   Click="Export_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Add map" controls:Icon.Key="addIcon"  Click="AddMap_Click" IsVisible="{Binding IsSingleMap}"/>

@@ -23,6 +23,7 @@
         <Button Content="Remove" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <Button Content="Import…" Click="Import_Click"/>
         <Button Content="Export…" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>

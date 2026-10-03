@@ -17,6 +17,7 @@
         <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding MatrixNames}" SelectedIndex="{Binding SelectedMatrixIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <ToggleButton x:Name="PaintToggle" Content="Paint" controls:Icon.Key="brush" IsChecked="{Binding PaintMode}"
                       ToolTip.Tip="On: click or drag fills cells with the paint value. Off: click selects, and a header cell opens its header."/>
         <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>

@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia
                 S("name:LineButtons", "Adding lines", "Add or remove a line at the end, or move the selected line up and down."),
                 S("toolbar", "Message box", "Tick Message box to see the selected line in the game's own box, one stop at a time. STRVAR Help lists the codes that insert names and numbers."),
                 S("name:ReplacePanel", "Search and replace", "Find text in this archive or in all of them, and replace it. Double-click a result to jump to that line."),
-                S("toolbar", "Saving", "Nothing is written until you press Save. Closing with unsaved edits asks first."));
+                S("toolbar", "Saving", "Nothing is written until you press Save. Ctrl+Z undoes and Ctrl+Y redoes. Closing with unsaved edits asks first."));
 
             Add("ScriptEditorView", "Script Editor",
                 S(null, "Scripts", "Each script file holds the scripts, functions and movements for a place in the game, written as text."),
@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia
                 S("toolbar", "Files", "Pick the level script file to edit. Import and Export move it in and out as a file."),
                 S("list", "Triggers", "Everything this file runs and when. Select one and press Remove selected to take it out."),
                 S("name:AddTriggerPanel", "Adding a trigger", "Pick when it fires and which script it runs. For a variable trigger, also give the variable and the value it must hold."),
-                S("toolbar", "Saving", "Nothing is written until you press Save."));
+                S("toolbar", "Saving", "Nothing is written until you press Save. Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("CustomScrcmdManagerView", "Custom Script Command Manager",
                 S(null, "Script commands", "Each project can have its own list of script commands, for hacks that add new ones."),

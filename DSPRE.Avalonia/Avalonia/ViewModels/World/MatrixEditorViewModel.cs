@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// the paintable <c>MatrixGridControl</c>. Supports selecting a matrix, adding the
     /// optional sections, and save / import / export.
     /// </summary>
-    public class MatrixEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class MatrixEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -212,8 +212,36 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string UnsavedChangesDescription => $"Matrix {_selectedIndex}";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedIndex >= 0) LoadMatrix(_selectedIndex); }
-        public void MarkDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void MarkDirty() { _undo?.Record(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo ────────────────────────────────────────────────────────────
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() { _undo?.Undo(); SyncDirtyWithUndo(); }
+        public void Redo() { _undo?.Redo(); SyncDirtyWithUndo(); }
+        private void SyncDirtyWithUndo()
+        {
+            if (_undo == null || _undo.IsDirty == _dirty) return;
+            _dirty = _undo.IsDirty; OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void StartUndo()
+        {
+            _undo = _matrix == null ? null : new ByteStateUndo(() => _matrix.ToByteArray(), state =>
+            {
+                int? id = _matrix.id;
+                GameMatrix restored;
+                using (var ms = new MemoryStream(state)) restored = new GameMatrix(ms);
+                _matrix = id is int keep ? new GameMatrix(restored, keep) : restored;
+                RebuildLegend();
+                MarkDirty();
+                RaiseLoaded();
+            }, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+        }
+        private void SetClean() { _undo?.MarkSaved(); if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private int _selectedIndex = -1;
         public int SelectedMatrixIndex
@@ -287,6 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _matrix = new GameMatrix(index);
                 RebuildLegend();
                 SetClean();
+                StartUndo();
                 StatusText = $"Loaded matrix {index} ({Width}×{Height}).";
                 RaiseLoaded();
             }

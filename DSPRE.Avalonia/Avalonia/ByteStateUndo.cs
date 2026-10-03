@@ -29,6 +29,10 @@ namespace DSPRE.Avalonia
         public bool CanUndo => _history.CanUndo;
         public bool CanRedo => _history.CanRedo;
 
+        /// <summary>False when undo or redo has returned to the state last saved.</summary>
+        public bool IsDirty => _history.IsDirty;
+        public void MarkSaved() => _history.MarkSaved();
+
         public void Record()
         {
             if (_applying) return;

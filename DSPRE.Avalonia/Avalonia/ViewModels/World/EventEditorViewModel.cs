@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// events, and save / import / export. The 3D map overlay with event markers and
     /// click-to-place are deferred (the renderer foundation is in place for later).
     /// </summary>
-    public class EventEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class EventEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         /// <summary>
         /// Whether the parts of this editor that are still being tried out are shown: walking the map,
@@ -944,8 +944,55 @@ namespace DSPRE.Avalonia.ViewModels.World
         public string UnsavedChangesDescription => $"Event file {_selectedIndex}";
         public void SaveChanges() => Save();
         public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); if (_selectedIndex >= 0) LoadFile(_selectedIndex); }
-        private void Dirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void Dirty() { _undo?.Record(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo ────────────────────────────────────────────────────────────
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() { _undo?.Undo(); SyncDirtyWithUndo(); }
+        public void Redo() { _undo?.Redo(); SyncDirtyWithUndo(); }
+        private void SyncDirtyWithUndo()
+        {
+            if (_undo == null || _undo.IsDirty == _dirty) return;
+            _dirty = _undo.IsDirty; OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void StartUndo()
+        {
+            _undo = _file == null ? null : new ByteStateUndo(() => _file.ToByteArray(), RestoreState,
+                () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+        }
+
+        // Swaps in the earlier file and selects the same events again, the one being edited last.
+        private void RestoreState(byte[] state)
+        {
+            int spawn = _selSpawn, ow = _selOw, warp = _selWarp, trig = _selTrig;
+            Event active = _current;
+            int id = _file.ID;
+            using (var ms = new MemoryStream(state)) _file = new EventFile(ms) { ID = id };
+            _current = null; _spawn = null; _ow = null; _warp = null; _trig = null;
+            _selSpawn = _selOw = _selWarp = _selTrig = -1;
+            RefreshLists();
+            int Keep(int i, int count) => i < count ? i : count - 1;
+            var order = new List<Action>
+            {
+                () => SelectedSpawnableIndex = Keep(spawn, _file.spawnables.Count),
+                () => SelectedOverworldIndex = Keep(ow, _file.overworlds.Count),
+                () => SelectedWarpIndex = Keep(warp, _file.warps.Count),
+                () => SelectedTriggerIndex = Keep(trig, _file.triggers.Count),
+            };
+            int last = active is Overworld ? 1 : active is Warp ? 2 : active is Trigger ? 3 : 0;
+            for (int i = 0; i < order.Count; i++) if (i != last) order[i]();
+            order[last]();
+            foreach (var n in new[] { nameof(HasSelectedEvent), nameof(HasSpawn), nameof(HasOw), nameof(HasWarp), nameof(HasTrig) })
+                OnPropertyChanged(n);
+            Dirty();
+            RefreshMarkers();
+        }
+        private void SetClean() { _undo?.MarkSaved(); if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         private int _selectedIndex = -1;
         public int SelectedEventIndex
@@ -1111,6 +1158,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 RefreshLists();
                 ResolveMatrixForFile(index);
                 SetClean();
+                StartUndo();
                 StatusText = $"Loaded event file {index}.";
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }

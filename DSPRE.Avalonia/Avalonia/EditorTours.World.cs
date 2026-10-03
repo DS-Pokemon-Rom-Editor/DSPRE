@@ -5,7 +5,7 @@ namespace DSPRE.Avalonia
         static partial void RegisterWorld()
         {
             Add("MapEditorView", "Map Editor",
-                S("type:NsbmdGlControl", "The map", "Drag to pan, right-drag to orbit, wheel to zoom. Turn on Paint to paint squares straight onto the map, or Move buildings to drag them."),
+                S("type:NsbmdGlControl", "The map", "Drag to pan, right-drag to orbit, wheel to zoom. Turn on Paint to paint squares straight onto the map, or Move buildings to drag them. The arrow keys pan, or move the picked building one square while Move buildings is on."),
                 S("name:ViewModeBox", "What you edit", "One map, the whole matrix, or every map of this header at once."),
                 S("toolbar", "Textures and overlays", "The second row picks this area's map and building textures and what is drawn over the map: collisions, square types or nothing."),
                 S("tab:Permissions", "Permissions", "Where the player can walk, and what each square is: grass, water, ledges, doors. Pick a value, then paint on the grids or the map."),
@@ -13,17 +13,17 @@ namespace DSPRE.Avalonia
                 S("tab:Area", "Area", "The light of this map's area and, in some games, its terrain animation and indoor setting. Every header in the same area shares them."),
                 S("tab:Files / I/O", "Files", "Export this map's model, and bring in or save out its terrain, sound plates and movement permissions."),
                 S("name:EditModelButton", "Changing the ground", "Build or reshape this map from tiles, or import a map made in Pokémon DS Map Studio."),
-                S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S does too. Closing with unsaved edits asks first."));
+                S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too. Closing with unsaved edits asks first."));
 
             Add("EventEditorView", "Event Editor",
-                S("name:GlHost", "The map", "Every event on this header's maps. Click one to select it, or turn on Move and drag it. Drag to pan, right-drag to orbit, wheel to zoom."),
+                S("name:GlHost", "The map", "Every event on this header's maps. Click one to select it, or turn on Move and drag it. Drag to pan, right-drag to orbit, wheel to zoom. The arrow keys pan, or move the picked event one square while Move is on."),
                 S("name:ShowBar", "What's shown", "Hide kinds of events, switch to a flat 2D view, or centre the camera on the selected event."),
-                S("tab:Overworlds", "People and objects", "Everyone and everything standing on the map. Pick one to set its sprite, script, movement and, for trainers, who they are."),
+                S("tab:Overworlds", "People and objects", "Everyone and everything standing on the map. Pick one to set its sprite, script, movement and, for trainers, who they are. Delete in the list removes it."),
                 S("tab:Warps", "Warps", "Doors and exits. Each one sends the player to a warp in another header; Go to destination opens it."),
                 S("tab:Triggers", "Triggers", "Squares that run a script when stepped on, if a variable holds the right value."),
                 S("tab:Spawnables", "Spawnables", "Signs, hidden items and other things the player reads or finds by facing a square."),
                 S("name:EventTabs", "Jump to other editors", "Fields that show a link button when you point at them lead to another editor: a person's trainer, a warp's destination. Right-click and pick Open, or Ctrl+click."),
-                S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S does too. Closing with unsaved edits asks first."));
+                S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too. Closing with unsaved edits asks first."));
 
             Add("HeaderEditorView", "Header Editor",
                 S("list", "Headers", "Every place in the game, grouped by location. Search above the list, and right-click a header to open its map, events, scripts, text, wild Pokémon or matrix."),
@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia
                 S("tab:Sections", "Sections", "Add a headers or heights section to a matrix that has none, which shows its tab."),
                 S("name:PaintToggle", "Painting", "Turn on Paint, set the paint value on the tab, then click or drag across cells to fill them."),
                 S("name:SpawnButton", "Starting point", "Makes the selected cell the place a new game begins."),
-                S("toolbar", "Saving", "Save keeps the matrix; in its own window Ctrl+S does too. Import and Export move a matrix in and out as a file."));
+                S("toolbar", "Saving", "Save keeps the matrix; in its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too. Import and Export move a matrix in and out as a file."));
 
             Add("AreaDataEditorView", "Area Data Editor",
                 S("toolbar", "Area data", "An area sets the look shared by every header that uses it. Pick one here."),

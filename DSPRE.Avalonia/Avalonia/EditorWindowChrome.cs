@@ -117,13 +117,23 @@ namespace DSPRE.Avalonia
             window.KeyBindings.Add(new KeyBinding
             {
                 Gesture = new KeyGesture(Key.Z, KeyModifiers.Control),
-                Command = new RelayCommand(() => { if (undo.CanUndo) undo.Undo(); }),
+                Command = new RelayCommand(() => { var u = UndoTarget(window, undo); if (u.CanUndo) u.Undo(); }),
             });
             window.KeyBindings.Add(new KeyBinding
             {
                 Gesture = new KeyGesture(Key.Y, KeyModifiers.Control),
-                Command = new RelayCommand(() => { if (undo.CanRedo) undo.Redo(); }),
+                Command = new RelayCommand(() => { var u = UndoTarget(window, undo); if (u.CanRedo) u.Redo(); }),
             });
+        }
+
+        // A tab with its own editor (trainer classes, each special encounter) undoes its own edits: the
+        // nearest undoable editor around the focused control wins over the window's.
+        private static ISupportsUndo UndoTarget(Window window, ISupportsUndo fallback)
+        {
+            for (var v = window.FocusManager?.GetFocusedElement() as global::Avalonia.Visual; v != null && v != window;
+                 v = global::Avalonia.VisualTree.VisualExtensions.GetVisualParent(v))
+                if (v is global::Avalonia.StyledElement se && se.DataContext is ISupportsUndo u) return u;
+            return fallback;
         }
 
         public sealed class RelayCommand : ICommand
