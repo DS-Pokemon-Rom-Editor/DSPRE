@@ -139,6 +139,117 @@ namespace DSPRE.Avalonia
                                                   string yes, string no, string cancel = "Cancel")
             => ShowMsg(message, title, MsgButtons.YesNoCancel, labels: (yes, no, cancel));
 
+        /// <summary>Two-way question with a checkbox under the text. Returns which button was pressed and the box's state.</summary>
+        public static async Task<(bool Yes, bool Checked)> AskWithCheck(string message, string title, string yes, string no,
+                                                                         string check, bool isChecked, Window owner = null)
+        {
+            bool answer = false;
+            var win = new Window
+            {
+                Title = title,
+                Width = 460,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                SizeToContent = SizeToContent.Height,
+            };
+
+            var msgText = new TextBlock
+            {
+                Text = message,
+                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                Margin = new global::Avalonia.Thickness(16, 16, 16, 8),
+            };
+            var box = new CheckBox { Content = check, IsChecked = isChecked, Margin = new global::Avalonia.Thickness(16, 0, 16, 8) };
+
+            var yesBtn = new Button { Content = yes, MinWidth = 72 };
+            yesBtn.Click += (_, _) => { answer = true; win.Close(); };
+            var noBtn = new Button { Content = no, MinWidth = 72, IsCancel = true };
+            noBtn.Click += (_, _) => win.Close();
+            var btnRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
+                Spacing = 6,
+            };
+            btnRow.Children.Add(yesBtn);
+            btnRow.Children.Add(noBtn);
+
+            var root = new StackPanel();
+            root.Children.Add(msgText);
+            root.Children.Add(box);
+            root.Children.Add(btnRow);
+            win.Content = root;
+
+            owner ??= ActiveOwner();
+            if (owner != null)
+                await win.ShowDialog(owner);
+            else
+            {
+                var closed = new TaskCompletionSource();
+                win.Closed += (_, _) => closed.TrySetResult();
+                win.Show();
+                await closed.Task;
+            }
+            return (answer, box.IsChecked == true);
+        }
+
+        /// <summary>Shows text the user can select and copy, with a Copy button for all of it.</summary>
+        public static async Task ShowCopyableText(string text, string title, Window owner = null)
+        {
+            var win = new Window
+            {
+                Title = title,
+                Width = 520,
+                CanResize = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                SizeToContent = SizeToContent.Height,
+            };
+
+            var box = new TextBox
+            {
+                Text = text,
+                IsReadOnly = true,
+                AcceptsReturn = true,
+                TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
+                MaxHeight = 360,
+                Margin = new global::Avalonia.Thickness(16, 16, 16, 12),
+            };
+
+            var copyBtn = new Button { MinWidth = 72 };
+            Controls.Icon.SetKey(copyBtn, "copy");
+            copyBtn.Content = "Copy";
+            copyBtn.Click += async (_, _) =>
+            {
+                if (win.Clipboard == null) return;
+                await win.Clipboard.SetTextAsync(text);
+                copyBtn.Content = "Copied";
+            };
+            var closeBtn = new Button { Content = "Close", MinWidth = 72, IsCancel = true, IsDefault = true };
+            closeBtn.Click += (_, _) => win.Close();
+
+            var btnRow = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new global::Avalonia.Thickness(8, 0, 8, 12),
+                Spacing = 6,
+            };
+            btnRow.Children.Add(copyBtn);
+            btnRow.Children.Add(closeBtn);
+
+            var root = new StackPanel();
+            root.Children.Add(box);
+            root.Children.Add(btnRow);
+            win.Content = root;
+
+            owner ??= ActiveOwner();
+            if (owner != null)
+                await win.ShowDialog(owner);
+            else
+                win.Show();
+        }
+
         /// <summary>Prompts for a single line of free text. Returns null if cancelled or closed without
         /// confirming; an empty string is a valid (non-null) confirmed answer.</summary>
         public static async Task<string> PromptText(string message, string title = "Enter a value", string defaultValue = "", Window owner = null)

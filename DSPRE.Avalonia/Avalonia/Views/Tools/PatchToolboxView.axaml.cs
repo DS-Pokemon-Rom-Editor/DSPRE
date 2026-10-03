@@ -24,6 +24,18 @@ namespace DSPRE.Avalonia.Views.Tools
             }
         }
 
+        private async void GenerateCredits_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM != null)
+                await DialogHelper.ShowCopyableText(VM.CreditsText(), "Credits", this);
+        }
+
+        private async void OpenLink_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control c && c.DataContext is PatchRowViewModel { Link: { } link })
+                await Launcher.LaunchUriAsync(new System.Uri(link));
+        }
+
         private void Apply_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Control c && c.DataContext is PatchRowViewModel row)

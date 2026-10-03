@@ -17,11 +17,15 @@
     <!-- ── Caution banner ─────────────────────────────────────────────── -->
     <Border x:Name="CautionBanner" DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock Text="{Binding HeaderNote}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"
-                   Foreground="{DynamicResource Editor.Subtle}"/>
-        <controls:HelpTip Text="These patches change the game's code, overlays and data archives directly."/>
-      </StackPanel>
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Content="Generate credits" Click="GenerateCredits_Click"
+                IsEnabled="{Binding CanGenerateCredits}"/>
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock Text="{Binding HeaderNote}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"
+                     Foreground="{DynamicResource Editor.Subtle}"/>
+          <controls:HelpTip Text="These patches change the game's code, overlays and data archives directly."/>
+        </StackPanel>
+      </DockPanel>
     </Border>
 
     <!-- ── Patch list ─────────────────────────────────────────────────── -->
@@ -40,12 +44,25 @@
                   </StackPanel>
                   <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12"
                              Foreground="{DynamicResource Editor.Subtle}"/>
+                  <ItemsControl ItemsSource="{Binding Parts}" IsVisible="{Binding HasParts}" Margin="10,4,0,0">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:PatchPartViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
+                          <TextBlock Text="{Binding Title}" FontSize="12" Width="170"/>
+                          <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{Binding StatusBrush}"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
                   <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold"
                              Foreground="{Binding StatusBrush}" Margin="0,2,0,0"/>
                 </StackPanel>
                 <Button Grid.Column="1" Content="{Binding ButtonText}" MinWidth="96" Height="32"
-                        VerticalAlignment="Center" Margin="12,0,0,0"
+                        VerticalAlignment="Center" Margin="12,0,0,0" IsVisible="{Binding ShowApply}"
                         IsEnabled="{Binding CanApply}" Click="Apply_Click"/>
+                <Button Grid.Column="1" Content="Open page" controls:Icon.Key="OpenLink" Height="32"
+                        VerticalAlignment="Center" Margin="12,0,0,0" IsVisible="{Binding HasLink}"
+                        ToolTip.Tip="{Binding Link}" Click="OpenLink_Click"/>
               </Grid>
             </Border>
           </DataTemplate>

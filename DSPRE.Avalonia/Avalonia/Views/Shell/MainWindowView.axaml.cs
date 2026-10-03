@@ -547,7 +547,24 @@ namespace DSPRE.Avalonia.Views.Shell
             });
             string path = file?.TryGetLocalPath();
             if (string.IsNullOrEmpty(path)) return;
-            await BuildRomAsync(path);
+            if (await BuildRomAsync(path)) await OfferPatchCreditsAsync();
+        }
+
+        /// <summary>Once per project, after a save, offers credits for the patches it has applied or found.</summary>
+        private async System.Threading.Tasks.Task OfferPatchCreditsAsync()
+        {
+            if (!PatchToolboxLogic.CreditsOfferDue()) return;
+            List<string> keys;
+            try { keys = await System.Threading.Tasks.Task.Run(() => PatchToolboxLogic.AppliedCreditKeys(PatchToolboxLogic.GetPatchStatuses())); }
+            catch (System.Exception ex) { AppLogger.Warn("Patch credits check failed: " + ex.Message); return; }
+            if (keys.Count == 0) return;
+
+            var (generate, stopAsking) = await DialogHelper.AskWithCheck(
+                "This ROM has patches applied but no credits generated for them yet. Do you want DSPRE to generate template credits? " +
+                "You can also generate them any time from the Patch Toolbox.",
+                "Patch credits", "Generate credits", "Not now", "Don't ask again", isChecked: true, owner: this);
+            if (generate || stopAsking) PatchToolboxLogic.MarkCreditsHandled();
+            if (generate) await DialogHelper.ShowCopyableText(PatchToolboxLogic.CreditsText(keys), "Credits", this);
         }
 
         /// <summary>Repacks the project into <paramref name="path"/>, reporting failure itself. True when built.</summary>

@@ -83,6 +83,9 @@ namespace DSPRE
         /// <summary>Editors whose first-open tour has run; the rest show theirs the next time they open.</summary>
         public List<string> editorToursShown { get; set; } = new List<string>();
 
+        /// <summary>Project folders that generated patch credits or declined the offer after saving.</summary>
+        public List<string> patchCreditsHandled { get; set; } = new List<string>();
+
         /// <summary>Main-window placement, saved on close and restored at startup (0 = unset).</summary>
         public double mainWindowWidth { get; set; } = 0;
         public double mainWindowHeight { get; set; } = 0;

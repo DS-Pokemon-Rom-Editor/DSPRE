@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using global::Avalonia.Media;
@@ -27,6 +29,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             private set { _headerNote = value; OnPropertyChanged(); }
         }
 
+        private bool _canGenerateCredits;
+        public bool CanGenerateCredits
+        {
+            get => _canGenerateCredits;
+            private set { _canGenerateCredits = value; OnPropertyChanged(); }
+        }
+
         // Design-time
         public PatchToolboxViewModel() { Refresh(); }
 
@@ -34,6 +43,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public void Refresh()
         {
             Patches.Clear();
+            CanGenerateCredits = AvaloniaEditorLauncher.IsRomLoaded;
 
             if (!AvaloniaEditorLauncher.IsRomLoaded)
             {
@@ -42,8 +52,18 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
 
             HeaderNote = "Back up your project first. Some patches cannot be undone.";
-            foreach (var p in DSPRE.PatchToolboxLogic.GetPatchStatuses())
+            _statuses = DSPRE.PatchToolboxLogic.GetPatchStatuses();
+            foreach (var p in _statuses)
                 Patches.Add(new PatchRowViewModel(p));
+        }
+
+        private List<DSPRE.PatchToolboxLogic.PatchInfo> _statuses = new();
+
+        /// <summary>Credits for the patches this ROM has, ready to paste.</summary>
+        public string CreditsText()
+        {
+            DSPRE.PatchToolboxLogic.MarkCreditsHandled();
+            return DSPRE.PatchToolboxLogic.CreditsText(DSPRE.PatchToolboxLogic.AppliedCreditKeys(_statuses));
         }
 
         /// <summary>Apply the patch for <paramref name="row"/>, then refresh all statuses.</summary>
@@ -68,6 +88,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public bool CanApply { get; }
         public string ButtonText { get; }
         public IBrush StatusBrush { get; }
+        public string Link { get; }
+        public bool HasLink => Link != null;
+        public bool ShowApply => Link == null;
+        public List<PatchPartViewModel> Parts { get; } = new List<PatchPartViewModel>();
+        public bool HasParts => Parts.Count > 0;
 
         public PatchRowViewModel(DSPRE.PatchToolboxLogic.PatchInfo p)
         {
@@ -75,9 +100,21 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             Title = p.Title;
             Description = p.Description;
             AuthorText = string.IsNullOrEmpty(p.Author) ? null : "by " + p.Author;
+            Link = p.Link;
+            if (p.Parts != null)
+                foreach (var part in p.Parts)
+                    Parts.Add(new PatchPartViewModel(part));
 
             switch (p.State)
             {
+                case DSPRE.PatchToolboxLogic.PatchState.Applied when HasParts:
+                    StatusText = $"{Parts.Count(part => part.Applied)} of {Parts.Count} found";
+                    StatusBrush = new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
+                    break;
+                case DSPRE.PatchToolboxLogic.PatchState.Unsupported when HasParts:
+                    StatusText = "None found";
+                    StatusBrush = new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
+                    break;
                 case DSPRE.PatchToolboxLogic.PatchState.Applied:
                     StatusText = "Applied";
                     CanApply = false;
@@ -97,6 +134,25 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     StatusBrush = new SolidColorBrush(Color.FromRgb(0x15, 0x65, 0xC0));
                     break;
             }
+        }
+    }
+
+    /// <summary>One patch inside a group another tool applies, found or not.</summary>
+    public class PatchPartViewModel
+    {
+        public string Key { get; }
+        public string Title { get; }
+        public bool Applied { get; }
+        public string StatusText { get; }
+        public IBrush StatusBrush { get; }
+
+        public PatchPartViewModel(DSPRE.PatchToolboxLogic.PatchPart part)
+        {
+            Key = part.Key;
+            Title = part.Title;
+            Applied = part.Applied;
+            StatusText = !part.Applied ? "Not found" : string.IsNullOrEmpty(part.Note) ? "Found" : "Found, " + part.Note;
+            StatusBrush = new SolidColorBrush(part.Applied ? Color.FromRgb(0x2E, 0x7D, 0x32) : Color.FromRgb(0x9E, 0x9E, 0x9E));
         }
     }
 }

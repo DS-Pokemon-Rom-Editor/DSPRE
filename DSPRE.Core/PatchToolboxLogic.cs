@@ -281,7 +281,7 @@ namespace DSPRE
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
                 "- Every Pokémon name will be converted to Sentence Case, including names you've renamed yourself.\n" +
                 "- Any other text (trainer dialogue, item descriptions, etc) mentioning a renamed Pokémon will be updated to match." + "\n\n" +
-                "Do you wish to continue?", "Confirm to proceed"))
+                "Do you wish to continue?" + CreditNote("sentenceCase"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -321,7 +321,7 @@ namespace DSPRE
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
                 "- Every Item name will be converted to Sentence Case, including names you've renamed yourself.\n" +
                 "- Any other text (trainer dialogue, script text, etc) mentioning a renamed Item will be updated to match." + "\n\n" +
-                "Do you wish to continue?", "Confirm to proceed"))
+                "Do you wish to continue?" + CreditNote("itemSentenceCase"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -379,7 +379,7 @@ namespace DSPRE
             "- Replace " + (data.overlayString1.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset1.ToString("X") + " with " + '\n' + data.overlayString1 + "\n\n" +
             "- Replace " + (data.overlayString2.Length / 3 + 1) + " bytes of data at overlay" + data.overlayNumber + " offset 0x" + data.overlayOffset2.ToString("X") + " with " + '\n' + data.overlayString2 + "\n\n" +
             "- Modify file #" + RomPatchState.expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + "to insert the BDHCAM routine (any data between 0x" + BDHCAMPatchData.BDHCamSubroutineOffset.ToString("X") + " and 0x" + (BDHCAMPatchData.BDHCamSubroutineOffset + data.subroutine.Length).ToString("X") + " will be overwritten)." + "\n\n" +
-            "Do you wish to continue?", "Confirm to proceed"))
+            "Do you wish to continue?" + CreditNote("bdhcam"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -528,7 +528,7 @@ namespace DSPRE
                 "to insert the building rotation routine at offset 0x" + payloadOffset.ToString("X") + " (runtime address 0x" + payloadAddress.ToString("X8") + ").\n" +
                 rangeStatus + "\n\n" +
                 "This enables the existing building rotation values to be used when placing buildings.\n\n" +
-                "Do you wish to continue?", "Confirm to proceed"))
+                "Do you wish to continue?" + CreditNote("buildingRotation"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -607,7 +607,7 @@ namespace DSPRE
                 " (runtime address 0x" + (synthOverlayLoadAddress + offset).ToString("X8") + ").\n" +
                 GetSyntheticOverlayRangeStatus(offset, template) + "\n\n" +
                 "- Point the ARM9's trainer party setup at it and leave flag 0x40 out of the ability.\n\n" +
-                "Party members ticked Shiny in the Trainer editor then battle shiny.\n\nDo you wish to continue?", "Confirm to proceed"))
+                "Party members ticked Shiny in the Trainer editor then battle shiny.\n\nDo you wish to continue?" + CreditNote("trainerShiny"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -679,7 +679,7 @@ namespace DSPRE
                 " (runtime address 0x" + (synthOverlayLoadAddress + offset).ToString("X8") + ").\n" + rangeStatus + "\n\n" +
                 "- Hook the ARM9 and overlays 1, 12, 80, 115, 117, 118, 119 and 120 to them (backups are made).\n\n" +
                 "Each trainer class then owns its gender, prize, music and VS intro, edited in the Trainer Classes window. " +
-                "Not compatible with hg-engine.\n\nDo you wish to continue?", "Confirm to proceed"))
+                "Not compatible with hg-engine.\n\nDo you wish to continue?" + CreditNote("trainerClassMetadata"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -710,7 +710,7 @@ namespace DSPRE
 
             if (!ConfirmYesNo("This process will apply the following changes:\n\n" +
                 "- Item scripts will be rearranged to follow the natural, ascending index order.\n\n" +
-                "- Any unsaved change to the current Event File will be discarded.\n\n", "Confirm to proceed"))
+                "- Any unsaved change to the current Event File will be discarded." + CreditNote("itemStandardize"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -825,7 +825,7 @@ namespace DSPRE
                     "- Replace " + (data.initString.Length / 3 + 1) + " bytes of data at arm9 offset 0x" + data.initOffset.ToString("X") + " with " + '\n' + data.initString + "\n\n" +
                     "- Modify file #" + RomPatchState.expandedARMfileID + " inside " + '\n' + RomInfo.gameDirs[DirNames.synthOverlay].unpackedDir + '\n' + " to accommodate for 88KB of data (no backup)." + "\n\n" +
                     "If you do not understand the implications of these changes and how they can affect your game do NOT continue. You can and will break the game if you do not know what you are doing here.\n\n" +
-                    "Do you wish to continue?", "Confirm to proceed"))
+                    "Do you wish to continue?" + CreditNote("arm9"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -911,7 +911,7 @@ namespace DSPRE
 
             if (!ConfirmYesNo("Confirming this process will apply the following changes:\n\n" +
                 listOfChanges +
-                "Do you wish to continue?", "Confirm to proceed"))
+                "Do you wish to continue?" + CreditNote("matrix"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -964,7 +964,7 @@ namespace DSPRE
                 "- Neutralize instances of (HeaderID * 0x18) so the base offset which the data is read from is always 0x0." + "\n\n" +
                 "- Change pointers to header fields, from(ARM9_HEADER_TABLE_OFFSET + n) to simply(0 + n)" + "\n\n" +
                 specialCaseChanges +
-                "Do you wish to continue?", "Confirm to proceed"))
+                "Do you wish to continue?" + CreditNote("dynamicHeaders"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -1037,7 +1037,7 @@ namespace DSPRE
         {
             if (SameHeldItemOddsState() != PatchState.Available) return false;
             if (!ConfirmYesNo("Wild Pokémon whose two held items are the same will hold it only as often as the " +
-                "held item odds say, instead of always.\n\nApply this patch?", "Confirm to proceed"))
+                "held item odds say, instead of always.\n\nApply this patch?" + CreditNote("sameHeldItemOdds"), "Confirm to proceed"))
                 return false;
             ROMFiles.GameTableFile.Write(GameTable.HeldItemSameItemBranch, SameItemBranchPatched);
             ShowInfo("Same held items now use the held item odds.", "Operation successful.");
@@ -1045,10 +1045,38 @@ namespace DSPRE
         }
 
         /// <summary>Set the Dynamic Textures field of every AreaData to 0xFFFF (HGSS).</summary>
+        public static bool ApplyMoveTrainerClassTables()
+        {
+            if (!ConfirmYesNo("The trainer class gender and prize money tables will be copied to the synthetic overlay " +
+                "and the game pointed at the copies.\n\nDo you wish to continue?" + CreditNote("trainerClassTablesExpanded"), "Confirm to proceed"))
+                return false;
+            if (!TrainerClassTableExpansion.MoveClassTables(out string error))
+            {
+                ShowError(error, "Tables not moved");
+                return false;
+            }
+            ShowInfo("The trainer class tables have been moved.", "Operation successful.");
+            return true;
+        }
+
+        public static bool ApplyMoveEncounterMusicTable()
+        {
+            if (!ConfirmYesNo("The eye-contact music table will be copied to the synthetic overlay " +
+                "and the game pointed at the copy.\n\nDo you wish to continue?" + CreditNote("trainerEncounterBgmRepointed"), "Confirm to proceed"))
+                return false;
+            if (!TrainerClassTableExpansion.MoveEncounterMusicTable(out string error))
+            {
+                ShowError(error, "Table not moved");
+                return false;
+            }
+            ShowInfo("The eye-contact music table has been moved.", "Operation successful.");
+            return true;
+        }
+
         public static bool ApplyDisableDynamicTexturesPatch()
         {
             if (!ConfirmYesNo("Applying this patch will set the Dynamic Textures field of all AreaData files to 0xFFFF.\n\n" +
-                "Are you sure you want to proceed?", "Confirm to proceed"))
+                "Are you sure you want to proceed?" + CreditNote("disableTextures"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -1076,7 +1104,7 @@ namespace DSPRE
             if (AlreadyApplied(RomPatchState.flag_TrainerNamesExpanded || RomInfo.trainerNameMaxLen > TrainerFile.defaultNameLen)) return false;
 
             if (!ConfirmYesNo($"Applying this patch will set the Trainer Name max length to {RomPatchState.expandedTrainerNameLength - 1} usable characters.\n" +
-                "Are you sure you want to proceed?", "Confirm to proceed"))
+                "Are you sure you want to proceed?" + CreditNote("trainerNames"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -1156,7 +1184,7 @@ namespace DSPRE
                 "- Update the ARM9 ScrCommands table pointer.\n\n" +
                 "- Update the ARM9 ScrCommands count pointer.\n" +
                 rangeStatus + "\n\n" +
-                "Do you wish to continue?", "Confirm to proceed"))
+                "Do you wish to continue?" + CreditNote("scrcmdRepoint"), "Confirm to proceed"))
             {
                 ShowInfo("No changes have been made.", "Operation canceled");
                 return false;
@@ -1330,7 +1358,86 @@ namespace DSPRE
             public PatchState State;
             public string Reason;       // shown for Unsupported (why) or Applied (optional note)
             public string ActionLabel;  // button caption when Available (defaults to "Apply")
-            public string Author;       // credited beside the title for patches written outside DSPRE
+            public string Author;       // credited beside the title
+            public string Link;         // where to get a patch DSPRE can't apply itself
+            public List<PatchPart> Parts;
+        }
+
+        /// <summary>One patch inside a group that another tool applies, such as hzla's PlatPatches.</summary>
+        public sealed class PatchPart
+        {
+            public string Key;
+            public string Title;
+            public bool Applied;
+            public string Note;
+        }
+
+        // Credited to whoever wrote the research or code, not to whoever added it to the toolbox.
+        private static readonly Dictionary<string, (string Who, string What)> Credits = new Dictionary<string, (string, string)>
+        {
+            ["arm9"] = ("Mikelan98 and Nømura", "ARM9 expansion"),
+            ["bdhcam"] = ("Mikelan98 and Trifindo", "dynamic cameras"),
+            ["dynamicHeaders"] = ("Nømura", "dynamic map headers"),
+            ["itemStandardize"] = ("Nømura", "item number standardization"),
+            ["matrix"] = ("AdAstra", "Matrix 0 expansion"),
+            ["scrcmdRepoint"] = ("AdAstra and MrHam88", "script command table repoint"),
+            ["disableTextures"] = ("AdAstra", "disable texture animations"),
+            ["sentenceCase"] = ("AdAstra", "sentence-case Pokémon names"),
+            ["itemSentenceCase"] = ("Mixone", "sentence-case item names"),
+            ["trainerNames"] = ("Mixone and AdAstra", "trainer name expansion"),
+            ["sameHeldItemOdds"] = ("Mixone", "held item odds"),
+            ["buildingRotation"] = ("MrHam88", "building rotation"),
+            ["trainerShiny"] = ("MrHam88", "shiny trainer Pokémon"),
+            ["trainerClassMetadata"] = ("MrHam88", "trainer class metadata"),
+            ["owSpriteExpansion"] = ("hzla", "custom overworld sprites"),
+            ["platItemExpansion"] = ("hzla", "item expansion"),
+            ["platExtraTms"] = ("hzla", "extra TMs"),
+            ["trainerClassTablesExpanded"] = ("Mixone", "trainer class table expansion"),
+            ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
+        };
+
+        private static string CreditNote(string key) =>
+            Credits.TryGetValue(key, out var c) ? $"\n\nPlease credit {c.Who} if you use this patch." : "";
+
+        /// <summary>Credit keys of the applied patches and the found parts of patch groups.</summary>
+        public static List<string> AppliedCreditKeys(IEnumerable<PatchInfo> statuses) =>
+            statuses.Where(p => p.Parts == null && p.State == PatchState.Applied).Select(p => p.Key)
+                .Concat(statuses.Where(p => p.Parts != null).SelectMany(p => p.Parts).Where(part => part.Applied).Select(part => part.Key))
+                .Where(Credits.ContainsKey)
+                .ToList();
+
+        /// <summary>Whether this project should still be offered credits after a save.</summary>
+        public static bool CreditsOfferDue() =>
+            !string.IsNullOrEmpty(RomInfo.workDir) && !SettingsManager.Settings.patchCreditsHandled.Contains(RomInfo.workDir);
+
+        /// <summary>Stops the after-save credits offer for this project.</summary>
+        public static void MarkCreditsHandled()
+        {
+            if (!CreditsOfferDue()) return;
+            SettingsManager.Settings.patchCreditsHandled.Add(RomInfo.workDir);
+            SettingsManager.Save();
+        }
+
+        /// <summary>Credits ready to paste into a hack's readme, one line per applied patch, then DSPRE.</summary>
+        public static string CreditsText(IEnumerable<string> appliedKeys)
+        {
+            var applied = new List<string>();
+            var detected = new List<string>();
+            foreach (string key in appliedKeys)
+                if (Credits.TryGetValue(key, out var c))
+                    (key is "owSpriteExpansion" or "platItemExpansion" or "platExtraTms" ? detected : applied)
+                        .Add($"{c.Who} for the {c.What} patch");
+
+            var lines = new List<string>
+            {
+                detected.Count == 0
+                    ? "These credits were generated by DSPRE from the patches applied through it."
+                    : "These credits were generated by DSPRE from the patches applied through it and the ones it detected."
+            };
+            lines.AddRange(applied);
+            lines.AddRange(detected);
+            lines.Add("The DSPRE developers and its many contributors and research gurus");
+            return string.Join("\n", lines);
         }
 
         /// <summary>
@@ -1350,7 +1457,7 @@ namespace DSPRE
                 "Convert every Pokémon name from ALL-CAPS to Sentence Case, including names you've renamed yourself.",
                 () => PatchState.Available));   // no reliable applied-detection
 
-            list.Add(Status("itemSentenceCase", "Sentence-case Item names",
+            list.Add(Status("itemSentenceCase", "Sentence-case item names",
                 "Convert every Item name from ALL-CAPS to Sentence Case, including names you've renamed yourself.",
                 () => PatchState.Available));   // no reliable applied-detection
 
@@ -1375,7 +1482,7 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("bdhcam", "Dynamic Cameras (BDHCam)",
+            list.Add(Status("bdhcam", "Dynamic cameras (BDHCam)",
                 "Install the BDHCam camera subroutine (Platinum / HGSS, EN or ES). Requires the ARM9 expansion patch first.",
                 () =>
                 {
@@ -1387,7 +1494,7 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("buildingRotation", "Building Rotation",
+            list.Add(Status("buildingRotation", "Building rotation",
                 "Enables the game to recognise the rotation of buildings placed in the Map Editor. Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
@@ -1424,7 +1531,7 @@ namespace DSPRE
                         TrainerClassMetadataDetectionState.Inconsistent => Unsupported("Partly applied"),
                         _ => PatchState.Available,
                     };
-                }, author: "darm"));
+                }));
 
             list.Add(Status("dynamicHeaders", "Dynamic map headers",
                 "Move the ARM9 header table into a NARC so headers are dynamically allocated (Platinum / HGSS).",
@@ -1474,38 +1581,66 @@ namespace DSPRE
                     return PatchState.Available;
                 }));
 
-            list.Add(Status("owSpriteExpansion", "Custom Overworld Sprites (hzla PlatPatches)",
-                "Detects hzla's PlatPatches \"overworld sprites\" expansion (github.com/hzla/PlatPatches), which relocates and expands the field-object tables to allow custom overworld appearance IDs. DSPRE only detects this patch, it is applied externally by that tool, not by DSPRE.",
-                () =>
-                {
-                    if (RomInfo.gameFamily != GameFamilies.Plat) return Unsupported("Platinum only");
-                    if (!OverworldSpriteTableExpansion.Detect())
-                        return Unsupported("Not detected: apply via hzla's PlatPatches tool (github.com/hzla/PlatPatches); DSPRE does not apply this patch itself.");
-                    _reason_text = $"{OverworldSpriteTableExpansion.UsedCount}/{OverworldSpriteTableExpansion.Capacity} custom slots used";
-                    return PatchState.Applied;
-                }));
+            list.Add(PlatPatchesStatus());
 
-            list.Add(Status("trainerClassTablesExpanded", "Trainer Class Tables Expanded (gender / prize money)",
-                "Whether the trainer-class gender and prize-money-multiplier tables have been repointed into the synthetic overlay, either by DSPRE's own \"Add Trainer Class\" or by hand (per the community write-up on adding a new trainer class). Platinum (English) only, since these tables have no bounds checking, so DSPRE won't touch them anywhere else.",
+            list.Add(Status("trainerClassTablesExpanded", "Trainer class tables",
+                "Gender and prize money tables moved to the synthetic overlay, so new trainer classes fit.",
                 () =>
                 {
                     if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum (English) only");
                     TrainerClassTableExpansion.Detect();
-                    bool applied = TrainerClassTableExpansion.IsGenderTableRepointed && TrainerClassTableExpansion.IsPrizeMulTableRepointed;
-                    if (!applied)
-                    {
-                        return Unsupported(TrainerClassTableExpansion.IsGenderTableRepointed || TrainerClassTableExpansion.IsPrizeMulTableRepointed
-                            ? "Only one of the two tables has been expanded so far. Add a trainer class in the Trainer Editor to finish the other."
-                            : "Not detected. Use \"Add Trainer Class\" in the Trainer Editor, or repoint by hand.");
-                    }
-                    return PatchState.Applied;
+                    if (TrainerClassTableExpansion.IsGenderTableRepointed && TrainerClassTableExpansion.IsPrizeMulTableRepointed)
+                        return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
-            list.Add(Status("trainerEncounterBgmRepointed", "Trainer Encounter Music Table Repointed",
-                "Whether the trainer-class \"eye contact\" encounter-music table has been repointed into the synthetic overlay (by hand, or by DSPRE's own \"Add Trainer Class\"). DSPRE's Trainer Editor already reads/writes this table correctly either way, this row is just visibility into which location is in use.",
-                () => TrainerClassTableExpansion.DetectMusicTableRepointed() ? PatchState.Applied : Unsupported("Not repointed. This ROM's trainer-class music table is still at its original location, which is completely normal.")));
+            list.Add(Status("trainerEncounterBgmRepointed", "Trainer encounter music table",
+                "Eye-contact music table moved to the synthetic overlay, so more classes can have music.",
+                () =>
+                {
+                    if (TrainerClassTableExpansion.DetectMusicTableRepointed()) return PatchState.Applied;
+                    if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum (English) only");
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
 
             return list;
+        }
+
+        // Applied by hzla's own tool; DSPRE only detects them.
+        private static PatchInfo PlatPatchesStatus()
+        {
+            var info = new PatchInfo
+            {
+                Key = "platPatches",
+                Title = "PlatPatches",
+                Author = "hzla",
+                Link = "https://github.com/hzla/PlatPatches",
+                Description = "Applied with hzla's own tool, not DSPRE. DSPRE finds them in the ROM and its editors use what they add.",
+            };
+            if (RomInfo.gameFamily != GameFamilies.Plat || RomInfo.isHGE)
+            {
+                info.State = PatchState.Unsupported;
+                info.Reason = "Platinum only";
+                return info;
+            }
+            info.Parts = new List<PatchPart>
+            {
+                Part("owSpriteExpansion", "Custom overworld sprites", () => OverworldSpriteTableExpansion.Detect()
+                    ? $"{OverworldSpriteTableExpansion.UsedCount}/{OverworldSpriteTableExpansion.Capacity} custom slots used" : null),
+                Part("platItemExpansion", "Item expansion", () => PlatPatches.Items() != null ? "" : null),
+                Part("platExtraTms", "Extra TMs", () => PlatPatches.Tms() is { } t ? $"{t.Count} extra TMs" : null),
+            };
+            info.State = info.Parts.Any(p => p.Applied) ? PatchState.Applied : PatchState.Unsupported;
+            return info;
+        }
+
+        // A null note means absent, and so does a detector that throws.
+        private static PatchPart Part(string key, string title, Func<string> detect)
+        {
+            string note;
+            try { note = detect(); }
+            catch { note = null; }
+            return new PatchPart { Key = key, Title = title, Applied = note != null, Note = note };
         }
 
         private static bool Arm9Expanded() => RomPatchState.flag_arm9Expanded || CheckFilesArm9ExpansionApplied();
@@ -1533,9 +1668,10 @@ namespace DSPRE
         [ThreadStatic] private static string _reason_text;
         private static PatchState Unsupported(string reason) { _reason_text = reason; return PatchState.Unsupported; }
 
-        private static PatchInfo Status(string key, string title, string desc, Func<PatchState> probe, string actionLabel = null, string author = null)
+        private static PatchInfo Status(string key, string title, string desc, Func<PatchState> probe, string actionLabel = null)
         {
-            var info = new PatchInfo { Key = key, Title = title, Description = desc, ActionLabel = actionLabel, Author = author };
+            var info = new PatchInfo { Key = key, Title = title, Description = desc, ActionLabel = actionLabel,
+                                     Author = Credits.TryGetValue(key, out var credit) ? credit.Who : null };
             try
             {
                 _reason_text = null;
@@ -1556,7 +1692,8 @@ namespace DSPRE
         public static bool ApplyByKey(string key)
         {
             string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.ExpansionRefusal();
-            if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint")
+            if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint"
+                or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -1578,6 +1715,8 @@ namespace DSPRE
                 case "disableTextures": return ApplyDisableDynamicTexturesPatch();
                 case "trainerNames": return ApplyExpandTrainerNamesPatch();
                 case "sameHeldItemOdds": return ApplySameHeldItemOddsPatch();
+                case "trainerClassTablesExpanded": return ApplyMoveTrainerClassTables();
+                case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
                 default: return false;
             }
         }
