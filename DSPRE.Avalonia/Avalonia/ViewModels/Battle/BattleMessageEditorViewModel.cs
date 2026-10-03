@@ -97,8 +97,6 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private int _currentTrainerId;
         private bool _currentIsDouble;
 
-        private string TablePath => Path.Combine(gameDirs[DirNames.trainerTextTable].unpackedDir, "0000");
-        private string OffsetPath => Path.Combine(gameDirs[DirNames.trainerTextOffset].unpackedDir, "0000");
 
         public ObservableCollection<string> Trainers { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> TriggerTypes { get; } = new ObservableCollection<string>(Triggers.Select(t => t.desc));
@@ -240,14 +238,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             var entries = new List<Entry>();
             try
             {
-                using var reader = new DSUtils.EasyReader(TablePath);
-                while (reader.BaseStream.Position < reader.BaseStream.Length)
-                {
-                    int offset = (int)reader.BaseStream.Position;
-                    ushort trainerId = reader.ReadUInt16();
-                    ushort triggerId = reader.ReadUInt16();
-                    entries.Add(new Entry { messageID = offset / 4, trainerId = trainerId, triggerId = triggerId });
-                }
+                foreach (var e in TrainerMessageTable.Read())
+                    entries.Add(new Entry { messageID = e.MessageId, trainerId = e.TrainerId, triggerId = e.TriggerId });
             }
             catch (Exception ex) { AppLogger.Error("ReadTable: " + ex.Message); }
 
@@ -573,7 +565,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_current != null) _byTrainer[(uint)_currentTrainerId] = _current;
 
             bool ok = await DialogHelper.AskYesNo(
-                $"This sorts and writes ALL trainer text entries back to the ROM. Text archive {trainerMessageTextNumber} " +
+                $"This writes ALL trainer text entries back to the ROM. Text archive {trainerMessageTextNumber} " +
                 "will be overwritten entirely and unused messages will be lost.\n\nContinue?", "Confirm Save");
             if (!ok) return;
 
@@ -594,33 +586,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
         }
 
-        private void WriteTable(List<Entry> entries)
-        {
-            // Truncate so entries deleted since the last save don't survive past the new end.
-            using var writer = new DSUtils.EasyWriter(TablePath, 0, FileMode.Create);
-            using var offsetWriter = new DSUtils.EasyWriter(OffsetPath);
-
-            var idToOffset = new Dictionary<uint, ushort>();
-            var sorted = entries.OrderBy(e => e.trainerId).ThenBy(e => e.triggerId).ToList();
-            var messages = new List<string>();
-
-            foreach (var e in sorted)
+        private void WriteTable(List<Entry> entries) =>
+            TrainerMessageTable.Write(entries.Select(e => new TrainerMessageTable.Entry
             {
-                if (!idToOffset.ContainsKey(e.trainerId)) idToOffset[e.trainerId] = (ushort)writer.BaseStream.Position;
-                writer.Write((ushort)e.trainerId);
-                writer.Write((ushort)e.triggerId);
-                messages.Add(e.messageID >= 0 && e.messageID < _archive.messages.Count ? _archive.messages[e.messageID] : "ERROR");
-            }
-
-            var temp = new TextArchive(trainerMessageTextNumber, messages);
-            temp.SaveToExpandedDir(trainerMessageTextNumber, false);
-
-            foreach (var kvp in idToOffset)
-            {
-                offsetWriter.Seek((int)kvp.Key * 2, SeekOrigin.Begin);
-                offsetWriter.Write(kvp.Value);
-            }
-        }
+                MessageId = e.messageID, TrainerId = e.trainerId, TriggerId = e.triggerId,
+            }), _archive.messages);
 
         // ── Validation warnings (ported) ────────────────────────────────────────────────
         private void CheckForMistakes()

@@ -380,28 +380,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     if (kv.Key is >= 0 and <= 255) _musicDict[(byte)kv.Key] = (0, (ushort)kv.Value.Johto, (ushort)kv.Value.Kanto);
                 return;
             }
-            SetEncounterMusicTableOffsetToRAMAddress();
-
-            uint tableStart = BitConverter.ToUInt32(ARM9.ReadBytes(encounterMusicTableOffsetToRAMAddress, 4), 0);
-            _musicTableRepointed = tableStart >= synthOverlayLoadAddress;
-            RomPatchState.flag_TrainerEncounterBGMTableRepointed = _musicTableRepointed;
-            tableStart -= _musicTableRepointed ? synthOverlayLoadAddress : ARM9.address;
-
-            uint tableSizeOffset = 10;
-            if (gameFamily == GameFamilies.HGSS) tableSizeOffset += 2;
-
-            byte entryCount = ARM9.ReadByte(encounterMusicTableOffsetToRAMAddress - tableSizeOffset);
-            string tablePath = _musicTableRepointed ? Filesystem.expArmPath : arm9Path;
-            using var reader = new DSUtils.EasyReader(tablePath, tableStart);
-            for (int i = 0; i < entryCount; i++)
-            {
-                uint entryOffset = (uint)reader.BaseStream.Position;
-                byte tclass = (byte)reader.ReadUInt16();
-                ushort musicD = reader.ReadUInt16();
-                ushort? musicN = gameFamily == GameFamilies.HGSS ? reader.ReadUInt16() : (ushort?)null;
-                _musicDict[tclass] = (entryOffset, musicD, musicN);
-            }
+            var (where, rows) = EncounterMusicTable.Read();
+            _musicWhere = where;
+            _musicTableRepointed = where.Repointed;
+            RomPatchState.flag_TrainerEncounterBGMTableRepointed = where.Repointed;
+            foreach (var row in rows) _musicDict[(byte)row.Class] = (row.Offset, row.Music, row.NightMusic);
         }
+
+        private EncounterMusicTable.Location _musicWhere;
 
         private void LoadClass(int index)
         {
@@ -593,10 +579,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 ushort main = (ushort)MusicMain;
                 ushort alt = (ushort)MusicAlt;
-                string tablePath = _musicTableRepointed ? Filesystem.expArmPath : arm9Path;
-                DSUtils.WriteToFile(tablePath, BitConverter.GetBytes(main), entry.entryOffset + 2);
-                if (gameFamily == GameFamilies.HGSS)
-                    DSUtils.WriteToFile(tablePath, BitConverter.GetBytes(alt), entry.entryOffset + 4);
+                EncounterMusicTable.WriteMusic(_musicWhere, new EncounterMusicTable.Row
+                {
+                    Offset = entry.entryOffset, Music = main, NightMusic = gameFamily == GameFamilies.HGSS ? alt : null,
+                });
                 _musicDict[idx] = (entry.entryOffset, main, gameFamily == GameFamilies.HGSS ? alt : entry.musicN);
             }
 

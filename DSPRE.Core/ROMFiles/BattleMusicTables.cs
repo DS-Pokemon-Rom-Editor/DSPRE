@@ -238,6 +238,23 @@ namespace DSPRE.ROMFiles
             return t;
         }
 
+        /// <summary>Writes combo row <paramref name="index"/> back where the table was read from.</summary>
+        public void WriteCombo(int index)
+        {
+            var (transition, sequence) = Combos.Rows[index];
+            using var w = new DSUtils.EasyWriter(Combos.Path, Combos.Start + 4 * (uint)index);
+            w.Write(transition);
+            w.Write(sequence);
+        }
+
+        /// <summary>Writes class row <paramref name="index"/> back, the class in the low 10 bits and the combo above.</summary>
+        public void WriteClass(int index)
+        {
+            var (trainerClass, combo) = Classes.Rows[index];
+            using var w = new DSUtils.EasyWriter(Classes.Path, Classes.Start + 2 * (uint)index);
+            w.Write((ushort)((trainerClass & 0x3FF) | (combo << 10)));
+        }
+
         // A second pointer sits two bytes into the same table; if they disagree, the layout is not the known one.
         private static bool DpPointersAgree() =>
             BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableSecondPointerOffset, 4), 0)

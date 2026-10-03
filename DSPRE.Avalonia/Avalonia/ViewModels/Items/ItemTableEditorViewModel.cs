@@ -168,6 +168,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public ushort Amount   { get; set; }
         public ushort ScriptID { get; set; }
 
+        /// <summary>The record's search range and padding, which the editor doesn't show but must write back.</summary>
+        public byte Range { get; set; }
+        public ushort Padding { get; set; }
+
         private string[] _names;
         public HiddenItemRowVM(ushort item, ushort amount, ushort script, string[] names)
         { ItemID = item; Amount = amount; ScriptID = script; _names = names; }
@@ -318,7 +322,6 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         // ── Hidden Items ──────────────────────────────────────────────────────
         public bool ShowHiddenItemsTab { get; }
-        private const int HIDDEN_ENTRY_SIZE = 8;
         // Hidden-item bg events run script 8000 + the entry's index (_std_hidden_item).
         private const int HIDDEN_SCRIPT_BASE = 8000;
         private int _hiddenMaxCapacity = 256;
@@ -395,12 +398,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         // ── Rock Smash (HGSS) ────────────────────────────────────────────────────
         // Per-header odds/table (data/a/2/5/3): available for any HGSS ROM, any language.
-        // The 3 hardcoded item-slot tables live in ov001.bin at English-only-confirmed offsets.
-        private const int ROCKSMASH_OVERLAY = 1;
-        private const uint ROCKSMASH_RUINS_OF_ALPH_OFFSET = 0x23D04;
-        private const uint ROCKSMASH_DEFAULT_OFFSET = 0x23D14;
-        private const uint ROCKSMASH_CLIFF_CAVE_OFFSET = 0x23D24;
-        private const int ROCKSMASH_SLOTS = 8;
+        // The 3 hardcoded item-slot tables are RockSmashItemSlots, at English-only-confirmed offsets.
 
         public bool ShowRockSmashTab { get; }
         public bool ShowRockSmashItemTables { get; }
@@ -484,23 +482,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // ── Pickup load ───────────────────────────────────────────────────────
         private void LoadPickupTable()
         {
-            string path = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
-
+            var table = PickupTable.Read();
             _commonIDs.Clear();
-            var common = DSUtils.ReadFromFile(path, RomInfo.pickupCommonItemsOffset, COMMON_COUNT * 2);
-            for (int i = 0; i < COMMON_COUNT; i++)
-                _commonIDs.Add(BitConverter.ToUInt16(common, i * 2));
-
+            _commonIDs.AddRange(table.Common);
             _rareIDs.Clear();
-            var rare = DSUtils.ReadFromFile(path, RomInfo.pickupRareItemsOffset, RARE_COUNT * 2);
-            for (int i = 0; i < RARE_COUNT; i++)
-                _rareIDs.Add(BitConverter.ToUInt16(rare, i * 2));
-
-            var divisorByte = DSUtils.ReadFromFile(path, RomInfo.pickupActivationDivisorOffset, 1);
-            _activationDivisor = _activDivisorEdit = divisorByte[0] > 0 ? divisorByte[0] : 10;
-
-            var weights = DSUtils.ReadFromFile(path, RomInfo.pickupWeightTableOffset, WEIGHT_SIZE);
-            Array.Copy(weights, _weightTable, WEIGHT_SIZE);
+            _rareIDs.AddRange(table.Rare);
+            _activationDivisor = _activDivisorEdit = table.Divisor > 0 ? table.Divisor : 10;
+            Array.Copy(table.Weights, _weightTable, WEIGHT_SIZE);
 
             BuildPickupRows();
             BuildActivationRows();
@@ -633,36 +621,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
             tableLen = Math.Min(tableLen, _hiddenMaxCapacity);
 
-            byte[] table = ARM9.ReadBytes(RomInfo.hiddenItemTableOffset, tableLen * HIDDEN_ENTRY_SIZE);
-
-            for (int i = 0; i < tableLen; i++)
-            {
-                int off = i * HIDDEN_ENTRY_SIZE;
-                ushort itemID   = BitConverter.ToUInt16(table, off);
-                ushort amount   = table[off + 2];
-                ushort scriptID = BitConverter.ToUInt16(table, off + 6);
-                HiddenItems.Add(new HiddenItemRowVM(itemID, amount, scriptID, _rawItemNames));
-            }
+            foreach (var e in HiddenItemTable.Read(tableLen))
+                HiddenItems.Add(new HiddenItemRowVM(e.Item, e.Quantity, e.Script, _rawItemNames) { Range = e.Range, Padding = e.Padding });
 
             if (HiddenItems.Count > 0) SelectedHiddenItem = HiddenItems[0];
             OnPropertyChanged(nameof(HiddenEntryCount));
         }
 
-        // The table has no terminator: every scan loops to the count its cmp holds. DSPRE used to patch
-        // only one of them, so the smallest is the real count.
-        private static int ReadHiddenItemCount()
-        {
-            var sites = RomInfo.hiddenItemCountSites;
-            if (sites.Length == 0) return -1;
-            int count = int.MaxValue;
-            foreach (uint site in sites)
-            {
-                byte[] ins = ARM9.ReadBytes(site, 2);
-                if ((ins[1] & 0xF8) != 0x28) return -1;   // Thumb cmp rN, #imm8
-                count = Math.Min(count, ins[0]);
-            }
-            return count;
-        }
+        private static int ReadHiddenItemCount() => HiddenItemTable.Count();
 
         private static List<int> HiddenItemUsers(int index)
         {
@@ -730,28 +696,17 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             if (ShowRockSmashItemTables)
             {
-                if (OverlayUtils.IsCompressed(ROCKSMASH_OVERLAY)) OverlayUtils.Decompress(ROCKSMASH_OVERLAY);
-                string path = OverlayUtils.GetPath(ROCKSMASH_OVERLAY);
-
                 RockSmashDefaultTable = new RockSmashItemSlotsRow("Default",
-                    ReadSlots(path, ROCKSMASH_DEFAULT_OFFSET), _rawItemNames, SetRockSmashDirty);
+                    RockSmashItemSlots.Read(RockSmashItemSlots.DefaultOffset), _rawItemNames, SetRockSmashDirty);
                 RockSmashRuinsOfAlphTable = new RockSmashItemSlotsRow("Ruins of Alph",
-                    ReadSlots(path, ROCKSMASH_RUINS_OF_ALPH_OFFSET), _rawItemNames, SetRockSmashDirty);
+                    RockSmashItemSlots.Read(RockSmashItemSlots.RuinsOfAlphOffset), _rawItemNames, SetRockSmashDirty);
                 RockSmashCliffCaveTable = new RockSmashItemSlotsRow("Cliff Cave",
-                    ReadSlots(path, ROCKSMASH_CLIFF_CAVE_OFFSET), _rawItemNames, SetRockSmashDirty);
+                    RockSmashItemSlots.Read(RockSmashItemSlots.CliffCaveOffset), _rawItemNames, SetRockSmashDirty);
 
                 OnPropertyChanged(nameof(RockSmashDefaultTable));
                 OnPropertyChanged(nameof(RockSmashRuinsOfAlphTable));
                 OnPropertyChanged(nameof(RockSmashCliffCaveTable));
             }
-        }
-
-        private static ushort[] ReadSlots(string overlayPath, uint offset)
-        {
-            byte[] raw = DSUtils.ReadFromFile(overlayPath, offset, ROCKSMASH_SLOTS * 2);
-            var slots = new ushort[ROCKSMASH_SLOTS];
-            for (int i = 0; i < ROCKSMASH_SLOTS; i++) slots[i] = BitConverter.ToUInt16(raw, i * 2);
-            return slots;
         }
 
         private void BuildRockSmashDummyRows()
@@ -843,21 +798,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return;
             }
 
-            int tableLen = HiddenItems.Count;
-            byte[] table = new byte[_hiddenMaxCapacity * HIDDEN_ENTRY_SIZE];
-
-            for (int i = 0; i < tableLen; i++)
+            HiddenItemTable.Write(HiddenItems.Select(e => new HiddenItemTable.Entry
             {
-                int off = i * HIDDEN_ENTRY_SIZE;
-                var e = HiddenItems[i];
-                BitConverter.GetBytes(e.ItemID).CopyTo(table, off);
-                table[off + 2] = (byte)e.Amount;
-                BitConverter.GetBytes(e.ScriptID).CopyTo(table, off + 6);
-            }
-
-            ARM9.WriteBytes(table, RomInfo.hiddenItemTableOffset);
-            foreach (uint site in RomInfo.hiddenItemCountSites)
-                ARM9.WriteBytes(new byte[] { (byte)tableLen }, site);
+                Item = e.ItemID, Quantity = (byte)e.Amount, Range = e.Range, Padding = e.Padding, Script = e.ScriptID,
+            }).ToList(), _hiddenMaxCapacity);
 
             _hiddenDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -877,22 +821,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             if (ShowRockSmashItemTables)
             {
-                string path = OverlayUtils.GetPath(ROCKSMASH_OVERLAY);
-                WriteSlots(path, ROCKSMASH_DEFAULT_OFFSET, RockSmashDefaultTable.ItemIDs);
-                WriteSlots(path, ROCKSMASH_RUINS_OF_ALPH_OFFSET, RockSmashRuinsOfAlphTable.ItemIDs);
-                WriteSlots(path, ROCKSMASH_CLIFF_CAVE_OFFSET, RockSmashCliffCaveTable.ItemIDs);
+                RockSmashItemSlots.Write(RockSmashItemSlots.DefaultOffset, RockSmashDefaultTable.ItemIDs);
+                RockSmashItemSlots.Write(RockSmashItemSlots.RuinsOfAlphOffset, RockSmashRuinsOfAlphTable.ItemIDs);
+                RockSmashItemSlots.Write(RockSmashItemSlots.CliffCaveOffset, RockSmashCliffCaveTable.ItemIDs);
             }
 
             _rockSmashDirty = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
-        }
-
-        private static void WriteSlots(string overlayPath, uint offset, ushort[] slots)
-        {
-            byte[] raw = new byte[ROCKSMASH_SLOTS * 2];
-            for (int i = 0; i < ROCKSMASH_SLOTS; i++) BitConverter.GetBytes(slots[i]).CopyTo(raw, i * 2);
-            DSUtils.WriteToFile(overlayPath, raw, offset);
         }
 
         // Re-reads each edited table from the project; the flags clear even if a read fails so closing never gets stuck.

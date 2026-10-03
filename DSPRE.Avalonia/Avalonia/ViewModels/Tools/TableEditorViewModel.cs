@@ -340,22 +340,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             HeaderNames.Clear();
             foreach (var h in _headerNames) HeaderNames.Add(h);
 
-            SetConditionalMusicTableOffsetToRAMAddress();
+            var (start, rows) = ConditionalMusicTable.Read();
+            _condMusicStartAddr = start;
             _condMusicTable = new List<(ushort, ushort, ushort)>();
-            _condMusicStartAddr = BitConverter.ToUInt32(ARM9.ReadBytes(conditionalMusicTableOffsetToRAMAddress, 4), 0) - ARM9.address;
-            byte count = ARM9.ReadByte(conditionalMusicTableOffsetToRAMAddress - 8);
-
             CondMusicItems.Clear();
-            using (var ar = new ARM9.Reader(_condMusicStartAddr))
+            foreach (var row in rows)
             {
-                for (int i = 0; i < count; i++)
-                {
-                    ushort header = ar.ReadUInt16();
-                    ushort flag = ar.ReadUInt16();
-                    ushort music = ar.ReadUInt16();
-                    _condMusicTable.Add((header, flag, music));
-                    CondMusicItems.Add(HeaderNameAt(header));
-                }
+                _condMusicTable.Add((row.Header, row.Flag, row.Music));
+                CondMusicItems.Add(HeaderNameAt(row.Header));
             }
             ShowConditionalMusic = true;
         }
@@ -396,6 +388,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 _tablesNote = isHGE ? "Link the hg-engine checkout to edit these tables." : null;
                 return;
             }
+            _battleTables = tables;
             _effectsComboTable = tables.Combos.Rows;
             _effectsComboStartAddr = tables.Combos.Start;
             RomPatchState.flag_MainComboTableRepointed = tables.Combos.Repointed;
@@ -442,6 +435,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         private uint _vsPokemonStartAddr;
+        private BattleMusicTables _battleTables;
         private bool _fromSource;
         private string _tablesNote;
 
@@ -476,12 +470,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public void SaveConditionalMusic()
         {
             if (_condMusicTable == null) return;
-            for (int i = 0; i < _condMusicTable.Count; i++)
-            {
-                ARM9.WriteBytes(BitConverter.GetBytes(_condMusicTable[i].header), (uint)(_condMusicStartAddr + 6 * i));
-                ARM9.WriteBytes(BitConverter.GetBytes(_condMusicTable[i].flag), (uint)(_condMusicStartAddr + 6 * i + 2));
-                ARM9.WriteBytes(BitConverter.GetBytes(_condMusicTable[i].music), (uint)(_condMusicStartAddr + 6 * i + 4));
-            }
+            ConditionalMusicTable.Write(_condMusicStartAddr, _condMusicTable
+                .Select(r => new ConditionalMusicTable.Row { Header = r.header, Flag = r.flag, Music = r.music }).ToList());
             _condDirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
             StatusText = "Conditional music table saved.";
@@ -518,13 +508,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
             else
             {
-                string path = RomPatchState.flag_MainComboTableRepointed ? Filesystem.expArmPath : arm9Path;
-                foreach (int i in rows)
-                {
-                    using var wr = new DSUtils.EasyWriter(path, _effectsComboStartAddr + 4 * (uint)i);
-                    wr.Write(_effectsComboTable[i].vsGraph);
-                    wr.Write(_effectsComboTable[i].battleSSEQ);
-                }
+                foreach (int i in rows) _battleTables.WriteCombo(i);
             }
             _dirtyCombos.Clear();
             _effectsDirty = false;
@@ -580,12 +564,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
             else
             {
-                string path = RomPatchState.flag_TrainerClassBattleTableRepointed ? Filesystem.expArmPath : arm9Path;
-                foreach (int i in rows)
-                {
-                    using var wr = new DSUtils.EasyWriter(path, _vsTrainerStartAddr + 2 * (uint)i);
-                    wr.Write((ushort)((_vsTrainerList[i].trainerClass & 1023) + (_vsTrainerList[i].comboID << 10)));
-                }
+                foreach (int i in rows) _battleTables.WriteClass(i);
             }
             _dirtyVsTrainers.Clear();
             _vsTrainerDirty = false;

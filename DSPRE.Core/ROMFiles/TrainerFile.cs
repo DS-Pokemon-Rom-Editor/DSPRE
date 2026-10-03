@@ -348,6 +348,26 @@ namespace DSPRE.ROMFiles {
             SaveToFileExplorePath("Gen IV Party Data", "pdat", suggestedFileName, showSuccessMessage);
         }
     }
+
+    public static class TrainerRecords {
+        /// <summary>Writes a trainer's properties and party as record <paramref name="id"/> of the unpacked archives.</summary>
+        public static void Save(int id, TrainerProperties trp, Party party) {
+            SaveProperties(id, trp);
+            File.WriteAllBytes(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerParty].unpackedDir, id.ToString("D4")), party.ToByteArray());
+        }
+
+        /// <summary>Writes only a trainer's properties record, for edits that leave the party alone.</summary>
+        public static void SaveProperties(int id, TrainerProperties trp) =>
+            File.WriteAllBytes(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerProperties].unpackedDir, id.ToString("D4")), trp.ToByteArray());
+
+        /// <summary>Reads record <paramref name="id"/> of the unpacked archives, the way the editor opens a trainer.</summary>
+        public static TrainerFile Load(int id, string name = "") {
+            string file = id.ToString("D4");
+            using var prop = File.OpenRead(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerProperties].unpackedDir, file));
+            using var party = File.OpenRead(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerParty].unpackedDir, file));
+            return new TrainerFile(new TrainerProperties((ushort)id, prop), party, name);
+        }
+    }
     public class TrainerFile : RomFile {
         public const int defaultNameLen = 7; // battle copies the name into an 8-character buffer with its end mark
         public const int POKE_IN_PARTY = 6;

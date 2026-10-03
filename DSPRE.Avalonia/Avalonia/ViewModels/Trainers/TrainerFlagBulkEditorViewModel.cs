@@ -336,7 +336,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     onDisk = new TrainerProperties((ushort)id, fs);
                 for (int f = 0; f < current.Length; f++)
                     if (current[f] != loaded[f]) SetFlag(onDisk, f, current[f]);
-                File.WriteAllBytes(path, onDisk.ToByteArray());
+                TrainerRecords.SaveProperties(id, onDisk);
 
                 _trainerData[id] = onDisk;
                 _loadedFlags[id] = SnapshotFlags(onDisk);

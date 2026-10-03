@@ -242,8 +242,17 @@ namespace DSPRE
             if (isPaired)
                 return TryWritePairedPrizeMul(ovPath, vanillaOffset, vanillaCount, classId, multiplier, out error);
 
-            if (!TryResolveByteTable(ovPath, pointerOffset, ovPath, vanillaOffset, vanillaCount, out byte[] table, out error))
+            byte[] table;
+            if (pointerOffset == 0)
+            {
+                // No known repoint pointer: resolving one would read the overlay's first word as a pointer.
+                try { table = DSUtils.ReadFromFile(ovPath, vanillaOffset, vanillaCount); }
+                catch (Exception ex) { error = ex.Message; return false; }
+            }
+            else if (!TryResolveByteTable(ovPath, pointerOffset, ovPath, vanillaOffset, vanillaCount, out table, out error))
+            {
                 return false;
+            }
             if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
 
             bool repointed = false;

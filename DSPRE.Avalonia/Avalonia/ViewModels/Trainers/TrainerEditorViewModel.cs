@@ -595,18 +595,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (IsHgeActive) { LoadTrainerFromSource(index); return; }
             try
             {
-                string suffix = Path.DirectorySeparatorChar + index.ToString("D4");
                 string[] trNames = GetSimpleTrainerNames();
                 bool error = index >= trNames.Length;
-
-                using (var propStream = new FileStream(gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
-                using (var partyStream = new FileStream(gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
-                {
-                    _trainer = new TrainerFile(
-                        new TrainerProperties((ushort)index, propStream),
-                        partyStream,
-                        error ? TrainerFile.NAME_NOT_FOUND : trNames[index]);
-                }
+                _trainer = TrainerRecords.Load(index, error ? TrainerFile.NAME_NOT_FOUND : trNames[index]);
                 _loadedTrainerId = index;
                 _savedName = _trainer.name;
                 _savedClass = _trainer.trp.trainerClass;
@@ -969,9 +960,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SyncToTrainer();
             bool listChanged = _savedName != _trainerName || _savedClass != _trainer.trp.trainerClass;
 
-            string indexStr = Path.DirectorySeparatorChar + _selectedTrainerIndex.ToString("D4");
-            File.WriteAllBytes(gameDirs[DirNames.trainerProperties].unpackedDir + indexStr, _trainer.trp.ToByteArray());
-            File.WriteAllBytes(gameDirs[DirNames.trainerParty].unpackedDir + indexStr, _trainer.party.ToByteArray());
+            TrainerRecords.Save(_selectedTrainerIndex, _trainer.trp, _trainer.party);
 
             UpdateTrainerName(_trainerName);
 
