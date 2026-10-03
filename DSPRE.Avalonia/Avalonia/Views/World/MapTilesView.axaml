@@ -62,9 +62,9 @@
       <Button Classes="small" controls:Icon.Key="undo" Click="UndoPaint_Click" IsEnabled="{Binding CanUndoPaint}" ToolTip.Tip="Undo (Ctrl+Z)"/>
       <Button Classes="small" controls:Icon.Key="redo" Click="RedoPaint_Click" IsEnabled="{Binding CanRedoPaint}" ToolTip.Tip="Redo (Ctrl+Y)" Margin="2,0,0,0"/>
       <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
-      <Button Classes="small" Content="Copy" controls:Icon.Key="copyIcon_small" Click="Copy_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+C"/>
+      <Button Classes="small" Content="Copy" controls:Icon.Key="copy" Click="Copy_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+C"/>
       <Button Classes="small" Content="Cut" Click="Cut_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+X" Margin="2,0,0,0"/>
-      <Button Classes="small" Content="Paste" controls:Icon.Key="pasteIcon" Click="Paste_Click" IsEnabled="{Binding HasClipboard}" ToolTip.Tip="Ctrl+V" Margin="2,0,0,0"/>
+      <Button Classes="small" Content="Paste" controls:Icon.Key="paste" Click="Paste_Click" IsEnabled="{Binding HasClipboard}" ToolTip.Tip="Ctrl+V" Margin="2,0,0,0"/>
       <Button Classes="small" Content="Delete" controls:Icon.Key="deleteIcon" Click="Delete_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Delete" Margin="2,0,0,0"/>
       <Button Classes="small" Content="Fill" Click="FillSel_Click" IsEnabled="{Binding HasSelection}" ToolTip.Tip="Ctrl+F" Margin="2,0,0,0"/>
       <Button x:Name="RampButton" Classes="small" Content="Ramp" controls:Icon.Key="dropdown" controls:Icon.After="True" IsEnabled="{Binding HasSelection}" Margin="2,0,0,0"
@@ -205,7 +205,7 @@
               <UniformGrid Columns="2">
                 <Button Classes="small" Content="Move up" controls:Icon.Key="arrowup" Click="MoveEarlier_Click"/>
                 <Button Classes="small" Content="Move down" controls:Icon.Key="arrowdown" Click="MoveLater_Click"/>
-                <Button Classes="small" Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="Duplicate_Click"/>
+                <Button Classes="small" Content="Duplicate" controls:Icon.Key="copy" Click="Duplicate_Click"/>
                 <Button Classes="small" Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveTile_Click"/>
               </UniformGrid>
               <Button Classes="small" Content="Append tiles…" Click="AddTiles_Click" HorizontalAlignment="Stretch"
@@ -336,8 +336,8 @@
               <Button Classes="small" controls:Icon.Key="arrowright" Click="ShiftRight_Click" ToolTip.Tip="Shift right"/>
               <Button Classes="small" controls:Icon.Key="raise" Click="RaiseUp_Click" ToolTip.Tip="Raise layer"/>
               <Button Classes="small" controls:Icon.Key="lower" Click="RaiseDown_Click" ToolTip.Tip="Lower layer"/>
-              <Button Classes="small" controls:Icon.Key="copyIcon_small" Click="CopyLayer_Click" ToolTip.Tip="Copy layer"/>
-              <Button Classes="small" controls:Icon.Key="pasteIcon" Click="PasteLayer_Click" IsEnabled="{Binding HasCopy}" ToolTip.Tip="Paste layer"/>
+              <Button Classes="small" controls:Icon.Key="copy" Click="CopyLayer_Click" ToolTip.Tip="Copy layer"/>
+              <Button Classes="small" controls:Icon.Key="paste" Click="PasteLayer_Click" IsEnabled="{Binding HasCopy}" ToolTip.Tip="Paste layer"/>
             </UniformGrid>
             <Button Classes="small" Content="Clear layer" controls:Icon.Key="Cross" Click="ClearLayer_Click" HorizontalAlignment="Stretch"/>
           </StackPanel>

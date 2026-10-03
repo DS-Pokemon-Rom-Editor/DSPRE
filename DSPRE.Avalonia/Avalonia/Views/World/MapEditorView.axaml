@@ -149,7 +149,7 @@
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
               <Button Content="Add" controls:Icon.Key="addIcon"    Click="AddBuilding_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
-              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <Button Content="Import…" controls:Icon.Key="import" Click="ImportBuildings_Click" IsEnabled="{Binding IsSingleMap}"
                       ToolTip.Tip="Replaces one map's whole building list, single map view only. In 'This header' view, use the per-building Add/Remove/Duplicate/gizmo instead."/>

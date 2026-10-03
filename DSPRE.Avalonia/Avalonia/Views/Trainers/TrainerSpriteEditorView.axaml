@@ -71,7 +71,7 @@
                       ToolTip.Tip="Frames that share tiles change together.">
             <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasLinkedSets}">
               <TextBlock Text="{Binding SelectedSetLabel, StringFormat='Painting: {0}'}" VerticalAlignment="Center"/>
-              <Button Content="Copy frame to other set" controls:Icon.Key="copyIcon_small" Click="CopyFrameToOtherSet_Click"
+              <Button Content="Copy frame to other set" controls:Icon.Key="copy" Click="CopyFrameToOtherSet_Click"
                       ToolTip.Tip="Paints this frame over the same frame of the other set"/>
             </StackPanel>
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MinHeight="84">

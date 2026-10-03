@@ -134,7 +134,7 @@
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddOw_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveOw_Click" IsEnabled="{Binding HasOw}"
                       ToolTip.Tip="Remove the selected overworld (Del while the list is focused)"/>
-              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <Button Content="Sort" controls:Icon.Key="sortAscending" Click="SortAsc_Click" ToolTip.Tip="Sort overworlds by OW id (ascending)"/>
               <Button Content="Sort" controls:Icon.Key="sortDescending" Click="SortDesc_Click" ToolTip.Tip="Sort overworlds by OW id (descending)"/>
@@ -285,7 +285,7 @@
               <Border Width="12" Height="12" Background="#FF9E1A" CornerRadius="2" VerticalAlignment="Center"/>
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddWarp_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveWarp_Click" IsEnabled="{Binding HasWarp}"/>
-              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupWarp_Click" IsEnabled="{Binding HasWarp}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupWarp_Click" IsEnabled="{Binding HasWarp}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <Button Content="Go to destination" controls:Icon.Key="goto" Click="TestWarp_Click" IsEnabled="{Binding HasWarp}"
                       ToolTip.Tip="Show the destination header's event file here"/>
@@ -327,7 +327,7 @@
               <Border Width="12" Height="12" Background="#F23FE5" CornerRadius="2" VerticalAlignment="Center"/>
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddTrig_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveTrig_Click" IsEnabled="{Binding HasTrig}"/>
-              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupTrig_Click" IsEnabled="{Binding HasTrig}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupTrig_Click" IsEnabled="{Binding HasTrig}"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
@@ -398,7 +398,7 @@
               <Border Width="12" Height="12" Background="#33D9F2" CornerRadius="2" VerticalAlignment="Center"/>
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddSpawn_Click"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
-              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Spawnables}" SelectedIndex="{Binding SelectedSpawnableIndex}"/>

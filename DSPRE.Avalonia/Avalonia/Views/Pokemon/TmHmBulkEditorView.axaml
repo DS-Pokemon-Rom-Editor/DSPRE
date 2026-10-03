@@ -32,7 +32,7 @@
                 ToolTip.Tip="Give it to every member of the selected families"/>
         <Button Content="Sync family (intersection)" Click="SyncIntersect_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"
                 ToolTip.Tip="Keep only the machines every member shares"/>
-        <Button Content="Copy compatibility to…" controls:Icon.Key="copyIcon_small" Click="CopyTo_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"/>
+        <Button Content="Copy compatibility to…" controls:Icon.Key="copy" Click="CopyTo_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"/>
 
         <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="0,0,6,4"/>
         <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="180" PlaceholderText="pokémon name…" Margin="0,0,0,4"/>
