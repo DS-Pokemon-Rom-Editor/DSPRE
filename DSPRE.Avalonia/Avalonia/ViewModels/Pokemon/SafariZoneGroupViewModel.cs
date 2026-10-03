@@ -136,8 +136,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (src == null || index < 0 || index >= src.Count) return;
             if (species is int sp) { if (sp < 0) return; src[index].pokemonID = (ushort)sp; }
             if (level is int lv) src[index].level = (byte)Math.Max(0, Math.Min(255, lv));
+            // Replacing the selected row clears that list's selection, and every later edit would then miss the slot.
+            int morning = _morningIndex, day = _dayIndex, night = _nightIndex;
             _suppress = true;
             display[index] = src[index].ToString();
+            _morningIndex = morning; _dayIndex = day; _nightIndex = night;
+            OnPropertyChanged(nameof(MorningIndex)); OnPropertyChanged(nameof(DayIndex)); OnPropertyChanged(nameof(NightIndex));
             _suppress = false;
             Touch();
         }

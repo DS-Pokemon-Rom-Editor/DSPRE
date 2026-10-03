@@ -406,9 +406,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int index = _selectedSetIndex;
             if (index >= 0 && index < SetLabels.Count)
             {
+                // Replacing the row clears the list's selection, which would leave later edits with no set.
                 _suppress = true;
                 SetLabels[index] = $"Set {index:D3}: {set}";
+                _selectedSetIndex = index;
                 _suppress = false;
+                OnPropertyChanged(nameof(SelectedSetIndex));
             }
 
             MarkDirty();

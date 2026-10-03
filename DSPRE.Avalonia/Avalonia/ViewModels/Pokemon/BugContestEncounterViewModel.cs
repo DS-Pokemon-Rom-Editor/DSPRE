@@ -222,6 +222,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _suppress = true;
             EncounterRows[sel] = enc.ToString();
             _suppress = false;
+            // Replacing the selected row clears the list's selection, which also blanks the fields; put both back
+            // so the next edit lands on this slot with its real values.
+            _selectedEncounterIndex = sel;
+            OnPropertyChanged(nameof(SelectedEncounterIndex));
+            LoadEncounter(sel);
 
             if (_speciesIndex >= 0) UpdateIcon(_speciesIndex);
         }
