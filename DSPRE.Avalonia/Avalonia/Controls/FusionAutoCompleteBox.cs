@@ -2,7 +2,9 @@ using System;
 using System.Collections.Specialized;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Threading;
 
 namespace DSPRE.Avalonia.Controls
 {
@@ -36,6 +38,7 @@ namespace DSPRE.Avalonia.Controls
         private bool _anyContainsText;
         private object _lastCommittedItem;
         private INotifyCollectionChanged _itemsSourceCollection;
+        private SelectingItemsControl _list;
 
         static FusionAutoCompleteBox()
         {
@@ -58,6 +61,12 @@ namespace DSPRE.Avalonia.Controls
         {
             get => GetValue(SelectedIndexProperty);
             set => SetValue(SelectedIndexProperty, value);
+        }
+
+        protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
+        {
+            base.OnApplyTemplate(e);
+            _list = e.NameScope.Find<SelectingItemsControl>("PART_SelectingItemsControl");
         }
 
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -271,6 +280,11 @@ namespace DSPRE.Avalonia.Controls
             PopulateComplete();
             SetCurrentValue(IsDropDownOpenProperty, true);
             _refreshingDropDown = false;
+
+            // Open on the current entry, not the top of a long list.
+            object current = SelectedItem;
+            if (current != null && _list != null)
+                Dispatcher.UIThread.Post(() => { if (IsDropDownOpen) _list.ScrollIntoView(current); }, DispatcherPriority.Background);
         }
 
         private void CommitText(bool entered = false)

@@ -235,8 +235,20 @@ namespace DSPRE.Avalonia.Data
             Ensure();
             var map = global ? _global : _project;
             if (!map.TryGetValue(key, out var d)) { d = new Dictionary<int, string>(); map[key] = d; }
-            if (string.IsNullOrWhiteSpace(value)) d.Remove(index);   // blank = fall back to the lower layer/default
+            // Blank, or the same as what this layer falls back to, keeps no entry. Added entries past the defaults
+            // stay even when unrenamed, because they are what extends the list.
+            bool withinDefaults = index < (GetCategory(key)?.Defaults.Count ?? 0);
+            if (string.IsNullOrWhiteSpace(value) || (withinDefaults && value.Trim() == FallbackLabel(key, index, global)))
+                d.Remove(index);
             else d[index] = value.Trim();
+            if (d.Count == 0) map.Remove(key);
+        }
+
+        private static string FallbackLabel(string key, int index, bool global)
+        {
+            if (!global && _global.TryGetValue(key, out var gl) && gl.TryGetValue(index, out var gv) && !string.IsNullOrEmpty(gv))
+                return gv;
+            return GetDefault(key, index);
         }
 
         public static void ResetCategory(string key, bool global)
@@ -263,7 +275,16 @@ namespace DSPRE.Avalonia.Data
             Ensure();
             var map = global ? _globalAttr : _projectAttr;
             if (!map.TryGetValue(key, out var d)) { d = new Dictionary<int, int>(); map[key] = d; }
-            d[index] = value;
+            int fallback;
+            if (!global && _globalAttr.TryGetValue(key, out var gl) && gl.TryGetValue(index, out var gv)) fallback = gv;
+            else
+            {
+                var cat = GetCategory(key);
+                fallback = cat?.AttrDefaults != null && index >= 0 && index < cat.AttrDefaults.Count ? cat.AttrDefaults[index] : -1;
+            }
+            if (value == fallback) d.Remove(index);
+            else d[index] = value;
+            if (d.Count == 0) map.Remove(key);
         }
 
         // ── Draft layer (Label editor) ────────────────────────────────────────────────────
@@ -339,12 +360,18 @@ namespace DSPRE.Avalonia.Data
             if (path == null) return;
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
                 var file = new LabelFile
                 {
                     labels = StringKeyed(global ? _global : _project),
                     attrs  = StringKeyed(global ? _globalAttr : _projectAttr),
                 };
+                // Nothing overridden: leave no file behind rather than an empty one.
+                if (file.labels.Count == 0 && file.attrs.Count == 0)
+                {
+                    if (File.Exists(path)) File.Delete(path);
+                    return;
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
                 File.WriteAllText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch (Exception ex) { AppLogger.Error("LabelStore.Save: " + ex.Message); }
