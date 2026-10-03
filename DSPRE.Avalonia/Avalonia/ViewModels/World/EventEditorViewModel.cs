@@ -760,14 +760,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool SpScriptGenericWarningVisible => SpScriptIndexOutOfRange && !SpScriptHasCommonInfo;
 
         /// <summary>Open the Script Editor on the given script, following a common script to its real
-        /// archive the way the old editor's per-event "go to script" buttons did.</summary>
+        /// archive the way the old editor's per-event "go to script" buttons did, and landing on the
+        /// script entry itself rather than just its file.</summary>
         public void GoToScript(int scriptNumber)
         {
             if (scriptNumber == EventFile.NoScript) { StatusText = "This event has no script."; return; }
             var result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
             if (result.Kind == CommonScriptId.Kind.Resolved)
             {
-                AvaloniaEditorLauncher.OpenScriptEditor(result.ScriptArchiveId);
+                AvaloniaEditorLauncher.OpenScriptEditor(result.ScriptArchiveId, result.ManualUserId);
                 StatusText = $"Common Script {result.ManualUserId} lives in script file {result.ScriptArchiveId}.";
                 return;
             }
@@ -776,7 +777,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 StatusText = $"Script {scriptNumber} is a Common Script in an ambiguous range ({result.RangeLower}-{result.RangeUpper}); it is one of: {string.Join(", ", result.CandidateArchives)}.";
                 return;
             }
-            AvaloniaEditorLauncher.OpenScriptEditor(_pairedScriptFileId);
+            // Below the common-script ranges the number is the paired file's own jump-table slot.
+            AvaloniaEditorLauncher.OpenScriptEditor(_pairedScriptFileId, scriptNumber);
         }
 
         /// <summary>Shows one overworld of one event file, asked for from another editor.</summary>

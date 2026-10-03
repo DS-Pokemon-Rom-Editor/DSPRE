@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia
                     else if (symbol.TryGetProperty("range", out var r)) range = r;
                     else if (symbol.TryGetProperty("location", out var loc) && loc.TryGetProperty("range", out var lr)) range = lr;
                     int line = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("start", out var st) ? st.ReadInt("line") + 1 : 1;
-                    symbols.Add(new RotomLspSymbol(symbol.ReadString("name") ?? "", symbol.ReadInt("kind"), line, depth));
+                    symbols.Add(new RotomLspSymbol(symbol.ReadString("name") ?? "", symbol.ReadInt("kind"), symbol.ReadString("detail"), line, depth));
                     if (symbol.TryGetProperty("children", out var children) && children.ValueKind == JsonValueKind.Array) Walk(children, depth + 1);
                 }
             }
@@ -661,7 +661,9 @@ namespace DSPRE.Avalonia
     /// <summary>A signature with the active parameter's span in <see cref="Label"/>, or -1 when none.</summary>
     internal sealed record RotomLspSignature(string Label, string Documentation, int ActiveStart, int ActiveEnd);
 
-    internal sealed record RotomLspSymbol(string Name, int Kind, int Line, int Depth);
+    /// <summary>One outline symbol. rotom-lsp puts a script's jump-table slot in
+    /// <see cref="Detail"/> as "#N"; other symbols leave it empty.</summary>
+    internal sealed record RotomLspSymbol(string Name, int Kind, string Detail, int Line, int Depth);
 
     /// <summary>Text drawn in the editor at a 1-based line and column, or at the end of the line when Column is -1.</summary>
     internal sealed record RotomLspInlineText(int Line, int Column, string Text);

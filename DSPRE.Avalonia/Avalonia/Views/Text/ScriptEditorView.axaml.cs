@@ -166,6 +166,14 @@ namespace DSPRE.Avalonia.Views.Text
             PushToEditor(vm.ScriptText);
             UpdateReadOnly();
             ApplyGrammar();
+
+            // "Go to script" opens on a script entry, not just its file. The document symbols
+            // only exist once the language service has the file open, so this comes after setup.
+            if (vm.InitialScriptNumber > 0)
+            {
+                int? line = await vm.ResolveScriptEntryLineAsync(vm.InitialScriptNumber);
+                if (line != null) JumpToLine(line.Value);
+            }
         }
 
         private void OnVmPropertyChanged(object sender, PropertyChangedEventArgs e)

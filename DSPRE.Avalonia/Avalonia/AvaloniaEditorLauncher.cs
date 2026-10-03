@@ -266,11 +266,13 @@ namespace DSPRE.Avalonia
             new StrVarHelpView(new StrVarHelpViewModel()).ShowManaged();
         }
 
-        public static void OpenScriptEditor(int initialIndex = 0)
+        /// <param name="scriptNumber">The jump-table slot to scroll to in that file once it loads;
+        /// 0 opens on the file alone.</param>
+        public static void OpenScriptEditor(int initialIndex = 0, int scriptNumber = 0)
         {
             if (!IsRomLoaded) return;
             new EditorHostWindow("Rotom Script Editor",
-                new ScriptEditorView(new ScriptEditorViewModel(true) { InitialIndex = initialIndex }),
+                new ScriptEditorView(new ScriptEditorViewModel(true) { InitialIndex = initialIndex, InitialScriptNumber = scriptNumber }),
                 980, 760).ShowManaged();
         }
 
