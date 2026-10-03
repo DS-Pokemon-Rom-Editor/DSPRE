@@ -72,7 +72,7 @@
               <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,8,2"
                         ItemsSource="{Binding TrainerClassItems}" SelectedIndex="{Binding TrainerClassIndex}"/>
 
-              <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+              <WrapPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" ItemSpacing="12" LineSpacing="4" Margin="0,4,8,0">
                 <CheckBox Content="Double battle" IsChecked="{Binding DoubleBattle}" IsVisible="{Binding !IsHgeActive}"/>
                 <TextBox Text="{Binding BattleTypeRaw}" Width="56" MaxLength="10" IsVisible="{Binding !IsHgeActive}"
                          ToolTip.Tip="Battle type flags, 2 is double"/>
@@ -82,13 +82,15 @@
                 </StackPanel>
                 <CheckBox Content="Custom moves"  IsChecked="{Binding ChooseMoves}" IsVisible="{Binding !IsHgeActive}"/>
                 <CheckBox Content="Held items"    IsChecked="{Binding ChooseItems}" IsVisible="{Binding !IsHgeActive}"/>
-                <TextBlock Text="Party size" VerticalAlignment="Center"/>
-                <NumericUpDown Width="90" Minimum="{Binding PartyCountMinimum}" Maximum="6" Increment="1" Value="{Binding PartyCount}"/>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <TextBlock Text="Party size" VerticalAlignment="Center"/>
+                  <NumericUpDown Width="90" Minimum="{Binding PartyCountMinimum}" Maximum="6" Increment="1" Value="{Binding PartyCount}"/>
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasClassSprite}">
                   <TextBlock Text="Frame" VerticalAlignment="Center"/>
                   <NumericUpDown Width="80" Minimum="0" Maximum="{Binding ClassFrameMax}" Increment="1" Value="{Binding ClassFrame}"/>
                 </StackPanel>
-              </StackPanel>
+              </WrapPanel>
             </Grid>
           </HeaderedContentControl>
 
