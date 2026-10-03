@@ -36,7 +36,7 @@
 
     <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,8">
       <TextBlock Text="{Binding Summary}" Classes="hint"/>
-      <TextBox Text="{Binding Search}" Watermark="Search by archive or file number"/>
+      <TextBox Text="{Binding Search}" PlaceholderText="Search by archive or file number"/>
       <CheckBox Content="Only the ones with art to draw them" IsChecked="{Binding DrawableOnly}"
                 ToolTip.Tip="An animation needs a layout and a sheet of tiles before anything can be shown"/>
       <CheckBox Content="Hide the ones another editor does better" IsChecked="{Binding HideSpecialised}"

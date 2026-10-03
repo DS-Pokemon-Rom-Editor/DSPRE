@@ -30,7 +30,7 @@
       <TextBox Text="{Binding ClassName}"/>
 
       <TextBlock Text="With article" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,4,0,0"/>
-      <TextBox Text="{Binding NameWithArticle}" Watermark="a Youngster"/>
+      <TextBox Text="{Binding NameWithArticle}" PlaceholderText="a Youngster"/>
 
       <TextBlock Text="Gender" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,4,0,0"
                  ToolTip.Tip="Used for DV/nature calculations."/>
