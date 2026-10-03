@@ -17,7 +17,7 @@ using LibNDSFormats.NSBMD;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>The game's models and the pictures painted on them, in their own list.</summary>
-    public sealed partial class ModelBrowserViewModel : INotifyPropertyChanged
+    public sealed partial class ModelBrowserViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo, IDisposable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -75,7 +75,36 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// Reading every archive to see what is in it is real file work, so it does not happen here.
         /// The caller runs <see cref="Scan"/> off the UI thread and then <see cref="Publish"/> on it.
         /// </summary>
-        public ModelBrowserViewModel() { }
+        public ModelBrowserViewModel()
+        {
+            // Reads here run from the scan thread and the render as well, so they all see the pending entries.
+            _overlay = ScriptNarc.Overlay(_pending.Read);
+            _pending.Changed += () =>
+            {
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(CanRedo));
+                PendingChanged?.Invoke();
+            };
+        }
+
+        // ── imports wait for Save ───────────────────────────────────────────────────────────────────
+
+        private readonly PendingArchiveWrites _pending = new();
+        private readonly IDisposable _overlay;
+
+        /// <summary>Raised when an undo, redo or discard changed what the entries hold, so the list is read again.</summary>
+        public event Action PendingChanged;
+
+        public bool HasUnsavedChanges => _pending.IsDirty;
+        public string UnsavedChangesDescription => "Models";
+        public bool CanUndo => _pending.CanUndo;
+        public bool CanRedo => _pending.CanRedo;
+        public void Undo() => _pending.Undo();
+        public void Redo() => _pending.Redo();
+        public void SaveChanges() { _pending.Save(); SaveNotice.Saved(UnsavedChangesDescription); Status = "Saved."; }
+        public void DiscardChanges() => _pending.Discard();
+        public void Dispose() => _overlay.Dispose();
 
         /// <summary>Reads and lists in one go, for callers that are already off the UI thread.</summary>
         public void Reload() { Scan(); Publish(); }
@@ -1026,14 +1055,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             return $"{name}_{ShowingIndex:D4}{extension}";
         }
 
-        /// <summary>Whether a file can be put in over what is picked, and why not when it cannot.</summary>
+        /// <summary>Whether a file can be imported over what is picked, and why not when it cannot.</summary>
         public bool CanPutFileIn => _selected != null && _cannotImport == null;
 
         public string PutFileInHelp => _selected == null
             ? "Pick something first."
             : _cannotImport
-              ?? ("Put a file in place of this one: a finished model, texture or animation file, or an OBJ "
-                  + "mesh, which is turned into a model as it goes in. Anything already in the game's own format "
+              ?? ("Replace this with a finished model, texture or animation file, or an OBJ mesh, which is "
+                  + "turned into a model on import. Anything already in the game's own format "
                   + "has to be the same kind as what is here now.\n\n" + ModelAssets.CanConvertAMesh);
 
         private string _cannotImport = "Pick something first.";
@@ -1047,9 +1076,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             note = null;
             if (_selected == null) return "Pick something first.";
             if (_cannotImport != null) return _cannotImport;
-            if (string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase))
-                return ModelAssets.ImportMesh(_selected.Archive, ShowingIndex, path, out note);
-            return ModelAssets.ImportRaw(_selected.Archive, ShowingIndex, path);
+            var archive = _selected.Archive;
+            int index = ShowingIndex;
+            string said = null;
+            string err = string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase)
+                ? _pending.Import(() => ModelAssets.ImportMesh(archive, index, path, out said))
+                : _pending.Import(() => ModelAssets.ImportRaw(archive, index, path));
+            note = said;
+            return err;
         }
 
         /// <summary>Saves the entry exactly as it sits in the ROM.</summary>

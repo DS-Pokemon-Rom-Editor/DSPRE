@@ -287,7 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                     return $"{it.Detail}, sound {it.SampleIndex}. One of the sounds the game is built from, so it "
                          + "can be replaced. More than one tune or effect may use it.";
                 return it.Name + ". This is written-out notes played on the game's own instruments, so it "
-                     + "can be saved as sound but a WAV cannot be put in its place. The sounds it plays "
+                     + "can be saved as sound but a WAV cannot replace it. The sounds it plays "
                      + "are on the Sounds tab, and those can be replaced.";
             }
         }
@@ -295,8 +295,8 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         /// <summary>Why the Import button is on for a sample and off for a sequence.</summary>
         public string ImportHelp =>
             (Selected != null && Selected.IsSample
-                ? "Put a WAV in over this sound.\n\n"
-                : "Put a WAV in as this Pokémon's cry.\n\n")
+                ? "Import a WAV over this sound.\n\n"
+                : "Import a WAV as this Pokémon's cry.\n\n")
             + SoundArchive.HowItWorks + "\n\n"
             + CryFiles.AcceptedFormat + "\n\n"
             + "It is squeezed down the way the games squeeze their own sounds, so it takes about the same "
@@ -583,10 +583,10 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             ? "Pick a piece of music, a fanfare or a sound effect first."
             : Selected.IsSample
                 ? "This is one of the sounds the game plays rather than written-out notes, so there is "
-                  + "nothing to put in a MIDI. Save it as a WAV instead."
+                  + "nothing to save as MIDI. Save it as a WAV instead."
             : Selected.IsCry
-                ? "A cry is a recorded sample rather than written-out notes, so there is nothing to put in "
-                  + "a MIDI. Save it as a WAV instead."
+                ? "A cry is a recorded sample rather than written-out notes, so there is nothing to save "
+                  + "as MIDI. Save it as a WAV instead."
                 : "Save the notes as a MIDI other music programs open. The notes and their timing are "
                   + "exact. The instruments are not: the game plays these on samples kept in the ROM, "
                   + "which a MIDI cannot carry, so it names an instrument number and the program you open "

@@ -10,9 +10,9 @@ namespace DSPRE.Avalonia
                 S("name:ItemList", "The list", "Pick an entry to show it on the right."),
                 S("name:PartsList", "Parts", "Some entries are made of several files, like a Pokémon's front and back. Pick the part to look at."),
                 S("name:PreviewPanel", "Preview", "The picture as the game draws it, blown up so small ones are easy to read."),
-                S("name:ActionsBar", "Out and back in", "Save picture writes a PNG that keeps its colours in order, so it can go back in. Put a picture in replaces it with a PNG."),
-                S("name:ActionsBar", "Painting and more", "Paint this opens it in the painter, and the Edit button opens the editor that decides everything else about it. Shiny shows shiny colours where there are any."),
-                S(null, "Keeping changes", "Pictures you put in go straight into the project. Save the ROM to keep them."));
+                S("name:ActionsBar", "Out and back in", "Export PNG writes a PNG that keeps its colours in order, so it can be imported back. Import PNG replaces the picture."),
+                S("name:ActionsBar", "Painting and more", "Paint opens it in the painter, and the Edit button opens the editor that decides everything else about it. Shiny shows shiny colours where there are any."),
+                S(null, "Keeping changes", "Imports wait until you press Save, and Undo (Ctrl+Z) takes them back."));
 
             Add("ModelBrowserView", "Models window",
                 S("name:SearchBox", "Every model", "Every 3D model, texture set and animation in the game. Type a name or number, like building or map, to narrow the list."),
@@ -21,8 +21,8 @@ namespace DSPRE.Avalonia
                 S("name:GlHost", "Preview", "Drag to turn the model round and use the wheel to come closer. Texture sets show their pictures here instead."),
                 S("name:SidePanel", "What it wears", "Pick the pictures, colours and movement to show it with. Buildings and scenery share pictures with a whole map, so you pick the set."),
                 S("name:PlayBar", "Movement", "Play the chosen movement, or drag the slider to one frame."),
-                S("name:FileButtons", "Save and replace", "Save a model as a 3D file or as glTF to use elsewhere. Put a file in swaps this entry for a file of the same kind, or turns a mesh from a 3D program into a model."),
-                S(null, "Keeping changes", "Files you put in go straight into the project. Save the ROM to keep them."));
+                S("name:FileButtons", "Import and export", "Export a model as DAE or glTF to use elsewhere. Import swaps this entry for a file of the same kind, or turns an OBJ mesh into a model. Export file writes the entry exactly as it is."),
+                S(null, "Keeping changes", "Imports wait until you press Save, and Undo (Ctrl+Z) takes them back."));
 
             Add("BattleSceneBrowserView", "Battle Scenes window",
                 S("name:SceneList", "Battle scenery", "Every set of battle scenery, with where it is used. Pick one to see it."),

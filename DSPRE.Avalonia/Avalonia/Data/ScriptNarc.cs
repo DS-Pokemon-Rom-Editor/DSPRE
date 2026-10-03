@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using static DSPRE.RomInfo;
@@ -21,6 +22,73 @@ namespace DSPRE.Avalonia.Data
         private int _count;
 
         public ScriptNarc(DirNames dir) { _dir = dir; }
+
+        /// <summary>
+        /// An editor's writes that wait for its Save. While one is in use on this thread every unpacked read asks
+        /// it first and every write goes to it instead of the disk.
+        /// </summary>
+        public sealed class Staging
+        {
+            /// <summary>The staged bytes for an entry, or null when it has none.</summary>
+            public Func<DirNames, int, byte[]> Read;
+            public Action<DirNames, int, byte[]> Write;
+        }
+
+        [ThreadStatic] private static Staging _staging;
+
+        /// <summary>Routes this thread's reads and writes through <paramref name="staging"/> until disposed.</summary>
+        public static IDisposable Use(Staging staging)
+        {
+            var before = _staging;
+            _staging = staging;
+            return new Restore(before);
+        }
+
+        private sealed class Restore : IDisposable
+        {
+            private readonly Staging _before;
+            public Restore(Staging before) => _before = before;
+            public void Dispose() => _staging = _before;
+        }
+
+        // Pending entries every thread reads, for an editor whose reads are spread over background work.
+        private static Func<DirNames, int, byte[]>[] _overlays = Array.Empty<Func<DirNames, int, byte[]>>();
+
+        /// <summary>Makes every read, on any thread, ask <paramref name="read"/> first until disposed.</summary>
+        public static IDisposable Overlay(Func<DirNames, int, byte[]> read)
+        {
+            lock (typeof(ScriptNarc))
+            {
+                var next = new List<Func<DirNames, int, byte[]>>(_overlays) { read };
+                _overlays = next.ToArray();
+            }
+            return new RemoveOverlay(read);
+        }
+
+        private sealed class RemoveOverlay : IDisposable
+        {
+            private readonly Func<DirNames, int, byte[]> _read;
+            public RemoveOverlay(Func<DirNames, int, byte[]> read) => _read = read;
+            public void Dispose()
+            {
+                lock (typeof(ScriptNarc))
+                {
+                    var next = new List<Func<DirNames, int, byte[]>>(_overlays);
+                    next.Remove(_read);
+                    _overlays = next.ToArray();
+                }
+            }
+        }
+
+        /// <summary>The entry as the project holds it, whatever any editor has pending.</summary>
+        public byte[] GetFromDisk(int id)
+        {
+            Ensure();
+            if (_path == null) return null;
+            if (_fromPacked) return FromPacked(id);
+            string f = FilePath(id);
+            return File.Exists(f) ? File.ReadAllBytes(f) : null;
+        }
 
         /// <summary>
         /// Reads the packed archive rather than its unpacked copy. Only that way are the bytes the ROM's
@@ -69,6 +137,9 @@ namespace DSPRE.Avalonia.Data
             Ensure();
             if (_path == null) return null;
             if (_fromPacked) return FromPacked(id);
+            if (_staging?.Read(_dir, id) is byte[] staged) return (byte[])staged.Clone();
+            foreach (var overlay in _overlays)
+                if (overlay(_dir, id) is byte[] pending) return (byte[])pending.Clone();
             string f = FilePath(id);
             return File.Exists(f) ? File.ReadAllBytes(f) : null;
         }
@@ -96,7 +167,9 @@ namespace DSPRE.Avalonia.Data
         {
             Ensure();
             if (_fromPacked) return;   // read-only view of the ROM's own bytes
-            if (_path != null) File.WriteAllBytes(FilePath(id), data);
+            if (_path == null) return;
+            if (_staging != null) { _staging.Write(_dir, id, (byte[])data.Clone()); return; }
+            File.WriteAllBytes(FilePath(id), data);
         }
     }
 }

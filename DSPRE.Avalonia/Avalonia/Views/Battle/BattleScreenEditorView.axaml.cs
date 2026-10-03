@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia.Views.Battle
             if (archive == null) return;
             if (!await WarnIfShared(piece)) return;
 
-            string path = await DialogHelper.OpenFile(this, "Open a PNG to put in",
+            string path = await DialogHelper.OpenFile(this, "Import PNG",
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } });
             if (path == null) return;
 

@@ -28,6 +28,14 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             InitializeComponent();
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm, onClosed: vm.Dispose);
+            EditorWindowChrome.AttachUndoKeys(this, vm);
+            // An import, undo, redo or discard can change what kind of thing an entry is, so the list is read again.
+            vm.PendingChanged += async () =>
+            {
+                await System.Threading.Tasks.Task.Run(vm.Scan);
+                vm.Publish();
+            };
             // Drag to turn it round, wheel to come closer, the same as everywhere else in DSPRE.
             _nav = new Gl3DPointerNavigation(GlHost, GlView);
             vm.ModelReady += (_, _) =>
@@ -67,6 +75,9 @@ namespace DSPRE.Avalonia.Views.Graphics
             SearchBox.Focus();
         }
 
+        private void Save_Click(object sender, RoutedEventArgs e) => ViewModel?.SaveChanges();
+        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel?.DiscardChanges();
+
         private async void SaveDae_Click(object sender, RoutedEventArgs e) => await Save(glb: false);
         private async void SaveGlb_Click(object sender, RoutedEventArgs e) => await Save(glb: true);
 
@@ -76,7 +87,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (vm?.Selected == null) return;
             if (!vm.CanSaveModel)
             {
-                await DialogHelper.ShowInfo(vm.SaveModelHelp, "Save as a 3D file");
+                await DialogHelper.ShowInfo(vm.SaveModelHelp, "Export model");
                 return;
             }
 
@@ -85,14 +96,14 @@ namespace DSPRE.Avalonia.Views.Graphics
                 ? new FilePickerFileType("glTF model") { Patterns = new[] { "*.glb" } }
                 : new FilePickerFileType("Collada model") { Patterns = new[] { "*.dae" } };
 
-            string path = await DialogHelper.SaveFile(this, "Save this model",
+            string path = await DialogHelper.SaveFile(this, "Export model",
                 new[] { type }, vm.SuggestedFileName(ext));
             if (path == null) return;
 
             string err = vm.SaveAsThreeD(path, glb);
             vm.Status = err ?? $"Saved to {path}. The shape and its pictures are in there; the animations "
                              + "are separate entries and are not.";
-            if (err != null) await DialogHelper.ShowInfo(err, "Save as a 3D file");
+            if (err != null) await DialogHelper.ShowInfo(err, "Export model");
         }
 
         private async void PutIn_Click(object sender, RoutedEventArgs e)
@@ -100,16 +111,16 @@ namespace DSPRE.Avalonia.Views.Graphics
             var vm = ViewModel;
             if (vm?.Selected == null)
             {
-                await DialogHelper.ShowInfo("Pick something on the left first.", "Put a file in");
+                await DialogHelper.ShowInfo("Pick something on the left first.", "Import");
                 return;
             }
             if (!vm.CanPutFileIn)
             {
-                await DialogHelper.ShowInfo(vm.PutFileInHelp, "Put a file in");
+                await DialogHelper.ShowInfo(vm.PutFileInHelp, "Import");
                 return;
             }
 
-            string path = await DialogHelper.OpenFile(this, "Choose a file to put in",
+            string path = await DialogHelper.OpenFile(this, "Import",
                 new[]
                 {
                     new FilePickerFileType("3D files")
@@ -125,16 +136,14 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (err != null)
             {
                 vm.Status = err;
-                await DialogHelper.ShowInfo(err, "Put a file in");
+                await DialogHelper.ShowInfo(err, "Import");
                 return;
             }
 
-            await System.Threading.Tasks.Task.Run(vm.Scan);
-            vm.Publish();
             vm.Status = note == null
-                ? "That file is in. Save the ROM to keep it."
-                : note + " Save the ROM to keep it.";
-            if (note != null) await DialogHelper.ShowInfo(vm.Status, "Mesh put in as a model");
+                ? "Imported. Save to keep it."
+                : note + " Save to keep it.";
+            if (note != null) await DialogHelper.ShowInfo(vm.Status, "Import");
         }
 
         private async void SaveRaw_Click(object sender, RoutedEventArgs e)
@@ -142,18 +151,18 @@ namespace DSPRE.Avalonia.Views.Graphics
             var vm = ViewModel;
             if (vm?.Selected == null)
             {
-                await DialogHelper.ShowInfo("Pick something on the left first.", "Save file");
+                await DialogHelper.ShowInfo("Pick something on the left first.", "Export file");
                 return;
             }
 
-            string path = await DialogHelper.SaveFile(this, "Save this file as it is",
+            string path = await DialogHelper.SaveFile(this, "Export file",
                 new[] { new FilePickerFileType("The file as it is in the ROM") { Patterns = new[] { "*.*" } } },
                 vm.SuggestedFileName(".bin"));
             if (path == null) return;
 
             string err = vm.SaveFileAsItIs(path);
             vm.Status = err ?? $"Saved to {path}, exactly as it sits in the ROM.";
-            if (err != null) await DialogHelper.ShowInfo(err, "Save file");
+            if (err != null) await DialogHelper.ShowInfo(err, "Export file");
         }
     }
 }

@@ -10,7 +10,7 @@ using DSPRE.Avalonia.Data;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     /// <summary>Every 2D graphic in the game in one list, with a picture of whatever is picked.</summary>
-    public sealed class GraphicsBrowserViewModel : INotifyPropertyChanged
+    public sealed class GraphicsBrowserViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -87,6 +87,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         public GraphicsBrowserViewModel(bool loadImmediately = true)
         {
+            _pending.Changed += RaiseEdited;
             if (loadImmediately) Reload();
         }
 
@@ -438,6 +439,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             var a = _selected.Archive;
             try
             {
+                using var pending = _pending.Reading();
                 var p = GraphicAssets.Render(ShowingArchive ?? a, ShowingIndex, _showShiny);
                 if (p.Rgba != null && p.Width > 0)
                 {
@@ -485,8 +487,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string SavePictureHelp => _selected == null
             ? "Pick something first."
             : _picture != null
-                ? "Save as a PNG that keeps its numbered colours, so it can go back in unchanged."
-                : "No picture here to save. The file itself can still be saved as it is.";
+                ? "Export a PNG that keeps its numbered colours, so it can be imported back unchanged."
+                : "No picture here to export. The file itself can still be exported.";
 
         public bool CanReplace => _selected != null && ShowingArchive?.CannotImportBecause == null
                                   && _picture != null;
@@ -500,8 +502,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_picture == null)
                     return "This entry has no picture in it, so a PNG cannot take its place. "
                          + (Whynot ?? "");
-                return "Put a PNG in place of this. Same size, same numbered colours: save this one "
-                     + "first and paint over it.";
+                return "Replace this with a PNG of the same size and numbered colours. Export it first and paint over that.";
             }
         }
 
@@ -541,12 +542,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string SavePicture(string path)
         {
             if (_selected == null) return "Pick something first.";
+            using var pending = _pending.Reading();
             return GraphicAssets.ExportPng(ShowingArchive ?? _selected.Archive, ShowingIndex, path);
         }
 
         public string SaveFileAsItIs(string path)
         {
             if (_selected == null) return "Pick something first.";
+            using var pending = _pending.Reading();
             return GraphicAssets.ExportRaw(ShowingArchive ?? _selected.Archive, ShowingIndex, path);
         }
 
@@ -559,10 +562,40 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             note = null;
             if (_selected == null) return "Pick something first.";
-            string err = GraphicAssets.ImportPng(ShowingArchive ?? _selected.Archive, ShowingIndex,
-                                                 path, out note);
-            if (err == null) Look();   // show what went in
+            var archive = ShowingArchive ?? _selected.Archive;
+            int index = ShowingIndex;
+            string said = null;
+            string err = _pending.Import(() => GraphicAssets.ImportPng(archive, index, path, out said));
+            note = said;
             return err;
+        }
+
+        // ── imports wait for Save ───────────────────────────────────────────────────────────────────
+
+        private readonly PendingArchiveWrites _pending = new();
+
+        public bool HasUnsavedChanges => _pending.IsDirty;
+        public string UnsavedChangesDescription => "Graphics";
+        public bool CanUndo => _pending.CanUndo;
+        public bool CanRedo => _pending.CanRedo;
+        public void Undo() => _pending.Undo();
+        public void Redo() => _pending.Redo();
+
+        public void SaveChanges()
+        {
+            _pending.Save();
+            SaveNotice.Saved(UnsavedChangesDescription);
+            Status = "Saved.";
+        }
+
+        public void DiscardChanges() => _pending.Discard();
+
+        private void RaiseEdited()
+        {
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+            Look();   // show what is pending now
         }
     }
 }

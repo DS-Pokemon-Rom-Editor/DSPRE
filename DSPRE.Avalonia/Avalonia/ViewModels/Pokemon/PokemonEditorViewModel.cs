@@ -59,13 +59,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int MaxMonIndex => System.Math.Max(0, PokemonNames.Count - 1 - (_pendingSpecies != null ? 1 : 0));
 
         private int _selectedMonIndex = 1;
-        /// <summary>What putting a cry in actually does, and what sort of file it takes. </summary>
+        /// <summary>What importing a cry actually does, and what sort of file it takes.</summary>
         public string CryImportHelp =>
-            "Put a WAV in as this Pokémon's cry.\n\n"
+            "Import a WAV as this Pokémon's cry.\n\n"
             + DSPRE.Avalonia.Data.SoundArchive.HowItWorks + "\n\n"
             + DSPRE.Avalonia.Data.CryFiles.AcceptedFormat + "\n\n"
             + "It is squeezed down the way the games squeeze their own cries, so it takes about the same "
-            + "room rather than making the sound file bigger. That costs a little detail, so put a cry in "
+            + "room rather than making the sound file bigger. That costs a little detail, so import a cry "
             + "once from your own source rather than exporting and importing the same one over and over.\n\n"
             + "The ROM's sound file is written straight away.";
 

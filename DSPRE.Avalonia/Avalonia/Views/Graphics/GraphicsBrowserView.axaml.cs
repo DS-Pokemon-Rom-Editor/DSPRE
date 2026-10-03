@@ -19,7 +19,12 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             InitializeComponent();
             DataContext = vm;
+            EditorWindowChrome.Attach(this, vm);
+            EditorWindowChrome.AttachUndoKeys(this, vm);
         }
+
+        private void Save_Click(object sender, RoutedEventArgs e) => ViewModel?.SaveChanges();
+        private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel?.DiscardChanges();
 
         /// <summary>Empties the search box, which is what the button beside it is for.</summary>
         private void ClearSearch_Click(object sender, RoutedEventArgs e)
@@ -33,13 +38,13 @@ namespace DSPRE.Avalonia.Views.Graphics
             var vm = ViewModel;
             if (vm?.Selected == null) return;
 
-            string path = await DialogHelper.SaveFile(this, "Save this picture",
+            string path = await DialogHelper.SaveFile(this, "Export PNG",
                 new[] { Png }, vm.SuggestedFileName(".png"));
             if (path == null) return;
 
             string err = vm.SavePicture(path);
-            vm.Status = err ?? $"Saved to {path}. It keeps its numbered colours, so it can go back in.";
-            if (err != null) await DialogHelper.ShowInfo(err, "Save picture");
+            vm.Status = err ?? $"Exported to {path}.";
+            if (err != null) await DialogHelper.ShowInfo(err, "Export PNG");
         }
 
         private async void SaveRaw_Click(object sender, RoutedEventArgs e)
@@ -47,18 +52,18 @@ namespace DSPRE.Avalonia.Views.Graphics
             var vm = ViewModel;
             if (vm?.Selected == null)
             {
-                await DialogHelper.ShowInfo("Pick something on the left first.", "Save file");
+                await DialogHelper.ShowInfo("Pick something on the left first.", "Export file");
                 return;
             }
 
-            string path = await DialogHelper.SaveFile(this, "Save this file as it is",
+            string path = await DialogHelper.SaveFile(this, "Export file",
                 new[] { new FilePickerFileType("The file as it is in the ROM") { Patterns = new[] { "*.*" } } },
                 vm.SuggestedFileName(".bin"));
             if (path == null) return;
 
             string err = vm.SaveFileAsItIs(path);
-            vm.Status = err ?? $"Saved to {path}, exactly as it sits in the ROM.";
-            if (err != null) await DialogHelper.ShowInfo(err, "Save file");
+            vm.Status = err ?? $"Exported to {path}.";
+            if (err != null) await DialogHelper.ShowInfo(err, "Export file");
         }
 
         private async void Replace_Click(object sender, RoutedEventArgs e)
@@ -70,23 +75,23 @@ namespace DSPRE.Avalonia.Views.Graphics
             // here another way, so say it plainly rather than doing nothing.
             if (!vm.CanReplace)
             {
-                await DialogHelper.ShowInfo(vm.ReplaceHelp, "Put a picture in");
+                await DialogHelper.ShowInfo(vm.ReplaceHelp, "Import PNG");
                 return;
             }
 
-            string path = await DialogHelper.OpenFile(this, "Choose a PNG to put in", new[] { Png });
+            string path = await DialogHelper.OpenFile(this, "Import PNG", new[] { Png });
             if (path == null) return;
 
             string err = vm.Replace(path, out string note);
-            vm.Status = err ?? "That picture is in. Save the ROM to keep it.";
-            if (err != null) { await DialogHelper.ShowInfo(err, "Put a picture in"); return; }
+            vm.Status = err ?? "Imported. Save to keep it.";
+            if (err != null) { await DialogHelper.ShowInfo(err, "Import PNG"); return; }
 
             // A background shares its pieces, so painting one square changes every square drawn from the
             // same one. Say so rather than leaving it to be found later.
             if (!string.IsNullOrEmpty(note))
             {
                 vm.Status = note;
-                await DialogHelper.ShowInfo(note, "Put a picture in");
+                await DialogHelper.ShowInfo(note, "Import PNG");
             }
         }
 
@@ -101,9 +106,12 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             if (!vm.CanReplace)
             {
-                await DialogHelper.ShowInfo(vm.ReplaceHelp, "Paint this");
+                await DialogHelper.ShowInfo(vm.ReplaceHelp, "Paint");
                 return;
             }
+
+            // The painter works on the saved graphic, so pending imports are settled first.
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(vm, this, "graphic", "Save them before painting?")) return;
 
             var painter = new GraphicPainterView(
                 new GraphicPainterViewModel(vm.ShowingArchive, vm.ShowingIndex));

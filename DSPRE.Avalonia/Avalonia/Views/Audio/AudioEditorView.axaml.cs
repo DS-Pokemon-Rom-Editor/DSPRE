@@ -289,7 +289,7 @@ namespace DSPRE.Avalonia.Views.Audio
             if (vm?.Selected == null || !vm.CanImport) return;
 
             bool sample = vm.Selected.IsSample;
-            string title = sample ? "Put in a sound" : "Put in a cry";
+            string title = sample ? "Import a sound" : "Import a cry";
 
             // Replacing a shared sound changes everything that plays it, so say so before it happens
             // rather than leaving somebody to find out by playing a tune that now sounds wrong.
@@ -299,7 +299,7 @@ namespace DSPRE.Avalonia.Views.Audio
                 return;
 
             string path = await DialogHelper.OpenFile(this,
-                sample ? "Choose a sound to put in" : "Choose a cry to put in",
+                sample ? "Choose a sound to import" : "Choose a cry to import",
                 new[] { new FilePickerFileType("WAV sound") { Patterns = new[] { "*.wav" } } });
             if (path == null) return;
 
@@ -320,9 +320,9 @@ namespace DSPRE.Avalonia.Views.Audio
                         : SoundArchive.PrepareCry(item.Number, path, out why);
                     if (held != null) { vm.StageSample(item, held); return; }
                 }
-                await DialogHelper.ShowInfo(why ?? "That could not be put in.", title);
+                await DialogHelper.ShowInfo(why ?? "That could not be imported.", title);
             }
-            catch (Exception ex) { await DialogHelper.ShowError("It could not be put in:\n" + ex.Message, title); }
+            catch (Exception ex) { await DialogHelper.ShowError("It could not be imported:\n" + ex.Message, title); }
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)

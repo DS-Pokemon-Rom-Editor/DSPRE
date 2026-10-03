@@ -69,10 +69,10 @@ namespace DSPRE.Avalonia.Views.Graphics
             var archive = ArchiveOf(piece);
             if (archive == null) return;
 
-            string path = await DialogHelper.OpenFile(this, "Open a PNG to put in", new[] { Png });
+            string path = await DialogHelper.OpenFile(this, "Import PNG", new[] { Png });
             if (path == null) return;
 
-            VM.Remember(piece.Archive, piece.Drawing, $"the PNG put into {piece.Name}");
+            VM.Remember(piece.Archive, piece.Drawing, $"the PNG imported into {piece.Name}");
             string trouble = GraphicAssets.ImportPng(archive, piece.Drawing, path, out string note);
             if (trouble != null) { await DialogHelper.ShowError(trouble, "Bottom Screen"); return; }
             string tooBig = VM?.RefuseIfOverRoom(piece);

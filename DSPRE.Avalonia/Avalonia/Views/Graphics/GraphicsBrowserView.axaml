@@ -26,22 +26,25 @@
           </TextBox.InnerRightContent>
         </TextBox>
         <WrapPanel x:Name="ActionsBar" Classes="toolbar" Orientation="Horizontal" Margin="12,2,6,2">
-          <Button Content="Save picture" Click="SavePicture_Click"
-                  IsEnabled="{Binding CanSavePicture}"
-                  ToolTip.Tip="{Binding SavePictureHelp}"/>
-          <Button Content="Save file as it is" Click="SaveRaw_Click"
-                  IsEnabled="{Binding HasSelection}"
-                  ToolTip.Tip="Save the whole entry exactly as it sits in the ROM, keeping everything a PNG would drop."/>
-          <Button Content="Put a picture in" Click="Replace_Click"
+          <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <controls:UndoRedoButtons/>
+          <Button Content="Import PNG…" Click="Replace_Click"
                   IsEnabled="{Binding CanReplace}"
                   ToolTip.Tip="{Binding ReplaceHelp}"/>
+          <Button Content="Export PNG…" Click="SavePicture_Click"
+                  IsEnabled="{Binding CanSavePicture}"
+                  ToolTip.Tip="{Binding SavePictureHelp}"/>
+          <Button Content="Export file…" Click="SaveRaw_Click"
+                  IsEnabled="{Binding HasSelection}"
+                  ToolTip.Tip="The whole entry exactly as it sits in the ROM, keeping everything a PNG would drop."/>
           <CheckBox Content="Shiny" IsChecked="{Binding ShowShiny, Mode=TwoWay}"
                     IsEnabled="{Binding CanShowShiny}" VerticalAlignment="Center"
                     Margin="10,0,4,0" FontSize="12" ToolTip.Tip="{Binding ShinyHelp}"/>
           <Button Content="{Binding OwningEditorLabel}" Click="OpenOwner_Click"
                   IsEnabled="{Binding HasOwningEditor}"
                   ToolTip.Tip="{Binding OwningEditorHelp}"/>
-          <Button Content="Paint this" Click="Paint_Click"
+          <Button Content="Paint…" Click="Paint_Click"
                   IsEnabled="{Binding CanReplace}"
                   ToolTip.Tip="{Binding ReplaceHelp}"/>
         </WrapPanel>
