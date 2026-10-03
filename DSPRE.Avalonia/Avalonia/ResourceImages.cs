@@ -11,13 +11,13 @@ namespace DSPRE.Avalonia
 {
     /// <summary>
     /// GDI-free replacement for the <c>Properties.Resources</c> image lookups in the Avalonia shell.
-    /// The PNG/GIF sources behind the WinForms .resx (<c>Resources/Graphics/**</c>) are embedded as
-    /// <c>avares://</c> assets (see DSPRE.csproj); this resolves a .resx key to the asset by file
-    /// basename. Unknown keys return null, matching <c>ResourceManager.GetObject</c>.
+    /// Avalonia keeps its own copy of the WinForms .resx images in <c>Assets/Legacy</c>, apart from
+    /// <c>Assets/Icons</c> so same-named files cannot collide; this resolves a .resx key to the asset by
+    /// file basename. Unknown keys return null, matching <c>ResourceManager.GetObject</c>.
     /// </summary>
     internal static class ResourceImages
     {
-        private const string AssetRoot = "avares://DSPRE.Avalonia/Resources/Graphics/";
+        private const string AssetRoot = "avares://DSPRE.Avalonia/Avalonia/Assets/Legacy/";
 
         /// <summary>.resx keys whose backing file has a different basename.</summary>
         private static readonly Dictionary<string, string> Aliases = new(StringComparer.OrdinalIgnoreCase)

@@ -64,8 +64,6 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Avalonia\Assets\**" />
-    <!-- Also embedded via DS_Map\Properties\Resources.resx for the legacy WinForms shell; shared, not moved. -->
-    <AvaloniaResource Include="..\DS_Map\Resources\Graphics\**" Link="Resources\Graphics\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
