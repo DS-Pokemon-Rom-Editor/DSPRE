@@ -16,13 +16,13 @@
   <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
           BorderThickness="0,0,0,1" Padding="6,4">
     <WrapPanel x:Name="SpriteButtons" Classes="toolbar">
-      <Button Content="Save Selected" Click="SaveSelected_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-      <Button Content="Save All" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-      <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Save selected" controls:Icon.Key="saveButton" Click="SaveSelected_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Save all" controls:Icon.Key="saveButton" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <controls:UndoRedoButtons/>
-      <Button Content="Import PNG" Click="Import_Click" IsEnabled="{Binding HasSelectedEntry}" Margin="12,2,6,2"/>
-      <Button Content="Export PNG" Click="Export_Click" IsEnabled="{Binding HasSelectedEntry}"/>
-      <Button Content="Show File" Click="ShowFile_Click" IsEnabled="{Binding HasSelectedEntry}"/>
+      <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding HasSelectedEntry}" Margin="12,2,6,2" ToolTip.Tip="PNG image"/>
+      <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding HasSelectedEntry}" ToolTip.Tip="PNG image"/>
+      <Button Content="Show file" Click="ShowFile_Click" IsEnabled="{Binding HasSelectedEntry}"/>
       <CheckBox Content="Shiny palette" IsChecked="{Binding IsShiny}"
                 IsEnabled="{Binding HasShinyPalette}" ToolTip.Tip="{Binding ShinyPaletteNote}"/>
       <StackPanel x:Name="EntryButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
@@ -32,9 +32,9 @@
             <Binding Path="IsExpansionApplied"/>
           </MultiBinding>
         </StackPanel.IsVisible>
-        <Button Content="Add Custom Entry…" Click="AddEntry_Click" IsEnabled="{Binding CanAddEntry}"
+        <Button Content="Add custom entry…" controls:Icon.Key="addIcon" Click="AddEntry_Click" IsEnabled="{Binding CanAddEntry}"
                 ToolTip.Tip="Needs the overworld sprite expansion patch"/>
-        <Button Content="Delete Selected Entry" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}"
+        <Button Content="Delete selected entry" controls:Icon.Key="deleteIcon" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}"
                 ToolTip.Tip="Only entries you added"/>
       </StackPanel>
       <TextBlock Text="{Binding ModifiedCount}" Foreground="OrangeRed" FontSize="12"/>

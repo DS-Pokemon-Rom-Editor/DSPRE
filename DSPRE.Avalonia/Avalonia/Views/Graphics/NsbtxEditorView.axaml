@@ -15,8 +15,8 @@
   <DockPanel>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <RadioButton Content="Map textures"      GroupName="tt" IsChecked="{Binding MapTextures}"/>
@@ -25,8 +25,8 @@
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddPack_Click"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemPack_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>
-        <Button Content="Export" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
       </WrapPanel>
     </Border>
 

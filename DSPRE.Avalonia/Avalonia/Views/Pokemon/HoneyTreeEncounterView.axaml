@@ -20,11 +20,11 @@
       <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="0,0,0,1" Padding="6,4">
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <Button Content="Save"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
-          <Button Content="Export…" Click="Export_Click"/>
-          <Button Content="Import…" Click="Import_Click"/>
-          <Button Content="Locate"  Click="Locate_Click"/>
+          <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
+          <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
+          <Button Content="Locate" controls:Icon.Key="folder"  Click="Locate_Click"/>
         </StackPanel>
       </Border>
 

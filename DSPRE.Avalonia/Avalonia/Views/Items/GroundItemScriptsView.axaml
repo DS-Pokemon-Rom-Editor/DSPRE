@@ -17,8 +17,8 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4" Margin="-12,-12,-12,8">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:HelpTip Text="The item and quantity pairs an item event on the map can give. An entry an event still uses can't be removed. Saving renumbers the item events to match."/>
       </StackPanel>
     </Border>
@@ -31,10 +31,10 @@
                     Width="260" HorizontalAlignment="Left"/>
           <TextBlock Text="Qty:" VerticalAlignment="Center" Margin="8,0,0,0"/>
           <NumericUpDown Value="{Binding NewQuantity}" Minimum="1" Maximum="99" FormatString="0" Width="90"/>
-          <Button Content="Add" Click="Add_Click" Width="70"/>
+          <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" Width="70"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
-          <Button Content="Remove Selected" Click="Remove_Click" IsEnabled="{Binding CanRemove}"/>
+          <Button Content="Remove selected" controls:Icon.Key="deleteIcon" Click="Remove_Click" IsEnabled="{Binding CanRemove}"/>
           <Button Content="Close" Click="Close_Click" IsCancel="True"/>
         </StackPanel>
       </StackPanel>

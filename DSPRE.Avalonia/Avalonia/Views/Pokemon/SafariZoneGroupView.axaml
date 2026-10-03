@@ -80,8 +80,8 @@
     <HeaderedContentControl Grid.Column="1" Header="Object encounters" Margin="4,0,0,0">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-          <Button Content="Add slot"    Click="AddObject_Click"    IsEnabled="{Binding CanEditObjectSlotCount}"/>
-          <Button Content="Remove slot" Click="RemoveObject_Click" IsEnabled="{Binding CanEditObjectSlotCount}"/>
+          <Button Content="Add slot" controls:Icon.Key="addIcon"    Click="AddObject_Click"    IsEnabled="{Binding CanEditObjectSlotCount}"/>
+          <Button Content="Remove slot" controls:Icon.Key="deleteIcon" Click="RemoveObject_Click" IsEnabled="{Binding CanEditObjectSlotCount}"/>
           <TextBlock Text="!" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"
                      IsVisible="{Binding NoSlotsWarning}" ToolTip.Tip="No bonus slots: surfing and every rod here give level 5 Magikarp"/>
         </StackPanel>

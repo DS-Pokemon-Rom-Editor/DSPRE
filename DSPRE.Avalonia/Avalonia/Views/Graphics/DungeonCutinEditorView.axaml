@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
 		x:Class="DSPRE.Avalonia.Views.Graphics.DungeonCutinEditorView"
 		x:DataType="vm:DungeonCutinEditorViewModel"
@@ -14,11 +15,11 @@
 
 	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
 	<StackPanel x:Name="CutinToolbar" Orientation="Horizontal" Spacing="6">
-	  <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-	  <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-	  <Button Content="Export CSV…" Click="Export_Click"/>
-	  <Button Content="Import CSV…" Click="Import_Click"/>
-	  <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"
+	  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+	  <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+	  <Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click"/>
+	  <Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
+	  <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
 	          ToolTip.Tip="Open this splash screen in the Graphics window, where its drawing, colours and arrangement for all four times of day sit together."/>
 	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
 	</StackPanel>
@@ -65,8 +66,8 @@
 			  <TextBlock Text="Morning" FontWeight="Bold"/>
 			  <Image Source="{Binding MorningPreview}" Width="200" Height="150" Stretch="Uniform" HorizontalAlignment="Left"/>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import…" Click="ImportMorning_Click"/>
-				<Button Content="Export…" Click="ExportMorning_Click"/>
+				<Button Content="Import…" controls:Icon.Key="import" Click="ImportMorning_Click"/>
+				<Button Content="Export…" controls:Icon.Key="export" Click="ExportMorning_Click"/>
 			  </StackPanel>
 			  <StackPanel Orientation="Horizontal" Spacing="10">
 				<StackPanel Spacing="2"><TextBlock Text="Palette"/><TextBox Text="{Binding SelectedRow.MorningPaletteId}" Width="70"/></StackPanel>
@@ -81,8 +82,8 @@
 			  <TextBlock Text="Noon" FontWeight="Bold"/>
 			  <Image Source="{Binding NoonPreview}" Width="200" Height="150" Stretch="Uniform" HorizontalAlignment="Left"/>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import…" Click="ImportNoon_Click"/>
-				<Button Content="Export…" Click="ExportNoon_Click"/>
+				<Button Content="Import…" controls:Icon.Key="import" Click="ImportNoon_Click"/>
+				<Button Content="Export…" controls:Icon.Key="export" Click="ExportNoon_Click"/>
 			  </StackPanel>
 			  <StackPanel Orientation="Horizontal" Spacing="10">
 				<StackPanel Spacing="2"><TextBlock Text="Palette"/><TextBox Text="{Binding SelectedRow.NoonPaletteId}" Width="70"/></StackPanel>
@@ -97,8 +98,8 @@
 			  <TextBlock Text="Evening" FontWeight="Bold"/>
 			  <Image Source="{Binding EveningPreview}" Width="200" Height="150" Stretch="Uniform" HorizontalAlignment="Left"/>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import…" Click="ImportEvening_Click"/>
-				<Button Content="Export…" Click="ExportEvening_Click"/>
+				<Button Content="Import…" controls:Icon.Key="import" Click="ImportEvening_Click"/>
+				<Button Content="Export…" controls:Icon.Key="export" Click="ExportEvening_Click"/>
 			  </StackPanel>
 			  <StackPanel Orientation="Horizontal" Spacing="10">
 				<StackPanel Spacing="2"><TextBlock Text="Palette"/><TextBox Text="{Binding SelectedRow.EveningPaletteId}" Width="70"/></StackPanel>
@@ -113,8 +114,8 @@
 			  <TextBlock Text="Night" FontWeight="Bold"/>
 			  <Image Source="{Binding NightPreview}" Width="200" Height="150" Stretch="Uniform" HorizontalAlignment="Left"/>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import…" Click="ImportNight_Click"/>
-				<Button Content="Export…" Click="ExportNight_Click"/>
+				<Button Content="Import…" controls:Icon.Key="import" Click="ImportNight_Click"/>
+				<Button Content="Export…" controls:Icon.Key="export" Click="ExportNight_Click"/>
 			  </StackPanel>
 			  <StackPanel Orientation="Horizontal" Spacing="10">
 				<StackPanel Spacing="2"><TextBlock Text="Palette"/><TextBox Text="{Binding SelectedRow.NightPaletteId}" Width="70"/></StackPanel>

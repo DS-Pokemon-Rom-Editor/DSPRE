@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
              xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
              xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
              x:Class="DSPRE.Avalonia.Views.World.MapGeometryView"
@@ -12,10 +13,10 @@
         <Button Content="Front" Click="CamFront_Click" Margin="4,0,0,0"/>
         <Button Content="Side" Click="CamSide_Click" Margin="4,0,0,0"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
-        <Button Content="Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-        <Button Content="Export" Click="Export_Click" Margin="4,0,0,0"
+        <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" Margin="4,0,0,0"
                 ToolTip.Tip="OBJ with textures"/>
-        <Button Content="Import" Click="Import_Click" Margin="4,0,0,0"
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" Margin="4,0,0,0"
                 ToolTip.Tip="OBJ from DSPRE or PDSMS"/>
 
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
@@ -74,7 +75,7 @@
           <CheckBox Content="Whole map" IsChecked="{Binding ProposeWholeMap}" IsVisible="{Binding !HasProposal}"/>
           <UniformGrid Columns="2" IsVisible="{Binding HasProposal}">
             <Button Content="Use" Click="UseProposal_Click" Margin="0,0,2,0"/>
-            <Button Content="Discard" Click="DiscardProposal_Click"/>
+            <Button Content="Discard" controls:Icon.Key="resetIcon" Click="DiscardProposal_Click"/>
           </UniformGrid>
           <TextBlock Text="{Binding PlateNote}" TextWrapping="Wrap" IsVisible="{Binding ShowPlates}"
                      Foreground="{DynamicResource Editor.Subtle}"/>
@@ -97,8 +98,8 @@
             <NumericUpDown Grid.Row="3" Grid.Column="3" Value="{Binding PlateSlopeZ}" Increment="0.125" FormatString="0.###"/>
           </Grid>
           <UniformGrid Columns="2" IsVisible="{Binding ShowPlates}">
-            <Button Content="Add plate" Click="AddPlate_Click" Margin="0,0,2,0" ToolTip.Tip="On the picked face"/>
-            <Button Content="Delete plate" Click="DeletePlate_Click" IsEnabled="{Binding HasPickedPlate}"/>
+            <Button Content="Add plate" controls:Icon.Key="addIcon" Click="AddPlate_Click" Margin="0,0,2,0" ToolTip.Tip="On the picked face"/>
+            <Button Content="Delete plate" controls:Icon.Key="deleteIcon" Click="DeletePlate_Click" IsEnabled="{Binding HasPickedPlate}"/>
           </UniformGrid>
         </StackPanel>
 
@@ -110,18 +111,18 @@
                     SelectedIndex="{Binding PickedPicture}"/>
           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AvailableColours}"
                     SelectedIndex="{Binding PickedColours}"/>
-          <Button Content="Paint" HorizontalAlignment="Stretch" Click="Paint_Click"/>
+          <Button Content="Paint" controls:Icon.Key="brush" HorizontalAlignment="Stretch" Click="Paint_Click"/>
         </StackPanel>
 
         <Rectangle Height="1" Fill="{DynamicResource Editor.Separator}"/>
 
         <StackPanel Spacing="4">
-          <Button Content="Delete face" HorizontalAlignment="Stretch" Click="DeleteFace_Click"
+          <Button Content="Delete face" controls:Icon.Key="deleteIcon" HorizontalAlignment="Stretch" Click="DeleteFace_Click"
                   IsEnabled="{Binding HasPickedFace}"/>
           <TextBlock Text="{Binding NewFaceNote}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
           <UniformGrid Columns="2">
-            <Button Content="Add face" Click="MakeFace_Click" IsEnabled="{Binding CanMakeFace}" Margin="0,0,2,0"/>
-            <Button Content="Clear" Click="ForgetCorners_Click"/>
+            <Button Content="Add face" controls:Icon.Key="addIcon" Click="MakeFace_Click" IsEnabled="{Binding CanMakeFace}" Margin="0,0,2,0"/>
+            <Button Content="Clear" controls:Icon.Key="Cross" Click="ForgetCorners_Click"/>
           </UniformGrid>
         </StackPanel>
 

@@ -21,8 +21,8 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       </StackPanel>
     </Border>
 
@@ -37,9 +37,9 @@
                    RenderOptions.BitmapInterpolationMode="None"/>
           </Border>
           <StackPanel Spacing="6" VerticalAlignment="Center">
-            <Button Content="Import PNG…" Click="ImportIcon_Click"
+            <Button Content="Import…" controls:Icon.Key="import" Click="ImportIcon_Click"
                     ToolTip.Tip="Replace the icon. Must be exactly 32×32 px with at most 15 opaque colors; transparent pixels stay transparent in the DS menu."/>
-            <Button Content="Export PNG…" Click="ExportIcon_Click"/>
+            <Button Content="Export…" controls:Icon.Key="export" Click="ExportIcon_Click" ToolTip.Tip="PNG image"/>
             <TextBlock Text="32×32 px, 15 colors + transparency" FontSize="11" Opacity="0.7"/>
           </StackPanel>
         </StackPanel>

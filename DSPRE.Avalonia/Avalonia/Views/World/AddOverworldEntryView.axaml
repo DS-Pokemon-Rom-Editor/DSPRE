@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
         x:Class="DSPRE.Avalonia.Views.World.AddOverworldEntryView"
         x:DataType="vm:AddOverworldEntryViewModel"
@@ -16,7 +17,7 @@
     <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
-        <Button Content="Add" Click="Add_Click" IsDefault="True"/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsDefault="True"/>
         <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
       </StackPanel>
     </StackPanel>
@@ -31,9 +32,9 @@
       <Grid ColumnDefinitions="*,4,*,4,Auto">
         <Button Grid.Column="0" Content="Choose PNG…" Click="ChoosePng_Click" HorizontalAlignment="Stretch"
                 ToolTip.Tip="A normal image file. It's converted into the ROM's native texture format on Add."/>
-        <Button Grid.Column="2" Content="Choose Raw Texture…" Click="ChooseRawBtx_Click" HorizontalAlignment="Stretch"
+        <Button Grid.Column="2" Content="Choose raw texture…" Click="ChooseRawBtx_Click" HorizontalAlignment="Stretch"
                 ToolTip.Tip="A texture file already in the game's own format (e.g. taken from another ROM), copied in as it is, so it stays pixel-perfect."/>
-        <Button Grid.Column="4" Content="Clear" Click="ClearImage_Click" IsEnabled="{Binding HasImage}"/>
+        <Button Grid.Column="4" Content="Clear" controls:Icon.Key="Cross" Click="ClearImage_Click" IsEnabled="{Binding HasImage}"/>
       </Grid>
       <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" Height="120">
         <Image Source="{Binding ImagePreview}" Stretch="Uniform" Margin="4"/>

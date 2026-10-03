@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
         x:Class="DSPRE.Avalonia.Views.Shell.HgEnginePatchesView"
         x:DataType="vm:HgEnginePatchesViewModel">
@@ -17,11 +18,11 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <TextBlock Text="Show:" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <ComboBox Width="160" ItemsSource="{Binding Binaries}" SelectedIndex="{Binding BinaryFilter}"/>
-        <Button Content="Reload" Click="Reload_Click"/>
+        <Button Content="Reload" controls:Icon.Key="reload" Click="Reload_Click"/>
       </StackPanel>
     </Border>
 
@@ -63,7 +64,7 @@
             <TextBlock Text="Bytes" VerticalAlignment="Center"/>
             <TextBox Width="220" Text="{Binding NewBytes}" ToolTip.Tip="Hex bytes, like 60 B4 C0 46"/>
           </StackPanel>
-          <Button Content="Add" Click="Add_Click" Margin="0,0,0,4"/>
+          <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" Margin="0,0,0,4"/>
         </WrapPanel>
       </StackPanel>
     </Border>

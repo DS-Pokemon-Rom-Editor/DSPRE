@@ -24,9 +24,9 @@
             BorderThickness="0,0,0,1" Padding="6,4">
       <Grid ColumnDefinitions="Auto,*,Auto">
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"
+          <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"
                   ToolTip.Tip="Save every tab (Ctrl+S)"/>
-          <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
         </StackPanel>
         <Grid x:Name="SpeciesBar" Grid.Column="1" ColumnDefinitions="36,8,115,8,*" Margin="12,0,8,0">
@@ -40,8 +40,8 @@
         </Grid>
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <Button Content="Cry" controls:Icon.Key="speaker" Click="PlayCry_Click" ToolTip.Tip="Play cry"/>
-          <Button Content="Edit cry…" Click="EditCry_Click" ToolTip.Tip="Open in the Audio Editor"/>
-          <Button Content="Add New…" controls:Icon.Key="addIcon" Click="AddSpecies_Click" IsVisible="{Binding ShowHgEngineBanner}" IsEnabled="{Binding CanAddSpecies}"
+          <Button Content="Edit cry…" controls:Icon.Key="pencil" Click="EditCry_Click" ToolTip.Tip="Open in the Audio Editor"/>
+          <Button Content="Add new…" controls:Icon.Key="addIcon" Click="AddSpecies_Click" IsVisible="{Binding ShowHgEngineBanner}" IsEnabled="{Binding CanAddSpecies}"
                   ToolTip.Tip="Add a new base species. It is created when you save."/>
         </StackPanel>
       </Grid>
@@ -61,7 +61,7 @@
           <Border DockPanel.Dock="Top" Margin="0,0,0,4">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <TextBlock Text="{Binding EntryCount, StringFormat=Entries: {0}}" VerticalAlignment="Center"/>
-              <Button Content="Export CSV" controls:Icon.Key="export" Click="Learnset_Export_Click"/>
+              <Button Content="Export CSV…" controls:Icon.Key="export" Click="Learnset_Export_Click"/>
               <Button Content="Bulk edit all…" controls:Icon.Key="tableEditor" Click="Learnset_BulkEdit_Click"/>
               <TextBlock Text="Warning: exceeds vanilla 20-move limit!" IsVisible="{Binding ExceedsVanillaLimit}" Foreground="OrangeRed" FontWeight="Bold" VerticalAlignment="Center"/>
               <TextBlock Text="{Binding StatusText}" Foreground="Red" FontStyle="Italic" VerticalAlignment="Center"/>
@@ -72,10 +72,10 @@
               <TextBlock Grid.Column="0" Text="Level:" Classes="lbl"/>
               <NumericUpDown Grid.Column="2" Value="{Binding AddLevel}" Minimum="1" Maximum="100" FormatString="0" Width="80"/>
               <ComboBox controls:EditorLink.To="Move" Grid.Column="4" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding AddMoveIndex}" HorizontalAlignment="Stretch"/>
-              <Button Grid.Column="6"  Content="Add"    Click="Learnset_Add_Click"      Width="60" IsEnabled="{Binding CanAdd}"/>
-              <Button Grid.Column="8"  Content="Delete" Click="Learnset_Delete_Click"   Width="60" IsEnabled="{Binding CanEdit}"/>
-              <Button Grid.Column="10" Content="Up"     Click="Learnset_MoveUp_Click"   Width="44" IsEnabled="{Binding CanMoveUp}"/>
-              <Button Grid.Column="12" Content="Down"   Click="Learnset_MoveDown_Click" Width="44" IsEnabled="{Binding CanMoveDown}"/>
+              <Button Grid.Column="6"  Content="Add" controls:Icon.Key="addIcon"    Click="Learnset_Add_Click"      Width="60" IsEnabled="{Binding CanAdd}"/>
+              <Button Grid.Column="8"  Content="Delete" controls:Icon.Key="deleteIcon" Click="Learnset_Delete_Click"   Width="60" IsEnabled="{Binding CanEdit}"/>
+              <Button Grid.Column="10" Content="Up" controls:Icon.Key="arrowup"     Click="Learnset_MoveUp_Click"   Width="44" IsEnabled="{Binding CanMoveUp}"/>
+              <Button Grid.Column="12" Content="Down" controls:Icon.Key="arrowdown"   Click="Learnset_MoveDown_Click" Width="44" IsEnabled="{Binding CanMoveDown}"/>
             </Grid>
           </Border>
           <ListBox ItemsSource="{Binding Entries}" SelectedIndex="{Binding SelectedEntryIndex}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">

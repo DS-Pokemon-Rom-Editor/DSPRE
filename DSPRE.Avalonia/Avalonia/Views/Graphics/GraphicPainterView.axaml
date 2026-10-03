@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         xmlns:v="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Graphics.GraphicPainterView"
@@ -16,13 +17,13 @@
         <TextBlock Text="{Binding Explain}" TextWrapping="Wrap" FontSize="12"
                    Foreground="{DynamicResource Editor.Subtle}"/>
         <WrapPanel x:Name="PainterButtons" Classes="toolbar" Orientation="Horizontal">
-          <Button Content="Save" Click="Save_Click"
+          <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click"
                   IsEnabled="{Binding CanPaint}"
                   ToolTip.Tip="Write this back into the ROM. Save the ROM afterwards to keep it."/>
-          <Button Content="Change this colour" Click="ChangeColour_Click"
+          <Button Content="Change this colour" controls:Icon.Key="pencil" Click="ChangeColour_Click"
                   IsEnabled="{Binding CanChangeColour}"
                   ToolTip.Tip="{Binding ChangeColourHelp}"/>
-          <Button Content="Undo" Click="Undo_Click"
+          <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click"
                   IsEnabled="{Binding CanUndo}"
                   ToolTip.Tip="{Binding UndoHelp}"/>
           <Button Content="Close" Click="Close_Click"/>

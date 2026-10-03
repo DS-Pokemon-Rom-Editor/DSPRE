@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
         x:Class="DSPRE.Avalonia.Views.Shell.EmulatorPickerView"
         x:DataType="vm:EmulatorPickerViewModel"
@@ -19,7 +20,7 @@
       <TextBlock Grid.Row="2" Grid.Column="0" Text="Program" VerticalAlignment="Center"/>
       <Grid Grid.Row="2" Grid.Column="2" ColumnDefinitions="*,Auto">
         <TextBox Grid.Column="0" Text="{Binding Path}" PlaceholderText="Path to the emulator"/>
-        <Button Grid.Column="1" Content="Browse…" Margin="6,0,0,0" Click="Browse_Click"/>
+        <Button Grid.Column="1" Content="Browse…" controls:Icon.Key="folder" Margin="6,0,0,0" Click="Browse_Click"/>
       </Grid>
     </Grid>
 
@@ -30,7 +31,7 @@
                IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
-      <Button Content="Build and Run" Click="Run_Click" IsDefault="True" IsEnabled="{Binding CanRun}"/>
+      <Button Content="Build and run" controls:Icon.Key="play" Click="Run_Click" IsDefault="True" IsEnabled="{Binding CanRun}"/>
       <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
     </StackPanel>
   </StackPanel>

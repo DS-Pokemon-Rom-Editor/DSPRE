@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.ParticleLibraryView"
         x:DataType="vm:ParticleLibraryViewModel"
@@ -17,7 +18,7 @@
       <WrapPanel Classes="toolbar">
         <ComboBox x:Name="CategoryPicker" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" Width="200"/>
         <TextBox x:Name="ParticleSearch" Text="{Binding Search}" PlaceholderText="Find by name or file number" Width="220"/>
-        <Button x:Name="OpenButton" Content="Open" Click="Open_Click"/>
+        <Button x:Name="OpenButton" Content="Open" controls:Icon.Key="OpenLink" Click="Open_Click"/>
       </WrapPanel>
     </Border>
 

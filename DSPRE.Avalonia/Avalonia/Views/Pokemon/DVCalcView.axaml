@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         x:Class="DSPRE.Avalonia.Views.Pokemon.DVCalcView"
         x:DataType="vm:DVCalcViewModel"
@@ -39,8 +40,8 @@
                 <NumericUpDown Grid.Column="3" Margin="2" Minimum="0" Maximum="255" Increment="1" Value="{Binding DV}"/>
                 <TextBlock Grid.Column="4" Text="{Binding IV}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                 <TextBlock Grid.Column="5" Text="{Binding Nature}" VerticalAlignment="Center" Margin="4,0,0,0"/>
-                <Button Grid.Column="6" Content="Change"   Click="Change_Click"  Margin="2"/>
-                <Button Grid.Column="7" Content="Show All" Click="ShowAll_Click" Margin="2"/>
+                <Button Grid.Column="6" Content="Change" controls:Icon.Key="pencil"   Click="Change_Click"  Margin="2"/>
+                <Button Grid.Column="7" Content="Show all" Click="ShowAll_Click" Margin="2"/>
               </Grid>
             </Border>
           </DataTemplate>

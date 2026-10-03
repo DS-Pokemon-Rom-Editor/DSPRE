@@ -83,8 +83,8 @@
             <TextBox Text="{Binding VarSearchText}" Width="120" PlaceholderText="e.g. 0x4001"/>
             <RadioButton Content="Dec" IsChecked="{Binding !VarHexMode}" GroupName="varMode"/>
             <RadioButton Content="Hex" IsChecked="{Binding VarHexMode}"  GroupName="varMode"/>
-            <Button Content="Search"    Click="VarSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
-            <Button Content="Clear"     Click="VarClear_Click"/>
+            <Button Content="Search" controls:Icon.Key="lens"    Click="VarSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear" controls:Icon.Key="Cross"     Click="VarClear_Click"/>
             <controls:HelpTip Text="Files that use this variable. Double-click a row to copy its ID."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding VariableResults}"
@@ -110,8 +110,8 @@
             <TextBox Text="{Binding FlagSearchText}" Width="120" PlaceholderText="e.g. 0x200"/>
             <RadioButton Content="Dec" IsChecked="{Binding !FlagHexMode}" GroupName="flagMode"/>
             <RadioButton Content="Hex" IsChecked="{Binding FlagHexMode}"  GroupName="flagMode"/>
-            <Button Content="Search"    Click="FlagSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
-            <Button Content="Clear"     Click="FlagClear_Click"/>
+            <Button Content="Search" controls:Icon.Key="lens"    Click="FlagSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear" controls:Icon.Key="Cross"     Click="FlagClear_Click"/>
             <controls:HelpTip Text="Overworld hide flags and script flag commands. Double-click a row to copy it."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding FlagResults}"
@@ -135,8 +135,8 @@
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <TextBlock Text="Sprite entry:" VerticalAlignment="Center"/>
             <NumericUpDown Value="{Binding OwEntryIdSearch}" Minimum="0" Maximum="9999" Width="120"/>
-            <Button Content="Search"    Click="OwSearch_Click" IsEnabled="{Binding DataLoaded}"/>
-            <Button Content="Clear"     Click="OwClear_Click"/>
+            <Button Content="Search" controls:Icon.Key="lens"    Click="OwSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear" controls:Icon.Key="Cross"     Click="OwClear_Click"/>
             <controls:HelpTip Text="Overworlds that use this sprite entry. Double-click a row to open it in the Event Editor."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding OwWatcherResults}"
@@ -162,8 +162,8 @@
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
             <ComboBox ItemsSource="{Binding TrainerNamesList}" SelectedIndex="{Binding SelectedTrainerIndex}" Width="260"/>
-            <Button Content="Search"    Click="TrainerWatchSearch_Click" IsEnabled="{Binding DataLoaded}"/>
-            <Button Content="Clear"     Click="TrainerWatchClear_Click"/>
+            <Button Content="Search" controls:Icon.Key="lens"    Click="TrainerWatchSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Clear" controls:Icon.Key="Cross"     Click="TrainerWatchClear_Click"/>
             <controls:HelpTip Text="Scripts and functions that name this trainer, overworld trainer battles and Vs. Seeker rows. Double-click a row to open it."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding TrainerWatcherResults}"
@@ -192,7 +192,7 @@
               <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
                 <TextBlock Text="Script File ID:" VerticalAlignment="Center"/>
                 <NumericUpDown Value="{Binding FileWatcherScriptFileId}" Minimum="0" Width="90" FormatString="0"/>
-                <Button Content="Search" Click="FileWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+                <Button Content="Search" controls:Icon.Key="lens" Click="FileWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
                 <controls:HelpTip Text="Headers that use this script file. Double-click a row to copy it."/>
               </StackPanel>
               <DataGrid ItemsSource="{Binding FileWatcherResults}"
@@ -222,7 +222,7 @@
                 <ComboBox ItemsSource="{Binding ScriptIdEntries}"
                           SelectedIndex="{Binding SelectedScriptIdIndex}"
                           Width="120"/>
-                <Button Content="Search" Click="IdWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+                <Button Content="Search" controls:Icon.Key="lens" Click="IdWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
                 <controls:HelpTip Text="Events in the files that use this script file and run the selected script."/>
               </StackPanel>
               <DataGrid ItemsSource="{Binding ScriptIdResults}"
@@ -250,7 +250,7 @@
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <TextBlock Text="Header ID:" VerticalAlignment="Center"/>
             <NumericUpDown Value="{Binding HeaderSearchId}" Minimum="0" Width="90" FormatString="0"/>
-            <Button Content="Search" Click="HeaderSearch_Click" IsEnabled="{Binding DataLoaded}"/>
+            <Button Content="Search" controls:Icon.Key="lens" Click="HeaderSearch_Click" IsEnabled="{Binding DataLoaded}"/>
             <controls:HelpTip Text="Incoming warps lead to this header from other event files. Outgoing warps leave from its own event file. Double-click a warp to go to that header, or a property to copy its value."/>
           </StackPanel>
 

@@ -18,8 +18,8 @@
         <ComboBox x:Name="CapsulePicker" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}" Width="220" MaxDropDownHeight="420"/>
         <TextBlock Text="{Binding UsedByText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="520"
                    Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="{Binding UsedByText}"/>
-        <Button Content="Clear" Click="Clear_Click" Width="70"/>
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"
+        <Button Content="Clear" controls:Icon.Key="Cross" Click="Clear_Click" Width="70"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"
                 ToolTip.Tip="Writes the trainer capsules."/>
       </WrapPanel>
     </Border>
@@ -35,8 +35,8 @@
         <TextBox DockPanel.Dock="Top" x:Name="SealFind" Text="{Binding SealFilter}" PlaceholderText="Find a seal" Margin="0,0,0,6"/>
         <StackPanel x:Name="SealButtons" DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
           <Button Content="Place" Click="Place_Click" Width="70"/>
-          <Button Content="Edit sticker" Click="EditSticker_Click" Width="90"/>
-          <Button Content="Edit particles" Click="EditParticles_Click" Width="96"/>
+          <Button Content="Edit sticker" controls:Icon.Key="pencil" Click="EditSticker_Click" Width="90"/>
+          <Button Content="Edit particles" controls:Icon.Key="pencil" Click="EditParticles_Click" Width="96"/>
         </StackPanel>
         <ListBox x:Name="SealList" ItemsSource="{Binding ShownSeals}" DoubleTapped="SealList_DoubleTapped">
           <ListBox.ItemTemplate>

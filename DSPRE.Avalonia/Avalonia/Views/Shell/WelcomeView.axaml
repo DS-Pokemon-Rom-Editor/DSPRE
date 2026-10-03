@@ -26,8 +26,8 @@
       <DockPanel Grid.Column="0">
         <TextBlock DockPanel.Dock="Top" Text="Get started" FontSize="16" FontWeight="Bold" Margin="0,0,0,8"/>
         <StackPanel DockPanel.Dock="Top" Spacing="6">
-          <Button Content="Open ROM (.nds)…" HorizontalAlignment="Stretch" Click="OpenRom_Click"/>
-          <Button Content="Open extracted folder…" HorizontalAlignment="Stretch" Click="OpenFolder_Click"/>
+          <Button Content="Open ROM (.nds)…" controls:Icon.Key="folder" HorizontalAlignment="Stretch" Click="OpenRom_Click"/>
+          <Button Content="Open extracted folder…" controls:Icon.Key="folder" HorizontalAlignment="Stretch" Click="OpenFolder_Click"/>
           <Button Content="Link hg-engine folder…" HorizontalAlignment="Stretch" Click="LinkHgEngine_Click"
                   ToolTip.Tip="Link a WSL hg-engine checkout so Species/Trainers/Items/Moves/Encounters editors read and write its source"/>
         </StackPanel>

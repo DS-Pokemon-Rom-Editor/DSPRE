@@ -18,8 +18,8 @@
         <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="320" ItemsSource="{Binding Trainers}" SelectedIndex="{Binding SelectedTrainerIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="Save all…" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save all…" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
@@ -32,8 +32,8 @@
       <!-- Entries -->
       <DockPanel Grid.Column="0" Margin="0,0,6,0">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-          <Button Content="Add"    Click="Add_Click"/>
-          <Button Content="Delete" Click="Delete_Click"/>
+          <Button Content="Add" controls:Icon.Key="addIcon"    Click="Add_Click"/>
+          <Button Content="Delete" controls:Icon.Key="deleteIcon" Click="Delete_Click"/>
         </StackPanel>
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding InfoText}" Foreground="{Binding InfoColor}" TextWrapping="Wrap" Margin="0,4,0,0"/>
         <ListBox ItemsSource="{Binding Entries}" SelectedIndex="{Binding SelectedEntryIndex}"/>
@@ -54,8 +54,8 @@
           <TextBlock Text="Message" FontWeight="Bold"/>
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
-          <Button Content="Edit trigger" Click="EditTrigger_Click"/>
-          <Button Content="Save message" Click="SaveMessage_Click"/>
+          <Button Content="Edit trigger" controls:Icon.Key="pencil" Click="EditTrigger_Click"/>
+          <Button Content="Save message" controls:Icon.Key="saveButton" Click="SaveMessage_Click"/>
         </StackPanel>
         <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding MessageText}" Margin="0,4,0,0"/>
       </DockPanel>

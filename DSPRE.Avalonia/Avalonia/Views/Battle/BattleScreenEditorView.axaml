@@ -102,14 +102,14 @@
           </Border>
 
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Content="Paint this…" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
-            <Button Content="Export PNG…" Click="Export_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Paint this…" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanPaint}" ToolTip.Tip="PNG image"/>
           </StackPanel>
-          <Button Content="Import PNG…" Click="Import_Click" IsEnabled="{Binding CanPaint}"
-                  HorizontalAlignment="Stretch"/>
+          <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding CanPaint}"
+                  HorizontalAlignment="Stretch" ToolTip.Tip="PNG image"/>
           <TextBlock Text="{Binding CannotPaintBecause}" Classes="hint"
                      IsVisible="{Binding CannotPaintBecause, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <Button Content="Open in Graphics…" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
+          <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
                   HorizontalAlignment="Stretch" ToolTip.Tip="{Binding HandOverWhat}"/>
 
           <Separator Margin="0,4"/>

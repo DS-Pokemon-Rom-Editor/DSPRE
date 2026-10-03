@@ -24,7 +24,7 @@
   </UserControl.Styles>
   <DockPanel LastChildFill="True" Margin="10">
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
-      <Button Content="Export CSV" controls:Icon.Key="export" Click="Export_Click" ToolTip.Tip="Export every Pokémon's personal data"/>
+      <Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click" ToolTip.Tip="Export every Pokémon's personal data"/>
     </StackPanel>
     <TextBlock DockPanel.Dock="Top" Text="{Binding HgLoadError}" IsVisible="{Binding HasHgLoadError}"
                Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap" Margin="0,0,0,8"/>
@@ -225,10 +225,10 @@
               <ListBox ItemsSource="{Binding AddedMachines}" SelectedIndex="{Binding SelectedAddedMachineIndex}"/>
             </DockPanel>
             <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="6">
-              <Button Content="Remove" Click="RemoveMachine_Click" Width="90"/>
-              <Button Content="Remove All" Click="RemoveAll_Click" Width="90"/>
-              <Button Content="Add" Click="AddMachine_Click" Width="90"/>
-              <Button Content="Add All" Click="AddAll_Click" Width="90"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveMachine_Click" Width="90"/>
+              <Button Content="Remove all" controls:Icon.Key="deleteIcon" Click="RemoveAll_Click" Width="90"/>
+              <Button Content="Add" controls:Icon.Key="addIcon" Click="AddMachine_Click" Width="90"/>
+              <Button Content="Add all" controls:Icon.Key="addIcon" Click="AddAll_Click" Width="90"/>
             </StackPanel>
             <DockPanel Grid.Column="4">
               <TextBlock DockPanel.Dock="Top" Text="Cannot Learn:" FontWeight="SemiBold" Margin="0,0,0,4"/>
@@ -293,10 +293,10 @@
                                  ToolTip.Tip="No sprite sheet exists for this species yet. Pick an existing species to clone its animation metadata from; only the artwork is replaced."/>
                       <ComboBox ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding OwTemplateSpeciesIndex}" MinWidth="200"/>
                     </StackPanel>
-                    <Button Content="Import Sprite Sheet…" Click="ImportOwSprite_Click"/>
+                    <Button Content="Import sprite sheet…" controls:Icon.Key="import" Click="ImportOwSprite_Click"/>
                   </StackPanel>
                 </StackPanel>
-                <Button Content="Create Overworld Follower Entry" Click="CreateOwEntry_Click" IsVisible="{Binding CanCreateOwEntry}"/>
+                <Button Content="Create overworld follower entry" Click="CreateOwEntry_Click" IsVisible="{Binding CanCreateOwEntry}"/>
               </StackPanel>
             </GroupBox>
           </StackPanel></controls:CappedWidth>

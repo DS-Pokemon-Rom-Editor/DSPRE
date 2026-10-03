@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
         x:Class="DSPRE.Avalonia.Views.World.AddTexturesDialogView"
         x:DataType="vm:MapTilesViewModel+TexturePlan"
@@ -21,7 +22,7 @@
       <TextBlock Text="{Binding Memory}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Bad}"
                  IsVisible="{Binding TooBig}"/>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-        <Button Content="Add" Click="Add_Click" IsEnabled="{Binding !TooBig}"/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding !TooBig}"/>
         <Button Content="Cancel" Click="Cancel_Click"/>
       </StackPanel>
     </StackPanel>

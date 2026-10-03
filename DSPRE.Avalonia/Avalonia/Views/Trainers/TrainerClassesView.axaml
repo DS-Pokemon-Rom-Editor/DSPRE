@@ -17,7 +17,7 @@
 
     <Grid ColumnDefinitions="220,*">
       <DockPanel Grid.Column="0" Margin="4">
-        <Button DockPanel.Dock="Top" Content="Add Trainer Class…" controls:Icon.Key="addIcon" Click="AddTrainerClass_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"
+        <Button DockPanel.Dock="Top" Content="Add trainer class…" controls:Icon.Key="addIcon" Click="AddTrainerClass_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"
                 ToolTip.Tip="Platinum (English) only. Repoints/extends the gender, prize-money and (optionally) eye-contact-music tables into the synthetic overlay."
                 IsEnabled="{Binding IsExpansionSupported}"/>
         <ListBox ItemsSource="{Binding ClassNames}"
@@ -34,7 +34,7 @@
               </Border>
               <Button controls:Icon.Key="{Binding PlayButtonIcon}" controls:Icon.Text="{Binding PlayButtonText}" Click="TogglePlay_Click" HorizontalAlignment="Stretch"
                       IsEnabled="{Binding CanPlayAnimation}" ToolTip.Tip="Play this class's real battle-intro animation."/>
-              <Button Content="Edit Sprite…" Click="EditSprite_Click" HorizontalAlignment="Stretch"
+              <Button Content="Edit sprite…" controls:Icon.Key="pencil" Click="EditSprite_Click" HorizontalAlignment="Stretch"
                       IsEnabled="{Binding CanEditSprite}"/>
             </StackPanel>
 
@@ -111,8 +111,8 @@
           </StackPanel>
 
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Content="Save trainer class" Click="Save_Click"/>
-            <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="Save trainer class" controls:Icon.Key="saveButton" Click="Save_Click"/>
+            <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <controls:UndoRedoButtons/>
           </StackPanel>
         </StackPanel>

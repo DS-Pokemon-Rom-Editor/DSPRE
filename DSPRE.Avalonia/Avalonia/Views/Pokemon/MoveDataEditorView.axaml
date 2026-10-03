@@ -30,8 +30,8 @@
 	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
 			BorderThickness="0,0,0,1" Padding="6,4">
 	  <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
-		<Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"/>
-		<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"/>
+		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
 		<TextBlock Text="Move:" VerticalAlignment="Center" Margin="12,0,0,0"/>
 		<NumericUpDown Value="{Binding SelectedMoveIndex}" Minimum="0" Maximum="{Binding MaxMoveIndex}" FormatString="0" Width="110"/>
@@ -40,9 +40,9 @@
 					  MinWidth="260"/>
 		<Button x:Name="EditMoveScriptButton" Content="Edit move script" controls:Icon.Key="pencil" Click="EditMoveScript_Click"
 				ToolTip.Tip="Open this move's battle script. Platinum and HGSS only."/>
-		<Button Content="Export CSV" Click="Export_Click" Margin="12,0,0,0"/>
-		<Button Content="Import CSV" Click="Import_Click"/>
-		<Button Content="Add New Move…" controls:Icon.Key="addIcon" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
+		<Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click" Margin="12,0,0,0"/>
+		<Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
+		<Button Content="Add new move…" controls:Icon.Key="addIcon" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
 				ToolTip.Tip="Add a new move to the hg-engine checkout"/>
 	  </WrapPanel>
 	</Border>

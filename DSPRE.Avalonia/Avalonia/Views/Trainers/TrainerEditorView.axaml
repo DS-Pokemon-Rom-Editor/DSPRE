@@ -20,25 +20,25 @@
         <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
                 BorderThickness="0,0,0,1" Padding="6,4">
           <WrapPanel x:Name="TrainerToolbar" Classes="toolbar">
-            <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Undo (Ctrl+Z)"/>
             <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Redo (Ctrl+Y)"/>
             <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-            <Button Content="Add Trainer" controls:Icon.Key="addIcon" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
-            <Button Content="Remove Last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
-            <Button Content="Search…"        Click="Search_Click"/>
+            <Button Content="Add trainer" controls:Icon.Key="addIcon" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
+            <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
+            <Button Content="Search…" controls:Icon.Key="lens"        Click="Search_Click"/>
             <Button Content="Reorder party…" Click="Reorder_Click"/>
-            <Button Content="DV Calc…"       Click="DVCalc_Click"/>
+            <Button Content="DV calc…"       Click="DVCalc_Click"/>
             <Button Content="Battle messages…" Click="BattleMessages_Click"/>
             <Button Content="Trainer classes…" Click="TrainerClasses_Click" ToolTip.Tip="Jump to this trainer's class on the Classes tab"/>
             <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2" IsVisible="{Binding !IsHgeActive}"/>
-            <Button Content="Export trainer…" Click="ExportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
-            <Button Content="Import trainer…" Click="ImportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Load a .trf file into this trainer slot"/>
-            <Button Content="Export properties…" Click="ExportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
-            <Button Content="Import properties…" Click="ImportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
-            <Button Content="Export party…" Click="ExportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
-            <Button Content="Import party…" Click="ImportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
+            <Button Content="Export trainer…" controls:Icon.Key="export" Click="ExportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
+            <Button Content="Import trainer…" controls:Icon.Key="import" Click="ImportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Load a .trf file into this trainer slot"/>
+            <Button Content="Export properties…" controls:Icon.Key="export" Click="ExportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
+            <Button Content="Import properties…" controls:Icon.Key="import" Click="ImportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
+            <Button Content="Export party…" controls:Icon.Key="export" Click="ExportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
+            <Button Content="Import party…" controls:Icon.Key="import" Click="ImportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
           </WrapPanel>
         </Border>
         <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">

@@ -15,13 +15,13 @@
       <WrapPanel Classes="toolbar">
         <TextBlock Text="Source:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <controls:FusionAutoCompleteBox Width="260" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
-        <Button Content="Add" Click="Add_Click" IsEnabled="{Binding CanAdd}"/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAdd}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding IsEditable}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding IsEditable}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-        <Button Content="Import" Click="Import_Click" IsEnabled="{Binding IsEditable}"/>
-        <Button Content="Export" Click="Export_Click" IsEnabled="{Binding IsEditable}"/>
-        <Button Content="Find in File" Click="Find_Click" IsEnabled="{Binding IsEditable}"/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding IsEditable}"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding IsEditable}"/>
+        <Button Content="Find in file" controls:Icon.Key="lens" Click="Find_Click" IsEnabled="{Binding IsEditable}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <TextBlock Text="Theme:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <ComboBox Width="150" ItemsSource="{Binding EditorThemeNames}" SelectedIndex="{Binding SelectedEditorThemeIndex}"/>
@@ -51,7 +51,7 @@
             <StackPanel DockPanel.Dock="Top" Spacing="5">
               <TextBox Text="{Binding SearchText}" PlaceholderText="Search scripts..." KeyDown="ProjectSearch_KeyDown"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Content="Search" Click="ProjectSearch_Click" Width="90" IsEnabled="{Binding CanSearchProject}"/>
+                <Button Content="Search" controls:Icon.Key="lens" Click="ProjectSearch_Click" Width="90" IsEnabled="{Binding CanSearchProject}"/>
                 <CheckBox Content="Fuzzy" IsChecked="{Binding SearchFuzzy}" VerticalAlignment="Center"/>
               </StackPanel>
               <TextBlock Text="{Binding SearchStatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
@@ -80,7 +80,7 @@
           <DockPanel>
             <StackPanel DockPanel.Dock="Top" Spacing="5">
               <TextBlock Text="{Binding DiagnosticsStatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
-              <Button Content="Clear" Click="ClearDiagnostics_Click" Width="90" IsEnabled="{Binding HasDiagnostics}"/>
+              <Button Content="Clear" controls:Icon.Key="Cross" Click="ClearDiagnostics_Click" Width="90" IsEnabled="{Binding HasDiagnostics}"/>
             </StackPanel>
 
             <ListBox x:Name="DiagnosticsList"

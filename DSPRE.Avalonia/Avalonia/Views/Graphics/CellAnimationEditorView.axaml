@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.CellAnimationEditorView"
         x:DataType="vm:CellAnimationEditorViewModel"
@@ -34,9 +35,9 @@
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
       <DockPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
-          <Button Content="Undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-          <Button Content="Redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-          <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+          <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+          <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="10">
           <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" VerticalAlignment="Center"/>
@@ -55,8 +56,8 @@
                          ToolTip.Tip="Jump straight to a sequence by its number"/>
         </StackPanel>
         <StackPanel x:Name="SequenceButtons" DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
-          <Button Content="Add on the end" Click="AddSequence_Click" FontSize="11" Padding="7,2"/>
-          <Button Content="Remove the last" Click="RemoveSequence_Click" FontSize="11" Padding="7,2"/>
+          <Button Content="Add on the end" controls:Icon.Key="addIcon" Click="AddSequence_Click" FontSize="11" Padding="7,2"/>
+          <Button Content="Remove the last" controls:Icon.Key="deleteIcon" Click="RemoveSequence_Click" FontSize="11" Padding="7,2"/>
         </StackPanel>
         <ListBox x:Name="SequenceList" ItemsSource="{Binding Sequences}" SelectedIndex="{Binding SelectedSequence}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -145,9 +146,9 @@
                     <TextBlock Text="{Binding SharedNote}" Classes="hint"
                                IsVisible="{Binding IsShared}"/>
                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
-                      <Button Content="Add after" Click="AddFrame_Click" Tag="{Binding Number}"
+                      <Button Content="Add after" controls:Icon.Key="addIcon" Click="AddFrame_Click" Tag="{Binding Number}"
                               FontSize="11" Padding="7,2"/>
-                      <Button Content="Remove" Click="RemoveFrame_Click" Tag="{Binding Number}"
+                      <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveFrame_Click" Tag="{Binding Number}"
                               FontSize="11" Padding="7,2"/>
                     </StackPanel>
                   </StackPanel>

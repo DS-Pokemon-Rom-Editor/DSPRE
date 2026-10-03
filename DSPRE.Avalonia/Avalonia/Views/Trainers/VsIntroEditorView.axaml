@@ -33,8 +33,8 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
@@ -74,7 +74,7 @@
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding ShowClass}">
                 <ComboBox ItemsSource="{Binding ClassChoices}" SelectedIndex="{Binding ClassIndex}" HorizontalAlignment="Stretch"
                           ToolTip.Tip="{Binding ClassTip}"/>
-                <Button Grid.Column="1" Content="Edit colours" Click="ClassColours_Click" IsVisible="{Binding CanEditClassColours}"
+                <Button Grid.Column="1" Content="Edit colours" controls:Icon.Key="pencil" Click="ClassColours_Click" IsVisible="{Binding CanEditClassColours}"
                         ToolTip.Tip="The class's battle sprite uses the same colours, so it changes too"/>
               </Grid>
 
@@ -82,7 +82,7 @@
               <ComboBox ItemsSource="{Binding FaceSetChoices}" SelectedIndex="{Binding FaceSetIndex}" HorizontalAlignment="Stretch"
                         IsVisible="{Binding ShowFace}" PlaceholderText="{Binding FaceFiles}"/>
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowFace}">
-                <Button Content="Paint" Click="PaintFace_Click"/>
+                <Button Content="Paint" controls:Icon.Key="brush" Click="PaintFace_Click"/>
                 <Button Content="Animation" Click="AnimateFace_Click"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowEndX}">
@@ -99,7 +99,7 @@
               <ComboBox ItemsSource="{Binding BannerSetChoices}" SelectedIndex="{Binding BannerSetIndex}" HorizontalAlignment="Stretch"
                         IsVisible="{Binding ShowBanner}" PlaceholderText="{Binding BannerFiles}"/>
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowBanner}">
-                <Button Content="Paint" Click="PaintBanner_Click"/>
+                <Button Content="Paint" controls:Icon.Key="brush" Click="PaintBanner_Click"/>
                 <Button Content="In Graphics" Click="BannerGraphics_Click"/>
               </StackPanel>
 
@@ -126,7 +126,7 @@
                     <Grid ColumnDefinitions="120,*,Auto" Margin="0,2">
                       <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
                       <TextBlock Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
-                      <Button Grid.Column="2" Content="Open" Tag="{Binding}" Click="Particle_Click"/>
+                      <Button Grid.Column="2" Content="Open" controls:Icon.Key="OpenLink" Tag="{Binding}" Click="Particle_Click"/>
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -140,7 +140,7 @@
                       <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
                       <TextBlock Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" TextWrapping="Wrap"
                                  Foreground="{DynamicResource Editor.Subtle}"/>
-                      <Button Grid.Column="2" Content="Open" Tag="{Binding}" Click="Fixed_Click" IsVisible="{Binding CanOpen}"/>
+                      <Button Grid.Column="2" Content="Open" controls:Icon.Key="OpenLink" Tag="{Binding}" Click="Fixed_Click" IsVisible="{Binding CanOpen}"/>
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

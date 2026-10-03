@@ -1,5 +1,6 @@
 <Window MinWidth="520" MinHeight="420" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.ParticleEditorView"
         x:DataType="vm:ParticleEditorViewModel"
@@ -15,7 +16,7 @@
         <ComboBox x:Name="EmitterPicker" ItemsSource="{Binding EmitterNames}" SelectedIndex="{Binding EmitterIndex}" Width="160"/>
         <CheckBox Content="Only this emitter" IsChecked="{Binding OnlySelected}" Margin="8,0"/>
         <Button Content="Replay" Click="Replay_Click" Width="80"/>
-        <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"/>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"/>
         <Button Content="Revert" Click="Revert_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"/>
       </WrapPanel>
     </Border>
@@ -62,7 +63,7 @@
                   <Image Source="{Binding Picture}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
                 </Border>
                 <TextBlock Grid.Column="1" Text="{Binding Info}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="8,0"/>
-                <Button Grid.Column="2" Content="Export" Click="ExportTexture_Click" Margin="4,0"/>
+                <Button Grid.Column="2" Content="Export…" controls:Icon.Key="export" Click="ExportTexture_Click" Margin="4,0"/>
                 <Button Grid.Column="3" Content="Replace" Click="ReplaceTexture_Click" IsEnabled="{Binding CanReplace}"
                         ToolTip.Tip="{Binding CannotReplace}"/>
               </Grid>

@@ -21,8 +21,8 @@
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Copy" controls:Icon.Key="copyIcon_small"  Click="Copy_Click"/>
         <Button Content="Paste" controls:Icon.Key="pasteIcon" Click="Paste_Click"/>
-        <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>
-        <Button Content="Export" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Add" controls:Icon.Key="addIcon"    Click="AddHeader_Click"    IsEnabled="{Binding CanAddRemove}"/>
         <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveHeader_Click" IsEnabled="{Binding CanAddRemove}"/>

@@ -16,10 +16,10 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel x:Name="DatabaseActions" Classes="toolbar">
-        <Button Content="Import…" Click="Import_Click" IsEnabled="{Binding HasSelection}"/>
-        <Button Content="Export…" Click="Export_Click" IsEnabled="{Binding HasSelection}"/>
-        <Button Content="Open Folder" Click="OpenFolder_Click"/>
-        <Button Content="Refresh" Click="Refresh_Click"/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding HasSelection}"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding HasSelection}"/>
+        <Button Content="Open folder" controls:Icon.Key="folder" Click="OpenFolder_Click"/>
+        <Button Content="Refresh" controls:Icon.Key="reload" Click="Refresh_Click"/>
       </WrapPanel>
     </Border>
 

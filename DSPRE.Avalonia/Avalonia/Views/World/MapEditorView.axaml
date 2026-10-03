@@ -38,8 +38,8 @@
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
-          <Button Content="Import" controls:Icon.Key="import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
-          <Button Content="Export" controls:Icon.Key="export"   Click="Export_Click" IsVisible="{Binding IsSingleMap}"/>
+          <Button Content="Import…" controls:Icon.Key="import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
+          <Button Content="Export…" controls:Icon.Key="export"   Click="Export_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Add map" controls:Icon.Key="addIcon"  Click="AddMap_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemMap_Click" IsVisible="{Binding IsSingleMap}"/>
         </WrapPanel>
@@ -147,13 +147,13 @@
         <TabItem Header="Buildings">
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
-              <Button Content="Add"    Click="AddBuilding_Click"/>
-              <Button Content="Remove" Click="RemoveBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
-              <Button Content="Duplicate" Click="DupBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
+              <Button Content="Add" controls:Icon.Key="addIcon"    Click="AddBuilding_Click"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <Button Content="Import" controls:Icon.Key="import" Click="ImportBuildings_Click" IsEnabled="{Binding IsSingleMap}"
+              <Button Content="Import…" controls:Icon.Key="import" Click="ImportBuildings_Click" IsEnabled="{Binding IsSingleMap}"
                       ToolTip.Tip="Replaces one map's whole building list, single map view only. In 'This header' view, use the per-building Add/Remove/Duplicate/gizmo instead."/>
-              <Button Content="Export" controls:Icon.Key="export" Click="ExportBuildings_Click" IsEnabled="{Binding IsSingleMap}"/>
+              <Button Content="Export…" controls:Icon.Key="export" Click="ExportBuildings_Click" IsEnabled="{Binding IsSingleMap}"/>
               <TextBlock Text="{Binding BuildingLimitWarning}" IsVisible="{Binding HasBuildingLimitWarning}"
                          Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="6,0,0,0"
                          ToolTip.Tip="The game loads only 32 per map"/>
@@ -218,28 +218,28 @@
             <StackPanel Margin="8" Spacing="10">
               <HeaderedContentControl Header="3D model">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                  <Button Content="Export model" controls:Icon.Key="export" Click="ExportNsbmd_Click"/>
-                  <Button Content="Export DAE" controls:Icon.Key="export"   Click="ExportDae_Click"/>
-                  <Button Content="Export GLB" controls:Icon.Key="export"   Click="ExportGlb_Click"/>
+                  <Button Content="Export model…" controls:Icon.Key="export" Click="ExportNsbmd_Click"/>
+                  <Button Content="Export DAE…" controls:Icon.Key="export"   Click="ExportDae_Click"/>
+                  <Button Content="Export GLB…" controls:Icon.Key="export"   Click="ExportGlb_Click"/>
                 </StackPanel>
               </HeaderedContentControl>
               <HeaderedContentControl Header="Terrain">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                  <Button Content="Import" controls:Icon.Key="import" Click="ImportTerrain_Click"/>
-                  <Button Content="Export" controls:Icon.Key="export" Click="ExportTerrain_Click"/>
+                  <Button Content="Import…" controls:Icon.Key="import" Click="ImportTerrain_Click"/>
+                  <Button Content="Export…" controls:Icon.Key="export" Click="ExportTerrain_Click"/>
                 </StackPanel>
               </HeaderedContentControl>
               <HeaderedContentControl Header="Sound plates">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                  <Button Content="Import" controls:Icon.Key="import" Click="ImportSound_Click"/>
-                  <Button Content="Export" controls:Icon.Key="export" Click="ExportSound_Click"/>
+                  <Button Content="Import…" controls:Icon.Key="import" Click="ImportSound_Click"/>
+                  <Button Content="Export…" controls:Icon.Key="export" Click="ExportSound_Click"/>
                   <Button Content="Blank" controls:Icon.Key="blank"  Click="BlankSound_Click"/>
                 </StackPanel>
               </HeaderedContentControl>
               <HeaderedContentControl Header="Movement permissions">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                  <Button Content="Import" controls:Icon.Key="import" Click="ImportPerms_Click"/>
-                  <Button Content="Export" controls:Icon.Key="export" Click="ExportPerms_Click"/>
+                  <Button Content="Import…" controls:Icon.Key="import" Click="ImportPerms_Click"/>
+                  <Button Content="Export…" controls:Icon.Key="export" Click="ExportPerms_Click"/>
                 </StackPanel>
               </HeaderedContentControl>
             </StackPanel>

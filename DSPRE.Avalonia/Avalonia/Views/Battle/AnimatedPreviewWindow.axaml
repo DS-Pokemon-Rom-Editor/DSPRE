@@ -223,7 +223,7 @@
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
             <TextBlock Text="{Binding ScriptStatusText}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap"
                        ToolTip.Tip="Esc stops a running script. Space and Z also act as A, Backspace as B."/>
-            <Button Grid.Column="1" Content="Stop" Click="StopScript_Click" IsVisible="{Binding ScriptRunning}"
+            <Button Grid.Column="1" Content="Stop" controls:Icon.Key="stop" Click="StopScript_Click" IsVisible="{Binding ScriptRunning}"
                     ToolTip.Tip="Stop the script where it is. Esc does the same."/>
           </Grid>
           <TextBlock DockPanel.Dock="Top" Text="{Binding MessageWaitText}" FontSize="12" TextWrapping="Wrap"

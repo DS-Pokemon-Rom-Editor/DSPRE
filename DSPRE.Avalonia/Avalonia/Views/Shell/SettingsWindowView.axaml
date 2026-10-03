@@ -1,5 +1,6 @@
 <Window MinWidth="760" MinHeight="640" xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
 		x:Class="DSPRE.Avalonia.Views.Shell.SettingsWindowView"
 		x:DataType="vm:SettingsWindowViewModel"
@@ -23,8 +24,8 @@
 		<TextBlock Text="ROM Export Path" FontWeight="SemiBold"/>
 		<Grid ColumnDefinitions="*,Auto,Auto">
 		  <TextBox Grid.Column="0" Text="{Binding ExportPath}" IsReadOnly="True"/>
-		  <Button Grid.Column="1" Content="Change Path" Margin="4,0,0,0" Click="ChangeExportPath_Click"/>
-		  <Button Grid.Column="2" Content="Clear"        Margin="4,0,0,0" Click="ClearExportPath_Click"/>
+		  <Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeExportPath_Click"/>
+		  <Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearExportPath_Click"/>
 		</Grid>
 	  </StackPanel>
 	</Border>
@@ -35,8 +36,8 @@
 		<TextBlock Text="Initial Map Import Path" FontWeight="SemiBold"/>
 		<Grid ColumnDefinitions="*,Auto,Auto">
 		  <TextBox Grid.Column="0" Text="{Binding MapImportPath}" IsReadOnly="True"/>
-		  <Button Grid.Column="1" Content="Change Path" Margin="4,0,0,0" Click="ChangeMapImportPath_Click"/>
-		  <Button Grid.Column="2" Content="Clear"        Margin="4,0,0,0" Click="ClearMapImportPath_Click"/>
+		  <Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeMapImportPath_Click"/>
+		  <Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearMapImportPath_Click"/>
 		</Grid>
 	  </StackPanel>
 	</Border>
@@ -47,8 +48,8 @@
 		<TextBlock Text="Open Default ROM" FontWeight="SemiBold"/>
 		<Grid ColumnDefinitions="*,Auto,Auto">
 		  <TextBox Grid.Column="0" Text="{Binding OpenDefaultRom}" IsReadOnly="True"/>
-		  <Button Grid.Column="1" Content="Change Path" Margin="4,0,0,0" Click="ChangeOpenDefaultRom_Click"/>
-		  <Button Grid.Column="2" Content="Clear"        Margin="4,0,0,0" Click="ClearOpenDefaultRom_Click"/>
+		  <Button Grid.Column="1" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeOpenDefaultRom_Click"/>
+		  <Button Grid.Column="2" Content="Clear" controls:Icon.Key="Cross"        Margin="4,0,0,0" Click="ClearOpenDefaultRom_Click"/>
 		</Grid>
 	  </StackPanel>
 	</Border>
@@ -60,8 +61,8 @@
 		<Grid ColumnDefinitions="160,*,Auto,Auto">
 		  <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding EmulatorChoices}" SelectedIndex="{Binding EmulatorIndex}"/>
 		  <TextBox Grid.Column="1" Text="{Binding EmulatorPath}" IsReadOnly="True" Margin="4,0,0,0" IsEnabled="{Binding HasSelectedEmulator}"/>
-		  <Button Grid.Column="2" Content="Change Path" Margin="4,0,0,0" Click="ChangeEmulatorPath_Click"/>
-		  <Button Grid.Column="3" Content="Clear" Margin="4,0,0,0" Click="ClearEmulatorPath_Click" IsEnabled="{Binding HasSelectedEmulator}"/>
+		  <Button Grid.Column="2" Content="Change path" controls:Icon.Key="folder" Margin="4,0,0,0" Click="ChangeEmulatorPath_Click"/>
+		  <Button Grid.Column="3" Content="Clear" controls:Icon.Key="Cross" Margin="4,0,0,0" Click="ClearEmulatorPath_Click" IsEnabled="{Binding HasSelectedEmulator}"/>
 		</Grid>
 	  </StackPanel>
 	</Border>
@@ -99,7 +100,7 @@
 	  <CheckBox Content="Show Welcome at startup"       IsChecked="{Binding ShowWelcomeOnStartup}"/>
 	  <CheckBox Content="Show the guided tours again" IsChecked="{Binding ShowGuidedTourNextLoad}"
 	            ToolTip.Tip="The tour can also be replayed anytime from Tools > Guided Tour"/>
-	  <Button Content="Open Welcome &amp; Tutorial…" Click="ShowWelcome_Click"/>
+	  <Button Content="Open Welcome &amp; Tutorial" controls:Icon.Key="OpenLink" Click="ShowWelcome_Click"/>
 	</StackPanel>
 
 	<!-- 3D View camera (mouse) -->
@@ -128,9 +129,9 @@
 
 	<!-- Buttons row -->
 	<StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-	  <Button Content="Check App updates"      Click="CheckForUpdates_Click"/>
-	  <Button Content="Check Database updates" Click="CheckDBUpdates_Click"/>
-	  <Button Content="Save" Click="Save_Click"/>
+	  <Button Content="Check app updates"      Click="CheckForUpdates_Click"/>
+	  <Button Content="Check database updates" Click="CheckDBUpdates_Click"/>
+	  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click"/>
 	</StackPanel>
 
   </StackPanel>

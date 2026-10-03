@@ -17,15 +17,15 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
-        <Button x:Name="SaveButton" Content="Save" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <StackPanel x:Name="SpeciesBar" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
           <TextBlock VerticalAlignment="Center">Species:</TextBlock>
           <controls:FusionAutoCompleteBox ItemsSource="{Binding PokemonNames}"
                                           SelectedIndex="{Binding SelectedSpeciesIndex}"
                                           Width="260" MaxDropDownHeight="300"/>
         </StackPanel>
-        <Button x:Name="AddSlotButton" Content="Add Form" controls:Icon.Key="addIcon"/>
+        <Button x:Name="AddSlotButton" Content="Add form" controls:Icon.Key="addIcon"/>
       </WrapPanel>
     </Border>
     <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F">

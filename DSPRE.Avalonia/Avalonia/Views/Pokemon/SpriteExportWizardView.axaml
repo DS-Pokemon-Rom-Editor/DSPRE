@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         x:Class="DSPRE.Avalonia.Views.Pokemon.SpriteExportWizardView"
         x:DataType="vm:SpriteExportWizardViewModel"
@@ -11,8 +12,8 @@
     <TextBlock Text="Pick anything to include, then export it all as one zip." TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
 
     <StackPanel Orientation="Horizontal" Spacing="8">
-      <Button Content="Select All" Click="SelectAll_Click"/>
-      <Button Content="Select None" Click="SelectNone_Click"/>
+      <Button Content="Select all" Click="SelectAll_Click"/>
+      <Button Content="Select none" Click="SelectNone_Click"/>
     </StackPanel>
 
     <StackPanel Spacing="4">
@@ -48,7 +49,7 @@
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button Content="Close" Click="Close_Click"/>
-      <Button Content="Export as ZIP" Click="Run_Click" IsDefault="True" FontWeight="SemiBold"/>
+      <Button Content="Export as ZIP…" controls:Icon.Key="export" Click="Run_Click" IsDefault="True" FontWeight="SemiBold"/>
     </StackPanel>
   </StackPanel>
 </Window>

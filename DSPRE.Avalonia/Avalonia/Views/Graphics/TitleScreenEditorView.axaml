@@ -14,8 +14,8 @@
   <DockPanel>
   <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
 	<StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
-	  <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasChanges}"/>
-	  <Button Content="Discard" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"/>
+	  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasChanges}"/>
+	  <Button Content="Discard" controls:Icon.Key="resetIcon" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"/>
 	  <TextBlock Text="{Binding StatusText}" Foreground="OrangeRed" VerticalAlignment="Center" Margin="6,0,0,0"/>
 	</StackPanel>
   </Border>
@@ -37,8 +37,8 @@
 				  <Image Source="{Binding BackgroundPreview}" Width="256" Height="192" Stretch="Uniform"/>
 				</Border>
 				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import PNG…" Click="ImportBackground_Click"/>
-				  <Button Content="Export PNG…" Click="ExportBackground_Click"/>
+				  <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportBackground_Click"/>
+				  <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportBackground_Click"/>
 				</StackPanel>
 			  </StackPanel>
 			</Border>
@@ -50,8 +50,8 @@
 				  <Image Source="{Binding LogoPreview}" Width="256" Height="192" Stretch="Uniform"/>
 				</Border>
 				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import PNG…" Click="ImportLogo_Click"/>
-				  <Button Content="Export PNG…" Click="ExportLogo_Click"/>
+				  <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportLogo_Click"/>
+				  <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportLogo_Click"/>
 				</StackPanel>
 			  </StackPanel>
 			</Border>
@@ -63,8 +63,8 @@
 				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours for you. Use these only to edit the colour file by hand."/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import colours…" Click="ImportPalette_Click"/>
-				  <Button Content="Export colours…" Click="ExportPalette_Click"/>
+				  <Button Content="Import colours…" controls:Icon.Key="import" Click="ImportPalette_Click"/>
+				  <Button Content="Export colours…" controls:Icon.Key="export" Click="ExportPalette_Click"/>
 				</StackPanel>
 			  </StackPanel>
 			</Border>
@@ -82,8 +82,8 @@
 				  <Image Source="{Binding BackgroundPreview}" Width="256" Height="192" Stretch="Uniform"/>
 				</Border>
 				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import PNG…" Click="ImportBackground_Click"/>
-				  <Button Content="Export PNG…" Click="ExportBackground_Click"/>
+				  <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportBackground_Click"/>
+				  <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportBackground_Click"/>
 				</StackPanel>
 			  </StackPanel>
 			</Border>
@@ -95,8 +95,8 @@
 				  <Image Source="{Binding LogoPreview}" Width="256" Height="192" Stretch="Uniform"/>
 				</Border>
 				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import PNG…" Click="ImportLogo_Click"/>
-				  <Button Content="Export PNG…" Click="ExportLogo_Click"/>
+				  <Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportLogo_Click"/>
+				  <Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportLogo_Click"/>
 				</StackPanel>
 			  </StackPanel>
 			</Border>
@@ -108,8 +108,8 @@
 				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours for you. Use these only to edit the colour file by hand."/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal" Spacing="6">
-				  <Button Content="Import colours…" Click="ImportPalette_Click"/>
-				  <Button Content="Export colours…" Click="ExportPalette_Click"/>
+				  <Button Content="Import colours…" controls:Icon.Key="import" Click="ImportPalette_Click"/>
+				  <Button Content="Export colours…" controls:Icon.Key="export" Click="ExportPalette_Click"/>
 				</StackPanel>
 			  </StackPanel>
 			</Border>
@@ -129,8 +129,8 @@
 			<Image Source="{Binding CopyrightPreview}" Width="256" Height="192" Stretch="Uniform"/>
 		  </Border>
 		  <StackPanel Orientation="Horizontal" Spacing="6">
-			<Button Content="Import PNG…" Click="ImportCopyright_Click"/>
-			<Button Content="Export PNG…" Click="ExportCopyright_Click"/>
+			<Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportCopyright_Click"/>
+			<Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportCopyright_Click"/>
 		  </StackPanel>
 		</StackPanel>
 	  </Border>

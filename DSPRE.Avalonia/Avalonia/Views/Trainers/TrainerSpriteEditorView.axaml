@@ -32,12 +32,12 @@
             BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
         <StackPanel x:Name="SpriteButtons" Orientation="Horizontal" Spacing="6">
-          <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <Button Content="Import PNG…" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
-          <Button Content="Export PNG…" Click="Export_Click"/>
-          <Button Content="Export sheet…" Click="ExportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
-          <Button Content="Import sheet…" Click="ImportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
-          <Button Content="Open in Graphics…" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
+          <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Import PNG…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
+          <Button Content="Export PNG…" controls:Icon.Key="export" Click="Export_Click"/>
+          <Button Content="Export sheet…" controls:Icon.Key="export" Click="ExportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
+          <Button Content="Import sheet…" controls:Icon.Key="import" Click="ImportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
+          <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
         </StackPanel>
         <StackPanel x:Name="SpritePicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
           <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
@@ -71,7 +71,7 @@
                       ToolTip.Tip="Frames that share tiles change together.">
             <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasLinkedSets}">
               <TextBlock Text="{Binding SelectedSetLabel, StringFormat='Painting: {0}'}" VerticalAlignment="Center"/>
-              <Button Content="Copy frame to other set" Click="CopyFrameToOtherSet_Click"
+              <Button Content="Copy frame to other set" controls:Icon.Key="copyIcon_small" Click="CopyFrameToOtherSet_Click"
                       ToolTip.Tip="Paints this frame over the same frame of the other set"/>
             </StackPanel>
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MinHeight="84">
@@ -107,7 +107,7 @@
 
             <StackPanel DockPanel.Dock="Top" Spacing="4">
               <TextBlock Text="Palette" FontWeight="SemiBold" ToolTip.Tip="Shows the palette of the part last painted."/>
-              <Button Content="Edit colour…" Click="EditColour_Click" HorizontalAlignment="Left"/>
+              <Button Content="Edit colour…" controls:Icon.Key="pencil" Click="EditColour_Click" HorizontalAlignment="Left"/>
             </StackPanel>
 
             <ScrollViewer>
@@ -164,8 +164,8 @@
                       </DataTemplate>
                     </ComboBox.ItemTemplate>
                   </ComboBox>
-                  <Button Content="Add Sequence" controls:Icon.Key="addIcon" Click="AddSequence_Click" IsVisible="{Binding CanEditAnimJson}"/>
-                  <Button Content="Remove Sequence" Click="RemoveSequence_Click" IsVisible="{Binding CanEditAnimJson}" IsEnabled="{Binding HasSelectedAnimSequence}"/>
+                  <Button Content="Add sequence" controls:Icon.Key="addIcon" Click="AddSequence_Click" IsVisible="{Binding CanEditAnimJson}"/>
+                  <Button Content="Remove sequence" controls:Icon.Key="deleteIcon" Click="RemoveSequence_Click" IsVisible="{Binding CanEditAnimJson}" IsEnabled="{Binding HasSelectedAnimSequence}"/>
                 </StackPanel>
 
                 <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
@@ -228,7 +228,7 @@
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Button Content="Add Frame" controls:Icon.Key="addIcon" Click="AddFrame_Click" VerticalAlignment="Top" Margin="0,28,0,0"
+                    <Button Content="Add frame" controls:Icon.Key="addIcon" Click="AddFrame_Click" VerticalAlignment="Top" Margin="0,28,0,0"
                             IsVisible="{Binding CanEditAnimJson}" IsEnabled="{Binding HasSelectedAnimSequence}"/>
                   </StackPanel>
                 </ScrollViewer>
@@ -238,7 +238,7 @@
             <TabItem Header="JSON" IsVisible="{Binding CanEditAnimJson}">
               <DockPanel Margin="0,8,0,0">
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
-                  <Button Content="Save Animation JSON" Click="SaveAnimJson_Click" IsEnabled="{Binding AnimJsonDirty}"/>
+                  <Button Content="Save animation JSON" controls:Icon.Key="saveButton" Click="SaveAnimJson_Click" IsEnabled="{Binding AnimJsonDirty}"/>
                 </StackPanel>
                 <ae:TextEditor x:Name="AnimJsonEditor" ShowLineNumbers="True" WordWrap="False"
                                FontFamily="Consolas,monospace" FontSize="12"

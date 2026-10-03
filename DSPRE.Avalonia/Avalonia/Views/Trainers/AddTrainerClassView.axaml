@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
         x:Class="DSPRE.Avalonia.Views.Trainers.AddTrainerClassView"
         x:DataType="vm:AddTrainerClassViewModel"
@@ -16,7 +17,7 @@
     <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,10,0,0">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="Firebrick" TextWrapping="Wrap"/>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
-        <Button Content="Add" Click="Add_Click" IsDefault="True"/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsDefault="True"/>
         <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
       </StackPanel>
     </StackPanel>

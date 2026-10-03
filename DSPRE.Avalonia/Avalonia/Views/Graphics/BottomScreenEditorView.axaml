@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.BottomScreenEditorView"
         x:DataType="vm:BottomScreenEditorViewModel"
@@ -36,11 +37,11 @@
       <StackPanel Spacing="6">
         <WrapPanel Classes="toolbar">
           <StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
-            <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <Button Content="Undo" Click="Undo_Click"
+            <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click"
                     IsEnabled="{Binding CanUndo}" ToolTip.Tip="{Binding UndoWhat}"/>
-            <Button Content="Redo" Click="Redo_Click"
+            <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click"
                     IsEnabled="{Binding CanRedo}" ToolTip.Tip="{Binding RedoWhat}"/>
           </StackPanel>
           <TabStrip x:Name="ScreenTabs" ItemsSource="{Binding TabNames}" SelectedIndex="{Binding TabIndex}" Margin="12,2,6,2"/>
@@ -140,12 +141,12 @@
           <TextBlock Text="{Binding SelectedWhat}" Classes="hint" IsVisible="{Binding HasWhat}"/>
 
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Content="Paint…" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
-            <Button Content="Export PNG…" Click="Export_Click" IsEnabled="{Binding CanPaint}"/>
-            <Button Content="Import PNG…" Click="Import_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Paint…" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanPaint}" ToolTip.Tip="PNG image"/>
+            <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding CanPaint}" ToolTip.Tip="PNG image"/>
           </StackPanel>
 
-          <Button Content="Edit animation…" Click="EditAnimation_Click" IsVisible="{Binding IsAnimation}"
+          <Button Content="Edit animation…" controls:Icon.Key="pencil" Click="EditAnimation_Click" IsVisible="{Binding IsAnimation}"
                   HorizontalAlignment="Stretch"
                   ToolTip.Tip="Open this animation's frames, their holds and their drawings"/>
           <TextBlock Text="{Binding CannotEditBecause}" Classes="hint"

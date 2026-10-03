@@ -27,16 +27,16 @@
           </TextBox.InnerRightContent>
         </TextBox>
         <StackPanel x:Name="FileButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
-          <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
-          <Button Content="Import…" Click="PutIn_Click"
+          <Button Content="Import…" controls:Icon.Key="import" Click="PutIn_Click"
                   IsEnabled="{Binding CanPutFileIn}" ToolTip.Tip="{Binding PutFileInHelp}"/>
-          <Button Content="Export DAE…" Click="SaveDae_Click"
+          <Button Content="Export DAE…" controls:Icon.Key="export" Click="SaveDae_Click"
                   IsEnabled="{Binding CanSaveModel}" ToolTip.Tip="{Binding SaveModelHelp}"/>
-          <Button Content="Export glTF…" Click="SaveGlb_Click"
+          <Button Content="Export glTF…" controls:Icon.Key="export" Click="SaveGlb_Click"
                   IsEnabled="{Binding CanSaveModel}" ToolTip.Tip="{Binding SaveModelHelp}"/>
-          <Button Content="Export file…" Click="SaveRaw_Click"
+          <Button Content="Export file…" controls:Icon.Key="export" Click="SaveRaw_Click"
                   IsEnabled="{Binding HasSelection}"
                   ToolTip.Tip="The whole entry exactly as it sits in the ROM, keeping everything a 3D file would drop."/>
         </StackPanel>

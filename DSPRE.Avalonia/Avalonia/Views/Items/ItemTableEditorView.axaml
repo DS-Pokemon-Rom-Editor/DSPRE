@@ -16,8 +16,8 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
@@ -187,8 +187,8 @@
           <!-- Left: list -->
           <DockPanel Grid.Column="0">
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
-              <Button Content="Add"    Click="HiddenAdd_Click"    Width="70"/>
-              <Button Content="Remove" Click="HiddenRemove_Click" Width="70"
+              <Button Content="Add" controls:Icon.Key="addIcon"    Click="HiddenAdd_Click"    Width="70"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="HiddenRemove_Click" Width="70"
                       IsEnabled="{Binding HiddenItemSelected}"/>
             </StackPanel>
             <TextBlock DockPanel.Dock="Top" Text="{Binding HiddenEntryCount}"

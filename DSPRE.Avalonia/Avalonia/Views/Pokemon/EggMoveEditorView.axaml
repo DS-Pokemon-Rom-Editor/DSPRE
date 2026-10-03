@@ -16,11 +16,11 @@
 	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
 			BorderThickness="0,0,0,1" Padding="6,4">
 	  <StackPanel Orientation="Horizontal" Spacing="6">
-		<Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-		<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
-		<Button Content="Export CSV" Click="Export_Click" Margin="12,0,0,0"/>
-		<Button Content="Import CSV" Click="Import_Click"/>
+		<Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click" Margin="12,0,0,0"/>
+		<Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
 		<TextBlock Text="{Binding MonCountText}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 		<TextBlock Text="{Binding ListSizeText}" Foreground="{Binding ListSizeBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 	  </StackPanel>
@@ -56,9 +56,9 @@
 		  </Grid>
 		  <TextBlock Text="{Binding MonStatusText}" FontSize="12" TextWrapping="Wrap"/>
 		  <StackPanel Orientation="Horizontal" Spacing="4">
-			<Button Content="Add"     IsEnabled="{Binding CanAddMon}"     Click="AddMon_Click"/>
+			<Button Content="Add" controls:Icon.Key="addIcon"     IsEnabled="{Binding CanAddMon}"     Click="AddMon_Click"/>
 			<Button Content="Replace" IsEnabled="{Binding CanReplaceMon}" Click="ReplaceMon_Click"/>
-			<Button Content="Delete"  IsEnabled="{Binding CanDeleteMon}"  Click="DeleteMon_Click"/>
+			<Button Content="Delete" controls:Icon.Key="deleteIcon"  IsEnabled="{Binding CanDeleteMon}"  Click="DeleteMon_Click"/>
 		  </StackPanel>
 		</StackPanel>
 
@@ -88,9 +88,9 @@
 					PlaceholderText="Pick a move for the buttons below"/>
 		  <TextBlock Text="{Binding MoveStatusText}" FontSize="12" TextWrapping="Wrap"/>
 		  <StackPanel Orientation="Horizontal" Spacing="4">
-			<Button Content="Add"     IsEnabled="{Binding CanAddMove}"     Click="AddMove_Click"/>
+			<Button Content="Add" controls:Icon.Key="addIcon"     IsEnabled="{Binding CanAddMove}"     Click="AddMove_Click"/>
 			<Button Content="Replace" IsEnabled="{Binding CanReplaceMove}" Click="ReplaceMove_Click"/>
-			<Button Content="Delete"  IsEnabled="{Binding CanDeleteMove}"  Click="DeleteMove_Click"/>
+			<Button Content="Delete" controls:Icon.Key="deleteIcon"  IsEnabled="{Binding CanDeleteMove}"  Click="DeleteMove_Click"/>
 		  </StackPanel>
 		</StackPanel>
 
@@ -110,7 +110,7 @@
 			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplaceeIndex}"/>
 			<TextBlock Text="With:" FontSize="12"/>
 			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplacerIndex}"/>
-			<Button Content="Bulk Replace" HorizontalAlignment="Stretch" Click="BulkReplace_Click"/>
+			<Button Content="Bulk replace" HorizontalAlignment="Stretch" Click="BulkReplace_Click"/>
 		  </StackPanel>
 		</Border>
 
@@ -119,7 +119,7 @@
 		  <StackPanel Spacing="4">
 			<TextBlock Text="Bulk Delete Move" FontWeight="SemiBold" FontSize="12"/>
 			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbDeleteAllIndex}"/>
-			<Button Content="Bulk Delete" HorizontalAlignment="Stretch" Click="BulkDelete_Click"/>
+			<Button Content="Bulk delete" HorizontalAlignment="Stretch" Click="BulkDelete_Click"/>
 		  </StackPanel>
 		</Border>
 	  </StackPanel>

@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
 		x:Class="DSPRE.Avalonia.Views.Graphics.TrainerCardEditorView"
 		x:DataType="vm:TrainerCardEditorViewModel"
@@ -15,13 +16,13 @@
 			BorderThickness="0,0,0,1" Padding="6,4">
 	  <WrapPanel Classes="toolbar">
 		<StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
-		  <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-		  <Button Content="Discard" Click="RevertChanges_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+		  <Button Content="Discard" controls:Icon.Key="resetIcon" Click="RevertChanges_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		</StackPanel>
 		<StackPanel x:Name="RankBar" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
 		  <TextBlock Text="Rank:" VerticalAlignment="Center"/>
 		  <ComboBox ItemsSource="{Binding RankNames}" SelectedIndex="{Binding SelectedRankIndex}" Width="140"/>
-		  <Button Content="Open in Graphics…" Click="OpenInGraphics_Click"
+		  <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
 		          ToolTip.Tip="Open the card in the Graphics window, where its drawing, its two arrangements and every rank's colours sit together."/>
 		</StackPanel>
 		<TextBlock Text="{Binding StatusText}" Foreground="OrangeRed" Margin="12,2,6,2"/>
@@ -46,8 +47,8 @@
 				<Image Source="{Binding CardFrontPreview}" Width="256" Height="192" Stretch="Uniform"/>
 			  </Border>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import PNG…" Click="ImportCardFront_Click"/>
-				<Button Content="Export PNG…" Click="ExportCardFront_Click"/>
+				<Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportCardFront_Click"/>
+				<Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportCardFront_Click"/>
 			  </StackPanel>
 			</StackPanel>
 		  </Border>
@@ -59,8 +60,8 @@
 				<Image Source="{Binding CardBackPreview}" Width="256" Height="192" Stretch="Uniform"/>
 			  </Border>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import PNG…" Click="ImportCardBack_Click"/>
-				<Button Content="Export PNG…" Click="ExportCardBack_Click"/>
+				<Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportCardBack_Click"/>
+				<Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportCardBack_Click"/>
 			  </StackPanel>
 			</StackPanel>
 		  </Border>
@@ -69,8 +70,8 @@
 			<StackPanel Spacing="8">
 			  <TextBlock Text="Colours (advanced)" FontWeight="Bold"/>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import colours…" Click="ImportRankPalette_Click"/>
-				<Button Content="Export colours…" Click="ExportRankPalette_Click"/>
+				<Button Content="Import colours…" controls:Icon.Key="import" Click="ImportRankPalette_Click"/>
+				<Button Content="Export colours…" controls:Icon.Key="export" Click="ExportRankPalette_Click"/>
 			  </StackPanel>
 			</StackPanel>
 		  </Border>
@@ -94,8 +95,8 @@
 				       RenderOptions.BitmapInterpolationMode="None"/>
 			  </Border>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import PNG…" Click="ImportTrainerMale_Click"/>
-				<Button Content="Export PNG…" Click="ExportTrainerMale_Click"/>
+				<Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportTrainerMale_Click"/>
+				<Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportTrainerMale_Click"/>
 			  </StackPanel>
 			</StackPanel>
 		  </Border>
@@ -108,8 +109,8 @@
 				       RenderOptions.BitmapInterpolationMode="None"/>
 			  </Border>
 			  <StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Import PNG…" Click="ImportTrainerFemale_Click"/>
-				<Button Content="Export PNG…" Click="ExportTrainerFemale_Click"/>
+				<Button Content="Import PNG…" controls:Icon.Key="import" Click="ImportTrainerFemale_Click"/>
+				<Button Content="Export PNG…" controls:Icon.Key="export" Click="ExportTrainerFemale_Click"/>
 			  </StackPanel>
 			</StackPanel>
 		  </Border>

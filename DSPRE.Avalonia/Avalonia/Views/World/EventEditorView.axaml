@@ -20,8 +20,8 @@
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>
-        <Button Content="Export" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Border x:Name="Pegman" Background="Transparent" Cursor="Hand" Padding="2" IsVisible="{Binding ShowBetaFeatures}"
                 PointerPressed="Pegman_PointerPressed"
@@ -131,10 +131,10 @@
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
               <Border Width="12" Height="12" Background="#3FF259" CornerRadius="2" VerticalAlignment="Center"/>
-              <Button Content="Add" Click="AddOw_Click"/>
-              <Button Content="Remove" Click="RemoveOw_Click" IsEnabled="{Binding HasOw}"
+              <Button Content="Add" controls:Icon.Key="addIcon" Click="AddOw_Click"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveOw_Click" IsEnabled="{Binding HasOw}"
                       ToolTip.Tip="Remove the selected overworld (Del while the list is focused)"/>
-              <Button Content="Duplicate" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupOw_Click" IsEnabled="{Binding HasOw}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <Button Content="Sort" controls:Icon.Key="sortAscending" Click="SortAsc_Click" ToolTip.Tip="Sort overworlds by OW id (ascending)"/>
               <Button Content="Sort" controls:Icon.Key="sortDescending" Click="SortDesc_Click" ToolTip.Tip="Sort overworlds by OW id (descending)"/>
@@ -198,7 +198,7 @@
                     <TextBlock Text="Item" FontWeight="Bold"/>
                     <Grid ColumnDefinitions="*,Auto">
                       <ComboBox Grid.Column="0" ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
-                      <Button Grid.Column="1" Content="Edit item list…" Click="ManageGroundItems_Click" Margin="4,0,0,0" ToolTip.Tip="Add or remove the item and quantity pairs item events can give"/>
+                      <Button Grid.Column="1" Content="Edit item list…" controls:Icon.Key="pencil" Click="ManageGroundItems_Click" Margin="4,0,0,0" ToolTip.Tip="Add or remove the item and quantity pairs item events can give"/>
                     </Grid>
                     <!-- No warning here: the dropdown itself shows whether the item resolved, and the
                          raw Script field appears below when it didn't. -->
@@ -283,9 +283,9 @@
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
               <Border Width="12" Height="12" Background="#FF9E1A" CornerRadius="2" VerticalAlignment="Center"/>
-              <Button Content="Add" Click="AddWarp_Click"/>
-              <Button Content="Remove" Click="RemoveWarp_Click" IsEnabled="{Binding HasWarp}"/>
-              <Button Content="Duplicate" Click="DupWarp_Click" IsEnabled="{Binding HasWarp}"/>
+              <Button Content="Add" controls:Icon.Key="addIcon" Click="AddWarp_Click"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveWarp_Click" IsEnabled="{Binding HasWarp}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupWarp_Click" IsEnabled="{Binding HasWarp}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <Button Content="Go to destination" controls:Icon.Key="goto" Click="TestWarp_Click" IsEnabled="{Binding HasWarp}"
                       ToolTip.Tip="Show the destination header's event file here"/>
@@ -325,9 +325,9 @@
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
               <Border Width="12" Height="12" Background="#F23FE5" CornerRadius="2" VerticalAlignment="Center"/>
-              <Button Content="Add" Click="AddTrig_Click"/>
-              <Button Content="Remove" Click="RemoveTrig_Click" IsEnabled="{Binding HasTrig}"/>
-              <Button Content="Duplicate" Click="DupTrig_Click" IsEnabled="{Binding HasTrig}"/>
+              <Button Content="Add" controls:Icon.Key="addIcon" Click="AddTrig_Click"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveTrig_Click" IsEnabled="{Binding HasTrig}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupTrig_Click" IsEnabled="{Binding HasTrig}"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
@@ -396,9 +396,9 @@
           <DockPanel Margin="4">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
               <Border Width="12" Height="12" Background="#33D9F2" CornerRadius="2" VerticalAlignment="Center"/>
-              <Button Content="Add" Click="AddSpawn_Click"/>
-              <Button Content="Remove" Click="RemoveSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
-              <Button Content="Duplicate" Click="DupSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
+              <Button Content="Add" controls:Icon.Key="addIcon" Click="AddSpawn_Click"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
+              <Button Content="Duplicate" controls:Icon.Key="copyIcon_small" Click="DupSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Spawnables}" SelectedIndex="{Binding SelectedSpawnableIndex}"/>

@@ -21,8 +21,8 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
@@ -37,8 +37,8 @@
       <DockPanel x:Name="ItemCounter" Grid.Column="0">
         <TextBlock DockPanel.Dock="Top" Text="{Binding LeftHeader}" FontWeight="SemiBold" Margin="2,0,0,4"/>
         <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,6,0,0">
-          <Button Content="Add" Click="AddLeft_Click" IsVisible="{Binding CanResize}"/>
-          <Button Content="Remove" Click="RemoveLeft_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="Add" controls:Icon.Key="addIcon" Click="AddLeft_Click" IsVisible="{Binding CanResize}"/>
+          <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveLeft_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
           <Button controls:Icon.Key="arrowup" Click="UpLeft_Click" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
           <Button controls:Icon.Key="arrowdown" Click="DownLeft_Click" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
           <Button Content="To TM counter" controls:Icon.Key="arrowright" controls:Icon.After="True" Click="ToRight_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedLeft, Converter={x:Static ObjectConverters.IsNotNull}}"/>
@@ -65,8 +65,8 @@
       <DockPanel x:Name="TmCounter" Grid.Column="2">
         <TextBlock DockPanel.Dock="Top" Text="{Binding RightHeader}" FontWeight="SemiBold" Margin="2,0,0,4"/>
         <WrapPanel DockPanel.Dock="Bottom" Orientation="Horizontal" ItemSpacing="4" LineSpacing="4" Margin="0,6,0,0">
-          <Button Content="Add" Click="AddRight_Click" IsVisible="{Binding CanResize}"/>
-          <Button Content="Remove" Click="RemoveRight_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+          <Button Content="Add" controls:Icon.Key="addIcon" Click="AddRight_Click" IsVisible="{Binding CanResize}"/>
+          <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveRight_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
           <Button controls:Icon.Key="arrowup" Click="UpRight_Click" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
           <Button controls:Icon.Key="arrowdown" Click="DownRight_Click" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>
           <Button Content="To item counter" controls:Icon.Key="arrowleft" Click="ToLeft_Click" IsVisible="{Binding CanResize}" IsEnabled="{Binding SelectedRight, Converter={x:Static ObjectConverters.IsNotNull}}"/>

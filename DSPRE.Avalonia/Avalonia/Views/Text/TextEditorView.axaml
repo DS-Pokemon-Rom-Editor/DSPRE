@@ -19,19 +19,19 @@
         <TextBlock Text="Archive:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="160" ItemsSource="{Binding ArchiveNames}"
                                         SelectedIndex="{Binding SelectedArchiveIndex}"/>
-        <Button Content="Add"    Click="AddArchive_Click"    ToolTip.Tip="Add a new text archive"/>
-        <Button Content="Remove" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
+        <Button Content="Add" controls:Icon.Key="addIcon"    Click="AddArchive_Click"    ToolTip.Tip="Add a new text archive"/>
+        <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="Save"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button Content="Import…" Click="Import_Click"/>
-        <Button Content="Export…" Click="Export_Click"/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <CheckBox Content="Hex line numbers" IsChecked="{Binding HexNumbering}" VerticalAlignment="Center"/>
         <CheckBox Content="Message box" IsChecked="{Binding ShowPreview}" VerticalAlignment="Center"
                   ToolTip.Tip="Show the selected line the way the game would, in its own message box."/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="STRVAR Help…" Click="StrVarHelp_Click"
+        <Button Content="STRVAR help…" Click="StrVarHelp_Click"
                 ToolTip.Tip="Open the string buffer syntax, examples, and type reference"/>
       </WrapPanel>
     </Border>
@@ -61,7 +61,7 @@
           <CheckBox Content="Case sensitive"          IsChecked="{Binding CaseSensitive}"/>
           <CheckBox Content="Search all archives"     IsChecked="{Binding SearchAllArchives}"/>
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Content="Search"  Click="Search_Click"  Width="90"/>
+            <Button Content="Search" controls:Icon.Key="lens"  Click="Search_Click"  Width="90"/>
             <Button Content="Replace" Click="Replace_Click" Width="90"/>
           </StackPanel>
           <TextBlock Text="Results (double-click to go):" Margin="0,6,0,0"/>
@@ -77,11 +77,11 @@
       <Border x:Name="LineButtons" DockPanel.Dock="Bottom" Padding="4" Background="{DynamicResource Editor.ToolbarBg}"
               BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0">
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <Button Content="Add String"    Click="AddString_Click"/>
-          <Button Content="Remove String" Click="RemoveString_Click"/>
+          <Button Content="Add string" controls:Icon.Key="addIcon"    Click="AddString_Click"/>
+          <Button Content="Remove string" controls:Icon.Key="deleteIcon" Click="RemoveString_Click"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-          <Button Content="Move Up"   Click="MoveUp_Click"   IsEnabled="{Binding CanMoveUp}"/>
-          <Button Content="Move Down" Click="MoveDown_Click" IsEnabled="{Binding CanMoveDown}"/>
+          <Button Content="Move up" controls:Icon.Key="arrowup"   Click="MoveUp_Click"   IsEnabled="{Binding CanMoveUp}"/>
+          <Button Content="Move down" controls:Icon.Key="arrowdown" Click="MoveDown_Click" IsEnabled="{Binding CanMoveDown}"/>
         </StackPanel>
       </Border>
 

@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.World"
         x:Class="DSPRE.Avalonia.Views.Shell.MainWindowView"
@@ -275,8 +276,8 @@
           <TextBlock Text="Open a game to start editing. Your edits go to a project folder next to the ROM; the original file is never touched."
                      TextWrapping="Wrap" TextAlignment="Center" Opacity="0.75"/>
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-            <Button Content="Open ROM (.nds)…" Click="OpenRom_Click"/>
-            <Button Content="Open extracted folder…" Click="OpenFolder_Click"/>
+            <Button Content="Open ROM (.nds)…" controls:Icon.Key="folder" Click="OpenRom_Click"/>
+            <Button Content="Open extracted folder…" controls:Icon.Key="folder" Click="OpenFolder_Click"/>
           </StackPanel>
           <StackPanel IsVisible="{Binding HasRecents}" Spacing="2">
             <TextBlock Text="Recent projects" FontWeight="SemiBold" Margin="0,10,0,2"/>

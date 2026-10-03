@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Text"
 		x:Class="DSPRE.Avalonia.Views.Text.CharMapManagerView"
 		x:DataType="vm:CharMapManagerViewModel"
@@ -15,11 +16,11 @@
 	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
 			BorderThickness="0,0,0,1" Padding="6,4">
 	  <WrapPanel x:Name="MapActions" Classes="toolbar">
-		<Button Content="Save"              IsEnabled="{Binding HasMap}" Click="Save_Click"/>
-		<Button Content="Create Custom Map" Click="CreateMap_Click" Margin="12,2,6,2"/>
-		<Button Content="Delete Custom Map" IsEnabled="{Binding HasMap}" Click="DeleteMap_Click"/>
-		<Button Content="Reload"            Click="Reload_Click"/>
-		<Button Content="Open File"         IsEnabled="{Binding HasMap}" Click="OpenFile_Click"/>
+		<Button Content="Save" controls:Icon.Key="saveButton"              IsEnabled="{Binding HasMap}" Click="Save_Click"/>
+		<Button Content="Create custom map" Click="CreateMap_Click" Margin="12,2,6,2"/>
+		<Button Content="Delete custom map" controls:Icon.Key="deleteIcon" IsEnabled="{Binding HasMap}" Click="DeleteMap_Click"/>
+		<Button Content="Reload" controls:Icon.Key="reload"            Click="Reload_Click"/>
+		<Button Content="Open file" controls:Icon.Key="folder"         IsEnabled="{Binding HasMap}" Click="OpenFile_Click"/>
 		<Button Content="Rebase"            IsEnabled="{Binding HasMap}" Click="Rebase_Click"/>
 	  </WrapPanel>
 	</Border>
@@ -37,7 +38,7 @@
 
 	  <!-- Search row under charmap list -->
 	  <DockPanel x:Name="CharSearch" Grid.Row="2" Grid.Column="0" Margin="0,6,0,0">
-		<Button DockPanel.Dock="Right" Content="Search" Click="Search_Click" Margin="6,0,0,0"/>
+		<Button DockPanel.Dock="Right" Content="Search" controls:Icon.Key="lens" Click="Search_Click" Margin="6,0,0,0"/>
 		<TextBox Text="{Binding SearchText}" PlaceholderText="Search (0x... for hex code)"
 				 KeyDown="Search_KeyDown"/>
 	  </DockPanel>
@@ -60,8 +61,8 @@
 				  HorizontalAlignment="Stretch"/>
 		<TextBox Text="{Binding NewAliasText}" PlaceholderText="New alias text"/>
 		<StackPanel Orientation="Horizontal" Spacing="6">
-		  <Button Content="Add Alias"    IsEnabled="{Binding HasMap}" Click="AddAlias_Click"/>
-		  <Button Content="Remove Alias" IsEnabled="{Binding HasMap}" Click="RemoveAlias_Click"/>
+		  <Button Content="Add alias" controls:Icon.Key="addIcon"    IsEnabled="{Binding HasMap}" Click="AddAlias_Click"/>
+		  <Button Content="Remove alias" controls:Icon.Key="deleteIcon" IsEnabled="{Binding HasMap}" Click="RemoveAlias_Click"/>
 		</StackPanel>
 	  </StackPanel>
 

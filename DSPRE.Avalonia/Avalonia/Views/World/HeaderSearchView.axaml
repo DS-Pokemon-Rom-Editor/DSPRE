@@ -1,5 +1,6 @@
 <Window MinWidth="520" MinHeight="400" xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="using:DSPRE.Avalonia.ViewModels.World"
         x:Class="DSPRE.Avalonia.Views.World.HeaderSearchView"
         x:DataType="vm:HeaderSearchViewModel"
@@ -19,7 +20,7 @@
         <ComboBox Width="150" ItemsSource="{Binding Operators}" SelectedIndex="{Binding OperatorIndex}"/>
         <TextBox x:Name="ValueBox" Width="180" Text="{Binding ValueText}" PlaceholderText="Value to search…"/>
         <CheckBox Content="Auto" IsChecked="{Binding AutoSearch}" ToolTip.Tip="Search as you type"/>
-        <Button Content="Search" Click="Search_Click"/>
+        <Button Content="Search" controls:Icon.Key="lens" Click="Search_Click"/>
       </WrapPanel>
     </Border>
 

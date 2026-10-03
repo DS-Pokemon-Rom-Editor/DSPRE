@@ -16,10 +16,10 @@
         <TextBlock Text="File:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="Save"     Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save" controls:Icon.Key="saveButton"     Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button Content="Save As…" Click="SaveAs_Click"/>
-        <Button Content="Import…"  Click="Import_Click"/>
+        <Button Content="Save as…" controls:Icon.Key="export" Click="SaveAs_Click"/>
+        <Button Content="Import…" controls:Icon.Key="import"  Click="Import_Click"/>
       </StackPanel>
     </Border>
 

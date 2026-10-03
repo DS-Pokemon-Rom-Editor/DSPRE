@@ -18,12 +18,12 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,0,0,1" Padding="6,4" IsVisible="{Binding IsAvailable}">
       <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button Content="Export…" Click="Export_Click" Margin="12,0,0,0" ToolTip.Tip="Exports the open tab"/>
-        <Button Content="Import…" Click="Import_Click" ToolTip.Tip="Imports into the open tab"/>
-        <Button Content="Locate" Click="Locate_Click" ToolTip.Tip="Shows the open tab's files"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" Margin="12,0,0,0" ToolTip.Tip="Exports the open tab"/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Imports into the open tab"/>
+        <Button Content="Locate" controls:Icon.Key="folder" Click="Locate_Click" ToolTip.Tip="Shows the open tab's files"/>
       </StackPanel>
     </Border>
 
@@ -34,7 +34,7 @@
       <TabItem Header="Trainers">
         <Grid ColumnDefinitions="280,*" Margin="6">
           <DockPanel Grid.Column="0" Margin="0,0,6,0">
-            <Button DockPanel.Dock="Top" Content="New Trainer" controls:Icon.Key="addIcon" Click="NewTrainer_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
+            <Button DockPanel.Dock="Top" Content="New trainer" controls:Icon.Key="addIcon" Click="NewTrainer_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding TrainerLabels}" SelectedIndex="{Binding SelectedTrainerIndex}"/>
           </DockPanel>
 
@@ -60,8 +60,8 @@
                 <TextBlock Text="Add set #:" VerticalAlignment="Center"/>
                 <NumericUpDown Value="{Binding AddSetNumber}" Minimum="0" Maximum="9999" Width="120"/>
                 <TextBlock Text="{Binding AddSetPreviewLabel}" VerticalAlignment="Center"/>
-                <Button Content="Add" Click="AddSet_Click"/>
-                <Button Content="Remove Selected" Click="RemoveSet_Click"/>
+                <Button Content="Add" controls:Icon.Key="addIcon" Click="AddSet_Click"/>
+                <Button Content="Remove selected" controls:Icon.Key="deleteIcon" Click="RemoveSet_Click"/>
               </StackPanel>
             </StackPanel>
           </ScrollViewer>
@@ -71,7 +71,7 @@
       <TabItem Header="Pokémon Sets">
         <Grid ColumnDefinitions="280,*" Margin="6">
           <DockPanel Grid.Column="0" Margin="0,0,6,0">
-            <Button DockPanel.Dock="Top" Content="New Set" controls:Icon.Key="addIcon" Click="NewSet_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
+            <Button DockPanel.Dock="Top" Content="New set" controls:Icon.Key="addIcon" Click="NewSet_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding SetLabels}" SelectedIndex="{Binding SelectedSetIndex}"/>
           </DockPanel>
 

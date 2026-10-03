@@ -14,7 +14,7 @@
 
   <DockPanel Margin="8">
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,8,0,0">
-      <Button Content="Save"   Click="Save_Click"   IsDefault="True"/>
+      <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click"   IsDefault="True"/>
       <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
     </StackPanel>
     <StackPanel DockPanel.Dock="Right" Spacing="6" Margin="8,0,0,0" VerticalAlignment="Center">

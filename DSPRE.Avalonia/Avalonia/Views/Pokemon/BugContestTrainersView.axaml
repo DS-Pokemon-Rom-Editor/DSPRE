@@ -15,9 +15,9 @@
       <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="0,0,0,1" Padding="6,4">
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <Button Content="Save"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-          <Button Content="Locate" Click="Locate_Click"/>
+          <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Locate" controls:Icon.Key="folder" Click="Locate_Click"/>
         </StackPanel>
       </Border>
 

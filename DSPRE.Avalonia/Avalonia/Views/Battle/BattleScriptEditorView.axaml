@@ -15,9 +15,9 @@
   <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
           BorderThickness="0,0,0,1" Padding="6,4">
     <WrapPanel Classes="toolbar">
-      <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
+      <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
               ToolTip.Tip="{Binding SaveHint}" ToolTip.ShowOnDisabled="True"/>
-      <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <StackPanel x:Name="EntryPicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
         <TextBlock Text="Archive" VerticalAlignment="Center"/>
         <ComboBox ItemsSource="{Binding ArchiveOptions}" SelectedIndex="{Binding ArchiveIndex}" Width="260"/>
@@ -267,7 +267,7 @@
         </Border>
         <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,4">
           <Button controls:Icon.Key="{Binding CellPlayButtonIcon}" controls:Icon.Text="{Binding CellPlayButtonText}" Click="PlayCell_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"/>
-          <Button x:Name="EditParticlesButton" Content="Edit particles" Click="EditParticles_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"
+          <Button x:Name="EditParticlesButton" Content="Edit particles" controls:Icon.Key="pencil" Click="EditParticles_Click" IsVisible="{Binding HasPreview}" Margin="0,2,6,2"
                   ToolTip.Tip="This move's particle files"/>
           <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"

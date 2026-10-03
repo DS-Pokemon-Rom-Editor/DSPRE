@@ -28,11 +28,11 @@
 		<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
 				BorderThickness="0,0,0,1" Padding="6,4">
 			<StackPanel Orientation="Horizontal" Spacing="6">
-				<Button Content="Save" Click="SaveButton_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-				<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+				<Button Content="Save" controls:Icon.Key="saveButton" Click="SaveButton_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+				<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 				<controls:UndoRedoButtons/>
-				<Button Content="Export CSV" Click="ExportButton_Click" Margin="12,0,0,0"/>
-				<Button Content="Import CSV" Click="ImportButton_Click"/>
+				<Button Content="Export CSV…" controls:Icon.Key="export" Click="ExportButton_Click" Margin="12,0,0,0"/>
+				<Button Content="Import CSV…" controls:Icon.Key="import" Click="ImportButton_Click"/>
 			</StackPanel>
 		</Border>
 
@@ -68,7 +68,7 @@
 						  HorizontalAlignment="Stretch"/>
 
 				<!-- Auto-Palette (single) -->
-				<Button Content="Auto Palette"
+				<Button Content="Auto palette"
 						Click="AutoPaletteButton_Click"
 						IsEnabled="{Binding PalettesKnown}"
 						ToolTip.Tip="Set palette based on the selected move's type."
@@ -82,7 +82,7 @@
 						  HorizontalAlignment="Stretch"/>
 
 				<!-- Auto-Palette All -->
-				<Button Content="Auto Palette All"
+				<Button Content="Auto palette all"
 						Click="AutoPaletteAllButton_Click"
 						IsEnabled="{Binding PalettesKnown}"
 						ToolTip.Tip="Apply automatic palette based on move type to all TMs/HMs."

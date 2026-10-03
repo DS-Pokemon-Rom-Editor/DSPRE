@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.CellAnimationPickerView"
         x:DataType="vm:CellAnimationPickerViewModel"
@@ -27,7 +28,7 @@
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
           <Button Content="{Binding DeepEditorName}" Click="DeepEditor_Click"
                   IsVisible="{Binding HasDeepEditor}"/>
-          <Button Content="Open" Click="Open_Click" Width="90"/>
+          <Button Content="Open" controls:Icon.Key="OpenLink" Click="Open_Click" Width="90"/>
         </StackPanel>
         <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
       </DockPanel>
