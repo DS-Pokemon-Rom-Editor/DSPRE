@@ -70,7 +70,7 @@
           </Grid>
           <TextBlock Text="{Binding EffectiveRateText}" Foreground="{Binding EffectiveRateColor}" FontWeight="Bold"/>
           <TextBlock Text="{Binding RateWarning}" Foreground="DarkRed" TextWrapping="Wrap" FontSize="12"/>
-          <Button Content="Rate help…" Click="RateHelp_Click" HorizontalAlignment="Left"/>
+          <Button Content="Rate help" Click="RateHelp_Click" HorizontalAlignment="Left"/>
         </StackPanel>
       </Grid>
     </DockPanel>

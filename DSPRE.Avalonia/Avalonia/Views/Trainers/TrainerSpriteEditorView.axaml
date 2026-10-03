@@ -107,7 +107,7 @@
 
             <StackPanel DockPanel.Dock="Top" Spacing="4">
               <TextBlock Text="Palette" FontWeight="SemiBold" ToolTip.Tip="Shows the palette of the part last painted."/>
-              <Button Content="Edit colour…" controls:Icon.Key="pencil" Click="EditColour_Click" HorizontalAlignment="Left"/>
+              <Button Content="Edit colour" controls:Icon.Key="pencil" Click="EditColour_Click" HorizontalAlignment="Left"/>
             </StackPanel>
 
             <ScrollViewer>
@@ -145,7 +145,7 @@
                      TextWrapping="Wrap" Margin="0,0,0,8"
                      IsVisible="{Binding AnimJsonStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-          <Button DockPanel.Dock="Top" Content="Create anim.json…" Click="CreateAnimJson_Click" HorizontalAlignment="Left" Margin="0,0,0,8"
+          <Button DockPanel.Dock="Top" Content="Create anim.json" Click="CreateAnimJson_Click" HorizontalAlignment="Left" Margin="0,0,0,8"
                   IsVisible="{Binding CanCreateAnimJson}"/>
 
           <TabControl x:Name="AnimInnerTabs" SelectionChanged="AnimInnerTabs_SelectionChanged" IsVisible="{Binding HasAnimation}"

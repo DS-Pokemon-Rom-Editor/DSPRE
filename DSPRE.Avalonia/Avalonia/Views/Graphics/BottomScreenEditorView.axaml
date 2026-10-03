@@ -141,12 +141,12 @@
           <TextBlock Text="{Binding SelectedWhat}" Classes="hint" IsVisible="{Binding HasWhat}"/>
 
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Content="Paint…" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Paint" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
             <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanPaint}" ToolTip.Tip="PNG image"/>
             <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding CanPaint}" ToolTip.Tip="PNG image"/>
           </StackPanel>
 
-          <Button Content="Edit animation…" controls:Icon.Key="pencil" Click="EditAnimation_Click" IsVisible="{Binding IsAnimation}"
+          <Button Content="Edit animation" controls:Icon.Key="pencil" Click="EditAnimation_Click" IsVisible="{Binding IsAnimation}"
                   HorizontalAlignment="Stretch"
                   ToolTip.Tip="Open this animation's frames, their holds and their drawings"/>
           <TextBlock Text="{Binding CannotEditBecause}" Classes="hint"

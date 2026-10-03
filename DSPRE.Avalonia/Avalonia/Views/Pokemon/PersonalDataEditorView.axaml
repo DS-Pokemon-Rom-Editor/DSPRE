@@ -217,7 +217,7 @@
       <!-- hg-engine takes machine moves from data/learnsets/learnsets.json, not personal data. -->
       <TabItem Header="TM/HM" IsVisible="{Binding !ShowHgEngineExtras}">
         <DockPanel Margin="8">
-          <Button DockPanel.Dock="Bottom" Content="Bulk Editor…" Click="TmHmBulkEditor_Click" HorizontalAlignment="Left" Margin="0,8,0,0"
+          <Button DockPanel.Dock="Bottom" Content="Bulk Editor" Click="TmHmBulkEditor_Click" HorizontalAlignment="Left" Margin="0,8,0,0"
                    ToolTip.Tip="Edit TM/HM compatibility across many Pokémon at once, or per-machine across the whole dex"/>
           <Grid ColumnDefinitions="*,8,Auto,8,*">
             <DockPanel Grid.Column="0">

@@ -30,8 +30,8 @@
             <Button Content="Search…" controls:Icon.Key="lens"        Click="Search_Click"/>
             <Button Content="Reorder party…" Click="Reorder_Click"/>
             <Button Content="DV calc…"       Click="DVCalc_Click"/>
-            <Button Content="Battle messages…" Click="BattleMessages_Click"/>
-            <Button Content="Trainer classes…" Click="TrainerClasses_Click" ToolTip.Tip="Jump to this trainer's class on the Classes tab"/>
+            <Button Content="Battle messages" Click="BattleMessages_Click"/>
+            <Button Content="Trainer classes" Click="TrainerClasses_Click" ToolTip.Tip="Jump to this trainer's class on the Classes tab"/>
             <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2" IsVisible="{Binding !IsHgeActive}"/>
             <Button Content="Export trainer…" controls:Icon.Key="export" Click="ExportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
             <Button Content="Import trainer…" controls:Icon.Key="import" Click="ImportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Load a .trf file into this trainer slot"/>
@@ -191,7 +191,7 @@
                             <TextBlock Text="Ball Capsule" FontSize="10"/>
                             <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}"
                                       MaxDropDownHeight="360"/>
-                            <Button Content="Design…" Click="DesignCapsule_Click" Margin="0,2,0,0" FontSize="11" Padding="6,1"
+                            <Button Content="Design" Click="DesignCapsule_Click" Margin="0,2,0,0" FontSize="11" Padding="6,1"
                                     ToolTip.Tip="Open in Ball Capsules"/>
                           </StackPanel>
                           <Border Width="64" Height="64" CornerRadius="32" Background="#2A7FA8C8" BorderBrush="#557FA8C8" BorderThickness="1"

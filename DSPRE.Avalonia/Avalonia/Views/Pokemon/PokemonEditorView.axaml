@@ -40,7 +40,7 @@
         </Grid>
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <Button Content="Cry" controls:Icon.Key="speaker" Click="PlayCry_Click" ToolTip.Tip="Play cry"/>
-          <Button Content="Edit cry…" controls:Icon.Key="pencil" Click="EditCry_Click" ToolTip.Tip="Open in the Audio Editor"/>
+          <Button Content="Edit cry" controls:Icon.Key="pencil" Click="EditCry_Click" ToolTip.Tip="Open in the Audio Editor"/>
           <Button Content="Add new…" controls:Icon.Key="addIcon" Click="AddSpecies_Click" IsVisible="{Binding ShowHgEngineBanner}" IsEnabled="{Binding CanAddSpecies}"
                   ToolTip.Tip="Add a new base species. It is created when you save."/>
         </StackPanel>
@@ -62,7 +62,7 @@
             <StackPanel Orientation="Horizontal" Spacing="12">
               <TextBlock Text="{Binding EntryCount, StringFormat=Entries: {0}}" VerticalAlignment="Center"/>
               <Button Content="Export CSV…" controls:Icon.Key="export" Click="Learnset_Export_Click"/>
-              <Button Content="Bulk edit all…" controls:Icon.Key="tableEditor" Click="Learnset_BulkEdit_Click"/>
+              <Button Content="Bulk edit all" controls:Icon.Key="tableEditor" Click="Learnset_BulkEdit_Click"/>
               <TextBlock Text="Warning: exceeds vanilla 20-move limit!" IsVisible="{Binding ExceedsVanillaLimit}" Foreground="OrangeRed" FontWeight="Bold" VerticalAlignment="Center"/>
               <TextBlock Text="{Binding StatusText}" Foreground="Red" FontStyle="Italic" VerticalAlignment="Center"/>
             </StackPanel>

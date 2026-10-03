@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (_main == null || !AvaloniaEditorLauncher.IsRomLoaded)
             {
                 await DialogHelper.ShowInfo(
-                    "Open a ROM project first (Open ROM or Open extracted folder), then link its hg-engine checkout from here or File > hg-engine > Link hg-engine checkout…",
+                    "Open a ROM project first (Open ROM or Open extracted folder), then link its hg-engine checkout from here or File > hg-engine > Link hg-engine checkout.",
                     "Open a project first");
                 return;
             }

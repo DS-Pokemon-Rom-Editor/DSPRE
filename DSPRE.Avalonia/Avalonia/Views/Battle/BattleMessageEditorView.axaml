@@ -18,7 +18,7 @@
         <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="320" ItemsSource="{Binding Trainers}" SelectedIndex="{Binding SelectedTrainerIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <Button Content="Save all…" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Save all" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
       </StackPanel>

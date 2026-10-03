@@ -15,7 +15,7 @@
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button x:Name="MakeRoomButton" Content="Make room…" Click="MakeRoom_Click" IsVisible="{Binding CanMakeRoom}"
+        <Button x:Name="MakeRoomButton" Content="Make room" Click="MakeRoom_Click" IsVisible="{Binding CanMakeRoom}"
                 ToolTip.Tip="{Binding MakeRoomTip}"/>
         <TextBlock Text="{Binding Room}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>

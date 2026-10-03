@@ -102,7 +102,7 @@
           </Border>
 
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Content="Paint this…" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
+            <Button Content="Paint this" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
             <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanPaint}" ToolTip.Tip="PNG image"/>
           </StackPanel>
           <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding CanPaint}"

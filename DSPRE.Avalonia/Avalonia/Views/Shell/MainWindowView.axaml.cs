@@ -506,7 +506,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 await DialogHelper.ShowInfo(
                     "Continuing without a linked checkout: the Pokémon, Move Data, Item, Trainer and " +
                     "wild-encounter editors stay disabled. Link one later from File > hg-engine > Link hg-engine " +
-                    "checkout…\n\nAlso note: text or script files that hg-engine edits will be " +
+                    "checkout.\n\nAlso note: text or script files that hg-engine edits will be " +
                     "overwritten if you save the ROM; manage those through hg-engine.",
                     "hg-engine detected");
                 return;

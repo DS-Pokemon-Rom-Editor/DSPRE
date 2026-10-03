@@ -6,7 +6,7 @@ using DSPRE.HgEngine;
 
 namespace DSPRE.Avalonia.ViewModels.Tools
 {
-    /// <summary>Backs the "Link hg-engine checkout…" dialog: link/unlink an hg-engine checkout and
+    /// <summary>Backs the "Link hg-engine checkout" window: link/unlink an hg-engine checkout and
     /// toggle whether it's active, so the Pokémon/Trainer/Item/Move/Wild-Encounter editors read and
     /// write its data/*.c source instead of the packed ROM.</summary>
     public class HgEngineLinkViewModel : INotifyPropertyChanged

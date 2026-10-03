@@ -29,9 +29,9 @@
         </WrapPanel>
 
         <WrapPanel x:Name="SceneButtons" Classes="toolbar" Orientation="Horizontal" Margin="12,2,6,2">
-          <Button Content="Paint the drawing…" controls:Icon.Key="brush" Click="EditDrawing_Click"
+          <Button Content="Paint the drawing" controls:Icon.Key="brush" Click="EditDrawing_Click"
                   ToolTip.Tip="Open this scenery's drawing in the Graphics window, where it can be painted by hand."/>
-          <Button Content="Change the colours…" controls:Icon.Key="pencil" Click="EditColours_Click"
+          <Button Content="Change the colours" controls:Icon.Key="pencil" Click="EditColours_Click"
                   ToolTip.Tip="Open the set of colours this scenery uses at the time of day showing."/>
         </WrapPanel>
       </WrapPanel>

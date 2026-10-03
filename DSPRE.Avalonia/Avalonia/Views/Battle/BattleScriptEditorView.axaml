@@ -279,7 +279,7 @@
           <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding BackgroundIndex}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="150" MaxDropDownHeight="360" Margin="0,2,6,2"
                     ToolTip.Tip="The real battle-scene backdrop (scenery behind the platforms) from pl_batt_bg.narc, not a move effect."/>
-          <Button Content="HP gauges…" IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
+          <Button Content="HP gauges" IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
                   ToolTip.Tip="Configure the gauge readout (species, level, HP %).">
             <Button.Flyout>
               <Flyout>

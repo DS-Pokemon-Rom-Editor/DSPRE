@@ -37,7 +37,7 @@ namespace DSPRE
             public DirNames[] BuiltArchives = Array.Empty<DirNames>();
         }
 
-        private const string LinkHint = "File > hg-engine > Link hg-engine checkout…";
+        private const string LinkHint = "File > hg-engine > Link hg-engine checkout";
 
         private static Func<string> Unless(Func<bool> supported, string why) => () => supported() ? null : why;
         private static bool Family(params GameFamilies[] families) => Array.IndexOf(families, gameFamily) >= 0;

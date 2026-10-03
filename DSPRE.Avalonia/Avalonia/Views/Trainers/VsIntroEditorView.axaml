@@ -63,7 +63,7 @@
             <StackPanel x:Name="MugshotDetails" Margin="12,8" Spacing="6" IsVisible="{Binding HasMugshot}">
               <TextBlock Text="{Binding MugshotTitle}" FontSize="16" FontWeight="SemiBold"/>
               <TextBlock Text="{Binding MugshotUsedBy}" Classes="subtle"/>
-              <Button Content="Classes and music…" Click="ClassesAndMusic_Click" HorizontalAlignment="Left"/>
+              <Button Content="Classes and music" Click="ClassesAndMusic_Click" HorizontalAlignment="Left"/>
 
               <TextBlock Text="Banner name" Classes="section" IsVisible="{Binding ShowTrainer}"/>
               <ComboBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"

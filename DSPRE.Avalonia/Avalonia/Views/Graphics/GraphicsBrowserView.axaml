@@ -44,7 +44,7 @@
           <Button Content="{Binding OwningEditorLabel}" Click="OpenOwner_Click"
                   IsEnabled="{Binding HasOwningEditor}"
                   ToolTip.Tip="{Binding OwningEditorHelp}"/>
-          <Button Content="Paint…" controls:Icon.Key="brush" Click="Paint_Click"
+          <Button Content="Paint" controls:Icon.Key="brush" Click="Paint_Click"
                   IsEnabled="{Binding CanReplace}"
                   ToolTip.Tip="{Binding ReplaceHelp}"/>
         </WrapPanel>

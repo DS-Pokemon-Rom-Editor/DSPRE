@@ -51,7 +51,7 @@
         <Button x:Name="ImportButton" Content="Import…" controls:Icon.Key="import" Click="ImportFile_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="ExportFile_Click"/>
         <Button Content="Repair all" controls:Icon.Key="wrench" Click="RepairAll_Click" ToolTip.Tip="Reset corrupted fields in every encounter file to defaults"/>
-        <Button x:Name="SlotOddsButton" Content="% slot odds…" Click="SlotOdds_Click" ToolTip.Tip="Edit the chance of each slot, shared by every encounter file"/>
+        <Button x:Name="SlotOddsButton" Content="% slot odds" Click="SlotOdds_Click" ToolTip.Tip="Edit the chance of each slot, shared by every encounter file"/>
       </WrapPanel>
     </Border>
     <TabControl Margin="10">

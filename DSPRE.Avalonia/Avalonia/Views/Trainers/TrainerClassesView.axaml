@@ -34,7 +34,7 @@
               </Border>
               <Button controls:Icon.Key="{Binding PlayButtonIcon}" controls:Icon.Text="{Binding PlayButtonText}" Click="TogglePlay_Click" HorizontalAlignment="Stretch"
                       IsEnabled="{Binding CanPlayAnimation}" ToolTip.Tip="Play this class's real battle-intro animation."/>
-              <Button Content="Edit sprite…" controls:Icon.Key="pencil" Click="EditSprite_Click" HorizontalAlignment="Stretch"
+              <Button Content="Edit sprite" controls:Icon.Key="pencil" Click="EditSprite_Click" HorizontalAlignment="Stretch"
                       IsEnabled="{Binding CanEditSprite}"/>
             </StackPanel>
 
