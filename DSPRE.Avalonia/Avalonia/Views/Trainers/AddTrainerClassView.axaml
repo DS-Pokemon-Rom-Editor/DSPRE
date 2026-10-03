@@ -5,8 +5,8 @@
         x:Class="DSPRE.Avalonia.Views.Trainers.AddTrainerClassView"
         x:DataType="vm:AddTrainerClassViewModel"
         Title="Add Trainer Class"
-        Width="380" Height="420"
-        MinWidth="340" MinHeight="420"
+        Width="380" SizeToContent="Height"
+        MinWidth="340"
         WindowStartupLocation="CenterOwner">
 
   <Design.DataContext>
@@ -41,6 +41,11 @@
 
       <TextBlock Text="Prize money multiplier" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,4,0,0"/>
       <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding PrizeMultiplier}"/>
+
+      <TextBlock Text="Sprite from" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,4,0,0"
+                 ToolTip.Tip="The new class starts with a copy of this class's battle sprite."/>
+      <ComboBox ItemsSource="{Binding SpriteChoices}" SelectedIndex="{Binding SpriteChoiceIndex}"
+                HorizontalAlignment="Stretch" MaxDropDownHeight="320"/>
 
       <CheckBox Content="Give this class eye-contact music" IsChecked="{Binding AddMusic}" Margin="0,8,0,0"/>
       <StackPanel Spacing="2" IsEnabled="{Binding AddMusic}">

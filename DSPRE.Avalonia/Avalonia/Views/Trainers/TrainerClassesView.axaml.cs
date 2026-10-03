@@ -46,6 +46,8 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (!await VM.ConfirmLeaveAsync()) return;
 
             var dlgVm = new AddTrainerClassViewModel();
+            int newClassId = VM.ClassNames.Count;
+            dlgVm.SetSpriteChoices(VM.ClassNames, VM.SelectedClassIndex, newClassId, TrainerClassTableExpansion.HasSprite(newClassId));
             var dlg = new AddTrainerClassView(dlgVm);
             var owner = TopLevel.GetTopLevel(this) as Window;
             if (owner != null) await dlg.ShowDialog(owner);
@@ -54,7 +56,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (!dlgVm.Confirmed) return;
 
             string error = VM.AddTrainerClass(dlgVm.ClassName, dlgVm.NameWithArticle, (byte)dlgVm.GenderIndex, (byte)dlgVm.PrizeMultiplier,
-                dlgVm.AddMusic, (ushort)dlgVm.MusicMain, 0);
+                dlgVm.AddMusic, (ushort)dlgVm.MusicMain, 0, dlgVm.SpriteFrom);
             if (error != null)
                 await DialogHelper.ShowError(error, "Add Trainer Class");
         }

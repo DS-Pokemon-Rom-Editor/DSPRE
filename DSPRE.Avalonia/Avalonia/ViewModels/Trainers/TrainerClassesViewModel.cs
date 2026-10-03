@@ -113,6 +113,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             public byte Gender, Prize;
             public bool AddMusic;
             public ushort MusicMain, MusicNight;
+            public int SpriteFrom;
         }
         private PendingClass _pendingClass;
         private int PendingIndex => _pendingClass == null ? -1 : ClassNames.Count - 1;
@@ -369,7 +370,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool CanEnableMusic => (IsExpansionSupported || _musicFromSource) && !MusicEnabled && _selectedIndex >= 0;
 
         // Without a linked checkout an hg-engine build would overwrite the sprite edits.
-        public bool CanEditSprite => !isHGE || HgEngineProject.IsActive;
+        // An unsaved class has no sprite files of its own until Save copies them.
+        public bool CanEditSprite => (!isHGE || HgEngineProject.IsActive) && !PendingSelected;
+
+        private bool PendingSelected => _pendingClass != null && _selectedIndex == PendingIndex;
+
+        private int SpriteClassIndex => PendingSelected && _pendingClass.SpriteFrom >= 0 ? _pendingClass.SpriteFrom : _selectedIndex;
 
         private readonly bool _musicFromSource = HgEngineMusicTables.TablesInSource;
 
@@ -503,8 +509,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// after the sprite editor saves changes, since it edits the same NCGR/NCLR files on disk.</summary>
         public void RefreshSpritePreview()
         {
+            OnPropertyChanged(nameof(CanEditSprite));
             if (_selectedIndex < 0) { SpritePreview = null; OnPropertyChanged(nameof(HasSpritePreview)); return; }
-            _spriteRenderer.Load(_selectedIndex);
+            _spriteRenderer.Load(SpriteClassIndex);
             SpritePreview = _spriteRenderer.HasSprite
                 ? _spriteRenderer.Render(_spriteFrame, 144, 144)
                 : null;
@@ -525,8 +532,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             PrizeMulLoaded = true;
             PrizeMultiplier = _pendingClass.Prize;
             IsPlaying = false;
-            SpritePreview = null;
-            OnPropertyChanged(nameof(HasSpritePreview));
+            _spriteRenderer.Load(SpriteClassIndex);
+            _spriteFrame = _spriteRenderer.DefaultFrame;
+            RefreshSpritePreview();
             OnPropertyChanged(nameof(CanEnableMusic));
             OnPropertyChanged(nameof(CanPlayAnimation));
             _suppress = false;
@@ -545,7 +553,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool SavePendingClass()
         {
             var p = _pendingClass;
-            if (!TrainerClassTableExpansion.AddTrainerClass(p.Name, p.NameWithArticle, p.Gender, p.Prize, p.AddMusic, p.MusicMain, p.MusicNight, out string error))
+            if (!TrainerClassTableExpansion.AddTrainerClass(p.Name, p.NameWithArticle, p.Gender, p.Prize, p.AddMusic, p.MusicMain, p.MusicNight, p.SpriteFrom, out string error))
             {
                 StatusText = "The new trainer class was not added.";
                 _ = DialogHelper.ShowError(error, "Add Trainer Class");
@@ -732,11 +740,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             StatusText = "Eye-contact music added. Save to keep it.";
         }
 
-        /// <summary>Holds a new trainer class (name, name with article, gender, prize multiplier and an optional
-        /// music entry) as the last list entry and selects it. Nothing is written until Save. Returns null,
+        /// <summary>Holds a new trainer class (name, name with article, gender, prize multiplier, an optional
+        /// music entry and the class its sprite is copied from) as the last list entry and selects it.
+        /// Nothing is written until Save. Returns null,
         /// or why it can't be added.</summary>
         public string AddTrainerClass(string name, string nameWithArticle, byte gender, byte prizeMultiplier,
-            bool addMusic, ushort musicMain, ushort musicNight)
+            bool addMusic, ushort musicMain, ushort musicNight, int spriteFrom)
         {
             if (_pendingClass != null) return "Save or discard the new trainer class first.";
             string refusal = TrainerClassTableExpansion.AddRefusal(name);
@@ -745,7 +754,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _pendingClass = new PendingClass
             {
                 Name = name, NameWithArticle = nameWithArticle ?? "", Gender = gender, Prize = prizeMultiplier,
-                AddMusic = addMusic, MusicMain = musicMain, MusicNight = musicNight,
+                AddMusic = addMusic, MusicMain = musicMain, MusicNight = musicNight, SpriteFrom = spriteFrom,
             };
             _suppress = true;
             ClassNames.Add($"[{ClassNames.Count:D3}] {name} (not saved)");

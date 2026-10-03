@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -33,6 +35,27 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private decimal _musicMain;
         public decimal MusicMain { get => _musicMain; set => Set(ref _musicMain, value); }
+
+        public ObservableCollection<string> SpriteChoices { get; } = new();
+
+        private int _spriteChoiceIndex;
+        public int SpriteChoiceIndex { get => _spriteChoiceIndex; set => Set(ref _spriteChoiceIndex, value); }
+
+        private bool _keepsSlotSprite;
+
+        /// <summary>Lists the classes whose sprite the new class can start with. When the archive already
+        /// holds a sprite in the new class's slot, keeping it comes first and is chosen.</summary>
+        public void SetSpriteChoices(IEnumerable<string> classNames, int selectedClass, int newClassId, bool slotHasSprite)
+        {
+            _keepsSlotSprite = slotHasSprite;
+            SpriteChoices.Clear();
+            if (slotHasSprite) SpriteChoices.Add($"[{newClassId:D3}] Sprite already in this slot");
+            foreach (string name in classNames) SpriteChoices.Add(name);
+            SpriteChoiceIndex = slotHasSprite ? 0 : Math.Max(0, selectedClass);
+        }
+
+        /// <summary>The class to copy the sprite from, or -1 to keep the one already in the slot.</summary>
+        public int SpriteFrom => _keepsSlotSprite ? SpriteChoiceIndex - 1 : SpriteChoiceIndex;
 
         private string _statusText = "";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }

@@ -11,7 +11,8 @@ namespace DSPRE
     /// Lets DSPRE perform the "add a new trainer class" repoint documented in a community write-up
     /// (repoint+extend sTrainerClassGender, sTrainerClassPrizeMul, sTrainerEncounterBGMs into the
     /// synthetic overlay, then append name and name-with-article text-archive entries) instead of requiring
-    /// manual hex editing. Platinum-English only: sTrainerClassPrizeMul and the gender-table pointer
+    /// manual hex editing. The new class also gets a front sprite, copied from a class the user picks.
+    /// Platinum-English only: sTrainerClassPrizeMul and the gender-table pointer
     /// slot only have confirmed offsets for that version. Every other language/family is refused
     /// outright rather than guessed at, since neither array has any bounds checking in the game.
     ///
@@ -336,21 +337,38 @@ namespace DSPRE
             return string.IsNullOrWhiteSpace(name) ? "Enter a class name." : null;
         }
 
+        // The game reads class N's front sprite from trfgra members 5N to 5N+4: tiles, palette, cells, animation, scan.
+        private const int SpriteFilesPerClass = 5;
+
+        private static string SpriteFile(int classId, int part) => Filesystem.GetTrainerGraphicsPath(classId * SpriteFilesPerClass + part);
+
+        /// <summary>Whether the trainer sprite archive already holds all five files for this class.</summary>
+        public static bool HasSprite(int classId)
+        {
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics });
+            return SpriteComplete(classId);
+        }
+
+        private static bool SpriteComplete(int classId) =>
+            Enumerable.Range(0, SpriteFilesPerClass).All(part => File.Exists(SpriteFile(classId, part)));
+
+        /// <param name="spriteFromClass">The class whose front sprite the new class starts with, or -1 to keep
+        /// the sprite already in the new class's slot.</param>
         public static bool AddTrainerClass(string name, string nameWithArticle, byte gender, byte prizeMultiplier,
-            bool addEncounterMusic, ushort musicMain, ushort musicNight, out string error)
+            bool addEncounterMusic, ushort musicMain, ushort musicNight, int spriteFromClass, out string error)
         {
             _writtenThisOperation = new List<(long, long)>();
-            try { return AddTrainerClassTables(name, nameWithArticle, gender, prizeMultiplier, addEncounterMusic, musicMain, musicNight, out error); }
+            try { return AddTrainerClassTables(name, nameWithArticle, gender, prizeMultiplier, addEncounterMusic, musicMain, musicNight, spriteFromClass, out error); }
             finally { _writtenThisOperation = null; }
         }
 
         private static bool AddTrainerClassTables(string name, string nameWithArticle, byte gender, byte prizeMultiplier,
-            bool addEncounterMusic, ushort musicMain, ushort musicNight, out string error)
+            bool addEncounterMusic, ushort musicMain, ushort musicNight, int spriteFromClass, out string error)
         {
             error = AddRefusal(name);
             if (error != null) return false;
 
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives });
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives, DirNames.trainerGraphics });
             EnsureOverlayDecompressed(PrizeMulOverlayNumber);
 
             // Validate every table resolves before writing anything (all-or-nothing).
@@ -359,11 +377,24 @@ namespace DSPRE
             string ov16Path = OverlayUtils.GetPath(PrizeMulOverlayNumber);
             if (!TryResolveByteTable(ov16Path, PrizeMulTablePointerOverlayOffset, ov16Path, VanillaPrizeMulTableOverlayOffset, VanillaPrizeMulTableCount, out byte[] prizeMulTable, out error))
                 return false;
+            int newClassId = genderTable.Length;
+            if (!SpriteComplete(spriteFromClass >= 0 ? spriteFromClass : newClassId))
+            {
+                error = spriteFromClass >= 0
+                    ? $"Trainer class {spriteFromClass} has no complete sprite to copy."
+                    : $"The trainer sprite archive has no sprite for class {newClassId}.";
+                return false;
+            }
+            // Packing takes the folder's files in order, so a gap would shift every later sprite.
+            for (int id = 0; id < newClassId; id++)
+            {
+                if (SpriteComplete(id)) continue;
+                error = $"The trainer sprite archive is missing files for class {id}.";
+                return false;
+            }
 
             try
             {
-                int newClassId = genderTable.Length; // 0-based: new entry lands right after the last one
-
                 byte[] newGenderTable = genderTable.Concat(new[] { gender }).ToArray();
                 if (RepointByteArrayTable(RomInfo.arm9Path, GenderTablePointerOffset, newGenderTable, out error) < 0) return false;
 
@@ -372,6 +403,10 @@ namespace DSPRE
 
                 if (addEncounterMusic && !AddEncounterMusicEntry((byte)newClassId, musicMain, musicNight, out error))
                     return false;
+
+                if (spriteFromClass >= 0)
+                    for (int part = 0; part < SpriteFilesPerClass; part++)
+                        File.Copy(SpriteFile(spriteFromClass, part), SpriteFile(newClassId, part), overwrite: true);
 
                 var nameArchive = new TextArchive(RomInfo.trainerClassMessageNumber);
                 nameArchive.messages.Add(name);
