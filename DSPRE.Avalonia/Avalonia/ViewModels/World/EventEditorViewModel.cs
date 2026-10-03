@@ -377,6 +377,17 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         /// <summary>Keeps the script field consistent with the kind of event this now is. The type value
         /// itself belongs to the type picker; this only deals with the script number the kind implies.</summary>
+        // The script a Standard event had before it was switched to Trainer or Item, so switching back restores it.
+        private ushort? _owNormalScript;
+
+        // Script numbers the trainer and item dropdowns write; any other number was typed or picked by the user.
+        private static bool ScriptOwnedBy(OwKind kind, ushort script) => kind switch
+        {
+            OwKind.Trainer => script >= 3000 && script < GroundItemScriptsLogic.ItemScrMin,
+            OwKind.Item => script >= GroundItemScriptsLogic.ItemScrMin && script < GroundItemScriptsLogic.ItemScrMax,
+            _ => false,
+        };
+
         private void SetOwKind(OwKind kind)
         {
             OwKind previous = _owKind;
@@ -384,13 +395,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             _owKind = kind;
             RaiseOwKindChanged();
             if (!changed || _suppress || _ow == null) return;
+            if (previous == OwKind.Normal) _owNormalScript = _ow.scriptNumber;
 
             switch (kind)
             {
                 case OwKind.Normal:
-                    // Only clear a script that the trainer/item dropdown owned. A message id or a
-                    // hand-written script number belongs to the user and must survive a type change.
-                    if (previous == OwKind.Trainer || previous == OwKind.Item) ForceOwScript(0);
+                    // A message id or a hand-written script number belongs to the user and must survive a type change.
+                    if (ScriptOwnedBy(previous, _ow.scriptNumber)) ForceOwScript(_owNormalScript ?? 0);
                     break;
                 case OwKind.Item:
                     if (IsHGE)
@@ -1159,6 +1170,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             // Derive the Standard/Trainer/Item radio selection and locked-script dropdown index from
             // the raw type/scriptNumber. Expanded rosters keep the direct one-based trainer mapping.
             _owRawType = _ow.type;
+            _owNormalScript = null;
             if (KindOfType(_ow.type) == OwKind.Trainer)
             {
                 _owKind = OwKind.Trainer;

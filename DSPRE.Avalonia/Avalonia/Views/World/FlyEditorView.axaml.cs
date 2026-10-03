@@ -17,6 +17,11 @@ namespace DSPRE.Avalonia.Views.World
             DataContext = _vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
             EditorWindowChrome.Attach(this, _vm, manageTitle: false);
+
+            // A zero width still leaves a sliver with a live cell in it, so the other family's columns are hidden.
+            var unlock = this.FindControl<DataGrid>("UnlockGrid");
+            for (int i = 0; unlock != null && i < unlock.Columns.Count; i++)
+                unlock.Columns[i].IsVisible = i < 3 ? _vm.IsDpOrPlat : _vm.IsHgss;
         }
 
         // Parameterless constructor for previewer only

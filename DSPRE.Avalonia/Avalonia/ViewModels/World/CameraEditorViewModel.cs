@@ -42,30 +42,39 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void Changed() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
 
+        // The boxes show fewer digits than the table stores, so typing a camera's loaded number back must give
+        // its loaded raw value rather than the nearest one to the rounded number.
+        private GameCamera _loaded;
+        private void Set<T>(ref T field, T fromBox, T loaded, decimal shown, Func<T, decimal> show)
+        {
+            field = _loaded != null && show(loaded) == shown ? loaded : fromBox;
+            Changed();
+        }
+
         public decimal Distance
         {
             get => Tiles(_distance);
-            set { if (value != Distance) { _distance = (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue); Changed(); } }
+            set { if (value != Distance) Set(ref _distance, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.distance ?? 0, value, v => Tiles(v)); }
         }
 
         /// <summary>How far the camera looks down. The table stores it negated.</summary>
         public decimal Tilt
         {
             get => -Degrees(_vertRot);
-            set { if (value != Tilt) { _vertRot = Angle(-value); Changed(); } }
+            set { if (value != Tilt) Set(ref _vertRot, Angle(-value), _loaded?.vertRot ?? 0, value, v => -Degrees(v)); }
         }
 
         public decimal Turn
         {
             get => Degrees(_horiRot);
-            set { if (value != Turn) { _horiRot = Angle(value); Changed(); } }
+            set { if (value != Turn) Set(ref _horiRot, Angle(value), _loaded?.horiRot ?? 0, value, v => Degrees(v)); }
         }
 
         /// <summary>How far the picture tilts, which is half the stored angle.</summary>
         public decimal Roll
         {
             get => Math.Round(Degrees(_zRot) / 2m, 2, MidpointRounding.AwayFromZero);
-            set { if (value != Roll) { _zRot = Angle(value * 2m); Changed(); } }
+            set { if (value != Roll) Set(ref _zRot, Angle(value * 2m), _loaded?.zRot ?? 0, value, v => Math.Round(Degrees(v) / 2m, 2, MidpointRounding.AwayFromZero)); }
         }
 
         /// <summary>0 perspective, 1 flat.</summary>
@@ -79,37 +88,37 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal FieldOfView
         {
             get => Math.Round(_fov * 2m / RawPerDegree, 2, MidpointRounding.AwayFromZero);
-            set { if (value != FieldOfView) { _fov = (ushort)Math.Clamp((int)Math.Round(value / 2m * RawPerDegree), 0, ushort.MaxValue); Changed(); } }
+            set { if (value != FieldOfView) Set(ref _fov, (ushort)Math.Clamp((int)Math.Round(value / 2m * RawPerDegree), 0, ushort.MaxValue), _loaded?.fov ?? 0, value, v => Math.Round(v * 2m / RawPerDegree, 2, MidpointRounding.AwayFromZero)); }
         }
 
         public decimal NearClip
         {
             get => Tiles(_nearClip);
-            set { if (value != NearClip) { _nearClip = (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue); Changed(); } }
+            set { if (value != NearClip) Set(ref _nearClip, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.nearClip ?? 0, value, v => Tiles(v)); }
         }
 
         public decimal FarClip
         {
             get => Tiles(_farClip);
-            set { if (value != FarClip) { _farClip = (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue); Changed(); } }
+            set { if (value != FarClip) Set(ref _farClip, (uint)Math.Clamp(FromTiles(value), 0, uint.MaxValue), _loaded?.farClip ?? 0, value, v => Tiles(v)); }
         }
 
         public decimal ShiftX
         {
             get => Tiles(_xOffset);
-            set { if (value != ShiftX) { _xOffset = (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue); Changed(); } }
+            set { if (value != ShiftX) Set(ref _xOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.xOffset ?? 0, value, v => Tiles(v)); }
         }
 
         public decimal ShiftY
         {
             get => Tiles(_yOffset);
-            set { if (value != ShiftY) { _yOffset = (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue); Changed(); } }
+            set { if (value != ShiftY) Set(ref _yOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.yOffset ?? 0, value, v => Tiles(v)); }
         }
 
         public decimal ShiftZ
         {
             get => Tiles(_zOffset);
-            set { if (value != ShiftZ) { _zOffset = (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue); Changed(); } }
+            set { if (value != ShiftZ) Set(ref _zOffset, (int)Math.Clamp(FromTiles(value), int.MinValue, int.MaxValue), _loaded?.zOffset ?? 0, value, v => Tiles(v)); }
         }
 
         /// <summary>The camera's name, which the header editor shows beside the number.</summary>
@@ -128,6 +137,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void LoadFrom(GameCamera cam)
         {
+            _loaded  = cam;
             Unk1     = cam.unk1;
             Unk2     = cam.unk2;
             _distance = cam.distance;

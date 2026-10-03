@@ -79,7 +79,7 @@
 
 	  <!-- ── Tab 3: Unlock Settings ─────────────────────────────────────── -->
 	  <TabItem Header="Unlock Settings">
-		<DataGrid ItemsSource="{Binding Rows}"
+		<DataGrid x:Name="UnlockGrid" ItemsSource="{Binding Rows}"
 				  CanUserReorderColumns="False" CanUserResizeColumns="True"
 				  CanUserSortColumns="False" GridLinesVisibility="All"
 				  SelectionMode="Single" AutoGenerateColumns="False">

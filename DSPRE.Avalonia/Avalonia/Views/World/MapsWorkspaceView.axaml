@@ -75,13 +75,13 @@
               </StackPanel>
             </DockPanel>
             <WrapPanel>
-              <Border Classes="chip" ToolTip.Tip="The world-map grid this header's maps sit in. The Matrix Editor shows the whole grid."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="The map and building texture packs, lighting and terrain animation this header uses."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="File with the NPCs, warps, triggers and hidden items placed on this map."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="File with the event logic that runs when you talk to NPCs or step on triggers here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="Scripts that run automatically when the map loads (music, weather, one-time setup)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level Scripts"/><TextBlock Text="{Binding LevelScriptId}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="Text archive with the dialogue and signs shown in this area."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Text"/><TextBlock Text="{Binding TextArchiveId}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="Wild Pokémon table for this area (255 means no wild encounters)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Encounters"/><TextBlock Text="{Binding WildPokemon}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="The world-map grid this header's maps sit in. The Matrix Editor shows the whole grid."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId, StringFormat={}{0:0}}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="The map and building texture packs, lighting and terrain animation this header uses."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId, StringFormat={}{0:0}}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="File with the NPCs, warps, triggers and hidden items placed on this map."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId, StringFormat={}{0:0}}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="File with the event logic that runs when you talk to NPCs or step on triggers here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId, StringFormat={}{0:0}}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Scripts that run automatically when the map loads (music, weather, one-time setup)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level Scripts"/><TextBlock Text="{Binding LevelScriptId, StringFormat={}{0:0}}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="Text archive with the dialogue and signs shown in this area."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Text"/><TextBlock Text="{Binding TextArchiveId, StringFormat={}{0:0}}"/></StackPanel></Border>
+              <Border Classes="chip" ToolTip.Tip="{Binding NoEncountersId, StringFormat='Wild Pokémon table for this area ({0} means no wild encounters).'}"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Encounters"/><TextBlock Text="{Binding WildPokemon, StringFormat={}{0:0}}"/></StackPanel></Border>
             </WrapPanel>
           </StackPanel>
         </Border>
@@ -149,7 +149,7 @@
             <StackPanel Classes="placeholder">
               <TextBlock Classes="title" Text="Wild Encounters"/>
               <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
-                         Text="This header has no wild encounters (255)." IsVisible="{Binding !CanOpenEncounters}"/>
+                         Text="{Binding NoEncountersId, StringFormat='This header has no wild encounters ({0}).'}" IsVisible="{Binding !CanOpenEncounters}"/>
             </StackPanel>
           </TabItem>
           <TabItem ToolTip.Tip="Event logic: what happens when you talk to NPCs or step on triggers." AutomationProperties.Name="Scripts">

@@ -98,6 +98,13 @@ namespace DSPRE.Avalonia.Views.World
             {
                 _wiringDone = true;
                 owner.Activated += (_, _) => vm.ReloadLocationNames();
+                vm.LinkedEditsWouldMove = id => TabsLeavingEdits(id).GetEnumerator().MoveNext();
+                vm.ConfirmLinkedTabsAsync = async id =>
+                {
+                    foreach (var (editor, what) in TabsLeavingEdits(id))
+                        if (!await RecordSwitchGuard.ConfirmLeaveAsync(editor, owner, what)) return false;
+                    return true;
+                };
                 vm.PropertyChanged += (_, e) =>
                 {
                     if (_settingUp) return;
@@ -152,6 +159,28 @@ namespace DSPRE.Avalonia.Views.World
             await LevelScriptsEmbed.EnsureSetupAsync(owner);
             await TextEmbed.EnsureSetupAsync(owner);
             EnsureEncountersEmbedded();
+        }
+
+        /// <summary>Tabs holding unsaved edits to a file other than the one header <paramref name="id"/> links.</summary>
+        private IEnumerable<(IEditorWithUnsavedChanges editor, string what)> TabsLeavingEdits(ushort id)
+        {
+            var h = DSPRE.ROMFiles.MapHeader.GetMapHeader(id);
+            if (h == null) yield break;
+            if (EventVM.HasUnsavedChanges && EventVM.SelectedEventIndex != h.eventFileID) yield return (EventVM, "event file");
+            if (MatrixVM.HasUnsavedChanges && MatrixVM.SelectedMatrixIndex != h.matrixID) yield return (MatrixVM, "matrix");
+            if (AreaDataVM.HasUnsavedChanges && AreaDataVM.SelectedIndex != h.areaDataID) yield return (AreaDataVM, "area");
+            if (ScriptsVM.HasUnsavedChanges && !ScriptsVM.IsShowingScriptFile(h.scriptFileID)) yield return (ScriptsVM, "script");
+            if (LevelScriptsVM.HasUnsavedChanges && LevelScriptsVM.SelectedScriptIndex != h.levelScriptID) yield return (LevelScriptsVM, "level script");
+            if (TextVM.HasUnsavedChanges && TextVM.SelectedArchiveIndex != h.textArchiveID) yield return (TextVM, "text archive");
+            if (MapVM.HasUnsavedChanges && MapVM.HeaderId != id) yield return (MapVM, "map");
+            int wild = _encountersVm switch
+            {
+                WildEditorDPPtViewModel dppt => dppt.SelectedEncounterIndex,
+                WildEditorHGSSViewModel hgss => hgss.SelectedEncounterIndex,
+                _ => -1,
+            };
+            if (_encountersVm is IEditorWithUnsavedChanges enc && enc.HasUnsavedChanges && h.wildPokemon != ushort.MaxValue && wild != h.wildPokemon)
+                yield return (enc, "encounter file");
         }
 
         /// <summary>Point the embedded Event editor at the current header's event file (live if it's already loaded).</summary>

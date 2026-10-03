@@ -146,7 +146,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // null. Keep the logical selection stable instead of reloading or losing the header.
                 if (RecordSwitchGuard.IsSnappingBack) return;
                 if (value == null && !_suppress && _selectedTreeNode != null) return;
-                if (!_suppress && value is HeaderTreeLeaf pick && _dirty && _header != null && pick.HeaderId != _header.ID)
+                if (!_suppress && value is HeaderTreeLeaf pick && MustAskBeforeLeaving(pick.HeaderId))
                 {
                     // Leave the tree on the loaded header until the user answers.
                     RecordSwitchGuard.SnapBack(() => _selectedTreeNode, v => _selectedTreeNode = v, () => OnPropertyChanged(nameof(SelectedTreeNode)), _ => null);
@@ -160,12 +160,21 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private bool _switchPending;
 
+        /// <summary>Set by the Maps workspace: whether a tab with unsaved edits would move to another file for this
+        /// header, and the prompt for those tabs. The header only moves once every one of them has answered.</summary>
+        public Func<ushort, bool> LinkedEditsWouldMove { get; set; }
+        public Func<ushort, Task<bool>> ConfirmLinkedTabsAsync { get; set; }
+
+        private bool MustAskBeforeLeaving(ushort id)
+            => _header != null && id != _header.ID && (_dirty || (LinkedEditsWouldMove?.Invoke(id) ?? false));
+
         private async Task SwitchHeaderAsync(ushort id)
         {
             _switchPending = true;
             try
             {
                 if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "header")) return;
+                if (ConfirmLinkedTabsAsync != null && !await ConfirmLinkedTabsAsync(id)) return;
                 SetClean();
                 if (!string.IsNullOrWhiteSpace(TreeFilterText) && FindLeaf(id) is { IsVisible: false }) TreeFilterText = "";
                 SelectHeader(id);
@@ -224,6 +233,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         // "Open" affordance is disabled/no-op there rather than silently opening an unrelated file.
         private int NullEncounterId => IsHgss ? MapHeader.HGSS_NULL_ENCOUNTER_FILE_ID : MapHeader.DPPT_NULL_ENCOUNTER_FILE_ID;
         public bool CanOpenEncounters => _header != null && (int)_wildPokemon != NullEncounterId;
+        /// <summary>The encounter number that means "no wild Pokémon" in the open game.</summary>
+        public int NoEncountersId => NullEncounterId;
 
         // ── Camera (combo + numeric) ─────────────────────────────────────────────────
         private decimal _cameraValue;
@@ -368,18 +379,25 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void ApplyState(byte[] bytes)
         {
             if (bytes == null || _header == null) return;
-            _header = MapHeader.LoadFromByteArray(bytes, _header.ID);
+            int headerLength = _header.ToByteArray().Length;
+            _header = MapHeader.LoadFromByteArray(bytes.AsSpan(0, headerLength).ToArray(), _header.ID);
             PopulateFromHeader();   // manages _suppress itself
+            _suppress = true;
+            try { InternalName = System.Text.Encoding.UTF8.GetString(bytes, headerLength, bytes.Length - headerLength); }
+            finally { _suppress = false; }
             _dirty = _history.IsDirty;
             OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseUndoState();
         }
 
+        // The internal name lives in its own file, not in the header record, so it rides along after the header bytes.
+        private byte[] UndoState() => _header.ToByteArray().Concat(System.Text.Encoding.UTF8.GetBytes(_internalName ?? "")).ToArray();
+
         private void RecordUndoSnapshot()
         {
             if (_suppress || _header == null) return;
             bool coalesce = (DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
-            _history.Capture(_header.ToByteArray(), coalesce);
+            _history.Capture(UndoState(), coalesce);
             _lastCaptureUtc = DateTime.UtcNow;
             RaiseUndoState();
         }
@@ -495,6 +513,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             AppEvents.LabelsChanged += OnLabelsChanged;
             OnPropertyChanged(nameof(ShowAreaIcon));
             OnPropertyChanged(nameof(WildPokeMax));
+            OnPropertyChanged(nameof(NoEncountersId));
             OnPropertyChanged(nameof(BattleBackgroundMax));
             OnPropertyChanged(nameof(WeatherMax));
             OnPropertyChanged(nameof(CameraMax));
@@ -919,7 +938,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             PopulateFromHeader();
             SetClean();
-            _history.Reset(_header.ToByteArray());   // loaded state is the clean undo baseline for this header
+            _history.Reset(UndoState());   // loaded state is the clean undo baseline for this header
             _lastCaptureUtc = DateTime.MinValue;
             RaiseUndoState();
             StatusText = $"Header {_header.ID} loaded.";
@@ -1209,7 +1228,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void GoToHeader(int id)
         {
             if (id < 0 || id >= _headerListNames.Count) return;
-            if (_dirty && _header != null && id != _header.ID)
+            if (MustAskBeforeLeaving((ushort)id))
             {
                 if (!_switchPending) _ = SwitchHeaderAsync((ushort)id);
                 return;

@@ -1214,6 +1214,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _scriptIdByPath.TryGetValue(path, out int id) && id == fileId);
 
         /// <summary>Shows script file <paramref name="fileId"/>, when the list holds it.</summary>
+        public bool IsShowingScriptFile(int fileId) => _selectedIndex >= 0 && IndexOfScriptFile(fileId) == _selectedIndex;
+
         public void SelectScriptFile(int fileId)
         {
             InitialIndex = fileId;
