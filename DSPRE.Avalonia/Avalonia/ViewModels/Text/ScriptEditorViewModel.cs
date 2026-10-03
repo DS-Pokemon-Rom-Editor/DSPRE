@@ -99,6 +99,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public ObservableCollection<ScriptSearchResult> SearchResults { get; } = new ObservableCollection<ScriptSearchResult>();
         public ObservableCollection<ScriptDiagnostic> Diagnostics { get; } = new ObservableCollection<ScriptDiagnostic>();
         public int InitialIndex { get; set; }
+        /// <summary>The jump-table slot to scroll to once the initial file has loaded.
+        /// 0 means the file alone is enough.</summary>
+        public int InitialScriptNumber { get; set; }
 
         public int SelectedEditorThemeIndex
         {
@@ -614,6 +617,50 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _lsp.Dispose();
             _lsp = null;
             _lspOpenPath = null;
+        }
+
+        /// <summary>Line of the entry occupying jump-table slot <paramref name="scriptNumber"/> in the
+        /// current file, as rotom-lsp's document symbols list it ("#N" detail). Null when the language
+        /// service can't answer or the slot isn't in the file.</summary>
+        public async Task<int?> ResolveScriptEntryLineAsync(int scriptNumber)
+        {
+            if (scriptNumber <= 0 || string.IsNullOrWhiteSpace(_currentPath)) return null;
+            if (_lsp == null || !_lsp.IsRunning)
+            {
+                StatusText = "Couldn't jump to script #" + scriptNumber + ": live language service is not running.";
+                return null;
+            }
+
+            try
+            {
+                if (Path.GetExtension(_currentPath).Equals(".rotom", StringComparison.OrdinalIgnoreCase))
+                    await FlushCurrentDocumentChangedToLsp();
+
+                int? line = FindScriptEntryLine(await _lsp.DocumentSymbolsAsync(_currentPath), scriptNumber);
+                StatusText = line == null
+                    ? "Script #" + scriptNumber + " was not found in " + DisplayPath(_currentPath) + "."
+                    : "Opened script #" + scriptNumber + " in " + DisplayPath(_currentPath) + ".";
+                return line;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("rotom-lsp document symbols failed: " + ex.Message);
+                StatusText = "Couldn't jump to script #" + scriptNumber + ": " + ex.Message;
+                return null;
+            }
+        }
+
+        /// <summary>Picks the line of the symbol claiming jump-table slot <paramref name="scriptNumber"/>.
+        /// The "#N" detail is compared exactly, so #2 never lands on #21.</summary>
+        internal static int? FindScriptEntryLine(IReadOnlyList<RotomLspSymbol> symbols, int scriptNumber)
+        {
+            string slot = "#" + scriptNumber;
+            foreach (RotomLspSymbol symbol in symbols)
+            {
+                if (string.Equals(symbol.Detail, slot, StringComparison.Ordinal))
+                    return symbol.Line;
+            }
+            return null;
         }
 
         public async Task<ScriptNavigationTarget> GoToDefinitionAsync(int line, int column)

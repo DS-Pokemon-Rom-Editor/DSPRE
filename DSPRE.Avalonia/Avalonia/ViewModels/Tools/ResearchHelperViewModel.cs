@@ -754,7 +754,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
             else if (result.Type == "Script Command" || result.Type == "Function Command")
             {
-                AvaloniaEditorLauncher.OpenScriptEditor(result.SourceId);
+                // A script container occupies jump-table slot Index, so the editor can land on it;
+                // a function's number has no slot in the source and only the file is opened.
+                int scriptNumber = result.Type == "Script Command" ? result.Index : 0;
+                AvaloniaEditorLauncher.OpenScriptEditor(result.SourceId, scriptNumber);
                 StatusText = $"Opened Script File {result.SourceId}";
             }
         }

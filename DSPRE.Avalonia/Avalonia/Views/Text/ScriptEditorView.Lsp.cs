@@ -111,10 +111,17 @@ namespace DSPRE.Avalonia.Views.Text
 
         private void JumpToOutlineEntry()
         {
-            if (OutlineList.SelectedItem is not OutlineEntry entry || entry.Line > RotomEditor.Document.LineCount) return;
-            RotomEditor.TextArea.Caret.Line = entry.Line;
+            if (OutlineList.SelectedItem is not OutlineEntry entry) return;
+            JumpToLine(entry.Line);
+        }
+
+        /// <summary>Places the caret at the start of a line and scrolls it into view.</summary>
+        private void JumpToLine(int line)
+        {
+            if (line > RotomEditor.Document.LineCount) return;
+            RotomEditor.TextArea.Caret.Line = line;
             RotomEditor.TextArea.Caret.Column = 1;
-            RotomEditor.ScrollToLine(entry.Line);
+            RotomEditor.ScrollToLine(line);
             RotomEditor.TextArea.Focus();
         }
 
