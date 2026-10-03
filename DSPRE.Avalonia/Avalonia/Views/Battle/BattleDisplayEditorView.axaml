@@ -97,7 +97,7 @@
             </StackPanel>
           </StackPanel>
 
-          <TextBlock Text="Battle-scene assets: PokEditor (turtleisaac)."
+          <TextBlock Text="Layout and shadows from PokEditor."
                      FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" MaxWidth="540"/>
         </StackPanel>
 

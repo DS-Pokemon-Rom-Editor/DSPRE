@@ -1017,7 +1017,7 @@ namespace DSPRE.Avalonia.Views.Shell
             + "Based on Nømura's DS Pokémon ROM Editor 1.0.4.\n"
             + "Largely inspired by Markitus95's \"Spiky's DS Map Editor\" (SDSME), from which certain assets were also reused.\n"
             + "Credits go to Markitus, Ark, Zark, Florian, and everyone else who deserves credit for SDSME.\n\n"
-            + "Special thanks to Trifindo, Mikelan98, JackHack96, Pleonex and BagBoy.\n"
+            + "Special thanks to Trifindo, Mikelan98, turtleisaac, JackHack96, Pleonex and BagBoy.\n"
             + "Their help, research and expertise in many fields of NDS ROM Hacking made the development of this tool possible.",
             "About");
 
