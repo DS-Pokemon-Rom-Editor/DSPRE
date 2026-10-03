@@ -46,16 +46,16 @@
     </ListBox>
 
     <!-- ── The selected camera, in tiles and degrees ───────────────────── -->
-    <ScrollViewer DockPanel.Dock="Left" Width="220" Margin="0,4"
-                  IsEnabled="{Binding SelectedCamera, Converter={x:Static ObjectConverters.IsNotNull}}">
-      <StackPanel Spacing="6" Margin="0,0,8,0">
+    <ScrollViewer DockPanel.Dock="Left" Width="220" Margin="0,4" DataContext="{Binding SelectedCamera}"
+                  IsEnabled="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
+      <StackPanel Spacing="6" Margin="0,0,8,0" x:DataType="vm:CameraRowVM">
         <GroupBox Header="Placement">
           <StackPanel Spacing="8">
             <StackPanel Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Distance"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="0" Maximum="65535" Increment="0.5" FormatString="0.###"
-                               Value="{Binding SelectedCamera.Distance}"/>
+                               Value="{Binding Distance}"/>
                 <TextBlock Text="tiles" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
@@ -63,7 +63,7 @@
               <TextBlock Classes="fieldlabel" Text="Tilt"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="-180" Maximum="180" Increment="1" FormatString="0.##"
-                               Value="{Binding SelectedCamera.Tilt}" ToolTip.Tip="How far it looks down"/>
+                               Value="{Binding Tilt}" ToolTip.Tip="How far it looks down"/>
                 <TextBlock Text="degrees" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
@@ -71,15 +71,15 @@
               <TextBlock Classes="fieldlabel" Text="Turn"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="-180" Maximum="180" Increment="1" FormatString="0.##"
-                               Value="{Binding SelectedCamera.Turn}" ToolTip.Tip="0 faces north"/>
+                               Value="{Binding Turn}" ToolTip.Tip="0 faces north"/>
                 <TextBlock Text="degrees" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
-            <StackPanel Spacing="2" IsVisible="{Binding ShowsRoll}">
+            <StackPanel Spacing="2" IsVisible="{Binding $parent[UserControl].((vm:CameraEditorViewModel)DataContext).ShowsRoll}">
               <TextBlock Classes="fieldlabel" Text="Roll"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="-90" Maximum="90" Increment="1" FormatString="0.##"
-                               Value="{Binding SelectedCamera.Roll}"/>
+                               Value="{Binding Roll}"/>
                 <TextBlock Text="degrees" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
@@ -89,7 +89,7 @@
           <StackPanel Spacing="8">
             <StackPanel Spacing="2">
               <TextBlock Classes="fieldlabel" Text="View"/>
-              <ComboBox Width="120" HorizontalAlignment="Left" SelectedIndex="{Binding SelectedCamera.ViewIndex}">
+              <ComboBox Width="120" HorizontalAlignment="Left" SelectedIndex="{Binding ViewIndex}">
                 <ComboBoxItem Content="Perspective"/>
                 <ComboBoxItem Content="Flat"/>
               </ComboBox>
@@ -98,7 +98,7 @@
               <TextBlock Classes="fieldlabel" Text="Field of view"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="0" Maximum="720" Increment="0.5" FormatString="0.##"
-                               Value="{Binding SelectedCamera.FieldOfView}" ToolTip.Tip="Top to bottom"/>
+                               Value="{Binding FieldOfView}" ToolTip.Tip="Top to bottom"/>
                 <TextBlock Text="degrees" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
@@ -106,7 +106,7 @@
               <TextBlock Classes="fieldlabel" Text="Near clip"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="0" Maximum="65535" Increment="1" FormatString="0.###"
-                               Value="{Binding SelectedCamera.NearClip}" ToolTip.Tip="Nothing closer is drawn"/>
+                               Value="{Binding NearClip}" ToolTip.Tip="Nothing closer is drawn"/>
                 <TextBlock Text="tiles" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
@@ -114,19 +114,19 @@
               <TextBlock Classes="fieldlabel" Text="Far clip"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="0" Maximum="65535" Increment="1" FormatString="0.###"
-                               Value="{Binding SelectedCamera.FarClip}" ToolTip.Tip="Nothing farther is drawn"/>
+                               Value="{Binding FarClip}" ToolTip.Tip="Nothing farther is drawn"/>
                 <TextBlock Text="tiles" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
           </StackPanel>
         </GroupBox>
-        <GroupBox Header="Shift" IsVisible="{Binding IsHgss}" ToolTip.Tip="Moves the camera and its view together">
+        <GroupBox Header="Shift" IsVisible="{Binding $parent[UserControl].((vm:CameraEditorViewModel)DataContext).IsHgss}" ToolTip.Tip="Moves the camera and its view together">
           <StackPanel Spacing="8">
             <StackPanel Spacing="2">
               <TextBlock Classes="fieldlabel" Text="X"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="-32768" Maximum="32768" Increment="0.25" FormatString="0.###"
-                               Value="{Binding SelectedCamera.ShiftX}" ToolTip.Tip="East"/>
+                               Value="{Binding ShiftX}" ToolTip.Tip="East"/>
                 <TextBlock Text="tiles" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
@@ -134,7 +134,7 @@
               <TextBlock Classes="fieldlabel" Text="Y"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="-32768" Maximum="32768" Increment="0.25" FormatString="0.###"
-                               Value="{Binding SelectedCamera.ShiftY}" ToolTip.Tip="Up"/>
+                               Value="{Binding ShiftY}" ToolTip.Tip="Up"/>
                 <TextBlock Text="tiles" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
@@ -142,7 +142,7 @@
               <TextBlock Classes="fieldlabel" Text="Z"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <NumericUpDown Width="120" Minimum="-32768" Maximum="32768" Increment="0.25" FormatString="0.###"
-                               Value="{Binding SelectedCamera.ShiftZ}" ToolTip.Tip="South"/>
+                               Value="{Binding ShiftZ}" ToolTip.Tip="South"/>
                 <TextBlock Text="tiles" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
               </StackPanel>
             </StackPanel>
