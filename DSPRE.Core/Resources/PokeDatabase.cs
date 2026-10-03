@@ -472,6 +472,8 @@ namespace DSPRE.Resources {
                 [1083] = "Viridian Forest",
                 [1084] = "Victory Road",
                 [1085] = "Indigo Plateau",
+                [1090] = "Bug-Catching Contest (gatehouses)",
+                [1091] = "Bug-Catching Contest (National Park)",
                 [1092] = "PokéAthlon Game",
                 [1096] = "S.S. Aqua",
                 [1097] = "Mt. Moon Plaza",
