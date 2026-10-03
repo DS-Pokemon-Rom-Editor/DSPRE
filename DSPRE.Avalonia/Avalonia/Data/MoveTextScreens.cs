@@ -48,12 +48,17 @@ namespace DSPRE.Avalonia.Data
             return rgba;
         }
 
+        // A preview must not unpack anything: Save ROM repacks every unpacked folder. An archive already
+        // unpacked is read there, so edits show; any other is read straight from its packed file.
         private static Func<int, byte[]> Members(RomInfo.DirNames dir)
         {
-            var narc = new ScriptNarc(dir);
-            if (!narc.Available) return null;
-            var cache = new byte[narc.Count][];
-            return i => i < 0 || i >= cache.Length ? null : cache[i] ??= NitroBgCodec.Inflate(narc.Get(i));
+            if (!RomInfo.gameDirs.TryGetValue(dir, out var paths)) return null;
+            ArchiveFiles files = System.IO.Directory.Exists(paths.unpackedDir)
+                ? ArchiveFiles.Mapped(dir)
+                : ArchiveFiles.Loose(paths.packedDir, dir.ToString());
+            if (!files.Available) return null;
+            var cache = new byte[files.Count][];
+            return i => i < 0 || i >= cache.Length ? null : cache[i] ??= NitroBgCodec.Inflate(files.Get(i));
         }
 
         private static Built Build(Screen screen)
