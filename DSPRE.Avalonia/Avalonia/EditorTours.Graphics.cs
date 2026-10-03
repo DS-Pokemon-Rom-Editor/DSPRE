@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia
                 S("name:SpriteButtons", "Pictures", "Import PNG replaces the sprite sheet and Export PNG saves it. Shiny palette shows the shiny colours when there are any."),
                 S("name:PropertiesPanel", "How it is drawn", "In Diamond, Pearl and Platinum, pick whether it is drawn flat or as a model, and its shadow, footprints and reflection."),
                 S("name:EntryButtons", "New overworlds", "With the overworld expansion patch applied, add new entries here, or delete ones you added."),
-                S("name:SpriteButtons", "Saving", "Save Selected writes the one you are on and Save All writes every changed one. Discard drops them. Ctrl+S saves them all."));
+                S("name:SpriteButtons", "Saving", "Save Selected writes the one you are on and Save All writes every changed one. Discard drops them. Ctrl+S saves them all, Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("NsbtxEditorView", "Map & Building Textures editor",
                 S("toolbar", "Map or building", "Switch between the texture packs maps use and the ones buildings use."),
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia
                 S("name:PaletteList", "Colours", "The colour sets in the pack. The one matching the texture's name is picked for you, but you can pick another."),
                 S("name:TexturePreview", "Preview", "The chosen texture drawn in the chosen colours."),
                 S("toolbar", "Import and export", "Export saves the whole chosen pack as a file, and Import replaces the chosen pack with one."),
-                S("toolbar", "Saving", "Save writes your changes and Discard puts everything back. Ctrl+S saves too."));
+                S("toolbar", "Saving", "Save writes your changes and Discard puts everything back. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("CellAnimationEditorView", "Cell Animation editor",
                 S("toolbar", "Cell Animation", "Edit a moving sprite: which drawing each frame shows and for how long. The top line says which animation this is."),

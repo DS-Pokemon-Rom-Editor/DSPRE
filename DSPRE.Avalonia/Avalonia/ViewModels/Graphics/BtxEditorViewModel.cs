@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public Bitmap Running { get => _running; set { if (!ReferenceEquals(_running, value)) { _running = value; Changed(nameof(Running)); } } }
     }
 
-    public class BtxEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BtxEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -211,7 +211,89 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
             LoadEntry(_selectedIndex);
+            ResetUndo();
         }
+
+        // ── Undo / redo ─────────────────────────────────────────────────────────
+        // A state holds every touched entry's sprite file and render properties as they stand. Applying one
+        // makes an entry pending only where it differs from the project now, so undo also works past a save.
+        private sealed record OwState(Dictionary<uint, byte[]> Files, Dictionary<uint, int[]> Render);
+        private readonly Dictionary<uint, byte[]> _originalFiles = new();
+        private readonly Dictionary<uint, int[]> _originalRender = new();
+        private readonly Dictionary<uint, OverworldSpriteProfileMetadataPatch> _knownPatches = new();
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private static byte[] DiskFile(uint key)
+        {
+            if (!RomInfo.OverworldTable.TryGetValue(key, out var entry)) return null;
+            string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, entry.spriteID.ToString("D4"));
+            return File.Exists(path) ? File.ReadAllBytes(path) : null;
+        }
+
+        private static int[] DiskRender(uint key) => OverworldSpriteTableExpansion.TryReadRenderState(key, out var s)
+            ? new[] { s.DrawType, s.ShadowType, s.FootmarkType, s.ReflectType } : null;
+
+        private void TouchFile(uint key) { if (!_originalFiles.ContainsKey(key)) _originalFiles[key] = DiskFile(key); }
+        private void TouchRender(uint key) { if (!_originalRender.ContainsKey(key)) _originalRender[key] = DiskRender(key); }
+
+        private byte[] TakeState()
+        {
+            var files = new Dictionary<uint, byte[]>();
+            foreach (uint key in _originalFiles.Keys)
+                files[key] = _modifiedFiles.TryGetValue(key, out byte[] mod) ? mod : DiskFile(key);
+            var render = new Dictionary<uint, int[]>();
+            foreach (uint key in _originalRender.Keys)
+                render[key] = _pendingRender.TryGetValue(key, out var r)
+                    ? new[] { r.DrawType, r.ShadowType, r.FootmarkType, r.ReflectType } : DiskRender(key);
+            return DSPRE.Avalonia.UndoJson.Take(new OwState(files, render));
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<OwState>(state);
+            foreach (uint key in _originalFiles.Keys)
+            {
+                byte[] want = s.Files != null && s.Files.TryGetValue(key, out byte[] f) ? f : _originalFiles[key];
+                byte[] disk = DiskFile(key);
+                if (want == null || (disk != null && want.AsSpan().SequenceEqual(disk)))
+                {
+                    _modifiedFiles.Remove(key);
+                    _metadataPatches.Remove(key);
+                }
+                else
+                {
+                    _modifiedFiles[key] = want;
+                    if (_knownPatches.TryGetValue(key, out var patch)) _metadataPatches[key] = patch;
+                }
+            }
+            foreach (uint key in _originalRender.Keys)
+            {
+                int[] want = s.Render != null && s.Render.TryGetValue(key, out int[] r) ? r : _originalRender[key];
+                int[] disk = DiskRender(key);
+                if (want == null || (disk != null && want.SequenceEqual(disk))) _pendingRender.Remove(key);
+                else _pendingRender[key] = new OverworldSpriteTableExpansion.OwRenderState
+                    { DrawType = want[0], ShadowType = want[1], FootmarkType = want[2], ReflectType = want[3] };
+            }
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ModifiedCount));
+            LoadEntry(_selectedIndex);
+        }
+
+        private void ResetUndo()
+        {
+            _originalFiles.Clear();
+            _originalRender.Clear();
+            _knownPatches.Clear();
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
+        }
+
+        private void Edited() => _undo?.Record();
 
         // ── Overworld properties (render state + expansion patch add/delete) ──────────
         // Diamond, Pearl and Platinum keep a render-properties table; HeartGold and SoulSilver do not.
@@ -264,6 +346,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try { _hasRenderTable = OverworldSpriteTableExpansion.IsRenderTableAvailable; }
             catch (Exception ex) { AppLogger.Error("Render table lookup failed: " + ex.Message); }
             LoadEntryList();
+            ResetUndo();
             if (OwEntries.Count > 0)
             {
                 _selectedIndex = 0;
@@ -388,9 +471,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 FootmarkType = _footmarkTypeIndex,
                 ReflectType = _reflectTypeIndex,
             };
+            TouchRender(key);
             _pendingRender[key] = state;
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(ModifiedCount));
+            Edited();
         }
 
         private bool SaveRenderState(uint key)
@@ -460,6 +545,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             RomInfo.ReadOWTable();
             LoadEntryList();
+            ResetUndo();
 
             SelectEntry(_owKeys.IndexOf(appearanceId));
             OnPropertyChanged(nameof(ExpansionStatusText));
@@ -588,6 +674,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             RomInfo.ReadOWTable();
             LoadEntryList();
+            ResetUndo();
             SelectEntry(OwEntries.Count > 0 ? 0 : -1);
             OnPropertyChanged(nameof(ExpansionStatusText));
             OnPropertyChanged(nameof(CanAddEntry));
@@ -667,11 +754,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 _btxData = newData;
 
                 uint key = _owKeys[_selectedIndex];
+                TouchFile(key);
                 _modifiedFiles[key] = newData;
 
                 RefreshImage();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 OnPropertyChanged(nameof(ModifiedCount));
+                Edited();
                 return null; // success
             }
             catch (Exception ex)
@@ -811,13 +900,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 byte[] newData = BTX0.WriteNewPalette(sourceData, import, 0, out string writeError);
                 if (newData == null) return writeError;
                 _btxData = newData;
+                TouchFile(targetAppearanceId);
                 _modifiedFiles[targetAppearanceId] = newData;
                 _metadataPatches[targetAppearanceId] = metadataPatch;
+                _knownPatches[targetAppearanceId] = metadataPatch;
 
                 RefreshImage();
                 StatusText = $"Staged {import.Width}×{import.Height} image with the profile from {OverworldLabels.Of(sourceAppearanceId)}.";
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 OnPropertyChanged(nameof(ModifiedCount));
+                Edited();
                 return null;
             }
             catch (Exception ex)

@@ -18,6 +18,7 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
 

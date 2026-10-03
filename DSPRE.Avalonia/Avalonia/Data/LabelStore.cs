@@ -353,6 +353,26 @@ namespace DSPRE.Avalonia.Data
 
         public static void DiscardDraft() { _draftLabels.Clear(); _draftAttrs.Clear(); _draftResets.Clear(); }
 
+        // The Label editor's undo: the whole draft as one value.
+        private sealed record DraftState(List<object[]> Labels, List<object[]> Attrs, List<object[]> Resets);
+
+        public static byte[] DraftSnapshot() => JsonSerializer.SerializeToUtf8Bytes(new DraftState(
+            _draftLabels.OrderBy(kv => (kv.Key.g, kv.Key.k, kv.Key.i)).Select(kv => new object[] { kv.Key.g, kv.Key.k, kv.Key.i, kv.Value }).ToList(),
+            _draftAttrs.OrderBy(kv => (kv.Key.g, kv.Key.k, kv.Key.i)).Select(kv => new object[] { kv.Key.g, kv.Key.k, kv.Key.i, kv.Value }).ToList(),
+            _draftResets.OrderBy(r => (r.g, r.k)).Select(r => new object[] { r.g, r.k }).ToList()));
+
+        public static void RestoreDraft(byte[] snapshot)
+        {
+            using var doc = JsonDocument.Parse(snapshot);
+            DiscardDraft();
+            foreach (var e in doc.RootElement.GetProperty("Labels").EnumerateArray())
+                _draftLabels[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetString();
+            foreach (var e in doc.RootElement.GetProperty("Attrs").EnumerateArray())
+                _draftAttrs[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetInt32();
+            foreach (var e in doc.RootElement.GetProperty("Resets").EnumerateArray())
+                _draftResets.Add((e[0].GetBoolean(), e[1].GetString()));
+        }
+
         public static void Save(bool global)
         {
             Ensure();

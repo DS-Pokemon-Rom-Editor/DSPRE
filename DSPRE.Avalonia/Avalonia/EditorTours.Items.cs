@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia
                 S("tab:Hidden Items>name:HiddenEditPanel", "Setting one up", "Pick the item, amount and script number. A hidden item on the map uses the number shown underneath."),
                 S("tab:Rock Smash>name:RockSmashGrid", "Rock Smash odds", "For each header, the chance a smashed rock gives an item, and which drop table it uses."),
                 S("tab:Rock Smash>name:RockSmashTables", "Drop tables", "The eight items in each drop table, each slot with its own fixed chance."),
-                S("name:SaveButton", "Saving", "Save writes every table, and Discard drops your changes. Ctrl+S saves too."));
+                S("name:SaveButton", "Saving", "Save writes every table, and Discard drops your changes. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
         }
     }
 }

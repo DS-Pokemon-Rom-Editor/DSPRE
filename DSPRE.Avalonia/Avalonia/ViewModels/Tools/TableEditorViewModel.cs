@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
     ///   • Battle Effects Combo table      (HGSS + Plat)
     ///   • VS Trainer / VS Pokémon tables  (HGSS)
     /// </summary>
-    public class TableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -228,6 +228,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             Reselect(cond, combo, vs, poke);
             if (!HasUnsavedChanges)
             {
+                _undo?.MarkSaved();
                 SaveNotice.Saved(UnsavedChangesDescription);
                 StatusText = toSource
                     ? $"Saved to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it."
@@ -254,6 +255,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _condDirty = _effectsDirty = _vsTrainerDirty = false;
             _dirtyCombos.Clear();
             _dirtyVsTrainers.Clear();
+            ResetUndo();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -276,6 +278,84 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         private void MarkDirty(ref bool flag) { flag = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo: all three tables ────────────────────────────────────────
+        private sealed record TablesState(int[][] Cond, int[][] Combos, int[][] VsTrainers);
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private TablesState _saved;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private TablesState Current() => new TablesState(
+            _condMusicTable?.Select(r => new int[] { r.header, r.flag, r.music }).ToArray() ?? Array.Empty<int[]>(),
+            _effectsComboTable?.Select(r => new int[] { r.vsGraph, r.battleSSEQ }).ToArray() ?? Array.Empty<int[]>(),
+            _vsTrainerList?.Select(r => new int[] { r.trainerClass, r.comboID }).ToArray() ?? Array.Empty<int[]>());
+
+        private void ResetUndo()
+        {
+            _saved = Current();
+            _undo = new DSPRE.Avalonia.ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(Current()), ApplyState, RaiseUndo);
+            RaiseUndo();
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<TablesState>(state);
+            for (int i = 0; _condMusicTable != null && i < s.Cond.Length && i < _condMusicTable.Count; i++)
+                _condMusicTable[i] = ((ushort)s.Cond[i][0], (ushort)s.Cond[i][1], (ushort)s.Cond[i][2]);
+            for (int i = 0; _effectsComboTable != null && i < s.Combos.Length && i < _effectsComboTable.Count; i++)
+                _effectsComboTable[i] = ((ushort)s.Combos[i][0], (ushort)s.Combos[i][1]);
+            for (int i = 0; _vsTrainerList != null && i < s.VsTrainers.Length && i < _vsTrainerList.Count; i++)
+                _vsTrainerList[i] = (s.VsTrainers[i][0], s.VsTrainers[i][1]);
+            RecountDirty();
+            int cond = _condSelectedIndex, combo = _comboSelectedIndex, vs = _vsTrainerSelectedIndex, poke = _vsPokemonSelectedIndex;
+            _suppress = true;
+            try
+            {
+                for (int i = 0; _condMusicTable != null && i < _condMusicTable.Count && i < CondMusicItems.Count; i++)
+                    if (CondMusicItems[i] != HeaderNameAt(_condMusicTable[i].header)) CondMusicItems[i] = HeaderNameAt(_condMusicTable[i].header);
+                for (int i = 0; _effectsComboTable != null && i < _effectsComboTable.Count && i < ComboItems.Count; i++)
+                {
+                    string label = $"Combo {i:D2} - Effect #{_effectsComboTable[i].vsGraph}, Music #{_effectsComboTable[i].battleSSEQ}";
+                    if (ComboItems[i] != label) ComboItems[i] = label;
+                }
+                for (int i = 0; _vsTrainerList != null && i < _vsTrainerList.Count && i < VsTrainerItems.Count; i++)
+                {
+                    string label = $"{TrainerLabel(_vsTrainerList[i].trainerClass)} uses Combo #{_vsTrainerList[i].comboID}";
+                    if (VsTrainerItems[i] != label) VsTrainerItems[i] = label;
+                }
+            }
+            finally { _suppress = false; }
+            Reselect(cond, combo, vs, poke);
+        }
+
+        // Rows count as changed while they differ from what was last read or saved, so undoing back clears them.
+        private void RecountDirty()
+        {
+            var now = Current();
+            _condDirty = !Same(now.Cond, _saved.Cond);
+            _dirtyCombos.Clear();
+            for (int i = 0; i < now.Combos.Length; i++)
+                if (i >= _saved.Combos.Length || !now.Combos[i].SequenceEqual(_saved.Combos[i])) _dirtyCombos.Add(i);
+            _effectsDirty = _dirtyCombos.Count > 0;
+            _dirtyVsTrainers.Clear();
+            for (int i = 0; i < now.VsTrainers.Length; i++)
+                if (i >= _saved.VsTrainers.Length || !now.VsTrainers[i].SequenceEqual(_saved.VsTrainers[i])) _dirtyVsTrainers.Add(i);
+            _vsTrainerDirty = _dirtyVsTrainers.Count > 0;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private static bool Same(int[][] a, int[][] b) => a.Length == b.Length && a.Zip(b).All(p => p.First.SequenceEqual(p.Second));
+
+        private void Edited()
+        {
+            if (_undo == null) return;
+            _undo.Record();
+            RecountDirty();
+        }
 
         // ── Constructors ──────────────────────────────────────────────────────────
         public TableEditorViewModel()
@@ -317,6 +397,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 if (ShowEffectsCombos && ComboItems.Count > 0) ComboSelectedIndex = 0;
 
                 OnPropertyChanged(nameof(NoTablesAvailable));
+                ResetUndo();
                 StatusText = _tablesNote ?? $"Tables loaded ({gameFamily}).";
             }
             catch (Exception ex)
@@ -465,6 +546,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             var cur = _condMusicTable[_condSelectedIndex];
             _condMusicTable[_condSelectedIndex] = (header ?? cur.header, flag ?? cur.flag, music ?? cur.music);
             MarkDirty(ref _condDirty);
+            Edited();
         }
 
         public void SaveConditionalMusic()
@@ -473,6 +555,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ConditionalMusicTable.Write(_condMusicStartAddr, _condMusicTable
                 .Select(r => new ConditionalMusicTable.Row { Header = r.header, Flag = r.flag, Music = r.music }).ToList());
             _condDirty = false;
+            if (_saved != null) _saved = _saved with { Cond = Current().Cond };
             OnPropertyChanged(nameof(HasUnsavedChanges));
             StatusText = "Conditional music table saved.";
         }
@@ -512,6 +595,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
             _dirtyCombos.Clear();
             _effectsDirty = false;
+            if (_saved != null) _saved = _saved with { Combos = Current().Combos };
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             _suppress = true;
@@ -531,6 +615,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _effectsComboTable[index] = ((ushort)VsAnimation, (ushort)BattleSseq);
             _dirtyCombos.Add(index);
             MarkDirty(ref _effectsDirty);
+            Edited();
         }
 
         // ── VS Trainer handlers ────────────────────────────────────────────────────
@@ -568,6 +653,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
             _dirtyVsTrainers.Clear();
             _vsTrainerDirty = false;
+            if (_saved != null) _saved = _saved with { VsTrainers = Current().VsTrainers };
             OnPropertyChanged(nameof(HasUnsavedChanges));
 
             _suppress = true;
@@ -587,6 +673,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _vsTrainerList[index] = ((ushort)Math.Max(0, _trainerClassIndex), (ushort)Math.Max(0, _trainerComboIndex));
             _dirtyVsTrainers.Add(index);
             MarkDirty(ref _vsTrainerDirty);
+            Edited();
         }
 
         // ── VS Pokémon handlers (display only) ─────────────────────────────────────

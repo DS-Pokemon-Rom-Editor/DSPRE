@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -28,7 +29,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// palettes and renders a preview of the chosen texture+palette (via the shared
     /// <see cref="NsbmdTextureDecoder"/>). Whole packs can be imported / exported.
     /// </summary>
-    public class NsbtxEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
+    public class NsbtxEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -106,6 +107,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.mapTextures, DirNames.buildingTextures });
                 ReloadPacks();
+                ResetUndo();
             }
             catch (Exception ex)
             {
@@ -252,17 +254,72 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly Dictionary<string, byte[]> _originals = new();
         private void Keep(string path)
         {
-            if (!_originals.ContainsKey(path)) _originals[path] = File.Exists(path) ? File.ReadAllBytes(path) : null;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            byte[] now = File.Exists(path) ? File.ReadAllBytes(path) : null;
+            if (!_originals.ContainsKey(path)) _originals[path] = now;
+            if (!_historyOriginals.ContainsKey(path)) _historyOriginals[path] = now;
         }
-        public bool HasUnsavedChanges => _originals.Count > 0;
+        private bool _dirty;
+        public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Texture packs";
         public void SaveChanges()
         {
-            if (_originals.Count == 0) return;
+            if (!_dirty) return;
             _originals.Clear();
+            _dirty = false;
+            _undo?.MarkSaved();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
+        }
+
+        // ── Undo / redo: every touched file as it stands ─────────────────────────────────
+        // Each state is the touched files' bytes; applying one writes them back, as the edits themselves do.
+        private readonly Dictionary<string, byte[]> _historyOriginals = new();
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private static byte[] Read(string path) => File.Exists(path) ? File.ReadAllBytes(path) : null;
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_historyOriginals.Keys.ToDictionary(p => p, Read));
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<Dictionary<string, byte[]>>(state);
+            foreach (var path in _historyOriginals.Keys)
+            {
+                byte[] want = s.TryGetValue(path, out byte[] b) ? b : _historyOriginals[path];
+                try { if (want == null) { if (File.Exists(path)) File.Delete(path); } else File.WriteAllBytes(path, want); }
+                catch (Exception ex) { AppLogger.Error("Texture pack undo: " + ex.Message); }
+            }
+            int keep = _packIndex;
+            ReloadPacks();
+            if (keep > 0 && keep < PackNames.Count) PackIndex = keep;
+            RecountDirty();
+        }
+
+        // Unsaved while any touched file differs from what it held when last saved.
+        private void RecountDirty()
+        {
+            _dirty = _originals.Any(kv => !SameBytes(Read(kv.Key), kv.Value));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private static bool SameBytes(byte[] a, byte[] b) => a == null ? b == null : b != null && a.AsSpan().SequenceEqual(b);
+
+        private void ResetUndo()
+        {
+            _historyOriginals.Clear();
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
+        }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            RecountDirty();
         }
         public void DiscardChanges()
         {
@@ -272,8 +329,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 catch (Exception ex) { AppLogger.Error("Texture pack discard: " + ex.Message); }
             }
             _originals.Clear();
+            _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
             ReloadPacks();
+            ResetUndo();
         }
 
         // ── Add / remove texture packs ───────────────────────────────────────────────────
@@ -296,6 +355,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 PackNames.Add("Texture Pack " + newId);
                 PackIndex = newId;
                 StatusText = $"Added texture pack {newId}.";
+                Edited();
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't add pack:\n{ex.Message}", "Map & Building Textures"); }
         }
@@ -317,6 +377,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (_packIndex == last) PackIndex = last - 1;
                 PackNames.RemoveAt(last);
                 StatusText = $"Removed texture pack {last}.";
+                Edited();
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Couldn't remove pack:\n{ex.Message}", "Map & Building Textures"); }
         }
@@ -365,6 +426,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 File.Copy(path, PackPath(_packIndex), true);
                 LoadPack(_packIndex);
                 StatusText = "Imported. Save to keep it.";
+                Edited();
             }
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
         }

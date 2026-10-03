@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.BtxEditorView"
         x:DataType="vm:BtxEditorViewModel"
@@ -18,6 +19,7 @@
       <Button Content="Save Selected" Click="SaveSelected_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Save All" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
       <Button Content="Import PNG" Click="Import_Click" IsEnabled="{Binding HasSelectedEntry}" Margin="12,2,6,2"/>
       <Button Content="Export PNG" Click="Export_Click" IsEnabled="{Binding HasSelectedEntry}"/>
       <Button Content="Show File" Click="ShowFile_Click" IsEnabled="{Binding HasSelectedEntry}"/>

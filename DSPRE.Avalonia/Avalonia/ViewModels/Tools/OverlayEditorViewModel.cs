@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -52,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
     }
 
-    public class OverlayEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class OverlayEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -131,6 +132,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             SaveEnabled = !_isDsRomProject;
             LoadOverlays();
             SetClean();
+            ResetUndo();
         }
 
         // ----------------------------------------------------------------
@@ -165,6 +167,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             LoadOverlays();
             SetClean();
+            ResetUndo();
         }
 
         public async Task SaveChangesCore()
@@ -300,6 +303,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private void SetDirty()
         {
+            _undo?.Record();
             Title = HasUnsavedChanges ? "● Overlay Editor" : "Overlay Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -310,6 +314,34 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             for (int i = 0; i < Overlays.Count; i++) _loaded[i] = (Overlays[i].IsCompressed, Overlays[i].IsMarkedCompressed);
             Title = "Overlay Editor";
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            _undo?.MarkSaved();
         }
+
+        // ----------------------------------------------------------------
+        // Undo / redo: every row's two checkboxes
+        // ----------------------------------------------------------------
+
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(Overlays.Select(r => new[] { r.IsCompressed, r.IsMarkedCompressed }).ToArray());
+
+        private void ApplyState(byte[] state)
+        {
+            var rows = DSPRE.Avalonia.UndoJson.Read<bool[][]>(state);
+            for (int i = 0; i < rows.Length && i < Overlays.Count; i++)
+            {
+                Overlays[i].IsCompressed = rows[i][0];
+                Overlays[i].IsMarkedCompressed = rows[i][1];
+            }
+            RefreshMismatch();
+            SetDirty();
+        }
+
+        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
     }
 }

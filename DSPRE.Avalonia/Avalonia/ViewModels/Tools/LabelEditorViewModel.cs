@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
     /// Edits <see cref="LabelStore"/> categories: renaming hardcoded dropdown entries and adding entries
     /// beyond the game's defaults (up to the field's data-type cap). Scope is per-project or global.
     /// </summary>
-    public class LabelEditorViewModel : INotifyPropertyChanged, global::DSPRE.Editors.IEditorWithUnsavedChanges
+    public class LabelEditorViewModel : INotifyPropertyChanged, global::DSPRE.Editors.IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -108,6 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             foreach (var g in _all.Select(c => c.Group).Distinct())
                 GroupNames.Add(g);
             if (GroupNames.Count > 0) SelectedGroupIndex = 0;
+            ResetUndo();
         }
 
         private void ReloadGroup()
@@ -147,9 +148,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             string value = LabelStore.GetDraftLabel(cat.Key, index, _globalScope);
             // Edits go to the DRAFT only; nothing reaches the real store (or other editors) until Save.
             return new LabelEntryRow(index, value, LabelStore.GetDefault(cat.Key, index), index >= cat.Defaults.Count,
-                (i, v) => { LabelStore.DraftSetLabel(cat.Key, i, v, _globalScope); HasUnsavedChanges = true; },
+                (i, v) => { LabelStore.DraftSetLabel(cat.Key, i, v, _globalScope); Edited(); },
                 attrOpts, attrIdx,
-                (i, a) => { LabelStore.DraftSetAttr(cat.Key, i, a, _globalScope); HasUnsavedChanges = true; });
+                (i, a) => { LabelStore.DraftSetAttr(cat.Key, i, a, _globalScope); Edited(); });
         }
 
         public void AddEntry()
@@ -161,7 +162,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             LabelStore.DraftSetLabel(cat.Key, index, def, _globalScope);
             if (cat.HasAttr) LabelStore.DraftSetAttr(cat.Key, index, cat.AttrDefaultForNew, _globalScope);   // e.g. evolution → "CustomNumber"
             Entries.Add(MakeRow(cat, index));
-            HasUnsavedChanges = true;
+            Edited();
             OnPropertyChanged(nameof(CanAddEntry));
             StatusText = $"Added entry {index} to “{cat.DisplayName}”. Rename it, then Save.";
         }
@@ -171,9 +172,33 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             var cat = CurrentCategory;
             if (cat == null) return;
             LabelStore.DraftReset(cat.Key, _globalScope);
-            HasUnsavedChanges = true;
             ReloadEntries();
+            Edited();
             StatusText = $"Reset “{cat.DisplayName}” to defaults ({(GlobalScope ? "global" : "project")}). Save to apply.";
+        }
+
+        // ── Undo / redo: the whole draft ──
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private void ApplyDraft(byte[] state)
+        {
+            LabelStore.RestoreDraft(state);
+            ReloadEntries();
+            HasUnsavedChanges = LabelStore.HasDraft;
+        }
+
+        private void ResetUndo() { _undo = new ByteStateUndo(LabelStore.DraftSnapshot, ApplyDraft, RaiseUndo); RaiseUndo(); }
+
+        private void Edited()
+        {
+            if (_undo == null) ResetUndo();
+            _undo.Record();
+            HasUnsavedChanges = LabelStore.HasDraft;
         }
 
         public void Save()
@@ -181,6 +206,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             LabelStore.CommitDraft();
             AppEvents.RaiseLabelsChanged();   // refresh every open editor's dropdowns
             HasUnsavedChanges = false;
+            ResetUndo();
             StatusText = $"Saved labels.";
         }
 
@@ -189,6 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             LabelStore.DiscardDraft();
             HasUnsavedChanges = false;
+            ResetUndo();
         }
     }
 }

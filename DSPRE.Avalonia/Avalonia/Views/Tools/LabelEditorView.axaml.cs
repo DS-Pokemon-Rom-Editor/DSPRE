@@ -12,7 +12,9 @@ namespace DSPRE.Avalonia.Views.Tools
         public LabelEditorView()
         {
             InitializeComponent();
-            DataContext = new LabelEditorViewModel();
+            var vm = new LabelEditorViewModel();
+            DataContext = vm;
+            EditorWindowChrome.AttachUndoKeys(this, vm);
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();

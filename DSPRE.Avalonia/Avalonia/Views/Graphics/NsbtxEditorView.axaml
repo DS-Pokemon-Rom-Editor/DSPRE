@@ -17,6 +17,7 @@
       <WrapPanel Classes="toolbar">
         <Button Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <RadioButton Content="Map textures"      GroupName="tt" IsChecked="{Binding MapTextures}"/>
         <RadioButton Content="Building textures" GroupName="tt" IsChecked="{Binding BuildingTextures}"/>

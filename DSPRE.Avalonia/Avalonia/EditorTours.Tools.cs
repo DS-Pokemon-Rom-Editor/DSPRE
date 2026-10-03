@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia
                 S(null, "Code overlays", "The game loads extra pieces of code as it needs them. This lists each one and whether it is packed down."),
                 S("list", "The list", "Compressed is how it is now, Marked Compressed is how the game expects it. A highlighted cell means the two disagree."),
                 S("toolbar", "Changing them", "Decompress All and Toggle Marked flip every row at once. In some projects the list is read only, since packing is handled when the ROM is built."),
-                S("toolbar", "Saving", "Nothing is written until you Save (Ctrl+S). Discard puts everything back."));
+                S("toolbar", "Saving", "Nothing is written until you Save (Ctrl+S). Discard puts everything back. Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("TableEditorView", "Music & Battle Tables",
                 S(null, "Music and battle tables", "Small tables that pick music and battle intros. Only the tables this game has are shown."),
@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia
                 S("tab:Effect Combos", "Effect Combos", "Each entry pairs a battle intro animation with a battle theme. Trainer classes and wild Pokémon pick one by number."),
                 S("tab:VS Trainer", "VS Trainer", "Gives a trainer class an effect combo, so all its trainers get the same intro and theme."),
                 S("tab:VS Pokémon", "VS Pokémon", "Which wild Pokémon have their own intro and theme. This one can only be looked at."),
-                S("toolbar", "Saving", "Nothing is written until you Save (Ctrl+S). Discard puts everything back."));
+                S("toolbar", "Saving", "Nothing is written until you Save (Ctrl+S). Discard puts everything back. Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("AddressHelperView", "Address Helper",
                 S(null, "Address Helper", "Turns a memory address from a debugger into the file and place it comes from."),
@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia
                 S("name:GroupStrip", "Editors", "Each tab is one editor's set of dropdowns."),
                 S("list", "Categories", "Pick which dropdown to rename."),
                 S("name:EntryRows", "Entries", "Type a new name next to each number. The default name is shown beside it for reference."),
-                S("toolbar", "Saving", "Add entry adds one more choice, Reset category brings back the defaults, and nothing is written until you press Save."));
+                S("toolbar", "Saving", "Add entry adds one more choice, Reset category brings back the defaults, and nothing is written until you press Save. Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("AudioEditorView", "Audio Editor",
                 S(null, "Audio", "Listen to every sound in the game, save it out, and put your own cries and sounds in."),

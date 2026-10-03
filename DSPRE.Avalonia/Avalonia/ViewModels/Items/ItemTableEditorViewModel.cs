@@ -276,10 +276,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string Item5 { get => Get(5); set => Set(5, value); }
         public string Item6 { get => Get(6); set => Set(6, value); }
         public string Item7 { get => Get(7); set => Set(7, value); }
+
+        public void Refresh() { for (int i = 0; i < 8; i++) OnPC($"Item{i}"); }
     }
 
     // ─── Main ViewModel ───────────────────────────────────────────────────────
-    public class ItemTableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class ItemTableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -422,9 +424,98 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 _rockSmashDirty ? "Rock Smash" : null
             }.Where(s => s != null).DefaultIfEmpty("Item Table Editor"));
 
-        private void SetPickupDirty() { _pickupDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetHiddenDirty() { _hiddenDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetRockSmashDirty() { _rockSmashDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetPickupDirty() { _pickupDirty = true; Edited(); }
+        private void SetHiddenDirty() { _hiddenDirty = true; Edited(); }
+        private void SetRockSmashDirty() { _rockSmashDirty = true; Edited(); }
+
+        // ── Undo / redo: every tab's tables ───────────────────────────────────
+        private sealed record PickupState(ushort[] Common, ushort[] Rare, int Divisor, byte[] Weights);
+        private sealed record TablesState(PickupState Pickup, int[][] Hidden, int[][] RockSmash, ushort[][] Slots);
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private TablesState _saved;
+        private bool _applyingUndo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private PickupState CurrentPickup() => new(_commonIDs.ToArray(), _rareIDs.ToArray(), _activationDivisor, (byte[])_weightTable.Clone());
+
+        private int[][] CurrentHidden() => HiddenItems.Select(h => new int[] { h.ItemID, h.Amount, h.ScriptID, h.Range, h.Padding }).ToArray();
+
+        private int[][] CurrentRockSmash() => RockSmashRows.Select(r => new int[] { r.Odds, r.TypeIndex }).ToArray();
+
+        private ushort[][] CurrentSlots() => ShowRockSmashItemTables && RockSmashDefaultTable != null
+            ? new[] { (ushort[])RockSmashDefaultTable.ItemIDs.Clone(), (ushort[])RockSmashRuinsOfAlphTable.ItemIDs.Clone(), (ushort[])RockSmashCliffCaveTable.ItemIDs.Clone() }
+            : Array.Empty<ushort[]>();
+
+        private TablesState Current() => new(CurrentPickup(), CurrentHidden(), CurrentRockSmash(), CurrentSlots());
+
+        private static bool Same<T>(T a, T b) => DSPRE.Avalonia.UndoJson.Take(a).AsSpan().SequenceEqual(DSPRE.Avalonia.UndoJson.Take(b));
+
+        private void ResetUndo()
+        {
+            _saved = Current();
+            _undo = new DSPRE.Avalonia.ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(Current()), ApplyState, RaiseUndo);
+            RaiseUndo();
+        }
+
+        // Each tab counts as unsaved while it differs from what was last read or saved, so undoing back clears it.
+        private void RecountDirty()
+        {
+            if (_saved == null) { OnPropertyChanged(nameof(HasUnsavedChanges)); return; }
+            _pickupDirty = !Same(CurrentPickup(), _saved.Pickup);
+            _hiddenDirty = !Same(CurrentHidden(), _saved.Hidden);
+            _rockSmashDirty = !Same(CurrentRockSmash(), _saved.RockSmash) || !Same(CurrentSlots(), _saved.Slots);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void Edited()
+        {
+            if (_applyingUndo) return;
+            _undo?.Record();
+            RecountDirty();
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<TablesState>(state);
+            _applyingUndo = true;
+            try
+            {
+                for (int i = 0; i < s.Pickup.Common.Length && i < _commonIDs.Count; i++) _commonIDs[i] = s.Pickup.Common[i];
+                for (int i = 0; i < s.Pickup.Rare.Length && i < _rareIDs.Count; i++) _rareIDs[i] = s.Pickup.Rare[i];
+                for (int i = 0; i < _commonIDs.Count; i++) RefreshCommonAdjacent(i);
+                for (int i = 0; i < _rareIDs.Count; i++) RefreshRareAdjacent(i);
+                _activationDivisor = _activDivisorEdit = s.Pickup.Divisor;
+                Array.Copy(s.Pickup.Weights, _weightTable, Math.Min(WEIGHT_SIZE, s.Pickup.Weights.Length));
+                OnPropertyChanged(nameof(ActivationDivisorEdit));
+                if (ActivationRows.Count > 0) RecalcActivation();
+
+                int keep = _selectedHiddenItem != null ? HiddenItems.IndexOf(_selectedHiddenItem) : -1;
+                HiddenItems.Clear();
+                foreach (var h in s.Hidden)
+                    HiddenItems.Add(new HiddenItemRowVM((ushort)h[0], (ushort)h[1], (ushort)h[2], _rawItemNames) { Range = (byte)h[3], Padding = (ushort)h[4] });
+                SelectedHiddenItem = HiddenItems.Count > 0 ? HiddenItems[Math.Clamp(keep, 0, HiddenItems.Count - 1)] : null;
+                OnPropertyChanged(nameof(HiddenEntryCount));
+
+                for (int i = 0; i < s.RockSmash.Length && i < RockSmashRows.Count; i++)
+                {
+                    RockSmashRows[i].Odds = s.RockSmash[i][0];
+                    RockSmashRows[i].TypeIndex = s.RockSmash[i][1];
+                }
+                var tables = new[] { RockSmashDefaultTable, RockSmashRuinsOfAlphTable, RockSmashCliffCaveTable };
+                for (int t = 0; t < s.Slots.Length && t < tables.Length; t++)
+                {
+                    if (tables[t] == null) continue;
+                    Array.Copy(s.Slots[t], tables[t].ItemIDs, Math.Min(s.Slots[t].Length, tables[t].ItemIDs.Length));
+                    tables[t].Refresh();
+                }
+            }
+            finally { _applyingUndo = false; }
+            RecountDirty();
+        }
 
         // ── Design-time constructor ───────────────────────────────────────────
         public ItemTableEditorViewModel()
@@ -477,6 +568,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.rockSmash });
                 LoadRockSmash();
             }
+            ResetUndo();
         }
 
         // ── Pickup load ───────────────────────────────────────────────────────
@@ -753,28 +845,33 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
 
             _hiddenDirty = false;
+            SavedTab();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
+        // A tab just written becomes the new saved state for that tab; undo's saved mark follows once nothing is left.
+        private void SavedTab()
+        {
+            if (_saved == null) return;
+            _saved = new TablesState(
+                _pickupDirty ? _saved.Pickup : CurrentPickup(),
+                _hiddenDirty ? _saved.Hidden : CurrentHidden(),
+                _rockSmashDirty ? _saved.RockSmash : CurrentRockSmash(),
+                _rockSmashDirty ? _saved.Slots : CurrentSlots());
+            if (!HasUnsavedChanges) _undo?.MarkSaved();
+        }
+
         private void SavePickupTable()
         {
-            string path = OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
-
-            var common = new byte[COMMON_COUNT * 2];
-            for (int i = 0; i < _commonIDs.Count; i++)
-                BitConverter.GetBytes(_commonIDs[i]).CopyTo(common, i * 2);
-            DSUtils.WriteToFile(path, common, RomInfo.pickupCommonItemsOffset);
-
-            var rare = new byte[RARE_COUNT * 2];
-            for (int i = 0; i < _rareIDs.Count; i++)
-                BitConverter.GetBytes(_rareIDs[i]).CopyTo(rare, i * 2);
-            DSUtils.WriteToFile(path, rare, RomInfo.pickupRareItemsOffset);
-
-            DSUtils.WriteToFile(path, new byte[] { (byte)_activationDivisor }, RomInfo.pickupActivationDivisorOffset);
-            DSUtils.WriteToFile(path, _weightTable, RomInfo.pickupWeightTableOffset);
+            new PickupTable
+            {
+                Common = _commonIDs.ToArray(), Rare = _rareIDs.ToArray(),
+                Divisor = (byte)_activationDivisor, Weights = (byte[])_weightTable.Clone(),
+            }.Write();
 
             _pickupDirty = false;
+            SavedTab();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -804,6 +901,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }).ToList(), _hiddenMaxCapacity);
 
             _hiddenDirty = false;
+            SavedTab();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -827,6 +925,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
 
             _rockSmashDirty = false;
+            SavedTab();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -845,6 +944,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 _pickupDirty = false;
                 _hiddenDirty = false;
                 _rockSmashDirty = false;
+                ResetUndo();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
             }
         }
