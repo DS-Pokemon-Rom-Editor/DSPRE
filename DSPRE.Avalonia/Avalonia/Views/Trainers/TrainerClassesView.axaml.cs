@@ -25,7 +25,12 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void TogglePlay_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
 
         // Adds the entry with music = 0/0 so the Main/Alt fields can be set before Save writes it.
-        private void EnableMusic_Click(object sender, RoutedEventArgs e) => VM?.EnableMusic(0, 0);
+        private async void EnableMusic_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+            if (VM.MusicNeedsExpansion && !await Arm9ExpansionOffer.EnsureAsync("Eye-contact music for this class", "Trainer Classes")) return;
+            VM.EnableMusic(0, 0);
+        }
 
         private void EditSprite_Click(object sender, RoutedEventArgs e)
         {
@@ -44,6 +49,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             }
             // The new class is selected once it is added, so the loaded class is settled first.
             if (!await VM.ConfirmLeaveAsync()) return;
+            if (!await Arm9ExpansionOffer.EnsureAsync("A new trainer class", "Add Trainer Class")) return;
 
             var dlgVm = new AddTrainerClassViewModel();
             int newClassId = VM.ClassNames.Count;

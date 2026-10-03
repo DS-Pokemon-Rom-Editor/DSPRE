@@ -369,6 +369,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public bool CanEnableMusic => (IsExpansionSupported || _musicFromSource) && !MusicEnabled && _selectedIndex >= 0;
 
+        /// <summary>A new music row goes into the synthetic overlay unless hg-engine's source holds the table.</summary>
+        public bool MusicNeedsExpansion => !_musicFromSource;
+
         // Without a linked checkout an hg-engine build would overwrite the sprite edits.
         // An unsaved class has no sprite files of its own until Save copies them.
         public bool CanEditSprite => (!isHGE || HgEngineProject.IsActive) && !PendingSelected;

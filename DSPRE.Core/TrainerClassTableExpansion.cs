@@ -334,8 +334,12 @@ namespace DSPRE
         public static string AddRefusal(string name)
         {
             if (!IsSupportedForCurrentRom) return "Adding trainer classes is only supported for Platinum (English) right now.";
+            if (!SyntheticOverlaySpace.Available()) return NeedsExpansion;
             return string.IsNullOrWhiteSpace(name) ? "Enter a class name." : null;
         }
+
+        // Without the expansion the synthetic overlay is never loaded, so a moved table would be read from empty memory.
+        private const string NeedsExpansion = "This needs the ARM9 expansion from the ROM Patch Toolbox, which isn't applied to this ROM.";
 
         // The game reads class N's front sprite from trfgra members 5N to 5N+4: tiles, palette, cells, animation, scan.
         private const int SpriteFilesPerClass = 5;
@@ -436,7 +440,8 @@ namespace DSPRE
 
         private static bool MoveClassTablesUnchanged(out string error)
         {
-            error = IsSupportedForCurrentRom ? null : "Only Platinum (English) is supported.";
+            error = !IsSupportedForCurrentRom ? "Only Platinum (English) is supported."
+                : !SyntheticOverlaySpace.Available() ? NeedsExpansion : null;
             if (error != null) return false;
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives });
@@ -466,7 +471,8 @@ namespace DSPRE
         /// <summary>Moves the eye-contact music table into the synthetic overlay unchanged.</summary>
         public static bool MoveEncounterMusicTable(out string error)
         {
-            error = IsSupportedForCurrentRom ? null : "Only Platinum (English) is supported.";
+            error = !IsSupportedForCurrentRom ? "Only Platinum (English) is supported."
+                : !SyntheticOverlaySpace.Available() ? NeedsExpansion : null;
             if (error != null) return false;
             return DetectMusicTableRepointed() || RepointEncounterMusic(null, null, out error);
         }
@@ -548,9 +554,13 @@ namespace DSPRE
         private static long RepointByteArrayTable(string pointerFilePath, uint pointerFileOffset, byte[] newFullTableBytes, out string error)
         {
             error = null;
+            if (!SyntheticOverlaySpace.Available())
+            {
+                error = NeedsExpansion;
+                return -1;
+            }
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay });
                 string expPath = Filesystem.expArmPath;
                 byte[] expData = File.ReadAllBytes(expPath);
                 var reserved = DSPRE.ROMFiles.SyntheticOverlaySpace.Reserved(expData);
