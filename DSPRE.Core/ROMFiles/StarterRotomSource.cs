@@ -197,7 +197,11 @@ namespace DSPRE.ROMFiles
                 if (endsWithNewline) lines = lines.Take(lines.Length - 1).ToArray();
             }
             catch (Exception ex) { return "Could not read the script source: " + ex.Message; }
-            void Write() => File.WriteAllText(path, string.Join(newline, lines) + (endsWithNewline ? newline : ""));
+            void Write()
+            {
+                ProjectSourceWatcher.Expect(path);
+                File.WriteAllText(path, string.Join(newline, lines) + (endsWithNewline ? newline : ""));
+            }
 
             if (m.LineNumber < 1 || m.LineNumber > lines.Length)
                 return "That line is no longer in the file.";

@@ -341,6 +341,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _selectedEditorThemeIndex = savedThemeIndex >= 0 ? savedThemeIndex : 0;
             AppEvents.ScriptSourceSaved += OnSourceSavedElsewhere;
             DSPRE.ROMFiles.ScriptSourceSync.SourcesRefreshed += OnSourcesRefreshed;
+            DSPRE.ROMFiles.ProjectSourceWatcher.ScriptsCompiled += OnCompiledAfterOutsideEdit;
         }
 
         /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
@@ -348,6 +349,21 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             AppEvents.ScriptSourceSaved -= OnSourceSavedElsewhere;
             DSPRE.ROMFiles.ScriptSourceSync.SourcesRefreshed -= OnSourcesRefreshed;
+            DSPRE.ROMFiles.ProjectSourceWatcher.ScriptsCompiled -= OnCompiledAfterOutsideEdit;
+        }
+
+        private void OnCompiledAfterOutsideEdit(RotomTool.Result result, IReadOnlyList<string> paths)
+        {
+            Dispatcher.UIThread.Post(async () =>
+            {
+                if (_lsp != null) _ = _lsp.DidChangeWatchedFilesAsync(paths);
+                bool current = _currentPath != null && paths.Any(p => SamePath(p, _currentPath));
+                if (current) await ReloadSavedElsewhereAsync(_currentPath);
+                if (!current || result.Success) return;
+                UpdateCompileDiagnostics(result);
+                var failures = RotomTool.FailureLines(result);
+                StatusText = "Edited outside DSPRE and did not compile: " + failures[0] + (failures.Count > 1 ? $" (and {failures.Count - 1} more)" : "");
+            });
         }
 
         private bool _askingAboutSavedElsewhere;
@@ -1340,6 +1356,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             else
             {
+                DSPRE.ROMFiles.ProjectSourceWatcher.Expect(_currentPath);
                 System.IO.File.WriteAllText(_currentPath, ScriptText ?? "");
             }
             SetClean();
@@ -1362,6 +1379,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     {
                         _documentVersion++;
                         await lsp.DidChangeAsync(_currentPath, _documentVersion, ScriptText ?? "");
+                        // Hints placed for the old text would land in the wrong spots.
+                        ScheduleDocumentExtras();
                         return;
                     }
 

@@ -98,6 +98,7 @@ namespace DSPRE
                 throw new FileNotFoundException("rotom was not found in DSPRE's Tools folder.", ExePath);
 
             await OneAtATime.WaitAsync().ConfigureAwait(false);
+            using var quiet = DSPRE.ROMFiles.ProjectSourceWatcher.Hold();
             try { return await RunLockedAsync(workingDirectory, args).ConfigureAwait(false); }
             finally { OneAtATime.Release(); }
         }
@@ -152,6 +153,63 @@ namespace DSPRE
                 Stdout = stdout.ToString(),
                 Stderr = stderr.ToString()
             };
+        }
+
+        /// <summary>"file, line N: message" per failing source, or rotom's own error text when it names none.</summary>
+        public static System.Collections.Generic.List<string> FailureLines(Result result)
+        {
+            var lines = new System.Collections.Generic.List<string>();
+            if (result == null || result.Success) return lines;
+            try
+            {
+                using var doc = JsonDocument.Parse(result.Stdout ?? "");
+                if (doc.RootElement.TryGetProperty("failures", out var failures) && failures.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var failure in failures.EnumerateArray())
+                    {
+                        string rel = failure.TryGetProperty("path", out var p) ? p.GetString() ?? "" : "";
+                        string message = null;
+                        int start = -1;
+                        if (failure.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.Object)
+                        {
+                            if (error.TryGetProperty("details", out var details) && details.ValueKind == JsonValueKind.Object)
+                            {
+                                if (details.TryGetProperty("message", out var m)) message = m.GetString();
+                                if (details.TryGetProperty("span", out var span) && span.ValueKind == JsonValueKind.Object
+                                    && span.TryGetProperty("start", out var s) && s.TryGetInt32(out int at)) start = at;
+                            }
+                            if (message == null && error.TryGetProperty("type", out var type)) message = type.GetString();
+                        }
+                        string full = Path.GetFullPath(Path.Combine(ProjectRoot, rel));
+                        int line = start < 0 ? 0 : LineOfByte(full, start);
+                        string shown = Path.GetRelativePath(ProjectRoot, full).Replace('\\', '/');
+                        lines.Add(shown + (line > 0 ? ", line " + line : "") + ": " + (message ?? "did not compile"));
+                    }
+                }
+            }
+            catch (JsonException) { }
+
+            if (lines.Count == 0)
+            {
+                string output = !string.IsNullOrWhiteSpace(result.Stderr) ? result.Stderr : result.Stdout;
+                lines.Add(string.IsNullOrWhiteSpace(output) ? $"rotom exited with code {result.ExitCode}." : output.Trim());
+            }
+            return lines;
+        }
+
+        // rotom reports UTF-8 byte offsets into the source file.
+        private static int LineOfByte(string path, int byteOffset)
+        {
+            try
+            {
+                byte[] bytes = File.ReadAllBytes(path);
+                int line = 1;
+                for (int i = 0; i < Math.Min(byteOffset, bytes.Length); i++)
+                    if (bytes[i] == (byte)'\n') line++;
+                return line;
+            }
+            catch (IOException) { return 0; }
+            catch (UnauthorizedAccessException) { return 0; }
         }
 
         public static string FormatResult(Result result)

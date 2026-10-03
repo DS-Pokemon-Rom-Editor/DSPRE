@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -46,6 +47,8 @@ namespace DSPRE.Avalonia.Views.Shell
             };
 
             RecentMenu.SubmenuOpened += (_, _) => RebuildRecentMenu();
+            ProjectSourceWatcher.ScriptsCompiled += (result, paths) =>
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => NoteOutsideScriptCompile(result, paths));
 
             AppEvents.BannerChanged += (_, _) =>
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(RefreshGameIcon);
@@ -404,6 +407,7 @@ namespace DSPRE.Avalonia.Views.Shell
                 return;
             }
             if (vm != null) vm.StatusText = $"Loaded {RomInfo.projectName ?? "project"} from {RomInfo.workDir}";
+            ProjectSourceWatcher.Start();
 
             // Nothing else dismisses the welcome window, and a loaded project makes it redundant.
             if (global::Avalonia.Application.Current?.ApplicationLifetime
@@ -526,6 +530,15 @@ namespace DSPRE.Avalonia.Views.Shell
             }
         }
 
+        private void NoteOutsideScriptCompile(RotomTool.Result result, IReadOnlyList<string> paths)
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+            string names = string.Join(", ", paths.Select(System.IO.Path.GetFileName).Distinct());
+            if (result.Success) { vm.StatusText = "Compiled " + names + " after an outside edit."; return; }
+            var failures = RotomTool.FailureLines(result);
+            vm.StatusText = "Did not compile: " + failures[0] + (failures.Count > 1 ? $" (and {failures.Count - 1} more)" : "");
+        }
+
         private async void SaveRom_Click(object sender, RoutedEventArgs e) => await SaveRomAsync();
 
         /// <summary>Builds a playable .nds from the current project. Public so other embedded views
@@ -583,6 +596,23 @@ namespace DSPRE.Avalonia.Views.Shell
             bool ok;
             try
             {
+                // Catches source edits made while DSPRE was closed.
+                if (RomInfo.hasRotomProject && RotomTool.IsAvailable)
+                {
+                    if (vm != null) vm.BusyHint = "Compiling changed scripts.";
+                    var compiled = await RotomTool.CompileProjectAsync();
+                    if (!compiled.Success)
+                    {
+                        if (vm != null) { vm.IsBusy = false; vm.StatusText = "ROM build stopped: scripts did not compile."; }
+                        await DialogHelper.ShowError("These scripts did not compile, so no ROM was written:\n\n"
+                                                     + string.Join("\n", RotomTool.FailureLines(compiled))
+                                                     + "\n\nFix them and save again.",
+                                                     "Save ROM", RotomTool.FormatDetails(compiled));
+                        return false;
+                    }
+                    if (vm != null) vm.BusyHint = "Repacking the project into a playable .nds file.";
+                }
+
                 ok = await BusyOverlay.RunLockedAsync(() =>
                 {
                     try
