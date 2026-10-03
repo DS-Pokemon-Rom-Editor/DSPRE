@@ -38,7 +38,7 @@
                 ToolTip.Tip="Walk the map from beside the selected event."/>
         <Button Content="Animate" controls:Icon.Key="play" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
                 ToolTip.Tip="Plays the map on its own: water, buildings and people moving. Scripts do not run."/>
-        <Button Content="Screenshot" controls:Icon.Key="camera" Click="Screenshot_Click"
+        <Button Content="Screenshot" controls:Icon.Key="cameraIcon" Click="Screenshot_Click"
                 ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Report…" controls:Icon.Key="bug" Click="ExportDebug_Click"
@@ -94,7 +94,7 @@
                       IsEnabled="{Binding !Flat2D}"/>
               <Button Content="Iso" Click="CamIso_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Isometric camera"
                       IsEnabled="{Binding !Flat2D}"/>
-              <Button controls:Icon.Key="reset" Click="CamReset_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Reset camera"/>
+              <Button controls:Icon.Key="resetIcon" Click="CamReset_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Reset camera"/>
               <Button Content="Centre" controls:Icon.Key="target" Click="CenterOnEvent_Click" FontSize="12" Padding="6,2"
                       ToolTip.Tip="Moves the camera onto the selected event."/>
             </WrapPanel>

@@ -64,7 +64,7 @@
             </Button>
             <controls:IconImage Key="addIcon" Opacity="0.5" IsVisible="{Binding IsEmpty}"
                    IsHitTestVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            <Button controls:Icon.Key="cross" Classes="chip-btn" Width="16" Height="16" Margin="0"
+            <Button controls:Icon.Key="Cross" Classes="chip-btn" Width="16" Height="16" Margin="0"
                     HorizontalAlignment="Right" VerticalAlignment="Top" Background="#333" Foreground="White"
                     IsVisible="{Binding !IsEmpty}" Tag="{Binding}" Click="FavoriteClear_Click"/>
           </Grid>

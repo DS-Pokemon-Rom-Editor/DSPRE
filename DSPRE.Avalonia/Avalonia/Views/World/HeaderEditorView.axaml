@@ -15,12 +15,12 @@
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
       <WrapPanel Classes="toolbar">
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <Button Content="Reset" controls:Icon.Key="reset" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
+        <Button Content="Reset" controls:Icon.Key="resetIcon" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
         <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Copy" controls:Icon.Key="copyIcon_small"  Click="Copy_Click"/>
-        <Button Content="Paste" controls:Icon.Key="paste" Click="Paste_Click"/>
+        <Button Content="Paste" controls:Icon.Key="pasteIcon" Click="Paste_Click"/>
         <Button Content="Import" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export" controls:Icon.Key="export" Click="Export_Click"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>

@@ -190,10 +190,10 @@
               <ComboBox ItemsSource="{Binding TilePictures}" SelectedItem="{Binding LookPicture}" HorizontalAlignment="Stretch"/>
               <TextBlock Text="Offset" FontWeight="SemiBold"/>
               <UniformGrid Columns="6">
-                <Button Classes="small" controls:Icon.Key="left" Click="NudgeWest_Click" ToolTip.Tip="-X"/>
-                <Button Classes="small" controls:Icon.Key="right" Click="NudgeEast_Click" ToolTip.Tip="+X"/>
-                <Button Classes="small" controls:Icon.Key="up" Click="NudgeNorth_Click" ToolTip.Tip="-Z"/>
-                <Button Classes="small" controls:Icon.Key="down" Click="NudgeSouth_Click" ToolTip.Tip="+Z"/>
+                <Button Classes="small" controls:Icon.Key="arrowleft" Click="NudgeWest_Click" ToolTip.Tip="-X"/>
+                <Button Classes="small" controls:Icon.Key="arrowright" Click="NudgeEast_Click" ToolTip.Tip="+X"/>
+                <Button Classes="small" controls:Icon.Key="arrowup" Click="NudgeNorth_Click" ToolTip.Tip="-Z"/>
+                <Button Classes="small" controls:Icon.Key="arrowdown" Click="NudgeSouth_Click" ToolTip.Tip="+Z"/>
                 <Button Classes="small" controls:Icon.Key="raise" Click="NudgeUp_Click" ToolTip.Tip="+Y"/>
                 <Button Classes="small" controls:Icon.Key="lower" Click="NudgeDown_Click" ToolTip.Tip="-Y"/>
               </UniformGrid>
@@ -330,14 +330,14 @@
               </ListBox.ItemTemplate>
             </ListBox>
             <UniformGrid Columns="4">
-              <Button Classes="small" controls:Icon.Key="up" Click="ShiftUp_Click" ToolTip.Tip="Shift up"/>
-              <Button Classes="small" controls:Icon.Key="down" Click="ShiftDown_Click" ToolTip.Tip="Shift down"/>
-              <Button Classes="small" controls:Icon.Key="left" Click="ShiftLeft_Click" ToolTip.Tip="Shift left"/>
-              <Button Classes="small" controls:Icon.Key="right" Click="ShiftRight_Click" ToolTip.Tip="Shift right"/>
+              <Button Classes="small" controls:Icon.Key="arrowup" Click="ShiftUp_Click" ToolTip.Tip="Shift up"/>
+              <Button Classes="small" controls:Icon.Key="arrowdown" Click="ShiftDown_Click" ToolTip.Tip="Shift down"/>
+              <Button Classes="small" controls:Icon.Key="arrowleft" Click="ShiftLeft_Click" ToolTip.Tip="Shift left"/>
+              <Button Classes="small" controls:Icon.Key="arrowright" Click="ShiftRight_Click" ToolTip.Tip="Shift right"/>
               <Button Classes="small" controls:Icon.Key="raise" Click="RaiseUp_Click" ToolTip.Tip="Raise layer"/>
               <Button Classes="small" controls:Icon.Key="lower" Click="RaiseDown_Click" ToolTip.Tip="Lower layer"/>
               <Button Classes="small" controls:Icon.Key="copyIcon_small" Click="CopyLayer_Click" ToolTip.Tip="Copy layer"/>
-              <Button Classes="small" controls:Icon.Key="paste" Click="PasteLayer_Click" IsEnabled="{Binding HasCopy}" ToolTip.Tip="Paste layer"/>
+              <Button Classes="small" controls:Icon.Key="pasteIcon" Click="PasteLayer_Click" IsEnabled="{Binding HasCopy}" ToolTip.Tip="Paste layer"/>
             </UniformGrid>
             <Button Classes="small" Content="Clear layer" Click="ClearLayer_Click" HorizontalAlignment="Stretch"/>
           </StackPanel>

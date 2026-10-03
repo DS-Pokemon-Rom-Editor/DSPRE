@@ -439,11 +439,11 @@ namespace DSPRE.Avalonia
                 Text = step.Body, TextWrapping = TextWrapping.Wrap, LineHeight = 20, Opacity = 0.95,
             };
 
-            var backBtn = new Button { Content = Controls.Icon.Content("left", "Back"), MinWidth = 70, IsEnabled = _index > 0 };
+            var backBtn = new Button { Content = Controls.Icon.Content("arrowleft", "Back"), MinWidth = 70, IsEnabled = _index > 0 };
             global::Avalonia.Automation.AutomationProperties.SetName(backBtn, "Back");
             backBtn.Click += (_, _) => Back();
             bool last = _index == _steps.Count - 1;
-            var nextBtn = new Button { Content = last ? "Finish" : Controls.Icon.Content("right", "Next", after: true), MinWidth = 70 };
+            var nextBtn = new Button { Content = last ? "Finish" : Controls.Icon.Content("arrowright", "Next", after: true), MinWidth = 70 };
             global::Avalonia.Automation.AutomationProperties.SetName(nextBtn, last ? "Finish" : "Next");
             nextBtn.Click += (_, _) => Next();
             var skipBtn = new Button { Content = "Skip tour", Opacity = 0.75 };

@@ -46,7 +46,7 @@
               <ComboBox Width="130" ItemsSource="{Binding RefKinds}" SelectedIndex="{Binding RefKindIndex}"/>
               <TextBlock Text="Id:" VerticalAlignment="Center"/>
               <NumericUpDown Width="110" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding LookupId}"/>
-              <Button Content="Find headers" controls:Icon.Key="link" Click="Find_Click"/>
+              <Button Content="Find headers" controls:Icon.Key="OpenLink" Click="Find_Click"/>
             </WrapPanel>
           </Border>
           <TextBlock DockPanel.Dock="Top" Text="{Binding FindStatus}" Foreground="{DynamicResource Editor.Subtle}"

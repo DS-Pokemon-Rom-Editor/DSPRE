@@ -89,9 +89,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
             _cells = new Border[n, n];
             var corner = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
             corner.Children.Add(new TextBlock { Text = "Atk", FontSize = 10, VerticalAlignment = VerticalAlignment.Center });
-            corner.Children.Add(DSPRE.Avalonia.Controls.Icon.Image("down"));
+            corner.Children.Add(DSPRE.Avalonia.Controls.Icon.Image("arrowdown"));
             corner.Children.Add(new TextBlock { Text = "Def", FontSize = 10, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) });
-            corner.Children.Add(DSPRE.Avalonia.Controls.Icon.Image("right"));
+            corner.Children.Add(DSPRE.Avalonia.Controls.Icon.Image("arrowright"));
             Cells.Children.Add(corner);
             for (int t = 0; t < n; t++)
             {

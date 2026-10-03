@@ -20,7 +20,7 @@
         <TextBox PlaceholderText="Search by name or number, like building or map" x:Name="SearchBox"
                  Text="{Binding Search}" FontSize="13" Width="340">
           <TextBox.InnerRightContent>
-            <Button controls:Icon.Key="cross" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
+            <Button controls:Icon.Key="Cross" Click="ClearSearch_Click" Padding="8,2" Margin="0,0,2,0"
                     Background="Transparent" BorderThickness="0"
                     ToolTip.Tip="Empty the search box"
                     IsVisible="{Binding Search, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>

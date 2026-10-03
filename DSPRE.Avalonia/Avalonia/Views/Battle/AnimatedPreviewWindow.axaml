@@ -256,7 +256,7 @@
                                    TextTrimming="CharacterEllipsis"/>
                         <TextBox Grid.Column="1" Width="80" Text="{Binding Value}" IsVisible="{Binding IsVariable}"
                                  Margin="6,0,0,0"/>
-                        <Button Grid.Column="2" controls:Icon.Key="cross" Padding="6,0" Margin="6,0,0,0" FontSize="11"
+                        <Button Grid.Column="2" controls:Icon.Key="Cross" Padding="6,0" Margin="6,0,0,0" FontSize="11"
                                 Click="ForgetState_Click" ToolTip.Tip="Forget this, so a script asks again."/>
                       </Grid>
                     </DataTemplate>

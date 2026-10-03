@@ -244,6 +244,7 @@
         <MenuItem Header="Guided Tour" Click="GuidedTour_Click"
                   ToolTip.Tip="Replay the walkthrough of the main window and editor menus"/>
         <MenuItem Header="Settings…" Click="Settings_Click"/>
+        <MenuItem Header="About…" Click="About_Click"/>
       </MenuItem>
       </Menu>
     </DockPanel>

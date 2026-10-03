@@ -22,7 +22,7 @@
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Add entry" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAddEntry}"/>
-        <Button Content="Reset category" controls:Icon.Key="reset" Click="Reset_Click"/>
+        <Button Content="Reset category" controls:Icon.Key="resetIcon" Click="Reset_Click"/>
       </WrapPanel>
     </Border>
 

@@ -86,7 +86,7 @@
             <Button Content="Iso" Click="CamIso_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Isometric (3/4) camera" IsEnabled="{Binding !Flat2D}"/>
             <Button Content="Front" Click="CamFront_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Front camera" IsEnabled="{Binding !Flat2D}"/>
             <Button Content="Side" Click="CamSide_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Side camera" IsEnabled="{Binding !Flat2D}"/>
-            <Button controls:Icon.Key="reset" Click="CamReset_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Reset camera"/>
+            <Button controls:Icon.Key="resetIcon" Click="CamReset_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Reset camera"/>
           </StackPanel>
         </WrapPanel>
       </StackPanel>

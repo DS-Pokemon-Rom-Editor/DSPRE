@@ -218,9 +218,9 @@
 
                               <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" Margin="0,4,0,0"
                                           IsVisible="{Binding #RootWindow.DataContext.CanEditAnimJson}">
-                                <Button controls:Icon.Key="up" Click="MoveFrameUp_Click" Padding="8,2" ToolTip.Tip="Move earlier"/>
-                                <Button controls:Icon.Key="down" Click="MoveFrameDown_Click" Padding="8,2" ToolTip.Tip="Move later"/>
-                                <Button controls:Icon.Key="cross" Click="RemoveFrame_Click" Padding="8,2" ToolTip.Tip="Remove frame"/>
+                                <Button controls:Icon.Key="arrowup" Click="MoveFrameUp_Click" Padding="8,2" ToolTip.Tip="Move earlier"/>
+                                <Button controls:Icon.Key="arrowdown" Click="MoveFrameDown_Click" Padding="8,2" ToolTip.Tip="Move later"/>
+                                <Button controls:Icon.Key="Cross" Click="RemoveFrame_Click" Padding="8,2" ToolTip.Tip="Remove frame"/>
                               </StackPanel>
                             </StackPanel>
                           </Border>

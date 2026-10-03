@@ -1008,6 +1008,19 @@ namespace DSPRE.Avalonia.Views.Shell
         private void Settings_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenSettings();
 
+        private void About_Click(object sender, RoutedEventArgs e) => _ = DialogHelper.ShowInfo(
+            "DS Pokémon ROM Editor Reloaded by AdAstra, Mixone, Kuha, Yako & Kalaay\n"
+            + "Version " + AppInfo.GetDSPREVersion() + "\n\n"
+            + "Icons by SkidMarc25.\n\n"
+            + "Built on these tools: ds-rom by AetiasHax, rotom by Kalaay, chatot by Yako, apicula by scurest "
+            + "and BLZ by CUE. The Ekona and Images libraries are by Pleonex.\n\n"
+            + "Based on Nømura's DS Pokémon ROM Editor 1.0.4.\n"
+            + "Largely inspired by Markitus95's \"Spiky's DS Map Editor\" (SDSME), from which certain assets were also reused.\n"
+            + "Credits go to Markitus, Ark, Zark, Florian, and everyone else who deserves credit for SDSME.\n\n"
+            + "Special thanks to Trifindo, Mikelan98, JackHack96, Pleonex and BagBoy.\n"
+            + "Their help, research and expertise in many fields of NDS ROM Hacking made the development of this tool possible.",
+            "About");
+
         private void LinkHgEngine_Click(object sender, RoutedEventArgs e)
             => AvaloniaEditorLauncher.OpenHgEngineLink();
 

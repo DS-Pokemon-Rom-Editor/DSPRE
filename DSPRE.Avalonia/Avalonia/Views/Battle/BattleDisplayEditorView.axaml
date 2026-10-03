@@ -421,8 +421,8 @@
                             <Grid ColumnDefinitions="186,*,Auto,Auto,Auto" Margin="2" ColumnSpacing="4">
                               <ComboBox Grid.Column="0" ItemsSource="{Binding Ops}" SelectedItem="{Binding Op}" HorizontalAlignment="Stretch"/>
                               <TextBox Grid.Column="1" Text="{Binding ArgsText}" PlaceholderText="{Binding ArgHint}" FontFamily="Consolas,monospace"/>
-                              <Button Grid.Column="2" controls:Icon.Key="up" Click="ProgramCmdUp_Click" ToolTip.Tip="Move up"/>
-                              <Button Grid.Column="3" controls:Icon.Key="down" Click="ProgramCmdDown_Click" ToolTip.Tip="Move down"/>
+                              <Button Grid.Column="2" controls:Icon.Key="arrowup" Click="ProgramCmdUp_Click" ToolTip.Tip="Move up"/>
+                              <Button Grid.Column="3" controls:Icon.Key="arrowdown" Click="ProgramCmdDown_Click" ToolTip.Tip="Move down"/>
                               <Button Grid.Column="4" controls:Icon.Key="deleteIcon" Click="ProgramCmdRemove_Click" ToolTip.Tip="Remove"/>
                             </Grid>
                           </DataTemplate>

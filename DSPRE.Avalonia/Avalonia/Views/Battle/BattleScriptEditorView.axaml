@@ -26,7 +26,7 @@
       </StackPanel>
       <StackPanel x:Name="ScriptButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding IsAvailable}">
         <Button Content="Add command" controls:Icon.Key="addIcon" Click="AddCommand_Click"/>
-        <Button Content="Command guide" controls:Icon.Key="help" Click="CommandGuide_Click"/>
+        <Button Content="Command guide" controls:Icon.Key="questionMark" Click="CommandGuide_Click"/>
       </StackPanel>
     </WrapPanel>
   </Border>
@@ -129,8 +129,8 @@
                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Stretch">
                       <TextBlock Grid.Column="0" Text="{Binding Summary}" TextTrimming="CharacterEllipsis"
                                  FontFamily="Consolas,monospace" FontSize="12" VerticalAlignment="Center"/>
-                      <Button Grid.Column="1" controls:Icon.Key="up" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
-                      <Button Grid.Column="2" controls:Icon.Key="down" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
+                      <Button Grid.Column="1" controls:Icon.Key="arrowup" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
+                      <Button Grid.Column="2" controls:Icon.Key="arrowdown" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
                       <Button Grid.Column="3" controls:Icon.Key="deleteIcon" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="12"/>
                     </Grid>
                   </Expander.Header>

@@ -37,6 +37,7 @@ namespace DSPRE.Avalonia.Controls
         public static void SetAfter(ContentControl c, bool value) => c.SetValue(AfterProperty, value);
 
         private static readonly Dictionary<string, Bitmap> Cache = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, Bitmap> Resolved = new(StringComparer.OrdinalIgnoreCase);
 
         static Icon()
         {
@@ -54,6 +55,44 @@ namespace DSPRE.Avalonia.Controls
         public static Bitmap Get(string key)
         {
             if (string.IsNullOrEmpty(key)) return null;
+            if (Resolved.TryGetValue(key, out var cached)) return cached;
+            var bmp = Drawn(key) ?? ResourceImages.GetBitmap(key);
+            if (bmp == null) AppLogger.Warn($"No icon named '{key}'.");
+            Resolved[key] = bmp;
+            return bmp;
+        }
+
+        /// <summary>A 16px image of the icon, for places that build controls in code.</summary>
+        public static Image Image(string key)
+        {
+            var img = new Image { Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center };
+            img.Classes.Add("icon");
+            Show(img, key);
+            img.AttachedToVisualTree += (_, _) => Show(img, key);
+            return img;
+        }
+
+        /// <summary>Shows the icon 16 by 16: a drawn icon's 32px version on a 2x screen, where it fills the pixels one to
+        /// one; elsewhere the 16px drawing, which is sharper than a shrunk 32px one.</summary>
+        internal static void Show(Image img, string key)
+        {
+            Bitmap big = Big(key, img);
+            Bitmap bmp = big ?? Get(key);
+            img.Source = bmp;
+            // Drawn icons are pixel art at whole multiples; the shell's own icons come in other sizes and need smoothing.
+            bool pixelArt = big != null || bmp?.PixelSize.Width == 16;
+            RenderOptions.SetBitmapInterpolationMode(img, pixelArt ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality);
+        }
+
+        /// <summary>The icon to draw 16 by 16 in <paramref name="on"/>: its 32px version on a 2x screen, when it has one.</summary>
+        public static Bitmap Get(string key, Visual on) => Big(key, on) ?? Get(key);
+
+        private static Bitmap Big(string key, Visual on) =>
+            string.IsNullOrEmpty(key) || !(TopLevel.GetTopLevel(on)?.RenderScaling >= 2) ? null : Drawn(key + "x32");
+
+        // An icon from Assets/Icons only, without falling back to the shell's own.
+        private static Bitmap Drawn(string key)
+        {
             if (Cache.TryGetValue(key, out var cached)) return cached;
             Bitmap bmp = null;
             try
@@ -62,22 +101,8 @@ namespace DSPRE.Avalonia.Controls
                 if (AssetLoader.Exists(uri)) bmp = new Bitmap(AssetLoader.Open(uri));
             }
             catch (Exception ex) { AppLogger.Warn($"Icon '{key}' failed to load: {ex.Message}"); }
-            bmp ??= ResourceImages.GetBitmap(key);
-            if (bmp == null) AppLogger.Warn($"No icon named '{key}'.");
             Cache[key] = bmp;
             return bmp;
-        }
-
-        /// <summary>A 16px image of the icon, for places that build controls in code.</summary>
-        public static Image Image(string key)
-        {
-            var bmp = Get(key);
-            var img = new Image { Source = bmp, Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center };
-            img.Classes.Add("icon");
-            // The drawn icons are exact 16px pixel art; the shell's larger ones need smoothing to shrink.
-            RenderOptions.SetBitmapInterpolationMode(img,
-                bmp != null && bmp.PixelSize.Width == 16 ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality);
-            return img;
         }
 
         /// <summary>Icon followed by text, as button content built in code.</summary>
@@ -131,11 +156,13 @@ namespace DSPRE.Avalonia.Controls
         protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
         {
             base.OnPropertyChanged(change);
-            if (change.Property != KeyProperty) return;
-            var bmp = Icon.Get(Key);
-            Source = bmp;
-            RenderOptions.SetBitmapInterpolationMode(this,
-                bmp != null && bmp.PixelSize.Width == 16 ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality);
+            if (change.Property == KeyProperty) Icon.Show(this, Key);
+        }
+
+        protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+            Icon.Show(this, Key);
         }
     }
 }

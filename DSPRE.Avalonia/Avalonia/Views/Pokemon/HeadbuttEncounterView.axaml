@@ -25,7 +25,7 @@
         <TextBlock Text="View:" VerticalAlignment="Center"/>
         <Button Content="Top" Click="CamTop_Click" Padding="6,2" ToolTip.Tip="Top-down camera"/>
         <Button Content="Iso" Click="CamIso_Click" Padding="6,2" ToolTip.Tip="Isometric camera"/>
-        <Button controls:Icon.Key="reset" Click="CamReset_Click" Padding="6,2" ToolTip.Tip="Reset camera"/>
+        <Button controls:Icon.Key="resetIcon" Click="CamReset_Click" Padding="6,2" ToolTip.Tip="Reset camera"/>
       </WrapPanel>
     </Border>
 

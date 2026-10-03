@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.Controls
             // The link button sits just inside the right edge, left of a drop-down arrow, and only while hovered.
             var arrow = new Button
             {
-                Content = Icon.Image("link"), Padding = new Thickness(2, 0), MinWidth = 0, MinHeight = 0, Height = 20,
+                Content = Icon.Image("OpenLink"), Padding = new Thickness(2, 0), MinWidth = 0, MinHeight = 0, Height = 20,
                 HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, c is NumericUpDown ? 30 : 26, 0), IsVisible = false, Focusable = false,
                 Background = new SolidColorBrush(Color.FromArgb(0xC0, 0x30, 0x30, 0x30)),
