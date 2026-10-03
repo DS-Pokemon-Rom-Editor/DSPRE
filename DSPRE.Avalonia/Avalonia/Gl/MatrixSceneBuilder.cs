@@ -20,6 +20,16 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public static class MatrixSceneBuilder
     {
+        /// <summary>Unpacks every archive a matrix scene reads. A fresh extract has none of them unpacked.</summary>
+        public static void EnsureUnpacked()
+        {
+            var dirs = new List<DirNames> {
+                DirNames.matrices, DirNames.maps, DirNames.areaData, DirNames.mapTextures,
+                DirNames.exteriorBuildingModels, DirNames.buildingTextures, DirNames.dynamicHeaders };
+            if (RomInfo.gameFamily == GameFamilies.HGSS) dirs.Add(DirNames.interiorBuildingModels);
+            DSUtils.TryUnpackNarcs(dirs);
+        }
+
         /// <summary>
         /// Builds the stitched matrix scene. <paramref name="areaForMap"/> resolves a map index
         /// to its area-data id (used when the matrix has no per-cell header section); when it is

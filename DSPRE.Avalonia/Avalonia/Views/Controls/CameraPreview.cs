@@ -107,6 +107,7 @@ namespace DSPRE.Avalonia.Views.Controls
         private static (NsbmdRenderModel scene, string note) BuildScene(int headerId)
         {
             if (headerId < 0) return (null, null);
+            MatrixSceneBuilder.EnsureUnpacked();
             var header = MapHeader.GetMapHeader((ushort)headerId);
             if (header == null) return (null, "No preview for this header.");
             var matrix = new GameMatrix(header.matrixID);
