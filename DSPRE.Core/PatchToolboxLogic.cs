@@ -245,6 +245,36 @@ namespace DSPRE
 
         // ── Patch apply-methods ──────────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Recases each all-capitals word, leaving control codes in braces and words already in lower case
+        /// (the "a" and "an" before a name) as they are.
+        /// </summary>
+        internal static string SentenceCaseName(string text)
+        {
+            var textInfo = System.Globalization.CultureInfo.CurrentCulture.TextInfo;
+            var sb = new System.Text.StringBuilder(text.Length);
+            int i = 0;
+            while (i < text.Length)
+            {
+                if (text[i] == '{')
+                {
+                    int close = text.IndexOf('}', i);
+                    if (close < 0) close = text.Length - 1;
+                    sb.Append(text, i, close - i + 1);
+                    i = close + 1;
+                    continue;
+                }
+                int end = i;
+                while (end < text.Length && text[end] != '{' && text[end] != ' ') end++;
+                string word = text.Substring(i, end - i);
+                bool upper = word.Any(char.IsLetter) && !word.Any(char.IsLower);
+                sb.Append(upper ? textInfo.ToTitleCase(word.ToLower()) : word);
+                while (end < text.Length && text[end] == ' ') sb.Append(text[end++]);
+                i = end;
+            }
+            return sb.ToString();
+        }
+
         /// <summary>Convert every Pokémon name to Sentence Case, including names the user renamed themselves. Always supported.</summary>
         public static bool ApplySentenceCasePatch()
         {
@@ -270,17 +300,17 @@ namespace DSPRE
                         continue;
                     }
 
-                    string sentenceCased = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(current.ToLower());
+                    string sentenceCased = SentenceCaseName(current);
                     if (sentenceCased != current)
                     {
                         pokeName.messages[i] = sentenceCased;
-                        renamePairs.Add((current, sentenceCased, false));
+                        renamePairs.Add((current, sentenceCased, true));
                     }
                 }
                 pokeName.SaveToExpandedDir(ID, showSuccessMessage: false);
             }
 
-            int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs) : 0;
+            int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs, wholeWord: true) : 0;
             ShowInfo($"Pokémon names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Operation successful");
             return true;
         }
@@ -308,16 +338,16 @@ namespace DSPRE
                     continue;
                 }
 
-                string sentenceCased = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(current.ToLower());
+                string sentenceCased = SentenceCaseName(current);
                 if (sentenceCased != current)
                 {
                     itemNames.messages[i] = sentenceCased;
-                    renamePairs.Add((current, sentenceCased, false));
+                    renamePairs.Add((current, sentenceCased, true));
                 }
             }
             itemNames.SaveToExpandedDir(RomInfo.itemNamesTextNumber, showSuccessMessage: false);
 
-            int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs) : 0;
+            int archivesUpdated = renamePairs.Count > 0 ? DSUtils.ReplaceTextEverywhere(renamePairs, wholeWord: true) : 0;
             ShowInfo($"Item names have been converted to Sentence Case.\nOther text banks updated: {archivesUpdated}", "Operation successful");
             return true;
         }

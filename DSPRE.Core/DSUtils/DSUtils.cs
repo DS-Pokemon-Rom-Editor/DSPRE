@@ -27,8 +27,9 @@ namespace DSPRE {
 
         // Advancing past each replacement instead of rescanning from 0 avoids looping forever when a
         // replacement text itself matches its own search text, e.g. renaming "PIKABLU" to "Pikablu".
-        public static int ReplaceTextEverywhere(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements) {
-            return ReplaceTextInArchives(replacements, 0, Filesystem.GetTextArchivesCount()).Count;
+        public static int ReplaceTextEverywhere(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements,
+            bool wholeWord = false) {
+            return ReplaceTextInArchives(replacements, 0, Filesystem.GetTextArchivesCount(), wholeWord: wholeWord).Count;
         }
 
         /// <summary>
@@ -36,7 +37,7 @@ namespace DSPRE {
         /// returns the ids it saved. <paramref name="skip"/> leaves an archive untouched.
         /// </summary>
         public static List<int> ReplaceTextInArchives(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements,
-            int first, int last, Func<int, bool> skip = null, object sender = null) {
+            int first, int last, Func<int, bool> skip = null, object sender = null, bool wholeWord = false) {
             var edited = new List<int>();
             var pairs = replacements.Where(r => !string.IsNullOrEmpty(r.searchString) && r.searchString != r.replaceString).ToList();
             if (pairs.Count == 0) {
@@ -55,7 +56,7 @@ namespace DSPRE {
                 for (int j = 0; j < archive.messages.Count; j++) {
                     string text = archive.messages[j];
                     foreach (var pair in pairs) {
-                        text = ReplaceInText(text, pair.searchString, pair.replaceString, pair.caseSensitive, ref changed);
+                        text = ReplaceInText(text, pair.searchString, pair.replaceString, pair.caseSensitive, ref changed, wholeWord);
                     }
                     archive.messages[j] = text;
                 }
@@ -69,7 +70,8 @@ namespace DSPRE {
             return edited;
         }
 
-        public static string ReplaceInText(string text, string searchString, string replaceString, bool caseSensitive, ref bool changed) {
+        public static string ReplaceInText(string text, string searchString, string replaceString, bool caseSensitive, ref bool changed,
+            bool wholeWord = false) {
             if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(searchString)) {
                 return text;
             }
@@ -77,11 +79,24 @@ namespace DSPRE {
             int searchFrom = 0;
             int posFound;
             while ((posFound = text.IndexOf(searchString, searchFrom, comparison)) >= 0) {
+                if (wholeWord && !IsWordAt(text, posFound, searchString.Length)) {
+                    searchFrom = posFound + 1;
+                    continue;
+                }
                 text = text.Substring(0, posFound) + replaceString + text.Substring(posFound + searchString.Length);
                 searchFrom = posFound + (replaceString ?? "").Length;
                 changed = true;
             }
             return text;
+        }
+
+        // A letter right after a backslash is an escape such as \n, so a name may start straight after it.
+        private static bool IsWordAt(string text, int start, int length) {
+            int end = start + length;
+            bool before = start == 0 || !char.IsLetterOrDigit(text[start - 1])
+                || (start >= 2 && text[start - 2] == '\\');
+            bool after = end >= text.Length || !char.IsLetterOrDigit(text[end]);
+            return before && after;
         }
 
         // Anything longer than the 3-command "give item" template is the shared execution routine, not a pickable entry.

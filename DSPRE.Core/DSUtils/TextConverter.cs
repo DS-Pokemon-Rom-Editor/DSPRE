@@ -135,6 +135,8 @@ namespace DSPRE
         private static List<(string path, int line)> FindToken(List<string> jsonFiles, string token)
         {
             var hits = new List<(string, int)>();
+            // The code sits in braces, so a word that happens to share its name in plain text is not it.
+            string code = "{" + token;
             string lang = langCodes.TryGetValue(RomInfo.gameLanguage, out string l) ? l : "en_US";
             foreach (string path in jsonFiles)
             {
@@ -150,7 +152,7 @@ namespace DSPRE
                             string value = text.ValueKind == System.Text.Json.JsonValueKind.Array
                                 ? string.Concat(text.EnumerateArray().Select(e => e.GetString()))
                                 : text.GetString();
-                            if (value != null && value.Contains(token)) hits.Add((path, index));
+                            if (value != null && value.Contains(code)) hits.Add((path, index));
                         }
                         index++;
                     }
