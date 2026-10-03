@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia
                 S("tab:Fanfares", "Fanfares", "The short jingles for things like healing or getting an item."),
                 S("tab:Sound effects", "Sound effects", "Every sound effect the game plays."),
                 S("tab:Sounds", "Sounds", "The sounds the music and effects are made of. Each can be heard, saved and replaced."),
-                S("name:PlayBar", "Playing", "Play, Stop and Loop. Click the notes or the wave above to play from that point."),
+                S("name:PlayBar", "Playing", "Play, Stop and Loop. Click the notes or the wave above to play from that point. Space plays or stops, Enter plays from the start, and Up and Down pick the next row."),
                 S("name:AudioActions", "Export and import", "Export saves the selection as a sound file, a song or its instruments. Import puts your own sound in for a cry or a sound."),
                 S("name:SaveButtons", "Saving", "Imports stay here until you Save (Ctrl+S). Discard forgets them."));
 

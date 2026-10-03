@@ -63,7 +63,8 @@
         </Border>
 
         <Grid x:Name="PlayBar" ColumnDefinitions="Auto,6,Auto,10,Auto,12,Auto,*">
-          <Button Grid.Column="0" Content="Play" controls:Icon.Key="play" Click="Play_Click" Width="86" IsEnabled="{Binding CanPlay}"/>
+          <Button Grid.Column="0" Content="Play" controls:Icon.Key="play" Click="Play_Click" Width="86" IsEnabled="{Binding CanPlay}"
+                  ToolTip.Tip="Space plays or stops, Enter plays from the start"/>
           <Button Grid.Column="2" x:Name="StopButton" Content="Stop" controls:Icon.Key="stop" Click="Stop_Click" Width="86" IsEnabled="False"/>
           <CheckBox Grid.Column="4" x:Name="LoopBox" Content="Loop"
                     ToolTip.Tip="Keep playing it round until you press Stop."/>
@@ -83,7 +84,7 @@
       </StackPanel>
     </Border>
 
-    <TabControl Margin="6" SelectedIndex="{Binding SelectedTab}">
+    <TabControl x:Name="Tabs" Margin="6" SelectedIndex="{Binding SelectedTab}">
       <TabItem Header="Cries">
         <ListBox ItemsSource="{Binding Cries}" SelectedItem="{Binding SelectedCry}"
                  DoubleTapped="List_DoubleTapped">

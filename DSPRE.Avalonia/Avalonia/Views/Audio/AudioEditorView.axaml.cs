@@ -28,6 +28,9 @@ namespace DSPRE.Avalonia.Views.Audio
         private DateTime _startedAt;
         private double _startedFrom;
 
+        // A key pressed while the new row is still rendering plays it once the render lands.
+        private bool _drawing, _playWhenDrawn;
+
         public AudioEditorView() : this(new AudioEditorViewModel()) { }
 
         public AudioEditorView(AudioEditorViewModel vm)
@@ -37,6 +40,7 @@ namespace DSPRE.Avalonia.Views.Audio
             EditorWindowChrome.Attach(this, vm);
             vm.PropertyChanged += OnViewModelChanged;
             _playhead.Tick += MovePlayhead;
+            AddHandler(KeyDownEvent, OnPlayKeys, RoutingStrategies.Tunnel);
             // Arriving from the Pokemon editor, the cry is already picked before this window exists, so
             // nothing has told it to draw yet.
             Opened += (_, _) => { if (vm.Selected != null) _ = DrawSelected(); };
@@ -59,8 +63,10 @@ namespace DSPRE.Avalonia.Views.Audio
             var token = mine.Token;
 
             var vm = ViewModel;
+            _drawing = vm?.Selected != null;
             if (vm?.Selected == null)
             {
+                _playWhenDrawn = false;
                 _pcm = null; Wave.Show(null, Rate);
                 Notes.SayWhyEmpty(null); Notes.SetNotes(null, 0); ShowTime(0);
                 return;
@@ -79,6 +85,8 @@ namespace DSPRE.Avalonia.Views.Audio
 
             _pcm = pcm;
             Wave.Show(pcm, Rate);
+            _drawing = false;
+            if (_playWhenDrawn) { _playWhenDrawn = false; PlayFromStart(); }
 
             // The notes come from the sequence itself rather than from the sound, so a cry has none.
             var notes = await Task.Run(() => { try { return vm.ReadSelectedNotes(); } catch { return null; } }, token);
@@ -145,6 +153,41 @@ namespace DSPRE.Avalonia.Views.Audio
             _startedFrom = Wave.MarkSeconds;
             _startedAt = DateTime.UtcNow;
             _playhead.Start();
+        }
+
+        // Space plays or stops, Enter plays from the start and Up/Down move through the open list, anywhere
+        // but a text box or dropdown. A focused list moves itself.
+        private void OnPlayKeys(object sender, KeyEventArgs e)
+        {
+            if (e.KeyModifiers != KeyModifiers.None) return;
+            var focused = FocusManager?.GetFocusedElement();
+            if (focused is TextBox or ComboBox) return;
+            if (e.Key is Key.Up or Key.Down)
+            {
+                if (focused is ListBoxItem or ListBox) return;
+                if (OpenList() is ListBox list && list.ItemCount > 0)
+                {
+                    list.SelectedIndex = Math.Clamp(list.SelectedIndex + (e.Key == Key.Down ? 1 : -1), 0, list.ItemCount - 1);
+                    list.ScrollIntoView(list.SelectedIndex);
+                    e.Handled = true;
+                }
+                return;
+            }
+            if (e.Key != Key.Space && e.Key != Key.Enter) return;
+            e.Handled = true;
+            if (e.Key == Key.Space && StopButton.IsEnabled) { Stop_Click(null, null); return; }
+            if (_drawing) { _playWhenDrawn = true; return; }
+            if (e.Key == Key.Enter) PlayFromStart();
+            else Play_Click(null, null);
+        }
+
+        private ListBox OpenList() => Tabs.SelectedContent as ListBox;
+
+        private void PlayFromStart()
+        {
+            Wave.MarkAt(0);
+            Notes.Playhead = 0;
+            Play_Click(null, null);
         }
 
         private void Stop_Click(object sender, RoutedEventArgs e)
