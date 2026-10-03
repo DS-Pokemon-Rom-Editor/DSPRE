@@ -261,6 +261,18 @@ namespace DSPRE.Avalonia.ViewModels.Text
             set => Set(ref _statusText, value);
         }
 
+        // Things worth knowing that need no answer, kept beside the status line instead of a dialog.
+        private string _noteText = "", _noteDetail = "";
+        public string NoteText { get => _noteText; private set { if (Set(ref _noteText, value)) OnPropertyChanged(nameof(HasNote)); } }
+        public string NoteDetail { get => _noteDetail; private set => Set(ref _noteDetail, value); }
+        public bool HasNote => NoteText.Length > 0;
+
+        private void AddNote(string shortText, string detail)
+        {
+            NoteText = NoteText.Length == 0 ? shortText : NoteText + "  ·  " + shortText;
+            NoteDetail = NoteDetail.Length == 0 ? detail : NoteDetail + "\n\n" + detail;
+        }
+
         public string SearchText
         {
             get => _searchText;
@@ -391,7 +403,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
             StatusText = DisplayPath(_currentPath) + " was saved elsewhere and reloaded.";
         }
 
-        private static bool _warnedAboutDPRotomSupport;
 
         public async Task SetupAsync(Window owner)
         {
@@ -400,14 +411,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
             IsReadOnly = true;
             StatusText = "Preparing Rotom project...";
 
-            if (gameFamily == GameFamilies.DP && !_warnedAboutDPRotomSupport)
+            if (gameFamily == GameFamilies.DP && !HasNote)
             {
-                _warnedAboutDPRotomSupport = true;
-                await DialogHelper.ShowInfo(
-                    "Rotom's Diamond/Pearl script support is still a work in progress and can behave " +
-                    "less reliably than Platinum/HGSS. If script conversion or decompiling fails or " +
-                    "produces something wrong, that's a known rough edge, not necessarily something you did.",
-                    "Diamond/Pearl script support");
+                AddNote("Diamond/Pearl scripts are a work in progress",
+                    "Rotom handles Diamond and Pearl scripts less reliably than Platinum and HGSS, so a failed " +
+                    "or wrong conversion may not be your mistake.");
             }
 
             try
@@ -1022,7 +1030,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             StatusText = "Updating the Rotom project...";
             var (problem, kept) = await DSPRE.ROMFiles.RotomProjectUpgrade.ApplyAsync(assessment, keepBinaries, regenerateAll);
             if (problem != null) await DialogHelper.ShowError(problem, "Update Rotom project");
-            else if (kept.Count > 0) await DialogHelper.ShowInfo(KeptBinariesMessage(kept), "Update Rotom project");
+            else if (kept.Count > 0) AddNote(KeptBinariesNote(kept), KeptBinariesMessage(kept));
             RefreshScriptList();
         }
 
@@ -1050,9 +1058,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
             StatusText = "Updating the script command database...";
             var (problem, kept) = await DSPRE.ROMFiles.RotomDatabaseUpdate.ApplyAsync(offer);
             if (problem != null) await DialogHelper.ShowError(problem, "Script command database");
-            else if (kept.Count > 0) await DialogHelper.ShowInfo(KeptBinariesMessage(kept), "Script command database");
+            else if (kept.Count > 0) AddNote(KeptBinariesNote(kept), KeptBinariesMessage(kept));
             RefreshScriptList();
         }
+
+        private static string KeptBinariesNote(List<int> kept)
+            => (kept.Count == 1 ? "Script " : "Scripts ") + string.Join(", ", kept.Select(i => i.ToString("D4"))) + " keep the game's bytes";
 
         private static string KeptBinariesMessage(List<int> kept)
         {

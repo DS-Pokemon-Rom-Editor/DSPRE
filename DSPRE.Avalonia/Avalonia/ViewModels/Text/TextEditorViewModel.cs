@@ -561,7 +561,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             int newId = ArchiveNames.Count;
             var archive = new TextArchive(newId, new List<string> { "Your text here." });
-            archive.SaveToExpandedDir(newId, sender: this);
+            archive.SaveToExpandedDir(newId, showSuccessMessage: false, sender: this);
 
             (string binPath, string jsonPath) = TextArchive.GetFilePaths(newId);
             TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
@@ -606,7 +606,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_managedSource != null) { _ = SaveToHgEngineSourceAsync(); return; }
             if (_generatedSource != null) { _ = RefusedForManagedArchive("Saving"); return; }
 
-            _current.SaveToExpandedDir(_current.ID, sender: this);
+            _current.SaveToExpandedDir(_current.ID, showSuccessMessage: false, sender: this);
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved Text Archive {_current.ID}.";

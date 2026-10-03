@@ -36,7 +36,11 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
-      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding NoteText}" IsVisible="{Binding HasNote}" ToolTip.Tip="{Binding NoteDetail}"
+                   FontSize="12" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+      </StackPanel>
     </Border>
 
     <Border DockPanel.Dock="Right" Width="320" Background="{DynamicResource Editor.PanelBg}"
