@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
         xmlns:models="clr-namespace:DSPRE.Avalonia.Models"
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerFlagBulkEditorView"
@@ -20,6 +21,7 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button x:Name="SaveButton" Content="Save" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
 
         <ToggleButton Content="By Trainer" Margin="12,0,0,0" IsChecked="{Binding IsByTrainerMode, Mode=OneWay}" Click="ByTrainerMode_Click"/>
         <ToggleButton Content="By Flag" IsChecked="{Binding IsByFlagMode, Mode=OneWay}" Click="ByFlagMode_Click"/>

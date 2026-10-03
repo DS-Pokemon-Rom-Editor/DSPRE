@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     /// a plain multi-line TextBox. Save rewrites the whole table + offset file +
     /// message archive (a global operation, exactly like the original).
     /// </summary>
-    public class BattleMessageEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BattleMessageEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -169,12 +169,58 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
         public void DiscardChanges()
         {
+            bool was = _dirty;
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            // Edits live only in memory until saved, so discarding reloads the trainer from source.
-            if (IsHgeActive && _selectedTrainerIndex >= 0) LoadTrainer(_currentTrainerId);
+            // Edits live only in memory until saved, so discarding reads the messages again.
+            if (!was || _selectedTrainerIndex < 0) return;
+            if (!IsHgeActive)
+            {
+                _archive = new TextArchive(trainerMessageTextNumber);
+                ReadTable();
+                _current = null;
+            }
+            LoadTrainer(_currentTrainerId);
         }
-        private void SetDirty() { if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty()
+        {
+            _undo?.Record();
+            bool dirty = _undo?.IsDirty ?? true;
+            if (_dirty == dirty) return;
+            _dirty = dirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        // ── Undo / redo: the shown trainer's messages ──────────────────────────────
+        private sealed record MessagesState(List<string> Archive, int[][] Entries, string[][] Hge);
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(IsHgeActive
+            ? new MessagesState(null, null, _hgeCurrent.Select(m => new[] { m.Token, m.Value.ToString(), m.Text }).ToArray())
+            : new MessagesState(_archive?.messages.ToList(), _current?.Select(en => new[] { en.messageID, (int)en.trainerId, en.triggerId }).ToArray(), null));
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<MessagesState>(state);
+            if (IsHgeActive)
+                _hgeCurrent = s.Hge.Select(m => new HgeMessage { Token = m[0], Value = int.Parse(m[1]), Text = m[2] }).ToList();
+            else
+            {
+                if (_archive != null && s.Archive != null) { _archive.messages.Clear(); _archive.messages.AddRange(s.Archive); }
+                _current = s.Entries?.Select(v => new Entry { messageID = v[0], trainerId = (uint)v[1], triggerId = (ushort)v[2] }).ToList() ?? new List<Entry>();
+            }
+            RefreshEntries();
+            if (_selectedEntryIndex >= 0) LoadEntry(_selectedEntryIndex);
+            bool dirty = _undo.IsDirty;
+            if (_dirty != dirty) { _dirty = dirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        }
+
+        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Constructors ────────────────────────────────────────────────────────────
@@ -287,7 +333,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 catch (Exception ex) { AppLogger.Error("LoadTrainer: " + ex.Message); }
                 _current = _byTrainer.TryGetValue((uint)trainerId, out var list) ? list : new List<Entry>();
             }
-            RefreshEntries();
+            RefreshEntries(keepSelection: false);
+            ResetUndo();
         }
 
         private void ShowSprite(int trainerClass)
@@ -325,8 +372,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
         }
 
-        private void RefreshEntries()
+        private void RefreshEntries(bool keepSelection = true)
         {
+            int keep = keepSelection ? _selectedEntryIndex : -1;
             _suppress = true;
             Entries.Clear();
             if (IsHgeActive)
@@ -343,6 +391,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 }
             }
             _suppress = false;
+            // Rebuilding the list clears its selection; keep the row being edited (the last one after a removal).
+            keep = Math.Min(keep, Entries.Count - 1);
+            if (keep >= 0) { _selectedEntryIndex = keep; OnPropertyChanged(nameof(SelectedEntryIndex)); }
             CheckForMistakes();
         }
 
@@ -537,6 +588,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
 
             ReadHgeTextOrder();
+            _undo?.MarkSaved();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Trainer {trainerId} messages saved to hg-engine source.";

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// spots the player), a small ARM9-backed table, separate from any single trainer's own data, so it
     /// gets its own tab rather than crowding the main Trainer Editor window.
     /// </summary>
-    public class TrainerClassesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TrainerClassesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -161,10 +162,44 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void MarkDirty()
         {
-            if (_suppress || _dirty) return;
-            _dirty = true;
+            if (_suppress) return;
+            _undo?.Record();
+            // An added music row stays unsaved whatever the fields are undone to.
+            bool dirty = (_undo?.IsDirty ?? true) || _musicAdded;
+            if (_dirty == dirty) return;
+            _dirty = dirty;
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
+
+        // ── Undo / redo: the loaded class's fields ──────────────────────────
+        private sealed record ClassState(string Name, decimal MusicMain, decimal MusicAlt, int Gender, int Prize,
+            int BattleMusic, int VsStyle, bool SavedRivalName, int TrainerNameId, decimal Style1Motion, decimal Style2Timing, int[] Assets);
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(new ClassState(_className, _musicMain, _musicAlt, _genderIndex, _prizeMultiplier,
+            _battleMusic, _vsStyle, _savedRivalName, _trainerNameId, _style1Motion, _style2Timing, MetadataAssets.Select(a => a.Value).ToArray()));
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<ClassState>(state);
+            _suppress = true;
+            ClassName = s.Name; MusicMain = s.MusicMain; MusicAlt = s.MusicAlt;
+            GenderIndex = s.Gender; PrizeMultiplier = s.Prize; BattleMusic = s.BattleMusic;
+            VsStyle = s.VsStyle; SavedRivalName = s.SavedRivalName; TrainerNameId = s.TrainerNameId;
+            Style1Motion = s.Style1Motion; Style2Timing = s.Style2Timing;
+            for (int i = 0; i < s.Assets.Length && i < MetadataAssets.Count; i++) MetadataAssets[i].Value = s.Assets[i];
+            RefreshStyleFields();
+            _suppress = false;
+            bool dirty = _undo.IsDirty || _musicAdded;
+            if (_dirty != dirty) { _dirty = dirty; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        }
+
+        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
 
         private void SetClean()
         {
@@ -461,6 +496,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(CanEnableMusic));
             OnPropertyChanged(nameof(CanPlayAnimation));
             _suppress = false;
+            ResetUndo();
         }
 
         /// <summary>Re-renders the (bigger) class-sprite preview shown at the top of this tab. Call
@@ -494,6 +530,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(CanEnableMusic));
             OnPropertyChanged(nameof(CanPlayAnimation));
             _suppress = false;
+            ResetUndo();
         }
 
         /// <summary>Writes the loaded class, then adds the new class if one is waiting. False when any part
@@ -639,6 +676,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _ = DialogHelper.ShowError(string.Join("\n", failures), "Trainer Classes");
                 return false;
             }
+            _undo?.MarkSaved();
             SetClean();
             StatusText = $"Trainer class {savedIndex} saved.";
             return true;

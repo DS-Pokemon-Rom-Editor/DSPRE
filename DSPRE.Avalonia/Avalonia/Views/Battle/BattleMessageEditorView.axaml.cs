@@ -32,6 +32,7 @@ namespace DSPRE.Avalonia.Views.Battle
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e) => await Safe(VM?.SaveAsync());
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddEntry();
         private void Delete_Click(object sender, RoutedEventArgs e) => VM?.DeleteEntry();
         private void EditTrigger_Click(object sender, RoutedEventArgs e) => VM?.EditTrigger();

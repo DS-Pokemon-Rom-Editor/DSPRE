@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// Choose Items/Choose Moves aren't included: they control the trainerParty file's binary layout,
     /// not just a flag, so editing them here without touching that file corrupts the party data.
     /// </summary>
-    public class TrainerFlagBulkEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TrainerFlagBulkEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -105,8 +105,58 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 RefreshFlagChecklistFromSelection();
             }
             _isDirty = false;
+            ResetUndo();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus();
+        }
+
+        // ── Undo / redo: every trainer's flags, one bit each ──
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState()
+        {
+            var state = new byte[_trainerCount * 2];
+            for (int i = 0; i < _trainerCount; i++)
+            {
+                int bits = 0;
+                for (int f = 0; f < FlagNames.Length; f++) if (GetFlag(_trainerData[i], f)) bits |= 1 << f;
+                state[i * 2] = (byte)bits;
+                state[i * 2 + 1] = (byte)(bits >> 8);
+            }
+            return state;
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            for (int i = 0; i < _trainerCount; i++)
+            {
+                int bits = state[i * 2] | state[i * 2 + 1] << 8;
+                for (int f = 0; f < FlagNames.Length; f++) SetFlag(_trainerData[i], f, (bits & (1 << f)) != 0);
+            }
+            RebuildTree();
+            RefreshFlagChecklistFromSelection();
+            RecountDirty();
+        }
+
+        private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+
+        // Unsaved while any trainer's flags differ from what was last read or saved.
+        private void RecountDirty()
+        {
+            _isDirty = _trainerData.Any(kv => !SnapshotFlags(kv.Value).SequenceEqual(_loadedFlags[kv.Key]));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            RecountDirty();
         }
 
         public TrainerFlagBulkEditorViewModel()
@@ -124,6 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             RebuildTree();
             RefreshFlagChecklistFromSelection();
+            ResetUndo();
             UpdateStatus();
         }
 
@@ -224,7 +275,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (group != null) UpdateGroupDisplay(group);
 
             if (IsByTrainerMode) RefreshFlagChecklistFromSelection();
-            UpdateStatus();
+            if (IsByFlagMode) Edited(); else UpdateStatus();
         }
 
         private void OnGroupChecked(TrainerFlagGroupNode group)
@@ -241,7 +292,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             UpdateGroupDisplay(group);
 
             if (IsByTrainerMode) RefreshFlagChecklistFromSelection();
-            UpdateStatus();
+            if (IsByFlagMode) Edited(); else UpdateStatus();
         }
 
         private void ApplyLeafCheckSideEffect(int trainerId, bool isChecked)
@@ -281,7 +332,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _suppressTreeEvents = false;
 
             if (IsByTrainerMode) RefreshFlagChecklistFromSelection();
-            UpdateStatus();
+            if (IsByFlagMode) Edited(); else UpdateStatus();
         }
 
         // ── Right-hand flag checklist (By Trainer mode) ────────────────────
@@ -316,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 SetFlagForTrainer(id, flagIndex, enable);
 
             RefreshFlagChecklistFromSelection();
-            UpdateStatus();
+            Edited();
         }
 
         // ── Save ─────────────────────────────────────────────────────────
@@ -343,6 +394,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
 
             _isDirty = false;
+            _undo?.MarkSaved();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus("All trainer flag changes have been saved.");

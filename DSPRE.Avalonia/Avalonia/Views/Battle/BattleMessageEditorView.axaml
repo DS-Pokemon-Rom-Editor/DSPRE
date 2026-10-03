@@ -19,6 +19,8 @@
         <controls:FusionAutoCompleteBox Width="320" ItemsSource="{Binding Trainers}" SelectedIndex="{Binding SelectedTrainerIndex}"/>
         <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save all…" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
       </StackPanel>
     </Border>
 

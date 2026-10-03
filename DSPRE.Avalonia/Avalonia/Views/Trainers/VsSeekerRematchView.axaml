@@ -20,6 +20,7 @@
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button x:Name="SaveButton" Content="Save" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="trainer name…"/>
       </StackPanel>

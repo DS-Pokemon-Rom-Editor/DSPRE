@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// Master-detail view over <see cref="PokegearRematchTable"/>. The phone book is shown alongside
     /// because a row whose base trainer nobody can phone is never reached.
     /// </summary>
-    public class PokegearRematchViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class PokegearRematchViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -158,8 +158,60 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 RowChanged();
             }
             _dirtyRows.Clear();
+            ResetUndo();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus();
+        }
+
+        // ── Undo / redo: every row's trainer ids ──
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        private List<ushort[]> _savedIds = new();
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private void ResetUndo()
+        {
+            _savedIds = _rows.Select(r => (ushort[])r.Ids.Clone()).ToList();
+            _undo = new DSPRE.Avalonia.ByteStateUndo(() => DSPRE.Avalonia.UndoJson.Take(_rows.Select(r => r.Ids)), ApplyState, RaiseUndo);
+            RaiseUndo();
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            var ids = DSPRE.Avalonia.UndoJson.Read<List<ushort[]>>(state);
+            for (int r = 0; r < ids.Count && r < _rows.Count; r++) _rows[r].Ids = ids[r];
+            RecountDirtyRows();
+            RefreshRowLabels();
+            if (_currentRowIndex >= 0) LoadRowIntoDetail(_currentRowIndex);
+            RowChanged();
+            UpdateReachability();
+            UpdateStatus();
+        }
+
+        // A row is unsaved while it differs from what was last read or saved, so undoing back clears it.
+        private void RecountDirtyRows()
+        {
+            _dirtyRows.Clear();
+            for (int r = 0; r < _rows.Count && r < _savedIds.Count; r++)
+                if (!_rows[r].Ids.SequenceEqual(_savedIds[r])) _dirtyRows.Add(r);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void RefreshRowLabels()
+        {
+            int listPos = _selectedRowListIndex;
+            _suppress = true;
+            for (int i = 0; i < _filteredIndices.Count && i < RowLabels.Count; i++)
+            {
+                string label = RowLabel(_filteredIndices[i]);
+                if (RowLabels[i] != label) RowLabels[i] = label;
+            }
+            _suppress = false;
+            // Replacing the selected row clears the list's selection; keep the row being edited selected.
+            if (listPos >= 0) { _selectedRowListIndex = listPos; OnPropertyChanged(nameof(SelectedRowListIndex)); }
         }
 
         public PokegearRematchViewModel(int initialRowIndex = -1)
@@ -184,6 +236,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             LoadPhoneBook();
 
             RebuildRowList();
+            ResetUndo();
 
             int listPosition = initialRowIndex >= 0 ? _filteredIndices.IndexOf(initialRowIndex) : -1;
             if (listPosition < 0 && _filteredIndices.Count > 0) listPosition = 0;
@@ -316,34 +369,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 else if (idx >= ChoiceFirstTrainer) row.SetRematch(i, (ushort)(idx - ChoiceFirstTrainer));
             }
 
-            _dirtyRows.Add(_currentRowIndex);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            _undo?.Record();
+            RecountDirtyRows();
             RowChanged();
             UpdateReachability();
             UpdateStatus();
-
-            int listPos = _selectedRowListIndex;
-            if (listPos >= 0 && listPos < RowLabels.Count)
-            {
-                _suppress = true;
-                RowLabels[listPos] = RowLabel(_currentRowIndex);
-                _suppress = false;
-            }
-        }
-
-        public void SaveCurrentRow()
-        {
-            if (_currentRowIndex < 0) return;
-
-            if (!PokegearRematchTable.WriteRow(_location, _currentRowIndex, _rows[_currentRowIndex],
-                out string error))
-            {
-                AppMessages.Error("Save failed: " + error, "Error");
-                return;
-            }
-            _dirtyRows.Remove(_currentRowIndex);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            UpdateStatus($"Row {_currentRowIndex} saved.");
+            RefreshRowLabels();
         }
 
         public void SaveAll()
@@ -365,6 +396,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             int count = _dirtyRows.Count;
             _dirtyRows.Clear();
+            _savedIds = _rows.Select(r => (ushort[])r.Ids.Clone()).ToList();
+            _undo?.MarkSaved();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus($"Saved {count} row(s).");

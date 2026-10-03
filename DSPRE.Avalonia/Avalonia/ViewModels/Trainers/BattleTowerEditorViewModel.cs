@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using global::Avalonia.Media;
@@ -15,7 +16,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// (class + rematch messages + which Pokémon sets they can draw from) and the shared pool of
     /// Pokémon sets those trainers reference by index.
     /// </summary>
-    public class BattleTowerEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BattleTowerEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -60,6 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 return;
             }
             _isDirty = false;
+            _undo?.MarkSaved();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus();
@@ -80,8 +82,46 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 OnPropertyChanged(nameof(AddSetPreviewLabel));
             }
             _isDirty = false;
+            ResetUndo();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus();
+        }
+
+        // ── Undo / redo: both files, trainers and sets ──
+        private sealed record TowerState(List<BattleTowerTrainer> Trainers, List<BattleTowerPokemonSet> Sets);
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(new TowerState(_trainerFile.Trainers.ToList(), _setFile.Sets.ToList()));
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<TowerState>(state);
+            int trainer = Math.Max(0, _selectedTrainerIndex), set = Math.Max(0, _selectedSetIndex);
+            _trainerFile.Trainers.Clear();
+            foreach (var t in s.Trainers) _trainerFile.Trainers.Add(t);
+            _setFile.Sets.Clear();
+            foreach (var p in s.Sets) _setFile.Sets.Add(p);
+            RefreshTrainerList(trainer);
+            RefreshSetList(set);
+            // The list may keep the same index, which skips the setter's reload.
+            LoadTrainer(_selectedTrainerIndex);
+            LoadSet(_selectedSetIndex);
+            OnPropertyChanged(nameof(AddSetPreviewLabel));
+            _isDirty = _undo.IsDirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
+
+        private void ResetUndo()
+        {
+            if (_trainerFile == null || _setFile == null) return;
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
         }
 
         public void LocateActive() { if (ActiveTabIndex == 1) LocateSets(); else LocateTrainers(); }
@@ -211,10 +251,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             RefreshTrainerList();
             RefreshSetList();
             OnPropertyChanged(nameof(AddSetPreviewLabel));
+            ResetUndo();
             UpdateStatus();
         }
 
-        private void MarkDirty() { _isDirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); UpdateStatus(); }
+        private void MarkDirty()
+        {
+            _undo?.Record();
+            _isDirty = _undo?.IsDirty ?? true;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
 
         // ── Trainers tab logic ───────────────────────────────────────────
         private void RefreshTrainerList(int selectIndex = 0)
