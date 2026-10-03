@@ -98,9 +98,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<string> RangeItems   { get; } = new();
         public ObservableCollection<string> BattleSeqItems { get; } = new();
         public ObservableCollection<string> ContestNames { get; } = new();
+        public ObservableCollection<string> ContestEffectNames { get; } = new();
         public ObservableCollection<FlagEntry> Flags     { get; } = new();
 
         // ── Current move selection ─────────────────────────────────────────────
+        public int MaxMoveIndex => Math.Max(0, MoveNames.Count - 1);
         private int _selectedMoveIndex;
         public int SelectedMoveIndex
         {
@@ -145,13 +147,182 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int Priority { get => _priority; set { if (Set(ref _priority, value) && _currentFile != null) { _currentFile.priority = (sbyte)value; SetDirty(); } } }
 
         private int _sideEffectPct;
+        // Vanilla ranges, widened for a move that already holds a value outside them so loading never changes it.
+        public int AccuracyMax { get; private set; } = 100;
+        public int SideEffectMax { get; private set; } = 100;
+        public int PriorityMin { get; private set; } = -7;
+        public int PriorityMax { get; private set; } = 5;
+
+        private void SetLimits(int accMax, int effMax, int priMin, int priMax)
+        {
+            AccuracyMax = accMax; SideEffectMax = effMax; PriorityMin = priMin; PriorityMax = priMax;
+            OnPropertyChanged(nameof(AccuracyMax)); OnPropertyChanged(nameof(SideEffectMax));
+            OnPropertyChanged(nameof(PriorityMin)); OnPropertyChanged(nameof(PriorityMax));
+        }
+
         public int SideEffectPct { get => _sideEffectPct; set { if (Set(ref _sideEffectPct, value) && _currentFile != null) { _currentFile.sideEffectProbability = (byte)value; SetDirty(); } } }
 
         private int _contestAppeal;
-        public int ContestAppeal { get => _contestAppeal; set { if (Set(ref _contestAppeal, value) && _currentFile != null) { _currentFile.contestAppeal = (byte)value; SetDirty(); } } }
+        public int ContestAppeal
+        {
+            get => _contestAppeal;
+            set
+            {
+                // A combo with no selection reports -1; that is not a value to store.
+                if (value < 0 || !Set(ref _contestAppeal, value)) return;
+                OnPropertyChanged(nameof(ContestHearts));
+                if (_currentFile != null) { _currentFile.contestAppeal = (byte)value; SetDirty(); }
+            }
+        }
+        public int ContestHearts => _contestAppeal < MoveData.ContestEffectAppeal.Length ? MoveData.ContestEffectAppeal[_contestAppeal] / 10 : 0;
+        public bool HasContestEffects => RomInfo.gameFamily != RomInfo.GameFamilies.HGSS;
+
+        // Effect labels, plus plain numbers for any id past them so every stored byte can show.
+        private void SyncContestEffects(int need)
+        {
+            var labels = DSPRE.Avalonia.Data.LabelStore.Get("move_contest_effects").ToList();
+            for (int i = labels.Count; i <= need; i++) labels.Add(i.ToString());
+            DSPRE.Avalonia.Data.ListSync.Apply(ContestEffectNames, labels);
+        }
 
         private string _description = string.Empty;
-        public string Description { get => _description; set => Set(ref _description, value); }
+        public string Description
+        {
+            get => _description;
+            set
+            {
+                value = (value ?? "").Replace("\r\n", "\n");
+                if (Set(ref _description, value)) { RaiseTextChecks(); if (!_loading) SetDirty(); }
+            }
+        }
+
+        // ── Description and TM bag text ────────────────────────────────────────
+        // Kept with real line breaks here; the archives store them as \n.
+        private EditableTextBank _descBank, _bagBank;
+        private int[] _machineMoves = Array.Empty<int>();
+        private string _savedDescription = "", _bagText = "", _savedBagText = "";
+        private int _bagItem = -1;
+
+        public bool DescriptionReadOnly => _descBank?.ReadOnlyReason != null || _pendingMove != null;
+        public string DescriptionReadOnlyReason => _pendingMove != null ? null : _descBank?.ReadOnlyReason;
+        public bool HasBag => _bagItem >= 0;
+        public string BagLabel { get; private set; } = "";
+        public bool BagReadOnly => _bagBank?.ReadOnlyReason != null;
+        public string BagText
+        {
+            get => _bagText;
+            set
+            {
+                value = (value ?? "").Replace("\r\n", "\n");
+                if (Set(ref _bagText, value)) { RaiseTextChecks(); if (!_loading) SetDirty(); }
+            }
+        }
+
+        private static string Shown(string stored) => (stored ?? "").Replace("\\n", "\n");
+        private static string Stored(string shown) => (shown ?? "").Replace("\n", "\\n");
+
+        private void LoadTexts()
+        {
+            bool was = _loading;
+            _loading = true;
+            _savedDescription = _pendingMove == null && _descBank != null && _currentId < _descBank.Messages.Count
+                ? Shown(_descBank.Messages[_currentId]) : "";
+            Description = _savedDescription;
+            int machine = Array.IndexOf(_machineMoves, _currentId);
+            _bagItem = machine >= 0 && _pendingMove == null && _bagBank != null ? TMEditor.MachineItemId(machine) : -1;
+            if (_bagItem >= _bagBank?.Messages.Count) _bagItem = -1;
+            BagLabel = machine >= 0 ? TMEditor.MachineLabelFromIndex(machine) : "";
+            _savedBagText = _bagItem >= 0 ? Shown(_bagBank.Messages[_bagItem]) : "";
+            BagText = _savedBagText;
+            _loading = was;
+            foreach (var n in new[] { nameof(DescriptionReadOnly), nameof(DescriptionReadOnlyReason), nameof(HasBag), nameof(BagLabel), nameof(BagReadOnly) })
+                OnPropertyChanged(n);
+            if (IsBagTab && !HasBag) PreviewTab = 0;
+            RefreshPreview();
+        }
+
+        /// <summary>Writes the description and bag text when they changed; returns an error, or null.</summary>
+        private string SaveTexts()
+        {
+            if (_descBank != null && _description != _savedDescription && _currentId < _descBank.Messages.Count)
+            {
+                _descBank.Messages[_currentId] = Stored(_description);
+                if (_descBank.Save(this) is string error) return error;
+                _savedDescription = _description;
+            }
+            if (_bagItem >= 0 && _bagText != _savedBagText)
+            {
+                _bagBank.Messages[_bagItem] = Stored(_bagText);
+                if (_bagBank.Save(this) is string error) return error;
+                _savedBagText = _bagText;
+            }
+            return null;
+        }
+
+        // The game prints these as stored, without wrapping, so anything past the box is cut off.
+        public const int DescriptionWidth = 120, DescriptionLines = 5, BagLines = 3;
+        private FieldFont _systemFont;
+        private bool _systemFontTried;
+        public FieldFont SystemFont
+        {
+            get
+            {
+                if (_systemFontTried) return _systemFont;
+                _systemFontTried = true;
+                try { _systemFont = FieldFontCharacters.Ready ? FieldFont.LoadSystemFont() : null; }
+                catch (Exception ex) { AppLogger.Warn("Move Data Editor: system font not read: " + ex.Message); }
+                return _systemFont;
+            }
+        }
+        public string DescriptionWarning => Overflow(_description, DescriptionWidth, DescriptionLines);
+        public string BagWarning => Overflow(_bagText, DSPRE.Avalonia.Data.MoveTextScreens.BagTextWidth, BagLines);
+        public bool HasDescriptionWarning => DescriptionWarning != null;
+        public bool HasBagWarning => BagWarning != null;
+
+        private string Overflow(string text, int width, int maxLines)
+        {
+            var lines = (text ?? "").Split('\n').ToList();
+            if (lines.Count > 1 && lines[^1].Length == 0) lines.RemoveAt(lines.Count - 1);
+            if (lines.Count > maxLines) return $"Only {maxLines} lines show";
+            if (SystemFont == null) return null;
+            for (int i = 0; i < lines.Count; i++)
+            {
+                int over = SystemFont.Measure(lines[i], FieldFontCharacters.GlyphFor) - width;
+                if (over > 0) return $"Line {i + 1} runs {over} px past the box";
+            }
+            return null;
+        }
+
+        private void RaiseTextChecks()
+        {
+            foreach (var n in new[] { nameof(DescriptionWarning), nameof(HasDescriptionWarning), nameof(BagWarning), nameof(HasBagWarning) })
+                OnPropertyChanged(n);
+            RefreshPreview();
+        }
+
+        // ── In-game preview ───────────────────────────────────────────────────
+        private readonly DSPRE.Avalonia.Data.MoveTextScreens _screens = new();
+        private int _previewTab;
+        /// <summary>0 summary, 1 battle, 2 relearner, 3 the bag's TM pocket.</summary>
+        public int PreviewTab
+        {
+            get => _previewTab;
+            set { if (Set(ref _previewTab, value)) { OnPropertyChanged(nameof(IsBagTab)); RefreshPreview(); } }
+        }
+        public bool IsBagTab => _previewTab == 3;
+        public global::Avalonia.Media.Imaging.Bitmap Preview { get; private set; }
+
+        private void RefreshPreview()
+        {
+            if (_descBank == null) return;
+            var screen = (DSPRE.Avalonia.Data.MoveTextScreens.Screen)Math.Clamp(_previewTab, 0, 3);
+            byte[] rgba = _screens.Render(screen, screen == DSPRE.Avalonia.Data.MoveTextScreens.Screen.Bag ? _bagText : _description, SystemFont);
+            Preview = rgba == null ? null : DSPRE.Avalonia.ImageConverter.FromRgba(rgba, 256, 192);
+            OnPropertyChanged(nameof(Preview));
+        }
+
+        private sealed record UndoState(byte[] Move, string Description, string Bag);
+        private byte[] Snapshot() => DSPRE.Avalonia.UndoJson.Take(new UndoState(_currentFile.ToByteArray(), _description, _bagText));
 
         private string _title = "Move Data Editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
@@ -178,7 +349,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_currentFile == null) return;
             bool coalesce = (System.DateTime.UtcNow - _lastCaptureUtc).TotalMilliseconds < CoalesceMs;
-            _history.Capture(_currentFile.ToByteArray(), coalesce);
+            _history.Capture(Snapshot(), coalesce);
             _lastCaptureUtc = System.DateTime.UtcNow;
             RaiseUndoState();
         }
@@ -186,16 +357,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void ApplyState(byte[] bytes)
         {
             if (bytes == null) return;
+            var state = DSPRE.Avalonia.UndoJson.Read<UndoState>(bytes);
             _loading = true;
-            _currentFile = new MoveData(new MemoryStream(bytes));
+            _currentFile = new MoveData(new MemoryStream(state.Move));
             PopulateFromCurrentFile();
+            Description = state.Description;
+            BagText = state.Bag;
             _loading = false;
 
             _dirty = _history.IsDirty;
             RefreshDirty();
             RaiseUndoState();
         }
-        private readonly string[] _moveDescriptions;
         private Dictionary<string, int> _typeNameToId;
         private Dictionary<string, MoveSplit> _splitNameToEnum;
         private Dictionary<string, ushort> _rangeNameToValue;
@@ -229,8 +402,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _contestAppeal = 0;
                 return;
             }
-            string[] rawDescs = new TextArchive(moveDescriptionsTextNumbers).messages.ToArray();
-            _moveDescriptions = rawDescs.Select(x => x.Replace("\\n", Environment.NewLine)).ToArray();
+            _descBank = new EditableTextBank(moveDescriptionsTextNumbers);
+            if (itemDescriptionsTextNumber > 0)
+                _bagBank = new EditableTextBank(itemDescriptionsTextNumber, isHGE ? "hg-engine builds item text from its source." : null);
+            try { _machineMoves = TMEditor.ReadMachineMoves(); }
+            catch (Exception ex) { AppLogger.Warn("Move Data Editor: TM moves not read: " + ex.Message); }
 
             string[] moveNames = GetAttackNames();
             string[] typeNames = GetTypeNames();
@@ -238,6 +414,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string[] db = PokeDatabase.MoveData.battleSequenceDescriptions;
 
             foreach (var n in moveNames) MoveNames.Add(n);
+            OnPropertyChanged(nameof(MaxMoveIndex));
             foreach (var n in typeNames) TypeNames.Add(n);
             // Split / contest dropdowns come from the customisable LabelStore (Tools ▸ Edit Dropdown Labels).
             ReloadSplitContest();
@@ -266,6 +443,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             DSPRE.Avalonia.Data.LabelStore.Sync(SplitNames,   "move_split");
             DSPRE.Avalonia.Data.LabelStore.Sync(ContestNames, "move_contest_conditions");
+            SyncContestEffects(_contestAppeal);
             AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.NamesChanged  -= OnNamesChanged;  AppEvents.NamesChanged  += OnNamesChanged;
         }
@@ -275,6 +453,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Re-resolve the combos' displayed text after the label lists were replaced in place.
             Repoke(_splitIndex,   nameof(SplitIndex),   v => _splitIndex = v);
             Repoke(_contestIndex, nameof(ContestIndex), v => _contestIndex = v);
+            Repoke(_contestAppeal, nameof(ContestAppeal), v => _contestAppeal = v);
         }
         private void OnNamesChanged(object sender, EventArgs e)
         {
@@ -366,6 +545,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 foreach (var (importId, imported) in records)
                     if (importId != id) imported.SaveToFileDefaultDir(importId, showSuccessMessage: false);
                 move.SaveToFileDefaultDir(id, showSuccessMessage: false);
+                if (SaveTexts() is string textError)
+                {
+                    await DialogHelper.ShowError($"The text of move {id} was not saved.\n{textError}", "Move Data Editor");
+                    return;
+                }
                 _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
             }
             SetClean();
@@ -424,7 +608,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(SelectedMoveIndex));
 
             _dirty = false;
-            _history.Reset(move.ToByteArray());
+            LoadTexts();
+            _history.Reset(Snapshot());
             _lastCaptureUtc = System.DateTime.MinValue;
             RefreshDirty();
             RaiseUndoState();
@@ -560,11 +745,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _currentFile = _pendingImports.TryGetValue(id, out var imported) ? Copy(imported) : LoadRecord(id, out loadError);
             SourceLoadError = loadError;
             PopulateFromCurrentFile();
+            LoadTexts();
             SetClean();
             _loading = false;
 
             // Loaded state is the clean baseline for undo on this move; switching moves starts fresh history.
-            _history.Reset(_currentFile.ToByteArray());
+            _history.Reset(Snapshot());
             _lastCaptureUtc = System.DateTime.MinValue;
             RaiseUndoState();
         }
@@ -572,17 +758,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Pushes <see cref="_currentFile"/> into the bound fields. Caller must guard with _loading.</summary>
         private void PopulateFromCurrentFile()
         {
+            // A box clamps its value when its limit drops, and the clamp would be written into this move,
+            // so the limits only narrow once the new values are in.
+            int acc = _currentFile.accuracy, eff = _currentFile.sideEffectProbability, pri = _currentFile.priority;
+            SetLimits(Math.Max(Math.Max(100, acc), _accuracy), Math.Max(Math.Max(100, eff), _sideEffectPct),
+                      Math.Min(Math.Min(-7, pri), _priority), Math.Max(Math.Max(5, pri), _priority));
             TypeIndex       = (int)_currentFile.movetype;
             SplitIndex      = (int)_currentFile.split;
             BattleSeqIndex  = (int)_currentFile.battleeffect;
             ContestIndex    = (int)_currentFile.contestConditionType;
             Power           = _currentFile.damage;
-            Accuracy        = _currentFile.accuracy;
+            Accuracy        = acc;
             PP              = _currentFile.pp;
-            Priority        = _currentFile.priority;
-            SideEffectPct   = _currentFile.sideEffectProbability;
+            Priority        = pri;
+            SideEffectPct   = eff;
+            SyncContestEffects(_currentFile.contestAppeal);
             ContestAppeal   = _currentFile.contestAppeal;
-            Description     = _pendingMove == null && _currentId < _moveDescriptions.Length ? _moveDescriptions[_currentId] : string.Empty;
+            SetLimits(Math.Max(100, acc), Math.Max(100, eff), Math.Min(-7, pri), Math.Max(5, pri));
 
             // Range
             int rangeIdx = 0;
@@ -766,7 +958,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 PopulateFromCurrentFile();
                 _loading = false;
                 _dirty = false;
-                _history.Reset(_currentFile.ToByteArray());
+                _history.Reset(Snapshot());
                 _lastCaptureUtc = System.DateTime.MinValue;
                 RaiseUndoState();
             }

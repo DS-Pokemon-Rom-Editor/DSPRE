@@ -646,6 +646,10 @@ namespace DSPRE
             poketch,                // Pt graphic/poketch.narc, the Pokétch on the bottom screen
             fieldTouchMenu,         // HGSS a/0/1/4, the touch menu panel on the bottom screen
             fieldTouchChoices,      // HGSS a/2/3/7, the Poké Ball screen and its touch buttons
+            summaryGraphics,        // DP graphic/pst_gra.narc, Pt graphic/pl_pst_gra.narc, HGSS a/1/6/2: the Pokémon summary screens
+            moveRelearnerGraphics,  // DP/Pt graphic/waza_oshie_gra.narc, HGSS a/1/1/0
+            battlePartyGraphics,    // DP battle/graphic/b_plist_gra.narc, Pt battle/graphic/pl_b_plist_gra.narc, HGSS a/0/7/1
+            bagGraphics,            // DP graphic/bag_gra.narc, Pt graphic/pl_bag_gra.narc, HGSS a/0/1/5
             fieldTextureAnimations, // Pt data/fldtanime.narc, HGSS a/1/3/9 (HGSS data/fldtanime.narc is unused): member 0 names textures, the rest hold frames
             encounterEffectGraphics, // DP/Pt graphic/field_encounteffect.narc, HGSS a/1/0/9: special trainer battle intro art
             nameInputGraphics,      // DP/Pt data/namein.narc, HGSS a/0/3/1: the naming screen's backgrounds and icons
@@ -2813,6 +2817,10 @@ namespace DSPRE
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\msg.narc",
                         [DirNames.fonts] = $@"{dataFolderName}\graphic\font.narc",
                         [DirNames.windowFrames] = $@"{dataFolderName}\graphic\winframe.narc",
+                        [DirNames.summaryGraphics] = $@"{dataFolderName}\graphic\pst_gra.narc",
+                        [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\graphic\waza_oshie_gra.narc",
+                        [DirNames.battlePartyGraphics] = $@"{dataFolderName}\battle\graphic\b_plist_gra.narc",
+                        [DirNames.bagGraphics] = $@"{dataFolderName}\graphic\bag_gra.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
 
@@ -2957,6 +2965,10 @@ namespace DSPRE
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\" + suffix + '_' + "msg.narc",
                         [DirNames.fonts] = $@"{dataFolderName}\graphic\pl_font.narc",
                         [DirNames.windowFrames] = $@"{dataFolderName}\graphic\pl_winframe.narc",
+                        [DirNames.summaryGraphics] = $@"{dataFolderName}\graphic\pl_pst_gra.narc",
+                        [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\graphic\waza_oshie_gra.narc",
+                        [DirNames.battlePartyGraphics] = $@"{dataFolderName}\battle\graphic\pl_b_plist_gra.narc",
+                        [DirNames.bagGraphics] = $@"{dataFolderName}\graphic\pl_bag_gra.narc",
                         [DirNames.poketch] = $@"{dataFolderName}\graphic\poketch.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
@@ -3060,6 +3072,10 @@ namespace DSPRE
                         [DirNames.windowFrames] = $@"{dataFolderName}\a\0\3\8",
                         [DirNames.fieldTouchMenu] = $@"{dataFolderName}\a\0\1\4",
                         [DirNames.fieldTouchChoices] = $@"{dataFolderName}\a\2\3\7",
+                        [DirNames.summaryGraphics] = $@"{dataFolderName}\a\1\6\2",
+                        [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\a\1\1\0",
+                        [DirNames.battlePartyGraphics] = $@"{dataFolderName}\a\0\7\1",
+                        [DirNames.bagGraphics] = $@"{dataFolderName}\a\0\1\5",
 
                         [DirNames.matrices] = $@"{dataFolderName}\a\0\4\1",
 

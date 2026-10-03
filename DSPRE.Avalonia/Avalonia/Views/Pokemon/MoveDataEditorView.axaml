@@ -5,7 +5,7 @@
 		x:Class="DSPRE.Avalonia.Views.Pokemon.MoveDataEditorView"
 		x:DataType="vm:MoveDataEditorViewModel"
 		Title="{Binding Title}"
-		Width="820" Height="620"
+		Width="980" Height="820"
 		MinWidth="700" MinHeight="520"
 		WindowStartupLocation="CenterScreen">
   <Design.DataContext>
@@ -34,6 +34,7 @@
 		<Button Content="Discard" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
 		<TextBlock Text="Move:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+		<NumericUpDown Value="{Binding SelectedMoveIndex}" Minimum="0" Maximum="{Binding MaxMoveIndex}" FormatString="0" Width="110"/>
 		<controls:FusionAutoCompleteBox x:Name="MovePicker" ItemsSource="{Binding MoveNames}"
 					  SelectedIndex="{Binding SelectedMoveIndex}"
 					  MinWidth="260"/>
@@ -85,13 +86,38 @@
 	  <GroupBox x:Name="EffectBox" Grid.Row="2" Grid.Column="0" Header="Battle Sequence (Effect)">
 		<ComboBox ItemsSource="{Binding BattleSeqItems}"
 				  SelectedIndex="{Binding BattleSeqIndex}"
-				  HorizontalAlignment="Stretch" MinWidth="0"/>
+				  HorizontalAlignment="Stretch" VerticalAlignment="Top" MinWidth="0">
+		  <!-- Realized all at once, so the open list is as wide as its longest entry instead of growing while scrolling. -->
+		  <ComboBox.ItemsPanel>
+			<ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
+		  </ComboBox.ItemsPanel>
+		</ComboBox>
 	  </GroupBox>
 
 	  <!-- Description -->
-	  <GroupBox x:Name="DescriptionBox" Grid.Row="4" Grid.Column="0" Header="Description">
-		<TextBox Text="{Binding Description}" IsReadOnly="True"
-				 TextWrapping="Wrap" MinHeight="70" AcceptsReturn="True"/>
+	  <GroupBox x:Name="DescriptionBox" Grid.Row="4" Grid.Column="0" Grid.RowSpan="2" Header="Description">
+		<DockPanel>
+		  <TabStrip DockPanel.Dock="Top" SelectedIndex="{Binding PreviewTab}">
+			<TabStripItem Content="Summary"/>
+			<TabStripItem Content="Battle"/>
+			<TabStripItem Content="Relearner"/>
+			<TabStripItem Content="{Binding BagLabel}" IsVisible="{Binding HasBag}"/>
+		  </TabStrip>
+		  <TextBlock DockPanel.Dock="Bottom" Text="{Binding DescriptionWarning}" IsVisible="{Binding HasDescriptionWarning}"
+					 Foreground="{DynamicResource Editor.Warn}" FontSize="12" Margin="0,4,0,0"/>
+		  <TextBlock DockPanel.Dock="Bottom" Text="{Binding BagWarning}" IsVisible="{Binding HasBagWarning}"
+					 Foreground="{DynamicResource Editor.Warn}" FontSize="12" Margin="0,4,0,0"/>
+		  <Panel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+			<TextBox Text="{Binding Description}" IsReadOnly="{Binding DescriptionReadOnly}" IsVisible="{Binding !IsBagTab}"
+					 ToolTip.Tip="{Binding DescriptionReadOnlyReason}"
+					 AcceptsReturn="True" TextWrapping="NoWrap" Height="96"/>
+			<TextBox Text="{Binding BagText}" IsReadOnly="{Binding BagReadOnly}" IsVisible="{Binding IsBagTab}"
+					 AcceptsReturn="True" TextWrapping="NoWrap" Height="64"/>
+		  </Panel>
+		  <Viewbox Stretch="Uniform" MaxHeight="288" Margin="0,6,0,0">
+			<Image Source="{Binding Preview}" Width="256" Height="192" RenderOptions.BitmapInterpolationMode="None"/>
+		  </Viewbox>
+		</DockPanel>
 	  </GroupBox>
 
 	  <!-- ── Right column ── -->
@@ -106,7 +132,7 @@
 
 		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Accuracy:"        Classes="label"/>
 		  <NumericUpDown Grid.Row="2" Grid.Column="1"
-						 Value="{Binding Accuracy}" Minimum="0" Maximum="255" Increment="1"/>
+						 Value="{Binding Accuracy}" Minimum="0" Maximum="{Binding AccuracyMax}" Increment="1"/>
 
 		  <TextBlock Grid.Row="4" Grid.Column="0" Text="PP:"              Classes="label"/>
 		  <NumericUpDown Grid.Row="4" Grid.Column="1"
@@ -114,25 +140,28 @@
 
 		  <TextBlock Grid.Row="6" Grid.Column="0" Text="Priority:"        Classes="label"/>
 		  <NumericUpDown Grid.Row="6" Grid.Column="1"
-						 Value="{Binding Priority}" Minimum="-128" Maximum="127" Increment="1"/>
+						 Value="{Binding Priority}" Minimum="{Binding PriorityMin}" Maximum="{Binding PriorityMax}" Increment="1"/>
 
 		  <TextBlock Grid.Row="8" Grid.Column="0" Text="Effect %:"        Classes="label"/>
 		  <NumericUpDown Grid.Row="8" Grid.Column="1"
-						 Value="{Binding SideEffectPct}" Minimum="0" Maximum="255" Increment="1"/>
+						 Value="{Binding SideEffectPct}" Minimum="0" Maximum="{Binding SideEffectMax}" Increment="1"/>
 		</Grid>
 	  </GroupBox>
 
 	  <!-- Contest -->
 	  <GroupBox x:Name="ContestBox" Grid.Row="2" Grid.Column="2" Header="Contest">
-		<Grid RowDefinitions="Auto,8,Auto" ColumnDefinitions="Auto,*">
+		<Grid RowDefinitions="Auto,8,Auto,8,Auto" ColumnDefinitions="Auto,*">
 
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Condition:" Classes="label"/>
 		  <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ContestNames}"
 					 SelectedIndex="{Binding ContestIndex}"/>
 
-		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Appeal:"    Classes="label"/>
-		  <NumericUpDown Grid.Row="2" Grid.Column="1"
-						 Value="{Binding ContestAppeal}" Minimum="0" Maximum="255" Increment="1"/>
+		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Effect:"    Classes="label" IsVisible="{Binding HasContestEffects}"/>
+		  <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ContestEffectNames}"
+					 SelectedIndex="{Binding ContestAppeal}" HorizontalAlignment="Stretch" IsVisible="{Binding HasContestEffects}"/>
+
+		  <TextBlock Grid.Row="4" Grid.Column="0" Text="Hearts:"    Classes="label" IsVisible="{Binding HasContestEffects}"/>
+		  <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ContestHearts}" VerticalAlignment="Center" IsVisible="{Binding HasContestEffects}"/>
 		</Grid>
 	  </GroupBox>
 

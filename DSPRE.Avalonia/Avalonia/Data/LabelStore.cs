@@ -112,6 +112,17 @@ namespace DSPRE.Avalonia.Data
             // Moves / trades
             Reg("move_split",             "Move Split (Phys/Spec/Status)", "Moves", "Split", Enum.GetNames<MoveData.MoveSplit>());
             Reg("move_contest_conditions","Move Contest Conditions", "Moves", "Condition", Enum.GetNames<MoveData.ContestCondition>());
+            Reg("move_contest_effects",   "Move Contest Effects (DP, Pt)", "Moves", "Effect", new[]
+            {
+                "None", "Perform first next turn", "Perform last next turn", "+2 per repeat of the same Judge",
+                "+2 if the Judge's Voltage goes up", "Basic performance", "+3 if no one else chose the Judge",
+                "Can be used twice in a row", "Voltage added to the score", "+15 if all choose the same Judge",
+                "Lowers every Judge's Voltage", "Double score next turn", "Steals the previous Voltage",
+                "No Voltage up this turn", "Random order next turn", "Double score on the final act",
+                "Higher score at low Voltage", "+2 if performing first", "+2 if performing last",
+                "No Voltage down this turn", "+3 after two Voltage ups in a row", "Scores more the later it goes",
+                "+3 after a max Voltage", "+3 if rated the worst",
+            });
             Reg("trade_languages",        "Trade Origin Languages", "Trades", "Language", Enum.GetNames<TradeOriginLang>());
 
             // Field cameras and weathers, per game: the header picks them by number and ROM hacks repurpose them.

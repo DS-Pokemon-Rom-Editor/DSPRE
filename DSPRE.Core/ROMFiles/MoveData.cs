@@ -34,6 +34,11 @@ namespace DSPRE {
             TOUGH,
         };
 
+        // contestAppeal is a contest effect id; each effect's appeal points, ten to a heart (pokeplatinum
+        // src/unk_02094EDC.c). The same in DP and Pt; HGSS keeps the byte but has no contests.
+        public static readonly byte[] ContestEffectAppeal =
+            { 0, 20, 20, 0, 20, 30, 10, 20, 0, 0, 20, 0, 0, 20, 20, 20, 0, 20, 20, 20, 10, 0, 20, 10 };
+
         public enum MoveFlags : byte {
             NONE = 0,
             CONTACT = (1 << 0),
