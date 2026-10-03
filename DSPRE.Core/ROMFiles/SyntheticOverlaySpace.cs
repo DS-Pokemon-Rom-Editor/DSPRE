@@ -54,6 +54,7 @@ namespace DSPRE.ROMFiles
             var chart = TypeChart.UnmarkedRangeInExpansion();
             if (chart.HasValue) ranges.Add(chart.Value);
             ranges.AddRange(PlatPatchesBlocks(data));
+            ranges.AddRange(TrainerClassTableExpansion.MovedTableRanges());
             // PlatPatches installs item payloads at fixed offsets and refuses when they are occupied.
             if (RomInfo.gameFamily == RomInfo.GameFamilies.Plat && data.Length > PlatPatchesFixedStart)
                 ranges.Add((PlatPatchesFixedStart, Math.Min(PlatPatchesFixedEnd, data.Length)));
