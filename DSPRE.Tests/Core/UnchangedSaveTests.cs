@@ -18,7 +18,7 @@ namespace DSPRE.Tests
     /// back afterwards, so the test projects are never left edited.
     /// </summary>
     [Collection("rom")]
-    public class UnchangedSaveTests
+    public partial class UnchangedSaveTests
     {
         public static TheoryData<string> Games => new() { "Platinum", "HeartGold", "Diamond" };
         public static TheoryData<string> DpPt => new() { "Platinum", "Diamond" };
@@ -51,12 +51,17 @@ namespace DSPRE.Tests
         /// Runs <paramref name="save"/>, which returns how many records it saved, and fails on any byte it
         /// changed in <paramref name="guarded"/> (folders or files), ARM9 or the overlays.
         /// </summary>
-        private static void SavesUnchanged(string what, IEnumerable<string> guarded, Func<int> save)
+        /// <param name="restored">Project files the save may rewrite in another form (expanded text or script sources); put back, not compared.</param>
+        private static void SavesUnchanged(string what, IEnumerable<string> guarded, Func<int> save, IEnumerable<string> restored = null)
         {
             var roots = guarded.Where(p => !string.IsNullOrEmpty(p)).Append(arm9Path).Append(overlayPath).Distinct().ToList();
-            List<string> Files() => roots.SelectMany(r => Directory.Exists(r) ? Directory.GetFiles(r, "*", SearchOption.AllDirectories)
+            List<string> FilesUnder(IEnumerable<string> under) => under.SelectMany(r => Directory.Exists(r) ? Directory.GetFiles(r, "*", SearchOption.AllDirectories)
                                                          : File.Exists(r) ? new[] { r } : Array.Empty<string>()).ToList();
+            List<string> Files() => FilesUnder(roots);
 
+            var extraRoots = (restored ?? Array.Empty<string>()).Where(p => !string.IsNullOrEmpty(p)).ToList();
+            var extra = FilesUnder(extraRoots).Where(f => !roots.Any(r => f.StartsWith(r, StringComparison.OrdinalIgnoreCase)))
+                .ToDictionary(f => f, File.ReadAllBytes);
             var before = Files().ToDictionary(f => f, File.ReadAllBytes);
             var changes = new List<string>();
             int saved;
@@ -73,6 +78,9 @@ namespace DSPRE.Tests
             }
             finally
             {
+                foreach (string file in FilesUnder(extraRoots).Where(f => !extra.ContainsKey(f) && !before.ContainsKey(f))) File.Delete(file);
+                foreach (var (file, original) in extra)
+                    if (!File.Exists(file) || !File.ReadAllBytes(file).AsSpan().SequenceEqual(original)) File.WriteAllBytes(file, original);
                 foreach (string file in Files().Where(f => !before.ContainsKey(f))) File.Delete(file);
                 foreach (var (file, original) in before)
                     if (!File.Exists(file) || !File.ReadAllBytes(file).AsSpan().SequenceEqual(original)) File.WriteAllBytes(file, original);
@@ -105,14 +113,9 @@ namespace DSPRE.Tests
                 int n = 0;
                 foreach (var (id, propPath) in Members(Dir(DirNames.trainerProperties)).ToList())
                 {
-                    string partyPath = Path.Combine(Dir(DirNames.trainerParty), Path.GetFileName(propPath));
-                    if (!File.Exists(partyPath)) continue;
-                    TrainerFile trainer;
-                    using (var prop = File.OpenRead(propPath))
-                    using (var party = File.OpenRead(partyPath))
-                        trainer = new TrainerFile(new TrainerProperties((ushort)id, prop), party, "");
-                    File.WriteAllBytes(propPath, trainer.trp.ToByteArray());
-                    File.WriteAllBytes(partyPath, trainer.party.ToByteArray());
+                    if (!File.Exists(Path.Combine(Dir(DirNames.trainerParty), Path.GetFileName(propPath)))) continue;
+                    var trainer = TrainerRecords.Load(id);
+                    TrainerRecords.Save(id, trainer.trp, trainer.party);
                     n++;
                 }
                 return n;

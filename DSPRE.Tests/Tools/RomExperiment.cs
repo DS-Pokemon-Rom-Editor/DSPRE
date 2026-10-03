@@ -140,6 +140,19 @@ namespace DSPRE.Tests
             if (!full.StartsWith(safeRoot, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"refusing to delete outside the work root: {full}");
             if (Directory.Exists(full)) Directory.Delete(full, recursive: true);
+            ForgetDatabaseFolder(full);
+        }
+
+        /// <summary>
+        /// Opening a project copies the script database into a folder named after it; a throwaway copy
+        /// leaves that folder behind for good unless the test removes it.
+        /// </summary>
+        public static void ForgetDatabaseFolder(string projectPath)
+        {
+            string name = Path.GetFileNameWithoutExtension(Path.TrimEndingDirectorySeparator(projectPath));
+            if (string.IsNullOrEmpty(name)) return;
+            string folder = Path.Combine(AppPaths.DatabasePath, "edited_databases", name);
+            try { if (Directory.Exists(folder)) Directory.Delete(folder, recursive: true); } catch { }
         }
 
         private static void CopyTree(string source, string destination)

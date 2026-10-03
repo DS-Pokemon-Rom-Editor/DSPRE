@@ -90,6 +90,7 @@ namespace DSPRE.Tests.Core
                 // project so the next test in the rom collection does not inherit a deleted path.
                 try { new RomInfo(PlatinumCode, TestRoms.Platinum); } catch { }
                 if (Directory.Exists(reopened)) Directory.Delete(reopened, recursive: true);
+                RomExperiment.ForgetDatabaseFolder(reopened);
                 if (File.Exists(builtRom)) File.Delete(builtRom);
             }
         }

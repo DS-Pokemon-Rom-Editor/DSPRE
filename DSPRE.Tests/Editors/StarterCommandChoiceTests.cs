@@ -268,6 +268,7 @@ namespace DSPRE.Tests
             {
                 try { new RomInfo("CPUE", Platinum); } catch { }
                 try { Directory.Delete(copy, true); } catch { }
+                RomExperiment.ForgetDatabaseFolder(copy);
             }
         }
 
@@ -313,6 +314,7 @@ namespace DSPRE.Tests
             {
                 try { new RomInfo("CPUE", Platinum); } catch { }
                 try { Directory.Delete(copy, true); } catch { }
+                RomExperiment.ForgetDatabaseFolder(copy);
             }
         }
 
