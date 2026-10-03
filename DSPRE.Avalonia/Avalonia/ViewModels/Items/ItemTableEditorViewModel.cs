@@ -249,9 +249,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private readonly string[] _names;
         private readonly Action _dirty;
 
-        public RockSmashItemSlotsRow(string label, ushort[] itemIDs, string[] names, Action dirty)
+        /// <summary>The choices for every slot, shared with the editor.</summary>
+        public ObservableCollection<string> ItemNames { get; }
+
+        public RockSmashItemSlotsRow(string label, ushort[] itemIDs, string[] names, ObservableCollection<string> itemNames, Action dirty)
         {
-            Label = label; ItemIDs = itemIDs; _names = names; _dirty = dirty;
+            Label = label; ItemIDs = itemIDs; _names = names; ItemNames = itemNames; _dirty = dirty;
         }
 
         private string Get(int slot) =>
@@ -797,11 +800,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (ShowRockSmashItemTables)
             {
                 RockSmashDefaultTable = new RockSmashItemSlotsRow("Default",
-                    RockSmashItemSlots.Read(RockSmashItemSlots.DefaultOffset), _rawItemNames, SetRockSmashDirty);
+                    RockSmashItemSlots.Read(RockSmashItemSlots.DefaultOffset), _rawItemNames, ItemNames, SetRockSmashDirty);
                 RockSmashRuinsOfAlphTable = new RockSmashItemSlotsRow("Ruins of Alph",
-                    RockSmashItemSlots.Read(RockSmashItemSlots.RuinsOfAlphOffset), _rawItemNames, SetRockSmashDirty);
+                    RockSmashItemSlots.Read(RockSmashItemSlots.RuinsOfAlphOffset), _rawItemNames, ItemNames, SetRockSmashDirty);
                 RockSmashCliffCaveTable = new RockSmashItemSlotsRow("Cliff Cave",
-                    RockSmashItemSlots.Read(RockSmashItemSlots.CliffCaveOffset), _rawItemNames, SetRockSmashDirty);
+                    RockSmashItemSlots.Read(RockSmashItemSlots.CliffCaveOffset), _rawItemNames, ItemNames, SetRockSmashDirty);
 
                 OnPropertyChanged(nameof(RockSmashDefaultTable));
                 OnPropertyChanged(nameof(RockSmashRuinsOfAlphTable));
@@ -815,9 +818,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 RockSmashRows.Add(new RockSmashHeaderRow(new RockSmashData((ushort)i, ""), $"Route {i}", SetRockSmashDirty));
 
             ushort[] Dummy() => new ushort[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-            RockSmashDefaultTable      = new RockSmashItemSlotsRow("Default", Dummy(), _rawItemNames, SetRockSmashDirty);
-            RockSmashRuinsOfAlphTable  = new RockSmashItemSlotsRow("Ruins of Alph", Dummy(), _rawItemNames, SetRockSmashDirty);
-            RockSmashCliffCaveTable    = new RockSmashItemSlotsRow("Cliff Cave", Dummy(), _rawItemNames, SetRockSmashDirty);
+            RockSmashDefaultTable      = new RockSmashItemSlotsRow("Default", Dummy(), _rawItemNames, ItemNames, SetRockSmashDirty);
+            RockSmashRuinsOfAlphTable  = new RockSmashItemSlotsRow("Ruins of Alph", Dummy(), _rawItemNames, ItemNames, SetRockSmashDirty);
+            RockSmashCliffCaveTable    = new RockSmashItemSlotsRow("Cliff Cave", Dummy(), _rawItemNames, ItemNames, SetRockSmashDirty);
         }
 
         // ── Save ──────────────────────────────────────────────────────────────

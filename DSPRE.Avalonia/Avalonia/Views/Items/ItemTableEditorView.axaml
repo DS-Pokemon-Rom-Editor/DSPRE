@@ -249,39 +249,39 @@
                          FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
 
               <TextBlock Text="Default" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
-              <UniformGrid Columns="8">
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item0}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item1}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item2}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item3}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item4}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item5}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item6}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashDefaultTable.Item7}" FontSize="11" Margin="1"/>
+              <UniformGrid Columns="8" DataContext="{Binding RockSmashDefaultTable}" x:DataType="vm:RockSmashItemSlotsRow">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item7}" FontSize="11" Margin="1"/>
               </UniformGrid>
 
               <TextBlock Text="Ruins of Alph" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
-              <UniformGrid Columns="8">
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item0}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item1}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item2}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item3}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item4}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item5}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item6}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashRuinsOfAlphTable.Item7}" FontSize="11" Margin="1"/>
+              <UniformGrid Columns="8" DataContext="{Binding RockSmashRuinsOfAlphTable}" x:DataType="vm:RockSmashItemSlotsRow">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item7}" FontSize="11" Margin="1"/>
               </UniformGrid>
 
               <TextBlock Text="Cliff Cave" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
-              <UniformGrid Columns="8">
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item0}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item1}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item2}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item3}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item4}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item5}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item6}" FontSize="11" Margin="1"/>
-                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding RockSmashCliffCaveTable.Item7}" FontSize="11" Margin="1"/>
+              <UniformGrid Columns="8" DataContext="{Binding RockSmashCliffCaveTable}" x:DataType="vm:RockSmashItemSlotsRow">
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item0}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item1}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item2}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item3}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item4}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item5}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item6}" FontSize="11" Margin="1"/>
+                <ComboBox ItemsSource="{Binding ItemNames}" SelectedItem="{Binding Item7}" FontSize="11" Margin="1"/>
               </UniformGrid>
             </StackPanel>
           </Border>
