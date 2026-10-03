@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    public class FlyEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class FlyEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -93,6 +93,20 @@ namespace DSPRE.Avalonia.ViewModels.World
             return !HasUnsavedChanges;
         }
         public void DiscardChanges() { LoadRows(); SetClean(); }
+
+        // ── Undo / redo ──────────────────────────────────────────────────────
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private void ApplyState(byte[] state)
+        {
+            UndoJson.ApplyInto(state, Rows);
+            if (_undo.IsDirty) SetDirty(); else SetClean();
+        }
 
         // ── Observable state ─────────────────────────────────────────────────
         public ObservableCollection<FlyRow>   Rows    { get; } = new();
@@ -171,6 +185,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 WriteRows();
+                _undo?.MarkSaved();
                 SetClean();
                 SaveNotice.Saved(UnsavedChangesDescription);
             }
@@ -185,6 +200,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── Private helpers ───────────────────────────────────────────────────
         private void SetDirty()  { _dirty = true;  Title = "● Fly / Warp Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean()  { _dirty = false; Title = "Fly / Warp Editor";  OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            if (_undo == null || _undo.IsDirty) SetDirty(); else SetClean();
+        }
 
         private void LoadRows()
         {
@@ -201,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         FlagIdx = r.FlagIdx, IsBlackoutSpawn = r.IsBlackoutSpawn, IsFlyPoint = r.IsFlyPoint,
                         HeaderIdUnlockWarp = r.HeaderIdUnlockWarp, GlobalXUnlock = r.GlobalXUnlock, GlobalYUnlock = r.GlobalYUnlock,
                     };
-                    row.PropertyChanged += (_, __) => SetDirty();
+                    row.PropertyChanged += (_, __) => Edited();
                     Rows.Add(row);
                 }
             }
@@ -210,6 +231,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 AppLogger.Error($"FlyEditorViewModel.LoadRows: {ex.Message}");
                 StatusText = $"Error loading: {ex.Message}";
             }
+            _undo = new ByteStateUndo(() => UndoJson.Take(Rows), ApplyState, RaiseUndo);
+            RaiseUndo();
         }
 
         private void WriteRows()

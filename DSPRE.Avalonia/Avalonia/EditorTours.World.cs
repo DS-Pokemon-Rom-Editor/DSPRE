@@ -66,25 +66,25 @@ namespace DSPRE.Avalonia
                 S("list", "Camera angles", "Each row is a camera a header can use. Headers pick one by its number."),
                 S("list", "Changing a camera", "Double-click a cell to change its distance, rotation, field of view or clipping. Some games also have offsets."),
                 S("list", "One camera", "Export and Import at the end of a row move that single camera in and out as a file."),
-                S("toolbar", "Saving", "Save keeps the table (Ctrl+S) and Discard throws your edits away. The table buttons move every camera at once."));
+                S("toolbar", "Saving", "Save keeps the table (Ctrl+S) and Discard throws your edits away. Ctrl+Z undoes and Ctrl+Y redoes. The table buttons move every camera at once."));
 
             Add("BuildingEditorView", "Building Editor",
                 S("list", "Buildings", "Every building model in the game. Pick one to see it."),
                 S("name:GlHost", "Preview", "The picked building in 3D. Drag to pan, right-drag to orbit, wheel to zoom."),
                 S("toolbar", "Textures and sets", "Pick the texture set to view it with. Interior switches to indoor buildings in games that have them."),
-                S("toolbar", "Saving", "Import replaces the picked building's model and Export saves it out. Save keeps imports (Ctrl+S), Discard undoes them."));
+                S("toolbar", "Saving", "Import replaces the picked building's model and Export saves it out. Save keeps imports (Ctrl+S) and Discard drops them. Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("FlyEditorView", "Fly / Warp Editor",
                 S("tab:Game-Over Warps", "After a loss", "Where the player wakes up after losing a battle: the header and the square to stand on."),
                 S("tab:Fly Warps", "Fly", "Where the player lands when flying to each place."),
                 S("tab:Unlock Settings", "Unlocking", "When each place opens up for Fly, and which ones are fly points or wake-up spots. The columns depend on the game."),
-                S("toolbar", "Saving", "Save keeps every table (Ctrl+S) and Discard throws your edits away."));
+                S("toolbar", "Saving", "Save keeps every table (Ctrl+S) and Discard throws your edits away. Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("SpawnEditorView", "Spawn Point Editor",
                 S("name:SpawnHeaderRow", "Where you start", "The header a new game begins in, and which way the player faces."),
                 S("name:CoordsGrid", "Exact square", "The matrix cell and the square inside that map where the player appears."),
                 S("name:MoneyRow", "Starting money", "How much money the player has at the start."),
-                S("toolbar", "Saving", "Save keeps it (Ctrl+S), Discard reloads the saved spawn. Show all headers brings back the full list when it was narrowed to one map."));
+                S("toolbar", "Saving", "Save keeps it (Ctrl+S), Discard reloads the saved spawn. Ctrl+Z undoes and Ctrl+Y redoes. Show all headers brings back the full list when it was narrowed to one map."));
 
             Add("HeaderSearchView", "Advanced Header Search",
                 S("name:QueryPanel", "What to search", "Pick a field such as music, weather or script file, then how to compare it."),

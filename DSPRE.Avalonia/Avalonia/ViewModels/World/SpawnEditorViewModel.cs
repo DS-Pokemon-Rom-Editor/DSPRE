@@ -12,7 +12,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.World
 {
-    public class SpawnEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class SpawnEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             set
             {
                 if (!Set(ref _selectedHeaderIndex, value)) return;
-                if (!_isLoading) SetDirty();
+                if (!_isLoading) Edited();
                 UpdateHeaderDependents(value);
             }
         }
@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int MatrixX
         {
             get => _matrixX;
-            set { if (Set(ref _matrixX, value) && !_isLoading) SetDirty(); }
+            set { if (Set(ref _matrixX, value) && !_isLoading) Edited(); }
         }
 
         private int _matrixXMax = 255;
@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int MatrixY
         {
             get => _matrixY;
-            set { if (Set(ref _matrixY, value) && !_isLoading) SetDirty(); }
+            set { if (Set(ref _matrixY, value) && !_isLoading) Edited(); }
         }
 
         private int _matrixYMax = 255;
@@ -70,14 +70,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int LocalX
         {
             get => _localX;
-            set { if (Set(ref _localX, value) && !_isLoading) SetDirty(); }
+            set { if (Set(ref _localX, value) && !_isLoading) Edited(); }
         }
 
         private int _localY;
         public int LocalY
         {
             get => _localY;
-            set { if (Set(ref _localY, value) && !_isLoading) SetDirty(); }
+            set { if (Set(ref _localY, value) && !_isLoading) Edited(); }
         }
 
         // ── Player direction ───────────────────────────────────────────────────
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int PlayerDirIndex
         {
             get => _playerDirIndex;
-            set { if (Set(ref _playerDirIndex, value) && !_isLoading) SetDirty(); }
+            set { if (Set(ref _playerDirIndex, value) && !_isLoading) Edited(); }
         }
 
         // ── Initial money ──────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal InitialMoney
         {
             get => _initialMoney;
-            set { if (Set(ref _initialMoney, value) && !_isLoading) SetDirty(); }
+            set { if (Set(ref _initialMoney, value) && !_isLoading) Edited(); }
         }
 
         // ── Dirty ──────────────────────────────────────────────────────────────
@@ -104,6 +104,41 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void SetDirty()  { _isDirty = true;  OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean()  { _isDirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // ── Undo / redo ────────────────────────────────────────────────────────
+        // A spawn proposed from the Matrix editor is unsaved even before anything is edited.
+        private bool _proposed;
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private byte[] TakeState() => UndoJson.Take(new[] { _selectedHeaderIndex, _matrixX, _matrixY, _localX, _localY, _playerDirIndex, (int)_initialMoney });
+
+        private void ApplyState(byte[] state)
+        {
+            int[] v = UndoJson.Read<int[]>(state);
+            _isLoading = true;
+            _selectedHeaderIndex = v[0];
+            OnPropertyChanged(nameof(SelectedHeaderIndex));
+            UpdateHeaderDependents(_selectedHeaderIndex);
+            _matrixX = v[1]; _matrixY = v[2]; _localX = v[3]; _localY = v[4]; _playerDirIndex = v[5]; _initialMoney = v[6];
+            OnPropertyChanged(nameof(MatrixX)); OnPropertyChanged(nameof(MatrixY));
+            OnPropertyChanged(nameof(LocalX)); OnPropertyChanged(nameof(LocalY));
+            OnPropertyChanged(nameof(PlayerDirIndex)); OnPropertyChanged(nameof(InitialMoney));
+            _isLoading = false;
+            if (_undo.IsDirty || _proposed) SetDirty(); else SetClean();
+        }
+
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+
+        private void Edited()
+        {
+            _undo?.Record();
+            if (_undo == null || _undo.IsDirty || _proposed) SetDirty(); else SetClean();
+        }
 
         // ── All header names (full list for reset) ─────────────────────────────
         private List<string> _allHeaderNames = new();
@@ -167,6 +202,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(InitialMoney));
             _isLoading = false;
             // The preset is a proposal not yet in the ROM, so Save and Discard start enabled.
+            _proposed = true;
+            ResetUndo();
             SetDirty();
         }
 
@@ -204,6 +241,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(PlayerDirIndex));
                 OnPropertyChanged(nameof(InitialMoney));
                 _isLoading = false;
+                _proposed = false;
+                ResetUndo();
                 SetClean();
             }
         }
@@ -256,27 +295,22 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Save ───────────────────────────────────────────────────────────────
-        public async Task<bool> SaveChangesAsync()
+        public Task<bool> SaveChangesAsync()
         {
-            bool confirmed = await DialogHelper.AskYesNo(
-                "This operation will overwrite:\n" +
-                $"- 10 bytes of data at ARM9 offset 0x{RomInfo.arm9spawnOffset:X}\n" +
-                $"- 4 bytes of data at Overlay{RomInfo.initialMoneyOverlayNumber} offset 0x{RomInfo.initialMoneyOverlayOffset:X}\n\nProceed?",
-                "Confirmation Required");
-            if (!confirmed) return false;
+            new SpawnPoint
+            {
+                Header = (ushort)SelectedHeaderIndex,
+                GlobalX = (ushort)(_matrixX * 32 + _localX),
+                GlobalY = (ushort)(_matrixY * 32 + _localY),
+                Direction = (ushort)_playerDirIndex,
+                Money = (uint)_initialMoney,
+            }.Write();
 
-            ushort headerNumber = (ushort)SelectedHeaderIndex;
-            ARM9.WriteBytes(BitConverter.GetBytes(headerNumber),             RomInfo.arm9spawnOffset);
-            ARM9.WriteBytes(BitConverter.GetBytes((short)(_matrixX * 32 + _localX)), RomInfo.arm9spawnOffset + 8);
-            ARM9.WriteBytes(BitConverter.GetBytes((short)(_matrixY * 32 + _localY)), RomInfo.arm9spawnOffset + 12);
-            ARM9.WriteBytes(BitConverter.GetBytes((short)_playerDirIndex),    RomInfo.arm9spawnOffset + 16);
-
-            string moneyPath = OverlayUtils.GetPath(RomInfo.initialMoneyOverlayNumber);
-            DSUtils.WriteToFile(moneyPath, BitConverter.GetBytes((int)_initialMoney), RomInfo.initialMoneyOverlayOffset);
-
+            _proposed = false;
+            _undo?.MarkSaved();
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
-            return true;
+            return Task.FromResult(true);
         }
 
         // IEditorWithUnsavedChanges sync wrapper

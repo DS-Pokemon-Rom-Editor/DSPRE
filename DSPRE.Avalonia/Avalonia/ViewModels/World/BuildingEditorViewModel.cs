@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using global::Avalonia.Controls;
@@ -21,7 +22,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     /// (exterior, or interior on HG/SS), renders the selected model in 3D with either its embedded
     /// textures or a chosen building tileset, and imports / exports the raw NSBMD.
     /// </summary>
-    public class BuildingEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BuildingEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -55,12 +56,15 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // Import writes the unpacked archive at once for the preview, so the pre-import bytes are kept for Discard.
         private readonly Dictionary<string, byte[]> _originals = new();
-        public bool HasUnsavedChanges => _originals.Count > 0;
+        private bool _dirty;
+        public bool HasUnsavedChanges => _dirty;
         public string UnsavedChangesDescription => "Building models";
         public void SaveChanges()
         {
-            if (_originals.Count == 0) return;
+            if (!_dirty) return;
             _originals.Clear();
+            _dirty = false;
+            _undo?.MarkSaved();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
         }
@@ -72,8 +76,57 @@ namespace DSPRE.Avalonia.ViewModels.World
                 catch (Exception ex) { AppLogger.Error("Building discard: " + ex.Message); }
             }
             _originals.Clear();
+            _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
             if (_selBuilding >= 0) LoadModel(_selBuilding);
+            ResetUndo();
+        }
+
+        // ── Undo / redo: every imported model file as it stands ──
+        private readonly Dictionary<string, byte[]> _historyOriginals = new();
+        private DSPRE.Avalonia.ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        private static byte[] ReadFile(string path) => File.Exists(path) ? File.ReadAllBytes(path) : null;
+
+        private void Keep(string path)
+        {
+            byte[] now = ReadFile(path);
+            if (now != null && !_originals.ContainsKey(path)) _originals[path] = now;
+            if (!_historyOriginals.ContainsKey(path)) _historyOriginals[path] = now;
+        }
+
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_historyOriginals.Keys.ToDictionary(p => p, ReadFile));
+
+        private void ApplyState(byte[] state)
+        {
+            var s = DSPRE.Avalonia.UndoJson.Read<Dictionary<string, byte[]>>(state);
+            foreach (var path in _historyOriginals.Keys)
+            {
+                byte[] want = s.TryGetValue(path, out byte[] b) ? b : _historyOriginals[path];
+                try { if (want != null) File.WriteAllBytes(path, want); }
+                catch (Exception ex) { AppLogger.Error("Building undo: " + ex.Message); }
+            }
+            if (_selBuilding >= 0) LoadModel(_selBuilding);
+            RecountDirty();
+        }
+
+        // Unsaved while any imported file differs from what it held when last saved.
+        private void RecountDirty()
+        {
+            _dirty = _originals.Any(kv => { var now = ReadFile(kv.Key); return now == null || !now.AsSpan().SequenceEqual(kv.Value); });
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void ResetUndo()
+        {
+            _historyOriginals.Clear();
+            _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
+            RaiseUndo();
         }
 
         public BuildingEditorViewModel() { }
@@ -101,6 +154,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _suppress = false;
 
                 RefreshBuildings();
+                ResetUndo();
                 StatusText = $"{Buildings.Count} building models.";
                 if (Buildings.Count > 0)
                     SelectedBuildingIndex = System.Math.Clamp(InitialIndex, 0, Buildings.Count - 1);
@@ -192,9 +246,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 string target = Path.Combine(BuildingDir(), _selBuilding.ToString("D4"));
-                if (!_originals.ContainsKey(target) && File.Exists(target)) _originals[target] = File.ReadAllBytes(target);
+                Keep(target);
                 File.Copy(path, target, true);
-                OnPropertyChanged(nameof(HasUnsavedChanges));
+                _undo?.Record();
+                RecountDirty();
                 LoadModel(_selBuilding);
                 StatusText = "Imported building model. Save to keep it.";
             }

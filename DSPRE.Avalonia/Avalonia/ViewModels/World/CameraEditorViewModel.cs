@@ -154,6 +154,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             Changed();
         }
 
+        /// <summary>Puts an undone or redone camera back without moving what counts as loaded.</summary>
+        public void ApplyState(GameCamera cam)
+        {
+            var loaded = _loaded;
+            LoadFrom(cam);
+            _loaded = loaded;
+        }
+
         public GameCamera ToGameCamera(bool isHgss) => new GameCamera(
             distance:  _distance,
             vertRot:   _vertRot,
@@ -172,7 +180,7 @@ namespace DSPRE.Avalonia.ViewModels.World
     }
 
     // ── Main ViewModel ────────────────────────────────────────────────────────
-    public class CameraEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
+    public class CameraEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         void Notify([CallerMemberName] string p = null) =>
@@ -197,6 +205,38 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void SaveChanges() => _ = SaveChangesAsync();
         public async Task<bool> SaveChangesAsync() { await SaveAsync(); return !IsDirty; }
         public void DiscardChanges() => _ = SetupAsync(_owner);
+
+        // ── Undo / redo: the whole table, as the game stores it ──────────────
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+        private void RaiseUndo() { Notify(nameof(CanUndo)); Notify(nameof(CanRedo)); }
+
+        private byte[] TakeState()
+        {
+            using var ms = new MemoryStream();
+            foreach (var row in Cameras) { byte[] b = row.ToGameCamera(IsHgss).ToByteArray(); ms.Write(b, 0, b.Length); }
+            return ms.ToArray();
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            int size = state.Length / Math.Max(1, Cameras.Count);
+            for (int i = 0; i < Cameras.Count; i++)
+                Cameras[i].ApplyState(new GameCamera(state.AsSpan(i * size, size).ToArray()));
+            IsDirty = _undo.IsDirty;
+        }
+
+        private void ResetUndo() { _undo = new ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
+
+        private void Edited()
+        {
+            if (_undo == null) { IsDirty = true; return; }
+            _undo.Record();
+            IsDirty = _undo.IsDirty;
+        }
 
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set { _statusText = value; Notify(); } }
@@ -351,6 +391,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 IsReady = true;
                 IsDirty = false;
+                ResetUndo();
                 SelectedCamera = Cameras.Count > 0 ? Cameras[0] : null;
                 LoadPreviewPlaces();
                 LoadPreviewWeathers();
@@ -370,6 +411,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 string overlayPath = OverlayUtils.GetPath(RomInfo.cameraTblOverlayNumber);
                 WriteCameraTable(overlayPath, _overlayCameraTblOffset);
+                _undo?.MarkSaved();
                 IsDirty = false;
                 GameCameraTable.RaiseSaved();
                 StatusText = "Camera table saved.";
@@ -426,7 +468,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     Cameras[i].LoadFrom(cam);
                 }
 
-                IsDirty = true;
+                Edited();
                 StatusText = $"Imported {nCameras} cameras from file.";
             }
             catch (Exception ex)
@@ -471,7 +513,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 byte[] data = File.ReadAllBytes(path);
                 var cam = new GameCamera(data);
                 Cameras[index].LoadFrom(cam);
-                IsDirty = true;
+                Edited();
                 StatusText = $"Camera {index} imported.";
             }
             catch (Exception ex)
@@ -488,7 +530,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             // A name lives with the project's labels, not in the table.
             if (e.PropertyName is nameof(CameraRowVM.Name) or nameof(CameraRowVM.Label)) return;
-            if (IsReady) IsDirty = true;
+            if (IsReady) Edited();
         }
 
         // ── Names ─────────────────────────────────────────────────────────────
