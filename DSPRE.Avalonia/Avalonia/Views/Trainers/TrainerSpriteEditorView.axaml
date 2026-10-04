@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
         xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
         xmlns:av="clr-namespace:DSPRE.Avalonia"
+        xmlns:v="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerSpriteEditorView"
         x:Name="RootWindow"
         x:DataType="vm:TrainerSpriteEditorViewModel"
@@ -103,6 +104,11 @@
             <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
               <RadioButton GroupName="Tool" Content="Pencil" IsChecked="{Binding IsPencil}"/>
               <RadioButton GroupName="Tool" Content="Eyedropper" IsChecked="{Binding IsEyedropper}"/>
+              <WrapPanel ItemSpacing="4" LineSpacing="4" Margin="0,4,0,0">
+                <Button Content="Zoom out" Click="ZoomOut_Click" IsEnabled="{Binding CanZoomOut}" ToolTip.Tip="Ctrl and the mouse wheel zoom too"/>
+                <Button Content="Zoom in" Click="ZoomIn_Click" IsEnabled="{Binding CanZoomIn}" ToolTip.Tip="Ctrl and the mouse wheel zoom too"/>
+              </WrapPanel>
+              <CheckBox Content="Pixel grid" IsChecked="{Binding ShowGrid, Mode=TwoWay}"/>
             </StackPanel>
 
             <StackPanel DockPanel.Dock="Top" Spacing="4">
@@ -132,8 +138,11 @@
           <!-- Center: composited "as it looks" paint canvas (or the flat tile sheet on DP, which has no animation cells) -->
           <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" HorizontalAlignment="Left" VerticalAlignment="Top">
-              <Image x:Name="CanvasImage" Source="{Binding CanvasBitmap}" Stretch="None"
-                     PointerPressed="Canvas_PointerPressed" PointerMoved="Canvas_PointerMoved"/>
+              <Panel PointerWheelChanged="Canvas_PointerWheelChanged">
+                <Image x:Name="CanvasImage" Source="{Binding CanvasBitmap}" Stretch="None"
+                       PointerPressed="Canvas_PointerPressed" PointerMoved="Canvas_PointerMoved"/>
+                <v:PixelGrid Cell="{Binding ZoomFactor}" IsVisible="{Binding GridOn}" IsHitTestVisible="False"/>
+              </Panel>
             </Border>
           </ScrollViewer>
         </DockPanel>

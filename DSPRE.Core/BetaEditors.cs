@@ -45,7 +45,6 @@ namespace DSPRE
                 ["TitleScreenEditorView"] = "Title Screen editor",
                 ["DungeonCutinEditorView"] = "Dungeon Cut-in editor",
                 ["TrainerCardEditorView"] = "Trainer Card editor",
-                ["TrainerSpriteEditorView"] = "Trainer Sprite editor",
                 ["BottomScreenEditorView"] = "Bottom Screen editor",
                 ["CellAnimationEditorView"] = "Cell Animation editor",
                 ["BallCapsuleEditorView"] = "Ball Capsule editor",

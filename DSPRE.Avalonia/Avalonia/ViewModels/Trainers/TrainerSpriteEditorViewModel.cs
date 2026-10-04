@@ -268,7 +268,55 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public bool IsFlatSheetMode => _sprite == null && _jsonBanks == null;
 
-        public int ZoomFactor { get; private set; } = 4;
+        private const int MaxZoom = 24;
+        private int _zoom = 4;
+        private bool _zoomChosen;
+
+        /// <summary>Screen pixels across one sprite pixel. Once the user zooms, switching sprites keeps it.</summary>
+        public int ZoomFactor
+        {
+            get => _zoom;
+            private set
+            {
+                if (_zoomChosen || _zoom == value) return;
+                _zoom = value;
+                RaiseZoom();
+            }
+        }
+
+        public bool CanZoomIn => _zoom < MaxZoom;
+        public bool CanZoomOut => _zoom > 1;
+        public void ZoomIn() => ChooseZoom(_zoom < 4 ? _zoom + 1 : _zoom + 2);
+        public void ZoomOut() => ChooseZoom(_zoom <= 4 ? _zoom - 1 : _zoom - 2);
+
+        private void ChooseZoom(int zoom)
+        {
+            zoom = Math.Clamp(zoom, 1, MaxZoom);
+            _zoomChosen = true;
+            if (zoom == _zoom) return;
+            _zoom = zoom;
+            RaiseZoom();
+            if (BankCount > 0) RebuildCompositedCanvas();
+            else if (_flatIndices != null && _pal != null) RebuildFlatCanvas();
+        }
+
+        private void RaiseZoom()
+        {
+            OnPropertyChanged(nameof(ZoomFactor));
+            OnPropertyChanged(nameof(CanZoomIn));
+            OnPropertyChanged(nameof(CanZoomOut));
+            OnPropertyChanged(nameof(GridOn));
+        }
+
+        private bool _showGrid = true;
+        public bool ShowGrid
+        {
+            get => _showGrid;
+            set { if (Set(ref _showGrid, value)) OnPropertyChanged(nameof(GridOn)); }
+        }
+
+        // Below four screen pixels a line between every pixel covers the drawing.
+        public bool GridOn => _showGrid && _zoom >= 4;
 
         public int FrameCount => BankCount;
         public int SelectedFrameIndex

@@ -62,6 +62,18 @@ namespace DSPRE.Avalonia.Views.Trainers
                 VM.SelectedFrameIndex = index;
         }
 
+        private void ZoomIn_Click(object sender, RoutedEventArgs e) => VM?.ZoomIn();
+        private void ZoomOut_Click(object sender, RoutedEventArgs e) => VM?.ZoomOut();
+
+        // Without Ctrl the wheel still scrolls a drawing bigger than the window.
+        private void Canvas_PointerWheelChanged(object sender, PointerWheelEventArgs e)
+        {
+            var vm = VM;
+            if (vm == null || !e.KeyModifiers.HasFlag(KeyModifiers.Control)) return;
+            if (e.Delta.Y > 0) vm.ZoomIn(); else if (e.Delta.Y < 0) vm.ZoomOut();
+            e.Handled = true;
+        }
+
         private bool _painting;
 
         private void Canvas_PointerPressed(object sender, PointerPressedEventArgs e)
