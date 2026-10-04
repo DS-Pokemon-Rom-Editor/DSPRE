@@ -394,9 +394,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _dirty;
         public bool HasUnsavedChanges
         {
-            get => _dirty || AnimJsonDirty;
+            get => _dirty || AnimJsonDirty || _romAnimDirty;
             private set => Set(ref _dirty, value);
         }
+
+        // Kept apart from _dirty so an animation-only save leaves the pixel files and their scan copy alone.
+        private bool _romAnimDirty;
         public string UnsavedChangesDescription => $"{_set.Title} ({_set.Noun} {_trClassID})";
 
         private readonly TrainerSpriteSet _set = TrainerSpriteSet.Classes;
@@ -422,6 +425,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_dirty)
             {
                 string error = Save();
+                if (error != null) return error;
+            }
+            if (_romAnimDirty)
+            {
+                string error = SaveRomAnimations();
                 if (error != null) return error;
             }
             return AnimJsonDirty ? SaveAnimJson() : null;
@@ -463,6 +471,65 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public string AnimJsonStatusText { get => _animJsonStatusText; private set => Set(ref _animJsonStatusText, value); }
 
         public bool CanEditAnimJson => HgEngineProject.IsActive;
+
+        // Outside hg-engine only each frame's cell and hold change in the ROM's animation file.
+        private Data.NanrFile _romAnim;
+        public bool CanEditAnimFrames => CanEditAnimJson || _romAnim != null;
+
+        private Data.NanrFile OpenRomAnimations()
+        {
+            if (_set.NamingScreen || _parts.Count == 0 || IsFlatSheetMode) return null;
+            try
+            {
+                var p = _parts[0];
+                return Data.NanrFile.Read(p.Nanr ?? File.ReadAllBytes(EntryPath(TrainerGraphicsLayout.AnimationEntry(p.Entry))));
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("TrainerSpriteEditorViewModel: animation file could not be read: " + ex.Message);
+                return null;
+            }
+        }
+
+        // A changed frame takes its own result entry rather than retargeting every frame that shares it.
+        private void ApplyRomAnimEdits()
+        {
+            if (_romAnim == null || _animRoot == null || _parts.Count == 0) return;
+            bool changed = false;
+            for (int s = 0; s < Math.Min(_romAnim.Sequences.Count, _animRoot.Sequences.Count); s++)
+            {
+                var frames = _romAnim.Sequences[s].Frames;
+                var model = _animRoot.Sequences[s].FrameData;
+                for (int f = 0; f < Math.Min(frames.Count, model.Count); f++)
+                {
+                    if (_romAnim.CellOf(s, f) != model[f].CellIndex) { _romAnim.SetCell(s, f, model[f].CellIndex); changed = true; }
+                    if (Math.Max(1, (int)frames[f].Delay) != model[f].FrameDelay) { _romAnim.SetDelay(s, f, model[f].FrameDelay); changed = true; }
+                }
+            }
+            if (!changed) return;
+            _romAnimDirty = true;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private string SaveRomAnimations()
+        {
+            try
+            {
+                var p = _parts[0];
+                File.WriteAllBytes(EntryPath(TrainerGraphicsLayout.AnimationEntry(p.Entry)), _romAnim.Write());
+                p.Nanr = null;
+                _romAnimDirty = false;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                StatusText = "Saved.";
+                return null;
+            }
+            catch (Exception ex)
+            {
+                StatusText = "Save failed: " + ex.Message;
+                return ex.Message;
+            }
+        }
+
         public bool HasAnimJsonFile => _animJsonPath != null && File.Exists(_animJsonPath);
         /// <summary>True when there is an animation to show, from hg-engine's JSON or read from the ROM.</summary>
         public bool HasAnimation => HasAnimJsonFile || _animJsonCreated || (!CanEditAnimJson && !string.IsNullOrEmpty(AnimJsonText));
@@ -483,9 +550,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(CanEditAnimJson));
             OnPropertyChanged(nameof(HasAnimJsonFile));
 
+            _romAnim = _animJsonPath == null ? OpenRomAnimations() : null;
+            _romAnimDirty = false;
+            OnPropertyChanged(nameof(CanEditAnimFrames));
             if (_animJsonPath == null)
             {
-                SetAnimJsonTextSilent(RomAnimationJson(trClassID) ?? "");
+                SetAnimJsonTextSilent((_romAnim != null ? AnimationJsonOf(_romAnim) : RomAnimationJson(trClassID)) ?? "");
                 AnimJsonStatusText = "";
             }
             else if (File.Exists(_animJsonPath))
@@ -744,6 +814,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _syncingAnimText = true;
             AnimJsonText = _animRoot.Serialize();
             _syncingAnimText = false;
+            ApplyRomAnimEdits();
+            if (!AnimPreviewPlaying && AnimFrameRows.Count > 0) AnimPreviewBitmap = AnimFrameRows[0].Thumbnail;
 
             // Sequence picker labels show frame counts, so rebuild them after any add/remove.
             int keepIndex = SelectedAnimSequence?.Index ?? 0;
@@ -1993,20 +2065,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(FrameCount));
             RebuildAnimCellChoices();
             StopAnimPreview();
-            SetAnimJsonTextSilent(AnimationJsonOf(OpenFrames(0)) ?? "");
+            _romAnim = OpenRomAnimations();
+            OnPropertyChanged(nameof(CanEditAnimFrames));
+            SetAnimJsonTextSilent(AnimationJsonOf(_romAnim ?? OpenFrames(0).Animations) ?? "");
             OnPropertyChanged(nameof(HasAnimation));
             StatusText = wizard.Outcome;
         }
 
-        // Mirrors RomAnimationJson for animations not yet saved.
-        private static string AnimationJsonOf(Data.TrainerSpriteFrames frames)
+        // One model frame per file frame, in order, so edits map back to the file.
+        private static string AnimationJsonOf(Data.NanrFile anims)
         {
             var root = new AnimJsonRoot();
-            for (int seq = 0; seq < frames.Animations.Sequences.Count; seq++)
+            for (int seq = 0; seq < anims.Sequences.Count; seq++)
             {
                 var model = new AnimSequenceJson { AnimationType = 1, PlaybackMode = 2 };
-                foreach (var st in frames.StepsOf(seq))
-                    model.FrameData.Add(new AnimFrameDataJson { CellIndex = st.Frame, FrameDelay = Math.Max(1, st.Hold) });
+                for (int f = 0; f < anims.Sequences[seq].Frames.Count; f++)
+                    model.FrameData.Add(new AnimFrameDataJson { CellIndex = anims.CellOf(seq, f), FrameDelay = Math.Max(1, (int)anims.Sequences[seq].Frames[f].Delay) });
                 root.Sequences.Add(model);
             }
             return root.Sequences.Count == 0 ? null : root.Serialize();

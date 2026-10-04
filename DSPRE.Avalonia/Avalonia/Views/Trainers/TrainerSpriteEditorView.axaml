@@ -212,7 +212,7 @@
 
                               <TextBlock Text="Pose" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
                               <ComboBox ItemsSource="{Binding #RootWindow.DataContext.AnimCellChoices}"
-                                        SelectedIndex="{Binding CellIndex}" IsEnabled="{Binding #RootWindow.DataContext.CanEditAnimJson}"
+                                        SelectedIndex="{Binding CellIndex}" IsEnabled="{Binding #RootWindow.DataContext.CanEditAnimFrames}"
                                         HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                   <DataTemplate x:DataType="vm:AnimCellChoiceViewModel">
@@ -223,7 +223,7 @@
 
                               <TextBlock Text="Delay" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="In 60ths of a second"/>
                               <NumericUpDown Value="{Binding Delay}" Minimum="1" Maximum="600" Increment="1" FormatString="0"
-                                             IsEnabled="{Binding #RootWindow.DataContext.CanEditAnimJson}"/>
+                                             IsEnabled="{Binding #RootWindow.DataContext.CanEditAnimFrames}"/>
 
                               <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" Margin="0,4,0,0"
                                           IsVisible="{Binding #RootWindow.DataContext.CanEditAnimJson}">
