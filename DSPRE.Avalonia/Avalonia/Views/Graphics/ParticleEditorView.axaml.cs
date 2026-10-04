@@ -18,6 +18,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             DataContext = vm;
             Closed += (_, _) => vm.Stop();
+            EditorWindowChrome.Attach(this, vm, manageTitle: false);
         }
 
         private void Replay_Click(object sender, RoutedEventArgs e) => VM?.Replay();

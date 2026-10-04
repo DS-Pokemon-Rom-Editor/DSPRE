@@ -178,7 +178,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// Pixel editor for a trainer sprite. Plat/HGSS paint on the composited frame and write each stroke into the
     /// cell tiles under it, so frames sharing tiles change together; DP has no cells and edits the flat sheet.
     /// </summary>
-    public class TrainerSpriteEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class TrainerSpriteEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -398,7 +398,190 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool HasUnsavedChanges
         {
             get => _dirty || AnimJsonDirty || _romAnimDirty;
-            private set => Set(ref _dirty, value);
+            private set { Set(ref _dirty, value); if (value) EditCommitted(); }
+        }
+
+        // ── Undo for pixels, palettes and sheet imports. The Animations tab's text box keeps its own. ──
+        private sealed class PartState
+        {
+            public ImageBase Tile;
+            public SpriteBase Sprite;
+            public byte[] Tiles;
+            public System.Drawing.Color[][] Pal;
+            public byte[] Ncgr, Ncer, Nanr;
+        }
+
+        private sealed class SpriteState
+        {
+            public PartState[] Parts;
+            public int[] Flat;
+            public System.Drawing.Color[][] ActivePal;
+        }
+
+        private readonly Stack<(SpriteState Before, SpriteState After)> _undoSteps = new(), _redoSteps = new();
+        private SpriteState _lastState, _savedState;
+        private DateTime _lastCommit = DateTime.MinValue;
+        private bool _stroking, _strokeEdited, _restoring;
+
+        private static System.Drawing.Color[][] CopyPal(PaletteBase pal) =>
+            pal?.Palette?.Select(b => (System.Drawing.Color[])b.Clone()).ToArray();
+
+        private SpriteState TakeState() => new SpriteState
+        {
+            Parts = _parts.Select(p => new PartState
+            {
+                Tile = p.Tile, Sprite = p.Sprite, Tiles = (byte[])p.Tile?.Tiles?.Clone(), Pal = CopyPal(p.Pal),
+                Ncgr = p.Ncgr, Ncer = p.Ncer, Nanr = p.Nanr,
+            }).ToArray(),
+            Flat = (int[])_flatIndices?.Clone(),
+            ActivePal = CopyPal(_pal),
+        };
+
+        private static bool SamePal(System.Drawing.Color[][] a, System.Drawing.Color[][] b) =>
+            a == null || b == null ? a == b
+            : a.Length == b.Length && a.Zip(b).All(z => z.First.Length == z.Second.Length
+                && z.First.Zip(z.Second).All(c => c.First.ToArgb() == c.Second.ToArgb()));
+
+        private static bool SameState(SpriteState a, SpriteState b) =>
+            a != null && b != null && a.Parts.Length == b.Parts.Length
+            && a.Parts.Zip(b.Parts).All(z => z.First.Tile == z.Second.Tile && z.First.Sprite == z.Second.Sprite
+                && (z.First.Tiles ?? Array.Empty<byte>()).AsSpan().SequenceEqual(z.Second.Tiles ?? Array.Empty<byte>())
+                && SamePal(z.First.Pal, z.Second.Pal))
+            && (a.Flat ?? Array.Empty<int>()).AsSpan().SequenceEqual(b.Flat ?? Array.Empty<int>())
+            && SamePal(a.ActivePal, b.ActivePal);
+
+        private void ResetSteps()
+        {
+            _undoSteps.Clear(); _redoSteps.Clear();
+            _lastState = _savedState = TakeState();
+            _stroking = _strokeEdited = false;
+            RaiseSteps();
+        }
+
+        private void RaiseSteps() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
+        /// <summary>A pointer drag on the canvas starts; everything it paints is one undo step.</summary>
+        public void BeginStroke() { _stroking = true; _strokeEdited = false; }
+
+        public void EndStroke()
+        {
+            if (!_stroking) return;
+            _stroking = false;
+            if (_strokeEdited) { _strokeEdited = false; Commit(coalesce: false); }
+        }
+
+        private void EditCommitted()
+        {
+            if (_restoring || _lastState == null) return;
+            if (_stroking) { _strokeEdited = true; return; }
+            // A burst of colour changes from one picker is one step.
+            Commit(coalesce: (DateTime.UtcNow - _lastCommit).TotalMilliseconds < 500);
+        }
+
+        private void Commit(bool coalesce)
+        {
+            var now = TakeState();
+            if (SameState(now, _lastState)) return;
+            if (coalesce && _undoSteps.Count > 0) _undoSteps.Push((_undoSteps.Pop().Before, now));
+            else _undoSteps.Push((_lastState, now));
+            if (_undoSteps.Count > 100)
+            {
+                var keep = _undoSteps.Take(100).Reverse().ToList();
+                _undoSteps.Clear();
+                foreach (var step in keep) _undoSteps.Push(step);
+            }
+            _redoSteps.Clear();
+            _lastState = now;
+            _lastCommit = DateTime.UtcNow;
+            RaiseSteps();
+        }
+
+        public bool CanUndo => _undoSteps.Count > 0;
+        public bool CanRedo => _redoSteps.Count > 0;
+
+        public void Undo()
+        {
+            if (_undoSteps.Count == 0) return;
+            var step = _undoSteps.Pop();
+            _redoSteps.Push(step);
+            Restore(step.Before);
+        }
+
+        public void Redo()
+        {
+            if (_redoSteps.Count == 0) return;
+            var step = _redoSteps.Pop();
+            _undoSteps.Push(step);
+            Restore(step.After);
+        }
+
+        private static void PutPal(PaletteBase pal, System.Drawing.Color[][] colours)
+        {
+            if (pal?.Palette == null || colours == null) return;
+            for (int b = 0; b < Math.Min(pal.Palette.Length, colours.Length); b++)
+                for (int i = 0; i < Math.Min(pal.Palette[b].Length, colours[b].Length); i++) pal.Palette[b][i] = colours[b][i];
+        }
+
+        private void Restore(SpriteState state)
+        {
+            bool layoutChanged = false;
+            for (int i = 0; i < Math.Min(_parts.Count, state.Parts.Length); i++)
+            {
+                var part = _parts[i];
+                var was = state.Parts[i];
+                layoutChanged |= part.Sprite != was.Sprite || part.Tile != was.Tile;
+                part.Tile = was.Tile; part.Sprite = was.Sprite;
+                part.Ncgr = was.Ncgr; part.Ncer = was.Ncer; part.Nanr = was.Nanr;
+                if (part.Tile != null && was.Tiles != null)
+                {
+                    if (part.Tile.Tiles != null && part.Tile.Tiles.Length == was.Tiles.Length) Array.Copy(was.Tiles, part.Tile.Tiles, was.Tiles.Length);
+                    else part.Tile.Set_Tiles((byte[])was.Tiles.Clone());
+                }
+                PutPal(part.Pal, was.Pal);
+            }
+            if (state.Flat != null) _flatIndices = (int[])state.Flat.Clone();
+            PutPal(_pal, state.ActivePal);
+
+            _lastState = state;
+            _restoring = true;
+            try
+            {
+                _dirty = !SameState(state, _savedState);
+                _paletteDirty = _dirty;
+            }
+            finally { _restoring = false; }
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+
+            if (IsFlatSheetMode)
+            {
+                BuildPaletteSwatches(Math.Max(0, _activePaletteBank));
+                RebuildFlatCanvas();
+            }
+            else if (layoutChanged)
+            {
+                // The same refresh a sheet import does, since the cells may differ.
+                Activate(Math.Min(_activePart, _parts.Count - 1));
+                BuildFrameThumbnails();
+                _activePaletteBank = -1;
+                _selectedStripFrame = -1;
+                SelectedFrameIndex = 0;
+                OnPropertyChanged(nameof(FrameCount));
+                RebuildAnimCellChoices();
+                StopAnimPreview();
+                _romAnim = OpenRomAnimations();
+                OnPropertyChanged(nameof(CanEditAnimFrames));
+                SetAnimJsonTextSilent(AnimationJsonOf(_romAnim ?? OpenFrames(0).Animations) ?? "");
+                OnPropertyChanged(nameof(HasAnimation));
+            }
+            else
+            {
+                if (_parts.Count > 0) Activate(_activePart);
+                if (_activePaletteBank >= 0) BuildPaletteSwatches(_activePaletteBank);
+                RebuildCompositedCanvas();
+                BuildFrameThumbnails();
+                RebuildTopBar();
+            }
+            RaiseSteps();
         }
 
         // Kept apart from _dirty so an animation-only save leaves the pixel files and their scan copy alone.
@@ -1076,6 +1259,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 HasUnsavedChanges = false;
                 _paletteDirty = false;
                 _palPath = Path.Combine(dir, paletteFilename);
+                ResetSteps();
                 StopAnimPreview();
                 RebuildAnimCellChoices();
                 LoadAnimJson(trClassID);
@@ -1674,6 +1858,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 OnPropertyChanged(nameof(CanUseAnimationSheets));
                 HasUnsavedChanges = false;
                 _paletteDirty = false;
+                ResetSteps();
                 StatusText = $"{ClassNames[Math.Max(0, _entryIds.IndexOf(animation))]}: {FrameCount} frame(s)";
                 _topBarFrame = 0; _topBarHold = 0;
                 BuildTopBarBackground(dir);
@@ -1949,6 +2134,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             for (int half = 0; half < 2; half++)
                 if (now[half] != null) halves[half].Base = now[half];
+            return null;
+        }
+
+        // hg-engine builds the scan copy from NNN_enc.png, reading only its pixel numbers.
+        private string WriteScanPng(int entry, string png)
+        {
+            if (!File.Exists(png)) return null;
+            var scan = ReadScan(entry, out string error);
+            if (scan == null) return error;
+            byte[] file = File.ReadAllBytes(png);
+            if (!IndexedPng.TryRead(file, out byte[] old, out uint[] colours, out int w, out int h)) return $"{Path.GetFileName(png)} isn't an indexed PNG.";
+            if (w != ScanFrame * 2 || h != ScanFrame) return $"{Path.GetFileName(png)} is {w}x{h}, not the {ScanFrame * 2}x{ScanFrame} hg-engine builds the scan copy from.";
+            var indices = new byte[w * h];
+            for (int i = 0; i < indices.Length; i++) indices[i] = (byte)ScanPixel(scan.Pixels, i);
+            if (indices.AsSpan().SequenceEqual(old)) return null;
+            File.WriteAllBytes(png, IndexedPng.Write(indices, colours, w, h, file.Length > 24 && file[24] == 4 ? 4 : 8));
             return null;
         }
 
@@ -2288,9 +2489,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         if (_parts.Count > 0) WriteStagedSheetFiles(_parts[p]);
                         if (_packedTilesPath != null)
                             File.WriteAllBytes(_packedTilesPath, Data.GraphicAssets.Squeeze(File.ReadAllBytes(_tilesPath), _packedTilesMarker));
-                        if (BankCount > 0 && _sourcePngPath == null && !_set.NamingScreen)
+                        if (BankCount > 0 && !_set.NamingScreen)
                         {
-                            string scanError = WriteScan(_parts.Count > 0 ? _parts[p].Entry : _trClassID);
+                            int entry = _parts.Count > 0 ? _parts[p].Entry : _trClassID;
+                            string scanError = WriteScan(entry);
+                            if (scanError == null && _sourcePngPath != null) scanError = WriteScanPng(entry, _sourcePngPath[..^4] + "_enc.png");
                             if (scanError != null) { StatusText = "Save failed: " + scanError; return scanError; }
                         }
                         if (_paletteDirty || _sourcePngPath != null)
@@ -2309,6 +2512,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (BankCount > 0) BuildFrameThumbnails();
 
                 HasUnsavedChanges = false;
+                _savedState = _lastState = TakeState();
                 StatusText = _sourcePngPath != null ? "Saved. Compile the ROM to apply it." : "Saved.";
                 return null;
             }

@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.CellAnimationEditorView"
         x:DataType="vm:CellAnimationEditorViewModel"
-        Title="Cell Animation"
+        Title="Cell animation"
         Width="1180" Height="760" MinWidth="860" MinHeight="560"
         WindowStartupLocation="CenterScreen">
 
@@ -31,20 +31,13 @@
       <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
     </Border>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
-            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
-      <DockPanel>
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
-          <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
-          <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-          <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <TextBlock Text="{Binding Subject}" FontWeight="SemiBold" VerticalAlignment="Center"/>
-          <TextBlock Text="{Binding FileNote}" Classes="hint" VerticalAlignment="Center"/>
-        </StackPanel>
-      </DockPanel>
-    </Border>
+    <controls:EditorToolbar>
+      <TextBlock controls:EditorToolbar.Slot="Picker" Text="{Binding Subject}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+      <TextBlock controls:EditorToolbar.Slot="Picker" Text="{Binding FileNote}" Classes="hint" VerticalAlignment="Center"/>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
+      <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
+    </controls:EditorToolbar>
 
     <!-- Sequences. A file can hold hundreds, so there is a way to go straight to one. -->
     <Border DockPanel.Dock="Left" Width="270" BorderBrush="{DynamicResource Editor.Border}"
@@ -173,7 +166,7 @@
                   ToolTip.Tip="Draw the sprite in the application's own screen, where a player sees it"/>
         <Button Content="{Binding PoketchAppName}" Click="BackToPoketch_Click"
                 IsVisible="{Binding InPoketch}"
-                ToolTip.Tip="Open the Bottom Screen editor on the application this belongs to"/>
+                ToolTip.Tip="Open this app in the Bottom screen editor"/>
       </StackPanel>
       <!-- Where the pieces of one drawing sit. The preview follows a move straight away. -->
       <Border x:Name="PiecesPanel" IsVisible="{Binding CanMovePieces}" Padding="10" CornerRadius="4" MaxWidth="512"

@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     }
 
     /// <summary>Designs a Ball Capsule, standalone or a trainer capsule, and previews it on a send-out.</summary>
-    public sealed class BallCapsuleEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public sealed class BallCapsuleEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -83,6 +83,49 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _capsuleIndex = 0;
             SpeciesIndex = Math.Min(1, SpeciesNames.Count - 1);
             StatusText = _seals.Count == 0 ? "This ROM's seal table was not found." : $"{Seals.Count} seals.";
+            StartUndo();
+        }
+
+        // Your design first, then each trainer capsule.
+        private IEnumerable<BallCapsule> AllCapsules() => new[] { _design }.Concat(_trainerCapsules);
+
+        private static byte[] Pack(IEnumerable<BallCapsule> capsules) => ByteStateUndo.Pack(w =>
+        {
+            foreach (var c in capsules) foreach (var p in c.Seals) { w.Write(p.Seal); w.Write(p.X); w.Write(p.Y); }
+        });
+
+        private byte[] _savedTrainer;
+        private ByteStateUndo _undo;
+        private void StartUndo()
+        {
+            _savedTrainer = Pack(_trainerCapsules);
+            _undo = new ByteStateUndo(() => Pack(AllCapsules()), ApplyState, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
+        }
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        // Shows the capsule the step changed.
+        private void ApplyState(byte[] state)
+        {
+            var all = AllCapsules().ToList();
+            int changed = -1;
+            ByteStateUndo.Unpack(state, r =>
+            {
+                for (int i = 0; i < all.Count; i++)
+                    foreach (var p in all[i].Seals)
+                    {
+                        int seal = r.ReadInt32(), x = r.ReadInt32(), y = r.ReadInt32();
+                        if (p.Seal == seal && p.X == x && p.Y == y) continue;
+                        p.Seal = seal; p.X = x; p.Y = y;
+                        if (changed < 0) changed = i;
+                    }
+            });
+            if (changed >= 0 && changed != _capsuleIndex) CapsuleIndex = changed;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            RaiseBoard();
         }
 
         public BallCapsule Current => _capsuleIndex > 0 && _capsuleIndex <= _trainerCapsules.Length ? _trainerCapsules[_capsuleIndex - 1] : _design;
@@ -167,8 +210,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void Touched()
         {
-            if (_capsuleIndex > 0) HasUnsavedChanges = true;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseBoard();
+            _undo?.Record();
         }
 
         /// <summary>Puts a seal in the first empty slot, at the centre of the board.</summary>
@@ -234,17 +278,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // ── saving ─────────────────────────────────────────────────────────────────────────────
 
-        private bool _dirty;
-        public bool HasUnsavedChanges { get => _dirty; private set => Set(ref _dirty, value); }
+        // Only the trainer capsules are saved; your design lives for the session.
+        public bool HasUnsavedChanges => _savedTrainer != null && !Pack(_trainerCapsules).AsSpan().SequenceEqual(_savedTrainer);
         public string UnsavedChangesDescription => "Ball Capsules (trainer capsules)";
 
         public void SaveChanges()
         {
-            if (!TrainerCapsules.Available || !_dirty) return;
+            if (!TrainerCapsules.Available || !HasUnsavedChanges) return;
             try
             {
                 TrainerCapsules.WriteAll(_trainerCapsules);
-                HasUnsavedChanges = false;
+                _savedTrainer = Pack(_trainerCapsules);
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = "Trainer capsules saved.";
                 Data.TrainerCapsuleCatalog.Saved();
             }
@@ -254,7 +299,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void DiscardChanges()
         {
             if (TrainerCapsules.Available) _trainerCapsules = TrainerCapsules.ReadAll();
-            HasUnsavedChanges = false;
+            StartUndo();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             RaiseBoard();
         }
     }

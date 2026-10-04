@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     }
 
     /// <summary>Edits a particle file with a live preview; layout fields are locked so the file keeps its size.</summary>
-    public sealed class ParticleEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public sealed class ParticleEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -127,6 +127,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             RebuildFields();
             RebuildTextures();
             Replay();
+            StartUndo();
 
             _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(1000.0 / 30), DispatcherPriority.Render, (_, _) => Tick());
             _timer.Start();
@@ -151,8 +152,34 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _status = "";
         public string StatusText { get => _status; set => Set(ref _status, value); }
 
-        private bool _dirty;
-        public bool HasUnsavedChanges { get => _dirty; private set => Set(ref _dirty, value); }
+        public bool HasUnsavedChanges => _doc != null && _saved != null && !_doc.ToBytes().AsSpan().SequenceEqual(_saved);
+
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private void StartUndo()
+        {
+            _undo = new ByteStateUndo(() => _doc.ToBytes(), ApplyState, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
+        }
+
+        private void ApplyState(byte[] state)
+        {
+            _doc = SpaDocument.Load(state);
+            foreach (var row in Fields) row.Refresh();
+            RebuildTextures();
+            Replay();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void Edited()
+        {
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            _undo?.Record();
+        }
         public string UnsavedChangesDescription => Title;
 
         internal static string Words(string pascal) =>
@@ -169,7 +196,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 _doc.SetRaw(_emitterIndex, row.Field, raw);
-                HasUnsavedChanges = true;
+                Edited();
                 StatusText = $"{row.Label} changed.";
                 Replay();
             }
@@ -264,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             var result = _doc.ReplaceTexture(index, w, h, rgba);
             if (!result.Succeeded) return StatusText = result.Error;
 
-            HasUnsavedChanges = true;
+            Edited();
             RebuildTextures();
             Replay();
             return StatusText = result.Quantized
@@ -289,13 +316,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void SaveChanges()
         {
-            if (!_dirty) return;
+            if (!HasUnsavedChanges) return;
             try
             {
                 byte[] bytes = _doc.ToBytes();
                 _source.Put(new Dictionary<int, byte[]> { [_entry] = bytes });
                 _saved = bytes;
-                HasUnsavedChanges = false;
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = "Saved.";
                 _changed?.Invoke(_entry);
             }
@@ -305,11 +332,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void DiscardChanges()
         {
             _doc = SpaDocument.Load(_saved);
-            HasUnsavedChanges = false;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             RebuildFields();
             RebuildTextures();
             Replay();
-            StatusText = "Changes undone.";
+            StartUndo();
+            StatusText = "Changes discarded.";
         }
     }
 }

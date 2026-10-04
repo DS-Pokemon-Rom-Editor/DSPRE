@@ -13,17 +13,16 @@
 
   <DockPanel LastChildFill="True">
 
-	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-	<StackPanel x:Name="CutinToolbar" Orientation="Horizontal" Spacing="6">
+	<controls:EditorToolbar x:Name="CutinToolbar">
 	  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 	  <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+	  <controls:UndoRedoButtons/>
 	  <Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click"/>
 	  <Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
-	  <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+	  <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
 	          ToolTip.Tip="Open this splash screen in the Graphics window, where its drawing, colours and arrangement for all four times of day sit together."/>
 	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
-	</StackPanel>
-	</Border>
+	</controls:EditorToolbar>
 
 	<ListBox x:Name="CutinList" DockPanel.Dock="Left" Width="220" Margin="8,8,8,8"
 			 ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}">
@@ -53,7 +52,7 @@
 			  <StackPanel Spacing="2">
 				<TextBlock Text="Name line"/>
 				<TextBox Text="{Binding SelectedRow.NameMessageId}" Width="120"
-				         ToolTip.Tip="Which line of the dungeon cut-in text archive is drawn as this place's name. Edit the wording in the Text Editor."/>
+				         ToolTip.Tip="The text line drawn as this place's name. Edit it in the Text editor."/>
 			  </StackPanel>
 			</StackPanel>
 		  </StackPanel>

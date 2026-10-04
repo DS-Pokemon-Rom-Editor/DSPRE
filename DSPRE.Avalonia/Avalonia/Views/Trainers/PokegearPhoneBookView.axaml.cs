@@ -43,6 +43,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
 
         private void AutoSort_Click(object sender, RoutedEventArgs e) => VM?.AutoSort();
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -12,7 +13,7 @@ using SortKey = DSPRE.PokegearPhoneBook.SortKey;
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
     /// <summary>Every field of every Pokégear contact, with the names the game shows for them.</summary>
-    public class PokegearPhoneBookViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class PokegearPhoneBookViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -30,7 +31,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private List<int> _sorted = new();
         private int _current = -1;
         private bool _suppress;
-        private bool _dirty;
+        private byte[] _saved;
+        private ByteStateUndo _undo;
 
         public ObservableCollection<string> ContactLabels { get; } = new();
         public List<string> TypeChoices { get; } = PokegearPhoneBook.TypeNames.ToList();
@@ -50,10 +52,57 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool HasLoadError => !string.IsNullOrEmpty(LoadError);
 
         // ── IEditorWithUnsavedChanges ──
-        public bool HasUnsavedChanges => _dirty;
+        public bool HasUnsavedChanges => _book != null && _saved != null && !_book.ToBytes().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Pokégear Phone Book";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        public void DiscardChanges()
+        {
+            if (_book == null || _saved == null) return;
+            ApplyState(_saved);
+            StartUndo();
+            UpdateStatus("Changes discarded.");
+        }
+
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private void StartUndo()
+        {
+            _saved = _book.ToBytes();
+            _undo = new ByteStateUndo(_book.ToBytes, ApplyState, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        // Shows the contact the step changed.
+        private void ApplyState(byte[] state)
+        {
+            var back = PokegearPhoneBook.Book.Parse(state, out _);
+            if (back == null || back.Entries.Count != _book.Entries.Count) return;
+            int changed = -1;
+            for (int i = 0; i < back.Entries.Count; i++)
+            {
+                var was = new byte[PokegearPhoneBook.EntrySize]; var now = new byte[PokegearPhoneBook.EntrySize];
+                _book.Entries[i].Write(was); back.Entries[i].Write(now);
+                if (was.AsSpan().SequenceEqual(now)) continue;
+                _book.Entries[i] = back.Entries[i];
+                _locations[i] = LocationText(back.Entries[i].MapId);
+                if (changed < 0) changed = i;
+            }
+            RebuildList();
+            RebuildSortRows();
+            if (changed >= 0 && changed != _current) SelectContact(changed); else LoadDetail();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus();
+        }
+
+        private void Edited()
+        {
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            _undo?.Record();
+        }
 
         public PokegearPhoneBookViewModel(int initialEntry = -1)
         {
@@ -104,6 +153,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             RebuildSortRows();
             int position = initialEntry >= 0 ? _listed.IndexOf(initialEntry) : -1;
             SelectedListIndex = position >= 0 ? position : (_listed.Count > 0 ? 0 : -1);
+            StartUndo();
             UpdateStatus();
         }
 
@@ -278,11 +328,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void SortChanged(string message)
         {
-            _dirty = true;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
             RebuildSortRows();
             NotifyRanks();
             UpdateStatus(message);
+            Edited();
         }
 
         private void NotifyRanks()
@@ -463,8 +512,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_suppress || Current == null) return;
 
             apply(Current, value);
-            _dirty = true;
-            OnPropertyChanged(nameof(HasUnsavedChanges));
             if (name == nameof(MapIndex)) _locations[_current] = LocationText(Current.MapId);
             if (name is nameof(TitleIndex) or nameof(MapIndex)) RebuildSortRows();
 
@@ -480,6 +527,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             DetailChanged();
             UpdateStatus();
+            Edited();
         }
 
         public void Save()
@@ -490,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 AppMessages.Error(error, "Pokégear Phone Book");
                 return;
             }
-            _dirty = false;
+            _saved = _book.ToBytes();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             UpdateStatus("Saved.");
@@ -499,7 +547,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void UpdateStatus(string message = null)
         {
             if (_book == null) return;
-            StatusText = message ?? $"{_book.Entries.Count} contacts.{(_dirty ? " Unsaved changes." : "")}";
+            StatusText = message ?? $"{_book.Entries.Count} contacts.{(HasUnsavedChanges ? " Unsaved changes." : "")}";
         }
     }
 }

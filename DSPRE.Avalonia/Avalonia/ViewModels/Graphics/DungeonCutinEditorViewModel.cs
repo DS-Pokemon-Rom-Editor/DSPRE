@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
     public enum DungeonCutinTimezone { Morning, Noon, Evening, Night }
 
-    public class DungeonCutinEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class DungeonCutinEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -103,8 +103,66 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // ── IEditorWithUnsavedChanges ─────────────────────────────────────────
-        private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
+        private byte[] _saved;
+        public bool HasUnsavedChanges => _saved != null && !TakeState().AsSpan().SequenceEqual(_saved);
+
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private static int[] Values(DungeonCutinRow r) => new[]
+        {
+            r.HeaderIndex, r.WipeType,
+            r.MorningPaletteId, r.MorningTilesId, r.MorningScreenId,
+            r.NoonPaletteId, r.NoonTilesId, r.NoonScreenId,
+            r.EveningPaletteId, r.EveningTilesId, r.EveningScreenId,
+            r.NightPaletteId, r.NightTilesId, r.NightScreenId,
+            r.NameMessageId,
+        };
+
+        private static void SetValues(DungeonCutinRow r, int[] v)
+        {
+            r.HeaderIndex = v[0]; r.WipeType = v[1];
+            r.MorningPaletteId = v[2]; r.MorningTilesId = v[3]; r.MorningScreenId = v[4];
+            r.NoonPaletteId = v[5]; r.NoonTilesId = v[6]; r.NoonScreenId = v[7];
+            r.EveningPaletteId = v[8]; r.EveningTilesId = v[9]; r.EveningScreenId = v[10];
+            r.NightPaletteId = v[11]; r.NightTilesId = v[12]; r.NightScreenId = v[13];
+            r.NameMessageId = v[14];
+        }
+
+        private byte[] TakeState() => ByteStateUndo.Pack(w =>
+        {
+            foreach (var row in Rows) foreach (int v in Values(row)) w.Write(v);
+        });
+
+        // Shows the row the step changed.
+        private void ApplyState(byte[] state)
+        {
+            DungeonCutinRow changed = null;
+            ByteStateUndo.Unpack(state, r =>
+            {
+                foreach (var row in Rows)
+                {
+                    var v = new int[FieldsPerRow];
+                    for (int i = 0; i < v.Length; i++) v[i] = r.ReadInt32();
+                    if (Values(row).SequenceEqual(v)) continue;
+                    SetValues(row, v);
+                    changed ??= row;
+                }
+            });
+            if (changed != null && changed != SelectedRow) SelectedRow = changed; else RefreshPreviews();
+            Changed();
+        }
+
+        private void StartUndo()
+        {
+            _saved = TakeState();
+            _undo = new ByteStateUndo(TakeState, ApplyState, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
+            Changed();
+        }
         public string UnsavedChangesDescription => "Dungeon Cutin Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -112,7 +170,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             await SaveCommand();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() { LoadRows(); SetClean(); }
+        public void DiscardChanges() => LoadRows();
 
         // ── Observable state ─────────────────────────────────────────────────
         public ObservableCollection<DungeonCutinRow> Rows { get; } = new();
@@ -241,7 +299,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 WriteRows();
-                SetClean();
+                _saved = TakeState();
+                Changed();
                 SaveNotice.Saved(UnsavedChangesDescription);
                 await DialogHelper.ShowInfo("Dungeon Cutin table saved successfully.", "Save");
             }
@@ -339,10 +398,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         NightScreenId = v[13],
                         NameMessageId = v[14],
                     };
-                    row.PropertyChanged += (_, __) => { SetDirty(); if (ReferenceEquals(row, SelectedRow)) RefreshPreviews(); };
+                    row.PropertyChanged += (_, __) => { Changed(); if (ReferenceEquals(row, SelectedRow)) RefreshPreviews(); };
                     Rows.Add(row);
                 }
-                SetDirty();
+                // Steps hold values by row position, so the import is one step over the rows it replaced.
+                Changed();
                 SelectedRow = Rows.Count > 0 ? Rows[0] : null;
                 return null;
             }
@@ -353,8 +413,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
-        private void SetDirty() { _dirty = true; Title = "● Dungeon Cutin Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        private void SetClean() { _dirty = false; Title = "Dungeon Cutin Editor"; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void Changed()
+        {
+            bool dirty = HasUnsavedChanges;
+            Title = dirty ? "● Dungeon Cutin Editor" : "Dungeon Cutin Editor";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            _undo?.Record();
+        }
 
         private void LoadRows()
         {
@@ -384,10 +449,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         NightScreenId = t.Art[3].Screen,
                         NameMessageId = t.NameMessageId,
                     };
-                    row.PropertyChanged += (_, __) => { SetDirty(); if (ReferenceEquals(row, SelectedRow)) RefreshPreviews(); };
+                    row.PropertyChanged += (_, __) => { Changed(); if (ReferenceEquals(row, SelectedRow)) RefreshPreviews(); };
                     Rows.Add(row);
                 }
-                SetClean();
+                StartUndo();
                 SelectedRow = Rows.Count > 0 ? Rows[0] : null;
             }
             catch (Exception ex)

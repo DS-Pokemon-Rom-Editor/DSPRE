@@ -72,7 +72,7 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
-    <TextBlock Text="Last Used" FontWeight="SemiBold" FontSize="12" IsVisible="{Binding HasLastUsed}"/>
+    <TextBlock Text="Last used" FontWeight="SemiBold" FontSize="12" IsVisible="{Binding HasLastUsed}"/>
     <ItemsControl ItemsSource="{Binding LastUsed}" IsVisible="{Binding HasLastUsed}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="3"/></ItemsPanelTemplate>

@@ -45,7 +45,15 @@ namespace DSPRE.Avalonia.Data
         // can put back exactly what was there when the editor was opened, undoing every import made since.
         private readonly Dictionary<int, byte[]> _backup = new();
 
-        public bool HasChanges => _backup.Count > 0;
+        public bool HasChanges
+        {
+            get
+            {
+                foreach (var kv in _backup)
+                    if (!(_narc.Get(kv.Key) ?? Array.Empty<byte>()).AsSpan().SequenceEqual(kv.Value)) return true;
+                return false;
+            }
+        }
 
         /// <summary>Reads a member's current on-disk bytes, snapshotting them first (once per session) so
         /// they can be restored later. Use this instead of a bare <c>_narc.Get</c> anywhere about to write.
@@ -54,9 +62,23 @@ namespace DSPRE.Avalonia.Data
         /// WriteMapData, so storing that reference directly would silently "revert" to the already-edited bytes.</summary>
         private byte[] GetAndSnapshot(int id)
         {
+            History.Touching(id);
+            return Backup(id);
+        }
+
+        private byte[] Backup(int id)
+        {
             byte[] raw = _narc.Get(id);
             if (raw != null && !_backup.ContainsKey(id)) _backup[id] = (byte[])raw.Clone();
             return raw;
+        }
+
+        /// <summary>Each import as an undo step; the owner commits after an import succeeds.</summary>
+        public MemberEditUndo History { get; }
+
+        public TitleScreenGraphics()
+        {
+            History = new MemberEditUndo(id => _narc.Get(id), (id, bytes) => { Backup(id); _narc.Put(id, bytes); });
         }
 
         /// <summary>Keeps every change so far, for Save; later changes start a new checkpoint.</summary>
@@ -68,6 +90,7 @@ namespace DSPRE.Avalonia.Data
         {
             foreach (var kv in _backup) _narc.Put(kv.Key, kv.Value);
             _backup.Clear();
+            History.Clear();
         }
 
         // ── Decode ───────────────────────────────────────────────────────────

@@ -9,15 +9,13 @@
         x:DataType="vm:DistortionWorldViewModel"
         Title="Distortion World" Width="1150" Height="760">
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Margin="12,0,0,0"
                    Foreground="{DynamicResource Editor.Subtle}"/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Grid ColumnDefinitions="230,*" Margin="8">
       <DockPanel Grid.Column="0" Margin="0,0,8,0">

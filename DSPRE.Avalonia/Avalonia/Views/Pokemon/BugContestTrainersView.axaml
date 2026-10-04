@@ -12,14 +12,12 @@
     <TextBlock IsVisible="{Binding !IsAvailable}" Text="{Binding Unavailable}" Margin="16" TextWrapping="Wrap"/>
 
     <DockPanel IsVisible="{Binding IsAvailable}">
-      <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-              BorderThickness="0,0,0,1" Padding="6,4">
-        <StackPanel Orientation="Horizontal" Spacing="6">
+      <controls:EditorToolbar>
           <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <controls:UndoRedoButtons/>
           <Button Content="Locate" controls:Icon.Key="folder" Click="Locate_Click"/>
-        </StackPanel>
-      </Border>
+      </controls:EditorToolbar>
 
       <StackPanel DockPanel.Dock="Bottom" Margin="8,0,8,8" Spacing="4">
         <TextBlock Text="{Binding Problems}" IsVisible="{Binding HasProblems}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>

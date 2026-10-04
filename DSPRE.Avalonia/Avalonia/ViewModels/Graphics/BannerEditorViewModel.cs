@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -17,7 +18,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     /// <c>dsrom build</c> re-encodes into the ROM on Save ROM. Legacy ndstool projects are
     /// display-only (the main window still shows their icon; this editor refuses to open).
     /// </summary>
-    public class BannerEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
+    public class BannerEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -54,8 +55,46 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         // A picked icon and edited titles wait here until Save.
         private RawImage _pendingIcon;
-        private bool _titlesEdited;
-        public bool HasUnsavedChanges => _pendingIcon != null || _titlesEdited;
+        private string _savedTitles = "";
+        private string TitleText() => string.Join("", Titles.Select(t => t.Text ?? ""));
+        private bool TitlesEdited => TitleText() != _savedTitles;
+        public bool HasUnsavedChanges => _pendingIcon != null || TitlesEdited;
+
+        // Icons picked this session, so an undo step can name one by its place here.
+        private readonly List<RawImage> _picked = new();
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private byte[] TakeState() => ByteStateUndo.Pack(w =>
+        {
+            w.Write(_pendingIcon == null ? -1 : _picked.IndexOf(_pendingIcon));
+            foreach (var t in Titles) w.Write(t.Text ?? "");
+        });
+
+        private void ApplyState(byte[] state) => ByteStateUndo.Unpack(state, r =>
+        {
+            int icon = r.ReadInt32();
+            _pendingIcon = icon >= 0 ? _picked[icon] : null;
+            foreach (var t in Titles) t.Text = r.ReadString();
+            if (_pendingIcon != null) IconPreview = ImageConverter.ToAvaloniaBitmap(_pendingIcon); else RefreshIconPreview();
+            RaiseUnsaved();
+        });
+
+        private void StartUndo()
+        {
+            _savedTitles = TitleText();
+            _undo = new ByteStateUndo(TakeState, ApplyState, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
+        }
+
+        private void Edited()
+        {
+            RaiseUnsaved();
+            _undo?.Record();
+        }
         public string UnsavedChangesDescription => "Game icon and titles";
         private void RaiseUnsaved() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasUnsavedChanges)));
 
@@ -67,12 +106,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (error != null) { _ = DialogHelper.ShowError(error, "Game Icon & Banner"); return; }
                 _pendingIcon = null;
             }
-            if (_titlesEdited && _yaml?.title != null)
+            if (TitlesEdited && _yaml?.title != null)
             {
                 foreach (var entry in Titles) _yaml.title[entry.Key] = entry.Text ?? "";
                 GameBanner.WriteDsRomYaml(_yaml);
-                _titlesEdited = false;
+                _savedTitles = TitleText();
             }
+            // The written icon is the file now; a step back to an older pick would need it as a pick again.
+            StartUndo();
             AppEvents.RaiseBannerChanged();
             RefreshIconPreview();
             RaiseUnsaved();
@@ -82,7 +123,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void DiscardChanges()
         {
             _pendingIcon = null;
-            _titlesEdited = false;
             Titles.Clear();
             Load();
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Titles)));
@@ -100,11 +140,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         Key = kv.Key,
                         Label = char.ToUpperInvariant(kv.Key[0]) + kv.Key.Substring(1),
                         Text = kv.Value,
-                        Edited = () => { _titlesEdited = true; RaiseUnsaved(); },
+                        Edited = Edited,
                     });
             }
             RefreshIconPreview();
             StatusText = _yaml == null ? "banner.yaml not found, titles unavailable." : $"{Titles.Count} title languages.";
+            StartUndo();
         }
 
         private void RefreshIconPreview()
@@ -152,8 +193,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return;
             }
             _pendingIcon = raw;
+            _picked.Add(raw);
             IconPreview = ImageConverter.ToAvaloniaBitmap(raw);
-            RaiseUnsaved();
+            Edited();
             StatusText = "Icon picked. Save to keep it.";
         }
     }

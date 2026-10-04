@@ -5,7 +5,7 @@
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Graphics.FontEditorView"
         x:DataType="vm:FontEditorViewModel"
-        Title="Font Editor"
+        Title="Font editor"
         Width="980" Height="700" MinWidth="900" MinHeight="560"
         WindowStartupLocation="CenterScreen">
 
@@ -28,9 +28,7 @@
       <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
     </Border>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
-            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
-      <StackPanel Orientation="Horizontal" Spacing="8">
+    <controls:EditorToolbar>
         <TextBlock Text="Font" VerticalAlignment="Center"/>
         <ComboBox Width="220" ItemsSource="{Binding FontNames}" SelectedIndex="{Binding SelectedFontIndex}"
                   PlaceholderText="This ROM carries no fonts this editor can read"/>
@@ -45,8 +43,7 @@
         <Button Content="Save this font" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <TextBlock Classes="hint" VerticalAlignment="Center"
                    Text="Nothing is written until you save."/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <!-- Every letter in the font -->
     <Border DockPanel.Dock="Left" Width="230" BorderBrush="{DynamicResource Editor.Border}"

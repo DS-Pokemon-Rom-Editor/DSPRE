@@ -24,6 +24,18 @@ namespace DSPRE.Avalonia.Views.Shell
             if (trouble != null) await DialogHelper.ShowError(trouble, "Add a patch");
         }
 
+        private async void Change_Click(object sender, RoutedEventArgs e)
+        {
+            string trouble = VM?.ChangeSelected();
+            if (trouble != null) await DialogHelper.ShowError(trouble, "Change a patch");
+        }
+
+        private async void Delete_Click(object sender, RoutedEventArgs e)
+        {
+            string trouble = VM?.DeleteSelected();
+            if (trouble != null) await DialogHelper.ShowError(trouble, "Delete a patch");
+        }
+
         private async void Save_Click(object sender, RoutedEventArgs e)
         {
             string trouble = VM?.Save();

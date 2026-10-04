@@ -26,6 +26,20 @@ namespace DSPRE.Avalonia
             _history.Reset(_last);
         }
 
+        /// <summary>State that isn't already bytes, written field by field.</summary>
+        public static byte[] Pack(Action<System.IO.BinaryWriter> write)
+        {
+            using var ms = new System.IO.MemoryStream();
+            using (var w = new System.IO.BinaryWriter(ms)) write(w);
+            return ms.ToArray();
+        }
+
+        public static void Unpack(byte[] state, Action<System.IO.BinaryReader> read)
+        {
+            using var r = new System.IO.BinaryReader(new System.IO.MemoryStream(state));
+            read(r);
+        }
+
         public bool CanUndo => _history.CanUndo;
         public bool CanRedo => _history.CanRedo;
 

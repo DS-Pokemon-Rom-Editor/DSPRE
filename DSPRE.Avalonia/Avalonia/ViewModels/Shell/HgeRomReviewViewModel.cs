@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
     /// Pokemon graphics for an hg-engine project and a check of the a/0/2/8 table archive.
     /// Graphics come from the linked checkout when there is one, since that is what the next build packs.
     /// </summary>
-    public class HgeRomReviewViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class HgeRomReviewViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         /// <summary>One species in the list.</summary>
         public class SpeciesRow
@@ -458,13 +458,23 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             Raise(nameof(CanRepair));
         }
 
+        // The staged repair is the only edit: undo unstages it, redo stages it again.
+        private bool _repairUnstaged;
+        public bool CanUndo => _repairStaged;
+        public bool CanRedo => _repairUnstaged;
+        public void Undo() { if (!_repairStaged) return; DiscardChanges(); _repairUnstaged = true; RaiseSteps(); }
+        public void Redo() { if (!_repairUnstaged) return; StageRepair(); }
+        private void RaiseSteps() { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); }
+
         public void StageRepair()
         {
             if (!CanRepair) return;
+            _repairUnstaged = false;
             _repairStaged = true;
             RepairNote = HgEngineCodeAddonRepair.Describe(_layout) + " Not saved yet.";
             Raise(nameof(CanRepair));
             Raise(nameof(HasUnsavedChanges));
+            RaiseSteps();
         }
 
         public bool HasUnsavedChanges => _repairStaged;
@@ -488,6 +498,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             LoadSelectedSpecies();
             RepairNote = "Repaired. Save the ROM to write it back.";
             Raise(nameof(HasUnsavedChanges));
+            RaiseSteps();
         }
 
         public Task<bool> SaveChangesAsync()
@@ -500,9 +511,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             if (!_repairStaged) return;
             _repairStaged = false;
+            _repairUnstaged = false;
             RepairNote = HgEngineCodeAddonRepair.Describe(_layout);
             Raise(nameof(CanRepair));
             Raise(nameof(HasUnsavedChanges));
+            RaiseSteps();
         }
 
         // ── Notification ────────────────────────────────────────────────────────────

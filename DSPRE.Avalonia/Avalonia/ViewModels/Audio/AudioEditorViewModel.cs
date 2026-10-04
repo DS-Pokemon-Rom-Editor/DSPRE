@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
     }
 
     /// <summary>Everything the ROM can play, in one place.</summary>
-    public class AudioEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class AudioEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -332,6 +332,77 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             get { lock (_heldLock) return _pendingCries.Count + _pendingSamples.Count > 0; }
         }
 
+        // ── undo: each import is a step, kept as the held imports before and after it ──
+        private sealed class Held
+        {
+            public Dictionary<AudioItem, SoundArchive.PendingCry> Cries;
+            public List<(AudioItem Item, SoundArchive.PendingSample Sample)> Samples;
+        }
+        private readonly Stack<(Held Before, Held After)> _undoSteps = new(), _redoSteps = new();
+
+        private Held TakeHeld()
+        {
+            lock (_heldLock)
+                return new Held
+                {
+                    Cries = new Dictionary<AudioItem, SoundArchive.PendingCry>(_pendingCries),
+                    Samples = _pendingSamples.Select(h => (h.Item, h.Sample)).ToList(),
+                };
+        }
+
+        private void RestoreHeld(Held held)
+        {
+            List<AudioItem> was;
+            lock (_heldLock)
+            {
+                was = _pendingCries.Keys.Concat(_pendingSamples.Select(h => h.Item)).ToList();
+                _pendingCries.Clear();
+                foreach (var kv in held.Cries) _pendingCries[kv.Key] = kv.Value;
+                _pendingSamples.Clear();
+                foreach (var (item, sample) in held.Samples) _pendingSamples.Add(new HeldSample { Item = item, Sample = sample });
+                _withHeld = null; _heldVersion++;
+            }
+            foreach (var item in was) item.IsPending = false;
+            foreach (var item in held.Cries.Keys.Concat(held.Samples.Select(h => h.Item))) item.IsPending = true;
+            PendingChanged();
+        }
+
+        public bool CanUndo => _undoSteps.Count > 0;
+        public bool CanRedo => _redoSteps.Count > 0;
+
+        public void Undo()
+        {
+            if (_undoSteps.Count == 0) return;
+            var step = _undoSteps.Pop();
+            _redoSteps.Push(step);
+            RestoreHeld(step.Before);
+            RaiseSteps();
+        }
+
+        public void Redo()
+        {
+            if (_redoSteps.Count == 0) return;
+            var step = _redoSteps.Pop();
+            _undoSteps.Push(step);
+            RestoreHeld(step.After);
+            RaiseSteps();
+        }
+
+        private void Stepped(Held before)
+        {
+            _undoSteps.Push((before, TakeHeld()));
+            _redoSteps.Clear();
+            RaiseSteps();
+        }
+
+        private void ForgetSteps()
+        {
+            _undoSteps.Clear(); _redoSteps.Clear();
+            RaiseSteps();
+        }
+
+        private void RaiseSteps() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
+
         public string UnsavedChangesDescription
         {
             get
@@ -352,9 +423,11 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public void StageCry(AudioItem item, SoundArchive.PendingCry cry)
         {
             if (item == null || cry == null) return;
+            var before = TakeHeld();
             lock (_heldLock) _pendingCries[item] = cry;
             item.IsPending = true;
             PendingChanged();
+            Stepped(before);
             Status = $"Ready to save to {cry.RelPath}.";
         }
 
@@ -362,6 +435,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public void StageSample(AudioItem item, SoundArchive.PendingSample sample)
         {
             if (item == null || sample?.Sample == null) return;
+            var before = TakeHeld();
             lock (_heldLock)
             {
                 var same = _pendingSamples.FirstOrDefault(h => h.Sample.WaveArc == sample.WaveArc && h.Sample.Index == sample.Index);
@@ -377,6 +451,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             }
             item.IsPending = true;
             PendingChanged();
+            Stepped(before);
             Status = "Imported. Save writes it to the ROM.";
         }
 
@@ -438,6 +513,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 wroteCheckout = true;
             }
             PendingChanged();
+            ForgetSteps();
             Status = wroteCheckout ? "Saved. Compile the ROM to hear the new cries in game." : "Saved.";
             return null;
         }
@@ -464,6 +540,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             }
             foreach (var item in items) item.IsPending = false;
             PendingChanged();
+            ForgetSteps();
         }
 
         private void PendingChanged()

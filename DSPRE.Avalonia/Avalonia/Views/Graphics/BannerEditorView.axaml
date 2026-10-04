@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.BannerEditorView"
         x:DataType="vm:BannerEditorViewModel"
-        Title="Game Icon &amp; Banner"
+        Title="Game icon &amp; banner"
         Width="560" Height="560"
         WindowStartupLocation="CenterScreen">
 
@@ -18,13 +18,11 @@
       <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-      </StackPanel>
-    </Border>
+        <controls:UndoRedoButtons/>
+    </controls:EditorToolbar>
 
     <ScrollViewer>
       <StackPanel Margin="12" Spacing="12">

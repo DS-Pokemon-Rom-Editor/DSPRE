@@ -4,17 +4,15 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
         x:Class="DSPRE.Avalonia.Views.Shell.HgeRomReviewView"
         x:DataType="vm:HgeRomReviewViewModel"
-        Title="hg-engine ROM Review" Width="1100" Height="760">
+        Title="hg-engine ROM review" Width="1100" Height="760">
   <DockPanel>
-  <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-          BorderThickness="0,0,0,1" Padding="6,4">
-    <WrapPanel Classes="toolbar">
+  <controls:EditorToolbar>
       <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
       <Button Content="Repair member order" Click="Repair_Click" IsEnabled="{Binding CanRepair}" Margin="12,2,6,2"
               ToolTip.Tip="Drops the members earlier builds left behind. Written when you save."/>
-    </WrapPanel>
-  </Border>
+  </controls:EditorToolbar>
 
   <TabControl Margin="6">
 

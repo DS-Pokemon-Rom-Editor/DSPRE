@@ -7,7 +7,7 @@ using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
-    public class TitleScreenEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges
+    public class TitleScreenEditorViewModel : INotifyPropertyChanged, DSPRE.Editors.IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -44,7 +44,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// either version, or the shared copyright), so <see cref="RevertChanges"/> has something to undo.</summary>
         public bool HasChanges => _graphics.HasChanges;
 
-        public TitleScreenEditorViewModel() => RefreshPreviews();
+        public TitleScreenEditorViewModel()
+        {
+            RefreshPreviews();
+            _graphics.History.Changed += () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); };
+        }
+
+        public bool CanUndo => _graphics.History.CanUndo;
+        public bool CanRedo => _graphics.History.CanRedo;
+        public void Undo() { _graphics.History.Undo(); RefreshPreviews(); }
+        public void Redo() { _graphics.History.Redo(); RefreshPreviews(); }
+
+        // Every import attempt closes its undo step, so a failed one can't leak into the next.
+        private string Imported(string error)
+        {
+            _graphics.History.Commit();
+            if (error == null) RefreshPreviews();
+            return error;
+        }
 
         private void RefreshPreviews()
         {
@@ -85,27 +102,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             var raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            string error = _graphics.ImportLogo(raw);
-            if (error == null) RefreshPreviews();
-            return error;
+            return Imported(_graphics.ImportLogo(raw));
         }
 
         public string ImportBackground(string pngPath)
         {
             var raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            string error = _graphics.ImportBackground(raw);
-            if (error == null) RefreshPreviews();
-            return error;
+            return Imported(_graphics.ImportBackground(raw));
         }
 
         public string ImportCopyright(string pngPath)
         {
             var raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            string error = _graphics.ImportCopyright(raw);
-            if (error == null) RefreshPreviews();
-            return error;
+            return Imported(_graphics.ImportCopyright(raw));
         }
 
         public string ExportLogo(string pngPath) => SavePng(_graphics.ComposeLogo(), pngPath);
@@ -117,9 +128,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             byte[] bytes;
             try { bytes = System.IO.File.ReadAllBytes(nclrPath); }
             catch (Exception ex) { return ex.Message; }
-            string error = _graphics.ImportPaletteRaw(bytes);
-            if (error == null) RefreshPreviews();
-            return error;
+            return Imported(_graphics.ImportPaletteRaw(bytes));
         }
 
         public string ExportPalette(string nclrPath)

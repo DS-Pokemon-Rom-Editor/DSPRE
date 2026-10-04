@@ -15,16 +15,14 @@
       <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <TextBlock Text="Show:" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <ComboBox Width="160" ItemsSource="{Binding Binaries}" SelectedIndex="{Binding BinaryFilter}"/>
         <Button Content="Reload" controls:Icon.Key="reload" Click="Reload_Click"/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,5">
       <TextBlock TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"
@@ -35,7 +33,7 @@
     <Border x:Name="AddPatchPanel" DockPanel.Dock="Bottom" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8">
       <StackPanel Spacing="6">
-        <TextBlock Text="Add a patch" FontWeight="Bold" FontSize="12"/>
+        <TextBlock Text="Add a patch, or pick one in the table to change or remove it" FontWeight="Bold" FontSize="12"/>
         <WrapPanel>
           <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,4">
             <TextBlock Text="List" VerticalAlignment="Center"/>
@@ -64,19 +62,21 @@
             <TextBlock Text="Bytes" VerticalAlignment="Center"/>
             <TextBox Width="220" Text="{Binding NewBytes}" ToolTip.Tip="Hex bytes, like 60 B4 C0 46"/>
           </StackPanel>
-          <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" Margin="0,0,0,4"/>
+          <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" Margin="0,0,6,4"/>
+          <Button Content="Change selected" Click="Change_Click" IsEnabled="{Binding HasSelection}" Margin="0,0,6,4"/>
+          <Button Content="Delete selected" Click="Delete_Click" IsEnabled="{Binding HasSelection}" Margin="0,0,0,4"/>
         </WrapPanel>
       </StackPanel>
     </Border>
 
-    <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
+    <DataGrid ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" AutoGenerateColumns="False" IsReadOnly="True"
               GridLinesVisibility="Horizontal" CanUserResizeColumns="True" CanUserSortColumns="True">
       <DataGrid.Columns>
         <DataGridTextColumn Header="Binary"  Binding="{Binding Binary}"  Width="100"/>
         <DataGridTextColumn Header="Address" Binding="{Binding Address}" Width="110"/>
         <DataGridTextColumn Header="Offset"  Binding="{Binding Offset}"  Width="90"/>
         <DataGridTextColumn Header="Bytes"   Binding="{Binding Size}"    Width="60"/>
-        <DataGridTextColumn Header="What it does" Binding="{Binding Does}" Width="*"/>
+        <DataGridTextColumn Header="Description" Binding="{Binding Does}" Width="*"/>
         <DataGridTextColumn Header="From"    Binding="{Binding List}"    Width="130"/>
         <DataGridTextColumn Header="Runs into" Binding="{Binding Clash}" Width="240"/>
       </DataGrid.Columns>

@@ -12,7 +12,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>The Bug-Catching Contest opponents (HGSS), a tab of the Encounters editor.</summary>
-    public class BugContestTrainersViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BugContestTrainersViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -50,8 +50,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string Warnings { get => _warnings; private set { if (Set(ref _warnings, value)) OnPropertyChanged(nameof(HasWarnings)); } }
         public bool HasWarnings => _warnings.Length > 0;
 
-        private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
+        private byte[] _saved;
+        public bool HasUnsavedChanges => _file != null && _saved != null && !_file.ToBytes().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Bug Contest Opponents";
         public void SaveChanges() => _ = SaveAsync();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -59,12 +59,28 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             await SaveAsync();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() { if (_dirty) Load(); }
+        public void DiscardChanges() { if (HasUnsavedChanges) Load(); }
 
-        private void SetDirty(bool dirty)
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        // Shows the opponent the step changed.
+        private void ApplyState(byte[] state)
         {
-            if (_dirty == dirty) return;
-            _dirty = dirty;
+            var back = new BugContestTrainerFile(state);
+            int changed = -1;
+            for (int o = 0; o < BugContestTrainerFile.Opponents; o++)
+                for (int r = 0; r < BugContestTrainerFile.RowsPerOpponent; r++)
+                {
+                    var to = _file.Rows[o, r]; var from = back.Rows[o, r];
+                    if (to.NationalDex == from.NationalDex && to.Day == from.Day && to.Species == from.Species && to.Score == from.Score && to.Variation == from.Variation) continue;
+                    to.NationalDex = from.NationalDex; to.Day = from.Day; to.Species = from.Species; to.Score = from.Score; to.Variation = from.Variation;
+                    if (changed < 0) changed = o;
+                }
+            if (changed >= 0 && changed != _selectedOpponent) SelectedOpponent = changed; else ShowOpponent();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -96,7 +112,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(IsAvailable));
             OnPropertyChanged(nameof(Unavailable));
 
-            SetDirty(false);
+            _saved = _file?.ToBytes();
+            _undo = _file == null ? null : new ByteStateUndo(_file.ToBytes, ApplyState, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             if (_selectedOpponent < 0 && _file != null) _selectedOpponent = 0;
             OnPropertyChanged(nameof(SelectedOpponent));
             ShowOpponent();
@@ -113,8 +132,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Edited()
         {
-            SetDirty(true);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             Recheck();
+            _undo?.Record();
         }
 
         private string NameOf(int o) => o < _names.Length ? _names[o] : $"Opponent {o + 1}";
@@ -127,7 +147,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task SaveAsync()
         {
-            if (_file == null || !_dirty) return;
+            if (_file == null || !HasUnsavedChanges) return;
             if (HasProblems)
             {
                 await DialogHelper.ShowError($"The contest opponents were not saved:\n{Problems}", "Bug Contest Opponents");
@@ -142,7 +162,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DialogHelper.ShowError($"The contest opponents were not saved:\n{e.Message}", "Bug Contest Opponents");
                 return;
             }
-            SetDirty(false);
+            _saved = _file.ToBytes();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
         }
 

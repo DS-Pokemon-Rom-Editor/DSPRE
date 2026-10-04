@@ -53,6 +53,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             DataContext = vm;
             vm.BoardChanged += Redraw;
             Closed += (_, _) => { vm.BoardChanged -= Redraw; vm.Battle?.StopPlayback(); };
+            EditorWindowChrome.Attach(this, vm);
             Redraw();
         }
 

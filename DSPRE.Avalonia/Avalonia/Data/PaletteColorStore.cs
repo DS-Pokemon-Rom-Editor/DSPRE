@@ -7,7 +7,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
 {
-    /// <summary>Per-project favorite (16) and last-used (8) palette colors for the Sprite Editor's swatch picker, persisted at workDir/dspre_palette_colors.json (same convention as LabelStore's dspre_labels.json).</summary>
+    /// <summary>Per-project favorite (16) and last-used (8) palette colors for the Sprite Editor's swatch picker, persisted at dspreDir/dspre_palette_colors.json (same convention as LabelStore's dspre_labels.json).</summary>
     public static class PaletteColorStore
     {
         public const int FavoriteSlots = 16;
@@ -18,12 +18,12 @@ namespace DSPRE.Avalonia.Data
 
         private static string _loadedProjectDir;
 
-        private static string FilePath => string.IsNullOrEmpty(workDir) ? null : Path.Combine(workDir, "dspre_palette_colors.json");
+        private static string FilePath => string.IsNullOrEmpty(dspreDir) ? null : Path.Combine(dspreDir, "dspre_palette_colors.json");
 
         // Re-loads whenever the open ROM's working directory changes, same guard as LabelStore.Ensure.
         private static void Ensure()
         {
-            string pdir = string.IsNullOrEmpty(workDir) ? null : workDir;
+            string pdir = string.IsNullOrEmpty(dspreDir) ? null : dspreDir;
             if (pdir == _loadedProjectDir) return;
             _loadedProjectDir = pdir;
             Load();

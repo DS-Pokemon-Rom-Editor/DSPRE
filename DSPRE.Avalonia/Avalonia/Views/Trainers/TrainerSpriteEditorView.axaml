@@ -29,23 +29,22 @@
   </Window.Styles>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <StackPanel x:Name="SpriteButtons" Orientation="Horizontal" Spacing="6">
           <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+          <controls:UndoRedoButtons/>
           <Button Content="Import PNG…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Colours must match the palette. Export first for a template."/>
           <Button Content="Export PNG…" controls:Icon.Key="export" Click="Export_Click"/>
           <Button Content="Export sheet…" controls:Icon.Key="export" Click="ExportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
           <Button Content="Import sheet…" controls:Icon.Key="import" Click="ImportSheet_Click" IsVisible="{Binding CanUseSheets}"/>
-          <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
+          <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click" IsVisible="{Binding ShowsAnimationsTab}"/>
         </StackPanel>
         <StackPanel x:Name="SpritePicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
           <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
           <controls:FusionAutoCompleteBox ItemsSource="{Binding ClassNames}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
         </StackPanel>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
   <DockPanel Margin="8">
 
@@ -140,7 +139,7 @@
             <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Background="{DynamicResource Editor.PanelBg}" HorizontalAlignment="Left" VerticalAlignment="Top">
               <Panel PointerWheelChanged="Canvas_PointerWheelChanged">
                 <Image x:Name="CanvasImage" Source="{Binding CanvasBitmap}" Stretch="None"
-                       PointerPressed="Canvas_PointerPressed" PointerMoved="Canvas_PointerMoved"/>
+                       PointerPressed="Canvas_PointerPressed" PointerMoved="Canvas_PointerMoved" PointerReleased="Canvas_PointerReleased"/>
                 <v:PixelGrid Cell="{Binding ZoomFactor}" IsVisible="{Binding GridOn}" IsHitTestVisible="False"/>
               </Panel>
             </Border>

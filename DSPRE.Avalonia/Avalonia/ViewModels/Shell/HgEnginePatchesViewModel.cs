@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
     /// hg-engine's patch lists, shown by what they do. Added patches stay in memory until Save edits the
     /// checkout's list in place, keeping its comments.
     /// </summary>
-    public class HgEnginePatchesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class HgEnginePatchesViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -49,7 +49,52 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private readonly Func<List<HgEnginePatchList>> _readAll;
         private List<HgEnginePatchList> _lists = new();
 
+        // Entries added or changed since the last save, shown as not saved.
         private readonly HashSet<HgEnginePatchEntry> _pending = new();
+
+        // One step per add, change or delete, each knowing how to take itself back and redo itself.
+        private sealed record Step(HgEnginePatchList List, Action Undo, Action Redo);
+        private readonly Stack<Step> _done = new(), _undone = new();
+        public bool CanUndo => _done.Count > 0;
+        public bool CanRedo => _undone.Count > 0;
+
+        public void Undo()
+        {
+            if (_done.Count == 0) return;
+            var step = _done.Pop();
+            step.Undo();
+            _undone.Push(step);
+            Stepped();
+        }
+
+        public void Redo()
+        {
+            if (_undone.Count == 0) return;
+            var step = _undone.Pop();
+            step.Redo();
+            _done.Push(step);
+            Stepped();
+        }
+
+        private void Did(Step step)
+        {
+            step.Redo();
+            _done.Push(step);
+            _undone.Clear();
+            Stepped();
+        }
+
+        private void Stepped()
+        {
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); OnPropertyChanged(nameof(HasUnsavedChanges));
+            Rebuild();
+        }
+
+        private void ForgetSteps()
+        {
+            _done.Clear(); _undone.Clear();
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
+        }
 
         public ObservableCollection<PatchRow> Rows { get; } = new();
         public ObservableCollection<string> Binaries { get; } = new();
@@ -184,6 +229,106 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
         }
 
+        // ── Editing one ─────────────────────────────────────────────────────
+        private PatchRow _selectedRow;
+        /// <summary>The row picked in the table; its values fill the fields so they can be changed.</summary>
+        public PatchRow SelectedRow
+        {
+            get => _selectedRow;
+            set
+            {
+                if (!Set(ref _selectedRow, value)) return;
+                OnPropertyChanged(nameof(HasSelection));
+                if (value == null) return;
+                var e = value.Entry;
+                int listIndex = _lists.FindIndex(l => l.Entries.Contains(e));
+                if (listIndex >= 0) NewList = listIndex;
+                NewBinary = e.OverlayNumber < 0 ? "arm9" : e.OverlayNumber.ToString("D4");
+                NewSymbol = e.Symbol;
+                NewAddress = e.Address.ToString("X8");
+                NewRegister = e.Register < 0 ? "" : e.Register.ToString();
+                NewBytes = string.Join(" ", e.Bytes.Select(b => b.ToString("X2")));
+            }
+        }
+        public bool HasSelection => _selectedRow != null;
+
+        /// <summary>Reads the fields into an entry's values, or says why they can't be used.</summary>
+        private string ReadFields(HgEnginePatchKind kind, out int overlay, out long at, out int register, out List<byte> bytes)
+        {
+            overlay = -1; at = 0; register = -1; bytes = new List<byte>();
+            if (!HgEngineClaimedRanges.TryBinary((NewBinary ?? "").Trim(), out overlay))
+                return "The binary has to be arm9 or an overlay number like 0012.";
+            string address = (NewAddress ?? "").Trim().Replace("0x", "", StringComparison.OrdinalIgnoreCase);
+            if (!long.TryParse(address, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out at))
+                return "The address has to be hex, like 02078384.";
+            if (kind == HgEnginePatchKind.ByteReplacement)
+            {
+                foreach (string token in (NewBytes ?? "").Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (!byte.TryParse(token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte b))
+                        return $"'{token}' is not a hex byte.";
+                    bytes.Add(b);
+                }
+                if (bytes.Count == 0) return "Give at least one byte to write.";
+            }
+            else if (string.IsNullOrWhiteSpace(NewSymbol))
+                return "Name the routine or table this points at.";
+            // An empty register on a hook keeps the whole-routine form the list already used.
+            if (kind == HgEnginePatchKind.Hook && string.IsNullOrWhiteSpace(NewRegister)) return null;
+            return HgEnginePatchList.TryParseRegister(kind, NewRegister, out register, out string registerError) ? null : registerError;
+        }
+
+        /// <summary>Changes the selected patch to the values in the fields.</summary>
+        public string ChangeSelected()
+        {
+            var entry = _selectedRow?.Entry;
+            if (entry == null) return "Pick a patch in the table first.";
+            var list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
+            if (list == null) return "That patch is no longer in its list.";
+            string why = ReadFields(list.Kind, out int overlay, out long at, out int register, out var bytes);
+            if (why != null) return why;
+
+            var before = (entry.Parsed, entry.OverlayNumber, entry.Symbol, entry.Address, entry.Register, entry.Bytes, entry.RawLine, Pending: _pending.Contains(entry));
+            var trial = new HgEnginePatchEntry { Kind = list.Kind, RawLine = entry.RawLine };
+            string symbol = NewSymbol?.Trim();
+            HgEnginePatchList.Change(trial, overlay, symbol, at, register, bytes);
+            string problem = HgEnginePatchList.Problem(trial);
+            if (problem != null) return problem;
+            if (trial.RawLine == entry.RawLine) return null;
+
+            Did(new Step(list,
+                Undo: () =>
+                {
+                    (entry.Parsed, entry.OverlayNumber, entry.Symbol, entry.Address, entry.Register, entry.Bytes, entry.RawLine) =
+                        (before.Parsed, before.OverlayNumber, before.Symbol, before.Address, before.Register, before.Bytes, before.RawLine);
+                    if (!before.Pending) _pending.Remove(entry);
+                },
+                Redo: () =>
+                {
+                    HgEnginePatchList.Change(entry, overlay, symbol, at, register, bytes);
+                    _pending.Add(entry);
+                }));
+            StatusText = $"Changed in {list.FileName}, not saved yet. {StatusText}";
+            return null;
+        }
+
+        /// <summary>Takes the selected patch out of its list.</summary>
+        public string DeleteSelected()
+        {
+            var entry = _selectedRow?.Entry;
+            if (entry == null) return "Pick a patch in the table first.";
+            var list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
+            if (list == null) return "That patch is no longer in its list.";
+            int at = list.Entries.IndexOf(entry);
+            bool wasPending = _pending.Contains(entry);
+            Did(new Step(list,
+                Undo: () => { list.Entries.Insert(Math.Min(at, list.Entries.Count), entry); if (wasPending) _pending.Add(entry); },
+                Redo: () => { list.Entries.Remove(entry); _pending.Remove(entry); }));
+            SelectedRow = null;
+            StatusText = $"Removed from {list.FileName}, not saved yet. {StatusText}";
+            return null;
+        }
+
         public string AddPatch()
         {
             if (NewList < 0 || NewList >= _lists.Count) return "Pick a list first.";
@@ -217,15 +362,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             var added = list.Add(overlay, NewSymbol?.Trim(), at, register, bytes);
             string problem = HgEnginePatchList.Problem(added);
-            if (problem != null)
-            {
-                list.Entries.Remove(added);
-                return problem;
-            }
+            list.Entries.Remove(added);
+            if (problem != null) return problem;
 
-            _pending.Add(added);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
-            Rebuild();
+            Did(new Step(list,
+                Undo: () => { list.Entries.Remove(added); _pending.Remove(added); },
+                Redo: () => { if (!list.Entries.Contains(added)) list.Entries.Add(added); _pending.Add(added); }));
             StatusText = $"Added to {list.FileName}, not saved yet. {StatusText}";
             return null;
         }
@@ -234,9 +376,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public string Save()
         {
             if (!IsAvailable) return "No hg-engine checkout is linked.";
-            if (_pending.Count == 0) return null;
+            if (_done.Count == 0) return null;
 
-            foreach (var list in _lists.Where(l => l.Entries.Any(_pending.Contains)).ToList())
+            foreach (var list in _done.Select(s => s.List).Distinct().ToList())
             {
                 if (!list.Save(out string error))
                 {
@@ -244,11 +386,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                     Rebuild();
                     return error;
                 }
-                _pending.ExceptWith(list.Entries);
             }
 
             _lists = _readAll();
             _pending.Clear();
+            ForgetSteps();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             Rebuild();
             return null;
@@ -262,11 +404,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         // ── Unsaved changes ─────────────────────────────────────────────────
-        public bool HasUnsavedChanges => _pending.Count > 0;
+        public bool HasUnsavedChanges => _done.Count > 0;
 
-        public string UnsavedChangesDescription => _pending.Count == 1
-            ? "1 added hg-engine patch"
-            : $"{_pending.Count} added hg-engine patches";
+        public string UnsavedChangesDescription => _done.Count == 1
+            ? "1 hg-engine patch change"
+            : $"{_done.Count} hg-engine patch changes";
 
         public void SaveChanges() => Save();
 
@@ -283,6 +425,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (!IsAvailable) return;
             _lists = _readAll();
             _pending.Clear();
+            ForgetSteps();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             Rebuild();
         }

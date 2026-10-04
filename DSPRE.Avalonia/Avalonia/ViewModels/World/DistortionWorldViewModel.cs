@@ -16,7 +16,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.World
 {
     /// <summary>Distortion World data (Platinum): gravity boxes, surface transitions and props per floor.</summary>
-    public class DistortionWorldViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class DistortionWorldViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public class FloorRow
         {
@@ -293,6 +293,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 Status = $"{Floors.Count} floors.";
                 if (Floors.Count > 0) SelectedFloorIndex = 0;
+                ResetSteps();
             }
             catch (Exception ex)
             {
@@ -1511,6 +1512,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             BuildCollisionFromSurfaces();
             RebuildOverlay();
             SceneShown?.Invoke();
+            Recorded();
         }
 
         public string PaintedGroundWarning { get; private set; }
@@ -1601,6 +1603,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Raise(nameof(HasUnsavedChanges));
             SayWhatIsUnsaved();
             if (gridsChanged) RefreshSurfaces();
+            Recorded();
             return true;
         }
 
@@ -1633,6 +1636,98 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public bool HasUnsavedChanges =>
             _editedMembers.Count > 0 || _editedGrids.Count > 0 || _shapeChanged.Count > 0;
+
+        // ── Undo for floors and collision grids; map models keep their own undo in the model editor. ──
+        private sealed class WorldState
+        {
+            public byte[][] Floors;
+            public Dictionary<int, ushort[]> Grids;
+            public int[] EditedMembers, EditedGrids;
+        }
+
+        private readonly Stack<(WorldState Before, WorldState After)> _undoSteps = new(), _redoSteps = new();
+        private WorldState _lastState;
+
+        private WorldState TakeState()
+        {
+            CommitShownFloor();
+            return new WorldState
+            {
+                Floors = Floors.Select(f => f.Data.ToByteArray()).ToArray(),
+                Grids = _gridCache.ToDictionary(kv => kv.Key, kv => (ushort[])kv.Value.Clone()),
+                EditedMembers = _editedMembers.ToArray(),
+                EditedGrids = _editedGrids.ToArray(),
+            };
+        }
+
+        private static bool SameState(WorldState a, WorldState b) =>
+            a.Floors.Length == b.Floors.Length && a.Floors.Zip(b.Floors).All(z => z.First.AsSpan().SequenceEqual(z.Second))
+            && a.Grids.Count == b.Grids.Count && a.Grids.All(kv => b.Grids.TryGetValue(kv.Key, out var g) && kv.Value.AsSpan().SequenceEqual(g));
+
+        private void ResetSteps()
+        {
+            _undoSteps.Clear(); _redoSteps.Clear();
+            _lastState = Floors.Count > 0 ? TakeState() : null;
+            RaiseSteps();
+        }
+
+        private void RaiseSteps() { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); }
+
+        private void Recorded()
+        {
+            if (_lastState == null) return;
+            var now = TakeState();
+            if (SameState(now, _lastState)) return;
+            _undoSteps.Push((_lastState, now));
+            _redoSteps.Clear();
+            _lastState = now;
+            RaiseSteps();
+        }
+
+        public bool CanUndo => _undoSteps.Count > 0;
+        public bool CanRedo => _redoSteps.Count > 0;
+
+        public void Undo()
+        {
+            if (_undoSteps.Count == 0) return;
+            var step = _undoSteps.Pop();
+            _redoSteps.Push(step);
+            Restore(step.Before, step.After);
+        }
+
+        public void Redo()
+        {
+            if (_redoSteps.Count == 0) return;
+            var step = _redoSteps.Pop();
+            _undoSteps.Push(step);
+            Restore(step.After, step.Before);
+        }
+
+        // Shows the floor the step changed.
+        private void Restore(WorldState state, WorldState from)
+        {
+            CommitShownFloor();
+            int changed = -1;
+            for (int i = 0; i < Math.Min(Floors.Count, state.Floors.Length); i++)
+            {
+                if (Floors[i].Data.ToByteArray().AsSpan().SequenceEqual(state.Floors[i])) continue;
+                Floors[i].Data = new TornWorldFile(state.Floors[i]);
+                if (changed < 0) changed = i;
+            }
+            foreach (var kv in state.Grids) _gridCache[kv.Key] = (ushort[])kv.Value.Clone();
+            foreach (int id in from.Grids.Keys.Where(id => !state.Grids.ContainsKey(id)).ToList()) _gridCache.Remove(id);
+            _editedMembers.Clear(); _editedMembers.UnionWith(state.EditedMembers);
+            _editedGrids.Clear(); _editedGrids.UnionWith(state.EditedGrids);
+            _lastState = state;
+
+            // The working lists hold the replaced floor's objects, so they must not be written back.
+            _shownFloorIndex = -1;
+            if (changed >= 0 && changed != _selectedFloorIndex) SelectedFloorIndex = changed;
+            else ShowFloor();
+            Raise(nameof(HasUnsavedChanges));
+            SayWhatIsUnsaved();
+            RaiseSteps();
+        }
 
         public string UnsavedChangesDescription
         {
@@ -1675,6 +1770,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _editedGrids.Clear();
                 _shapeChanged.Clear();
                 Raise(nameof(HasUnsavedChanges));
+                ResetSteps();
                 Status = "Saved.";
             }
             catch (Exception ex)

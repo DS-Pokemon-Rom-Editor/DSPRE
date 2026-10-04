@@ -13,9 +13,7 @@
 
   <DockPanel>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <TextBox PlaceholderText="Search by name or number, like trainer or icon" x:Name="SearchBox"
                  Text="{Binding Search}" FontSize="13" Width="340">
           <TextBox.InnerRightContent>
@@ -48,8 +46,7 @@
                   IsEnabled="{Binding CanReplace}"
                   ToolTip.Tip="{Binding ReplaceHelp}"/>
         </WrapPanel>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
       <Grid ColumnDefinitions="*,8,Auto">

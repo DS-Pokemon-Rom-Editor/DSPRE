@@ -4,7 +4,7 @@
 		xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
 		x:Class="DSPRE.Avalonia.Views.Graphics.TitleScreenEditorView"
 		x:DataType="vm:TitleScreenEditorViewModel"
-		Title="Title Screen Editor"
+		Title="Title screen editor"
 		Width="1180" Height="760" MinWidth="500" MinHeight="380"
 		WindowStartupLocation="CenterOwner">
   <Design.DataContext>
@@ -12,13 +12,12 @@
   </Design.DataContext>
 
   <DockPanel>
-  <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-	<StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
+  <controls:EditorToolbar x:Name="SaveButtons">
 	  <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasChanges}"/>
 	  <Button Content="Discard" controls:Icon.Key="resetIcon" Click="RevertChanges_Click" IsEnabled="{Binding HasChanges}"/>
+	  <controls:UndoRedoButtons/>
 	  <TextBlock Text="{Binding StatusText}" Foreground="OrangeRed" VerticalAlignment="Center" Margin="6,0,0,0"/>
-	</StackPanel>
-  </Border>
+  </controls:EditorToolbar>
   <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
   <StackPanel Margin="12" Spacing="12">
 
@@ -124,7 +123,7 @@
 
 	  <Border x:Name="CopyrightCard" Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Padding="10" VerticalAlignment="Top" Margin="0,0,12,0">
 		<StackPanel Spacing="8">
-		  <TextBlock Text="Copyright Text" FontWeight="Bold"/>
+		  <TextBlock Text="Copyright text" FontWeight="Bold"/>
 		  <Border Background="#181818" HorizontalAlignment="Left">
 			<Image Source="{Binding CopyrightPreview}" Width="256" Height="192" Stretch="Uniform"/>
 		  </Border>
@@ -150,7 +149,7 @@
 			  <Image Source="{Binding CopyrightPreview}" Width="384" Height="288" Stretch="Uniform"/>
 			</Grid>
 		  </Border>
-		  <Button Content="Play Intro" controls:Icon.Key="play" Click="PlayIntro_Click" HorizontalAlignment="Left"
+		  <Button Content="Play intro" controls:Icon.Key="play" Click="PlayIntro_Click" HorizontalAlignment="Left"
 				  ToolTip.Tip="A recreation of the logo animation, close to the game's."/>
 		</StackPanel>
 	  </Border>

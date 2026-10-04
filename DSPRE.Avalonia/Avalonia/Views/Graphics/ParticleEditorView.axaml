@@ -10,16 +10,14 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
-            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <ComboBox x:Name="EmitterPicker" ItemsSource="{Binding EmitterNames}" SelectedIndex="{Binding EmitterIndex}" Width="160"/>
         <CheckBox Content="Only this emitter" IsChecked="{Binding OnlySelected}" Margin="8,0"/>
         <Button Content="Replay" Click="Replay_Click" Width="80"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" MinWidth="70"/>
-        <Button Content="Revert" Click="Revert_Click" IsEnabled="{Binding HasUnsavedChanges}" Width="70"/>
-      </WrapPanel>
-    </Border>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Revert_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">

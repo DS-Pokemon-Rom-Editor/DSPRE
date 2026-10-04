@@ -361,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             try
             {
-                using var bmp = new System.Drawing.Bitmap(across * cell, down * cell);
+                var image = new DSPRE.RawImage(across * cell, down * cell);
                 for (int i = 0; i < (wholeFont ? _font.GlyphCount : 1); i++)
                 {
                     int glyph = wholeFont ? i : _selectedGlyphIndex;
@@ -371,10 +371,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         {
                             byte shade = _font.PixelAt(glyph, x, y);
                             byte grey = ShadeGrey[shade & 3];
-                            bmp.SetPixel(ox + x, oy + y, System.Drawing.Color.FromArgb(grey, grey, grey));
+                            int at = ((oy + y) * image.Width + ox + x) * 4;
+                            image.Bgra[at] = image.Bgra[at + 1] = image.Bgra[at + 2] = grey;
+                            image.Bgra[at + 3] = 255;
                         }
                 }
-                bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                ImageConverter.ToAvaloniaBitmap(image).Save(path, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 return null;
             }
             catch (Exception ex) { return "That picture could not be written: " + ex.Message; }
@@ -396,9 +398,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             try
             {
-                using var bmp = new System.Drawing.Bitmap(path);
-                if (bmp.Width != wantAcross || bmp.Height != wantDown)
-                    return $"That picture is {bmp.Width} by {bmp.Height} and this wants "
+                DSPRE.RawImage image;
+                using (var stream = System.IO.File.OpenRead(path)) image = ImageConverter.DecodeRawImage(stream);
+                if (image == null) return "That picture could not be read.";
+                if (image.Width != wantAcross || image.Height != wantDown)
+                    return $"That picture is {image.Width} by {image.Height} and this wants "
                          + $"{wantAcross} by {wantDown}. Save one out first to get the right size.";
 
                 for (int i = 0; i < (wholeFont ? _font.GlyphCount : 1); i++)
@@ -408,8 +412,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     for (int y = 0; y < cell; y++)
                         for (int x = 0; x < cell; x++)
                         {
-                            var c = bmp.GetPixel(ox + x, oy + y);
-                            _font.SetPixel(glyph, x, y, NearestShade(c.R, c.G, c.B));
+                            int at = ((oy + y) * image.Width + ox + x) * 4;
+                            _font.SetPixel(glyph, x, y, NearestShade(image.Bgra[at + 2], image.Bgra[at + 1], image.Bgra[at]));
                         }
                 }
                 RecordStep();
@@ -505,6 +509,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     : $"{_font.GlyphCount} letters, up to {_font.MaxWidth} by {_font.Height}, "
                       + $"{1 << _font.BitsPerPixel} shades. {mapped} of them are written by a "
                       + "character in this ROM's map; the rest are kana and symbols it never asks for.";
+                if (_font != null && HgEngine.HgEngineSourceAssets.VerbatimSourceFor(
+                        HgEngine.HgEngineOwnedFiles.ArchiveOf(DirNames.fonts), _fontEntries[which]) is HgEngine.HgEngineOwnedFile source)
+                    StatusText += $" hg-engine builds this font from {source.RelPath}, so saving writes there too.";
                 RaiseGlyph();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
             }

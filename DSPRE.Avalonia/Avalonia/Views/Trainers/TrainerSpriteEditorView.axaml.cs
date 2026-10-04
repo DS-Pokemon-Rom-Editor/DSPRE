@@ -73,6 +73,7 @@ namespace DSPRE.Avalonia.Views.Trainers
                 VM.SelectedFrameIndex = index;
         }
 
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
         private void ZoomIn_Click(object sender, RoutedEventArgs e) => VM?.ZoomIn();
         private void ZoomOut_Click(object sender, RoutedEventArgs e) => VM?.ZoomOut();
 
@@ -90,7 +91,15 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void Canvas_PointerPressed(object sender, PointerPressedEventArgs e)
         {
             _painting = true;
+            VM?.BeginStroke();
             PaintAtPointer(e);
+        }
+
+        // A whole drag is one undo step.
+        private void Canvas_PointerReleased(object sender, PointerReleasedEventArgs e)
+        {
+            _painting = false;
+            VM?.EndStroke();
         }
 
         private void Canvas_PointerMoved(object sender, PointerEventArgs e)
@@ -98,6 +107,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (!_painting || !e.GetCurrentPoint(CanvasImage).Properties.IsLeftButtonPressed)
             {
                 _painting = false;
+                VM?.EndStroke();
                 return;
             }
             PaintAtPointer(e);

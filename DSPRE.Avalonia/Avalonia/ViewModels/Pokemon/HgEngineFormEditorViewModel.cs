@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -33,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// themselves (base stats, types, abilities...) are edited through the normal Pokémon Editor; this
     /// editor only manages which form entries exist and how they're flagged, not their contents.
     /// </summary>
-    public class HgEngineFormEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class HgEngineFormEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -57,8 +58,38 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string SelectedSpeciesDesignator =>
             _selectedSpeciesIndex >= 0 && _species != null && _species.TryGetNameWithPrefix(_selectedSpeciesIndex, "SPECIES_", out string n) ? n : null;
 
-        private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
+        private byte[] _loaded;
+        public bool HasUnsavedChanges => _loaded != null && !TakeState().AsSpan().SequenceEqual(_loaded);
+
+        // One species at a time: its history starts when it is shown.
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private byte[] TakeState() => ByteStateUndo.Pack(w =>
+        {
+            w.Write(Slots.Count);
+            foreach (var row in Slots) { w.Write(row.PokemonIndex); w.Write(row.NeedsReversion); }
+        });
+
+        private void ApplyState(byte[] state)
+        {
+            Slots.Clear();
+            ByteStateUndo.Unpack(state, r =>
+            {
+                for (int n = r.ReadInt32(), i = 0; i < n; i++) AddRow(r.ReadInt32(), r.ReadBoolean());
+            });
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private void StartUndo()
+        {
+            _loaded = TakeState();
+            _undo = new ByteStateUndo(TakeState, ApplyState, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
+            OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo));
+        }
         public string UnsavedChangesDescription =>
             _selectedSpeciesIndex >= 0 && _selectedSpeciesIndex < PokemonNames.Count
                 ? $"Form Editor ({PokemonNames[_selectedSpeciesIndex]})" : "Form Editor";
@@ -86,7 +117,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void LoadSelected()
         {
             Slots.Clear();
-            _dirty = false;
             string designator = SelectedSpeciesDesignator;
             if (designator != null && _table.TryGetValue(designator, out var slots))
             {
@@ -99,6 +129,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             StatusText = Slots.Count > 0
                 ? $"{Slots.Count} form(s) found in PokeFormDataTbl.c."
                 : "No forms registered for this species in PokeFormDataTbl.c.";
+            StartUndo();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -122,9 +153,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void SetDirty()
         {
-            if (_dirty) return;
-            _dirty = true;
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            _undo?.Record();
         }
 
         public void SaveChanges() => _ = SaveAsync();
@@ -160,7 +190,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             _table = HgEngineFormRegistry.LoadAll();   // refresh from disk so future selections see the new state
-            _dirty = false;
+            _loaded = TakeState();
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved {desired.Count} form(s) for {(SelectedSpeciesIndex < PokemonNames.Count ? PokemonNames[SelectedSpeciesIndex] : SelectedSpeciesIndex.ToString())}.";
             OnPropertyChanged(nameof(HasUnsavedChanges));

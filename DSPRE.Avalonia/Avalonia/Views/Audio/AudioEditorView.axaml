@@ -5,7 +5,7 @@
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Audio.AudioEditorView"
         x:DataType="vm:AudioEditorViewModel"
-        Title="Audio Editor"
+        Title="Audio editor"
         Width="860" Height="700"
         WindowStartupLocation="CenterScreen">
   <Design.DataContext>
@@ -13,14 +13,13 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
           <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click"
                   IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Write what was imported."/>
           <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click"
                   IsEnabled="{Binding HasUnsavedChanges}" ToolTip.Tip="Forget what was imported."/>
+          <controls:UndoRedoButtons/>
         </StackPanel>
         <TextBox PlaceholderText="Search every tab by name or number" x:Name="SearchBox"
                  Text="{Binding Search}" FontSize="13" Width="280" Margin="12,2,6,2">
@@ -41,8 +40,7 @@
           <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding CanImport}"
                   ToolTip.Tip="{Binding ImportHelp}"/>
         </StackPanel>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
       <StackPanel Spacing="6">
