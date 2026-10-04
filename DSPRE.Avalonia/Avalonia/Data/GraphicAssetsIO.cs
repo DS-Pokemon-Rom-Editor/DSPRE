@@ -31,6 +31,17 @@ namespace DSPRE.Avalonia.Data
             var narc = source ?? new ScriptNarc(a.Dir);
             if (!narc.Available) { whynot = "This game does not have this archive."; return null; }
 
+            if (a.Pokewalker is { } pw)
+            {
+                var pwPixels = DSPRE.ROMFiles.PokewalkerImage.Decode(Unsqueeze(narc.Get(index)), pw.Width, pw.Height);
+                if (pwPixels == null) { whynot = $"This entry isn't a {pw.Width} by {pw.Height} Pokéwalker picture."; return null; }
+                return new Indexed
+                {
+                    Indices = pwPixels, Palette = (uint[])DSPRE.ROMFiles.PokewalkerImage.Shades.Clone(),
+                    Width = pw.Width, Height = pw.Height, ColourCount = 4, BitsPerPixel = 2,
+                };
+            }
+
             byte[] rawStored = narc.Get(index);
             var kind = Identify(rawStored);
             if (kind != Kind.TileGraphic)
@@ -78,7 +89,16 @@ namespace DSPRE.Avalonia.Data
 
             // Most drawings store their pixels in eight by eight blocks laid left to right. Some are stored
             // plainly, row after row, and the drawing says which it is. Straighten out only the blocked ones.
-            var straight = tiled ? Untile(idx, width, height) : idx;
+            // A drawing a cell places is laid out the way that cell puts its tiles.
+            byte[] straight;
+            var pieces = tiled ? PiecesFor(a, narc, index, bpp) : null;
+            if (pieces != null && CellPlacement.Place(idx, pieces, out byte[] placed, out int pw2, out int ph2))
+            {
+                straight = placed;
+                width = pw2;
+                height = ph2;
+            }
+            else straight = tiled ? Untile(idx, width, height) : idx;
 
             // A sixteen colour drawing takes one bank out of a palette that usually holds several, and the
             // archive says which bank this entry wants.
@@ -102,6 +122,15 @@ namespace DSPRE.Avalonia.Data
             };
         }
 
+        /// <summary>The pieces of the cell that places this drawing, or null when nothing does.</summary>
+        private static List<CellPlacement.Piece> PiecesFor(Archive a, ScriptNarc narc, int index, int bpp)
+        {
+            int layout = -1;
+            try { layout = a.CellPlacementEntry?.Invoke(index) ?? -1; } catch { }
+            byte[] ncer = layout >= 0 && layout != index ? narc.Get(layout) : null;
+            return ncer == null ? null : CellPlacement.Pieces(Unsqueeze(ncer), bpp);
+        }
+
         /// <summary>Whether this archive's pixels are scrambled in the game being edited.</summary>
         private static bool Scrambled(Archive a, int index) =>
             a.ScrambledEntry?.Invoke(index) ?? a.ScrambledNow?.Invoke() ?? a.ScrambledPixels;
@@ -118,7 +147,24 @@ namespace DSPRE.Avalonia.Data
         {
             int said = 0;
             try { said = a.PixelWidthOf?.Invoke(index) ?? 0; } catch { }
-            return said > 0 ? said : a.PixelWidth;
+            if (said > 0) return said;
+            return a.PixelWidth > 0 ? a.PixelWidth : SourcePngWidth(a, index);
+        }
+
+        // hg-engine tiles a drawing from its PNG row by row, so the PNG's width is the drawing's width.
+        private static int SourcePngWidth(Archive a, int index)
+        {
+            if (!HgEngineProject.IsActive) return 0;
+            var source = HgEngineBuiltPngs.For(HgEngineOwnedFiles.ArchiveOf(a.Dir), index, new ScriptNarc(a.Dir).Count);
+            if (source?.Part != HgEngineBuiltPngs.Part.Pixels || !File.Exists(source.Path)) return 0;
+            try
+            {
+                using var f = File.OpenRead(source.Path);
+                var head = new byte[24];
+                if (f.Read(head, 0, 24) < 24 || head[12] != 'I' || head[13] != 'H' || head[14] != 'D' || head[15] != 'R') return 0;
+                return (head[16] << 24) | (head[17] << 16) | (head[18] << 8) | head[19];
+            }
+            catch (IOException) { return 0; }
         }
 
         private static (int dataOff, int dataSize, int bpp, int width, int height, bool tiled)? ReadShape(byte[] ncgr, int declaredWidth = 0)
@@ -318,7 +364,8 @@ namespace DSPRE.Avalonia.Data
             note = null;
             if (a.CannotImportBecause != null) return a.CannotImportBecause;
 
-            string builtByHgEngine = HgEngineSourceAssets.CannotImportBecause(a.Dir, index);
+            string builtByHgEngine = HgEngineSourceAssets.CannotImportBecause(a.Dir, index)
+                ?? BuiltPngSources.CannotWrite(a.Dir, HgEngineOwnedFiles.ArchiveOf(a.Dir), index, new ScriptNarc(a.Dir).Count);
             if (builtByHgEngine != null) return builtByHgEngine;
 
             // A whole picture put together from pieces goes back through the pieces, not straight into
@@ -420,6 +467,17 @@ namespace DSPRE.Avalonia.Data
             byte[] storedRaw = narc.Get(index);
             if (storedRaw == null) return "This entry could not be read.";
 
+            if (a.Pokewalker is { } pw)
+            {
+                byte[] plain = DSPRE.ROMFiles.PokewalkerImage.Encode(straightIndices, pw.Width, pw.Height);
+                if (plain == null) return "A Pokéwalker picture has four shades, numbered 0 to 3.";
+                byte pwMarker = SqueezeMarker(storedRaw);
+                byte[] packed = pwMarker != 0 ? Squeeze(plain, pwMarker) : plain;
+                if (packed == null) return "This picture could not be squeezed back down, so nothing was changed.";
+                narc.Put(index, packed);
+                return null;
+            }
+
             // Some of these are kept squeezed down. Work on the opened-out file and squeeze it again at
             // the end, so the edit lands in the same shape the game reads.
             byte marker = SqueezeMarker(storedRaw);
@@ -432,7 +490,26 @@ namespace DSPRE.Avalonia.Data
             if (shape == null) return "This drawing could not be taken apart, so nothing was changed.";
             var (dataOff, dataSize, bpp, width, height, isTiled) = shape.Value;
 
-            var tiled = isTiled ? Retile(straightIndices, width, height) : straightIndices;
+            byte[] tiled;
+            var pieces = isTiled ? PiecesFor(a, narc, index, bpp) : null;
+            if (pieces != null)
+            {
+                // Start from the tiles as they are, so tiles no piece shows keep their pixels.
+                var current = (byte[])stored.Clone();
+                if (Scrambled(a, index)) SpriteScrambling.Unscramble(current, dataOff, dataSize, FromEnd(a));
+                tiled = new byte[width * height];
+                for (int i = 0; i < tiled.Length; i++)
+                {
+                    int at = dataOff + (bpp == 8 ? i : i / 2);
+                    if (at >= current.Length) break;
+                    tiled[i] = bpp == 8 ? current[at] : (byte)(i % 2 == 0 ? current[at] & 0x0F : current[at] >> 4);
+                }
+                CellPlacement.Place(tiled, pieces, out _, out int placedWidth, out int placedHeight);
+                if (straightIndices.Length != placedWidth * placedHeight
+                    || !CellPlacement.Unplace(straightIndices, placedWidth, pieces, tiled))
+                    return "That picture doesn't match the cell this drawing is placed by, so nothing was changed.";
+            }
+            else tiled = isTiled ? Retile(straightIndices, width, height) : straightIndices;
             var outp = (byte[])stored.Clone();
             ushort seed = Scrambled(a, index) ? SpriteScrambling.Seed(stored, dataOff, dataSize, FromEnd(a)) : (ushort)0;
 

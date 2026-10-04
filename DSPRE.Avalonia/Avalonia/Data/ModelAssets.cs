@@ -41,10 +41,13 @@ namespace DSPRE.Avalonia.Data
 
             /// <summary>True for the models inside buildings. </summary>
             public bool Indoor { get; init; }
+
+            /// <summary>The archive mixes 3D with flat pictures, which the graphics browser lists; only the 3D shows here.</summary>
+            public bool OnlyThreeD { get; init; }
         }
 
         /// <summary>The eight archives holding 3D data, from the census in
-        /// Research/Graphics/GraphicsCensus.md.</summary>
+        /// Research/Graphics/GraphicsCensus.md, plus the two that mix 3D with flat pictures.</summary>
         public static readonly Archive[] All =
         {
             new Archive { Dir = DirNames.OWSprites, Title = "Overworld people and objects", In = Group.Overworld,
@@ -70,6 +73,10 @@ namespace DSPRE.Avalonia.Data
             new Archive { Dir = DirNames.titleScreenGraphics, Title = "Title screen", In = Group.Other,
                 What = "The logo and background of the game's own title screen.",
                 DeepEditor = "Title Screen Editor" },
+            new Archive { Dir = DirNames.bagGraphics, Title = "Bag", In = Group.Other, OnlyThreeD = true,
+                What = "The bag on the bag screen, one for the boy and one for the girl, with each pocket opening." },
+            new Archive { Dir = DirNames.openingDemoGraphics, Title = "Opening movie", In = Group.Other, OnlyThreeD = true,
+                What = "The 3D pieces of the opening movie." },
         };
 
         public enum Kind { Unknown, Model, TextureBundle, JointAnimation, TextureAnimation, TextureSwap,
@@ -368,12 +375,12 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Plain words for a piece of a thing.</summary>
         private static string PartName(Kind k) => k switch
         {
-            Kind.Model => "The shape",
-            Kind.TextureBundle => "Its pictures",
+            Kind.Model => "Shape",
+            Kind.TextureBundle => "Pictures",
             Kind.JointAnimation => "Movement",
             Kind.TextureAnimation => "Sliding pictures",
             Kind.TextureSwap => "Changing pictures",
-            Kind.VisibilityAnimation => "What shows when",
+            Kind.VisibilityAnimation => "Visibility",
             Kind.MaterialAnimation => "Colour over time",
             Kind.Empty => "Empty",
             _ => "Other data",
@@ -418,6 +425,7 @@ namespace DSPRE.Avalonia.Data
                 }
 
                 open = null;
+                if (a.OnlyThreeD && kind is Kind.NotThreeD or Kind.Empty) continue;
                 // A set of pictures is named after the first picture in it, which is who it actually is.
                 string lonely = kind == Kind.TextureBundle ? FirstTextureName(b) : null;
                 var lone = new Unit { Archive = a, Name = lonely ?? a.Title };

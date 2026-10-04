@@ -62,6 +62,8 @@ namespace DSPRE.Avalonia.Data
                 spokenFor.Add(drawing);
                 spokenFor.Add(palDay); spokenFor.Add(palDay + 1); spokenFor.Add(palDay + 2);
             }
+            // Not pictures on their own: they arrange a picture the trade sequence makes at runtime.
+            for (int i = 0; i < BattleBgRenderer.TradePokemonMapCount; i++) spokenFor.Add(BattleBgRenderer.TradePokemonMaps0 + i);
 
             FillGaps(units, a, fileCount, spokenFor);
             return units;
@@ -300,6 +302,21 @@ namespace DSPRE.Avalonia.Data
         // ── the Ball Capsule editor's seals and screens ────────────────────────────────────────────
 
         /// <summary>One row per seal, drawn through its layout, plus the capsule editor's screens.</summary>
+        // DP/Pt cb_data: one layout, animation and drawing per seal 00-79 (plus a second seal 15), in that order.
+        private const int SealLayoutsDppt = 92, SealDrawingsDppt = 184, SealCountDppt = 81, SealCaseLayoutDppt = 180;
+
+        /// <summary>A layout shown with the drawing and colours the game pairs it with.</summary>
+        private static GraphicAssets.UnitPart Drawn(GraphicAssets.Archive a, int layout, int drawing, int colours, string name)
+        {
+            GraphicAssets.Archive own = new GraphicAssets.Archive
+            {
+                Dir = a.Dir, Title = a.Title, In = a.In, What = a.What, DeepEditor = a.DeepEditor,
+                DrawingEntry = i => i == layout ? drawing : -1,
+                ColourEntry = i => i == layout || i == drawing ? colours : (a.ColourEntry?.Invoke(i) ?? -1),
+            };
+            return new GraphicAssets.UnitPart { Archive = own, Index = layout, Name = name, Kind = GraphicAssets.Kind.CellLayout };
+        }
+
         public static List<GraphicAssets.Unit> SealGraphics(GraphicAssets.Archive a, int fileCount)
         {
             var units = new List<GraphicAssets.Unit>();
@@ -337,6 +354,19 @@ namespace DSPRE.Avalonia.Data
                 u.Parts.Add(Part(a, sprite, "Drawing"));
                 if (animation < fileCount) u.Parts.Add(Part(a, animation, "Animation, shared"));
                 if (colours < fileCount) u.Parts.Add(Part(a, colours, "Colours, shared"));
+                // DP/Pt also store a layout per seal, in drawing order, but the game draws every sticker with
+                // seal 01's 32x32 layout; and the seal case lists each seal through layout 180.
+                if (!johto)
+                {
+                    int ownLayout = sprite - SealDrawingsDppt + SealLayoutsDppt;
+                    if (ownLayout >= SealLayoutsDppt && ownLayout < SealLayoutsDppt + SealCountDppt && ownLayout != layout)
+                    {
+                        u.Parts.Add(Drawn(a, ownLayout, sprite, colours, "Own layout, unused"));
+                        spokenFor.Add(ownLayout);
+                    }
+                    if (SealCaseLayoutDppt < fileCount)
+                        u.Parts.Add(Drawn(a, SealCaseLayoutDppt, sprite, colours, "In the seal case"));
+                }
                 units.Add(u);
                 spokenFor.Add(sprite);
             }
@@ -345,9 +375,40 @@ namespace DSPRE.Avalonia.Data
             if (!johto)
             {
                 Row("Capsule editor, lower screen", true, (267, "Drawing"), (283, "Capsule arrangement"),
-                    (282, "Seal case arrangement"), (287, "Colours"));
+                    (282, "Seal case arrangement"), (287, "Colours"), (294, "Colours, text"));
                 Row("Capsule editor, top screen", true, (268, "Drawing"), (284, "Arrangement"),
                     (269, "Second drawing"), (285, "Second arrangement"), (288, "Colours"));
+
+                // Sprite pieces of the capsule screens: (drawing, layout, animation, colours) as the editor loads them.
+                foreach ((string name, int drawing, int cells, int anim, int pal) in new (string, int, int, int, int)[]
+                {
+                    ("Capsule animation", 265, 173, 81, 290), ("Ball", 266, 174, 82, 286), ("Button", 270, 175, 83, 290),
+                    ("Square button", 272, 176, 84, 290), ("Scroll button, first", 273, 177, 85, 290),
+                    ("Scroll button, second", 274, 178, 86, 290), ("Cursor", 275, 179, 87, 291),
+                })
+                {
+                    if (cells >= fileCount || drawing >= fileCount) continue;
+                    GraphicAssets.Unit piece = new GraphicAssets.Unit { Archive = a, Name = name };
+                    piece.Parts.Add(Drawn(a, cells, drawing, pal, "As it appears"));
+                    piece.Parts.Add(Part(a, drawing, "Drawing"));
+                    if (anim < fileCount) piece.Parts.Add(Part(a, anim, "Animation"));
+                    if (pal < fileCount) piece.Parts.Add(Part(a, pal, "Colours"));
+                    units.Add(piece);
+                    foreach (int i in new[] { drawing, cells, anim, pal }) spokenFor.Add(i);
+                }
+                spokenFor.Add(SealCaseLayoutDppt);
+                spokenFor.Add(88);
+
+                // An older button and the seal-list pieces are stored but never loaded. Seal 00's drawing is blank, and
+                // the list layouts 181-183 have no drawing the game pairs them with, so those are left out.
+                spokenFor.Add(SealLayoutsDppt);
+                spokenFor.Add(SealDrawingsDppt);
+                Row("Unused pieces", true, (271, "Old button"), (276, "Seal list piece 1"), (277, "Seal list piece 2"),
+                    (278, "Seal list piece 3"), (279, "Seal list piece 4"), (280, "Seal list piece 5"), (281, "Seal list piece 6"),
+                    (292, "Colours, seal list"), (289, "Colours, second top screen"));
+                for (int i = 181; i <= 183; i++) spokenFor.Add(i);
+                for (int i = 89; i <= 91; i++) spokenFor.Add(i);
+                for (int i = 0; i < SealCountDppt; i++) spokenFor.Add(i);
             }
 
             FillGaps(units, a, fileCount, spokenFor);
@@ -511,7 +572,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 var card = RomInfo.TrainerCardMembers;
-                var u = new GraphicAssets.Unit { Archive = a, Name = "The card itself" };
+                var u = new GraphicAssets.Unit { Archive = a, Name = "Card" };
                 Claim(u, card.ncgr, "Drawing");
                 Claim(u, card.facaNscr, "Front, arrangement");
                 Claim(u, card.backNscr, "Back, arrangement");
@@ -524,7 +585,7 @@ namespace DSPRE.Avalonia.Data
                 if (u.Parts.Count > 0) units.Add(u);
 
                 var t = RomInfo.TrainerCardTrainerMembers;
-                var p2 = new GraphicAssets.Unit { Archive = a, Name = "The trainer on the card" };
+                var p2 = new GraphicAssets.Unit { Archive = a, Name = "Trainer on the card" };
                 Claim(p2, t.ncgr, "Drawing");
                 Claim(p2, t.maleNscr, "Boy, arrangement");
                 Claim(p2, t.femaleNscr, "Girl, arrangement");
@@ -619,7 +680,7 @@ namespace DSPRE.Avalonia.Data
             var lead = new GraphicAssets.Unit
             {
                 Archive = a,
-                Name = "The colours and the layout every icon shares",
+                Name = "Shared colours and layout",
             };
             for (int k = 0; k < Math.Min(LeadIn, fileCount); k++)
             {

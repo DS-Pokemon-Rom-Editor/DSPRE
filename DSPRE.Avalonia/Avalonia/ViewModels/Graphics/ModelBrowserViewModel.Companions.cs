@@ -407,11 +407,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             var idle = new List<string>();
             if (_slide != null && (TextureMatrices == null || TextureMatrices.Count == 0))
-                idle.Add(Wanted("The sliding picture", _slide.MaterialNames));
+                idle.Add(Wanted("Sliding picture", _slide.MaterialNames));
             if (_swap != null && (TextureSwaps == null || TextureSwaps.Count == 0))
-                idle.Add(Wanted("The swapped picture", _swap.MaterialNames));
+                idle.Add(Wanted("Swapped picture", _swap.MaterialNames));
             if (_colour != null && (MaterialFades == null || MaterialFades.Count == 0))
-                idle.Add(Wanted("The colour change", _colour.MaterialNames));
+                idle.Add(Wanted("Colour change", _colour.MaterialNames));
 
             CompanionNote = idle.Count == 0 ? "" : string.Join(" ", idle);
             OnPropertyChanged(nameof(HasCompanionNote));
@@ -421,9 +421,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             var real = names.Where(n => !string.IsNullOrWhiteSpace(n)).Take(3).ToList();
             return real.Count == 0
-                ? $"{what} names no surface, so it changes nothing here."
-                : $"{what} is for {string.Join(", ", real)}, which this model does not have, so it changes "
-                  + "nothing here.";
+                ? $"{what}: no surface named."
+                : $"{what}: no {string.Join(", ", real)} on this model.";
         }
 
 
