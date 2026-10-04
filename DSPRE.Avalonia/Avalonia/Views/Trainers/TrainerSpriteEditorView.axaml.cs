@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -53,7 +54,17 @@ namespace DSPRE.Avalonia.Views.Trainers
             int bank = vm.ActivePaletteBank;
             var editor = new DSPRE.Avalonia.ViewModels.Graphics.PaletteColorEditorViewModel(
                 vm.PaletteTitle(bank, index), vm.SwatchColor(bank, index), argb => vm.SetSwatchColor(bank, index, argb));
-            new DSPRE.Avalonia.Views.Graphics.PaletteColorEditorView(editor).Show(this);
+            var window = new DSPRE.Avalonia.Views.Graphics.PaletteColorEditorView(editor);
+            // Outside the editor, so the palette and the sprite both stay in view while the colour changes.
+            var area = Screens.ScreenFromWindow(this)?.WorkingArea;
+            double scale = RenderScaling;
+            var right = this.PointToScreen(new Point(Bounds.Width + 8, 0));
+            int width = (int)(window.Width * scale);
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Position = area == null || right.X + width <= area.Value.Right
+                ? right
+                : this.PointToScreen(new Point(-8 - window.Width, 0));
+            window.Show(this);
         }
 
         private void Frame_PointerPressed(object sender, PointerPressedEventArgs e)
