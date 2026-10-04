@@ -21,6 +21,7 @@ namespace DSPRE.Editors
         private InputComboBox itemPickerCombo;
         private NumericUpDown qtyUpDown;
         private Button addButton;
+        private Button updateButton;
         private Button removeButton;
         private Button closeButton;
 
@@ -43,7 +44,7 @@ namespace DSPRE.Editors
             var infoLabel = new Label
             {
                 Text = "These are the item + quantity combinations Overworld Item events can pick from.\n" +
-                       "Entries still in use by an Overworld event can't be removed.",
+                       "Select an entry to change it. Entries still in use by an Overworld event can't be removed.",
                 Dock = DockStyle.Top,
                 Height = 40,
                 Padding = new Padding(8, 8, 8, 0)
@@ -64,18 +65,21 @@ namespace DSPRE.Editors
             grid.Columns.Add("Item", "Item");
             grid.Columns.Add("Quantity", "Quantity");
             grid.Columns.Add("InUse", "In use");
-            grid.SelectionChanged += (s, e) => removeButton.Enabled = grid.SelectedRows.Count > 0;
+            grid.SelectionChanged += Grid_SelectionChanged;
 
             var addPanel = new Panel { Dock = DockStyle.Bottom, Height = 40 };
-            itemPickerCombo = new InputComboBox { Location = new Point(8, 8), Width = 260 };
-            var qtyLabel = new Label { Text = "Qty:", Location = new Point(276, 12), AutoSize = true };
-            qtyUpDown = new NumericUpDown { Location = new Point(312, 8), Width = 60, Minimum = 1, Maximum = 99, Value = 1 };
-            addButton = new Button { Text = "Add", Location = new Point(384, 7), Width = 70 };
+            itemPickerCombo = new InputComboBox { Location = new Point(8, 8), Width = 230 };
+            var qtyLabel = new Label { Text = "Qty:", Location = new Point(246, 12), AutoSize = true };
+            qtyUpDown = new NumericUpDown { Location = new Point(282, 8), Width = 60, Minimum = 1, Maximum = 99, Value = 1 };
+            addButton = new Button { Text = "Add", Location = new Point(354, 7), Width = 70 };
             addButton.Click += AddButton_Click;
+            updateButton = new Button { Text = "Update selected", Location = new Point(432, 7), Width = 112, Enabled = false };
+            updateButton.Click += UpdateButton_Click;
             addPanel.Controls.Add(itemPickerCombo);
             addPanel.Controls.Add(qtyLabel);
             addPanel.Controls.Add(qtyUpDown);
             addPanel.Controls.Add(addButton);
+            addPanel.Controls.Add(updateButton);
 
             var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 40 };
             removeButton = new Button { Text = "Remove selected", Location = new Point(8, 6), Width = 130, Enabled = false };
@@ -141,15 +145,103 @@ namespace DSPRE.Editors
                 int rowIndex = grid.Rows.Add(itemName, entry.quantity, inUse ? "Yes" : "No");
                 grid.Rows[rowIndex].Tag = entry.scriptIndex;
             }
+            grid.ClearSelection();
+        }
+
+        private void Grid_SelectionChanged(object sender, EventArgs e)
+        {
+            bool hasSelection = grid.SelectedRows.Count > 0;
+            removeButton.Enabled = hasSelection;
+            updateButton.Enabled = hasSelection;
+
+            // The first row gets selected while it is being added, before its Tag is set.
+            if (!hasSelection || !(grid.SelectedRows[0].Tag is int scriptIndex))
+            {
+                return;
+            }
+
+            var entry = entries.FirstOrDefault(x => x.scriptIndex == scriptIndex);
+            if (entry.itemId >= 0 && entry.itemId < itemNames.Length)
+            {
+                itemPickerCombo.SelectedIndex = entry.itemId;
+            }
+            qtyUpDown.Value = Math.Max(qtyUpDown.Minimum, Math.Min(qtyUpDown.Maximum, entry.quantity));
+        }
+
+        private bool TryGetPickedItem(out int itemId)
+        {
+            string typedName = (itemPickerCombo.Text ?? "").Trim();
+
+            // Several items can share a name, so the picked index wins over a lookup by name while it still matches the text.
+            int selected = itemPickerCombo.SelectedIndex;
+            if (selected >= 0 && selected < itemNames.Length && string.Equals(itemNames[selected], typedName, StringComparison.OrdinalIgnoreCase))
+            {
+                itemId = selected;
+                return true;
+            }
+
+            itemId = Array.FindIndex(itemNames, n => string.Equals(n, typedName, StringComparison.OrdinalIgnoreCase));
+            if (itemId < 0)
+            {
+                MessageBox.Show("Pick an item first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            return true;
+        }
+
+        private void UpdateButton_Click(object sender, EventArgs e)
+        {
+            if (grid.SelectedRows.Count == 0 || !TryGetPickedItem(out int itemId))
+            {
+                return;
+            }
+
+            int scriptIndex = (int)grid.SelectedRows[0].Tag;
+            int quantity = (int)qtyUpDown.Value;
+            var current = entries.FirstOrDefault(x => x.scriptIndex == scriptIndex);
+            if (current.itemId == itemId && current.quantity == quantity)
+            {
+                return;
+            }
+
+            if (usedScriptNumbers.Contains(itemScrMin + scriptIndex))
+            {
+                DialogResult confirm = MessageBox.Show("This entry is used by one or more Overworld Item events.\n" +
+                    "Every one of them will give " + quantity + "x " + itemNames[itemId] + " instead. Proceed?",
+                    "Confirm to proceed", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (confirm != DialogResult.Yes)
+                {
+                    return;
+                }
+            }
+
+            List<ScriptCommand> commands = itemScript.allScripts[scriptIndex].commands;
+            commands[0] = new ScriptCommand("SetVar 0x8008 " + itemId);
+            commands[1] = new ScriptCommand("SetVar 0x8009 " + quantity);
+
+            if (!itemScript.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false))
+            {
+                return;
+            }
+
+            itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+            RefreshGrid();
+
+            foreach (DataGridViewRow row in grid.Rows)
+            {
+                if ((int)row.Tag == scriptIndex)
+                {
+                    row.Selected = true;
+                    grid.CurrentCell = row.Cells[0];
+                    break;
+                }
+            }
         }
 
         private void AddButton_Click(object sender, EventArgs e)
         {
-            string typedName = (itemPickerCombo.Text ?? "").Trim();
-            int itemId = Array.FindIndex(itemNames, n => string.Equals(n, typedName, StringComparison.OrdinalIgnoreCase));
-            if (itemId < 0)
+            if (!TryGetPickedItem(out int itemId))
             {
-                MessageBox.Show("Pick an item first.", "Nothing selected", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
