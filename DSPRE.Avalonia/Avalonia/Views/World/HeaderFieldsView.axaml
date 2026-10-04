@@ -42,7 +42,7 @@
             </StackPanel>
             <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Location name"/>
-              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding LocationNames}" SelectedIndex="{Binding LocationNameIndex}"/>
+              <controls:FusionAutoCompleteBox HorizontalAlignment="Stretch" ItemsSource="{Binding LocationNames}" SelectedIndex="{Binding LocationNameIndex}"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Map type"/>
@@ -62,14 +62,14 @@
               <TextBlock Classes="fieldlabel" Text="Music (Day)"/>
               <Grid ColumnDefinitions="90,6,*">
                 <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding MusicDayValue}"/>
-                <ComboBox Grid.Column="2" ItemsSource="{Binding MusicDay.Names}" SelectedIndex="{Binding MusicDayComboIndex}"/>
+                <controls:FusionAutoCompleteBox Grid.Column="2" ItemsSource="{Binding MusicDay.Names}" SelectedIndex="{Binding MusicDayComboIndex}"/>
               </Grid>
             </StackPanel>
             <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
               <TextBlock Classes="fieldlabel" Text="Music (Night)"/>
               <Grid ColumnDefinitions="90,6,*">
                 <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding MusicNightValue}"/>
-                <ComboBox Grid.Column="2" ItemsSource="{Binding MusicNight.Names}" SelectedIndex="{Binding MusicNightComboIndex}"/>
+                <controls:FusionAutoCompleteBox Grid.Column="2" ItemsSource="{Binding MusicNight.Names}" SelectedIndex="{Binding MusicNightComboIndex}"/>
               </Grid>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">

@@ -197,7 +197,7 @@
                   <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisibleVanilla}" Margin="0,4,0,0">
                     <TextBlock Text="Item" FontWeight="Bold"/>
                     <Grid ColumnDefinitions="*,Auto">
-                      <ComboBox Grid.Column="0" ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
+                      <controls:FusionAutoCompleteBox Grid.Column="0" ItemsSource="{Binding OwItemEntries}" SelectedIndex="{Binding OwItemIndex}" HorizontalAlignment="Stretch"/>
                       <Button Grid.Column="1" Content="Edit item list…" controls:Icon.Key="pencil" Click="ManageGroundItems_Click" Margin="4,0,0,0" ToolTip.Tip="Add or remove the item and quantity pairs item events can give"/>
                     </Grid>
                     <!-- No warning here: the dropdown itself shows whether the item resolved, and the
@@ -212,7 +212,7 @@
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwTrainerFieldsVisible}" Margin="0,4,0,0">
                     <TextBlock Text="Trainer" FontWeight="Bold"/>
-                    <ComboBox controls:EditorLink.To="Trainer" ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
+                    <controls:FusionAutoCompleteBox controls:EditorLink.To="Trainer" ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Script number doesn't match a known trainer (edit Script below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
                     <TextBlock Text="Trainer 0 is the empty slot. Pick another or the battle has nobody in it."
@@ -245,7 +245,7 @@
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwScriptSectionVisible}">
                     <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
-                    <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
+                    <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptGenericWarningVisible}"/>
                     <TextBlock Text="{Binding OwScriptCommonInfo}"
@@ -353,7 +353,7 @@
                     <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding TrScriptIndex}" HorizontalAlignment="Stretch"/>
+                  <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding TrScriptIndex}" HorizontalAlignment="Stretch"/>
                   <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptGenericWarningVisible}"/>
                   <TextBlock Text="{Binding TrScriptCommonInfo}"
@@ -424,7 +424,7 @@
                     <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <ComboBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" HorizontalAlignment="Stretch"/>
+                  <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" HorizontalAlignment="Stretch"/>
                   <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptGenericWarningVisible}"/>
                   <TextBlock Text="{Binding SpScriptCommonInfo}"

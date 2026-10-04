@@ -18,7 +18,7 @@
       <Setter Property="Increment" Value="1"/>
       <Setter Property="FormatString" Value="0"/>
     </Style>
-    <Style Selector="ComboBox">
+    <Style Selector="ComboBox, controls|FusionAutoCompleteBox">
       <Setter Property="MinWidth" Value="160"/>
     </Style>
   </UserControl.Styles>
@@ -72,17 +72,17 @@
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Type 2:"    Classes="label"/>
                   <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding TypeNames}"    SelectedIndex="{Binding Type2Index}"/>
                   <TextBlock Grid.Row="4" Grid.Column="0" Text="Ability 1:" Classes="label"/>
-                  <ComboBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability1Index}"/>
+                  <controls:FusionAutoCompleteBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability1Index}"/>
                   <TextBlock Grid.Row="6" Grid.Column="0" Text="Ability 2:" Classes="label"/>
-                  <ComboBox  Grid.Row="6" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability2Index}"/>
+                  <controls:FusionAutoCompleteBox  Grid.Row="6" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability2Index}"/>
                 </Grid>
               </GroupBox>
               <GroupBox Grid.Column="2" Header="Held Items">
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto" Margin="4">
                   <TextBlock Grid.Row="0" Grid.Column="0" Text="Item 1:" Classes="label"/>
-                  <ComboBox controls:EditorLink.To="Item"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1Index}"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1Index}"/>
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Item 2:" Classes="label"/>
-                  <ComboBox controls:EditorLink.To="Item"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2Index}"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2Index}"/>
                 </Grid>
               </GroupBox>
             </Grid>
@@ -243,11 +243,11 @@
             <GroupBox Header="Breeding / Dex">
               <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto" Margin="4">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Hidden Ability:"  Classes="label"/>
-                <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding HgHiddenAbilityIndex}"/>
+                <controls:FusionAutoCompleteBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding HgHiddenAbilityIndex}"/>
                 <TextBlock Grid.Row="0" Grid.Column="2" Text="Base Exp:"        Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding HgBaseExp}" Minimum="0" Maximum="65535"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Baby Pokémon:"    Classes="label"/>
-                <ComboBox controls:EditorLink.To="Pokemon"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HgBabyMonIndex}"/>
+                <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HgBabyMonIndex}"/>
                 <TextBlock Grid.Row="2" Grid.Column="2" Text="Regional Dex #:"  Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding HgRegionalDexNumber}" Minimum="0" Maximum="65535"/>
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="Icon Palette:"    Classes="label"/>
@@ -291,7 +291,7 @@
                     <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding OwNeedsTemplate}">
                       <TextBlock Text="Template species:" Classes="label"
                                  ToolTip.Tip="No sprite sheet exists for this species yet. Pick an existing species to clone its animation metadata from; only the artwork is replaced."/>
-                      <ComboBox ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding OwTemplateSpeciesIndex}" MinWidth="200"/>
+                      <controls:FusionAutoCompleteBox ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding OwTemplateSpeciesIndex}" MinWidth="200"/>
                     </StackPanel>
                     <Button Content="Import sprite sheet…" controls:Icon.Key="import" Click="ImportOwSprite_Click"/>
                   </StackPanel>

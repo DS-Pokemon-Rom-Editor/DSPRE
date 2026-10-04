@@ -63,7 +63,7 @@
 
 				<!-- Move selector -->
 				<Label Content="Move"/>
-				<ComboBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}"
+				<controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}"
 						  SelectedIndex="{Binding SelectedMoveIndex}"
 						  HorizontalAlignment="Stretch"/>
 

@@ -40,7 +40,7 @@
       <ScrollViewer Grid.Column="1">
         <StackPanel x:Name="RowPanel" Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
           <TextBlock Text="Base Trainer" FontWeight="Bold"/>
-          <ComboBox x:Name="BaseTrainerBox" controls:EditorLink.To="Trainer" ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding BaseTrainerIndex}" HorizontalAlignment="Stretch"/>
+          <controls:FusionAutoCompleteBox x:Name="BaseTrainerBox" controls:EditorLink.To="Trainer" ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding BaseTrainerIndex}" HorizontalAlignment="Stretch"/>
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="{Binding RowNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" VerticalAlignment="Center"/>
             <Button Content="Open in Phone Book" controls:Icon.Key="OpenLink" Click="OpenPhoneBook_Click" IsVisible="{Binding HasPhoneEntry}" FontSize="11" Padding="6,1"/>

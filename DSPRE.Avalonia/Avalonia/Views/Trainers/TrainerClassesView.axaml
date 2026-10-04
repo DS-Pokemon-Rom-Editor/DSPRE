@@ -83,7 +83,7 @@
             <CheckBox Content="Use the rival's saved name" IsChecked="{Binding SavedRivalName}" IsVisible="{Binding RivalChoiceVisible}"/>
             <StackPanel Spacing="2" IsVisible="{Binding TrainerNameVisible}">
               <TextBlock Text="Name shown"/>
-              <ComboBox ItemsSource="{Binding TrainerNameChoices}" SelectedIndex="{Binding TrainerNameId}" HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
+              <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerNameChoices}" SelectedIndex="{Binding TrainerNameId}" HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
             </StackPanel>
             <StackPanel Spacing="2" IsVisible="{Binding Style1MotionVisible}">
               <TextBlock Text="Motion"/>

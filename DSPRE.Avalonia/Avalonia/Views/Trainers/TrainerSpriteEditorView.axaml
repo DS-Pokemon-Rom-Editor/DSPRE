@@ -41,7 +41,7 @@
         </StackPanel>
         <StackPanel x:Name="SpritePicker" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
           <TextBlock Text="{Binding ItemLabel}" VerticalAlignment="Center"/>
-          <ComboBox ItemsSource="{Binding ClassNames}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
+          <controls:FusionAutoCompleteBox ItemsSource="{Binding ClassNames}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
         </StackPanel>
       </WrapPanel>
     </Border>

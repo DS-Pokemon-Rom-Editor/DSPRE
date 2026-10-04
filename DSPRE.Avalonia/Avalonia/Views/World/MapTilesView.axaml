@@ -42,7 +42,7 @@
                 ToolTip.Tip="Collision defaults from the tileset"/>
       <Button Content="Revert" Click="Undo_Click" IsEnabled="{Binding CanUndo}" Margin="4,0,0,0"
               ToolTip.Tip="Undo the last Apply"/>
-      <ComboBox ItemsSource="{Binding ProjectMaps}" SelectedIndex="{Binding ProjectMap}" Margin="8,0,0,0"
+      <controls:FusionAutoCompleteBox ItemsSource="{Binding ProjectMaps}" SelectedIndex="{Binding ProjectMap}" Margin="8,0,0,0"
                 IsVisible="{Binding HasProject}" MinWidth="170" ToolTip.Tip="Map in project"/>
     </WrapPanel>
 

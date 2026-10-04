@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         xmlns:models="clr-namespace:DSPRE.Avalonia.Models"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Pokemon.CopyMachinesDialogView"
         x:DataType="vm:CopyMachinesDialogViewModel"
         Title="Copy TM/HM Compatibility" Width="420" Height="620"
@@ -9,7 +10,7 @@
 
   <DockPanel Margin="10">
     <TextBlock DockPanel.Dock="Top" Text="Copy compatibility FROM:" Margin="0,0,0,2"/>
-    <ComboBox DockPanel.Dock="Top" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SourceIndex}"
+    <controls:FusionAutoCompleteBox DockPanel.Dock="Top" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SourceIndex}"
               HorizontalAlignment="Stretch" Margin="0,0,0,8"/>
 
     <TextBlock DockPanel.Dock="Top" Text="Copy TO (check individuals or whole families):" Margin="0,0,0,2"/>

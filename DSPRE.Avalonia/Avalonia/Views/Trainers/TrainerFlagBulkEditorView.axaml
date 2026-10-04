@@ -27,7 +27,7 @@
         <ToggleButton Content="By flag" IsChecked="{Binding IsByFlagMode, Mode=OneWay}" Click="ByFlagMode_Click"/>
 
         <TextBlock Text="Flag:" VerticalAlignment="Center" Margin="12,0,0,0" IsVisible="{Binding IsByFlagMode}"/>
-        <ComboBox ItemsSource="{Binding FlagNamesList}"
+        <controls:FusionAutoCompleteBox ItemsSource="{Binding FlagNamesList}"
                   SelectedIndex="{Binding CurrentFlagIndex}" Width="220" IsVisible="{Binding IsByFlagMode}"/>
 
         <Button Content="{Binding SelectAllLabel}" Click="SelectAll_Click" Margin="12,0,0,0"/>

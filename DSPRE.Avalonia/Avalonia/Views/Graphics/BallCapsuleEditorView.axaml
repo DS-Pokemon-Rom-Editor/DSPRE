@@ -66,7 +66,7 @@
       <StackPanel x:Name="SendOutPanel" Grid.Column="4" Spacing="8">
         <TextBlock Text="Preview" FontWeight="SemiBold"/>
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" Width="220" MaxDropDownHeight="420"/>
+          <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" Width="220" MaxDropDownHeight="420"/>
           <Button controls:Icon.Key="{Binding Battle.SendOutButtonIcon}" controls:Icon.Text="{Binding Battle.SendOutButtonText}" Click="Play_Click" MinWidth="120"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="8" x:DataType="vmb:BattleDisplayEditorViewModel" DataContext="{Binding Battle}">

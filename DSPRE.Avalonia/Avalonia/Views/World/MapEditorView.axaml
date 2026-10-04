@@ -27,7 +27,7 @@
           <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding HeaderNames}" SelectedIndex="{Binding SelectedHeaderIndex}" IsVisible="{Binding IsHeaderView}"
                                           ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
           <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
-          <ComboBox Width="110" ItemsSource="{Binding HeaderMapNames}" SelectedIndex="{Binding SelectedHeaderMapIndex}" IsVisible="{Binding IsHeaderView}"
+          <controls:FusionAutoCompleteBox Width="110" ItemsSource="{Binding HeaderMapNames}" SelectedIndex="{Binding SelectedHeaderMapIndex}" IsVisible="{Binding IsHeaderView}"
                     ToolTip.Tip="The map to edit. Picking a building or painting a square picks its map."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button Content="Animate" controls:Icon.Key="play" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"

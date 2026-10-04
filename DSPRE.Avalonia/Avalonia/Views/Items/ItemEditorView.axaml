@@ -101,7 +101,7 @@
                                 BorderThickness="1" CornerRadius="4" Padding="6">
                             <StackPanel Spacing="4">
                                 <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Hold Effect</TextBlock>
-                                <ComboBox ItemsSource="{Binding HoldEffectNames}"
+                                <controls:FusionAutoCompleteBox ItemsSource="{Binding HoldEffectNames}"
                                           SelectedIndex="{Binding HoldEffectIndex}"
                                           HorizontalAlignment="Stretch" MaxDropDownHeight="200"/>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">

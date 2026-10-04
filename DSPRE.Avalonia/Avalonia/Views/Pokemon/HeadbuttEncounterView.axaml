@@ -44,7 +44,7 @@
                     <Grid ColumnDefinitions="72,34,*,84,84" Margin="0,1">
                       <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
                       <Image Grid.Column="1" Width="32" Height="32" Source="{Binding SpeciesIndex, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-                      <ComboBox Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="0" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
+                      <controls:FusionAutoCompleteBox Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="0" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
                       <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0" ToolTip.Tip="Minimum level"/>
                       <NumericUpDown Grid.Column="4" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0" ToolTip.Tip="Maximum level"/>
                     </Grid>
@@ -95,7 +95,7 @@
                     <Grid ColumnDefinitions="72,34,*,84,84" Margin="0,1">
                       <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
                       <Image Grid.Column="1" Width="32" Height="32" Source="{Binding SpeciesIndex, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-                      <ComboBox Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="0" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
+                      <controls:FusionAutoCompleteBox Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="0" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
                       <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0" ToolTip.Tip="Minimum level"/>
                       <NumericUpDown Grid.Column="4" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0" ToolTip.Tip="Maximum level"/>
                     </Grid>

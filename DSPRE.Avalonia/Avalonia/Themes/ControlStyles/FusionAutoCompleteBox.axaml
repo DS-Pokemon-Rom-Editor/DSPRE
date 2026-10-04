@@ -8,8 +8,8 @@
         <Setter Property="BorderBrush" Value="{DynamicResource ComboBox.Static.Editable.Border}"/>
         <Setter Property="Foreground" Value="{DynamicResource ABrush.Foreground.Static}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="2"/>
-        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="MinHeight" Value="28"/>
         <Setter Property="Padding" Value="4,0"/>
         <Setter Property="PlaceholderForeground" Value="{DynamicResource ABrush.Foreground.Static}"/>
         <Setter Property="MaxDropDownHeight" Value="360"/>

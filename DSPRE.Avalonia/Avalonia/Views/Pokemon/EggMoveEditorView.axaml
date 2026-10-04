@@ -50,7 +50,7 @@
 		<StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,6,0,0">
 		  <TextBlock Text="{Binding EntryIdText}" FontSize="12"/>
 		  <Grid ColumnDefinitions="*,*">
-			<ComboBox Grid.Column="0" Grid.ColumnSpan="2" ItemsSource="{Binding MonNames}"
+			<controls:FusionAutoCompleteBox Grid.Column="0" Grid.ColumnSpan="2" ItemsSource="{Binding MonNames}"
 					  SelectedIndex="{Binding CbMonIndex}" Margin="0,0,0,4"
 					  PlaceholderText="Pick a Pokemon for the buttons below"/>
 		  </Grid>
@@ -84,7 +84,7 @@
 			<TextBlock Text="{Binding MoveCountText}" Foreground="{Binding MoveCountBrush}" FontSize="12"/>
 			<TextBlock Text="{Binding MoveIdText}"    FontSize="12"/>
 		  </StackPanel>
-		  <ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbMoveIndex}"
+		  <controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbMoveIndex}"
 					PlaceholderText="Pick a move for the buttons below"/>
 		  <TextBlock Text="{Binding MoveStatusText}" FontSize="12" TextWrapping="Wrap"/>
 		  <StackPanel Orientation="Horizontal" Spacing="4">
@@ -107,9 +107,9 @@
 		  <StackPanel Spacing="4">
 			<TextBlock Text="Bulk Replace Move" FontWeight="SemiBold" FontSize="12"/>
 			<TextBlock Text="Replace:" FontSize="12"/>
-			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplaceeIndex}"/>
+			<controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplaceeIndex}"/>
 			<TextBlock Text="With:" FontSize="12"/>
-			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplacerIndex}"/>
+			<controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplacerIndex}"/>
 			<Button Content="Bulk replace" HorizontalAlignment="Stretch" Click="BulkReplace_Click"/>
 		  </StackPanel>
 		</Border>
@@ -118,7 +118,7 @@
 				BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="6">
 		  <StackPanel Spacing="4">
 			<TextBlock Text="Bulk Delete Move" FontWeight="SemiBold" FontSize="12"/>
-			<ComboBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbDeleteAllIndex}"/>
+			<controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbDeleteAllIndex}"/>
 			<Button Content="Bulk delete" HorizontalAlignment="Stretch" Click="BulkDelete_Click"/>
 		  </StackPanel>
 		</Border>

@@ -54,13 +54,13 @@
                    SelectedIndex="{Binding CondSelectedIndex}"/>
           <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
             <TextBlock Text="Header" FontWeight="Bold"/>
-            <ComboBox HorizontalAlignment="Stretch"
+            <controls:FusionAutoCompleteBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding HeaderNames}"
                       SelectedIndex="{Binding CondHeaderIndex}"/>
             <TextBlock Text="Flag" FontWeight="Bold"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding CondFlag}"/>
             <TextBlock Text="Music" FontWeight="Bold"/>
-            <ComboBox HorizontalAlignment="Stretch"
+            <controls:FusionAutoCompleteBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding MusicNames.Names}"
                       SelectedIndex="{Binding CondMusicComboIndex}"
                       PlaceholderText="Unnamed track"/>
@@ -96,7 +96,7 @@
                    SelectedIndex="{Binding VsTrainerSelectedIndex}"/>
           <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
             <TextBlock Text="Trainer Class" FontWeight="Bold"/>
-            <ComboBox HorizontalAlignment="Stretch"
+            <controls:FusionAutoCompleteBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding TrainerNames}"
                       SelectedIndex="{Binding TrainerClassIndex}"/>
             <TextBlock Text="Effect Combo" FontWeight="Bold"/>
@@ -127,7 +127,7 @@
                    SelectedIndex="{Binding VsPokemonSelectedIndex}"/>
           <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
             <TextBlock Text="Pokémon" FontWeight="Bold"/>
-            <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch"
+            <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch"
                       ItemsSource="{Binding PokemonNames}"
                       SelectedIndex="{Binding PokemonIndex}"
                       IsEnabled="False"/>

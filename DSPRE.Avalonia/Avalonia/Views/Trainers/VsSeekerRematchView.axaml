@@ -37,7 +37,7 @@
       <ScrollViewer Grid.Column="1">
         <controls:CappedWidth Cap="520"><StackPanel x:Name="RematchPanel" Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
           <TextBlock Text="Encounter Trainer" FontWeight="Bold"/>
-          <ComboBox x:Name="EncounterBox" controls:EditorLink.To="Trainer" ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding EncounterIndex}" HorizontalAlignment="Stretch"/>
+          <controls:FusionAutoCompleteBox x:Name="EncounterBox" controls:EditorLink.To="Trainer" ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding EncounterIndex}" HorizontalAlignment="Stretch"/>
           <TextBlock Text="{Binding RowProblems}" IsVisible="{Binding HasRowProblems}" FontSize="11"
                      Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
 

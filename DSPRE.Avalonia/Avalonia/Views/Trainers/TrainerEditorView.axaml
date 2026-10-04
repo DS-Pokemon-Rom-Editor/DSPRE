@@ -69,7 +69,7 @@
               </Border>
 
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Class" VerticalAlignment="Center" Margin="0,0,6,2"/>
-              <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,8,2"
+              <controls:FusionAutoCompleteBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,8,2"
                         ItemsSource="{Binding TrainerClassItems}" SelectedIndex="{Binding TrainerClassIndex}"/>
 
               <WrapPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" ItemSpacing="12" LineSpacing="4" Margin="0,4,8,0">
@@ -117,7 +117,7 @@
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TrainerItemSlotViewModel">
-                  <ComboBox controls:EditorLink.To="Item" Width="200" Margin="2"
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" Width="200" Margin="2"
                             ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}"/>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -160,7 +160,7 @@
                       <!-- Row 0: species + level -->
                       <StackPanel Grid.Row="0" Grid.Column="1" Margin="6,0,4,2">
                         <TextBlock Text="Species" FontSize="10"/>
-                        <ComboBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SpeciesIndex}"/>
+                        <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SpeciesIndex}"/>
                       </StackPanel>
                       <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,2">
                         <TextBlock Text="Level" FontSize="10"/>
@@ -223,23 +223,23 @@
                       <WrapPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="6,2,0,0">
                         <StackPanel Width="180" Margin="0,0,6,0" IsVisible="{Binding ItemEnabled}">
                           <TextBlock Text="Held item" FontSize="10"/>
-                          <ComboBox controls:EditorLink.To="Item" HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}"/>
+                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}"/>
                         </StackPanel>
                         <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
                           <TextBlock Text="Move 1" FontSize="10"/>
-                          <ComboBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move1}"/>
+                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move1}"/>
                         </StackPanel>
                         <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
                           <TextBlock Text="Move 2" FontSize="10"/>
-                          <ComboBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move2}"/>
+                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move2}"/>
                         </StackPanel>
                         <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
                           <TextBlock Text="Move 3" FontSize="10"/>
-                          <ComboBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move3}"/>
+                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move3}"/>
                         </StackPanel>
                         <StackPanel Width="150" IsVisible="{Binding MovesEnabled}">
                           <TextBlock Text="Move 4" FontSize="10"/>
-                          <ComboBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}"/>
+                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}"/>
                         </StackPanel>
                       </WrapPanel>
 
@@ -249,11 +249,11 @@
                           <WrapPanel>
                             <StackPanel Width="180" Margin="0,0,6,0" IsEnabled="{Binding HgeExplicitAbilityEnabled}">
                               <TextBlock Text="Explicit ability" FontSize="10"/>
-                              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AllAbilityNames}" SelectedIndex="{Binding HgeExtras.AbilityId}"/>
+                              <controls:FusionAutoCompleteBox HorizontalAlignment="Stretch" ItemsSource="{Binding AllAbilityNames}" SelectedIndex="{Binding HgeExtras.AbilityId}"/>
                             </StackPanel>
                             <StackPanel Width="180" Margin="0,0,6,0" IsEnabled="{Binding HgeBallEnabled}">
                               <TextBlock Text="Catch ball" FontSize="10"/>
-                              <ComboBox controls:EditorLink.To="Item" HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HgeExtras.BallId}"/>
+                              <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HgeExtras.BallId}"/>
                             </StackPanel>
                             <StackPanel Width="180" Margin="0,0,6,0" IsEnabled="{Binding HgeNatureEnabled}">
                               <TextBlock Text="Nature" FontSize="10"/>

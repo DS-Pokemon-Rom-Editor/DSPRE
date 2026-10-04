@@ -19,7 +19,7 @@
         <ToggleButton Content="By TM/HM" IsChecked="{Binding IsByMachineMode, Mode=OneWay}" Click="ByMachineMode_Click" Margin="0,0,12,4"/>
 
         <TextBlock Text="Machine:" VerticalAlignment="Center" Margin="0,0,6,4" IsVisible="{Binding IsByMachineMode}"/>
-        <ComboBox ItemsSource="{Binding MachineNamesList}" SelectedIndex="{Binding CurrentMachineIndex}"
+        <controls:FusionAutoCompleteBox ItemsSource="{Binding MachineNamesList}" SelectedIndex="{Binding CurrentMachineIndex}"
                   Width="220" Margin="0,0,12,4" IsVisible="{Binding IsByMachineMode}"/>
 
         <Button Content="Save all" controls:Icon.Key="saveButton" Click="SaveAll_Click" Margin="0,0,12,4"/>

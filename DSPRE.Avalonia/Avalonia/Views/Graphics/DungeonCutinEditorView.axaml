@@ -43,7 +43,7 @@
 			<StackPanel Orientation="Horizontal" Spacing="16">
 			  <StackPanel Spacing="2">
 				<TextBlock Text="Zone"/>
-				<ComboBox ItemsSource="{Binding Headers}" SelectedIndex="{Binding SelectedRow.HeaderIndex}" Width="240"/>
+				<controls:FusionAutoCompleteBox ItemsSource="{Binding Headers}" SelectedIndex="{Binding SelectedRow.HeaderIndex}" Width="240"/>
 			  </StackPanel>
 			  <StackPanel Spacing="2">
 				<TextBlock Text="Wipe type (unused)"/>

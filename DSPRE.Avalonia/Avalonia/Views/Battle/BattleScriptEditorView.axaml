@@ -286,7 +286,7 @@
                 <StackPanel Spacing="6" Width="190">
                   <TextBlock Text="Gauge readout" FontWeight="SemiBold"/>
                   <TextBlock Text="Pokémon to display" FontSize="12"/>
-                  <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding GaugeSpeciesIndex}"
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding GaugeSpeciesIndex}"
                             HorizontalAlignment="Stretch" MaxDropDownHeight="360"
                             ToolTip.Tip="Loads this species' front/back battle sprites into the preview and names the gauge."/>
                   <TextBlock Text="Level" FontSize="12"/>

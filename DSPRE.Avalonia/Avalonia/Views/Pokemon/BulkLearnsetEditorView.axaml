@@ -35,7 +35,7 @@
         <DataGridTemplateColumn Header="Species" Width="280">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:BulkLearnsetRow">
-              <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch" Margin="2"/>
+              <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch" Margin="2"/>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
@@ -49,7 +49,7 @@
         <DataGridTemplateColumn Header="Move" Width="*">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:BulkLearnsetRow">
-              <ComboBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding MoveIndex}" HorizontalAlignment="Stretch" Margin="2"/>
+              <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding MoveIndex}" HorizontalAlignment="Stretch" Margin="2"/>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>

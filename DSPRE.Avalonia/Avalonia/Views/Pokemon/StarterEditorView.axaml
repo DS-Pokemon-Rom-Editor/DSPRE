@@ -32,19 +32,19 @@
 
 		<controls:CappedWidth Cap="560"><Grid x:Name="StarterGrid" ColumnDefinitions="Auto,*,36" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8" Margin="0,8,0,0">
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Starter 1:" VerticalAlignment="Center"/>
-		  <ComboBox controls:EditorLink.To="Pokemon"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter1}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
+		  <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter1}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
 		  <Image     Grid.Row="0" Grid.Column="2" Source="{Binding Starter1Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="1" Grid.Column="0" Text="Starter 2:" VerticalAlignment="Center"/>
-		  <ComboBox controls:EditorLink.To="Pokemon"  Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter2}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
+		  <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon"  Grid.Row="1" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter2}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
 		  <Image     Grid.Row="1" Grid.Column="2" Source="{Binding Starter2Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Starter 3:" VerticalAlignment="Center"/>
-		  <ComboBox controls:EditorLink.To="Pokemon"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter3}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
+		  <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter3}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
 		  <Image     Grid.Row="2" Grid.Column="2" Source="{Binding Starter3Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
 		  <TextBlock Grid.Row="3" Grid.Column="0" Text="Held Item:" VerticalAlignment="Center" IsVisible="{Binding IsHeldItemSupported}"/>
-		  <ComboBox controls:EditorLink.To="Item"  Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HeldItem}"
+		  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HeldItem}"
 					 HorizontalAlignment="Stretch" IsVisible="{Binding IsHeldItemSupported}"/>
 		  <Image     Grid.Row="3" Grid.Column="2" Source="{Binding HeldItemIcon}" Width="32" Height="32" Stretch="Uniform"
 					 IsVisible="{Binding IsHeldItemSupported}"/>

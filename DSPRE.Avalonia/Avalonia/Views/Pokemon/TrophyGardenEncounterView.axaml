@@ -50,7 +50,7 @@
           </Border>
           <TextBlock Text="{Binding SlotInfoText}"/>
           <TextBlock Text="Species"/>
-          <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch"/>
+          <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch"/>
         </StackPanel>
       </Grid>
     </Grid>

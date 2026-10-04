@@ -54,7 +54,7 @@
               <controls:HelpTip Text="The trainer this contact is. The game matches it after a win to offer their number, rematches and gifts, so it must match the trainer battled and their Rematch Editor row. Pick 'not a trainer' for people you never battle."/>
             </StackPanel>
             <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-              <ComboBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"/>
+              <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"/>
               <Button Grid.Column="1" Content="Open in Rematch Editor" controls:Icon.Key="OpenLink" Click="OpenRematch_Click" IsVisible="{Binding HasRematchRow}"/>
             </Grid>
 
@@ -62,13 +62,13 @@
               <TextBlock Text="Map"/>
               <controls:HelpTip Text="Where the contact lives. Calling them while you're on this map plays their local line, they don't call you at random while you're there, and their dialogue can name the place or a wild Pokémon found there."/>
             </StackPanel>
-            <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding MapChoices}" SelectedIndex="{Binding MapIndex}" HorizontalAlignment="Stretch"/>
+            <controls:FusionAutoCompleteBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding MapChoices}" SelectedIndex="{Binding MapIndex}" HorizontalAlignment="Stretch"/>
 
             <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Rematch gift"/>
               <controls:HelpTip Text="An item handed over each time you win a rematch against this trainer. Cheri Berry gives a random berry."/>
             </StackPanel>
-            <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemChoices}" SelectedIndex="{Binding GiftIndex}" HorizontalAlignment="Stretch"
+            <controls:FusionAutoCompleteBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemChoices}" SelectedIndex="{Binding GiftIndex}" HorizontalAlignment="Stretch"
                       ToolTip.Tip="Given after each rematch win. Cheri Berry gives a random berry."/>
 
             <StackPanel Grid.Row="5" Orientation="Horizontal" VerticalAlignment="Center">

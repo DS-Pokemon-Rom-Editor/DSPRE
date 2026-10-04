@@ -161,7 +161,7 @@
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
             <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
-            <ComboBox ItemsSource="{Binding TrainerNamesList}" SelectedIndex="{Binding SelectedTrainerIndex}" Width="260"/>
+            <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerNamesList}" SelectedIndex="{Binding SelectedTrainerIndex}" Width="260"/>
             <Button Content="Search" controls:Icon.Key="lens"    Click="TrainerWatchSearch_Click" IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear" controls:Icon.Key="Cross"     Click="TrainerWatchClear_Click"/>
             <controls:HelpTip Text="Scripts and functions that name this trainer, overworld trainer battles and Vs. Seeker rows. Double-click a row to open it."/>
@@ -215,11 +215,11 @@
             <DockPanel Margin="4">
               <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
                 <TextBlock Text="Script File:" VerticalAlignment="Center"/>
-                <ComboBox ItemsSource="{Binding ScriptFileEntries}"
+                <controls:FusionAutoCompleteBox ItemsSource="{Binding ScriptFileEntries}"
                           SelectedIndex="{Binding SelectedScriptFileIndex}"
                           Width="160"/>
                 <TextBlock Text="Script ID:" VerticalAlignment="Center"/>
-                <ComboBox ItemsSource="{Binding ScriptIdEntries}"
+                <controls:FusionAutoCompleteBox ItemsSource="{Binding ScriptIdEntries}"
                           SelectedIndex="{Binding SelectedScriptIdIndex}"
                           Width="120"/>
                 <Button Content="Search" controls:Icon.Key="lens" Click="IdWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>

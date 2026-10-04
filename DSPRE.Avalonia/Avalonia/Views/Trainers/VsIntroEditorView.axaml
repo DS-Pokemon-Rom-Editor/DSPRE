@@ -66,13 +66,13 @@
               <Button Content="Classes and music" Click="ClassesAndMusic_Click" HorizontalAlignment="Left"/>
 
               <TextBlock Text="Banner name" Classes="section" IsVisible="{Binding ShowTrainer}"/>
-              <ComboBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"
+              <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"
                         IsVisible="{Binding ShowTrainer}" ToolTip.Tip="The trainer whose name the banner shows"/>
               <CheckBox Content="Show the rival's name" IsChecked="{Binding RivalName}" IsVisible="{Binding ShowRivalName}"/>
 
               <TextBlock Text="{Binding ClassLabel}" Classes="section" IsVisible="{Binding ShowClass}"/>
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding ShowClass}">
-                <ComboBox ItemsSource="{Binding ClassChoices}" SelectedIndex="{Binding ClassIndex}" HorizontalAlignment="Stretch"
+                <controls:FusionAutoCompleteBox ItemsSource="{Binding ClassChoices}" SelectedIndex="{Binding ClassIndex}" HorizontalAlignment="Stretch"
                           ToolTip.Tip="{Binding ClassTip}"/>
                 <Button Grid.Column="1" Content="Edit colours" controls:Icon.Key="pencil" Click="ClassColours_Click" IsVisible="{Binding CanEditClassColours}"
                         ToolTip.Tip="The class's battle sprite uses the same colours, so it changes too"/>

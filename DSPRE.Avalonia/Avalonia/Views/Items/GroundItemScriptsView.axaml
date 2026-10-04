@@ -27,7 +27,7 @@
       <StackPanel Spacing="6">
         <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="Firebrick" TextWrapping="Wrap"/>
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <ComboBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding NewItemIndex}"
+          <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding NewItemIndex}"
                     Width="260" HorizontalAlignment="Left"/>
           <TextBlock Text="Qty:" VerticalAlignment="Center" Margin="8,0,0,0"/>
           <NumericUpDown Value="{Binding NewQuantity}" Minimum="1" Maximum="99" FormatString="0" Width="90"/>

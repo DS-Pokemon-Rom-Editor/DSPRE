@@ -42,7 +42,7 @@
         <StackPanel x:Name="SpeciesDetails" DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
           <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6" IsVisible="{Binding SpeciesEditable}">
             <TextBlock Text="Pokémon" VerticalAlignment="Center"/>
-            <ComboBox Grid.Column="1" ItemsSource="{Binding SpeciesChoices}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch"/>
+            <controls:FusionAutoCompleteBox Grid.Column="1" ItemsSource="{Binding SpeciesChoices}" SelectedIndex="{Binding SpeciesIndex}" HorizontalAlignment="Stretch"/>
             <TextBlock Grid.Row="1" Text="Intro" VerticalAlignment="Center"/>
             <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding ComboChoices}" SelectedIndex="{Binding SpeciesComboIndex}" HorizontalAlignment="Stretch"/>
           </Grid>

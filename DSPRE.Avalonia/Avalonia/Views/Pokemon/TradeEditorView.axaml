@@ -45,22 +45,22 @@
 			  <TextBlock Grid.Row="0"  Grid.Column="0" Text="Species:"          VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="0" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedSpecies, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-			    <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedSpecies}"/>
+			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedSpecies}"/>
 			  </DockPanel>
 
 			  <TextBlock Grid.Row="1"  Grid.Column="0" Text="Requested:"        VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="1" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedRequested, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
-			    <ComboBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedRequested}"/>
+			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedRequested}"/>
 			  </DockPanel>
 
 			  <TextBlock Grid.Row="2"  Grid.Column="0" Text="Ability:"          VerticalAlignment="Center"/>
-			  <ComboBox  Grid.Row="2"  Grid.Column="1" ItemsSource="{Binding AbilityNames}"  SelectedIndex="{Binding SelectedAbility}"/>
+			  <controls:FusionAutoCompleteBox  Grid.Row="2"  Grid.Column="1" ItemsSource="{Binding AbilityNames}"  SelectedIndex="{Binding SelectedAbility}"/>
 
 			  <TextBlock Grid.Row="3"  Grid.Column="0" Text="Held Item:"        VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="3" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedHeldItem, Converter={x:Static controls:GameIconConverter.Item}}"/>
-			    <ComboBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding SelectedHeldItem}"/>
+			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding SelectedHeldItem}"/>
 			  </DockPanel>
 
 			  <TextBlock Grid.Row="4"  Grid.Column="0" Text="OT Gender:"        VerticalAlignment="Center"/>

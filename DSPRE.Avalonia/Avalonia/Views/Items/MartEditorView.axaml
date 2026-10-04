@@ -69,7 +69,7 @@
                   <DockPanel Margin="2,1">
                     <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0"
                            Source="{Binding ItemId, Converter={x:Static controls:GameIconConverter.Item}}"/>
-                    <ComboBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemId}" HorizontalAlignment="Stretch"/>
+                    <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemId}" HorizontalAlignment="Stretch"/>
                   </DockPanel>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
