@@ -245,6 +245,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             // A sheet import can change the cells and animations too; they wait here until saved.
             public byte[] Ncgr, Ncer, Nanr;
+
+            // Per scan half, the frame it shows and that frame as it was when last read or saved; null where none.
+            public ScanHalf[] Scan;
         }
         private readonly List<SpritePart> _parts = new();
         private int _activePart;
@@ -1039,6 +1042,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     });
                 }
                 Activate(0);
+                MapScanFrames();
                 OnPropertyChanged(nameof(HasLinkedSets));
                 OnPropertyChanged(nameof(SelectedClassIndex));
 
@@ -1811,12 +1815,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
         }
 
-        // The scan copy (file 4) is what the HGSS slide-in, the Hall of Fame and the friend roster draw:
-        // frames 0 and 1, the middle 80x80 of each, side by side, scrambled like a Pokemon sprite.
+        // The scan copy (file 4) is two 80x80 poses for the Hall of Fame and the link rosters, scrambled like a
+        // Pokemon sprite. Each half only takes the pixels edited in the frame it was drawn from.
         private const int ScanFrame = 80;
 
-        private string WriteScan(int entry)
+        private sealed class ScanCopy
         {
+            public string Path;
+            public byte[] File;
+            public int DataOff, Size;
+            public bool FromEnd;
+            public byte[] Pixels;   // unscrambled, two pixels a byte
+        }
+
+        private ScanCopy ReadScan(int entry, out string error)
+        {
+            error = null;
             int id = TrainerGraphicsLayout.ScanEntry(entry);
             if (id < 0) return null;
             string path = Path.Combine(RomInfo.gameDirs[_set.Archive].unpackedDir, id.ToString("D4"));
@@ -1824,33 +1838,117 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             byte[] file = File.ReadAllBytes(path);
             int rahc = IndexOfMagic(file, "RAHC");
-            if (rahc < 0 || rahc + 0x20 > file.Length) return "the scan copy has no pixel block";
+            if (rahc < 0 || rahc + 0x20 > file.Length) { error = "the scan copy has no pixel block"; return null; }
             int tilesHigh = BitConverter.ToUInt16(file, rahc + 8), tilesWide = BitConverter.ToUInt16(file, rahc + 10);
             int depth = BitConverter.ToInt32(file, rahc + 0xC);
             int size = BitConverter.ToInt32(file, rahc + 0x18), dataOff = rahc + 8 + BitConverter.ToInt32(file, rahc + 0x1C);
             int width = ScanFrame * 2, height = ScanFrame;
             if (tilesWide * 8 != width || tilesHigh * 8 != height || depth != 3 || size != width * height / 2 || dataOff + size > file.Length)
-                return $"the scan copy is not the usual {width}x{height} 4bpp picture";
+            {
+                error = $"the scan copy is not the usual {width}x{height} 4bpp picture";
+                return null;
+            }
 
             bool fromEnd = TrainerGraphicsLayout.ScanScrambledFromEnd;
-            ushort seed = SpriteScrambling.Seed(file, dataOff, size, fromEnd);
+            byte[] plain = (byte[])file.Clone();
+            SpriteScrambling.Unscramble(plain, dataOff, size, fromEnd);
             var pixels = new byte[size];
+            Array.Copy(plain, dataOff, pixels, 0, size);
+            return new ScanCopy { Path = path, File = file, DataOff = dataOff, Size = size, FromEnd = fromEnd, Pixels = pixels };
+        }
+
+        private static int ScanPixel(byte[] pixels, int pos) => (pos & 1) == 0 ? pixels[pos >> 1] & 0xF : pixels[pos >> 1] >> 4;
+
+        private sealed class ScanHalf
+        {
+            public int Frame;
+            public int[] Base;
+        }
+
+        // The middle 80x80 of a drawn frame, colour index within its palette.
+        private static int[] ScanCrop(int[] canvas)
+        {
             int margin = (CanvasSize - ScanFrame) / 2;
-            // A one-frame sprite leaves the right half empty, as the retail scans do.
-            for (int half = 0; half < Math.Min(2, BankCount); half++)
+            var crop = new int[ScanFrame * ScanFrame];
+            for (int y = 0; y < ScanFrame; y++)
+                for (int x = 0; x < ScanFrame; x++)
+                    crop[y * ScanFrame + x] = canvas[(y + margin) * CanvasSize + x + margin] & 0xF;
+            return crop;
+        }
+
+        /// <summary>For each part, ties each scan half to the frame it is closest to. Run before any edit.</summary>
+        private void MapScanFrames()
+        {
+            if (_set.NamingScreen) return;
+            int keep = _activePart;
+            for (int p = 0; p < _parts.Count; p++)
             {
-                int[] frame = FrameIndices(half);
-                for (int y = 0; y < height; y++)
-                    for (int x = 0; x < ScanFrame; x++)
+                Activate(p);
+                var scan = BankCount > 0 ? ReadScan(_parts[p].Entry, out _) : null;
+                var halves = new ScanHalf[2];
+                if (scan != null)
+                {
+                    try
                     {
-                        int v = frame[(y + margin) * CanvasSize + x + margin] & 0xF;
-                        int pos = y * width + half * ScanFrame + x;
-                        pixels[pos >> 1] |= (byte)((pos & 1) == 0 ? v : v << 4);
+                        var frames = OpenFrames(p);
+                        var crops = Enumerable.Range(0, frames.FrameCount).Select(f => ScanCrop(frames.Draw(f))).ToList();
+                        for (int half = 0; half < 2; half++)
+                        {
+                            int inked = 0, best = int.MaxValue, bestFrame = -1;
+                            for (int i = 0; i < ScanFrame * ScanFrame; i++)
+                                if (ScanPixel(scan.Pixels, (i / ScanFrame) * ScanFrame * 2 + half * ScanFrame + i % ScanFrame) != 0) inked++;
+                            for (int f = 0; f < crops.Count; f++)
+                            {
+                                int diff = 0;
+                                for (int i = 0; i < ScanFrame * ScanFrame; i++)
+                                    if (crops[f][i] != ScanPixel(scan.Pixels, (i / ScanFrame) * ScanFrame * 2 + half * ScanFrame + i % ScanFrame)) diff++;
+                                if (diff < best) { best = diff; bestFrame = f; }
+                            }
+                            // A half further off than this is its own drawing and is never redrawn.
+                            if (inked > 0 && bestFrame >= 0 && best <= inked / 20)
+                                halves[half] = new ScanHalf { Frame = bestFrame, Base = crops[bestFrame] };
+                        }
                     }
+                    catch (Exception ex) { AppLogger.Error("TrainerSpriteEditorViewModel: scan copy could not be matched: " + ex.Message); }
+                }
+                _parts[p].Scan = halves;
+                AppLogger.Debug($"Trainer sprite {_parts[p].Entry}: scan halves follow frames {halves[0]?.Frame ?? -1} and {halves[1]?.Frame ?? -1}.");
             }
-            Array.Copy(pixels, 0, file, dataOff, size);
-            SpriteScrambling.Scramble(file, dataOff, size, seed, fromEnd);
-            File.WriteAllBytes(path, file);
+            Activate(keep);
+        }
+
+        private string WriteScan(int entry)
+        {
+            var scan = ReadScan(entry, out string error);
+            if (scan == null) return error;
+            var halves = _parts.Count > 0 ? _parts[_activePart].Scan : null;
+            if (halves == null) return null;
+
+            var frames = OpenFrames(_activePart);
+            var pixels = (byte[])scan.Pixels.Clone();
+            var now = new int[2][];
+            for (int half = 0; half < 2; half++)
+            {
+                var h = halves[half];
+                if (h == null || h.Frame >= frames.FrameCount) continue;
+                now[half] = ScanCrop(frames.Draw(h.Frame));
+                for (int i = 0; i < now[half].Length; i++)
+                {
+                    if (now[half][i] == h.Base[i]) continue;
+                    int pos = (i / ScanFrame) * ScanFrame * 2 + half * ScanFrame + i % ScanFrame, v = now[half][i];
+                    pixels[pos >> 1] = (byte)((pos & 1) == 0 ? (pixels[pos >> 1] & 0xF0) | v : (pixels[pos >> 1] & 0x0F) | (v << 4));
+                }
+            }
+            if (!pixels.AsSpan().SequenceEqual(scan.Pixels))
+            {
+                ushort seed = SpriteScrambling.Seed(scan.File, scan.DataOff, scan.Size, scan.FromEnd);
+                byte[] file = (byte[])scan.File.Clone();
+                Array.Copy(pixels, 0, file, scan.DataOff, scan.Size);
+                SpriteScrambling.Scramble(file, scan.DataOff, scan.Size, seed, scan.FromEnd);
+                File.WriteAllBytes(scan.Path, file);
+            }
+            for (int half = 0; half < 2; half++)
+                if (now[half] != null) halves[half].Base = now[half];
             return null;
         }
 
