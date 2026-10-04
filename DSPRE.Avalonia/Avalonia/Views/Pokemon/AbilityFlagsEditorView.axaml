@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+        x:Class="DSPRE.Avalonia.Views.Pokemon.AbilityFlagsEditorView"
+        x:DataType="vm:AbilityFlagsEditorViewModel"
+        Title="Ability flags"
+        Width="720" Height="560" MinWidth="520" MinHeight="360">
+
+  <Design.DataContext>
+    <vm:AbilityFlagsEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+    </controls:EditorToolbar>
+    <Border DockPanel.Dock="Bottom" Padding="8,6" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Editor.Border}">
+      <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
+    </Border>
+    <Grid ColumnDefinitions="260,8,*" Margin="8">
+      <DockPanel Grid.Column="0">
+        <TextBox DockPanel.Dock="Top" Text="{Binding Filter}" PlaceholderText="Search abilities" Margin="0,0,0,6"/>
+        <ListBox ItemsSource="{Binding Abilities}" SelectedItem="{Binding Selected}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:AbilityFlagsEditorViewModel+AbilityRow">
+              <TextBlock Text="{Binding Display}"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+      <ItemsControl Grid.Column="2" ItemsSource="{Binding Flags}" IsEnabled="{Binding HasSelection}">
+        <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:AbilityFlagsEditorViewModel+FlagItem">
+            <CheckBox Content="{Binding Label}" IsChecked="{Binding IsSet}"/>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Grid>
+  </DockPanel>
+</Window>
