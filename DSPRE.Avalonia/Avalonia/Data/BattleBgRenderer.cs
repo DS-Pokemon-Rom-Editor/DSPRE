@@ -9,61 +9,13 @@ namespace DSPRE.Avalonia.Data
     {
         public sealed class BgImage { public byte[] Rgba; public int Width, Height; public int Period; }
 
-        // background id → (chr, pal, scr, scrReverse) file indices in the battle-background NARC, one table per game
-        // family: Platinum uses pl_batt_bg.narc, HGSS uses a/0/0/7 (, 351 entries).
-        // Index = the background id the move-effect scripts pass to the background-change / background-scroll opcodes
-        // (background id 48 → Surf; background id 44 → Dark Void). −1 = no reverse-side tilemap. The two families' file layouts
-        // differ throughout, so using one family's table on the other decodes entirely wrong entries.
-        private static readonly (int chr, int pal, int scr, int scrRev)[] PlatTable =
-        {
-            (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,291,62,63), (65,321,62,63),
-            (69,292,66,67), (69,325,66,67), (69,328,66,67), (70,293,71,71), (70,293,71,71), (70,319,71,71),
-            (70,320,71,71), (70,327,71,71), (76,294,72,72), (76,296,72,72), (76,304,72,72), (76,312,72,72),
-            (76,304,72,72), (81,297,82,82), (89,299,86,87), (95,301,92,93), (99,302,96,97), (100,303,101,101),
-            (102,305,103,103), (105,306,106,106), (111,307,110,110), (111,339,110,110), (112,308,113,113), (112,309,113,113),
-            (112,308,113,113), (119,311,116,117), (119,311,116,117), (119,311,116,117), (124,315,125,125), (129,317,130,130),
-            (131,318,132,132), (138,323,136,137), (139,324,140,140), (141,326,142,142), (146,329,143,144), (150,330,147,148),
-            (151,331,152,152), (153,332,154,154), (155,333,156,156), (160,334,157,158), (161,335,162,162), (52,286,53,53),
-            (163,336,164,165), (163,338,164,165), (166,337,168,167), (78,295,79,79), (90,300,91,91), (85,298,83,83),
-            (114,310,115,115), (122,314,123,123), (120,313,121,121), (134,322,135,135),
-        };
+        // Background id → its battle background archive members (drawing, palette, screen, reversed screen, contest
+        // screen), read from the game or the hg-engine checkout. The id is what the move-effect scripts pass to the
+        // background-change and background-scroll opcodes (48 → Surf, 44 → Dark Void).
+        private static System.Collections.Generic.List<int[]> Table => DSPRE.ROMFiles.MoveBackgroundTable.Current.Rows;
 
-        private static readonly (int chr, int pal, int scr, int scrRev)[] HgssTable =
-        {
-            (59,295,56,57), (59,295,56,57), (119,319,120,-1), (59,295,56,57), (59,295,56,57), (59,330,56,57),
-            (63,296,60,61), (142,334,143,144), (63,337,60,61), (64,297,65,-1), (64,297,65,-1), (119,320,120,-1),
-            (64,329,65,-1), (64,336,65,-1), (119,318,120,-1), (70,300,66,-1), (70,308,66,-1), (119,317,120,-1),
-            (70,308,66,-1), (75,301,76,-1), (83,303,80,81), (89,305,86,87), (93,306,90,91), (94,307,95,-1),
-            (99,310,100,-1), (102,311,103,-1), (108,312,107,-1), (108,348,107,-1), (109,313,110,-1), (111,314,112,-1),
-            (109,313,110,-1), (118,316,115,116), (118,316,115,116), (118,316,115,116), (125,324,126,-1), (130,326,131,-1),
-            (132,327,133,-1), (139,332,137,138), (140,333,141,-1), (145,335,146,-1), (150,338,147,148), (154,339,151,152),
-            (155,340,156,-1), (157,341,158,-1), (159,342,160,-1), (164,343,161,162), (165,344,166,-1), (46,290,47,-1),
-            (167,345,168,169), (167,347,168,169), (170,346,172,171), (72,299,73,-1), (84,304,85,-1), (79,302,77,78),
-            (113,315,114,-1), (123,323,124,-1), (121,322,122,-1), (135,331,136,-1), (98,309,96,97),
-        };
-
-        // Diamond and Pearl, from the table in overlay 8.
-        private static readonly (int chr, int pal, int scr, int scrRev)[] DpTable =
-        {
-            (53,208,50,51), (53,208,50,51), (53,208,50,51), (53,208,50,51), (53,208,50,51), (53,238,50,51),
-            (57,209,54,55), (57,242,54,55), (57,245,54,55), (58,210,59,59), (58,210,59,59), (58,236,59,59),
-            (58,237,59,59), (58,244,59,59), (64,211,60,60), (64,213,60,60), (64,221,60,60), (64,229,60,60),
-            (64,221,60,60), (69,214,70,70), (77,216,74,75), (83,218,80,81), (87,219,84,85), (88,220,89,89),
-            (90,222,91,91), (93,223,94,94), (99,224,98,98), (99,256,98,98), (100,225,101,101), (100,226,101,101),
-            (100,225,101,101), (107,228,104,105), (107,228,104,105), (107,228,104,105), (112,232,113,113), (117,234,118,118),
-            (119,235,120,120), (126,240,124,125), (127,241,128,128), (129,243,130,130), (134,246,131,132), (138,247,135,136),
-            (139,248,140,140), (141,249,142,142), (143,250,144,144), (148,251,145,146), (149,252,150,150), (40,203,41,41),
-            (151,253,152,153), (151,255,152,153), (154,254,156,155), (66,212,67,67), (78,217,79,79), (73,215,71,71),
-            (102,227,103,103), (110,231,111,111), (108,230,109,109), (122,239,123,123),
-        };
-
-        private static (int chr, int pal, int scr, int scrRev)[] Table =>
-            RomInfo.gameFamily == GameFamilies.HGSS ? HgssTable
-            : RomInfo.gameFamily == GameFamilies.DP ? DpTable
-            : PlatTable;
-
-        public static bool HasBg(int bgId) => bgId >= 0 && bgId < Table.Length;
-        public static int BgCount => Table.Length;
+        public static bool HasBg(int bgId) => bgId >= 0 && bgId < Table.Count;
+        public static int BgCount => Table.Count;
 
         // Scenery behind the platforms, not the move-effect BGs above. A wrong palette base still lands on a
         // valid palette, so a mix-up shows wrong colours instead of failing.
@@ -75,6 +27,18 @@ namespace DSPRE.Avalonia.Data
             RomInfo.GameFamilies.DP => 158,
             _ => 172,
         };
+
+        /// <summary>
+        /// The trade sequence's four tile maps (normal, flipped, and both 512 wide) that lay the traded Pokémon's
+        /// picture out as a background. The picture is made at runtime, so the archive holds no drawing for them.
+        /// </summary>
+        public static int TradePokemonMaps0 => RomInfo.gameFamily switch
+        {
+            RomInfo.GameFamilies.HGSS => 266,
+            RomInfo.GameFamilies.DP => 198,
+            _ => 262,
+        };
+        public const int TradePokemonMapCount = 4;
 
         /// <summary>Which files in the archive make up one backdrop. </summary>
         public static (int Drawing, int Tilemap, int PaletteDay) BackdropFiles(int bgId)
@@ -97,14 +61,21 @@ namespace DSPRE.Avalonia.Data
         private readonly ScriptNarc _narc = new ScriptNarc(DirNames.battleBg);
 
         /// <summary>Builds the BG image for a background id; reverse=true uses the enemy-side tilemap. Null if unavailable.</summary>
-        public BgImage Build(int bgId, bool reverse = false)
+        public BgImage Build(int bgId, bool reverse = false) => Build(bgId, reverse ? 1 : 0);
+
+        /// <summary>Builds the BG image with its screen (0), reversed screen (1) or contest screen (2).</summary>
+        public BgImage Build(int bgId, int screen)
         {
-            if (!HasBg(bgId) || !_narc.Available) return null;
-            var (chrIdx, palIdx, scrIdx, scrRevIdx) = Table[bgId];
-            int useScr = reverse && scrRevIdx >= 0 ? scrRevIdx : scrIdx;
-            byte[] chr = Inflate(_narc.Get(chrIdx));
-            byte[] pal = Inflate(_narc.Get(palIdx));
-            byte[] scr = Inflate(_narc.Get(useScr));
+            return HasBg(bgId) ? Build(Table[bgId], screen) : null;
+        }
+
+        /// <summary>Builds a background from a table row that may not be saved yet.</summary>
+        public BgImage Build(int[] row, int screen)
+        {
+            if (row == null || row.Length < 5 || !_narc.Available) return null;
+            byte[] chr = Inflate(_narc.Get(row[0]));
+            byte[] pal = Inflate(_narc.Get(row[1]));
+            byte[] scr = Inflate(_narc.Get(row[2 + Math.Clamp(screen, 0, 2)]));
             if (chr == null || pal == null || scr == null) return null;
             try { return Composite(chr, pal, scr); } catch { return null; }
         }

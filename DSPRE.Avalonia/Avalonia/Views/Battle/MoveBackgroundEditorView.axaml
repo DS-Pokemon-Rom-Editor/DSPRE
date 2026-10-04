@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
+        x:Class="DSPRE.Avalonia.Views.Battle.MoveBackgroundEditorView"
+        x:DataType="vm:MoveBackgroundEditorViewModel"
+        Title="Move backgrounds"
+        Width="900" Height="560" MinWidth="640" MinHeight="400">
+
+  <Design.DataContext>
+    <vm:MoveBackgroundEditorViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsVisible="{Binding CanResize}" Margin="12,0,0,0"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="Remove_Click" IsVisible="{Binding CanResize}"/>
+    </controls:EditorToolbar>
+    <Border DockPanel.Dock="Bottom" Padding="8,6" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Editor.Border}">
+      <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
+    </Border>
+    <Grid ColumnDefinitions="180,8,Auto,16,*" Margin="8">
+      <ListBox Grid.Column="0" ItemsSource="{Binding Backgrounds}" SelectedIndex="{Binding SelectedIndex}"/>
+      <Grid Grid.Column="2" ColumnDefinitions="120,110" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto" IsEnabled="{Binding HasSelection}">
+        <TextBlock Grid.Row="0" Text="Drawing" VerticalAlignment="Center"/>
+        <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding Drawing}" Minimum="0" Maximum="{Binding ArchiveMax}" FormatString="0"/>
+        <TextBlock Grid.Row="2" Text="Palette" VerticalAlignment="Center"/>
+        <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding Palette}" Minimum="0" Maximum="{Binding ArchiveMax}" FormatString="0"/>
+        <TextBlock Grid.Row="4" Text="Screen" VerticalAlignment="Center"/>
+        <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding Screen}" Minimum="0" Maximum="{Binding ArchiveMax}" FormatString="0"/>
+        <TextBlock Grid.Row="6" Text="Reversed screen" VerticalAlignment="Center"/>
+        <NumericUpDown Grid.Row="6" Grid.Column="1" Value="{Binding ReversedScreen}" Minimum="0" Maximum="{Binding ArchiveMax}" FormatString="0"/>
+        <TextBlock Grid.Row="8" Text="Contest screen" VerticalAlignment="Center"/>
+        <NumericUpDown Grid.Row="8" Grid.Column="1" Value="{Binding ContestScreen}" Minimum="0" Maximum="{Binding ArchiveMax}" FormatString="0"/>
+      </Grid>
+      <DockPanel Grid.Column="4">
+        <ComboBox DockPanel.Dock="Top" ItemsSource="{Binding Screens}" SelectedIndex="{Binding ScreenIndex}" Width="180" Margin="0,0,0,6"/>
+        <Border Background="#202020" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <Image Source="{Binding Preview}" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+        </Border>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>
