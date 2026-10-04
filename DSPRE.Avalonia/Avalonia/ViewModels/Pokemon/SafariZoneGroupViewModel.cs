@@ -108,45 +108,64 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── Normal: Morning ─────────────────────────────────────────────────────────
         private int _morningIndex = -1;
-        public int MorningIndex { get => _morningIndex; set { if (Set(ref _morningIndex, value)) LoadNormal(_group?.MorningEncounters, value, v => MorningSpecies = v, v => MorningLevel = v); } }
+        public int MorningIndex { get => _morningIndex; set { if (Set(ref _morningIndex, value)) LoadNormal(_group?.MorningEncounters, value, v => MorningSpecies = v, v => MorningLevel = v, v => MorningForm = v); } }
         private int _morningSpecies = -1;
         public int MorningSpecies { get => _morningSpecies; set { if (Set(ref _morningSpecies, value) && !_suppress) ApplyNormal(_group?.MorningEncounters, _morningIndex, MorningItems, value, null); } }
         private decimal _morningLevel;
         public decimal MorningLevel { get => _morningLevel; set { if (Set(ref _morningLevel, value) && !_suppress) ApplyNormal(_group?.MorningEncounters, _morningIndex, MorningItems, null, (int)value); } }
+        private decimal _morningForm;
+        public decimal MorningForm { get => _morningForm; set { if (Set(ref _morningForm, value) && !_suppress) ApplyNormal(_group?.MorningEncounters, _morningIndex, MorningItems, null, null, (int)value); } }
 
         // ── Normal: Day ─────────────────────────────────────────────────────────────
         private int _dayIndex = -1;
-        public int DayIndex { get => _dayIndex; set { if (Set(ref _dayIndex, value)) LoadNormal(_group?.DayEncounters, value, v => DaySpecies = v, v => DayLevel = v); } }
+        public int DayIndex { get => _dayIndex; set { if (Set(ref _dayIndex, value)) LoadNormal(_group?.DayEncounters, value, v => DaySpecies = v, v => DayLevel = v, v => DayForm = v); } }
         private int _daySpecies = -1;
         public int DaySpecies { get => _daySpecies; set { if (Set(ref _daySpecies, value) && !_suppress) ApplyNormal(_group?.DayEncounters, _dayIndex, DayItems, value, null); } }
         private decimal _dayLevel;
         public decimal DayLevel { get => _dayLevel; set { if (Set(ref _dayLevel, value) && !_suppress) ApplyNormal(_group?.DayEncounters, _dayIndex, DayItems, null, (int)value); } }
+        private decimal _dayForm;
+        public decimal DayForm { get => _dayForm; set { if (Set(ref _dayForm, value) && !_suppress) ApplyNormal(_group?.DayEncounters, _dayIndex, DayItems, null, null, (int)value); } }
 
         // ── Normal: Night ───────────────────────────────────────────────────────────
         private int _nightIndex = -1;
-        public int NightIndex { get => _nightIndex; set { if (Set(ref _nightIndex, value)) LoadNormal(_group?.NightEncounters, value, v => NightSpecies = v, v => NightLevel = v); } }
+        public int NightIndex { get => _nightIndex; set { if (Set(ref _nightIndex, value)) LoadNormal(_group?.NightEncounters, value, v => NightSpecies = v, v => NightLevel = v, v => NightForm = v); } }
         private int _nightSpecies = -1;
         public int NightSpecies { get => _nightSpecies; set { if (Set(ref _nightSpecies, value) && !_suppress) ApplyNormal(_group?.NightEncounters, _nightIndex, NightItems, value, null); } }
         private decimal _nightLevel;
         public decimal NightLevel { get => _nightLevel; set { if (Set(ref _nightLevel, value) && !_suppress) ApplyNormal(_group?.NightEncounters, _nightIndex, NightItems, null, (int)value); } }
+        private decimal _nightForm;
+        public decimal NightForm { get => _nightForm; set { if (Set(ref _nightForm, value) && !_suppress) ApplyNormal(_group?.NightEncounters, _nightIndex, NightItems, null, null, (int)value); } }
 
         // Levels show clamped to the boxes' range so they never coerce; only an edit to that box writes it back.
         private const int MaxShownLevel = 100;
 
-        private void LoadNormal(BindingList<SafariZoneEncounter> src, int index, Action<int> setSpecies, Action<decimal> setLevel)
+        /// <summary>True on an hg-engine folder, whose species words also carry a form.</summary>
+        public bool ShowForms => DSPRE.HgEngine.HgEngineProject.IsActive;
+
+        private static int BaseSpecies(ushort id) => id & DSPRE.HgEngine.HgEngineTrainerSource.SpeciesMask;
+        private static int FormBits(ushort id) => id >> DSPRE.HgEngine.HgEngineTrainerSource.FormShift;
+
+        // A new species keeps the slot's form; the form box beside it shows and changes that.
+        private static ushort WithSpecies(ushort id, int species) => (ushort)(species | (FormBits(id) << DSPRE.HgEngine.HgEngineTrainerSource.FormShift));
+        private static ushort WithForm(ushort id, int form) => (ushort)(BaseSpecies(id) | (Math.Clamp(form, 0, 31) << DSPRE.HgEngine.HgEngineTrainerSource.FormShift));
+
+        private void LoadNormal(BindingList<SafariZoneEncounter> src, int index, Action<int> setSpecies, Action<decimal> setLevel, Action<decimal> setForm)
         {
             if (src == null || index < 0 || index >= src.Count) return;
             _suppress = true;
-            setSpecies(src[index].pokemonID < SpeciesNames.Count ? src[index].pokemonID : -1);
+            int species = BaseSpecies(src[index].pokemonID);
+            setSpecies(species < SpeciesNames.Count ? species : -1);
             setLevel(Math.Min((int)src[index].level, MaxShownLevel));
+            setForm(FormBits(src[index].pokemonID));
             _suppress = false;
         }
 
         // Only the edited field is written, so an out-of-range value the boxes can't show survives other edits.
-        private void ApplyNormal(BindingList<SafariZoneEncounter> src, int index, ObservableCollection<string> display, int? species, int? level)
+        private void ApplyNormal(BindingList<SafariZoneEncounter> src, int index, ObservableCollection<string> display, int? species, int? level, int? form = null)
         {
             if (src == null || index < 0 || index >= src.Count) return;
-            if (species is int sp) { if (sp < 0) return; src[index].pokemonID = (ushort)sp; }
+            if (species is int sp) { if (sp < 0) return; src[index].pokemonID = WithSpecies(src[index].pokemonID, sp); }
+            if (form is int f) src[index].pokemonID = WithForm(src[index].pokemonID, f);
             if (level is int lv) src[index].level = (byte)Math.Max(0, Math.Min(255, lv));
             // Replacing the selected row clears that list's selection, and every later edit would then miss the slot.
             int morning = _morningIndex, day = _dayIndex, night = _nightIndex;
@@ -170,16 +189,22 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int ObjMorningSpecies { get => _objMorningSpecies; set { if (Set(ref _objMorningSpecies, value) && !_suppress) ApplyObjectEncounter(_group?.MorningEncountersObject, value, null); } }
         private decimal _objMorningLevel;
         public decimal ObjMorningLevel { get => _objMorningLevel; set { if (Set(ref _objMorningLevel, value) && !_suppress) ApplyObjectEncounter(_group?.MorningEncountersObject, null, (int)value); } }
+        private decimal _objMorningForm;
+        public decimal ObjMorningForm { get => _objMorningForm; set { if (Set(ref _objMorningForm, value) && !_suppress) ApplyObjectEncounter(_group?.MorningEncountersObject, null, null, (int)value); } }
 
         private int _objDaySpecies = -1;
         public int ObjDaySpecies { get => _objDaySpecies; set { if (Set(ref _objDaySpecies, value) && !_suppress) ApplyObjectEncounter(_group?.DayEncountersObject, value, null); } }
         private decimal _objDayLevel;
         public decimal ObjDayLevel { get => _objDayLevel; set { if (Set(ref _objDayLevel, value) && !_suppress) ApplyObjectEncounter(_group?.DayEncountersObject, null, (int)value); } }
+        private decimal _objDayForm;
+        public decimal ObjDayForm { get => _objDayForm; set { if (Set(ref _objDayForm, value) && !_suppress) ApplyObjectEncounter(_group?.DayEncountersObject, null, null, (int)value); } }
 
         private int _objNightSpecies = -1;
         public int ObjNightSpecies { get => _objNightSpecies; set { if (Set(ref _objNightSpecies, value) && !_suppress) ApplyObjectEncounter(_group?.NightEncountersObject, value, null); } }
         private decimal _objNightLevel;
         public decimal ObjNightLevel { get => _objNightLevel; set { if (Set(ref _objNightLevel, value) && !_suppress) ApplyObjectEncounter(_group?.NightEncountersObject, null, (int)value); } }
+        private decimal _objNightForm;
+        public decimal ObjNightForm { get => _objNightForm; set { if (Set(ref _objNightForm, value) && !_suppress) ApplyObjectEncounter(_group?.NightEncountersObject, null, null, (int)value); } }
 
         private int _reqType = -1;
         public int ReqType
@@ -206,10 +231,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _suppress = true;
             ObjMorningSpecies = SpeciesOf(_group.MorningEncountersObject, index);
             ObjMorningLevel = LevelOf(_group.MorningEncountersObject, index);
+            ObjMorningForm = FormOf(_group.MorningEncountersObject, index);
             ObjDaySpecies = SpeciesOf(_group.DayEncountersObject, index);
             ObjDayLevel = LevelOf(_group.DayEncountersObject, index);
+            ObjDayForm = FormOf(_group.DayEncountersObject, index);
             ObjNightSpecies = SpeciesOf(_group.NightEncountersObject, index);
             ObjNightLevel = LevelOf(_group.NightEncountersObject, index);
+            ObjNightForm = FormOf(_group.NightEncountersObject, index);
             ReqType = _group.ObjectRequirements[index].typeID;
             ReqPoints = _group.ObjectRequirements[index].quantity;
             OptReqType = _group.OptionalObjectRequirements[index].typeID;
@@ -218,15 +246,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         private int SpeciesOf(BindingList<SafariZoneEncounter> list, int i) =>
-            list != null && i < list.Count && list[i].pokemonID < SpeciesNames.Count ? list[i].pokemonID : -1;
+            list != null && i < list.Count && BaseSpecies(list[i].pokemonID) < SpeciesNames.Count ? BaseSpecies(list[i].pokemonID) : -1;
+        private static int FormOf(BindingList<SafariZoneEncounter> list, int i) =>
+            list != null && i < list.Count ? FormBits(list[i].pokemonID) : 0;
         private int LevelOf(BindingList<SafariZoneEncounter> list, int i) =>
             list != null && i < list.Count ? Math.Min((int)list[i].level, MaxShownLevel) : 0;
 
-        private void ApplyObjectEncounter(BindingList<SafariZoneEncounter> list, int? species, int? level)
+        private void ApplyObjectEncounter(BindingList<SafariZoneEncounter> list, int? species, int? level, int? form = null)
         {
             int i = _objectIndex;
             if (list == null || i < 0 || i >= list.Count) return;
-            if (species is int sp) { if (sp < 0) return; list[i].pokemonID = (ushort)sp; }
+            if (species is int sp) { if (sp < 0) return; list[i].pokemonID = WithSpecies(list[i].pokemonID, sp); }
+            if (form is int f) list[i].pokemonID = WithForm(list[i].pokemonID, f);
             if (level is int lv) list[i].level = (byte)Math.Max(0, Math.Min(255, lv));
             Touch();
         }

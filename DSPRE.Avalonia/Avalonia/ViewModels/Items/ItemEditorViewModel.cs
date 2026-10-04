@@ -876,30 +876,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
         };
 
         // ── Helpers ───────────────────────────────────────────────────────────
-        private static ItemNarcTableEntry ReadTableEntry(int index)
-        {
-            // RomInfo.itemTableOffset is a vanilla-only ARM9 address for the item indirection table,
-            // meaningless on hg-engine's recompiled ARM9. hg-engine's itemdata.c is a flat array indexed
-            // directly by item id, so item data is read by id here. Icon/palette DO have a deterministic
-            // mapping: a018.narc packs one NCGR+NCLR pair per item, in id order, after 2 fixed header
-            // files, so image slot = 2*id + 2, palette slot = 2*id + 3. A newly added item with no
-            // compiled slot yet falls back to "n/a" (see UpdateIcon).
-            if (RomInfo.isHGE)
-            {
-                uint imageSlot = (uint)(2 * index + 2);
-                uint paletteSlot = imageSlot + 1;
-                return new ItemNarcTableEntry { itemData = (uint)index, itemIcon = imageSlot, itemPalette = paletteSlot, itemAGB = 0 };
-            }
-
-            // PlatPatches' expanded items resolve through its overflow table.
-            return DSPRE.ROMFiles.ItemTable.Read(index);
-        }
+        // hg-engine rows follow from the id; a newly added item with no compiled icon yet shows "n/a" (see UpdateIcon).
+        private static ItemNarcTableEntry ReadTableEntry(int index) => DSPRE.ROMFiles.ItemTable.Read(index);
 
         private void SaveTableEntry()
         {
             if (RomInfo.isHGE)
             {
-                // Nothing reliable to write back to: see ReadTableEntry. Item data itself still saves
+                // hg-engine has no item table to write (see ItemTable.Read). Item data itself still saves
                 // normally (SaveItemData, keyed directly by item id).
                 _entryDirty = false;
                 OnPropertyChanged(nameof(HasUnsavedChanges));

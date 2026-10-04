@@ -27,6 +27,7 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot()
         {
+            if (HgEngine.HgEngineProject.IsActive) return HgEngine.HgEngineSlotOdds.WhyNot();
             var methods = SlotOddsMethods;
             if (methods == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
             foreach (int ov in methods.Select(m => m.Overlay).Distinct())
@@ -52,6 +53,17 @@ namespace DSPRE.ROMFiles
         public static EncounterSlotOdds Load()
         {
             var odds = new EncounterSlotOdds();
+            // hg-engine rolls the slots in its own C, so the odds are read from there.
+            if (HgEngine.HgEngineProject.IsActive)
+            {
+                if (!HgEngine.HgEngineSlotOdds.TryLoad(out var fromSource, out string error)) throw new InvalidDataException(error);
+                for (int r = 0; r < HgEngine.HgEngineSlotOdds.Rolls.Length; r++)
+                {
+                    var roll = HgEngine.HgEngineSlotOdds.Rolls[r];
+                    odds.Methods.Add(new Method(new SlotOddsMethod(roll.Name, -1, roll.Slots, Array.Empty<int[]>()), fromSource[r]));
+                }
+                return odds;
+            }
             var files = new Dictionary<int, byte[]>();
             foreach (var m in SlotOddsMethods ?? throw new InvalidOperationException("This game version isn't supported yet."))
             {
@@ -105,6 +117,12 @@ namespace DSPRE.ROMFiles
         public void Save()
         {
             if (Problem() is string p) throw new InvalidOperationException(p);
+            if (HgEngine.HgEngineProject.IsActive)
+            {
+                string error = HgEngine.HgEngineSlotOdds.Write(Methods.Select(m => m.Percents).ToList());
+                if (error != null) throw new InvalidOperationException(error);
+                return;
+            }
             var files = new Dictionary<int, byte[]>();
             foreach (var m in Methods)
             {
@@ -132,6 +150,12 @@ namespace DSPRE.ROMFiles
         {
             try
             {
+                if (HgEngine.HgEngineProject.IsActive)
+                {
+                    if (!HgEngine.HgEngineSlotOdds.TryLoad(out var fromSource, out _)) return null;
+                    int at = Array.FindIndex(HgEngine.HgEngineSlotOdds.Rolls, r => r.Name == methodName);
+                    return at >= 0 ? fromSource[at] : null;
+                }
                 var methods = SlotOddsMethods;
                 if (methods == null) return null;
                 // Only a legacy project can still hold a compressed overlay; a label lookup won't decompress it.

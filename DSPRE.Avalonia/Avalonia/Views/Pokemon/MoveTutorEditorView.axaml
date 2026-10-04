@@ -9,14 +9,11 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <TextBlock DockPanel.Dock="Bottom" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Margin="8,4"
                Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
@@ -88,7 +85,7 @@
         </Grid>
       </TabItem>
 
-      <TabItem Header="By Move">
+      <TabItem Header="By move">
         <Grid ColumnDefinitions="240,*" Margin="4">
           <ListBox Grid.Column="0" ItemsSource="{Binding TutorNames}" SelectedIndex="{Binding SelectedTutor}" Margin="0,0,8,0"/>
           <ListBox Grid.Column="1" ItemsSource="{Binding SpeciesOfMove}">

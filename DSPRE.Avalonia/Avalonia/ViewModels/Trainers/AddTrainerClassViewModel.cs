@@ -18,6 +18,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
+        /// <summary>Adding to an hg-engine checkout rather than a Platinum ROM.</summary>
+        public bool ForHgEngine { get; init; }
+
+        public string Note => ForHgEngine
+            ? "Adds the class to the hg-engine source: its constant, names, sprite files, gender and prize money. Compile the ROM to use it."
+            : "Requires Platinum (English). Repoints/extends the gender, prize-money, and (optionally) eye-contact-music tables into the synthetic overlay.";
+
         private string _className = "";
         public string ClassName { get => _className; set => Set(ref _className, value); }
 

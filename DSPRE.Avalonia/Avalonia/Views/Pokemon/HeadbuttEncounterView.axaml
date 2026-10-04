@@ -11,23 +11,18 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <TextBlock Text="Headbutt file:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <ToggleButton Content="Move trees" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}"
                       ToolTip.Tip="3D edit mode: click a tree to select it, then drag the red/blue handles to move it across the map. Arrow keys nudge one tile."/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <TextBlock Text="View:" VerticalAlignment="Center"/>
         <Button Content="Top" Click="CamTop_Click" Padding="6,2" ToolTip.Tip="Top-down camera"/>
         <Button Content="Iso" Click="CamIso_Click" Padding="6,2" ToolTip.Tip="Isometric camera"/>
         <Button controls:Icon.Key="resetIcon" Click="CamReset_Click" Padding="6,2" ToolTip.Tip="Reset camera"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
@@ -53,7 +48,13 @@
               </ItemsControl>
             </ScrollViewer>
             <DockPanel Grid.Column="1">
-              <TextBlock DockPanel.Dock="Top" Text="Tree groups" FontWeight="Bold" Margin="0,0,0,4"/>
+              <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                  <Button controls:Icon.Key="addIcon" Click="AddNormalGroup_Click" ToolTip.Tip="Add a tree group" Padding="6,1"/>
+                  <Button controls:Icon.Key="deleteIcon" Click="RemoveNormalGroup_Click" ToolTip.Tip="Remove the selected tree group" Padding="6,1"/>
+                </StackPanel>
+                <TextBlock Text="Tree groups" FontWeight="Bold" VerticalAlignment="Center"/>
+              </DockPanel>
               <ListBox DockPanel.Dock="Top" Height="110" ItemsSource="{Binding NormalTreeGroups}" SelectedIndex="{Binding SelectedNormalGroupIndex}"/>
               <DockPanel DockPanel.Dock="Top" Margin="0,6,0,4">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
@@ -104,7 +105,13 @@
               </ItemsControl>
             </ScrollViewer>
             <DockPanel Grid.Column="1">
-              <TextBlock DockPanel.Dock="Top" Text="Tree groups" FontWeight="Bold" Margin="0,0,0,4"/>
+              <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                  <Button controls:Icon.Key="addIcon" Click="AddSpecialGroup_Click" ToolTip.Tip="Add a tree group" Padding="6,1"/>
+                  <Button controls:Icon.Key="deleteIcon" Click="RemoveSpecialGroup_Click" ToolTip.Tip="Remove the selected tree group" Padding="6,1"/>
+                </StackPanel>
+                <TextBlock Text="Tree groups" FontWeight="Bold" VerticalAlignment="Center"/>
+              </DockPanel>
               <ListBox DockPanel.Dock="Top" Height="110" ItemsSource="{Binding SpecialTreeGroups}" SelectedIndex="{Binding SelectedSpecialGroupIndex}"/>
               <DockPanel DockPanel.Dock="Top" Margin="0,6,0,4">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">

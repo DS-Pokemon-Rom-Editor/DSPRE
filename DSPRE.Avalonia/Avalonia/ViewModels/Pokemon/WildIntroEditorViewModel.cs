@@ -205,11 +205,24 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_t == null || !_t.HasChanges) return true;
-            try { _t.Save(); }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            // hg-engine's music rows are source text, saved as one hg-engine write like the other editors.
+            if (_t.FromSource)
             {
-                await DialogHelper.ShowError("The wild Pokémon intros were not saved:\n" + e.Message, Title);
-                return false;
+                var (saved, error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError("The wild Pokémon intros were not saved:\n" + error, Title);
+                    return false;
+                }
+            }
+            else
+            {
+                try { _t.Save(); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+                {
+                    await DialogHelper.ShowError("The wild Pokémon intros were not saved:\n" + e.Message, Title);
+                    return false;
+                }
             }
             Refresh();
             SaveNotice.Saved(UnsavedChangesDescription);

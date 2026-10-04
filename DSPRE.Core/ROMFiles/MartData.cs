@@ -51,6 +51,12 @@ namespace DSPRE.ROMFiles
         public List<CommonEntry> CommonItems { get; } = new();
         public List<SpecialtyShop> SpecialtyShops { get; } = new();
         public bool ExpansionAvailable { get; }
+        /// <summary>hg-engine with MART_EXPANSION: the marts are src/field/mart.c, lists of any length in fixed slots.</summary>
+        public bool FromSource { get; }
+        public int CommonItemLimit => FromSource ? HgEngine.HgEngineMarts.BadgeMartLimit : MaxCommonItems;
+        /// <summary>Vanilla stock tiers run 0-6; hg-engine's badge mart counts badges, Kanto's too.</summary>
+        public int MaxTier => FromSource ? 16 : 6;
+        public bool CanAddShops => ExpansionAvailable && !FromSource;
         public bool HasSizeChanges => CommonItems.Count != _originalCommonCount
             || SpecialtyShops.Count != _specialtyDataOffsets.Length
             || SpecialtyShops.Where((shop, i) => i < _specialtyDataOffsets.Length)
@@ -58,6 +64,7 @@ namespace DSPRE.ROMFiles
 
         public static MartData LoadCurrent()
         {
+            if (HgEngine.HgEngineMarts.Enabled) return LoadSource();
             if (!RomInfo.IsMartEditorAvailable())
                 throw new InvalidOperationException("The Mart Editor is not available for this ROM.");
 
@@ -142,8 +149,31 @@ namespace DSPRE.ROMFiles
             }
         }
 
+        private MartData(List<CommonEntry> common, List<SpecialtyShop> shops)
+        {
+            _arm9 = Array.Empty<byte>();
+            FromSource = ExpansionAvailable = true;
+            CommonItems.AddRange(common);
+            SpecialtyShops.AddRange(shops);
+            _originalCommonCount = common.Count;
+            _vanillaSpecialtyShopCount = shops.Count;
+            _specialtyDataOffsets = new int[shops.Count];
+        }
+
+        private static MartData LoadSource()
+        {
+            if (!HgEngine.HgEngineMarts.TryRead(out var badgeMart, out var specialty, out string error)) throw new InvalidOperationException(error);
+            var names = MartShopNames.ForFamily(RomInfo.gameFamily);
+            var common = badgeMart.Select(r => new CommonEntry { ItemId = (ushort)r.Item, RequiredTier = (ushort)r.Badges }).ToList();
+            var shops = specialty.Select((s, i) => new SpecialtyShop(i, names != null && names.Count == specialty.Count ? names[i] : s.Array,
+                s.Items.Select(x => (ushort)x).ToList())).ToList();
+            return new MartData(common, shops);
+        }
+
         public SpecialtyShop AddSpecialtyShop()
         {
+            if (FromSource)
+                throw new InvalidOperationException("hg-engine puts its marts in the game's own slots, so no mart can be added.");
             if (!ExpansionAvailable)
                 throw new InvalidOperationException("Apply the ARM9 expansion patch before adding a mart.");
             int id = SpecialtyShops.Count;
@@ -161,6 +191,14 @@ namespace DSPRE.ROMFiles
 
         public bool SaveCurrent()
         {
+            if (FromSource)
+            {
+                ValidateInventories();
+                if (!HgEngine.HgEngineMarts.TryWrite(CommonItems.Select(c => ((int)c.ItemId, (int)c.RequiredTier)).ToList(),
+                        SpecialtyShops.Select(s => (IReadOnlyList<int>)s.Items.Select(x => (int)x).ToList()).ToList(), out string error))
+                    throw new IOException(error);
+                return true;
+            }
             if (!HasSizeChanges && _commonDataOffset >= 0 && _specialtyDataOffsets.All(offset => offset >= 0))
                 return SaveToFile(RomInfo.arm9Path, showSuccessMessage: false);
             if (!ExpansionAvailable)
@@ -285,16 +323,16 @@ namespace DSPRE.ROMFiles
 
         private void ValidateInventories()
         {
-            if (CommonItems.Count < 1 || CommonItems.Count > MaxCommonItems)
-                throw new InvalidOperationException($"The common mart must contain between 1 and {MaxCommonItems} items.");
+            if (CommonItems.Count < 1 || CommonItems.Count > CommonItemLimit)
+                throw new InvalidOperationException($"The common mart must contain between 1 and {CommonItemLimit} items.");
             if (SpecialtyShops.Count < _vanillaSpecialtyShopCount)
                 throw new InvalidOperationException("Vanilla specialty marts cannot be removed.");
             foreach (CommonEntry entry in CommonItems)
             {
                 if (entry.ItemId == 0 || entry.ItemId == ushort.MaxValue)
                     throw new InvalidOperationException("Mart item IDs must be between 1 and 0xFFFE.");
-                if (entry.RequiredTier > 6)
-                    throw new InvalidOperationException("Common mart stock tiers must be between 0 and 6.");
+                if (entry.RequiredTier > MaxTier)
+                    throw new InvalidOperationException(FromSource ? "Badge mart items need between 0 and 16 badges." : "Common mart stock tiers must be between 0 and 6.");
             }
             foreach (SpecialtyShop shop in SpecialtyShops)
             {

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using System.Text.RegularExpressions;
 using DSPRE.ROMFiles;
@@ -11,8 +13,8 @@ namespace DSPRE.HgEngine
     /// convention rather than assumed from declaration order. Reuses the vanilla
     /// <see cref="HeadbuttEncounterFile"/>/<see cref="HeadbuttTreeGroup"/>/<see cref="HeadbuttTree"/>/
     /// <see cref="HeadbuttEncounter"/> POCOs as the in-memory shape, so the existing UI works unchanged.
-    /// Adding/removing whole tree groups, or enabling trees on a map that has none, isn't supported: both
-    /// need editing the per-map struct's type declaration, not just its data.</summary>
+    /// Each map's struct type sizes its own arrays, so adding or removing tree groups, or giving trees to a map
+    /// that has none, rewrites that type's declaration along with its data; __size[] follows through sizeof.</summary>
     public static class HgEngineHeadbutt
     {
         private const string SourceRelPath = "data/Headbutt.c";
@@ -86,6 +88,11 @@ namespace DSPRE.HgEngine
             var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             var failed = new List<string>();
 
+            // As the game's own files: a map with no trees and no Pokemon set is only the counts.
+            int totalGroups = file.normalTreeGroups.Count + file.specialTreeGroups.Count;
+            bool slots = totalGroups > 0 || file.normalEncounters.Concat(file.specialEncounters).Any(e => e.pokemonID != 0 || e.minLevel != 0 || e.maxLevel != 0);
+            if (!TryShapeMap(ref text, fieldName, slots, totalGroups, out error)) return false;
+
             string SlotsLiteral(IReadOnlyList<HeadbuttEncounter> list, int count)
             {
                 var items = new List<string>(count);
@@ -98,14 +105,11 @@ namespace DSPRE.HgEngine
                 return "{ " + string.Join(", ", items) + " }";
             }
 
-            if (!TryReplaceMapField(ref text, fieldName, "normalSlots", SlotsLiteral(file.normalEncounters, 12))) failed.Add("normalSlots");
-            if (!TryReplaceMapField(ref text, fieldName, "specialSlots", SlotsLiteral(file.specialEncounters, 6))) failed.Add("specialSlots");
+            if (slots && !TryReplaceMapField(ref text, fieldName, "normalSlots", SlotsLiteral(file.normalEncounters, 12))) failed.Add("normalSlots");
+            if (slots && !TryReplaceMapField(ref text, fieldName, "specialSlots", SlotsLiteral(file.specialEncounters, 6))) failed.Add("specialSlots");
             if (!TryReplaceMapField(ref text, fieldName, "normalTreeCount", file.normalTreeGroups.Count.ToString())) failed.Add("normalTreeCount");
             if (!TryReplaceMapField(ref text, fieldName, "specialTreeCount", file.specialTreeGroups.Count.ToString())) failed.Add("specialTreeCount");
 
-            // Groups are never added/removed here, so normalTreeGroups.Count + specialTreeGroups.Count
-            // always equals the treeCoords[N][6] the source already declares.
-            int totalGroups = file.normalTreeGroups.Count + file.specialTreeGroups.Count;
             if (totalGroups > 0)
             {
                 string GroupLiteral(HeadbuttTreeGroup g)
@@ -130,6 +134,63 @@ namespace DSPRE.HgEngine
             try { HgEngineFileCache.WriteText(path, text); }
             catch (System.Exception ex) when (ex is IOException || ex is System.UnauthorizedAccessException)
             { error = $"Headbutt.c couldn't be written: {ex.Message}"; return false; }
+            return true;
+        }
+
+        private static readonly Regex MemberTypeRegex = new(@"(HeadbuttFile_\d+_\w+)\s+(\w+)\s*;");
+
+        /// <summary>
+        /// Makes the map's struct type and initializer hold exactly the arrays it needs: the two slot arrays when
+        /// <paramref name="slots"/>, and treeCoords[<paramref name="groups"/>][6] when there are groups.
+        /// </summary>
+        private static bool TryShapeMap(ref string text, string fieldName, bool slots, int groups, out string error)
+        {
+            error = null;
+            string type = MemberTypeRegex.Matches(text).Cast<Match>().FirstOrDefault(m => m.Groups[2].Value == fieldName)?.Groups[1].Value;
+            if (type == null) { error = $"Headbutt.c declares no type for .{fieldName}."; return false; }
+            var decl = new Regex(@"(typedef\s+struct\s+PACKED\s+" + Regex.Escape(type) + @"\s*\{)(.*?)(\}\s*" + Regex.Escape(type) + @"\s*;)", RegexOptions.Singleline).Match(text);
+            if (!decl.Success) { error = $"Headbutt.c has no typedef for {type}."; return false; }
+
+            string body = "\n    u16 normalTreeCount;\n    u16 specialTreeCount;\n"
+                + (slots ? "    HeadbuttEncounterSlot normalSlots[12];\n    HeadbuttEncounterSlot specialSlots[6];\n" : "")
+                + (groups > 0 ? $"    HeadbuttTreeCoord treeCoords[{groups}][6];\n" : "");
+            if (Regex.Replace(decl.Groups[2].Value, @"\s+", " ").Trim() != Regex.Replace(body, @"\s+", " ").Trim())
+                text = text.Substring(0, decl.Groups[2].Index) + body + text.Substring(decl.Groups[2].Index + decl.Groups[2].Length);
+
+            foreach (var (name, wanted, placeholder) in new[]
+            {
+                ("treeCoords", groups > 0, "{\n        }"),
+                ("specialSlots", slots, "{ }"),
+                ("normalSlots", slots, "{ }"),
+            })
+            {
+                if (!TryFindDataBlock(text, out int open, out int close)) { error = "Could not locate the Headbutt.c __data initializer."; return false; }
+                bool has = ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName), FieldPathSegment.Field(name) }, out int vs, out int ve);
+                if (has && !wanted)
+                {
+                    int start = text.LastIndexOf('\n', text.LastIndexOf("." + name, vs, StringComparison.Ordinal)) + 1;
+                    int end = ve;
+                    while (end < text.Length && (text[end] == ' ' || text[end] == ',')) end++;
+                    if (end < text.Length && text[end] == '\n') end++;
+                    text = text.Remove(start, end - start);
+                }
+                else if (!has && wanted)
+                {
+                    if (!ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName) }, out int ms, out int me))
+                    { error = $"Could not locate .{fieldName} in Headbutt.c."; return false; }
+                    // Placed before the map's closing brace, the counts come first and the arrays follow in order.
+                    int closing = text.LastIndexOf('}', me - 1);
+                    int lineStart = text.LastIndexOf('\n', closing) + 1;
+                    string indent = text.Substring(lineStart, closing - lineStart) + "    ";
+                    string after = name == "treeCoords" ? null : ".treeCoords";
+                    int at = lineStart;
+                    if (after != null && ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName), FieldPathSegment.Field("treeCoords") }, out int ts, out _))
+                        at = text.LastIndexOf('\n', text.LastIndexOf(after, ts, StringComparison.Ordinal)) + 1;
+                    if (name == "normalSlots" && ElementScanner.TryLocateValueSpan(text, open, close, new[] { FieldPathSegment.Field(fieldName), FieldPathSegment.Field("specialSlots") }, out int ss, out _))
+                        at = text.LastIndexOf('\n', text.LastIndexOf(".specialSlots", ss, StringComparison.Ordinal)) + 1;
+                    text = text.Insert(at, $"{indent}.{name} = {placeholder.Replace("\n", "\n" + indent.Substring(4))},\n");
+                }
+            }
             return true;
         }
 

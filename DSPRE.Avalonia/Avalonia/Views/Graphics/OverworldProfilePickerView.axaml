@@ -3,7 +3,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.OverworldProfilePickerView"
         x:DataType="vm:OverworldProfilePickerViewModel"
-        Title="Choose Overworld Graphics Profile"
+        Title="Choose overworld graphics profile"
         Width="560" Height="300"
         MinWidth="460" MinHeight="260"
         WindowStartupLocation="CenterOwner">

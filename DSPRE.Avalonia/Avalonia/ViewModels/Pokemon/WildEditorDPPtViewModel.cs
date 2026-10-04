@@ -81,6 +81,27 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        /// <summary>True on an hg-engine folder, whose species words also carry a form.</summary>
+        public bool ShowForm { get; set; }
+
+        private int _form;
+        public int Form
+        {
+            get => _form;
+            set { if (_form != value) { _form = value; OnPropertyChanged(); } }
+        }
+
+        /// <summary>The slot's stored value: the species, with hg-engine's form above it when the project has forms.</summary>
+        public int PackedSpecies
+        {
+            get => ShowForm ? _pokemonIndex | (_form << DSPRE.HgEngine.HgEngineTrainerSource.FormShift) : _pokemonIndex;
+            set
+            {
+                PokemonIndex = ShowForm ? value & DSPRE.HgEngine.HgEngineTrainerSource.SpeciesMask : value;
+                Form = ShowForm ? value >> DSPRE.HgEngine.HgEngineTrainerSource.FormShift : 0;
+            }
+        }
+
         private IImage _pokemonIcon;
         public IImage PokemonIcon => _pokemonIcon;
 

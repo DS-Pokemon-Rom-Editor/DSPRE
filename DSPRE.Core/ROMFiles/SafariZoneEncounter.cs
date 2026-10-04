@@ -28,8 +28,11 @@ namespace DSPRE.ROMFiles
 
     public override string ToString() {
       string[] pokemonNames = RomInfo.GetPokemonNames();
-      string pokemon = pokemonNames[pokemonID];
-      return $"{pokemonID,4} {pokemon,10}: {level,3}";
+      // hg-engine keeps a form above the species, which the base games never set.
+      int species = pokemonID & HgEngine.HgEngineTrainerSource.SpeciesMask, form = pokemonID >> HgEngine.HgEngineTrainerSource.FormShift;
+      string pokemon = species < pokemonNames.Length ? pokemonNames[species] : "???";
+      if (form > 0) pokemon += $" (form {form})";
+      return $"{species,4} {pokemon,10}: {level,3}";
     }
   }
 }

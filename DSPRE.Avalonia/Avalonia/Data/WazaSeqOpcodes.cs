@@ -31,11 +31,11 @@ namespace DSPRE.Avalonia.Data
             new("CalcDamage", 0),
             new("CalcMaxDamage", 0),
             new("PrintAttackMessage", 0),
-            new("PrintMessage", 18),
-            new("PrintGlobalMessage", 18),
+            new("PrintMessage", 2),
+            new("PrintGlobalMessage", 2),
             new("PrintBufferedMessage", 0),
-            new("BufferMessage", 18),
-            new("BufferLocalMessage", 19),
+            new("BufferMessage", 2),
+            new("BufferLocalMessage", 3),
             new("PlayMoveAnimation", 1),
             new("PlayMoveAnimationOnMons", 3),
             new("FlickerMon", 1),
@@ -254,11 +254,11 @@ namespace DSPRE.Avalonia.Data
             new("CalcDamage", 0),
             new("CalcMaxDamage", 0),
             new("PrintAttackMessage", 0),
-            new("PrintMessage", 18),
-            new("PrintGlobalMessage", 18),
+            new("PrintMessage", 2),
+            new("PrintGlobalMessage", 2),
             new("PrintBufferedMessage", 0),
-            new("BufferMessage", 18),
-            new("BufferLocalMessage", 19),
+            new("BufferMessage", 2),
+            new("BufferLocalMessage", 3),
             new("PlayMoveAnimation", 1),
             new("PlayMoveAnimationOnMons", 3),
             new("FlickerMon", 1),
@@ -481,11 +481,11 @@ namespace DSPRE.Avalonia.Data
             new("CalcDamage", 0),
             new("CalcMaxDamage", 0),
             new("PrintAttackMessage", 0),
-            new("PrintMessage", 18),
-            new("PrintGlobalMessage", 18),
+            new("PrintMessage", 2),
+            new("PrintGlobalMessage", 2),
             new("PrintBufferedMessage", 0),
-            new("BufferMessage", 18),
-            new("BufferLocalMessage", 19),
+            new("BufferMessage", 2),
+            new("BufferLocalMessage", 3),
             new("PlayMoveAnimation", 1),
             new("PlayMoveAnimationOnMons", 3),
             new("FlickerMon", 1),
@@ -693,9 +693,32 @@ namespace DSPRE.Avalonia.Data
         public static WazaSeqOp[] Table(WazaSeqVersion v) => v switch
         {
             WazaSeqVersion.DP => Dp,
-            WazaSeqVersion.HGSS => Hgss,
+            WazaSeqVersion.HGSS => WithHgEngine(Hgss),
             _ => Plat,
         };
+
+        private static System.Collections.Generic.IReadOnlyDictionary<int, HgEngine.HgEngineScriptCommands.Command> _extendedFrom;
+        private static WazaSeqOp[] _extended;
+
+        // hg-engine adds battle-script commands after the game's own and changes some of the game's (ChangeStatStage
+        // takes five jumps), so its macro wins on length; the game's names stay. A number it skips stays unknown.
+        private static WazaSeqOp[] WithHgEngine(WazaSeqOp[] retail)
+        {
+            var added = HgEngine.HgEngineScriptCommands.Battle();
+            if (added.Count == 0) return retail;
+            if (ReferenceEquals(added, _extendedFrom)) return _extended;
+            int last = System.Math.Max(retail.Length - 1, System.Linq.Enumerable.Max(added.Keys));
+            var table = new WazaSeqOp[last + 1];
+            for (int i = 0; i <= last; i++)
+            {
+                bool own = added.TryGetValue(i, out var c);
+                table[i] = i < retail.Length ? (own ? new WazaSeqOp(retail[i].Name, c.ArgCount) : retail[i])
+                    : own ? new WazaSeqOp(c.Name, c.ArgCount)
+                    : new WazaSeqOp("op" + i, -1);
+            }
+            _extendedFrom = added;
+            return _extended = table;
+        }
 
         public static int Count(WazaSeqVersion v) => Table(v).Length;
 
@@ -704,6 +727,29 @@ namespace DSPRE.Avalonia.Data
             var t = Table(v);
             return (id >= 0 && id < t.Length) ? t[id].ArgCount : -1;
         }
+
+        /// <summary>
+        /// Argument count of the command whose arguments begin at <paramref name="args"/>[0]; null words read as 0.
+        /// The message commands carry one more word past TAG_NONE, TAG_TRNAME (8), TAG_TRCLASS_TRNAME (30) and
+        /// TAG_TRCLASS_TRNAME_ITEM (51), and two more past TAG_TRCLASS_TRNAME_TRCLASS_TRNAME (59), as btlcmd.inc
+        /// in pokeplatinum and pokeheartgold builds them and BattleMessageParams_Make reads them.
+        /// </summary>
+        public static int ArgCount(WazaSeqVersion v, int id, System.Func<int, int> arg)
+        {
+            int n = ArgCount(v, id);
+            int tagAt = TagIndex(v, id);
+            if (n < 0 || tagAt < 0) return n;
+            int tag = arg(tagAt);
+            return n + (tag <= 0 ? 0 : tag <= 8 ? 1 : tag <= 30 ? 2 : tag <= 51 ? 3 : tag <= 59 ? 4 : 6);
+        }
+
+        // Where the message tag sits among the command's arguments, or -1 for a command without one.
+        private static int TagIndex(WazaSeqVersion v, int id) => Name(v, id) switch
+        {
+            "PrintMessage" or "PrintGlobalMessage" or "BufferMessage" => 1,
+            "BufferLocalMessage" => 2,
+            _ => -1,
+        };
 
         public static string Name(WazaSeqVersion v, int id)
         {

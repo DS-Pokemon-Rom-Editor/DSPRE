@@ -298,6 +298,31 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return _selGroup < groups.Count ? groups[_selGroup] : null;
         }
 
+        /// <summary>Adds an empty group of six tree slots to the normal or special list and selects it.</summary>
+        public void AddGroup(bool special)
+        {
+            if (_file == null) return;
+            var groups = special ? _file.specialTreeGroups : _file.normalTreeGroups;
+            groups.Add(new HeadbuttTreeGroup());
+            Dirty();
+            RefreshGroups();
+            if (special) SelectedSpecialGroupIndex = groups.Count - 1; else SelectedNormalGroupIndex = groups.Count - 1;
+        }
+
+        /// <summary>Takes the selected group, and its trees, out of the normal or special list.</summary>
+        public void RemoveGroup(bool special)
+        {
+            if (_file == null || _specialGroupActive != special || _selGroup < 0) return;
+            var groups = special ? _file.specialTreeGroups : _file.normalTreeGroups;
+            if (_selGroup >= groups.Count) return;
+            int keep = Math.Min(_selGroup, groups.Count - 2);
+            groups.RemoveAt(_selGroup);
+            Dirty();
+            RefreshGroups();
+            if (keep >= 0) { if (special) SelectedSpecialGroupIndex = keep; else SelectedNormalGroupIndex = keep; }
+            else ShowGroupTrees();
+        }
+
         /// <summary>Activates the first empty (unused) slot in the current group, placing it on an existing
         /// tree's cell (or 0,0), so it shows up as a real, editable tree.</summary>
         public void AddTree()

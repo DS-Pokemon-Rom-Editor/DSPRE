@@ -9,21 +9,19 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
-            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <Separator Width="8"/>
         <Button Content="Add item" controls:Icon.Key="addIcon" Click="AddItem_Click" IsEnabled="{Binding CanAddItem}" MinWidth="90"/>
         <Button Content="Remove last item" controls:Icon.Key="deleteIcon" Click="RemoveItem_Click" IsEnabled="{Binding CanRemoveItem}" MinWidth="130"/>
         <Separator Width="8"/>
-        <Button Content="Add custom mart" controls:Icon.Key="addIcon" Click="AddShop_Click" IsEnabled="{Binding CanResize}" MinWidth="125"/>
+        <Button Content="Add custom mart" controls:Icon.Key="addIcon" Click="AddShop_Click" IsEnabled="{Binding CanAddShop}" MinWidth="125"/>
         <Button Content="Remove last custom mart" controls:Icon.Key="deleteIcon" Click="RemoveShop_Click" IsEnabled="{Binding CanRemoveCustomShop}" MinWidth="165"/>
         <Button Content="Apply ARM9 expansion" Click="Expand_Click" IsVisible="{Binding CanOfferExpansion}"
                 ToolTip.Tip="Lets marts grow and custom marts be added"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,4">
@@ -77,7 +75,7 @@
             <DataGridTemplateColumn Header="Stock tier" Width="120">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate x:DataType="vm:MartItemRowVM">
-                  <NumericUpDown Value="{Binding RequiredTier}" Minimum="0" Maximum="6" FormatString="0"
+                  <NumericUpDown Value="{Binding RequiredTier}" Minimum="0" Maximum="{Binding MaxTier}" FormatString="0"
                                  IsVisible="{Binding HasTier}" Margin="2,1"/>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>

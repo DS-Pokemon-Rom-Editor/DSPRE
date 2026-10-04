@@ -43,6 +43,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             f = v; OnPropertyChanged(n); return true;
         }
 
+        /// <summary>hg-engine numbers new NPCs itself, so there is no appearance ID to type.</summary>
+        public bool IsHgEngine => DSPRE.HgEngine.HgEngineProject.IsActive;
+
         private string _appearanceIdText = "";
         public string AppearanceIdText { get => _appearanceIdText; set => Set(ref _appearanceIdText, value); }
 

@@ -199,6 +199,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Description and TM bag text ────────────────────────────────────────
         // Kept with real line breaks here; the archives store them as \n.
         private EditableTextBank _descBank, _bagBank;
+        // hg-engine keeps bag descriptions in one archive per item generation.
+        private readonly Dictionary<int, EditableTextBank> _bagBanks = new();
         private int[] _machineMoves = Array.Empty<int>();
         private string _savedDescription = "", _bagText = "", _savedBagText = "";
         private int _bagItem = -1;
@@ -229,8 +231,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ? Shown(_descBank.Messages[_currentId]) : "";
             Description = _savedDescription;
             int machine = Array.IndexOf(_machineMoves, _currentId);
-            _bagItem = machine >= 0 && _pendingMove == null && _bagBank != null ? TMEditor.MachineItemId(machine) : -1;
-            if (_bagItem >= _bagBank?.Messages.Count) _bagItem = -1;
+            _bagItem = -1;
+            if (machine >= 0 && _pendingMove == null && DSPRE.Editors.TmItemDescriptions.TryLocate(TMEditor.MachineItemId(machine), out int bank, out int line))
+            {
+                if (!_bagBanks.TryGetValue(bank, out _bagBank)) _bagBanks[bank] = _bagBank = new EditableTextBank(bank);
+                if (line < _bagBank.Messages.Count) _bagItem = line;
+            }
             BagLabel = machine >= 0 ? TMEditor.MachineLabelFromIndex(machine) : "";
             _savedBagText = _bagItem >= 0 ? Shown(_bagBank.Messages[_bagItem]) : "";
             BagText = _savedBagText;
@@ -403,8 +409,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             _descBank = new EditableTextBank(moveDescriptionsTextNumbers);
-            if (itemDescriptionsTextNumber > 0)
-                _bagBank = new EditableTextBank(itemDescriptionsTextNumber, isHGE ? "hg-engine builds item text from its source." : null);
             try { _machineMoves = TMEditor.ReadMachineMoves(); }
             catch (Exception ex) { AppLogger.Warn("Move Data Editor: TM moves not read: " + ex.Message); }
 

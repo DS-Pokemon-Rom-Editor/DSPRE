@@ -632,13 +632,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             catch (Exception ex)
             {
+                // An empty table saved back would wipe every list, so a failed read blocks saving.
+                _loadError = ex.Message;
                 AppLogger.Error($"Failed to populate egg move data: {ex.Message}");
             }
         }
 
+        private string _loadError;
+
         /// <summary>Writes the table; returns why it couldn't, or null.</summary>
         private string SaveEggMoveData()
         {
+            if (_loadError != null) return "The egg moves couldn't be read, so saving would replace them: " + _loadError;
             try
             {
                 EggMoveData.Write(_eggMoveData, _useSpecialFormat, _monNames.Length);

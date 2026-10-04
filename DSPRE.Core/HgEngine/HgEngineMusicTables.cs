@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -105,9 +106,126 @@ namespace DSPRE.HgEngine
         public static bool TrySetClassCombo(int row, int trainerClass, int combo, out string error)
             => Edit(out error, text => SetClassCombo(text, row, trainerClass, combo, Sounds, Classes));
 
+        /// <summary>Rewrites row <paramref name="row"/> of the Pokemon music table, in file order.</summary>
+        public static bool TrySetSpeciesCombo(int row, int species, int combo, out string error)
+        {
+            error = SpeciesRowProblem(species, combo);
+            return error == null && Edit(out error, text => SetSpeciesCombo(text, row, species, combo, Sounds, Species));
+        }
+
+        // struct MonBattleMusic packs the species in 10 bits and the combo in 6.
+        private static string SpeciesRowProblem(int species, int combo) =>
+            species < 0 || species > 0x3FF ? $"{SpeciesTable} stores species in 10 bits, so species {species} can't have a row."
+            : combo < 0 || combo > 0x3F ? $"{SpeciesTable} stores combos in 6 bits, so combo {combo} doesn't fit."
+            : null;
+
+        /// <summary>
+        /// Adds a Pokemon music row. The game only searches as many rows as bytereplacement's count byte for the
+        /// table says, so that count is raised with it.
+        /// </summary>
+        public static bool TryAddSpeciesRow(int species, int combo, out string error)
+        {
+            error = SpeciesRowProblem(species, combo);
+            if (error != null) return false;
+            if (!TryTableCount(SpeciesTable, SpeciesRow, +1, out string count, out error)) return false;
+            return Edit(out error, text => AddSpeciesRow(text, species, combo, Sounds, Species)) && WriteCount(count, out error);
+        }
+
+        /// <summary>Takes a Pokemon music row out, lowering the table's count byte with it.</summary>
+        public static bool TryRemoveSpeciesRow(int row, out string error)
+        {
+            if (!TryTableCount(SpeciesTable, SpeciesRow, -1, out string count, out error)) return false;
+            return Edit(out error, text => RemoveSpeciesRow(text, row)) && WriteCount(count, out error);
+        }
+
+        private const string ByteReplacementRelPath = "bytereplacement";
+
+        // bytereplacement's EXPAND_MUSIC_TABLES branch: "# <table> table range" then "arm9 <address> <count>".
+        private static Regex CountLine(string table) => new(@"#\s*" + table + @"\s+table range[^\n]*\n\s*arm9\s+\w+\s+([0-9A-Fa-f]{2})\b");
+
+        private static bool TryTableCount(string table, string rowPattern, int delta, out string updated, out string error)
+        {
+            updated = null;
+            error = null;
+            string text = Read(ByteReplacementRelPath, out _), source = Read(SourceRelPath, out _);
+            if (text == null || source == null) { error = $"{ByteReplacementRelPath} or {SourceRelPath} is missing from the checkout."; return false; }
+            Match m = CountLine(table).Match(text);
+            if (!m.Success) { error = $"{ByteReplacementRelPath} has no {table} table range, so a row can't be added or removed."; return false; }
+            int count = int.Parse(m.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            int rows = Rows(MaskComments(source), table, rowPattern)?.Count ?? -1;
+            if (rows != count) { error = $"{table} has {rows} rows but the game is told to search {count}. Make them agree first."; return false; }
+            int next = count + delta;
+            if (next < 1 || next > 255) { error = $"{table} can have 1 to 255 rows."; return false; }
+            updated = text.Substring(0, m.Groups[1].Index) + next.ToString("X2", CultureInfo.InvariantCulture) + text.Substring(m.Groups[1].Index + 2);
+            return true;
+        }
+
+        private static bool WriteCount(string text, out string error)
+        {
+            error = null;
+            Read(ByteReplacementRelPath, out string path);
+            HgEngineFileCache.WriteText(path, text);
+            return true;
+        }
+
+        internal static (string Text, string Error) SetSpeciesCombo(string text, int row, int species, int combo,
+            HgEngineSymbolTable sounds, HgEngineSymbolTable speciesTable)
+        {
+            var rows = Rows(MaskComments(text), SpeciesTable, SpeciesRow);
+            if (rows == null || row < 0 || row >= rows.Count) return (null, $"{SpeciesTable} has no row {row}.");
+            var m = rows[row];
+            return (Replace(text, (m.Groups[2], Token(combo, m.Groups[2].Value, sounds, ComboPrefix)),
+                                  (m.Groups[1], Token(species, m.Groups[1].Value, speciesTable, "SPECIES_"))), null);
+        }
+
+        internal static (string Text, string Error) AddSpeciesRow(string text, int species, int combo,
+            HgEngineSymbolTable sounds, HgEngineSymbolTable speciesTable)
+        {
+            string masked = MaskComments(text);
+            var rows = Rows(masked, SpeciesTable, SpeciesRow);
+            int end = BlockEnd(masked, SpeciesTable);
+            if (rows == null || end < 0) return (null, $"{SourceRelPath} has no {SpeciesTable}.");
+            string newline = text.Contains("\r\n") ? "\r\n" : "\n";
+            string indent = "    ";
+            if (rows.Count > 0)
+            {
+                int lineStart = text.LastIndexOf('\n', rows[^1].Index) + 1;
+                indent = text.Substring(lineStart, rows[^1].Index - lineStart);
+                indent = indent.Substring(0, indent.Length - indent.TrimStart().Length);
+            }
+            string line = $"{indent}{{ .species = {Token(species, null, speciesTable, "SPECIES_")}, .combo = {Token(combo, null, sounds, ComboPrefix)} }},{newline}";
+            return (text.Insert(text.LastIndexOf('\n', end) + 1, line), null);
+        }
+
+        internal static (string Text, string Error) RemoveSpeciesRow(string text, int row)
+        {
+            var rows = Rows(MaskComments(text), SpeciesTable, SpeciesRow);
+            if (rows == null || row < 0 || row >= rows.Count) return (null, $"{SpeciesTable} has no row {row}.");
+            int start = text.LastIndexOf('\n', rows[row].Index) + 1;
+            int end = text.IndexOf('\n', rows[row].Index + rows[row].Length);
+            end = end < 0 ? text.Length : end + 1;
+            // A line holding only this row goes whole; otherwise just the row and its comma.
+            string lineText = text.Substring(start, end - start);
+            if (lineText.Trim().TrimEnd(',').Trim() == rows[row].Value.Trim()) return (text.Remove(start, end - start), null);
+            int cut = rows[row].Index + rows[row].Length;
+            while (cut < text.Length && (text[cut] == ' ' || text[cut] == ',')) cut++;
+            return (text.Remove(rows[row].Index, cut - rows[row].Index), null);
+        }
+
         /// <summary>Sets a class's eye-contact music, adding its row when it has none.</summary>
+        /// <summary>Sets a class's eye-contact music. A new row raises the count the game searches, as hg-engine's
+        /// guide to adding classes says it must.</summary>
         public static bool TrySetEncounterMusic(int trainerClass, ushort johto, ushort kanto, out string error)
-            => Edit(out error, text => SetEncounterMusic(text, trainerClass, johto, kanto, Sounds, Classes));
+        {
+            error = null;
+            string source = Read(SourceRelPath, out _);
+            bool adding = source != null && !(Rows(MaskComments(source), EncounterTable, EncounterRow) ?? Array.Empty<Match>())
+                .Any(m => Value(m.Groups[1].Value, Classes) == trainerClass);
+            string count = null;
+            if (adding && !TryTableCount(EncounterTable, EncounterRow, +1, out count, out error)) return false;
+            return Edit(out error, text => SetEncounterMusic(text, trainerClass, johto, kanto, Sounds, Classes))
+                && (!adding || WriteCount(count, out error));
+        }
 
         internal static (string Text, string Error) SetCombo(string text, int index, ushort transition, ushort sequence, HgEngineSymbolTable sounds)
         {
@@ -158,7 +276,7 @@ namespace DSPRE.HgEngine
 
         private const string ComboRow = @"(?:\[\s*(\w+)\s*\]\s*=\s*)?\{\s*(\w+)\s*,\s*(\w+)\s*\}";
         private const string ClassRow = @"\{\s*(\w+)\s*,\s*(\w+)\s*(\*\s*4)?\s*\}";
-        private const string SpeciesRow = @"\.species\s*=\s*(\w+)\s*,\s*\.combo\s*=\s*(\w+)";
+        private const string SpeciesRow = @"\{\s*\.species\s*=\s*(\w+)\s*,\s*\.combo\s*=\s*(\w+)\s*\}";
         private const string EncounterRow = @"\.class\s*=\s*(\w+)\s*,\s*\.music1\s*=\s*(\w+)\s*,\s*\.music2\s*=\s*(\w+)";
 
         // The second byte of a class row is the combo's offset into the 4-byte-row combo table.
@@ -198,22 +316,26 @@ namespace DSPRE.HgEngine
             return sb.ToString();
         }
 
+        // The table's rows as the C reader splits them, each matched against the row's own span; null when the table is
+        // missing, a row sits under #if, or a row isn't the shape the pattern describes.
         private static IReadOnlyList<Match> Rows(string masked, string table, string rowPattern)
         {
-            var head = Regex.Match(masked, @"\b" + Regex.Escape(table) + @"\s*\[[^\]]*\](?:\s*\[[^\]]*\])*\s*=\s*\{");
-            if (!head.Success) return null;
-            int start = head.Index + head.Length, end = BlockEnd(masked, table);
-            if (end < 0) return null;
+            var decl = CSourceFile.For(masked).Find(table);
+            if (decl == null) return null;
+            var pattern = new Regex(rowPattern);
             var rows = new List<Match>();
-            foreach (Match m in new Regex(rowPattern).Matches(masked.Substring(0, end), start)) rows.Add(m);
+            foreach (var item in decl.Init.Items)
+            {
+                if (item.IsConditional) return null;
+                Match m = pattern.Match(masked, item.Start, item.End - item.Start);
+                if (!m.Success) return null;
+                rows.Add(m);
+            }
             return rows;
         }
 
-        private static int BlockEnd(string masked, string table)
-        {
-            var head = Regex.Match(masked, @"\b" + Regex.Escape(table) + @"\s*\[[^\]]*\](?:\s*\[[^\]]*\])*\s*=\s*\{");
-            return head.Success ? masked.IndexOf("};", head.Index + head.Length, StringComparison.Ordinal) : -1;
-        }
+        // Where the table's closing brace is, for inserting rows before it.
+        private static int BlockEnd(string masked, string table) => CSourceFile.For(masked).Find(table)?.Init.Close ?? -1;
 
         // Replaces spans right to left so earlier offsets stay valid.
         private static string Replace(string text, params (Capture At, string With)[] edits)

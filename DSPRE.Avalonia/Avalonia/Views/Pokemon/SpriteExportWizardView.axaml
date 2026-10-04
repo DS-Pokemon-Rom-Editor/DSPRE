@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         x:Class="DSPRE.Avalonia.Views.Pokemon.SpriteExportWizardView"
         x:DataType="vm:SpriteExportWizardViewModel"
-        Title="Export Wizard"
+        Title="Export wizard"
         Width="420" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterScreen">
   <StackPanel Margin="18" Spacing="14">
@@ -17,7 +17,7 @@
     </StackPanel>
 
     <StackPanel Spacing="4">
-      <TextBlock Text="Individual Sprites" FontWeight="SemiBold"/>
+      <TextBlock Text="Individual sprites" FontWeight="SemiBold"/>
       <ItemsControl ItemsSource="{Binding IndividualSprites}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -31,7 +31,7 @@
     </StackPanel>
 
     <StackPanel Spacing="4">
-      <TextBlock Text="Sprite Sheets" FontWeight="SemiBold"/>
+      <TextBlock Text="Sprite sheets" FontWeight="SemiBold"/>
       <ItemsControl ItemsSource="{Binding SpriteSheets}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>

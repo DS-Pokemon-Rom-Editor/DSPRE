@@ -127,6 +127,10 @@ namespace DSPRE.ROMFiles
 
         public static ushort[] Read(uint offset)
         {
+            // hg-engine reads its own array instead of these overlay tables.
+            if (HgEngine.HgEngineProject.IsActive)
+                return HgEngine.HgEngineRockSmashItems.TryRead(TableType(offset), out ushort[] items, out string error)
+                    ? items : throw new InvalidOperationException(error);
             if (OverlayUtils.IsCompressed(Overlay)) OverlayUtils.Decompress(Overlay);
             byte[] raw = DSUtils.ReadFromFile(OverlayUtils.GetPath(Overlay), offset, Slots * 2);
             var slots = new ushort[Slots];
@@ -134,7 +138,24 @@ namespace DSPRE.ROMFiles
             return slots;
         }
 
-        public static void Write(uint offset, IReadOnlyList<ushort> slots) =>
+        public static void Write(uint offset, IReadOnlyList<ushort> slots)
+        {
+            if (HgEngine.HgEngineProject.IsActive)
+            {
+                if (!HgEngine.HgEngineRockSmashItems.TryWrite(TableType(offset), slots, out string error))
+                    throw new InvalidOperationException(error);
+                return;
+            }
             DSUtils.WriteToFile(OverlayUtils.GetPath(Overlay), PickupTable.Words(slots, Slots), offset);
+        }
+
+        /// <summary>The map type that picks this table, which is also its index in hg-engine's array.</summary>
+        private static int TableType(uint offset) => offset switch
+        {
+            DefaultOffset => 0,
+            RuinsOfAlphOffset => 1,
+            CliffCaveOffset => 2,
+            _ => throw new ArgumentException($"No Rock Smash table at 0x{offset:X}."),
+        };
     }
 }

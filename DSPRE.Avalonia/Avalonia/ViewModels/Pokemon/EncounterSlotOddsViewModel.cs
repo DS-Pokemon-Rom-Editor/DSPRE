@@ -134,11 +134,24 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_odds == null) return true;
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Encounter Slot Odds"); return false; }
-            try { _odds.Save(); }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            if (DSPRE.HgEngine.HgEngineProject.IsActive)
             {
-                await DialogHelper.ShowError("The slot odds were not saved:\n" + e.Message, "Encounter Slot Odds");
-                return false;
+                // The rolls are rewritten in encounter_check.c, which may drop comments inside them.
+                var (saved, error) = await HgEngineSave.RunAsync(() => { _odds.Save(); return null; });
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError("The slot odds were not saved:\n" + error, "Encounter Slot Odds");
+                    return false;
+                }
+            }
+            else
+            {
+                try { _odds.Save(); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+                {
+                    await DialogHelper.ShowError("The slot odds were not saved:\n" + e.Message, "Encounter Slot Odds");
+                    return false;
+                }
             }
             _saved = _odds.Snapshot();
             Changed();

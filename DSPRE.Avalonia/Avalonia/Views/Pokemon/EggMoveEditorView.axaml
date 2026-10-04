@@ -13,9 +13,7 @@
 
 
   <DockPanel LastChildFill="True">
-	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-			BorderThickness="0,0,0,1" Padding="6,4">
-	  <StackPanel Orientation="Horizontal" Spacing="6">
+	<controls:EditorToolbar>
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
@@ -23,8 +21,7 @@
 		<Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
 		<TextBlock Text="{Binding MonCountText}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 		<TextBlock Text="{Binding ListSizeText}" Foreground="{Binding ListSizeBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
-	  </StackPanel>
-	</Border>
+	</controls:EditorToolbar>
 
 	<DockPanel Margin="8" LastChildFill="True">
 
@@ -33,7 +30,7 @@
 
 	  <!-- LEFT: Pokémon list + search -->
 	  <DockPanel x:Name="MonPanel" Grid.Column="0">
-		<TextBlock DockPanel.Dock="Top" Text="Pokémon with Egg Moves" FontWeight="SemiBold" Margin="0,0,0,4"/>
+		<TextBlock DockPanel.Dock="Top" Text="Pokémon with egg moves" FontWeight="SemiBold" Margin="0,0,0,4"/>
 
 		<!-- Search -->
 		<StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
@@ -77,7 +74,7 @@
 
 	  <!-- MIDDLE: Egg move list for selected Pokémon -->
 	  <DockPanel x:Name="MovePanel" Grid.Column="1">
-		<TextBlock DockPanel.Dock="Top" Text="Egg Moves" FontWeight="SemiBold" Margin="0,0,0,4"/>
+		<TextBlock DockPanel.Dock="Top" Text="Egg moves" FontWeight="SemiBold" Margin="0,0,0,4"/>
 
 		<StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,6,0,0">
 		  <StackPanel Orientation="Horizontal" Spacing="12">
@@ -100,12 +97,12 @@
 
 	  <!-- RIGHT: Bulk operations -->
 	  <StackPanel x:Name="BulkPanel" Grid.Column="2" Spacing="10">
-		<TextBlock Text="Bulk Operations" FontWeight="SemiBold"/>
+		<TextBlock Text="Bulk operations" FontWeight="SemiBold"/>
 
 		<Border BorderThickness="1"
 				BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="6">
 		  <StackPanel Spacing="4">
-			<TextBlock Text="Bulk Replace Move" FontWeight="SemiBold" FontSize="12"/>
+			<TextBlock Text="Bulk replace move" FontWeight="SemiBold" FontSize="12"/>
 			<TextBlock Text="Replace:" FontSize="12"/>
 			<controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbReplaceeIndex}"/>
 			<TextBlock Text="With:" FontSize="12"/>
@@ -117,7 +114,7 @@
 		<Border BorderThickness="1"
 				BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="6">
 		  <StackPanel Spacing="4">
-			<TextBlock Text="Bulk Delete Move" FontWeight="SemiBold" FontSize="12"/>
+			<TextBlock Text="Bulk delete move" FontWeight="SemiBold" FontSize="12"/>
 			<controls:FusionAutoCompleteBox ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding CbDeleteAllIndex}"/>
 			<Button Content="Bulk delete" HorizontalAlignment="Stretch" Click="BulkDelete_Click"/>
 		  </StackPanel>

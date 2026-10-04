@@ -181,12 +181,86 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadAllTrainerData()
         {
             string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
+            var source = FromSource ? HgEngine.HgEngineTrainerSource.LoadAll() : null;
+            _sourceAi.Clear();
+            _sourceBattle.Clear();
             for (int i = 0; i < _trainerCount; i++)
             {
                 using var fs = new FileStream(Path.Combine(dir, i.ToString("D4")), FileMode.Open);
                 _trainerData[i] = new TrainerProperties((ushort)i, fs);
+                if (source != null) ReadSource(i, i < source.Count ? source[i] : (HgEngine.HgEngineSourceBlock?)null);
                 _loadedFlags[i] = SnapshotFlags(_trainerData[i]);
             }
+        }
+
+        // ── hg-engine: data/Trainers.c ──────────────────────────────────────
+        private static bool FromSource => HgEngine.HgEngineProject.IsActive;
+        private const string TrainerDataHeader = "include/trainer_data.h";
+        private static readonly HgEngine.FieldPathSegment[] AiPath = { HgEngine.FieldPathSegment.Field("data"), HgEngine.FieldPathSegment.Field("aiFlags") };
+        private static readonly HgEngine.FieldPathSegment[] BattlePath = { HgEngine.FieldPathSegment.Field("data"), HgEngine.FieldPathSegment.Field("battleType") };
+        // The source's own values; a trainer missing here can't be saved.
+        private readonly Dictionary<int, int> _sourceAi = new(), _sourceBattle = new();
+
+        // The checkout's F_ bits 0-10 are the ones these boxes show; higher ones (roaming, Safari) are kept as they are.
+        private void ReadSource(int id, HgEngine.HgEngineSourceBlock? entry)
+        {
+            if (entry is not { } block || !block.TryGetFlagsValue(AiPath, TrainerDataHeader, out int ai)) return;
+            int battle = block.TryGetSymbol(BattlePath, TrainerDataHeader, out int b) ? b : block.TryGetRaw(BattlePath, out _) ? -1 : 0;
+            if (battle < 0) return;
+            _sourceAi[id] = ai;
+            _sourceBattle[id] = battle;
+            var tp = _trainerData[id];
+            for (int f = 0; f < AI_FLAG_COUNT; f++) tp.AI[f] = (ai & (1 << f)) != 0;
+            tp.doubleBattle = battle != 0;
+        }
+
+        private async System.Threading.Tasks.Task SaveSourceAsync()
+        {
+            var writes = new List<(int Id, List<HgEngine.HgEngineFieldWrite> Fields, bool[] Now)>();
+            var symbols = HgEngine.HgEngineSymbolTable.Load(TrainerDataHeader);
+            foreach (var (id, tp) in _trainerData)
+            {
+                bool[] loaded = _loadedFlags[id], now = SnapshotFlags(tp);
+                if (loaded.SequenceEqual(now)) continue;
+                if (!_sourceAi.TryGetValue(id, out int ai))
+                {
+                    await DialogHelper.ShowError($"Trainer {id}'s flags couldn't be read from Trainers.c, so nothing was saved.", "Trainer Flag Bulk Editor");
+                    return;
+                }
+                for (int f = 0; f < AI_FLAG_COUNT; f++)
+                    if (now[f] != loaded[f]) ai = now[f] ? ai | (1 << f) : ai & ~(1 << f);
+                var fields = new List<HgEngine.HgEngineFieldWrite>
+                {
+                    new(AiPath, symbols?.TryGetFlagsExpression(ai, "F_", out string expr) == true ? expr : ai.ToString()),
+                };
+                if (now[AI_FLAG_COUNT] != loaded[AI_FLAG_COUNT])
+                    fields.Add(new(BattlePath, now[AI_FLAG_COUNT] ? "DOUBLE_BATTLE" : "SINGLE_BATTLE"));
+                writes.Add((id, fields, now));
+            }
+
+            var (saved, error) = await HgEngineSave.RunAsync(() =>
+            {
+                foreach (var (id, fields, _) in writes)
+                {
+                    if (!HgEngine.HgEngineWriter.TryWriteFields(HgEngine.HgEngineDomain.Trainers, id, fields, out var unresolved, out string e, allOrNothing: true))
+                        return $"Trainer {id}: {e}";
+                    if (unresolved.Count > 0) return $"Trainer {id}: Trainers.c has no {string.Join(", ", unresolved)}.";
+                }
+                return null;
+            });
+            if (!saved) { if (error != null) await DialogHelper.ShowError("Not everything was saved:\n" + error, "Trainer Flag Bulk Editor"); return; }
+
+            var source = HgEngine.HgEngineTrainerSource.LoadAll();
+            foreach (var (id, _, now) in writes)
+            {
+                if (id < source.Count) ReadSource(id, source[id]);
+                _loadedFlags[id] = SnapshotFlags(_trainerData[id]);
+            }
+            _isDirty = false;
+            _undo?.MarkSaved();
+            SaveNotice.Saved(UnsavedChangesDescription);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            UpdateStatus($"Saved {writes.Count} trainers into Trainers.c.");
         }
 
         // Flags as last read or saved, so a save only touches the bits the user changed.
@@ -373,6 +447,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── Save ─────────────────────────────────────────────────────────
         public void SaveAllChanges()
         {
+            if (FromSource) { _ = SaveSourceAsync(); return; }
             string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
             foreach (var (id, tp) in _trainerData.ToList())
             {

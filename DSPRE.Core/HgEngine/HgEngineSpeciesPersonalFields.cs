@@ -86,7 +86,15 @@ namespace DSPRE.HgEngine
             var writes = CollapseAbsentParents(BuildWrites(data, entry, HgEngineSymbolTable.Load), p => entry.TryGetRaw(p, out _));
             // Rewriting an unchanged entry would still touch the file and make the next build redo it.
             if (writes.All(w => entry.TryGetRaw(w.Path, out string raw) && raw == w.ValueLiteral)) return true;
-            return HgEngineWriter.TryWriteFields(HgEngineDomain.Species, speciesId, writes, out _, out error, allowInsert: true, allOrNothing: true);
+
+            var typeFields = All.Where(f => f.Path[1].Name == "types").ToArray();
+            var oldTypes = typeFields.Select(f => entry.TryGetRaw(f.Path, out string raw)
+                && HgEngineSourceExpression.TryEvaluate(raw, HgEngineSourceFields.NameLookup(f.Headers, HgEngineSymbolTable.Load), out int v) ? v : -1).ToArray();
+
+            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Species, speciesId, writes, out _, out error, allowInsert: true, allOrNothing: true))
+                return false;
+            if (oldTypes.Contains(-1)) return true;
+            return HgEnginePokedexMetrics.TryMoveTypes(speciesId, (oldTypes[0], oldTypes[1]), ((int)data.type1, (int)data.type2), out error);
         }
 
         private static readonly System.Text.RegularExpressions.Regex SpeciesEntry = new(@"\[\s*(SPECIES_\w+)\s*\]\s*=\s*\{");

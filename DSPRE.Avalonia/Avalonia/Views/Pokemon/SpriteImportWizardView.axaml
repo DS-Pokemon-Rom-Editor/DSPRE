@@ -3,7 +3,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         x:Class="DSPRE.Avalonia.Views.Pokemon.SpriteImportWizardView"
         x:DataType="vm:SpriteImportWizardViewModel"
-        Title="Import Wizard"
+        Title="Import wizard"
         Width="460" SizeToContent="Height" CanResize="False"
         WindowStartupLocation="CenterScreen">
   <StackPanel Margin="18" Spacing="16">
@@ -13,7 +13,7 @@
       <RadioButton GroupName="mode" Content="Replace the image only" IsChecked="True" Click="ModeImage_Click"/>
       <RadioButton GroupName="mode" Content="Replace the palette only" Click="ModePalette_Click"/>
       <RadioButton GroupName="mode" Content="Change full artwork (image and palette together)" Click="ModeFull_Click"/>
-      <RadioButton GroupName="mode" Content="Import a sprite sheet (Back + Front together)" Click="ModeSheet_Click"/>
+      <RadioButton GroupName="mode" Content="Import a sprite sheet (back + front together)" Click="ModeSheet_Click"/>
     </StackPanel>
 
     <StackPanel Spacing="8" IsVisible="{Binding ShowArtworkScope}">

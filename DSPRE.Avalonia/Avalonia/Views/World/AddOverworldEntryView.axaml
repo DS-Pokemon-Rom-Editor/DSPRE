@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
         x:Class="DSPRE.Avalonia.Views.World.AddOverworldEntryView"
         x:DataType="vm:AddOverworldEntryViewModel"
-        Title="Add Custom Overworld Entry"
+        Title="Add custom overworld entry"
         Width="380" Height="520"
         MinWidth="340" MinHeight="480"
         WindowStartupLocation="CenterOwner"
@@ -23,10 +23,13 @@
     </StackPanel>
 
     <StackPanel Spacing="4">
-      <TextBlock Text="Requires the hzla PlatPatches overworld-sprites expansion patch and a free custom slot." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+      <TextBlock Text="Requires the hzla PlatPatches overworld-sprites expansion patch and a free custom slot." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"
+                 IsVisible="{Binding !IsHgEngine}"/>
+      <TextBlock Text="Adds a new NPC to the hg-engine checkout. Its appearance ID is the next free one." FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"
+                 IsVisible="{Binding IsHgEngine}"/>
 
-      <TextBlock Text="Appearance ID (decimal or 0x hex)" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
-      <TextBox Text="{Binding AppearanceIdText}"/>
+      <TextBlock Text="Appearance ID (decimal or 0x hex)" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0" IsVisible="{Binding !IsHgEngine}"/>
+      <TextBox Text="{Binding AppearanceIdText}" IsVisible="{Binding !IsHgEngine}"/>
 
       <TextBlock Text="Image (optional, pick this first, it decides which texture slot below will fit)" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
       <Grid ColumnDefinitions="*,4,*,4,Auto">

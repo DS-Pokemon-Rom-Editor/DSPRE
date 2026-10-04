@@ -14,7 +14,8 @@ namespace DSPRE.HgEngine
         private static Dictionary<int, string> _cache;
         private static string _cachedForRepo;
 
-        public static bool TryGetSpritePngPath(int speciesId, out string absolutePngPath)
+        /// <param name="mustExist">False to get the path pokegra.mk builds from even before the PNG is there.</param>
+        public static bool TryGetSpritePngPath(int speciesId, out string absolutePngPath, bool mustExist = true)
         {
             absolutePngPath = null;
             if (!HgEngineProject.IsLinked) return false;
@@ -26,7 +27,7 @@ namespace DSPRE.HgEngine
             if (lookupId < 0 || !map.TryGetValue(lookupId, out string relPath)) return false;
 
             string full = Path.Combine(HgEngineProject.RepoPathUnc, relPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(full)) return false;
+            if (mustExist && !File.Exists(full)) return false;
 
             absolutePngPath = full;
             return true;

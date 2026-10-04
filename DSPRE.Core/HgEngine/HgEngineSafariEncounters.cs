@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.ComponentModel;
 using System.IO;
 using DSPRE.ROMFiles;
@@ -44,6 +45,7 @@ namespace DSPRE.HgEngine
             var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             string typeField = FieldNameFor(type);
             group = new SafariZoneEncounterGroup();
+            string unreadable = null;
 
             void ReadSlotArray(string fieldName, BindingList<SafariZoneEncounter> dest)
             {
@@ -55,7 +57,7 @@ namespace DSPRE.HgEngine
                     if (parts.Count < 2) continue;
                     dest.Add(new SafariZoneEncounter
                     {
-                        pokemonID = (ushort)ResolveToken(parts[0], species),
+                        pokemonID = (ushort)ResolveSpecies(parts[0], species, ref unreadable),
                         level = (byte)ResolveToken(parts[1], null),
                     });
                 }
@@ -67,6 +69,8 @@ namespace DSPRE.HgEngine
             ReadSlotArray("bonusSpeciesMorning", group.MorningEncountersObject);
             ReadSlotArray("bonusSpeciesDay", group.DayEncountersObject);
             ReadSlotArray("bonusSpeciesNight", group.NightEncountersObject);
+            // Saving would write SPECIES_NONE over it.
+            if (unreadable != null) { error = $"SafariEncounters.c has a species DSPRE can't read: {unreadable}"; group = null; return false; }
 
             var condPath = new[] { FieldPathSegment.Field(typeField), FieldPathSegment.Field("bonusUnlockConditions") };
             if (HgEngineSourcePatcher.TryGetFieldValue(text, areaDesignator, condPath, out string rawConds))
@@ -131,19 +135,19 @@ namespace DSPRE.HgEngine
             var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             string typeField = FieldNameFor(type);
 
-            string SlotLiteral(BindingList<SafariZoneEncounter> list, int count)
+            List<string> SlotItems(BindingList<SafariZoneEncounter> list, int count)
             {
                 var items = new List<string>(count);
                 for (int i = 0; i < count; i++)
                 {
                     var e = i < list.Count ? list[i] : new SafariZoneEncounter();
-                    string sp = species != null && species.TryGetNameWithPrefix(e.pokemonID, "SPECIES_", out string sn) ? sn : e.pokemonID.ToString();
+                    string sp = HgEngineTrainerSource.FormatPackedSpecies(e.pokemonID, SpeciesHeaderRelPath);
                     items.Add($"{{ {sp}, {e.level} }}");
                 }
-                return "{ " + string.Join(", ", items) + " }";
+                return items;
             }
 
-            string CondLiteral(BindingList<SafariZoneObjectRequirement> req, BindingList<SafariZoneObjectRequirement> opt, int count)
+            List<string> CondItems(BindingList<SafariZoneObjectRequirement> req, BindingList<SafariZoneObjectRequirement> opt, int count)
             {
                 var items = new List<string>(count);
                 for (int i = 0; i < count; i++)
@@ -154,28 +158,51 @@ namespace DSPRE.HgEngine
                     string ot = header != null && header.TryGetNameWithPrefix(o.typeID, ObjectTypePrefix, out string on) ? on : o.typeID.ToString();
                     items.Add($"{{ .objects = {{ {{ {rt}, {r.quantity} }}, {{ {ot}, {o.quantity} }} }} }}");
                 }
-                return "{\n            " + string.Join(",\n            ", items) + ",\n        }";
+                return items;
             }
 
-            var writes = new (string Field, string Literal)[]
+            var writes = new (string Field, List<string> Items)[]
             {
-                ("speciesMorning", SlotLiteral(group.MorningEncounters, mainCount)),
-                ("speciesDay", SlotLiteral(group.DayEncounters, mainCount)),
-                ("speciesNight", SlotLiteral(group.NightEncounters, mainCount)),
-                ("bonusSpeciesMorning", SlotLiteral(group.MorningEncountersObject, bonusCount)),
-                ("bonusSpeciesDay", SlotLiteral(group.DayEncountersObject, bonusCount)),
-                ("bonusSpeciesNight", SlotLiteral(group.NightEncountersObject, bonusCount)),
-                ("bonusUnlockConditions", CondLiteral(group.ObjectRequirements, group.OptionalObjectRequirements, bonusCount)),
+                ("speciesMorning", SlotItems(group.MorningEncounters, mainCount)),
+                ("speciesDay", SlotItems(group.DayEncounters, mainCount)),
+                ("speciesNight", SlotItems(group.NightEncounters, mainCount)),
+                ("bonusSpeciesMorning", SlotItems(group.MorningEncountersObject, bonusCount)),
+                ("bonusSpeciesDay", SlotItems(group.DayEncountersObject, bonusCount)),
+                ("bonusSpeciesNight", SlotItems(group.NightEncountersObject, bonusCount)),
+                ("bonusUnlockConditions", CondItems(group.ObjectRequirements, group.OptionalObjectRequirements, bonusCount)),
             };
 
             var failedFields = new List<string>();
-            foreach (var (field, literal) in writes)
+            foreach (var (field, items) in writes)
             {
                 var fieldPath = new[] { FieldPathSegment.Field(typeField), FieldPathSegment.Field(field) };
-                if (!HgEngineSourcePatcher.TryReplaceField(ref text, areaDesignator, fieldPath, literal))
+                HgEngineSourcePatcher.TryGetFieldValue(text, areaDesignator, fieldPath, out string original);
+                if (!HgEngineSourcePatcher.TryReplaceField(ref text, areaDesignator, fieldPath, ListLiteral(original, items)))
                     failedFields.Add(field);
             }
             return failedFields;
+        }
+
+        /// <summary>
+        /// A brace list in the layout the file already gives it: one item per line with the same indent and trailing
+        /// comma when it was written that way, otherwise on one line, so an edit only changes the items that changed.
+        /// </summary>
+        internal static string ListLiteral(string original, IReadOnlyList<string> items)
+        {
+            string body = original?.Replace("\r\n", "\n");
+            if (body == null || !body.Contains('\n') || items.Count == 0) return "{ " + string.Join(", ", items) + " }";
+
+            string[] lines = body.Split('\n');
+            string itemLine = lines.Skip(1).FirstOrDefault(l => l.Trim().Length > 0 && l.Trim() != "}") ?? "";
+            string itemIndent = itemLine.Substring(0, itemLine.Length - itemLine.TrimStart().Length);
+            string last = lines[^1];
+            string closeIndent = last.Substring(0, last.Length - last.TrimStart().Length);
+            bool trailingComma = lines.Take(lines.Length - 1).LastOrDefault(l => l.Trim().Length > 0)?.TrimEnd().EndsWith(",") == true;
+
+            var sb = new System.Text.StringBuilder("{");
+            for (int i = 0; i < items.Count; i++)
+                sb.Append('\n').Append(itemIndent).Append(items[i]).Append(i < items.Count - 1 || trailingComma ? "," : "");
+            return sb.Append('\n').Append(closeIndent).Append('}').ToString();
         }
 
         private static SafariZoneObjectRequirement ParseRequirement(string block, HgEngineSymbolTable objectTypes)
@@ -183,6 +210,14 @@ namespace DSPRE.HgEngine
             var parts = HgEngineSourcePatcher.SplitArrayValue(block.Trim());
             if (parts.Count < 2) return new SafariZoneObjectRequirement();
             return new SafariZoneObjectRequirement((byte)ResolveToken(parts[0], objectTypes), (byte)ResolveToken(parts[1], null));
+        }
+
+        // A slot can name a form: MON_WITH_FORM(SPECIES_X, n) or SPECIES_X | (n << 11).
+        private static int ResolveSpecies(string token, HgEngineSymbolTable species, ref string unreadable)
+        {
+            if (HgEngineEvolutions.ResolveTarget(token.Trim(), species, out int id, out int form)) return id | (form << HgEngineTrainerSource.FormShift);
+            unreadable ??= token.Trim();
+            return 0;
         }
 
         private static int ResolveToken(string token, HgEngineSymbolTable table)

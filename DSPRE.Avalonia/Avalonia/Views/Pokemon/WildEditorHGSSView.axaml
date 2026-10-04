@@ -10,13 +10,15 @@
 
   <UserControl.Resources>
     <DataTemplate x:Key="PokemonEncounterCellTemplate" x:DataType="vm:WildEncounterRow">
-      <Grid ColumnDefinitions="32,*" ColumnSpacing="6">
+      <Grid ColumnDefinitions="32,*,Auto" ColumnSpacing="6">
         <Image Source="{Binding PokemonIcon}" Width="32" Height="32" Stretch="Uniform"/>
         <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" Grid.Column="1"
                   ItemsSource="{Binding PokemonNames}"
                   SelectedIndex="{Binding PokemonIndex}"
                   HorizontalAlignment="Stretch"
                   VerticalAlignment="Center"/>
+        <NumericUpDown Grid.Column="2" Value="{Binding Form}" Minimum="0" Maximum="31" MinWidth="70"
+                       IsVisible="{Binding ShowForm}" VerticalAlignment="Center" ToolTip.Tip="Form"/>
       </Grid>
     </DataTemplate>
   </UserControl.Resources>
@@ -37,23 +39,19 @@
     </Style>
   </UserControl.Styles>
   <DockPanel LastChildFill="True">
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <TextBlock Text="Encounter File:" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,6,0"/>
+        <TextBlock Text="Encounter file:" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,6,0"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="300"/>
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemFile_Click"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button x:Name="ImportButton" Content="Import…" controls:Icon.Key="import" Click="ImportFile_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="ExportFile_Click"/>
         <Button Content="Repair all" controls:Icon.Key="wrench" Click="RepairAll_Click" ToolTip.Tip="Reset corrupted fields in every encounter file to defaults"/>
         <Button x:Name="SlotOddsButton" Content="% slot odds" Click="SlotOdds_Click" ToolTip.Tip="Edit the chance of each slot, shared by every encounter file"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
     <Border DockPanel.Dock="Top" Padding="8,3" Margin="10,8,10,0" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
       <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
     </Border>
@@ -65,7 +63,7 @@
       <TabItem Header="Morning">
         <DockPanel Margin="8">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
-            <TextBlock Text="Walk Rate:" Classes="lbl"/>
+            <TextBlock Text="Walk rate:" Classes="lbl"/>
             <NumericUpDown Value="{Binding WalkingRate}" Minimum="0" Maximum="255" Width="100"/>
             <TextBlock Text="A rate of 0 means nothing appears in the grass here." Classes="lbl"
                        Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding NothingWalksHere}"/>
@@ -123,7 +121,7 @@
                 </DataGrid.Columns>
               </DataGrid>
             </GroupBox>
-            <GroupBox Header="Hoenn Radio">
+            <GroupBox Header="Hoenn radio">
               <DataGrid ItemsSource="{Binding HoennRadioRows}" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                   <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="150" IsReadOnly="True"/>
@@ -131,7 +129,7 @@
                 </DataGrid.Columns>
               </DataGrid>
             </GroupBox>
-            <GroupBox Header="Sinnoh Radio">
+            <GroupBox Header="Sinnoh radio">
               <DataGrid ItemsSource="{Binding SinnohRadioRows}" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                   <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="150" IsReadOnly="True"/>
@@ -142,19 +140,19 @@
             <GroupBox Header="Rock Smash">
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                  <TextBlock Text="Rock Smash Rate:" Classes="lbl"/>
+                  <TextBlock Text="Rock Smash rate:" Classes="lbl"/>
                   <NumericUpDown Value="{Binding RockSmashRate}" Minimum="0" Maximum="255" Width="100"/>
                 </StackPanel>
                 <DataGrid ItemsSource="{Binding RockSmashRows}" AutoGenerateColumns="False">
                   <DataGrid.Columns>
                     <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="150" IsReadOnly="True"/>
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
-                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                    <DataGridTemplateColumn Header="Min lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                    <DataGridTemplateColumn Header="Max lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -170,13 +168,13 @@
       <TabItem Header="Water">
         <DockPanel Margin="8">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
-            <TextBlock Text="Surf Rate:"      Classes="lbl"/>
+            <TextBlock Text="Surf rate:"      Classes="lbl"/>
             <NumericUpDown Value="{Binding SurfRate}"     Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Old Rod Rate:"   Classes="lbl"/>
+            <TextBlock Text="Old Rod rate:"   Classes="lbl"/>
             <NumericUpDown Value="{Binding OldRodRate}"   Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Good Rod Rate:"  Classes="lbl"/>
+            <TextBlock Text="Good Rod rate:"  Classes="lbl"/>
             <NumericUpDown Value="{Binding GoodRodRate}"  Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Super Rod Rate:" Classes="lbl"/>
+            <TextBlock Text="Super Rod rate:" Classes="lbl"/>
             <NumericUpDown Value="{Binding SuperRodRate}" Minimum="0" Maximum="255" Width="100"/>
           </StackPanel>
           <ScrollViewer>
@@ -186,12 +184,12 @@
                   <DataGrid.Columns>
                     <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="150" IsReadOnly="True"/>
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
-                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                    <DataGridTemplateColumn Header="Min lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                    <DataGridTemplateColumn Header="Max lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -204,12 +202,12 @@
                   <DataGrid.Columns>
                     <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="150" IsReadOnly="True"/>
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
-                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                    <DataGridTemplateColumn Header="Min lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                    <DataGridTemplateColumn Header="Max lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -222,12 +220,12 @@
                   <DataGrid.Columns>
                     <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="150" IsReadOnly="True"/>
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
-                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                    <DataGridTemplateColumn Header="Min lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                    <DataGridTemplateColumn Header="Max lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
@@ -240,12 +238,12 @@
                   <DataGrid.Columns>
                     <DataGridTextColumn Header="#" Binding="{Binding Label}" Width="150" IsReadOnly="True"/>
                     <DataGridTemplateColumn Header="Pokémon" Width="*" MaxWidth="460" CellTemplate="{StaticResource PokemonEncounterCellTemplate}"/>
-                    <DataGridTemplateColumn Header="Min Lv" Width="110">
+                    <DataGridTemplateColumn Header="Min lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MinLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="Max Lv" Width="110">
+                    <DataGridTemplateColumn Header="Max lv" Width="110">
                       <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate><NumericUpDown Value="{Binding MaxLevel}" Minimum="0" Maximum="100"/></DataTemplate>
                       </DataGridTemplateColumn.CellTemplate>

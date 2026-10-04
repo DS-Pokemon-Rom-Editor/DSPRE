@@ -255,6 +255,14 @@ namespace DSPRE.ROMFiles
             w.Write((ushort)((trainerClass & 0x3FF) | (combo << 10)));
         }
 
+        /// <summary>Writes species row <paramref name="index"/> back, the species in the low 10 bits and the combo above.</summary>
+        public void WriteSpecies(int index)
+        {
+            var (species, combo) = Species.Rows[index];
+            using var w = new DSUtils.EasyWriter(Species.Path, Species.Start + 2 * (uint)index);
+            w.Write((ushort)((species & 0x3FF) | (combo << 10)));
+        }
+
         // A second pointer sits two bytes into the same table; if they disagree, the layout is not the known one.
         private static bool DpPointersAgree() =>
             BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableSecondPointerOffset, 4), 0)

@@ -20,7 +20,14 @@ namespace DSPRE.ROMFiles
         {
             public byte Attacker, Defender, Tenths;
             public bool ForesightRemovable;
+            /// <summary>hg-engine: an immunity listed after TYPE_RING_TARGET, which Ring Target lifts.</summary>
+            public bool RingTargetRemovable;
         }
+
+        /// <summary>True when the chart is hg-engine's TypeEffectivenessTable in its source.</summary>
+        public bool FromSource { get; private set; }
+
+        private static bool UsesSource => HgEngine.HgEngineProject.IsActive;
 
         /// <summary>Non-neutral pairs, in the order the chart lists them.</summary>
         public List<Matchup> Matchups { get; } = new List<Matchup>();
@@ -46,12 +53,14 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot()
         {
+            if (UsesSource) return null;
             if (GameTableFile.WhyNot(GameTable.TypeChart, 112 * RecordSize) is string why) return why;
             return TypeChartPointerSites == null ? "This game version isn't supported yet." : null;
         }
 
         public static TypeChart Load()
         {
+            if (UsesSource) return LoadSource();
             var chart = new TypeChart();
             chart.Locate();
             byte[] data = File.ReadAllBytes(chart._path);
@@ -68,6 +77,25 @@ namespace DSPRE.ROMFiles
                 chart.Matchups.Add(new Matchup { Attacker = a, Defender = d, Tenths = m, ForesightRemovable = foresight });
             }
             chart.Capacity = Math.Max(chart.Capacity, records);
+            return chart;
+        }
+
+        // hg-engine repoints the battle code to its own table, sized by the compiler, so there is no fixed room.
+        private static TypeChart LoadSource()
+        {
+            if (!HgEngine.HgEngineTypeChart.TryRead(out var rows, out string error)) throw new InvalidDataException(error);
+            var chart = new TypeChart { FromSource = true, InExpansion = true, Capacity = 4096, Where = "in " + HgEngine.HgEngineTypeChart.SourceRelPath };
+            foreach (var r in rows)
+            {
+                if (chart.Find(r.Attacker, r.Defender) != null)
+                    throw new InvalidDataException($"The type chart lists types {r.Attacker} and {r.Defender} twice; DSPRE can't edit it without changing damage.");
+                chart.Matchups.Add(new Matchup
+                {
+                    Attacker = (byte)r.Attacker, Defender = (byte)r.Defender, Tenths = (byte)r.Tenths,
+                    ForesightRemovable = r.Section == HgEngine.HgEngineTypeChart.Section.Foresight,
+                    RingTargetRemovable = r.Section == HgEngine.HgEngineTypeChart.Section.RingTarget,
+                });
+            }
             return chart;
         }
 
@@ -167,6 +195,15 @@ namespace DSPRE.ROMFiles
         public void Save()
         {
             if (Problem() is string p) throw new InvalidOperationException(p);
+            if (FromSource)
+            {
+                var rows = Matchups.Select(m => new HgEngine.HgEngineTypeChart.Row(m.Attacker, m.Defender, m.Tenths,
+                    m.ForesightRemovable ? HgEngine.HgEngineTypeChart.Section.Foresight
+                    : m.RingTargetRemovable ? HgEngine.HgEngineTypeChart.Section.RingTarget
+                    : HgEngine.HgEngineTypeChart.Section.Main)).ToList();
+                if (!HgEngine.HgEngineTypeChart.TryWrite(rows, out string error)) throw new IOException(error);
+                return;
+            }
             DSUtils.WriteToFile(_path, ToBytes(), (uint)_offset);
             RepairModulus();
             if (SpotOf(GameTable.PoketchTypeChart) != null && GameTableFile.WhyNot(GameTable.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
@@ -245,9 +282,11 @@ namespace DSPRE.ROMFiles
         {
             var m = Find(attacker, defender);
             if (tenths == Neutral) { if (m != null) Matchups.Remove(m); return; }
-            if (m == null) { m = new Matchup { Attacker = (byte)attacker, Defender = (byte)defender }; Matchups.Add(m); }
+            // hg-engine lists every immunity after its Ring Target row.
+            if (m == null) { m = new Matchup { Attacker = (byte)attacker, Defender = (byte)defender, RingTargetRemovable = FromSource }; Matchups.Add(m); }
             m.Tenths = (byte)Math.Clamp(tenths, 0, 255);
             m.ForesightRemovable = foresightRemovable && tenths == 0;
+            m.RingTargetRemovable = FromSource && tenths == 0 && !m.ForesightRemovable;
         }
     }
 }

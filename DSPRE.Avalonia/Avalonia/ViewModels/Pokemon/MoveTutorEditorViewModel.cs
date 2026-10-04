@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             MoveNames = GetAttackNames();
             for (int i = 0; i < _data.Pool.Count; i++) Pool.Add(new PoolRow(this, i));
 
-            string[] names = GetPokemonNamesWithForms(508);
+            string[] names = _data.FromSource ? GetPokemonNames() : GetPokemonNamesWithForms(508);
             for (int id = 1; id < names.Length; id++)
                 if (MoveTutorData.RowOf(id) is int row && row >= 0) Species.Add((names[id], row));
             _species = 0; _tutor = 0;
@@ -227,11 +227,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_data == null) return true;
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Move Tutors"); return false; }
-            try { _data.Save(MoveNames.Length); }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            if (_data.FromSource)
             {
-                await DialogHelper.ShowError("The move tutors were not saved:\n" + e.Message, "Move Tutors");
-                return false;
+                var (saved, error) = await HgEngineSave.RunAsync(() => { _data.Save(MoveNames.Length); return null; });
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError("The move tutors were not saved:\n" + error, "Move Tutors");
+                    return false;
+                }
+            }
+            else
+            {
+                try { _data.Save(MoveNames.Length); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+                {
+                    await DialogHelper.ShowError("The move tutors were not saved:\n" + e.Message, "Move Tutors");
+                    return false;
+                }
             }
             _savedPool = _data.PoolBytes();
             _savedMasks = _data.MaskBytes();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Avalonia.Controls;
@@ -19,6 +20,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public int Slot { get; }
         public string[] ItemNames { get; }
         public bool HasTier => _getTier != null;
+        /// <summary>Vanilla stock tier, or on hg-engine the badges needed (Kanto's count too).</summary>
+        public int MaxTier { get; }
 
         public int ItemId
         {
@@ -37,7 +40,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => _getTier?.Invoke() ?? 1;
             set
             {
-                if (_getTier == null || value < 0 || value > 6 || value == _getTier()) return;
+                if (_getTier == null || value < 0 || value > MaxTier || value == _getTier()) return;
                 _setTier((ushort)value);
                 Notify();
                 _changed();
@@ -46,8 +49,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         internal MartItemRowVM(int slot, string[] itemNames, Func<ushort> getItem,
             Action<ushort> setItem, Action changed, Func<ushort> getTier = null,
-            Action<ushort> setTier = null)
+            Action<ushort> setTier = null, int maxTier = 6)
         {
+            MaxTier = maxTier;
             Slot = slot;
             ItemNames = itemNames;
             _getItem = getItem;
@@ -80,11 +84,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
     }
 
-    public sealed class MartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public sealed class MartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         private MartData _data;
         private readonly string[] _itemNames;
-        private bool _dirty;
+        private byte[] _saved;
         private MartShopVM _selectedShop;
 
         public ObservableCollection<MartShopVM> Shops { get; } = new();
@@ -109,18 +113,22 @@ namespace DSPRE.Avalonia.ViewModels.Items
             ? ""
             : SelectedShop.Kind + ", " + SelectedShop.CountLabel;
 
-        public bool HasUnsavedChanges => _dirty;
+        public bool HasUnsavedChanges => _data != null && _saved != null && !TakeState().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Mart inventories";
         public bool CanResize => _data?.ExpansionAvailable == true;
         public bool CanAddItem => CanResize && SelectedShop != null
-            && (!SelectedShop.IsCommon || SelectedShop.Items.Count < 63);
+            && (!SelectedShop.IsCommon || SelectedShop.Items.Count < _data.CommonItemLimit);
+        public bool CanAddShop => _data?.CanAddShops == true;
         public bool CanRemoveItem => CanResize && SelectedShop?.Items.Count > 1;
         public bool CanRemoveCustomShop => CanResize && SelectedShop?.SpecialtySource?.IsCustom == true
             && SelectedShop.SpecialtySource.Id == _data.SpecialtyShops.Count - 1;
-        public string ResizeStatus => CanResize
+        public string ResizeStatus => _data?.FromSource == true
+            ? $"Edited in hg-engine's {DSPRE.HgEngine.HgEngineMarts.SourceRelPath}. Lists can be any length; the marts themselves are the game's slots."
+            : CanResize
             ? "ARM9 expansion detected. Inventory resizing and custom marts are available."
             : "Apply the ARM9 expansion patch to add or remove inventory slots or custom marts.";
-        public string NewShopDisplayGuide => SelectedShop?.SpecialtySource?.IsCustom == true
+        public string NewShopDisplayGuide => _data?.FromSource == true ? ""
+            : SelectedShop?.SpecialtySource?.IsCustom == true
             ? $"To display this mart, call SpMartScreen {SelectedShop.SpecialtySource.Id} from your script. DSPRE does not modify scripts automatically."
             : "Custom marts receive a new SpMartScreen ID. You remain responsible for calling that ID from an event script.";
 
@@ -137,6 +145,60 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _data = data ?? throw new ArgumentNullException(nameof(data));
             _itemNames = itemNames ?? Array.Empty<string>();
             PopulateShops();
+            StartUndo();
+        }
+
+        private ByteStateUndo _undo;
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private void StartUndo()
+        {
+            _saved = TakeState();
+            _undo = new ByteStateUndo(TakeState, ApplyState, () => { Notify(nameof(CanUndo)); Notify(nameof(CanRedo)); });
+            Notify(nameof(CanUndo)); Notify(nameof(CanRedo)); Notify(nameof(HasUnsavedChanges));
+        }
+
+        private byte[] TakeState() => ByteStateUndo.Pack(w =>
+        {
+            w.Write(_data.CommonItems.Count);
+            foreach (var e in _data.CommonItems) { w.Write(e.ItemId); w.Write(e.RequiredTier); }
+            w.Write(_data.SpecialtyShops.Count);
+            foreach (var shop in _data.SpecialtyShops) { w.Write(shop.Items.Count); foreach (ushort item in shop.Items) w.Write(item); }
+        });
+
+        // Shows the mart the step changed.
+        private void ApplyState(byte[] state)
+        {
+            byte[] before = TakeState();
+            int changed = -1;
+            ByteStateUndo.Unpack(state, r =>
+            {
+                var common = new System.Collections.Generic.List<MartData.CommonEntry>();
+                for (int n = r.ReadInt32(), i = 0; i < n; i++) common.Add(new MartData.CommonEntry { ItemId = r.ReadUInt16(), RequiredTier = r.ReadUInt16() });
+                if (common.Count != _data.CommonItems.Count || common.Where((e, i) => e.ItemId != _data.CommonItems[i].ItemId || e.RequiredTier != _data.CommonItems[i].RequiredTier).Any())
+                    changed = 0;
+                _data.CommonItems.Clear();
+                _data.CommonItems.AddRange(common);
+
+                int shops = r.ReadInt32();
+                while (_data.SpecialtyShops.Count > shops) _data.RemoveLastSpecialtyShop();
+                while (_data.SpecialtyShops.Count < shops) _data.AddSpecialtyShop();
+                for (int s = 0; s < shops; s++)
+                {
+                    var items = new System.Collections.Generic.List<ushort>();
+                    for (int n = r.ReadInt32(), i = 0; i < n; i++) items.Add(r.ReadUInt16());
+                    var list = _data.SpecialtyShops[s].Items;
+                    if (changed < 0 && !list.SequenceEqual(items)) changed = s + 1;
+                    list.Clear();
+                    list.AddRange(items);
+                }
+            });
+            PopulateShops(changed >= 0 ? changed : Math.Max(0, Shops.IndexOf(SelectedShop)));
+            foreach (var n in new[] { nameof(SelectedShopDescription), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop), nameof(HasUnsavedChanges) })
+                Notify(n);
         }
 
         private void PopulateShops(int selectedIndex = 0)
@@ -151,7 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                     value => entry.ItemId = value,
                     SetDirty,
                     () => entry.RequiredTier,
-                    value => entry.RequiredTier = value));
+                    value => entry.RequiredTier = value, _data.MaxTier));
             }
             Shops.Add(common);
 
@@ -198,7 +260,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public void AddShop()
         {
-            if (!CanResize) return;
+            if (!CanAddShop) return;
             MartData.SpecialtyShop added = _data.AddSpecialtyShop();
             PopulateShops(added.Id + 1);
             SetDirty();
@@ -215,9 +277,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public void SaveChanges()
         {
-            if (!_dirty || _data == null) return;
+            if (_data == null || !HasUnsavedChanges) return;
             if (!_data.SaveCurrent()) return;
-            SetClean();
+            _saved = TakeState();
+            Notify(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
         }
 
@@ -227,7 +290,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         /// <summary>Applies the ARM9 expansion and reloads the marts so they can grow.</summary>
         public async System.Threading.Tasks.Task OfferExpansionAsync()
         {
-            if (_dirty)
+            if (HasUnsavedChanges)
             {
                 await DialogHelper.ShowInfo("Save or discard the mart changes first; the marts reload after the expansion.", "Mart Editor");
                 return;
@@ -235,7 +298,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (!await Arm9ExpansionOffer.EnsureAsync("Adding mart slots or custom marts", "Mart Editor")) return;
             _data = MartData.LoadCurrent();
             PopulateShops();
-            foreach (var n in new[] { nameof(CanResize), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop),
+            StartUndo();
+            foreach (var n in new[] { nameof(CanResize), nameof(CanAddShop), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop),
                                       nameof(ResizeStatus), nameof(CanOfferExpansion) })
                 Notify(n);
         }
@@ -249,23 +313,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 PopulateShops(selected);
                 foreach (var n in new[] { nameof(SelectedShopDescription), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop) })
                     Notify(n);
+                StartUndo();
             }
-            _dirty = false;
-            Notify(nameof(HasUnsavedChanges));
         }
 
         private void SetDirty()
         {
-            if (_dirty) return;
-            _dirty = true;
             Notify(nameof(HasUnsavedChanges));
-        }
-
-        private void SetClean()
-        {
-            if (!_dirty) return;
-            _dirty = false;
-            Notify(nameof(HasUnsavedChanges));
+            _undo?.Record();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

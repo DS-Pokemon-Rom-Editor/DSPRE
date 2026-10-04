@@ -8,7 +8,7 @@
   <Grid ColumnDefinitions="*,*" Margin="4">
 
     <!-- ── Normal encounters (Morning / Day / Night) ─────────────────────────── -->
-    <HeaderedContentControl Grid.Column="0" Header="Normal encounters" Margin="0,0,4,0">
+    <GroupBox Grid.Column="0" Header="Normal encounters" Margin="0,0,4,0">
       <TabControl>
         <TabItem Header="Morning">
           <DockPanel>
@@ -17,6 +17,8 @@
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="Level" VerticalAlignment="Center"/>
                 <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding MorningLevel}"/>
+                <TextBlock Text="Form" VerticalAlignment="Center" IsVisible="{Binding ShowForms}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="31" Increment="1" Value="{Binding MorningForm}" IsVisible="{Binding ShowForms}"/>
               </StackPanel>
             </StackPanel>
             <ListBox ItemsSource="{Binding MorningItems}" SelectedIndex="{Binding MorningIndex}">
@@ -38,6 +40,8 @@
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="Level" VerticalAlignment="Center"/>
                 <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding DayLevel}"/>
+                <TextBlock Text="Form" VerticalAlignment="Center" IsVisible="{Binding ShowForms}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="31" Increment="1" Value="{Binding DayForm}" IsVisible="{Binding ShowForms}"/>
               </StackPanel>
             </StackPanel>
             <ListBox ItemsSource="{Binding DayItems}" SelectedIndex="{Binding DayIndex}">
@@ -59,6 +63,8 @@
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Text="Level" VerticalAlignment="Center"/>
                 <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding NightLevel}"/>
+                <TextBlock Text="Form" VerticalAlignment="Center" IsVisible="{Binding ShowForms}"/>
+                <NumericUpDown Width="90" Minimum="0" Maximum="31" Increment="1" Value="{Binding NightForm}" IsVisible="{Binding ShowForms}"/>
               </StackPanel>
             </StackPanel>
             <ListBox ItemsSource="{Binding NightItems}" SelectedIndex="{Binding NightIndex}">
@@ -74,10 +80,10 @@
           </DockPanel>
         </TabItem>
       </TabControl>
-    </HeaderedContentControl>
+    </GroupBox>
 
     <!-- ── Object encounters (shared slots + requirements) ───────────────────── -->
-    <HeaderedContentControl Grid.Column="1" Header="Object encounters" Margin="4,0,0,0">
+    <GroupBox Grid.Column="1" Header="Object encounters" Margin="4,0,0,0">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
           <Button Content="Add slot" controls:Icon.Key="addIcon"    Click="AddObject_Click"    IsEnabled="{Binding CanEditObjectSlotCount}"/>
@@ -93,12 +99,15 @@
             <TextBlock Text="Morning" FontWeight="Bold"/>
             <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjMorningSpecies}"/>
             <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjMorningLevel}"/>
+            <NumericUpDown Minimum="0" Maximum="31" Increment="1" Value="{Binding ObjMorningForm}" IsVisible="{Binding ShowForms}" ToolTip.Tip="Form"/>
             <TextBlock Text="Day" FontWeight="Bold"/>
             <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjDaySpecies}"/>
             <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjDayLevel}"/>
+            <NumericUpDown Minimum="0" Maximum="31" Increment="1" Value="{Binding ObjDayForm}" IsVisible="{Binding ShowForms}" ToolTip.Tip="Form"/>
             <TextBlock Text="Night" FontWeight="Bold"/>
             <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjNightSpecies}"/>
             <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjNightLevel}"/>
+            <NumericUpDown Minimum="0" Maximum="31" Increment="1" Value="{Binding ObjNightForm}" IsVisible="{Binding ShowForms}" ToolTip.Tip="Form"/>
             <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
               <TextBlock Text="Requirement" FontWeight="Bold"/>
               <TextBlock Text="!" FontWeight="Bold" Foreground="{DynamicResource Editor.Warn}"
@@ -112,6 +121,6 @@
           </StackPanel>
         </ScrollViewer>
       </DockPanel>
-    </HeaderedContentControl>
+    </GroupBox>
   </Grid>
 </UserControl>

@@ -34,7 +34,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int MethodIndex
         {
             get => _methodIndex;
-            set { if (_methodIndex != value) { _methodIndex = value; OnPropertyChanged(); OnPropertyChanged(nameof(ParamLabel)); OnPropertyChanged(nameof(IsParamEnabled)); OnPropertyChanged(nameof(ParamMaximum)); OnPropertyChanged(nameof(IsTargetEnabled)); Changed?.Invoke(); } }
+            // A combo that loses its items (the tab unloading) reports -1; the stored method is kept.
+            set { if (value >= 0 && _methodIndex != value) { _methodIndex = value; OnPropertyChanged(); OnPropertyChanged(nameof(ParamLabel)); OnPropertyChanged(nameof(IsParamEnabled)); OnPropertyChanged(nameof(ParamMaximum)); OnPropertyChanged(nameof(IsTargetEnabled)); Changed?.Invoke(); } }
         }
 
         private int _targetIndex;
@@ -333,7 +334,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Live refresh: when dropdown labels are customised (Tools ▸ Edit Dropdown Labels), reload.
             AppEvents.LabelsChanged += OnLabelsChanged;
 
-            for (int i = 0; i < EvolutionFile.numEvolutions; i++)
+            // hg-engine sets its own slot count; Eevee alone needs eight.
+            int slots = UseHgEngineSource && DSPRE.HgEngine.HgEngineEvolutions.MaxSlots() is int max and > 0 ? max : EvolutionFile.numEvolutions;
+            for (int i = 0; i < slots; i++)
             {
                 var row = new EvolutionRowViewModel
                 {
@@ -368,9 +371,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     // Evolutions isn't synced from a packed NARC, so the vanilla read path below would
                     // show stale ROM data instead of the checkout's real data/Evolutions.c.
                     _hgLoadError = null;
-                    if (!DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvolutionFile.numEvolutions, out var hgEntries, out string loadError))
+                    if (!DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvoRows.Count, out var hgEntries, out string loadError))
                         _hgLoadError = loadError;
-                    for (int i = 0; i < EvolutionFile.numEvolutions; i++)
+                    for (int i = 0; i < EvoRows.Count; i++)
                     {
                         var row = EvoRows[i];
                         if (i < hgEntries.Count)

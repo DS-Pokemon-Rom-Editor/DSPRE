@@ -20,7 +20,6 @@ namespace DSPRE.Avalonia.ViewModels.Items
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private readonly List<ushort> _ids;
-        private readonly string[] _names;
         private readonly int _b; // bracket index
         private readonly Action _dirty;
         private readonly Action<int> _adjacentRefresh; // pass absolute id index
@@ -30,32 +29,25 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public string LevelRange { get; }
 
-        public CommonPickupRow(int bracket, List<ushort> ids, string[] names,
+        public CommonPickupRow(int bracket, List<ushort> ids,
                                Action dirty, Action<int> adjacentRefresh,
                                ObservableCollection<string> itemNamesList)
         {
-            _b = bracket; _ids = ids; _names = names;
+            _b = bracket; _ids = ids;
             _dirty = dirty; _adjacentRefresh = adjacentRefresh;
             ItemNamesList = itemNamesList;
             LevelRange = $"Lv {bracket * 10 + 1}-{(bracket + 1) * 10}";
         }
 
-        private string Get(int slot)
-        {
-            var id = _ids[_b + slot];
-            return id < _names.Length ? $"{id}: {_names[id]}" : $"{id}: ???";
-        }
+        private int Get(int slot) => _ids[_b + slot];
 
-        private void Set(int slot, string val)
+        // The list's index is the item id. -1 is the box being cleared, which keeps the item.
+        private void Set(int slot, int id)
         {
-            if (val == null) return;
-            int colon = val.IndexOf(':');
-            if (colon > 0 && ushort.TryParse(val.Substring(0, colon).Trim(), out ushort id))
-            {
-                _ids[_b + slot] = id;
-                _dirty();
-                _adjacentRefresh(_b + slot);
-            }
+            if (id < 0 || id > ushort.MaxValue || _ids[_b + slot] == id) return;
+            _ids[_b + slot] = (ushort)id;
+            _dirty();
+            _adjacentRefresh(_b + slot);
         }
 
         public void RefreshSlots(int absoluteId)
@@ -65,15 +57,15 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (rel >= 0 && rel <= 8) OnPC($"Item{rel}");
         }
 
-        public string Item0 { get => Get(0); set => Set(0, value); }
-        public string Item1 { get => Get(1); set => Set(1, value); }
-        public string Item2 { get => Get(2); set => Set(2, value); }
-        public string Item3 { get => Get(3); set => Set(3, value); }
-        public string Item4 { get => Get(4); set => Set(4, value); }
-        public string Item5 { get => Get(5); set => Set(5, value); }
-        public string Item6 { get => Get(6); set => Set(6, value); }
-        public string Item7 { get => Get(7); set => Set(7, value); }
-        public string Item8 { get => Get(8); set => Set(8, value); }
+        public int Item0 { get => Get(0); set => Set(0, value); }
+        public int Item1 { get => Get(1); set => Set(1, value); }
+        public int Item2 { get => Get(2); set => Set(2, value); }
+        public int Item3 { get => Get(3); set => Set(3, value); }
+        public int Item4 { get => Get(4); set => Set(4, value); }
+        public int Item5 { get => Get(5); set => Set(5, value); }
+        public int Item6 { get => Get(6); set => Set(6, value); }
+        public int Item7 { get => Get(7); set => Set(7, value); }
+        public int Item8 { get => Get(8); set => Set(8, value); }
     }
 
     public class RarePickupRow : INotifyPropertyChanged
@@ -83,7 +75,6 @@ namespace DSPRE.Avalonia.ViewModels.Items
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private readonly List<ushort> _ids;
-        private readonly string[] _names;
         private readonly int _b;
         private readonly Action _dirty;
         private readonly Action<int> _adjacentRefresh;
@@ -91,32 +82,25 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public ObservableCollection<string> ItemNamesList { get; }
         public string LevelRange { get; }
 
-        public RarePickupRow(int bracket, List<ushort> ids, string[] names,
+        public RarePickupRow(int bracket, List<ushort> ids,
                              Action dirty, Action<int> adjacentRefresh,
                              ObservableCollection<string> itemNamesList)
         {
-            _b = bracket; _ids = ids; _names = names;
+            _b = bracket; _ids = ids;
             _dirty = dirty; _adjacentRefresh = adjacentRefresh;
             ItemNamesList = itemNamesList;
             LevelRange = $"Lv {bracket * 10 + 1}-{(bracket + 1) * 10}";
         }
 
-        private string Get(int slot)
-        {
-            var id = _ids[_b + slot];
-            return id < _names.Length ? $"{id}: {_names[id]}" : $"{id}: ???";
-        }
+        private int Get(int slot) => _ids[_b + slot];
 
-        private void Set(int slot, string val)
+        // The list's index is the item id. -1 is the box being cleared, which keeps the item.
+        private void Set(int slot, int id)
         {
-            if (val == null) return;
-            int colon = val.IndexOf(':');
-            if (colon > 0 && ushort.TryParse(val.Substring(0, colon).Trim(), out ushort id))
-            {
-                _ids[_b + slot] = id;
-                _dirty();
-                _adjacentRefresh(_b + slot);
-            }
+            if (id < 0 || id > ushort.MaxValue || _ids[_b + slot] == id) return;
+            _ids[_b + slot] = (ushort)id;
+            _dirty();
+            _adjacentRefresh(_b + slot);
         }
 
         public void RefreshSlots(int absoluteId)
@@ -125,8 +109,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (rel >= 0 && rel <= 1) OnPC($"Item{rel}");
         }
 
-        public string Item0 { get => Get(0); set => Set(0, value); }
-        public string Item1 { get => Get(1); set => Set(1, value); }
+        public int Item0 { get => Get(0); set => Set(0, value); }
+        public int Item1 { get => Get(1); set => Set(1, value); }
     }
 
     public class ActivationRowVM : INotifyPropertyChanged
@@ -246,39 +230,34 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public string Label { get; }
         public readonly ushort[] ItemIDs;
-        private readonly string[] _names;
         private readonly Action _dirty;
 
         /// <summary>The choices for every slot, shared with the editor.</summary>
         public ObservableCollection<string> ItemNames { get; }
 
-        public RockSmashItemSlotsRow(string label, ushort[] itemIDs, string[] names, ObservableCollection<string> itemNames, Action dirty)
+        public RockSmashItemSlotsRow(string label, ushort[] itemIDs, ObservableCollection<string> itemNames, Action dirty)
         {
-            Label = label; ItemIDs = itemIDs; _names = names; ItemNames = itemNames; _dirty = dirty;
+            Label = label; ItemIDs = itemIDs; ItemNames = itemNames; _dirty = dirty;
         }
 
-        private string Get(int slot) =>
-            ItemIDs[slot] < _names.Length ? $"{ItemIDs[slot]}: {_names[ItemIDs[slot]]}" : $"{ItemIDs[slot]}: ???";
+        private int Get(int slot) => ItemIDs[slot];
 
-        private void Set(int slot, string val)
+        // The list's index is the item id. -1 is the box being cleared, which keeps the item.
+        private void Set(int slot, int id)
         {
-            if (val == null) return;
-            int colon = val.IndexOf(':');
-            if (colon > 0 && ushort.TryParse(val.Substring(0, colon).Trim(), out ushort id))
-            {
-                ItemIDs[slot] = id;
-                _dirty();
-            }
+            if (id < 0 || id > ushort.MaxValue || ItemIDs[slot] == id) return;
+            ItemIDs[slot] = (ushort)id;
+            _dirty();
         }
 
-        public string Item0 { get => Get(0); set => Set(0, value); }
-        public string Item1 { get => Get(1); set => Set(1, value); }
-        public string Item2 { get => Get(2); set => Set(2, value); }
-        public string Item3 { get => Get(3); set => Set(3, value); }
-        public string Item4 { get => Get(4); set => Set(4, value); }
-        public string Item5 { get => Get(5); set => Set(5, value); }
-        public string Item6 { get => Get(6); set => Set(6, value); }
-        public string Item7 { get => Get(7); set => Set(7, value); }
+        public int Item0 { get => Get(0); set => Set(0, value); }
+        public int Item1 { get => Get(1); set => Set(1, value); }
+        public int Item2 { get => Get(2); set => Set(2, value); }
+        public int Item3 { get => Get(3); set => Set(3, value); }
+        public int Item4 { get => Get(4); set => Set(4, value); }
+        public int Item5 { get => Get(5); set => Set(5, value); }
+        public int Item6 { get => Get(6); set => Set(6, value); }
+        public int Item7 { get => Get(7); set => Set(7, value); }
 
         public void Refresh() { for (int i = 0; i < 8; i++) OnPC($"Item{i}"); }
     }
@@ -414,7 +393,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // The 3 hardcoded item-slot tables are RockSmashItemSlots, at English-only-confirmed offsets.
 
         public bool ShowRockSmashTab { get; }
-        public bool ShowRockSmashItemTables { get; }
+        public bool ShowRockSmashItemTables { get; private set; }
         public ObservableCollection<RockSmashHeaderRow> RockSmashRows { get; } = new();
         public RockSmashItemSlotsRow RockSmashDefaultTable { get; private set; }
         public RockSmashItemSlotsRow RockSmashRuinsOfAlphTable { get; private set; }
@@ -601,12 +580,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             CommonRows.Clear();
             for (int b = 0; b < 10; b++)
-                CommonRows.Add(new CommonPickupRow(b, _commonIDs, _rawItemNames,
+                CommonRows.Add(new CommonPickupRow(b, _commonIDs,
                     SetPickupDirty, RefreshCommonAdjacent, ItemNames));
 
             RareRows.Clear();
             for (int b = 0; b < 10; b++)
-                RareRows.Add(new RarePickupRow(b, _rareIDs, _rawItemNames,
+                RareRows.Add(new RarePickupRow(b, _rareIDs,
                     SetPickupDirty, RefreshRareAdjacent, ItemNames));
         }
 
@@ -799,17 +778,29 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             if (ShowRockSmashItemTables)
             {
-                RockSmashDefaultTable = new RockSmashItemSlotsRow("Default",
-                    RockSmashItemSlots.Read(RockSmashItemSlots.DefaultOffset), _rawItemNames, ItemNames, SetRockSmashDirty);
-                RockSmashRuinsOfAlphTable = new RockSmashItemSlotsRow("Ruins of Alph",
-                    RockSmashItemSlots.Read(RockSmashItemSlots.RuinsOfAlphOffset), _rawItemNames, ItemNames, SetRockSmashDirty);
-                RockSmashCliffCaveTable = new RockSmashItemSlotsRow("Cliff Cave",
-                    RockSmashItemSlots.Read(RockSmashItemSlots.CliffCaveOffset), _rawItemNames, ItemNames, SetRockSmashDirty);
-
-                OnPropertyChanged(nameof(RockSmashDefaultTable));
-                OnPropertyChanged(nameof(RockSmashRuinsOfAlphTable));
-                OnPropertyChanged(nameof(RockSmashCliffCaveTable));
+                try { LoadRockSmashItemTables(); }
+                // An hg-engine source DSPRE can't read hides the tables rather than showing wrong ones.
+                catch (InvalidOperationException e)
+                {
+                    AppLogger.Error("Item Tables, Rock Smash items: " + e.Message);
+                    ShowRockSmashItemTables = false;
+                    OnPropertyChanged(nameof(ShowRockSmashItemTables));
+                }
             }
+        }
+
+        private void LoadRockSmashItemTables()
+        {
+            RockSmashDefaultTable = new RockSmashItemSlotsRow("Default",
+                RockSmashItemSlots.Read(RockSmashItemSlots.DefaultOffset), ItemNames, SetRockSmashDirty);
+            RockSmashRuinsOfAlphTable = new RockSmashItemSlotsRow("Ruins of Alph",
+                RockSmashItemSlots.Read(RockSmashItemSlots.RuinsOfAlphOffset), ItemNames, SetRockSmashDirty);
+            RockSmashCliffCaveTable = new RockSmashItemSlotsRow("Cliff Cave",
+                RockSmashItemSlots.Read(RockSmashItemSlots.CliffCaveOffset), ItemNames, SetRockSmashDirty);
+
+            OnPropertyChanged(nameof(RockSmashDefaultTable));
+            OnPropertyChanged(nameof(RockSmashRuinsOfAlphTable));
+            OnPropertyChanged(nameof(RockSmashCliffCaveTable));
         }
 
         private void BuildRockSmashDummyRows()
@@ -818,9 +809,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 RockSmashRows.Add(new RockSmashHeaderRow(new RockSmashData((ushort)i, ""), $"Route {i}", SetRockSmashDirty));
 
             ushort[] Dummy() => new ushort[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-            RockSmashDefaultTable      = new RockSmashItemSlotsRow("Default", Dummy(), _rawItemNames, ItemNames, SetRockSmashDirty);
-            RockSmashRuinsOfAlphTable  = new RockSmashItemSlotsRow("Ruins of Alph", Dummy(), _rawItemNames, ItemNames, SetRockSmashDirty);
-            RockSmashCliffCaveTable    = new RockSmashItemSlotsRow("Cliff Cave", Dummy(), _rawItemNames, ItemNames, SetRockSmashDirty);
+            RockSmashDefaultTable      = new RockSmashItemSlotsRow("Default", Dummy(), ItemNames, SetRockSmashDirty);
+            RockSmashRuinsOfAlphTable  = new RockSmashItemSlotsRow("Ruins of Alph", Dummy(), ItemNames, SetRockSmashDirty);
+            RockSmashCliffCaveTable    = new RockSmashItemSlotsRow("Cliff Cave", Dummy(), ItemNames, SetRockSmashDirty);
         }
 
         // ── Save ──────────────────────────────────────────────────────────────
@@ -930,9 +921,18 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             if (ShowRockSmashItemTables)
             {
-                RockSmashItemSlots.Write(RockSmashItemSlots.DefaultOffset, RockSmashDefaultTable.ItemIDs);
-                RockSmashItemSlots.Write(RockSmashItemSlots.RuinsOfAlphOffset, RockSmashRuinsOfAlphTable.ItemIDs);
-                RockSmashItemSlots.Write(RockSmashItemSlots.CliffCaveOffset, RockSmashCliffCaveTable.ItemIDs);
+                try
+                {
+                    RockSmashItemSlots.Write(RockSmashItemSlots.DefaultOffset, RockSmashDefaultTable.ItemIDs);
+                    RockSmashItemSlots.Write(RockSmashItemSlots.RuinsOfAlphOffset, RockSmashRuinsOfAlphTable.ItemIDs);
+                    RockSmashItemSlots.Write(RockSmashItemSlots.CliffCaveOffset, RockSmashCliffCaveTable.ItemIDs);
+                }
+                catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
+                {
+                    AppLogger.Error("Item Tables, Rock Smash items: " + e.Message);
+                    _ = DialogHelper.ShowError("The Rock Smash items were not saved:\n" + e.Message, "Item Tables");
+                    return;
+                }
             }
 
             _rockSmashDirty = false;

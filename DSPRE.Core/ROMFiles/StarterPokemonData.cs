@@ -44,6 +44,13 @@ namespace DSPRE.ROMFiles
         /// <summary>Reads the 3 current starter species IDs.</summary>
         public static int[] GetStarters()
         {
+            // hg-engine sets the starters from src/starters.c at run time.
+            if (HgEngine.HgEngineStarters.Available)
+            {
+                if (HgEngine.HgEngineStarters.TryRead(out int[] species, out _, out string error)) return species;
+                AppLogger.Warn("StarterPokemonData: " + error);
+                return (int[])VanillaHgssStarters.Clone();
+            }
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {
                 ARM9.DecompressIfMarked();
@@ -149,7 +156,12 @@ namespace DSPRE.ROMFiles
             // The DP/Pt selection-scene patch rewrites code, so the same three species must not touch anything.
             if (oldSpecies != null && oldSpecies.SequenceEqual(newSpecies)) return true;
 
-            if (!SetSpeciesAndGraphics(newSpecies))
+            if (HgEngine.HgEngineStarters.Available)
+            {
+                // Its hooks also pick the cries from the species, so only the choices are written.
+                if (!HgEngine.HgEngineStarters.TryWrite(newSpecies, out string error)) { AppLogger.Error("StarterPokemonData: " + error); return false; }
+            }
+            else if (!SetSpeciesAndGraphics(newSpecies))
                 return false; // couldn't safely locate the species table, leave everything else untouched
 
             // The species table (the part that actually matters for gameplay) is already written at this
@@ -157,7 +169,7 @@ namespace DSPRE.ROMFiles
             // a text archive that fails to decode, ...) must not make it look like the save itself failed.
             RunBestEffort("starter cries", () =>
             {
-                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) PatchStarterCries(newSpecies);
+                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && !HgEngine.HgEngineStarters.Available) PatchStarterCries(newSpecies);
             });
             var touched = scriptFilesTouched;
             RunBestEffort("rival/tag-battle scripts", () => touched.AddRange(PatchRivalAndTagBattleScripts(oldSpecies, newSpecies)));

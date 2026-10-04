@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Items.ItemEditorView"
         x:DataType="vm:ItemEditorViewModel"
-        Title="Item Data Editor"
+        Title="Item data editor"
         Width="900" Height="700"
         MinWidth="800" MinHeight="600">
 
@@ -14,8 +14,7 @@
 
     <DockPanel>
         <!-- ── Top: Item Selector ── -->
-        <Border DockPanel.Dock="Top" Padding="6,4" BorderThickness="0,0,0,1" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}">
-            <WrapPanel x:Name="ItemBar" Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
+        <controls:EditorToolbar x:Name="ItemBar">
                 <Button x:Name="SaveAllButton" Content="Save" controls:Icon.Key="saveButton" IsEnabled="{Binding HasUnsavedChanges}"/>
                 <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
                 <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
@@ -31,12 +30,11 @@
                                Width="100" FormatString="0"/>
                 <Separator Width="12"/>
                 <Button x:Name="ExportButton" Click="Export_Click" Content="Export…" controls:Icon.Key="export"/>
-                <Button Content="Open icon in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+                <Button Content="Open icon in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
                         ToolTip.Tip="Open this item's icon in the Graphics window, where it can be painted by hand."/>
                 <Button x:Name="AddItemButton" Content="Add new item…" controls:Icon.Key="addIcon" IsVisible="{Binding ShowHgEngineBanner}"
                         ToolTip.Tip="Mint a brand new item in the linked hg-engine checkout"/>
-            </WrapPanel>
-        </Border>
+        </controls:EditorToolbar>
         <TextBlock DockPanel.Dock="Top" Margin="8,3" Text="{Binding SharedDataNote}" IsVisible="{Binding HasSharedDataNote}"
                    Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
         <TextBlock x:Name="TableLimitNote" DockPanel.Dock="Top" Margin="8,3" Text="{Binding TableLimitNote}" IsVisible="{Binding HasTableLimitNote}"
@@ -215,7 +213,7 @@
                         </TextBlock>
                         <TabControl>
                             <!-- Status Heals tab -->
-                            <TabItem Header="Status Heals">
+                            <TabItem Header="Status heals">
                                 <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
                                       Margin="4" ColumnSpacing="16" RowSpacing="4">
                                     <CheckBox Grid.Row="0" Grid.Column="0" IsChecked="{Binding SlpHeal}">Sleep Heal</CheckBox>
@@ -236,7 +234,7 @@
                             </TabItem>
 
                             <!-- Stat Stages tab -->
-                            <TabItem Header="Stat Stages">
+                            <TabItem Header="Stat stages">
                                 <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                       Margin="4" ColumnSpacing="8" RowSpacing="4">
                                     <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">Attack:</TextBlock>

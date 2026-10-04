@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.BtxEditorView"
         x:DataType="vm:BtxEditorViewModel"
-        Title="Overworld Editor"
+        Title="Overworld editor"
         Width="1000" Height="560"
         MinWidth="860" MinHeight="420"
         WindowStartupLocation="CenterScreen">
@@ -13,9 +13,7 @@
   </Design.DataContext>
 
   <DockPanel>
-  <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-          BorderThickness="0,0,0,1" Padding="6,4">
-    <WrapPanel x:Name="SpriteButtons" Classes="toolbar">
+  <controls:EditorToolbar x:Name="SpriteButtons">
       <Button Content="Save selected" controls:Icon.Key="saveButton" Click="SaveSelected_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Save all" controls:Icon.Key="saveButton" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -25,26 +23,19 @@
       <Button Content="Show file" Click="ShowFile_Click" IsEnabled="{Binding HasSelectedEntry}"/>
       <CheckBox Content="Shiny palette" IsChecked="{Binding IsShiny}"
                 IsEnabled="{Binding HasShinyPalette}" ToolTip.Tip="{Binding ShinyPaletteNote}"/>
-      <StackPanel x:Name="EntryButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
-        <StackPanel.IsVisible>
-          <MultiBinding Converter="{x:Static BoolConverters.And}">
-            <Binding Path="HasRenderTable"/>
-            <Binding Path="IsExpansionApplied"/>
-          </MultiBinding>
-        </StackPanel.IsVisible>
+      <StackPanel x:Name="EntryButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding ShowEntryButtons}">
         <Button Content="Add custom entry…" controls:Icon.Key="addIcon" Click="AddEntry_Click" IsEnabled="{Binding CanAddEntry}"
-                ToolTip.Tip="Needs the overworld sprite expansion patch"/>
+                ToolTip.Tip="{Binding AddEntryNote}"/>
         <Button Content="Delete selected entry" controls:Icon.Key="deleteIcon" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}"
-                ToolTip.Tip="Only entries you added"/>
+                IsVisible="{Binding IsExpansionApplied}" ToolTip.Tip="Only entries you added"/>
       </StackPanel>
       <TextBlock Text="{Binding ModifiedCount}" Foreground="OrangeRed" FontSize="12"/>
-    </WrapPanel>
-  </Border>
+  </controls:EditorToolbar>
 
   <Grid ColumnDefinitions="160,8,*,8,260" Margin="8">
     <!-- Left: entry list -->
     <DockPanel Grid.Column="0">
-      <TextBlock DockPanel.Dock="Top" Text="OW Entries" FontWeight="SemiBold" Margin="0,0,0,4"/>
+      <TextBlock DockPanel.Dock="Top" Text="OW entries" FontWeight="SemiBold" Margin="0,0,0,4"/>
       <ListBox ItemsSource="{Binding OwEntries}"
                SelectedIndex="{Binding SelectedIndex}"
                ScrollViewer.VerticalScrollBarVisibility="Auto"/>

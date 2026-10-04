@@ -16,9 +16,7 @@
       <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="SaveAll_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
@@ -35,8 +33,7 @@
 
         <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="200" PlaceholderText="trainer name…"/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Grid ColumnDefinitions="480,*">
       <TreeView Grid.Column="0" Margin="4" ItemsSource="{Binding Tree}">

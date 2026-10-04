@@ -193,13 +193,32 @@ namespace DSPRE.Avalonia.Data
             new("JumpIfBatonPass", 1, false, -1),
         };
 
-        public static BattleAnimCommand[] Table(WazaSeqVersion v) => v == WazaSeqVersion.HGSS ? Hgss : Plat;
+        public static BattleAnimCommand[] Table(WazaSeqVersion v) => v == WazaSeqVersion.HGSS ? WithHgEngine(Hgss) : Plat;
         public static int Count(WazaSeqVersion v) => Table(v).Length;
         public static bool TryGet(WazaSeqVersion v, int id, out BattleAnimCommand op)
         {
             var t = Table(v);
-            if (id >= 0 && id < t.Length) { op = t[id]; return true; }
+            if (id >= 0 && id < t.Length && t[id].ArgCount >= 0) { op = t[id]; return true; }
             op = default; return false;
+        }
+
+        private static System.Collections.Generic.IReadOnlyDictionary<int, HgEngine.HgEngineScriptCommands.Command> _extendedFrom;
+        private static BattleAnimCommand[] _extended;
+
+        // hg-engine adds commands after the game's own (changepermanentbg is 0x58); a number it skips stays unknown.
+        private static BattleAnimCommand[] WithHgEngine(BattleAnimCommand[] retail)
+        {
+            var added = HgEngine.HgEngineScriptCommands.Animation();
+            if (added.Count == 0) return retail;
+            if (ReferenceEquals(added, _extendedFrom)) return _extended;
+            int last = System.Math.Max(retail.Length - 1, System.Linq.Enumerable.Max(added.Keys));
+            var table = new BattleAnimCommand[last + 1];
+            for (int i = 0; i <= last; i++)
+                table[i] = i < retail.Length ? retail[i]
+                    : added.TryGetValue(i, out var c) ? new BattleAnimCommand(c.Name, c.ArgCount, false, -1)
+                    : new BattleAnimCommand("op" + i, -1, false, -1);
+            _extendedFrom = added;
+            return _extended = table;
         }
         public static string Name(WazaSeqVersion v, int id) => TryGet(v, id, out var op) ? op.Name : null;
         public static int Id(WazaSeqVersion v, string name)

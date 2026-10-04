@@ -55,6 +55,10 @@ namespace DSPRE.HgEngine
             return result;
         }
 
+        /// <summary>MAX_EVOS_PER_POKE from include/pokemon.h, or -1 when the checkout doesn't say.</summary>
+        public static int MaxSlots() =>
+            HgEngineSymbolTable.Load("include/pokemon.h") is { } header && header.TryGetValue("MAX_EVOS_PER_POKE", out int n) && n > 0 ? n : -1;
+
         /// <summary>Reads up to <paramref name="slotCount"/> entries. A species with no entry at all in
         /// Evolutions.c (e.g. a fakemon added after the last dump) reads as an empty list, not an error.</summary>
         public static bool TryGetEntries(int speciesId, int slotCount, out List<EvoEntry> entries, out string error)

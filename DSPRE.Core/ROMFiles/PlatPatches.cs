@@ -284,9 +284,9 @@ namespace DSPRE.ROMFiles
         public static TableLimits Limits()
         {
             if (string.IsNullOrEmpty(arm9Path) || !File.Exists(arm9Path)) return new TableLimits();
-            string key = arm9Path + "|" + File.GetLastWriteTimeUtc(arm9Path).Ticks + "|" + itemTableOffset;
+            string key = arm9Path + "|" + File.GetLastWriteTimeUtc(arm9Path).Ticks + "|" + itemTableOffset + "|" + isHGE;
             if (_limits.key == key && _limits.limits != null) return _limits.limits;
-            var limits = ComputeLimits(File.ReadAllBytes(arm9Path));
+            var limits = isHGE ? ComputedLimits() : ComputeLimits(File.ReadAllBytes(arm9Path));
             _limits = (key, limits);
             return limits;
         }
@@ -310,6 +310,21 @@ namespace DSPRE.ROMFiles
                 AppLogger.Error($"Item table: row {rows} points past the item archives, below the game's limit of {codeLimit}; items from {rows} on are left alone.");
             return new TableLimits { Count = rows, CodeLimit = codeLimit, FirstBadRow = codeLimit >= 0 && rows < cap ? rows : -1 };
         }
+
+        // hg-engine's GetItemIndex ignores the ARM9 table: an item's data is the member at its id, and the icon archive holds
+        // each item's drawing and colours at 2 * id + 2 and 2 * id + 3, after its shared NANR and NCER.
+        private static TableLimits ComputedLimits()
+        {
+            int dataCount = MemberCount(DirNames.itemData), iconCount = MemberCount(DirNames.itemIcons);
+            return new TableLimits { Count = Math.Max(0, Math.Min(dataCount, (iconCount - 2) / 2)) };
+        }
+
+        private static ItemNarcTableEntry ComputedRow(int itemId) => new ItemNarcTableEntry
+        {
+            itemData = (uint)itemId,
+            itemIcon = (uint)(itemId * 2 + 2),
+            itemPalette = (uint)(itemId * 2 + 3),
+        };
 
         /// <summary>The limit the game's item loader clamps ids to, when its code is where RomInfo expects; -1 otherwise.</summary>
         private static int ReadCodeLimit(byte[] arm9)
@@ -364,8 +379,14 @@ namespace DSPRE.ROMFiles
             catch (Exception ex) { AppLogger.Error("Item table: item names: " + ex.Message); return 0; }
         }
 
+        /// <summary>An item's row. On hg-engine it follows from the id, so an item added since the last build has one too.</summary>
         public static ItemNarcTableEntry Read(int itemId)
         {
+            if (isHGE)
+            {
+                if (itemId < 0) throw new InvalidOperationException($"Item {itemId} has no row in the item table.");
+                return ComputedRow(itemId);
+            }
             if (PlatPatches.TryReadItem(itemId, out var e)) return e;
             if (itemId < 0 || itemId >= VanillaCount) throw new InvalidOperationException($"Item {itemId} has no row in the item table.");
             uint o = itemTableOffset + (uint)itemId * 8;
@@ -380,6 +401,7 @@ namespace DSPRE.ROMFiles
 
         public static void Write(int itemId, ItemNarcTableEntry e)
         {
+            if (isHGE) throw new InvalidOperationException("hg-engine finds an item's data and icon by its id, so there is no item table to edit.");
             if (PlatPatches.TryWriteItem(itemId, e)) return;
             if (itemId < 0 || itemId >= VanillaCount) throw new InvalidOperationException($"Item {itemId} has no row in the item table.");
             uint o = itemTableOffset + (uint)itemId * 8;
@@ -400,6 +422,11 @@ namespace DSPRE.ROMFiles
         {
             var members = new int[itemCount];
             int vanilla = VanillaCount;
+            if (isHGE)
+            {
+                for (int i = 0; i < itemCount; i++) members[i] = i < vanilla ? i : -1;
+                return members;
+            }
             byte[] table = ARM9.ReadBytes(itemTableOffset, vanilla * 8);
             var expansion = PlatPatches.Items();
             for (int i = 0; i < itemCount; i++)

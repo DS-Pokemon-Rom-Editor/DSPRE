@@ -25,23 +25,20 @@
 	</Window.Styles>
 
 	<DockPanel>
-		<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-				BorderThickness="0,0,0,1" Padding="6,4">
-			<StackPanel Orientation="Horizontal" Spacing="6">
+		<controls:EditorToolbar>
 				<Button Content="Save" controls:Icon.Key="saveButton" Click="SaveButton_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 				<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 				<controls:UndoRedoButtons/>
 				<Button Content="Export CSV…" controls:Icon.Key="export" Click="ExportButton_Click" Margin="12,0,0,0"/>
 				<Button Content="Import CSV…" controls:Icon.Key="import" Click="ImportButton_Click"/>
-			</StackPanel>
-		</Border>
+		</controls:EditorToolbar>
 
 		<!-- Two columns: list, detail panel -->
 		<Grid Margin="8" ColumnDefinitions="280,*">
 
 			<!-- ── Left column: TM/HM list ─────────────────────────────── -->
 			<DockPanel Grid.Column="0" Margin="0,0,8,0">
-				<Label DockPanel.Dock="Top" Content="TM / HM List" FontWeight="SemiBold" Margin="0,0,0,4"/>
+				<Label DockPanel.Dock="Top" Content="TM / HM list" FontWeight="SemiBold" Margin="0,0,0,4"/>
 				<ListBox ItemsSource="{Binding MachineItems}"
 						 SelectedIndex="{Binding SelectedMachineIndex}"
 						 ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -75,7 +72,7 @@
 						HorizontalAlignment="Stretch"/>
 
 				<!-- Type / Palette selector -->
-				<Label Content="Palette (Type)"/>
+				<Label Content="Palette (type)"/>
 				<ComboBox ItemsSource="{Binding TypeNames}"
 						  SelectedIndex="{Binding SelectedTypeIndex}"
 						  IsEnabled="{Binding PalettesKnown}"

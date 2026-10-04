@@ -490,48 +490,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return (int)moveData.movetype;
         }
 
-        private static int PaletteToTypeIndex(int paletteID) => paletteID switch
-        {
-            398 => 1,  // Fighting
-            399 => 16, // Dragon
-            400 => 11, // Water
-            401 => 14, // Psychic
-            402 => 0,  // Normal
-            403 => 3,  // Poison
-            404 => 15, // Ice
-            405 => 12, // Grass
-            406 => 10, // Fire
-            407 => 17, // Dark
-            408 => 8,  // Steel
-            409 => 13, // Electric
-            410 => 4,  // Ground
-            411 => 7,  // Ghost
-            412 => 5,  // Rock
-            413 => 2,  // Flying
-            610 => 6,  // Bug
-            _   => 0,  // Fallback Normal
-        };
+        private static int PaletteToTypeIndex(int paletteID) => TMEditor.PaletteToTypeIndex(paletteID);
 
-        private static int TypeIndexToPalette(int typeIndex) => typeIndex switch
-        {
-            0  => 402, // Normal
-            1  => 398, // Fighting
-            2  => 413, // Flying
-            3  => 403, // Poison
-            4  => 410, // Ground
-            5  => 412, // Rock
-            6  => 610, // Bug
-            7  => 411, // Ghost
-            8  => 408, // Steel
-            10 => 406, // Fire
-            11 => 400, // Water
-            12 => 405, // Grass
-            13 => 409, // Electric
-            14 => 401, // Psychic
-            15 => 404, // Ice
-            16 => 399, // Dragon
-            17 => 407, // Dark
-            _  => 402, // Fallback Normal
-        };
+        private static int TypeIndexToPalette(int typeIndex) => TMEditor.TypeIndexToPalette(typeIndex);
     }
 }

@@ -258,7 +258,16 @@ namespace DSPRE.ROMFiles {
             return bitfield;
         }
         public void SaveToFileDefaultDir(int IDtoReplace, bool showSuccessMessage = true) {
-            SaveToFileDefaultDir(DirNames.personalPokeData, IDtoReplace, showSuccessMessage);
+            // The Pokédex type search lists each species under its types; hg-engine keeps those lists in PokedexSort.c.
+            (int, int)? before = null;
+            string path = Path.Combine(gameDirs[DirNames.personalPokeData].unpackedDir, IDtoReplace.ToString("D4"));
+            if (!HgEngine.HgEngineProject.IsActive && File.Exists(path)) {
+                byte[] old = File.ReadAllBytes(path);
+                if (old.Length > 7) before = (old[6], old[7]);
+            }
+            if (!SaveToFileDefaultDir(DirNames.personalPokeData, IDtoReplace, showSuccessMessage)) return;
+            if (before is (int, int) was && was != ((int)type1, (int)type2))
+                PokedexDataArchive.MoveTypes(IDtoReplace, was, ((int)type1, (int)type2));
         }
         public void SaveToFileExplorePath(string suggestedFileName, bool showSuccessMessage = true) {
             SaveToFileExplorePath("Gen IV Personal Pokémon data", "bin", suggestedFileName, showSuccessMessage);

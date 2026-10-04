@@ -482,11 +482,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Func<int, int> minFn, Func<int, int> maxFn, bool hasMinMax)
         {
             while (rows.Count > count) rows.RemoveAt(rows.Count - 1);
-            while (rows.Count < count) rows.Add(new WildEncounterRow(PokemonNames, _pokemonIcons.Get));
+            while (rows.Count < count) rows.Add(new WildEncounterRow(PokemonNames, _pokemonIcons.Get) { ShowForm = HgEngineProject.IsActive });
             for (int i = 0; i < count; i++)
             {
                 rows[i].Label        = labelFn(i);
-                rows[i].PokemonIndex = pokeFn(i);
+                rows[i].PackedSpecies = pokeFn(i);
                 rows[i].Level        = hasMinMax ? 0 : lvlFn(i);
                 if (hasMinMax && minFn != null) { rows[i].MinLevel = minFn(i); rows[i].MaxLevel = maxFn(i); }
             }
@@ -494,16 +494,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void WriteWalkingRowsToFile()
         {
-            for (int i = 0; i < MorningRows.Count && i < 12; i++) _current.morningPokemon[i] = (ushort)MorningRows[i].PokemonIndex;
-            for (int i = 0; i < DayRows.Count     && i < 12; i++) _current.dayPokemon[i]     = (ushort)DayRows[i].PokemonIndex;
-            for (int i = 0; i < NightRows.Count   && i < 12; i++) _current.nightPokemon[i]   = (ushort)NightRows[i].PokemonIndex;
+            for (int i = 0; i < MorningRows.Count && i < 12; i++) _current.morningPokemon[i] = (ushort)MorningRows[i].PackedSpecies;
+            for (int i = 0; i < DayRows.Count     && i < 12; i++) _current.dayPokemon[i]     = (ushort)DayRows[i].PackedSpecies;
+            for (int i = 0; i < NightRows.Count   && i < 12; i++) _current.nightPokemon[i]   = (ushort)NightRows[i].PackedSpecies;
             for (int i = 0; i < 12; i++) _current.walkingLevels[i] = (byte)(MorningRows.Count > i ? MorningRows[i].Level : 0);
-            for (int i = 0; i < SwarmRows.Count   && i < 4; i++) _current.swarmPokemon[i]       = (ushort)SwarmRows[i].PokemonIndex;
-            for (int i = 0; i < HoennRadioRows.Count  && i < 2; i++) _current.hoennMusicPokemon[i]  = (ushort)HoennRadioRows[i].PokemonIndex;
-            for (int i = 0; i < SinnohRadioRows.Count && i < 2; i++) _current.sinnohMusicPokemon[i] = (ushort)SinnohRadioRows[i].PokemonIndex;
+            for (int i = 0; i < SwarmRows.Count   && i < 4; i++) _current.swarmPokemon[i]       = (ushort)SwarmRows[i].PackedSpecies;
+            for (int i = 0; i < HoennRadioRows.Count  && i < 2; i++) _current.hoennMusicPokemon[i]  = (ushort)HoennRadioRows[i].PackedSpecies;
+            for (int i = 0; i < SinnohRadioRows.Count && i < 2; i++) _current.sinnohMusicPokemon[i] = (ushort)SinnohRadioRows[i].PackedSpecies;
             for (int i = 0; i < RockSmashRows.Count && i < 2; i++)
             {
-                _current.rockSmashPokemon[i]   = (ushort)RockSmashRows[i].PokemonIndex;
+                _current.rockSmashPokemon[i]   = (ushort)RockSmashRows[i].PackedSpecies;
                 _current.rockSmashMinLevels[i] = (byte)RockSmashRows[i].MinLevel;
                 _current.rockSmashMaxLevels[i] = (byte)RockSmashRows[i].MaxLevel;
             }
@@ -521,7 +521,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             for (int i = 0; i < rows.Count && i < poke.Length; i++)
             {
-                poke[i] = (ushort)rows[i].PokemonIndex;
+                poke[i] = (ushort)rows[i].PackedSpecies;
                 min[i]  = (byte)rows[i].MinLevel;
                 max[i]  = (byte)rows[i].MaxLevel;
             }

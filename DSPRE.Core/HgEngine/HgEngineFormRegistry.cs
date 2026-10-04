@@ -28,59 +28,45 @@ namespace DSPRE.HgEngine
         }
 
         /// <summary>Parses every "[SPECIES_X] = { ... }" entry, keyed by the base species' designator.
-        /// Unrecognized slot text is skipped rather than guessed.</summary>
+        /// Unrecognized slot text is skipped rather than guessed; a save refuses such an entry.</summary>
         public static Dictionary<string, List<FormSlot>> LoadAll()
         {
             var result = new Dictionary<string, List<FormSlot>>(StringComparer.Ordinal);
             if (!HgEngineProject.IsLinked) return result;
-            string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) return result;
-            string text = File.ReadAllText(path);
-
-            foreach (Match m in Regex.Matches(text, @"\[\s*(SPECIES_\w+)\s*\]\s*=\s*\{"))
-            {
-                int open = m.Index + m.Length - 1;
-                if (!BraceScanner.TryFindMatchingBrace(text, open, out int close)) continue;
-                result[m.Groups[1].Value] = ParseSlots(text, open, close);
-            }
+            string text = ReadSource(RelPath);
+            if (text == null) return result;
+            var table = Table(text);
+            if (table == null) return result;
+            foreach (var entry in table.Init.Items)
+                if (entry.IndexText != null && entry.List != null) result[entry.IndexText.Trim()] = ParseSlots(text, entry.List, out _);
             return result;
         }
 
-        private static List<FormSlot> ParseSlots(string text, int open, int close)
+        // The table is the declaration with the most [NAME] entries.
+        private static CDeclaration Table(string text) =>
+            CSourceFile.For(text).Declarations.OrderByDescending(d => d.Init.Items.Count(i => i.IndexText != null)).FirstOrDefault();
+
+        private static List<FormSlot> ParseSlots(string text, CInitList list, out bool complete)
         {
             var slots = new List<FormSlot>();
-            foreach (var (s, e) in SplitTopLevel(text, open, close))
+            complete = true;
+            foreach (var item in list.Items)
             {
-                string raw = text.Substring(s, e - s).Trim();
-                if (raw.Length == 0) continue;
-
+                string raw = item.ValueText(text).Trim();
+                if (item.IsConditional) { complete = false; continue; }
                 var withReversion = Regex.Match(raw, @"^NEEDS_REVERSION\s*\|\s*(SPECIES_\w+)$");
                 if (withReversion.Success) { slots.Add(new FormSlot(true, withReversion.Groups[1].Value)); continue; }
-
                 var plain = Regex.Match(raw, @"^(SPECIES_\w+)$");
                 if (plain.Success) { slots.Add(new FormSlot(false, plain.Groups[1].Value)); continue; }
-                // Unrecognized slot text: skip, don't guess.
+                complete = false;   // unrecognized: skipped, never guessed
             }
             return slots;
         }
 
-        /// <summary>Comma-splits an entry's direct children at brace depth 0, skipping "//" comments.</summary>
-        private static List<(int start, int end)> SplitTopLevel(string text, int open, int close)
+        private static string ReadSource(string rel)
         {
-            var spans = new List<(int, int)>();
-            int i = open + 1, elemStart = i;
-            while (i < close)
-            {
-                if (text[i] == '/' && i + 1 < close && text[i + 1] == '/')
-                {
-                    while (i < close && text[i] != '\n') i++;
-                    continue;
-                }
-                if (text[i] == ',') { spans.Add((elemStart, i)); elemStart = i + 1; i++; continue; }
-                i++;
-            }
-            spans.Add((elemStart, close));
-            return spans;
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, rel.Replace('/', Path.DirectorySeparatorChar));
+            return File.Exists(path) ? HgEngineFileCache.GetText(path).Replace("\r\n", "\n") : null;
         }
 
         /// <summary>The species id a form's personal data, learnset and hidden ability are read from, as
@@ -125,26 +111,79 @@ namespace DSPRE.HgEngine
             { error = $"Could not resolve a species designator for id {baseSpeciesId}."; return false; }
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
-            string text = File.ReadAllText(path);
+            string text = ReadSource(RelPath);
+            if (text == null) { error = $"Source file not found: {path}"; return false; }
+            var table = Table(text);
+            if (table == null) { error = $"{RelPath} has no form table."; return false; }
 
             string body = string.Concat(desiredSlots.Select(s =>
                 "\n        " + (s.NeedsReversion ? "NEEDS_REVERSION | " : "") + s.SpeciesSymbol + ","));
 
-            if (HgEngineSourcePatcher.TryFindEntry(text, designator, out int open, out int close))
+            var entry = table.Init.Items.FirstOrDefault(i => i.IndexText != null && i.List != null
+                && (i.IndexText.Trim() == designator || (speciesTable.TryGetValue(i.IndexText.Trim(), out int v) && v == baseSpeciesId)));
+            if (entry != null)
             {
-                text = string.Concat(text.AsSpan(0, open + 1), body, "\n    ", text.AsSpan(close));
+                ParseSlots(text, entry.List, out bool complete);
+                if (!complete) { error = $"{RelPath}: {designator}'s forms include text DSPRE doesn't read, so it wasn't rewritten."; return false; }
+                text = string.Concat(text.AsSpan(0, entry.List.Open + 1), body, "\n    ", text.AsSpan(entry.List.Close));
             }
             else
             {
-                int insertAt = text.LastIndexOf("};", StringComparison.Ordinal);
-                if (insertAt < 0) { error = "Could not find the end of PokeFormDataTbl to insert a new entry."; return false; }
-                string newEntry = $"    [{designator}] = {{{body}\n    }},\n";
-                text = string.Concat(text.AsSpan(0, insertAt), newEntry, text.AsSpan(insertAt));
+                int insertAt = HgEngineSwarms.LineStart(text, table.Init.Close);
+                text = text.Insert(insertAt, $"    [{designator}] = {{{body}\n    }},\n");
             }
 
-            HgEngineFileCache.WriteText(path, text);
-            return true;
+            if (!HgEngineVerifiedWrite.TryWrite(path, RelPath, text, written =>
+                {
+                    var back = Table(written)?.Init.Items.FirstOrDefault(i => i.IndexText?.Trim() == designator || (entry != null && i.IndexText?.Trim() == entry.IndexText.Trim()));
+                    if (back?.List == null) return "the entry is missing";
+                    var slots = ParseSlots(written, back.List, out bool ok);
+                    return ok && slots.Select(x => (x.NeedsReversion, x.SpeciesSymbol)).SequenceEqual(desiredSlots.Select(x => (x.NeedsReversion, x.SpeciesSymbol))) ? null : "the forms differ";
+                }, out error)) return false;
+            return MapFormsToBase(designator, desiredSlots, speciesTable, out error);
+        }
+
+        private const string MappingRelPath = "data/FormToSpeciesMapping.c";
+
+        /// <summary>
+        /// The game and build_learnsets.py find a form's base species in FormToSpeciesMapping.c (a028 9_12), indexed
+        /// from SPECIES_MEGA_START. Every form now listed for the base gets that line, added or corrected.
+        /// </summary>
+        private static bool MapFormsToBase(string baseDesignator, IReadOnlyList<FormSlot> slots, HgEngineSymbolTable species, out string error)
+        {
+            error = null;
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, MappingRelPath.Replace('/', Path.DirectorySeparatorChar));
+            string text = ReadSource(MappingRelPath);
+            if (text == null || !species.TryGetValue("SPECIES_MEGA_START", out int megaStart)) return true;
+            int? Index(string designator) => HgEngineSourceExpression.TryEvaluate(designator, n => species.TryGetValue(n, out int v) ? v : null, out int i) ? i : null;
+            string original = text;
+            foreach (var slot in slots)
+            {
+                if (!species.TryGetValue(slot.SpeciesSymbol, out int id) || id < megaStart) continue;
+                var table = Table(text);
+                if (table == null) { error = $"{MappingRelPath} has no table."; return false; }
+                var entry = table.Init.Items.FirstOrDefault(i => i.IndexText != null && Index(i.IndexText) == id - megaStart);
+                if (entry != null)
+                {
+                    if (entry.ValueText(text).Trim() != baseDesignator)
+                        text = text.Substring(0, entry.ValueStart) + baseDesignator + text.Substring(entry.ValueEnd);
+                    continue;
+                }
+                text = text.Insert(HgEngineSwarms.LineStart(text, table.Init.Close), $"    [{slot.SpeciesSymbol} - SPECIES_MEGA_START] = {baseDesignator},\n");
+            }
+            if (text == original) return true;
+            species.TryGetValue(baseDesignator, out int baseId);
+            return HgEngineVerifiedWrite.TryWrite(path, MappingRelPath, text, written =>
+            {
+                var table = Table(written);
+                foreach (var slot in slots)
+                {
+                    if (!species.TryGetValue(slot.SpeciesSymbol, out int id) || id < megaStart) continue;
+                    var e = table?.Init.Items.FirstOrDefault(i => i.IndexText != null && Index(i.IndexText) == id - megaStart);
+                    if (e == null || Index(e.ValueText(written)) != baseId) return $"{slot.SpeciesSymbol} doesn't map to {baseDesignator}";
+                }
+                return null;
+            }, out error);
         }
     }
 }

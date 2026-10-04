@@ -10,18 +10,14 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <TextBlock Text="File:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Save" controls:Icon.Key="saveButton"     Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Save as…" controls:Icon.Key="export" Click="SaveAs_Click"/>
         <Button Content="Import…" controls:Icon.Key="import"  Click="Import_Click"/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <TabControl Margin="2">
       <TabItem Header="Grass">     <views:SafariZoneGroupView DataContext="{Binding GrassVM}"/></TabItem>

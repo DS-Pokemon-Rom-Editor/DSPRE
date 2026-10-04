@@ -245,6 +245,22 @@ namespace DSPRE.HgEngine
             return blocks;
         }
 
+        /// <summary>
+        /// hg-engine's species words carry a form above the species, as include/constants/species.h spells it:
+        /// <c>MON_WITH_FORM(species, form) ((species) | ((form) &lt;&lt; 11))</c>. Trainers, wild and Safari
+        /// encounters and evolutions all use it.
+        /// </summary>
+        public const int FormShift = 11;
+        public const int SpeciesMask = (1 << FormShift) - 1;
+
+        /// <summary>A species word as source text: the species' name, wrapped in MON_WITH_FORM when it has a form.</summary>
+        public static string FormatPackedSpecies(int packed, string speciesHeader)
+        {
+            int species = packed & SpeciesMask, form = packed >> FormShift;
+            string name = HgEngineSymbolTable.Load(speciesHeader)?.TryGetNameWithPrefix(species, "SPECIES_", out string n) == true ? n : species.ToString();
+            return FormatSpecies(name, form);
+        }
+
         /// <summary>Reads a party species value: a name or number, <c>MON_WITH_FORM(species, form)</c>, or
         /// <c>species | (form &lt;&lt; 11)</c>. The form sits in the top five bits of the species word.</summary>
         public static bool TryParseSpecies(string raw, string speciesHeader, out int species, out int form)
@@ -261,8 +277,8 @@ namespace DSPRE.HgEngine
 
             if (!HgEngineSourceBlock.TryResolveToken(speciesToken, speciesHeader, out int value)) return false;
             if (formToken != null && !HgEngineSourceBlock.TryResolveToken(formToken, null, out form)) return false;
-            if (formToken == null && value > 0x7FF) form = value >> 11;
-            species = value & 0x7FF;
+            if (formToken == null && value > SpeciesMask) form = value >> FormShift;
+            species = value & SpeciesMask;
             return true;
         }
 

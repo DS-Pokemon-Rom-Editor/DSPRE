@@ -149,7 +149,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>The hg-engine side-table values and pending follower operations, as staged or as loaded.</summary>
         internal sealed record HgStaged(int HiddenAbility, int BaseExp, int BabyMon, int RegionalDex, int IconPalette,
             int FollowerSize, int FollowerBounceIndex, string OwFemaleForm, int OwSizeClassIndex,
-            bool CreateOwEntry, string OwSpritePath);
+            bool CreateOwEntry, string OwSpritePath, string OwShinySpritePath = null);
 
         internal delegate bool ExpressionValidator(string expression, out string error);
 
@@ -242,6 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _hgLoaded = null;
             _owPendingCreate = false;
             _owPendingSpritePath = null;
+            _owPendingShinyPath = null;
             if (!DSPRE.HgEngine.HgEngineProject.IsActive) return;
 
             _hgHiddenAbilityIndex = HgEngineHiddenAbility.TryGetAbilityId(_currentId, out int ha) ? ha : 0;
@@ -279,7 +280,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private HgStaged CaptureHg() => ShowHgEngineExtras
             ? new HgStaged(_hgHiddenAbilityIndex, _hgBaseExp, _hgBabyMonIndex, _hgRegionalDexNumber, _hgIconPaletteIndex,
-                _hgFollowerSize, _hgFollowerBounceIndex, _hgOwFemaleFormExpression, _owSizeClassIndex, _owPendingCreate, _owPendingSpritePath)
+                _hgFollowerSize, _hgFollowerBounceIndex, _hgOwFemaleFormExpression, _owSizeClassIndex, _owPendingCreate, _owPendingSpritePath, _owPendingShinyPath)
             : null;
 
         private void ApplyHg(HgStaged s)
@@ -297,6 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             HgOwFemaleFormError = OwFemaleFormProblem(s.OwFemaleForm);
             _owPendingCreate = s.CreateOwEntry;
             _owPendingSpritePath = s.OwSpritePath;
+            _owPendingShinyPath = s.OwShinySpritePath;
             RefreshOwPending();
         }
 
@@ -393,6 +395,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Performed by SaveCommand; dropped by Discard or a species switch.
         private bool _owPendingCreate;
         private string _owPendingSpritePath;
+        private string _owPendingShinyPath;
         private string _owDiskPngPath;
         private string _owPreviewPath;
 
@@ -409,7 +412,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             var parts = new List<string>();
             if (_owPendingCreate) parts.Add("The follower entry is created on save.");
-            if (_owPendingSpritePath != null) parts.Add($"{Path.GetFileName(_owPendingSpritePath)} is imported on save.");
+            if (_owPendingSpritePath != null) parts.Add($"{Path.GetFileName(_owPendingSpritePath)} is imported on save"
+                + (_owPendingShinyPath != null ? $", with {Path.GetFileName(_owPendingShinyPath)} as its shiny colours." : "."));
             OwPendingText = string.Join(" ", parts);
             OnPropertyChanged(nameof(CanCreateOwEntry));
 
@@ -463,11 +467,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _owSizeClassIndex = _owSizeClassValues.IndexOf(sizeClass);
                 OnPropertyChanged(nameof(OwSizeClassIndex));
 
-                // The species' own data/graphics/sprites/<name>/overworld.png (same convention as icon.png)
-                // is the real, populated walk sprite; the newer per-form gfx-index table is a fallback for
-                // species that only have art registered there.
-                _owDiskPngPath = HgEngineOverworldSprite.TryGetSpritePngPath(_currentId, out string ownPath) ? ownPath
-                    : HgEngineOverworldFollowerSprite.TryGetSpritePngPath(_owGfxIndex);
+                // pokegra.mk builds every follower from the species' own sprites/<name>/overworld.png.
+                _owDiskPngPath = HgEngineOverworldSprite.TryGetSpritePngPath(_currentId, out string ownPath) ? ownPath : null;
                 _owHasSpriteFiles = _owDiskPngPath != null;
                 OwStatusText = $"Overworld gfx #{_owGfxIndex}" + (_owHasSpriteFiles ? "" : " (no sprite art yet, import one below)");
             }
@@ -483,11 +484,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetDirty();
         }
 
-        /// <summary>Stages the sheet and previews it; the template species is read when saving.</summary>
-        public void ImportOwFollowerSprite(string pngSourcePath)
+        /// <summary>Stages the sheet, and optionally a recoloured copy for shiny, and previews it; the template species is read when saving.</summary>
+        public void ImportOwFollowerSprite(string pngSourcePath, string shinyPngPath = null)
         {
             if (_current == null || !_owHasEntry || _owGfxIndex < 0) return;
             _owPendingSpritePath = pngSourcePath;
+            _owPendingShinyPath = shinyPngPath;
             RefreshOwPending();
             SetDirty();
         }
@@ -501,11 +503,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Composite snapshot: the personal-data file bytes + the hatch-result (which lives in a separate
         // table, not in the file) + the staged hg-engine side-table values. Edit bursts within CoalesceMs
         // collapse into one undo step.
-        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; public FollowerStaged[] Followers; public byte[][] Athlon; public int[] ExtraTms; }
+        private sealed class PersonalSnapshot { public byte[] Data; public int Hatch; public HgStaged Hg; public FollowerStaged[] Followers; public byte[][] Athlon; public int[] ExtraTms; public int[] SourceMachineMoves; }
 
         // PlatPatches' TM121+ compatibility lives in the synthetic overlay, so it is staged here until Save.
         private HashSet<int> _extraMaskTms = new HashSet<int>(), _extraMaskTmsSaved = new HashSet<int>();
         private static int FirstMaskMachine => TMEditor.VanillaMachineCount + PlatPatches.PersonalMaskRows;
+
+        // hg-engine has no compatibility bits: learnsets.json lists the moves a species learns from any machine, and
+        // its build adds every level-up move on top. Staged here until Save, in the file's own order.
+        private List<int> _sourceMachineMoves, _sourceMachineMovesSaved;
+        private HashSet<int> _sourceLevelUpMoves = new HashSet<int>();
+        private int[] _machineMoveIds = Array.Empty<int>();
         private readonly DSPRE.Avalonia.UndoHistory<PersonalSnapshot> _history = new();
         private PersonalSnapshot _savedSnapshot;   // UndoHistory doesn't expose it, and Discard restores it
         private DateTime _lastCaptureUtc = DateTime.MinValue;
@@ -518,7 +526,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
         private PersonalSnapshot Snapshot() =>
-            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex, Hg = CaptureHg(), Followers = (FollowerStaged[])_followers?.Clone(), Athlon = _athlon?.Select(r => (byte[])r.Clone()).ToArray(), ExtraTms = _extraMaskTms.OrderBy(i => i).ToArray() };
+            new PersonalSnapshot { Data = _current.ToByteArray(), Hatch = _hatchResultIndex, Hg = CaptureHg(), Followers = (FollowerStaged[])_followers?.Clone(), Athlon = _athlon?.Select(r => (byte[])r.Clone()).ToArray(), ExtraTms = _extraMaskTms.OrderBy(i => i).ToArray(), SourceMachineMoves = _sourceMachineMoves?.ToArray() };
 
         private void ApplyState(PersonalSnapshot snap)
         {
@@ -526,6 +534,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _loading = true;
             _current = new PokemonPersonalData(new MemoryStream(snap.Data));
             if (snap.ExtraTms != null) _extraMaskTms = new HashSet<int>(snap.ExtraTms);
+            if (snap.SourceMachineMoves != null) _sourceMachineMoves = snap.SourceMachineMoves.ToList();
             PopulateFromCurrent();
             _hatchResultIndex = snap.Hatch; OnPropertyChanged(nameof(HatchResultIndex));
             ApplyHg(snap.Hg);
@@ -758,6 +767,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DSPRE.Avalonia.DialogHelper.ShowError($"The TM121+ compatibility of species {_currentId} was not saved:\n{maskError}", "Personal Data");
                 return;
             }
+            string machineError = SaveSourceMachineMoves();
+            if (machineError != null)
+            {
+                await DSPRE.Avalonia.DialogHelper.ShowError($"The machine moves of species {_currentId} were not saved:\n{machineError}", "Personal Data");
+                return;
+            }
             _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
             AppEvents.RaisePersonalDataSaved(this, _currentId);
             // hg-engine rebuilds pms.narc from data/BabyMons.c, which the Baby Pokémon picker edits.
@@ -773,8 +788,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         /// <summary>Writes Species.c, then each side-table value that differs from what was loaded, then the
         /// pending follower operations. Returns why it stopped, or null. Nothing is written while the entry
-        /// didn't load cleanly or a staged value is invalid. The TM list is not here: hg-engine keeps machine
-        /// moves in its learnset source.</summary>
+        /// didn't load cleanly or a staged value is invalid. Machine moves are saved on their own, into learnsets.json.</summary>
         private string SaveHgEngineSource(out bool partlySaved)
         {
             partlySaved = false;
@@ -786,17 +800,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string invalid = ValidateHgStaged(s, loaded, _followerBounceValues.Count, _owSizeClassValues.Count, HgEngineSpeciesOwFormFemale.TryValidateRawExpression);
             if (invalid != null) return invalid;
 
-            int? templateGfx = null;
+            int? templateSpecies = null;
             if (s.OwSpritePath != null)
             {
                 if (!File.Exists(s.OwSpritePath)) return $"{Path.GetFileName(s.OwSpritePath)} was not found.";
+                if (s.OwShinySpritePath != null && !File.Exists(s.OwShinySpritePath)) return $"{Path.GetFileName(s.OwShinySpritePath)} was not found.";
                 if (OwNeedsTemplate)
                 {
                     if (_owTemplateSpeciesIndex < 0 || _owTemplateSpeciesIndex >= PokemonNames.Count)
                         return "Pick a template species for the overworld sprite.";
-                    if (!HgEngineOverworldFollowerSprite.TryGetAssignment(_owTemplateSpeciesIndex, out int gfx, out _, out string templateError))
-                        return $"Template species: {templateError}";
-                    templateGfx = gfx;
+                    templateSpecies = _owTemplateSpeciesIndex;
                 }
             }
 
@@ -855,10 +868,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (Step(s.CreateOwEntry, "Overworld follower entry",
                     () => HgEngineOverworldFollowerSprite.TryEnsureEntry(id, out _, out string e) ? null : e))
             { _owPendingCreate = false; followerFilesChanged = true; }
-            string label = id < PokemonNames.Count ? PokemonNames[id] : id.ToString();
+            string importWarning = null;
             if (Step(s.OwSpritePath != null, "Overworld sprite",
-                    () => HgEngineOverworldFollowerSprite.TryImportSprite(_owGfxIndex, s.OwSpritePath, templateGfx, label, out string e) ? null : e))
-            { _owPendingSpritePath = null; followerFilesChanged = true; }
+                    () => DSPRE.Avalonia.Data.OverworldSourceFiles.ImportFollower(id, s.OwSpritePath, s.OwShinySpritePath, templateSpecies, out importWarning)))
+            { _owPendingSpritePath = null; _owPendingShinyPath = null; followerFilesChanged = true; }
 
             if (followerFilesChanged)
             {
@@ -868,7 +881,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _loading = wasLoading;
                 loaded = loaded with { OwSizeClassIndex = _owSizeClassIndex };
             }
-            _hgLoaded = loaded with { CreateOwEntry = false, OwSpritePath = null };
+            if (importWarning != null)
+            {
+                OwStatusText = importWarning;
+                SaveNotice.Show(importWarning);
+            }
+            _hgLoaded = loaded with { CreateOwEntry = false, OwSpritePath = null, OwShinySpritePath = null };
             HgOwFemaleFormError = OwFemaleFormProblem(_hgOwFemaleFormExpression);
 
             return failures.Count == 0 ? null : string.Join("\n", failures);
@@ -984,6 +1002,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_current == null || _selectedAddedMachineIndex < 0 || _selectedAddedMachineIndex >= AddedMachines.Count) return;
             int idx = TMEditor.MachineIndexFromLabel(AddedMachines[_selectedAddedMachineIndex]);
+            // hg-engine's build adds every level-up move back, which the row's "(level-up)" says.
+            if (LearnedByLevelUp(idx)) return;
             if (idx < 0) return;
             SetMachine(idx, false);
             RebuildMachineLists();
@@ -1007,13 +1027,58 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetDirty();
         }
 
-        private bool HasMachine(int index) =>
-            index >= FirstMaskMachine ? _extraMaskTms.Contains(index) : _current.machines.Contains((byte)index);
+        private bool HasMachine(int index)
+        {
+            if (_sourceMachineMoves != null)
+                return index < _machineMoveIds.Length && (_sourceMachineMoves.Contains(_machineMoveIds[index]) || _sourceLevelUpMoves.Contains(_machineMoveIds[index]));
+            return index >= FirstMaskMachine ? _extraMaskTms.Contains(index) : _current.machines.Contains((byte)index);
+        }
+
+        /// <summary>On hg-engine a machine whose move is also learned by level-up is always compatible.</summary>
+        private bool LearnedByLevelUp(int index) =>
+            _sourceMachineMoves != null && index < _machineMoveIds.Length && _sourceLevelUpMoves.Contains(_machineMoveIds[index]);
 
         private void SetMachine(int index, bool on)
         {
+            if (_sourceMachineMoves != null)
+            {
+                if (index >= _machineMoveIds.Length) return;
+                int move = _machineMoveIds[index];
+                if (on && !_sourceMachineMoves.Contains(move)) _sourceMachineMoves.Add(move);
+                else if (!on) _sourceMachineMoves.Remove(move);
+                return;
+            }
             if (index >= FirstMaskMachine) { if (on) _extraMaskTms.Add(index); else _extraMaskTms.Remove(index); return; }
             if (on) _current.machines.Add((byte)index); else _current.machines.Remove((byte)index);
+        }
+
+        /// <summary>Reads the current Pokémon's machine moves and level-up moves from learnsets.json on an hg-engine folder.</summary>
+        private void LoadSourceMachineMoves()
+        {
+            _sourceMachineMoves = _sourceMachineMovesSaved = null;
+            _sourceLevelUpMoves = new HashSet<int>();
+            if (!HgEngineProject.IsActive || _currentId < 0) return;
+            _machineMoveIds = TMEditor.ReadMachineMoves();
+            // Inherited lists are the build's fallback for forms; saving gives the form a list of its own.
+            if (!HgEngineLearnsets.TryGetMoveNames(_currentId, HgEngineLearnsets.MachineMovesField, out var moves, out _, out string error)
+                || !HgEngineLearnsets.TryGetLevelMoves(_currentId, out var levelUp, out error))
+            {
+                AppLogger.Error($"learnsets.json read failed for species {_currentId}: {error}");
+                return;
+            }
+            _sourceMachineMoves = moves;
+            _sourceMachineMovesSaved = new List<int>(moves);
+            _sourceLevelUpMoves = levelUp.Select(m => m.move).ToHashSet();
+        }
+
+        /// <summary>Writes the current Pokémon's machine moves when they changed; returns why it couldn't, or null.</summary>
+        private string SaveSourceMachineMoves()
+        {
+            if (_sourceMachineMoves == null || _sourceMachineMoves.SequenceEqual(_sourceMachineMovesSaved)) return null;
+            if (!HgEngineLearnsets.TrySaveMoveNames(_currentId, HgEngineLearnsets.MachineMovesField, _sourceMachineMoves, out string error))
+                return error;
+            _sourceMachineMovesSaved = new List<int>(_sourceMachineMoves);
+            return null;
         }
 
         /// <summary>Reads the current Pokemon's TM121+ compatibility from the synthetic overlay.</summary>
@@ -1443,6 +1508,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             HgLoadError = loadError == null ? null : $"Species.c could not be read, so this Pokémon can't be saved: {loadError}";
 
             LoadExtraMaskTms();
+            LoadSourceMachineMoves();
             PopulateFromCurrent();
             LoadHgEngineExtras();
             LoadRetailFollower();
@@ -1505,7 +1571,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 string label = TMEditor.MachineLabelFromIndex(i);
                 string move  = _machineMoveNames.Length > i ? _machineMoveNames[i] : $"UNK_{i}";
-                string entry = $"{label} - {move}";
+                string entry = LearnedByLevelUp(i) ? $"{label} - {move} (level-up)" : $"{label} - {move}";
                 if (HasMachine(i)) AddedMachines.Add(entry);
                 else                               AddableMachines.Add(entry);
             }

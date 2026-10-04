@@ -301,14 +301,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool HasRenderTable => _hasRenderTable;
 
         public bool IsExpansionApplied => OverworldSpriteTableExpansion.IsApplied;
-        public string ExpansionStatusText => IsExpansionApplied
+        public string ExpansionStatusText => HgEngine.HgEngineProject.IsActive
+            ? "Saved into the hg-engine checkout. New NPCs go in data/graphics/overworlds/custom."
+            : IsExpansionApplied
             ? $"Custom Overworld Sprites patch detected. {OverworldSpriteTableExpansion.UsedCount}/{OverworldSpriteTableExpansion.Capacity} custom slots used."
             : "Custom Overworld Sprites patch (hzla PlatPatches) not detected. Add/Delete are disabled. Render-state properties below are still editable.";
 
         private bool _isSelectedEntryCustom;
         public bool IsSelectedEntryCustom { get => _isSelectedEntryCustom; private set => Set(ref _isSelectedEntryCustom, value); }
 
-        public bool CanAddEntry => IsExpansionApplied && OverworldSpriteTableExpansion.UsedCount < OverworldSpriteTableExpansion.Capacity;
+        public bool ShowEntryButtons => HgEngine.HgEngineProject.IsActive || HasRenderTable && IsExpansionApplied;
+        public string AddEntryNote => HgEngine.HgEngineProject.IsActive ? "Adds a new NPC to the hg-engine checkout" : "Needs the overworld sprite expansion patch";
+
+        public bool CanAddEntry => HgEngine.HgEngineProject.IsActive
+            || IsExpansionApplied && OverworldSpriteTableExpansion.UsedCount < OverworldSpriteTableExpansion.Capacity;
         public bool CanDeleteSelected => IsExpansionApplied && HasSelectedEntry && IsSelectedEntryCustom;
 
         public string[] DrawTypeOptions { get; } = { "None", "Billboard", "3D model" };
@@ -503,6 +509,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// import cannot leave behind a partially added entry.</summary>
         public string AddEntryWithImage(string appearanceIdText, uint templateMember, uint cloneFrom, string pngPath, string rawBtxPath)
         {
+            if (HgEngine.HgEngineProject.IsActive) return AddSourceNpc(templateMember, cloneFrom, pngPath, rawBtxPath);
             if (!TryParseId(appearanceIdText, "Appearance ID", out uint appearanceId, out string error)) return error;
 
             bool hasImage = rawBtxPath != null || pngPath != null;
@@ -551,6 +558,52 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             OnPropertyChanged(nameof(ExpansionStatusText));
             OnPropertyChanged(nameof(CanAddEntry));
 
+            return null;
+        }
+
+        /// <summary>
+        /// hg-engine's way of adding an NPC: new custom/ files copied from the template, a NEW_NPC_ENTRY row taking the
+        /// clone source's properties, and MON_OVERWORLD_GFX_START one higher. The new member sits before every
+        /// follower, so the project's copy of a/0/8/1 is shifted the same way to match what the build will make.
+        /// </summary>
+        private string AddSourceNpc(uint templateMember, uint cloneFrom, string pngPath, string rawBtxPath)
+        {
+            if (!TryValidateTemplateForCloneSource(templateMember, cloneFrom, out string error)) return error;
+            byte[] image = null;
+            if (rawBtxPath != null && !TryBuildRawBtx(templateMember, rawBtxPath, out image, out error)) return error;
+            if (pngPath != null && !TryBuildPngBtx(templateMember, pngPath, out image, out error)) return error;
+
+            var members = HgEngine.HgEngineOverworlds.Members(out error);
+            if (members == null) return error;
+            if (templateMember >= members.Count) return "The checkout has no source for that template.";
+            if (image != null && OverworldSourceFiles.Check(members[(int)templateMember], image) is string problem) return problem;
+
+            if (!HgEngine.HgEngineOverworlds.TryAddNpc((int)templateMember, out int tag, out int gfx, out var added, out error)) return error;
+            if (image != null && OverworldSourceFiles.Write(added, image) is string written)
+                return $"NPC {tag} was added but its picture couldn't be saved: {written}";
+            int props = RomInfo.OverworldTable.TryGetValue(cloneFrom, out var clone) ? clone.properties : 0;
+            if (props != 0 && !HgEngine.HgEngineOverworlds.TrySetProperties(tag, props, out error))
+                return $"NPC {tag} was added but its properties couldn't be copied: {error}";
+
+            string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
+            try
+            {
+                int last = Directory.GetFiles(dir).Select(Path.GetFileName).Select(n => int.TryParse(n, out int i) ? i : -1).Max();
+                for (int i = last; i >= gfx; i--)
+                    File.Move(Path.Combine(dir, i.ToString("D4")), Path.Combine(dir, (i + 1).ToString("D4")));
+                File.WriteAllBytes(Path.Combine(dir, gfx.ToString("D4")), image ?? File.ReadAllBytes(Path.Combine(dir, templateMember.ToString("D4"))));
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                return $"NPC {tag} was added to the checkout, but DSPRE's copy of the textures couldn't follow ({ex.Message}). Build to bring it in line.";
+            }
+
+            RomInfo.ReadOWTable();
+            LoadEntryList();
+            ResetUndo();
+            SelectEntry(_owKeys.IndexOf((uint)tag));
+            OnPropertyChanged(nameof(CanAddEntry));
+            StatusText = $"Added NPC {tag}.";
             return null;
         }
 
@@ -1003,6 +1056,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             try
             {
+                // hg-engine rebuilds every texture from the checkout, so the sources are what has to change.
+                if (OverworldSourceFiles.Write((int)sprite, data) is string sourceError)
+                {
+                    if (metadataApplied) patch.TryRollback(out _);
+                    StatusText = "Save failed: " + sourceError;
+                    return false;
+                }
                 File.WriteAllBytes(path, data);
             }
             catch (Exception ex)

@@ -1534,6 +1534,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 "Add Opposite Gender Sprites", owner);
             if (!confirmed) return;
 
+            if (HgEngineProject.IsActive) { AddOppositeGenderToHgEngineSource(missingGender, sourceGender); return; }
+
             try
             {
                 DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokemonBattleSprites });
@@ -1585,6 +1587,55 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        private const string NoHgEngineSpritesNote =
+            "pokegra.mk has no sprites for this species, so it can't be saved. scripts/reformat_sprite_data.py writes them from species.h.";
+
+        /// <summary>
+        /// hg-engine keeps a missing gender as empty PNGs: the existing gender's front and back are copied over them,
+        /// and its HeightTable.c offsets with them, so the new gender stands where the old one does.
+        /// </summary>
+        private void AddOppositeGenderToHgEngineSource(string missingGender, string sourceGender)
+        {
+            string[] poses = HgEnginePokemonBattleSprites.TryGetPosePaths(_currentId);
+            if (poses == null) { StatusText = NoHgEngineSpritesNote; return; }
+            // Slots: FemaleBack, MaleBack, FemaleFront, MaleFront.
+            int srcBack = _missingGenderIsFemale ? 1 : 0, dstBack = _missingGenderIsFemale ? 0 : 1;
+            int srcFront = _missingGenderIsFemale ? 3 : 2, dstFront = _missingGenderIsFemale ? 2 : 3;
+            try
+            {
+                File.WriteAllBytes(poses[dstBack], File.ReadAllBytes(poses[srcBack]));
+                File.WriteAllBytes(poses[dstFront], File.ReadAllBytes(poses[srcFront]));
+                EnsurePoseKey(poses, dstBack);
+                EnsurePoseKey(poses, dstFront);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                StatusText = $"Failed to add {missingGender} sprites: {ex.Message}";
+                return;
+            }
+
+            string heightNote = "";
+            if (HgEngineHeightTable.TryGet(_currentId, out int fb, out int mb, out int ff, out int mf))
+            {
+                if (_missingGenderIsFemale) { fb = mb; ff = mf; } else { mb = fb; mf = ff; }
+                if (!HgEngineHeightTable.TrySet(_currentId, fb, mb, ff, mf, out string error)) heightNote = $" HeightTable.c wasn't updated: {error}";
+            }
+            StatusText = $"Added {missingGender} sprites (duplicated from the existing {sourceGender} sprites)." + heightNote;
+            LoadMon(_currentId);
+        }
+
+        /// <summary>
+        /// A pose with art needs its .png.key, the seed the build scrambles it with, and a gender that was empty
+        /// may have none. Any seed works, so it takes the other gender's for the same pose.
+        /// </summary>
+        private static void EnsurePoseKey(string[] poses, int slot)
+        {
+            string key = poses[slot] + ".key";
+            if (File.Exists(key)) return;
+            string other = poses[slot ^ 1] + ".key";
+            if (File.Exists(other)) File.WriteAllBytes(key, File.ReadAllBytes(other));
+        }
+
         private static void CopyEntryFile(string unpackedDir, int srcIdx, int dstIdx)
             => File.Copy(Path.Combine(unpackedDir, srcIdx.ToString("D4")),
                           Path.Combine(unpackedDir, dstIdx.ToString("D4")), overwrite: true);
@@ -1597,7 +1648,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             if (_isAlternateForms) { SaveAlternateForm(); return; }
 
-            if (HgEngineProject.IsActive && SaveToHgEngineSource()) return;
+            if (HgEngineProject.IsActive)
+            {
+                // hg-engine rebuilds a/0/0/4 from pokegra.mk, so a species it has no PNGs for can't be saved here.
+                if (!SaveToHgEngineSource()) StatusText = NoHgEngineSpritesNote;
+                return;
+            }
 
             var narc = PokemonBattleSpriteArchive.Open(DirNames.pokemonBattleSprites);
             if (narc == null)
@@ -1676,6 +1732,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     failed.Add("Normal palette: this form has no palette file of its own.");
                 if (_shinyPal != null && !narc.WritePalette(form.ShinyPaletteIndex, _shinyPal))
                     failed.Add("Shiny palette: this form has no palette file of its own.");
+
+                // hg-engine converts a few of these palettes from its own JASC files on every build.
+                foreach (var (index, colours) in new[] { (form.NormalPaletteIndex, _normalPal), (form.ShinyPaletteIndex, _shinyPal) })
+                    if (colours != null && HgEngineSourceAssets.ConvertedPaletteFor(DirNames.otherPokemonBattleSprites, index) is string pal)
+                        HgEngineOverworlds.WriteJasc(pal, colours.Take(16).Select(c => (int)(c & 0xFFFFFF)).ToArray());
             }
             catch (Exception ex)
             {
@@ -1700,6 +1761,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     if (pal == null) continue;
                     byte[] png = IndexedPng.Write(_rawSprites[i], pal, SpriteWidth, SpriteHeight);
                     File.WriteAllBytes(posePaths[i], png);
+                    EnsurePoseKey(posePaths, i);
                 }
                 _undo?.MarkSaved();
                 _dirty = false;

@@ -13,15 +13,12 @@
   </Design.DataContext>
 
   <DockPanel LastChildFill="True">
-	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-			BorderThickness="0,0,0,1" Padding="6,4">
-	  <StackPanel Orientation="Horizontal" Spacing="6">
+	<controls:EditorToolbar>
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
 		<TextBlock Text="{Binding BusyText}" IsVisible="{Binding IsBusy}" VerticalAlignment="Center" Opacity="0.7" Margin="12,0,0,0"/>
-	  </StackPanel>
-	</Border>
+	</controls:EditorToolbar>
 
 	<Border Margin="12" BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="10">
 	  <StackPanel Spacing="8">
@@ -43,7 +40,7 @@
 		  <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding Starter3}" HorizontalAlignment="Stretch" IsEnabled="{Binding SpeciesEditable}"/>
 		  <Image     Grid.Row="2" Grid.Column="2" Source="{Binding Starter3Icon}" Width="32" Height="32" Stretch="Uniform"/>
 
-		  <TextBlock Grid.Row="3" Grid.Column="0" Text="Held Item:" VerticalAlignment="Center" IsVisible="{Binding IsHeldItemSupported}"/>
+		  <TextBlock Grid.Row="3" Grid.Column="0" Text="Held item:" VerticalAlignment="Center" IsVisible="{Binding IsHeldItemSupported}"/>
 		  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="3" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding HeldItem}"
 					 HorizontalAlignment="Stretch" IsVisible="{Binding IsHeldItemSupported}"/>
 		  <Image     Grid.Row="3" Grid.Column="2" Source="{Binding HeldItemIcon}" Width="32" Height="32" Stretch="Uniform"

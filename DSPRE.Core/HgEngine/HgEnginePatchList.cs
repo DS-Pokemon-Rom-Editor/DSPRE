@@ -279,15 +279,29 @@ namespace DSPRE.HgEngine
             return entry;
         }
 
+        /// <summary>Rewrites an entry's fields and its line, keeping the line's indentation.</summary>
+        public static void Change(HgEnginePatchEntry entry, int overlayNumber, string symbol, long address, int register,
+            IReadOnlyList<byte> bytes)
+        {
+            string raw = entry.RawLine ?? "";
+            string indent = raw.Substring(0, raw.Length - raw.TrimStart().Length);
+            entry.Parsed = true;
+            entry.OverlayNumber = overlayNumber;
+            entry.Symbol = symbol ?? "";
+            entry.Address = address;
+            entry.Register = register;
+            entry.Bytes = bytes ?? Array.Empty<byte>();
+            entry.RawLine = indent + entry.Render();
+        }
+
         public bool Save(out string error)
         {
             error = Entries.Select(Problem).FirstOrDefault(p => p != null);
             if (error != null) return false;
             try
             {
-                // Written back line for line: an entry that was never parsed keeps its own text, and one
-                // that was edited is rendered fresh.
-                var lines = Entries.Select(e => e.Parsed ? e.Render() : e.RawLine);
+                // Written back line for line as they came; added and changed entries carry their new line.
+                var lines = Entries.Select(e => e.RawLine);
                 HgEngineFileCache.WriteText(FullPath, string.Join("\n", lines) + "\n");
                 HgEngineClaimedRanges.ClearCache();
                 return true;

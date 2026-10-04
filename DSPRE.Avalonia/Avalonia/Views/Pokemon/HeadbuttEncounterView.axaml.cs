@@ -161,6 +161,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private void AddTree_Click(object sender, RoutedEventArgs e) => VM?.AddTree();
+        private void AddNormalGroup_Click(object sender, RoutedEventArgs e) => VM?.AddGroup(special: false);
+        private void RemoveNormalGroup_Click(object sender, RoutedEventArgs e) => VM?.RemoveGroup(special: false);
+        private void AddSpecialGroup_Click(object sender, RoutedEventArgs e) => VM?.AddGroup(special: true);
+        private void RemoveSpecialGroup_Click(object sender, RoutedEventArgs e) => VM?.RemoveGroup(special: true);
         private void RemoveTree_Click(object sender, RoutedEventArgs e) => VM?.RemoveSelectedTree();
         private void CamTop_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(0f, 89f);
         private void CamIso_Click(object sender, RoutedEventArgs e) => GlView.SetOrientation(30f, 30f);

@@ -12,9 +12,7 @@
   </Design.DataContext>
 
   <DockPanel>
-  <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-          BorderThickness="0,0,0,1" Padding="6,4">
-    <WrapPanel Classes="toolbar">
+  <controls:EditorToolbar>
       <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
               ToolTip.Tip="{Binding SaveHint}" ToolTip.ShowOnDisabled="True"/>
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -28,8 +26,7 @@
         <Button Content="Add command" controls:Icon.Key="addIcon" Click="AddCommand_Click"/>
         <Button Content="Command guide" controls:Icon.Key="questionMark" Click="CommandGuide_Click"/>
       </StackPanel>
-    </WrapPanel>
-  </Border>
+  </controls:EditorToolbar>
 
   <Grid Margin="12" RowDefinitions="Auto,Auto,*">
 

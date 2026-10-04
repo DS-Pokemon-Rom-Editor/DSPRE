@@ -23,9 +23,36 @@ namespace DSPRE
             _replacement = replacement;
         }
 
-        public bool TryApply(out string error) => TryReplace(_expected, _replacement, out error);
+        // On an hg-engine folder the row lives in src/field/overworld_table.c and the change is its callback_params.
+        private readonly int _sourceTag = -1, _sourceFrom, _sourceTo;
 
-        public bool TryRollback(out string error) => TryReplace(_replacement, _expected, out error);
+        internal OverworldSpriteProfileMetadataPatch(int tag, int from, int to)
+        {
+            _sourceTag = tag;
+            _sourceFrom = from;
+            _sourceTo = to;
+        }
+
+        public bool TryApply(out string error) => _sourceTag >= 0
+            ? TrySetSource(_sourceFrom, _sourceTo, out error)
+            : TryReplace(_expected, _replacement, out error);
+
+        public bool TryRollback(out string error) => _sourceTag >= 0
+            ? TrySetSource(_sourceTo, _sourceFrom, out error)
+            : TryReplace(_replacement, _expected, out error);
+
+        private bool TrySetSource(int expected, int value, out string error)
+        {
+            if (!HgEngine.HgEngineOverworlds.TryReadTable(out var rows, out error)) return false;
+            var row = rows.Find(r => r.Tag == _sourceTag);
+            if (row == null) { error = $"overworld_table.c no longer has tag {_sourceTag}."; return false; }
+            if (row.Properties != expected)
+            {
+                error = "The overworld metadata changed after the profile was selected. Re-import the image to refresh the staged change.";
+                return false;
+            }
+            return HgEngine.HgEngineOverworlds.TrySetProperties(_sourceTag, value, out error);
+        }
 
         private bool TryReplace(byte[] expected, byte[] replacement, out string error)
         {
@@ -80,6 +107,15 @@ namespace DSPRE
 
             try
             {
+                if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && HgEngine.HgEngineProject.IsActive)
+                {
+                    if (!HgEngine.HgEngineOverworlds.TryReadTable(out var rows, out error)) return false;
+                    var target = rows.Find(r => r.Tag == targetAppearanceId);
+                    var source = rows.Find(r => r.Tag == sourceAppearanceId);
+                    if (target == null || source == null) { error = "The selected profile is missing from overworld_table.c."; return false; }
+                    patch = new OverworldSpriteProfileMetadataPatch(target.Tag, target.Properties, source.Properties);
+                    return true;
+                }
                 if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
                     return TryCreateHgssPatch(RomInfo.OWtablePath, RomInfo.OWTableOffset, targetAppearanceId, sourceAppearanceId, out patch, out error);
 

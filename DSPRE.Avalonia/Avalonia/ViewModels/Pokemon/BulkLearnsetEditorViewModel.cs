@@ -101,8 +101,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task SetupAsync(Window owner)
         {
-            // Opened straight from the Pokémon editor, not the launcher. Its writes reach only the unpacked
-            // learnsets, which hg-engine rebuilds from data/learnsets/learnsets.json.
+            // Opened straight from the Pokémon editor, not the launcher.
             if (AvaloniaEditorLauncher.Refused("BulkLearnsetEditorView")) { owner?.Close(); return; }
             try
             {
@@ -121,19 +120,32 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        // hg-engine: each species' own LevelMoves in learnsets.json as loaded, to save only what changed.
+        private Dictionary<int, List<(int level, int move)>> _sourceLists;
+        private string _loadError;
+
         private void Load()
         {
             _all.Clear();
+            _sourceLists = null;
+            _loadError = null;
             try
             {
-                for (int id = 0; id < _learnsetCount; id++)
+                if (HgEngine.HgEngineProject.IsActive)
+                {
+                    if (!HgEngine.HgEngineLearnsets.TryGetAllLevelMoves(out _sourceLists, out string error)) throw new InvalidOperationException(error);
+                    foreach (var (id, list) in _sourceLists.OrderBy(kv => kv.Key))
+                        foreach (var (level, move) in list)
+                            _all.Add(new BulkLearnsetRow(SpeciesNames, MoveNames, id, level, move, Dirty));
+                }
+                else for (int id = 0; id < _learnsetCount; id++)
                 {
                     var ls = new LearnsetData(id);
                     foreach (var (level, move) in ls.list)
                         _all.Add(new BulkLearnsetRow(SpeciesNames, MoveNames, id, level, move, Dirty));
                 }
             }
-            catch (Exception ex) { AppLogger.Error("Bulk learnset load failed: " + ex.Message); }
+            catch (Exception ex) { _loadError = ex.Message; AppLogger.Error("Bulk learnset load failed: " + ex.Message); }
             ApplyFilter();
             SetClean();
             _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo);
@@ -170,6 +182,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void SaveAll()
         {
+            if (_loadError != null)
+            {
+                _ = DialogHelper.ShowError("The learnsets couldn't be read, so saving would replace them:\n" + _loadError, "Bulk Learnsets");
+                return;
+            }
+            if (_sourceLists != null) { _ = SaveSourceAsync(); return; }
             try
             {
                 // Group current rows by species and rewrite each species' learnset file.
@@ -194,6 +212,28 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 StatusText = "Saved all learnsets.";
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Bulk Learnsets"); }
+        }
+
+        // Only species whose rows changed are written into learnsets.json.
+        private async Task SaveSourceAsync()
+        {
+            var now = _all.GroupBy(r => r.SpeciesIndex).ToDictionary(g => g.Key,
+                g => g.Select(r => (r.Level, r.MoveIndex)).Distinct().ToList());
+            var changes = new Dictionary<int, IReadOnlyList<(int level, int move)>>();
+            foreach (var (id, rows) in now)
+                if (!_sourceLists.TryGetValue(id, out var was) || !was.SequenceEqual(rows)) changes[id] = rows;
+            foreach (int id in _sourceLists.Keys)
+                if (!now.ContainsKey(id)) changes[id] = new List<(int, int)>();
+
+            var (saved, error) = await HgEngineSave.RunAsync(() =>
+                changes.Count == 0 || HgEngine.HgEngineLearnsets.TrySaveLevelMoves(changes, out string e) ? null : e);
+            if (!saved) { if (error != null) await DialogHelper.ShowError("The learnsets were not saved:\n" + error, "Bulk Learnsets"); return; }
+            foreach (var (id, rows) in changes)
+                if (rows.Count > 0) _sourceLists[id] = rows.ToList(); else _sourceLists.Remove(id);
+            _undo?.MarkSaved();
+            SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
+            StatusText = $"Saved {changes.Count} species into learnsets.json.";
         }
     }
 }

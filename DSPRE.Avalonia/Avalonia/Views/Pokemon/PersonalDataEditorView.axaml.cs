@@ -69,7 +69,19 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string path = files[0].TryGetLocalPath();
             if (path == null) return;
 
-            ViewModel.ImportOwFollowerSprite(path);
+            string shiny = null;
+            if (await DialogHelper.AskYesNo("Also import a shiny version? It has to be the same drawing, only recoloured.", "Shiny colours", TopLevel.GetTopLevel(this) as Window))
+            {
+                var shinyFiles = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                {
+                    Title = "Shiny follower sheet",
+                    AllowMultiple = false,
+                    FileTypeFilter = new List<FilePickerFileType> { DialogHelper.PngFilter }
+                });
+                if (shinyFiles.Count > 0) shiny = shinyFiles[0].TryGetLocalPath();
+            }
+
+            ViewModel.ImportOwFollowerSprite(path, shiny);
         }
     }
 }

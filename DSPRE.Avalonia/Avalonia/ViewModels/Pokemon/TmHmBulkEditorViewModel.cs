@@ -32,7 +32,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private readonly string[] _pokemonNames;
         private readonly int _speciesCount;
-        private readonly Dictionary<int, PokemonPersonalData> _personalData = new();
+        // Each species' ticked rows. A row is a machine slot, or on hg-engine one move however many slots teach it.
+        private readonly Dictionary<int, SortedSet<int>> _compat = new();
         private readonly List<SpeciesFamily> _families;
         private readonly HashSet<int> _selectedSpeciesIds = new();
         private bool _suppressTreeEvents;
@@ -62,7 +63,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string SelectAllLabel => IsByMachineMode ? "Enable All" : "Select All";
         public string SelectNoneLabel => IsByMachineMode ? "Disable All" : "Select None";
 
-        private readonly int[] _order = TMEditor.DisplayOrder();
+        private readonly int[] _order;
         /// <summary>The machine the "By TM/HM" box shows; <see cref="CurrentMachineIndex"/> is its place in the list.</summary>
         private int CurrentMachine => _currentMachineIndex >= 0 && _currentMachineIndex < _order.Length ? _order[_currentMachineIndex] : -1;
 
@@ -112,13 +113,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Redo() => _undo?.Redo();
         private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
-        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_personalData.OrderBy(kv => kv.Key).Select(kv => kv.Value.machines.ToArray()).ToArray());
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(_compat.OrderBy(kv => kv.Key).Select(kv => kv.Value.ToArray()).ToArray());
 
         private void ApplyState(byte[] state)
         {
-            var sets = DSPRE.Avalonia.UndoJson.Read<byte[][]>(state);
-            foreach (var (id, data) in _personalData)
-                if (id < sets.Length) data.machines = new SortedSet<byte>(sets[id]);
+            var sets = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
+            foreach (int id in _compat.Keys.ToList())
+                if (id < sets.Length) _compat[id] = new SortedSet<int>(sets[id]);
             RebuildTree();
             if (IsByPokemonMode) RefreshMachineChecklistFromSelection();
             RecountDirty();
@@ -151,7 +152,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public TmHmBulkEditorViewModel(string[] pokemonNames)
         {
             _pokemonNames = pokemonNames;
-            MachineNamesList = BuildMachineLabels();
+            if (FromSource)
+            {
+                BuildMoveRows(out string[] labels);
+                MachineNamesList = labels;
+                _order = Enumerable.Range(0, labels.Length).ToArray();
+            }
+            else
+            {
+                MachineNamesList = BuildMachineLabels();
+                _order = TMEditor.DisplayOrder();
+            }
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions });
 
@@ -174,12 +185,110 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void LoadAll()
         {
+            if (FromSource) { LoadSource(); return; }
             for (int i = 0; i < _speciesCount; i++)
             {
-                _personalData[i] = new PokemonPersonalData(i);
-                _savedFileMachines[i] = FileMachines(_personalData[i].machines);
+                var data = new PokemonPersonalData(i);
+                _compat[i] = new SortedSet<int>(data.machines.Select(m => (int)m));
+                _savedFileMachines[i] = FileMachines(data.machines);
             }
             LoadExtraMaskTms();
+        }
+
+        // ── hg-engine: learnsets.json MachineMoves ──────────────────────────
+        private static bool FromSource => HgEngine.HgEngineProject.IsActive;
+        private int[] _rowMove = Array.Empty<int>();
+        private readonly Dictionary<int, int> _rowOfMove = new();
+        // Rows a species learns by level-up: the build makes those compatible whatever the list says.
+        private readonly Dictionary<int, HashSet<int>> _levelUpRows = new();
+        // Each species' own MachineMoves as read, and the rows ticked by its list, so a save writes only what changed.
+        private readonly Dictionary<int, List<int>> _sourceOwn = new();
+        private readonly Dictionary<int, SortedSet<int>> _savedRows = new();
+        private string _loadError;
+
+        private void BuildMoveRows(out string[] labels)
+        {
+            int[] moves = TMEditor.ReadMachineMoves();
+            string[] moveNames = GetAttackNames();
+            var slots = new List<List<int>>();
+            var rowMove = new List<int>();
+            foreach (int i in TMEditor.DisplayOrder())
+            {
+                if (i >= moves.Length) continue;
+                if (!_rowOfMove.TryGetValue(moves[i], out int row))
+                {
+                    _rowOfMove[moves[i]] = row = rowMove.Count;
+                    rowMove.Add(moves[i]);
+                    slots.Add(new List<int>());
+                }
+                slots[row].Add(i);
+            }
+            _rowMove = rowMove.ToArray();
+            labels = Enumerable.Range(0, _rowMove.Length).Select(r =>
+                string.Join(" / ", slots[r].Select(TMEditor.MachineLabelFromIndex)) + " - "
+                + (_rowMove[r] < moveNames.Length ? moveNames[_rowMove[r]] : $"Move {_rowMove[r]}")).ToArray();
+        }
+
+        private Dictionary<int, List<int>> _machineLists;
+        private Dictionary<int, List<(int level, int move)>> _levelLists;
+        private Dictionary<int, int> _formBases;
+
+        private void LoadSource()
+        {
+            _loadError = null;
+            _compat.Clear(); _levelUpRows.Clear(); _sourceOwn.Clear(); _savedRows.Clear();
+            ReadSourceLists();
+            for (int i = 0; i < _speciesCount; i++) LoadSourceSpecies(i);
+        }
+
+        private void ReadSourceLists()
+        {
+            if (!HgEngine.HgEngineLearnsets.TryGetAllMoveNames(HgEngine.HgEngineLearnsets.MachineMovesField, out _machineLists, out string error)
+                || !HgEngine.HgEngineLearnsets.TryGetAllLevelMoves(out _levelLists, out error))
+            {
+                _loadError = error;
+                AppLogger.Error("TM/HM Bulk Editor: learnsets.json could not be read: " + error);
+            }
+            _formBases = HgEngine.HgEngineLearnsets.FormBases();
+        }
+
+        // A form with no list of its own uses its base species' one, as the build does.
+        private void LoadSourceSpecies(int id)
+        {
+            List<T> Own<T>(Dictionary<int, List<T>> lists, int s) => lists != null && lists.TryGetValue(s, out var l) ? l : new List<T>();
+            List<T> Effective<T>(Dictionary<int, List<T>> lists)
+            {
+                var own = Own(lists, id);
+                return own.Count > 0 || !_formBases.TryGetValue(id, out int b) ? own : Own(lists, b);
+            }
+            _sourceOwn[id] = Own(_machineLists, id).ToList();
+            _levelUpRows[id] = Effective(_levelLists).Where(e => _rowOfMove.ContainsKey(e.move)).Select(e => _rowOfMove[e.move]).ToHashSet();
+            _savedRows[id] = new SortedSet<int>(Effective(_machineLists).Where(_rowOfMove.ContainsKey).Select(m => _rowOfMove[m]));
+            _compat[id] = new SortedSet<int>(_savedRows[id].Concat(_levelUpRows[id]));
+        }
+
+        private bool Locked(int speciesId, int row) => FromSource && _levelUpRows.TryGetValue(speciesId, out var set) && set.Contains(row);
+
+        private void SaveSource()
+        {
+            if (_loadError != null) throw new InvalidOperationException("learnsets.json couldn't be read, so saving would replace it: " + _loadError);
+            var changes = new Dictionary<int, IReadOnlyList<int>>();
+            var rows = new Dictionary<int, SortedSet<int>>();
+            foreach (var (id, ticked) in _compat)
+            {
+                // A level-up row is only listed when the list already named it.
+                var wanted = new SortedSet<int>(ticked.Where(r => !_levelUpRows[id].Contains(r) || _savedRows[id].Contains(r)));
+                if (wanted.SetEquals(_savedRows[id])) continue;
+                // Moves no machine teaches stay where they were; ticked rows keep their place or join at the end.
+                var list = _sourceOwn[id].Where(m => !_rowOfMove.TryGetValue(m, out int r) || wanted.Contains(r)).ToList();
+                foreach (int r in wanted) if (!list.Contains(_rowMove[r])) list.Add(_rowMove[r]);
+                changes[id] = list;
+                rows[id] = wanted;
+            }
+            if (changes.Count == 0) return;
+            if (!HgEngine.HgEngineLearnsets.TrySaveMoveNames(HgEngine.HgEngineLearnsets.MachineMovesField, changes, out string error))
+                throw new InvalidOperationException(error);
+            foreach (var (id, list) in changes) { _sourceOwn[id] = list.ToList(); _savedRows[id] = rows[id]; }
         }
 
         private static string[] BuildMachineLabels()
@@ -264,7 +373,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private SpeciesLeafNode MakeLeafNode(int id)
         {
             var leaf = new SpeciesLeafNode { SpeciesId = id, DisplayName = SpeciesLabel(id), OnCheckedChanged = OnLeafChecked };
-            leaf.SetCheckedSilent(IsByMachineMode ? _personalData[id].machines.Contains((byte)CurrentMachine) : _selectedSpeciesIds.Contains(id));
+            leaf.SetCheckedSilent(IsByMachineMode ? _compat[id].Contains(CurrentMachine) : _selectedSpeciesIds.Contains(id));
             return leaf;
         }
 
@@ -281,6 +390,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_suppressTreeEvents) return;
 
             ApplyLeafCheckSideEffect(leaf.SpeciesId, leaf.IsChecked);
+            if (IsByMachineMode) leaf.SetCheckedSilent(_compat[leaf.SpeciesId].Contains(CurrentMachine));
 
             var group = Tree.OfType<SpeciesGroupNode>().FirstOrDefault(g => g.Children.Contains(leaf));
             if (group != null) UpdateGroupDisplay(group);
@@ -297,8 +407,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _suppressTreeEvents = true;
             foreach (var child in group.Children)
             {
-                child.SetCheckedSilent(group.IsChecked);
                 ApplyLeafCheckSideEffect(child.SpeciesId, group.IsChecked);
+                child.SetCheckedSilent(IsByMachineMode ? _compat[child.SpeciesId].Contains(CurrentMachine) : group.IsChecked);
             }
             _suppressTreeEvents = false;
             UpdateGroupDisplay(group);
@@ -321,10 +431,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        private void SetMachineCompat(int speciesId, bool enabled)
+        private void SetMachineCompat(int speciesId, bool enabled) => SetCompat(speciesId, CurrentMachine, enabled);
+
+        private void SetCompat(int speciesId, int row, bool enabled)
         {
-            var data = _personalData[speciesId];
-            bool changed = enabled ? data.machines.Add((byte)CurrentMachine) : data.machines.Remove((byte)CurrentMachine);
+            if (!enabled && Locked(speciesId, row)) return;
+            bool changed = enabled ? _compat[speciesId].Add(row) : _compat[speciesId].Remove(row);
             if (changed) _pendingEdit = true;
         }
 
@@ -337,15 +449,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     foreach (var leaf in group.Children)
                     {
-                        leaf.SetCheckedSilent(value);
                         ApplyLeafCheckSideEffect(leaf.SpeciesId, value);
+                        leaf.SetCheckedSilent(IsByMachineMode ? _compat[leaf.SpeciesId].Contains(CurrentMachine) : value);
                     }
                     UpdateGroupDisplay(group);
                 }
                 else if (node is SpeciesLeafNode leaf)
                 {
-                    leaf.SetCheckedSilent(value);
                     ApplyLeafCheckSideEffect(leaf.SpeciesId, value);
+                    leaf.SetCheckedSilent(IsByMachineMode ? _compat[leaf.SpeciesId].Contains(CurrentMachine) : value);
                 }
             }
             _suppressTreeEvents = false;
@@ -368,7 +480,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
                 else
                 {
-                    int haveCount = _selectedSpeciesIds.Count(id => _personalData[id].machines.Contains((byte)m));
+                    int haveCount = _selectedSpeciesIds.Count(id => _compat[id].Contains(m));
                     state = haveCount == 0 ? false : haveCount == _selectedSpeciesIds.Count ? true : (bool?)null;
                 }
                 item.SetChecked(state);
@@ -384,12 +496,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             bool enable = MachineChecklist.FirstOrDefault(c => c.Index == machineIndex)?.IsChecked != true;
-            foreach (var id in _selectedSpeciesIds)
-            {
-                var data = _personalData[id];
-                bool changed = enable ? data.machines.Add((byte)machineIndex) : data.machines.Remove((byte)machineIndex);
-                if (changed) _pendingEdit = true;
-            }
+            foreach (var id in _selectedSpeciesIds) SetCompat(id, machineIndex, enable);
             FlushEdit();
 
             RefreshMachineChecklistFromSelection();
@@ -412,28 +519,28 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             foreach (var fam in touched)
             {
-                if (union)
-                {
-                    var u = new SortedSet<byte>();
-                    foreach (var id in fam.MemberIds) u.UnionWith(_personalData[id].machines);
-                    foreach (var id in fam.MemberIds) _personalData[id].machines = new SortedSet<byte>(u);
-                }
-                else
-                {
-                    var inter = new SortedSet<byte>(_personalData[fam.MemberIds[0]].machines);
-                    foreach (var id in fam.MemberIds.Skip(1)) inter.IntersectWith(_personalData[id].machines);
-                    foreach (var id in fam.MemberIds) _personalData[id].machines = new SortedSet<byte>(inter);
-                }
+                var shared = new SortedSet<int>(_compat[fam.MemberIds[0]]);
+                foreach (var id in fam.MemberIds.Skip(1))
+                    if (union) shared.UnionWith(_compat[id]); else shared.IntersectWith(_compat[id]);
+                foreach (var id in fam.MemberIds) SetRows(id, shared);
             }
             AfterBulkFamilyChange($"Synced {touched.Count} famil{(touched.Count == 1 ? "y" : "ies")} ({(union ? "Union" : "Intersection")}).");
         }
 
         public void CopyMachinesTo(int sourceId, IEnumerable<int> targetIds)
         {
-            var sourceSet = new SortedSet<byte>(_personalData[sourceId].machines);
+            var sourceSet = new SortedSet<int>(_compat[sourceId]);
             var targets = targetIds.Where(id => id != sourceId).ToList();
-            foreach (var id in targets) _personalData[id].machines = new SortedSet<byte>(sourceSet);
+            foreach (var id in targets) SetRows(id, sourceSet);
             AfterBulkFamilyChange($"Copied TM/HM compatibility from {SpeciesLabel(sourceId)} to {targets.Count} Pokémon.");
+        }
+
+        // Level-up rows stay ticked whatever is copied over them.
+        private void SetRows(int speciesId, IEnumerable<int> rows)
+        {
+            var set = new SortedSet<int>(rows);
+            if (FromSource) set.UnionWith(_levelUpRows[speciesId]);
+            _compat[speciesId] = set;
         }
 
         private void AfterBulkFamilyChange(string message)
@@ -454,8 +561,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             var t = PlatPatches.Tms();
             if (t == null) return;
-            _maskLoaded = PlatPatches.Compatibility(t, _personalData.Keys, PlatPatches.PersonalMaskRows);
-            foreach (var (row, id) in _maskLoaded) _personalData[id].machines.Add((byte)(TMEditor.VanillaMachineCount + row));
+            _maskLoaded = PlatPatches.Compatibility(t, _compat.Keys, PlatPatches.PersonalMaskRows);
+            foreach (var (row, id) in _maskLoaded) _compat[id].Add(TMEditor.VanillaMachineCount + row);
         }
 
         /// <summary>Writes only the TM121+ bits changed here, so edits saved elsewhere since opening survive.
@@ -465,8 +572,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var t = PlatPatches.Tms();
             if (t == null) return new HashSet<int>();
             var now = new HashSet<(int Row, int PersonalId)>();
-            foreach (var (id, data) in _personalData)
-                foreach (byte m in data.machines)
+            foreach (var (id, rows) in _compat)
+                foreach (int m in rows)
                     if (m >= FirstMaskMachine) now.Add((m - TMEditor.VanillaMachineCount, id));
             var changes = now.Except(_maskLoaded).Select(c => (c.Item1, c.Item2, true))
                 .Concat(_maskLoaded.Except(now).Select(c => (c.Row, c.PersonalId, false))).ToList();
@@ -484,6 +591,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private static SortedSet<byte> FileMachines(IEnumerable<byte> machines) =>
             new SortedSet<byte>(machines.Where(m => m < FirstMaskMachine));
 
+        private static SortedSet<byte> FileMachines(IEnumerable<int> rows) =>
+            new SortedSet<byte>(rows.Where(m => m < FirstMaskMachine).Select(m => (byte)m));
+
         private static void ApplyDelta(SortedSet<byte> target, SortedSet<byte> from, SortedSet<byte> to)
         {
             foreach (byte m in from) if (!to.Contains(m)) target.Remove(m);
@@ -493,7 +603,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Another editor saved a species: take its machine changes while keeping the ones made here.</summary>
         private void OnPersonalDataSaved(object sender, int id)
         {
-            if (ReferenceEquals(sender, this) || !_personalData.TryGetValue(id, out var data)) return;
+            if (ReferenceEquals(sender, this) || !_compat.TryGetValue(id, out var data)) return;
             if (!global::Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
             {
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPersonalDataSaved(sender, id));
@@ -501,8 +611,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             try
             {
+                if (FromSource) TakeSourceSave(id);
+                else
+                {
                 var onDisk = FileMachines(new PokemonPersonalData(id).machines);
-                ApplyDelta(data.machines, _savedFileMachines[id], onDisk);
+                var bytes = new SortedSet<byte>(data.Where(m => m < FirstMaskMachine).Select(m => (byte)m));
+                ApplyDelta(bytes, _savedFileMachines[id], onDisk);
+                data.RemoveWhere(m => m < FirstMaskMachine);
+                data.UnionWith(bytes.Select(m => (int)m));
                 _savedFileMachines[id] = onDisk;
 
                 var t = PlatPatches.Tms();
@@ -510,10 +626,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     var maskOnDisk = PlatPatches.Compatibility(t, new[] { id }, PlatPatches.PersonalMaskRows);
                     var maskWas = _maskLoaded.Where(c => c.PersonalId == id).ToHashSet();
-                    foreach (var (row, _) in maskWas.Except(maskOnDisk)) data.machines.Remove((byte)(TMEditor.VanillaMachineCount + row));
-                    foreach (var (row, _) in maskOnDisk.Except(maskWas)) data.machines.Add((byte)(TMEditor.VanillaMachineCount + row));
+                    foreach (var (row, _) in maskWas.Except(maskOnDisk)) data.Remove(TMEditor.VanillaMachineCount + row);
+                    foreach (var (row, _) in maskOnDisk.Except(maskWas)) data.Add(TMEditor.VanillaMachineCount + row);
                     _maskLoaded.ExceptWith(maskWas);
                     _maskLoaded.UnionWith(maskOnDisk);
+                }
                 }
             }
             catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException)
@@ -528,6 +645,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             UpdateStatus();
         }
 
+        // The Pokemon editor saved this species' lists: take its changes and keep the ones made here.
+        private void TakeSourceSave(int id)
+        {
+            var was = _savedRows[id];
+            var mine = new SortedSet<int>(_compat[id]);
+            ReadSourceLists();
+            LoadSourceSpecies(id);
+            foreach (int r in was) if (!mine.Contains(r)) _compat[id].Remove(r);
+            foreach (int r in mine) if (!was.Contains(r)) _compat[id].Add(r);
+        }
+
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
         public void Detach() => AppEvents.PersonalDataSaved -= OnPersonalDataSaved;
 
@@ -536,13 +664,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             var written = new HashSet<int>();
             try
             {
-                written.UnionWith(SaveExtraMaskTms());
+                if (FromSource) SaveSource();
+                else written.UnionWith(SaveExtraMaskTms());
 
                 // Each file is re-read just before writing and only the machine bits changed here are applied,
                 // so edits other editors saved since this one opened survive.
-                foreach (var (id, data) in _personalData)
+                if (!FromSource) foreach (var (id, data) in _compat)
                 {
-                    var now = FileMachines(data.machines);
+                    var now = FileMachines(data);
                     if (now.SetEquals(_savedFileMachines[id])) continue;
                     var fresh = new PokemonPersonalData(id);
                     ApplyDelta(fresh.machines, _savedFileMachines[id], now);
@@ -580,7 +709,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 string machineLabel = CurrentMachineIndex >= 0 && CurrentMachineIndex < MachineNamesList.Length
                     ? MachineNamesList[CurrentMachineIndex] : "?";
-                int compatCount = _personalData.Count(kvp => kvp.Value.machines.Contains((byte)CurrentMachine));
+                int compatCount = _compat.Count(kvp => kvp.Value.Contains(CurrentMachine));
                 StatusText = $"{machineLabel}: {compatCount} of {_speciesCount} Pokémon compatible." +
                     (_isDirty ? " [Unsaved Changes]" : "");
             }

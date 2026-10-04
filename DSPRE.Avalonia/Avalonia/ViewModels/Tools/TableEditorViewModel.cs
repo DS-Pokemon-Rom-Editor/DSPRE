@@ -197,17 +197,18 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
 
         private int _pokemonIndex = -1;
-        public int PokemonIndex { get => _pokemonIndex; set => Set(ref _pokemonIndex, value); }
+        public int PokemonIndex { get => _pokemonIndex; set { if (Set(ref _pokemonIndex, value)) OnVsPokemonEdited(); } }
 
         private int _pokemonComboIndex = -1;
-        public int PokemonComboIndex { get => _pokemonComboIndex; set => Set(ref _pokemonComboIndex, value); }
+        public int PokemonComboIndex { get => _pokemonComboIndex; set { if (Set(ref _pokemonComboIndex, value)) OnVsPokemonEdited(); } }
 
         // ── Dirty tracking ────────────────────────────────────────────────────────
-        private bool _condDirty, _effectsDirty, _vsTrainerDirty;
+        private bool _condDirty, _effectsDirty, _vsTrainerDirty, _vsPokemonDirty;
         // Rows edited since the last save, so one Save writes every changed row, not just the shown one.
         private readonly HashSet<int> _dirtyCombos = new HashSet<int>();
         private readonly HashSet<int> _dirtyVsTrainers = new HashSet<int>();
-        public bool HasUnsavedChanges => _condDirty || _effectsDirty || _vsTrainerDirty;
+        private readonly HashSet<int> _dirtyVsPokemon = new HashSet<int>();
+        public bool HasUnsavedChanges => _condDirty || _effectsDirty || _vsTrainerDirty || _vsPokemonDirty;
         public string UnsavedChangesDescription => "Table Editor";
         public void SaveChanges() => _ = SaveAllAsync();
 
@@ -221,10 +222,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             if (!HasUnsavedChanges) return;
             int cond = _condSelectedIndex, combo = _comboSelectedIndex, vs = _vsTrainerSelectedIndex, poke = _vsPokemonSelectedIndex;
-            bool toSource = _fromSource && (_effectsDirty || _vsTrainerDirty);
+            bool toSource = _fromSource && (_effectsDirty || _vsTrainerDirty || _vsPokemonDirty);
             if (_condDirty) SaveConditionalMusic();
             if (_effectsDirty) await SaveEffectCombosAsync();
             if (_vsTrainerDirty) await SaveVsTrainersAsync();
+            if (_vsPokemonDirty) await SaveVsPokemonAsync();
             Reselect(cond, combo, vs, poke);
             if (!HasUnsavedChanges)
             {
@@ -252,9 +254,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 finally { _suppress = false; }
                 Reselect(cond, combo, vs, poke);
             }
-            _condDirty = _effectsDirty = _vsTrainerDirty = false;
+            _condDirty = _effectsDirty = _vsTrainerDirty = _vsPokemonDirty = false;
             _dirtyCombos.Clear();
             _dirtyVsTrainers.Clear();
+            _dirtyVsPokemon.Clear();
             ResetUndo();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
@@ -280,7 +283,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private void MarkDirty(ref bool flag) { flag = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Undo / redo: all three tables ────────────────────────────────────────
-        private sealed record TablesState(int[][] Cond, int[][] Combos, int[][] VsTrainers);
+        private sealed record TablesState(int[][] Cond, int[][] Combos, int[][] VsTrainers, int[][] VsPokemon);
         private DSPRE.Avalonia.ByteStateUndo _undo;
         private TablesState _saved;
         public bool CanUndo => _undo?.CanUndo == true;
@@ -292,7 +295,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private TablesState Current() => new TablesState(
             _condMusicTable?.Select(r => new int[] { r.header, r.flag, r.music }).ToArray() ?? Array.Empty<int[]>(),
             _effectsComboTable?.Select(r => new int[] { r.vsGraph, r.battleSSEQ }).ToArray() ?? Array.Empty<int[]>(),
-            _vsTrainerList?.Select(r => new int[] { r.trainerClass, r.comboID }).ToArray() ?? Array.Empty<int[]>());
+            _vsTrainerList?.Select(r => new int[] { r.trainerClass, r.comboID }).ToArray() ?? Array.Empty<int[]>(),
+            _vsPokemonList?.Select(r => new int[] { r.pokemonID, r.comboID }).ToArray() ?? Array.Empty<int[]>());
 
         private void ResetUndo()
         {
@@ -310,6 +314,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 _effectsComboTable[i] = ((ushort)s.Combos[i][0], (ushort)s.Combos[i][1]);
             for (int i = 0; _vsTrainerList != null && i < s.VsTrainers.Length && i < _vsTrainerList.Count; i++)
                 _vsTrainerList[i] = (s.VsTrainers[i][0], s.VsTrainers[i][1]);
+            for (int i = 0; _vsPokemonList != null && s.VsPokemon != null && i < s.VsPokemon.Length && i < _vsPokemonList.Count; i++)
+                _vsPokemonList[i] = (s.VsPokemon[i][0], s.VsPokemon[i][1]);
             RecountDirty();
             int cond = _condSelectedIndex, combo = _comboSelectedIndex, vs = _vsTrainerSelectedIndex, poke = _vsPokemonSelectedIndex;
             _suppress = true;
@@ -327,6 +333,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     string label = $"{TrainerLabel(_vsTrainerList[i].trainerClass)} uses Combo #{_vsTrainerList[i].comboID}";
                     if (VsTrainerItems[i] != label) VsTrainerItems[i] = label;
                 }
+                for (int i = 0; _vsPokemonList != null && i < _vsPokemonList.Count && i < VsPokemonItems.Count; i++)
+                    if (VsPokemonItems[i] != PokemonRowLabel(i)) VsPokemonItems[i] = PokemonRowLabel(i);
             }
             finally { _suppress = false; }
             Reselect(cond, combo, vs, poke);
@@ -345,6 +353,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             for (int i = 0; i < now.VsTrainers.Length; i++)
                 if (i >= _saved.VsTrainers.Length || !now.VsTrainers[i].SequenceEqual(_saved.VsTrainers[i])) _dirtyVsTrainers.Add(i);
             _vsTrainerDirty = _dirtyVsTrainers.Count > 0;
+            _dirtyVsPokemon.Clear();
+            for (int i = 0; i < now.VsPokemon.Length; i++)
+                if (i >= _saved.VsPokemon.Length || !now.VsPokemon[i].SequenceEqual(_saved.VsPokemon[i])) _dirtyVsPokemon.Add(i);
+            _vsPokemonDirty = _dirtyVsPokemon.Count > 0;
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -500,11 +512,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     VsTrainerItems.Add($"{TrainerLabel(classID)} uses Combo #{comboID}");
 
                 VsPokemonItems.Clear();
-                foreach (var (pokeID, comboID) in _vsPokemonList)
-                {
-                    string name = pokeID >= 0 && pokeID < _pokeNames.Length ? _pokeNames[pokeID] : "UNKNOWN";
-                    VsPokemonItems.Add($"[{pokeID:D3}] {name} uses Combo #{comboID}");
-                }
+                for (int i = 0; i < _vsPokemonList.Count; i++) VsPokemonItems.Add(PokemonRowLabel(i));
+                OnPropertyChanged(nameof(CanAddVsPokemonRows));
                 ShowVsTables = true;
             }
             else
@@ -676,7 +685,89 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             Edited();
         }
 
-        // ── VS Pokémon handlers (display only) ─────────────────────────────────────
+        // ── VS Pokémon handlers ────────────────────────────────────────────────────
+        private string PokemonRowLabel(int row)
+        {
+            var (pokeID, comboID) = _vsPokemonList[row];
+            string name = pokeID >= 0 && pokeID < _pokeNames.Length ? _pokeNames[pokeID] : "UNKNOWN";
+            return $"[{pokeID:D3}] {name} uses Combo #{comboID}";
+        }
+
+        // An edited row goes straight into the table so switching rows keeps it.
+        private void OnVsPokemonEdited()
+        {
+            int index = _vsPokemonSelectedIndex;
+            if (_suppress || _vsPokemonList == null || index < 0 || index >= _vsPokemonList.Count) return;
+            _vsPokemonList[index] = (Math.Max(0, _pokemonIndex), Math.Max(0, _pokemonComboIndex));
+            _dirtyVsPokemon.Add(index);
+            MarkDirty(ref _vsPokemonDirty);
+            _suppress = true;
+            try { VsPokemonItems[index] = PokemonRowLabel(index); }
+            finally { _suppress = false; }
+            Edited();
+        }
+
+        private async Task SaveVsPokemonAsync()
+        {
+            if (_vsPokemonList == null) return;
+            var rows = _dirtyVsPokemon.Where(i => i >= 0 && i < _vsPokemonList.Count).OrderBy(i => i).ToList();
+            // Rows store the species in 10 bits.
+            var tooBig = rows.FirstOrDefault(i => _vsPokemonList[i].pokemonID > 0x3FF, -1);
+            if (tooBig >= 0) { StatusText = $"Row {tooBig}: species above 1023 can't have their own battle music."; return; }
+            if (_fromSource)
+            {
+                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                {
+                    foreach (int i in rows)
+                        if (!HgEngineMusicTables.TrySetSpeciesCombo(i, _vsPokemonList[i].pokemonID, _vsPokemonList[i].comboID, out string e)) return e;
+                    return null;
+                });
+                if (!saved) { if (error != null) StatusText = error; return; }
+            }
+            else
+            {
+                foreach (int i in rows) _battleTables.WriteSpecies(i);
+            }
+            _dirtyVsPokemon.Clear();
+            _vsPokemonDirty = false;
+            if (_saved != null) _saved = _saved with { VsPokemon = Current().VsPokemon };
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        /// <summary>hg-engine builds this table from source and DSPRE keeps its search count in step, so rows can come and go.</summary>
+        public bool CanAddVsPokemonRows => _fromSource && _vsPokemonList != null;
+
+        public async Task AddVsPokemonRowAsync()
+        {
+            if (!CanAddVsPokemonRows) return;
+            if (HasUnsavedChanges) { StatusText = "Save or discard your changes first."; return; }
+            int species = Math.Max(0, _pokemonIndex), combo = Math.Max(0, _pokemonComboIndex);
+            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TryAddSpeciesRow(species, combo, out string e) ? null : e);
+            if (!saved) { if (error != null) StatusText = error; return; }
+            ReloadVsPokemon(_vsPokemonList.Count);
+            StatusText = $"Row added to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it.";
+        }
+
+        public async Task RemoveVsPokemonRowAsync()
+        {
+            int row = _vsPokemonSelectedIndex;
+            if (!CanAddVsPokemonRows || row < 0 || row >= _vsPokemonList.Count) return;
+            if (HasUnsavedChanges) { StatusText = "Save or discard your changes first."; return; }
+            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TryRemoveSpeciesRow(row, out string e) ? null : e);
+            if (!saved) { if (error != null) StatusText = error; return; }
+            ReloadVsPokemon(Math.Min(row, _vsPokemonList.Count - 2));
+            StatusText = $"Row removed from {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it.";
+        }
+
+        private void ReloadVsPokemon(int select)
+        {
+            int cond = _condSelectedIndex, combo = _comboSelectedIndex, vs = _vsTrainerSelectedIndex;
+            _suppress = true;
+            try { SetupBattleEffects(); }
+            finally { _suppress = false; }
+            ResetUndo();
+            Reselect(cond, combo, vs, Math.Min(select, _vsPokemonList.Count - 1));
+        }
         private void LoadVsPokemonEntry(int index)
         {
             if (_vsPokemonList == null || index < 0 || index >= _vsPokemonList.Count) return;

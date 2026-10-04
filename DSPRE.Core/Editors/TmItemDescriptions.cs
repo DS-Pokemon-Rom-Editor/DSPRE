@@ -17,8 +17,8 @@ namespace DSPRE.Editors
         public static int Bank => RomInfo.itemDescriptionsTextNumber;
 
         public static string WhyNot() =>
-            RomInfo.isHGE ? "hg-engine builds item text from its source."
-            : Bank <= 0 ? "Item descriptions aren't located for this game version."
+            RomInfo.isHGE && !HgEngine.HgEngineProject.IsActive ? "Open the hg-engine folder to change its item text."
+            : !RomInfo.isHGE && Bank <= 0 ? "Item descriptions aren't located for this game version."
             : !FieldFontCharacters.Ready || FieldFont.LoadSystemFont() == null ? "The game font couldn't be read."
             : null;
 
@@ -29,24 +29,40 @@ namespace DSPRE.Editors
             public List<string> Kept { get; } = new List<string>();
         }
 
+        /// <summary>
+        /// The text archive and line holding an item's bag description. hg-engine splits them by generation, so
+        /// each item is looked up in its checkout.
+        /// </summary>
+        public static bool TryLocate(int item, out int bank, out int line)
+        {
+            if (RomInfo.isHGE) return HgEngine.HgEngineItemText.TryLocate(item, "DESCRIPTION", out bank, out line);
+            bank = Bank;
+            line = item;
+            return bank > 0 && item >= 0;
+        }
+
         /// <summary>Rewrites the descriptions of machines whose move changed.</summary>
         public static Result Update(IReadOnlyList<(int Machine, int OldMove, int NewMove)> changes)
         {
             var result = new Result();
             if (changes.Count == 0 || WhyNot() != null) return result;
 
-            var descriptions = new TextArchive(Bank);
+            var banks = new Dictionary<int, EditableTextBank>();
+            EditableTextBank BankOf(int id) => banks.TryGetValue(id, out var b) ? b : banks[id] = new EditableTextBank(id);
             var moveDescriptions = new TextArchive(RomInfo.moveDescriptionsTextNumbers).messages;
             string[] moveNames = RomInfo.GetAttackNames();
-            var layout = Layout(descriptions.messages);
+            var layout = Layout(BankOf);
             var font = FieldFont.LoadSystemFont();
+            var touched = new HashSet<int>();
 
             foreach (var (machine, oldMove, newMove) in changes)
             {
                 int item = TMEditor.MachineItemId(machine);
                 string label = TMEditor.MachineLabelFromIndex(machine);
-                if (item < 0 || item >= descriptions.messages.Count || oldMove == newMove) continue;
-                string now = Flat(descriptions.messages[item]);
+                if (oldMove == newMove || !TryLocate(item, out int bankId, out int line)) continue;
+                var descriptions = BankOf(bankId);
+                if (descriptions.ReadOnlyReason != null || line >= descriptions.Messages.Count) { result.Kept.Add(label); continue; }
+                string now = Flat(descriptions.Messages[line]);
                 string next = null;
 
                 if (oldMove < moveNames.Length && newMove < moveNames.Length
@@ -56,24 +72,27 @@ namespace DSPRE.Editors
                     next = Wrap(moveDescriptions[newMove], layout.Width, layout.Lines, font);
 
                 if (next == null) { result.Kept.Add(label); continue; }
-                descriptions.messages[item] = next;
+                descriptions.Messages[line] = next;
+                touched.Add(bankId);
                 result.Updated++;
             }
 
-            if (result.Updated > 0) descriptions.SaveToExpandedDir(Bank, false);
+            foreach (int id in touched)
+                if (banks[id].Save() is string error) AppLogger.Error($"TM descriptions: text {id} was not saved: {error}");
             return result;
         }
 
         /// <summary>The widest line and most lines any vanilla TM description uses, so rewrapped text fits the same box.</summary>
-        private static (int Width, int Lines) Layout(List<string> descriptions)
+        private static (int Width, int Lines) Layout(Func<int, EditableTextBank> bankOf)
         {
             var font = FieldFont.LoadSystemFont();
             int width = 0, lines = 0;
             for (int i = 0; i < TMEditor.VanillaMachineCount; i++)
             {
-                int item = TMEditor.MachineItemId(i);
-                if (item < 0 || item >= descriptions.Count) continue;
-                string[] parts = Lines(descriptions[item]);
+                if (!TryLocate(TMEditor.MachineItemId(i), out int bank, out int line)) continue;
+                var descriptions = bankOf(bank).Messages;
+                if (line >= descriptions.Count) continue;
+                string[] parts = Lines(descriptions[line]);
                 lines = Math.Max(lines, parts.Length);
                 foreach (string p in parts) width = Math.Max(width, font.Measure(p, FieldFontCharacters.GlyphFor));
             }

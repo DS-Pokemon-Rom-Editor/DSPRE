@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
         x:Class="DSPRE.Avalonia.Views.Trainers.AddTrainerClassView"
         x:DataType="vm:AddTrainerClassViewModel"
-        Title="Add Trainer Class"
+        Title="Add trainer class"
         Width="380" SizeToContent="Height"
         MinWidth="340"
         WindowStartupLocation="CenterOwner">
@@ -23,7 +23,7 @@
     </StackPanel>
 
     <StackPanel Spacing="4">
-      <TextBlock Text="Requires Platinum (English). Repoints/extends the gender, prize-money, and (optionally) eye-contact-music tables into the synthetic overlay."
+      <TextBlock Text="{Binding Note}"
                  FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
 
       <TextBlock Text="Class name" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>

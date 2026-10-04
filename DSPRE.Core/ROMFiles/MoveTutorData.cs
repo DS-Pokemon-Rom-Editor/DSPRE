@@ -24,12 +24,15 @@ namespace DSPRE.ROMFiles
         }
 
         public bool Platinum { get; }
-        public int PoolSize => Platinum ? 38 : 52;
+        /// <summary>hg-engine: the pool is src/field/move_tutor.c and each species' row its learnsets.json TutorMoves.</summary>
+        public bool FromSource { get; private set; }
+        private int _sourcePool;
+        public int PoolSize => FromSource ? _sourcePool : Platinum ? 38 : 52;
         private int RecordSize => Platinum ? 12 : 4;
         private int MaskSize => Platinum ? 5 : 8;
 
         public List<Tutor> Pool { get; } = new List<Tutor>();
-        public ulong[] Masks { get; } = new ulong[Rows];
+        public ulong[] Masks { get; private set; } = new ulong[Rows];
 
         public static readonly string[] PlatinumPlaces = { "Route 212", "Survival Area", "Snowpoint City" };
         public static readonly string[] HeartGoldTutors = { "Frontier, top left", "Frontier, top right", "Frontier, bottom right", "Headbutt tutor" };
@@ -40,8 +43,11 @@ namespace DSPRE.ROMFiles
 
         private static string HgMaskPath => Path.Combine(dataPath, "fielddata", "wazaoshie", "waza_oshie.bin");
 
+        private static bool UsesSource => HgEngine.HgEngineProject.IsActive;
+
         public static string WhyNot()
         {
+            if (UsesSource) return null;
             if (gameFamily == GameFamilies.DP) return "Diamond and Pearl have no move tutors.";
             bool pt = gameFamily == GameFamilies.Plat;
             if (GameTableFile.WhyNot(GameTable.TutorPool, (pt ? 38 * 12 : 52 * 4)) is string why) return why;
@@ -53,6 +59,7 @@ namespace DSPRE.ROMFiles
         public static MoveTutorData Load()
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
+            if (UsesSource) return LoadSource();
             var data = new MoveTutorData(gameFamily == GameFamilies.Plat);
             byte[] pool = GameTableFile.Read(GameTable.TutorPool, data.PoolSize * data.RecordSize);
             byte[] masks = data.Platinum ? GameTableFile.Read(GameTable.TutorCompatibility, Rows * 5) : File.ReadAllBytes(HgMaskPath);
@@ -71,7 +78,7 @@ namespace DSPRE.ROMFiles
                     ? new Tutor { Move = BitConverter.ToUInt16(raw, 0), Costs = raw[2..6], Where = (int)BitConverter.ToUInt32(raw, 8), Raw = raw }
                     : new Tutor { Move = BitConverter.ToUInt16(raw, 0), Costs = new[] { raw[2] }, Where = raw[3], Raw = raw });
             }
-            for (int r = 0; r < Rows; r++)
+            for (int r = 0; r < Masks.Length && (r + 1) * MaskSize <= masks.Length; r++)
             {
                 ulong m = 0;
                 for (int b = 0; b < MaskSize; b++) m |= (ulong)masks[r * MaskSize + b] << (8 * b);
@@ -79,9 +86,10 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        /// <summary>The mask row for a personal file id, or -1 (eggs have none).</summary>
+        /// <summary>The mask row for a personal file id, or -1 (eggs have none). hg-engine has a row per species id.</summary>
         public static int RowOf(int personalId) =>
-            personalId >= 1 && personalId <= 493 ? personalId - 1
+            UsesSource ? (personalId >= 1 ? personalId : -1)
+            : personalId >= 1 && personalId <= 493 ? personalId - 1
             : personalId >= 496 && personalId < 496 + 12 ? personalId - 3
             : -1;
 
@@ -109,8 +117,8 @@ namespace DSPRE.ROMFiles
 
         public byte[] MaskBytes()
         {
-            var data = new byte[Rows * MaskSize];
-            for (int r = 0; r < Rows; r++)
+            var data = new byte[Masks.Length * MaskSize];
+            for (int r = 0; r < Masks.Length; r++)
                 for (int b = 0; b < MaskSize; b++) data[r * MaskSize + b] = (byte)(Masks[r] >> (8 * b));
             return data;
         }
@@ -130,9 +138,62 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
+        // ── hg-engine ────────────────────────────────────────────────────────
+        private List<List<int>> _sourceOwn;
+        private ulong[] _sourceMasks;
+
+        // A form with no list of its own uses its base species' one, as the build does.
+        private static MoveTutorData LoadSource()
+        {
+            if (!HgEngine.HgEngineMoveTutors.TryRead(out var tutors, out string error)
+                || !HgEngine.HgEngineLearnsets.TryGetAllMoveNames(HgEngine.HgEngineLearnsets.TutorMovesField, out var lists, out error))
+                throw new InvalidDataException(error);
+            if (tutors.Count > 64) throw new InvalidDataException($"{HgEngine.HgEngineMoveTutors.SourceRelPath} has {tutors.Count} tutor moves; DSPRE edits up to 64.");
+            var data = new MoveTutorData(false) { FromSource = true, _sourcePool = tutors.Count };
+            foreach (var t in tutors)
+                data.Pool.Add(new Tutor { Move = (ushort)t.Move, Costs = new[] { (byte)t.Cost }, Where = t.Npc, Raw = new byte[4] });
+            var bases = HgEngine.HgEngineLearnsets.FormBases();
+            int species = GetPokemonNames().Length;
+            data.Masks = new ulong[species];
+            data._sourceOwn = new List<List<int>>(species);
+            for (int s = 0; s < species; s++)
+            {
+                var own = lists.TryGetValue(s, out var l) ? l : new List<int>();
+                data._sourceOwn.Add(own);
+                var effective = own.Count > 0 || !bases.TryGetValue(s, out int b) || !lists.TryGetValue(b, out var inherited) ? own : inherited;
+                for (int j = 0; j < tutors.Count; j++)
+                    if (effective.Contains(tutors[j].Move)) data.Masks[s] |= 1UL << j;
+            }
+            data._sourceMasks = (ulong[])data.Masks.Clone();
+            return data;
+        }
+
+        private void SaveSource()
+        {
+            var tutors = Pool.Select(t => new HgEngine.HgEngineMoveTutors.Tutor(t.Move, t.Costs[0], t.Where)).ToList();
+            if (!HgEngine.HgEngineMoveTutors.TryWrite(tutors, out string error)) throw new IOException(error);
+            var changes = new Dictionary<int, IReadOnlyList<int>>();
+            var poolMoves = Pool.Select(t => (int)t.Move).ToHashSet();
+            for (int s = 0; s < Masks.Length; s++)
+            {
+                if (Masks[s] == _sourceMasks[s]) continue;
+                // Moves keep their place; a tutor's move goes when unticked and joins the end when ticked.
+                var learned = Enumerable.Range(0, Pool.Count).Where(j => Learns(s, j)).Select(j => (int)Pool[j].Move).ToHashSet();
+                var list = _sourceOwn[s].Where(m => !poolMoves.Contains(m) || learned.Contains(m)).ToList();
+                for (int j = 0; j < Pool.Count; j++)
+                    if (Learns(s, j) && !list.Contains(Pool[j].Move)) list.Add(Pool[j].Move);
+                changes[s] = list;
+            }
+            if (changes.Count > 0 && !HgEngine.HgEngineLearnsets.TrySaveMoveNames(HgEngine.HgEngineLearnsets.TutorMovesField, changes, out error))
+                throw new IOException(error);
+            foreach (var (s, list) in changes) _sourceOwn[s] = list.ToList();
+            _sourceMasks = (ulong[])Masks.Clone();
+        }
+
         public void Save(int moveCount)
         {
             if (Problem(moveCount) is string p) throw new InvalidOperationException(p);
+            if (FromSource) { SaveSource(); return; }
             GameTableFile.Write(GameTable.TutorPool, PoolBytes());
             if (Platinum) GameTableFile.Write(GameTable.TutorCompatibility, MaskBytes());
             else File.WriteAllBytes(HgMaskPath, MaskBytes());

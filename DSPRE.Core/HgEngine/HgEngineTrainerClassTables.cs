@@ -1,5 +1,5 @@
 using System.IO;
-using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace DSPRE.HgEngine
 {
@@ -7,31 +7,50 @@ namespace DSPRE.HgEngine
     /// domains: src/trainermoney.c's PrizeMoney[] (struct array keyed by `.class = TRAINERCLASS_X`) and
     /// src/pokemon.c's sTrainerGenders[] (flat `[TRAINERCLASS_X] = TRAINER_MALE,` array). Neither has a
     /// narc build target; both compile straight into the ARM9 overlay, so edits need a full "Compile
-    /// ROM" to take effect in-game, same as any other src/*.c change.</summary>
+    /// ROM" to take effect in-game, same as any other src/*.c change. Entries match by the class id their
+    /// name stands for, so an alias isn't taken for a missing entry.</summary>
     public static class HgEngineTrainerClassTables
     {
         private const string MoneyRelPath = "src/trainermoney.c";
         private const string GenderRelPath = "src/pokemon.c";
         private const string ClassHeaderRelPath = "include/constants/trainerclass.h";
         private const string Prefix = "TRAINERCLASS_";
+        private const string MoneyTable = "PrizeMoney";
+        private const string GenderTable = "sTrainerGenders";
+
+        private static HgEngineSymbolTable Classes => HgEngineSymbolTable.Load(ClassHeaderRelPath);
 
         private static bool TryResolveClassDesignator(int trainerClassId, out string designator)
         {
             designator = null;
-            var table = HgEngineSymbolTable.Load(ClassHeaderRelPath);
-            return table != null && table.TryGetNameWithPrefix(trainerClassId, Prefix, out designator);
+            return Classes?.TryGetNameWithPrefix(trainerClassId, Prefix, out designator) == true;
+        }
+
+        private static int? ClassOf(string token) =>
+            Classes != null && HgEngineSourceExpression.TryEvaluate(token, n => Classes.TryGetValue(n, out int v) ? v : null, out int id) ? id : null;
+
+        private static CInitItem MoneyEntry(string text, int classId, out CDeclaration table)
+        {
+            table = CSourceFile.For(text).Find(MoneyTable);
+            return table?.Init.Items.FirstOrDefault(i => i.List?.Field("class") is CInitItem c && ClassOf(c.ValueText(text)) == classId);
+        }
+
+        private static CInitItem GenderEntry(string text, int classId, out CDeclaration table)
+        {
+            table = CSourceFile.For(text).Find(GenderTable);
+            return table?.Init.Items.FirstOrDefault(i => i.IndexText != null && ClassOf(i.IndexText) == classId);
         }
 
         public static bool TryGetPrizeMultiplier(int trainerClassId, out int multiplier)
         {
             multiplier = 0;
-            if (!HgEngineProject.IsActive || !TryResolveClassDesignator(trainerClassId, out string designator)) return false;
-
+            if (!HgEngineProject.IsActive) return false;
             string text = TryReadSource(MoneyRelPath, out _);
             if (text == null) return false;
-
-            var m = Regex.Match(text, @"\.class\s*=\s*" + Regex.Escape(designator) + @"\s*,\s*\.multiplier\s*=\s*(\d+)");
-            return m.Success && int.TryParse(m.Groups[1].Value, out multiplier);
+            var entry = MoneyEntry(text, trainerClassId, out var table);
+            if (table != null && CompiledOut(table)) return false;
+            var field = entry?.List.Field("multiplier");
+            return field != null && HgEngineSourceExpression.TryEvaluate(field.ValueText(text), _ => null, out multiplier);
         }
 
         public static bool TrySetPrizeMultiplier(int trainerClassId, int multiplier, out string error)
@@ -44,34 +63,39 @@ namespace DSPRE.HgEngine
             string text = TryReadSource(MoneyRelPath, out string path);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
-            var m = Regex.Match(text, @"(\.class\s*=\s*" + Regex.Escape(designator) + @"\s*,\s*\.multiplier\s*=\s*)(\d+)");
-            if (m.Success)
+            var entry = MoneyEntry(text, trainerClassId, out var table);
+            if (table == null) { error = $"{MoneyRelPath} has no {MoneyTable}."; return false; }
+            if (CompiledOut(table)) { error = $"{MoneyTable} is only built with EXPAND_TRAINER_PRIZE_MONEY; turn it on in hg-engine Settings to change prize money."; return false; }
+            if (entry != null)
             {
-                text = text.Remove(m.Groups[2].Index, m.Groups[2].Length).Insert(m.Groups[2].Index, multiplier.ToString());
+                var field = entry.List.Field("multiplier");
+                if (field == null) { error = $"{MoneyRelPath}: {designator}'s entry has no .multiplier."; return false; }
+                text = text.Substring(0, field.ValueStart) + multiplier + text.Substring(field.ValueEnd);
             }
             else
             {
-                int close = text.LastIndexOf("};");
-                if (close < 0) { error = "Could not find the end of PrizeMoney[] to insert a new entry."; return false; }
-                string newEntry = $"    {{ .class = {designator}, .multiplier = {multiplier} }},\n";
-                text = text.Insert(close, newEntry);
+                int at = HgEngineSwarms.LineStart(text, table.Init.Close);
+                text = text.Insert(at, $"    {{ .class = {designator}, .multiplier = {multiplier} }},\n");
             }
-            HgEngineFileCache.WriteText(path, text);
-            return true;
+            return HgEngineVerifiedWrite.TryWrite(path, MoneyRelPath, text, written =>
+            {
+                var back = MoneyEntry(written, trainerClassId, out _)?.List.Field("multiplier");
+                return back != null && HgEngineSourceExpression.TryEvaluate(back.ValueText(written), _ => null, out int m) && m == multiplier ? null : "the multiplier differs";
+            }, out error);
         }
 
         // TRAINER_MALE = 0, TRAINER_FEMALE = 1 (include/trainer_data.h's TrainerGender enum).
         public static bool TryGetGender(int trainerClassId, out int gender)
         {
             gender = 0;
-            if (!HgEngineProject.IsActive || !TryResolveClassDesignator(trainerClassId, out string designator)) return false;
-
+            if (!HgEngineProject.IsActive) return false;
             string text = TryReadSource(GenderRelPath, out _);
             if (text == null) return false;
-
-            var m = Regex.Match(text, @"\[\s*" + Regex.Escape(designator) + @"\s*\]\s*=\s*(TRAINER_MALE|TRAINER_FEMALE)\s*,");
-            if (!m.Success) return false;
-            gender = m.Groups[1].Value == "TRAINER_FEMALE" ? 1 : 0;
+            var entry = GenderEntry(text, trainerClassId, out var table);
+            if (entry == null || CompiledOut(table)) return false;
+            string value = entry.ValueText(text).Trim();
+            if (value != "TRAINER_MALE" && value != "TRAINER_FEMALE") return false;
+            gender = value == "TRAINER_FEMALE" ? 1 : 0;
             return true;
         }
 
@@ -86,26 +110,25 @@ namespace DSPRE.HgEngine
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
             string genderName = gender == 1 ? "TRAINER_FEMALE" : "TRAINER_MALE";
-            var m = Regex.Match(text, @"(\[\s*" + Regex.Escape(designator) + @"\s*\]\s*=\s*)(TRAINER_MALE|TRAINER_FEMALE)(\s*,)");
-            if (m.Success)
-            {
-                text = text.Substring(0, m.Index) + m.Groups[1].Value + genderName + m.Groups[3].Value + text.Substring(m.Index + m.Length);
-            }
-            else
-            {
-                int close = text.IndexOf("};", text.IndexOf("sTrainerGenders"));
-                if (close < 0) { error = "Could not find the end of sTrainerGenders[] to insert a new entry."; return false; }
-                string newEntry = $"    [{designator}] = {genderName},\n";
-                text = text.Insert(close, newEntry);
-            }
-            HgEngineFileCache.WriteText(path, text);
-            return true;
+            var entry = GenderEntry(text, trainerClassId, out var table);
+            if (table == null) { error = $"{GenderRelPath} has no {GenderTable}."; return false; }
+            if (CompiledOut(table)) { error = $"{GenderTable} is only built with EXPAND_TRAINER_GENDER_TABLE; turn it on in hg-engine Settings to change genders."; return false; }
+            if (entry != null) text = text.Substring(0, entry.ValueStart) + genderName + text.Substring(entry.ValueEnd);
+            else text = text.Insert(HgEngineSwarms.LineStart(text, table.Init.Close), $"    [{designator}] = {genderName},\n");
+
+            return HgEngineVerifiedWrite.TryWrite(path, GenderRelPath, text, written =>
+                TryGenderIn(written, trainerClassId) == genderName ? null : "the gender differs", out error);
         }
+
+        private static string TryGenderIn(string text, int classId) => GenderEntry(text, classId, out _)?.ValueText(text).Trim();
+
+        // The table sits under an #ifdef the checkout's config.h leaves off.
+        private static bool CompiledOut(CDeclaration table) => HgEngineConfigState.Compiles(table.Conditions) == false;
 
         private static string TryReadSource(string relPath, out string path)
         {
             path = Path.Combine(HgEngineProject.RepoPathUnc, relPath.Replace('/', Path.DirectorySeparatorChar));
-            return File.Exists(path) ? HgEngineFileCache.GetText(path) : null;
+            return File.Exists(path) ? HgEngineFileCache.GetText(path).Replace("\r\n", "\n") : null;
         }
     }
 }

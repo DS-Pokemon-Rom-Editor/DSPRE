@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private TypeChart _chart;
 
         private ByteStateUndo _undo;
-        private void StartUndo() => _undo = new ByteStateUndo(() => _chart.Matchups.SelectMany(m => new[] { m.Attacker, m.Defender, m.Tenths, (byte)(m.ForesightRemovable ? 1 : 0) }).ToArray(), ApplyMatchups, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        private void StartUndo() => _undo = new ByteStateUndo(() => _chart.Matchups.SelectMany(m => new[] { m.Attacker, m.Defender, m.Tenths, (byte)(m.ForesightRemovable ? 1 : m.RingTargetRemovable ? 2 : 0) }).ToArray(), ApplyMatchups, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             _chart.Matchups.Clear();
             for (int k = 0; k + 3 < b.Length; k += 4)
-                _chart.Matchups.Add(new TypeChart.Matchup { Attacker = b[k], Defender = b[k + 1], Tenths = b[k + 2], ForesightRemovable = b[k + 3] != 0 });
+                _chart.Matchups.Add(new TypeChart.Matchup { Attacker = b[k], Defender = b[k + 1], Tenths = b[k + 2], ForesightRemovable = b[k + 3] == 1, RingTargetRemovable = b[k + 3] == 2 });
             Changed();
         }
 
@@ -196,7 +196,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 Raise(n);
         }
 
-        public string Room => _chart == null ? "" : $"{_chart.Matchups.Count} of {_chart.MaxMatchups} matchups used · chart {_chart.Where}";
+        public string Room => _chart == null ? ""
+            : _chart.FromSource ? $"{_chart.Matchups.Count} matchups · chart {_chart.Where}"
+            : $"{_chart.Matchups.Count} of {_chart.MaxMatchups} matchups used · chart {_chart.Where}";
 
         public string Problem => _chart?.Problem() ?? "";
         public bool HasProblem => Problem.Length > 0;
@@ -240,11 +242,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_chart == null) return true;
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Type Chart"); return false; }
-            try { _chart.Save(); }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            if (_chart.FromSource)
             {
-                await DialogHelper.ShowError("The type chart was not saved:\n" + e.Message, "Type Chart");
-                return false;
+                var (saved, error) = await HgEngineSave.RunAsync(() => { _chart.Save(); return null; });
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError("The type chart was not saved:\n" + error, "Type Chart");
+                    return false;
+                }
+            }
+            else
+            {
+                try { _chart.Save(); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+                {
+                    await DialogHelper.ShowError("The type chart was not saved:\n" + e.Message, "Type Chart");
+                    return false;
+                }
             }
             _savedKey = Key();
             Changed();

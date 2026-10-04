@@ -149,6 +149,222 @@ namespace DSPRE.HgEngine
             };
         }
 
+        /// <summary>The learnsets.json lists that name moves only. The build turns MachineMoves into each species'
+        /// compatibility with every sMachineMoves slot teaching one of them, level-up moves included.</summary>
+        public const string MachineMovesField = "MachineMoves", EggMovesField = "EggMoves", TutorMovesField = "TutorMoves";
+
+        /// <summary>
+        /// One species' move list from learnsets.json, in file order. <paramref name="inherited"/> is true when the species
+        /// has none of its own and the build uses its base species' list instead, as build_learnsets.py does for forms.
+        /// </summary>
+        public static bool TryGetMoveNames(int speciesId, string field, out List<int> moves, out bool inherited, out string error)
+        {
+            moves = new List<int>();
+            inherited = false;
+            if (!TryLoad(out string json, out var species, out var moveTable, out var formToBase, out error)) return false;
+            var root = JsonSpan.Members(json, 0);
+            if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
+            if (!TryKeyFor(speciesId, species, root, out string key, out var names, out error)) return false;
+
+            if (!TryReadNames(json, root, key, field, moveTable, moves, out error)) return false;
+            if (moves.Count > 0) return true;
+            string form = formToBase.ContainsKey(key) ? key : names.FirstOrDefault(n => formToBase.ContainsKey(n));
+            if (form == null) return true;
+            if (!TryReadNames(json, root, formToBase[form], field, moveTable, moves, out error)) return false;
+            inherited = moves.Count > 0;
+            return true;
+        }
+
+        /// <summary>Each form's base species, from FormToSpeciesMapping.c: the build gives a form with no list of its own the base's.</summary>
+        public static Dictionary<int, int> FormBases()
+        {
+            var bases = new Dictionary<int, int>();
+            if (!TryLoad(out _, out var species, out _, out var formToBase, out _)) return bases;
+            foreach (var (form, baseName) in formToBase)
+                if (species.TryGetValue(form, out int formId) && species.TryGetValue(baseName, out int baseId)) bases[formId] = baseId;
+            return bases;
+        }
+
+        /// <summary>
+        /// Every species' own list in one pass, keyed by species id; a species with no list of its own is absent (the
+        /// build gives a form its base species' list, which <see cref="TryGetMoveNames"/> reports).
+        /// </summary>
+        public static bool TryGetAllMoveNames(string field, out Dictionary<int, List<int>> lists, out string error)
+        {
+            lists = new Dictionary<int, List<int>>();
+            if (!TryLoad(out string json, out var species, out var moveTable, out _, out error)) return false;
+            var root = JsonSpan.Members(json, 0);
+            if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
+            foreach (var member in root)
+            {
+                if (!species.TryGetValue(member.Key, out int id) || lists.ContainsKey(id)) continue;
+                var moves = new List<int>();
+                if (!TryReadNames(json, root, member.Key, field, moveTable, moves, out error)) return false;
+                if (moves.Count > 0) lists[id] = moves;
+            }
+            return true;
+        }
+
+        /// <summary>Writes one species' move list into learnsets.json, keeping the names the file already spells.</summary>
+        public static bool TrySaveMoveNames(int speciesId, string field, IReadOnlyList<int> moves, out string error) =>
+            TrySaveMoveNames(field, new Dictionary<int, IReadOnlyList<int>> { [speciesId] = moves }, out error);
+
+        /// <summary>Writes several species' lists in one go, so the file is written once.</summary>
+        public static bool TrySaveMoveNames(string field, IReadOnlyDictionary<int, IReadOnlyList<int>> lists, out string error)
+        {
+            if (!TryLoad(out string json, out var species, out var moveTable, out _, out error)) return false;
+            string original = json;
+            foreach (var (speciesId, moves) in lists)
+                if (!TryApplyMoveNames(ref json, speciesId, field, moves, species, moveTable, out error)) return false;
+            if (json == original) return true;
+
+            try
+            {
+                string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
+                byte[] bytes = File.ReadAllBytes(path);
+                bool bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+                HgEngineFileCache.WriteText(path, json, new UTF8Encoding(bom));
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TryApplyMoveNames(ref string json, int speciesId, string field, IReadOnlyList<int> moves,
+            HgEngineSymbolTable species, HgEngineSymbolTable moveTable, out string error)
+        {
+            error = null;
+            var root = JsonSpan.Members(json, 0);
+            if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
+            if (!TryKeyFor(speciesId, species, root, out string key, out _, out error)) return false;
+
+            var kept = new Dictionary<int, string>();
+            var existing = root.FirstOrDefault(m => m.Key == key);
+            var fields = existing != null && json[existing.ValueStart] == '{' ? JsonSpan.Members(json, existing.ValueStart) : null;
+            var current = fields?.FirstOrDefault(m => m.Key == field);
+            if (current != null)
+                foreach (Match m in Regex.Matches(json.Substring(current.ValueStart, current.ValueEnd - current.ValueStart), "\"([^\"]+)\""))
+                    if (moveTable.TryGetValue(m.Groups[1].Value.Trim(), out int id)) kept.TryAdd(id, m.Groups[1].Value);
+
+            var names = new List<string>(moves.Count);
+            foreach (int move in moves)
+            {
+                if (!kept.TryGetValue(move, out string name) && !moveTable.TryGetNameWithPrefix(move, "MOVE_", out name))
+                { error = $"No MOVE_ name for move {move}."; return false; }
+                names.Add(name);
+            }
+
+            string newline = json.Contains("\r\n") ? "\r\n" : "\n";
+            string unit = DetectIndentUnit(json);
+            string updated;
+            if (existing == null)
+            {
+                string member = $"\"{key}\": {{{newline}{unit}{unit}\"{field}\": {RenderNames(names, unit + unit, unit, newline)}{newline}{unit}}}";
+                int rootEnd = JsonSpan.SkipValue(json, JsonSpan.SkipWs(json, 0));
+                updated = InsertMember(json, JsonSpan.SkipWs(json, 0), rootEnd, root, member, unit, "", newline);
+            }
+            else if (fields == null) { error = $"{key} is not an object in learnsets.json."; return false; }
+            else if (current != null)
+            {
+                if (json[current.ValueStart] != '[') { error = $"{key} {field} is not a list."; return false; }
+                updated = json.Substring(0, current.ValueStart) + RenderNames(names, LineIndent(json, current.KeyStart), unit, newline)
+                        + json.Substring(current.ValueEnd);
+            }
+            else
+            {
+                string outer = LineIndent(json, existing.KeyStart);
+                updated = InsertMember(json, existing.ValueStart, existing.ValueEnd, fields,
+                    $"\"{field}\": {RenderNames(names, outer + unit, unit, newline)}", outer + unit, outer, newline);
+            }
+            json = updated;
+            return true;
+        }
+
+        private static bool TryLoad(out string json, out HgEngineSymbolTable species, out HgEngineSymbolTable moves,
+            out Dictionary<string, string> formToBase, out string error)
+        {
+            json = null; formToBase = null; error = null;
+            species = moves = null;
+            if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
+            species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
+            if (species == null || moves == null) { error = "Could not read species.h or moves.h from the checkout."; return false; }
+            string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
+            string formPath = Path.Combine(HgEngineProject.RepoPathUnc, FormMapRelPath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path) || !File.Exists(formPath)) { error = $"{SourceRelPath} or {FormMapRelPath} is missing from the checkout."; return false; }
+            try
+            {
+                string text = HgEngineFileCache.GetText(path);
+                json = text.Length > 0 && text[0] == '﻿' ? text.Substring(1) : text;
+                formToBase = ParseFormToBase(HgEngineFileCache.GetText(formPath));
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        // The file's own spelling of the species wins over other names species.h gives the same id.
+        private static bool TryKeyFor(int speciesId, HgEngineSymbolTable species, List<JsonSpan.Member> root,
+            out string key, out List<string> names, out string error)
+        {
+            error = null;
+            names = species.ByName
+                .Where(kv => kv.Value == speciesId && kv.Key.StartsWith("SPECIES_", StringComparison.Ordinal))
+                .Select(kv => kv.Key).ToList();
+            key = names.FirstOrDefault(n => root.Any(m => m.Key == n));
+            if (key != null || species.TryGetNameWithPrefix(speciesId, "SPECIES_", out key)) return true;
+            error = $"No SPECIES_ name for species {speciesId}.";
+            return false;
+        }
+
+        private static bool TryReadNames(string json, List<JsonSpan.Member> root, string key, string field,
+            HgEngineSymbolTable moves, List<int> list, out string error)
+        {
+            error = null;
+            var entry = root.FirstOrDefault(m => m.Key == key);
+            if (entry == null) return true;
+            if (json[entry.ValueStart] != '{') { error = $"{key} is not an object in learnsets.json."; return false; }
+            var value = JsonSpan.Members(json, entry.ValueStart)?.FirstOrDefault(m => m.Key == field);
+            if (value == null) return true;
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(json.AsMemory(value.ValueStart, value.ValueEnd - value.ValueStart));
+                if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) { error = $"{key} {field} is not a list."; return false; }
+                foreach (var row in doc.RootElement.EnumerateArray())
+                {
+                    string name = row.ValueKind == System.Text.Json.JsonValueKind.String ? row.GetString().Trim() : "";
+                    if (!moves.TryGetValue(name, out int id)) { error = $"{key} {field} names unknown move \"{name}\"."; return false; }
+                    list.Add(id);
+                }
+                return true;
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                list.Clear();
+                error = $"{key} {field} could not be read: {ex.Message}";
+                return false;
+            }
+        }
+
+        // Matches Python's json.dump(indent=N): one name per line.
+        private static string RenderNames(IReadOnlyList<string> names, string indent, string unit, string newline)
+        {
+            if (names.Count == 0) return "[]";
+            var sb = new StringBuilder("[");
+            for (int i = 0; i < names.Count; i++)
+            {
+                sb.Append(newline).Append(indent).Append(unit).Append('"').Append(names[i]).Append('"');
+                if (i < names.Count - 1) sb.Append(',');
+            }
+            return sb.Append(newline).Append(indent).Append(']').ToString();
+        }
+
         public const uint Terminator = 0x0000FFFF;
 
         // build_learnsets.py regenerates MAX_LEVELUP_MOVES from the longest list, but refuses rows past 64 slots.
@@ -206,8 +422,29 @@ namespace DSPRE.HgEngine
             return m.Success ? int.Parse(m.Groups[1].Value) : -1;
         }
 
+        /// <summary>Every species' own level-up list in one pass, keyed by species id; forms that inherit are absent.</summary>
+        public static bool TryGetAllLevelMoves(out Dictionary<int, List<(int level, int move)>> lists, out string error)
+        {
+            lists = new Dictionary<int, List<(int level, int move)>>();
+            if (!TryLoad(out string json, out var species, out var moveTable, out _, out error)) return false;
+            var root = JsonSpan.Members(json, 0);
+            if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
+            foreach (var member in root)
+            {
+                if (!species.TryGetValue(member.Key, out int id) || lists.ContainsKey(id)) continue;
+                var list = new List<(int level, int move)>();
+                if (!TryReadList(json, root, member.Key, moveTable, list, out error)) return false;
+                if (list.Count > 0) lists[id] = list;
+            }
+            return true;
+        }
+
         /// <summary>Writes one species' level-up list into the linked checkout's learnsets.json.</summary>
-        public static bool TrySaveLevelMoves(int speciesId, IReadOnlyList<(int level, int move)> entries, out string error)
+        public static bool TrySaveLevelMoves(int speciesId, IReadOnlyList<(int level, int move)> entries, out string error) =>
+            TrySaveLevelMoves(new Dictionary<int, IReadOnlyList<(int level, int move)>> { [speciesId] = entries }, out error);
+
+        /// <summary>Writes several species' level-up lists, writing the file once.</summary>
+        public static bool TrySaveLevelMoves(IReadOnlyDictionary<int, IReadOnlyList<(int level, int move)>> lists, out string error)
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
@@ -225,7 +462,13 @@ namespace DSPRE.HgEngine
                 bool bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
                 string text = new UTF8Encoding(false).GetString(bytes, bom ? 3 : 0, bytes.Length - (bom ? 3 : 0));
 
-                if (!TryApplyLevelMoves(text, speciesId, entries, species, moves, out string updated, out error)) return false;
+                string updated = text;
+                foreach (var (speciesId, entries) in lists)
+                    if (!TryApplyLevelMoves(updated, speciesId, entries, species, moves, out updated, out error))
+                    {
+                        error = lists.Count > 1 ? $"Species {speciesId}: {error}" : error;
+                        return false;
+                    }
                 if (updated == text) return true;
 
                 HgEngineFileCache.WriteText(path, updated, new UTF8Encoding(bom));

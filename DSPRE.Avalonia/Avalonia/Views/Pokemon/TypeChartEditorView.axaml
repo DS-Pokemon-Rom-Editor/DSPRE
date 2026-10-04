@@ -9,17 +9,14 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button x:Name="MakeRoomButton" Content="Make room" Click="MakeRoom_Click" IsVisible="{Binding CanMakeRoom}"
                 ToolTip.Tip="{Binding MakeRoomTip}"/>
         <TextBlock Text="{Binding Room}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <StackPanel DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
       <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>

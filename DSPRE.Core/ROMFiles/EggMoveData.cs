@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using DSPRE.ROMFiles;
 
 namespace DSPRE
@@ -16,8 +17,12 @@ namespace DSPRE
         public const int SPECIES_CONSTANT = 20000;
 
         /// <summary>Whether DP or Platinum use the expanded one-file-per-species layout, and its moves-per-species limit.</summary>
+        /// <summary>hg-engine builds the egg moves from learnsets.json's EggMoves lists, which have no length limit.</summary>
+        public static bool FromHgEngineSource => HgEngine.HgEngineProject.IsActive;
+
         public static (bool Expanded, int MaxMoves) Layout()
         {
+            if (FromHgEngineSource) return (true, int.MaxValue);
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return (false, 0);
             using var reader = new BinaryReader(File.OpenRead(OverlayUtils.GetPath(OVERLAY_NUMBER)));
             reader.BaseStream.Seek(RomInfo.GetEggMoveTableOffset(), SeekOrigin.Begin);
@@ -33,6 +38,7 @@ namespace DSPRE
         /// </summary>
         public static void Write(IReadOnlyList<EggMoveEntry> entries, bool expandedLayout, int speciesCount)
         {
+            if (FromHgEngineSource) { WriteSource(entries); return; }
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {
                 var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
@@ -69,6 +75,28 @@ namespace DSPRE
             }
         }
 
+        // Only species whose list changed are rewritten; one taken out of the table gets an empty list.
+        private static void WriteSource(IReadOnlyList<EggMoveEntry> entries)
+        {
+            string field = HgEngine.HgEngineLearnsets.EggMovesField;
+            if (!HgEngine.HgEngineLearnsets.TryGetAllMoveNames(field, out var before, out string error)) throw new IOException(error);
+            var now = new Dictionary<int, List<int>>();
+            foreach (var e in entries) now[e.speciesID] = e.moveIDs.Select(m => (int)m).ToList();
+            var changes = new Dictionary<int, IReadOnlyList<int>>();
+            foreach (var (species, moves) in now)
+                if (!before.TryGetValue(species, out var was) ? moves.Count > 0 : !was.SequenceEqual(moves)) changes[species] = moves;
+            foreach (int species in before.Keys)
+                if (!now.ContainsKey(species)) changes[species] = new List<int>();
+            if (!HgEngine.HgEngineLearnsets.TrySaveMoveNames(field, changes, out error)) throw new IOException(error);
+        }
+
+        private static List<EggMoveEntry> ReadSource()
+        {
+            if (!HgEngine.HgEngineLearnsets.TryGetAllMoveNames(HgEngine.HgEngineLearnsets.EggMovesField, out var lists, out string error))
+                throw new IOException(error);
+            return lists.OrderBy(kv => kv.Key).Select(kv => new EggMoveEntry(kv.Key, kv.Value.Select(m => (ushort)m).ToList())).ToList();
+        }
+
         private static void WriteTable(BinaryWriter w, IReadOnlyList<EggMoveEntry> entries)
         {
             foreach (var e in entries)
@@ -81,6 +109,7 @@ namespace DSPRE
 
         public static List<EggMoveEntry> ReadFromRom()
         {
+            if (FromHgEngineSource) return ReadSource();
             const int overlayNum = OVERLAY_NUMBER;
             var result = new List<EggMoveEntry>();
             bool useSpecial = false;

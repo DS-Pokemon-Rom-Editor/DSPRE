@@ -82,7 +82,7 @@
                     Padding="14,8" FontWeight="Bold" FontSize="14"/>
             <Button Content="Export wizard…" controls:Icon.Key="export" Click="OpenExportWizard_Click"
                     Padding="14,8" FontSize="14"/>
-            <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+            <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
                     Padding="14,8" FontSize="14"
                     ToolTip.Tip="Open this Pokemon's sprites in the Graphics window, where the drawing, its colours and its shiny colours can be painted by hand."/>
           </StackPanel>
@@ -92,7 +92,7 @@
                     Click="AddOppositeGenderSprites_Click"
                     IsVisible="{Binding CanAddOppositeGenderSprites}"
                     FontSize="11" Padding="8,4"
-                    ToolTip.Tip="This species is missing sprites for one gender (needed if you widen its gender ratio in the Personal Data editor). Duplicates the existing gender's sprites into the empty slots."/>
+                    ToolTip.Tip="Copies the existing gender's sprites into the missing gender."/>
             <ComboBox IsVisible="{Binding HasAlternateForms}"
                       ItemsSource="{Binding VariantNames}"
                       SelectedIndex="{Binding SelectedVariantIndex}"
@@ -113,23 +113,23 @@
     </Border>
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="16" Margin="4">
-        <GroupBox Header="Normal Sprites">
+        <GroupBox Header="Normal sprites">
           <StackPanel Spacing="10" Margin="4">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="Sprite Sheet" Width="80" VerticalAlignment="Center" FontWeight="SemiBold"
-                         ToolTip.Tip="Edit Back and Front together as one 160x80 image (80x80 each, Back then Front). No palette involved, just the art."/>
+              <TextBlock Text="Sprite sheet" Width="80" VerticalAlignment="Center" FontWeight="SemiBold"
+                         ToolTip.Tip="Back and front as one 160x80 image. Art only, no palette."/>
               <Button Classes="sprite-btn" Content="Import female…" controls:Icon.Key="import" Click="ImportFemaleSheet_Click" IsVisible="{Binding ShowFemaleFormImport}"/>
               <Button Classes="sprite-btn" Content="Export female…" controls:Icon.Key="export" Click="ExportFemaleSheet_Click"/>
               <Button Classes="sprite-btn" Content="Import male…" controls:Icon.Key="import" Click="ImportMaleSheet_Click"/>
               <Button Classes="sprite-btn" Content="Export male…" controls:Icon.Key="export" Click="ExportMaleSheet_Click"/>
               <Border Width="1" Margin="4,2" Background="{DynamicResource Editor.Border}" IsVisible="{Binding CanUseFullSheet}"/>
               <Button Classes="sprite-btn" Content="Import both…" controls:Icon.Key="import" Click="ImportFullSheet_Click" IsVisible="{Binding CanUseFullSheet}"
-                      ToolTip.Tip="Both genders together: Female Back, Male Back, Female Front, Male Front, left to right."/>
+                      ToolTip.Tip="Both genders together: female back, male back, female front, male front, left to right."/>
               <Button Classes="sprite-btn" Content="Export both…" controls:Icon.Key="export" Click="ExportFullSheet_Click" IsVisible="{Binding CanUseFullSheet}"/>
             </StackPanel>
             <Grid ColumnDefinitions="*,8,*,8,*,8,*">
               <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">
-                <TextBlock Classes="header" Text="Female Back"/>
+                <TextBlock Classes="header" Text="Female back"/>
                 <Border Classes="sprite-cell">
                   <Image Classes="sprite-img" Source="{Binding FemaleBackNormal}"/>
                 </Border>
@@ -143,7 +143,7 @@
                 </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4" HorizontalAlignment="Center">
-                <TextBlock Classes="header" Text="Male Back"/>
+                <TextBlock Classes="header" Text="Male back"/>
                 <Border Classes="sprite-cell">
                   <Image Classes="sprite-img" Source="{Binding MaleBackNormal}"/>
                 </Border>
@@ -157,7 +157,7 @@
                 </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="4" Spacing="4" HorizontalAlignment="Center">
-                <TextBlock Classes="header" Text="Female Front"/>
+                <TextBlock Classes="header" Text="Female front"/>
                 <Border Classes="sprite-cell">
                   <Image Classes="sprite-img" Source="{Binding FemaleFrontNormal}"/>
                 </Border>
@@ -171,7 +171,7 @@
                 </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="6" Spacing="4" HorizontalAlignment="Center">
-                <TextBlock Classes="header" Text="Male Front"/>
+                <TextBlock Classes="header" Text="Male front"/>
                 <Border Classes="sprite-cell">
                   <Image Classes="sprite-img" Source="{Binding MaleFrontNormal}"/>
                 </Border>
@@ -206,10 +206,10 @@
           </StackPanel>
         </GroupBox>
 
-        <GroupBox Header="Shiny Sprites">
+        <GroupBox Header="Shiny sprites">
           <StackPanel Spacing="10" Margin="4">
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="Sprite Sheet" Width="80" VerticalAlignment="Center" FontWeight="SemiBold"
+              <TextBlock Text="Sprite sheet" Width="80" VerticalAlignment="Center" FontWeight="SemiBold"
                          ToolTip.Tip="Get the shiny palette from a fully shiny-colored Back+Front sheet. Artwork is unchanged, only colors are read from it."/>
               <Button Classes="sprite-btn" Content="Import female…" controls:Icon.Key="import" Click="ImportFemaleShinySheet_Click" IsVisible="{Binding ShowFemaleShinyFormImport}"/>
               <Button Classes="sprite-btn" Content="Export female…" controls:Icon.Key="export" Click="ExportFemaleShinySheet_Click"/>
@@ -224,7 +224,7 @@
                        IsVisible="{Binding IsHgEngineSourced}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
             <Grid ColumnDefinitions="*,8,*,8,*,8,*">
               <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">
-                <TextBlock Classes="header" Text="Female Back (Shiny)"/>
+                <TextBlock Classes="header" Text="Female back (shiny)"/>
                 <Border Classes="sprite-cell">
                   <Image Classes="sprite-img" Source="{Binding FemaleBackShiny}"/>
                 </Border>
@@ -239,7 +239,7 @@
                 </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4" HorizontalAlignment="Center">
-                <TextBlock Classes="header" Text="Male Back (Shiny)"/>
+                <TextBlock Classes="header" Text="Male back (shiny)"/>
                 <Border Classes="sprite-cell">
                   <Image Classes="sprite-img" Source="{Binding MaleBackShiny}"/>
                 </Border>
@@ -254,7 +254,7 @@
                 </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="4" Spacing="4" HorizontalAlignment="Center">
-                <TextBlock Classes="header" Text="Female Front (Shiny)"/>
+                <TextBlock Classes="header" Text="Female front (shiny)"/>
                 <Border Classes="sprite-cell">
                   <Image Classes="sprite-img" Source="{Binding FemaleFrontShiny}"/>
                 </Border>
@@ -269,7 +269,7 @@
                 </StackPanel>
               </StackPanel>
               <StackPanel Grid.Column="6" Spacing="4" HorizontalAlignment="Center">
-                <TextBlock Classes="header" Text="Male Front (Shiny)"/>
+                <TextBlock Classes="header" Text="Male front (shiny)"/>
                 <Border Classes="sprite-cell">
                   <Image Classes="sprite-img" Source="{Binding MaleFrontShiny}"/>
                 </Border>

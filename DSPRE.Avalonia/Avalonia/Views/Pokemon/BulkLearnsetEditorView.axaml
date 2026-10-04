@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         x:Class="DSPRE.Avalonia.Views.Pokemon.BulkLearnsetEditorView"
         x:DataType="vm:BulkLearnsetEditorViewModel"
-        Title="Bulk Learnset Editor"
+        Title="Bulk learnset editor"
         Width="720" Height="640"
         WindowStartupLocation="CenterScreen">
 
@@ -13,17 +13,14 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <TextBlock Text="Filter:" VerticalAlignment="Center"/>
         <ComboBox Width="200" ItemsSource="{Binding SpeciesFilter}" SelectedIndex="{Binding FilterIndex}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Save all" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Add row" controls:Icon.Key="addIcon"  Click="Add_Click"/>
         <Button Content="Remove" controls:Icon.Key="deleteIcon"   Click="Remove_Click"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>

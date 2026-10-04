@@ -27,25 +27,19 @@
   </Window.Styles>
 
   <DockPanel LastChildFill="True">
-	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-			BorderThickness="0,0,0,1" Padding="6,4">
-	  <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
+	<controls:EditorToolbar>
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
-		<TextBlock Text="Move:" VerticalAlignment="Center" Margin="12,0,0,0"/>
-		<NumericUpDown Value="{Binding SelectedMoveIndex}" Minimum="0" Maximum="{Binding MaxMoveIndex}" FormatString="0" Width="110"/>
-		<controls:FusionAutoCompleteBox x:Name="MovePicker" ItemsSource="{Binding MoveNames}"
-					  SelectedIndex="{Binding SelectedMoveIndex}"
-					  MinWidth="260"/>
+		<TextBlock Text="Move:" VerticalAlignment="Center"/>
+		<controls:IdNameSelector x:Name="MovePicker" Value="{Binding SelectedMoveIndex}" Maximum="{Binding MaxMoveIndex}" Names="{Binding MoveNames}" Width="380"/>
 		<Button x:Name="EditMoveScriptButton" Content="Edit move script" controls:Icon.Key="pencil" Click="EditMoveScript_Click"
 				ToolTip.Tip="Open this move's battle script. Platinum and HGSS only."/>
 		<Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click" Margin="12,0,0,0"/>
 		<Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
 		<Button Content="Add new move…" controls:Icon.Key="addIcon" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
 				ToolTip.Tip="Add a new move to the hg-engine checkout"/>
-	  </WrapPanel>
-	</Border>
+	</controls:EditorToolbar>
 
 	<DockPanel LastChildFill="True" Margin="10">
 
@@ -65,7 +59,7 @@
 	  <!-- ── Left column ── -->
 
 	  <!-- Type / Split / Range -->
-	  <GroupBox x:Name="PropertiesBox" Grid.Row="0" Grid.Column="0" Header="Move Properties">
+	  <GroupBox x:Name="PropertiesBox" Grid.Row="0" Grid.Column="0" Header="Move properties">
 		<Grid RowDefinitions="Auto,8,Auto,8,Auto" ColumnDefinitions="Auto,*">
 
 		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Type:"   Classes="label"/>
@@ -83,7 +77,7 @@
 	  </GroupBox>
 
 	  <!-- Battle sequence -->
-	  <GroupBox x:Name="EffectBox" Grid.Row="2" Grid.Column="0" Header="Battle Sequence (Effect)">
+	  <GroupBox x:Name="EffectBox" Grid.Row="2" Grid.Column="0" Header="Battle sequence (effect)">
 		<ComboBox ItemsSource="{Binding BattleSeqItems}"
 				  SelectedIndex="{Binding BattleSeqIndex}"
 				  HorizontalAlignment="Stretch" VerticalAlignment="Top" MinWidth="0">

@@ -95,11 +95,20 @@ namespace DSPRE.Avalonia
                 DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<DirNames> { archive });
                 string dir = gameDirs[archive].unpackedDir;
 
-                int paletteFileID = TrainerGraphicsLayout.ColoursEntry(trClassID);
+                bool back = archive == DirNames.trainerBackGraphics;
+                // A class added on hg-engine has its source files before a build gives it archive members; class
+                // 0's members serve as same-sized containers for the source PNG laid over them below.
+                int memberClass = trClassID;
+                if ((back || archive == DirNames.trainerGraphics) && HgEngineProject.IsActive
+                    && !File.Exists(Path.Combine(dir, TrainerGraphicsLayout.ColoursEntry(trClassID).ToString("D4")))
+                    && File.Exists(HgEngineTrainerGraphicsSource.Stem(back, trClassID) + "_cell.json"))
+                    memberClass = 0;
+
+                int paletteFileID = TrainerGraphicsLayout.ColoursEntry(memberClass);
                 string paletteFilename = paletteFileID.ToString("D4");
                 _pal = new NCLR(Path.Combine(dir, paletteFilename), paletteFileID, paletteFilename);
 
-                int tilesFileID = TrainerGraphicsLayout.DrawingEntry(trClassID);
+                int tilesFileID = TrainerGraphicsLayout.DrawingEntry(memberClass);
                 string tilesFilename = tilesFileID.ToString("D4");
                 _tile = new NCGR(Path.Combine(dir, tilesFilename), tilesFileID, tilesFilename);
 
@@ -117,9 +126,9 @@ namespace DSPRE.Avalonia
                     return Math.Max(0, FrameCount - 1);
                 }
 
-                bool back = archive == DirNames.trainerBackGraphics;
                 if ((back || archive == DirNames.trainerGraphics) && HgEngineProject.IsActive && TryLoadFromSource(trClassID, back))
                     return FrameCount - 1;
+                if (memberClass != trClassID) { _pal = null; _tile = null; return 0; }
 
                 int spriteFileID = TrainerGraphicsLayout.CellsEntry(trClassID);
                 string spriteFilename = spriteFileID.ToString("D4");

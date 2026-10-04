@@ -33,18 +33,10 @@ namespace DSPRE.Avalonia.Data
                 cmds.Add(new WazaSeqCommand(op, args.ToArray()) { WordPos = pos });
                 pos += 1 + total;
             }
+            WazaSeqScript.KeepRest(cmds, data, pos);
             return cmds;
         }
 
-        public static byte[] Serialize(IReadOnlyList<WazaSeqCommand> cmds)
-        {
-            int words = 0;
-            foreach (var c in cmds) words += 1 + c.Args.Length;
-            var data = new byte[words * 4];
-            int pos = 0;
-            void W(int v) { BitConverter.GetBytes(v).CopyTo(data, pos * 4); pos++; }
-            foreach (var c in cmds) { W(c.OpId); foreach (var a in c.Args) W(a); }
-            return data;
-        }
+        public static byte[] Serialize(IReadOnlyList<WazaSeqCommand> cmds) => WazaSeqScript.Serialize(cmds);
     }
 }
