@@ -4,6 +4,14 @@
 
 ---
 
+## 2.3.3
+- The Ground Item Scripts window, opened from the Event Editor, can now change an existing entry
+  instead of only adding and removing them. Selecting an entry loads its item and quantity into the
+  boxes below, and Update Selected writes your changes back. If Overworld Item events already use
+  that entry you are asked to confirm first, since all of them will give the new item.
+
+---
+
 ## 2.3.2
 - Fixed the trainer class picture never appearing in Diamond and Pearl. Those two games keep only a
   drawing and its colours for each class, where Platinum and HeartGold keep five files and animate
