@@ -148,7 +148,7 @@ namespace DSPRE.HgEngine
         /// branches (move_data.h's FLAG_UNUSABLE_* under DISALLOW_DEXIT_GEN) gets the value that is built.
         /// Names come from earlier #defines in this file or <paramref name="outside"/> (config.h); an
         /// undefined name is 0, as in C. A condition this can't evaluate keeps every branch.</summary>
-        private static string DropInactiveBranches(string text, IReadOnlyDictionary<string, int> outside)
+        internal static string DropInactiveBranches(string text, IReadOnlyDictionary<string, int> outside)
         {
             if (!text.Contains("#if")) return text;
             var lines = text.Split('\n');
@@ -275,22 +275,16 @@ namespace DSPRE.HgEngine
             return (i >= 0 ? expr[..i] : expr).Trim();
         }
 
-        /// <summary>Removes every "// ..." run through end-of-line from the whole text, preserving line
-        /// breaks (nothing here depends on column position, but keeping line counts intact is cheap and
-        /// avoids surprises if that ever changes).</summary>
+        /// <summary>Blanks every comment, line and block, as the C lexer finds them (so "//" inside a string stays),
+        /// keeping line breaks: a "#define" inside "/* ... */" is dead text, not a definition.</summary>
         private static string StripLineComments(string text)
         {
-            var sb = new System.Text.StringBuilder(text.Length);
-            int i = 0;
-            while (i < text.Length)
+            var sb = new System.Text.StringBuilder(text);
+            foreach (var t in CLexer.Tokenize(text, keepComments: true))
             {
-                if (text[i] == '/' && i + 1 < text.Length && text[i + 1] == '/')
-                {
-                    while (i < text.Length && text[i] != '\n') i++;
-                    continue;
-                }
-                sb.Append(text[i]);
-                i++;
+                if (t.Kind != CTokenKind.Comment) continue;
+                for (int i = t.Start; i < t.End; i++)
+                    if (sb[i] != '\n' && sb[i] != '\r') sb[i] = ' ';
             }
             return sb.ToString();
         }

@@ -85,7 +85,7 @@ namespace DSPRE
 
             public static void SetDefaultCompressed(int ovNumber, bool compressStatus)
             {
-                if (RomInfo.IsDsRomProject)
+                if (RomInfo.OverlaysStayFlat)
                 {
                     AppLogger.Warn("Cannot modify overlay compression flag in ds-rom format (compression is automatic)");
                     return;
@@ -174,12 +174,12 @@ namespace DSPRE
          **/
         /// <summary>Whether the overlay on disk is still compressed. ds-rom projects keep overlays flat until build.</summary>
         public static bool IsStillCompressed(int ovNumber) =>
-            !RomInfo.IsDsRomProject && OverlayTable.IsDefaultCompressed(ovNumber) && IsCompressed(ovNumber);
+            !RomInfo.OverlaysStayFlat && OverlayTable.IsDefaultCompressed(ovNumber) && IsCompressed(ovNumber);
 
         public static bool IsCompressed(int ovNumber)
         {
             // ds-rom extracts every overlay flat; its size there leaves out the BSS the table's size counts.
-            if (RomInfo.IsDsRomProject) return false;
+            if (RomInfo.OverlaysStayFlat) return false;
 
             string overlayPath = GetPath(ovNumber);
 
@@ -233,7 +233,7 @@ namespace DSPRE
         public static int Compress(int overlayNumber)
         {
             // ds-rom handles compression automatically during build
-            if (RomInfo.IsDsRomProject)
+            if (RomInfo.OverlaysStayFlat)
             {
                 AppLogger.Info("ds-rom handles overlay compression automatically during ROM build.");
                 return 0; // Success - no action needed
@@ -267,7 +267,7 @@ namespace DSPRE
         public static int Decompress(string overlayFilePath, bool makeBackup = true)
         {
             // ds-rom overlays are always decompressed on disk
-            if (RomInfo.IsDsRomProject)
+            if (RomInfo.OverlaysStayFlat)
             {
                 AppLogger.Info("ds-rom overlays are always stored decompressed on disk.");
                 return 0; // Success - already decompressed

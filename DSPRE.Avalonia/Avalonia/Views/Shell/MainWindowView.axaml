@@ -25,49 +25,54 @@
       <MenuItem Header="_File" x:Name="FileMenu">
         <MenuItem Header="Open ROM…" Click="OpenRom_Click"/>
         <MenuItem Header="Open extracted folder…" Click="OpenFolder_Click"/>
+        <MenuItem Header="Open hg-engine folder…" Click="OpenHgEngineFolder_Click"/>
         <MenuItem Header="Open _Recent" x:Name="RecentMenu">
           <MenuItem Header="(no recent projects)" IsEnabled="False"/>
         </MenuItem>
         <Separator/>
         <MenuItem Header="Save ROM…" Click="SaveRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
-        <MenuItem Header="Build and Run" Click="BuildAndRun_Click" IsEnabled="{Binding IsRomLoaded}" InputGesture="F5"
+        <MenuItem Header="Build and run" Click="BuildAndRun_Click" IsEnabled="{Binding IsRomLoaded}" InputGesture="F5"
                   ToolTip.Tip="Builds the ROM and opens it in your emulator."/>
-        <MenuItem Header="Also Compile hg-engine" ToggleType="CheckBox" IsChecked="{Binding BuildAndRunCompiles, Mode=TwoWay}"
-                  IsVisible="{Binding IsHgEngineLinked}"/>
         <MenuItem Header="Convert to ds-rom format" Click="ConvertDsRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <Separator/>
         <MenuItem Header="hg-engine" x:Name="HgEngineMenu" IsEnabled="{Binding IsRomLoaded}">
-          <MenuItem Header="Link hg-engine checkout" Click="LinkHgEngine_Click" IsEnabled="{Binding IsRomLoaded}"
-                    ToolTip.Tip="Edit Species/Trainers/Items/Moves/Encounters straight from a linked hg-engine WSL checkout's source"/>
           <MenuItem Header="Compile ROM" Click="CompileRom_Click" IsEnabled="{Binding CanCompileRom}"
                     ToolTip.Tip="{Binding HgEngineNote}"/>
-          <MenuItem Header="hg-engine Patches" Click="HgEnginePatches_Click" IsEnabled="{Binding IsHgEngineLinked}"
+          <MenuItem Header="hg-engine settings" Click="HgEngineSettings_Click" IsEnabled="{Binding IsHgEngineLinked}"
+                    ToolTip.Tip="The checkout's config.h and config.s options"/>
+          <MenuItem Header="hg-engine patches" Click="HgEnginePatches_Click" IsEnabled="{Binding IsHgEngineLinked}"
                     ToolTip.Tip="Every hook, byte replacement and repoint the checkout applies to the game's code"/>
-          <MenuItem Header="hg-engine ROM Review" Click="HgeRomReview_Click" IsVisible="{Binding Shown[HgeRomReviewView]}" IsEnabled="{Binding CanUseHgeRomReview}"
+          <MenuItem Header="hg-engine ROM review" Click="HgeRomReview_Click" IsVisible="{Binding Shown[HgeRomReviewView]}" IsEnabled="{Binding CanUseHgeRomReview}"
                     ToolTip.Tip="Pokémon graphics as an hg-engine ROM stores them, with a check of the archive its data tables live in"/>
+          <MenuItem Header="Battle tests" Click="BattleTests_Click" IsVisible="{Binding HgeDevOn}" IsEnabled="{Binding IsHgEngineLinked}"
+                    ToolTip.Tip="hg-engine's battle test scenarios in data/battle_tests"/>
         </MenuItem>
         <Separator/>
         <MenuItem Header="Close" Click="Close_Click"/>
       </MenuItem>
 
       <MenuItem Header="_Pokémon" x:Name="PokemonMenu" IsEnabled="{Binding IsRomLoaded}">
-        <MenuItem Header="Pokémon Editor"   Click="PokemonEditor_Click" IsEnabled="{Binding CanUsePokemonEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Form Editor (hg-engine)" Click="HgEngineFormEditor_Click" IsVisible="{Binding Shown[HgEngineFormEditorView]}" IsEnabled="{Binding CanUseHgEngineFormEditor}"
+        <MenuItem Header="Pokémon editor"   Click="PokemonEditor_Click" IsEnabled="{Binding CanUsePokemonEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
+        <MenuItem Header="Form editor (hg-engine)" Click="HgEngineFormEditor_Click" IsVisible="{Binding Shown[HgEngineFormEditorView]}" IsEnabled="{Binding CanUseHgEngineFormEditor}"
                   ToolTip.Tip="Which form species (Mega/regional/Gmax/etc.) exist per base Pokémon, from the linked checkout's PokeFormDataTbl.c"/>
-        <MenuItem Header="Growth Curves" Click="GrowthCurves_Click" IsVisible="{Binding Shown[GrowthCurveEditorView]}" IsEnabled="{Binding CanUseGrowthCurves}"
+        <MenuItem Header="Ability flags (hg-engine)" Click="AbilityFlags_Click" IsVisible="{Binding Shown[AbilityFlagsEditorView]}" IsEnabled="{Binding CanUseAbilityFlagsEditor}"
+                  ToolTip.Tip="Which abilities Mold Breaker ignores, Neutralizing Gas turns off, and Trace or Skill Swap can't take"/>
+        <MenuItem Header="Growth curves" Click="GrowthCurves_Click" IsVisible="{Binding Shown[GrowthCurveEditorView]}" IsEnabled="{Binding CanUseGrowthCurves}"
                   ToolTip.Tip="{Binding BlockedNote[GrowthCurveEditorView], TargetNullValue='The EXP each growth rate needs per level'}"/>
-        <MenuItem Header="Breeding Items" Click="BreedingItems_Click" IsVisible="{Binding Shown[BreedingItemsView]}" IsEnabled="{Binding CanUseBreedingItems}"
+        <MenuItem Header="Breeding items" Click="BreedingItems_Click" IsVisible="{Binding Shown[BreedingItemsView]}" IsEnabled="{Binding CanUseBreedingItems}"
                   ToolTip.Tip="{Binding BlockedNote[BreedingItemsView], TargetNullValue='Babies that only hatch while a parent holds an incense'}"/>
-        <MenuItem Header="Friendship Changes" Click="FriendshipChanges_Click" IsVisible="{Binding Shown[FriendshipChangesView]}" IsEnabled="{Binding CanUseFriendship}"
+        <MenuItem Header="Friendship changes" Click="FriendshipChanges_Click" IsVisible="{Binding Shown[FriendshipChangesView]}" IsEnabled="{Binding CanUseFriendship}"
                   ToolTip.Tip="{Binding BlockedNote[FriendshipChangesView], TargetNullValue='How much friendship each event adds or takes'}"/>
         <Separator/>
-        <MenuItem Header="Move Data Editor" Click="MoveDataEditor_Click" IsEnabled="{Binding CanUseMoveEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Move Animations &amp; Battle Scripts" Click="BattleScriptEditor_Click" IsVisible="{Binding Shown[BattleScriptEditorView]}"
+        <MenuItem Header="Move data editor" Click="MoveDataEditor_Click" IsEnabled="{Binding CanUseMoveEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
+        <MenuItem Header="Move animations &amp; battle scripts" Click="BattleScriptEditor_Click" IsVisible="{Binding Shown[BattleScriptEditorView]}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Edit move animations and battle-effect scripts, with a live animation preview'}" IsEnabled="{Binding CanUseBattleScriptEditor}"/>
-        <MenuItem Header="Type Chart" Click="TypeChart_Click" IsVisible="{Binding Shown[TypeChartEditorView]}" IsEnabled="{Binding CanUseTypeChart}"
+        <MenuItem Header="Move backgrounds" Click="MoveBackgrounds_Click" IsVisible="{Binding Shown[MoveBackgroundEditorView]}" IsEnabled="{Binding CanUseMoveBackgrounds}"
+                  ToolTip.Tip="{Binding BlockedNote[MoveBackgroundEditorView], TargetNullValue='The full-screen backgrounds moves like Surf and Psychic draw'}"/>
+        <MenuItem Header="Type chart" Click="TypeChart_Click" IsVisible="{Binding Shown[TypeChartEditorView]}" IsEnabled="{Binding CanUseTypeChart}"
                   ToolTip.Tip="{Binding BlockedNote[TypeChartEditorView], TargetNullValue='How well each type hits each other type'}"/>
-        <MenuItem Header="TM / HM Editor"   Click="TMEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Move Tutors" Click="MoveTutors_Click" IsEnabled="{Binding CanUseMoveTutors}"
+        <MenuItem Header="TM / HM editor"   Click="TMEditor_Click" IsEnabled="{Binding Usable[TMEditorView]}" ToolTip.Tip="{Binding BlockedNote[TMEditorView]}"/>
+        <MenuItem Header="Move tutors" Click="MoveTutors_Click" IsEnabled="{Binding CanUseMoveTutors}"
                   ToolTip.Tip="{Binding BlockedNote[MoveTutorEditorView], TargetNullValue='What each move tutor teaches, where, at what price, and to which Pokémon'}">
           <MenuItem.IsVisible>
             <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -76,53 +81,53 @@
             </MultiBinding>
           </MenuItem.IsVisible>
         </MenuItem>
-        <MenuItem Header="Egg Move Editor"  Click="EggMoveEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
+        <MenuItem Header="Egg move editor"  Click="EggMoveEditor_Click" IsEnabled="{Binding Usable[EggMoveEditorView]}" ToolTip.Tip="{Binding BlockedNote[EggMoveEditorView]}"/>
         <Separator/>
-        <MenuItem Header="Trade Editor"      Click="TradeEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Starter Pokémon Editor" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
+        <MenuItem Header="Trade editor"      Click="TradeEditor_Click" IsEnabled="{Binding Usable[TradeEditorView]}" ToolTip.Tip="{Binding BlockedNote[TradeEditorView]}"/>
+        <MenuItem Header="Starter Pokémon editor" Click="StarterEditor_Click" IsEnabled="{Binding CanUseStarterEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <Separator/>
-        <MenuItem Header="Wild Pokémon Editor"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Encounter Slot Odds" Click="EncounterSlotOdds_Click" IsVisible="{Binding Shown[EncounterSlotOddsView]}" IsEnabled="{Binding CanUseSlotOdds}"
+        <MenuItem Header="Wild Pokémon editor"    Click="WildEditor_Click" IsEnabled="{Binding CanUseWildEditors}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
+        <MenuItem Header="Encounter slot odds" Click="EncounterSlotOdds_Click" IsVisible="{Binding Shown[EncounterSlotOddsView]}" IsEnabled="{Binding CanUseSlotOdds}"
                   ToolTip.Tip="{Binding BlockedNote[EncounterSlotOddsView], TargetNullValue='The chance of each wild encounter slot'}"/>
-        <MenuItem Header="Wild Held Items" Click="WildHeldItems_Click" IsVisible="{Binding Shown[WildHeldItemOddsView]}" IsEnabled="{Binding CanUseWildHeldItems}"
+        <MenuItem Header="Wild held items" Click="WildHeldItems_Click" IsVisible="{Binding Shown[WildHeldItemOddsView]}" IsEnabled="{Binding CanUseWildHeldItems}"
                   ToolTip.Tip="{Binding BlockedNote[WildHeldItemOddsView], TargetNullValue='How often wild Pokémon hold their common or rare item'}"/>
-        <MenuItem Header="Special Encounters Editor" Click="SpecialEncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"
-                  ToolTip.Tip="Headbutt trees, Bug Contest, Safari Zone, Honey Trees, Great Marsh, Trophy Garden and swarms"/>
-        <MenuItem Header="Wild Pokémon Intro Editor" Click="WildIntroEditor_Click" IsVisible="{Binding Shown[WildIntroEditorView]}" IsEnabled="{Binding CanUseWildIntroEditor}"
+        <MenuItem Header="Special encounters editor" Click="SpecialEncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"
+                  ToolTip.Tip="Headbutt trees, Bug Contest, Safari Zone, honey trees, Great Marsh, Trophy Garden and swarms"/>
+        <MenuItem Header="Wild Pokémon intro editor" Click="WildIntroEditor_Click" IsVisible="{Binding Shown[WildIntroEditorView]}" IsEnabled="{Binding CanUseWildIntroEditor}"
                   ToolTip.Tip="{Binding BlockedNote[WildIntroEditorView], TargetNullValue='The intros and music of wild Pokémon battles'}"/>
       </MenuItem>
 
       <MenuItem Header="_Trainers" x:Name="TrainersMenu" IsEnabled="{Binding IsRomLoaded}">
-        <MenuItem Header="Trainer Editor"        Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Trainer Sprite Editor" Click="TrainerSpriteEditor_Click" IsVisible="{Binding Shown[TrainerSpriteEditorView]}" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BlockedNote[TrainerSpriteEditorView]}"/>
-        <MenuItem Header="Trainer Back Sprite Editor" Click="TrainerBackSpriteEditor_Click" IsVisible="{Binding Shown[TrainerSpriteEditorView]}" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BlockedNote[TrainerSpriteEditorView]}"/>
+        <MenuItem Header="Trainer editor"        Click="TrainerEditor_Click" IsEnabled="{Binding CanUseTrainerEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
+        <MenuItem Header="Trainer sprite editor" Click="TrainerSpriteEditor_Click" IsVisible="{Binding Shown[TrainerSpriteEditorView]}" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BlockedNote[TrainerSpriteEditorView]}"/>
+        <MenuItem Header="Trainer back sprite editor" Click="TrainerBackSpriteEditor_Click" IsVisible="{Binding Shown[TrainerSpriteEditorView]}" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BlockedNote[TrainerSpriteEditorView]}"/>
         <Separator/>
-        <MenuItem Header="Vs. Seeker Rematch Editor" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}" IsVisible="{Binding IsDpOrPlatinum}"
+        <MenuItem Header="Vs. Seeker rematch editor" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}" IsVisible="{Binding IsDpOrPlatinum}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Diamond/Pearl/Platinum (English): which trainer rematches via the Vs. Seeker for each encounter trainer'}"/>
-        <MenuItem Header="Pokégear Rematch Editor" Click="PokegearRematchEditor_Click" IsEnabled="{Binding CanUsePokegearRematchEditor}" IsVisible="{Binding !IsDpOrPlatinum}"
+        <MenuItem Header="Pokégear rematch editor" Click="PokegearRematchEditor_Click" IsEnabled="{Binding CanUsePokegearRematchEditor}" IsVisible="{Binding !IsDpOrPlatinum}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='HeartGold/SoulSilver: which trainer you rematch when a Pokégear caller wants a battle'}"/>
-        <MenuItem Header="Pokégear Phone Book" Click="PokegearPhoneBook_Click" IsVisible="{Binding Shown[PokegearPhoneBookView]}" IsEnabled="{Binding CanUsePokegearPhoneBook}"
+        <MenuItem Header="Pokégear phone book" Click="PokegearPhoneBook_Click" IsVisible="{Binding Shown[PokegearPhoneBookView]}" IsEnabled="{Binding CanUsePokegearPhoneBook}"
                   ToolTip.Tip="{Binding BlockedNote[PokegearPhoneBookView]}"/>
-        <MenuItem Header="VS Intro Editor" Click="VsIntroEditor_Click" IsVisible="{Binding Shown[VsIntroEditorView]}" IsEnabled="{Binding CanUseVsIntroEditor}"
+        <MenuItem Header="VS intro editor" Click="VsIntroEditor_Click" IsVisible="{Binding Shown[VsIntroEditorView]}" IsEnabled="{Binding CanUseVsIntroEditor}"
                   ToolTip.Tip="{Binding BlockedNote[VsIntroEditorView], TargetNullValue='The mugshots and music special trainer battles open with'}"/>
         <Separator/>
-        <MenuItem Header="Trainer Flag Bulk Editor" Click="TrainerFlagBulkEditor_Click" IsEnabled="{Binding CanUseTrainerFlagBulkEditor}"
+        <MenuItem Header="Trainer flag bulk editor" Click="TrainerFlagBulkEditor_Click" IsEnabled="{Binding CanUseTrainerFlagBulkEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Bulk-edit AI flags and the double-battle flag across many trainers at once'}"/>
-        <MenuItem Header="Generate Trainer Usage CSV…" Click="TrainerUsageCsv_Click" IsEnabled="{Binding CanUseDataExports}"
+        <MenuItem Header="Generate trainer usage CSV…" Click="TrainerUsageCsv_Click" IsEnabled="{Binding CanUseDataExports}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Which Pokémon each trainer class uses, with counts'}"/>
         <Separator/>
-        <MenuItem Header="Battle Tower Editor" Click="BattleTowerEditor_Click" IsEnabled="{Binding CanUseBattleTowerEditor}"
+        <MenuItem Header="Battle Tower editor" Click="BattleTowerEditor_Click" IsEnabled="{Binding CanUseBattleTowerEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Battle Tower trainer roster + the shared pool of rental Pokémon sets'}"/>
       </MenuItem>
 
       <MenuItem Header="_Items" x:Name="ItemsMenu" IsEnabled="{Binding IsRomLoaded}">
-        <MenuItem Header="Item Editor" Click="ItemEditor_Click" IsEnabled="{Binding CanUseItemEditor}"
+        <MenuItem Header="Item editor" Click="ItemEditor_Click" IsEnabled="{Binding CanUseItemEditor}"
                   ToolTip.Tip="Each item's data: price, effect parameters, description and icon"/>
-        <MenuItem Header="Mart Editor" Click="MartEditor_Click" IsVisible="{Binding Shown[MartEditorView]}" IsEnabled="{Binding CanUseMartEditor}"
+        <MenuItem Header="Mart editor" Click="MartEditor_Click" IsVisible="{Binding Shown[MartEditorView]}" IsEnabled="{Binding CanUseMartEditor}"
                   ToolTip.Tip="{Binding MartEditorNote}"/>
-        <MenuItem Header="Berry Data" Click="BerryData_Click" IsVisible="{Binding Shown[BerryDataEditorView]}" IsEnabled="{Binding CanUseBerryData}"
+        <MenuItem Header="Berry data" Click="BerryData_Click" IsVisible="{Binding Shown[BerryDataEditorView]}" IsEnabled="{Binding CanUseBerryData}"
                   ToolTip.Tip="{Binding BlockedNote[BerryDataEditorView], TargetNullValue='The size, firmness, growth and flavours of each berry'}"/>
-        <MenuItem Header="Battle Point Shop" Click="BpShop_Click" IsEnabled="{Binding CanUseBpShop}"
+        <MenuItem Header="Battle Point shop" Click="BpShop_Click" IsEnabled="{Binding CanUseBpShop}"
                   ToolTip.Tip="{Binding BlockedNote[BpShopEditorView], TargetNullValue='What the Battle Point exchange counters sell'}">
           <MenuItem.IsVisible>
             <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -131,7 +136,7 @@
             </MultiBinding>
           </MenuItem.IsVisible>
         </MenuItem>
-        <MenuItem Header="Underground Mining" Click="UndergroundMining_Click" IsEnabled="{Binding CanUseMining}"
+        <MenuItem Header="Underground mining" Click="UndergroundMining_Click" IsEnabled="{Binding CanUseMining}"
                   ToolTip.Tip="{Binding BlockedNote[UndergroundMiningView], TargetNullValue='How likely each Underground treasure is'}">
           <MenuItem.IsVisible>
             <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -140,92 +145,95 @@
             </MultiBinding>
           </MenuItem.IsVisible>
         </MenuItem>
-        <MenuItem Header="Item Tables (Pickup, Hidden, Rock Smash)" Click="ItemTableEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}"
+        <MenuItem Header="Item tables (pickup, hidden, Rock Smash)" Click="ItemTableEditor_Click" IsEnabled="{Binding Usable[ItemTableEditorView]}"
                   ToolTip.Tip="Where items come from: the Pickup ability's common/rare tables, hidden ground items, and HGSS Rock Smash drops"/>
       </MenuItem>
 
       <MenuItem Header="Te_xt" x:Name="TextMenu" IsEnabled="{Binding IsRomLoaded}">
-        <MenuItem Header="Text Editor" Click="TextEditor_Click"/>
-        <MenuItem Header="Script Editor" Click="ScriptEditor_Click"/>
-        <MenuItem Header="Level Script Editor" Click="LevelScriptEditor_Click"/>
-        <MenuItem Header="Custom Script Command Manager" Click="CustomCommandManager_Click"
+        <MenuItem Header="Text editor" Click="TextEditor_Click"/>
+        <MenuItem Header="Script editor" Click="ScriptEditor_Click"/>
+        <MenuItem Header="Level script editor" Click="LevelScriptEditor_Click"/>
+        <MenuItem Header="Script command database" Click="ScriptCommandDatabase_Click"
+                  ToolTip.Tip="Every script command, movement and comparison operator, with parameters and descriptions"/>
+        <MenuItem Header="Custom script command manager" Click="CustomCommandManager_Click"
                   ToolTip.Tip="Manage custom script-command databases (.scrcmd)"/>
         <Separator/>
-        <MenuItem Header="Font Editor" Click="FontEditor_Click" IsVisible="{Binding Shown[FontEditorView]}" IsEnabled="{Binding CanUseFontEditor}"
+        <MenuItem Header="Font editor" Click="FontEditor_Click" IsVisible="{Binding Shown[FontEditorView]}" IsEnabled="{Binding CanUseFontEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='The letters this ROM writes with, and what a sentence looks like in them'}"/>
-        <MenuItem Header="Char Map Manager" Click="CharMapManager_Click"/>
+        <MenuItem Header="Char map manager" Click="CharMapManager_Click"/>
       </MenuItem>
 
       <MenuItem Header="_World" x:Name="WorldMenu" IsEnabled="{Binding IsRomLoaded}">
-        <MenuItem Header="Map Editor"             Click="MapEditor_Click"/>
-        <MenuItem Header="Matrix Editor"          Click="MatrixEditor_Click"/>
-        <MenuItem Header="Header Editor"          Click="HeaderEditor_Click"/>
-        <MenuItem Header="Camera Editor"          Click="CameraEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Area Data Editor"       Click="AreaDataEditor_Click"/>
-        <MenuItem Header="Building Editor"        Click="BuildingEditor_Click"/>
+        <MenuItem Header="Map editor"             Click="MapEditor_Click"/>
+        <MenuItem Header="Matrix editor"          Click="MatrixEditor_Click"/>
+        <MenuItem Header="Header editor"          Click="HeaderEditor_Click"/>
+        <MenuItem Header="Camera editor"          Click="CameraEditor_Click" IsEnabled="{Binding Usable[CameraEditorView]}" ToolTip.Tip="{Binding BlockedNote[CameraEditorView]}"/>
+        <MenuItem Header="Area data editor"       Click="AreaDataEditor_Click"/>
+        <MenuItem Header="Building editor"        Click="BuildingEditor_Click"/>
         <Separator/>
-        <MenuItem Header="Event Editor"           Click="EventEditor_Click"/>
-        <MenuItem Header="Fly / Warp Editor"      Click="FlyWarpEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Spawn Point Editor"     Click="SpawnEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
+        <MenuItem Header="Event editor"           Click="EventEditor_Click"/>
+        <MenuItem Header="Fly / warp editor"      Click="FlyWarpEditor_Click" IsEnabled="{Binding Usable[FlyEditorView]}" ToolTip.Tip="{Binding BlockedNote[FlyEditorView]}"/>
+        <MenuItem Header="Spawn point editor"     Click="SpawnEditor_Click" IsEnabled="{Binding Usable[SpawnEditorView]}" ToolTip.Tip="{Binding BlockedNote[SpawnEditorView]}"/>
         <Separator IsVisible="{Binding BetaOn}"/>
         <MenuItem Header="Distortion World"       Click="DistortionWorld_Click" IsVisible="{Binding Shown[DistortionWorldView]}" IsEnabled="{Binding CanUseDistortionWorld}"
                   ToolTip.Tip="Platinum's Distortion World"/>
         <Separator/>
-        <MenuItem Header="Advanced Header Search" Click="HeaderSearch_Click"/>
+        <MenuItem Header="Advanced header search" Click="HeaderSearch_Click"/>
       </MenuItem>
 
       <MenuItem Header="_Graphics" x:Name="GraphicsMenu" IsEnabled="{Binding IsRomLoaded}">
-        <MenuItem Header="All graphics" Click="GraphicsBrowser_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="All models and textures" Click="ModelBrowser_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
+        <MenuItem Header="All graphics" Click="GraphicsBrowser_Click" IsEnabled="{Binding Usable[GraphicsBrowserView]}" ToolTip.Tip="{Binding BlockedNote[GraphicsBrowserView]}"/>
+        <MenuItem Header="Pokédex graphics" Click="PokedexGraphics_Click" IsEnabled="{Binding Usable[GraphicsBrowserView]}" ToolTip.Tip="{Binding BlockedNote[GraphicsBrowserView]}"/>
+        <MenuItem Header="All models and textures" Click="ModelBrowser_Click" IsEnabled="{Binding Usable[ModelBrowserView]}" ToolTip.Tip="{Binding BlockedNote[ModelBrowserView]}"/>
         <Separator IsVisible="{Binding BetaOn}"/>
-        <MenuItem Header="Battle Scenes" Click="BattleSceneBrowser_Click" IsVisible="{Binding Shown[BattleSceneBrowserView]}" IsEnabled="{Binding CanUseBattleSceneBrowser}" ToolTip.Tip="{Binding BlockedNote[BattleSceneBrowserView]}"/>
-        <MenuItem Header="Battle Screen" Click="BattleScreen_Click" IsVisible="{Binding Shown[BattleScreenEditorView]}" IsEnabled="{Binding CanUseBattleScreen}"
+        <MenuItem Header="Battle scenes" Click="BattleSceneBrowser_Click" IsVisible="{Binding Shown[BattleSceneBrowserView]}" IsEnabled="{Binding CanUseBattleSceneBrowser}" ToolTip.Tip="{Binding BlockedNote[BattleSceneBrowserView]}"/>
+        <MenuItem Header="Battle screen" Click="BattleScreen_Click" IsVisible="{Binding Shown[BattleScreenEditorView]}" IsEnabled="{Binding CanUseBattleScreen}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Both screens of a battle, drawn from this ROM, with every piece editable'}"/>
-        <MenuItem Header="Bottom Screen" Click="BottomScreenEditor_Click" IsVisible="{Binding Shown[BottomScreenEditorView]}" IsEnabled="{Binding CanUseBottomScreenEditor}"
+        <MenuItem Header="Bottom screen" Click="BottomScreenEditor_Click" IsVisible="{Binding Shown[BottomScreenEditorView]}" IsEnabled="{Binding CanUseBottomScreenEditor}"
                   ToolTip.Tip="{Binding BottomScreenEditorNote}"/>
-        <MenuItem Header="Title Screen Editor" Click="TitleScreenEditor_Click" IsVisible="{Binding Shown[TitleScreenEditorView]}" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding TitleScreenEditorNote}"/>
-        <MenuItem Header="Dungeon Cutin Editor" Click="DungeonCutinEditor_Click" IsVisible="{Binding Shown[DungeonCutinEditorView]}" IsEnabled="{Binding CanUseDungeonCutinEditor}" ToolTip.Tip="{Binding DungeonCutinEditorNote}"/>
-        <MenuItem Header="Trainer Card Editor" Click="TrainerCardEditor_Click" IsVisible="{Binding Shown[TrainerCardEditorView]}" IsEnabled="{Binding CanUseTrainerCardEditor}" ToolTip.Tip="{Binding TrainerCardEditorNote}"/>
-        <MenuItem Header="Naming Screen" Click="NamingScreenEditor_Click" IsVisible="{Binding Shown[TrainerSpriteEditorView]}" IsEnabled="{Binding CanUseNamingScreenEditor}"
+        <MenuItem Header="Title screen editor" Click="TitleScreenEditor_Click" IsVisible="{Binding Shown[TitleScreenEditorView]}" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding TitleScreenEditorNote}"/>
+        <MenuItem Header="Dungeon cutin editor" Click="DungeonCutinEditor_Click" IsVisible="{Binding Shown[DungeonCutinEditorView]}" IsEnabled="{Binding CanUseDungeonCutinEditor}" ToolTip.Tip="{Binding DungeonCutinEditorNote}"/>
+        <MenuItem Header="Trainer card editor" Click="TrainerCardEditor_Click" IsVisible="{Binding Shown[TrainerCardEditorView]}" IsEnabled="{Binding CanUseTrainerCardEditor}" ToolTip.Tip="{Binding TrainerCardEditorNote}"/>
+        <MenuItem Header="Naming screen" Click="NamingScreenEditor_Click" IsVisible="{Binding Shown[TrainerSpriteEditorView]}" IsEnabled="{Binding CanUseNamingScreenEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='The icons beside a name being typed: the player, rival, box and more'}"/>
-        <MenuItem Header="Game Icon &amp; Banner" Click="BannerEditor_Click" IsVisible="{Binding Shown[BannerEditorView]}" IsEnabled="{Binding CanUseBannerEditor}"
+        <MenuItem Header="Game icon &amp; banner" Click="BannerEditor_Click" IsVisible="{Binding Shown[BannerEditorView]}" IsEnabled="{Binding CanUseBannerEditor}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Edit the 32×32 icon and menu titles shown in the DS system menu (ds-rom projects)'}"/>
         <Separator/>
-        <MenuItem Header="Overworld Editor" Click="OverworldEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Map &amp; Building Textures"   Click="NsbtxEditor_Click"/>
+        <MenuItem Header="Overworld editor" Click="OverworldEditor_Click" IsEnabled="{Binding Usable[BtxEditorView]}" ToolTip.Tip="{Binding BlockedNote[BtxEditorView]}"/>
+        <MenuItem Header="Map &amp; building textures"   Click="NsbtxEditor_Click"/>
         <Separator IsVisible="{Binding BetaOn}"/>
-        <MenuItem Header="Cell Animations" Click="CellAnimations_Click" IsVisible="{Binding Shown[CellAnimationEditorView]}" IsEnabled="{Binding CanUseCellAnimations}"
+        <MenuItem Header="Cell animations" Click="CellAnimations_Click" IsVisible="{Binding Shown[CellAnimationEditorView]}" IsEnabled="{Binding CanUseCellAnimations}"
                   ToolTip.Tip="{Binding BlockedNote[CellAnimationEditorView]}"/>
         <MenuItem Header="Particles" Click="Particles_Click" IsVisible="{Binding Shown[ParticleLibraryView]}" IsEnabled="{Binding CanUseParticles}"
                   ToolTip.Tip="{Binding BlockedNote[ParticleLibraryView]}"/>
         <MenuItem Header="Ball Capsules" Click="BallCapsules_Click" IsVisible="{Binding Shown[BallCapsuleEditorView]}" IsEnabled="{Binding CanUseBallCapsules}"
                   ToolTip.Tip="{Binding BlockedNote[BallCapsuleEditorView]}"/>
         <Separator IsVisible="{Binding BetaOn}"/>
-        <MenuItem Header="Picture to Background" Click="TilesetBuilder_Click" IsVisible="{Binding Shown[TilesetBuilderView]}"
+        <MenuItem Header="Picture to background" Click="TilesetBuilder_Click" IsVisible="{Binding Shown[TilesetBuilderView]}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Turn a PNG into the colours, tiles and arrangement a background is drawn from'}" IsEnabled="{Binding CanUseTilesetBuilder}"/>
       </MenuItem>
 
       <MenuItem Header="_Audio" x:Name="AudioMenu" IsEnabled="{Binding IsRomLoaded}" IsVisible="{Binding BetaOn}">
-        <MenuItem Header="Audio Editor" Click="AudioEditor_Click" IsVisible="{Binding Shown[AudioEditorView]}" IsEnabled="{Binding CanUseAudioEditor}" ToolTip.Tip="{Binding BlockedNote[AudioEditorView]}"/>
+        <MenuItem Header="Audio editor" Click="AudioEditor_Click" IsVisible="{Binding Shown[AudioEditorView]}" IsEnabled="{Binding CanUseAudioEditor}" ToolTip.Tip="{Binding BlockedNote[AudioEditorView]}"/>
       </MenuItem>
 
       <MenuItem Header="_Tools" x:Name="ToolsMenu">
-        <MenuItem Header="Go to… (Ctrl+P)" Click="CommandPalette_Click" InputGesture="Ctrl+P"
+        <MenuItem Header="Go to… (Ctrl+P)" Click="CommandPalette_Click" InputGesture="Ctrl+P" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Quick-open: jump to any editor by name"/>
         <Separator/>
         <MenuItem Header="Validation &amp; Where-Used" Click="ProjectChecks_Click" IsVisible="{Binding Shown[ProjectChecksView]}" IsEnabled="{Binding CanUseProjectChecks}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Scan headers for broken references, and look up which headers use a matrix/event/script/…'}"/>
         <Separator IsVisible="{Binding BetaOn}"/>
-        <MenuItem Header="ROM Patch Toolbox" Click="PatchToolbox_Click" IsEnabled="{Binding HgeUnlinkedAllows}"
+        <MenuItem Header="ROM patch toolbox" Click="PatchToolbox_Click" IsEnabled="{Binding Usable[PatchToolboxView]}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='ARM9 expansion, matrix/header/trainer-name expansion, dynamic cameras, script-command repoint, item standardization and other ROM patches'}"/>
-        <MenuItem Header="Overlay Editor" Click="OverlayEditor_Click" IsEnabled="{Binding HgeUnlinkedAllows}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
-        <MenuItem Header="Music &amp; Battle Tables" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}"
+        <MenuItem Header="Overlay editor" Click="OverlayEditor_Click" IsEnabled="{Binding Usable[OverlayEditorView]}" ToolTip.Tip="{Binding BlockedNote[OverlayEditorView]}"/>
+        <MenuItem Header="Music &amp; battle tables" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Misc game-wide tables: conditional map music (HGSS), battle-effect combos (Plat/HGSS) and the VS Trainer / VS Pokémon posters (HGSS)'}"/>
         <Separator/>
-        <MenuItem Header="Address Helper"  Click="AddressHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
-        <MenuItem Header="Research Helper" Click="ResearchHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Address helper"  Click="AddressHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
+        <MenuItem Header="Research helper" Click="ResearchHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <Separator/>
-        <MenuItem Header="Export Docs…" Click="ExportDocs_Click" IsEnabled="{Binding CanUseDataExports}"
+        <MenuItem Header="Export docs…" Click="ExportDocs_Click" IsEnabled="{Binding CanUseDataExports}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Export Pokémon/learnset/evolution/trainer/move/TM/egg-move/header/encounter data as CSV, TXT and JSON'}"/>
         <MenuItem Header="Archive tools">
           <MenuItem Header="Unpack archive to folder…" Click="NarcUnpack_Click"/>
@@ -237,12 +245,12 @@
           <MenuItem Header="Save textures from a model…" Click="NsbmdSaveTex_Click"/>
         </MenuItem>
         <Separator/>
-        <MenuItem Header="Edit Dropdown Labels" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
+        <MenuItem Header="Edit dropdown labels" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
                   ToolTip.Tip="Rename or add entries for hardcoded dropdowns (e.g. evolution methods), per project or global"/>
-        <MenuItem Header="Toggle theme (Light / Dark)" Click="ToggleTheme_Click"
+        <MenuItem Header="Toggle theme (light / dark)" Click="ToggleTheme_Click"
                   ToolTip.Tip="Also in Settings, where the choice is listed with the other appearance options"/>
-        <MenuItem Header="Welcome &amp; Tutorial" Click="Welcome_Click"/>
-        <MenuItem Header="Guided Tour" Click="GuidedTour_Click"
+        <MenuItem Header="Welcome &amp; tutorial" Click="Welcome_Click"/>
+        <MenuItem Header="Guided tour" Click="GuidedTour_Click"
                   ToolTip.Tip="Replay the walkthrough of the main window and editor menus"/>
         <MenuItem Header="Settings" Click="Settings_Click"/>
         <MenuItem Header="About" Click="About_Click"/>

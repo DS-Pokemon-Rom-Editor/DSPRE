@@ -19,6 +19,7 @@ namespace DSPRE.AvaloniaShell
         {
             PreferWslGpu();
             BetaEditors.ReadFrom(args);
+            DSPRE.HgEngine.HgEngineDev.ReadFrom(args);
 
             // Velopack hooks (install/update/uninstall) must run before any UI is created.
             // Cross-platform: Windows installer packages and Linux AppImages alike.

@@ -12,13 +12,19 @@ namespace DSPRE.HgEngine
         public static bool TryEvaluate(string text, Func<string, int?> lookup, out int value)
         {
             value = 0;
-            if (string.IsNullOrWhiteSpace(text) || !TryTokenize(text, out var tokens)) return false;
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            // The one function-like macro data files put in values; the evaluator itself only knows operators.
+            text = MonWithForm.Replace(text, "(($1) | (($2) << " + HgEngineTrainerSource.FormShift + "))");
+            if (!TryTokenize(text, out var tokens)) return false;
             var parser = new Parser(tokens, lookup);
             if (!parser.TryTernary(out long result) || parser.Position != tokens.Count) return false;
             if (result < int.MinValue || result > uint.MaxValue) return false;
             value = unchecked((int)result);
             return true;
         }
+
+        private static readonly System.Text.RegularExpressions.Regex MonWithForm =
+            new(@"\bMON_WITH_FORM\s*\(\s*([^,()]+?)\s*,\s*([^,()]+?)\s*\)");
 
         private static readonly string[] Operators =
             { "||", "&&", "==", "!=", "<=", ">=", "<<", ">>", "?", ":", "|", "^", "&", "<", ">", "+", "-", "*", "/", "%", "!", "~", "(", ")" };

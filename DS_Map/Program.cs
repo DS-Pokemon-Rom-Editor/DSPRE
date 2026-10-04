@@ -25,6 +25,7 @@ namespace DSPRE
         {
             // Read before any window can be opened, since the gate is asked as each one is shown.
             BetaEditors.ReadFrom(args);
+            DSPRE.HgEngine.HgEngineDev.ReadFrom(args);
 
             if (!Directory.Exists(DspreDataPath))
                 Directory.CreateDirectory(DspreDataPath);

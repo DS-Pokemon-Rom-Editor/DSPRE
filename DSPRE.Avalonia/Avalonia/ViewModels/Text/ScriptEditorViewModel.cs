@@ -449,7 +449,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     EnsureDspreSourceRoot();
 
                     StatusText = "Initializing Rotom project...";
-                    await RunRequiredRotomCommand("init", "--non-interactive");
+                    var init = await RotomTool.InitProjectAsync();
+                    if (!init.Success) throw new InvalidOperationException("rotom init --non-interactive failed:\n" + RotomTool.FormatDetails(init));
                     RefreshRotomProjectState();
                 }
 
@@ -473,6 +474,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 {
                     StatusText = "Decompiling binary scripts to Rotom...";
                     var decompiled = await RotomTool.RunAsync("decompile");
+                    RotomTool.SetAsideHgEngineOwnedSources();
                     RefreshScriptList();
                     // One file rotom can't read must not cost every other script; its binary stays as it is.
                     if (!decompiled.Success)
@@ -1289,6 +1291,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         /// <summary>Shows script file <paramref name="fileId"/>, when the list holds it.</summary>
         public bool IsShowingScriptFile(int fileId) => _selectedIndex >= 0 && IndexOfScriptFile(fileId) == _selectedIndex;
+
+        /// <summary>The script file number showing, or -1.</summary>
+        public int ShowingScriptFileId =>
+            _selectedIndex >= 0 && _selectedIndex < _sourceFiles.Count && _scriptIdByPath.TryGetValue(_sourceFiles[_selectedIndex], out int id) ? id : -1;
 
         public void SelectScriptFile(int fileId)
         {

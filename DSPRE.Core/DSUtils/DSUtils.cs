@@ -775,9 +775,33 @@ namespace DSPRE {
                 // and its overlay tables overarm9/overarm7 rather than y9/y7.
                 return Directory.Exists(Path.Combine(folderPath, "root")) ? 2 : 1;
             }
+            else if (HgEngineDsRomMetaDir(folderPath) != null)
+            {
+                return 2; // hg-engine's ds-rom bridge: the same base/ tree, header and banner kept in base_dsrom/
+            }
 
             return -1; // Not a valid dsrom or ndstool folder
 
+        }
+
+        /// <summary>
+        /// For an hg-engine base/ tree built through ds-rom, the base_dsrom/ project beside it, which holds the header,
+        /// banner and overlay metadata the flat tree has no files for. Null for any other folder.
+        /// </summary>
+        public static string HgEngineDsRomMetaDir(string baseFolder)
+        {
+            try
+            {
+                string folder = baseFolder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (!Directory.Exists(Path.Combine(folder, "root")) || !File.Exists(Path.Combine(folder, "overarm9.bin"))) return null;
+                string parent = Directory.GetParent(folder)?.FullName;
+                string meta = parent == null ? null : Path.Combine(parent, "base_dsrom");
+                return meta != null && File.Exists(Path.Combine(meta, "config.yaml")) ? meta : null;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
+            {
+                return null;
+            }
         }
 
         /// <summary>

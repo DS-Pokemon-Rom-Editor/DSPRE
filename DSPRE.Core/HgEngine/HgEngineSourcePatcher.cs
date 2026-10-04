@@ -421,28 +421,9 @@ namespace DSPRE.HgEngine
         /// <summary>Where each top-level element starts (designator included) and where its value ends.</summary>
         internal static List<(int Start, int End)> ElementSpans(string text, int openBrace, int closeBrace)
         {
+            var list = new CSourceFile(text, openBrace, closeBrace + 1).ListAt(openBrace);
             var spans = new List<(int, int)>();
-            int i = openBrace + 1, elemStart = i, depth = 0;
-
-            void Flush(int elemEnd)
-            {
-                int s = elemStart, e = elemEnd;
-                while (s < e && char.IsWhiteSpace(text[s])) s++;
-                SkipLeadingComments(text, ref s, e);
-                TrimTrailingComments(text, s, ref e);
-                if (s < e) spans.Add((s, e));
-            }
-
-            while (i < closeBrace)
-            {
-                if (BraceScanner.SkipNonCode(text, ref i)) continue;
-                char c = text[i];
-                if (c == '{' || c == '(' || c == '[') depth++;
-                else if (c == '}' || c == ')' || c == ']') depth--;
-                else if (c == ',' && depth == 0) { Flush(i); elemStart = i + 1; }
-                i++;
-            }
-            Flush(closeBrace);
+            if (list != null) foreach (var item in list.Items) spans.Add((item.Start, item.End));
             return spans;
         }
 
@@ -469,128 +450,24 @@ namespace DSPRE.HgEngine
             return false;
         }
 
+        // The syntax reader splits the list (directives, strings and comments are not code to it). A single .field or
+        // numeric [N] designator names or numbers the element; anything else, a symbolic [NAME] included, counts by position.
         private static List<Element> Split(string text, int openBrace, int closeBrace)
         {
             var result = new List<Element>();
-            int i = openBrace + 1;
-            int elemStart = i;
-            int depth = 0;
+            var list = new CSourceFile(text, openBrace, closeBrace + 1).ListAt(openBrace);
+            if (list == null) return result;
             int autoIndex = 0;
-
-            void Flush(int elemEnd)
+            foreach (var item in list.Items)
             {
-                int s = elemStart, e = elemEnd;
-                while (s < e && char.IsWhiteSpace(text[s])) s++;
-                SkipLeadingComments(text, ref s, e);
-                TrimTrailingComments(text, s, ref e);
-                if (s >= e) return;   // empty (trailing comma before closing brace, or a trailing comment with no value after it)
-
-                var (name, idx, valueStart) = ParseDesignator(text, s, e, autoIndex);
-                result.Add(new Element(name, idx, valueStart, e));
-                autoIndex = idx + 1;
+                string name = null;
+                int index = autoIndex;
+                if (item.Designators.Count == 1 && item.Designators[0].IsField) name = item.Designators[0].Text;
+                else if (item.Designators.Count == 1 && item.Position >= 0) index = item.Position;
+                result.Add(new Element(name, index, item.ValueStart, item.ValueEnd));
+                autoIndex = index + 1;
             }
-
-            while (i < closeBrace)
-            {
-                if (BraceScanner.SkipNonCode(text, ref i)) continue;
-                char c = text[i];
-                if (c == '{' || c == '(' || c == '[') { depth++; i++; continue; }
-                if (c == '}' || c == ')' || c == ']') { depth--; i++; continue; }
-                if (c == ',' && depth == 0)
-                {
-                    Flush(i);
-                    elemStart = i + 1;
-                    i++;
-                    continue;
-                }
-                i++;
-            }
-            Flush(closeBrace);
             return result;
-        }
-
-        /// <summary>Parses an element's leading designator, if any: ".name =" (named) or "[N] =" (indexed).
-        /// Returns the field name (or null for positional), the resolved index, and where the value starts.</summary>
-        private static (string name, int index, int valueStart) ParseDesignator(string text, int start, int end, int autoIndex)
-        {
-            int i = start;
-            if (i < end && text[i] == '.')
-            {
-                int nameStart = ++i;
-                while (i < end && (char.IsLetterOrDigit(text[i]) || text[i] == '_')) i++;
-                string name = text.Substring(nameStart, i - nameStart);
-                int j = i;
-                while (j < end && char.IsWhiteSpace(text[j])) j++;
-                if (j < end && text[j] == '=' && (j + 1 >= end || text[j + 1] != '='))
-                    return (name, autoIndex, SkipWhitespace(text, j + 1, end));
-                // ".name" without "=" isn't a field designator DSPRE understands here; treat as positional.
-                return (null, autoIndex, start);
-            }
-            if (i < end && text[i] == '[')
-            {
-                int numStart = ++i;
-                while (i < end && text[i] != ']') i++;
-                if (i < end && int.TryParse(text.Substring(numStart, i - numStart).Trim(), out int idx))
-                {
-                    int j = i + 1;
-                    while (j < end && char.IsWhiteSpace(text[j])) j++;
-                    if (j < end && text[j] == '=' && (j + 1 >= end || text[j + 1] != '='))
-                        return (null, idx, SkipWhitespace(text, j + 1, end));
-                }
-            }
-            return (null, autoIndex, start);
-        }
-
-        private static int SkipWhitespace(string text, int i, int end)
-        {
-            while (i < end && char.IsWhiteSpace(text[i])) i++;
-            return i;
-        }
-
-        // A comma-delimited entry can be preceded by its own trailing comment ("}, // Location\n    { ...",
-        // the comment belongs to the PRIOR entry but sits before this one since there's no comma between
-        // them), which BraceScanner.SkipNonCode only protects depth-tracking from, it doesn't advance where
-        // an element starts. Skip any run of leading "//"/"/* */" comments (and the whitespace around them)
-        // so they never end up prepended to the next real value.
-        // The last element before '}' has no comma, so a "// note" after it would otherwise count as its value.
-        private static void TrimTrailingComments(string text, int s, ref int e)
-        {
-            int i = s, lastCode = s - 1;
-            while (i < e)
-            {
-                char c = text[i];
-                bool comment = c == '/' && i + 1 < e && (text[i + 1] == '/' || text[i + 1] == '*');
-                if (comment || c == '"' || c == '\'')
-                {
-                    int j = i;
-                    BraceScanner.SkipNonCode(text, ref j);
-                    j = Math.Min(j, e);
-                    if (!comment) lastCode = j - 1;
-                    i = j;
-                    continue;
-                }
-                if (!char.IsWhiteSpace(c)) lastCode = i;
-                i++;
-            }
-            e = lastCode + 1;
-        }
-
-        private static void SkipLeadingComments(string text, ref int s, int end)
-        {
-            while (s < end && text[s] == '/' && s + 1 < end && (text[s + 1] == '/' || text[s + 1] == '*'))
-            {
-                if (text[s + 1] == '/')
-                {
-                    int nl = text.IndexOf('\n', s);
-                    s = (nl < 0 || nl >= end) ? end : nl + 1;
-                }
-                else
-                {
-                    int close = text.IndexOf("*/", s + 2, System.StringComparison.Ordinal);
-                    s = (close < 0 || close + 2 > end) ? end : close + 2;
-                }
-                while (s < end && char.IsWhiteSpace(text[s])) s++;
-            }
         }
     }
 }

@@ -57,12 +57,23 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public bool HasBetaNotice => BetaEditors.Enabled;
 
+        /// <summary>Tools for working on hg-engine itself, shown when DSPRE starts with --hge-dev.</summary>
+        public bool HgeDevOn => DSPRE.HgEngine.HgEngineDev.Enabled;
+
         /// <summary>Why it is greyed out, or nothing when it is not.</summary>
         public BetaReason BetaNote { get; } = new BetaReason();
 
         public sealed class BetaLookup
         {
             public bool this[string window] => BetaEditors.Allows(window);
+        }
+
+        /// <summary>Whether an editor can open now, by its own availability rule. A new instance on every read, like Shown.</summary>
+        public UsableLookup Usable => new UsableLookup();
+
+        public sealed class UsableLookup
+        {
+            public bool this[string window] => EditorAvailability.Allows(window);
         }
 
         public sealed class BetaReason
@@ -90,6 +101,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         public bool CanUseBattleScriptEditor => EditorAvailability.Allows("BattleScriptEditorView");
+        public bool CanUseMoveBackgrounds => EditorAvailability.Allows("MoveBackgroundEditorView");
         public bool CanUseFontEditor => EditorAvailability.Allows("FontEditorView");
         public bool CanUseBattleSceneBrowser => EditorAvailability.Allows("BattleSceneBrowserView");
         public bool CanUseCellAnimations => EditorAvailability.Allows("CellAnimationEditorView");
@@ -124,6 +136,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         // PokeFormDataTbl.c is source-only (no packed-ROM equivalent), so this needs the checkout link
         // itself rather than the isHGE/HgAllows gate the other 5 domains use.
         public bool CanUseHgEngineFormEditor => EditorAvailability.Allows("HgEngineFormEditorView");
+        public bool CanUseAbilityFlagsEditor => EditorAvailability.Allows("AbilityFlagsEditorView");
         public bool CanUseBattleScreen => EditorAvailability.Allows("BattleScreenEditorView");
 
         public bool CanUseMoveEditor => EditorAvailability.Allows("MoveDataEditorView");
@@ -244,8 +257,22 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public string Title =>
             IsRomLoaded
-                ? $"DSPRE - {GetGameDisplayName()} (Avalonia preview)"
+                ? $"DSPRE - {GetGameDisplayName()}{ProjectNameSuffix} (Avalonia preview)"
                 : "DSPRE (Avalonia preview)";
+
+        /// <summary>" - name" of the open project folder, so two open projects of the same game can be told apart.</summary>
+        private static string ProjectNameSuffix
+        {
+            get
+            {
+                string dir = RomInfo.workDir?.TrimEnd(System.IO.Path.DirectorySeparatorChar, '/');
+                if (string.IsNullOrEmpty(dir)) return "";
+                string name = System.IO.Path.GetFileName(dir);
+                const string contents = "_DSPRE_contents";
+                if (name.EndsWith(contents, System.StringComparison.OrdinalIgnoreCase)) name = name[..^contents.Length];
+                return string.IsNullOrEmpty(name) ? "" : " - " + name;
+            }
+        }
 
         /// <summary>Re-evaluate ROM-dependent state after a ROM is loaded/closed (enables the editor menus + title).</summary>
         public void RefreshRomState()
@@ -256,6 +283,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseBattleScreen));
             OnPropertyChanged(nameof(CanUsePokemonEditor));
             OnPropertyChanged(nameof(CanUseHgEngineFormEditor));
+            OnPropertyChanged(nameof(CanUseAbilityFlagsEditor));
             OnPropertyChanged(nameof(CanUseMoveEditor));
             OnPropertyChanged(nameof(CanUseItemEditor));
             OnPropertyChanged(nameof(CanUseMartEditor));
@@ -287,7 +315,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(HgeUnlinkedNote));
             OnPropertyChanged(nameof(BlockedNote));
             OnPropertyChanged(nameof(Shown));
+            OnPropertyChanged(nameof(Usable));
             OnPropertyChanged(nameof(CanUseBattleScriptEditor));
+            OnPropertyChanged(nameof(CanUseMoveBackgrounds));
             OnPropertyChanged(nameof(CanUseFontEditor));
             OnPropertyChanged(nameof(CanUseBattleSceneBrowser));
             OnPropertyChanged(nameof(CanUseCellAnimations));
@@ -325,6 +355,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(IsHgEngineLinked));
             OnPropertyChanged(nameof(CanUsePokemonEditor));
             OnPropertyChanged(nameof(CanUseHgEngineFormEditor));
+            OnPropertyChanged(nameof(CanUseAbilityFlagsEditor));
             OnPropertyChanged(nameof(CanUseMoveEditor));
             OnPropertyChanged(nameof(CanUseItemEditor));
             OnPropertyChanged(nameof(CanUseMartEditor));
@@ -339,7 +370,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(HgeUnlinkedNote));
             OnPropertyChanged(nameof(BlockedNote));
             OnPropertyChanged(nameof(Shown));
+            OnPropertyChanged(nameof(Usable));
             OnPropertyChanged(nameof(CanUseBattleScriptEditor));
+            OnPropertyChanged(nameof(CanUseMoveBackgrounds));
             OnPropertyChanged(nameof(CanUseFontEditor));
             OnPropertyChanged(nameof(CanUseBattleSceneBrowser));
             OnPropertyChanged(nameof(CanUseCellAnimations));

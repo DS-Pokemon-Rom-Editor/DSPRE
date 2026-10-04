@@ -49,6 +49,9 @@ namespace DSPRE.Avalonia.Data
         public byte[] Get(int index)
         {
             if (_mapped != null) return _mapped.Get(index);
+            // As ScriptNarc does for mapped archives: a member hg-engine copies in from its own file is that file.
+            if (HgEngine.HgEngineSourceAssets.ReadVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOfPath(LoosePath), index) is byte[] source)
+                return source;
             var files = LooseFiles();
             return index >= 0 && index < files.Length ? files[index] : null;
         }
@@ -61,6 +64,9 @@ namespace DSPRE.Avalonia.Data
                 foreach (var file in files) _mapped.Put(file.Key, file.Value);
                 return;
             }
+
+            foreach (var file in files)
+                HgEngine.HgEngineSourceAssets.WriteVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOfPath(LoosePath), file.Key, file.Value);
 
             var narc = Narc.Open(LoosePath) ?? throw new IOException("That archive could not be read.");
             try

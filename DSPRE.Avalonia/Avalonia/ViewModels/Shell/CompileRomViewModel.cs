@@ -43,6 +43,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public IBrush ResultBrush => Succeeded ? Brushes.LimeGreen : Brushes.OrangeRed;
 
+        /// <summary>The ROM make writes; test.nds unless a build name was chosen.</summary>
+        public string BuildRom { get; set; }
+
         public async Task RunAsync()
         {
             IsRunning = true;
@@ -50,12 +53,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             ResultText = "";
             Succeeded = false;
 
-            string ndsPath = Path.Combine(HgEngineProject.RepoPathUnc, "test.nds");
+            string ndsPath = Path.Combine(HgEngineProject.RepoPathUnc, HgEngineProject.IsSafeBuildRomName(BuildRom) ? BuildRom : "test.nds");
             DateTime? beforeWriteTimeUtc = File.Exists(ndsPath) ? File.GetLastWriteTimeUtc(ndsPath) : (DateTime?)null;
 
             bool ok = await Task.Run(() => HgEngineBuild.RunFullBuild(
                 line => Dispatcher.UIThread.Post(() => LogLines.Add(line)),
-                out _));
+                out _, BuildRom));
 
             bool ndsProduced = File.Exists(ndsPath) &&
                 (beforeWriteTimeUtc == null || File.GetLastWriteTimeUtc(ndsPath) > beforeWriteTimeUtc);
@@ -67,7 +70,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
             else if (ok)
             {
-                ResultText = "make reported success, but test.nds wasn't produced or updated at " + ndsPath + ".";
+                ResultText = "make reported success, but the ROM wasn't produced or updated at " + ndsPath + ".";
             }
             else
             {

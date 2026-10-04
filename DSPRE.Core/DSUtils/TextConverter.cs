@@ -24,7 +24,7 @@ namespace DSPRE
         public static string GetExpandedFolderPath()
         {
             // ToDo: Don't hardcode "expanded" and "textArchives" folders
-            return Path.Combine(RomInfo.workDir, "expanded", "textArchives");
+            return Path.Combine(RomInfo.dspreDir, "expanded", "textArchives");
         }
 
         public static void BinToJSON(string inputFilePath, string outputFilePath, string charMapPath)

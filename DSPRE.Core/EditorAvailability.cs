@@ -34,10 +34,12 @@ namespace DSPRE
             public bool NeedsRom = true;
             public string Beta;
             public Func<string> Unsupported;
+            /// <summary>Why a Closed editor stays closed on hg-engine, when the general reason isn't it.</summary>
+            public string HgeReason;
             public DirNames[] BuiltArchives = Array.Empty<DirNames>();
         }
 
-        private const string LinkHint = "File > hg-engine > Link hg-engine checkout";
+        private const string LinkHint = "File > Open hg-engine folder";
 
         private static Func<string> Unless(Func<bool> supported, string why) => () => supported() ? null : why;
         private static bool Family(params GameFamilies[] families) => Array.IndexOf(families, gameFamily) >= 0;
@@ -54,30 +56,33 @@ namespace DSPRE
 
             ["BattleMessageEditorView"] = new Rule { Title = "The Battle Message Editor", Hge = HgEngine.Source },
 
-            ["EggMoveEditorView"] = new Rule { Title = "The Egg Move Editor", Hge = HgEngine.Closed },
-            ["BulkLearnsetEditorView"] = new Rule { Title = "The Bulk Learnset Editor", Hge = HgEngine.Closed },
-            ["TmHmBulkEditorView"] = new Rule { Title = "The TM/HM Bulk Editor", Hge = HgEngine.Closed },
-            ["TrainerFlagBulkEditorView"] = new Rule { Title = "The Trainer Flag Bulk Editor", Hge = HgEngine.Closed },
+            ["EggMoveEditorView"] = new Rule { Title = "The Egg Move Editor", Hge = HgEngine.Source },
+            ["BulkLearnsetEditorView"] = new Rule { Title = "The Bulk Learnset Editor", Hge = HgEngine.Source },
+            ["TmHmBulkEditorView"] = new Rule { Title = "The TM/HM Bulk Editor", Hge = HgEngine.Source },
+            ["TrainerFlagBulkEditorView"] = new Rule { Title = "The Trainer Flag Bulk Editor", Hge = HgEngine.Source },
             ["StarterEditorView"] = new Rule
             {
-                Title = "The Starter Pokémon Editor", Hge = HgEngine.Closed,
+                Title = "The Starter Pokémon Editor", Hge = HgEngine.Source,
                 Unsupported = Unless(IsStarterEditorAvailable, "The Starter Pokémon Editor does not support this ROM."),
             },
             ["MartEditorView"] = new Rule
             {
-                Title = "The Mart Editor", Hge = HgEngine.Closed,
+                Title = "The Mart Editor", Hge = HgEngine.Source,
                 Unsupported = Unless(IsMartEditorAvailable, "The Mart Editor currently supports English Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs."),
             },
-            ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Closed },
-            ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Closed },
-            ["FriendshipChangesView"] = new Rule { Title = "The Friendship changes editor", Hge = HgEngine.Closed },
-            ["EncounterSlotOddsView"] = new Rule { Title = "The Encounter slot odds editor", Hge = HgEngine.Closed },
-            ["BreedingItemsView"] = new Rule { Title = "The Breeding items editor", Hge = HgEngine.Closed },
-            ["BerryDataEditorView"] = new Rule { Title = "The Berry data editor", Hge = HgEngine.Closed },
-            ["TypeChartEditorView"] = new Rule { Title = "The Type chart editor", Hge = HgEngine.Closed },
+            ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open },
+            ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Open },
+            ["FriendshipChangesView"] = new Rule { Title = "The Friendship changes editor", Hge = HgEngine.Open },
+            ["EncounterSlotOddsView"] = new Rule
+            {
+                Title = "The Encounter slot odds editor", Hge = HgEngine.Source,
+            },
+            ["BreedingItemsView"] = new Rule { Title = "The Breeding items editor", Hge = HgEngine.Open },
+            ["BerryDataEditorView"] = new Rule { Title = "The Berry data editor", Hge = HgEngine.Open },
+            ["TypeChartEditorView"] = new Rule { Title = "The Type chart editor", Hge = HgEngine.Source },
             ["MoveTutorEditorView"] = new Rule
             {
-                Title = "The Move tutor editor", Hge = HgEngine.Closed,
+                Title = "The Move tutor editor", Hge = HgEngine.Source,
                 Unsupported = Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "Diamond and Pearl have no move tutors."),
             },
             ["BpShopEditorView"] = new Rule
@@ -90,8 +95,8 @@ namespace DSPRE
                 Title = "The Underground mining editor", Hge = HgEngine.Closed,
                 Unsupported = Unless(() => Family(GameFamilies.DP, GameFamilies.Plat), "Only Diamond, Pearl and Platinum have the Underground."),
             },
-            ["VsIntroEditorView"] = new Rule { Title = "The VS Intro Editor", Hge = HgEngine.Closed },
-            ["WildIntroEditorView"] = new Rule { Title = "The Wild Pokémon Intro Editor", Hge = HgEngine.Closed },
+            ["VsIntroEditorView"] = new Rule { Title = "The VS Intro Editor", Hge = HgEngine.Source },
+            ["WildIntroEditorView"] = new Rule { Title = "The Wild Pokémon Intro Editor", Hge = HgEngine.Source },
 
             ["AudioEditorView"] = new Rule { Title = "The Audio Editor", Hge = HgEngine.NeedsLink },
             ["TMEditorView"] = new Rule { Title = "The TM Editor", Hge = HgEngine.NeedsLink },
@@ -150,6 +155,7 @@ namespace DSPRE
                 Unsupported = Unless(IsTrainerCardEditorAvailable, "The Trainer Card editor is not available for this ROM."),
             },
             ["CellAnimationEditorView"] = new Rule { Title = "The Cell Animation Editor", Hge = HgEngine.NeedsLink },
+            ["PokedexGraphicsEditorView"] = new Rule { Title = "The Pokédex Graphics Editor", Hge = HgEngine.NeedsLink },
             ["NamingScreenEditor"] = new Rule { Title = "The Naming Screen Editor", Hge = HgEngine.NeedsLink, Beta = "TrainerSpriteEditorView" },
             ["ParticleEditorView"] = new Rule { Title = "The Particle Editor", Hge = HgEngine.NeedsLink },
             ["ParticleLibraryView"] = new Rule { Title = "The Particle Library", Hge = HgEngine.NeedsLink },
@@ -179,7 +185,11 @@ namespace DSPRE
             ["BattleSceneBrowserView"] = new Rule { Title = "The battle scenes list", Hge = HgEngine.NeedsLink, NeedsRom = false },
 
             ["HgEngineFormEditorView"] = new Rule { Title = "The Form Editor", Hge = HgEngine.LinkedOnly },
+            ["AbilityFlagsEditorView"] = new Rule { Title = "The Ability Flags editor", Hge = HgEngine.LinkedOnly },
+            ["MoveBackgroundEditorView"] = new Rule { Title = "The Move Backgrounds editor", Hge = HgEngine.Source },
+            ["HgEngineSettingsView"] = new Rule { Title = "hg-engine Settings", Hge = HgEngine.LinkedOnly },
             ["HgEnginePatchesView"] = new Rule { Title = "hg-engine patches", Hge = HgEngine.LinkedOnly },
+            ["BattleTestsView"] = new Rule { Title = "Battle tests", Hge = HgEngine.LinkedOnly },
             ["HgeRomReviewView"] = new Rule
             {
                 Title = "The hg-engine ROM Review",
@@ -207,14 +217,15 @@ namespace DSPRE
             switch (rule.Hge)
             {
                 case HgEngine.NeedsLink when isHGE && !HgEngineProject.IsActive:
-                    return $"{title} is not available for this hg-engine project until its checkout is linked ({LinkHint}).";
+                    return $"{title} is not available for an hg-engine ROM opened on its own. Open its hg-engine folder instead ({LinkHint}).";
                 case HgEngine.Source when isHGE && !HgEngineProject.IsActive:
                     return $"{title} is disabled for hg-engine ROMs: hg-engine manages this data itself and would overwrite any changes " +
-                        $"made here on its next build. Link your hg-engine checkout ({LinkHint}) to edit it from source instead.";
+                        $"made here on its next build. Open its hg-engine folder ({LinkHint}) to edit it from source instead.";
                 case HgEngine.Closed when isHGE:
-                    return $"{title} is disabled for hg-engine ROMs: hg-engine manages this data itself and would overwrite any changes made here on its next build.";
+                    return rule.HgeReason != null ? $"{title} is disabled for hg-engine ROMs: {rule.HgeReason}"
+                        : $"{title} is disabled for hg-engine ROMs: hg-engine manages this data itself and would overwrite any changes made here on its next build.";
                 case HgEngine.LinkedOnly when !HgEngineProject.IsActive:
-                    return $"{title} needs a linked hg-engine checkout ({LinkHint}).";
+                    return $"{title} needs an hg-engine folder project ({LinkHint}).";
             }
 
             if (rule.Unsupported?.Invoke() is string unsupported) return unsupported;

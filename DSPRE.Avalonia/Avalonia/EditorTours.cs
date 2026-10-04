@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia
             buttons.Children.Add(later);
             buttons.Children.Add(show);
             var stack = new StackPanel { Spacing = 8 };
-            stack.Children.Add(new TextBlock { Text = "New to the " + All[key].Name + "?", FontWeight = FontWeight.SemiBold, FontSize = 14 });
+            stack.Children.Add(new TextBlock { Text = "New to the " + All[key].Name + "?", FontWeight = FontWeight.SemiBold, FontSize = 14, TextWrapping = TextWrapping.Wrap });
             stack.Children.Add(new TextBlock { Text = "A short tour shows what each part does. " + (HasButton.Contains(root) ? "F1 or ? shows it again later." : "F1 shows it again later."), TextWrapping = TextWrapping.Wrap, Opacity = 0.9 });
             stack.Children.Add(buttons);
             var card = new Border

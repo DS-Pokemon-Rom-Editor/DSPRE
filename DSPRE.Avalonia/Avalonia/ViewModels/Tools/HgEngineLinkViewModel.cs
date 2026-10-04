@@ -21,18 +21,23 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ? $"Linked to {HgEngineProject.RepoRootWindows}  (builds with {ShellLabel})"
             : "No hg-engine checkout linked for this project.";
 
-        private static string ShellLabel => HgEngineProject.Shell == HgEngineShell.Msys2
-            ? "MSYS2"
-            : string.IsNullOrWhiteSpace(HgEngineProject.WslDistro) ? "WSL" : "WSL: " + HgEngineProject.WslDistro;
+        private static string ShellLabel => HgEngineProject.Shell switch
+        {
+            HgEngineShell.Msys2 => "MSYS2",
+            HgEngineShell.Native => "this system's bash",
+            _ => string.IsNullOrWhiteSpace(HgEngineProject.WslDistro) ? "WSL" : "WSL: " + HgEngineProject.WslDistro,
+        };
 
         /// <summary>Shown when the checkout is on a Windows drive but builds through WSL, which works
         /// but reads every file across the /mnt boundary.</summary>
         public bool ShowMountSpeedNote => IsLinked && HgEngineProject.BuildCrossesMountBoundary;
 
-        public string MountSpeedNote =>
-            "This checkout is on a Windows drive but builds through WSL, so make runs over /mnt and "
-            + "will be noticeably slower than a checkout inside WSL. Building it with MSYS2 instead, "
-            + "or moving the checkout into WSL, avoids that.";
+        public string MountSpeedNote => HgEngineProject.Shell == HgEngineShell.Native
+            ? "This checkout is on a Windows drive, so make reads every file over /mnt and will be noticeably "
+              + "slower than a checkout in your Linux home folder."
+            : "This checkout is on a Windows drive but builds through WSL, so make runs over /mnt and "
+              + "will be noticeably slower than a checkout inside WSL. Building it with MSYS2 instead, "
+              + "or moving the checkout into WSL, avoids that.";
 
         /// <summary>hg-engine's own `make` hard-requires a rom.nds at the checkout root; surfaced here so
         /// a missing one is caught while linking, not mid-Compile-ROM.</summary>
@@ -52,8 +57,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public async Task BrowseAsync(Window owner)
         {
-            string path = await DialogHelper.OpenFolder(owner,
-                "Select your hg-engine checkout (a WSL folder, e.g. \\\\wsl.localhost\\Ubuntu\\home\\you\\hg-engine)");
+            string path = await DialogHelper.OpenFolder(owner, HgEngineProject.HostIsPosix
+                ? "Select your hg-engine checkout"
+                : "Select your hg-engine checkout (a WSL folder, e.g. \\\\wsl.localhost\\Ubuntu\\home\\you\\hg-engine)");
             if (string.IsNullOrEmpty(path)) return;
 
             if (!HgEngineProject.TryLink(path, out string error))
@@ -72,6 +78,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         /// </summary>
         public static async Task<HgEngineShell?> AskShellAsync(string path)
         {
+            if (HgEngineProject.HostIsPosix) return HgEngineShell.Native;
             if (HgEngineProject.IsWslPath(path)) return HgEngineShell.Wsl;
 
             var choice = await DialogHelper.AskThreeWay(

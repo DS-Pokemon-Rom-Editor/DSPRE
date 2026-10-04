@@ -26,11 +26,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             field = value; OnPropertyChanged(n); return true;
         }
 
-        public enum Archive { MoveScripts = 0, EffectScripts = 1, Subroutines = 2, MoveAnimation = 3 }
+        public enum Archive { MoveScripts = 0, EffectScripts = 1, Subroutines = 2, MoveAnimation = 3, SubAnimation = 4 }
 
         private readonly WazaSeqVersion _version;
         private readonly string[] _moveNames;
-        private readonly ScriptNarc[] _narcs = new ScriptNarc[4];
+        private readonly ScriptNarc[] _narcs = new ScriptNarc[5];
 
         public bool IsAvailable { get; }
         public string UnavailableText => "The battle-script editor currently supports Platinum and HeartGold/SoulSilver only.";
@@ -50,11 +50,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _narcs[(int)Archive.EffectScripts] = new ScriptNarc(DirNames.beSeq);
             _narcs[(int)Archive.Subroutines]  = new ScriptNarc(DirNames.subSeq);
             _narcs[(int)Archive.MoveAnimation] = new ScriptNarc(DirNames.wazaEffectScripts);
+            _narcs[(int)Archive.SubAnimation] = new ScriptNarc(DirNames.wazaEffectSub);
 
             _dirs[(int)Archive.MoveScripts] = DirNames.wazaSeq;
             _dirs[(int)Archive.EffectScripts] = DirNames.beSeq;
             _dirs[(int)Archive.Subroutines] = DirNames.subSeq;
             _dirs[(int)Archive.MoveAnimation] = DirNames.wazaEffectScripts;
+            _dirs[(int)Archive.SubAnimation] = DirNames.wazaEffectSub;
 
             if (IsAvailable) SelectArchive(0);
         }
@@ -68,7 +70,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string[] ArchiveOptions { get; } =
         {
             "Move scripts (waza_seq)", "Move-effect scripts (be_seq)",
-            "Subroutines (sub_seq)", "Move animation (we)",
+            "Subroutines (sub_seq)", "Move animation (we)", "Animation subroutines (we_sub)",
         };
 
         private int _archiveIndex = -1;
@@ -90,10 +92,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
         }
 
-        /// <summary>Whether the move-animation archive is the one open. The three views are for it.</summary>
-        public bool IsAnimation => (Archive)_archiveIndex == Archive.MoveAnimation;
+        /// <summary>Whether an animation archive is open: the move animations, or the subroutines they call.</summary>
+        public bool IsAnimation => (Archive)_archiveIndex is Archive.MoveAnimation or Archive.SubAnimation;
         private ScriptNarc CurrentNarc => _narcs[_archiveIndex];
-        private readonly DirNames[] _dirs = new DirNames[4];
+        private readonly DirNames[] _dirs = new DirNames[5];
         private Dictionary<int, HgEngineOwnedFile> _sourceById;
         private List<int> _sourceOrder = new List<int>();
 
@@ -302,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void SelectArchive(int index)
         {
-            _archiveIndex = Math.Clamp(index, 0, 3);
+            _archiveIndex = Math.Clamp(index, 0, ArchiveOptions.Length - 1);
             OnPropertyChanged(nameof(ArchiveIndex));
 
             OpcodeNames.Clear();
@@ -373,7 +375,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public string SourceText
         {
             get => _sourceText;
-            set { if (Set(ref _sourceText, value)) Dirty = true; }
+            set { if (Set(ref _sourceText, value)) Dirty = value != _loadedSourceText; }
         }
 
         private string LabelFor(int i)
@@ -385,6 +387,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     return i < _moveNames.Length ? $"{i:D3} - {_moveNames[i]}" : $"{i:D3} - Move {i}";
                 case Archive.EffectScripts:
                     return $"{i:D3} - Effect {i}";
+                case Archive.SubAnimation:
+                    return $"{i:D3} - Animation subroutine {i}";
                 default:
                     return $"{i:D3} - Subroutine {i}";
             }
@@ -446,6 +450,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 _sourceText = source == null ? ""
                     : HgEngineOwnedFiles.TryReadText(source, out string text, out string readError)
                         ? text : readError;
+                _loadedSourceText = _sourceText;
                 Dirty = false;
                 OnPropertyChanged(nameof(SourceText));
                 OnPropertyChanged(nameof(SourceNote));
@@ -460,8 +465,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 var cmds = bytes == null ? null
                          : IsAnimation ? BattleAnimScript.Parse(bytes, _version)
                                   : WazaSeqScript.Parse(bytes, _version);
-                if (cmds != null) foreach (var c in cmds) AddRow(c.OpId, c.Args);
+                _tail = cmds?.LastOrDefault(c => c.Tail != null)?.Tail;
+                if (cmds != null) foreach (var c in cmds.Where(c => !c.OnlyTail)) AddRow(c.OpId, c.Args, c.Raw);
             }
+            _loadedBytes = _fileIndex >= 0 ? CurrentBytes() : null;
             Dirty = false;
             TextErrors = Array.Empty<TextError>();
             SyncTextFromRows();   // seed the text view from the freshly-loaded cards
@@ -472,9 +479,24 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(EntryHeader));
         }
 
-        private void AddRow(int opId, int[] args)
+        // Bytes after the entry's last whole word, carried through a save.
+        private byte[] _tail;
+
+        // What the entry held when loaded, so undoing an edit back to it leaves nothing to save.
+        private byte[] _loadedBytes;
+        private string _loadedSourceText = "";
+
+        private byte[] CurrentBytes()
         {
-            var row = new ScriptCmdRow { Script = !IsAnimation, OpNameOf = OpNameOf, FixedArgCountOf = FixedArgCountOf, OnEdited = OnRowEdited, PreviewSound = TryPreviewSound, SoundNameOf = SoundNameOf };
+            List<WazaSeqCommand> cmds = BuildCommands();
+            return IsAnimation ? BattleAnimScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
+        }
+
+        private bool DiffersFromLoaded() => _loadedBytes == null || !CurrentBytes().AsSpan().SequenceEqual(_loadedBytes);
+
+        private void AddRow(int opId, int[] args, bool raw = false)
+        {
+            var row = new ScriptCmdRow { Script = !IsAnimation, Raw = raw, OpNameOf = OpNameOf, ArgCountOf = ArgCountOf, OnEdited = OnRowEdited, PreviewSound = TryPreviewSound, SoundNameOf = SoundNameOf };
             row.Args.AddRange(args ?? System.Array.Empty<int>());
             row._opIdSilent(opId);   // set without firing OnEdited during load
             row.Rebuild();
@@ -484,17 +506,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // opId → opcode name for the row labels (the dropdown index IS the opcode id).
         private string OpNameOf(int opId) => opId >= 0 && opId < OpcodeNames.Count ? OpcodeNames[opId] : "op" + opId;
 
-        // The opcode's fixed parameter count (variable-length opcodes report only their fixed leading args).
-        private int FixedArgCountOf(int opId)
+        // The opcode's parameter count for these args (animation opcodes report only their fixed leading args; a
+        // message command's count follows its tag).
+        private int ArgCountOf(int opId, IReadOnlyList<int> args)
         {
             if (IsAnimation) return BattleAnimCommands.TryGet(_version, opId, out var op) ? op.ArgCount : 0;
-            return Math.Max(0, WazaSeqOpcodes.ArgCount(_version, opId));
+            return Math.Max(0, WazaSeqOpcodes.ArgCount(_version, opId, i => i < args.Count ? args[i] : 0));
         }
 
         private void OnRowEdited(ScriptCmdRow row)
         {
             RefreshViewLines();
-            Dirty = true;
+            Dirty = DiffersFromLoaded();
             RefreshStoryboard();
             SyncTextFromRows();
         }
@@ -502,7 +525,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void AddCommand()
         {
             AddRow(0, Array.Empty<int>());
-            Dirty = true;
+            Dirty = DiffersFromLoaded();
             RefreshStoryboard();
             SyncTextFromRows();
             OnPropertyChanged(nameof(HasRows));
@@ -513,7 +536,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (row == null || !Rows.Contains(row)) return;
             Rows.Remove(row);
-            Dirty = true;
+            Dirty = DiffersFromLoaded();
             RefreshStoryboard();
             SyncTextFromRows();
             OnPropertyChanged(nameof(HasRows));
@@ -525,7 +548,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             int i = Rows.IndexOf(row), j = i + dir;
             if (i < 0 || j < 0 || j >= Rows.Count) return;
             Rows.Move(i, j);
-            Dirty = true;
+            Dirty = DiffersFromLoaded();
             RefreshStoryboard();
             SyncTextFromRows();
         }
@@ -555,6 +578,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 await DSPRE.Avalonia.DialogHelper.ShowError(error, "Battle Scripts");
                 return;
             }
+            _loadedSourceText = SourceText ?? "";
             Dirty = false;
 
             if (HgEngineProject.SuppressManagedFileSaveNotice) return;
@@ -591,19 +615,25 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             foreach (var row in Rows)
             {
                 int[] args;
-                if (IsAnimation)
+                if (IsAnimation || row.Raw)
                 {
-                    // Animation commands are variable-length; keep exactly the row's args.
+                    // Animation commands are variable-length, and a raw row is words the reader didn't understand;
+                    // either way the row's args are kept exactly.
                     args = row.Args.ToArray();
                 }
                 else
                 {
-                    // waza/be/sub opcodes are fixed-length, pad/truncate to the opcode's arg count.
-                    int n = Math.Max(0, WazaSeqOpcodes.ArgCount(_version, row.OpId));
+                    // waza/be/sub opcodes are fixed-length or sized by a message tag; pad/truncate to that count.
+                    int n = ArgCountOf(row.OpId, row.Args);
                     args = new int[n];
                     for (int i = 0; i < n; i++) args[i] = i < row.Args.Count ? row.Args[i] : 0;
                 }
-                list.Add(new WazaSeqCommand(row.OpId, args));
+                list.Add(new WazaSeqCommand(row.OpId, args) { Raw = row.Raw });
+            }
+            if (_tail != null)
+            {
+                if (list.Count > 0) list[^1].Tail = _tail;
+                else list.Add(new WazaSeqCommand(0, null) { Tail = _tail, OnlyTail = true });
             }
             return list;
         }
@@ -838,7 +868,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Rows.Clear();
             foreach (var (opId, args) in parsed) AddRow(opId, args);
             _rebuildingRows = false;
-            Dirty = true;
+            Dirty = DiffersFromLoaded();
             RefreshStoryboard();
             OnPropertyChanged(nameof(HasRows));
             OnPropertyChanged(nameof(EntryHeader));
@@ -1586,10 +1616,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise(string n) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
+        /// <summary>Words the reader could not decode, shown and saved as they are.</summary>
+        public bool Raw { get; init; }
+
         // Context wired by the view-model so the row can name its opcode/params and report edits.
         internal System.Func<int, string> OpNameOf;
         internal bool Script;
-        internal System.Func<int, int> FixedArgCountOf;
+        internal System.Func<int, System.Collections.Generic.IReadOnlyList<int>, int> ArgCountOf;
         internal System.Action<ScriptCmdRow> OnEdited;
         internal System.Func<int, string> PreviewSound;   // returns an error message, or null on success
         internal System.Func<int, string> SoundNameOf;
@@ -1605,7 +1638,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
         // Ensure the args list has at least the new opcode's fixed parameter count (pad with 0). Extra args are kept
         // (variable-length opcodes); the user can trim them via the raw-args field.
-        private void PadArgs() { int need = FixedArgCountOf?.Invoke(_opId) ?? 0; while (Args.Count < need) Args.Add(0); }
+        private void PadArgs() { int need = ArgCountOf?.Invoke(_opId, Args) ?? 0; while (Args.Count < need) Args.Add(0); }
         public string OpName => OpNameOf?.Invoke(_opId) ?? ("op" + _opId);
         public string OpDisplay => DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDisplay(OpName, Script);
         public string OpDoc => DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDoc(OpName, Script);
@@ -1666,6 +1699,17 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (index < 0 || index >= Args.Count || Args[index] == v) return;
             Args[index] = v;
+            // A message command's tag decides how many values follow it.
+            if (Script && !Raw && ArgCountOf != null)
+            {
+                int need = ArgCountOf(_opId, Args);
+                if (need != Args.Count)
+                {
+                    while (Args.Count < need) Args.Add(0);
+                    if (Args.Count > need) Args.RemoveRange(need, Args.Count - need);
+                    Rebuild();
+                }
+            }
             Raise(nameof(Summary)); Raise(nameof(RawArgs));
             OnEdited?.Invoke(this);
         }

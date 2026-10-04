@@ -5,9 +5,8 @@ using System.Text;
 
 namespace DSPRE.HgEngine
 {
-    /// <summary>Shells out to the linked hg-engine checkout's Makefile. Only for invoking `make`; the
-    /// toolchain (gcc, armips, ndstool) is POSIX-native, so it runs under WSL or MSYS2 depending on
-    /// which the checkout was linked with. hg-engine documents both.</summary>
+    /// <summary>Shells out to the linked hg-engine checkout's Makefile. The toolchain is POSIX-native, so on
+    /// Windows it runs under WSL or MSYS2, whichever the checkout was linked with; elsewhere in the host's bash.</summary>
     public static class HgEngineBuild
     {
         /// <summary>Builds one or more make targets (e.g. "build/narc/a055.narc") in one `make` call.</summary>
@@ -16,8 +15,9 @@ namespace DSPRE.HgEngine
 
         /// <summary>Runs the full `make` build (all data domains + ASM hooks + repack into test.nds),
         /// streaming output line by line for a live log panel.</summary>
-        public static bool RunFullBuild(Action<string> onOutputLine, out string stderr)
-            => RunStreaming($"make -C '{HgEngineProject.RepoPathPosix}'", onOutputLine, out stderr);
+        public static bool RunFullBuild(Action<string> onOutputLine, out string stderr, string buildRom = null)
+            => RunStreaming($"make -C '{HgEngineProject.RepoPathPosix}'"
+                + (HgEngineProject.IsSafeBuildRomName(buildRom) ? $" BUILDROM='{buildRom}'" : ""), onOutputLine, out stderr);
 
         /// <summary>
         /// Runs hg-engine's text-archive validator over one source file. It reports problems on stdout
@@ -40,6 +40,9 @@ namespace DSPRE.HgEngine
             if (reported.Length > 0) problems = reported;
             return true;
         }
+
+        /// <summary>Runs one command in the checkout's build shell, for checks such as finding the toolchain.</summary>
+        public static bool TryRunShell(string bashCommand, out string stdout, out string stderr) => Run(bashCommand, out stdout, out stderr);
 
         private static bool Run(string bashCommand, out string stdout, out string stderr)
         {
@@ -108,8 +111,12 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        private static string ShellName =>
-            HgEngineProject.Shell == HgEngineShell.Msys2 ? HgEngineProject.MsysBashPath : "wsl.exe";
+        private static string ShellName => HgEngineProject.Shell switch
+        {
+            HgEngineShell.Msys2 => HgEngineProject.MsysBashPath,
+            HgEngineShell.Native => "bash",
+            _ => "wsl.exe",
+        };
 
         private static ProcessStartInfo BuildStartInfo(string bashCommand, bool redirectOutput)
         {
@@ -121,6 +128,15 @@ namespace DSPRE.HgEngine
                 CreateNoWindow = true,
                 WindowStyle = ProcessWindowStyle.Hidden,
             };
+
+            if (HgEngineProject.Shell == HgEngineShell.Native)
+            {
+                // Login shell for the same reason as MSYS2: toolchain PATH setup usually lives in the profile.
+                psi.FileName = "bash";
+                psi.ArgumentList.Add("-lc");
+                psi.ArgumentList.Add(bashCommand);
+                return psi;
+            }
 
             if (HgEngineProject.Shell == HgEngineShell.Msys2)
             {

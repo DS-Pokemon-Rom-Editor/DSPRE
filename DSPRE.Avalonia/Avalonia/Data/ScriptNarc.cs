@@ -20,6 +20,7 @@ namespace DSPRE.Avalonia.Data
         private bool _ready;
         private string _path;
         private int _count;
+        private string _archive;
 
         public ScriptNarc(DirNames dir) { _dir = dir; }
 
@@ -86,6 +87,13 @@ namespace DSPRE.Avalonia.Data
             Ensure();
             if (_path == null) return null;
             if (_fromPacked) return FromPacked(id);
+            return FromUnpacked(id);
+        }
+
+        // A member hg-engine copies in from its own file on every build is whatever that file holds now.
+        private byte[] FromUnpacked(int id)
+        {
+            if (HgEngine.HgEngineSourceAssets.ReadVerbatim(_archive, id) is byte[] source) return source;
             string f = FilePath(id);
             return File.Exists(f) ? File.ReadAllBytes(f) : null;
         }
@@ -116,6 +124,7 @@ namespace DSPRE.Avalonia.Data
                 return;
             }
 
+            _archive = HgEngine.HgEngineOwnedFiles.ArchiveOf(_dir);
             DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { _dir });
             _path = gameDirs[_dir].unpackedDir;
             _count = (_path != null && Directory.Exists(_path)) ? Directory.GetFiles(_path).Length : 0;
@@ -140,8 +149,7 @@ namespace DSPRE.Avalonia.Data
             if (_staging?.Read(_dir, id) is byte[] staged) return (byte[])staged.Clone();
             foreach (var overlay in _overlays)
                 if (overlay(_dir, id) is byte[] pending) return (byte[])pending.Clone();
-            string f = FilePath(id);
-            return File.Exists(f) ? File.ReadAllBytes(f) : null;
+            return FromUnpacked(id);
         }
 
         /// <summary>
@@ -169,7 +177,12 @@ namespace DSPRE.Avalonia.Data
             if (_fromPacked) return;   // read-only view of the ROM's own bytes
             if (_path == null) return;
             if (_staging != null) { _staging.Write(_dir, id, (byte[])data.Clone()); return; }
+            // The build copies that file over the member, so a member saved only here would be lost.
+            HgEngine.HgEngineSourceAssets.WriteVerbatim(_archive, id, data);
+            byte[] before = File.Exists(FilePath(id)) ? File.ReadAllBytes(FilePath(id)) : null;
             File.WriteAllBytes(FilePath(id), data);
+            BuiltPngSources.Write(_dir, _archive, id, _count, before, data);
+            AppEvents.RaiseArchiveMemberSaved(_dir);
         }
     }
 }

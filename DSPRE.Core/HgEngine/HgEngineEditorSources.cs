@@ -336,7 +336,7 @@ namespace DSPRE.HgEngine
         private const string SpeciesHeader = "include/constants/species.h";
         public static readonly string[] Headers = { SpeciesHeader };
 
-        private static string Species(int id) => HgEngineSourceFields.Symbol(SpeciesHeader, "SPECIES_", id);
+        private static string Species(int id) => HgEngineTrainerSource.FormatPackedSpecies(id, SpeciesHeader);
 
         private static HgEngineSourceField<EncounterFileHGSS> Byte(System.Func<EncounterFileHGSS, byte[]> array, int i, params object[] path) => new()
         {

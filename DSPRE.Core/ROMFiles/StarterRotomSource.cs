@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles
 
         private static string SourceDir() =>
             string.IsNullOrEmpty(RomInfo.workDir)
-                ? null : Path.Combine(RomInfo.workDir, "expanded", "scripts");
+                ? null : Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
 
         public static string PathFor(int fileId) =>
             Path.Combine(SourceDir() ?? "", fileId.ToString("D4") + ".rotom");

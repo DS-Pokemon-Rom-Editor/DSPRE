@@ -37,6 +37,12 @@ namespace DSPRE.HgEngine
         /// only overwrites its own files, so everything else in that archive is still DSPRE's to edit.
         /// </summary>
         public bool ReplacesWholeArchive { get; init; }
+
+        /// <summary>
+        /// True when the rule copies its source folder over the extracted archive as it is, so a source file
+        /// named like a member (6_06) holds exactly that member's bytes.
+        /// </summary>
+        public bool CopiesSourceVerbatim { get; init; }
     }
 
     /// <summary>One file inside an archive hg-engine builds.</summary>
@@ -191,7 +197,7 @@ namespace DSPRE.HgEngine
             lines = new List<string>();
             if (!TryReadText(file, out string text, out error)) return false;
 
-            lines = text.Replace("\r\n", "\n").Split('\n').ToList();
+            lines = text.Replace("\r\n", "\n").Split('\n').Select(HgEngineGlyphs.ToDspre).ToList();
             if (lines.Count > 0 && lines[^1].Length == 0) lines.RemoveAt(lines.Count - 1);
             return true;
         }
@@ -213,7 +219,7 @@ namespace DSPRE.HgEngine
         /// <summary>Always CRLF: msgenc splits messages on "\r\n" and merges the two breaks around an empty
         /// message when they are bare LF, shifting every later message id (data/text/.gitattributes).</summary>
         public static bool TryWriteLines(HgEngineOwnedFile file, IEnumerable<string> lines, out string error)
-            => TryWriteText(file, string.Join("\n", lines) + "\n", out error, crlf: true);
+            => TryWriteText(file, string.Join("\n", lines.Select(HgEngineGlyphs.ToCheckout)) + "\n", out error, crlf: true);
 
         public static bool TryWriteText(HgEngineOwnedFile file, string text, out string error) => TryWriteText(file, text, out error, crlf: false);
 
@@ -280,6 +286,8 @@ namespace DSPRE.HgEngine
                     TargetArchive = archive,
                     ReplacesWholeArchive = !Regex.IsMatch(fragment,
                         @"extract\s+\$\(" + Regex.Escape(variable) + @"_TARGET\)"),
+                    CopiesSourceVerbatim = Regex.IsMatch(fragment,
+                        @"cp\s+-r\s+\$\(" + Regex.Escape(variable) + @"_DEPENDENCIES_DIR\)/\.\s+\$\(" + Regex.Escape(variable) + @"_DIR\)"),
                 };
 
                 rules[rule.TargetArchive] = rule;
@@ -288,6 +296,24 @@ namespace DSPRE.HgEngine
 
             return (rules, files);
         }
+
+        /// <summary>The same test hg-engine's Makefile makes: an uncommented <c>#define NAME</c> line in include/config.h.</summary>
+        internal static bool ConfigEnabled(string root, string name)
+        {
+            try
+            {
+                string config = Path.Combine(root, "include", "config.h");
+                return File.Exists(config) && Regex.IsMatch(File.ReadAllText(config),
+                    @"^[ \t]*#define[ \t]+" + Regex.Escape(name) + @"[ \t]*\r?$", RegexOptions.Multiline);
+            }
+            catch (IOException ex) { AppLogger.Error("HgEngineOwnedFiles.ConfigEnabled: " + ex.Message); return false; }
+        }
+
+        /// <summary>The field scripts hg-engine builds from its own source, which nothing else may write.</summary>
+        public static IEnumerable<int> OwnedScriptIds() =>
+            FilesIn(ArchiveOf(RomInfo.DirNames.scripts)).Values
+                .Where(f => f.Ownership == HgEngineOwnership.EditableSource)
+                .Select(f => f.Id);
 
         private static Dictionary<int, HgEngineOwnedFile> ScanRule(string root, HgEngineRule rule, string fragment)
         {
@@ -298,10 +324,13 @@ namespace DSPRE.HgEngine
                 string dir = Path.Combine(root, rule.SourceDirRelPath.Replace('/', Path.DirectorySeparatorChar));
                 if (Directory.Exists(dir))
                 {
+                    // Dumped four-digit scripts are only built with BUILD_DUMPED_SCR_SEQ; the five-digit ones always are.
+                    bool dumpedScriptsBuilt = rule.Variable != "SCR_SEQ" || ConfigEnabled(root, "BUILD_DUMPED_SCR_SEQ");
                     try
                     {
                         foreach (string path in Directory.EnumerateFiles(dir))
                         {
+                            if (!dumpedScriptsBuilt && !Regex.IsMatch(Path.GetFileName(path), @"^scr_seq_\d{5}_.*\.s$")) continue;
                             int id = IdFromName(Path.GetFileNameWithoutExtension(path));
                             if (id < 0 || into.ContainsKey(id)) continue;
 
@@ -330,6 +359,7 @@ namespace DSPRE.HgEngine
                     SourceDirRelPath = rule.SourceDirRelPath,
                     TargetArchive = rule.TargetArchive,
                     ReplacesWholeArchive = rule.ReplacesWholeArchive,
+                    CopiesSourceVerbatim = false,
                 };
                 foreach (int id in GeneratedTextArchives(fragment))
                 {

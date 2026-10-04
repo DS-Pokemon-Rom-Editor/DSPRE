@@ -133,6 +133,9 @@ namespace DSPRE.Avalonia
         {
             if (folderType == 0)   // ds-rom → header.yaml
                 return YamlUtils.ReadGameCodeFromHeaderYaml(Path.Combine(folder, "header.yaml"))?.gamecode;
+            string meta = folderType == 2 ? DSUtils.HgEngineDsRomMetaDir(folder) : null;
+            if (meta != null && !File.Exists(Path.Combine(folder, "header.bin")))
+                return YamlUtils.ReadGameCodeFromHeaderYaml(Path.Combine(meta, "header.yaml"))?.gamecode;
             try   // ndstool → header.bin: the 4-char game code is at offset 0x0C
             {
                 var b = File.ReadAllBytes(Path.Combine(folder, "header.bin"));

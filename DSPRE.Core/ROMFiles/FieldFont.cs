@@ -157,6 +157,9 @@ namespace DSPRE.ROMFiles
             try
             {
                 if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out var dirs)) return null;
+                // hg-engine copies some fonts in from its own files on every build, so those files are the font.
+                if (HgEngine.HgEngineSourceAssets.ReadVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.fonts), entry) is byte[] source)
+                    return Read(source);
                 string member = EntryPath(entry);
                 if (member != null) return Read(File.ReadAllBytes(member));
                 string path = dirs.packedDir;
@@ -186,7 +189,9 @@ namespace DSPRE.ROMFiles
         public void Save(int entry)
         {
             string path = EntryPath(entry) ?? throw new FileNotFoundException($"Font archive entry {entry} is not unpacked.");
-            File.WriteAllBytes(path, Write());
+            byte[] bytes = Write();
+            HgEngine.HgEngineSourceAssets.WriteVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.fonts), entry, bytes);
+            File.WriteAllBytes(path, bytes);
         }
 
         /// <summary>How wide a letter is, which is how far along the next one starts.</summary>

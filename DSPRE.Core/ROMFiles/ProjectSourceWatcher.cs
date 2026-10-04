@@ -32,8 +32,8 @@ namespace DSPRE.ROMFiles
         public static void Start()
         {
             Stop();
-            if (string.IsNullOrEmpty(RomInfo.workDir)) return;
-            string expanded = Path.GetFullPath(Path.Combine(RomInfo.workDir, "expanded"));
+            if (string.IsNullOrEmpty(RomInfo.dspreDir)) return;
+            string expanded = Path.GetFullPath(Path.Combine(RomInfo.dspreDir, "expanded"));
             if (!Directory.Exists(expanded)) return;
 
             _scriptsDir = Path.Combine(expanded, "scripts");

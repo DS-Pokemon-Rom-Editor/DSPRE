@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        x:Class="DSPRE.Avalonia.Views.Tools.HgEngineSettingsView"
+        x:DataType="vm:HgEngineSettingsViewModel"
+        Title="hg-engine settings"
+        Width="760" Height="640" MinWidth="520" MinHeight="400">
+
+  <Design.DataContext>
+    <vm:HgEngineSettingsViewModel/>
+  </Design.DataContext>
+
+  <Window.Resources>
+    <DataTemplate x:Key="SettingRow" x:DataType="vm:HgEngineSettingRow">
+      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Editor.Border}" Padding="4,6">
+        <StackPanel Spacing="2">
+          <Grid ColumnDefinitions="*,Auto">
+            <CheckBox Grid.Column="0" Content="{Binding Name}" IsChecked="{Binding Enabled}" IsEnabled="{Binding CanDisable}" FontWeight="SemiBold"/>
+            <TextBox Grid.Column="1" Text="{Binding Value}" IsVisible="{Binding HasValue}" MinWidth="160" Margin="8,0,0,0"/>
+          </Grid>
+          <TextBlock Text="{Binding Description}" IsVisible="{Binding HasDescription}" TextWrapping="Wrap" FontSize="12"
+                     Foreground="{DynamicResource Editor.Subtle}" Margin="26,0,0,0"/>
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+  </Window.Resources>
+
+  <DockPanel>
+    <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+        <TextBox Text="{Binding Filter}" PlaceholderText="Search settings" Width="240" Margin="12,0,0,0"/>
+    </controls:EditorToolbar>
+    <Border DockPanel.Dock="Bottom" Padding="8,6" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Editor.Border}">
+      <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
+    </Border>
+    <TabControl>
+      <TabItem Header="config.h">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding CodeSettings}" ItemTemplate="{StaticResource SettingRow}" Margin="8"/>
+        </ScrollViewer>
+      </TabItem>
+      <TabItem Header="config.s">
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding AssemblerSettings}" ItemTemplate="{StaticResource SettingRow}" Margin="8"/>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

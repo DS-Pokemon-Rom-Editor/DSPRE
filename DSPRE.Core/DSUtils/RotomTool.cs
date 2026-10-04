@@ -19,7 +19,7 @@ namespace DSPRE
             public System.Collections.Generic.List<int> KeptBinaries { get; set; } = new System.Collections.Generic.List<int>();
         }
 
-        public static string ProjectRoot => RomInfo.workDir?.TrimEnd('\\', '/') ?? "";
+        public static string ProjectRoot => RomInfo.dspreDir?.TrimEnd('\\', '/') ?? "";
         public static string ExePath => DSUtils.ToolPath("rotom");
         public static string LspPath => DSUtils.ToolPath("rotom-lsp");
         public static bool IsAvailable => File.Exists(ExePath);
@@ -31,6 +31,68 @@ namespace DSPRE
         public static Task<Result> RunAsync(params string[] args) => RunInAsync(ProjectRoot, args);
 
         /// <summary>
+        /// Runs `rotom init`, which reads the game family from a ROM tree in the project root. An hg-engine folder
+        /// project keeps its Rotom project in .dspre/, apart from base/, so the files rotom looks for are copied in
+        /// for the run and removed afterwards; later commands only need the rotom.toml it writes.
+        /// </summary>
+        public static async Task<Result> InitProjectAsync()
+        {
+            var staged = new System.Collections.Generic.List<string>();
+            try
+            {
+                if (RomInfo.HgEngineDsRomMetaDir != null)
+                {
+                    Stage(RomInfo.arm9Path, Path.Combine(ProjectRoot, "arm9.bin"), staged);
+                    Stage(Path.Combine(RomInfo.HgEngineDsRomMetaDir, "config.yaml"), Path.Combine(ProjectRoot, "config.yaml"), staged);
+                }
+                var result = await RunAsync("init", "--non-interactive").ConfigureAwait(false);
+                if (result.Success) DSPRE.ROMFiles.RotomDatabaseUpdate.OverlayHgEngineFlags();
+                return result;
+            }
+            finally
+            {
+                foreach (string file in staged)
+                {
+                    try { File.Delete(file); }
+                    catch (IOException ex) { AppLogger.Error("RotomTool.InitProjectAsync: " + ex.Message); }
+                }
+            }
+        }
+
+        /// <summary>
+        /// hg-engine builds some field scripts from its own source and replaces their members every build. Rotom's
+        /// decompiled copies of those are moved out of its source root, so a project compile never rebuilds them
+        /// and their binaries stay as hg-engine built them.
+        /// </summary>
+        public static void SetAsideHgEngineOwnedSources()
+        {
+            if (!DSPRE.HgEngine.HgEngineProject.IsActive || string.IsNullOrEmpty(ProjectRoot)) return;
+            string sources = Path.Combine(ProjectRoot, "expanded", "scripts");
+            string aside = Path.Combine(ProjectRoot, ".rotom", "backups", "hg-engine-owned");
+            foreach (int id in DSPRE.HgEngine.HgEngineOwnedFiles.OwnedScriptIds())
+            {
+                foreach (string ext in new[] { ".rotom", ".json" })
+                {
+                    string source = Path.Combine(sources, id.ToString("D4") + ext);
+                    if (!File.Exists(source)) continue;
+                    try
+                    {
+                        Directory.CreateDirectory(aside);
+                        File.Move(source, Path.Combine(aside, Path.GetFileName(source)), overwrite: true);
+                    }
+                    catch (IOException ex) { AppLogger.Error("RotomTool.SetAsideHgEngineOwnedSources: " + ex.Message); }
+                }
+            }
+        }
+
+        private static void Stage(string from, string to, System.Collections.Generic.List<string> staged)
+        {
+            if (File.Exists(to) || !File.Exists(from)) return;
+            File.Copy(from, to);
+            staged.Add(to);
+        }
+
+        /// <summary>
         /// Compiles the project. Waits for pending source regeneration first, or a just-written binary
         /// would be rebuilt from its old source. rotom prints nothing with --json when the project itself
         /// fails to load, so that case is run again without it to get the message.
@@ -38,6 +100,7 @@ namespace DSPRE
         public static async Task<Result> CompileProjectAsync()
         {
             await DSPRE.ROMFiles.ScriptSourceSync.WhenIdleAsync().ConfigureAwait(false);
+            SetAsideHgEngineOwnedSources();
             var archivesBefore = TextArchiveTimes();
             var guard = DSPRE.ROMFiles.RotomRebuildGuard.Before(ProjectRoot);
             var result = await RunAsync("compile", "--json").ConfigureAwait(false);

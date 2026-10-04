@@ -20,7 +20,7 @@ namespace DSPRE.HgEngine
         private static readonly Dictionary<HgEngineDomain, DateTime[]> _lastSyncedMtimes = new();
         private static readonly HashSet<HgEngineDomain> _syncedOnceThisSession = new();
 
-        internal static void ClearSyncState() { _lastSyncedMtimes.Clear(); _syncedOnceThisSession.Clear(); }
+        internal static void ClearSyncState() { _lastSyncedMtimes.Clear(); _syncedOnceThisSession.Clear(); _splitLearnsetsFrom = default; }
 
         private static string[] ExtraInputsFor(HgEngineDomainInfo domain) =>
             domain.Domain == HgEngineDomain.Species ? new[] { "data/learnsets/learnsets.json" } : Array.Empty<string>();
@@ -29,6 +29,14 @@ namespace DSPRE.HgEngine
         /// the rest (returned for the caller's normal packed-ROM unpack path).</summary>
         public static List<DirNames> SyncOwnedAndReturnRemaining(List<DirNames> ids)
         {
+            // An hg-engine folder project reads base/root, which already holds what the last make built.
+            if (RomInfo.IsHgEngineBaseProject)
+            {
+                if (!ids.Contains(DirNames.learnsets)) return ids;
+                if (!SplitBuiltLearnsets(out string learnsetError)) AppLogger.Error($"hg-engine learnsets: {learnsetError}");
+                return ids.Where(id => id != DirNames.learnsets).ToList();
+            }
+
             var remaining = new List<DirNames>();
             var domainsToSync = new HashSet<HgEngineDomain>();
 
@@ -133,6 +141,29 @@ namespace DSPRE.HgEngine
 
                 if (domain.SyncOncePerSession) _syncedOnceThisSession.Add(domain.Domain);
                 else _lastSyncedMtimes[domain.Domain] = currentMtimes;
+                return true;
+            }
+        }
+
+        private static (DateTime, long) _splitLearnsetsFrom;
+
+        /// <summary>
+        /// Splits base/root's built a/0/3/3, one table for every species, into the per-species files the editors
+        /// read. Done again whenever the build replaced the table or the folder was emptied.
+        /// </summary>
+        private static bool SplitBuiltLearnsets(out string error)
+        {
+            error = null;
+            var (packed, unpacked) = gameDirs[DirNames.learnsets];
+            if (!File.Exists(packed)) { error = $"{packed} is missing."; return false; }
+            var stamp = (File.GetLastWriteTimeUtc(packed), new FileInfo(packed).Length);
+            lock (_buildLock)
+            {
+                if (stamp == _splitLearnsetsFrom && Directory.Exists(unpacked) && Directory.GetFiles(unpacked).Length > 0) return true;
+                Narc personal = File.Exists(gameDirs[DirNames.personalPokeData].packedDir) ? Narc.Open(gameDirs[DirNames.personalPokeData].packedDir) : null;
+                if (personal == null) { error = "Could not read the species count from the personal data archive."; return false; }
+                if (!HgEngineLearnsets.Sync(packed, HgEngineProject.RepoPathUnc, unpacked, personal.ElementCount, out error)) return false;
+                _splitLearnsetsFrom = stamp;
                 return true;
             }
         }

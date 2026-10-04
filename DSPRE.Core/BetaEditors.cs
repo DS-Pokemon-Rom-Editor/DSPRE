@@ -53,6 +53,8 @@ namespace DSPRE
                 ["ProjectChecksView"] = "Project checks",
                 ["ScriptCommandGuideView"] = "Script command reference",
                 ["HgEngineFormEditorView"] = "Form editor",
+                ["AbilityFlagsEditorView"] = "Ability Flags editor",
+                ["MoveBackgroundEditorView"] = "Move Backgrounds editor",
                 ["HgeRomReviewView"] = "hg-engine ROM review",
                 ["DistortionWorldView"] = "Distortion World editor",
                 ["MartEditorView"] = "Mart editor",
@@ -69,6 +71,7 @@ namespace DSPRE
                 ["EncounterSlotOddsView"] = "Encounter slot odds",
                 ["VsIntroEditorView"] = "VS Intro Editor",
                 ["WildIntroEditorView"] = "Wild Pokémon Intro Editor",
+                ["PokedexGraphicsEditorView"] = "Pokédex graphics editor",
             };
 
         /// <summary>Reads the switch off the command line. Call this once, before any window opens.</summary>
@@ -180,7 +183,7 @@ namespace DSPRE
                        or "TrainerCardEditorView" or "TrainerSpriteEditorView"
                        or "BottomScreenEditorView" or "CellAnimationEditorView"
                        or "BallCapsuleEditorView" or "ParticleEditorView"
-                       or "ParticleLibraryView") return "Graphics";
+                       or "ParticleLibraryView" or "PokedexGraphicsEditorView") return "Graphics";
             if (window is "WildHeldItemOddsView" or "GrowthCurveEditorView" or "BreedingItemsView"
                        or "TypeChartEditorView" or "MoveTutorEditorView" or "HgEngineFormEditorView"
                        or "FriendshipChangesView" or "EncounterSlotOddsView" or "WildIntroEditorView") return "Pokémon";

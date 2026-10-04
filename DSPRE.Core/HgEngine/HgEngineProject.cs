@@ -12,6 +12,9 @@ namespace DSPRE.HgEngine
     {
         Wsl,
         Msys2,
+
+        /// <summary>The host's own bash: DSPRE running on Linux, macOS or inside WSL.</summary>
+        Native,
     }
 
     /// <summary>
@@ -63,6 +66,7 @@ namespace DSPRE.HgEngine
             get
             {
                 if (!IsLinked) return null;
+                if (Shell == HgEngineShell.Native) return RepoRootWindows;
                 if (TryParseWslUncPath(RepoRootWindows, out _, out string posix)) return posix;
                 return ToPosix(RepoRootWindows, Shell);
             }
@@ -71,7 +75,24 @@ namespace DSPRE.HgEngine
         /// <summary>True when the build will cross the Windows/Linux filesystem boundary, which is
         /// correct but markedly slower than building from inside WSL.</summary>
         public static bool BuildCrossesMountBoundary =>
-            IsLinked && Shell == HgEngineShell.Wsl && !TryParseWslUncPath(RepoRootWindows, out _, out _);
+            IsLinked && (Shell == HgEngineShell.Wsl && !TryParseWslUncPath(RepoRootWindows, out _, out _)
+                || Shell == HgEngineShell.Native && RepoRootWindows.StartsWith("/mnt/", StringComparison.Ordinal));
+
+        /// <summary>Off Windows the build always runs in the host's own bash.</summary>
+        public static bool HostIsPosix => !OperatingSystem.IsWindows();
+
+        /// <summary>
+        /// A stored checkout path as this host can open it. A link written by Windows DSPRE names a WSL
+        /// checkout as \\wsl.localhost\distro\... and a Windows-drive one as C:\..., which DSPRE inside
+        /// WSL reaches as the plain Linux path and /mnt/c/... respectively.
+        /// </summary>
+        internal static string HostPath(string stored)
+        {
+            if (!HostIsPosix || string.IsNullOrWhiteSpace(stored)) return stored;
+            if (TryParseWslUncPath(stored, out _, out string posix)) return posix;
+            if (stored.Length >= 2 && stored[1] == ':' && char.IsLetter(stored[0])) return ToPosix(stored, HgEngineShell.Wsl);
+            return stored;
+        }
 
         /// <summary>Null unless active; the 5 source-backed editors show this so it's never ambiguous
         /// which backend (ROM vs. linked source) is live.</summary>
@@ -92,12 +113,10 @@ namespace DSPRE.HgEngine
         /// <summary>True when the path is inside WSL, so the shell is settled and nothing needs asking.</summary>
         public static bool IsWslPath(string path) => TryParseWslUncPath(path, out _, out _);
 
-        // A base tree is deleted whole and re-extracted whenever rom.nds changes, so the link cannot live
-        // inside it; it belongs beside the checkout that owns it.
+        // A base tree is deleted whole and re-extracted whenever rom.nds changes, so the settings live in the
+        // checkout's .dspre/ folder instead.
         private static string ConfigPath =>
-            string.IsNullOrEmpty(workDir) ? null
-            : Path.Combine(RomInfo.IsHgEngineBaseProject ? CheckoutOfBaseProject() ?? workDir : workDir,
-                "dspre_hgengine.json");
+            IsLinked && !string.IsNullOrEmpty(RepoRootWindows) ? FolderConfigPath(RepoRootWindows) : null;
 
         /// <summary>The checkout a base-tree project belongs to, which is simply its parent.</summary>
         internal static string CheckoutOfBaseProject()
@@ -114,49 +133,105 @@ namespace DSPRE.HgEngine
             Reset();
             _loadedFor = workDir;
 
-            // Opening a checkout's own tree says which checkout it is, so no config is needed for the link.
-            string implied = CheckoutOfBaseProject();
-            if (implied != null && LooksLikeCheckout(implied))
-            {
-                RepoRootWindows = implied;
-                Shell = IsWslPath(implied) ? HgEngineShell.Wsl : HgEngineShell.Msys2;
-                if (TryParseWslUncPath(implied, out string impliedDistro, out _)) WslDistro = impliedDistro;
-                IsLinked = true;
-                Enabled = true;
-            }
+            // Only an opened hg-engine folder is linked; its base/ tree names the checkout.
+            string checkout = CheckoutOfBaseProject();
+            if (checkout == null || !LooksLikeCheckout(checkout)) return;
+            SetFolderState(checkout, DefaultShellFor(checkout));
+            ReadFolderConfig(checkout);
+        }
 
-            string path = ConfigPath;
-            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
+        /// <summary>
+        /// Points the link at a checkout opened as a folder project, before its base/ tree is loaded (for the
+        /// first build) and after. The shell choice is kept in the checkout's .dspre/ folder.
+        /// </summary>
+        public static void OpenFolder(string checkout, HgEngineShell shell, string msysBashPath = null)
+        {
+            Reset();
+            _loadedFor = workDir;   // the project still open must not refresh this away before the folder loads
+            SetFolderState(checkout.TrimEnd('\\', '/'), HostIsPosix ? HgEngineShell.Native : shell);
+            if (!string.IsNullOrWhiteSpace(msysBashPath)) MsysBashPath = msysBashPath;
+            Save();
+        }
+
+        private static void SetFolderState(string checkout, HgEngineShell shell)
+        {
+            RepoRootWindows = checkout;
+            Shell = shell;
+            WslDistro = TryParseWslUncPath(checkout, out string distro, out _) ? distro : null;
+            IsLinked = true;
+            Enabled = true;
+        }
+
+        /// <summary>The name Build and Run passes as make's BUILDROM, so emulator saves follow it; null until chosen.</summary>
+        public static string BuildRomName { get; private set; }
+
+        /// <summary>A plain file name ending in .nds, safe to hand to make.</summary>
+        public static bool IsSafeBuildRomName(string name) =>
+            !string.IsNullOrWhiteSpace(name) && name.EndsWith(".nds", StringComparison.OrdinalIgnoreCase)
+            && System.Text.RegularExpressions.Regex.IsMatch(name, @"^[A-Za-z0-9][A-Za-z0-9 ._-]*$");
+
+        public static void SetBuildRomName(string name)
+        {
+            if (!IsLinked || !IsSafeBuildRomName(name)) return;
+            BuildRomName = name;
+            Save();
+        }
+
+        /// <summary>
+        /// The build shell chosen the first time this folder was opened on this kind of host, or null when it hasn't
+        /// been. The same checkout can be opened from Linux and from Windows, and each stores the shell it used.
+        /// </summary>
+        public static HgEngineShell? StoredShellFor(string checkout)
+        {
+            string path = Path.Combine(checkout, RomInfo.HgEngineDspreFolder, "hgengine.json");
+            if (!File.Exists(path)) return null;
+            try
+            {
+                var cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path));
+                if (cfg == null || !Enum.TryParse(cfg.shell, out HgEngineShell shell)) return null;
+                if (HostIsPosix) return shell == HgEngineShell.Native ? shell : null;
+                if (shell == HgEngineShell.Native) return null;
+                return IsWslPath(checkout) && shell != HgEngineShell.Wsl ? null : shell;
+            }
+            catch (Exception ex) { AppLogger.Error("HgEngineProject.StoredShellFor: " + ex.Message); return null; }
+        }
+
+        private static HgEngineShell DefaultShellFor(string checkout) =>
+            HostIsPosix ? HgEngineShell.Native : HgEngineShell.Wsl;
+
+        private static void ReadFolderConfig(string checkout)
+        {
+            string path = FolderConfigPath(checkout);
+            if (!File.Exists(path)) return;
             try
             {
                 var cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path));
                 if (cfg == null) return;
-
-                if (!string.IsNullOrWhiteSpace(cfg.rootWindows))
-                {
-                    RepoRootWindows = cfg.rootWindows;
-                    Shell = string.Equals(cfg.shell, nameof(HgEngineShell.Msys2), StringComparison.OrdinalIgnoreCase)
-                        ? HgEngineShell.Msys2
-                        : HgEngineShell.Wsl;
-                    WslDistro = cfg.wslDistro;
-                    MsysBashPath = string.IsNullOrWhiteSpace(cfg.msysBashPath) ? DefaultMsysBash : cfg.msysBashPath;
-                }
-                else if (!string.IsNullOrWhiteSpace(cfg.wslDistro) && !string.IsNullOrWhiteSpace(cfg.repoPathPosix))
-                {
-                    // Config written before local checkouts were supported. Rebuild the UNC root from
-                    // the distro and posix path it stored, so an existing link keeps working untouched.
-                    RepoRootWindows = $@"\\wsl.localhost\{cfg.wslDistro}{cfg.repoPathPosix.Replace('/', '\\')}";
-                    Shell = HgEngineShell.Wsl;
-                    WslDistro = cfg.wslDistro;
-                    MsysBashPath = DefaultMsysBash;
-                }
-                else return;
-
-                Enabled = cfg.enabled;
+                // The shell only matters on Windows, and a WSL path can only build one way.
+                if (!HostIsPosix && !IsWslPath(checkout) && Enum.TryParse(cfg.shell, out HgEngineShell stored) && stored != HgEngineShell.Native)
+                    Shell = stored;
+                if (!string.IsNullOrWhiteSpace(cfg.msysBashPath)) MsysBashPath = cfg.msysBashPath;
                 SuppressManagedFileSaveNotice = cfg.suppressManagedFileSaveNotice;
-                IsLinked = true;
+                BuildRomName = IsSafeBuildRomName(cfg.buildRomName) ? cfg.buildRomName : null;
             }
-            catch (Exception ex) { AppLogger.Error("HgEngineProject.Refresh: " + ex.Message); }
+            catch (Exception ex) { AppLogger.Error("HgEngineProject.ReadFolderConfig: " + ex.Message); }
+        }
+
+        /// <summary>The checkout's .dspre/ settings file, which also makes sure .dspre/ ignores itself in git.</summary>
+        internal static string FolderConfigPath(string checkout)
+        {
+            string dir = Path.Combine(checkout, RomInfo.HgEngineDspreFolder);
+            try
+            {
+                Directory.CreateDirectory(dir);
+                string ignore = Path.Combine(dir, ".gitignore");
+                if (!File.Exists(ignore)) File.WriteAllText(ignore, "*\n");
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Error("HgEngineProject.FolderConfigPath: " + ex.Message);
+            }
+            return Path.Combine(dir, "hgengine.json");
         }
 
         /// <summary>Ensures the state matches the currently open project (workDir may have changed since Refresh).</summary>
@@ -185,8 +260,14 @@ namespace DSPRE.HgEngine
 
             bool isWslPath = TryParseWslUncPath(windowsPath, out string distro, out _);
             if (isWslPath) shell = HgEngineShell.Wsl;
+            if (HostIsPosix) shell = HgEngineShell.Native;
 
-            if (shell == HgEngineShell.Msys2)
+            if (shell == HgEngineShell.Native)
+            {
+                MsysBashPath = DefaultMsysBash;
+                WslDistro = null;
+            }
+            else if (shell == HgEngineShell.Msys2)
             {
                 string bash = string.IsNullOrWhiteSpace(msysBashPath) ? DefaultMsysBash : msysBashPath;
                 if (!File.Exists(bash))
@@ -216,9 +297,9 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        /// <summary>Links a WSL checkout, whose shell needs no asking.</summary>
+        /// <summary>Links a checkout whose shell needs no asking: one inside WSL, or any on a POSIX host.</summary>
         public static bool TryLink(string windowsPath, out string error)
-            => TryLink(windowsPath, HgEngineShell.Wsl, null, out error);
+            => TryLink(windowsPath, HostIsPosix ? HgEngineShell.Native : HgEngineShell.Wsl, null, out error);
 
         public static void SetEnabled(bool enabled)
         {
@@ -256,6 +337,7 @@ namespace DSPRE.HgEngine
             WslDistro = null;
             MsysBashPath = DefaultMsysBash;
             SuppressManagedFileSaveNotice = false;
+            BuildRomName = null;
             HgEngineSymbolTable.ClearCache();
             HgEngineFileCache.ClearCache();
             HgEngineOwnedFiles.ClearCache();
@@ -277,6 +359,7 @@ namespace DSPRE.HgEngine
                     repoPathPosix = RepoPathPosix,   // written for older DSPRE builds to still read
                     enabled = Enabled,
                     suppressManagedFileSaveNotice = SuppressManagedFileSaveNotice,
+                    buildRomName = BuildRomName,
                 };
                 File.WriteAllText(path, JsonSerializer.Serialize(cfg, new JsonSerializerOptions { WriteIndented = true }));
             }
@@ -328,6 +411,7 @@ namespace DSPRE.HgEngine
             public string repoPathPosix { get; set; }
             public bool enabled { get; set; }
             public bool suppressManagedFileSaveNotice { get; set; }
+            public string buildRomName { get; set; }
         }
     }
 }

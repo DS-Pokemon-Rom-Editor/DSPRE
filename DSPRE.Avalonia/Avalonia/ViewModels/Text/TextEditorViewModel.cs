@@ -67,6 +67,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private HgEngineOwnedFile _managedSource;
         private HgEngineOwnedFile _generatedSource;
 
+        // A generated archive whose lines come from one Species.c or Moves.c field, and the lines as last read
+        // or saved, so a save writes only the entries that changed.
+        private HgEngineGeneratedText.Source _fieldSource;
+        private List<string> _fieldBefore;
+
         public ObservableCollection<string> ArchiveNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<TextLineVM> Lines { get; } = new ObservableCollection<TextLineVM>();
         public ObservableCollection<TextSearchResultVM> SearchResults { get; } = new ObservableCollection<TextSearchResultVM>();
@@ -474,6 +479,22 @@ namespace DSPRE.Avalonia.ViewModels.Text
                         StatusText = readError;
                     }
                 }
+                _fieldSource = _generatedSource != null ? HgEngineGeneratedText.For(id) : null;
+                _fieldBefore = null;
+                if (_fieldSource?.IsMain == true)
+                {
+                    if (HgEngineGeneratedText.TryReadLines(_fieldSource, _current.messages.Count, out var fieldLines, out string fieldError))
+                    {
+                        for (int i = 0; i < fieldLines.Length; i++)
+                            if (fieldLines[i] != null) _current.messages[i] = fieldLines[i];
+                        _fieldBefore = new List<string>(_current.messages);
+                    }
+                    else
+                    {
+                        _fieldSource = null;
+                        StatusText = fieldError;
+                    }
+                }
                 OnPropertyChanged(nameof(IsManagedByHgEngine));
                 OnPropertyChanged(nameof(IsGeneratedByHgEngine));
                 OnPropertyChanged(nameof(HasHgEngineNote));
@@ -520,7 +541,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
         // ── Add / remove strings ─────────────────────────────────────────────────
         public void AddString()
         {
-            if (_current == null) return;
+            // A field-backed archive has exactly one line per entry.
+            if (_current == null || _fieldSource != null) return;
             _current.messages.Add("");
             var line = new TextLineVM(Lines.Count, "");
             line.PropertyChanged += OnLineChanged;
@@ -531,7 +553,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public void RemoveString()
         {
-            if (_current == null || _current.messages.Count == 0) return;
+            if (_current == null || _current.messages.Count == 0 || _fieldSource != null) return;
             _current.messages.RemoveAt(_current.messages.Count - 1);
             var last = Lines[Lines.Count - 1];
             last.PropertyChanged -= OnLineChanged;
@@ -604,6 +626,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_current == null) return;
             if (_managedSource != null) { _ = SaveToHgEngineSourceAsync(); return; }
+            if (_fieldSource?.IsMain == true) { _ = SaveToGeneratedFieldAsync(); return; }
             if (_generatedSource != null) { _ = RefusedForManagedArchive("Saving"); return; }
 
             _current.SaveToExpandedDir(_current.ID, showSuccessMessage: false, sender: this);
@@ -645,6 +668,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public string ManagedNote =>
             _managedSource != null
                 ? $"hg-engine builds this archive from {_managedSource.RelPath}. Editing it here edits that file."
+            : _fieldSource?.IsMain == true
+                ? $"hg-engine builds this archive from {_fieldSource.FieldLabel} in {_fieldSource.RelPath}, one line per entry. Editing a line here edits that field."
+            : _fieldSource != null
+                ? $"hg-engine copies this archive from archive {_fieldSource.MainArchive} at build time. Edit that archive instead."
             : _generatedSource != null
                 ? "hg-engine generates this archive from its own data at build time, so changes made here " +
                   "are overwritten. Edit the data it comes from instead."
@@ -693,6 +720,30 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 "compile, not just save the ROM, to see the change in game.",
                 "Managed by hg-engine");
             if (never) HgEngineProject.SuppressManagedFileSaveNoticeForProject();
+        }
+
+        private async Task SaveToGeneratedFieldAsync()
+        {
+            var source = _fieldSource;
+            var lines = new List<string>(_current.messages);
+            var before = _fieldBefore ?? lines;
+            var (saved, error) = await HgEngineSave.RunAsync(() =>
+                HgEngineGeneratedText.TryWriteLines(source, lines, before, out string writeError) ? null : writeError);
+            if (!saved)
+            {
+                if (error != null)
+                {
+                    StatusText = error;
+                    await DialogHelper.ShowError(error, "Text Editor");
+                }
+                return;
+            }
+
+            _fieldBefore = lines;
+            SetClean();
+            SaveNotice.Saved(UnsavedChangesDescription);
+            StatusText = $"Saved {source.FieldLabel} in {source.RelPath}.";
+            AppEvents.RaiseNamesChanged();
         }
 
         // ── Import / export ──────────────────────────────────────────────────────

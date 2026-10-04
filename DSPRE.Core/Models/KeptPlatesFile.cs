@@ -13,7 +13,7 @@ namespace DSPRE.Models
     public static class KeptPlatesFile
     {
         private static string PathFor(int mapIndex) =>
-            RomInfo.workDir == null ? null : Path.Combine(RomInfo.workDir, "expanded", "terrain", $"{mapIndex:D4}.kept");
+            RomInfo.dspreDir == null ? null : Path.Combine(RomInfo.dspreDir, "expanded", "terrain", $"{mapIndex:D4}.kept");
 
         public static List<BdhcBuild.Piece> Load(int mapIndex)
         {

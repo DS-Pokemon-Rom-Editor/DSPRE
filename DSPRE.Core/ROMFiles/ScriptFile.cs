@@ -298,7 +298,7 @@ namespace DSPRE.ROMFiles
         public static (string binPath, string txtPath) GetFilePaths(int fileID)
         {
             string binPath = Filesystem.GetScriptPath(fileID);
-            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
+            string expandedDir = Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
             string txtPath = Path.Combine(expandedDir, $"{fileID:D4}.script");
             return (binPath, txtPath);
         }
@@ -845,7 +845,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         private static void RegenerateLegacyExports(Action<int, int> progressCallback)
         {
-            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
+            string expandedDir = Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
             bool writeExports = !RomInfo.hasRotomProject;
             if (writeExports) Directory.CreateDirectory(expandedDir);
 
@@ -905,7 +905,7 @@ namespace DSPRE.ROMFiles
             if (RomInfo.hasRotomProject) return;
             string currentDbHash = GetDatabaseHash();
             if (string.IsNullOrEmpty(currentDbHash)) return;
-            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
+            string expandedDir = Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
             Directory.CreateDirectory(expandedDir);
             File.WriteAllText(Path.Combine(expandedDir, ".database_hash"), currentDbHash);
         }
@@ -967,7 +967,7 @@ namespace DSPRE.ROMFiles
                 return true;
             }
 
-            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
+            string expandedDir = Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
             string dbHashMarkerPath = Path.Combine(expandedDir, ".database_hash");
 
             if (Directory.Exists(expandedDir))
@@ -1099,7 +1099,7 @@ namespace DSPRE.ROMFiles
             Resources.ScriptDatabase.InitializeMoveNames();
             Resources.ScriptDatabase.InitializeTrainerNames();
 
-            string expandedDir = Path.Combine(RomInfo.workDir, "expanded", "scripts");
+            string expandedDir = Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
 
             if (!Directory.Exists(expandedDir))
             {

@@ -42,7 +42,7 @@ namespace DSPRE.ROMFiles
                 string latest = LatestDatabaseFile(Path.GetFileName(project));
                 if (latest == null) return null;
 
-                byte[] mine = File.ReadAllBytes(project), theirs = File.ReadAllBytes(latest);
+                byte[] mine = File.ReadAllBytes(project), theirs = Latest(latest);
                 if (mine.AsSpan().SequenceEqual(theirs)) return null;
                 string hash = Convert.ToHexString(XxHash3.Hash(theirs));
                 if (DeclinedHash() == hash) return null;
@@ -75,7 +75,7 @@ namespace DSPRE.ROMFiles
             string backup = Path.Combine(RotomTool.ProjectRoot, ".rotom", "backups", "dspre-database-" + DateTime.Now.ToString("yyyyMMddHHmmss"));
             Directory.CreateDirectory(backup);
             File.Copy(offer.ProjectFile, Path.Combine(backup, Path.GetFileName(offer.ProjectFile)), overwrite: true);
-            File.Copy(offer.LatestFile, offer.ProjectFile, overwrite: true);
+            File.WriteAllBytes(offer.ProjectFile, Latest(offer.LatestFile));
             if (File.Exists(DecisionPath)) File.Delete(DecisionPath);
 
             var unedited = UneditedScripts();
@@ -109,6 +109,27 @@ namespace DSPRE.ROMFiles
             }
             return null;
         }
+
+        /// <summary>Gives a new hg-engine folder project's database its checkout's flag names.</summary>
+        public static void OverlayHgEngineFlags()
+        {
+            if (!HgEngine.HgEngineProject.IsActive) return;
+            try
+            {
+                string project = ProjectDatabaseFile();
+                if (project == null || !File.Exists(project)) return;
+                byte[] before = File.ReadAllBytes(project), after = HgEngine.HgEngineScriptDatabase.Overlay(before);
+                if (!after.AsSpan().SequenceEqual(before)) File.WriteAllBytes(project, after);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Warn("The hg-engine flag names could not be added to the project database: " + ex.Message);
+            }
+        }
+
+        // An hg-engine folder project reads its scripts with its checkout's flag names laid over the shared database.
+        private static byte[] Latest(string file) =>
+            HgEngine.HgEngineProject.IsActive ? HgEngine.HgEngineScriptDatabase.Overlay(File.ReadAllBytes(file)) : File.ReadAllBytes(file);
 
         // DSPRE's shared copy of the same file, at the top of the checkout or among the hack databases.
         private static string LatestDatabaseFile(string name)

@@ -27,6 +27,15 @@ namespace DSPRE
         /// It is the flat ndstool shape with its own names, and the build owns packing it.
         /// </summary>
         public static bool IsHgEngineBaseProject { get; internal set; }
+
+        /// <summary>The base/ tree of a checkout that builds through ds-rom; its header, banner and overlay
+        /// metadata live in this base_dsrom/ folder beside it. Null otherwise.</summary>
+        public static string HgEngineDsRomMetaDir { get; private set; }
+
+        /// <summary>Overlays on disk are always flat and the build compresses them, so DSPRE never compresses or
+        /// decompresses one itself.</summary>
+        public static bool OverlaysStayFlat => IsDsRomProject || HgEngineDsRomMetaDir != null;
+
         public static bool isHGE { get; private set; }
 
         // UI-agnostic warning surface. The host sets this (WinForms → MessageBox, Avalonia → dialog); the default
@@ -34,13 +43,42 @@ namespace DSPRE
         public static Action<string, string> ShowWarning = (msg, title) => AppLogger.Error(title + ": " + msg);
         public static bool hasRotomProject { get; private set; }
         public static void RefreshRotomProjectState() => hasRotomProject =
-            !string.IsNullOrWhiteSpace(workDir) && File.Exists(Path.Combine(workDir, "rotom.toml"));
+            !string.IsNullOrWhiteSpace(dspreDir) && File.Exists(Path.Combine(dspreDir, "rotom.toml"));
+
+        /// <summary>The checkout's .dspre/ folder for its base/ tree, created with a .gitignore that ignores it.</summary>
+        private static string HgEngineDspreDirFor(string basePath)
+        {
+            try
+            {
+                string checkout = Path.GetDirectoryName(basePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+                if (checkout == null) return null;
+                string dir = Path.Combine(checkout, HgEngineDspreFolder);
+                Directory.CreateDirectory(dir);
+                string ignore = Path.Combine(dir, ".gitignore");
+                if (!File.Exists(ignore)) File.WriteAllText(ignore, "*\n");
+                return dir + Path.DirectorySeparatorChar;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                AppLogger.Error("RomInfo.HgEngineDspreDirFor: " + ex.Message);
+                return null;
+            }
+        }
         public static string romID { get; private set; }
 
         /// <summary>The cartridge revision (header byte 0x1E), or -1 when unknown.</summary>
         public static int romRevision { get; private set; } = -1;
         public static string projectName { get; private set; }
         public static string workDir { get; private set; }
+
+        /// <summary>
+        /// Where DSPRE keeps its own working folders (unpacked members, expanded sources, the Rotom project,
+        /// labels), with a trailing separator. The project folder itself, except for an hg-engine checkout, whose
+        /// base/ tree is deleted by make clean and every re-extract: there it is the checkout's .dspre/ folder.
+        /// </summary>
+        public static string dspreDir { get; private set; }
+
+        public const string HgEngineDspreFolder = ".dspre";
         public static string arm9Path { get; private set; }
         public static string arm7Path { get; private set; }
         public static string overlayTablePath { get; set; }
@@ -242,6 +280,7 @@ namespace DSPRE
             MoveCategoryIconBanks, // u8[3]: palette bank of the physical, special and status icons
             TypeIconMembers,       // u32[23]: battle object archive member of each type or contest icon
             MoveTypeButtonPalettes, // u32[18]: RAM pointers to each type's 16-colour move button palette
+            PokewalkerSprites,     // HGSS u16[494][2]: Pokéwalker picture (a/2/5/6) of each species, male then female
         }
 
         /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
@@ -296,6 +335,7 @@ namespace DSPRE
             [("IPKE", 0, GameTable.MoveTypeButtonPalettes)] = new(6, 0x3D0),
             [("CPUE", 1, GameTable.MoveTypeButtonPalettes)] = new(11, 0x3D0),
             [("ADAE", 5, GameTable.MoveTypeButtonPalettes)] = new(8, 0x18B84),
+            [("IPKE", 0, GameTable.PokewalkerSprites)] = new(112, 0xE07E),
         };
 
         // In the type chart's overlay: the literals holding the chart's address (column 0, +1 and +2), the
@@ -387,6 +427,19 @@ namespace DSPRE
             [("ADAE", 5)] = new(6, 0x17CA0, 28, 4, new[] { 0xC26C, 0xC298 }, Array.Empty<int>(), new[] { 0xC25E, 0xC276 }),
         };
 
+        /// <summary>
+        /// The overlay holding the move-effect background table and its rows: five u32 battle background archive members
+        /// per background id (pokeplatinum sBgNarcIndices in the battle animation overlay, pokeheartgold ov07_02234F48).
+        /// Its place inside the overlay is found from the code that reads it.
+        /// </summary>
+        public static (int Overlay, int Rows) MoveBackgroundTableSite => gameFamily switch
+        {
+            GameFamilies.DP => (8, 58),
+            GameFamilies.Plat => (12, 58),
+            GameFamilies.HGSS => (7, 59),
+            _ => (-1, 0),
+        };
+
         public static SwarmSites SwarmCodeSites =>
             romID != null && SwarmSiteTable.TryGetValue((romID, romRevision), out var s) ? s : null;
 
@@ -426,6 +479,29 @@ namespace DSPRE
         public static VsIntroSites VsIntroCodeSites =>
             romID != null && VsIntroSiteTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out var same) ? same : romID, out var s) ? s : null;
 
+        /// <summary>
+        /// Data tables in the intro code: the six emblems the Team Rocket or Galactic grunt intro flies in (eight s32
+        /// each), the column order of the black block wipe (eight bytes), and the emblem's palette, tiles, cells and
+        /// animation in the encounter effect archive (null where unconfirmed).
+        /// </summary>
+        public sealed record VsIntroMotionSites(int FlightOverlay, int FlightTable, int BlockOverlay, int BlockOrder, int[] EmblemMembers);
+
+        private static readonly Dictionary<string, VsIntroMotionSites> VsIntroMotionTable = new()
+        {
+            ["IPKE"] = new(117, 0xAD4, 1, 0x21080, new[] { 3, 156, 158, 157 }),
+            ["CPUE"] = new(5, 0x29114, 5, 0x28C08, new[] { 0, 2, 4, 3 }),
+            ["ADAE"] = new(5, 0x20558, 5, 0x1FF7C, new[] { 0, 2, 4, 3 }),
+        };
+
+        /// <summary>
+        /// How many cells a loaded matrix may hold: the game keeps every matrix in one fixed buffer (MAP_MATRIX_MAX_SIZE,
+        /// 900 in DP and Platinum, 799 in HGSS) and indexes past it unchecked. HGSS's matrix expansion patch doubles it.
+        /// </summary>
+        public static int MatrixMaxCells(bool expansionPatched) => gameFamily == GameFamilies.HGSS ? (expansionPatched ? 799 * 2 : 799) : 900;
+
+        public static VsIntroMotionSites VsIntroMotionCodeSites =>
+            romID != null && VsIntroMotionTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out var same) ? same : romID, out var s) ? s : null;
+
         /// <summary>Where this ROM keeps <paramref name="table"/>, or null for an unsupported version.</summary>
         public static TableSpot? SpotOf(GameTable table) =>
             romID != null && TableSpots.TryGetValue((romID, romRevision, table), out var spot) ? spot : null;
@@ -435,6 +511,7 @@ namespace DSPRE
             try
             {
                 string yaml = Path.Combine(dir, "header.yaml");
+                if (!File.Exists(yaml) && HgEngineDsRomMetaDir != null) yaml = Path.Combine(HgEngineDsRomMetaDir, "header.yaml");
                 if (File.Exists(yaml)) return YamlUtils.ReadGameCodeFromHeaderYaml(yaml)?.revision ?? -1;
                 string bin = Path.Combine(dir, "header.bin");
                 if (File.Exists(bin))
@@ -455,6 +532,18 @@ namespace DSPRE
         public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : -1;
         public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : -1;
 
+        /// <summary>
+        /// HGSS: species whose Pokéwalker picture is picked by form, each with the first of its form pictures in
+        /// a/2/5/6, as overlay 112's lookup adds them (the form number is added to it). Empty elsewhere.
+        /// </summary>
+        public static IReadOnlyList<(int Species, int FirstPicture)> PokewalkerFormPictures => romID == "IPKE"
+            ? new[] { (386, 586), (201, 590), (351, 618), (412, 622), (413, 625), (422, 628), (423, 630), (421, 632),
+                      (493, 634), (492, 652), (479, 654), (487, 660), (172, 662) }
+            : Array.Empty<(int, int)>();
+
+        /// <summary>HGSS: a Pokéwalker icon (a/2/4/8) is the party icon (a/0/2/0) this many entries earlier; -1 elsewhere.</summary>
+        public static int PokewalkerIconLeadIn => gameFamily == GameFamilies.HGSS ? 7 : -1;
+
         /// <summary>HGSS arm9 file offset of sPokeathlonPerformanceArcIdxs, the first Pokéathlon record of each species; -1 elsewhere.</summary>
         public static int PokeathlonMemberTableOffset => romID == "IPKE" ? 0xFF7B4 : -1;
 
@@ -466,6 +555,36 @@ namespace DSPRE
 
         public static int nullEncounterID { get; private set; }
         public static int abilityNamesTextNumber { get; private set; }
+
+        // The Pokédex's own lines and each species' entry, category, height and weight. -1 where unconfirmed.
+        // Japanese ROMs number them differently and lack the last few message lines (the Japanese heading and the
+        // dash placeholders).
+        public static int pokedexMessagesTextNumber { get; private set; } = -1;
+        public static int pokedexEntryTextNumber { get; private set; } = -1;
+        public static int pokedexCategoryTextNumber { get; private set; } = -1;
+        public static int pokedexHeightTextNumber { get; private set; } = -1;
+        public static int pokedexWeightTextNumber { get; private set; } = -1;
+        // A species' entry, name and category in the other languages the Pokédex can show, in the order French,
+        // German, Italian, Spanish, Japanese; null where unconfirmed or where the game offers other languages
+        // (Japanese ROMs show English to Spanish). DP keeps all languages in one bank each.
+        public static int[] pokedexForeignEntryTextNumbers { get; private set; }
+        public static int[] pokedexForeignNameTextNumbers { get; private set; }
+        public static int[] pokedexForeignCategoryTextNumbers { get; private set; }
+        // DP has foreign text for only the species in an ARM9 table (u16 each); a species' line in each bank is its
+        // place in the table times six plus the language, Japanese first. -1 where unconfirmed (US Diamond only).
+        public static int pokedexForeignSpeciesTableOffset { get; private set; } = -1;
+        public const int pokedexForeignSpeciesCount = 14;
+        // HGSS's two player characters' names, the boy's then the girl's (the game gives them to the player's friend).
+        // -1 where unconfirmed.
+        public static int playerCharacterNamesTextNumber { get; private set; } = -1;
+        // HGSS's Pokédex area page names each place's zone through two tables in overlay 18, one for routes and
+        // towns and one for caves, both ending in 0xFFFF. -1 where unconfirmed (English HeartGold only so far).
+        public const int pokedexAreaZoneOverlay = 18;
+        public static int pokedexFieldZoneTableOffset { get; private set; } = -1;
+        public static int pokedexDungeonZoneTableOffset { get; private set; } = -1;
+        /// <summary>The zones in the order the area page lists them (u32 each, <see cref="pokedexAreaSortTableCount"/> long).</summary>
+        public static int pokedexAreaSortTableOffset { get; private set; } = -1;
+        public static int pokedexAreaSortTableCount { get; private set; }
         public static int attackNamesTextNumber { get; private set; }
         public static int[] pokemonNamesTextNumbers { get; private set; }
         public static int itemNamesTextNumber { get; private set; }
@@ -654,6 +773,15 @@ namespace DSPRE
             encounterEffectGraphics, // DP/Pt graphic/field_encounteffect.narc, HGSS a/1/0/9: special trainer battle intro art
             nameInputGraphics,      // DP/Pt data/namein.narc, HGSS a/0/3/1: the naming screen's backgrounds and icons
             trainerClassMetadata,   // HGSS a/1/5/5, only used by the external trainer class metadata patch
+            pokedexData,            // DP/Pt application/zukanlist/zkn_data/zukan_data.narc, HGSS a/0/7/4: dex height, weight, body shape, size check and sort lists (Pt/HGSS with Origin Giratina)
+            pokedexDataAltered,     // Pt zukan_data_gira.narc, HGSS a/2/1/4: the same with Altered Giratina
+            pokedexAreas,           // DP zukan_enc_diamond/pearl.narc, Pt zukan_enc_platinum.narc, HGSS a/1/3/3: where the Pokédex says each species lives
+            pokedexSearchSteps,     // HGSS a/0/7/5: member 0 holds the height and weight search sliders' steps (u16 height, u16 weight)
+            footprintGraphics,      // DP/Pt poketool/pokefoot/pokefoot.narc, HGSS a/0/6/9: one palette and layout, then a footprint per species
+            pokedexGraphics,        // DP/Pt resource/eng/zukan/zukan.narc, HGSS a/0/6/8 (graphic/zukan_gra.narc): the Pokédex screens
+            openingDemoGraphics,    // HGSS a/2/6/2 (demo/opening/gs_opening.narc): the opening movie
+            pokewalkerSprites,      // HGSS a/2/5/6: the Pokéwalker's Pokemon pictures, 64x96 2bpp (PokewalkerImage)
+            pokewalkerIcons,        // HGSS a/2/4/8: the Pokéwalker's small pictures, 32x48 2bpp
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -684,7 +812,10 @@ namespace DSPRE
             int folderType = DSUtils.GetFolderType(romFolderName);
             IsDsRomProject = folderType == 0;
             IsHgEngineBaseProject = folderType == 2;
-            
+            HgEngineDsRomMetaDir = IsHgEngineBaseProject && !File.Exists(Path.Combine(romFolderName, "header.bin"))
+                ? DSUtils.HgEngineDsRomMetaDir(romFolderName)
+                : null;
+
             if (IsDsRomProject)
             {
                 dataFolderName = "files";
@@ -696,6 +827,7 @@ namespace DSPRE
             customNarcFolderName = dataFolderName + "/zcustom";
 
             workDir = path + Path.DirectorySeparatorChar; // Trailing separator is load-bearing: callers concatenate onto workDir directly
+            dspreDir = IsHgEngineBaseProject ? HgEngineDspreDirFor(path) ?? workDir : workDir;
             RefreshRotomProjectState();
             
             if (IsDsRomProject)
@@ -717,10 +849,10 @@ namespace DSPRE
                 y7Path = Path.Combine(workDir, IsHgEngineBaseProject ? "overarm7.bin" : "y7.bin");
                 dataPath = Path.Combine(workDir, dataFolderName);
                 overlayPath = Path.Combine(workDir, @"overlay");
-                bannerPath = Path.Combine(workDir, @"banner.bin");
-                headerPath = Path.Combine(workDir, @"header.bin");
+                bannerPath = HgEngineDsRomMetaDir != null ? Path.Combine(HgEngineDsRomMetaDir, "banner") : Path.Combine(workDir, @"banner.bin");
+                headerPath = HgEngineDsRomMetaDir != null ? Path.Combine(HgEngineDsRomMetaDir, "header.yaml") : Path.Combine(workDir, @"header.bin");
             }
-            unpackedPath = Path.Combine(workDir, @"unpacked");
+            unpackedPath = Path.Combine(dspreDir, @"unpacked");
             internalNamesPath = Path.Combine(dataPath, "fielddata", "maptable", "mapname.bin");
 
             gameVersion = PokeDatabase.System.versionsDict[id];
@@ -738,6 +870,8 @@ namespace DSPRE
             {
                 projectName = folderName;
             }
+            // Every checkout's tree is called base, which would make them share one script database.
+            if (IsHgEngineBaseProject) projectName = Path.GetFileName(Path.GetDirectoryName(path)) ?? projectName;
 
             LoadGameFamily();
             LoadGameLanguage();
@@ -775,6 +909,7 @@ namespace DSPRE
             SetMonIconsPalTableAddress();
 
             SetAbilityNamesTextNumber();
+            SetPokedexTextNumbers();
             SetAttackNamesTextNumber();
             SetPokemonNamesTextNumber();
             SetItemsTextNumber();
@@ -2074,6 +2209,93 @@ namespace DSPRE
             }
         }
 
+        private static void SetPokedexTextNumbers()
+        {
+            pokedexMessagesTextNumber = pokedexEntryTextNumber = pokedexCategoryTextNumber = -1;
+            pokedexHeightTextNumber = pokedexWeightTextNumber = -1;
+            pokedexForeignEntryTextNumbers = pokedexForeignNameTextNumbers = pokedexForeignCategoryTextNumbers = null;
+            pokedexForeignSpeciesTableOffset = -1;
+            playerCharacterNamesTextNumber = -1;
+            pokedexFieldZoneTableOffset = pokedexDungeonZoneTableOffset = pokedexAreaSortTableOffset = -1;
+            pokedexAreaSortTableCount = 0;
+            bool japanese = gameLanguage == GameLanguages.Japanese;
+            switch (gameFamily)
+            {
+                case GameFamilies.DP:
+                    if (japanese)
+                    {
+                        pokedexMessagesTextNumber = 600;
+                        pokedexEntryTextNumber = gameVersion == GameVersions.Pearl ? 602 : 601;
+                        pokedexWeightTextNumber = 605;
+                        pokedexHeightTextNumber = 606;
+                        pokedexCategoryTextNumber = 607;
+                        break;
+                    }
+                    pokedexCategoryTextNumber = 621;
+                    pokedexMessagesTextNumber = 614;
+                    pokedexEntryTextNumber = gameVersion == GameVersions.Pearl ? 616 : 615;
+                    pokedexWeightTextNumber = 619;
+                    pokedexHeightTextNumber = 620;
+                    if (gameVersion == GameVersions.Diamond && gameLanguage == GameLanguages.English)
+                    {
+                        pokedexForeignSpeciesTableOffset = 0xFD120;
+                        pokedexForeignEntryTextNumbers = new[] { 617, 617, 617, 617, 617 };
+                        pokedexForeignNameTextNumbers = new[] { 622, 622, 622, 622, 622 };
+                        pokedexForeignCategoryTextNumbers = new[] { 623, 623, 623, 623, 623 };
+                    }
+                    break;
+
+                case GameFamilies.Plat:
+                    if (japanese)
+                    {
+                        pokedexMessagesTextNumber = 685;
+                        pokedexEntryTextNumber = 693;
+                        pokedexWeightTextNumber = 694;
+                        pokedexHeightTextNumber = 696;
+                        pokedexCategoryTextNumber = 698;
+                        break;
+                    }
+                    pokedexCategoryTextNumber = 711;
+                    pokedexMessagesTextNumber = 697;
+                    pokedexEntryTextNumber = 706;
+                    pokedexWeightTextNumber = 707;
+                    pokedexHeightTextNumber = 709;
+                    pokedexForeignEntryTextNumbers = new[] { 701, 702, 703, 704, 705 };
+                    pokedexForeignNameTextNumbers = new[] { 713, 714, 715, 716, 717 };
+                    pokedexForeignCategoryTextNumbers = new[] { 719, 720, 721, 722, 723 };
+                    break;
+
+                case GameFamilies.HGSS:
+                    if (japanese) playerCharacterNamesTextNumber = 438;
+                    else if (gameLanguage == GameLanguages.English) playerCharacterNamesTextNumber = 445;
+                    if (japanese)
+                    {
+                        pokedexMessagesTextNumber = 790;
+                        pokedexEntryTextNumber = gameVersion == GameVersions.SoulSilver ? 792 : 791;
+                        pokedexWeightTextNumber = 799;
+                        pokedexHeightTextNumber = 801;
+                        pokedexCategoryTextNumber = 803;
+                        break;
+                    }
+                    pokedexMessagesTextNumber = 802;
+                    pokedexEntryTextNumber = gameVersion == GameVersions.SoulSilver ? 804 : 803;
+                    pokedexWeightTextNumber = 812;
+                    pokedexHeightTextNumber = 814;
+                    pokedexCategoryTextNumber = 816;
+                    pokedexForeignEntryTextNumbers = new[] { 806, 807, 808, 809, 810 };
+                    pokedexForeignNameTextNumbers = new[] { 818, 819, 820, 821, 822 };
+                    pokedexForeignCategoryTextNumbers = new[] { 824, 825, 826, 827, 828 };
+                    if (gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English)
+                    {
+                        pokedexFieldZoneTableOffset = 0x14054;
+                        pokedexDungeonZoneTableOffset = 0x13FD8;
+                        pokedexAreaSortTableOffset = 0x140E0;
+                        pokedexAreaSortTableCount = 142;
+                    }
+                    break;
+            }
+        }
+
         private static void SetAttackNamesTextNumber()
         {
             switch (gameFamily)
@@ -2821,6 +3043,7 @@ namespace DSPRE
                         [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\graphic\waza_oshie_gra.narc",
                         [DirNames.battlePartyGraphics] = $@"{dataFolderName}\battle\graphic\b_plist_gra.narc",
                         [DirNames.bagGraphics] = $@"{dataFolderName}\graphic\bag_gra.narc",
+                        [DirNames.footprintGraphics] = $@"{dataFolderName}\poketool\pokefoot\pokefoot.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
 
@@ -2900,6 +3123,13 @@ namespace DSPRE
 
                         [DirNames.ballParticles] = $@"{dataFolderName}\wazaeffect\effectdata\ball_particle.narc",
                         [DirNames.sealGraphics] = $@"{dataFolderName}\application\custom_ball\data\cb_data.narc",
+                        [DirNames.pokedexData] = $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_data.narc",
+                        [DirNames.pokedexGraphics] = gameLanguage == GameLanguages.Japanese
+                            ? $@"{dataFolderName}\graphic\zukan.narc"
+                            : $@"{dataFolderName}\resource\eng\zukan\zukan.narc",
+                        [DirNames.pokedexAreas] = gameVersion == GameVersions.Pearl
+                            ? $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_enc_pearl.narc"
+                            : $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_enc_diamond.narc",
                     };
 
                     //Personal Data archive is different for Pearl
@@ -2958,6 +3188,12 @@ namespace DSPRE
                         [DirNames.areaWindowGraphics] = $@"{dataFolderName}\arc\area_win_gra.narc",
                         [DirNames.sealGraphics] = $@"{dataFolderName}\application\custom_ball\data\cb_data.narc",
                         [DirNames.trainerCapsules] = $@"{dataFolderName}\application\custom_ball\edit\pl_cb_data.narc",
+                        [DirNames.pokedexData] = $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_data.narc",
+                        [DirNames.pokedexDataAltered] = $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_data_gira.narc",
+                        [DirNames.pokedexAreas] = $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_enc_platinum.narc",
+                        [DirNames.pokedexGraphics] = gameLanguage == GameLanguages.Japanese
+                            ? $@"{dataFolderName}\graphic\zukan.narc"
+                            : $@"{dataFolderName}\resource\eng\zukan\zukan.narc",
 
                         [DirNames.tornWorld] = $@"{dataFolderName}\fielddata\tornworld\tw_arc.narc",
                         [DirNames.tornWorldAttributes] = $@"{dataFolderName}\fielddata\tornworld\tw_arc_attr.narc",
@@ -2969,6 +3205,7 @@ namespace DSPRE
                         [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\graphic\waza_oshie_gra.narc",
                         [DirNames.battlePartyGraphics] = $@"{dataFolderName}\battle\graphic\pl_b_plist_gra.narc",
                         [DirNames.bagGraphics] = $@"{dataFolderName}\graphic\pl_bag_gra.narc",
+                        [DirNames.footprintGraphics] = $@"{dataFolderName}\poketool\pokefoot\pokefoot.narc",
                         [DirNames.poketch] = $@"{dataFolderName}\graphic\poketch.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
@@ -3066,6 +3303,10 @@ namespace DSPRE
                         [DirNames.areaWindowGraphics] = $@"{dataFolderName}\a\1\6\3",
                         [DirNames.sealGraphics] = $@"{dataFolderName}\a\0\8\7",
                         [DirNames.trainerCapsules] = $@"{dataFolderName}\a\1\8\5",
+                        [DirNames.pokedexData] = $@"{dataFolderName}\a\0\7\4",
+                        [DirNames.pokedexDataAltered] = $@"{dataFolderName}\a\2\1\4",
+                        [DirNames.pokedexAreas] = $@"{dataFolderName}\a\1\3\3",
+                        [DirNames.pokedexSearchSteps] = $@"{dataFolderName}\a\0\7\5",
 
                         [DirNames.textArchives] = $@"{dataFolderName}\a\0\2\7",
                         [DirNames.fonts] = $@"{dataFolderName}\a\0\1\6",
@@ -3076,6 +3317,11 @@ namespace DSPRE
                         [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\a\1\1\0",
                         [DirNames.battlePartyGraphics] = $@"{dataFolderName}\a\0\7\1",
                         [DirNames.bagGraphics] = $@"{dataFolderName}\a\0\1\5",
+                        [DirNames.footprintGraphics] = $@"{dataFolderName}\a\0\6\9",
+                        [DirNames.pokedexGraphics] = $@"{dataFolderName}\a\0\6\8",
+                        [DirNames.openingDemoGraphics] = $@"{dataFolderName}\a\2\6\2",
+                        [DirNames.pokewalkerSprites] = $@"{dataFolderName}\a\2\5\6",
+                        [DirNames.pokewalkerIcons] = $@"{dataFolderName}\a\2\4\8",
 
                         [DirNames.matrices] = $@"{dataFolderName}\a\0\4\1",
 
@@ -3142,7 +3388,7 @@ namespace DSPRE
             {
                 // The NARC path literals use '\', normalize so they resolve on non-Windows too.
                 string packedDir = Path.Combine(workDir, kvp.Value.Replace('\\', Path.DirectorySeparatorChar));
-                string unpackedDir = Path.Combine(workDir, "unpacked", kvp.Key.ToString());
+                string unpackedDir = Path.Combine(dspreDir, "unpacked", kvp.Key.ToString());
                 gameDirs.Add(kvp.Key, (packedDir, unpackedDir));
             }
         }
@@ -3184,6 +3430,15 @@ namespace DSPRE
         public static void ReadOWTable()
         {
             OverworldTable = new SortedDictionary<uint, (uint spriteID, ushort properties)>();
+            // hg-engine repoints the table to src/field/overworld_table.c, which also holds its new NPCs and followers.
+            List<HgEngine.HgEngineOverworlds.Entry> sourceRows = null;
+            string sourceError = null;
+            bool fromSource = gameFamily == GameFamilies.HGSS && HgEngine.HgEngineProject.IsActive
+                && HgEngine.HgEngineOverworlds.TryReadTable(out sourceRows, out sourceError);
+            if (sourceError != null) AppLogger.Error("ReadOWTable: " + sourceError);
+            if (fromSource)
+                foreach (var row in sourceRows) OverworldTable[(uint)row.Tag] = ((uint)row.Gfx, (ushort)row.Properties);
+            else
             switch (gameFamily)
             {
                 case GameFamilies.Plat when OverworldSpriteTableExpansion.Detect():
@@ -3244,7 +3499,7 @@ namespace DSPRE
         /// <summary>Whether the standard ARM9 mart layout has been verified for this ROM.</summary>
         public static bool IsMartEditorAvailable()
         {
-            return !isHGE && martSpecialtyShopCount > 0;
+            return (!isHGE || HgEngine.HgEngineMarts.Enabled) && martSpecialtyShopCount > 0;
         }
 
         /// <summary>Checks if Hidden Items editor is available for the current ROM version. </summary>

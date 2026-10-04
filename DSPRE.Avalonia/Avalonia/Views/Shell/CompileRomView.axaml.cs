@@ -37,8 +37,9 @@ namespace DSPRE.Avalonia.Views.Shell
         }
 
         /// <summary>Builds with the log showing and closes on success. True when the ROM was built.</summary>
-        public async System.Threading.Tasks.Task<bool> BuildAsync(Window owner)
+        public async System.Threading.Tasks.Task<bool> BuildAsync(Window owner, string buildRom = null)
         {
+            VM.BuildRom = buildRom;
             var runTask = VM.RunAsync();
             var shown = ShowDialog(owner);
             await runTask;
