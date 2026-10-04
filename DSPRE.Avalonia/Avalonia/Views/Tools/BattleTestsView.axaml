@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        x:Class="DSPRE.Avalonia.Views.Tools.BattleTestsView"
+        x:DataType="vm:BattleTestsViewModel"
+        Title="Battle tests"
+        Width="1100" Height="760" MinWidth="700" MinHeight="420">
+
+  <Design.DataContext>
+    <vm:BattleTestsViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <TextBox Text="{Binding NewName}" PlaceholderText="folder/new_test.c" Width="240" Margin="12,0,0,0"/>
+        <Button Content="Add test" Click="Add_Click" ToolTip.Tip="A copy of the open test under the new name"/>
+        <Button Content="Delete" Click="Delete_Click" Margin="12,0,0,0"/>
+    </controls:EditorToolbar>
+    <Border DockPanel.Dock="Bottom" Padding="8,6" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Editor.Border}">
+      <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap"/>
+    </Border>
+    <Grid ColumnDefinitions="320,4,*">
+      <DockPanel Grid.Column="0" Margin="6">
+        <TextBox DockPanel.Dock="Top" Text="{Binding Filter}" PlaceholderText="Search tests" Margin="0,0,0,6"/>
+        <ListBox ItemsSource="{Binding Tests}" SelectedItem="{Binding Selected}"/>
+      </DockPanel>
+      <GridSplitter Grid.Column="1" ResizeDirection="Columns"/>
+      <TextBox Grid.Column="2" Margin="6" Text="{Binding Text}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
+               FontFamily="Cascadia Mono, Consolas, monospace" FontSize="13"
+               ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+    </Grid>
+  </DockPanel>
+</Window>
