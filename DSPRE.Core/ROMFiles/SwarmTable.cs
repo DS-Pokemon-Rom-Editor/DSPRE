@@ -25,6 +25,8 @@ namespace DSPRE.ROMFiles
         public List<Row> Rows { get; } = new List<Row>();
         public bool HasMethod => gameFamily == GameFamilies.HGSS;
         public string Where { get; private set; } = "";
+        /// <summary>hg-engine: the rows are src/swarms.c's sSwarmMapLUT.</summary>
+        public bool FromSource { get; private set; }
         public bool InExpansion => _path == Filesystem.expArmPath;
         /// <summary>Rows that fit where the table is now without moving it.</summary>
         public int Capacity { get; private set; }
@@ -41,6 +43,8 @@ namespace DSPRE.ROMFiles
 
         public static string WhyNot()
         {
+            if (HgEngine.HgEngineProject.IsActive)
+                return HgEngine.HgEngineSwarms.WhyNot() ?? (HgEngine.HgEngineSwarms.TryRead(out _, out string error) ? null : error);
             var sites = SwarmCodeSites;
             if (sites == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
             if (sites.Overlay < 0 && !IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
@@ -57,6 +61,13 @@ namespace DSPRE.ROMFiles
 
         public static SwarmTable Load()
         {
+            if (HgEngine.HgEngineProject.IsActive)
+            {
+                if (!HgEngine.HgEngineSwarms.TryRead(out var rows, out string error)) throw new InvalidDataException(error);
+                var source = new SwarmTable(null) { FromSource = true, Capacity = 255, Where = "in " + HgEngine.HgEngineSwarms.RelPath };
+                source.Rows.AddRange(rows.Select(r => new Row { Header = r.Header, Method = r.Method }));
+                return source;
+            }
             var sites = SwarmCodeSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
             var table = new SwarmTable(sites);
             byte[] code = table.ReadCode();
@@ -108,7 +119,7 @@ namespace DSPRE.ROMFiles
 
         private byte[] RowBytes()
         {
-            var bytes = new byte[Rows.Count * _sites.RowSize];
+            var bytes = new byte[Rows.Count * (_sites?.RowSize ?? 4)];
             for (int i = 0; i < Rows.Count; i++)
             {
                 if (HasMethod)
@@ -122,7 +133,7 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>The table outgrew its room in the game and the ARM9 expansion isn't there to take it.</summary>
-        public bool NeedsExpansion => !FitsWhereItIs && !InExpansion && !SyntheticOverlaySpace.Available();
+        public bool NeedsExpansion => !FromSource && !FitsWhereItIs && !InExpansion && !SyntheticOverlaySpace.Available();
 
         /// <summary>Why the table can't be saved, or null.</summary>
         /// <param name="hasSwarmSpecies">HGSS: whether the row's method has a swarm species in its header's encounter file.</param>
@@ -149,6 +160,12 @@ namespace DSPRE.ROMFiles
         public void Save(int headerCount, Func<ushort, bool> hasEncounters, Func<Row, bool> hasSwarmSpecies = null)
         {
             if (Problem(headerCount, hasEncounters, hasSwarmSpecies) is string p) throw new InvalidOperationException(p);
+            if (FromSource)
+            {
+                if (!HgEngine.HgEngineSwarms.TryWrite(Rows.Select(r => (r.Header, r.Method)).ToList(), out string error))
+                    throw new InvalidOperationException(error);
+                return;
+            }
             byte[] code = ReadCode(), codeBefore = (byte[])code.Clone();
             byte[] rows = RowBytes();
 

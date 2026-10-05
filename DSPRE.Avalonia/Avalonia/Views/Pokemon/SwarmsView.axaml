@@ -11,15 +11,13 @@
   <Panel>
   <TextBlock IsVisible="{Binding !Loaded}" Text="{Binding WhyNotLoaded}" Margin="16" TextWrapping="Wrap"/>
   <DockPanel IsVisible="{Binding Loaded}">
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding Loaded}" ToolTip.Tip="Every destination is equally likely"/>
         <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="Remove_Click" IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <StackPanel DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
       <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>

@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.RoamersView"
+             x:DataType="vm:RoamersViewModel">
+  <Design.DataContext>
+    <vm:RoamersViewModel/>
+  </Design.DataContext>
+
+  <Panel>
+  <TextBlock IsVisible="{Binding !Loaded}" Text="{Binding WhyNotLoaded}" Margin="16" TextWrapping="Wrap"/>
+  <DockPanel IsVisible="{Binding Loaded}">
+    <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+    </controls:EditorToolbar>
+
+    <TextBlock DockPanel.Dock="Bottom" Margin="8,4" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+
+    <Grid ColumnDefinitions="Auto,16,*" Margin="8">
+      <StackPanel Grid.Column="0" Spacing="4">
+        <Grid ColumnDefinitions="80,240,80">
+          <TextBlock Grid.Column="1" Text="Pokémon" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="2" Text="Level" FontWeight="SemiBold"/>
+        </Grid>
+        <ItemsControl ItemsSource="{Binding Slots}">
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RoamersViewModel+SlotRow">
+              <Grid ColumnDefinitions="80,240,80">
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" Grid.Column="1" Margin="0,0,8,0" AllowsNone="False"
+                    ItemsSource="{Binding $parent[ItemsControl].((vm:RoamersViewModel)DataContext).PokemonNames}" SelectedIndex="{Binding Species}"/>
+                <NumericUpDown Grid.Column="2" Value="{Binding Level}" Minimum="1" Maximum="100" FormatString="0"/>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <DockPanel Grid.Column="2">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding RoutesNote}" IsVisible="{Binding HasRoutesNote}" TextWrapping="Wrap"
+                   FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,6"/>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="40,300,*" Margin="6,0,24,4">
+          <TextBlock Grid.Column="1" Text="Route" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="2" Text="Next routes" FontWeight="SemiBold" IsVisible="{Binding RoutesEditable}"/>
+        </Grid>
+        <ListBox ItemsSource="{Binding Routes}" Background="Transparent" IsEnabled="{Binding RoutesEditable}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:RoamersViewModel+RouteRow">
+              <Grid ColumnDefinitions="40,300,*">
+                <TextBlock Text="{Binding Number}" VerticalAlignment="Center"/>
+                <controls:FusionAutoCompleteBox Grid.Column="1" Margin="0,0,8,0" AllowsNone="False"
+                    ItemsSource="{Binding $parent[ListBox].((vm:RoamersViewModel)DataContext).HeaderNames}" SelectedIndex="{Binding Header}"/>
+                <TextBox Grid.Column="2" Text="{Binding Next}" IsVisible="{Binding $parent[ListBox].((vm:RoamersViewModel)DataContext).RoutesEditable}"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+  </Panel>
+</UserControl>

@@ -28,6 +28,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public BugContestTrainersViewModel BugContestTrainersVM { get; }
         public SafariZoneEncounterViewModel SafariZoneVM { get; }
         public SwarmsViewModel SwarmsVM { get; }
+        public RoamersViewModel RoamersVM { get; }
 
         public bool ShowHoneyTree { get; }
         public bool ShowGreatMarsh { get; }
@@ -37,6 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool ShowBugContestOpponents => ShowBugContest && BetaEditors.Enabled;
         public bool ShowSafariZone { get; }
         public bool ShowSwarms { get; }
+        public bool ShowRoamers { get; }
 
         /// <summary>Open on the Headbutt tab, as a "Go to Headbutt file" jump does.</summary>
         public bool StartOnHeadbutt { get; }
@@ -46,7 +48,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasPending => !string.IsNullOrEmpty(_pendingNote);
 
         private IEditorWithUnsavedChanges[] Children => new IEditorWithUnsavedChanges[]
-        { HoneyTreeVM, GreatMarshVM, TrophyGardenVM, HeadbuttVM, BugContestVM, BugContestTrainersVM, SafariZoneVM, SwarmsVM };
+        { HoneyTreeVM, GreatMarshVM, TrophyGardenVM, HeadbuttVM, BugContestVM, BugContestTrainersVM, SafariZoneVM, SwarmsVM, RoamersVM };
 
         public bool HasUnsavedChanges
         {
@@ -98,7 +100,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             ShowGreatMarsh = true;
         }
 
-        /// <param name="headbuttOnly">A linked hg-engine project: only Headbutt reads its data safely.</param>
+        /// <param name="headbuttOnly">An hg-engine ROM: only the encounters it builds from source are shown.</param>
         /// <param name="headbuttFile">Headbutt file to open first, or -1 to open on the first tab.</param>
         public SpecialEncountersEditorViewModel(bool headbuttOnly, int headbuttFile = -1)
         {
@@ -134,7 +136,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     BugContestTrainersVM = new BugContestTrainersViewModel();
                     BugContestTrainersVM.PropertyChanged += OnChildChanged;
                     ShowBugContest = true;
+                }
 
+                // A linked checkout's data/SafariEncounters.c is edited directly.
+                if (!headbuttOnly || DSPRE.HgEngine.HgEngineProject.IsActive)
+                {
                     SafariZoneVM = new SafariZoneEncounterViewModel(true);
                     SafariZoneVM.PropertyChanged += OnChildChanged;
                     ShowSafariZone = true;
@@ -145,11 +151,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 PendingNote = "This ROM version has no special encounters.";
             }
-            if ((dppt || (hgss && !headbuttOnly)) && BetaEditors.Enabled)
+            // A linked checkout's src/swarms.c is edited directly.
+            if ((dppt || (hgss && (!headbuttOnly || DSPRE.HgEngine.HgEngineProject.IsActive))) && BetaEditors.Enabled)
             {
                 SwarmsVM = new SwarmsViewModel();
                 SwarmsVM.PropertyChanged += OnChildChanged;
                 ShowSwarms = true;
+                RoamersVM = new RoamersViewModel();
+                RoamersVM.PropertyChanged += OnChildChanged;
+                ShowRoamers = true;
             }
             OnPropertyChanged(nameof(HasPending));
         }
@@ -174,6 +184,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await SafariZoneVM.SetupAsync(owner);
             if (ShowSwarms && SwarmsVM != null)
                 SwarmsVM.Setup();
+            if (ShowRoamers && RoamersVM != null)
+                RoamersVM.Setup();
         }
     }
 }

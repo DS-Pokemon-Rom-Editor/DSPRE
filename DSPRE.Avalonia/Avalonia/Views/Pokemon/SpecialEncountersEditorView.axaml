@@ -4,7 +4,7 @@
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Pokemon"
         x:Class="DSPRE.Avalonia.Views.Pokemon.SpecialEncountersEditorView"
         x:DataType="vm:SpecialEncountersEditorViewModel"
-        Title="Special Encounters Editor"
+        Title="Special encounters editor"
         Width="1200" Height="720" MinWidth="980" MinHeight="560"
         WindowStartupLocation="CenterScreen">
 
@@ -35,7 +35,7 @@
       <TabItem Header="Bug Contest" IsVisible="{Binding ShowBugContest}">
         <views:BugContestEncounterView DataContext="{Binding BugContestVM}"/>
       </TabItem>
-      <TabItem Header="Bug Contest Opponents" IsVisible="{Binding ShowBugContestOpponents}">
+      <TabItem Header="Bug Contest opponents" IsVisible="{Binding ShowBugContestOpponents}">
         <views:BugContestTrainersView DataContext="{Binding BugContestTrainersVM}"/>
       </TabItem>
       <TabItem Header="Safari Zone" IsVisible="{Binding ShowSafariZone}">
@@ -43,6 +43,9 @@
       </TabItem>
       <TabItem Header="Swarms" IsVisible="{Binding ShowSwarms}">
         <views:SwarmsView DataContext="{Binding SwarmsVM}"/>
+      </TabItem>
+      <TabItem Header="Roamers" IsVisible="{Binding ShowRoamers}">
+        <views:RoamersView DataContext="{Binding RoamersVM}"/>
       </TabItem>
     </TabControl>
   </DockPanel>

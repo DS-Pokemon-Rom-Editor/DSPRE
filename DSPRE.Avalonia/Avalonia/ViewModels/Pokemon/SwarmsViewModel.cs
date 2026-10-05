@@ -13,7 +13,7 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>Where swarms can happen: one row per possible destination, picked at random each day.</summary>
-    public class SwarmsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class SwarmsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -48,6 +48,37 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _speciesCache.Clear();
             Rebuild();
             foreach (var n in new[] { nameof(HeaderNames), nameof(HasMethod), nameof(Loaded) }) Raise(n);
+            StartUndo();
+            Changed();
+        }
+
+        private ByteStateUndo _undo;
+        private void StartUndo()
+        {
+            _undo = new ByteStateUndo(TakeState, ApplyState, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+            Raise(nameof(CanUndo)); Raise(nameof(CanRedo));
+        }
+        public bool CanUndo => _undo?.CanUndo == true;
+        public bool CanRedo => _undo?.CanRedo == true;
+        public void Undo() => _undo?.Undo();
+        public void Redo() => _undo?.Redo();
+
+        private byte[] TakeState() => ByteStateUndo.Pack(w =>
+        {
+            w.Write(_table.Rows.Count);
+            foreach (var r in _table.Rows) { w.Write(r.Header); w.Write(r.Method); }
+        });
+
+        private void ApplyState(byte[] state)
+        {
+            int at = Selected == null ? -1 : Rows.IndexOf(Selected);
+            _table.Rows.Clear();
+            ByteStateUndo.Unpack(state, r =>
+            {
+                for (int n = r.ReadInt32(), i = 0; i < n; i++) _table.Rows.Add(new SwarmTable.Row { Header = r.ReadUInt16(), Method = r.ReadUInt16() });
+            });
+            Rebuild();
+            Selected = Rows.ElementAtOrDefault(Math.Min(at, Rows.Count - 1));
             Changed();
         }
 
@@ -100,9 +131,21 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters });
-                byte[] bytes = File.ReadAllBytes(Path.Combine(gameDirs[DirNames.encounters].unpackedDir, file.ToString("D4")));
-                EncounterFile enc = gameFamily == GameFamilies.HGSS
-                    ? new EncounterFileHGSS(new MemoryStream(bytes)) : new EncounterFileDPPt(new MemoryStream(bytes));
+                string path = Path.Combine(gameDirs[DirNames.encounters].unpackedDir, file.ToString("D4"));
+                EncounterFile enc;
+                if (DSPRE.HgEngine.HgEngineProject.IsActive)
+                {
+                    // Encounters.c is what the next build uses; the built file only fills what an entry leaves out.
+                    var source = File.Exists(path) ? new EncounterFileHGSS(new MemoryStream(File.ReadAllBytes(path))) : new EncounterFileHGSS();
+                    if (!DSPRE.HgEngine.HgEngineEncounterSource.TryLoad(file, source, out string sourceError)) throw new IOException(sourceError);
+                    enc = source;
+                }
+                else
+                {
+                    byte[] bytes = File.ReadAllBytes(path);
+                    enc = gameFamily == GameFamilies.HGSS
+                        ? new EncounterFileHGSS(new MemoryStream(bytes)) : new EncounterFileDPPt(new MemoryStream(bytes));
+                }
                 // HGSS: walking, surfing and fishing swarms sit in slots 0, 1 and 3 (slot 2 is night fishing).
                 ushort[] mons = gameFamily == GameFamilies.HGSS
                     ? new[] { enc.swarmPokemon[row.Method == 2 ? 3 : Math.Min((int)row.Method, 1)] }
@@ -185,6 +228,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         internal void Changed()
         {
             foreach (var n in new[] { nameof(Status), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
+            _undo?.Record();
         }
 
         public bool HasUnsavedChanges => _table != null && !_table.Snapshot().AsSpan().SequenceEqual(_saved);
@@ -199,11 +243,27 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // The Wild editor may have changed a swarm species since the rows were read.
             _speciesCache.Clear();
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Swarms"); return false; }
-            try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies); }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
+            if (_table.FromSource)
             {
-                await DialogHelper.ShowError("The swarms were not saved:\n" + e.Message, "Swarms");
-                return false;
+                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                {
+                    try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies); return null; }
+                    catch (InvalidOperationException e) { return e.Message; }
+                });
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError("The swarms were not saved:\n" + error, "Swarms");
+                    return false;
+                }
+            }
+            else
+            {
+                try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
+                {
+                    await DialogHelper.ShowError("The swarms were not saved:\n" + e.Message, "Swarms");
+                    return false;
+                }
             }
             _saved = _table.Snapshot();
             _speciesCache.Clear();
@@ -226,6 +286,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _speciesCache.Clear();
             Selected = null;
             Rebuild();
+            StartUndo();
             Changed();
         }
     }
