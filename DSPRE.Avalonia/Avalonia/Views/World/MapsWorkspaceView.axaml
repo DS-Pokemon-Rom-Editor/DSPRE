@@ -27,6 +27,14 @@
     <Style Selector="Border.chip TextBlock.k">
       <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
     </Style>
+    <Style Selector="Button.chip">
+      <Setter Property="Padding" Value="7,2"/>
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="Button.chip TextBlock.k">
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+    </Style>
     <Style Selector="StackPanel.placeholder">
       <Setter Property="HorizontalAlignment" Value="Center"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
@@ -58,13 +66,6 @@
           <StackPanel Spacing="7">
             <DockPanel>
               <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" x:Name="SaveResetPanel">
-                <Button Content="Open in window" controls:Icon.Key="popout" Click="PopOut_Click"
-                        ToolTip.Tip="Open the current tab in its full editor, on the same map or file."/>
-                <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-                <Button Content="Save header" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
-                        ToolTip.Tip="Save just this header's own fields. Each tab (Map, Events, Scripts…) has its own Save button for its own data."/>
-                <Button Content="Reset" controls:Icon.Key="resetIcon" Click="Reset_Click" ToolTip.Tip="Revert to the saved header"/>
-                <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
                 <Button Content="Save ROM…" controls:Icon.Key="save_rom" Click="SaveRom_Click"
                         ToolTip.Tip="Build a playable .nds from everything saved so far in this project."/>
               </StackPanel>
@@ -75,17 +76,18 @@
               </StackPanel>
             </DockPanel>
             <WrapPanel>
-              <Border Classes="chip" ToolTip.Tip="The world-map grid this header's maps sit in. The Matrix Editor shows the whole grid."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId, StringFormat={}{0:0}}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="The map and building texture packs, lighting and terrain animation this header uses."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area Data"/><TextBlock Text="{Binding AreaDataId, StringFormat={}{0:0}}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="File with the NPCs, warps, triggers and hidden items placed on this map."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId, StringFormat={}{0:0}}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="File with the event logic that runs when you talk to NPCs or step on triggers here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId, StringFormat={}{0:0}}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="Scripts that run automatically when the map loads (music, weather, one-time setup)."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level Scripts"/><TextBlock Text="{Binding LevelScriptId, StringFormat={}{0:0}}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="Text archive with the dialogue and signs shown in this area."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Text"/><TextBlock Text="{Binding TextArchiveId, StringFormat={}{0:0}}"/></StackPanel></Border>
-              <Border Classes="chip" ToolTip.Tip="{Binding NoEncountersId, StringFormat='Wild Pokémon table for this area ({0} means no wild encounters).'}"><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Encounters"/><TextBlock Text="{Binding WildPokemon, StringFormat={}{0:0}}"/></StackPanel></Border>
+              <Button Classes="chip" Tag="Events" Click="Chip_Click" ToolTip.Tip="NPCs, warps, triggers and hidden items placed on this map."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Events"/><TextBlock Text="{Binding EventFileId, StringFormat={}{0:0}}"/></StackPanel></Button>
+              <Button Classes="chip" Tag="Matrix" Click="Chip_Click" ToolTip.Tip="The grid that joins this header's maps into the world."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Matrix"/><TextBlock Text="{Binding MatrixId, StringFormat={}{0:0}}"/></StackPanel></Button>
+              <Button Classes="chip" Tag="Area Data" Click="Chip_Click" ToolTip.Tip="The texture packs, lighting and global texture animation this area uses."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Area data"/><TextBlock Text="{Binding AreaDataId, StringFormat={}{0:0}}"/></StackPanel></Button>
+              <Button Classes="chip" Tag="Encounters" Click="Chip_Click" ToolTip.Tip="The wild Pokémon that appear here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Encounters"/><TextBlock Text="{Binding WildPokemon, StringFormat={}{0:0}}"/></StackPanel></Button>
+              <Button Classes="chip" Tag="Scripts" Click="Chip_Click" ToolTip.Tip="What happens when you talk to people or step on triggers here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Scripts"/><TextBlock Text="{Binding ScriptFileId, StringFormat={}{0:0}}"/></StackPanel></Button>
+              <Button Classes="chip" Tag="Level Scripts" Click="Chip_Click" ToolTip.Tip="Scripts that run by themselves when the map loads."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Level scripts"/><TextBlock Text="{Binding LevelScriptId, StringFormat={}{0:0}}"/></StackPanel></Button>
+              <Button Classes="chip" Tag="Text" Click="Chip_Click" ToolTip.Tip="The dialogue and signs shown here."><StackPanel Orientation="Horizontal" Spacing="5"><TextBlock Classes="k" Text="Text"/><TextBlock Text="{Binding TextArchiveId, StringFormat={}{0:0}}"/></StackPanel></Button>
             </WrapPanel>
           </StackPanel>
         </Border>
 
+        <Panel>
         <TabControl x:Name="MapTabs">
           <TabItem ToolTip.Tip="The header is this location's settings record: music, weather, camera, flags and which files it uses." AutomationProperties.Name="Header">
             <TabItem.Header>
@@ -95,7 +97,10 @@
                 <TextBlock Text="Header" VerticalAlignment="Center"/>
               </StackPanel>
             </TabItem.Header>
-            <views:HeaderFieldsView x:Name="HeaderEmbed"/>
+            <DockPanel>
+              <views:HeaderToolbarView/>
+              <views:HeaderFieldsView x:Name="HeaderEmbed"/>
+            </DockPanel>
           </TabItem>
           <TabItem ToolTip.Tip="The 3D terrain and buildings of the selected map." AutomationProperties.Name="Map">
             <TabItem.Header>
@@ -108,7 +113,7 @@
             <views:MapEditorView x:Name="MapEmbed" DataContext="{Binding #MapsRoot.MapVM}"/>
           </TabItem>
           <!-- Embedded Event editor; follows the selected header's event file (see code-behind). -->
-          <TabItem ToolTip.Tip="NPCs, warps, triggers and hidden items placed on the map." AutomationProperties.Name="Events">
+          <TabItem ToolTip.Tip="NPCs, warps, triggers and hidden items placed on this map." AutomationProperties.Name="Events">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Image Source="{x:Static ava:EditorIcons.Events}" Width="16" Height="16"
@@ -118,7 +123,7 @@
             </TabItem.Header>
             <views:EventEditorView x:Name="EventsEmbed" DataContext="{Binding #MapsRoot.EventVM}"/>
           </TabItem>
-          <TabItem ToolTip.Tip="The grid that stitches individual maps into the seamless world." AutomationProperties.Name="Matrix">
+          <TabItem ToolTip.Tip="The grid that joins this header's maps into the world." AutomationProperties.Name="Matrix">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Image Source="{x:Static ava:EditorIcons.Matrix}" Width="16" Height="16"
@@ -128,17 +133,17 @@
             </TabItem.Header>
             <views:MatrixEditorView x:Name="MatrixEmbed" DataContext="{Binding #MapsRoot.MatrixVM}"/>
           </TabItem>
-          <TabItem ToolTip.Tip="Which texture and building set this area uses." AutomationProperties.Name="Area Data">
+          <TabItem ToolTip.Tip="The texture packs, lighting and global texture animation this area uses." AutomationProperties.Name="Area Data">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Image Source="{x:Static ava:EditorIcons.AreaData}" Width="16" Height="16"
                        RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
-                <TextBlock Text="Area Data" VerticalAlignment="Center"/>
+                <TextBlock Text="Area data" VerticalAlignment="Center"/>
               </StackPanel>
             </TabItem.Header>
             <views:AreaDataEditorView x:Name="AreaDataEmbed" DataContext="{Binding #MapsRoot.AreaDataVM}"/>
           </TabItem>
-          <TabItem x:Name="EncountersTab" ToolTip.Tip="Wild Pokémon that appear in this area." AutomationProperties.Name="Encounters">
+          <TabItem x:Name="EncountersTab" ToolTip.Tip="The wild Pokémon that appear here." AutomationProperties.Name="Encounters">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Image Source="{x:Static ava:EditorIcons.Encounters}" Width="16" Height="16"
@@ -146,13 +151,8 @@
                 <TextBlock Text="Encounters" VerticalAlignment="Center"/>
               </StackPanel>
             </TabItem.Header>
-            <StackPanel Classes="placeholder">
-              <TextBlock Classes="title" Text="Wild Encounters"/>
-              <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
-                         Text="{Binding NoEncountersId, StringFormat='This header has no wild encounters ({0}).'}" IsVisible="{Binding !CanOpenEncounters}"/>
-            </StackPanel>
           </TabItem>
-          <TabItem ToolTip.Tip="Event logic: what happens when you talk to NPCs or step on triggers." AutomationProperties.Name="Scripts">
+          <TabItem ToolTip.Tip="What happens when you talk to people or step on triggers here." AutomationProperties.Name="Scripts">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Image Source="{x:Static ava:EditorIcons.Scripts}" Width="16" Height="16"
@@ -162,17 +162,17 @@
             </TabItem.Header>
             <viewstext:ScriptEditorView x:Name="ScriptsEmbed" DataContext="{Binding #MapsRoot.ScriptsVM}"/>
           </TabItem>
-          <TabItem ToolTip.Tip="Scripts that run automatically when the map loads." AutomationProperties.Name="Level Scripts">
+          <TabItem ToolTip.Tip="Scripts that run by themselves when the map loads." AutomationProperties.Name="Level Scripts">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Image Source="{x:Static ava:EditorIcons.LevelScripts}" Width="16" Height="16"
                        RenderOptions.BitmapInterpolationMode="HighQuality" VerticalAlignment="Center"/>
-                <TextBlock Text="Level Scripts" VerticalAlignment="Center"/>
+                <TextBlock Text="Level scripts" VerticalAlignment="Center"/>
               </StackPanel>
             </TabItem.Header>
             <viewstext:LevelScriptEditorView x:Name="LevelScriptsEmbed" DataContext="{Binding #MapsRoot.LevelScriptsVM}"/>
           </TabItem>
-          <TabItem ToolTip.Tip="Dialogue and signs used by this area." AutomationProperties.Name="Text">
+          <TabItem ToolTip.Tip="The dialogue and signs shown here." AutomationProperties.Name="Text">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Image Source="{x:Static ava:EditorIcons.Text}" Width="16" Height="16"
@@ -183,6 +183,10 @@
             <viewstext:TextEditorView x:Name="TextEmbed" DataContext="{Binding #MapsRoot.TextVM}"/>
           </TabItem>
         </TabControl>
+        <!-- Rides at the end of the tab strip and names the tab it opens, since it acts on that tab only. -->
+        <Button x:Name="PopOutButton" Classes="small" controls:Icon.Key="popout" Click="PopOut_Click"
+                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"/>
+        </Panel>
       </DockPanel>
     </Grid>
   </DockPanel>

@@ -11,18 +11,15 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <TextBlock Text="Event file:" VerticalAlignment="Center"/>
-        <controls:FusionAutoCompleteBox Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
+        <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemFile_Click"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Border x:Name="Pegman" Background="Transparent" Cursor="Hand" Padding="2" IsVisible="{Binding ShowBetaFeatures}"
                 PointerPressed="Pegman_PointerPressed"
                 PointerMoved="Pegman_PointerMoved"
@@ -40,11 +37,9 @@
                 ToolTip.Tip="Plays the map on its own: water, buildings and people moving. Scripts do not run."/>
         <Button Content="Screenshot" controls:Icon.Key="cameraIcon" Click="Screenshot_Click"
                 ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Report…" controls:Icon.Key="bug" Click="ExportDebug_Click"
                 ToolTip.Tip="Saves where every map and event was placed, plus a picture of the view, to attach to a bug report."/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <Grid ColumnDefinitions="*,Auto">
@@ -253,7 +248,7 @@
                     <Grid ColumnDefinitions="*,Auto">
                       <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
                       <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToOwScript_Click"
-                              ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
+                              ToolTip.Tip="Open this script, following a common script to its own file."/>
                     </Grid>
                   </StackPanel>
 
@@ -361,7 +356,7 @@
                   <Grid ColumnDefinitions="*,Auto">
                     <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
                     <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToTrScript_Click"
-                            ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
+                            ToolTip.Tip="Open this script, following a common script to its own file."/>
                   </Grid>
                   <TextBlock Text="Width / height" FontWeight="Bold" Margin="0,4,0,0"/>
                   <Grid ColumnDefinitions="72,*,72,*">
@@ -432,7 +427,7 @@
                   <Grid ColumnDefinitions="*,Auto">
                     <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
                     <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToSpScript_Click"
-                            ToolTip.Tip="Open this script in the Script Editor, following a common script to the file it really lives in."/>
+                            ToolTip.Tip="Open this script, following a common script to its own file."/>
                   </Grid>
                   <TextBlock Text="Type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
                   <Grid ColumnDefinitions="72,*,72,*">

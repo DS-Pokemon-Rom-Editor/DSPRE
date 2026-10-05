@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia.Gl;
+using DSPRE.ROMFiles;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.World
@@ -151,7 +152,21 @@ namespace DSPRE.Avalonia.Views.World
             CollisionGrid.PaintValue = VM.CollisionPaintValue;
             TypeGrid.PaintValue = VM.TypePaintValue;
             GlView.SetModel(VM.Model3D);
+            GlView.BuildingAnimator = BuildingAnimatorFor(VM.Model3D);
             RefreshGizmo();
+        }
+
+        // Every edit rebuilds the scene and lands here, so the animator always matches the geometry shown.
+        private SceneBuildingAnimator BuildingAnimatorFor(NsbmdRenderModel scene)
+        {
+            if (scene == null) return null;
+            bool indoor = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && VM.AreaIndoor;
+            try { return new SceneBuildingAnimator(scene, indoor, FieldTimeOfDay.Now); }
+            catch (Exception ex)
+            {
+                AppLogger.Warn("Building animations for the map view: " + ex.Message);
+                return null;
+            }
         }
 
         /// <summary>Syncs the GL control's translate gizmo with the VM's edit mode + selected building.</summary>

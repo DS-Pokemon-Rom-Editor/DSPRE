@@ -44,6 +44,8 @@ namespace DSPRE.Avalonia.Views.World
             // Each tab offers its own tour the first time it is on screen.
             foreach (Control tab in new Control[] { HeaderEmbed, MapEmbed, EventsEmbed, MatrixEmbed, AreaDataEmbed, ScriptsEmbed, LevelScriptsEmbed, TextEmbed })
                 EditorTours.Attach(tab, tab.GetType().Name);
+            MapTabs.SelectionChanged += (_, _) => UpdatePopOut();
+            UpdatePopOut();
         }
 
         // Ctrl+Z / Ctrl+Y undo the tab on show. Listened for on the window, so it also works while nothing
@@ -146,6 +148,7 @@ namespace DSPRE.Avalonia.Views.World
             {
                 _wiringDone = true;
                 owner.Activated += (_, _) => vm.ReloadLocationNames();
+                vm.OpenInTab = ShowTab;
                 vm.LinkedEditsWouldMove = id => TabsLeavingEdits(id).GetEnumerator().MoveNext();
                 vm.ConfirmLinkedTabsAsync = async id =>
                 {
@@ -207,6 +210,77 @@ namespace DSPRE.Avalonia.Views.World
             await LevelScriptsEmbed.EnsureSetupAsync(owner);
             await TextEmbed.EnsureSetupAsync(owner);
             EnsureEncountersEmbedded();
+            foreach (Control embed in new Control[] { EventsEmbed, MatrixEmbed, AreaDataEmbed, ScriptsEmbed, LevelScriptsEmbed, TextEmbed })
+                LockToHeader(embed);
+            if (!_followGuarded)
+            {
+                _followGuarded = true;
+                Follow(EventVM, nameof(EventEditorViewModel.SelectedEventIndex), () => EventVM.SelectedEventIndex, () => (int)vm.EventFileId,
+                       id => AvaloniaEditorLauncher.OpenEventEditor(id), RetargetEvents);
+                Follow(MatrixVM, nameof(MatrixEditorViewModel.SelectedMatrixIndex), () => MatrixVM.SelectedMatrixIndex, () => (int)vm.MatrixId,
+                       id => AvaloniaEditorLauncher.OpenMatrixEditor(id), RetargetMatrix);
+                Follow(AreaDataVM, nameof(AreaDataEditorViewModel.SelectedIndex), () => AreaDataVM.SelectedIndex, () => (int)vm.AreaDataId,
+                       id => AvaloniaEditorLauncher.OpenAreaDataEditor(id), RetargetAreaData);
+                Follow(ScriptsVM, nameof(ScriptEditorViewModel.SelectedScriptIndex), () => ScriptsVM.ShowingScriptFileId, () => (int)vm.ScriptFileId,
+                       id => AvaloniaEditorLauncher.OpenScriptEditor(id), RetargetScripts);
+                Follow(LevelScriptsVM, nameof(LevelScriptEditorViewModel.SelectedScriptIndex), () => LevelScriptsVM.SelectedScriptIndex, () => (int)vm.LevelScriptId,
+                       id => AvaloniaEditorLauncher.OpenLevelScriptEditor(id), RetargetLevelScripts);
+                Follow(TextVM, nameof(TextEditorViewModel.SelectedArchiveIndex), () => TextVM.SelectedArchiveIndex, () => (int)vm.TextArchiveId,
+                       id => AvaloniaEditorLauncher.OpenTextEditor(id), RetargetText);
+            }
+        }
+
+        private bool _followGuarded;
+
+        /// <summary>
+        /// Keeps a tab on the header's own file. A jump inside the editor (a warp's go-to, next and previous, Add) that
+        /// lands on another file opens that file in the editor's own window and puts the tab back.
+        /// </summary>
+        private void Follow(System.ComponentModel.INotifyPropertyChanged tabVm, string property, System.Func<int> showing,
+                            System.Func<int> wanted, System.Action<int> openElsewhere, System.Action putBack)
+        {
+            tabVm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != property || _settingUp || VM == null) return;
+                int now = showing(), want = wanted();
+                if (now < 0 || now == want) return;
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    if (showing() == wanted()) return;
+                    openElsewhere(now);
+                    putBack();
+                });
+            };
+        }
+
+        /// <summary>
+        /// A tab here shows the selected header's own file, so its file picker follows the header instead of being
+        /// pickable: editing a file you think belongs to this header but does not is the mistake this prevents.
+        /// The tab's Open in window gives the free editor.
+        /// </summary>
+        private static void LockToHeader(Control embed)
+        {
+            if (embed?.FindControl<Control>("FilePicker") is not Control picker) return;
+            picker.IsEnabled = false;
+            ToolTip.SetTip(picker, "Follows the selected header. Open in window to pick another file.");
+            ToolTip.SetShowOnDisabled(picker, true);
+        }
+
+        private Control _encountersView;
+        private readonly TextBlock _noEncounters = new()
+        {
+            Text = "This header has no wild Pokémon.",
+            Margin = new global::Avalonia.Thickness(16),
+            Opacity = 0.75,
+        };
+
+        /// <summary>Shows the encounter editor, or says there is nothing when the header links no encounter file (255),
+        /// rather than leaving the last header's table up.</summary>
+        private void ShowEncountersFor(bool hasEncounters)
+        {
+            if (_encountersView == null) return;
+            object want = hasEncounters ? _encountersView : _noEncounters;
+            if (!ReferenceEquals(EncountersTab.Content, want)) EncountersTab.Content = want;
         }
 
         /// <summary>Tabs holding unsaved edits to a file other than the one header <paramref name="id"/> links.</summary>
@@ -301,6 +375,7 @@ namespace DSPRE.Avalonia.Views.World
                     TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 };
                 _encountersVm = null;
+                _encountersView = null;
                 _encountersEmbedded = true;
                 return;
             }
@@ -316,17 +391,34 @@ namespace DSPRE.Avalonia.Views.World
                 {
                     var evm = new WildEditorDPPtViewModel(path, names, initial, headerCount);
                     _encountersVm = evm;
-                    EncountersTab.Content = new WildEditorDPPtView(evm);
-                    EditorTours.Attach((Control)EncountersTab.Content, nameof(WildEditorDPPtView));
+                    _encountersView = new WildEditorDPPtView(evm);
+                    EncountersTab.Content = _encountersView;
+                    EditorTours.Attach(_encountersView, nameof(WildEditorDPPtView));
                 }
                 else
                 {
                     var evm = new WildEditorHGSSViewModel(path, names, initial, headerCount);
                     _encountersVm = evm;
-                    EncountersTab.Content = new WildEditorHGSSView(evm);
-                    EditorTours.Attach((Control)EncountersTab.Content, nameof(WildEditorHGSSView));
+                    _encountersView = new WildEditorHGSSView(evm);
+                    EncountersTab.Content = _encountersView;
+                    EditorTours.Attach(_encountersView, nameof(WildEditorHGSSView));
                 }
                 _encountersEmbedded = true;
+                LockToHeader(_encountersView);
+                switch (_encountersVm)
+                {
+                    case WildEditorDPPtViewModel dppt:
+                        Follow(dppt, nameof(WildEditorDPPtViewModel.SelectedEncounterIndex), () => dppt.SelectedEncounterIndex,
+                               () => VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : dppt.SelectedEncounterIndex,
+                               id => AvaloniaEditorLauncher.OpenWildEditor(id), RetargetEncounters);
+                        break;
+                    case WildEditorHGSSViewModel hgss:
+                        Follow(hgss, nameof(WildEditorHGSSViewModel.SelectedEncounterIndex), () => hgss.SelectedEncounterIndex,
+                               () => VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : hgss.SelectedEncounterIndex,
+                               id => AvaloniaEditorLauncher.OpenWildEditor(id), RetargetEncounters);
+                        break;
+                }
+                ShowEncountersFor(VM != null && VM.CanOpenEncounters);
             }
             catch (System.Exception ex)
             {
@@ -340,6 +432,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (!_encountersEmbedded) { EnsureEncountersEmbedded(); return; }
             var vm = VM;
+            ShowEncountersFor(vm != null && vm.CanOpenEncounters);
             if (vm == null || !vm.CanOpenEncounters) return;
             int id = (int)vm.WildPokemon;
             switch (_encountersVm)
@@ -399,8 +492,34 @@ namespace DSPRE.Avalonia.Views.World
             }
         }
 
-        private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
-        private void Reset_Click(object sender, RoutedEventArgs e) => VM?.Reset();
+        /// <summary>The tab whose automation name is <paramref name="name"/>, or null.</summary>
+        private TabItem TabNamed(string name)
+        {
+            foreach (object item in MapTabs.Items)
+                if (item is TabItem t && global::Avalonia.Automation.AutomationProperties.GetName(t) == name) return t;
+            return null;
+        }
+
+        /// <summary>Selects a tab by name. The header's Open buttons and the file chips land here.</summary>
+        private bool ShowTab(string name)
+        {
+            if (TabNamed(name) is not TabItem tab) return false;
+            MapTabs.SelectedItem = tab;
+            return true;
+        }
+
+        private void Chip_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control c && c.Tag is string name) ShowTab(name);
+        }
+
+        /// <summary>The pop-out button names the tab it opens, because it only ever opens that one.</summary>
+        private void UpdatePopOut()
+        {
+            string tab = (MapTabs.SelectedItem as TabItem) is TabItem t ? global::Avalonia.Automation.AutomationProperties.GetName(t) : null;
+            ToolTip.SetTip(PopOutButton, tab == null ? "Open this tab in its own window" : $"Open {tab} in its own window, on the same map or file");
+            global::Avalonia.Automation.AutomationProperties.SetName(PopOutButton, "Open in window");
+        }
 
         /// <summary>Builds a playable .nds, the same flow as the File menu's "Save ROM…", reachable
         /// without leaving the Maps workspace.</summary>

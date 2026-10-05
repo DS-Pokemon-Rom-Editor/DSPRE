@@ -12,37 +12,33 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Vertical" Spacing="2">
-        <!-- Row 1: selection + file actions -->
-        <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
           <TextBlock Text="View:" VerticalAlignment="Center"/>
           <ComboBox x:Name="ViewModeBox" Width="110" ItemsSource="{Binding ViewModes}" SelectedIndex="{Binding ViewModeIndex}"/>
           <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
           <controls:FusionAutoCompleteBox Width="140" ItemsSource="{Binding MapNames}" SelectedIndex="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
           <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
           <controls:FusionAutoCompleteBox Width="140" ItemsSource="{Binding Matrices}" SelectedIndex="{Binding SelectedMatrixIndex}" IsVisible="{Binding IsMatrixView}"/>
-          <TextBlock Text="{Binding MatrixInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding IsMatrixView}"/>
+          <TextBlock controls:EditorToolbar.Slot="Picker" Text="{Binding MatrixInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding IsMatrixView}"/>
           <TextBlock Text="Header:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
           <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding HeaderNames}" SelectedIndex="{Binding SelectedHeaderIndex}" IsVisible="{Binding IsHeaderView}"
                                           ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
           <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
           <controls:FusionAutoCompleteBox Width="110" ItemsSource="{Binding HeaderMapNames}" SelectedIndex="{Binding SelectedHeaderMapIndex}" IsVisible="{Binding IsHeaderView}"
                     ToolTip.Tip="The map to edit. Picking a building or painting a square picks its map."/>
-          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-          <Button Content="Animate" controls:Icon.Key="play" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
+          <Button controls:EditorToolbar.Slot="Extra" Content="Animate" controls:Icon.Key="play" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
                   ToolTip.Tip="Plays the map, with its water moving as it does in game."/>
-          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button x:Name="EditModelButton" Content="Edit map model" controls:Icon.Key="pencil" Click="EditModel_Click" IsEnabled="{Binding CanEditModel}"
                   ToolTip.Tip="Build or edit this map from tiles"/>
-          <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"     Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
           <Button Content="Import…" controls:Icon.Key="import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Export…" controls:Icon.Key="export"   Click="Export_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Add map" controls:Icon.Key="addIcon"  Click="AddMap_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemMap_Click" IsVisible="{Binding IsSingleMap}"/>
-        </WrapPanel>
+    </controls:EditorToolbar>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
+      <StackPanel Orientation="Vertical">
         <!-- Row 2: textures + overlay -->
         <WrapPanel Classes="toolbar">
           <TextBlock Text="Map textures:" VerticalAlignment="Center"/>
@@ -118,17 +114,11 @@
                 <TextBlock Text="Collision painter" FontWeight="Bold"/>
                 <controls:HelpTip Text="Click or drag on a grid below to paint. In 'This header' view, use Paint in the 3D view instead."/>
               </StackPanel>
-              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CollisionPainters}" SelectedIndex="{Binding CollisionPainterIndex}" IsEnabled="{Binding !UseRawCollision}"/>
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <CheckBox Content="Raw value" IsChecked="{Binding UseRawCollision}"/>
-                <NumericUpDown Width="110" Minimum="0" Maximum="255" Value="{Binding RawCollision}" IsEnabled="{Binding UseRawCollision}"/>
-              </StackPanel>
+              <controls:IdNameSelector Maximum="255" Value="{Binding CollisionValue}" Names="{Binding CollisionNames}" Keys="{Binding CollisionKeys}"
+                                       ToolTip.Tip="A number with no name is painted as it is"/>
               <TextBlock Text="Type painter" FontWeight="Bold" Margin="0,4,0,0"/>
-              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TypePainters}" SelectedIndex="{Binding TypePainterIndex}" IsEnabled="{Binding !UseRawType}"/>
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <CheckBox Content="Raw value" IsChecked="{Binding UseRawType}"/>
-                <NumericUpDown Width="110" Minimum="0" Maximum="255" Value="{Binding RawType}" IsEnabled="{Binding UseRawType}"/>
-              </StackPanel>
+              <controls:IdNameSelector Maximum="255" Value="{Binding TypeValue}" Names="{Binding TypeNames}" Keys="{Binding TypeKeys}"
+                                       ToolTip.Tip="A number with no name is painted as it is"/>
               <StackPanel Spacing="4" Margin="0,4,0,4">
                 <Button Content="Scan used types" controls:Icon.Key="lens" HorizontalAlignment="Left" Click="ScanTypes_Click"/>
               </StackPanel>
@@ -178,7 +168,7 @@
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="Rotation (°)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
-                  <TextBlock Text="Requires the Building Rotation patch (Patch Toolbox)" FontSize="9" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding !BuildingRotationEnabled}"/>
+                  <TextBlock Text="Requires the building rotation patch (patch toolbox)" FontSize="9" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding !BuildingRotationEnabled}"/>
                   <Grid ColumnDefinitions="18,*" RowDefinitions="Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotX}" IsEnabled="{Binding BuildingRotationEnabled}"/>
@@ -201,13 +191,13 @@
                 <controls:HelpTip Text="The area a map belongs to picks its textures, terrain animation and light. Every header using the area shares these, and they're saved with the map."/>
               </StackPanel>
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,6,Auto,6,Auto">
-                <TextBlock Grid.Row="0" Text="Terrain animation" VerticalAlignment="Center" Margin="0,0,10,0" IsVisible="{Binding IsHgssGame}"/>
+                <TextBlock Grid.Row="0" Text="Global NSBTA" VerticalAlignment="Center" Margin="0,0,10,0" IsVisible="{Binding IsHgssGame}"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding AreaGroundAnimation}" Minimum="0" Maximum="65535" FormatString="0"
                                Width="120" HorizontalAlignment="Left" IsVisible="{Binding IsHgssGame}"
-                               ToolTip.Tip="Which animated ground set plays; 65535 is none"/>
-                <TextBlock Grid.Row="2" Text="Light" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding AreaLightType}" Minimum="0" Maximum="65535" FormatString="0"
-                               Width="120" HorizontalAlignment="Left"/>
+                               ToolTip.Tip="Area-wide texture animation, like moving water. 65535 is none."/>
+                <TextBlock Grid.Row="2" Text="Light type" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <controls:IdNameSelector Grid.Row="2" Grid.Column="1" Value="{Binding AreaLightType}" Names="{Binding AreaLightNames}" Width="260"
+                                         HorizontalAlignment="Left" ToolTip.Tip="{Binding AreaLightNote}"/>
                 <CheckBox Grid.Row="4" Grid.ColumnSpan="2" Content="Indoors" IsChecked="{Binding AreaIndoor}" IsVisible="{Binding IsHgssGame}"/>
               </Grid>
             </StackPanel>
@@ -216,32 +206,32 @@
         <TabItem Header="Files / I/O" IsEnabled="{Binding IsSingleMap}">
           <ScrollViewer>
             <StackPanel Margin="8" Spacing="10">
-              <HeaderedContentControl Header="3D model">
+              <GroupBox Header="3D model">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <Button Content="Export model…" controls:Icon.Key="export" Click="ExportNsbmd_Click"/>
                   <Button Content="Export DAE…" controls:Icon.Key="export"   Click="ExportDae_Click"/>
                   <Button Content="Export GLB…" controls:Icon.Key="export"   Click="ExportGlb_Click"/>
                 </StackPanel>
-              </HeaderedContentControl>
-              <HeaderedContentControl Header="Terrain">
+              </GroupBox>
+              <GroupBox Header="Terrain">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <Button Content="Import…" controls:Icon.Key="import" Click="ImportTerrain_Click"/>
                   <Button Content="Export…" controls:Icon.Key="export" Click="ExportTerrain_Click"/>
                 </StackPanel>
-              </HeaderedContentControl>
-              <HeaderedContentControl Header="Sound plates">
+              </GroupBox>
+              <GroupBox Header="Sound plates">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <Button Content="Import…" controls:Icon.Key="import" Click="ImportSound_Click"/>
                   <Button Content="Export…" controls:Icon.Key="export" Click="ExportSound_Click"/>
                   <Button Content="Blank" controls:Icon.Key="blank"  Click="BlankSound_Click"/>
                 </StackPanel>
-              </HeaderedContentControl>
-              <HeaderedContentControl Header="Movement permissions">
+              </GroupBox>
+              <GroupBox Header="Movement permissions">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <Button Content="Import…" controls:Icon.Key="import" Click="ImportPerms_Click"/>
                   <Button Content="Export…" controls:Icon.Key="export" Click="ExportPerms_Click"/>
                 </StackPanel>
-              </HeaderedContentControl>
+              </GroupBox>
             </StackPanel>
           </ScrollViewer>
         </TabItem>

@@ -1,4 +1,5 @@
 <Window xmlns="https://github.com/avaloniaui"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
         xmlns:world="clr-namespace:DSPRE.Avalonia.Views.World"
@@ -7,9 +8,7 @@
         Title="Map model" Width="1280" Height="860"
         WindowStartupLocation="CenterOwner">
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <Button x:Name="DoneButton" Content="Done" Click="Done_Click" MinWidth="110"/>
         <TextBlock Text="{Binding Unsaved}"
                    Foreground="{DynamicResource Editor.Warn}"
@@ -17,11 +16,9 @@
         <TextBlock Text="{Binding Which}" FontWeight="SemiBold" Margin="12,2,6,2"/>
         <TextBlock Text="{Binding Shared}" IsVisible="{Binding Shared, Converter={x:Static ObjectConverters.IsNotNull}}"
                    ToolTip.Tip="{Binding SharedTip}" Foreground="{DynamicResource Editor.Warn}"/>
-        <Rectangle Width="1" Height="16" Fill="{DynamicResource Editor.Separator}"/>
         <TextBlock Text="{Binding Note}"
                    Foreground="{DynamicResource Editor.Subtle}"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
   <Grid RowDefinitions="*" Margin="8">
 
