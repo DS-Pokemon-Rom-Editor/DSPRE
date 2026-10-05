@@ -38,6 +38,69 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void AddSpecies_Click(object sender, RoutedEventArgs e)
             => await ViewModel.AddNewFakemonAsync(this);
 
+        private async void RebuildDexSortLists_Click(object sender, RoutedEventArgs e)
+            => await ViewModel.PokedexVM.RebuildSortListsAsync();
+
+        private async void ImportPokewalker_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Control)?.Tag is not PokewalkerViewModel.Picture picture) return;
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Import Pokéwalker picture",
+                AllowMultiple = false,
+                FileTypeFilter = new System.Collections.Generic.List<FilePickerFileType> { DialogHelper.PngFilter },
+            });
+            string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
+            if (path == null) return;
+            string error = ViewModel.PokewalkerVM.Import(picture, path);
+            if (error != null) await DialogHelper.ShowError(error, "Pokéwalker", this);
+        }
+
+        private async void ExportPokewalker_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Control)?.Tag is not PokewalkerViewModel.Picture picture) return;
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Export Pokéwalker picture",
+                DefaultExtension = "png",
+                SuggestedFileName = $"pokewalker_{ViewModel.SelectedMonIndex:D3}_{picture.Title.ToLowerInvariant().Replace(' ', '_')}.png",
+                FileTypeChoices = new System.Collections.Generic.List<FilePickerFileType> { DialogHelper.PngFilter },
+            });
+            string path = file?.TryGetLocalPath();
+            if (path == null) return;
+            string error = ViewModel.PokewalkerVM.Export(picture, path);
+            if (error != null) await DialogHelper.ShowError(error, "Pokéwalker", this);
+        }
+
+        private async void ImportFootprint_Click(object sender, RoutedEventArgs e)
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Import footprint",
+                AllowMultiple = false,
+                FileTypeFilter = new System.Collections.Generic.List<FilePickerFileType> { DialogHelper.PngFilter },
+            });
+            string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
+            if (path == null) return;
+            string error = ViewModel.PokedexVM.ImportFootprint(path);
+            if (error != null) await DialogHelper.ShowError(error, "Footprint", this);
+        }
+
+        private async void ExportFootprint_Click(object sender, RoutedEventArgs e)
+        {
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Export footprint",
+                DefaultExtension = "png",
+                SuggestedFileName = $"footprint_{ViewModel.SelectedMonIndex:D3}.png",
+                FileTypeChoices = new System.Collections.Generic.List<FilePickerFileType> { DialogHelper.PngFilter },
+            });
+            string path = file?.TryGetLocalPath();
+            if (path == null) return;
+            string error = ViewModel.PokedexVM.ExportFootprint(path);
+            if (error != null) await DialogHelper.ShowError(error, "Footprint", this);
+        }
+
         /// <summary>Plays the chosen Pokemon's cry. </summary>
         private void PlayCry_Click(object sender, RoutedEventArgs e)
         {

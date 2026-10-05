@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 
 namespace DSPRE.HgEngine
 {
@@ -39,7 +40,28 @@ namespace DSPRE.HgEngine
             { error = $"Could not locate or insert species {speciesId} in RegionalDex.c."; return false; }
 
             HgEngineFileCache.WriteText(path, text);
-            return true;
+            return TrySyncSortOrder(text, out error);
+        }
+
+        /// <summary>
+        /// The Pokedex's regional-number sort is RegionalDex.c's species in number order, listed again in
+        /// PokedexSort.c, so it is rebuilt from the table after a number changes.
+        /// </summary>
+        private static bool TrySyncSortOrder(string regionalDex, out string error)
+        {
+            error = null;
+            if (!HgEngineDexSortLists.Exists) return true;
+            if (!HgEngineDexSortLists.TryLoad(out var sort, out error)) return false;
+            if (!sort.Lists.ContainsKey("RegionalNum")) { error = $"{HgEngineDexSortLists.RelPath} has no sPokedexSort_RegionalNum to keep in order."; return false; }
+
+            var table = CSourceFile.For(regionalDex).Find("RegionalDex");
+            if (table == null) { error = $"{SourceRelPath} has no RegionalDex table."; return false; }
+            var order = table.Init.Items
+                .Select((item, i) => (Species: item.IndexText?.Trim(), Number: int.TryParse(item.ValueText(regionalDex).Trim(), out int n) ? n : 0, At: i))
+                .Where(e => e.Species != null && e.Number > 0).OrderBy(e => e.Number).ThenBy(e => e.At).Select(e => e.Species).ToList();
+            if (sort.Lists["RegionalNum"].SequenceEqual(order)) return true;
+            sort.Lists["RegionalNum"] = order;
+            return sort.TryWrite(new[] { "RegionalNum" }, out error);
         }
 
         private static string TryReadSource(out string path)

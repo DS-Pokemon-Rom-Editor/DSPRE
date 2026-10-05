@@ -1,0 +1,90 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.PokedexGraphicsEditorView"
+        x:DataType="vm:PokedexGraphicsEditorViewModel"
+        Title="Pokédex graphics"
+        Width="1180" Height="900" MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterScreen">
+
+  <Window.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+  </Window.Styles>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
+    </Border>
+
+    <controls:EditorToolbar>
+      <TextBlock Text="Page" VerticalAlignment="Center"/>
+      <ComboBox Width="220" ItemsSource="{Binding PageNames}" SelectedIndex="{Binding PageIndex}"/>
+      <TextBlock Text="State" VerticalAlignment="Center" IsVisible="{Binding HasVariants}"/>
+      <ComboBox Width="170" ItemsSource="{Binding VariantNames}" SelectedIndex="{Binding VariantIndex}"
+                IsVisible="{Binding HasVariants}"/>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="{Binding UndoWhat}"/>
+      <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="{Binding RedoWhat}"/>
+    </controls:EditorToolbar>
+
+    <!-- The layers, front first -->
+    <Border DockPanel.Dock="Left" Width="230" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+      <ListBox Margin="6" ItemsSource="{Binding Layers}" SelectedIndex="{Binding LayerIndex}"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:DexLayerRow">
+            <StackPanel>
+              <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Where}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <!-- The files the picked layer is made from -->
+    <Border DockPanel.Dock="Right" Width="270" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
+      <DockPanel Margin="10">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding LayerName}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
+          <Button Content="Paint" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanEditPart}"/>
+          <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanEditPart}" ToolTip.Tip="PNG image"/>
+          <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding CanEditPart}" ToolTip.Tip="PNG image"/>
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Parts}" SelectedIndex="{Binding PartIndex}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:DexPartRow">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}"/>
+                <TextBlock Text="{Binding Where}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <!-- Both screens, the top one first; a click picks the layer in front at that point -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <StackPanel Margin="12" Spacing="6" HorizontalAlignment="Center">
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <Image x:Name="TopScreen" Source="{Binding TopImage}" Width="512" Height="384" Stretch="Fill"
+                 RenderOptions.BitmapInterpolationMode="None" PointerPressed="Screen_Pressed" Cursor="Hand"/>
+        </Border>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <Image x:Name="BottomScreen" Source="{Binding BottomImage}" Width="512" Height="384" Stretch="Fill"
+                 RenderOptions.BitmapInterpolationMode="None" PointerPressed="Screen_Pressed" Cursor="Hand"/>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
+</Window>

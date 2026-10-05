@@ -39,7 +39,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public PersonalDataEditorViewModel  PersonalVM  { get; }
         public LearnsetEditorViewModel      LearnsetVM  { get; }
         public EvolutionsEditorViewModel    EvolutionsVM { get; }
+        public PokedexMetricsEditorViewModel PokedexVM  { get; }
         public PokemonSpriteEditorViewModel SpriteVM    { get; }
+        public PokewalkerViewModel          PokewalkerVM { get; } = new();
+        public bool ShowPokewalkerTab => PokewalkerViewModel.GameHasPokewalker;
         public BattleDisplayEditorViewModel BattleDisplayVM { get; }
 
         // ─── Shared header
@@ -93,7 +96,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PersonalVM.HasUnsavedChanges ||
             LearnsetVM.HasUnsavedChanges ||
             EvolutionsVM.HasUnsavedChanges ||
+            PokedexVM.HasUnsavedChanges ||
             SpriteVM.HasUnsavedChanges ||
+            PokewalkerVM.HasUnsavedChanges ||
             BattleDisplayVM.HasUnsavedChanges;
 
         public string UnsavedChangesDescription =>
@@ -111,12 +116,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // These three only clear their flag on discard, so their edits are put back by reading the mon again.
             if (LearnsetVM.HasUnsavedChanges)   { LearnsetVM.DiscardChanges();   LearnsetVM.LoadMon(_selectedMonIndex); }
             if (EvolutionsVM.HasUnsavedChanges) { EvolutionsVM.DiscardChanges(); EvolutionsVM.LoadMon(_selectedMonIndex); }
+            if (PokedexVM.HasUnsavedChanges)    PokedexVM.DiscardChanges();
             if (SpriteVM.HasUnsavedChanges)     { SpriteVM.DiscardChanges();     SpriteVM.LoadMon(_selectedMonIndex); }
+            if (PokewalkerVM.HasUnsavedChanges) PokewalkerVM.DiscardChanges();
             DropPendingSpecies();
         }
 
         // ─── Undo / redo (routes to the visible tab) ──────────────────────────────
-        // Tab order in the view: 0 = Personal Data, 1 = Learnset, 2 = Evolutions, 3 = Sprites.
+        // Tab order in the view: 0 = Personal Data, 1 = Learnset, 2 = Evolutions, 3 = Pokédex, 4 = Sprites, 5 = Pokéwalker,
+        // 6 = Battle Display. The Pokéwalker tab is hidden outside HGSS but keeps its place.
         // Only the tabs whose sub-VM implements ISupportsUndo participate; the rest report nothing.
         private int _selectedTabIndex;
         public int SelectedTabIndex
@@ -130,8 +138,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             0 => PersonalVM,
             1 => LearnsetVM,
             2 => EvolutionsVM,
-            3 => SpriteVM,
-            4 => BattleDisplayVM as ISupportsUndo,
+            3 => PokedexVM,
+            4 => SpriteVM,
+            5 => PokewalkerVM,
+            6 => BattleDisplayVM as ISupportsUndo,
             _ => null,
         };
         public bool CanUndo => ActiveUndo?.CanUndo ?? false;
@@ -151,6 +161,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PersonalVM   = new PersonalDataEditorViewModel();
             LearnsetVM   = new LearnsetEditorViewModel();
             EvolutionsVM = new EvolutionsEditorViewModel();
+            PokedexVM    = new PokedexMetricsEditorViewModel();
             SpriteVM     = new PokemonSpriteEditorViewModel();
             BattleDisplayVM = new BattleDisplayEditorViewModel();
         }
@@ -163,6 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PersonalVM   = new PersonalDataEditorViewModel(pokemonNames);
             LearnsetVM   = new LearnsetEditorViewModel(moveNames);
             EvolutionsVM = new EvolutionsEditorViewModel(pokemonNames);
+            PokedexVM    = new PokedexMetricsEditorViewModel();
             SpriteVM     = new PokemonSpriteEditorViewModel(true);
             BattleDisplayVM = new BattleDisplayEditorViewModel(SpriteVM);
 
@@ -171,7 +183,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PersonalVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(PersonalVM.HasUnsavedChanges))    OnChildDirty(); };
             LearnsetVM.PropertyChanged   += (_, e) => { if (e.PropertyName == nameof(LearnsetVM.HasUnsavedChanges))    OnChildDirty(); };
             EvolutionsVM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(EvolutionsVM.HasUnsavedChanges)) OnChildDirty(); };
+            PokedexVM.PropertyChanged    += (_, e) => { if (e.PropertyName == nameof(PokedexVM.HasUnsavedChanges))    OnChildDirty(); };
             SpriteVM.PropertyChanged     += (_, e) => { if (e.PropertyName == nameof(SpriteVM.HasUnsavedChanges))     OnChildDirty(); };
+            PokewalkerVM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(PokewalkerVM.HasUnsavedChanges)) OnChildDirty(); };
             BattleDisplayVM.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(BattleDisplayVM.HasUnsavedChanges)) OnChildDirty(); };
 
             // Bubble the active tab's undo availability up to the window toolbar / Ctrl+Z.
@@ -183,7 +197,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PersonalVM.PropertyChanged   += OnChildUndoState;
             LearnsetVM.PropertyChanged   += OnChildUndoState;
             EvolutionsVM.PropertyChanged += OnChildUndoState;
+            PokedexVM.PropertyChanged    += OnChildUndoState;
             SpriteVM.PropertyChanged     += OnChildUndoState;
+            PokewalkerVM.PropertyChanged += OnChildUndoState;
             BattleDisplayVM.PropertyChanged += OnChildUndoState;
 
             // Picking a form in the Sprites tab that has its own main-list entry (e.g. Deoxys - Attack) should
@@ -227,7 +243,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PersonalVM.LoadMon(id);
             LearnsetVM.LoadMon(id);
             EvolutionsVM.LoadMon(id);
+            PokedexVM.LoadMon(id);
             SpriteVM.LoadMon(id);
+            PokewalkerVM.LoadMon(id);
             BattleDisplayVM.LoadMon(id);
         }
 
@@ -242,8 +260,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (PersonalVM.HasUnsavedChanges)   ((IEditorWithUnsavedChanges)PersonalVM).SaveChanges();
             if (LearnsetVM.HasUnsavedChanges)   LearnsetVM.SaveChanges();
             if (EvolutionsVM.HasUnsavedChanges) EvolutionsVM.SaveChanges();
+            if (PokedexVM.HasUnsavedChanges)    PokedexVM.SaveChanges();
             if (BattleDisplayVM.HasUnsavedChanges) BattleDisplayVM.SaveChanges();
             if (SpriteVM.HasUnsavedChanges) SpriteVM.SaveChanges();
+            if (PokewalkerVM.HasUnsavedChanges) PokewalkerVM.SaveChanges();
             // Announced after the children so the one visible notice names the whole save.
             if (!HasUnsavedChanges) SaveNotice.Saved(UnsavedChangesDescription);
         }
@@ -260,6 +280,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (EvolutionsVM.HasUnsavedChanges &&
                 !await ((IEditorWithUnsavedChanges)EvolutionsVM).SaveChangesAsync())
                 return false;
+            if (PokedexVM.HasUnsavedChanges &&
+                !await ((IEditorWithUnsavedChanges)PokedexVM).SaveChangesAsync())
+                return false;
             if (BattleDisplayVM.HasUnsavedChanges &&
                 !await ((IEditorWithUnsavedChanges)BattleDisplayVM).SaveChangesAsync())
                 return false;
@@ -268,6 +291,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 SpriteVM.SaveChanges();
                 if (SpriteVM.HasUnsavedChanges) return false;
             }
+            if (PokewalkerVM.HasUnsavedChanges &&
+                !await ((IEditorWithUnsavedChanges)PokewalkerVM).SaveChangesAsync())
+                return false;
 
             int added = -1;
             if (_pendingSpecies != null && (added = await SavePendingSpeciesAsync()) < 0) return false;
