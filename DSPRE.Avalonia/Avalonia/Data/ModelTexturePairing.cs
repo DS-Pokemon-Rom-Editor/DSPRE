@@ -11,38 +11,37 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public static class ModelTexturePairing
     {
+        /// <summary>
+        /// The palette whose name follows the texture's, or -1 when none does. The rule is the one DSPRE has always
+        /// used: the texture name, then shorter and shorter cuts of it, each tried as "name_pl" and as "name"; then a
+        /// palette that starts with the whole texture name. Nothing looser, because a near name is often the wrong
+        /// palette (sea_on is drawn with sea_f02_pl, not the first "sea_" palette).
+        /// </summary>
+        public static int MatchPaletteIndex(IReadOnlyList<NSBMDPalette> palettes, string textureName)
+        {
+            if (palettes == null || palettes.Count == 0 || string.IsNullOrEmpty(textureName)) return -1;
+            Dictionary<string, int> byName = new(StringComparer.Ordinal);
+            for (int i = 0; i < palettes.Count; i++)
+            {
+                string name = palettes[i]?.palname;
+                if (!string.IsNullOrEmpty(name)) byName.TryAdd(name, i);
+            }
+            for (string cut = textureName; cut.Length > 0; cut = cut.Substring(0, cut.Length - 1))
+            {
+                if (byName.TryGetValue(cut + "_pl", out int withSuffix)) return withSuffix;
+                if (byName.TryGetValue(cut, out int plain)) return plain;
+            }
+            for (int i = 0; i < palettes.Count; i++)
+                if (palettes[i]?.palname?.StartsWith(textureName, StringComparison.Ordinal) == true) return i;
+            return -1;
+        }
+
+        /// <summary>The matching palette, or the first one when none matches and a preview needs some palette.</summary>
         public static int BestPaletteIndex(IReadOnlyList<NSBMDPalette> palettes, string textureName)
         {
             if (palettes == null || palettes.Count == 0) return -1;
-            string texture = textureName ?? "";
-            for (int i = 0; i < palettes.Count; i++)
-                if (String.Equals(palettes[i]?.palname, texture, StringComparison.Ordinal)) return i;
-            for (int i = 0; i < palettes.Count; i++)
-            {
-                string palette = palettes[i]?.palname;
-                if (!string.IsNullOrEmpty(palette)
-                    && (texture.StartsWith(palette, StringComparison.Ordinal)
-                        || palette.StartsWith(texture, StringComparison.Ordinal)))
-                    return i;
-            }
-            // A few standalone HGSS packs name the surface texture "*_on" while its palette carries
-            // a more specific surface name, and keep a separate "*_un" underground pair. NSBTX has
-            // no stored texture-to-palette binding, so this remains a name suggestion; avoid choosing
-            // the clearly underground palette for the surface texture.
-            int split = texture.IndexOf('_');
-            if (split > 0 && texture.EndsWith("_on", StringComparison.Ordinal))
-            {
-                string stem = texture.Substring(0, split) + "_";
-                for (int i = 0; i < palettes.Count; i++)
-                {
-                    string palette = palettes[i]?.palname;
-                    if (!string.IsNullOrEmpty(palette)
-                        && palette.StartsWith(stem, StringComparison.Ordinal)
-                        && !palette.EndsWith("_un", StringComparison.Ordinal))
-                        return i;
-                }
-            }
-            return 0;
+            int match = MatchPaletteIndex(palettes, textureName);
+            return match >= 0 ? match : 0;
         }
     }
 }

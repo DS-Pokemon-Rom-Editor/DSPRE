@@ -72,9 +72,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal BuildingsTileset { get => _buildingsTileset; set { if (Set(ref _buildingsTileset, value) && _area != null) { _area.buildingsTileset = (ushort)value; if (!_suppress) Dirty(); } } }
         /// <summary>Third field of the area record. HGSS keeps the terrain animation index
         /// here; DP/Pt keeps a model set index that nothing in the game reads, so the label follows the game.</summary>
-        public string ThirdFieldLabel => IsHGSS ? "Terrain animation" : "Unused";
+        public string ThirdFieldLabel => IsHGSS ? "Global NSBTA" : "Unused";
         public string ThirdFieldTip => IsHGSS
-            ? "Which terrain animation this area plays: the moving water, and nothing else in these games. 65535 means none."
+            ? "Area-wide texture animation, like moving water. 65535 is none."
             : "Diamond, Pearl and Platinum store a model set number here but never read it, so changing it does nothing.";
 
         public decimal ThirdField
@@ -91,7 +91,27 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         /// <summary>65535 is the game's way of saying there is no animation, so say that rather than the number.</summary>
         public string ThirdFieldNote => IsHGSS && _thirdField == 65535 ? "none" : "";
-        public decimal LightType { get => _lightType; set { if (Set(ref _lightType, value) && _area != null) { _area.lightType = (ushort)value; if (!_suppress) Dirty(); } } }
+        public decimal LightType
+        {
+            get => _lightType;
+            set
+            {
+                if (!Set(ref _lightType, value)) return;
+                OnPropertyChanged(nameof(LightTypeIndex));
+                OnPropertyChanged(nameof(LightTypeNote));
+                if (_area != null) { _area.lightType = (ushort)value; if (!_suppress) Dirty(); }
+            }
+        }
+
+        /// <summary>The open game's light names, renamable per project under World labels.</summary>
+        public System.Collections.Generic.IReadOnlyList<string> LightTypeNames => Data.LabelStore.Get(Data.AreaLightTypes.LabelKey);
+        public int LightTypeIndex
+        {
+            get => _lightType >= 0 && _lightType < LightTypeNames.Count ? (int)_lightType : -1;
+            set { if (value >= 0) LightType = value; }
+        }
+        /// <summary>What the chosen light type does in this game.</summary>
+        public string LightTypeNote => Data.AreaLightTypes.NoteFor((int)_lightType);
 
         private int _areaTypeIndex;
         public int AreaTypeIndex { get => _areaTypeIndex; set { if (Set(ref _areaTypeIndex, value) && _area != null) { _area.areaType = (byte)(value == 0 ? 0 : 1); if (!_suppress) Dirty(); } } }
@@ -113,9 +133,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
 
-        public bool CanUndo => _history.CanUndo;
+        public bool CanUndo => _history.CanUndo || _removedAreas.Count > 0;
         public bool CanRedo => _history.CanRedo;
-        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Undo()
+        {
+            if (_history.CanUndo) ApplyState(_history.Undo());
+            else if (_removedAreas.Count > 0) RestoreRemovedArea();
+        }
         public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
@@ -167,12 +191,21 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public async Task SetupAsync(Window owner)
         {
+            // The Maps workspace builds this before any ROM is open, when every game-dependent label reads as
+            // Diamond/Pearl/Platinum; say them again for the game now open.
+            OnPropertyChanged(nameof(IsHGSS));
+            OnPropertyChanged(nameof(ThirdFieldLabel));
+            OnPropertyChanged(nameof(ThirdFieldTip));
+            OnPropertyChanged(nameof(ThirdFieldNote));
+            OnPropertyChanged(nameof(LightTypeNames));
+            OnPropertyChanged(nameof(LightTypeIndex));
+            OnPropertyChanged(nameof(LightTypeNote));
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.areaData });
                 int count = Directory.GetFiles(gameDirs[DirNames.areaData].unpackedDir).Length;
                 AreaNames.Clear();
-                for (int i = 0; i < count; i++) AreaNames.Add("Area Data " + i);
+                for (int i = 0; i < count; i++) AreaNames.Add("Area data " + i);
                 StatusText = $"{count} area data entries.";
                 if (count > 0) SelectedIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
             }
@@ -200,6 +233,64 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load area data {index}:\n{ex.Message}", "Area Data"); }
         }
+
+        // ── Add / remove (the last entry only: headers refer to area data by number) ─────
+
+        private string AreaPath(int index) => Path.Combine(gameDirs[DirNames.areaData].unpackedDir, index.ToString("D4"));
+
+        // Removed entries, newest last, so Ctrl+Z can put them back while no field edit is left to undo.
+        private readonly Stack<byte[]> _removedAreas = new();
+
+        public string RemoveTip => AreaNames.Count > 1
+            ? $"Removes entry {AreaNames.Count - 1}, the last one"
+            : "There has to be at least one entry.";
+
+        /// <summary>Adds an entry at the end, a copy of entry 0. Headers hold area data numbers in one byte, so 256 is the most.</summary>
+        public async Task AddAsync()
+        {
+            int count = AreaNames.Count;
+            if (count >= 256) { await DialogHelper.ShowError("Headers can only point at area data 0 to 255.", "Area Data"); return; }
+            File.Copy(AreaPath(0), AreaPath(count));
+            _removedAreas.Clear();
+            AreaNames.Add("Area data " + count);
+            SelectedIndex = count;
+            StatusText = $"Added area data {count}, a copy of 0.";
+            AreaCountChanged();
+        }
+
+        public async Task RemoveLastAsync()
+        {
+            int last = AreaNames.Count - 1;
+            if (last <= 0) { await DialogHelper.ShowError("There has to be at least one area data entry.", "Area Data"); return; }
+            if (!await DialogHelper.AskYesNo($"Remove area data {last}? Only the last entry can be removed. It is deleted now, not on Save; Ctrl+Z puts it back.", "Remove last area data"))
+                return;
+            if (_selectedIndex == last && _dirty) SetClean();
+            _removedAreas.Push(File.ReadAllBytes(AreaPath(last)));
+            File.Delete(AreaPath(last));
+            if (_selectedIndex >= last) SelectedIndex = last - 1;
+            AreaNames.RemoveAt(last);
+            StatusText = $"Removed area data {last}.";
+            AreaCountChanged();
+        }
+
+        private void RestoreRemovedArea()
+        {
+            int id = AreaNames.Count;
+            File.WriteAllBytes(AreaPath(id), _removedAreas.Pop());
+            AreaNames.Add("Area data " + id);
+            SelectedIndex = id;
+            StatusText = $"Put area data {id} back.";
+            AreaCountChanged();
+        }
+
+        private void AreaCountChanged()
+        {
+            OnPropertyChanged(nameof(RemoveTip));
+            RaiseUndoState();
+        }
+
+        /// <summary>Opens the texture editor on this entry's map or building pack.</summary>
+        public void OpenTextures(bool buildings) => AvaloniaEditorLauncher.OpenNsbtxEditor(buildings, (int)(buildings ? _buildingsTileset : _mapTileset));
 
         public void Save()
         {

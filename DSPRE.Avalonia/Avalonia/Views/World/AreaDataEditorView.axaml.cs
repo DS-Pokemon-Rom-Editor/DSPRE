@@ -45,6 +45,10 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private async void Add_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.AddAsync(); }
+        private async void RemoveLast_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveLastAsync(); }
+        private void OpenMapTextures_Click(object sender, RoutedEventArgs e) => VM?.OpenTextures(false);
+        private void OpenBuildingTextures_Click(object sender, RoutedEventArgs e) => VM?.OpenTextures(true);
 
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();
         private void Redo_Click(object sender, RoutedEventArgs e) => VM?.Redo();

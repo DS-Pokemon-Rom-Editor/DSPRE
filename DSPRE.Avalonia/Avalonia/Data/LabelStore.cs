@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.Data
     /// Customisable labels for hardcoded enums/dropdowns. The game stores fixed-width numeric values;
     /// DSPRE only relabels them, useful when a ROM hack repurposes or adds values (e.g. a new evolution
     /// method). Resolution order per index: PROJECT override → GLOBAL override → built-in default →
-    /// generated "Singular N". Project overrides live in <c>workDir/dspre_labels.json</c> (travels with
+    /// generated "Singular N". Project overrides live in <c>dspreDir/dspre_labels.json</c> (travels with
     /// the extracted ROM); global overrides in <c>%AppData%/DSPRE/databases/labels.global.json</c>.
     /// </summary>
     public static class LabelStore
@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Data
         public static LabelCategory GetCategory(string key) { Ensure(); return _cats.TryGetValue(key, out var c) ? c : null; }
 
         private static string GlobalPath => Path.Combine(AppPaths.DatabasePath, "labels.global.json");
-        private static string ProjectPath => string.IsNullOrEmpty(workDir) ? null : Path.Combine(workDir, "dspre_labels.json");
+        private static string ProjectPath => string.IsNullOrEmpty(dspreDir) ? null : Path.Combine(dspreDir, "dspre_labels.json");
 
         /// <summary>Lazily registers built-ins, loads the global file once, and (re)loads the project file
         /// whenever the open ROM's working directory changes.</summary>
@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (!_builtinsRegistered) { RegisterBuiltins(); _builtinsRegistered = true; }
             if (!_globalLoaded) { Load(GlobalPath, _global, _globalAttr); _globalLoaded = true; }
-            string pdir = string.IsNullOrEmpty(workDir) ? null : workDir;
+            string pdir = string.IsNullOrEmpty(dspreDir) ? null : dspreDir;
             if (pdir != _loadedProjectDir) { Load(ProjectPath, _project, _projectAttr); _loadedProjectDir = pdir; }
         }
 
@@ -123,6 +123,10 @@ namespace DSPRE.Avalonia.Data
                 "No Voltage down this turn", "+3 after two Voltage ups in a row", "Scores more the later it goes",
                 "+3 after a max Voltage", "+3 if rated the worst",
             });
+            // Area light types: what each value of an area data record's light field loads, per game (AreaLightTypes).
+            Reg("area_light_dp",          "Area Light Types (DP)",   "World", "Light", AreaLightTypes.DiamondPearlLabels);
+            Reg("area_light_pt",          "Area Light Types (Pt)",   "World", "Light", AreaLightTypes.PlatinumLabels);
+            Reg("area_light_hgss",        "Area Light Types (HGSS)", "World", "Light", AreaLightTypes.HeartGoldLabels);
             Reg("trade_languages",        "Trade Origin Languages", "Trades", "Language", Enum.GetNames<TradeOriginLang>());
 
             // Field cameras and weathers, per game: the header picks them by number and ROM hacks repurpose them.

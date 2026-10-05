@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.NsbtxEditorView"
         x:DataType="vm:NsbtxEditorViewModel"
-        Title="Map &amp; Building Textures"
+        Title="Map &amp; building textures"
         Width="800" Height="560"
         WindowStartupLocation="CenterScreen">
 
@@ -13,26 +13,24 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
-        <RadioButton Content="Map textures"      GroupName="tt" IsChecked="{Binding MapTextures}"/>
-        <RadioButton Content="Building textures" GroupName="tt" IsChecked="{Binding BuildingTextures}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddPack_Click"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemPack_Click"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
+
+    <TabStrip DockPanel.Dock="Top" SelectedIndex="{Binding KindIndex}" Margin="4,2,4,0">
+      <TabStripItem Content="Map textures"/>
+      <TabStripItem Content="Building textures"/>
+    </TabStrip>
 
     <Grid ColumnDefinitions="170,170,170,*" Margin="4">
       <DockPanel Grid.Column="0" Margin="0,0,4,0">
@@ -44,10 +42,9 @@
         <ListBox x:Name="TextureList" ItemsSource="{Binding TextureNames}" SelectedIndex="{Binding TextureIndex}"/>
       </DockPanel>
       <DockPanel Grid.Column="2" Margin="0,0,4,0">
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,2">
           <TextBlock Text="Palettes" FontWeight="Bold"/>
-          <TextBlock Text="Suggested from names; you can override it." FontSize="10"
-                     Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+          <controls:HelpTip Text="Preview only. Picked by name."/>
         </StackPanel>
         <ListBox x:Name="PaletteList" ItemsSource="{Binding PaletteNames}" SelectedIndex="{Binding PaletteIndex}"/>
       </DockPanel>

@@ -47,8 +47,55 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ObservableCollection<string> PaletteNames { get; } = new ObservableCollection<string>();
 
         private bool _mapTextures = true;
-        public bool MapTextures { get => _mapTextures; set { if (Set(ref _mapTextures, value) && !_suppress) { OnPropertyChanged(nameof(BuildingTextures)); ReloadPacks(); } } }
+        public bool MapTextures
+        {
+            get => _mapTextures;
+            set
+            {
+                if (_mapTextures == value) return;
+                // Each kind of pack keeps its own place, so going back to a tab finds the pack left open there.
+                if (_mapTextures) _mapPack = _packIndex; else _buildingPack = _packIndex;
+                _mapTextures = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(BuildingTextures));
+                OnPropertyChanged(nameof(KindIndex));
+                if (!_suppress) ReloadPacks();
+            }
+        }
         public bool BuildingTextures { get => !_mapTextures; set => MapTextures = !value; }
+
+        /// <summary>The tab showing: 0 map textures, 1 building textures.</summary>
+        public int KindIndex { get => _mapTextures ? 0 : 1; set => MapTextures = value == 0; }
+
+        private int _mapPack = -1, _buildingPack = -1;
+
+        /// <summary>A pack to open first, for an editor that hands one over (the Area Data editor's texture links).</summary>
+        public void OpenAt(bool buildings, int pack)
+        {
+            if (buildings) _buildingPack = pack; else _mapPack = pack;
+            if (_owner == null)
+            {
+                // Not set up yet: SetupAsync opens this kind and pack.
+                _mapTextures = !buildings;
+                OnPropertyChanged(nameof(MapTextures)); OnPropertyChanged(nameof(BuildingTextures)); OnPropertyChanged(nameof(KindIndex));
+                return;
+            }
+            if (BuildingTextures == buildings) { if (pack >= 0 && pack < PackNames.Count) PackIndex = pack; }
+            else MapTextures = !buildings;
+        }
+
+        /// <summary>The palette matched by name, or keeps the one showing and says so when none matches.</summary>
+        private void MatchPalette(string texture)
+        {
+            int match = ModelTexturePairing.MatchPaletteIndex(_palettes, texture);
+            if (match >= 0) _paletteIndex = match;
+            else
+            {
+                if (_paletteIndex < 0 || _paletteIndex >= _palettes.Count) _paletteIndex = _palettes.Count > 0 ? 0 : -1;
+                if (_palettes.Count > 0) StatusText = $"No palette matches {texture}.";
+            }
+            OnPropertyChanged(nameof(PaletteIndex));
+        }
 
         private int _packIndex = -1;
         public int PackIndex { get => _packIndex; set { if (Set(ref _packIndex, value) && !_suppress && value >= 0) LoadPack(value); } }
@@ -61,8 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (!Set(ref _textureIndex, value) || _suppress) return;
                 string name = value >= 0 && value < _textures.Count ? _textures[value].texname : "";
-                _paletteIndex = ModelTexturePairing.BestPaletteIndex(_palettes, name);
-                OnPropertyChanged(nameof(PaletteIndex));
+                MatchPalette(name);
                 RenderPreview();
             }
         }
@@ -93,7 +139,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
-        public NsbtxEditorViewModel() { if (Design.IsDesignMode) PackNames.Add("Texture Pack 0"); }
+        public NsbtxEditorViewModel() { if (Design.IsDesignMode) PackNames.Add("Texture pack 0"); }
         public NsbtxEditorViewModel(bool _) { }
 
         private string TexDir => gameDirs[_mapTextures ? DirNames.mapTextures : DirNames.buildingTextures].unpackedDir;
@@ -121,10 +167,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _suppress = true;
             PackNames.Clear();
             int count = TexCount;
-            for (int i = 0; i < count; i++) PackNames.Add("Texture Pack " + i);
+            for (int i = 0; i < count; i++) PackNames.Add("Texture pack " + i);
             _suppress = false;
             StatusText = $"{count} {(_mapTextures ? "map" : "building")} texture packs.";
-            if (PackNames.Count > 0) PackIndex = 0;
+            int remembered = _mapTextures ? _mapPack : _buildingPack;
+            _packIndex = -1;
+            if (PackNames.Count > 0) PackIndex = remembered >= 0 && remembered < PackNames.Count ? remembered : 0;
             else
             {
                 TextureNames.Clear();
@@ -167,9 +215,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 _textureIndex = TextureNames.Count > 0 ? 0 : -1;
                 string texture = _textureIndex >= 0 ? _textures[_textureIndex].texname : "";
-                _paletteIndex = ModelTexturePairing.BestPaletteIndex(_palettes, texture);
+                _paletteIndex = -1;
+                MatchPalette(texture);
                 OnPropertyChanged(nameof(TextureIndex));
-                OnPropertyChanged(nameof(PaletteIndex));
                 RenderPreview();
                 StatusText = $"Pack {index}: {_textures.Count} textures, {_palettes.Count} palettes.";
             }
@@ -352,7 +400,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         File.Copy(Path.Combine(cfg, "0000"), Path.Combine(cfg, newId.ToString("D4")));
                     }
                 }
-                PackNames.Add("Texture Pack " + newId);
+                PackNames.Add("Texture pack " + newId);
                 PackIndex = newId;
                 StatusText = $"Added texture pack {newId}.";
                 Edited();

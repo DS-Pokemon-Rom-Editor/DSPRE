@@ -10,43 +10,49 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <TextBlock Text="Area data:" VerticalAlignment="Center"/>
-        <controls:FusionAutoCompleteBox Width="160" ItemsSource="{Binding AreaNames}" SelectedIndex="{Binding SelectedIndex}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="160" ItemsSource="{Binding AreaNames}" SelectedIndex="{Binding SelectedIndex}"/>
         <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-      </StackPanel>
-    </Border>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" ToolTip.Tip="Copy of entry 0"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveLast_Click" ToolTip.Tip="{Binding RemoveTip}"/>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <StackPanel x:Name="AreaFields" Margin="14" Spacing="8" MaxWidth="380" HorizontalAlignment="Left">
-      <StackPanel Orientation="Horizontal">
-        <TextBlock Text="Texture packs" FontWeight="SemiBold"/>
-        <controls:HelpTip Text="Which texture sets the map and its buildings use."/>
-      </StackPanel>
-      <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" >
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Map textures" VerticalAlignment="Center"/>
-        <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding MapTileset}" Margin="2"/>
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Building textures" VerticalAlignment="Center"/>
-        <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding BuildingsTileset}" Margin="2"/>
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding ThirdFieldLabel}" VerticalAlignment="Center"/>
-        <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6">
-          <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding ThirdField}" Margin="2"
-                         ToolTip.Tip="{Binding ThirdFieldTip}"/>
-          <TextBlock Text="{Binding ThirdFieldNote}" VerticalAlignment="Center" FontStyle="Italic"
-                     Foreground="{DynamicResource Editor.Subtle}"/>
-        </StackPanel>
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="Light type" VerticalAlignment="Center"/>
-        <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding LightType}" Margin="2"/>
-        <TextBlock Grid.Row="4" Grid.Column="0" Text="Area type (HGSS)" VerticalAlignment="Center" IsVisible="{Binding IsHGSS}"/>
-        <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AreaTypes}" SelectedIndex="{Binding AreaTypeIndex}" IsVisible="{Binding IsHGSS}" Margin="2"/>
-      </Grid>
+    <StackPanel x:Name="AreaFields" Margin="14" Spacing="10" MaxWidth="440" HorizontalAlignment="Left">
+      <GroupBox Header="Texture packs" ToolTip.Tip="Which texture sets the map and its buildings use.">
+        <Grid ColumnDefinitions="160,*,Auto" RowDefinitions="Auto,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="Map textures" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding MapTileset}" Margin="2"/>
+          <Button Grid.Row="0" Grid.Column="2" Content="Open" controls:Icon.Key="OpenLink" Click="OpenMapTextures_Click" Margin="4,2,0,2"
+                  ToolTip.Tip="Open in Map and building textures"/>
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="Building textures" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding BuildingsTileset}" Margin="2"/>
+          <Button Grid.Row="1" Grid.Column="2" Content="Open" controls:Icon.Key="OpenLink" Click="OpenBuildingTextures_Click" Margin="4,2,0,2"
+                  ToolTip.Tip="Open in Map and building textures"/>
+        </Grid>
+      </GroupBox>
+      <GroupBox Header="Lighting and animation">
+        <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto">
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding ThirdFieldLabel}" VerticalAlignment="Center" ToolTip.Tip="{Binding ThirdFieldTip}"/>
+          <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
+            <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding ThirdField}" Margin="2"
+                           ToolTip.Tip="{Binding ThirdFieldTip}"/>
+            <TextBlock Text="{Binding ThirdFieldNote}" VerticalAlignment="Center" FontStyle="Italic"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
+          </StackPanel>
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="Light type" VerticalAlignment="Center"/>
+          <controls:IdNameSelector Grid.Row="1" Grid.Column="1" Value="{Binding LightType}" Names="{Binding LightTypeNames}" Margin="2"
+                                   ToolTip.Tip="{Binding LightTypeNote}"/>
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="Area type" VerticalAlignment="Center" IsVisible="{Binding IsHGSS}"/>
+          <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding AreaTypes}" SelectedIndex="{Binding AreaTypeIndex}" IsVisible="{Binding IsHGSS}" Margin="2"/>
+        </Grid>
+      </GroupBox>
     </StackPanel>
   </DockPanel>
 </UserControl>
