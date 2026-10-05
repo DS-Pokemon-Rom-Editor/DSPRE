@@ -17,14 +17,11 @@
       <!-- ── Validation ────────────────────────────────────────────── -->
       <TabItem Header="Validation">
         <DockPanel>
-          <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-                  BorderThickness="0,0,0,1" Padding="6,4">
-            <WrapPanel Classes="toolbar">
+          <controls:EditorToolbar>
               <Button Content="Run validation" controls:Icon.Key="lens" Click="Run_Click" IsEnabled="{Binding !IsRunning}"/>
               <TextBlock Text="{Binding ValidationStatus}" VerticalAlignment="Center"
                          Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
-            </WrapPanel>
-          </Border>
+          </controls:EditorToolbar>
           <DataGrid ItemsSource="{Binding Issues}" IsReadOnly="True" GridLinesVisibility="Horizontal"
                     Margin="4,6,4,4" CanUserResizeColumns="True">
             <DataGrid.Columns>
@@ -39,16 +36,13 @@
       <!-- ── Where used ────────────────────────────────────────────── -->
       <TabItem Header="Where used">
         <DockPanel>
-          <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-                  BorderThickness="0,0,0,1" Padding="6,4">
-            <WrapPanel Classes="toolbar">
+          <controls:EditorToolbar>
               <TextBlock Text="File type:" VerticalAlignment="Center"/>
               <ComboBox Width="130" ItemsSource="{Binding RefKinds}" SelectedIndex="{Binding RefKindIndex}"/>
               <TextBlock Text="Id:" VerticalAlignment="Center"/>
               <NumericUpDown Width="110" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding LookupId}"/>
               <Button Content="Find headers" controls:Icon.Key="OpenLink" Click="Find_Click"/>
-            </WrapPanel>
-          </Border>
+          </controls:EditorToolbar>
           <TextBlock DockPanel.Dock="Top" Text="{Binding FindStatus}" Foreground="{DynamicResource Editor.Subtle}"
                      FontSize="12" Margin="6,4,4,4" TextWrapping="Wrap"/>
           <ListBox ItemsSource="{Binding FindResults}" Margin="4,0,4,4"/>

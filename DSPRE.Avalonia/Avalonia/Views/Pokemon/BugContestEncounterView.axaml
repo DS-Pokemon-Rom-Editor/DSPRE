@@ -13,21 +13,18 @@
                Text="Bug Contest encounters are not available for this ROM version."/>
 
     <DockPanel IsVisible="{Binding IsAvailable}">
-      <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-              BorderThickness="0,0,0,1" Padding="6,4">
-        <StackPanel Orientation="Horizontal" Spacing="6">
+      <controls:EditorToolbar>
           <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
           <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
           <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
           <Button Content="Locate" controls:Icon.Key="folder"  Click="Locate_Click"/>
-        </StackPanel>
-      </Border>
+      </controls:EditorToolbar>
 
       <Grid ColumnDefinitions="*,250" Margin="8">
         <DockPanel Grid.Column="0" Margin="0,0,8,0">
           <StackPanel DockPanel.Dock="Top" Spacing="4">
-            <TextBlock Text="Encounter Set" FontWeight="Bold"/>
+            <TextBlock Text="Encounter set" FontWeight="Bold"/>
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding SetNames}"
                       SelectedIndex="{Binding SelectedSetIndex}"/>
@@ -57,9 +54,9 @@
             <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
           </Border>
           <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" >
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Min Level" VerticalAlignment="Center" Margin="0,0,6,2"/>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Min level" VerticalAlignment="Center" Margin="0,0,6,2"/>
             <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="100" Increment="1" Value="{Binding MinLevel}" Margin="0,0,0,2"/>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="Max Level" VerticalAlignment="Center" Margin="0,0,6,2"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Max level" VerticalAlignment="Center" Margin="0,0,6,2"/>
             <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" Increment="1" Value="{Binding MaxLevel}" Margin="0,0,0,2"/>
             <TextBlock Grid.Row="2" Grid.Column="0" Text="Rate" VerticalAlignment="Center" Margin="0,0,6,2"/>
             <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" Increment="1" Value="{Binding Rate}" Margin="0,0,0,2"/>

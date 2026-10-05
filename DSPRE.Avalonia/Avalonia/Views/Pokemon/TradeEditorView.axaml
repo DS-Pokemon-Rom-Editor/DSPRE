@@ -13,9 +13,7 @@
 
 
   <DockPanel LastChildFill="True">
-	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-			BorderThickness="0,0,0,1" Padding="6,4">
-	  <StackPanel Orientation="Horizontal" Spacing="6">
+	<controls:EditorToolbar>
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
@@ -25,8 +23,7 @@
 					   Maximum="{Binding TradeIDMax}"
 					   Width="80"
 					   ValueChanged="TradeID_Changed"/>
-	  </StackPanel>
-	</Border>
+	</controls:EditorToolbar>
 
 	<DockPanel Margin="10" LastChildFill="True">
 
@@ -38,7 +35,7 @@
 			  BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
 		<ScrollViewer>
 		  <StackPanel Spacing="6">
-			<TextBlock Text="Trade Data" FontWeight="Bold"/>
+			<TextBlock Text="Trade data" FontWeight="Bold"/>
 
 			<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
 
@@ -57,13 +54,13 @@
 			  <TextBlock Grid.Row="2"  Grid.Column="0" Text="Ability:"          VerticalAlignment="Center"/>
 			  <controls:FusionAutoCompleteBox  Grid.Row="2"  Grid.Column="1" ItemsSource="{Binding AbilityNames}"  SelectedIndex="{Binding SelectedAbility}"/>
 
-			  <TextBlock Grid.Row="3"  Grid.Column="0" Text="Held Item:"        VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="3"  Grid.Column="0" Text="Held item:"        VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="3" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedHeldItem, Converter={x:Static controls:GameIconConverter.Item}}"/>
 			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding SelectedHeldItem}"/>
 			  </DockPanel>
 
-			  <TextBlock Grid.Row="4"  Grid.Column="0" Text="OT Gender:"        VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="4"  Grid.Column="0" Text="OT gender:"        VerticalAlignment="Center"/>
 			  <ComboBox  Grid.Row="4"  Grid.Column="1" ItemsSource="{Binding OTGenderNames}" SelectedIndex="{Binding SelectedOTGender}"/>
 
 			  <TextBlock Grid.Row="5"  Grid.Column="0" Text="Language:"         VerticalAlignment="Center"/>
@@ -125,12 +122,12 @@
 	  <Border x:Name="TextDataPanel" Grid.Column="1" BorderThickness="1"
 			  BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}" Padding="8">
 		<StackPanel Spacing="8">
-		  <TextBlock Text="Text Data" FontWeight="Bold"/>
+		  <TextBlock Text="Text data" FontWeight="Bold"/>
 
 		  <TextBlock Text="Nickname (max 10 chars):"/>
 		  <TextBox Text="{Binding Nickname}" MaxLength="10"/>
 
-		  <TextBlock Text="OT Name (max 7 chars):"/>
+		  <TextBlock Text="OT name (max 7 chars):"/>
 		  <TextBox Text="{Binding OtName}" MaxLength="7"/>
 		</StackPanel>
 	  </Border>

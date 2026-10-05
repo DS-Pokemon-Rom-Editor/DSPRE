@@ -23,14 +23,14 @@
       <StackPanel Spacing="6">
         <TextBlock Text="Colours" FontWeight="SemiBold"/>
         <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding CanUseSheetColours}">
-          <RadioButton GroupName="colours" Content="The sheet's colours" IsChecked="{Binding UseSheetColours}" Width="170"/>
+          <RadioButton GroupName="colours" Content="Sheet colours" IsChecked="{Binding UseSheetColours}" Width="170"/>
           <ItemsControl ItemsSource="{Binding SheetSwatches}" VerticalAlignment="Center">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate><DataTemplate x:DataType="IBrush"><Border Width="14" Height="14" Background="{Binding}" Margin="0,0,2,2"/></DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="10">
-          <RadioButton GroupName="colours" Content="The sprite's colours" IsChecked="{Binding UseSpriteColours}" Width="170"/>
+          <RadioButton GroupName="colours" Content="Sprite colours" IsChecked="{Binding UseSpriteColours}" Width="170"/>
           <ItemsControl ItemsSource="{Binding SpriteSwatches}" VerticalAlignment="Center">
             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate><DataTemplate x:DataType="IBrush"><Border Width="14" Height="14" Background="{Binding}" Margin="0,0,2,2"/></DataTemplate></ItemsControl.ItemTemplate>

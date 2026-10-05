@@ -11,22 +11,17 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <TextBlock Text="Source:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
-        <controls:FusionAutoCompleteBox Width="260" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
+        <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="260" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAdd}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding IsEditable}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding IsEditable}"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding IsEditable}"/>
         <Button Content="Find in file" controls:Icon.Key="lens" Click="Find_Click" IsEnabled="{Binding IsEditable}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <TextBlock Text="Theme:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <ComboBox Width="150" ItemsSource="{Binding EditorThemeNames}" SelectedIndex="{Binding SelectedEditorThemeIndex}"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Top" IsVisible="{Binding IsManagedByHgEngine}"
             Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"

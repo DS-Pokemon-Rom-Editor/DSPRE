@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
         x:Class="DSPRE.Avalonia.Views.Graphics.TilesetBuilderView"
         x:DataType="vm:TilesetBuilderViewModel"
-        Title="Picture to Background"
+        Title="Picture to background"
         Width="1000" Height="700" MinWidth="620" MinHeight="440"
         WindowStartupLocation="CenterScreen">
 
@@ -30,15 +30,12 @@
       <TextBlock Text="{Binding Summary}" Classes="hint" VerticalAlignment="Center"/>
     </Border>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
-            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
-      <StackPanel Orientation="Horizontal" Spacing="8">
+    <controls:EditorToolbar>
         <Button Content="Open a PNG…" controls:Icon.Key="folder" Click="Open_Click"/>
         <TextBlock Text="{Binding PictureName}" VerticalAlignment="Center" FontWeight="SemiBold"/>
         <TextBlock Classes="hint" VerticalAlignment="Center" IsVisible="{Binding HasNoPicture}"
                    Text="Nothing is written until you save."/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <!-- What it costs, and what will not fit -->
     <Border DockPanel.Dock="Right" Width="300" Background="{DynamicResource Editor.PanelBg}"
@@ -74,7 +71,7 @@
 
           <Separator Background="{DynamicResource Editor.Separator}"/>
 
-          <TextBlock Text="What it comes to" Classes="head"/>
+          <TextBlock Text="Result" Classes="head"/>
           <TextBlock Classes="hint" IsVisible="{Binding HasNoPicture}"
                      Text="Open a PNG and this fills in."/>
 
@@ -131,7 +128,7 @@
       <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                     IsVisible="{Binding HasPicture}">
         <StackPanel Spacing="10">
-          <TextBlock Text="The picture as it is" Classes="head"/>
+          <TextBlock Text="Original picture" Classes="head"/>
           <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                   HorizontalAlignment="Left">
             <Image Source="{Binding Before}" Stretch="None"

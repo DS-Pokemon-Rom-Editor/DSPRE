@@ -5,7 +5,7 @@
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Pokemon.CopyMachinesDialogView"
         x:DataType="vm:CopyMachinesDialogViewModel"
-        Title="Copy TM/HM Compatibility" Width="420" Height="620"
+        Title="Copy TM/HM compatibility" Width="420" Height="620"
         WindowStartupLocation="CenterOwner" CanResize="True">
 
   <DockPanel Margin="10">

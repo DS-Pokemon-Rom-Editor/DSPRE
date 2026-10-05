@@ -28,6 +28,7 @@
 					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#EFEFEF"/>
 					<SolidColorBrush x:Key="Editor.Border"     Color="#ABABAB"/>
 					<SolidColorBrush x:Key="Editor.Separator"  Color="#B8B8B8"/>
+					<SolidColorBrush x:Key="Editor.MenuSeparator" Color="#C4C4C4"/>
 					<SolidColorBrush x:Key="Editor.Text"       Color="#000000"/>
 					<SolidColorBrush x:Key="Editor.Subtle"     Color="#767676"/>
 					<SolidColorBrush x:Key="Editor.Good"       Color="#1B7F2E"/>
@@ -40,6 +41,7 @@
 					<SolidColorBrush x:Key="Editor.StatusBg"   Color="#262626"/>
 					<SolidColorBrush x:Key="Editor.Border"     Color="#242424"/>
 					<SolidColorBrush x:Key="Editor.Separator"  Color="#212121"/>
+					<SolidColorBrush x:Key="Editor.MenuSeparator" Color="#4A4A4A"/>
 					<SolidColorBrush x:Key="Editor.Text"       Color="#F0F0F0"/>
 					<SolidColorBrush x:Key="Editor.Subtle"     Color="#828282"/>
 					<SolidColorBrush x:Key="Editor.Good"       Color="#5FD07A"/>
@@ -96,6 +98,28 @@
 		<Style Selector="WrapPanel.toolbar > :is(Control)">
 			<Setter Property="Margin" Value="0,2,6,2"/>
 			<Setter Property="VerticalAlignment" Value="Center"/>
+		</Style>
+
+		<!-- Menu dividers: the plain separator colour sits three steps off the menu background in dark mode, which
+		     reads as uneven spacing rather than a line. -->
+		<Style Selector="MenuItem Separator, ContextMenu Separator, Menu Separator">
+			<Setter Property="Background" Value="{DynamicResource Editor.MenuSeparator}"/>
+			<Setter Property="Margin" Value="6,4"/>
+		</Style>
+
+		<!-- Rows of flag check boxes get room between wrapped lines, not only between boxes. -->
+		<Style Selector="WrapPanel.flags > CheckBox">
+			<Setter Property="Margin" Value="0,3,16,5"/>
+		</Style>
+
+		<!-- Check boxes show data names (SPECIES_X, F_PRIORITIZE_...); an access key would hide their first "_".
+		     Every check box gives its label as text so this one template draws it. -->
+		<Style Selector="CheckBox">
+			<Setter Property="ContentTemplate">
+				<DataTemplate x:DataType="x:String">
+					<TextBlock Text="{Binding}"/>
+				</DataTemplate>
+			</Setter>
 		</Style>
 
 		<!-- DSPRE-local rounding + tweaks (last so its setters win over the base Fusion themes). -->

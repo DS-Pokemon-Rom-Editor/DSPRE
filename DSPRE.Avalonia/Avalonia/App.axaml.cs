@@ -61,6 +61,17 @@ namespace DSPRE
             catch (System.Exception ex) { AppLogger.Warn("Rendering mode unknown: " + ex.Message); }
         }
 
+        // Ctrl+P opens the command palette from editor windows too; the main window handles its own, with the busy check.
+        private static void InstallPaletteShortcut() =>
+            global::Avalonia.Input.InputElement.KeyDownEvent.AddClassHandler<Window>((window, e) =>
+            {
+                if (e.Handled || e.Key != global::Avalonia.Input.Key.P || e.KeyModifiers != global::Avalonia.Input.KeyModifiers.Control) return;
+                if (window is DSPRE.Avalonia.Views.Shell.MainWindowView or DSPRE.Avalonia.Views.Shell.CommandPaletteView) return;
+                if (!DSPRE.Avalonia.AvaloniaEditorLauncher.IsRomLoaded) return;
+                DSPRE.Avalonia.AvaloniaEditorLauncher.OpenCommandPalette(window);
+                e.Handled = true;
+            });
+
         public override void OnFrameworkInitializationCompleted()
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -74,6 +85,7 @@ namespace DSPRE
                 DSPRE.Avalonia.AvaloniaErrorHandler.Install();
                 DSPRE.Avalonia.OwnerWindow.Install();
                 DSPRE.Avalonia.EditorTours.Install();
+                InstallPaletteShortcut();
 
                 // Grey secondary text in list rows is unreadable on the blue selection, in both themes.
                 var subtleOnSelection = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xD8, 0xE8, 0xF4));

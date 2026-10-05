@@ -14,21 +14,18 @@
                Text="Great Marsh encounters are not available for this ROM version."/>
 
     <DockPanel IsVisible="{Binding IsAvailable}">
-      <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-              BorderThickness="0,0,0,1" Padding="6,4">
-        <StackPanel Orientation="Horizontal" Spacing="6">
+      <controls:EditorToolbar>
           <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
           <controls:UndoRedoButtons/>
           <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
           <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
           <Button Content="Locate" controls:Icon.Key="folder"  Click="Locate_Click"/>
-        </StackPanel>
-      </Border>
+      </controls:EditorToolbar>
 
       <Grid ColumnDefinitions="*,220" Margin="8">
         <DockPanel Grid.Column="0" Margin="0,0,8,0">
           <StackPanel DockPanel.Dock="Top" Spacing="4">
-            <TextBlock Text="Encounter List" FontWeight="Bold"/>
+            <TextBlock Text="Encounter list" FontWeight="Bold"/>
             <ComboBox HorizontalAlignment="Stretch"
                       ItemsSource="{Binding GroupNames}"
                       SelectedIndex="{Binding SelectedGroupIndex}"/>

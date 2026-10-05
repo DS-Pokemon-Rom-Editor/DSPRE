@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
         x:Class="DSPRE.Avalonia.Views.Pokemon.DVCalcView"
         x:DataType="vm:DVCalcViewModel"
-        Title="DV Calculator"
+        Title="DV calculator"
         Width="720" Height="500"
         WindowStartupLocation="CenterOwner">
 

@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Trainers"
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerSearchView"
         x:DataType="vm:TrainerSearchViewModel"
-        Title="Search Trainers"
+        Title="Search trainers"
         Width="380" Height="440"
         WindowStartupLocation="CenterOwner">
 

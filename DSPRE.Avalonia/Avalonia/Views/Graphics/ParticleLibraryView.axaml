@@ -13,14 +13,11 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <ComboBox x:Name="CategoryPicker" ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}" Width="200"/>
         <TextBox x:Name="ParticleSearch" Text="{Binding Search}" PlaceholderText="Find by name or file number" Width="220"/>
         <Button x:Name="OpenButton" Content="Open" controls:Icon.Key="OpenLink" Click="Open_Click"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
   <DockPanel Margin="10">
     <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Text="{Binding StatusText}" FontSize="12"

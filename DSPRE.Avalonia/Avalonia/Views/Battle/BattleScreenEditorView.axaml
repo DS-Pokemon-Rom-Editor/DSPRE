@@ -5,7 +5,7 @@
         xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Battle.BattleScreenEditorView"
         x:DataType="vm:BattleScreenEditorViewModel"
-        Title="Battle Screen"
+        Title="Battle screen"
         Width="1120" Height="780" MinWidth="980" MinHeight="620"
         WindowStartupLocation="CenterScreen">
 
@@ -33,9 +33,7 @@
     </Border>
 
     <!-- What the screens are showing -->
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}"
-            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,6">
-      <WrapPanel Orientation="Horizontal">
+    <controls:EditorToolbar>
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
           <TextBlock Text="Ground" Classes="label"/>
           <ComboBox Width="110" ItemsSource="{Binding TerrainNames}" SelectedIndex="{Binding TerrainIndex}"
@@ -59,8 +57,7 @@
           <TextBlock Text="Menu" Classes="label"/>
           <ComboBox Width="120" ItemsSource="{Binding MenuNames}" SelectedIndex="{Binding MenuIndex}"/>
         </StackPanel>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <!-- The piece list -->
     <Border DockPanel.Dock="Left" Width="196" BorderBrush="{DynamicResource Editor.Border}"
@@ -109,7 +106,7 @@
                   HorizontalAlignment="Stretch" ToolTip.Tip="PNG image"/>
           <TextBlock Text="{Binding CannotPaintBecause}" Classes="hint"
                      IsVisible="{Binding CannotPaintBecause, Converter={x:Static ObjectConverters.IsNotNull}}"/>
-          <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
+          <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="HandOver_Click" IsEnabled="{Binding CanHandOver}"
                   HorizontalAlignment="Stretch" ToolTip.Tip="{Binding HandOverWhat}"/>
 
           <Separator Margin="0,4"/>
@@ -141,7 +138,7 @@
             <ComboBoxItem>No gender</ComboBoxItem>
           </ComboBox>
 
-          <TextBlock Text="What is wrong with it" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
+          <TextBlock Text="Status condition" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
           <ComboBox SelectedIndex="{Binding StatusChoice}" HorizontalAlignment="Stretch"
                     IsVisible="{Binding GaugeTextIsReal}">
             <ComboBoxItem>Nothing</ComboBoxItem>

@@ -15,16 +15,13 @@
       <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <TextBox Text="{Binding FilterText}" Width="220" PlaceholderText="trainer name…"/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border x:Name="NotesPanel" DockPanel.Dock="Top" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="8,4">
       <StackPanel Spacing="2">
@@ -39,11 +36,11 @@
 
       <ScrollViewer Grid.Column="1">
         <StackPanel x:Name="RowPanel" Margin="16" Spacing="8" IsEnabled="{Binding IsRowSelected}">
-          <TextBlock Text="Base Trainer" FontWeight="Bold"/>
+          <TextBlock Text="Base trainer" FontWeight="Bold"/>
           <controls:FusionAutoCompleteBox x:Name="BaseTrainerBox" controls:EditorLink.To="Trainer" ItemsSource="{Binding TrainerNames}" SelectedIndex="{Binding BaseTrainerIndex}" HorizontalAlignment="Stretch"/>
           <StackPanel Orientation="Horizontal" Spacing="8">
             <TextBlock Text="{Binding RowNote}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap" VerticalAlignment="Center"/>
-            <Button Content="Open in Phone Book" controls:Icon.Key="OpenLink" Click="OpenPhoneBook_Click" IsVisible="{Binding HasPhoneEntry}" FontSize="11" Padding="6,1"/>
+            <Button Content="Open in phone book" controls:Icon.Key="OpenLink" Click="OpenPhoneBook_Click" IsVisible="{Binding HasPhoneEntry}" FontSize="11" Padding="6,1"/>
           </StackPanel>
           <TextBlock Text="{Binding RowProblems}" IsVisible="{Binding HasRowProblems}" FontSize="11"
                      Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>

@@ -14,9 +14,7 @@
 
   <DockPanel>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <WrapPanel x:Name="SceneChoices" Classes="toolbar" Orientation="Horizontal">
           <TextBlock Text="Ground" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
           <ComboBox ItemsSource="{Binding Terrains}" SelectedIndex="{Binding TerrainIndex, Mode=TwoWay}"
@@ -34,8 +32,7 @@
           <Button Content="Change the colours" controls:Icon.Key="pencil" Click="EditColours_Click"
                   ToolTip.Tip="Open the set of colours this scenery uses at the time of day showing."/>
         </WrapPanel>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
       <StackPanel Spacing="4">

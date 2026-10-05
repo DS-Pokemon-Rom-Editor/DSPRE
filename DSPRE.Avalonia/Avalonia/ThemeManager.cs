@@ -1,4 +1,9 @@
+using System;
+using System.Runtime.InteropServices;
 using global::Avalonia;
+using global::Avalonia.Controls;
+using global::Avalonia.Controls.ApplicationLifetimes;
+using global::Avalonia.Interactivity;
 using global::Avalonia.Styling;
 
 namespace DSPRE.Avalonia
@@ -30,6 +35,7 @@ namespace DSPRE.Avalonia
                 DSPRE.SettingsManager.Settings.darkTheme = dark;
                 DSPRE.SettingsManager.Save();
             }
+            ApplyTitleBars();
         }
 
         public static void Toggle() => SetDark(!IsDark);
@@ -40,6 +46,44 @@ namespace DSPRE.Avalonia
             var s = DSPRE.SettingsManager.Settings;
             if (s != null && Application.Current != null)
                 Application.Current.RequestedThemeVariant = s.darkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
+            WatchTitleBars();
+        }
+
+        // ── Windows title bars ─────────────────────────────────────────────────────────────────────
+        // The title bar is drawn by Windows, which only darkens it when asked. Windows 11 and Windows 10 from 20H1
+        // take attribute 20; earlier Windows 10 builds take 19.
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+        private const int ImmersiveDarkMode = 20, ImmersiveDarkModeBefore20H1 = 19;
+        private static bool _watching;
+
+        private static void WatchTitleBars()
+        {
+            if (_watching || !OperatingSystem.IsWindows()) return;
+            _watching = true;
+            Control.LoadedEvent.AddClassHandler<Window>((window, _) => ApplyTitleBar(window), RoutingStrategies.Direct);
+        }
+
+        private static void ApplyTitleBars()
+        {
+            if (!OperatingSystem.IsWindows()) return;
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                foreach (Window window in desktop.Windows) ApplyTitleBar(window);
+        }
+
+        private static void ApplyTitleBar(Window window)
+        {
+            IntPtr handle = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+            if (handle == IntPtr.Zero) return;
+            int dark = IsDark ? 1 : 0;
+            try
+            {
+                if (DwmSetWindowAttribute(handle, ImmersiveDarkMode, ref dark, sizeof(int)) != 0)
+                    DwmSetWindowAttribute(handle, ImmersiveDarkModeBefore20H1, ref dark, sizeof(int));
+            }
+            catch (Exception ex) when (ex is DllNotFoundException || ex is EntryPointNotFoundException) { }
         }
     }
 }

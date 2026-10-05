@@ -30,7 +30,7 @@
           <TextBlock Text="Battle preview (this Pokémon vs itself)" FontWeight="SemiBold"/>
           <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
             <CheckBox Content="Show both genders" IsChecked="{Binding UnifiedDisplay}" IsVisible="{Binding HasGenderChoice}"
-                      ToolTip.Tip="Show Male and Female battle scenes side by side."/>
+                      ToolTip.Tip="Show male and female battle scenes side by side."/>
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding !UnifiedDisplay}">
               <TextBlock Text="Gender" VerticalAlignment="Center" IsVisible="{Binding HasGenderChoice}"/>
               <ComboBox ItemsSource="{Binding Genders}" SelectedIndex="{Binding GenderIndex}" Width="100"
@@ -106,7 +106,7 @@
 
           <!-- Party icon palette + graphic -->
           <StackPanel Spacing="4">
-            <TextBlock Text="Party Icon" FontWeight="SemiBold"/>
+            <TextBlock Text="Party icon" FontWeight="SemiBold"/>
             <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
               <ComboBox ItemsSource="{Binding PartyPalettes}" SelectedIndex="{Binding PartyPaletteIndex}" Width="160" VerticalAlignment="Center"
                         ToolTip.Tip="Which of the 3 icon palettes the party icon uses."/>
@@ -136,7 +136,7 @@
 
           <!-- Battle sprite & shadow data -->
           <StackPanel Spacing="6">
-            <TextBlock Text="Battle Sprite &amp; Shadow" FontWeight="SemiBold"/>
+            <TextBlock Text="Battle sprite &amp; shadow" FontWeight="SemiBold"/>
             <TextBlock Text="This Pokémon has no battle-sprite record." IsVisible="{Binding !HasSpriteData}"
                        FontSize="12" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
 

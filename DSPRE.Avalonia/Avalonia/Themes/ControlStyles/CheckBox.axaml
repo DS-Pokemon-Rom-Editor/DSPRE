@@ -15,7 +15,8 @@
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="Template">
             <ControlTemplate>
-                <Grid ColumnDefinitions="Auto,*">
+                <!-- A background makes the gap between box and label part of the check box, so the tooltip stays put. -->
+                <Grid ColumnDefinitions="Auto,*" Background="{TemplateBinding Background}">
                     <Border x:Name="border"
                             Width="16"
                             Height="16"

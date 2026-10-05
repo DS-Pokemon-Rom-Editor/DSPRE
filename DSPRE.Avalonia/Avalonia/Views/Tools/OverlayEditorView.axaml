@@ -14,16 +14,13 @@
 
   <DockPanel LastChildFill="True">
 
-	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-			BorderThickness="0,0,0,1" Padding="6,4">
-	  <StackPanel Orientation="Horizontal" Spacing="6">
+	<controls:EditorToolbar>
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
 		<Button Content="Decompress all" IsEnabled="{Binding IsNotDsRomProject}" Click="DecompressAll_Click" Margin="12,0,0,0"/>
 		<Button Content="Toggle marked"  IsEnabled="{Binding IsNotDsRomProject}" Click="ToggleMarked_Click"/>
-	  </StackPanel>
-	</Border>
+	</controls:EditorToolbar>
 
 	<!-- ds-rom projects: read only -->
 	<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,8,10,0" IsVisible="{Binding IsDsRomProject}">
@@ -50,7 +47,7 @@
 			</DataTemplate>
 		  </DataGridTemplateColumn.CellTemplate>
 		</DataGridTemplateColumn>
-		<DataGridTemplateColumn Header="Marked Compressed"  Width="130">
+		<DataGridTemplateColumn Header="Marked compressed"  Width="130">
 		  <DataGridTemplateColumn.CellTemplate>
 			<DataTemplate x:DataType="vm:OverlayRow">
 			  <Border Background="{Binding MismatchBrush}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
@@ -60,8 +57,8 @@
 			</DataTemplate>
 		  </DataGridTemplateColumn.CellTemplate>
 		</DataGridTemplateColumn>
-		<DataGridTextColumn   Header="RAM Address"          Binding="{Binding RAMAddressHex}"       IsReadOnly="True"  Width="110"/>
-		<DataGridTextColumn   Header="Uncompressed Size"    Binding="{Binding UncompressedSize}"    IsReadOnly="True"  Width="130"/>
+		<DataGridTextColumn   Header="RAM address"          Binding="{Binding RAMAddressHex}"       IsReadOnly="True"  Width="110"/>
+		<DataGridTextColumn   Header="Uncompressed size"    Binding="{Binding UncompressedSize}"    IsReadOnly="True"  Width="130"/>
 	  </DataGrid.Columns>
 	</DataGrid>
 

@@ -26,6 +26,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             DataContext = vm;
             EditorWindowChrome.Attach(this, vm, onClosed: vm.Detach);
+            vm.TrainerList.KeepInView(TrainerList);
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)

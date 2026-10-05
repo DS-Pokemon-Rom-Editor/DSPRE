@@ -21,14 +21,11 @@
   </UserControl.Styles>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <TextBlock DockPanel.Dock="Bottom" Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Margin="8,4"
                Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>

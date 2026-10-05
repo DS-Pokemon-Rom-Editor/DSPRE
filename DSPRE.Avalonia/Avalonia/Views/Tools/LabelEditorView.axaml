@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
         x:Class="DSPRE.Avalonia.Views.Tools.LabelEditorView"
         x:DataType="vm:LabelEditorViewModel"
-        Title="Dropdown Labels"
+        Title="Dropdown labels"
         Width="760" Height="600" MinWidth="560" MinHeight="420"
         WindowStartupLocation="CenterScreen">
 
@@ -13,18 +13,15 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <TextBlock Text="Scope:" VerticalAlignment="Center"/>
         <RadioButton Content="This project" GroupName="scope" IsChecked="{Binding !GlobalScope}"/>
         <RadioButton Content="Global"       GroupName="scope" IsChecked="{Binding GlobalScope}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Add entry" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAddEntry}"/>
         <Button Content="Reset category" controls:Icon.Key="resetIcon" Click="Reset_Click"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
@@ -60,7 +57,7 @@
                                Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis"/>
                   <ComboBox    Grid.Column="3" ItemsSource="{Binding AttrOptions}" SelectedIndex="{Binding AttrIndex}"
                                IsVisible="{Binding HasAttr}" HorizontalAlignment="Stretch"
-                               ToolTip.Tip="What this method's Parameter means (Level / Item / Move / Species / Beauty)"/>
+                               ToolTip.Tip="What this method's parameter means (level / item / move / species / beauty)"/>
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

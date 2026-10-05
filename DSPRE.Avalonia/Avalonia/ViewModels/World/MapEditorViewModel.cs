@@ -260,7 +260,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
         public decimal AreaGroundAnimation { get => _area?.groundAnimation ?? 0; set => EditArea(a => a.groundAnimation = (ushort)value); }
-        public decimal AreaLightType { get => _area?.lightType ?? 0; set => EditArea(a => a.lightType = (ushort)value); }
+        public decimal AreaLightType { get => _area?.lightType ?? 0; set { EditArea(a => a.lightType = (ushort)value); OnPropertyChanged(nameof(AreaLightNote)); } }
+        public IReadOnlyList<string> AreaLightNames => DSPRE.Avalonia.Data.LabelStore.Get(DSPRE.Avalonia.Data.AreaLightTypes.LabelKey);
+        public string AreaLightNote => _area == null ? "" : DSPRE.Avalonia.Data.AreaLightTypes.NoteFor(_area.lightType);
         public bool AreaIndoor { get => _area?.areaType == AreaData.TYPE_INDOOR; set => EditArea(a => a.areaType = value ? AreaData.TYPE_INDOOR : AreaData.TYPE_OUTDOOR); }
 
         private void EditArea(Action<AreaData> change)
@@ -282,7 +284,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void RaiseArea()
         {
-            foreach (var n in new[] { nameof(HasArea), nameof(AreaLabel), nameof(AreaGroundAnimation), nameof(AreaLightType), nameof(AreaIndoor) })
+            foreach (var n in new[] { nameof(HasArea), nameof(AreaLabel), nameof(AreaGroundAnimation), nameof(AreaLightType), nameof(AreaIndoor), nameof(AreaLightNames), nameof(AreaLightNote) })
                 OnPropertyChanged(n);
         }
 
@@ -359,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int CollisionPainterIndex
         {
             get => _collisionPainterIndex;
-            set { if (Set(ref _collisionPainterIndex, value)) OnPropertyChanged(nameof(CollisionPaintValue)); }
+            set { if (Set(ref _collisionPainterIndex, value)) { OnPropertyChanged(nameof(CollisionPaintValue)); OnPropertyChanged(nameof(CollisionValue)); } }
         }
         public byte CollisionPaintValue => _useRawCollision ? (byte)_rawCollision :
             (_collisionPainterIndex >= 0 && _collisionPainterIndex < CollisionPainters.Count ? CollisionPainters[_collisionPainterIndex].Value : (byte)0);
@@ -368,18 +370,51 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int TypePainterIndex
         {
             get => _typePainterIndex;
-            set { if (Set(ref _typePainterIndex, value)) OnPropertyChanged(nameof(TypePaintValue)); }
+            set { if (Set(ref _typePainterIndex, value)) { OnPropertyChanged(nameof(TypePaintValue)); OnPropertyChanged(nameof(TypeValue)); } }
         }
         public byte TypePaintValue => _useRawType ? (byte)_rawType :
             (_typePainterIndex >= 0 && _typePainterIndex < TypePainters.Count ? TypePainters[_typePainterIndex].Value : (byte)0);
 
         // Paint a raw value (WinForms "Value" radio) instead of a named type from the combo.
         private bool _useRawCollision; private decimal _rawCollision;
-        public bool UseRawCollision { get => _useRawCollision; set { if (Set(ref _useRawCollision, value)) OnPropertyChanged(nameof(CollisionPaintValue)); } }
-        public decimal RawCollision { get => _rawCollision; set { if (Set(ref _rawCollision, value)) OnPropertyChanged(nameof(CollisionPaintValue)); } }
+        public bool UseRawCollision { get => _useRawCollision; set { if (Set(ref _useRawCollision, value)) { OnPropertyChanged(nameof(CollisionPaintValue)); OnPropertyChanged(nameof(CollisionValue)); } } }
+        public decimal RawCollision { get => _rawCollision; set { if (Set(ref _rawCollision, value)) { OnPropertyChanged(nameof(CollisionPaintValue)); OnPropertyChanged(nameof(CollisionValue)); } } }
         private bool _useRawType; private decimal _rawType;
-        public bool UseRawType { get => _useRawType; set { if (Set(ref _useRawType, value)) OnPropertyChanged(nameof(TypePaintValue)); } }
-        public decimal RawType { get => _rawType; set { if (Set(ref _rawType, value)) OnPropertyChanged(nameof(TypePaintValue)); } }
+        public bool UseRawType { get => _useRawType; set { if (Set(ref _useRawType, value)) { OnPropertyChanged(nameof(TypePaintValue)); OnPropertyChanged(nameof(TypeValue)); } } }
+        public decimal RawType { get => _rawType; set { if (Set(ref _rawType, value)) { OnPropertyChanged(nameof(TypePaintValue)); OnPropertyChanged(nameof(TypeValue)); } } }
+
+        // The painters as one number with names, like every other named value: a number with a name picks the name,
+        // any other number is painted as it is.
+        public ObservableCollection<string> CollisionNames { get; } = new();
+        public List<int> CollisionKeys { get; } = new();
+        public ObservableCollection<string> TypeNames { get; } = new();
+        public List<int> TypeKeys { get; } = new();
+
+        public decimal CollisionValue
+        {
+            get => CollisionPaintValue;
+            set
+            {
+                int v = (int)value;
+                int row = CollisionKeys.IndexOf(v);
+                if (row >= 0) { UseRawCollision = false; CollisionPainterIndex = row; }
+                else { RawCollision = v; UseRawCollision = true; }
+                OnPropertyChanged();
+            }
+        }
+
+        public decimal TypeValue
+        {
+            get => TypePaintValue;
+            set
+            {
+                int v = (int)value;
+                int row = TypeKeys.IndexOf(v);
+                if (row >= 0) { UseRawType = false; TypePainterIndex = row; }
+                else { RawType = v; UseRawType = true; }
+                OnPropertyChanged();
+            }
+        }
 
         private string _permissionHover = "";
         public string PermissionHover { get => _permissionHover; private set => Set(ref _permissionHover, value); }
@@ -1888,8 +1923,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 TypePainters.Clear();
                 foreach (var c in TilePermissions.CollisionsFor(gameFamily)) CollisionPainters.Add(new PainterOption(c.Value, c.Label));
                 foreach (var b in TilePermissions.BehavioursFor(gameFamily)) TypePainters.Add(new PainterOption(b.Value, b.Label));
+                CollisionNames.Clear(); CollisionKeys.Clear(); TypeNames.Clear(); TypeKeys.Clear();
+                foreach (PainterOption o in CollisionPainters) { CollisionNames.Add(o.Name); CollisionKeys.Add(o.Value); }
+                foreach (PainterOption o in TypePainters) { TypeNames.Add(o.Name); TypeKeys.Add(o.Value); }
                 CollisionPainterIndex = Math.Max(0, CollisionPainters.ToList().FindIndex(p => p.Value == TilePermissions.BlockedBit));
                 if (TypePainters.Count > 0) TypePainterIndex = 0;
+                OnPropertyChanged(nameof(CollisionValue));
+                OnPropertyChanged(nameof(TypeValue));
 
                 _suppress = true;
                 MapTilesets.Clear();

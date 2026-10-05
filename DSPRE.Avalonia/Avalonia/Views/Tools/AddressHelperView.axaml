@@ -4,7 +4,7 @@
 		xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
 		x:Class="DSPRE.Avalonia.Views.Tools.AddressHelperView"
 		x:DataType="vm:AddressHelperViewModel"
-		Title="Address Helper"
+		Title="Address helper"
 		Width="360" SizeToContent="Height"
 		MinWidth="360" MinHeight="260"
 		CanResize="True"
@@ -15,16 +15,13 @@
 
 
 	<DockPanel>
-		<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-				BorderThickness="0,0,0,1" Padding="6,4">
-			<WrapPanel Classes="toolbar">
-				<TextBlock Text="RAM Address (hex):"/>
+		<controls:EditorToolbar>
+				<TextBlock Text="RAM address (hex):"/>
 				<TextBox x:Name="AddressBox" Width="130"
 						 Text="{Binding AddressInput}"
 						 PlaceholderText="e.g. 02004800"/>
 				<Button Content="Search" controls:Icon.Key="lens" Click="SearchButton_Click"/>
-			</WrapPanel>
-		</Border>
+		</controls:EditorToolbar>
 
 	<DockPanel Margin="8">
 
