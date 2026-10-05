@@ -261,7 +261,18 @@ namespace DSPRE.Avalonia.Views.World
                 if (VM != vm) return;
                 if (!replace) vm.AlsoTerrain = false;
             }
-            vm.Apply();
+            bool bringInBuildings = true;
+            var swap = vm.BuildingsApplyWouldReplace();
+            if (swap != null)
+            {
+                bringInBuildings = await DSPRE.Avalonia.DialogHelper.AskYesNo(
+                    swap.Value.newBuildings > 0
+                        ? $"The PDSMS map carries {swap.Value.newBuildings} buildings. Replace the {swap.Value.currentBuildings} buildings on this map with them?"
+                        : $"The PDSMS map carries no buildings. Remove the {swap.Value.currentBuildings} buildings on this map?",
+                    "Replace buildings");
+                if (VM != vm) { vm.AlsoTerrain = terrain; return; }
+            }
+            vm.Apply(bringInBuildings);
             vm.AlsoTerrain = terrain;
         }
         private void Undo_Click(object sender, RoutedEventArgs e) => VM?.Undo();

@@ -2379,6 +2379,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Squares whose tiles changed since From map; everything counts as changed for an import or a new set.
         private Func<int, int, bool> ChangedSquares => _ripped == null ? null : (c, r) => ChangedSinceRipped(c, r);
 
+        public (int newBuildings, int currentBuildings)? BuildingsApplyWouldReplace()
+        {
+            if (_map?.buildings == null || _map.buildings.Count == 0) return null;
+            if (!AlsoSaved || !_saved.TryGetValue("bld", out string bld) || LeavesOut("bld")) return null;
+            try
+            {
+                byte[] newBuildings = File.ReadAllBytes(bld);
+                if (newBuildings.AsSpan().SequenceEqual(_map.BuildingsToByteArray())) return null;
+                return (newBuildings.Length / MapFile.buildingHeaderSize, _map.buildings.Count);
+            }
+            catch { return null; }
+        }
+
         /// <summary>How many of the map's current plates Apply's terrain rebuild would replace.</summary>
         public int PlatesApplyWouldReplace()
         {
@@ -2428,7 +2441,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             };
         }
 
-        public void Apply()
+        public void Apply(bool bringInBuildings = true)
         {
             if (_map == null || _set == null) return;
             if (_project != null) ImportedSinceOpen = true;
@@ -2491,9 +2504,16 @@ namespace DSPRE.Avalonia.ViewModels.World
                 try
                 {
                     if (_saved.TryGetValue("per", out string per)) { _map.ImportPermissions(File.ReadAllBytes(per)); savedMovement = true; brought.Add("permissions"); }
-                    if (_saved.TryGetValue("bld", out string bld) && !LeavesOut("bld")) { _map.ImportBuildings(File.ReadAllBytes(bld)); brought.Add($"{_map.buildings.Count} buildings"); }
                     if (_saved.TryGetValue("bgs", out string bgs)) { _map.ImportSoundPlates(File.ReadAllBytes(bgs)); brought.Add("BGS"); }
                     if (_saved.TryGetValue("bdhc", out string bdhc) && !LeavesOut("bdhc")) { _map.ImportTerrain(File.ReadAllBytes(bdhc)); savedGround = true; brought.Add("BDHC"); }
+                    if (_saved.TryGetValue("bld", out string bld) && !LeavesOut("bld"))
+                    {
+                        if (bringInBuildings)
+                        {
+                            _map.ImportBuildings(File.ReadAllBytes(bld));
+                            brought.Add($"{_map.buildings.Count} buildings");
+                        }
+                    }
                 }
                 catch (Exception ex) { Warning = "Could not read PDSMS files: " + ex.Message; }
             }
