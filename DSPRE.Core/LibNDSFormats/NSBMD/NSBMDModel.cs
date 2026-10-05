@@ -50,6 +50,10 @@ namespace LibNDSFormats.NSBMD
         public float boundZmax;
         public float boundScale;
         public float modelScale;
+
+        /// <summary>How the model's texture matrices are built, NNSG3dResMdlInfo.texMtxMode: 0 Maya, 1 SoftImage 3D,
+        /// 2 3ds Max, 3 XSI. The field models are Maya.</summary>
+        public byte texMtxMode;
         public int laststackid;
         #endregion Properties 
     }

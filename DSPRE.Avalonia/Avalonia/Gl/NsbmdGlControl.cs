@@ -18,13 +18,13 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public class NsbmdGlControl : OpenGlControlBase
     {
-        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int NodeIndex; public int CullMode; public bool Fog; }
+        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int NodeIndex; public int CullMode; public bool Fog; public bool TexAlpha; public float[] TexMatrix; }
 
         private GlFunctions _f;
-        private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc, _matColorLoc;
+        private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc, _matColorLoc, _texAlphaLoc;
         private int _viewLoc, _fogOnLoc, _fogColorLoc, _fogLoc, _fogClipLoc, _fogTableLoc;
         private int _spotOnLoc, _spotCenterLoc, _spotScaleLoc, _spotTrisLoc, _spotTriCountLoc,
-                    _spotTexLoc, _spotSizeLoc, _camPosLoc, _camDirLoc;
+                    _spotTexLoc, _spotSizeLoc, _camPosLoc, _camDirLoc, _spotRightLoc, _spotUpLoc;
         private int _tintLoc, _tileOriginLoc, _tileSizeLoc, _collLoc;
         private string _error;
 
@@ -525,6 +525,9 @@ namespace DSPRE.Avalonia.Gl
             _f.Uniform3f(_camPosLoc, inv[12], inv[13], inv[14]);
             // The view looks down its own -z, which is the third row of the view matrix.
             _f.Uniform4f(_camDirLoc, -view[2], -view[6], -view[10], _orthographic ? 1f : 0f);
+            // The first two rows of the view matrix are the camera's right and up in the world.
+            _f.Uniform3f(_spotRightLoc, view[0], view[4], view[8]);
+            _f.Uniform3f(_spotUpLoc, view[1], view[5], view[9]);
         }
 
         /// <summary>What shows where nothing is drawn.</summary>
@@ -700,7 +703,7 @@ namespace DSPRE.Avalonia.Gl
                     "out vec2 vUv;\nout vec3 vColor;\nout vec2 vWorld;\nout float vEye;\nout vec3 vPos;\n" +
                     "void main(){ vUv = (uTexMtx * vec3(aUv, 1.0)).xy; vColor = aColor; vWorld = aPos.xz; vEye = -(uView * vec4(aPos, 1.0)).z; vPos = aPos; gl_Position = uMvp * vec4(aPos, 1.0); }\n";
                 string fs = header +
-                    "uniform sampler2D uTex;\nuniform int uHasTex;\nuniform float uAlpha;\n" +
+                    "uniform sampler2D uTex;\nuniform int uHasTex;\nuniform int uTexAlpha;\nuniform float uAlpha;\n" +
                     // Per-tile permission tint (uTint>0): sample a 32x32 collision-colour texture by the fragment's
                     // world-tile and mix it into the surface AFTER the alpha discard, so the collision colour follows
                     // the real texture shape (trees/lamps tinted on their pixels; transparent texels stay clear).
@@ -713,14 +716,18 @@ namespace DSPRE.Avalonia.Gl
                     "in vec2 vUv;\nin vec3 vColor;\nin vec2 vWorld;\nin float vEye;\nin vec3 vPos;\nout vec4 fragColor;\n" +
                     "uniform int uSpotOn;\nuniform vec3 uSpotCenter;\nuniform vec2 uSpotScale;\nuniform vec4 uSpotTris[" + MaxSpotTriangles * 3 + "];\nuniform int uSpotTriCount;\n" +
                     "uniform sampler2D uSpotTex;\nuniform vec2 uSpotSize;\n" +
-                    "uniform vec3 uCamPos;\nuniform vec4 uCamDir;\n" +
+                    "uniform vec3 uCamPos;\nuniform vec4 uCamDir;\nuniform vec3 uSpotRight;\nuniform vec3 uSpotUp;\n" +
                     "float spotAlpha(){\n" +
                     "  vec3 o = uCamDir.w > 0.5 ? vPos - uCamDir.xyz * 1000.0 : uCamPos;\n" +
                     "  vec3 d = vPos - o;\n" +
-                    "  if (abs(d.z) < 1e-6) return -1.0;\n" +
-                    "  float t = (uSpotCenter.z - o.z) / d.z;\n" +
+                    // dun_spot is a billboard: its plane faces the camera through the spot's centre.
+                    "  vec3 n = uCamDir.xyz;\n" +
+                    "  float dn = dot(d, n);\n" +
+                    "  if (abs(dn) < 1e-6) return -1.0;\n" +
+                    "  float t = dot(uSpotCenter - o, n) / dn;\n" +
                     "  if (t <= 0.0 || t >= 1.0) return -1.0;\n" +
-                    "  vec2 l = ((o + d * t).xy - uSpotCenter.xy) / uSpotScale;\n" +
+                    "  vec3 q3 = o + d * t - uSpotCenter;\n" +
+                    "  vec2 l = vec2(dot(q3, uSpotRight), dot(q3, uSpotUp)) / uSpotScale;\n" +
                     "  for (int i = 0; i < " + MaxSpotTriangles + "; i++) {\n" +
                     "    if (i >= uSpotTriCount) break;\n" +
                     "    vec4 p0 = uSpotTris[3 * i], p1 = uSpotTris[3 * i + 1], p2 = uSpotTris[3 * i + 2];\n" +
@@ -759,7 +766,9 @@ namespace DSPRE.Avalonia.Gl
                     "  return mix(c, t.rgb, uTint * t.a);\n" +
                     "}\n" +
                     "void main(){\n" +
-                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); if (t.a < 0.5) discard; fragColor = vec4(fogged(tintRgb(t.rgb) * uMatColor), uAlpha); }\n" +
+                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv);\n" +
+                    "    if (uTexAlpha == 1) { if (t.a < 0.02) discard; fragColor = vec4(fogged(tintRgb(t.rgb) * uMatColor), uAlpha * t.a); }\n" +
+                    "    else { if (t.a < 0.5) discard; fragColor = vec4(fogged(tintRgb(t.rgb) * uMatColor), uAlpha); } }\n" +
                     "  else { fragColor = vec4(fogged(tintRgb(vColor) * uMatColor), uAlpha); }\n" +
                     "}\n";
 
@@ -772,6 +781,7 @@ namespace DSPRE.Avalonia.Gl
                 _texLoc = _f.GetUniformLocation(_program, "uTex");
                 _hasTexLoc = _f.GetUniformLocation(_program, "uHasTex");
                 _alphaLoc = _f.GetUniformLocation(_program, "uAlpha");
+                _texAlphaLoc = _f.GetUniformLocation(_program, "uTexAlpha");
                 _tintLoc = _f.GetUniformLocation(_program, "uTint");
                 _tileOriginLoc = _f.GetUniformLocation(_program, "uTileOrigin");
                 _tileSizeLoc = _f.GetUniformLocation(_program, "uTileSize");
@@ -791,6 +801,8 @@ namespace DSPRE.Avalonia.Gl
                 _spotSizeLoc = _f.GetUniformLocation(_program, "uSpotSize");
                 _camPosLoc = _f.GetUniformLocation(_program, "uCamPos");
                 _camDirLoc = _f.GetUniformLocation(_program, "uCamDir");
+                _spotRightLoc = _f.GetUniformLocation(_program, "uSpotRight");
+                _spotUpLoc = _f.GetUniformLocation(_program, "uSpotUp");
 
                 var arr = new int[1];
                 _f.GenVertexArrays(1, arr); _vao = arr[0];
@@ -907,12 +919,13 @@ namespace DSPRE.Avalonia.Gl
                 finally { h.Free(); }
 
                 int texId = 0;
-                if (_model.Textures != null && _model.Textures.TryGetValue(part.MaterialIndex, out var tex) && tex?.Rgba != null)
+                NsbmdTextureData tex = null;
+                if (_model.Textures != null && _model.Textures.TryGetValue(part.MaterialIndex, out tex) && tex?.Rgba != null)
                     texId = UploadTexture(tex);
 
                 _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId,
                     Alpha = part.Alpha, MaterialKey = part.MaterialIndex, NodeIndex = part.NodeIndex,
-                    CullMode = part.CullMode, Fog = part.Fog });
+                    CullMode = part.CullMode, Fog = part.Fog, TexAlpha = HasPartialAlpha(tex?.Rgba), TexMatrix = part.TexMatrix });
             }
             _uploadPending = false;
         }
@@ -960,6 +973,18 @@ namespace DSPRE.Avalonia.Gl
             return id;
         }
 
+        /// <summary>
+        /// Whether a texture has see-through-but-not-clear texels (A3I5 and A5I3, like New Bark's wind streaks). Those are
+        /// blended with their own alpha as the DS does; cutting them at half alpha made faint ones vanish.
+        /// </summary>
+        private static bool HasPartialAlpha(byte[] rgba)
+        {
+            if (rgba == null) return false;
+            for (int i = 3; i < rgba.Length; i += 4)
+                if (rgba[i] != 0 && rgba[i] != 255) return true;
+            return false;
+        }
+
         private static int WrapGl(int w) => w == 2 ? GlFunctions.GL_MIRRORED_REPEAT : w == 1 ? GlFunctions.GL_REPEAT : GlFunctions.GL_CLAMP_TO_EDGE;
 
         // Field texture animations run on their own clock at the field's 30 steps a second.
@@ -969,8 +994,45 @@ namespace DSPRE.Avalonia.Gl
 
         private Dictionary<int, float[]> _groundMatrices;
 
+        /// <summary>
+        /// The scene's buildings played on the field clock (windmills, signs, wind lines), for a view that shows the
+        /// field rather than stepping animations itself. Null leaves the building state to the Set* calls.
+        /// </summary>
+        public SceneBuildingAnimator BuildingAnimator
+        {
+            get => _buildingAnimator;
+            set
+            {
+                _buildingAnimator = value;
+                _buildingTick = -1;
+                if (value == null) { _texMatrices = null; _texSwaps = null; _fadedMaterials = null; _movedParts = null; _movedPartsDirty = true; }
+                RequestNextFrameRendering();
+            }
+        }
+        private SceneBuildingAnimator _buildingAnimator;
+        private long _buildingTick = -1;
+
+        private void StepBuildings()
+        {
+            SceneBuildingAnimator animator = _buildingAnimator;
+            if (animator == null || !PlayFieldAnimations || !animator.HasAnything) return;
+            long tick = (long)(_fieldClock.Elapsed.TotalSeconds * 30);
+            if (tick != _buildingTick)
+            {
+                _buildingTick = tick;
+                SceneBuildingAnimator.Frame f = animator.At((int)(tick % int.MaxValue));
+                _texMatrices = f.TextureMatrices;
+                _texSwaps = f.TextureSwaps;
+                _fadedMaterials = f.MaterialFades;
+                _movedParts = f.MovedParts;
+                _movedPartsDirty = true;
+            }
+            RequestNextFrameRendering();
+        }
+
         private void StepFieldAnimations()
         {
+            StepBuildings();
             var scrolls = _model?.GroundScrolls;
             if (!PlayFieldAnimations || scrolls == null || scrolls.Count == 0) _groundMatrices = null;
             else
@@ -1071,8 +1133,11 @@ namespace DSPRE.Avalonia.Gl
             _f.BindVertexArray(_vao);
 
             int stride = 8 * sizeof(float);
+            // Translucent textures go last, so opaque geometry behind them is already there to blend over.
+            for (int pass = 0; pass < 2; pass++)
             foreach (var part in _parts)
             {
+                if (part.TexAlpha != (pass == 1)) continue;
                 if (_hiddenNodes != null && _hiddenNodes.Contains(part.NodeIndex)) continue;
                 _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, part.Vbo);
                 _f.EnableVertexAttribArray(0);
@@ -1107,15 +1172,26 @@ namespace DSPRE.Avalonia.Gl
                     alpha = faded;
                 // Faded all the way out is not drawn: without blending it would still cover what is behind.
                 if (alpha <= 0.001f) continue;
-                bool blend = alpha < 0.999f;
+                bool texAlpha = part.TexAlpha && texId != 0 && _showTextures;
+                bool blend = alpha < 0.999f || texAlpha;
                 if (blend)
                 {
                     _f.Enable(GlFunctions.GL_BLEND);
-                    _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
+                    BlendOver();
                 }
+                if (texAlpha)
+                {
+                    // Overlays like New Bark's wind lie on the ground they cover; pull them forward so the ground
+                    // drawn first does not hide them.
+                    _f.DepthMask(false);
+                    _f.Enable(GlFunctions.GL_POLYGON_OFFSET_FILL);
+                    _f.PolygonOffset(-1f, -4f);
+                }
+                if (_texAlphaLoc >= 0) _f.Uniform1i(_texAlphaLoc, texAlpha ? 1 : 0);
                 _f.Uniform1f(_alphaLoc, alpha);
 
-                float[] texMtx = IdentityTexMatrix;
+                // A texture animation replaces the material's own texture matrix while it plays, as on the DS.
+                float[] texMtx = part.TexMatrix ?? IdentityTexMatrix;
                 if (_texMatrices != null && _texMatrices.TryGetValue(part.MaterialKey, out var m) && m != null && m.Length == 9)
                     texMtx = m;
                 else if (_groundMatrices != null && _groundMatrices.TryGetValue(part.MaterialKey, out var g) && g != null && g.Length == 9)
@@ -1144,7 +1220,13 @@ namespace DSPRE.Avalonia.Gl
 
                 if (cull) _f.Disable(GlFunctions.GL_CULL_FACE);
                 if (blend) _f.Disable(GlFunctions.GL_BLEND);
+                if (texAlpha)
+                {
+                    _f.Disable(GlFunctions.GL_POLYGON_OFFSET_FILL);
+                    _f.DepthMask(true);
+                }
             }
+            if (_texAlphaLoc >= 0) _f.Uniform1i(_texAlphaLoc, 0);
             if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
             if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, 1f, 1f, 1f);
             if (_fogOnLoc >= 0) _f.Uniform1i(_fogOnLoc, 0);
@@ -1175,6 +1257,11 @@ namespace DSPRE.Avalonia.Gl
 
         /// <summary>Draws the 3-axis translate handle (X red, Y green, Z blue) at the target, as
         /// camera-facing thin quads with a square grab handle at each tip. Depth test off.</summary>
+        // Blends colour only. The view is composited over the window by its alpha, so a translucent part that
+        // lowered the stored alpha let the panel behind show through, as grey shapes in an otherwise black scene.
+        private void BlendOver() =>
+            _f.BlendFuncSeparate(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA, GlFunctions.GL_ZERO, GlFunctions.GL_ONE);
+
         private void RenderEditGizmo(int stride)
         {
             // Camera basis (world space) from the orbit rotation, for billboarding the axis lines.
@@ -1279,7 +1366,7 @@ namespace DSPRE.Avalonia.Gl
 
             _f.Enable(GlFunctions.GL_BLEND);
             // Translucent COLOUR tint over the tile's texture (keeps the permission colour, not a darkening shadow).
-            _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
+            BlendOver();
             // Depth-test ON (write OFF): trees/rocks/buildings in front occlude the tint, and their transparent
             // texels were discarded in the map pass, so the tinted ground shows through them; decorations stay clean.
             _f.Enable(GlFunctions.GL_DEPTH_TEST);
@@ -1321,7 +1408,7 @@ namespace DSPRE.Avalonia.Gl
             // Same triangles as the scene, so an equal depth passes and only the visible surface is tinted;
             // the material's own texture keeps leaves leaf-shaped instead of tinting the whole quad.
             _f.Enable(GlFunctions.GL_BLEND);
-            _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
+            BlendOver();
             _f.Enable(GlFunctions.GL_DEPTH_TEST);
             _f.DepthFunc(GlFunctions.GL_LEQUAL);
             _f.DepthMask(false);
@@ -1369,7 +1456,7 @@ namespace DSPRE.Avalonia.Gl
             if (_markerVbo == 0 || _markerCount == 0) return;
 
             _f.Enable(GlFunctions.GL_BLEND);
-            _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
+            BlendOver();
             _f.Disable(GlFunctions.GL_DEPTH_TEST);   // markers always visible, even through geometry
             _f.Uniform1i(_hasTexLoc, 0);
             _f.Uniform1f(_alphaLoc, 0.92f);
@@ -1403,7 +1490,7 @@ namespace DSPRE.Avalonia.Gl
             float tx = -sy * cp, ty = sp, tz = cy * cp;
 
             _f.Enable(GlFunctions.GL_BLEND);
-            _f.BlendFunc(GlFunctions.GL_SRC_ALPHA, GlFunctions.GL_ONE_MINUS_SRC_ALPHA);
+            BlendOver();
             _f.DepthMask(false);                 // sit in the scene but don't write depth
             // In the editor a sprite shows through geometry on purpose: an NPC behind a tall counter or
             // wall prop would otherwise be hidden, and you need to see every event you have placed.

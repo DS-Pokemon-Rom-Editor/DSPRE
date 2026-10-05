@@ -4,7 +4,7 @@
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.World.SpawnEditorView"
         x:DataType="vm:SpawnEditorViewModel"
-        Title="Spawn Point Editor"
+        Title="Spawn point editor"
         Width="420" Height="290"
         MinWidth="420" MinHeight="290"
         CanResize="False"
@@ -22,30 +22,27 @@
   </Window.Styles>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"
                 ToolTip.Tip="Reload the spawn point saved in the ROM"/>
         <controls:UndoRedoButtons/>
         <Button Content="Show all headers" Click="ResetFilter_Click" Margin="12,0,0,0"
                 ToolTip.Tip="Puts every header back in the list when it has been narrowed to one map"/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <!-- Content -->
     <controls:CappedWidth Cap="620" Margin="10"><StackPanel Spacing="8">
       <!-- Row 1: Header + Direction -->
       <Grid x:Name="SpawnHeaderRow" ColumnDefinitions="*,12,*">
         <StackPanel Grid.Column="0" Spacing="3">
-          <TextBlock Text="Spawn Header:" Classes="lbl"/>
+          <TextBlock Text="Spawn header:" Classes="lbl"/>
           <controls:FusionAutoCompleteBox ItemsSource="{Binding HeaderNames}"
                                           SelectedIndex="{Binding SelectedHeaderIndex}"
                                           HorizontalAlignment="Stretch"/>
         </StackPanel>
         <StackPanel Grid.Column="2" Spacing="3">
-          <TextBlock Text="Player Direction:" Classes="lbl"/>
+          <TextBlock Text="Player direction:" Classes="lbl"/>
           <ComboBox ItemsSource="{Binding DirectionNames}"
                     SelectedIndex="{Binding PlayerDirIndex}"
                     HorizontalAlignment="Stretch"/>
@@ -73,7 +70,7 @@
 
       <!-- Row 4: Initial money -->
       <StackPanel x:Name="MoneyRow" Orientation="Horizontal" Spacing="8">
-        <TextBlock Text="Initial Money:" Classes="lbl"/>
+        <TextBlock Text="Initial money:" Classes="lbl"/>
         <NumericUpDown Value="{Binding InitialMoney}"
                        Minimum="0" Maximum="999999" FormatString="0" Width="110"/>
       </StackPanel>

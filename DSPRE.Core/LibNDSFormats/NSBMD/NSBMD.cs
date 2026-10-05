@@ -455,7 +455,10 @@ namespace LibNDSFormats.NSBMD {
             uint texpaloffset_base = reader.ReadUInt32();
             uint polyoffset_base = reader.ReadUInt32();
             uint polyend_base = reader.ReadUInt32();
-            stream.Skip(4);
+            reader.ReadByte();                       // sbcType
+            reader.ReadByte();                       // scalingRule
+            byte texMtxMode = reader.ReadByte();
+            reader.ReadByte();                       // numNode
             uint matnum = reader.ReadByte(); // no. of material
             uint polynum = reader.ReadByte(); // no. of polygon
             byte laststack = reader.ReadByte();
@@ -469,6 +472,7 @@ namespace LibNDSFormats.NSBMD {
 
             model[0].laststackid = laststack;
             model[0].modelScale = modelscale;
+            model[0].texMtxMode = texMtxMode;
             model[0].boundScale = boundscale;
             model[0].boundXmin = (float)NSBMDGlRenderer.Sign(reader.ReadInt16(), 16) / 4096f;
             model[0].boundYmin = (float)NSBMDGlRenderer.Sign(reader.ReadInt16(), 16) / 4096f;
@@ -610,45 +614,47 @@ namespace LibNDSFormats.NSBMD {
                         mod.Materials[j].scaleS = 1;
                         mod.Materials[j].scaleT = 1;
                     }*/
-                    switch (texImageParam >> 14 & 0x03) {
-                        case 0:
-                            mod.Materials[j].scaleS = 1;
-                            mod.Materials[j].scaleT = 1;
-                            mod.Materials[j].transS = 0;
-                            mod.Materials[j].transT = 0;
-                            break;
-
-                        case 1:
-                            {
-                                int sscale = (int)reader.ReadInt32();// >> 0 & 0xFFFFFFFF;
-                                sscale = NSBMDGlRenderer.Sign(sscale, 32);
-                                int tscale = (int)reader.ReadInt32();// >> 0 & 0xFFFFFFFF;
-                                tscale = NSBMDGlRenderer.Sign(tscale, 32);
-                                //int strans = (int)unknown2 >> 0 & 0xFFFF;
-                                //int ttrans = (int)unknown2 >> 16 & 0xFFFF;
-
-                                mod.Materials[j].scaleS = (float)sscale / 4096f;
-                                mod.Materials[j].scaleT = (float)tscale / 4096f;
-                                if (sectionSize >= 60) {
-                                    mod.Materials[j].rot = (float)reader.ReadInt16() / 4096f;
-                                    mod.Materials[j].transS = (float)reader.ReadInt16() / 4096f;
-                                    mod.Materials[j].transT = (float)reader.ReadInt16() / 4096f;
-                                } else {
-
-                                }
-                                break;
-                            }
-                        case 2:
-                        case 3:
+                    {
+                        // NNSG3dResMatData: after origWidth/origHeight and magW/magH come the texture matrix fields,
+                        // each stored only when the material's flags (high half of the word after the texture
+                        // parameter mask) say it is not the identity: 0x2 scale is one, 0x4 rotation is zero,
+                        // 0x8 translation is zero; then the effect matrix when 0x2000 is set. This holds whatever the
+                        // texture coordinate mode. Reading them unconditionally took the next field for the scale
+                        // (New Bark's wind read a scale of -1/4096, which flattened every texture coordinate to 0).
+                        int matFlags = (constant4 >> 16) & 0xFFFF;
+                        mod.Materials[j].scaleS = 1;
+                        mod.Materials[j].scaleT = 1;
+                        mod.Materials[j].rot = 0;
+                        mod.Materials[j].rotCos = 1;
+                        mod.Materials[j].transS = 0;
+                        mod.Materials[j].transT = 0;
+                        if ((matFlags & 0x2) == 0) {
+                            mod.Materials[j].scaleS = reader.ReadInt32() / 4096f;
+                            mod.Materials[j].scaleT = reader.ReadInt32() / 4096f;
+                        }
+                        if ((matFlags & 0x4) == 0) {
+                            mod.Materials[j].rot = reader.ReadInt16() / 4096f;
+                            mod.Materials[j].rotCos = reader.ReadInt16() / 4096f;
+                        }
+                        if ((matFlags & 0x8) == 0) {
+                            mod.Materials[j].transS = reader.ReadInt32() / 4096f;
+                            mod.Materials[j].transT = reader.ReadInt32() / 4096f;
+                        }
+                        if ((matFlags & 0x2000) != 0) {
                             mod.Materials[j].mtx = new float[16];
                             for (int k = 0; k < 16; k++) {
                                 mod.Materials[j].mtx[k] = reader.ReadInt32();
                             }
-                            break;
-
-                        default:
-                            break;
-                            // throw new Exception(String.Format("BMD: unsupported texture coord transform mode {0}", matgroup.m_TexParams >> 30));
+                        }
+                        // Without a texture matrix (flag 0x1 off) the coordinates are used as they are.
+                        if ((matFlags & 0x1) == 0) {
+                            mod.Materials[j].scaleS = 1;
+                            mod.Materials[j].scaleT = 1;
+                            mod.Materials[j].rot = 0;
+                            mod.Materials[j].rotCos = 1;
+                            mod.Materials[j].transS = 0;
+                            mod.Materials[j].transT = 0;
+                        }
                     }
                     mod.Materials[j].width = matWidth;
                     mod.Materials[j].height = matHeight;

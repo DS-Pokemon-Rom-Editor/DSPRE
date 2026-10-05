@@ -370,9 +370,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
 
-        public bool CanUndo => _history.CanUndo;
+        public bool CanUndo => _history.CanUndo || _removedHeaders.Count > 0;
         public bool CanRedo => _history.CanRedo;
-        public void Undo() { if (_history.CanUndo) ApplyState(_history.Undo()); }
+        public void Undo()
+        {
+            if (_history.CanUndo) ApplyState(_history.Undo());
+            else if (_removedHeaders.Count > 0) RestoreRemovedHeader();
+        }
         public void Redo() { if (_history.CanRedo) ApplyState(_history.Redo()); }
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
@@ -569,18 +573,6 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (_locationIndexByHeader[id] != mystery)
                     return id;
             return 0;
-        }
-
-        /// <summary>True if any word in <paramref name="text"/> is within a small edit distance of the query.</summary>
-        private static bool FuzzyMatches(string query, string text)
-        {
-            if (query.Length < 3 || string.IsNullOrEmpty(text)) return false;
-            int threshold = Math.Max(1, query.Length / 4);   // ~one typo per four characters
-            query = query.ToLowerInvariant();
-            foreach (var word in text.Split(new[] { ' ', '_', '-', '.', ',' }, StringSplitOptions.RemoveEmptyEntries))
-                if (CoreExtensions.Levenshtein(query, word.ToLowerInvariant()) <= threshold)
-                    return true;
-            return false;
         }
 
         /// <summary>
@@ -851,7 +843,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 || SearchMatch.Contains(entry.LocationName, q)
                 || SearchMatch.Contains(entry.IdText, q))
                 return true;
-            return fuzzy && (FuzzyMatches(q, entry.LocationName) || FuzzyMatches(q, entry.Label));
+            return fuzzy && (SearchMatch.NearMiss(entry.LocationName, q) || SearchMatch.NearMiss(entry.Label, q));
         }
 
         public void ExpandAllFolders() { foreach (var f in TreeFolders) f.IsExpanded = true; }
@@ -929,8 +921,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Load a header into the fields ───────────────────────────────────────────
+        /// <summary>Plays the day or night music, or stops it when it is already playing.</summary>
+        public void PlayMusic(bool night) => MusicPreview.Toggle((int)(night ? MusicNightValue : MusicDayValue));
+
         private void LoadHeader(ushort headerId)
         {
+            MusicPreview.Stop();   // the music belonged to the header being left
             if (headerId >= _headerListNames.Count) return;
 
             _header = MapHeader.GetMapHeader(headerId);
@@ -1238,13 +1234,46 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // Jump to the related editor at this header's referenced file.
-        public void OpenMatrix() { if (_header != null) AvaloniaEditorLauncher.OpenMatrixEditor(_header.matrixID, _header.ID); }
-        public void OpenAreaData() { if (_header != null) AvaloniaEditorLauncher.OpenAreaDataEditor(_header.areaDataID); }
-        public void OpenEvents() { if (_header != null) AvaloniaEditorLauncher.OpenEventEditor(_header.eventFileID); }
-        public void OpenScripts() { if (_header != null) AvaloniaEditorLauncher.OpenScriptEditor(_header.scriptFileID); }
-        public void OpenLevelScripts() { if (_header != null) AvaloniaEditorLauncher.OpenLevelScriptEditor(_header.levelScriptID); }
-        public void OpenTexts() { if (_header != null) AvaloniaEditorLauncher.OpenTextEditor(_header.textArchiveID); }
-        public void OpenEncounters() { if (CanOpenEncounters) AvaloniaEditorLauncher.OpenWildEditor(_header.wildPokemon); }
+        /// <summary>
+        /// Shows a linked file in the main view's tab of that name instead of a window, when this header is shown there.
+        /// The tabs always show this header's own files, so the tab is already on the right one. Returns false to fall
+        /// back to the editor window.
+        /// </summary>
+        public Func<string, bool> OpenInTab
+        {
+            get => _openInTab;
+            set { _openInTab = value; OnPropertyChanged(nameof(OpenTips)); }
+        }
+        private Func<string, bool> _openInTab;
+
+        // What each linked file is called, one name used for the field, the tab and the Open button.
+        private static readonly (string Key, string Name, string Editor)[] LinkedFiles =
+        {
+            ("Matrix", "matrix", "Matrix editor"), ("AreaData", "area data", "Area Data editor"),
+            ("Script", "script file", "Script editor"), ("LevelScript", "level script file", "Level Script editor"),
+            ("Event", "event file", "Event editor"), ("Text", "text archive", "Text editor"),
+            ("Encounters", "encounters", "Encounters editor"),
+        };
+
+        /// <summary>The Open buttons' tooltips: where the linked file opens, here or in its own window.</summary>
+        public Dictionary<string, string> OpenTips
+        {
+            get
+            {
+                Dictionary<string, string> tips = new();
+                foreach ((string key, string name, string editor) in LinkedFiles)
+                    tips[key] = _openInTab != null ? $"Show the linked {name} in its tab" : $"Open the linked {name} in the {editor}";
+                return tips;
+            }
+        }
+
+        public void OpenMatrix() { if (_header != null && _openInTab?.Invoke("Matrix") != true) AvaloniaEditorLauncher.OpenMatrixEditor(_header.matrixID, _header.ID); }
+        public void OpenAreaData() { if (_header != null && _openInTab?.Invoke("Area Data") != true) AvaloniaEditorLauncher.OpenAreaDataEditor(_header.areaDataID); }
+        public void OpenEvents() { if (_header != null && _openInTab?.Invoke("Events") != true) AvaloniaEditorLauncher.OpenEventEditor(_header.eventFileID); }
+        public void OpenScripts() { if (_header != null && _openInTab?.Invoke("Scripts") != true) AvaloniaEditorLauncher.OpenScriptEditor(_header.scriptFileID); }
+        public void OpenLevelScripts() { if (_header != null && _openInTab?.Invoke("Level Scripts") != true) AvaloniaEditorLauncher.OpenLevelScriptEditor(_header.levelScriptID); }
+        public void OpenTexts() { if (_header != null && _openInTab?.Invoke("Text") != true) AvaloniaEditorLauncher.OpenTextEditor(_header.textArchiveID); }
+        public void OpenEncounters() { if (CanOpenEncounters && _openInTab?.Invoke("Encounters") != true) AvaloniaEditorLauncher.OpenWildEditor(_header.wildPokemon); }
 
         /// <summary>Opens the battle scenery this place fights on. Every other linked field on this row
         /// has a button to the thing it names; this one was a bare number.</summary>
@@ -1261,11 +1290,41 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         // ── Add / remove header (dynamic-headers patch only; no associated files) ─────
+
+        // Header 0 is the blank one (no encounters, 255s), so it stays the default source for a new header.
+        public static readonly string[] CopyFromOptions = { "Copy header 0", "Copy selected header" };
+        private const string CopyFromKey = "header.addCopiesSelected";
+
+        public int CopyFromIndex
+        {
+            get => ProjectPrefs.Get(CopyFromKey, "false") == "true" ? 1 : 0;
+            set
+            {
+                ProjectPrefs.Set(CopyFromKey, value == 1 ? "true" : "false");
+                OnPropertyChanged(nameof(CopyFromIndex));
+            }
+        }
+
+        /// <summary>The header Remove takes away. Headers are numbered by position, so only the last one can go.</summary>
+        public string RemoveTip => _headerListNames.Count > 1
+            ? $"Removes header {_headerListNames.Count - 1:D3}, the last one"
+            : "There has to be at least one header.";
+
+        // Removed headers, newest last, so Ctrl+Z can put them back while no field edit is left to undo.
+        private readonly Stack<(byte[] Data, string Name)> _removedHeaders = new();
+
         public async Task AddHeaderAsync()
         {
             if (!_dynamicHeaders) return;
             const string newmap = "NEWMAP";
-            int newId = MapHeader.AddDynamicHeader(newmap);
+            int source = CopyFromIndex == 1 ? SelectedHeaderId : 0;
+            // The selected header's unsaved edits are what the user sees, so a copy of it carries them.
+            int newId = source == SelectedHeaderId && _dirty && _header != null
+                ? MapHeader.RestoreDynamicHeader(_header.ToByteArray(), newmap)
+                : MapHeader.AddDynamicHeader(newmap, source);
+            _removedHeaders.Clear();   // a restore would land on a different number now
+            RaiseUndoState();
+            OnPropertyChanged(nameof(RemoveTip));
 
             _headerListNames.Add(newId.ToString("D3") + MapHeader.nameSeparator + newmap);
             _internalNames.Add(newmap);
@@ -1288,13 +1347,36 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
 
+            string name = lastIndex < _internalNames.Count ? _internalNames[lastIndex] : "";
+            if (!await DialogHelper.AskYesNo(
+                    $"Remove header {lastIndex:D3} ({name})? Only the last header can be removed. It is deleted now, not on Save; Ctrl+Z puts it back.",
+                    "Remove last header"))
+                return;
+
+            byte[] data = File.ReadAllBytes(Filesystem.GetDynamicHeaderPath(lastIndex));
             MapHeader.RemoveLastDynamicHeader();
+            _removedHeaders.Push((data, name));
 
             _internalNames.RemoveAt(lastIndex);
             _headerListNames.RemoveAt(lastIndex);
             LoadLocationIndices();
             RebuildTree();
             SelectHeader(SelectedHeaderId >= lastIndex ? (ushort)(lastIndex - 1) : SelectedHeaderId);
+            RaiseUndoState();
+            OnPropertyChanged(nameof(RemoveTip));
+        }
+
+        private void RestoreRemovedHeader()
+        {
+            (byte[] data, string name) = _removedHeaders.Pop();
+            int id = MapHeader.RestoreDynamicHeader(data, name);
+            _headerListNames.Add(id.ToString("D3") + MapHeader.nameSeparator + name);
+            _internalNames.Add(name);
+            LoadLocationIndices();
+            RebuildTree();
+            SelectHeader((ushort)id);
+            RaiseUndoState();
+            OnPropertyChanged(nameof(RemoveTip));
         }
     }
 }

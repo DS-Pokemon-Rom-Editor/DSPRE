@@ -61,25 +61,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // material key → the animation driving it and which of its materials to read
         private readonly Dictionary<int, (TextureSrtAnimation anim, int material)> _animatedMaterials
             = new Dictionary<int, (TextureSrtAnimation, int)>();
-        // material key → the swapping animation driving it and which of its materials to read
-        private readonly Dictionary<int, (TexturePatternAnimation anim, int material)> _swappedMaterials
-            = new Dictionary<int, (TexturePatternAnimation, int)>();
+        // The buildings' own animations, shared with the header editor's field view.
+        private SceneBuildingAnimator _buildings;
         private int _movingBuildings;
         private int _jointBuildings;
         private int _colourBuildings;
         private int _doorBuildings;
         private int _timeBuildings;
-        // material key → the fading animation driving it and which of its materials to read
-        private readonly Dictionary<int, (MaterialColourAnimation anim, int material)> _fadedMaterials
-            = new Dictionary<int, (MaterialColourAnimation, int)>();
-        // Buildings whose parts move, with the animation driving them.
-        private readonly List<(NsbmdRenderModel.BuildingMaterials building, JointAnimation anim)> _jointed
-            = new List<(NsbmdRenderModel.BuildingMaterials, JointAnimation)>();
-        private readonly List<(NsbmdRenderModel.BuildingMaterials building, BuildingAnimationSet.WholeModelMotion motion)> _moving
-            = new List<(NsbmdRenderModel.BuildingMaterials, BuildingAnimationSet.WholeModelMotion)>();
-
-        private readonly Dictionary<(int key, int x, int y, int z), Dictionary<int, float[]>> _movedCache
-            = new Dictionary<(int, int, int, int), Dictionary<int, float[]>>();
         private float _tileX, _tileZ;
 
         public NsbmdRenderModel Scene => _scene;
@@ -2013,16 +2001,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _frame = 0;
             _npcs.Clear();
             _animatedMaterials.Clear();
-            _swappedMaterials.Clear();
+            _buildings = null;
             _movingBuildings = 0;
             _jointBuildings = 0;
             _colourBuildings = 0;
             _doorBuildings = 0;
             _timeBuildings = 0;
-            _fadedMaterials.Clear();
-            _jointed.Clear();
-            _moving.Clear();
-            _movedCache.Clear();
             _playingOnce.Clear();
             _cameraTrail.Clear();
             _talkTarget = null;
@@ -2051,65 +2035,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     if (m >= 0 && !_terrain.IsStatic(m)) _animatedMaterials[kv.Key] = (_terrain, m);
                 }
 
-            // Buildings animate too, and each one names its own animations, so a building's animation is
-            // matched only against that building's own materials.
-            foreach (var b in scene.Buildings)
-            {
-                bool moves = false;
-                bool counted = false;
-
-                // A door only opens when something opens it, and a time-of-day animation only runs at
-                // the right hour, so neither is played here. Say so rather than leaving them out quietly.
-                var waits = BuildingAnimationSet.WaitsFor(b.ModelId, indoor);
-                if (waits.Door) _doorBuildings++;
-                if (waits.TimeOfDay) _timeBuildings++;
-                foreach (var anim in BuildingAnimationSet.ScrollingFor(b.ModelId, indoor, _timeOfDay))
-                    for (int k = b.FirstKey; k < b.FirstKey + b.Count; k++)
-                    {
-                        if (_animatedMaterials.ContainsKey(k)) continue;
-                        if (!scene.MaterialNameByKey.TryGetValue(k, out string name)) continue;
-                        int m = anim.IndexOf(name);
-                        if (m < 0 || anim.IsStatic(m)) continue;
-                        _animatedMaterials[k] = (anim, m);
-                        moves = true;
-                    }
-                foreach (var anim in BuildingAnimationSet.PatternsFor(b.ModelId, indoor, _timeOfDay))
-                    for (int k = b.FirstKey; k < b.FirstKey + b.Count; k++)
-                    {
-                        if (_swappedMaterials.ContainsKey(k)) continue;
-                        if (!scene.MaterialNameByKey.TryGetValue(k, out string name)) continue;
-                        int m = anim.IndexOf(name);
-                        if (m < 0 || anim.IsStatic(m)) continue;
-                        _swappedMaterials[k] = (anim, m);
-                        moves = true;
-                    }
-                if (moves) _movingBuildings++;
-                foreach (var fade in BuildingAnimationSet.FadesFor(b.ModelId, indoor, _timeOfDay))
-                    for (int k = b.FirstKey; k < b.FirstKey + b.Count; k++)
-                    {
-                        if (_fadedMaterials.ContainsKey(k)) continue;
-                        if (!scene.MaterialNameByKey.TryGetValue(k, out string name)) continue;
-                        int m = fade.IndexOf(name);
-                        if (m < 0 || fade.IsStatic(m)) continue;
-                        _fadedMaterials[k] = (fade, m);
-                        moves = true;
-                        counted = true;
-                    }
-                if (counted) _colourBuildings++;
-                foreach (var joint in BuildingAnimationSet.JointsFor(b.ModelId, indoor, _timeOfDay))
-                {
-                    _jointed.Add((b, joint));
-                    _jointBuildings++;
-                    moves = true;
-                }
-                var motion = BuildingAnimationSet.MotionFor(b.ModelId);
-                if (motion != null)
-                {
-                    _moving.Add((b, motion));
-                    if (!moves) _movingBuildings++;
-                    moves = true;
-                }
-            }
+            // Buildings animate too, each from its own animations (SceneBuildingAnimator).
+            _buildings = new SceneBuildingAnimator(scene, indoor, _timeOfDay, _animatedMaterials.Keys);
+            _movingBuildings = _buildings.MovingBuildings;
+            _jointBuildings = _buildings.JointBuildings;
+            _colourBuildings = _buildings.ColourBuildings;
+            _doorBuildings = _buildings.DoorBuildings;
+            _timeBuildings = _buildings.TimeBuildings;
 
             // People: every overworld gets its own motion, seeded so replaying the preview looks the same.
             if (events?.overworlds != null)
@@ -2154,8 +2086,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             int people = _npcs.Count(n => IsOnMap(n));
             string water;
-            if (_animatedMaterials.Count > 0)
-                water = $"{_animatedMaterials.Count} moving surface{(_animatedMaterials.Count == 1 ? "" : "s")}";
+            int surfaces = _animatedMaterials.Count + (_buildings?.ScrolledSurfaces ?? 0);
+            if (surfaces > 0)
+                water = $"{surfaces} moving surface{(surfaces == 1 ? "" : "s")}";
             else if (_terrain == null) water = "no terrain animation here";
             else water = "terrain animation touches nothing on this map";
 
@@ -2360,38 +2293,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (_scene == null) return;
 
-            TextureSwaps = null;
-            if (_animateTerrain && _swappedMaterials.Count > 0)
-            {
-                var swaps = new Dictionary<int, string>(_swappedMaterials.Count);
-                foreach (var kv in _swappedMaterials)
-                {
-                    var swap = kv.Value.anim.Evaluate(kv.Value.material, _frame);
-                    if (swap.IsSet) swaps[kv.Key] = swap.TextureName;
-                }
-                if (swaps.Count > 0) TextureSwaps = swaps;
-            }
+            SceneBuildingAnimator.Frame built = _animateTerrain && _buildings != null ? _buildings.At(_frame) : null;
+            TextureSwaps = built?.TextureSwaps;
 
             TextureMatrices = null;
-            if (_animateTerrain && _animatedMaterials.Count > 0)
+            if (_animateTerrain && (_animatedMaterials.Count > 0 || built?.TextureMatrices != null))
             {
-                var mats = new Dictionary<int, float[]>(_animatedMaterials.Count);
+                Dictionary<int, float[]> mats = built?.TextureMatrices != null ? new Dictionary<int, float[]>(built.TextureMatrices) : new Dictionary<int, float[]>();
                 foreach (var kv in _animatedMaterials)
                     mats[kv.Key] = kv.Value.anim.Evaluate(kv.Value.material, _frame).ToMatrix3();
                 TextureMatrices = mats;
             }
 
-            MaterialFades = null;
-            if (_animateTerrain && _fadedMaterials.Count > 0)
-            {
-                var fades = new Dictionary<int, float>(_fadedMaterials.Count);
-                foreach (var kv in _fadedMaterials)
-                {
-                    float? v = kv.Value.anim.Evaluate(kv.Value.material, _frame);
-                    if (v.HasValue) fades[kv.Key] = v.Value;
-                }
-                if (fades.Count > 0) MaterialFades = fades;
-            }
+            MaterialFades = built?.MaterialFades;
 
             if (BuildingOpacity != null)
             {
@@ -2406,41 +2320,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (fades != null) MaterialFades = fades;
             }
 
-            MovedParts = null;
-            if (_animateTerrain && _jointed.Count > 0)
-            {
-                var moved = new Dictionary<int, float[]>();
-                foreach (var (building, anim) in _jointed)
-                {
-                    int frame = _frame % Math.Max(1, anim.FrameCount);
-                    var rebuilt = NsbmdGeometry.RebuildBuilding(_scene, building,
-                        (objectId, part) => anim.MatrixFor(objectId, frame, part, building.Model?.modelScale ?? 1f));
-                    foreach (var kv in rebuilt) moved[kv.Key] = kv.Value;
-                }
-                if (moved.Count > 0) MovedParts = moved;
-            }
-
-            if (_animateTerrain && _moving.Count > 0)
-            {
-                var moved = MovedParts != null ? new Dictionary<int, float[]>(MovedParts) : new Dictionary<int, float[]>();
-                float unit = NsbmdGeometry.TileSize / 16f;
-
-                foreach (var (building, motion) in _moving)
-                {
-                    var (ox, oy, oz) = motion.At(_frame);
-                    if (ox == 0f && oy == 0f && oz == 0f) continue;
-
-                    var at = (building.FirstKey, (int)Math.Round(ox * 64f), (int)Math.Round(oy * 64f), (int)Math.Round(oz * 64f));
-                    if (!_movedCache.TryGetValue(at, out var parts))
-                    {
-                        var elsewhere = Mat4.Multiply(Mat4.Translate(ox * unit, oy * unit, oz * unit), building.Transform);
-                        parts = NsbmdGeometry.RebuildBuilding(_scene, building, null, elsewhere);
-                        _movedCache[at] = parts;
-                    }
-                    foreach (var kv in parts) moved[kv.Key] = kv.Value;
-                }
-                if (moved.Count > 0) MovedParts = moved;
-            }
+            MovedParts = built?.MovedParts;
 
             // A door that is part-way through opening overrides whatever else drives its parts.
             if (_playingOnce.Count > 0)

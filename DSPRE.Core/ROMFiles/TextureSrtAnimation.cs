@@ -25,12 +25,38 @@ namespace DSPRE.ROMFiles
             /// The transform as a 3x3 matrix in OpenGL's column-major order, ready to multiply a texture
             /// coordinate by.
             /// </summary>
-            public float[] ToMatrix3() => new[]
+            /// <param name="mode">The model's texture matrix mode (NNSG3dResMdlInfo.texMtxMode): 0 Maya, 1 SoftImage 3D,
+            /// 2 3ds Max, 3 XSI. Each tool builds the matrix its own way; the games' field models are Maya, where the S
+            /// translation is subtracted and T is measured from the far edge. In texture-size units, so the texture's
+            /// pixel size only enters through <paramref name="heightOverWidth"/> where a rotation mixes the axes.</param>
+            public float[] ToMatrix3(int mode = 0, float heightOverWidth = 1f)
             {
-                ScaleS * CosRotation, ScaleS * SinRotation, 0f,
-                -ScaleT * SinRotation, ScaleT * CosRotation, 0f,
-                TranslateS, TranslateT, 1f,
-            };
+                float sS = ScaleS, sT = ScaleT, sin = SinRotation, cos = CosRotation, tS = TranslateS, tT = TranslateT;
+                float a, b, c, d, tx, ty;   // u' = a u + c v + tx, v' = b u + d v + ty
+                switch (mode)
+                {
+                    case 1:   // SoftImage 3D: no rotation
+                        a = sS; b = 0f; c = 0f; d = sT;
+                        tx = -sS * tS; ty = -sT * tT;
+                        break;
+                    case 2:   // 3ds Max
+                        a = sS * cos; c = -sS * sin; b = sT * sin; d = sT * cos;
+                        tx = sS * cos * (-0.5f - tS) - sS * sin * heightOverWidth * (-0.5f + tT) + 0.5f;
+                        ty = sT * sin / heightOverWidth * (-0.5f - tS) + sT * cos * (-0.5f + tT) + 0.5f;
+                        break;
+                    case 3:   // XSI
+                        a = sS * cos; c = -sS * sin; b = sT * sin; d = sT * cos;
+                        tx = sS * sin - sS * (tS * cos + tT * sin);
+                        ty = 1f - sT * cos - sT * (tS * sin - tT * cos);
+                        break;
+                    default:  // Maya
+                        a = sS * cos; c = sS * sin; b = -sT * sin; d = sT * cos;
+                        tx = sS * (1f - sin - cos) / 2f - sS * tS;
+                        ty = (sT * sin - sT * cos - sT + 2f) / 2f + sT * tT;
+                        break;
+                }
+                return new[] { a, b, 0f, c, d, 0f, tx, ty, 1f };
+            }
         }
 
         private readonly NSBTA.NSBTA_File _file;

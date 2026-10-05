@@ -82,9 +82,10 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             NsbmdRenderModel scene = null;
             string note = null;
+            SceneBuildingAnimator buildings = null;
             try
             {
-                (scene, note) = await Task.Run(() => BuildScene(headerId));
+                (scene, note, buildings) = await Task.Run(() => BuildScene(headerId));
             }
             catch (Exception ex)
             {
@@ -100,27 +101,35 @@ namespace DSPRE.Avalonia.Views.Controls
                 _note.IsVisible = scene == null;
                 _gl.IsVisible = scene != null;
                 if (scene != null) _gl.SetModel(scene);
+                _gl.BuildingAnimator = buildings;
                 Frame();
             });
         }
 
-        private static (NsbmdRenderModel scene, string note) BuildScene(int headerId)
+        private static (NsbmdRenderModel scene, string note, SceneBuildingAnimator buildings) BuildScene(int headerId)
         {
-            if (headerId < 0) return (null, null);
+            if (headerId < 0) return (null, null, null);
             MatrixSceneBuilder.EnsureUnpacked();
             var header = MapHeader.GetMapHeader((ushort)headerId);
-            if (header == null) return (null, "No preview for this header.");
+            if (header == null) return (null, "No preview for this header.", null);
             var matrix = new GameMatrix(header.matrixID);
 
             var cells = matrix.CellsOfHeader(headerId);
             if (cells != null && FieldCatchAllHeader.IsCatchAll(cells.Count))
-                return (null, "This header has no place of its own to show.");
+                return (null, "This header has no place of its own to show.", null);
             // Without a headers section the whole matrix is the place, unless it is world-sized.
             if (cells == null && matrix.width * matrix.height > 256)
-                return (null, "No preview for this header.");
+                return (null, "No preview for this header.", null);
 
             var scene = MatrixSceneBuilder.Build(matrix, header.areaDataID, RomInfo.gameFamily, areaForMap: null, includeCells: cells);
-            return (scene, scene == null ? "No maps to show." : null);
+            if (scene == null) return (null, "No maps to show.", null);
+            // HGSS interior areas take their buildings from the interior set, and so their animations too.
+            bool indoor = false;
+            try { indoor = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && new AreaData(header.areaDataID).areaType == AreaData.TYPE_INDOOR; } catch { }
+            SceneBuildingAnimator buildings = null;
+            try { buildings = new SceneBuildingAnimator(scene, indoor, FieldTimeOfDay.Now); }
+            catch (Exception ex) { AppLogger.Warn("Building animations for the field view: " + ex.Message); }
+            return (scene, null, buildings);
         }
 
         // The focus tile's ground in the scene's own space, placed the way the event editor places a marker.

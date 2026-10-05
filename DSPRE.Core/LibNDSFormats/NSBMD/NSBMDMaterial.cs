@@ -33,7 +33,8 @@ namespace LibNDSFormats.NSBMD
         public int repeatT;
         public int flipS;
         public int flipT;
-        public float rot;
+        public float rot;      // sine of the texture rotation
+        public float rotCos = 1f;
         public float scaleT;
         public float scaleS;
         public float transT;

@@ -27,23 +27,19 @@ namespace DSPRE.Avalonia
 
             Add("HeaderEditorView", "Header Editor",
                 S("list", "Headers", "Every place in the game, grouped by location. Search above the list, and right-click a header to open its map, events, scripts, text, wild Pokémon or matrix."),
-                S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon."),
-                S("name:SoundGroup", "Music and weather", "Day and night music, the weather and the camera angle. Type a number or pick from the list."),
-                S("name:LinkedFilesGroup", "Linked files", "The matrix, events, scripts, text and wild Pokémon this place uses. Open takes you to each one."),
-                S("name:MapSettingsGroup", "Map settings", "Whether the player can ride the bike, run, use an Escape Rope or fly here, plus phone and radio in some games."),
-                S("name:HgssGroup", "Region settings", "Where the place sits on the town map, which Pokémon may follow you, Mom's call and whether it is Johto or Kanto."),
-                S("name:PreviewRail", "Previews", "See the area icon, the weather and the camera angle you picked."),
+                S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon, shown beside it."),
+                S("name:SoundGroup", "Music, weather and camera", "Day and night music, the weather, the camera angle and the battle background, with the field as they make it. Type a number or pick from the list."),
+                S("name:LinkedFilesGroup", "Linked files", "The matrix, area data, scripts, events, text and encounters this place uses. Open takes you to each one."),
+                S("name:MapSettingsGroup", "Map settings", "Whether the player can ride the bike, run, use an Escape Rope or fly here; in HeartGold and SoulSilver also phone, radio, the town map position, following Pokémon, Mom's call and the region."),
                 S("toolbar", "Tools", "Copy and paste a whole header, move headers in and out as files, or add and remove headers when the ROM allows it."),
                 S("toolbar", "Saving", "Save keeps this header (Ctrl+S) and Reset goes back to the saved one. Ctrl+Z undoes, Ctrl+Y redoes."));
 
             Add("HeaderFieldsView", "Header tab",
-                S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon."),
-                S("name:SoundGroup", "Music and weather", "Day and night music, the weather and the camera angle. Type a number or pick from the list."),
-                S("name:LinkedFilesGroup", "Linked files", "The matrix, events, scripts, text and wild Pokémon this place uses. Open takes you to each one."),
-                S("name:MapSettingsGroup", "Map settings", "Whether the player can ride the bike, run, use an Escape Rope or fly here, plus phone and radio in some games."),
-                S("name:HgssGroup", "Region settings", "Where the place sits on the town map, which Pokémon may follow you, Mom's call and whether it is Johto or Kanto."),
-                S("name:PreviewRail", "Previews", "See the area icon, the weather and the camera angle you picked."),
-                S(null, "Saving", "Save header above the tabs keeps these fields, and Reset goes back to the saved header. Each other tab saves its own data."));
+                S("name:LocationGroup", "Name and type", "The name shown on screen when you arrive, the kind of place it is and, in some games, its area icon, shown beside it."),
+                S("name:SoundGroup", "Music, weather and camera", "Day and night music, the weather, the camera angle and the battle background, with the field as they make it. Type a number or pick from the list."),
+                S("name:LinkedFilesGroup", "Linked files", "The matrix, area data, scripts, events, text and encounters this place uses. Open shows each one in its tab."),
+                S("name:MapSettingsGroup", "Map settings", "Whether the player can ride the bike, run, use an Escape Rope or fly here; in HeartGold and SoulSilver also phone, radio, the town map position, following Pokémon, Mom's call and the region."),
+                S(null, "Saving", "The toolbar above these fields saves them, and Reset goes back to the saved header. Each other tab saves its own data."));
 
             Add("MatrixEditorView", "Matrix Editor",
                 S("toolbar", "The matrix", "A matrix is the grid that joins maps into one seamless world. Pick one here."),

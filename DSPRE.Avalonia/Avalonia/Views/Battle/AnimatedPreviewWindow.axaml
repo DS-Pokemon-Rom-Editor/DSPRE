@@ -181,7 +181,7 @@
               Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
               BorderThickness="1" Padding="8">
         <DockPanel>
-          <TextBlock DockPanel.Dock="Top" Text="What the map runs by itself"
+          <TextBlock DockPanel.Dock="Top" Text="Level scripts"
                      FontWeight="SemiBold" Margin="0,0,0,4"/>
           <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
                      Foreground="{DynamicResource Editor.Subtle}" FontSize="12"
@@ -242,7 +242,7 @@
                   BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="0,6,0,0">
             <DockPanel>
               <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
-                <TextBlock Text="What the preview knows" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock Text="Remembered answers" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 <Button Grid.Column="1" Content="Forget all" Click="ForgetAll_Click" FontSize="11" Padding="6,1"
                         ToolTip.Tip="Forget every answer, so the next script asks again."/>
               </Grid>

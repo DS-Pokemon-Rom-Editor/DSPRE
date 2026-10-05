@@ -69,6 +69,7 @@ namespace DSPRE.Avalonia.Gl
         public delegate void Uniform2fDelegate(int location, float v0, float v1);
         public delegate void DepthMaskDelegate(bool flag);
         public delegate void DepthFuncDelegate(int func);
+        public delegate void PolygonOffsetDelegate(float factor, float units);
         public delegate void ReadPixelsDelegate(int x, int y, int w, int h, int format, int type, byte[] data);
 
         // ── Bound functions ──────────────────────────────────────────────────────────
@@ -121,6 +122,7 @@ namespace DSPRE.Avalonia.Gl
         public readonly Uniform2fDelegate Uniform2f;
         public readonly DepthMaskDelegate DepthMask;
         public readonly DepthFuncDelegate DepthFunc;
+        public readonly PolygonOffsetDelegate PolygonOffset;
         public readonly ReadPixelsDelegate ReadPixels;
 
         // ── GL constants ─────────────────────────────────────────────────────────────
@@ -137,6 +139,7 @@ namespace DSPRE.Avalonia.Gl
         public const int GL_LESS = 0x0201;
         public const int GL_LEQUAL = 0x0203;
         public const int GL_CULL_FACE = 0x0B44;
+        public const int GL_POLYGON_OFFSET_FILL = 0x8037;
         public const int GL_FRONT = 0x0404;
         public const int GL_BACK = 0x0405;
         public const int GL_CW = 0x0900;
@@ -217,6 +220,7 @@ namespace DSPRE.Avalonia.Gl
             Uniform2f = Bind<Uniform2fDelegate>(gl, "glUniform2f");
             DepthMask = Bind<DepthMaskDelegate>(gl, "glDepthMask");
             DepthFunc = Bind<DepthFuncDelegate>(gl, "glDepthFunc");
+            PolygonOffset = Bind<PolygonOffsetDelegate>(gl, "glPolygonOffset");
             DrawArrays = Bind<DrawArraysDelegate>(gl, "glDrawArrays");
             ClearColor = Bind<ClearColorDelegate>(gl, "glClearColor");
             Clear = Bind<ClearDelegate>(gl, "glClear");

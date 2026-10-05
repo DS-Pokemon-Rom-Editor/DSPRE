@@ -254,9 +254,19 @@ namespace DSPRE.ROMFiles {
             DSUtils.WriteToFile(RomInfo.internalNamesPath, InternalNameBytes(name), (uint)(id * RomInfo.internalNameLength));
 
         /// <summary>Appends a header copied from header 0 with this internal name; dynamic headers only. Returns its id.</summary>
-        public static int AddDynamicHeader(string internalName) {
+        /// <summary>Adds a header at the end, a copy of header <paramref name="copyFrom"/>; dynamic headers only.</summary>
+        public static int AddDynamicHeader(string internalName, int copyFrom = 0) {
             int id = GetHeaderCount();
-            File.Copy(Filesystem.GetDynamicHeaderPath(0), Filesystem.GetDynamicHeaderPath(id));
+            if (copyFrom < 0 || copyFrom >= id) copyFrom = 0;
+            File.Copy(Filesystem.GetDynamicHeaderPath(copyFrom), Filesystem.GetDynamicHeaderPath(id));
+            WriteInternalName(id, internalName);
+            return id;
+        }
+
+        /// <summary>Puts back a removed last header from its saved bytes; dynamic headers only.</summary>
+        public static int RestoreDynamicHeader(byte[] data, string internalName) {
+            int id = GetHeaderCount();
+            File.WriteAllBytes(Filesystem.GetDynamicHeaderPath(id), data);
             WriteInternalName(id, internalName);
             return id;
         }

@@ -50,12 +50,12 @@
           <TextBlock Text="{Binding DisplayName}" Background="Transparent">
             <TextBlock.ContextMenu>
               <ContextMenu>
-                <MenuItem Header="Open Map Editor"      Click="CtxOpenMap_Click"/>
-                <MenuItem Header="Open Events"          Click="CtxOpenEvents_Click"/>
-                <MenuItem Header="Open Scripts"         Click="CtxOpenScripts_Click"/>
-                <MenuItem Header="Open Text"            Click="CtxOpenTexts_Click"/>
-                <MenuItem Header="Open Wild Encounters" Click="CtxOpenEncounters_Click"/>
-                <MenuItem Header="Open Matrix"          Click="CtxOpenMatrix_Click"/>
+                <MenuItem Header="Open map editor"      Click="CtxOpenMap_Click"/>
+                <MenuItem Header="Open events"          Click="CtxOpenEvents_Click"/>
+                <MenuItem Header="Open scripts"         Click="CtxOpenScripts_Click"/>
+                <MenuItem Header="Open text"            Click="CtxOpenTexts_Click"/>
+                <MenuItem Header="Open wild encounters" Click="CtxOpenEncounters_Click"/>
+                <MenuItem Header="Open matrix"          Click="CtxOpenMatrix_Click"/>
               </ContextMenu>
             </TextBlock.ContextMenu>
           </TextBlock>

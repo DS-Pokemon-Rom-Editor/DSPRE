@@ -25,6 +25,10 @@ namespace DSPRE.Avalonia.Gl
 
         /// <summary>The material lets fog fall on it, polygon attribute bit 15.</summary>
         public bool Fog;
+
+        /// <summary>The material's resting texture matrix (its own scale, rotation and translation, built the way
+        /// the model's tool builds them); a texture animation replaces it while it plays. Null is identity.</summary>
+        public float[] TexMatrix;
     }
 
     /// <summary>Which faces of a polygon the hardware draws, straight out of GXCull.</summary>
@@ -58,6 +62,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Which faces each material draws, so a backdrop does not show its inside.</summary>
         public Dictionary<int, int> MaterialCullByKey = new Dictionary<int, int>();
         public Dictionary<int, bool> MaterialFogByKey = new Dictionary<int, bool>();
+        public Dictionary<int, float[]> MaterialTexMatrixByKey = new Dictionary<int, float[]>();
         // Material names, so a terrain animation (which targets materials by name, e.g. "river")
         // can be matched to the parts it should move.
         public Dictionary<int, string> MaterialNameByKey = new Dictionary<int, string>();
@@ -734,6 +739,9 @@ namespace DSPRE.Avalonia.Gl
                     if (!target.MaterialAlphaByKey.ContainsKey(key))
                         target.MaterialAlphaByKey[key] = MaterialAlpha(mat);
 
+                    if (!target.MaterialTexMatrixByKey.ContainsKey(key))
+                        target.MaterialTexMatrixByKey[key] = MaterialTexMatrix(mat, model.texMtxMode);
+
                     if (!target.MaterialNameByKey.ContainsKey(key) && !string.IsNullOrEmpty(mat.MaterialName))
                         target.MaterialNameByKey[key] = mat.MaterialName;
 
@@ -798,7 +806,8 @@ namespace DSPRE.Avalonia.Gl
                 float alpha = result.MaterialAlphaByKey.TryGetValue(kv.Key, out var a) ? a : 1f;
                 int cull = result.MaterialCullByKey.TryGetValue(kv.Key, out var c) ? c : NsbmdCull.None;
                 bool fog = result.MaterialFogByKey.TryGetValue(kv.Key, out var f) && f;
-                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha, CullMode = cull, Fog = fog });
+                result.MaterialTexMatrixByKey.TryGetValue(kv.Key, out float[] texMtx);
+                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha, CullMode = cull, Fog = fog, TexMatrix = texMtx });
                 result.TotalVertices += kv.Value.Count / 8;
             }
         }
@@ -812,6 +821,21 @@ namespace DSPRE.Avalonia.Gl
             return v;
         }
 
+        /// <summary>A material's resting texture matrix, or null when it leaves coordinates alone.</summary>
+        private static float[] MaterialTexMatrix(NSBMDMaterial mat, byte mode)
+        {
+            // The loader's trailing placeholder material carries no parsed fields (all zero).
+            if (mat == null || (mat.scaleS == 0f && mat.scaleT == 0f)) return null;
+            if (mat.scaleS == 1f && mat.scaleT == 1f && mat.rot == 0f && mat.transS == 0f && mat.transT == 0f) return null;
+            var srt = new DSPRE.ROMFiles.TextureSrtAnimation.Srt
+            {
+                ScaleS = mat.scaleS, ScaleT = mat.scaleT, SinRotation = mat.rot, CosRotation = mat.rotCos,
+                TranslateS = mat.transS, TranslateT = mat.transT,
+            };
+            float hw = mat.width > 0 && mat.height > 0 ? (float)mat.height / mat.width : 1f;
+            return srt.ToMatrix3(mode, hw);
+        }
+
         private static void InterpretPolyData(byte[] poly, int polyStackId, MTX44[] stack, float modelScale,
             NSBMDMaterial mat, float[] sceneTransform, List<float> outVerts, float cr, float cg, float cb)
         {
@@ -819,7 +843,7 @@ namespace DSPRE.Avalonia.Gl
 
             float texW = mat != null && mat.width > 0 ? mat.width : 1f;
             float texH = mat != null && mat.height > 0 ? mat.height : 1f;
-            float scaleS = mat?.scaleS ?? 1f, scaleT = mat?.scaleT ?? 1f;
+            // The material's scale is part of its texture matrix (NsbmdMeshPart.TexMatrix), applied when drawn.
             int flipS = mat?.flipS ?? 0, flipT = mat?.flipT ?? 0;
 
             var cur = new MTX44(); cur.LoadIdentity();
@@ -881,9 +905,8 @@ namespace DSPRE.Avalonia.Gl
                                 int p = S32(poly, ref idx);
                                 int s = NSBMDGlRenderer.Sign(p & 0xffff, 0x10);
                                 int tt = NSBMDGlRenderer.Sign((p >> 16) & 0xffff, 0x10);
-                                u = (scaleS / texW) * (s / 16f) / (flipS + 1);
-                                // GL samples textures bottom-up vs the DS top-down convention, so V is flipped.
-                                w = (scaleT / texH) * (tt / 16f) / (flipT + 1);
+                                u = (s / 16f) / texW / (flipS + 1);
+                                w = (tt / 16f) / texH / (flipT + 1);
                                 break;
                             }
                         case 0x23:
@@ -979,8 +1002,10 @@ namespace DSPRE.Avalonia.Gl
                 float alpha = result.MaterialAlphaByKey.TryGetValue(material, out var a) ? a : 1f;
                 int cull = result.MaterialCullByKey.TryGetValue(material, out var c) ? c : NsbmdCull.None;
                 bool fog = result.MaterialFogByKey.TryGetValue(material, out var f) && f;
+                result.MaterialTexMatrixByKey.TryGetValue(material, out float[] texMtx);
                 result.Parts.Add(new NsbmdMeshPart
                 {
+                    TexMatrix = texMtx,
                     Fog = fog,
                     MaterialIndex = material,
                     NodeIndex = kv.Key.Node,

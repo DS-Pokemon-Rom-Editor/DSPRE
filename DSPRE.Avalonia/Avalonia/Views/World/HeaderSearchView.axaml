@@ -4,7 +4,7 @@
         xmlns:vm="using:DSPRE.Avalonia.ViewModels.World"
         x:Class="DSPRE.Avalonia.Views.World.HeaderSearchView"
         x:DataType="vm:HeaderSearchViewModel"
-        Title="Advanced Header Search"
+        Title="Advanced header search"
         Width="560" Height="480"
         WindowStartupLocation="CenterScreen">
 
@@ -13,21 +13,18 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel x:Name="QueryPanel" Classes="toolbar">
+    <controls:EditorToolbar x:Name="QueryPanel">
         <ComboBox Width="170" ItemsSource="{Binding Fields}" SelectedIndex="{Binding FieldIndex}"/>
         <ComboBox Width="150" ItemsSource="{Binding Operators}" SelectedIndex="{Binding OperatorIndex}"/>
         <TextBox x:Name="ValueBox" Width="180" Text="{Binding ValueText}" PlaceholderText="Value to search…"/>
         <CheckBox Content="Auto" IsChecked="{Binding AutoSearch}" ToolTip.Tip="Search as you type"/>
         <Button Content="Search" controls:Icon.Key="lens" Click="Search_Click"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
   <DockPanel Margin="10">
     <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Text="{Binding StatusText}" TextWrapping="Wrap"/>
     <TextBlock DockPanel.Dock="Bottom" Margin="0,8,0,0" Opacity="0.7"
-               Text="Double-click a result to open it in the Header Editor."/>
+               Text="Double-click a result to open it in the header editor."/>
 
     <ListBox x:Name="ResultList" Margin="0,8,0,0"
              ItemsSource="{Binding Results}"

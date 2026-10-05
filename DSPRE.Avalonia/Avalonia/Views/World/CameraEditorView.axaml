@@ -12,21 +12,16 @@
   <DockPanel>
 
     <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="SaveTable_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Export table…" controls:Icon.Key="export" Click="ExportTable_Click" IsEnabled="{Binding IsReady}" MinWidth="100"/>
         <Button Content="Import table…" controls:Icon.Key="import" Click="ImportTable_Click" IsEnabled="{Binding IsReady}" MinWidth="100"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
         <Button Content="Rename…" controls:Icon.Key="pencil" Click="Rename_Click" IsEnabled="{Binding IsReady}"/>
         <Button Content="Export camera…" controls:Icon.Key="export" Click="ExportCamera_Click" IsEnabled="{Binding IsReady}"/>
         <Button Content="Import camera…" controls:Icon.Key="import" Click="ImportCamera_Click" IsEnabled="{Binding IsReady}"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <!-- ── Status bar ──────────────────────────────────────────────────── -->
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"

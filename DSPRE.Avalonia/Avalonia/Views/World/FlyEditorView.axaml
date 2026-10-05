@@ -15,21 +15,18 @@
 
   <DockPanel LastChildFill="True">
 
-	<Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-			BorderThickness="0,0,0,1" Padding="6,4">
-	  <StackPanel Orientation="Horizontal" Spacing="6">
+	<controls:EditorToolbar>
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
 		<TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed" Margin="12,0,0,0"/>
-	  </StackPanel>
-	</Border>
+	</controls:EditorToolbar>
 
 	<!-- Three tabs -->
 	<TabControl Margin="8">
 
 	  <!-- ── Tab 1: Game-Over / Death Warps ─────────────────────────────── -->
-	  <TabItem Header="Game-Over Warps">
+	  <TabItem Header="Game-Over warps">
 		<DataGrid ItemsSource="{Binding Rows}"
 				  CanUserReorderColumns="False" CanUserResizeColumns="True"
 				  CanUserSortColumns="False" GridLinesVisibility="All"
@@ -55,7 +52,7 @@
 	  </TabItem>
 
 	  <!-- ── Tab 2: Fly Warps ────────────────────────────────────────────── -->
-	  <TabItem Header="Fly Warps">
+	  <TabItem Header="Fly warps">
 		<DataGrid ItemsSource="{Binding Rows}"
 				  CanUserReorderColumns="False" CanUserResizeColumns="True"
 				  CanUserSortColumns="False" GridLinesVisibility="All"
@@ -80,7 +77,7 @@
 	  </TabItem>
 
 	  <!-- ── Tab 3: Unlock Settings ─────────────────────────────────────── -->
-	  <TabItem Header="Unlock Settings">
+	  <TabItem Header="Unlock settings">
 		<DataGrid x:Name="UnlockGrid" ItemsSource="{Binding Rows}"
 				  CanUserReorderColumns="False" CanUserResizeColumns="True"
 				  CanUserSortColumns="False" GridLinesVisibility="All"
@@ -88,7 +85,7 @@
 		  <DataGrid.Columns>
 
 			<!-- DP / Plat columns -->
-			<DataGridTemplateColumn Header="Is Teleport Pos"
+			<DataGridTemplateColumn Header="Is teleport pos"
 									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsDpOrPlat, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">
@@ -97,7 +94,7 @@
 			  </DataGridTemplateColumn.CellTemplate>
 			</DataGridTemplateColumn>
 
-			<DataGridTemplateColumn Header="Unlock on Map Entry"
+			<DataGridTemplateColumn Header="Unlock on map entry"
 									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsDpOrPlat, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">
@@ -110,7 +107,7 @@
 								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsDpOrPlat, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
 
 			<!-- HGSS columns -->
-			<DataGridTemplateColumn Header="Header (Unlock)"
+			<DataGridTemplateColumn Header="Header (unlock)"
 									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">
@@ -121,15 +118,15 @@
 			  </DataGridTemplateColumn.CellTemplate>
 			</DataGridTemplateColumn>
 
-			<DataGridTextColumn Header="Global X (Unlock)" Binding="{Binding GlobalXUnlock}"
+			<DataGridTextColumn Header="Global X (unlock)" Binding="{Binding GlobalXUnlock}"
 								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
-			<DataGridTextColumn Header="Global Y (Unlock)" Binding="{Binding GlobalYUnlock}"
-								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
-
-			<DataGridTextColumn Header="Flag Index" Binding="{Binding FlagIdx}"
+			<DataGridTextColumn Header="Global Y (unlock)" Binding="{Binding GlobalYUnlock}"
 								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
 
-			<DataGridTemplateColumn Header="Is Blackout Spawn"
+			<DataGridTextColumn Header="Flag index" Binding="{Binding FlagIdx}"
+								Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}"/>
+
+			<DataGridTemplateColumn Header="Is blackout spawn"
 									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">
@@ -138,7 +135,7 @@
 			  </DataGridTemplateColumn.CellTemplate>
 			</DataGridTemplateColumn>
 
-			<DataGridTemplateColumn Header="Is Fly Point"
+			<DataGridTemplateColumn Header="Is Fly point"
 									Width="{Binding $parent[Window].((vm:FlyEditorViewModel)DataContext).IsHgss, Converter={x:Static vmcontrols:BoolToGridLengthConverter.Instance}}">
 			  <DataGridTemplateColumn.CellTemplate>
 				<DataTemplate x:DataType="vm:FlyRow">

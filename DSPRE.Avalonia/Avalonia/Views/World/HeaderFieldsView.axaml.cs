@@ -76,5 +76,7 @@ namespace DSPRE.Avalonia.Views.World
         private void OpenTexts_Click(object sender, RoutedEventArgs e) => VM?.OpenTexts();
         private void OpenEncounters_Click(object sender, RoutedEventArgs e) => VM?.OpenEncounters();
         private void OpenBattleScenery_Click(object sender, RoutedEventArgs e) => VM?.OpenBattleScenery();
+        private void PlayDayMusic_Click(object sender, RoutedEventArgs e) => VM?.PlayMusic(false);
+        private void PlayNightMusic_Click(object sender, RoutedEventArgs e) => VM?.PlayMusic(true);
     }
 }
