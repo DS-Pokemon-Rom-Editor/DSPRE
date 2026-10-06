@@ -1,0 +1,49 @@
+name: Avalonia Feedback
+description: Share feedback on an editor in the Avalonia version of DSPRE
+title: "[Avalonia Feedback] "
+type: Feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the feedback! Put the editor and a broad topic in the title, e.g. "[Avalonia Feedback] Map Editor collision and type UX/UI". One post can cover several points in the same editor.
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue Noticed
+      description: What's hard to use, unclear, missing or worse than before?
+      placeholder: e.g., Collision and type are hard to read, and tools like pick and fill are missing.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Possible Solution
+      description: How you'd like it to work, if you have an idea.
+      placeholder: e.g., An opacity slider, IDs on a grid, higher contrast between types.
+    validations:
+      required: false
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Other tools or older DSPRE versions that do it well. Screenshots welcome.
+      placeholder: e.g., PDSMS, DSPRE 2.3.3
+    validations:
+      required: false
+  - type: input
+    id: base-rom
+    attributes:
+      label: Base ROM
+      description: Only if the feedback is about one game.
+      placeholder: e.g., Pokémon HeartGold
+    validations:
+      required: false
+  - type: input
+    id: editor-version
+    attributes:
+      label: Editor Version
+      description: Which build of DSPRE you're using.
+      placeholder: e.g., canary from 2026-10-06
+    validations:
+      required: false
