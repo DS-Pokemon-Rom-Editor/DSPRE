@@ -173,7 +173,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why this ROM's intros can't be edited, or null.</summary>
         public static string WhyNot()
         {
-            if (isHGE) return "VS intros can't be edited in hg-engine projects yet.";
+            if (isHGE && !HgEngine.HgEngineProject.IsActive) return "Open the hg-engine folder to edit its VS intros.";
             if (gameFamily != GameFamilies.DP && gameFamily != GameFamilies.Plat && gameFamily != GameFamilies.HGSS)
                 return "This game has no VS intros DSPRE knows about.";
             if (gameLanguage != GameLanguages.English) return "VS intros are not supported for this language yet. Only US English games can be edited.";
@@ -193,19 +193,21 @@ namespace DSPRE.ROMFiles
             if (why != null) throw new InvalidOperationException(why);
             var sites = VsIntroCodeSites;
 
-            var music = BattleMusicTables.LoadRom() ?? throw Mismatch("the battle music tables");
+            // hg-engine's EXPAND_MUSIC_TABLES builds the combo, class and Pokemon tables from src/music_tables.c.
+            bool source = isHGE && HgEngine.HgEngineMusicTables.TablesInSource;
+            var music = (source ? HgEngine.HgEngineMusicTables.ReadBattle() : BattleMusicTables.LoadRom()) ?? throw Mismatch("the battle music tables");
             if (!music.MusicPointerAgrees) throw Mismatch("the music half of the intro table");
-            var t = new VsIntroTables(sites, music);
+            var t = new VsIntroTables(sites, music) { FromSource = source };
             bool hgss = gameFamily == GameFamilies.HGSS;
 
-            if (hgss && sites.ComboMusicCount >= 0 && ARM9.ReadByte((uint)sites.ComboMusicCount) != music.Combos.Rows.Count)
+            if (!source && hgss && sites.ComboMusicCount >= 0 && ARM9.ReadByte((uint)sites.ComboMusicCount) != music.Combos.Rows.Count)
                 throw Mismatch("the intro table's length");
-            t._combos = t.AddRegion(music.Combos.Path, (int)music.Combos.Start, 4 * music.Combos.Rows.Count);
+            t._combos = source ? t.AddSourceRegion(ComboBytes(music)) : t.AddRegion(music.Combos.Path, (int)music.Combos.Start, 4 * music.Combos.Rows.Count);
 
             if (hgss)
             {
-                t._classRows = t.AddRegion(music.Classes.Path, (int)music.Classes.Start, 2 * music.Classes.Rows.Count);
-                t._speciesRows = t.AddRegion(music.Species.Path, (int)music.Species.Start, 2 * music.Species.Rows.Count);
+                t._classRows = source ? t.AddSourceRegion(Packed(music.Classes.Rows)) : t.AddRegion(music.Classes.Path, (int)music.Classes.Start, 2 * music.Classes.Rows.Count);
+                t._speciesRows = source ? t.AddSourceRegion(Packed(music.Species.Rows)) : t.AddRegion(music.Species.Path, (int)music.Species.Start, 2 * music.Species.Rows.Count);
             }
             else
             {
@@ -236,6 +238,60 @@ namespace DSPRE.ROMFiles
 
         private static InvalidDataException Mismatch(string what) =>
             new InvalidDataException($"DSPRE could not find {what} where it expects it in this ROM, so it won't edit VS intros here.");
+
+        /// <summary>True when the music tables are hg-engine source; saving those rows then writes music_tables.c.</summary>
+        public bool FromSource { get; private set; }
+
+        // Held in the ROM's own row encoding, so the editors read them the same way; Path stays null.
+        private Region AddSourceRegion(byte[] now)
+        {
+            var r = new Region { Now = now, Saved = (byte[])now.Clone() };
+            _regions.Add(r);
+            return r;
+        }
+
+        private static byte[] ComboBytes(BattleMusicTables music)
+        {
+            var bytes = new byte[4 * music.Combos.Rows.Count];
+            for (int i = 0; i < music.Combos.Rows.Count; i++)
+            {
+                BitConverter.GetBytes(music.Combos.Rows[i].Transition).CopyTo(bytes, 4 * i);
+                BitConverter.GetBytes(music.Combos.Rows[i].Sequence).CopyTo(bytes, 4 * i + 2);
+            }
+            return bytes;
+        }
+
+        private static byte[] Packed(List<(int Id, int Combo)> rows)
+        {
+            var bytes = new byte[2 * rows.Count];
+            for (int i = 0; i < rows.Count; i++)
+                BitConverter.GetBytes((ushort)((rows[i].Id & 0x3FF) | ((rows[i].Combo & 0x3F) << 10))).CopyTo(bytes, 2 * i);
+            return bytes;
+        }
+
+        private byte[] SourceBytes(Region r, BattleMusicTables fresh) =>
+            r == _combos ? ComboBytes(fresh) : r == _classRows ? Packed(fresh.Classes.Rows) : Packed(fresh.Species.Rows);
+
+        // Each changed row of a source table is written into music_tables.c.
+        private void SaveSourceRows(Region r)
+        {
+            int size = r == _combos ? 4 : 2;
+            for (int row = 0; row < r.Now.Length / size; row++)
+            {
+                if (r.Now.AsSpan(row * size, size).SequenceEqual(r.Saved.AsSpan(row * size, size))) continue;
+                string error;
+                bool ok;
+                if (r == _combos) ok = HgEngine.HgEngineMusicTables.TrySetCombo(row, (ushort)EffectOf(row), (ushort)SequenceOf(row), out error);
+                else
+                {
+                    ushort v = BitConverter.ToUInt16(r.Now, 2 * row);
+                    ok = r == _classRows
+                        ? HgEngine.HgEngineMusicTables.TrySetClassCombo(row, v & 0x3FF, v >> 10, out error)
+                        : HgEngine.HgEngineMusicTables.TrySetSpeciesCombo(row, v & 0x3FF, v >> 10, out error);
+                }
+                if (!ok) throw new IOException(error);
+            }
+        }
 
         private Region AddRegion(string path, int offset, int length)
         {
@@ -540,6 +596,7 @@ namespace DSPRE.ROMFiles
         public string WhyNoClassRoom()
         {
             if (_classRows == null) return "Only HeartGold and SoulSilver keep their class rules in a table.";
+            if (FromSource) return "hg-engine builds the class table from src/music_tables.c.";
             if (ClassTableMoved) return "The class table has already been given room.";
             if (HasChanges) return "Save or discard your changes first.";
             if (!SyntheticOverlaySpace.Available()) return "Apply the ARM9 expansion in the ROM Patch Toolbox first.";
@@ -623,13 +680,17 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public void Save()
         {
-            var disk = _regions.Select(r => DSUtils.ReadFromFile(r.Path, r.Offset, r.Now.Length)).ToList();
+            var fresh = FromSource ? HgEngine.HgEngineMusicTables.ReadBattle() : null;
+            var disk = _regions.Select(r => r.Path == null ? SourceBytes(r, fresh) : DSUtils.ReadFromFile(r.Path, r.Offset, r.Now.Length)).ToList();
+            for (int k = 0; k < _regions.Count; k++)
+                if (disk[k].Length != _regions[k].Now.Length)
+                    throw new IOException("src/music_tables.c gained or lost rows since the VS intros were read. Discard and try again.");
             for (int k = 0; k < _regions.Count; k++)
             {
                 var r = _regions[k];
                 for (int i = 0; i < r.Now.Length; i++)
                     if (r.Owns(i) && r.Now[i] != r.Saved[i] && disk[k][i] != r.Saved[i])
-                        throw new IOException($"{Path.GetFileName(r.Path)} was changed by something else since the VS intros were read. Discard and try again.");
+                        throw new IOException($"{(r.Path == null ? "src/music_tables.c" : Path.GetFileName(r.Path))} was changed by something else since the VS intros were read. Discard and try again.");
             }
             for (int k = 0; k < _regions.Count; k++)
             {
@@ -639,6 +700,12 @@ namespace DSPRE.ROMFiles
             }
             foreach (var r in _regions)
             {
+                if (r.Path == null)
+                {
+                    SaveSourceRows(r);
+                    r.Saved = (byte[])r.Now.Clone();
+                    continue;
+                }
                 int i = 0;
                 while (i < r.Now.Length)
                 {

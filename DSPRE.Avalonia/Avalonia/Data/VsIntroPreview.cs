@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
@@ -8,9 +9,9 @@ namespace DSPRE.Avalonia.Data
     /// timings follow the games' code where they are known; the rest is a close approximation, and the field
     /// behind the intro is a plain backdrop.
     /// </summary>
-    public sealed class VsIntroPreview
+    public sealed partial class VsIntroPreview
     {
-        public enum Layout { Gym, League, Executive }
+        public enum Layout { Gym, League, Executive, Pieces, Balls, Special }
 
         /// <summary>What to draw. Member arrays are palette, tiles, cells (and animation); null leaves a part out.</summary>
         public sealed class Scene
@@ -24,7 +25,27 @@ namespace DSPRE.Avalonia.Data
             public int FramePalette = -1, NamePalette = -1, EndX = 214, ClashFrames = 32;
             /// <summary>HGSS Rocket executive backdrop: palette, tiles, then the two screens.</summary>
             public int[] Backdrop;
+            /// <summary>
+            /// For intros the preview doesn't animate (the terrain Poké Balls, Red, Team Rocket, Kimono Girl): the sprite
+            /// sets they use, laid out side by side, and a background screen (palette, tiles, screen) behind them.
+            /// </summary>
+            public List<int[]> Pieces;
+            /// <summary>The ordinary trainer intros: which of the six, and the large and small Poké Ball sets.</summary>
+            public BallVariant Variant;
+            public int[] Large, Small;
+            /// <summary>The Team Rocket, Red and Kimono Girl intros: which, and the emblem set they draw.</summary>
+            public SpecialVariant Special;
+            public int[] Emblem;
+            public int[] Screen;
+            /// <summary>The ROM's emblem flights and block wipe column order, when read; null keeps the shipped values.</summary>
+            public IReadOnlyList<DSPRE.ROMFiles.VsIntroMotion.Flight> Flights;
+            public int[] BlockOrder;
+            /// <summary>The class's intro timings by VsIntroTimingAddon field, or null for the game's own.</summary>
+            public int[] Timings;
             public string Name;
+
+            internal int Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field f) =>
+                Timings != null && (int)f < Timings.Length && Timings[(int)f] > 0 ? Timings[(int)f] : DSPRE.ROMFiles.VsIntroTimingAddon.GameValues[(int)f];
         }
 
         private readonly Func<int, byte[]> _member;
@@ -42,7 +63,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>How many frames the animation runs.</summary>
         public static int Length(Scene s) => s.Kind switch
         {
-            Layout.Gym => 77,
+            Layout.Pieces => 1,
+            Layout.Balls => BallLength(s.Variant),
+            Layout.Special => SpecialLength(s),
+            Layout.Gym => 77 + GymExtra(s),
             Layout.League => 34 + Math.Clamp(s.ClashFrames, 0, 255),
             _ => 70,
         };
@@ -54,6 +78,9 @@ namespace DSPRE.Avalonia.Data
             {
                 Layout.Gym => Gym(s, frame),
                 Layout.League => League(s, frame),
+                Layout.Pieces => Pieces(s),
+                Layout.Balls => Balls(s, frame),
+                Layout.Special => Special(s, frame),
                 _ => Executive(s, frame),
             };
         }
@@ -138,8 +165,31 @@ namespace DSPRE.Avalonia.Data
                     Array.Copy(from, (y * w + (x + dx) % w) * 4, to, (y * w + x) * 4, 4);
         }
 
-        // Four copies shrink from double size one after another.
-        private static void VsMark((DsBgScreen.Oam[] Cell, byte[] Tiles, Func<int, ushort[]> Colours)? vs, byte[] rgba, int x, int y, int frame, int start)
+        // Frames the gym intro gains when its slide or VS timings are longer than the game's.
+        private static int GymExtra(Scene s) => Math.Max(0, s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.GymSlide) - 4)
+            + Math.Max(0, s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.VsShrink) - 6)
+            + 3 * Math.Max(0, s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.VsGap) - 3);
+
+        // Three burst copies play the mark's second sequence while shrinking from double size, three frames apart,
+        // and hide once full size; the fourth is the letters, playing the first sequence at full size.
+        private void VsMark(Scene s, int[] vs, byte[] rgba, int x, int y, int frame, int start)
+        {
+            int shrink = s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.VsShrink), gap = s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.VsGap);
+            if (vs == null) return;
+            if (vs.Length < 4) { VsMarkStill(Sprite(vs, null), rgba, x, y, frame, start); return; }
+            if (frame < 0) { DrawSprite(Sequence(vs, 0, 0, true), rgba, x, y); return; }
+            for (int k = 0; k < 4; k++)
+            {
+                int t = frame - start - gap * k;
+                if (t < 0) continue;
+                if (k == 3) { DrawSprite(Sequence(vs, 0, t, true), rgba, x, y); continue; }
+                if (t >= shrink) continue;
+                DrawSprite(Sequence(vs, 1, t, true), rgba, x, y, 2 - t / (double)shrink);
+            }
+        }
+
+        // A mark without an animation file: four copies of its first drawing shrink one after another.
+        private static void VsMarkStill((DsBgScreen.Oam[] Cell, byte[] Tiles, Func<int, ushort[]> Colours)? vs, byte[] rgba, int x, int y, int frame, int start)
         {
             if (frame < 0) { DrawSprite(vs, rgba, x, y); return; }
             for (int k = 0; k < 4; k++)
@@ -153,6 +203,15 @@ namespace DSPRE.Avalonia.Data
         private static double Ease(double t) => 1 - (1 - t) * (1 - t);
 
         // ── Gym leaders and the HGSS rival ────────────────────────────────────────────────────────
+
+        private byte[] Pieces(Scene s)
+        {
+            byte[] rgba = (s.Screen != null && s.Screen.Length >= 3 ? Background(s.Screen[0], s.Screen[1], s.Screen[2]) : null) ?? Plain();
+            int count = s.Pieces?.Count ?? 0;
+            for (int i = 0; i < count; i++)
+                DrawSprite(Sprite(s.Pieces[i], null, rows: true), rgba, DsBgScreen.Width * (2 * i + 1) / (2 * count), DsBgScreen.Height / 2);
+            return rgba;
+        }
 
         private byte[] Gym(Scene s, int frame)
         {
@@ -170,10 +229,11 @@ namespace DSPRE.Avalonia.Data
 
             if (frame < 0 || frame >= 6)
             {
-                int x = frame < 0 || frame >= 10 ? s.EndX : (int)(272 + (s.EndX - 272) * Ease((frame - 6) / 4.0));
+                int slide = s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.GymSlide);
+                int x = frame < 0 || frame >= 6 + slide ? s.EndX : (int)(272 + (s.EndX - 272) * Ease((frame - 6) / (double)slide));
                 DrawSprite(Sprite(s.Face, s.FaceColours), rgba, x, 66);
             }
-            VsMark(Sprite(s.Vs, null), rgba, 72, 74, frame, 10);
+            VsMark(s, s.Vs, rgba, 72, 74, frame, 6 + s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.GymSlide));
             // Measured in game: the name starts 122 pixels in, to the right of the VS mark.
             Name(s, rgba, 122, 81);
 
@@ -214,7 +274,7 @@ namespace DSPRE.Avalonia.Data
             DrawSprite(frameSprite, rgba, plX, plY);
             DrawSprite(Sprite(s.Face, s.FaceColours), rgba, oppX, oppY);
             DrawSprite(Sprite(s.PlayerFace, s.PlayerColours), rgba, plX, plY);
-            if (frame < 0 || frame < leave) VsMark(Sprite(s.Vs, null), rgba, 128, 96, frame, 7);
+            if (frame < 0 || frame < leave) VsMark(s, s.Vs, rgba, 128, 96, frame, 7);
             if (frame < 0 || frame < leave) Name(s, rgba, 170, 105);
 
             if (frame >= 20 && frame < 26) Blend(rgba, frame < 23 ? (frame - 19) / 3.0 : (26 - frame) / 3.0);

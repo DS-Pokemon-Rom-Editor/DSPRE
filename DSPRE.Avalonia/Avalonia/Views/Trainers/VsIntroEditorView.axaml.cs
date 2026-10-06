@@ -13,7 +13,8 @@ namespace DSPRE.Avalonia.Views.Trainers
         public VsIntroEditorView(VsIntroEditorViewModel vm) : this()
         {
             DataContext = vm;
-            DetachedFromVisualTree += (_, _) => vm.StopAnimation();
+            AttachedToVisualTree += (_, _) => vm.Attach();
+            DetachedFromVisualTree += (_, _) => { vm.StopAnimation(); vm.StopMotion(); vm.Detach(); };
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
@@ -27,7 +28,24 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void PaintBanner_Click(object sender, RoutedEventArgs e) => VM?.PaintBanner();
         private void BannerGraphics_Click(object sender, RoutedEventArgs e) => VM?.ShowBannerInGraphics();
         private void Animate_Click(object sender, RoutedEventArgs e) => VM?.ToggleAnimation();
+        private void PlayMotion_Click(object sender, RoutedEventArgs e) => VM?.ToggleMotion();
+        private async void InstallTimings_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.InstallTimingsAsync(); }
         private void ShowMugshot_Click(object sender, RoutedEventArgs e) => VM?.ShowMugshot();
+
+        private void PaintSlot_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control { Tag: IntroArtSlot slot }) VM?.PaintSlot(slot);
+        }
+
+        private void AnimateSlot_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control { Tag: IntroArtSlot slot }) VM?.AnimateSlot(slot);
+        }
+
+        private void ShowPart_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control { Tag: IntroArtFile part }) VM?.ShowPart(part);
+        }
 
         private void Particle_Click(object sender, RoutedEventArgs e)
         {

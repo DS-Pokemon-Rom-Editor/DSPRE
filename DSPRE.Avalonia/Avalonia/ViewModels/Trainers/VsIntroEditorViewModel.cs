@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// The intros special trainer battles open with: the mugshot records and their art, and which trainer
     /// classes get which intro and music.
     /// </summary>
-    public class VsIntroEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public partial class VsIntroEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
@@ -73,7 +73,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Reads everything the editor shows. File work only, for the busy overlay's thread.</summary>
         public void Load()
         {
-            _t = VsIntroTables.Load(Part.Trainers);
+            // With the class metadata patch the stock tables are retired, and no longer read as they were.
+            if (!DetectClassRecords()) _t = VsIntroTables.Load(Part.Trainers);
             var dirs = new List<DirNames> { Archive, DirNames.textArchives };
             if (gameFamily == GameFamilies.Plat) dirs.Add(DirNames.trainerGraphics);
             DSUtils.TryUnpackNarcs(dirs);
@@ -83,11 +84,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                                .Select(i => { try { return GraphicAssets.Identify(_art.Get(i)); } catch { return Kind.Unknown; } }).ToArray();
             try { _font = FieldFont.LoadSystemFont(); } catch { _font = null; }
             _preview = new VsIntroPreview(i => _art.Get(i), _font);
+            LoadMotion();
+            if (IsClassRecords) { LoadClassRecords(); LoadTimings(); }
         }
 
         /// <summary>Fills the lists once loaded, on the UI thread.</summary>
         public void Ready()
         {
+            ReadyMotion();
+            if (IsClassRecords) { ReadyClassRecords(); return; }
             BuildChoices();
             BuildMugshotRows();
             BuildIntroRows();
@@ -460,11 +465,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private global::Avalonia.Media.Imaging.Bitmap _image;
         public global::Avalonia.Media.Imaging.Bitmap PreviewImage { get => _image; private set { _image = value; Raise(); } }
-        public bool HasPreview => !IsDp && Rec != null && Scene() != null;
+        public bool HasPreview => IsClassRecords ? ClassScene() != null : !IsDp && Rec != null && Scene() != null;
 
         private bool _girl;
         public bool PlayerGirl { get => _girl; set { if (_girl == value) return; _girl = value; Raise(); RenderPreview(); } }
-        public bool ShowPlayerChoice => Rec?.Kind == RecordKind.League && !IsDp;
+        public bool ShowPlayerChoice => IsClassRecords ? Record?.VsStyle == 2 : Rec?.Kind == RecordKind.League && !IsDp;
 
         private ushort[] ClassColours(int trainerClass)
         {
@@ -478,6 +483,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private VsIntroPreview.Scene Scene()
         {
+            if (IsClassRecords) return ClassScene();
             if (Rec == null || IsDp || _preview == null) return null;
             var s = _t.Sites;
             int[] Four(int first) => first < 0 ? null : Order(first, 4);
@@ -542,6 +548,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _timer.Start();
             Raise(nameof(Animating), nameof(AnimateLabel));
             RenderPreview();
+        }
+
+        /// <summary>Redraws the preview when art in the intro archive is saved elsewhere, such as an edited animation.</summary>
+        public void Attach() => AppEvents.ArchiveMemberSaved += OnArchiveMemberSaved;
+        public void Detach() => AppEvents.ArchiveMemberSaved -= OnArchiveMemberSaved;
+
+        private void OnArchiveMemberSaved(object sender, DirNames dir)
+        {
+            if (dir != Archive) return;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { if (!Animating) RenderPreview(); });
         }
 
         public void StopAnimation()
@@ -766,7 +782,26 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── Editing, undo and saving ─────────────────────────────────────────────────────────────
 
         private ByteStateUndo _undo;
-        private void StartUndo() => _undo = new ByteStateUndo(_t.Snapshot, s => { _t.Restore(s); RefreshAll(); }, () => Raise(nameof(CanUndo), nameof(CanRedo)));
+        // Each step holds the intro tables or class records together with the motion tables.
+        private void StartUndo()
+        {
+            Func<byte[]> take = IsClassRecords ? RecordsSnapshot : _t.Snapshot;
+            Action<byte[]> apply = IsClassRecords ? RestoreRecords : s => { _t.Restore(s); RefreshAll(); };
+            _undo = new ByteStateUndo(
+                () => ByteStateUndo.Pack(w =>
+                {
+                    byte[] main = take(), motion = _motion?.Snapshot() ?? Array.Empty<byte>(), timing = _timing?.Snapshot() ?? Array.Empty<byte>();
+                    w.Write(main.Length); w.Write(main); w.Write(motion.Length); w.Write(motion); w.Write(timing.Length); w.Write(timing);
+                }),
+                state => ByteStateUndo.Unpack(state, r =>
+                {
+                    byte[] main = r.ReadBytes(r.ReadInt32()), motion = r.ReadBytes(r.ReadInt32()), timing = r.ReadBytes(r.ReadInt32());
+                    apply(main);
+                    RestoreMotion(motion);
+                    RestoreTimings(timing);
+                }),
+                () => Raise(nameof(CanUndo), nameof(CanRedo)));
+        }
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -789,19 +824,40 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             Raise(nameof(HasUnsavedChanges));
         }
 
-        public bool HasUnsavedChanges => _t?.HasChanges == true;
+        public bool HasUnsavedChanges => (IsClassRecords ? RecordsChanged : _t?.HasChanges == true) || _motion?.HasChanges == true
+                                         || _timing?.HasChanges == true;
         public string UnsavedChangesDescription => "VS intros";
 
         public void SaveChanges() => _ = SaveChangesAsync();
 
         public async Task<bool> SaveChangesAsync()
         {
-            if (_t == null || !_t.HasChanges) return true;
-            try { _t.Save(); }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            bool hadMotion = _motion?.HasChanges == true || _timing?.HasChanges == true;
+            if (!await SaveMotionAsync() || !await SaveTimingsAsync()) return false;
+            if (IsClassRecords) return await SaveRecordsAsync();
+            if (_t == null || !_t.HasChanges)
             {
-                await DialogHelper.ShowError("The VS intros were not saved:\n" + e.Message, Title);
-                return false;
+                if (hadMotion) { Raise(nameof(HasUnsavedChanges)); SaveNotice.Saved(UnsavedChangesDescription); StatusText = "Saved. Save the ROM to keep the changes."; }
+                return true;
+            }
+            // hg-engine's music rows are source text, saved as one hg-engine write like the other editors.
+            if (_t.FromSource)
+            {
+                var (saved, error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
+                if (!saved)
+                {
+                    if (error != null) await DialogHelper.ShowError("The VS intros were not saved:\n" + error, Title);
+                    return false;
+                }
+            }
+            else
+            {
+                try { _t.Save(); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+                {
+                    await DialogHelper.ShowError("The VS intros were not saved:\n" + e.Message, Title);
+                    return false;
+                }
             }
             RefreshAll();
             SaveNotice.Saved(UnsavedChangesDescription);
@@ -811,7 +867,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public void DiscardChanges()
         {
-            if (_t == null) return;
+            if (_motion?.HasChanges == true) ReloadMotion();
+            if (_timing?.HasChanges == true) { LoadTimings(); ShowTimings(); }
+            if (IsClassRecords) { DiscardRecords(); return; }
+            if (_t == null) { Raise(nameof(HasUnsavedChanges)); return; }
             try { _t = VsIntroTables.Load(Part.Trainers); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)
             {

@@ -30,19 +30,16 @@
       <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" TextWrapping="Wrap"/>
     </Border>
 
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-      </StackPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <TabControl x:Name="IntroTabs" SelectedIndex="{Binding SelectedTab}" Margin="4">
 
       <!-- Mugshots -->
-      <TabItem Header="Mugshots">
+      <TabItem Header="Mugshots" IsVisible="{Binding ShowStockTabs}">
         <Grid ColumnDefinitions="220,*,540">
           <ListBox x:Name="MugshotList" Classes="grouped" Grid.Column="0" Margin="4" ItemsSource="{Binding MugshotRows}"
                    SelectedItem="{Binding SelectedMugshot}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -100,7 +97,7 @@
                         IsVisible="{Binding ShowBanner}" PlaceholderText="{Binding BannerFiles}"/>
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowBanner}">
                 <Button Content="Paint" controls:Icon.Key="brush" Click="PaintBanner_Click"/>
-                <Button Content="In Graphics" Click="BannerGraphics_Click"/>
+                <Button Content="In graphics" Click="BannerGraphics_Click"/>
               </StackPanel>
 
               <TextBlock Text="{Binding FramePaletteLabel}" Classes="section" IsVisible="{Binding ShowFramePalette}"/>
@@ -161,7 +158,7 @@
       </TabItem>
 
       <!-- Trainer intros and music -->
-      <TabItem Header="Trainer intros and music">
+      <TabItem Header="Trainer intros and music" IsVisible="{Binding ShowStockTabs}">
         <Grid ColumnDefinitions="260,*,300">
           <ListBox x:Name="IntroList" Classes="grouped" Grid.Column="0" Margin="4" ItemsSource="{Binding IntroRows}"
                    SelectedItem="{Binding SelectedIntro}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -211,6 +208,150 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </DockPanel>
+        </Grid>
+      </TabItem>
+
+      <!-- Class intros (trainer class metadata patch): each class's own intro record -->
+      <TabItem Header="Class intros" IsVisible="{Binding IsClassRecords}">
+        <Grid ColumnDefinitions="220,*,540">
+          <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding ClassRecordNames}" SelectedIndex="{Binding SelectedRecordIndex}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+          <ScrollViewer Grid.Column="1" Margin="4">
+            <StackPanel Spacing="6" IsVisible="{Binding HasRecord}" Margin="4">
+              <TextBlock Text="VS style"/>
+              <ComboBox ItemsSource="{Binding StyleChoices}" SelectedIndex="{Binding StyleIndex}" HorizontalAlignment="Stretch"/>
+              <CheckBox Content="Use the rival's saved name" IsChecked="{Binding SavedRivalName}" IsVisible="{Binding ShowSavedRival}"/>
+              <StackPanel Spacing="2" IsVisible="{Binding ShowStaticName}">
+                <TextBlock Text="Name shown"/>
+                <controls:FusionAutoCompleteBox ItemsSource="{Binding StaticNameChoices}" SelectedIndex="{Binding StaticNameIndex}" HorizontalAlignment="Stretch"/>
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding ArtSlots}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:IntroArtSlot">
+                    <StackPanel Spacing="2" Margin="0,4,0,0" IsVisible="{Binding Visible}">
+                      <TextBlock Text="{Binding Label}"/>
+                      <ComboBox ItemsSource="{Binding Choices}" SelectedIndex="{Binding Index}" HorizontalAlignment="Stretch"/>
+                      <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                        <Button Content="Paint" controls:Icon.Key="pencil" Tag="{Binding}" Click="PaintSlot_Click"/>
+                        <Button Content="Animation" Tag="{Binding}" Click="AnimateSlot_Click" IsVisible="{Binding CanAnimate}"/>
+                      </StackPanel>
+                      <ItemsControl ItemsSource="{Binding Parts}">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:IntroArtFile">
+                            <StackPanel Width="112" Margin="0,2,4,0" Spacing="1">
+                              <TextBlock Classes="subtle" Text="{Binding Label}"/>
+                              <StackPanel Orientation="Horizontal" Spacing="2">
+                                <NumericUpDown Value="{Binding Value}" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Width="96"/>
+                                <Button controls:Icon.Key="OpenLink" Tag="{Binding}" Click="ShowPart_Click" ToolTip.Tip="Show in the graphics browser"/>
+                              </StackPanel>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <StackPanel Spacing="2" IsVisible="{Binding ShowMotion}">
+                <TextBlock Text="Stops at X"/>
+                <NumericUpDown Value="{Binding Motion}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"/>
+              </StackPanel>
+              <StackPanel Spacing="2" IsVisible="{Binding ShowTiming}">
+                <TextBlock Text="Clash shake"/>
+                <NumericUpDown Value="{Binding Timing}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"
+                               ToolTip.Tip="Frames"/>
+              </StackPanel>
+
+              <StackPanel Spacing="4" Margin="0,10,0,0" IsVisible="{Binding ShowTimingSection}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Timings" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <controls:HelpTip Text="This class's intro speeds in frames. 0 keeps the game's value."/>
+                </StackPanel>
+                <TextBlock Text="{Binding TimingNote}" IsVisible="{Binding !HasTimings}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+                <Button Content="Add timing table" controls:Icon.Key="addIcon" Click="InstallTimings_Click" IsVisible="{Binding CanInstallTimings}" HorizontalAlignment="Left"/>
+                <ItemsControl ItemsSource="{Binding TimingRows}" IsVisible="{Binding ShowTimingRows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TimingRow">
+                      <Grid ColumnDefinitions="110,110,Auto" Margin="0,2" IsVisible="{Binding Visible}">
+                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" ToolTip.Tip="{Binding Tip}"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding Value}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" ToolTip.Tip="{Binding Tip}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding GameValue}" VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+          <StackPanel Grid.Column="2" Margin="8" Spacing="6" IsVisible="{Binding HasPreview}">
+            <Border Background="Black" Width="512" Height="384" HorizontalAlignment="Left">
+              <Image Source="{Binding PreviewImage}" Width="512" Height="384" RenderOptions.BitmapInterpolationMode="None"/>
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="{Binding AnimateLabel}" Click="Animate_Click" IsVisible="{Binding CanAnimate}"/>
+              <ComboBox ItemsSource="{Binding TerrainChoices}" SelectedIndex="{Binding TerrainIndex}" IsVisible="{Binding ShowTerrain}" Width="160"/>
+              <CheckBox Content="Girl player" IsChecked="{Binding PlayerGirl}" IsVisible="{Binding ShowPlayerChoice}"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+      <!-- Motion tables the intro code reads: grunt emblem flights and the block wipe order -->
+      <TabItem Header="Motion" IsVisible="{Binding HasMotion}">
+        <Grid ColumnDefinitions="*,540">
+          <ScrollViewer Grid.Column="0" Margin="4">
+            <StackPanel Spacing="10" Margin="4">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding GruntIntroName, StringFormat='{}{0} intro'}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <controls:HelpTip Text="Start and end in screen pixels, starting speed in pixels a frame, wait in frames after the previous emblem. Negative turns spin the other way."/>
+              </StackPanel>
+              <Grid ColumnDefinitions="74,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,-6">
+                <TextBlock Grid.Column="1" Text="Start X" Width="80"/>
+                <TextBlock Grid.Column="2" Text="Start Y" Width="80"/>
+                <TextBlock Grid.Column="3" Text="End X" Width="80"/>
+                <TextBlock Grid.Column="4" Text="End Y" Width="80"/>
+                <TextBlock Grid.Column="5" Text="Speed X" Width="80"/>
+                <TextBlock Grid.Column="6" Text="Speed Y" Width="80"/>
+                <TextBlock Grid.Column="7" Text="Wait" Width="80"/>
+                <TextBlock Grid.Column="8" Text="Turns" Width="80"/>
+              </Grid>
+              <ItemsControl ItemsSource="{Binding FlightRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FlightRow">
+                    <Grid ColumnDefinitions="74,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,2">
+                      <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
+                      <NumericUpDown Grid.Column="1" Width="80" Value="{Binding StartX}" Minimum="-4096" Maximum="4096" FormatString="0"/>
+                      <NumericUpDown Grid.Column="2" Width="80" Value="{Binding StartY}" Minimum="-4096" Maximum="4096" FormatString="0"/>
+                      <NumericUpDown Grid.Column="3" Width="80" Value="{Binding EndX}" Minimum="-4096" Maximum="4096" FormatString="0"/>
+                      <NumericUpDown Grid.Column="4" Width="80" Value="{Binding EndY}" Minimum="-4096" Maximum="4096" FormatString="0"/>
+                      <NumericUpDown Grid.Column="5" Width="80" Value="{Binding SpeedX}" Minimum="-4096" Maximum="4096" FormatString="0"/>
+                      <NumericUpDown Grid.Column="6" Width="80" Value="{Binding SpeedY}" Minimum="-4096" Maximum="4096" FormatString="0"/>
+                      <NumericUpDown Grid.Column="7" Width="80" Value="{Binding Wait}" Minimum="0" Maximum="255" FormatString="0"/>
+                      <NumericUpDown Grid.Column="8" Width="80" Value="{Binding Turns}" Minimum="-16" Maximum="16" FormatString="0"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
+                <TextBlock Text="Block wipe order" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <controls:HelpTip Text="The order the black blocks fill the columns, 0 left to 7 right. Used by the late cave intro."/>
+              </StackPanel>
+              <TextBox Text="{Binding BlockOrderText}" Width="240" HorizontalAlignment="Left"/>
+              <TextBlock Text="{Binding BlockOrderError}" Foreground="{DynamicResource Editor.Warning}"
+                         IsVisible="{Binding BlockOrderError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </StackPanel>
+          </ScrollViewer>
+          <StackPanel Grid.Column="1" Margin="8" Spacing="6">
+            <Border Background="Black" Width="512" Height="384" HorizontalAlignment="Left">
+              <Image Source="{Binding MotionImage}" Width="512" Height="384" RenderOptions.BitmapInterpolationMode="None"/>
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Button Content="{Binding MotionPlayLabel}" Click="PlayMotion_Click"/>
+              <ComboBox ItemsSource="{Binding MotionShows}" SelectedIndex="{Binding MotionShow}" Width="200"/>
+            </StackPanel>
+          </StackPanel>
         </Grid>
       </TabItem>
     </TabControl>
