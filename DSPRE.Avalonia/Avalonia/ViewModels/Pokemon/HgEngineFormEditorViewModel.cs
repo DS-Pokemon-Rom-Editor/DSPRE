@@ -52,7 +52,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int SelectedSpeciesIndex
         {
             get => _selectedSpeciesIndex;
-            set { if (_selectedSpeciesIndex != value) { _selectedSpeciesIndex = value; OnPropertyChanged(); LoadSelected(); } }
+            set
+            {
+                if (RecordSwitchGuard.IsSnappingBack || _selectedSpeciesIndex == value) return;
+                if (HasUnsavedChanges)
+                {
+                    int requested = value;
+                    RecordSwitchGuard.SnapBack(() => _selectedSpeciesIndex, v => _selectedSpeciesIndex = v, () => OnPropertyChanged(nameof(SelectedSpeciesIndex)));
+                    _ = SwitchSpeciesAsync(requested);
+                    return;
+                }
+                _selectedSpeciesIndex = value; OnPropertyChanged(); LoadSelected();
+            }
+        }
+
+        private async System.Threading.Tasks.Task SwitchSpeciesAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "species")) return;
+            _selectedSpeciesIndex = requested;
+            OnPropertyChanged(nameof(SelectedSpeciesIndex));
+            LoadSelected();
         }
 
         public string SelectedSpeciesDesignator =>
