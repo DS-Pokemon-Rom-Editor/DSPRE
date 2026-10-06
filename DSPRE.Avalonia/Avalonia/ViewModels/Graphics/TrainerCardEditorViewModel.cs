@@ -18,7 +18,22 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly TrainerCardGraphics _graphics = new();
         public bool GraphicsAvailable => _graphics.Available;
         public string[] RankNames => TrainerCardGraphics.RankNames;
-        private int[] AllRanks => System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(0, RankNames.Length));
+
+        /// <summary>One rank's box in the row that says which ranks an imported design colours.</summary>
+        public sealed class RankChoice
+        {
+            public string Name { get; init; }
+            public int Index { get; init; }
+            public bool IsChecked { get; set; } = true;
+        }
+
+        private System.Collections.ObjectModel.ObservableCollection<RankChoice> _importRanks;
+        public System.Collections.ObjectModel.ObservableCollection<RankChoice> ImportRanks => _importRanks ??=
+            new System.Collections.ObjectModel.ObservableCollection<RankChoice>(
+                System.Linq.Enumerable.Select(RankNames, (n, i) => new RankChoice { Name = n, Index = i }));
+
+        private int[] PickedRanks => System.Linq.Enumerable.ToArray(
+            System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(ImportRanks, r => r.IsChecked), r => r.Index));
 
         private int _selectedRankIndex;
         public int SelectedRankIndex
@@ -92,14 +107,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportCardFront(raw, AllRanks));
+            return Imported(_graphics.ImportCardFront(raw, PickedRanks));
         }
 
         public string ImportCardBack(string pngPath)
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportCardBack(raw, AllRanks));
+            return Imported(_graphics.ImportCardBack(raw, PickedRanks));
         }
 
         public string ImportTrainerMale(string pngPath)

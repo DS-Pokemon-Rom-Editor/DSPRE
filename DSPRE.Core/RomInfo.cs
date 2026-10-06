@@ -3574,10 +3574,13 @@ namespace DSPRE
             : gameFamily == GameFamilies.DP ? (23, 30, 31, new[] { 0, 1, 2, 3, 4, 5, 6 })
             : (41, 47, 48, new[] { 0, 1, 2, 3, 4, 5, 6 });
 
-        public static readonly string[] TrainerCardRankNames =
-            { "Normal", "Bronze", "Kap", "Silver", "Gold", "Black", "No Pokédex" };
+        // DP and Platinum use the pokeplatinum level names; HeartGold's are not named, so they go by colour.
+        public static string[] TrainerCardRankNames => gameFamily == GameFamilies.HGSS
+            ? new[] { "Normal", "Blue", "Green", "Purple", "Silver", "Black", "No Pokédex" }
+            : new[] { "Normal", "Cobalt", "Bronze", "Silver", "Gold", "Black", "No Pokédex" };
 
-        // Shared NCGR + one NSCR per gender; its colours sit in slots 65-95 of every rank's palette.
+        // Shared NCGR + one NSCR per gender; its colours sit in slots 65-95, of Normal's palette in DP and
+        // Platinum and of every rank's in HeartGold.
         public static (int ncgr, int maleNscr, int femaleNscr) TrainerCardTrainerMembers =>
             gameFamily == GameFamilies.Plat ? (31, 40, 41) : gameFamily == GameFamilies.DP ? (27, 35, 36) : (44, 54, 55);
 

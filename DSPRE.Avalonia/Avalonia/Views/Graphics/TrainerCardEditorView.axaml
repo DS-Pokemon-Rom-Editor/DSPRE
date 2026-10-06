@@ -35,6 +35,20 @@
 	<Border x:Name="CardDesign" BorderBrush="Gray" BorderThickness="1" Padding="10">
 	  <StackPanel Spacing="8">
 		<TextBlock Text="Card design" FontWeight="Bold"/>
+		<StackPanel Orientation="Horizontal" Spacing="10">
+		  <TextBlock Text="Ranks" VerticalAlignment="Center"
+		             ToolTip.Tip="The ranks an imported design colours. The others keep their own colours."/>
+		  <ItemsControl ItemsSource="{Binding ImportRanks}">
+			<ItemsControl.ItemsPanel>
+			  <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
+			<ItemsControl.ItemTemplate>
+			  <DataTemplate x:DataType="vm:TrainerCardEditorViewModel+RankChoice">
+				<CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked}" Margin="0,0,10,0"/>
+			  </DataTemplate>
+			</ItemsControl.ItemTemplate>
+		  </ItemsControl>
+		</StackPanel>
 
 		<WrapPanel Orientation="Horizontal">
 

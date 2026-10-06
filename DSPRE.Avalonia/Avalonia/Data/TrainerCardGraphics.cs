@@ -117,10 +117,20 @@ namespace DSPRE.Avalonia.Data
         }
 
         // ── Card design (shared NCGR, rebuilds all 7 rank palettes) ──────────────────
-        // Measured on retail DP, Platinum and HeartGold: the card draws with indices 0-63 (HeartGold also 96-111)
-        // and the trainer pose with 65-95, in every rank's palette. Each import keeps to its own slots.
-        private const int CardColourSlots = 64;
+        // A card shows the rank palette's banks 1-3 (HeartGold 1-8) and 15 over the Normal palette, and the pose
+        // sits in banks 4-5: Normal's own in DP and Platinum, every rank's in HeartGold. Each import keeps to its slots.
         private const int PoseFirstSlot = 65, PoseColourSlots = 31;
+
+        private static int[] CardSlots()
+        {
+            List<int> slots = new List<int>();
+            for (int i = 16; i < 64; i++) slots.Add(i);
+            if (gameFamily == GameFamilies.HGSS) for (int i = 96; i < 144; i++) slots.Add(i);
+            return slots.ToArray();
+        }
+
+        private static int[] PoseRanks(int rankCount) => gameFamily == GameFamilies.HGSS
+            ? System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(0, rankCount)) : new[] { 0 };
 
         public string ImportCardFront(RawImage png, IReadOnlyCollection<int> ranks) => ImportCardDesign(png, front: true, ranks);
         public string ImportCardBack(RawImage png, IReadOnlyCollection<int> ranks) => ImportCardDesign(png, front: false, ranks);
@@ -140,8 +150,10 @@ namespace DSPRE.Avalonia.Data
             if (chrRaw == null || facaRaw == null || backRaw == null)
                 return "Could not read the current card design.";
 
-            RawImage frontPng = front ? png : ComposeCardFront(0);
-            RawImage backPng = front ? ComposeCardBack(0) : png;
+            // The side not being replaced is read in the colours of a rank it will be written to.
+            int lookRank = System.Linq.Enumerable.First(ranks);
+            RawImage frontPng = front ? png : ComposeCardFront(lookRank);
+            RawImage backPng = front ? ComposeCardBack(lookRank) : png;
             if (frontPng == null || backPng == null) return "Could not decode the current card design.";
 
             int capacity = TileCapacity(chrRaw, facaRaw, backRaw);
@@ -155,16 +167,20 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex) { return ex.Message; }
 
+            int[] slots = CardSlots();
             int total = frontTiles.Colors.Count + backTiles.Colors.Count;
-            if (total > CardColourSlots)
-                return $"The front and back use {total} colours between them; the card has room for {CardColourSlots}.";
+            if (total > slots.Length)
+                return $"The front and back use {total} colours between them; the card has room for {slots.Length}.";
 
             int backBase = frontTiles.Colors.Count;
             (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[total];
             for (int i = 0; i < frontTiles.Colors.Count; i++) palette[i] = frontTiles.Colors[i];
             for (int i = 0; i < backTiles.Colors.Count; i++) palette[backBase + i] = backTiles.Colors[i];
+            int[] used = slots[..total];
+            Remap(frontTiles, v => used[v]);
+            Remap(backTiles, v => used[backBase + v]);
 
-            MergedTiles merged = MergeTilePools(frontTiles, backTiles, backBase, capacity, reserveZero: false);
+            MergedTiles merged = MergeTilePools(frontTiles, backTiles, 0, capacity, reserveZero: false);
             if (merged == null)
                 return $"Front + back design needs more than {capacity} unique 8x8 tiles once deduplicated. Simplify the images.";
 
@@ -176,7 +192,7 @@ namespace DSPRE.Avalonia.Data
             foreach (int rank in ranks)
                 if (rank >= 0 && rank < m.rankPalettes.Length && NitroBgCodec.Inflate(GetAndSnapshot(m.rankPalettes[rank])) is byte[] raw)
                     palettes[m.rankPalettes[rank]] = raw;
-            try { foreach (byte[] raw in palettes.Values) WritePalette(raw, palette, 0); }
+            try { foreach (byte[] raw in palettes.Values) WritePalette(raw, palette, used); }
             catch (InvalidDataException ex) { return ex.Message; }
 
             _narc.Put(m.ncgr, chrRaw);
@@ -239,11 +255,12 @@ namespace DSPRE.Avalonia.Data
                 return "The trainer's arrangement files are too small for a whole pose.";
             WriteTileData(chrRaw, merged.TileData);
 
-            // Every rank's palette carries the pose's colours, so a card of any rank shows the new pose.
+            // HeartGold shows the pose in each rank's colours; DP and Platinum always take Normal's.
             Dictionary<int, byte[]> palettes = new Dictionary<int, byte[]> { [m.rankPalettes[0]] = palRaw };
-            for (int rank = 1; rank < m.rankPalettes.Length; rank++)
-                if (NitroBgCodec.Inflate(GetAndSnapshot(m.rankPalettes[rank])) is byte[] other) palettes[m.rankPalettes[rank]] = other;
-            try { foreach (byte[] raw in palettes.Values) WritePalette(raw, palette, PoseFirstSlot); }
+            foreach (int rank in PoseRanks(m.rankPalettes.Length))
+                if (rank > 0 && NitroBgCodec.Inflate(GetAndSnapshot(m.rankPalettes[rank])) is byte[] other) palettes[m.rankPalettes[rank]] = other;
+            int[] poseSlots = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(PoseFirstSlot, palette.Length));
+            try { foreach (byte[] raw in palettes.Values) WritePalette(raw, palette, poseSlots); }
             catch (InvalidDataException ex) { return ex.Message; }
 
             _narc.Put(t.ncgr, chrRaw);
@@ -398,18 +415,27 @@ namespace DSPRE.Avalonia.Data
             return block;
         }
 
-        private static void WritePalette(byte[] palRaw, (byte r, byte g, byte b)[] palette, int firstSlot)
+        private static void WritePalette(byte[] palRaw, (byte r, byte g, byte b)[] palette, int[] slots)
         {
             int pltt = NitroBgCodec.Find(palRaw, "TTLP", 0);
             if (pltt < 0) throw new InvalidDataException("The colour file has no palette block.");
-            int dataOffset = pltt + 0x18 + firstSlot * 2;
-            for (int i = 0; i < palette.Length && dataOffset + i * 2 + 1 < palRaw.Length; i++)
+            int dataOffset = pltt + 0x18;
+            for (int i = 0; i < palette.Length && i < slots.Length; i++)
             {
+                int at = dataOffset + slots[i] * 2;
+                if (at + 1 >= palRaw.Length) continue;
                 (byte r, byte g, byte b) = palette[i];
                 ushort c = (ushort)(((r >> 3) & 0x1F) | (((g >> 3) & 0x1F) << 5) | (((b >> 3) & 0x1F) << 10));
-                palRaw[dataOffset + i * 2] = (byte)(c & 0xFF);
-                palRaw[dataOffset + i * 2 + 1] = (byte)(c >> 8);
+                palRaw[at] = (byte)(c & 0xFF);
+                palRaw[at + 1] = (byte)(c >> 8);
             }
+        }
+
+        // Moves quantized colour numbers onto the palette slots they will be written to.
+        private static void Remap(EncodedTiles tiles, Func<int, int> slotOf)
+        {
+            for (int i = 0; i < tiles.TileData.Length; i++)
+                if (tiles.TileData[i] < tiles.Colors.Count) tiles.TileData[i] = (byte)slotOf(tiles.TileData[i]);
         }
 
         private static void WriteTileData(byte[] memberRaw, byte[] tiles)
