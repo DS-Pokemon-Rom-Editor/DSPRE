@@ -703,6 +703,35 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Which drawing a frame shows.</summary>
         public int CellOf(int sequence, int frame) => ResultFor(sequence, frame)?.Cell ?? 0;
 
+        /// <summary>
+        /// The frame showing <paramref name="ticks"/> frames after the sequence starts. Modes 2 and 4 loop from the
+        /// loop start; 3 and 4 play back again after reaching the end; anything else stops on the last frame.
+        /// </summary>
+        public int FrameAt(int sequence, int ticks)
+        {
+            if (sequence < 0 || sequence >= Sequences.Count) return 0;
+            Sequence s = Sequences[sequence];
+            int count = s.Frames.Count;
+            if (count == 0 || ticks <= 0) return 0;
+            bool loops = s.PlayMode == 2 || s.PlayMode == 4, bounces = s.PlayMode == 3 || s.PlayMode == 4;
+            List<int> order = new List<int>();
+            for (int i = 0; i < count; i++) order.Add(i);
+            if (bounces) for (int i = count - 2; i > 0; i--) order.Add(i);
+            int loopFrom = loops && !bounces ? Math.Clamp(s.LoopStartFrame, 0, count - 1) : 0;
+            int at = 0, step = 0, guard = 0;
+            while (guard++ < 100000)
+            {
+                int hold = Math.Max(1, (int)s.Frames[order[step]].Delay);
+                if (ticks < at + hold) return order[step];
+                at += hold;
+                step++;
+                if (step < order.Count) continue;
+                if (!loops) return bounces ? 0 : count - 1;
+                step = loopFrom;
+            }
+            return 0;
+        }
+
         /// <summary>How far this frame shifts the sprite, in pixels.</summary>
         public (int X, int Y) ShiftOf(int sequence, int frame)
         {
