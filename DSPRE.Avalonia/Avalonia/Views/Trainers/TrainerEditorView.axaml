@@ -6,7 +6,7 @@
         xmlns:data="clr-namespace:DSPRE.Avalonia.Data"
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerEditorView"
         x:DataType="vm:TrainerEditorViewModel"
-        Title="Trainer Editor"
+        Title="Trainer editor"
         Width="980" Height="760"
         WindowStartupLocation="CenterScreen">
 
@@ -17,14 +17,11 @@
   <TabControl x:Name="MainTabs">
     <TabItem Header="Trainers">
       <DockPanel>
-        <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-                BorderThickness="0,0,0,1" Padding="6,4">
-          <WrapPanel x:Name="TrainerToolbar" Classes="toolbar">
+        <controls:EditorToolbar x:Name="TrainerToolbar">
             <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Undo (Ctrl+Z)"/>
             <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-            <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2"/>
             <Button Content="Add trainer" controls:Icon.Key="addIcon" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
             <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
             <Button Content="Search…" controls:Icon.Key="lens"        Click="Search_Click"/>
@@ -32,15 +29,13 @@
             <Button Content="DV calc…"       Click="DVCalc_Click"/>
             <Button Content="Battle messages" Click="BattleMessages_Click"/>
             <Button Content="Trainer classes" Click="TrainerClasses_Click" ToolTip.Tip="Jump to this trainer's class on the Classes tab"/>
-            <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="2,2" IsVisible="{Binding !IsHgeActive}"/>
             <Button Content="Export trainer…" controls:Icon.Key="export" Click="ExportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
             <Button Content="Import trainer…" controls:Icon.Key="import" Click="ImportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Load a .trf file into this trainer slot"/>
             <Button Content="Export properties…" controls:Icon.Key="export" Click="ExportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
             <Button Content="Import properties…" controls:Icon.Key="import" Click="ImportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
             <Button Content="Export party…" controls:Icon.Key="export" Click="ExportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
             <Button Content="Import party…" controls:Icon.Key="import" Click="ImportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
-          </WrapPanel>
-        </Border>
+        </controls:EditorToolbar>
         <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
           <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
         </Border>
@@ -51,15 +46,17 @@
 
         <Panel>
         <Grid ColumnDefinitions="240,*">
-      <ListBox x:Name="TrainerList" Grid.Column="0" Margin="4"
-               ItemsSource="{Binding TrainerNames}"
-               SelectedIndex="{Binding SelectedTrainerIndex}"/>
+      <DockPanel Grid.Column="0" Margin="4">
+        <TextBox DockPanel.Dock="Top" Text="{Binding TrainerList.Filter}" PlaceholderText="Search trainers" Margin="0,0,0,4"
+                 ToolTip.Tip="Name, class or number. Close spellings count when nothing matches exactly."/>
+        <ListBox x:Name="TrainerList" ItemsSource="{Binding TrainerList.Shown}" SelectedIndex="{Binding TrainerList.ShownIndex}"/>
+      </DockPanel>
 
       <ScrollViewer Grid.Column="1" Padding="8,8,8,24">
         <StackPanel Spacing="8">
 
           <!-- Properties -->
-          <HeaderedContentControl Header="Trainer">
+          <GroupBox Header="Trainer">
             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center" Margin="0,0,6,2"/>
               <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding TrainerName}" MaxLength="{Binding TrainerNameMaxLength}" Margin="0,0,8,2"/>
@@ -74,8 +71,8 @@
 
               <WrapPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" ItemSpacing="12" LineSpacing="4" Margin="0,4,8,0">
                 <CheckBox Content="Double battle" IsChecked="{Binding DoubleBattle}" IsVisible="{Binding !IsHgeActive}"/>
-                <TextBox Text="{Binding BattleTypeRaw}" Width="56" MaxLength="10" IsVisible="{Binding !IsHgeActive}"
-                         ToolTip.Tip="Battle type flags, 2 is double"/>
+                <NumericUpDown Value="{Binding BattleTypeValue}" Width="110" Minimum="0" Maximum="4294967295" IsVisible="{Binding !IsHgeActive}"
+                               ToolTip.Tip="Battle type flags, 2 is double"/>
                 <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsHgeActive}">
                   <TextBlock Text="Battle type" VerticalAlignment="Center"/>
                   <ComboBox Width="180" ItemsSource="{Binding BattleTypeOptions}" SelectedIndex="{Binding BattleTypeIndex}"/>
@@ -92,29 +89,26 @@
                 </StackPanel>
               </WrapPanel>
             </Grid>
-          </HeaderedContentControl>
+          </GroupBox>
 
           <!-- Trainer data type (hg-engine only): the real TRAINER_DATA_TYPE_* flags, dynamically named
                from the linked checkout's include/trainer_data.h. Each one gates the matching party-mon
                field(s) below (see TrainerPartyMonViewModel's Hge*Enabled properties). -->
-          <HeaderedContentControl Header="Trainer data type" IsVisible="{Binding IsHgeActive}">
+          <GroupBox Header="Trainer data type" IsVisible="{Binding IsHgeActive}">
             <ItemsControl ItemsSource="{Binding TrainerDataTypeFlags}">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel ItemSpacing="4" LineSpacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:AiFlagViewModel">
-                  <!-- Nested TextBlock, not Content=, so leading "_" in flag names isn't eaten as a mnemonic. -->
-                  <CheckBox IsChecked="{Binding Checked}" Width="220" Margin="0,0,4,0">
-                    <TextBlock Text="{Binding Label}"/>
-                  </CheckBox>
+                  <CheckBox Content="{Binding Label}" IsChecked="{Binding Checked}" Width="220" Margin="0,0,4,0"/>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </HeaderedContentControl>
+          </GroupBox>
 
           <!-- Held items -->
-          <HeaderedContentControl Header="Trainer-held items">
+          <GroupBox Header="Trainer-held items">
             <ItemsControl ItemsSource="{Binding TrainerItems}">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel ItemSpacing="4" LineSpacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TrainerItemSlotViewModel">
                   <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" Width="200" Margin="2"
@@ -122,27 +116,24 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </HeaderedContentControl>
+          </GroupBox>
 
           <!-- AI flags: dynamically named from trainer_data.h's real F_* bits when hg-engine is active
                (repopulated in code, see TrainerEditorViewModel.SetupAsync); the same static, generic
                labels as before otherwise. -->
-          <HeaderedContentControl Header="AI flags">
+          <GroupBox Header="AI flags">
             <ItemsControl ItemsSource="{Binding AiFlags}">
-              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel ItemSpacing="4" LineSpacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:AiFlagViewModel">
-                  <!-- Nested TextBlock, not Content=, so leading "_" in flag names isn't eaten as a mnemonic. -->
-                  <CheckBox IsChecked="{Binding Checked}" Width="220" Margin="0,0,4,0">
-                    <TextBlock Text="{Binding Label}"/>
-                  </CheckBox>
+                  <CheckBox Content="{Binding Label}" IsChecked="{Binding Checked}" Width="220" Margin="0,0,4,0"/>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </HeaderedContentControl>
+          </GroupBox>
 
           <!-- Party -->
-          <HeaderedContentControl x:Name="PartyBox" Header="Party">
+          <GroupBox x:Name="PartyBox" Header="Party">
             <!-- Non-virtualizing panel: the default VirtualizingStackPanel mismeasures cards whose
                  Expander changes height. -->
             <ItemsControl ItemsSource="{Binding Party}">
@@ -338,7 +329,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </HeaderedContentControl>
+          </GroupBox>
 
           <!-- Fixed spacer: guarantees scroll room past the last party card. -->
           <Border Height="320"/>

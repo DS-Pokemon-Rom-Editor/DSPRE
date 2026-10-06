@@ -18,10 +18,16 @@
     <Grid ColumnDefinitions="220,*">
       <DockPanel Grid.Column="0" Margin="4">
         <Button DockPanel.Dock="Top" Content="Add trainer class…" controls:Icon.Key="addIcon" Click="AddTrainerClass_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"
-                ToolTip.Tip="Platinum (English) only. Repoints/extends the gender, prize-money and (optionally) eye-contact-music tables into the synthetic overlay."
-                IsEnabled="{Binding IsExpansionSupported}"/>
-        <ListBox ItemsSource="{Binding ClassNames}"
-                 SelectedIndex="{Binding SelectedClassIndex}"/>
+                ToolTip.Tip="Platinum (English) or an hg-engine checkout."
+                IsEnabled="{Binding CanOfferAddClass}" IsVisible="{Binding !ShowClassCopy}"/>
+        <Button DockPanel.Dock="Top" Content="Copy class" controls:Icon.Key="copy" Click="CopyClass_Click" HorizontalAlignment="Stretch"
+                Margin="0,0,0,4" IsVisible="{Binding ShowClassCopy}"
+                ToolTip.Tip="Adds the selected class again at the end, with its name, description, sprite and metadata."/>
+        <Button DockPanel.Dock="Top" Content="Remove last class" controls:Icon.Key="deleteIcon" Click="RemoveLastClass_Click"
+                HorizontalAlignment="Stretch" Margin="0,0,0,4" IsVisible="{Binding ShowClassCopy}"/>
+        <TextBox DockPanel.Dock="Top" Text="{Binding ClassList.Filter}" PlaceholderText="Search classes" Margin="0,0,0,4"
+                 ToolTip.Tip="Name or number. Close spellings count when nothing matches exactly."/>
+        <ListBox x:Name="ClassList" ItemsSource="{Binding ClassList.Shown}" SelectedIndex="{Binding ClassList.ShownIndex}"/>
       </DockPanel>
 
       <ScrollViewer Grid.Column="1">
@@ -58,7 +64,7 @@
           </StackPanel>
 
           <StackPanel Spacing="2" IsEnabled="{Binding MusicEnabled}">
-            <TextBlock Text="Eye contact music [Main]"
+            <TextBlock Text="Eye contact music [main]"
                        ToolTip.Tip="The SSEQ that plays when a trainer of this class spots the player. Disabled means this class has none."/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
           </StackPanel>
@@ -77,37 +83,13 @@
               <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleMusic}"/>
             </StackPanel>
             <StackPanel Spacing="2">
-              <TextBlock Text="VS style"/>
-              <ComboBox ItemsSource="{Binding StyleNames}" SelectedIndex="{Binding VsStyle}" HorizontalAlignment="Stretch"/>
+              <TextBlock Text="VS intro"/>
+              <TextBlock Text="{Binding IntroSummary}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+              <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+                <Button Content="Edit intro" Click="EditIntro_Click"/>
+                <Button Content="Patch notes" Click="PatchNotes_Click"/>
+              </StackPanel>
             </StackPanel>
-            <CheckBox Content="Use the rival's saved name" IsChecked="{Binding SavedRivalName}" IsVisible="{Binding RivalChoiceVisible}"/>
-            <StackPanel Spacing="2" IsVisible="{Binding TrainerNameVisible}">
-              <TextBlock Text="Name shown"/>
-              <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerNameChoices}" SelectedIndex="{Binding TrainerNameId}" HorizontalAlignment="Stretch" MaxDropDownHeight="360"/>
-            </StackPanel>
-            <StackPanel Spacing="2" IsVisible="{Binding Style1MotionVisible}">
-              <TextBlock Text="Motion"/>
-              <NumericUpDown Minimum="0" Maximum="4294967295" Increment="1" Value="{Binding Style1Motion}"/>
-            </StackPanel>
-            <StackPanel Spacing="2" IsVisible="{Binding Style2TimingVisible}">
-              <TextBlock Text="Timing"/>
-              <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding Style2Timing}"/>
-            </StackPanel>
-            <TextBlock Text="Intro graphics"/>
-            <ItemsControl ItemsSource="{Binding MetadataAssets}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:TrainerClassesViewModel+MetadataAsset">
-                  <StackPanel Width="96" Margin="0,0,6,6" Spacing="1" IsEnabled="{Binding Used}">
-                    <TextBlock Text="{Binding Group}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
-                    <TextBlock Text="{Binding Label}" FontSize="11"/>
-                    <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding Value}" FormatString="0"/>
-                  </StackPanel>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
           </StackPanel>
 
           <StackPanel Orientation="Horizontal" Spacing="6">

@@ -349,22 +349,7 @@ namespace DSPRE.Avalonia.Controls
                 return false;
             }
 
-            string query = global::DSPRE.SearchMatch.Fold(searchText.Trim());
-            if (query.Length < 3)
-            {
-                return false;
-            }
-
-            int threshold = Math.Max(1, query.Length / 4);
-            foreach (string token in itemText.Split(new[] { ' ', '_', '-', '.', ',', '[', ']', '(', ')', '/' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                if (global::DSPRE.CoreExtensions.Levenshtein(query, global::DSPRE.SearchMatch.Fold(token)) <= threshold)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return global::DSPRE.SearchMatch.NearMiss(itemText, searchText);
         }
 
         private bool AnyItemContains(string text)
