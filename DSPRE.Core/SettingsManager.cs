@@ -95,6 +95,9 @@ namespace DSPRE
         public double mapEditorSidePanelWidth { get; set; } = 0;
         public double eventEditorSidePanelWidth { get; set; } = 0;
 
+        /// <summary>How the map model editor's tile palette pictures tiles: 0 automatic, 1 angled, 2 from above.</summary>
+        public int mapTilesView { get; set; } = 0;
+
         /// <summary>Most-recently-opened projects (.nds files or extracted folders), newest first.</summary>
         public List<string> recentProjects { get; set; } = new List<string>();
     }

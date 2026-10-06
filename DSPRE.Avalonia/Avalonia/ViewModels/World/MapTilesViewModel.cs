@@ -237,6 +237,46 @@ namespace DSPRE.Avalonia.ViewModels.World
             set { if (Set(ref _dimOtherLayers, value)) GridChanged?.Invoke(this, EventArgs.Empty); }
         }
 
+        public List<string> TileViews { get; } = new List<string> { "Automatic", "Angled", "From above" };
+
+        // Automatic shows flat ground from above, where its texture reads best, and anything with height angled.
+        private int _tileViewIndex = Math.Clamp(SettingsManager.Settings?.mapTilesView ?? 0, 0, 2);
+        public int TileViewIndex
+        {
+            get => _tileViewIndex;
+            set
+            {
+                if (value < 0 || !Set(ref _tileViewIndex, value)) return;
+                if (SettingsManager.Settings != null) { SettingsManager.Settings.mapTilesView = value; try { SettingsManager.Save(); } catch { } }
+                _thumbs.Clear();
+                FillList();
+            }
+        }
+
+        private bool ShowsFromAbove(MapTileset.Tile tile) => _tileViewIndex switch
+        {
+            1 => false,
+            2 => true,
+            _ => tile.IsGround && tile.Corners.Max(c => c.Y) - tile.Corners.Min(c => c.Y) <= MapTileset.TileWidth / 4f,
+        };
+
+        private byte[] DrawThumbnail(MapTileset.Tile tile, int size)
+        {
+            if (!ShowsFromAbove(tile)) return TileThumbnail.Draw(tile, size, Picture);
+            int squares = Math.Max(1, Math.Max(tile.Wide, tile.Deep));
+            (byte[] rgba, int wide, int tall) drawn = TileThumbnail.DrawFromAbove(tile, 0, Math.Max(1, size / squares), Picture);
+            byte[] fitted = new byte[size * size * 4];
+            int ox = (size - drawn.wide) / 2, oy = (size - drawn.tall) / 2;
+            for (int y = 0; y < drawn.tall; y++)
+                for (int x = 0; x < drawn.wide; x++)
+                {
+                    int tx = ox + x, ty = oy + y;
+                    if (tx < 0 || ty < 0 || tx >= size || ty >= size) continue;
+                    Array.Copy(drawn.rgba, (y * drawn.wide + x) * 4, fitted, (ty * size + tx) * 4, 4);
+                }
+            return fitted;
+        }
+
         public bool ShowHeights
         {
             get => _painter.Heights;
@@ -1468,7 +1508,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 if (_set != null && tile >= 0 && tile < _set.Tiles.Count)
-                    return ToBitmap(TileThumbnail.Draw(_set.Tiles[tile], Size, Picture), Size, Size);
+                    return ToBitmap(DrawThumbnail(_set.Tiles[tile], Size), Size, Size);
             }
             catch (Exception ex) { AppLogger.Error("MapTiles.BigThumbnail: " + ex.Message); }
             return null;
@@ -1482,7 +1522,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 if (_set != null && tile >= 0 && tile < _set.Tiles.Count)
-                    made = ToBitmap(TileThumbnail.Draw(_set.Tiles[tile], Size, Picture), Size, Size);
+                    made = ToBitmap(DrawThumbnail(_set.Tiles[tile], Size), Size, Size);
             }
             catch (Exception ex) { AppLogger.Error("MapTiles.Thumbnail: " + ex.Message); }
             _thumbs[tile] = made;

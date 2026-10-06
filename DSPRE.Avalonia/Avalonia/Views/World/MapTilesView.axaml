@@ -109,8 +109,11 @@
       <TabControl x:Name="TilePalette" Grid.Column="0" Padding="0">
         <TabItem Header="Tiles">
           <DockPanel>
-          <TextBox DockPanel.Dock="Top" Text="{Binding TileSearch}" PlaceholderText="Search tiles or textures"
-                   Margin="0,0,0,4" IsEnabled="{Binding Ready}"/>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+            <TextBox Text="{Binding TileSearch}" PlaceholderText="Search tiles or textures" IsEnabled="{Binding Ready}"/>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding TileViews}" SelectedIndex="{Binding TileViewIndex}" Margin="4,0,0,0"
+                      ToolTip.Tip="How tiles are pictured. Automatic shows flat ground from above and anything taller angled."/>
+          </Grid>
           <ListBox Classes="strip" ItemsSource="{Binding ShownTiles}" SelectedItem="{Binding ShownTile}"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemsPanel>
@@ -293,7 +296,7 @@
                   BorderThickness="1" BorderBrush="{DynamicResource Editor.Separator}">
             <Panel>
               <gl:TileGridControl x:Name="Painter" AutomationProperties.Name="Squares"/>
-              <TextBlock Text="Start with From map or Import…"
+              <TextBlock Text="Start with from map or import…"
                          IsVisible="{Binding !Ready}" TextWrapping="Wrap" MaxWidth="360" TextAlignment="Center"
                          HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"
                          IsHitTestVisible="False"/>
