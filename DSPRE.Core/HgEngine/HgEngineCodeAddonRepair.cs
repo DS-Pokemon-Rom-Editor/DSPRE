@@ -23,36 +23,38 @@ namespace DSPRE.HgEngine
             if (staleMembers == null || staleMembers.Count == 0)
             { error = "There is nothing to drop."; return false; }
 
+            string dir = unpackedDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string building = dir + ".repair", previous = dir + ".old";
             try
             {
-                List<string> members = Directory.GetFiles(unpackedDir)
+                // Only the numbered members; anything else left in the folder is not part of the archive.
+                List<string> members = Directory.GetFiles(dir)
+                    .Where(p => Path.GetFileName(p).Length == 4 && Path.GetFileName(p).All(char.IsDigit))
                     .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
                 List<string> keep = members.Where((_, i) => !staleMembers.Contains(i)).ToList();
                 if (keep.Count == 0) { error = "That would drop every member."; return false; }
 
-                // Renaming in place would overwrite members not moved yet, so every kept member goes to a
-                // temporary name first.
-                List<string> staged = new List<string>(keep.Count);
-                foreach (string path in keep)
-                {
-                    string temp = path + ".repair";
-                    File.Move(path, temp);
-                    staged.Add(temp);
-                }
-                foreach (string path in members.Where(p => File.Exists(p))) File.Delete(path);
+                // The new layout is built beside the archive and swapped in whole, so a failure part way
+                // leaves the archive as it was.
+                if (Directory.Exists(building)) Directory.Delete(building, true);
+                Directory.CreateDirectory(building);
+                for (int i = 0; i < keep.Count; i++)
+                    File.Copy(keep[i], Path.Combine(building, i.ToString("D4")));
 
-                for (int i = 0; i < staged.Count; i++)
-                {
-                    File.Move(staged[i], Path.Combine(unpackedDir, i.ToString("D4")));
-                }
+                if (Directory.Exists(previous)) Directory.Delete(previous, true);
+                Directory.Move(dir, previous);
+                try { Directory.Move(building, dir); }
+                catch { Directory.Move(previous, dir); throw; }
+                Directory.Delete(previous, true);
                 return true;
             }
             catch (Exception ex)
             {
                 error = ex.Message;
                 AppLogger.Error("HgEngineCodeAddonRepair.TryRepair: " + ex.Message);
+                try { if (Directory.Exists(dir) && Directory.Exists(building)) Directory.Delete(building, true); } catch { }
                 return false;
             }
         }
