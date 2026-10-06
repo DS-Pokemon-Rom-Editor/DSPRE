@@ -18,6 +18,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly TrainerCardGraphics _graphics = new();
         public bool GraphicsAvailable => _graphics.Available;
         public string[] RankNames => TrainerCardGraphics.RankNames;
+        private int[] AllRanks => System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Range(0, RankNames.Length));
 
         private int _selectedRankIndex;
         public int SelectedRankIndex
@@ -91,14 +92,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportCardFront(raw));
+            return Imported(_graphics.ImportCardFront(raw, AllRanks));
         }
 
         public string ImportCardBack(string pngPath)
         {
             RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
-            return Imported(_graphics.ImportCardBack(raw));
+            return Imported(_graphics.ImportCardBack(raw, AllRanks));
         }
 
         public string ImportTrainerMale(string pngPath)

@@ -3577,7 +3577,7 @@ namespace DSPRE
         public static readonly string[] TrainerCardRankNames =
             { "Normal", "Bronze", "Kap", "Silver", "Gold", "Black", "No Pokédex" };
 
-        // Shared NCGR + one NSCR per gender; always uses rankPalettes[0] (Normal), matching the game.
+        // Shared NCGR + one NSCR per gender; its colours sit in slots 65-95 of every rank's palette.
         public static (int ncgr, int maleNscr, int femaleNscr) TrainerCardTrainerMembers =>
             gameFamily == GameFamilies.Plat ? (31, 40, 41) : gameFamily == GameFamilies.DP ? (27, 35, 36) : (44, 54, 55);
 
