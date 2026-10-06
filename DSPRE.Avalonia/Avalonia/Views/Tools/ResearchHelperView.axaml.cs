@@ -68,6 +68,16 @@ namespace DSPRE.Avalonia.Views.Tools
                 VM?.NavigateToTrainerResult(r);
         }
 
+        // ── Class Watcher ─────────────────────────────────────────────────────
+        private void ClassWatchSearch_Click(object sender, RoutedEventArgs e) => VM?.SearchClassUsage();
+        private void ClassWatchClear_Click(object sender, RoutedEventArgs e)  => VM?.ClearClassResults();
+
+        private void ClassWatchGrid_DoubleTapped(object sender, TappedEventArgs e)
+        {
+            if (sender is DataGrid dg && dg.SelectedItem is TrainerUsageResult r)
+                VM?.NavigateToTrainerResult(r);
+        }
+
         // ── File Watcher ──────────────────────────────────────────────────────
         private void FileWatcherSearch_Click(object sender, RoutedEventArgs e)
             => VM?.SearchScriptFileReferences();

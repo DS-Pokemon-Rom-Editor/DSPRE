@@ -16,11 +16,19 @@ namespace DSPRE.ROMFiles
 
         public string Kind { get; }
         public string Location { get; }
+        /// <summary>The trainer the reference names, when a scan covered several.</summary>
+        public int TrainerId { get; init; } = -1;
+        /// <summary>The file it is in (event or script file), or -1.</summary>
+        public int SourceId { get; init; } = -1;
+        /// <summary>Its place there: overworld, script number, row or entry; -1 when there is none.</summary>
+        public int Index { get; init; } = -1;
+        /// <summary>For a script reference, whether it sits in a function rather than a numbered script.</summary>
+        public bool InFunction { get; init; }
         public override string ToString() => $"{Kind}: {Location}";
     }
 
-    /// <summary>Finds known game resources that directly reference a main-roster trainer ID.</summary>
-    internal static class TrainerReferenceScanner
+    /// <summary>Finds known game resources that directly reference main-roster trainer IDs.</summary>
+    public static class TrainerReferenceScanner
     {
         private const int PhoneBookHeaderSize = PokegearPhoneBook.HeaderSize;
         private const int PhoneBookEntrySize = PokegearPhoneBook.EntrySize;
@@ -54,17 +62,46 @@ namespace DSPRE.ROMFiles
             };
 
         public static bool TryFindCurrentProjectReferences(int trainerId,
+            out List<TrainerReference> references, out string error) =>
+            TryFindCurrentProjectReferences(new HashSet<int> { trainerId }, out references, out error);
+
+        /// <summary>One pass over every resource for all of <paramref name="trainerIds"/>.</summary>
+        public static bool TryFindCurrentProjectReferences(ISet<int> trainerIds,
+            out List<TrainerReference> references, out string error) =>
+            TryFindCurrentProjectReferences(trainerIds, -1, out references, out error);
+
+        /// <summary>Only the trainer battle-message table and, in HeartGold and SoulSilver, the phone book.</summary>
+        public static bool TryFindTableReferences(int trainerId, out List<TrainerReference> references, out string error)
+        {
+            references = new List<TrainerReference>();
+            HashSet<int> ids = new HashSet<int> { trainerId };
+            if (TryScanBattleMessages(ids, references, out error) && TryScanHeartGoldPhoneBook(ids, references, out error)) return true;
+            references.Clear();
+            return false;
+        }
+
+        /// <summary>
+        /// The same, and when <paramref name="trainerClass"/> is set, the script commands that print that class's name.
+        /// </summary>
+        public static bool TryFindCurrentProjectReferences(ISet<int> trainerIds, int trainerClass,
             out List<TrainerReference> references, out string error)
         {
             references = new List<TrainerReference>();
             error = null;
+            if (trainerIds.Count == 0 && trainerClass < 0) return true;
+            if (trainerIds.Count == 0)
+            {
+                if (TryScanScripts(trainerIds, trainerClass, references, out error)) return true;
+                references.Clear();
+                return false;
+            }
 
-            if (!TryScanEvents(trainerId, references, out error) ||
-                !TryScanScripts(trainerId, references, out error) ||
-                !TryScanBattleMessages(trainerId, references, out error) ||
-                !TryScanVsSeeker(trainerId, references, out error) ||
-                !TryScanPokegearRematch(trainerId, references, out error) ||
-                !TryScanHeartGoldPhoneBook(trainerId, references, out error))
+            if (!TryScanEvents(trainerIds, references, out error) ||
+                !TryScanScripts(trainerIds, trainerClass, references, out error) ||
+                !TryScanBattleMessages(trainerIds, references, out error) ||
+                !TryScanVsSeeker(trainerIds, references, out error) ||
+                !TryScanPokegearRematch(trainerIds, references, out error) ||
+                !TryScanHeartGoldPhoneBook(trainerIds, references, out error))
             {
                 references.Clear();
                 return false;
@@ -75,23 +112,32 @@ namespace DSPRE.ROMFiles
 
         internal static void FindEventReferences(RomInfo.GameFamilies family, int eventFileId,
             EventFile events, int trainerId,
+            ICollection<TrainerReference> references) =>
+            FindEventReferences(family, eventFileId, events, new HashSet<int> { trainerId }, references);
+
+        internal static void FindEventReferences(RomInfo.GameFamilies family, int eventFileId,
+            EventFile events, ISet<int> trainerIds,
             ICollection<TrainerReference> references)
         {
-            foreach (Overworld overworld in events.overworlds)
+            for (int i = 0; i < events.overworlds.Count; i++)
             {
-                if (OverworldEventTypes.Find(family, overworld.type)?.IsTrainer != true ||
-                    TrainerScripts.TrainerIdFor(overworld.scriptNumber) != trainerId)
-                {
-                    continue;
-                }
+                Overworld overworld = events.overworlds[i];
+                if (OverworldEventTypes.Find(family, overworld.type)?.IsTrainer != true) continue;
+                if (TrainerScripts.TrainerIdFor(overworld.scriptNumber) is not int trainerId) continue;
+                if (!trainerIds.Contains(trainerId)) continue;
 
                 references.Add(new TrainerReference("Event",
-                    $"event file {eventFileId}, overworld {overworld.owID}"));
+                    $"event file {eventFileId}, overworld {overworld.owID}")
+                    { TrainerId = trainerId, SourceId = eventFileId, Index = i });
             }
         }
 
         internal static void FindScriptReferences(RomInfo.GameFamilies family, int scriptFileId,
-            ScriptFile scriptFile, int trainerId, ICollection<TrainerReference> references)
+            ScriptFile scriptFile, int trainerId, ICollection<TrainerReference> references) =>
+            FindScriptReferences(family, scriptFileId, scriptFile, new HashSet<int> { trainerId }, references);
+
+        internal static void FindScriptReferences(RomInfo.GameFamilies family, int scriptFileId,
+            ScriptFile scriptFile, ISet<int> trainerIds, ICollection<TrainerReference> references)
         {
             IReadOnlyDictionary<ushort, int[]> parameterMap = family switch
             {
@@ -102,12 +148,16 @@ namespace DSPRE.ROMFiles
             if (parameterMap == null) return;
 
             FindScriptContainerReferences(scriptFileId, "script", scriptFile.allScripts,
-                parameterMap, trainerId, references);
+                parameterMap, trainerIds, references);
             FindScriptContainerReferences(scriptFileId, "function", scriptFile.allFunctions,
-                parameterMap, trainerId, references);
+                parameterMap, trainerIds, references);
         }
 
         internal static bool TryFindBattleMessageReferences(ReadOnlySpan<byte> table, int trainerId,
+            ICollection<TrainerReference> references, out string error) =>
+            TryFindBattleMessageReferences(table, new HashSet<int> { trainerId }, references, out error);
+
+        internal static bool TryFindBattleMessageReferences(ReadOnlySpan<byte> table, ISet<int> trainerIds,
             ICollection<TrainerReference> references, out string error)
         {
             error = null;
@@ -119,17 +169,22 @@ namespace DSPRE.ROMFiles
 
             for (int offset = 0; offset < table.Length; offset += 4)
             {
-                if (BinaryPrimitives.ReadUInt16LittleEndian(table.Slice(offset, 2)) == trainerId)
+                int trainerId = BinaryPrimitives.ReadUInt16LittleEndian(table.Slice(offset, 2));
+                if (trainerIds.Contains(trainerId))
                 {
                     ushort trigger = BinaryPrimitives.ReadUInt16LittleEndian(table.Slice(offset + 2, 2));
                     references.Add(new TrainerReference("Battle message",
-                        $"entry {offset / 4}, trigger {trigger}"));
+                        $"entry {offset / 4}, trigger {trigger}") { TrainerId = trainerId, Index = offset / 4 });
                 }
             }
             return true;
         }
 
         internal static bool TryFindPhoneBookReferences(ReadOnlySpan<byte> data, int trainerId,
+            ICollection<TrainerReference> references, out string error) =>
+            TryFindPhoneBookReferences(data, new HashSet<int> { trainerId }, references, out error);
+
+        internal static bool TryFindPhoneBookReferences(ReadOnlySpan<byte> data, ISet<int> trainerIds,
             ICollection<TrainerReference> references, out string error)
         {
             error = null;
@@ -150,16 +205,16 @@ namespace DSPRE.ROMFiles
             for (int i = 0; i < count; i++)
             {
                 int offset = PhoneBookHeaderSize + i * PhoneBookEntrySize;
-                if (BinaryPrimitives.ReadUInt16LittleEndian(
-                    data.Slice(offset + PhoneBookTrainerIdOffset, 2)) == trainerId)
+                int trainerId = BinaryPrimitives.ReadUInt16LittleEndian(data.Slice(offset + PhoneBookTrainerIdOffset, 2));
+                if (trainerIds.Contains(trainerId))
                 {
-                    references.Add(new TrainerReference("Pokégear phonebook", $"entry {i}"));
+                    references.Add(new TrainerReference("Pokégear phonebook", $"entry {i}") { TrainerId = trainerId, Index = i });
                 }
             }
             return true;
         }
 
-        private static bool TryScanEvents(int trainerId, ICollection<TrainerReference> references,
+        private static bool TryScanEvents(ISet<int> trainerIds, ICollection<TrainerReference> references,
             out string error)
         {
             error = null;
@@ -175,7 +230,7 @@ namespace DSPRE.ROMFiles
                 foreach ((int id, string path) in NumberedFiles(directory))
                 {
                     using var input = File.OpenRead(path);
-                    FindEventReferences(RomInfo.gameFamily, id, new EventFile(input), trainerId,
+                    FindEventReferences(RomInfo.gameFamily, id, new EventFile(input), trainerIds,
                         references);
                 }
                 return true;
@@ -187,7 +242,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        private static bool TryScanScripts(int trainerId, ICollection<TrainerReference> references,
+        private static bool TryScanScripts(ISet<int> trainerIds, int trainerClass, ICollection<TrainerReference> references,
             out string error)
         {
             error = null;
@@ -208,7 +263,8 @@ namespace DSPRE.ROMFiles
                         error = $"Script file {id} did not parse completely, so trainer removal was cancelled.";
                         return false;
                     }
-                    FindScriptReferences(RomInfo.gameFamily, id, scriptFile, trainerId, references);
+                    FindScriptReferences(RomInfo.gameFamily, id, scriptFile, trainerIds, references);
+                    if (trainerClass >= 0) FindClassNameReferences(RomInfo.gameFamily, id, scriptFile, trainerClass, references);
                 }
                 return true;
             }
@@ -219,7 +275,7 @@ namespace DSPRE.ROMFiles
             }
         }
 
-        private static bool TryScanBattleMessages(int trainerId,
+        private static bool TryScanBattleMessages(ISet<int> trainerIds,
             ICollection<TrainerReference> references, out string error)
         {
             string path = Path.Combine(
@@ -229,11 +285,11 @@ namespace DSPRE.ROMFiles
                 error = "The trainer battle-message table must be unpacked before removing a trainer.";
                 return false;
             }
-            return TryFindBattleMessageReferences(File.ReadAllBytes(path), trainerId, references,
+            return TryFindBattleMessageReferences(File.ReadAllBytes(path), trainerIds, references,
                 out error);
         }
 
-        private static bool TryScanVsSeeker(int trainerId, ICollection<TrainerReference> references,
+        private static bool TryScanVsSeeker(ISet<int> trainerIds, ICollection<TrainerReference> references,
             out string error)
         {
             error = null;
@@ -256,23 +312,23 @@ namespace DSPRE.ROMFiles
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
             {
                 RematchTable.Row row = rows[rowIndex];
-                if (row.BaseTrainerId == trainerId)
+                if (trainerIds.Contains(row.BaseTrainerId))
                 {
-                    references.Add(new TrainerReference("Vs. Seeker", $"row {rowIndex}, encounter"));
+                    references.Add(new TrainerReference("Vs. Seeker", $"row {rowIndex}, encounter") { TrainerId = row.BaseTrainerId, Index = rowIndex });
                 }
                 for (int level = 0; level < RematchTable.RematchLevelCount; level++)
                 {
-                    if (row.Rematch(level) == trainerId)
+                    if (trainerIds.Contains(row.Rematch(level)))
                     {
                         references.Add(new TrainerReference("Vs. Seeker",
-                            $"row {rowIndex}, rematch {level + 1}"));
+                            $"row {rowIndex}, rematch {level + 1}") { TrainerId = row.Rematch(level), Index = rowIndex });
                     }
                 }
             }
             return true;
         }
 
-        private static bool TryScanPokegearRematch(int trainerId,
+        private static bool TryScanPokegearRematch(ISet<int> trainerIds,
             ICollection<TrainerReference> references, out string error)
         {
             error = null;
@@ -295,23 +351,23 @@ namespace DSPRE.ROMFiles
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
             {
                 RematchTable.Row row = rows[rowIndex];
-                if (row.BaseTrainerId == trainerId)
+                if (trainerIds.Contains(row.BaseTrainerId))
                 {
-                    references.Add(new TrainerReference("Pokégear rematch", $"row {rowIndex}, base trainer"));
+                    references.Add(new TrainerReference("Pokégear rematch", $"row {rowIndex}, base trainer") { TrainerId = row.BaseTrainerId, Index = rowIndex });
                 }
                 for (int level = 0; level < RematchTable.RematchLevelCount; level++)
                 {
-                    if (row.Rematch(level) == trainerId)
+                    if (trainerIds.Contains(row.Rematch(level)))
                     {
                         references.Add(new TrainerReference("Pokégear rematch",
-                            $"row {rowIndex}, rematch {level + 1}"));
+                            $"row {rowIndex}, rematch {level + 1}") { TrainerId = row.Rematch(level), Index = rowIndex });
                     }
                 }
             }
             return true;
         }
 
-        private static bool TryScanHeartGoldPhoneBook(int trainerId,
+        private static bool TryScanHeartGoldPhoneBook(ISet<int> trainerIds,
             ICollection<TrainerReference> references, out string error)
         {
             error = null;
@@ -323,13 +379,13 @@ namespace DSPRE.ROMFiles
                 error = "The Pokégear phonebook is missing, so trainer removal was cancelled.";
                 return false;
             }
-            return TryFindPhoneBookReferences(File.ReadAllBytes(path), trainerId, references,
+            return TryFindPhoneBookReferences(File.ReadAllBytes(path), trainerIds, references,
                 out error);
         }
 
         private static void FindScriptContainerReferences(int scriptFileId, string containerKind,
             IReadOnlyList<ScriptCommandContainer> containers,
-            IReadOnlyDictionary<ushort, int[]> parameterMap, int trainerId,
+            IReadOnlyDictionary<ushort, int[]> parameterMap, ISet<int> trainerIds,
             ICollection<TrainerReference> references)
         {
             if (containers == null) return;
@@ -356,12 +412,48 @@ namespace DSPRE.ROMFiles
                             4 => BinaryPrimitives.ReadUInt32LittleEndian(parameter),
                             _ => uint.MaxValue,
                         };
-                        if (value == trainerId)
+                        if (value <= int.MaxValue && trainerIds.Contains((int)value))
                         {
                             references.Add(new TrainerReference("Script",
                                 $"file {scriptFileId}, {containerKind} {container.manualUserID}, " +
-                                $"command {commandIndex + 1} ({command.name}), parameter {parameterIndex + 1}"));
+                                $"command {commandIndex + 1} ({command.name}), parameter {parameterIndex + 1}")
+                                {
+                                    TrainerId = (int)value, SourceId = scriptFileId, Index = (int)container.manualUserID,
+                                    InFunction = containerKind == "function",
+                                });
                         }
+                    }
+                }
+            }
+        }
+
+        // TextTrainerClass: a string buffer, then the class as a flex value (a number below 0x4000, else a variable).
+        private static ushort? TextTrainerClassCommand(RomInfo.GameFamilies family) => family switch
+        {
+            RomInfo.GameFamilies.HGSS => 0x0351,
+            RomInfo.GameFamilies.Plat => 0x0344,
+            RomInfo.GameFamilies.DP => 0x02CC,
+            _ => null,
+        };
+
+        internal static void FindClassNameReferences(RomInfo.GameFamilies family, int scriptFileId,
+            ScriptFile scriptFile, int trainerClass, ICollection<TrainerReference> references)
+        {
+            if (TextTrainerClassCommand(family) is not ushort command) return;
+            foreach ((string kind, List<ScriptCommandContainer> containers) in new[] { ("script", scriptFile.allScripts), ("function", scriptFile.allFunctions) })
+            {
+                if (containers == null) continue;
+                foreach (ScriptCommandContainer container in containers)
+                {
+                    if (container?.commands == null) continue;
+                    for (int i = 0; i < container.commands.Count; i++)
+                    {
+                        ScriptCommand c = container.commands[i];
+                        if (c.id != command || c.cmdParams == null || c.cmdParams.Count < 2 || c.cmdParams[1].Length < 2) continue;
+                        if (BinaryPrimitives.ReadUInt16LittleEndian(c.cmdParams[1]) != trainerClass) continue;
+                        references.Add(new TrainerReference("Script",
+                            $"file {scriptFileId}, {kind} {container.manualUserID}, command {i + 1} ({c.name}) prints the class name")
+                            { SourceId = scriptFileId, Index = (int)container.manualUserID, InFunction = kind == "function" });
                     }
                 }
             }

@@ -111,6 +111,17 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public string Type { get; set; }
         public int Index { get; set; }
         public string Details { get; set; }
+        /// <summary>A script reference inside a function, which has no script number to land on.</summary>
+        public bool InFunction { get; set; }
+
+        internal static TrainerUsageResult From(TrainerReference reference) => new TrainerUsageResult
+        {
+            SourceId = reference.SourceId,
+            Type = reference.InFunction ? reference.Kind + " (function)" : reference.Kind,
+            Index = reference.Index,
+            Details = reference.Location,
+            InFunction = reference.InFunction,
+        };
     }
 
     // ── Main ViewModel ────────────────────────────────────────────────────────
@@ -196,6 +207,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public int SelectedTrainerIndex { get => _selectedTrainerIndex; set => Set(ref _selectedTrainerIndex, value); }
 
         public ObservableCollection<TrainerUsageResult> TrainerWatcherResults { get; } = new();
+
+        // ── Tab: Class Watcher ──────────────────────────────────────────────────
+        public ObservableCollection<string> ClassNamesList { get; } = new();
+
+        private int _selectedClassIndex = -1;
+        public int SelectedClassIndex { get => _selectedClassIndex; set => Set(ref _selectedClassIndex, value); }
+
+        public ObservableCollection<TrainerUsageResult> ClassWatcherResults { get; } = new();
 
         // ── Tab 6: Header Watcher ─────────────────────────────────────────────
         private int _headerSearchId;
@@ -335,6 +354,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 TrainerNamesList.Clear();
                 foreach (var name in DSPRE.TrainerNames.GetAll()) TrainerNamesList.Add(name);
                 if (TrainerNamesList.Count > 0) SelectedTrainerIndex = 0;
+
+                ClassNamesList.Clear();
+                string[] classNames = RomInfo.GetTrainerClassNames();
+                for (int i = 0; i < classNames.Length; i++) ClassNamesList.Add($"[{i:D3}] {classNames[i]}");
+                if (ClassNamesList.Count > 0) SelectedClassIndex = 0;
 
                 DataLoaded = true;
                 StatusText = $"Loaded {_cachedScriptFiles.Count} script files, {_cachedLevelScriptFiles.Count} level scripts, {_cachedEventFiles.Count} event files";
@@ -693,8 +717,32 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 }
             }
 
+            // The battle-message table and the phone book, from the same scanner trainer removal uses.
+            if (TrainerReferenceScanner.TryFindTableReferences(trainerId, out List<TrainerReference> tables, out string tableError))
+                foreach (TrainerReference reference in tables) TrainerWatcherResults.Add(TrainerUsageResult.From(reference));
+            else StatusText = tableError;
+
             StatusText = $"Found {TrainerWatcherResults.Count} use(s) of Trainer {trainerId}";
         }
+
+        // ── Class Watcher ────────────────────────────────────────────────────────
+        public void SearchClassUsage()
+        {
+            if (!DataLoaded) { StatusText = "Data not loaded yet."; return; }
+            if (SelectedClassIndex < 0) { StatusText = "Select a class."; return; }
+
+            int classId = SelectedClassIndex;
+            ClassWatcherResults.Clear();
+            if (!TrainerClassDatasetManager.TryFindClassUses(classId, out List<TrainerReference> uses, out string error))
+            {
+                StatusText = error;
+                return;
+            }
+            foreach (TrainerReference reference in uses) ClassWatcherResults.Add(TrainerUsageResult.From(reference));
+            StatusText = $"Found {ClassWatcherResults.Count} use(s) of class {classId}";
+        }
+
+        public void ClearClassResults() { ClassWatcherResults.Clear(); StatusText = "Class Watcher search cleared"; }
 
         public void ClearTrainerResults() { TrainerWatcherResults.Clear(); StatusText = "Trainer Watcher search cleared"; }
 
@@ -740,7 +788,42 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 return;
             }
 
-            if (result.Type.StartsWith("Pokégear Rematch"))
+            if (result.Type == "Trainer")
+            {
+                AvaloniaEditorLauncher.OpenTrainerEditor(result.Index);
+                StatusText = $"Opened Trainer {result.Index}";
+                return;
+            }
+
+            if (result.Type == "Pokégear phonebook")
+            {
+                AvaloniaEditorLauncher.OpenPokegearPhoneBook(result.Index);
+                StatusText = $"Opened the phone book at entry {result.Index}";
+                return;
+            }
+
+            if (result.Type == "Battle Tower")
+            {
+                AvaloniaEditorLauncher.OpenBattleTowerEditor();
+                StatusText = $"Opened the Battle Tower editor; the trainer is number {result.Index}";
+                return;
+            }
+
+            if (result.Type == "Event")
+            {
+                AvaloniaEditorLauncher.OpenEventEditorWithOverworld(result.SourceId, result.Index);
+                StatusText = $"Opened Event File {result.SourceId}";
+                return;
+            }
+
+            if (result.Type.StartsWith("Script"))
+            {
+                AvaloniaEditorLauncher.OpenScriptEditor(result.SourceId, result.InFunction ? 0 : result.Index);
+                StatusText = $"Opened Script File {result.SourceId}";
+                return;
+            }
+
+            if (result.Type.StartsWith("Pokégear Rematch", StringComparison.OrdinalIgnoreCase))
             {
                 AvaloniaEditorLauncher.OpenPokegearRematchEditor(result.Index);
                 StatusText = "Opened Pokégear Rematch Editor";
