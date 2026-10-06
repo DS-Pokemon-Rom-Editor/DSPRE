@@ -125,9 +125,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _timing = VsIntroTimingAddon.Install();
                 StatusText = "Timing table added. Save the ROM to keep it.";
             }
-            catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException)
+            catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
             {
                 await DialogHelper.ShowError("The timing table couldn't be added:\n" + e.Message, Title);
+                return;
             }
             ShowTimings();
             StartUndo();

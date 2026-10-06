@@ -295,6 +295,13 @@ namespace DSPRE.ROMFiles
 
         private Region AddRegion(string path, int offset, int length)
         {
+            // The trainer class metadata patch empties the class table and leaves it no pointer; there is nothing to read.
+            if (length == 0)
+            {
+                Region empty = new Region { Path = arm9Path, Offset = 0, Now = Array.Empty<byte>(), Saved = Array.Empty<byte>() };
+                _regions.Add(empty);
+                return empty;
+            }
             if (!File.Exists(path) || offset < 0 || new FileInfo(path).Length < offset + length)
                 throw new InvalidDataException($"{Path.GetFileName(path)} is too short for the VS intro tables.");
             byte[] now = DSUtils.ReadFromFile(path, offset, length);
