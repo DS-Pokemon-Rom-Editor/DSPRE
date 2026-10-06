@@ -18,7 +18,7 @@ namespace DSPRE
     {
         public const int PayloadSize = 0x2068;
         public const uint DefaultPayloadOffset = 0x12200;
-        private const uint SyntheticBase = 0x023C8000;
+        public const uint SyntheticBase = 0x023C8000;
 
         public static bool SupportsCurrentRom =>
             RomInfo.gameLanguage == RomInfo.GameLanguages.English && (RomInfo.romID == "IPKE" || RomInfo.romID == "IPGE");
@@ -84,6 +84,25 @@ namespace DSPRE
                 bytes.CopyTo(p, (int)x.Offset);
             }
             return p;
+        }
+
+        /// <summary>
+        /// Where an installed copy's routines sit in the synthetic overlay, read back from the first ARM9 pointer the
+        /// install wrote (the payload address plus a known offset); null when it can't be told.
+        /// </summary>
+        public static uint? InstalledOffset()
+        {
+            try
+            {
+                Target arm9 = Load().Targets.FirstOrDefault(t => t.Path == "arm9/arm9.bin");
+                Reloc pointer = arm9?.Relocs.FirstOrDefault(x => x.Kind != 2);
+                if (pointer == null) return null;
+                byte[] file = File.ReadAllBytes(RomInfo.arm9Path);
+                if (pointer.Offset + 4 > file.Length) return null;
+                uint address = BitConverter.ToUInt32(file, (int)pointer.Offset) - pointer.Value;
+                return address >= SyntheticBase && address - SyntheticBase + PayloadSize <= 0x16000 ? address - SyntheticBase : null;
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException) { return null; }
         }
 
         /// <summary>The payload with everything that depends on its address zeroed, for the range check.</summary>

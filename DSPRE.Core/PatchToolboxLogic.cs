@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -677,7 +677,9 @@ namespace DSPRE
                 "- Build one record per trainer class in a/1/5/5 from the game's own gender, prize, music and intro tables.\n\n" +
                 "- Insert the patch routines (0x" + footprint.Length.ToString("X") + " bytes) at synthetic overlay offset 0x" + offset.ToString("X") +
                 " (runtime address 0x" + (synthOverlayLoadAddress + offset).ToString("X8") + ").\n" + rangeStatus + "\n\n" +
-                "- Hook the ARM9 and overlays 1, 12, 80, 115, 117, 118, 119 and 120 to them (backups are made).\n\n" +
+                "- Hook the ARM9 and overlays 1, 12, 80, 115, 117, 118, 119 and 120 to them.\n\n" +
+                "Backups (" + BackupSuffix + ") are made of the ARM9, those overlays and the synthetic overlay, and of a/1/5/5 as " +
+                "unpacked/a155.narc" + BackupSuffix + ".\n\n" +
                 "Each trainer class then owns its gender, prize, music and VS intro, edited in the Trainer Classes window. " +
                 "Not compatible with hg-engine.\n\nDo you wish to continue?" + CreditNote("trainerClassMetadata"), "Confirm to proceed"))
             {
@@ -689,10 +691,19 @@ namespace DSPRE
             File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
             foreach (int overlay in new[] { 1, 12, 80, 115, 117, 118, 119, 120 })
                 File.Copy(OverlayUtils.GetPath(overlay), OverlayUtils.GetPath(overlay) + BackupSuffix, overwrite: true);
+            if (File.Exists(Filesystem.expArmPath)) File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            // Not beside the archive: ds-rom packs every file under files/, so a copy there would join the ROM.
+            (string metadataArchive, string metadataUnpacked) = RomInfo.gameDirs[DirNames.trainerClassMetadata];
+            string metadataBackup = Path.Combine(Path.GetDirectoryName(metadataUnpacked), "a155.narc" + BackupSuffix);
+            if (File.Exists(metadataArchive))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(metadataBackup));
+                File.Copy(metadataArchive, metadataBackup, overwrite: true);
+            }
             try { TrainerClassMetadataPatch.Apply(offset); }
             catch (Exception ex)
             {
-                ShowError("Operation failed: " + ex.Message + "\nIt is strongly advised that you restore the ARM9 and overlay backups.", "Something went wrong");
+                ShowError("Operation failed: " + ex.Message + "\nIt is strongly advised that you restore the ARM9, overlay, synthetic overlay and a/1/5/5 backups.", "Something went wrong");
                 return false;
             }
             ShowInfo("The trainer class metadata patch has been applied.\n\nSynthetic overlay offset: 0x" + offset.ToString("X"), "Operation successful.");
@@ -1396,12 +1407,30 @@ namespace DSPRE
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
         };
 
+        // What a patch was built on and how, as its author asked to be credited.
+        private static readonly Dictionary<string, string> CreditSources = new Dictionary<string, string>
+        {
+            ["trainerClassMetadata"] = "built on the pokeheartgold decompilation and Mixone's Ghidra symbol map, and developed with AI assistance",
+        };
+
+        /// <summary>The credit line for a patch, as the credits list writes it, or null.</summary>
+        public static string CreditLine(string key)
+        {
+            if (!Credits.TryGetValue(key, out var c)) return null;
+            return CreditSources.TryGetValue(key, out string sources)
+                ? $"{c.Who} for the {c.What} patch, {sources}"
+                : $"{c.Who} for the {c.What} patch";
+        }
+
         private static string CreditNote(string key) =>
-            Credits.TryGetValue(key, out var c) ? $"\n\nPlease credit {c.Who} if you use this patch." : "";
+            Credits.TryGetValue(key, out var c)
+                ? $"\n\nPlease credit {c.Who} if you use this patch." +
+                  (CreditSources.TryGetValue(key, out string sources) ? $" It was {sources}." : "")
+                : "";
 
         /// <summary>Credit keys of the applied patches and the found parts of patch groups.</summary>
         public static List<string> AppliedCreditKeys(IEnumerable<PatchInfo> statuses) =>
-            statuses.Where(p => p.Parts == null && p.State == PatchState.Applied).Select(p => p.Key)
+            statuses.Where(p => p.Parts == null && p.State == PatchState.Applied && p.Reason != AppliedByHgEngine).Select(p => p.Key)
                 .Concat(statuses.Where(p => p.Parts != null).SelectMany(p => p.Parts).Where(part => part.Applied).Select(part => part.Key))
                 .Where(Credits.ContainsKey)
                 .ToList();
@@ -1424,9 +1453,8 @@ namespace DSPRE
             var applied = new List<string>();
             var detected = new List<string>();
             foreach (string key in appliedKeys)
-                if (Credits.TryGetValue(key, out var c))
-                    (key is "owSpriteExpansion" or "platItemExpansion" or "platExtraTms" ? detected : applied)
-                        .Add($"{c.Who} for the {c.What} patch");
+                if (CreditLine(key) is string line)
+                    (key is "owSpriteExpansion" or "platItemExpansion" or "platExtraTms" ? detected : applied).Add(line);
 
             var lines = new List<string>
             {
@@ -1518,7 +1546,7 @@ namespace DSPRE
                 }));
 
             list.Add(Status("trainerClassMetadata", "Trainer class metadata",
-                "Gives every trainer class its own record for gender, prize, eye-contact and battle music and VS intro, edited in the Trainer Classes window (US HeartGold/SoulSilver). Requires the ARM9 expansion patch and a ds-rom-format project.",
+                "Gives every trainer class its own record for gender, prize, eye-contact and battle music and VS intro, edited in the Trainer Classes window and the VS intro editor (US HeartGold/SoulSilver). Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
@@ -1571,12 +1599,12 @@ namespace DSPRE
                 $"Raise the trainer-name max length to {RomPatchState.expandedTrainerNameLength - 1} usable characters.",
                 () =>
                 {
-                    if (RomPatchState.flag_TrainerNamesExpanded) return PatchState.Applied;
+                    if (RomPatchState.flag_TrainerNamesExpanded) return AppliedHere();
                     if (RomInfo.trainerNameLenOffset < 0) return Unsupported("Unsupported");
                     if (RomInfo.trainerNameMaxLen > TrainerFile.defaultNameLen)
                     {
                         RomPatchState.flag_TrainerNamesExpanded = true;
-                        return PatchState.Applied;
+                        return AppliedHere();
                     }
                     return PatchState.Available;
                 }));
@@ -1598,7 +1626,7 @@ namespace DSPRE
                 "Eye-contact music table moved to the synthetic overlay, so more classes can have music.",
                 () =>
                 {
-                    if (TrainerClassTableExpansion.DetectMusicTableRepointed()) return PatchState.Applied;
+                    if (TrainerClassTableExpansion.DetectMusicTableRepointed()) return AppliedHere();
                     if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum (English) only");
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
@@ -1667,6 +1695,16 @@ namespace DSPRE
         // take down the whole catalogue (a status probe should never be fatal).
         [ThreadStatic] private static string _reason_text;
         private static PatchState Unsupported(string reason) { _reason_text = reason; return PatchState.Unsupported; }
+
+        public const string AppliedByHgEngine = "Applied by hg-engine";
+
+        // hg-engine raises the trainer-name limit and moves the eye-contact music table itself, so on its ROMs
+        // these patches are its doing and earn no credit here.
+        private static PatchState AppliedHere()
+        {
+            if (RomInfo.isHGE) _reason_text = AppliedByHgEngine;
+            return PatchState.Applied;
+        }
 
         private static PatchInfo Status(string key, string title, string desc, Func<PatchState> probe, string actionLabel = null)
         {
