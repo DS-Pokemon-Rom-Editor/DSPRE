@@ -390,7 +390,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             internal int[] Moves;
             internal int AbilityId, BallId, Nature, Status;
             internal int[] Ivs, Evs;
-            internal bool Shiny, StatusOn, HpOn, AtkOn, DefOn, SpeOn, SpAOn, SpDOn, PpOn, NickOn;
+            internal bool Shiny, ForceShiny, StatusOn, HpOn, AtkOn, DefOn, SpeOn, SpAOn, SpDOn, PpOn, NickOn;
             internal decimal Hp, Atk, Def, Spe, SpA, SpD, Pp1, Pp2, Pp3, Pp4;
             internal string Nick;
         }
@@ -403,7 +403,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 Species = _speciesIndex, Form = (int)_formId, Level = (int)_level, Item = _itemIndex, Gender = _genderIndex,
                 Ability = _abilityIndex, Difficulty = (int)_difficulty, BallSeals = (int)_ballSeals,
-                Moves = new[] { _move1, _move2, _move3, _move4 },
+                Moves = new[] { _move1, _move2, _move3, _move4 }, ForceShiny = _forceShiny,
                 AbilityId = x.AbilityId, BallId = x.BallId, Nature = x.NatureIndex, Status = x.ExtraStatus,
                 Ivs = Stats(x.SetIvs), Evs = Stats(x.SetEvs), Shiny = x.ShinyLocked,
                 StatusOn = x.ExtraStatusEnabled, HpOn = x.ExtraHpEnabled, AtkOn = x.ExtraAttackEnabled, DefOn = x.ExtraDefenseEnabled,
@@ -415,7 +415,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public void Restore(State s)
         {
-            Load(s.Species, s.Form, s.Level, s.Moves, s.Item, s.Gender, s.Ability, s.Difficulty, s.BallSeals);
+            Load(s.Species, s.Form, s.Level, s.Moves, s.Item, s.Gender, s.Ability, s.Difficulty, s.BallSeals, s.ForceShiny);
             _suppress = true;
             var x = HgeExtras;
             x.AbilityId = s.AbilityId; x.BallId = s.BallId; x.NatureIndex = s.Nature; x.ShinyLocked = s.Shiny;

@@ -28,6 +28,14 @@ namespace DSPRE.Avalonia
         /// which of the 5 source-backed editors are unblocked.</summary>
         public static event EventHandler HgEngineLinkChanged;
 
+        /// <summary>A member of a mapped archive was written, so previews built from it can redraw.</summary>
+        public static event EventHandler<RomInfo.DirNames> ArchiveMemberSaved;
+        public static void RaiseArchiveMemberSaved(RomInfo.DirNames dir) => ArchiveMemberSaved?.Invoke(null, dir);
+
+        /// <summary>Class intros (trainer class metadata patch) were saved in the VS intro editor.</summary>
+        public static event EventHandler ClassIntrosSaved;
+        public static void RaiseClassIntrosSaved() => ClassIntrosSaved?.Invoke(null, EventArgs.Empty);
+
         public static void RaiseNamesChanged() => NamesChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseLabelsChanged() => LabelsChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseRomPatchStateChanged() => RomPatchStateChanged?.Invoke(null, EventArgs.Empty);

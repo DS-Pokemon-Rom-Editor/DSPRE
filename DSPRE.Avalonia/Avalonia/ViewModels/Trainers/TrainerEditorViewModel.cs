@@ -58,6 +58,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _formVisible;
 
         public ObservableCollection<string> TrainerNames { get; } = new ObservableCollection<string>();
+
+        /// <summary>The trainer list as shown, filtered by its search box.</summary>
+        public Data.FilteredNames TrainerList => _trainerList ??= new Data.FilteredNames(TrainerNames,
+            () => SelectedTrainerIndex, v => SelectedTrainerIndex = v, this, nameof(SelectedTrainerIndex));
+        private Data.FilteredNames _trainerList;
         public ObservableCollection<string> TrainerClassItems { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> PokemonNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> MoveNames { get; } = new ObservableCollection<string>();
@@ -268,12 +273,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get => _battleType.ToString();
             set { if (uint.TryParse(value?.Trim(), out uint v)) SetBattleType(v); }
         }
+
+        /// <summary>The battle type flags as a number, for the number box every editor uses.</summary>
+        public decimal BattleTypeValue
+        {
+            get => _battleType;
+            set => SetBattleType((uint)Math.Max(0, value));
+        }
         private void SetBattleType(uint value)
         {
             if (value == _battleType) return;
             _battleType = value;
             OnPropertyChanged(nameof(DoubleBattle));
             OnPropertyChanged(nameof(BattleTypeRaw));
+            OnPropertyChanged(nameof(BattleTypeValue));
             if (!_suppress) SetDirty();
         }
         private bool _chooseMoves;
@@ -443,7 +456,23 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void Detach()
         {
             AppEvents.NamesChanged -= OnNamesChanged;
+            AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
+            AppEvents.ClassIntrosSaved -= OnClassIntrosSaved;
             Data.TrainerCapsuleCatalog.Changed -= ShowCapsuleNames;
+        }
+
+        private void OnClassIntrosSaved(object sender, EventArgs e) => Classes?.RefreshIntroSummary();
+
+        // The patch toolbox can add the trainer shiny or class metadata patch while the editor is open.
+        private void OnRomPatchStateChanged(object sender, EventArgs e)
+        {
+            bool shiny = gameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
+            if (shiny != _shinyPatch)
+            {
+                _shinyPatch = shiny;
+                foreach (TrainerPartyMonViewModel mon in Party) mon.ShinyEnabled = shiny;
+            }
+            Classes?.RefreshPatchState();
         }
 
         // A new list instance after a save makes every picker refresh its rows.
@@ -481,6 +510,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 string[] classNames = GetTrainerClassNames();
                 foreach (var n in TrainerListEntries(classNames)) TrainerNames.Add(n);
                 AppEvents.NamesChanged += OnNamesChanged;   // live-refresh names from the Text editor
+                AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
+                AppEvents.ClassIntrosSaved += OnClassIntrosSaved;
 
                 for (int i = 0; i < classNames.Length; i++) TrainerClassItems.Add($"[{i:D3}] {classNames[i]}");
 
