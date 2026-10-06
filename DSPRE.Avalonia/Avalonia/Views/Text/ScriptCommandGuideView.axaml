@@ -15,12 +15,13 @@
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
       <TextBlock Text="Search:" VerticalAlignment="Center"/>
       <TextBox Text="{Binding SearchText}" Width="260" PlaceholderText="command, parameter or description"/>
+      <ComboBox ItemsSource="{Binding SectionNames}" SelectedIndex="{Binding SectionIndex}" IsVisible="{Binding HasSections}" MinWidth="180"/>
     </StackPanel>
 
     <TextBlock DockPanel.Dock="Top" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="0,0,0,6" TextWrapping="Wrap"
-               Text="Every command usable in this script's text editor, with its arguments and what it does. Type a command's arguments as label=value (e.g. slot=0); unlabeled numbers just fill whichever argument slots are left, in order."/>
+               Text="{Binding Hint}"/>
 
-    <DataGrid ItemsSource="{Binding Entries}"
+    <DataGrid x:Name="Grid" ItemsSource="{Binding Entries}"
               AutoGenerateColumns="False"
               IsReadOnly="True"
               GridLinesVisibility="Horizontal"
