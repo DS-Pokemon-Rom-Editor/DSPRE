@@ -75,8 +75,9 @@ namespace DSPRE.Avalonia.Data
             _ => Filesystem.GetEncountersCount(),
         };
 
-        /// <summary>"none" sentinel for a ref kind (areaData is a byte → 0xFF; the rest are ushort → 0xFFFF).</summary>
-        private static int NoneFor(RefKind kind) => kind == RefKind.AreaData ? U8None : U16None;
+        /// <summary>"none" sentinel for a ref kind: area data, and HGSS wild data, are a byte (0xFF); the rest are ushort (0xFFFF).</summary>
+        private static int NoneFor(RefKind kind) =>
+            kind == RefKind.AreaData || (kind == RefKind.Wild && RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) ? U8None : U16None;
 
         public static List<ValidationIssue> Validate()
         {
