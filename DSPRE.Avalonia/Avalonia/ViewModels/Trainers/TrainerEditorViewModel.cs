@@ -14,6 +14,7 @@ using DSPRE.Editors;
 using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
+using Avalonia.Threading;
 
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
@@ -104,7 +105,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_battleTypeRepushPending) return;
             _battleTypeRepushPending = true;
-            var dispatcher = global::Avalonia.Threading.Dispatcher.UIThread;
+            Dispatcher dispatcher = global::Avalonia.Threading.Dispatcher.UIThread;
             dispatcher.Post(() =>
             {
                 int keep = _battleTypeIndex;
@@ -144,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void ApplyHgeGatingToParty()
         {
-            foreach (var mon in Party)
+            foreach (TrainerPartyMonViewModel mon in Party)
             {
                 mon.HgeAdvancedVisible = IsHgeActive;
                 mon.HgeExplicitAbilityEnabled = HgeAbilityFlagChecked;
@@ -395,7 +396,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (snap == null || _trainer == null || _loadedTrainerId < 0) return;
             _suppress = true;
-            var trp = new TrainerProperties((ushort)_loadedTrainerId, new MemoryStream(snap.Trp));
+            TrainerProperties trp = new TrainerProperties((ushort)_loadedTrainerId, new MemoryStream(snap.Trp));
             byte partyCount = trp.partyCount;
             trp.partyCount = TrainerFile.POKE_IN_PARTY;
             _trainer = new TrainerFile(trp, new MemoryStream(snap.Party), snap.Name);
@@ -448,7 +449,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             finally { _suppress = wasSuppressed; }
 
-            var formatted = new System.Collections.Generic.List<string>(classNames.Length);
+            List<string> formatted = new System.Collections.Generic.List<string>(classNames.Length);
             for (int i = 0; i < classNames.Length; i++) formatted.Add($"[{i:D3}] {classNames[i]}");
             DSPRE.Avalonia.Data.ListSync.Apply(TrainerClassItems, formatted);
         }
@@ -478,8 +479,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // A new list instance after a save makes every picker refresh its rows.
         private void ShowCapsuleNames()
         {
-            var names = Data.TrainerCapsuleCatalog.Names();
-            foreach (var mon in Party) mon.CapsuleNames = names;
+            List<string> names = Data.TrainerCapsuleCatalog.Names();
+            foreach (TrainerPartyMonViewModel mon in Party) mon.CapsuleNames = names;
         }
 
         // ── Setup ─────────────────────────────────────────────────────────────────────
@@ -501,14 +502,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _ballEnabled = gameFamily != GameFamilies.DP;
                 _formVisible = gameFamily != GameFamilies.DP;
 
-                foreach (var n in GetPokemonNames()) PokemonNames.Add(n);
-                foreach (var n in GetAttackNames()) MoveNames.Add(n);
-                foreach (var n in GetItemNames()) ItemNames.Add(n);
+                foreach (string n in GetPokemonNames()) PokemonNames.Add(n);
+                foreach (string n in GetAttackNames()) MoveNames.Add(n);
+                foreach (string n in GetItemNames()) ItemNames.Add(n);
                 _abilityNames = GetAbilityNames();
                 LoadAbilities();
 
                 string[] classNames = GetTrainerClassNames();
-                foreach (var n in TrainerListEntries(classNames)) TrainerNames.Add(n);
+                foreach (string n in TrainerListEntries(classNames)) TrainerNames.Add(n);
                 AppEvents.NamesChanged += OnNamesChanged;   // live-refresh names from the Text editor
                 AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
                 AppEvents.ClassIntrosSaved += OnClassIntrosSaved;
@@ -517,15 +518,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 if (IsHgeActive)
                 {
-                    foreach (var flag in HgEngineTrainerFieldSchema.GetAiFlags())
+                    foreach (HgEngineTrainerFieldSchema.NamedFlag flag in HgEngineTrainerFieldSchema.GetAiFlags())
                     {
-                        var f = new AiFlagViewModel(flag.Name, flag.Bit);
+                        AiFlagViewModel f = new AiFlagViewModel(flag.Name, flag.Bit);
                         f.Changed += (s, e) => { if (!_suppress) _hgeAiFlagsKnown = true; SetDirty(); };
                         AiFlags.Add(f);
                     }
-                    foreach (var flag in HgEngineTrainerFieldSchema.GetTrainerDataTypeFlags())
+                    foreach (HgEngineTrainerFieldSchema.NamedFlag flag in HgEngineTrainerFieldSchema.GetTrainerDataTypeFlags())
                     {
-                        var f = new AiFlagViewModel(flag.Name, flag.Bit);
+                        AiFlagViewModel f = new AiFlagViewModel(flag.Name, flag.Bit);
                         f.Changed += (s, e) =>
                         {
                             if (!_suppress) _hgeTrainerTypeKnown = true;
@@ -536,15 +537,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         };
                         TrainerDataTypeFlags.Add(f);
                     }
-                    var battleTypes = HgEngineTrainerFieldSchema.GetBattleTypes();
+                    IReadOnlyList<HgEngineTrainerFieldSchema.NamedFlag> battleTypes = HgEngineTrainerFieldSchema.GetBattleTypes();
                     _battleTypeValues = battleTypes.Select(b => b.Bit).ToArray();
-                    foreach (var bt in battleTypes) BattleTypeOptions.Add(bt.Name);
+                    foreach (HgEngineTrainerFieldSchema.NamedFlag bt in battleTypes) BattleTypeOptions.Add(bt.Name);
                 }
                 else
                 {
                     for (int i = 0; i < AiFlagLabels.Length; i++)
                     {
-                        var f = new AiFlagViewModel(AiFlagLabels[i]);
+                        AiFlagViewModel f = new AiFlagViewModel(AiFlagLabels[i]);
                         f.Changed += (s, e) => SetDirty();
                         AiFlags.Add(f);
                     }
@@ -552,7 +553,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 for (int i = 0; i < TrainerProperties.TRAINER_ITEMS; i++)
                 {
-                    var slot = new TrainerItemSlotViewModel(ItemNames);
+                    TrainerItemSlotViewModel slot = new TrainerItemSlotViewModel(ItemNames);
                     slot.Changed += (s, e) => SetDirty();
                     TrainerItems.Add(slot);
                 }
@@ -562,7 +563,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 bool genderVisibleForMode = _genderEditable && !IsHgeActive;
                 for (int i = 0; i < TrainerFile.POKE_IN_PARTY; i++)
                 {
-                    var mon = new TrainerPartyMonViewModel(i, PokemonNames, MoveNames, ItemNames,
+                    TrainerPartyMonViewModel mon = new TrainerPartyMonViewModel(i, PokemonNames, MoveNames, ItemNames,
                         _abilityNames, _abilities, _abilityEditable, genderVisibleForMode, _formVisible, _ballEnabled);
                     mon.Changed += (s, e) => SetDirty();
                     Party.Add(mon);
@@ -599,7 +600,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     string path = Path.Combine(dir, i.ToString("D4"));
                     if (!File.Exists(path)) { _abilities[i] = (0, 0); continue; }
                     // hg-engine widens both abilities to u16 at other offsets.
-                    var personal = new PokemonPersonalData(new FileStream(path, FileMode.Open, FileAccess.Read));
+                    PokemonPersonalData personal = new PokemonPersonalData(new FileStream(path, FileMode.Open, FileAccess.Read));
                     _abilities[i] = (personal.firstAbility, personal.secondAbility);
                 }
                 catch { _abilities[i] = (0, 0); }
@@ -607,15 +608,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             // The built copies trail Species.c until the next make.
             if (!IsHgeActive) return;
-            if (!HgEngineSpeciesPersonalFields.TryLoadAllAbilities(out var fromSource, out string error))
+            if (!HgEngineSpeciesPersonalFields.TryLoadAllAbilities(out Dictionary<int, (int first, int second)> fromSource, out string error))
             {
                 AppLogger.Error("Trainer Editor abilities could not be read from Species.c: " + error);
                 return;
             }
-            foreach (var pair in fromSource)
+            foreach (KeyValuePair<int, (int first, int second)> pair in fromSource)
             {
                 if (pair.Key < 0 || pair.Key >= count) continue;
-                var (first, second) = pair.Value;
+                (int first, int second) = pair.Value;
                 _abilities[pair.Key] = (first >= 0 ? first : _abilities[pair.Key].abi1, second >= 0 ? second : _abilities[pair.Key].abi2);
             }
         }
@@ -665,7 +666,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void LoadTrainerFromSource(int index)
         {
-            if (!HgEngineTrainerSource.TryLoad(index, out var block, out string error))
+            if (!HgEngineTrainerSource.TryLoad(index, out HgEngineSourceBlock block, out string error))
             {
                 _ = DialogHelper.ShowError($"Failed to load trainer {index} from hg-engine source:\n{error}", "Trainer Editor Error");
                 return;
@@ -697,31 +698,31 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             bool gotTrainerType = block.TryGetFlagsValue(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerType") }, TrainerDataHeader, out int trainerTypeValue);
             _hgeTrainerTypeKnown = gotTrainerType;
-            foreach (var f in TrainerDataTypeFlags) f.Checked = gotTrainerType && (trainerTypeValue & f.Value) != 0;
+            foreach (AiFlagViewModel f in TrainerDataTypeFlags) f.Checked = gotTrainerType && (trainerTypeValue & f.Value) != 0;
             RaiseHgeFlagCheckedChanged();
             ChooseMoves = HgeMovesFlagChecked;
             ChooseItems = HgeItemsFlagChecked;
 
             bool gotAiFlags = block.TryGetFlagsValue(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("aiFlags") }, TrainerDataHeader, out int aiFlagsValue);
             _hgeAiFlagsKnown = gotAiFlags;
-            foreach (var f in AiFlags) f.Checked = gotAiFlags && (aiFlagsValue & f.Value) != 0;
+            foreach (AiFlagViewModel f in AiFlags) f.Checked = gotAiFlags && (aiFlagsValue & f.Value) != 0;
 
             // A battle type with no row stays -1 so saving leaves it alone.
-            var battleTypePath = new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("battleType") };
+            FieldPathSegment[] battleTypePath = new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("battleType") };
             BattleTypeIndex = block.TryGetSymbol(battleTypePath, TrainerDataHeader, out int battleTypeValue)
                 ? Array.IndexOf(_battleTypeValues, battleTypeValue)
                 : block.TryGetRaw(battleTypePath, out _) ? -1 : 0;   // absent means 0, SINGLE_BATTLE
             DoubleBattle = BattleTypeIndex > 0;   // kept loosely in sync for display only; save uses BattleTypeIndex
             RepushBattleTypeIndex();
 
-            var itemsRaw = block.GetArrayElements(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("items") });
+            IReadOnlyList<HgEngineSourceBlock> itemsRaw = block.GetArrayElements(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("items") });
             for (int i = 0; i < TrainerItems.Count; i++)
             {
                 _hgeItemRaw[i] = i < itemsRaw.Count ? itemsRaw[i].Raw.Trim() : null;
                 TrainerItems[i].Load(_hgeItemRaw[i] != null && HgEngineSourceBlock.TryResolveToken(_hgeItemRaw[i], ItemHeader, out int itemVal) ? itemVal : -1);
             }
 
-            var partyRaw = block.GetArrayElements(new[] { FieldPathSegment.Field("party") });
+            IReadOnlyList<HgEngineSourceBlock> partyRaw = block.GetArrayElements(new[] { FieldPathSegment.Field("party") });
             PartyCount = partyRaw.Count;
             for (int i = 0; i < Party.Count; i++)
             {
@@ -761,7 +762,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int abilityIndex = 0;
             if (monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("abilitySlot") }, TrainerDataHeader, out int slotValue))
             {
-                var slot = HgEngineTrainerFieldSchema.GetAbilitySlots().FirstOrDefault(s => s.Bit == slotValue && s.Name != null);
+                HgEngineTrainerFieldSchema.NamedFlag slot = HgEngineTrainerFieldSchema.GetAbilitySlots().FirstOrDefault(s => s.Bit == slotValue && s.Name != null);
                 abilityIndex = slot.Name == null ? -1 : Array.IndexOf(TrainerPartyMonViewModel.HgeAbilitySlotNames, slot.Name);
             }
 
@@ -769,7 +770,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             // gender from, so it's always "Default" here (the Gender selector is hidden in the UI too).
             mon.Load(species, form, Math.Max(1, level), moves, itemVal, 0, abilityIndex, ivs, ballSeal);
 
-            var extras = mon.HgeExtras;
+            TrainerPartyMonHgeExtras extras = mon.HgeExtras;
             extras.AbilityId = HgeAbilityFlagChecked && monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("ability") }, AbilityHeader, out int abilityId) ? abilityId : -1;
             extras.BallId = HgeBallFlagChecked && monBlock.TryGetSymbol(new[] { FieldPathSegment.Field("ball") }, ItemHeader, out int ballId) ? ballId : -1;
 
@@ -795,8 +796,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int extraFlagsValue = 0;
             bool gotExtraFlags = HgeAdditionalFlagsFlagChecked &&
                 monBlock.TryGetFlagsValue(new[] { FieldPathSegment.Field("additionalFlags") }, TrainerDataHeader, out extraFlagsValue);
-            var extraFlagBits = gotExtraFlags ? HgEngineTrainerFieldSchema.GetExtraFlags() : System.Array.Empty<HgEngineTrainerFieldSchema.NamedFlag>();
-            int ExtraBit(string suffix) { foreach (var f in extraFlagBits) if (f.Name.EndsWith(suffix)) return f.Bit; return 0; }
+            IReadOnlyList<HgEngineTrainerFieldSchema.NamedFlag> extraFlagBits = gotExtraFlags ? HgEngineTrainerFieldSchema.GetExtraFlags() : System.Array.Empty<HgEngineTrainerFieldSchema.NamedFlag>();
+            int ExtraBit(string suffix) { foreach (HgEngineTrainerFieldSchema.NamedFlag f in extraFlagBits) if (f.Name.EndsWith(suffix)) return f.Bit; return 0; }
 
             extras.ExtraStatusEnabled = gotExtraFlags && (extraFlagsValue & ExtraBit("STATUS")) != 0;
             extras.ExtraStatus = extras.ExtraStatusEnabled && monBlock.TryGetFlagsValue(new[] { FieldPathSegment.Field("status") }, BattleConstantsHeader, out int status) ? status : 0;
@@ -817,7 +818,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             extras.ExtraPpCountsEnabled = gotExtraFlags && (extraFlagsValue & ExtraBit("PP_COUNTS")) != 0;
             if (extras.ExtraPpCountsEnabled)
             {
-                var pp = monBlock.GetArrayElements(new[] { FieldPathSegment.Field("ppCounts") });
+                IReadOnlyList<HgEngineSourceBlock> pp = monBlock.GetArrayElements(new[] { FieldPathSegment.Field("ppCounts") });
                 extras.ExtraPp1 = pp.Count > 0 && HgEngineSourceBlock.TryResolveToken(pp[0].Raw, null, out int p1) ? p1 : 0;
                 extras.ExtraPp2 = pp.Count > 1 && HgEngineSourceBlock.TryResolveToken(pp[1].Raw, null, out int p2) ? p2 : 0;
                 extras.ExtraPp3 = pp.Count > 2 && HgEngineSourceBlock.TryResolveToken(pp[2].Raw, null, out int p3) ? p3 : 0;
@@ -831,7 +832,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private static int GetInt(HgEngineSourceBlock block, string nestedField, string statField)
         {
-            var path = nestedField != null
+            FieldPathSegment[] path = nestedField != null
                 ? new[] { FieldPathSegment.Field(nestedField), FieldPathSegment.Field(statField) }
                 : new[] { FieldPathSegment.Field(statField) };
             return block.TryGetInt(path, out int v) ? v : 0;
@@ -840,7 +841,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Pushes <see cref="_trainer"/> into the bound fields + party mons. Caller guards with _suppress.</summary>
         private void PopulateFromTrainer()
         {
-            var trp = _trainer.trp;
+            TrainerProperties trp = _trainer.trp;
             TrainerName = _trainer.name;
             TrainerClassIndex = trp.trainerClass;
             SetBattleType(trp.battleType);
@@ -869,7 +870,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void SyncToTrainer()
         {
             if (_trainer == null) return;
-            var trp = _trainer.trp;
+            TrainerProperties trp = _trainer.trp;
             trp.partyCount = (byte)_partyCount;
             trp.chooseMoves = _chooseMoves;
             trp.chooseItems = _chooseItems;
@@ -888,8 +889,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             // Slots past the party count are synced too, so undo keeps them; the party file stops at the count.
             for (int i = 0; i < Party.Count && i < TrainerFile.POKE_IN_PARTY; i++)
             {
-                var mon = Party[i];
-                var p = _trainer.party[i];
+                TrainerPartyMonViewModel mon = Party[i];
+                PartyPokemon p = _trainer.party[i];
                 p.pokeID = (ushort)Math.Max(0, mon.SpeciesIndex);
                 p.formID = (ushort)mon.FormId;
                 p.level = (ushort)mon.Level;
@@ -908,7 +909,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     // Bits the editor has no field for stay as they were read.
                     const PartyPokemon.GenderAndAbilityFlags Edited = PartyPokemon.GenderAndAbilityFlags.FORCE_MALE | PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE
                         | PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1 | PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT2;
-                    var flags = p.genderAndAbilityFlags & ~Edited;
+                    PartyPokemon.GenderAndAbilityFlags flags = p.genderAndAbilityFlags & ~Edited;
                     if (mon.GenderIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.FORCE_MALE;
                     else if (mon.GenderIndex == 2) flags |= PartyPokemon.GenderAndAbilityFlags.FORCE_FEMALE;
                     if (mon.AbilityIndex == 1) flags |= PartyPokemon.GenderAndAbilityFlags.ABILITY_SLOT1;
@@ -944,8 +945,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             mon.ShinyEnabled = _shinyPatch;
         }
 
-        private void ApplyMovesEnabled() { foreach (var m in Party) m.MovesEnabled = _chooseMoves; }
-        private void ApplyItemsEnabled() { foreach (var m in Party) m.ItemEnabled = _chooseItems; }
+        private void ApplyMovesEnabled() { foreach (TrainerPartyMonViewModel m in Party) m.MovesEnabled = _chooseMoves; }
+        private void ApplyItemsEnabled() { foreach (TrainerPartyMonViewModel m in Party) m.ItemEnabled = _chooseItems; }
         private void ApplyPartyVisibility()
         {
             int count = (int)_partyCount;
@@ -1025,7 +1026,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             int trainer = _selectedTrainerIndex;
             if (trainer < 0) return;
-            var (saved, error) = await HgEngineSave.RunAsync(WriteHgEngineSource);
+            (bool saved, string error) = await HgEngineSave.RunAsync(WriteHgEngineSource);
             if (!saved)
             {
                 if (error == null) return;
@@ -1086,7 +1087,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             string battleTypeLiteral = BattleTypeIndex >= 0 && BattleTypeIndex < BattleTypeOptions.Count
                 ? BattleTypeOptions[BattleTypeIndex] : "SINGLE_BATTLE";
 
-            var fields = new List<HgEngineFieldWrite>
+            List<HgEngineFieldWrite> fields = new List<HgEngineFieldWrite>
             {
                 new(new[] { FieldPathSegment.Field("name") }, HgEngineTrainerSource.ToCStringLiteral(_trainerName ?? "")),
             };
@@ -1103,16 +1104,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             fields.Add(new(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("items") },
                 "{ " + string.Join(", ", TrainerItems.Select((t, i) => t.ItemIndex >= 0 ? ItemSymbol(t.ItemIndex) : _hgeItemRaw[i] ?? "ITEM_NONE")) + " }"));
 
-            var abilitySlots = HgEngineTrainerFieldSchema.GetAbilitySlots();
+            IReadOnlyList<HgEngineTrainerFieldSchema.NamedFlag> abilitySlots = HgEngineTrainerFieldSchema.GetAbilitySlots();
 
             for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
             {
-                var mon = Party[i];
-                var extras = mon.HgeExtras;
-                var p = FieldPathSegment.Field("party");
+                TrainerPartyMonViewModel mon = Party[i];
+                TrainerPartyMonHgeExtras extras = mon.HgeExtras;
+                FieldPathSegment p = FieldPathSegment.Field("party");
                 FieldPathSegment[] Path(params FieldPathSegment[] rest)
                 {
-                    var full = new FieldPathSegment[rest.Length + 2];
+                    FieldPathSegment[] full = new FieldPathSegment[rest.Length + 2];
                     full[0] = p; full[1] = FieldPathSegment.At(i);
                     System.Array.Copy(rest, 0, full, 2, rest.Length);
                     return full;
@@ -1179,11 +1180,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
             }
 
-            var partyPath = new[] { FieldPathSegment.Field("party") };
-            var arrayCounts = new List<HgEngineArrayCount>();
+            FieldPathSegment[] partyPath = new[] { FieldPathSegment.Field("party") };
+            List<HgEngineArrayCount> arrayCounts = new List<HgEngineArrayCount>();
             if ((int)_partyCount == 0) fields.Add(HgEngineFieldWrite.Remove(partyPath));
             else arrayCounts.Add(new HgEngineArrayCount(partyPath, (int)_partyCount, NewPartyEntry));
-            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Trainers, _selectedTrainerIndex, fields, out var unresolved, out string error,
+            if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Trainers, _selectedTrainerIndex, fields, out List<string> unresolved, out string error,
                     allowInsert: true, arrayCounts: arrayCounts, allOrNothing: true))
             {
                 AppLogger.Error($"hg-engine write failed for trainer {_selectedTrainerIndex}: {error}");
@@ -1208,7 +1209,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             static int ExtraBit(string suffix)
             {
-                foreach (var f in HgEngineTrainerFieldSchema.GetExtraFlags()) if (f.Name.EndsWith(suffix)) return f.Bit;
+                foreach (HgEngineTrainerFieldSchema.NamedFlag f in HgEngineTrainerFieldSchema.GetExtraFlags()) if (f.Name.EndsWith(suffix)) return f.Bit;
                 return 0;
             }
         }
@@ -1324,7 +1325,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_trainer == null) return;
             SyncToTrainer();
-            var filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
+            FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
             string path = await DialogHelper.SaveFile(_owner, "Export trainer", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trf");
             if (path == null) return;
             try
@@ -1341,12 +1342,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public async Task ImportTrainerAsync()
         {
             if (_trainer == null || _selectedTrainerIndex < 0) return;
-            var filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
+            FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer File") { Patterns = new[] { "*.trf" } };
             string path = await DialogHelper.OpenFile(_owner, "Import trainer", new[] { filter });
             if (path == null) return;
             try
             {
-                using var reader = new BinaryReader(File.OpenRead(path));
+                using BinaryReader reader = new BinaryReader(File.OpenRead(path));
                 string trName = reader.ReadString();
                 byte datSize = reader.ReadByte();
                 byte[] trDat = reader.ReadBytes(datSize);
@@ -1370,7 +1371,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_trainer == null) return;
             SyncToTrainer();
-            var filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
+            FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
             string path = await DialogHelper.SaveFile(_owner, "Export trainer properties", new[] { filter }, $"trainer_{_selectedTrainerIndex:D4}.trp");
             if (path == null) return;
             try
@@ -1384,12 +1385,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public async Task ReplacePropertiesAsync()
         {
             if (_trainer == null || _selectedTrainerIndex < 0) return;
-            var filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
+            FilePickerFileType filter = new FilePickerFileType("Gen IV Trainer Properties") { Patterns = new[] { "*.trp" } };
             string path = await DialogHelper.OpenFile(_owner, "Import trainer properties", new[] { filter });
             if (path == null) return;
             try
             {
-                using var fs = File.OpenRead(path);
+                using FileStream fs = File.OpenRead(path);
                 _trainer.trp = new TrainerProperties((ushort)_selectedTrainerIndex, fs);
                 _suppress = true;
                 try { PopulateFromTrainer(); } finally { _suppress = false; }
@@ -1404,7 +1405,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_trainer == null) return;
             SyncToTrainer();
-            var filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
+            FilePickerFileType filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
             string path = await DialogHelper.SaveFile(_owner, "Export trainer party", new[] { filter }, $"party_{_selectedTrainerIndex:D4}.pdat");
             if (path == null) return;
             try
@@ -1420,12 +1421,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public async Task ImportPartyAsync()
         {
             if (_trainer == null) return;
-            var filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
+            FilePickerFileType filter = new FilePickerFileType("Gen IV Party Data") { Patterns = new[] { "*.pdat" } };
             string path = await DialogHelper.OpenFile(_owner, "Import trainer party", new[] { filter });
             if (path == null) return;
             try
             {
-                using var fs = File.OpenRead(path);
+                using FileStream fs = File.OpenRead(path);
                 _trainer.party = new Party(readFirstByte: true, TrainerFile.POKE_IN_PARTY, fs, _trainer.trp);
                 _suppress = true;
                 try { PopulateFromTrainer(); } finally { _suppress = false; }
@@ -1442,7 +1443,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int count = (int)_partyCount;
             for (int i = 0; i < count && i < Party.Count; i++)
             {
-                var m = Party[i];
+                TrainerPartyMonViewModel m = Party[i];
                 string name = m.SpeciesIndex >= 0 && m.SpeciesIndex < PokemonNames.Count ? PokemonNames[m.SpeciesIndex] : "?";
                 yield return (i, $"[{i}] {name} Lv. {(int)m.Level}");
             }
@@ -1452,7 +1453,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             int count = newOrder.Count;
             if (count == 0) return;
-            var snap = new List<TrainerPartyMonViewModel.State>();
+            List<TrainerPartyMonViewModel.State> snap = new List<TrainerPartyMonViewModel.State>();
             for (int i = 0; i < count && i < Party.Count; i++) snap.Add(Party[i].Capture());
             for (int i = 0; i < count && i < Party.Count; i++)
             {
@@ -1471,11 +1472,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── DV Calculator support ─────────────────────────────────────────────────────
         public (ushort trainerId, byte trainerClass, List<(int pokeId, int level, int gender, int ability, int dv)> party) GetDVCalcInput()
         {
-            var list = new List<(int, int, int, int, int)>();
+            List<(int, int, int, int, int)> list = new List<(int, int, int, int, int)>();
             int count = (int)_partyCount;
             for (int i = 0; i < count && i < Party.Count; i++)
             {
-                var m = Party[i];
+                TrainerPartyMonViewModel m = Party[i];
                 // The calculator speaks vanilla flags. hg-engine passes abilitySlot to the same personality
                 // routine, where its hidden value 0x02 is the force-female bit.
                 int ability = m.AbilityIndex, gender = m.GenderIndex;
@@ -1494,7 +1495,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             for (int i = 0; i < results.Count && i < Party.Count; i++)
             {
-                var m = Party[i];
+                TrainerPartyMonViewModel m = Party[i];
                 m.Difficulty = results[i].dv;
                 m.GenderIndex = results[i].gender;
                 if (!IsHgeActive) m.AbilityIndex = results[i].ability;
@@ -1515,7 +1516,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
             {
-                var mon = Party[i];
+                TrainerPartyMonViewModel mon = Party[i];
                 // Vanilla learnset files are per species only, so a vanilla form is left for the user to fill.
                 if (mon.SpeciesIndex <= 0 || (mon.FormId > 0 && !IsHgeActive) || mon.Move1 > 0 || mon.Move2 > 0 || mon.Move3 > 0 || mon.Move4 > 0) continue;
                 try
@@ -1533,15 +1534,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // The same pick as a learnset file, taken from learnsets.json rather than the last build.
         private static ushort[] HgeLevelUpMoves(int speciesId, int level)
         {
-            if (!HgEngineLearnsets.TryGetLevelMoves(speciesId, out var list, out string error))
+            if (!HgEngineLearnsets.TryGetLevelMoves(speciesId, out List<(int level, int move)> list, out string error))
             {
                 AppLogger.Error($"Level-up moves for species {speciesId} could not be read: {error}");
                 return null;
             }
-            var stream = new MemoryStream();
-            using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            MemoryStream stream = new MemoryStream();
+            using (BinaryWriter writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
             {
-                foreach (var (moveLevel, move) in list) writer.Write((uint)((moveLevel << 16) | move));
+                foreach ((int moveLevel, int move) in list) writer.Write((uint)((moveLevel << 16) | move));
                 writer.Write(0x0000FFFFu);
             }
             stream.Position = 0;
@@ -1555,7 +1556,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             int pokeBall = HgEngineSymbolTable.Load(ItemHeader)?.TryGetValue("ITEM_POKE_BALL", out int ball) == true ? ball : 4;
             for (int i = 0; i < (int)_partyCount && i < Party.Count; i++)
             {
-                var extras = Party[i].HgeExtras;
+                TrainerPartyMonHgeExtras extras = Party[i].HgeExtras;
                 if (flagName == "TRAINER_DATA_TYPE_ABILITY" && extras.AbilityId <= 0) extras.AbilityId = Party[i].SlotAbilityId();
                 if (flagName == "TRAINER_DATA_TYPE_BALL" && extras.BallId <= 0) extras.BallId = pokeBall;
             }
@@ -1570,7 +1571,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             string entry;
             if (IsHgeActive)
             {
-                if (!HgEngineTrainerSource.TryLoad(id, out var block, out _)) return;
+                if (!HgEngineTrainerSource.TryLoad(id, out HgEngineSourceBlock block, out _)) return;
                 entry = DSPRE.TrainerNames.HgEngineEntry(id, block, GetTrainerClassNames());
             }
             else
@@ -1598,7 +1599,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try
             {
                 _trainer.name = newName;
-                var ta = new TextArchive(trainerNamesMessageNumber);
+                TextArchive ta = new TextArchive(trainerNamesMessageNumber);
                 ta.SetSimpleTrainerName(_trainer.trp.trainerID, newName);
                 ta.SaveToExpandedDir(trainerNamesMessageNumber, showSuccessMessage: false);
             }

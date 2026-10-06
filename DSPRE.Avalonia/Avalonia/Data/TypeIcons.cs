@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Data
         {
             string rom = RomInfo.workDir;
             if (_cachedFor != rom) { Cache.Clear(); _cachedFor = rom; }
-            if (Cache.TryGetValue(type, out var known)) return known;
+            if (Cache.TryGetValue(type, out Bitmap known)) return known;
 
             Bitmap icon = null;
             if (type >= 0 && type < BattleObjects.IconOrder.Length)
@@ -27,10 +27,10 @@ namespace DSPRE.Avalonia.Data
                 try
                 {
                     int index = BattleObjects.Find(BattleObjects.IconOrder[type], "Drawing");
-                    var archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.battleObj);
+                    GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.battleObj);
                     if (index >= 0 && archive != null)
                     {
-                        var p = GraphicAssets.Render(archive, index);
+                        GraphicAssets.Preview p = GraphicAssets.Render(archive, index);
                         if (p.Rgba != null) icon = ImageConverter.FromRgba(p.Rgba, p.Width, p.Height);
                     }
                 }

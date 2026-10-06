@@ -92,7 +92,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             get
             {
-                var cat = CurrentCategory; return cat != null && LabelStore.DraftCount(cat.Key, _globalScope) < cat.Cap;
+                LabelCategory cat = CurrentCategory; return cat != null && LabelStore.DraftCount(cat.Key, _globalScope) < cat.Cap;
             }
         }
 
@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public LabelEditorViewModel()
         {
             _all.AddRange(LabelStore.Categories.OrderBy(c => c.Group).ThenBy(c => c.DisplayName));
-            foreach (var g in _all.Select(c => c.Group).Distinct())
+            foreach (string g in _all.Select(c => c.Group).Distinct())
                 GroupNames.Add(g);
             if (GroupNames.Count > 0) SelectedGroupIndex = 0;
             ResetUndo();
@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (_selGroup >= 0 && _selGroup < GroupNames.Count)
             {
                 string group = GroupNames[_selGroup];
-                foreach (var c in _all.Where(c => c.Group == group))
+                foreach (LabelCategory c in _all.Where(c => c.Group == group))
                 {
                     _keys.Add(c.Key);
                     CategoryNames.Add(c.DisplayName);
@@ -131,7 +131,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private void ReloadEntries()
         {
             Entries.Clear();
-            var cat = CurrentCategory;
+            LabelCategory cat = CurrentCategory;
             if (cat == null) { OnPropertyChanged(nameof(CanAddEntry)); return; }
             int count = LabelStore.DraftCount(cat.Key, _globalScope);
             for (int i = 0; i < count; i++)
@@ -143,7 +143,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private LabelEntryRow MakeRow(LabelCategory cat, int index)
         {
-            var attrOpts = cat.HasAttr ? cat.AttrOptions : null;
+            IReadOnlyList<string> attrOpts = cat.HasAttr ? cat.AttrOptions : null;
             int attrIdx = cat.HasAttr ? Math.Max(0, Math.Min(cat.AttrOptions.Count - 1, LabelStore.GetDraftAttr(cat.Key, index, _globalScope))) : 0;
             string value = LabelStore.GetDraftLabel(cat.Key, index, _globalScope);
             // Edits go to the DRAFT only; nothing reaches the real store (or other editors) until Save.
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public void AddEntry()
         {
-            var cat = CurrentCategory;
+            LabelCategory cat = CurrentCategory;
             if (cat == null || !CanAddEntry) return;
             int index = LabelStore.DraftCount(cat.Key, _globalScope);
             string def = LabelStore.GetDefault(cat.Key, index);
@@ -169,7 +169,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public void ResetCategory()
         {
-            var cat = CurrentCategory;
+            LabelCategory cat = CurrentCategory;
             if (cat == null) return;
             LabelStore.DraftReset(cat.Key, _globalScope);
             ReloadEntries();

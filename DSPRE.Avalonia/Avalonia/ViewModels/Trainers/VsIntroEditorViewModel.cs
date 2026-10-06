@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-        private void Raise(params string[] names) { foreach (var n in names) Raise(n); }
+        private void Raise(params string[] names) { foreach (string n in names) Raise(n); }
 
         private VsIntroTables _t;
         private VsIntroNames _names = new();
@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             // With the class metadata patch the stock tables are retired, and no longer read as they were.
             if (!DetectClassRecords()) _t = VsIntroTables.Load(Part.Trainers);
-            var dirs = new List<DirNames> { Archive, DirNames.textArchives };
+            List<DirNames> dirs = new List<DirNames> { Archive, DirNames.textArchives };
             if (gameFamily == GameFamilies.Plat) dirs.Add(DirNames.trainerGraphics);
             DSUtils.TryUnpackNarcs(dirs);
             _names = VsIntroNames.Read();
@@ -144,9 +144,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             FindSets(_faceSets, _t.Records.Select(r => r.FaceMembers()), Kind.Palette, Kind.TileGraphic, Kind.CellLayout, Kind.CellAnimation);
             FindSets(_bannerSets, _t.Records.Select(r => r.BannerMembers()), Kind.Palette, Kind.TileGraphic, Kind.TileMap);
             FaceSetChoices.Clear();
-            foreach (var set in _faceSets) FaceSetChoices.Add(ArtLabel(set[0], r => r.FaceMembers()?[0]));
+            foreach (int[] set in _faceSets) FaceSetChoices.Add(ArtLabel(set[0], r => r.FaceMembers()?[0]));
             BannerSetChoices.Clear();
-            foreach (var set in _bannerSets) BannerSetChoices.Add(ArtLabel(set[0], r => r.BannerMembers()?[0]));
+            foreach (int[] set in _bannerSets) BannerSetChoices.Add(ArtLabel(set[0], r => r.BannerMembers()?[0]));
             FramePaletteChoices.Clear();
             foreach (int p in _palettes) FramePaletteChoices.Add(ArtLabel(p, r => r.Has(RecordField.FramePalette) ? r.Get(RecordField.FramePalette) : null));
         }
@@ -158,26 +158,26 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void FindSets(List<int[]> sets, IEnumerable<int[]> used, params Kind[] roles)
         {
             sets.Clear();
-            var layouts = used.Where(m => m != null && m.Length == roles.Length)
+            List<int[]> layouts = used.Where(m => m != null && m.Length == roles.Length)
                               .Select(m => m.Select(x => x - m.Min()).ToArray())
                               .Where(o => o.Distinct().Count() == o.Length && o.Max() == o.Length - 1)
                               .GroupBy(o => string.Join(",", o)).Select(g => g.First()).ToList();
             for (int i = 0; i < _kinds.Length; i++)
-                foreach (var offsets in layouts)
+                foreach (int[] offsets in layouts)
                     if (offsets.Select((o, k) => i + o < _kinds.Length && _kinds[i + o] == roles[k]).All(x => x))
                     {
                         sets.Add(offsets.Select(o => i + o).ToArray());
                         break;
                     }
-            foreach (var m in used)
+            foreach (int[] m in used)
                 if (m != null && m.Length == roles.Length && !sets.Any(x => x.SequenceEqual(m))) sets.Add(m);
         }
 
         // A file is named after the records that use it, as the retail rows set them.
         private string ArtLabel(int member, Func<Record, int?> uses)
         {
-            var who = _t.Records.Where(r => uses(r) == member).Select(r => _names.Record(_t, r)).Distinct().ToList();
-            var s = _t.Sites;
+            List<string> who = _t.Records.Where(r => uses(r) == member).Select(r => _names.Record(_t, r)).Distinct().ToList();
+            VsIntroSites s = _t.Sites;
             if (who.Count == 0 && member == s.PlayerFaceBoy) who.Add("Player, boy");
             if (who.Count == 0 && member == s.PlayerFaceGirl) who.Add("Player, girl");
             return (who.Count == 0 ? "Unused" : string.Join(", ", who)) + $" ({member})";
@@ -192,10 +192,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             MugshotRows.Clear();
             void Group(string heading, IEnumerable<Record> records)
             {
-                var list = records.ToList();
+                List<Record> list = records.ToList();
                 if (list.Count == 0) return;
                 MugshotRows.Add(new IntroRow { IsHeader = true, Title = heading });
-                foreach (var r in list) MugshotRows.Add(new IntroRow { Record = r });
+                foreach (Record r in list) MugshotRows.Add(new IntroRow { Record = r });
             }
             Group("Gym Leaders", _t.Records.Where(r => r.Kind == RecordKind.Gym));
             Group("Rival", _t.Records.Where(r => r.Kind == RecordKind.Rival));
@@ -206,7 +206,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void RenameMugshots()
         {
-            foreach (var row in MugshotRows.Where(r => r.IsItem))
+            foreach (IntroRow row in MugshotRows.Where(r => r.IsItem))
             {
                 row.Title = _names.Record(_t, row.Record);
                 row.Detail = string.Join(", ", ClassesFor(row.Record).Select(_names.Class).Distinct());
@@ -215,7 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private IEnumerable<int> CombosFor(Record r)
         {
-            var effects = new HashSet<int>(_t.EffectsUsing(r));
+            HashSet<int> effects = new HashSet<int>(_t.EffectsUsing(r));
             return Enumerable.Range(0, _t.ComboCount).Where(c => effects.Contains(_t.EffectOf(c)));
         }
 
@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get
             {
                 if (Rec == null) return "";
-                var classes = ClassesFor(Rec).Select(_names.Class).Distinct().ToList();
+                List<string> classes = ClassesFor(Rec).Select(_names.Class).Distinct().ToList();
                 return classes.Count == 0 ? "No trainer class uses this intro." : "Used by " + string.Join(", ", classes) + ".";
             }
         }
@@ -302,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             get
             {
-                var m = Rec?.FaceMembers();
+                int[] m = Rec?.FaceMembers();
                 return m == null ? -1 : _faceSets.FindIndex(s => s.SequenceEqual(m));
             }
             set
@@ -318,7 +318,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             get
             {
-                var m = Rec?.BannerMembers();
+                int[] m = Rec?.BannerMembers();
                 return m == null ? -1 : _bannerSets.FindIndex(s => s.SequenceEqual(m));
             }
             set
@@ -390,7 +390,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             Fixed.Clear();
             if (Rec == null) return;
-            var s = _t.Sites;
+            VsIntroSites s = _t.Sites;
             void Add(string label, string value, Action open = null) => Fixed.Add(new FixedArt { Label = label, Value = value, Open = open });
             string Files(int first, int n) => string.Join(", ", Enumerable.Range(first, n));
 
@@ -432,7 +432,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private static void Paint(int ncgr)
         {
-            var archive = ArtArchive;
+            GraphicAssets.Archive archive = ArtArchive;
             if (archive == null || ncgr < 0) return;
             new Views.Graphics.GraphicPainterView(new GraphicPainterViewModel(archive, ncgr)).ShowManaged();
         }
@@ -455,7 +455,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (Rec == null) return;
             int combo = CombosFor(Rec).DefaultIfEmpty(-1).First();
-            var row = IntroRows.FirstOrDefault(r => r.Combo == combo);
+            IntroRow row = IntroRows.FirstOrDefault(r => r.Combo == combo);
             if (row == null) return;
             SelectedIntro = row;
             SelectedTab = 1;
@@ -474,7 +474,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private ushort[] ClassColours(int trainerClass)
         {
             if (!IsPlatinum || trainerClass < 0) return null;
-            if (_classColours.TryGetValue(trainerClass, out var c)) return c;
+            if (_classColours.TryGetValue(trainerClass, out ushort[] c)) return c;
             try { c = DsBgScreen.ReadColours(new ScriptNarc(DirNames.trainerGraphics).Get(trainerClass * 5 + 1)); }
             catch { c = null; }
             if (c != null && c.Length == 0) c = null;
@@ -485,7 +485,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (IsClassRecords) return ClassScene();
             if (Rec == null || IsDp || _preview == null) return null;
-            var s = _t.Sites;
+            VsIntroSites s = _t.Sites;
             int[] Four(int first) => first < 0 ? null : Order(first, 4);
             string name = Rec.Kind == RecordKind.Rival || (IsHgss && Rec.Has(RecordField.Class) && Rec.Get(RecordField.Class) == HgssRivalClass)
                 ? "Rival" : Rec.Has(RecordField.TrainerId) ? _names.Trainer(Rec.Get(RecordField.TrainerId)) : "";
@@ -500,7 +500,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         EndX = Rec.Get(RecordField.EndX), NamePalette = s.NamePalette, Name = name,
                     };
                 case RecordKind.League:
-                    var frame = Order(s.LeagueFrame, 3);
+                    int[] frame = Order(s.LeagueFrame, 3);
                     return new VsIntroPreview.Scene
                     {
                         Kind = VsIntroPreview.Layout.League, Face = Rec.FaceMembers(), Vs = Four(s.VsMark),
@@ -526,7 +526,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void RenderPreview()
         {
             Raise(nameof(HasPreview), nameof(ShowPlayerChoice));
-            var scene = Scene();
+            VsIntroPreview.Scene scene = Scene();
             if (scene == null) { PreviewImage = null; return; }
             try { PreviewImage = ImageConverter.FromRgba(_preview.Draw(scene, _frame), DsBgScreen.Width, DsBgScreen.Height); }
             catch (Exception e) { AppLogger.Error("VS intro preview failed: " + e.Message); PreviewImage = null; }
@@ -535,7 +535,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void ToggleAnimation()
         {
             if (Animating) { StopAnimation(); RenderPreview(); return; }
-            var scene = Scene();
+            VsIntroPreview.Scene scene = Scene();
             if (scene == null) return;
             int length = VsIntroPreview.Length(scene);
             _frame = 0;
@@ -575,7 +575,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private string GroupOf(int combo)
         {
-            var kind = _t.KindOfEffect(_t.EffectOf(combo));
+            IntroKind kind = _t.KindOfEffect(_t.EffectOf(combo));
             if (kind == IntroKind.Gym) return "Gym Leaders";
             if (kind == IntroKind.League) return "Elite Four and Champion";
             if (kind == IntroKind.Rival || _t.RoleOf(combo) == ComboRole.Rival) return "Rival";
@@ -589,7 +589,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _trainerCombos = Enumerable.Range(0, _t.ComboCount).Where(_t.OwnsMusic).ToList();
             foreach (string group in new[] { "Gym Leaders", "Elite Four and Champion", "Rival", "Team Rocket", "Team Galactic", "Other" })
             {
-                var combos = _trainerCombos.Where(c => GroupOf(c) == group).ToList();
+                List<int> combos = _trainerCombos.Where(c => GroupOf(c) == group).ToList();
                 if (combos.Count == 0) continue;
                 IntroRows.Add(new IntroRow { IsHeader = true, Title = group });
                 foreach (int c in combos) IntroRows.Add(new IntroRow { Combo = c });
@@ -599,7 +599,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void RenameIntros()
         {
-            foreach (var row in IntroRows.Where(r => r.IsItem))
+            foreach (IntroRow row in IntroRows.Where(r => r.IsItem))
             {
                 row.Title = _names.Combo(_t, row.Combo);
                 row.Detail = _names.Sequence(_t.SequenceOf(row.Combo));
@@ -658,8 +658,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void ShowMugshot()
         {
             if (!HasIntro) return;
-            var record = _t.RecordFor(_t.EffectOf(Combo));
-            var row = MugshotRows.FirstOrDefault(r => r.Record != null && r.Record == record);
+            Record record = _t.RecordFor(_t.EffectOf(Combo));
+            IntroRow row = MugshotRows.FirstOrDefault(r => r.Record != null && r.Record == record);
             if (row == null) return;
             SelectedMugshot = row;
             SelectedTab = 0;
@@ -668,7 +668,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Selects the class list's row for one of the classes the selected intro lists.</summary>
         public void GoToClass(int index)
         {
-            var classes = HasIntro ? _t.ClassesUsing(Combo) : new List<int>();
+            List<int> classes = HasIntro ? _t.ClassesUsing(Combo) : new List<int>();
             if (index < 0 || index >= classes.Count) return;
             SelectedClass = ClassRows.FirstOrDefault(r => r.Class == classes[index]);
         }
@@ -688,7 +688,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void RenameClasses()
         {
-            foreach (var row in ClassRows)
+            foreach (IntroRow row in ClassRows)
             {
                 row.Title = _names.Class(row.Class);
                 int combo = _t.ComboForClass(row.Class);
@@ -843,7 +843,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             // hg-engine's music rows are source text, saved as one hg-engine write like the other editors.
             if (_t.FromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError("The VS intros were not saved:\n" + error, Title);

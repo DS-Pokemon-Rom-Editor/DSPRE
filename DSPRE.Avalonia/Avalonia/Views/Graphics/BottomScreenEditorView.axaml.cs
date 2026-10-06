@@ -30,9 +30,9 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Paint_Click(object sender, RoutedEventArgs e)
         {
-            var piece = VM?.Selected;
+            BottomScreenPiece piece = VM?.Selected;
             if (piece == null || piece.Drawing < 0) return;
-            var archive = ArchiveOf(piece);
+            GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null)
             {
                 await DialogHelper.ShowError("This piece's archive is not one the painter can open.", "Bottom Screen");
@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
 
             VM.Remember(piece.Archive, piece.Drawing, $"the painting of {piece.Name}");
-            var painter = new GraphicPainterView(new GraphicPainterViewModel(archive, piece.Drawing));
+            GraphicPainterView painter = new GraphicPainterView(new GraphicPainterViewModel(archive, piece.Drawing));
             // The painter writes as it goes, so the screen is read again once it is closed.
             painter.Closed += (_, _) => VM?.ReloadAfterImport();
             painter.ShowManaged();
@@ -48,9 +48,9 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var piece = VM?.Selected;
+            BottomScreenPiece piece = VM?.Selected;
             if (piece == null || piece.Drawing < 0) return;
-            var archive = ArchiveOf(piece);
+            GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
 
             string path = await DialogHelper.SaveFile(this, "Save this piece as a PNG",
@@ -64,9 +64,9 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var piece = VM?.Selected;
+            BottomScreenPiece piece = VM?.Selected;
             if (piece == null || piece.Drawing < 0) return;
-            var archive = ArchiveOf(piece);
+            GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
 
             string path = await DialogHelper.OpenFile(this, "Import PNG", new[] { Png });
@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void EditAnimation_Click(object sender, RoutedEventArgs e)
         {
-            var piece = VM?.Selected;
+            BottomScreenPiece piece = VM?.Selected;
             if (piece == null || piece.Animation < 0) return;
             // Named for the screen it belongs to, not just "Animation", so several open at once stay apart.
             string what = $"{VM.AppName} animation {piece.Animation}";
@@ -104,12 +104,12 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void Swatch_Pressed(object sender, PointerPressedEventArgs e)
         {
             if (VM == null || sender is not Control c || c.Tag is not int at) return;
-            var editor = new PaletteColorEditorViewModel(
+            PaletteColorEditorViewModel editor = new PaletteColorEditorViewModel(
                 VM.SelectedName + ", colour " + at, VM.ColourAt(at), argb => VM.SetColour(at, argb));
 
             // Opened away from the right-hand side, because the colours sit there and a window over them
             // swallows the click that picks the next one.
-            var view = new PaletteColorEditorView(editor)
+            PaletteColorEditorView view = new PaletteColorEditorView(editor)
             {
                 WindowStartupLocation = WindowStartupLocation.Manual,
             };

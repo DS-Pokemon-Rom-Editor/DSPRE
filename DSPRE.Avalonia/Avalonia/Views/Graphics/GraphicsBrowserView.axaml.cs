@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void SavePicture_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
 
             string path = await DialogHelper.SaveFile(this, "Export PNG",
@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void SaveRaw_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
             {
                 await DialogHelper.ShowInfo("Pick something on the left first.", "Export file");
@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Replace_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
 
             // The button is off when this cannot work, and its tooltip says why, but somebody may still get
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Paint_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            GraphicsBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
 
             if (!vm.CanReplace)
@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             // The painter works on the saved graphic, so pending imports are settled first.
             if (!await RecordSwitchGuard.ConfirmLeaveAsync(vm, this, "graphic", "Save them before painting?")) return;
 
-            var painter = new GraphicPainterView(
+            GraphicPainterView painter = new GraphicPainterView(
                 new GraphicPainterViewModel(vm.ShowingArchive, vm.ShowingIndex));
             painter.ShowManaged();
         }

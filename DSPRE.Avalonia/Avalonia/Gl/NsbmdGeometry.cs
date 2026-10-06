@@ -130,10 +130,10 @@ namespace DSPRE.Avalonia.Gl
         public float[] CellToScene(int cx, int cy, float modelScale)
         {
             float s = modelScale == 0f ? 1f : modelScale;
-            var m = Mat4.Scale(s / 64f, s / 64f, s / 64f);
+            float[] m = Mat4.Scale(s / 64f, s / 64f, s / 64f);
 
             float ox = 0f, oy = 0f, oz = 0f;
-            if (TryCellPlacement(cx, cy, out var placement))
+            if (TryCellPlacement(cx, cy, out CellPlacement placement))
             {
                 ox = placement.OriginX + placement.Width / 2f;
                 oz = placement.OriginZ + placement.Height / 2f;
@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.Gl
 
             m = Mat4.Multiply(Mat4.Translate(ox, oy, oz), m);
 
-            var normalize = Mat4.Scale(Scale, Scale, Scale);
+            float[] normalize = Mat4.Scale(Scale, Scale, Scale);
             normalize[12] = -Cx * Scale;
             normalize[13] = -Cy * Scale;
             normalize[14] = -Cz * Scale;
@@ -153,12 +153,12 @@ namespace DSPRE.Avalonia.Gl
         {
             y = 0f;
             long key = CellKey(cx, cy);
-            if (CellBdhc == null || !CellBdhc.TryGetValue(key, out var bdhc) || bdhc == null) return false;
-            if (!TryCellPlacement(cx, cy, out var p)) return false;
-            float altitude = CellAltitudeY != null && CellAltitudeY.TryGetValue(key, out var ay) ? ay : 0f;
+            if (CellBdhc == null || !CellBdhc.TryGetValue(key, out BdhcFile bdhc) || bdhc == null) return false;
+            if (!TryCellPlacement(cx, cy, out CellPlacement p)) return false;
+            float altitude = CellAltitudeY != null && CellAltitudeY.TryGetValue(key, out float ay) ? ay : 0f;
             float localX = rawX - p.OriginX;
             float localZ = rawZ - p.OriginZ;
-            if (!bdhc.TryGetHeight(localX, localZ, preferredY - altitude, out var localY)) return false;
+            if (!bdhc.TryGetHeight(localX, localZ, preferredY - altitude, out float localY)) return false;
             y = localY + altitude;
             return true;
         }
@@ -170,9 +170,9 @@ namespace DSPRE.Avalonia.Gl
             matX = matY = 0; tileFx = tileFy = 0f;
             if (CellPlacements == null || CellPlacements.Count == 0) return false;
             long bestKey = 0; float bestD = float.MaxValue; bool inside = false;
-            foreach (var kv in CellPlacements)
+            foreach (KeyValuePair<long, CellPlacement> kv in CellPlacements)
             {
-                var p = kv.Value;
+                CellPlacement p = kv.Value;
                 bool within = rawX >= p.OriginX && rawX <= p.OriginX + p.Width && rawZ >= p.OriginZ && rawZ <= p.OriginZ + p.Height;
                 if (within) { bestKey = kv.Key; inside = true; break; }
                 float ccx = p.OriginX + p.Width * 0.5f, ccz = p.OriginZ + p.Height * 0.5f;
@@ -180,7 +180,7 @@ namespace DSPRE.Avalonia.Gl
                 if (d < bestD) { bestD = d; bestKey = kv.Key; }
             }
             if (!inside && bestD == float.MaxValue) return false;
-            var bp = CellPlacements[bestKey];
+            CellPlacement bp = CellPlacements[bestKey];
             matX = (int)(bestKey >> 32); matY = (int)(uint)bestKey;
             tileFx = bp.Width > 0 ? (rawX - bp.OriginX) / bp.Width * 32f : 0f;
             tileFy = bp.Height > 0 ? (rawZ - bp.OriginZ) / bp.Height * 32f : 0f;
@@ -212,14 +212,14 @@ namespace DSPRE.Avalonia.Gl
             int r = (int)Math.Floor((z - HOriginZ) / HTileZ);
             if (c < 0 || r < 0 || c >= HCols || r >= HRows) return DefaultSurfaceY;
             int idx = r * HCols + c;
-            var bucket = HeightBuckets != null && idx < HeightBuckets.Length ? HeightBuckets[idx] : null;
+            Dictionary<int, int> bucket = HeightBuckets != null && idx < HeightBuckets.Length ? HeightBuckets[idx] : null;
             if (bucket != null && bucket.Count > 0)
             {
                 float modal = HeightGrid[idx];
                 int modalKey = (int)Math.Round((float.IsNaN(modal) ? DefaultSurfaceY : modal) * HeightSnap);
                 int preferredKey = (int)Math.Round(preferredY * HeightSnap);
                 int bestKey = modalKey, bestDist = int.MaxValue, bestModalDist = int.MaxValue, bestCount = -1;
-                foreach (var kv in bucket)
+                foreach (KeyValuePair<int, int> kv in bucket)
                 {
                     int dist = Math.Abs(kv.Key - preferredKey);
                     int modalDist = Math.Abs(kv.Key - modalKey);
@@ -270,8 +270,8 @@ namespace DSPRE.Avalonia.Gl
         public static NsbmdRenderModel BuildModel(NSBMDModel model,
             Func<int, NSBMDObject, float[]> jointMatrix = null, NsbmdRenderModel placeLike = null)
         {
-            var result = new NsbmdRenderModel();
-            var byNodeAndMat = new Dictionary<(int Material, int Node), List<float>>();
+            NsbmdRenderModel result = new NsbmdRenderModel();
+            Dictionary<(int Material, int Node), List<float>> byNodeAndMat = new Dictionary<(int Material, int Node), List<float>>();
             Accumulate(model, null, 0, result, null, jointMatrix, byNodeAndMat);
             Finalize(result, byNodeAndMat);
             NormalizePositions(result, placeLike);
@@ -289,7 +289,7 @@ namespace DSPRE.Avalonia.Gl
             // Build the single map as a 1×1 matrix cell so it gets the SAME fixed 32-tile CellPlacement and
             // per-tile height grid the matrix/event editor uses. That gives the permission overlay a real tile
             // grid (fixes oversized tiles on maps that don't fill all 32 tiles) and per-tile surface heights.
-            var scene = BuildMatrixScene(new[]
+            NsbmdRenderModel scene = BuildMatrixScene(new[]
             {
                 new MatrixCellGeometry { Map = map, Buildings = buildings, MapAnimations = mapAnimations, GroundScroll = groundScroll, CellX = 0, CellY = 0 }
             }, MatrixStitchMode.Grid);
@@ -343,21 +343,21 @@ namespace DSPRE.Avalonia.Gl
         public static NsbmdRenderModel BuildMatrixScene(IReadOnlyList<MatrixCellGeometry> cells,
             MatrixStitchMode mode = MatrixStitchMode.Continuous)
         {
-            var result = new NsbmdRenderModel { IsMatrix = true };
+            NsbmdRenderModel result = new NsbmdRenderModel { IsMatrix = true };
             int offset = 0;
-            var cellSwaps = new Dictionary<int, Dictionary<string, NsbmdTextureData>>();
+            Dictionary<int, Dictionary<string, NsbmdTextureData>> cellSwaps = new Dictionary<int, Dictionary<string, NsbmdTextureData>>();
 
-            var stored = new List<CellBuild>();
+            List<CellBuild> stored = new List<CellBuild>();
             int minCx = int.MaxValue, minCy = int.MaxValue, maxCx = int.MinValue, maxCy = int.MinValue;
 
-            foreach (var cell in cells)
+            foreach (MatrixCellGeometry cell in cells)
             {
-                var mapMats = new Dictionary<int, List<float>>();
+                Dictionary<int, List<float>> mapMats = new Dictionary<int, List<float>>();
                 float cMinX = 0, cMinZ = 0, cFpX = 0, cFpZ = 0; bool cHas = false;
                 if (cell.Map != null)
                 {
                     if (cell.MapAnimations != null)
-                        foreach (var kv in cell.MapAnimations)
+                        foreach (KeyValuePair<int, (Dictionary<string, NsbmdTextureData> Frames, List<(string Swap, int Frames)> Sequence)> kv in cell.MapAnimations)
                         {
                             result.SwappableTextures[offset + kv.Key] = kv.Value.Frames;
                             result.FieldAnimations.Add((offset + kv.Key, kv.Value.Sequence));
@@ -376,11 +376,11 @@ namespace DSPRE.Avalonia.Gl
                         cMinX = mnx; cMinZ = mnz; cHas = true;
                     }
                 }
-                var bldMats = new Dictionary<int, List<float>>();
+                Dictionary<int, List<float>> bldMats = new Dictionary<int, List<float>>();
                 if (cell.SwappableTextures != null)
-                    foreach (var kv in cell.SwappableTextures) cellSwaps[kv.Key] = kv.Value;
+                    foreach (KeyValuePair<int, Dictionary<string, NsbmdTextureData>> kv in cell.SwappableTextures) cellSwaps[kv.Key] = kv.Value;
                 if (cell.Buildings != null)
-                    foreach (var b in cell.Buildings)
+                    foreach (PlacedBuilding b in cell.Buildings)
                     {
                         if (b.Model == null) continue;
                         Accumulate(b.Model, b.Transform, offset, result, bldMats);
@@ -390,7 +390,7 @@ namespace DSPRE.Avalonia.Gl
                             Model = b.Model, Transform = b.Transform,
                             TileX = b.TileX, TileZ = b.TileZ,
                         });
-                        if (cellSwaps.TryGetValue(b.ModelId, out var swaps))
+                        if (cellSwaps.TryGetValue(b.ModelId, out Dictionary<string, NsbmdTextureData> swaps))
                             for (int k = 0; k < b.Model.Materials.Count; k++)
                                 result.SwappableTextures[offset + k] = swaps;
                         offset += Math.Max(1, b.Model.Materials.Count);
@@ -399,27 +399,27 @@ namespace DSPRE.Avalonia.Gl
                 minCx = Math.Min(minCx, cell.CellX); maxCx = Math.Max(maxCx, cell.CellX);
                 minCy = Math.Min(minCy, cell.CellY); maxCy = Math.Max(maxCy, cell.CellY);
             }
-            var colX = new Dictionary<int, float>();
+            Dictionary<int, float> colX = new Dictionary<int, float>();
             for (int cx = minCx; cx <= maxCx; cx++) colX[cx] = (cx - minCx) * MapStride;
-            var rowZ = new Dictionary<int, float>();
+            Dictionary<int, float> rowZ = new Dictionary<int, float>();
             for (int cy = minCy; cy <= maxCy; cy++) rowZ[cy] = (cy - minCy) * MapStride;
 
-            var byMat = new Dictionary<int, List<float>>();
-            var placements = new Dictionary<long, NsbmdRenderModel.CellPlacement>();
-            var cellBdhc = new Dictionary<long, BdhcFile>();
-            var cellAltitude = new Dictionary<long, float>();
-            var mapSurf = new List<float>();   // map-only triangles (post-offset) for the permission overlay
-            foreach (var cb in stored)
+            Dictionary<int, List<float>> byMat = new Dictionary<int, List<float>>();
+            Dictionary<long, NsbmdRenderModel.CellPlacement> placements = new Dictionary<long, NsbmdRenderModel.CellPlacement>();
+            Dictionary<long, BdhcFile> cellBdhc = new Dictionary<long, BdhcFile>();
+            Dictionary<long, float> cellAltitude = new Dictionary<long, float>();
+            List<float> mapSurf = new List<float>();   // map-only triangles (post-offset) for the permission overlay
+            foreach (CellBuild cb in stored)
             {
                 float ox = colX[cb.CellX] + cb.ShiftX, oz = rowZ[cb.CellY] + cb.ShiftZ;
                 cb.ColW = MapStride; cb.RowH = MapStride;
                 cb.OffX = ox + MapStride / 2f; cb.OffY = cb.AltitudeY; cb.OffZ = oz + MapStride / 2f;
                 MergeOffset(cb.MapMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
                 MergeOffset(cb.BldMats, byMat, cb.OffX, cb.OffY, cb.OffZ);
-                foreach (var bm in result.Buildings)
+                foreach (NsbmdRenderModel.BuildingMaterials bm in result.Buildings)
                     if (cb.BldMats.ContainsKey(bm.FirstKey))
                     { bm.OffsetX = cb.OffX; bm.OffsetY = cb.OffY; bm.OffsetZ = cb.OffZ; }
-                foreach (var list in cb.MapMats.Values)
+                foreach (List<float> list in cb.MapMats.Values)
                     for (int i = 0; i + 7 < list.Count; i += 8)
                     { mapSurf.Add(list[i] + cb.OffX); mapSurf.Add(list[i + 1] + cb.OffY); mapSurf.Add(list[i + 2] + cb.OffZ); }
                 long key = NsbmdRenderModel.CellKey(cb.CellX, cb.CellY);
@@ -467,16 +467,16 @@ namespace DSPRE.Avalonia.Gl
             if (spanX <= 0 || spanZ <= 0) return;
             float tileX = spanX / cols, tileZ = spanZ / rows;
             float originX = result.MapMinX, originZ = result.MapMinZ;
-            var grid = new float[cols * rows];
+            float[] grid = new float[cols * rows];
             for (int i = 0; i < grid.Length; i++) grid[i] = float.NaN;
-            var buckets = new Dictionary<int, int>[grid.Length];
-            var globalCounts = new Dictionary<int, int>();
+            Dictionary<int, int>[] buckets = new Dictionary<int, int>[grid.Length];
+            Dictionary<int, int> globalCounts = new Dictionary<int, int>();
 
             const float snap = NsbmdRenderModel.HeightSnap;
-            foreach (var cb in stored)
+            foreach (CellBuild cb in stored)
             {
                 float ox = cb.OffX, oz = cb.OffZ;
-                foreach (var list in cb.MapMats.Values)
+                foreach (List<float> list in cb.MapMats.Values)
                     for (int i = 0; i + 2 < list.Count; i += 8)
                     {
                         float x = list[i] + ox, y = list[i + 1] + cb.OffY, z = list[i + 2] + oz;
@@ -486,14 +486,14 @@ namespace DSPRE.Avalonia.Gl
                         int idx = r * cols + c;
                         int key = (int)Math.Round(y * snap);
                         if (buckets[idx] == null) buckets[idx] = new Dictionary<int, int>();
-                        buckets[idx][key] = buckets[idx].TryGetValue(key, out var n) ? n + 1 : 1;
+                        buckets[idx][key] = buckets[idx].TryGetValue(key, out int n) ? n + 1 : 1;
                         globalCounts[key] = globalCounts.TryGetValue(key, out n) ? n + 1 : 1;
                     }
             }
 
             int defaultKey = (int)Math.Round((result.HasMapBounds ? result.MapMinY : 0f) * snap);
             int defaultCount = -1;
-            foreach (var kv in globalCounts)
+            foreach (KeyValuePair<int, int> kv in globalCounts)
             {
                 if (kv.Value > defaultCount || (kv.Value == defaultCount && kv.Key < defaultKey))
                 {
@@ -505,10 +505,10 @@ namespace DSPRE.Avalonia.Gl
 
             for (int i = 0; i < buckets.Length; i++)
             {
-                var bucket = buckets[i];
+                Dictionary<int, int> bucket = buckets[i];
                 if (bucket == null || bucket.Count == 0) continue;
                 int bestKey = defaultKey, bestCount = -1, bestDist = int.MaxValue;
-                foreach (var kv in bucket)
+                foreach (KeyValuePair<int, int> kv in bucket)
                 {
                     int dist = Math.Abs(kv.Key - defaultKey);
                     if (kv.Value > bestCount ||
@@ -526,37 +526,37 @@ namespace DSPRE.Avalonia.Gl
                 for (int pass = 0; pass < 12; pass++)
                 {
                     bool changed = false;
-                    var src = (float[])grid.Clone();
+                    float[] src = (float[])grid.Clone();
                     for (int r = 0; r < rows; r++)
                         for (int c = 0; c < cols; c++)
                         {
                             int idx = r * cols + c;
                             if (!float.IsNaN(src[idx])) continue;
-                            var seen = new Dictionary<int, int>(4);
+                            Dictionary<int, int> seen = new Dictionary<int, int>(4);
                             if (c > 0 && !float.IsNaN(src[idx - 1]))
                             {
                                 int key = (int)Math.Round(src[idx - 1] * snap);
-                                seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+                                seen[key] = seen.TryGetValue(key, out int n) ? n + 1 : 1;
                             }
                             if (c < cols - 1 && !float.IsNaN(src[idx + 1]))
                             {
                                 int key = (int)Math.Round(src[idx + 1] * snap);
-                                seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+                                seen[key] = seen.TryGetValue(key, out int n) ? n + 1 : 1;
                             }
                             if (r > 0 && !float.IsNaN(src[idx - cols]))
                             {
                                 int key = (int)Math.Round(src[idx - cols] * snap);
-                                seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+                                seen[key] = seen.TryGetValue(key, out int n) ? n + 1 : 1;
                             }
                             if (r < rows - 1 && !float.IsNaN(src[idx + cols]))
                             {
                                 int key = (int)Math.Round(src[idx + cols] * snap);
-                                seen[key] = seen.TryGetValue(key, out var n) ? n + 1 : 1;
+                                seen[key] = seen.TryGetValue(key, out int n) ? n + 1 : 1;
                             }
                             if (seen.Count > 0)
                             {
                                 int bestKey = defaultKey, bestCount = -1, bestDist = int.MaxValue;
-                                foreach (var kv in seen)
+                                foreach (KeyValuePair<int, int> kv in seen)
                                 {
                                     int dist = Math.Abs(kv.Key - defaultKey);
                                     if (kv.Value > bestCount ||
@@ -588,9 +588,9 @@ namespace DSPRE.Avalonia.Gl
             float ext = (m.HasMapBounds ? m.MapMaxX - m.MapMinX : m.RawMaxX - m.RawMinX);
             float y = (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + ext * 0.004f;
             float lw = ext * 0.0015f;               // line half-width in raw units
-            var v = new List<float>(stored.Count * 96);
+            List<float> v = new List<float>(stored.Count * 96);
 
-            foreach (var cb in stored)
+            foreach (CellBuild cb in stored)
             {
                 // Cell boundary (cyan): block corner → corner (OffX is the block CENTER).
                 float cx0 = cb.OffX - MapStride / 2f, cz0 = cb.OffZ - MapStride / 2f;
@@ -619,10 +619,10 @@ namespace DSPRE.Avalonia.Gl
         {
             float dx = x1 - x0, dz = z1 - z0; float len = (float)Math.Sqrt(dx * dx + dz * dz); if (len < 1e-6f) return;
             float px = -dz / len * w, pz = dx / len * w;   // perpendicular, scaled to half-width
-            var a = m.ToNormalized(x0 + px, y, z0 + pz);
-            var bb = m.ToNormalized(x1 + px, y, z1 + pz);
-            var c = m.ToNormalized(x1 - px, y, z1 - pz);
-            var d = m.ToNormalized(x0 - px, y, z0 - pz);
+            (float x, float y, float z) a = m.ToNormalized(x0 + px, y, z0 + pz);
+            (float x, float y, float z) bb = m.ToNormalized(x1 + px, y, z1 + pz);
+            (float x, float y, float z) c = m.ToNormalized(x1 - px, y, z1 - pz);
+            (float x, float y, float z) d = m.ToNormalized(x0 - px, y, z0 - pz);
             void Vtx((float x, float y, float z) p) { v.Add(p.x); v.Add(p.y); v.Add(p.z); v.Add(0); v.Add(0); v.Add(r); v.Add(g); v.Add(b); }
             Vtx(a); Vtx(bb); Vtx(c);
             Vtx(a); Vtx(c); Vtx(d);
@@ -630,10 +630,10 @@ namespace DSPRE.Avalonia.Gl
 
         private static void MergeOffset(Dictionary<int, List<float>> src, Dictionary<int, List<float>> dst, float ox, float oy, float oz)
         {
-            foreach (var kv in src)
+            foreach (KeyValuePair<int, List<float>> kv in src)
             {
-                if (!dst.TryGetValue(kv.Key, out var list)) { list = new List<float>(kv.Value.Count); dst[kv.Key] = list; }
-                var s = kv.Value;
+                if (!dst.TryGetValue(kv.Key, out List<float> list)) { list = new List<float>(kv.Value.Count); dst[kv.Key] = list; }
+                List<float> s = kv.Value;
                 for (int i = 0; i + 7 < s.Count; i += 8)
                 {
                     list.Add(s[i] + ox); list.Add(s[i + 1] + oy); list.Add(s[i + 2] + oz);
@@ -651,19 +651,19 @@ namespace DSPRE.Avalonia.Gl
             NsbmdRenderModel.BuildingMaterials building, Func<int, NSBMDObject, float[]> jointMatrix,
             float[] transform = null)
         {
-            var result = new Dictionary<int, float[]>();
+            Dictionary<int, float[]> result = new Dictionary<int, float[]>();
             if (scene == null || building?.Model == null) return result;
 
-            var raw = new Dictionary<int, List<float>>();
+            Dictionary<int, List<float>> raw = new Dictionary<int, List<float>>();
             Accumulate(building.Model, transform ?? building.Transform, building.FirstKey, scene, raw, jointMatrix);
 
-            foreach (var kv in raw)
+            foreach (KeyValuePair<int, List<float>> kv in raw)
             {
-                var src = kv.Value;
-                var dst = new float[src.Count];
+                List<float> src = kv.Value;
+                float[] dst = new float[src.Count];
                 for (int i = 0; i + 7 < src.Count; i += 8)
                 {
-                    var (nx, ny, nz) = scene.ToNormalized(src[i] + building.OffsetX,
+                    (float nx, float ny, float nz) = scene.ToNormalized(src[i] + building.OffsetX,
                                                           src[i + 1] + building.OffsetY,
                                                           src[i + 2] + building.OffsetZ);
                     dst[i] = nx; dst[i + 1] = ny; dst[i + 2] = nz;
@@ -682,10 +682,10 @@ namespace DSPRE.Avalonia.Gl
         {
             if (model == null || model.Polygons.Count == 0) return;
 
-            var stack = new MTX44[32];
+            MTX44[] stack = new MTX44[32];
             for (int i = 0; i < stack.Length; i++) { stack[i] = new MTX44(); stack[i].LoadIdentity(); }
-            var running = new MTX44(); running.LoadIdentity();
-            foreach (var obj in model.Objects)
+            MTX44 running = new MTX44(); running.LoadIdentity();
+            foreach (NSBMDObject obj in model.Objects)
             {
                 if (obj.RestoreID != -1) running = stack[obj.RestoreID].Clone();
                 if (obj.StackID != -1)
@@ -695,7 +695,7 @@ namespace DSPRE.Avalonia.Gl
                         // A joint animation replaces a part's own matrix for this frame, keeping
                         // whatever the model says about anything the animation does not touch.
                         float[] mtx = jointMatrix?.Invoke(model.Objects.IndexOf(obj), obj) ?? obj.materix;
-                        var b = new MTX44(); b.SetValues(mtx);
+                        MTX44 b = new MTX44(); b.SetValues(mtx);
                         running = running.MultMatrix(b);
                     }
                     else { running = running.Clone(); running.Zero(); }
@@ -703,7 +703,7 @@ namespace DSPRE.Avalonia.Gl
                 }
             }
 
-            foreach (var poly in model.Polygons)
+            foreach (NSBMDPolygon poly in model.Polygons)
             {
                 int matId = poly.MatId;
                 NSBMDMaterial mat = (matId >= 0 && matId < model.Materials.Count) ? model.Materials[matId] : null;
@@ -716,7 +716,7 @@ namespace DSPRE.Avalonia.Gl
                 List<float> list;
                 if (byNodeAndMat != null)
                 {
-                    var part = (key, poly.JointID);
+                    (int key, int JointID) part = (key, poly.JointID);
                     if (!byNodeAndMat.TryGetValue(part, out list))
                     {
                         list = new List<float>();
@@ -753,7 +753,7 @@ namespace DSPRE.Avalonia.Gl
 
                     if (!target.Textures.ContainsKey(key))
                     {
-                        var tex = NsbmdTextureDecoder.Decode(mat);
+                        NsbmdTextureData tex = NsbmdTextureDecoder.Decode(mat);
                         if (tex != null) target.Textures[key] = tex;
                         else if (mat.missingExternalTexture) target.Textures[key] = MissingTexture();
                     }
@@ -764,7 +764,7 @@ namespace DSPRE.Avalonia.Gl
         private static NsbmdTextureData MissingTexture()
         {
             const int size = 8;
-            var rgba = new byte[size * size * 4];
+            byte[] rgba = new byte[size * size * 4];
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
                 {
@@ -787,7 +787,7 @@ namespace DSPRE.Avalonia.Gl
         {
             minX = minY = minZ = float.MaxValue; maxX = maxY = maxZ = float.MinValue;
             bool any = false;
-            foreach (var list in byMat.Values)
+            foreach (List<float> list in byMat.Values)
                 for (int i = 0; i + 2 < list.Count; i += 8)
                 {
                     any = true;
@@ -800,12 +800,12 @@ namespace DSPRE.Avalonia.Gl
 
         private static void Finalize(NsbmdRenderModel result, Dictionary<int, List<float>> byMat)
         {
-            foreach (var kv in byMat)
+            foreach (KeyValuePair<int, List<float>> kv in byMat)
             {
                 if (kv.Value.Count == 0) continue;
-                float alpha = result.MaterialAlphaByKey.TryGetValue(kv.Key, out var a) ? a : 1f;
-                int cull = result.MaterialCullByKey.TryGetValue(kv.Key, out var c) ? c : NsbmdCull.None;
-                bool fog = result.MaterialFogByKey.TryGetValue(kv.Key, out var f) && f;
+                float alpha = result.MaterialAlphaByKey.TryGetValue(kv.Key, out float a) ? a : 1f;
+                int cull = result.MaterialCullByKey.TryGetValue(kv.Key, out int c) ? c : NsbmdCull.None;
+                bool fog = result.MaterialFogByKey.TryGetValue(kv.Key, out bool f) && f;
                 result.MaterialTexMatrixByKey.TryGetValue(kv.Key, out float[] texMtx);
                 result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha, CullMode = cull, Fog = fog, TexMatrix = texMtx });
                 result.TotalVertices += kv.Value.Count / 8;
@@ -827,7 +827,7 @@ namespace DSPRE.Avalonia.Gl
             // The loader's trailing placeholder material carries no parsed fields (all zero).
             if (mat == null || (mat.scaleS == 0f && mat.scaleT == 0f)) return null;
             if (mat.scaleS == 1f && mat.scaleT == 1f && mat.rot == 0f && mat.transS == 0f && mat.transT == 0f) return null;
-            var srt = new DSPRE.ROMFiles.TextureSrtAnimation.Srt
+            TextureSrtAnimation.Srt srt = new DSPRE.ROMFiles.TextureSrtAnimation.Srt
             {
                 ScaleS = mat.scaleS, ScaleT = mat.scaleT, SinRotation = mat.rot, CosRotation = mat.rotCos,
                 TranslateS = mat.transS, TranslateT = mat.transT,
@@ -846,20 +846,20 @@ namespace DSPRE.Avalonia.Gl
             // The material's scale is part of its texture matrix (NsbmdMeshPart.TexMatrix), applied when drawn.
             int flipS = mat?.flipS ?? 0, flipT = mat?.flipT ?? 0;
 
-            var cur = new MTX44(); cur.LoadIdentity();
+            MTX44 cur = new MTX44(); cur.LoadIdentity();
             int stackId = polyStackId;
             if (stackId >= 0 && stackId < stack.Length) stack[stackId & 0x1f].CopyValuesTo(cur);
 
-            var v = new float[3];
+            float[] v = new float[3];
             float u = 0f, w = 0f;                 // current texcoord
             float vr = cr, vg = cg, vb = cb;
-            var prim = new List<float[]>();       // each entry: pos.xyz + uv.st + colour.rgb
+            List<float[]> prim = new List<float[]>();       // each entry: pos.xyz + uv.st + colour.rgb
             int primType = -1;
 
             int idx = 0, len = poly.Length;
             while (idx < len)
             {
-                var cmds = new int[4];
+                int[] cmds = new int[4];
                 for (int k = 0; k < 4; k++) cmds[k] = idx < len ? poly[idx++] : 0xff;
 
                 // Every command in the word is run, not only the ones with a parameter still to come.
@@ -973,7 +973,7 @@ namespace DSPRE.Avalonia.Gl
 
         private static void LoadOrMult(byte[] poly, ref int idx, MTX44 cur, int count, bool load)
         {
-            var m = new MTX44(); m.LoadIdentity();
+            MTX44 m = new MTX44(); m.LoadIdentity();
             if (count == 16) for (int n = 0; n < 16; n++) m[n] = S32(poly, ref idx) / 4096f;
             else if (count == 12) for (int col = 0; col < 4; col++) for (int row = 0; row < 3; row++) m[col * 4 + row] = S32(poly, ref idx) / 4096f;
             else for (int col = 0; col < 3; col++) for (int row = 0; row < 3; row++) m[col * 4 + row] = S32(poly, ref idx) / 4096f;
@@ -985,7 +985,7 @@ namespace DSPRE.Avalonia.Gl
             float r, float g, float b, float[] sceneTransform, List<float[]> prim)
         {
             float x = v[0], y = v[1], z = v[2];
-            if (stackId >= 0) { var t = cur.MultVector(v); x = t[0]; y = t[1]; z = t[2]; }
+            if (stackId >= 0) { float[] t = cur.MultVector(v); x = t[0]; y = t[1]; z = t[2]; }
             if (sceneTransform != null) Mat4.TransformPoint(sceneTransform, ref x, ref y, ref z);
             prim.Add(new[] { x, y, z, u, w, r, g, b });
         }
@@ -995,13 +995,13 @@ namespace DSPRE.Avalonia.Gl
         private static void Finalize(NsbmdRenderModel result,
             Dictionary<(int Material, int Node), List<float>> byNodeAndMat)
         {
-            foreach (var kv in byNodeAndMat)
+            foreach (KeyValuePair<(int Material, int Node), List<float>> kv in byNodeAndMat)
             {
                 if (kv.Value.Count == 0) continue;
                 int material = kv.Key.Material;
-                float alpha = result.MaterialAlphaByKey.TryGetValue(material, out var a) ? a : 1f;
-                int cull = result.MaterialCullByKey.TryGetValue(material, out var c) ? c : NsbmdCull.None;
-                bool fog = result.MaterialFogByKey.TryGetValue(material, out var f) && f;
+                float alpha = result.MaterialAlphaByKey.TryGetValue(material, out float a) ? a : 1f;
+                int cull = result.MaterialCullByKey.TryGetValue(material, out int c) ? c : NsbmdCull.None;
+                bool fog = result.MaterialFogByKey.TryGetValue(material, out bool f) && f;
                 result.MaterialTexMatrixByKey.TryGetValue(material, out float[] texMtx);
                 result.Parts.Add(new NsbmdMeshPart
                 {
@@ -1049,7 +1049,7 @@ namespace DSPRE.Avalonia.Gl
         {
             float minX = float.MaxValue, minY = float.MaxValue, minZ = float.MaxValue;
             float maxX = float.MinValue, maxY = float.MinValue, maxZ = float.MinValue;
-            foreach (var part in model.Parts)
+            foreach (NsbmdMeshPart part in model.Parts)
                 for (int i = 0; i < part.Vertices.Length; i += 8)
                 {
                     minX = Math.Min(minX, part.Vertices[i]); maxX = Math.Max(maxX, part.Vertices[i]);
@@ -1073,7 +1073,7 @@ namespace DSPRE.Avalonia.Gl
             model.RawMinY = minY; model.RawMaxY = maxY;
             model.RawMinZ = minZ; model.RawMaxZ = maxZ;
 
-            foreach (var part in model.Parts)
+            foreach (NsbmdMeshPart part in model.Parts)
                 for (int i = 0; i < part.Vertices.Length; i += 8)
                 {
                     part.Vertices[i] = (part.Vertices[i] - cx) * scale;

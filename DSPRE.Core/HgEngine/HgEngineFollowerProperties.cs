@@ -24,7 +24,7 @@ namespace DSPRE.HgEngine
         {
             size = 0; bounce = 0; hasEntry = false; error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
@@ -33,7 +33,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineSourcePatcher.TryFindEntry(text, designator, out _, out _)) return true;   // no entry: defaults
             hasEntry = true;
 
-            var bounceNames = HgEngineSymbolTable.Load(SourceRelPath);
+            HgEngineSymbolTable bounceNames = HgEngineSymbolTable.Load(SourceRelPath);
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, SizePath, out string sizeRaw))
                 int.TryParse(sizeRaw, out size);
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, BouncePath, out string bounceRaw))
@@ -48,14 +48,14 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
             string text = TryReadSource(out string path);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
-            var bounceNames = HgEngineSymbolTable.Load(SourceRelPath);
+            HgEngineSymbolTable bounceNames = HgEngineSymbolTable.Load(SourceRelPath);
             string bounceLiteral = bounceNames != null && bounceNames.TryGetNameWithPrefix(bounce, "OVERWORLD_BOUNCE_", out string bn)
                 ? bn : bounce.ToString();
 
@@ -80,10 +80,10 @@ namespace DSPRE.HgEngine
         /// dynamic UI dropdown (never hardcode which speeds exist).</summary>
         public static List<(string Name, int Value)> GetBounceOptions()
         {
-            var result = new List<(string Name, int Value)>();
-            var table = HgEngineSymbolTable.Load(SourceRelPath);
+            List<(string Name, int Value)> result = new List<(string Name, int Value)>();
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(SourceRelPath);
             if (table == null) return result;
-            foreach (var kv in table.ByName)
+            foreach (KeyValuePair<string, int> kv in table.ByName)
                 if (kv.Key.StartsWith("OVERWORLD_BOUNCE_")) result.Add((kv.Key, kv.Value));
             result.Sort((a, b) => a.Value.CompareTo(b.Value));
             return result;

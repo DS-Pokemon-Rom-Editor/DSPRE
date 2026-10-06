@@ -25,26 +25,26 @@ namespace DSPRE.Avalonia.Data
 
             // One MIDI track per track of the sequence, plus a first track holding the name and the speed,
             // which is what a Type 1 file is.
-            var byTrack = notes.GroupBy(n => n.Track).OrderBy(g => g.Key).ToList();
-            var chunks = new List<byte[]> { HeaderTrack(name) };
-            foreach (var g in byTrack) chunks.Add(OneTrack(g.ToList(), g.Key));
+            List<IGrouping<int, SseqPlayer.Note>> byTrack = notes.GroupBy(n => n.Track).OrderBy(g => g.Key).ToList();
+            List<byte[]> chunks = new List<byte[]> { HeaderTrack(name) };
+            foreach (IGrouping<int, SseqPlayer.Note> g in byTrack) chunks.Add(OneTrack(g.ToList(), g.Key));
 
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             WriteAscii(ms, "MThd");
             WriteU32(ms, 6);
             WriteU16(ms, 1);                        // Type 1: several tracks played together
             WriteU16(ms, (ushort)chunks.Count);
             WriteU16(ms, TicksPerQuarter);
-            foreach (var c in chunks) ms.Write(c, 0, c.Length);
+            foreach (byte[] c in chunks) ms.Write(c, 0, c.Length);
             return ms.ToArray();
         }
 
         private static byte[] HeaderTrack(string name)
         {
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             WriteVarInt(ms, 0);
             ms.WriteByte(0xFF); ms.WriteByte(0x03);          // track name
-            var bytes = System.Text.Encoding.ASCII.GetBytes(Tidy(name));
+            byte[] bytes = System.Text.Encoding.ASCII.GetBytes(Tidy(name));
             WriteVarInt(ms, bytes.Length);
             ms.Write(bytes, 0, bytes.Length);
 
@@ -67,10 +67,10 @@ namespace DSPRE.Avalonia.Data
             int channel = trackNumber % 15;
             if (channel >= 9) channel++;
 
-            var events = new List<(long tick, int order, byte[] bytes)>();
+            List<(long tick, int order, byte[] bytes)> events = new List<(long tick, int order, byte[] bytes)>();
             int lastProgram = -1, lastPan = -1, lastVolume = -1;
 
-            foreach (var n in notes.OrderBy(n => n.StartSeconds))
+            foreach (SseqPlayer.Note n in notes.OrderBy(n => n.StartSeconds))
             {
                 long on = (long)Math.Round(n.StartSeconds * TicksPerSecond);
                 double length = n.NoLengthGiven || n.DurationSeconds <= 0
@@ -103,15 +103,15 @@ namespace DSPRE.Avalonia.Data
             // off by the old one's release. The order field does that.
             events.Sort((a, b) => a.tick != b.tick ? a.tick.CompareTo(b.tick) : a.order.CompareTo(b.order));
 
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             WriteVarInt(ms, 0);
             ms.WriteByte(0xFF); ms.WriteByte(0x03);
-            var title = System.Text.Encoding.ASCII.GetBytes("Track " + (trackNumber + 1));
+            byte[] title = System.Text.Encoding.ASCII.GetBytes("Track " + (trackNumber + 1));
             WriteVarInt(ms, title.Length);
             ms.Write(title, 0, title.Length);
 
             long at = 0;
-            foreach (var e in events)
+            foreach ((long tick, int order, byte[] bytes) e in events)
             {
                 WriteVarInt(ms, (int)(e.tick - at));
                 at = e.tick;
@@ -126,13 +126,13 @@ namespace DSPRE.Avalonia.Data
         private static string Tidy(string s)
         {
             if (string.IsNullOrEmpty(s)) return "Sequence";
-            var clean = new string(s.Where(c => c >= 32 && c < 127).ToArray());
+            string clean = new string(s.Where(c => c >= 32 && c < 127).ToArray());
             return clean.Length == 0 ? "Sequence" : clean;
         }
 
         private static byte[] Chunk(byte[] body)
         {
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             WriteAscii(ms, "MTrk");
             WriteU32(ms, (uint)body.Length);
             ms.Write(body, 0, body.Length);
@@ -159,7 +159,7 @@ namespace DSPRE.Avalonia.Data
         private static void WriteVarInt(Stream s, int value)
         {
             if (value < 0) value = 0;
-            var stack = new Stack<byte>();
+            Stack<byte> stack = new Stack<byte>();
             stack.Push((byte)(value & 0x7F));
             value >>= 7;
             while (value > 0) { stack.Push((byte)((value & 0x7F) | 0x80)); value >>= 7; }

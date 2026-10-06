@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
@@ -47,13 +48,13 @@ namespace DSPRE.Avalonia
         private static FilePickerFileType ToFileType(string filter)
         {
             string name = "File";
-            var patterns = new System.Collections.Generic.List<string>();
+            List<string> patterns = new System.Collections.Generic.List<string>();
             if (!string.IsNullOrEmpty(filter))
             {
-                var parts = filter.Split('|');
+                string[] parts = filter.Split('|');
                 if (parts.Length >= 1) name = parts[0];
                 if (parts.Length >= 2)
-                    foreach (var p in parts[1].Split(';'))
+                    foreach (string p in parts[1].Split(';'))
                         if (!string.IsNullOrWhiteSpace(p)) patterns.Add(p.Trim());
             }
             if (patterns.Count == 0) patterns.Add("*.*");
@@ -62,10 +63,10 @@ namespace DSPRE.Avalonia
 
         private static string PickSaveFileSync(string title, string filter, string suggestedName)
         {
-            var owner = ActiveOwner();
+            Window owner = ActiveOwner();
             if (owner == null) return null;
 
-            var uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            TaskScheduler uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
             string path = null;
             bool done = false;
 
@@ -87,10 +88,10 @@ namespace DSPRE.Avalonia
 
         private static string PickFolderSync(string title)
         {
-            var owner = ActiveOwner();
+            Window owner = ActiveOwner();
             if (owner == null) return null;
 
-            var uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            TaskScheduler uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
             string path = null;
             bool done = false;
 
@@ -102,7 +103,7 @@ namespace DSPRE.Avalonia
             {
                 try
                 {
-                    var folders = t.Result;
+                    IReadOnlyList<IStorageFolder> folders = t.Result;
                     path = folders != null && folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
                 }
                 catch { path = null; }
@@ -118,7 +119,7 @@ namespace DSPRE.Avalonia
             bool result = false;
             bool closed = false;
 
-            var win = new Window
+            Window win = new Window
             {
                 Title = string.IsNullOrEmpty(title) ? "Confirm" : title,
                 Width = 460,
@@ -129,14 +130,14 @@ namespace DSPRE.Avalonia
                 ShowInTaskbar = false,
             };
 
-            var msgText = new TextBlock
+            TextBlock msgText = new TextBlock
             {
                 Text = message,
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 Margin = new global::Avalonia.Thickness(16, 16, 16, 12),
             };
 
-            var btnRow = new StackPanel
+            StackPanel btnRow = new StackPanel
             {
                 Orientation = global::Avalonia.Layout.Orientation.Horizontal,
                 HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Right,
@@ -145,7 +146,7 @@ namespace DSPRE.Avalonia
             };
             void AddBtn(string label, bool r, bool isDefault = false)
             {
-                var btn = new Button { Content = label, MinWidth = 80, IsDefault = isDefault };
+                Button btn = new Button { Content = label, MinWidth = 80, IsDefault = isDefault };
                 btn.Click += (_, _) => { result = r; win.Close(); };
                 btnRow.Children.Add(btn);
             }
@@ -153,12 +154,12 @@ namespace DSPRE.Avalonia
             AddBtn("No", false);
 
             win.Closed += (_, _) => closed = true;
-            var root = new StackPanel();
+            StackPanel root = new StackPanel();
             root.Children.Add(msgText);
             root.Children.Add(btnRow);
             win.Content = root;
 
-            var owner = ActiveOwner();
+            Window owner = ActiveOwner();
             if (owner != null) _ = win.ShowDialog(owner);
             else win.Show();
 
@@ -168,10 +169,10 @@ namespace DSPRE.Avalonia
 
         private static DSPRE.AppMessages.ConfirmResult ShowConfirmCancelSync(string message, string title)
         {
-            var result = DSPRE.AppMessages.ConfirmResult.Cancel;
+            AppMessages.ConfirmResult result = DSPRE.AppMessages.ConfirmResult.Cancel;
             bool closed = false;
 
-            var win = new Window
+            Window win = new Window
             {
                 Title = string.IsNullOrEmpty(title) ? "Confirm" : title,
                 Width = 480,
@@ -182,14 +183,14 @@ namespace DSPRE.Avalonia
                 ShowInTaskbar = false,
             };
 
-            var msgText = new TextBlock
+            TextBlock msgText = new TextBlock
             {
                 Text = message,
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 Margin = new global::Avalonia.Thickness(16, 16, 16, 12),
             };
 
-            var btnRow = new StackPanel
+            StackPanel btnRow = new StackPanel
             {
                 Orientation = global::Avalonia.Layout.Orientation.Horizontal,
                 HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Right,
@@ -198,7 +199,7 @@ namespace DSPRE.Avalonia
             };
             void AddBtn(string label, DSPRE.AppMessages.ConfirmResult r, bool isDefault = false)
             {
-                var btn = new Button { Content = label, MinWidth = 80, IsDefault = isDefault };
+                Button btn = new Button { Content = label, MinWidth = 80, IsDefault = isDefault };
                 btn.Click += (_, _) => { result = r; win.Close(); };
                 btnRow.Children.Add(btn);
             }
@@ -207,12 +208,12 @@ namespace DSPRE.Avalonia
             AddBtn("Cancel", DSPRE.AppMessages.ConfirmResult.Cancel);
 
             win.Closed += (_, _) => closed = true;
-            var root = new StackPanel();
+            StackPanel root = new StackPanel();
             root.Children.Add(msgText);
             root.Children.Add(btnRow);
             win.Content = root;
 
-            var owner = ActiveOwner();
+            Window owner = ActiveOwner();
             if (owner != null) _ = win.ShowDialog(owner);
             else win.Show();
 
@@ -230,8 +231,8 @@ namespace DSPRE.Avalonia
                 while (!isDone()) Thread.Sleep(10);
                 return;
             }
-            var frame = new DispatcherFrame();
-            var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Background,
+            DispatcherFrame frame = new DispatcherFrame();
+            DispatcherTimer timer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Background,
                 (_, _) => { if (isDone()) frame.Continue = false; });
             timer.Start();
             try { Dispatcher.UIThread.PushFrame(frame); }

@@ -96,15 +96,15 @@ public static class ScriptDatabaseJsonLoader
                 JsonElement entry = prop.Value;
 
                 // Create unified command info object
-                var cmdInfo = new ScriptCommandInfo
+                ScriptCommandInfo cmdInfo = new ScriptCommandInfo
                 {
                     CommandId = code,
                     Name = entry.GetProperty("name").GetString(),
-                    DecompName = entry.TryGetProperty("decomp_name", out var decompElem) ? decompElem.GetString() : "",
-                    Description = entry.TryGetProperty("description", out var descElem) ? descElem.GetString() : "",
+                    DecompName = entry.TryGetProperty("decomp_name", out JsonElement decompElem) ? decompElem.GetString() : "",
+                    Description = entry.TryGetProperty("description", out JsonElement descElem) ? descElem.GetString() : "",
                 };
 
-                if (entry.TryGetProperty("parameters", out var paramsElem))
+                if (entry.TryGetProperty("parameters", out JsonElement paramsElem))
                 {
                     cmdInfo.ParameterSizes = paramsElem
                         .EnumerateArray()
@@ -113,7 +113,7 @@ public static class ScriptDatabaseJsonLoader
                 }
 
                 // Load parameter types
-                if (entry.TryGetProperty("parameter_types", out var paramTypesElem))
+                if (entry.TryGetProperty("parameter_types", out JsonElement paramTypesElem))
                 {
                     cmdInfo.ParameterTypes = new List<ScriptParameter.ParameterType>();
                     foreach (JsonElement typeElement in paramTypesElem.EnumerateArray())
@@ -121,14 +121,14 @@ public static class ScriptDatabaseJsonLoader
                         string typeStr = typeElement.GetString();
                         if (!string.IsNullOrEmpty(typeStr))
                         {
-                            var paramType = ScriptParameter.ParseTypeString(typeStr);
+                            ScriptParameter.ParameterType paramType = ScriptParameter.ParseTypeString(typeStr);
                             cmdInfo.ParameterTypes.Add(paramType);
                         }
                     }
                 }
 
                 // Load parameter names (for display/documentation)
-                if (entry.TryGetProperty("parameter_values", out var paramNamesElem))
+                if (entry.TryGetProperty("parameter_values", out JsonElement paramNamesElem))
                 {
                     cmdInfo.ParameterNames = new List<string>();
                     foreach (JsonElement nameElement in paramNamesElem.EnumerateArray())
@@ -204,7 +204,7 @@ public static class ScriptDatabaseJsonLoader
             string file = Path.GetFileNameWithoutExtension(legacyJsonPath) ?? "";
             string stem = file.Replace("_scrcmd_database", "");
             string byGame = V2FileName(gameVersion);
-            var candidates = new List<string>
+        List<string> candidates = new List<string>
             {
                 Path.Combine(dir ?? "", stem + "_v2.json"),
                 Path.Combine(dir ?? "", file + "_v2.json"),
@@ -236,7 +236,7 @@ public static class ScriptDatabaseJsonLoader
 
                     if (!prop.Value.TryGetProperty("id", out JsonElement idElem)) continue;
                     if (!idElem.TryGetInt32(out int id) || id < 0 || id > ushort.MaxValue) continue;
-                    if (!commands.TryGetValue((ushort)id, out var info)) continue;
+                    if (!commands.TryGetValue((ushort)id, out ScriptCommandInfo info)) continue;
 
                     string rotom = prop.Name;
                     if (string.IsNullOrWhiteSpace(rotom)) continue;
@@ -256,7 +256,7 @@ public static class ScriptDatabaseJsonLoader
         // name, so they lose to both, whichever order the file lists them in.
         private static void ReadVarNames(JsonElement vars)
         {
-            var rankOf = new Dictionary<ushort, int>();
+        Dictionary<ushort, int> rankOf = new Dictionary<ushort, int>();
             foreach (JsonProperty prop in vars.EnumerateObject())
             {
                 if (!prop.Name.StartsWith("VAR_", StringComparison.Ordinal)) continue;
@@ -378,9 +378,9 @@ namespace DSPRE.Resources
         /// </summary>
         internal static Dictionary<ushort, string> UnambiguousNames(IEnumerable<string> names, string prefix)
         {
-            var result = new Dictionary<ushort, string>();
+            Dictionary<ushort, string> result = new Dictionary<ushort, string>();
             if (names == null) return result;
-            var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            HashSet<string> taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             int index = 0;
             foreach (string name in names)
             {
@@ -448,13 +448,13 @@ namespace DSPRE.Resources
         private static void ExportDictionary(Dictionary<ushort, string> dictionary, string filePath)
         {
             // Convert Dictionary<ushort, string> to Dictionary<string, string> for JSON serialization
-            var exportDict = new Dictionary<string, string>();
-            foreach (var kvp in dictionary)
+            Dictionary<string, string> exportDict = new Dictionary<string, string>();
+            foreach (KeyValuePair<ushort, string> kvp in dictionary)
             {
                 exportDict[kvp.Key.ToString()] = kvp.Value;
             }
 
-            var options = new JsonSerializerOptions
+            JsonSerializerOptions options = new JsonSerializerOptions
             {
                 WriteIndented = true,
                 Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping

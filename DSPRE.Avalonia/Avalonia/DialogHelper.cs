@@ -28,10 +28,10 @@ namespace DSPRE.Avalonia
             byte r = 0, g = 0, b = 0;
             (byte, byte, byte)? answer = null;
 
-            var preview = new Border { Width = 64, Height = 64, BorderThickness = new global::Avalonia.Thickness(1) };
-            var rBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
-            var gBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
-            var bBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
+            Border preview = new Border { Width = 64, Height = 64, BorderThickness = new global::Avalonia.Thickness(1) };
+            NumericUpDown rBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
+            NumericUpDown gBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
+            NumericUpDown bBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
 
             void Refresh()
             {
@@ -44,10 +44,10 @@ namespace DSPRE.Avalonia
             bBox.ValueChanged += (_, __) => Refresh();
             Refresh();
 
-            var ok = new Button { Content = "Use this colour", MinWidth = 130, IsDefault = true };
-            var cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+            Button ok = new Button { Content = "Use this colour", MinWidth = 130, IsDefault = true };
+            Button cancel = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
 
-            var win = new Window
+            Window win = new Window
             {
                 Title = title,
                 Width = 340, Height = 250,
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia
         /// <returns>true = Yes, false = No</returns>
         public static async Task<bool> AskYesNo(string message, string title = "Confirm", Window owner = null)
         {
-            var result = await ShowMsg(message, title, MsgButtons.YesNo, owner: owner);
+            MsgResult result = await ShowMsg(message, title, MsgButtons.YesNo, owner: owner);
             return result == MsgResult.Yes;
         }
 
@@ -144,7 +144,7 @@ namespace DSPRE.Avalonia
                                                                          string check, bool isChecked, Window owner = null)
         {
             bool answer = false;
-            var win = new Window
+            Window win = new Window
             {
                 Title = title,
                 Width = 460,
@@ -153,19 +153,19 @@ namespace DSPRE.Avalonia
                 SizeToContent = SizeToContent.Height,
             };
 
-            var msgText = new TextBlock
+            TextBlock msgText = new TextBlock
             {
                 Text = message,
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 Margin = new global::Avalonia.Thickness(16, 16, 16, 8),
             };
-            var box = new CheckBox { Content = check, IsChecked = isChecked, Margin = new global::Avalonia.Thickness(16, 0, 16, 8) };
+            CheckBox box = new CheckBox { Content = check, IsChecked = isChecked, Margin = new global::Avalonia.Thickness(16, 0, 16, 8) };
 
-            var yesBtn = new Button { Content = yes, MinWidth = 72 };
+            Button yesBtn = new Button { Content = yes, MinWidth = 72 };
             yesBtn.Click += (_, _) => { answer = true; win.Close(); };
-            var noBtn = new Button { Content = no, MinWidth = 72, IsCancel = true };
+            Button noBtn = new Button { Content = no, MinWidth = 72, IsCancel = true };
             noBtn.Click += (_, _) => win.Close();
-            var btnRow = new StackPanel
+            StackPanel btnRow = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -175,7 +175,7 @@ namespace DSPRE.Avalonia
             btnRow.Children.Add(yesBtn);
             btnRow.Children.Add(noBtn);
 
-            var root = new StackPanel();
+            StackPanel root = new StackPanel();
             root.Children.Add(msgText);
             root.Children.Add(box);
             root.Children.Add(btnRow);
@@ -186,7 +186,7 @@ namespace DSPRE.Avalonia
                 await win.ShowDialog(owner);
             else
             {
-                var closed = new TaskCompletionSource();
+                TaskCompletionSource closed = new TaskCompletionSource();
                 win.Closed += (_, _) => closed.TrySetResult();
                 win.Show();
                 await closed.Task;
@@ -197,7 +197,7 @@ namespace DSPRE.Avalonia
         /// <summary>Shows text the user can select and copy, with a Copy button for all of it.</summary>
         public static async Task ShowCopyableText(string text, string title, Window owner = null)
         {
-            var win = new Window
+            Window win = new Window
             {
                 Title = title,
                 Width = 520,
@@ -206,7 +206,7 @@ namespace DSPRE.Avalonia
                 SizeToContent = SizeToContent.Height,
             };
 
-            var box = new TextBox
+            TextBox box = new TextBox
             {
                 Text = text,
                 IsReadOnly = true,
@@ -216,7 +216,7 @@ namespace DSPRE.Avalonia
                 Margin = new global::Avalonia.Thickness(16, 16, 16, 12),
             };
 
-            var copyBtn = new Button { MinWidth = 72 };
+            Button copyBtn = new Button { MinWidth = 72 };
             Controls.Icon.SetKey(copyBtn, "copy");
             copyBtn.Content = "Copy";
             copyBtn.Click += async (_, _) =>
@@ -225,10 +225,10 @@ namespace DSPRE.Avalonia
                 await win.Clipboard.SetTextAsync(text);
                 copyBtn.Content = "Copied";
             };
-            var closeBtn = new Button { Content = "Close", MinWidth = 72, IsCancel = true, IsDefault = true };
+            Button closeBtn = new Button { Content = "Close", MinWidth = 72, IsCancel = true, IsDefault = true };
             closeBtn.Click += (_, _) => win.Close();
 
-            var btnRow = new StackPanel
+            StackPanel btnRow = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -238,7 +238,7 @@ namespace DSPRE.Avalonia
             btnRow.Children.Add(copyBtn);
             btnRow.Children.Add(closeBtn);
 
-            var root = new StackPanel();
+            StackPanel root = new StackPanel();
             root.Children.Add(box);
             root.Children.Add(btnRow);
             win.Content = root;
@@ -254,9 +254,9 @@ namespace DSPRE.Avalonia
         /// confirming; an empty string is a valid (non-null) confirmed answer.</summary>
         public static async Task<string> PromptText(string message, string title = "Enter a value", string defaultValue = "", Window owner = null)
         {
-            var tcs = new TaskCompletionSource<string>();
+            TaskCompletionSource<string> tcs = new TaskCompletionSource<string>();
 
-            var win = new Window
+            Window win = new Window
             {
                 Title = title,
                 Width = 420,
@@ -265,20 +265,20 @@ namespace DSPRE.Avalonia
                 SizeToContent = SizeToContent.Height,
             };
 
-            var msgText = new TextBlock
+            TextBlock msgText = new TextBlock
             {
                 Text = message,
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 Margin = new global::Avalonia.Thickness(16, 16, 16, 8),
             };
 
-            var input = new TextBox
+            TextBox input = new TextBox
             {
                 Text = defaultValue,
                 Margin = new global::Avalonia.Thickness(16, 0, 16, 12),
             };
 
-            var btnRow = new StackPanel
+            StackPanel btnRow = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -286,16 +286,16 @@ namespace DSPRE.Avalonia
                 Spacing = 6,
             };
 
-            var okBtn = new Button { Content = "OK", MinWidth = 72, IsDefault = true };
+            Button okBtn = new Button { Content = "OK", MinWidth = 72, IsDefault = true };
             okBtn.Click += (_, _) => { tcs.TrySetResult(input.Text ?? ""); win.Close(); };
-            var cancelBtn = new Button { Content = "Cancel", MinWidth = 72, IsCancel = true };
+            Button cancelBtn = new Button { Content = "Cancel", MinWidth = 72, IsCancel = true };
             cancelBtn.Click += (_, _) => { tcs.TrySetResult(null); win.Close(); };
             btnRow.Children.Add(okBtn);
             btnRow.Children.Add(cancelBtn);
 
             win.Closed += (_, _) => tcs.TrySetResult(null);
 
-            var root = new StackPanel();
+            StackPanel root = new StackPanel();
             root.Children.Add(msgText);
             root.Children.Add(input);
             root.Children.Add(btnRow);
@@ -324,27 +324,27 @@ namespace DSPRE.Avalonia
             string title,
             IReadOnlyList<FilePickerFileType> filters = null)
         {
-            var opts = new FilePickerOpenOptions
+            FilePickerOpenOptions opts = new FilePickerOpenOptions
             {
                 Title = title,
                 AllowMultiple = false,
                 FileTypeFilter = filters
             };
 
-            var files = await owner.StorageProvider.OpenFilePickerAsync(opts);
+            IReadOnlyList<IStorageFile> files = await owner.StorageProvider.OpenFilePickerAsync(opts);
             return files?.Count > 0 ? files[0].TryGetLocalPath() : null;
         }
 
         /// <summary>Opens a folder-picker dialog. Returns null if cancelled.</summary>
         public static async Task<string> OpenFolder(Window owner, string title)
         {
-            var opts = new FolderPickerOpenOptions
+            FolderPickerOpenOptions opts = new FolderPickerOpenOptions
             {
                 Title = title,
                 AllowMultiple = false
             };
 
-            var folders = await owner.StorageProvider.OpenFolderPickerAsync(opts);
+            IReadOnlyList<IStorageFolder> folders = await owner.StorageProvider.OpenFolderPickerAsync(opts);
             return folders?.Count > 0 ? folders[0].TryGetLocalPath() : null;
         }
 
@@ -355,14 +355,14 @@ namespace DSPRE.Avalonia
             IReadOnlyList<FilePickerFileType> filters = null,
             string suggestedFileName = null)
         {
-            var opts = new FilePickerSaveOptions
+            FilePickerSaveOptions opts = new FilePickerSaveOptions
             {
                 Title = title,
                 FileTypeChoices = filters,
                 SuggestedFileName = suggestedFileName
             };
 
-            var file = await owner.StorageProvider.SaveFilePickerAsync(opts);
+            IStorageFile file = await owner.StorageProvider.SaveFilePickerAsync(opts);
             return file?.TryGetLocalPath();
         }
 
@@ -391,9 +391,9 @@ namespace DSPRE.Avalonia
         private static async Task<MsgResult> ShowMsg(string message, string title, MsgButtons buttons, string details = null, Window owner = null,
                                                      (string Yes, string No, string Cancel)? labels = null)
         {
-            var tcs = new TaskCompletionSource<MsgResult>();
+            TaskCompletionSource<MsgResult> tcs = new TaskCompletionSource<MsgResult>();
 
-            var win = new Window
+            Window win = new Window
             {
                 Title = title,
                 Width = labels == null ? 420 : 560,   // named buttons are wider than Yes and No
@@ -403,14 +403,14 @@ namespace DSPRE.Avalonia
                 SizeToContent = SizeToContent.Height,
             };
 
-            var msgText = new TextBlock
+            TextBlock msgText = new TextBlock
             {
                 Text = message,
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 Margin = new global::Avalonia.Thickness(16, 16, 16, 12),
             };
 
-            var btnRow = new StackPanel
+            StackPanel btnRow = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -420,7 +420,7 @@ namespace DSPRE.Avalonia
 
             void AddBtn(string label, MsgResult result, bool enterOrEscape = false)
             {
-                var btn = new Button { Content = label, MinWidth = 72, IsDefault = enterOrEscape, IsCancel = enterOrEscape };
+                Button btn = new Button { Content = label, MinWidth = 72, IsDefault = enterOrEscape, IsCancel = enterOrEscape };
                 btn.Click += (_, _) => { tcs.TrySetResult(result); win.Close(); };
                 btnRow.Children.Add(btn);
             }
@@ -444,11 +444,11 @@ namespace DSPRE.Avalonia
 
             win.Closed += (_, _) => tcs.TrySetResult(MsgResult.Cancel);
 
-            var root = new StackPanel();
+            StackPanel root = new StackPanel();
             root.Children.Add(new ScrollViewer { Content = msgText, MaxHeight = 380 });
             if (!string.IsNullOrEmpty(details))
             {
-                var copyBtn = new Button
+                Button copyBtn = new Button
                 {
                     Content = "Copy details",
                     HorizontalAlignment = HorizontalAlignment.Left,
@@ -456,7 +456,7 @@ namespace DSPRE.Avalonia
                 };
                 copyBtn.Click += async (_, _) =>
                 {
-                    var clipboard = win.Clipboard;
+                    IClipboard clipboard = win.Clipboard;
                     if (clipboard != null)
                     {
                         await clipboard.SetTextAsync(message + "\n\n" + details);

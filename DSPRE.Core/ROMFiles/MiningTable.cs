@@ -41,14 +41,14 @@ namespace DSPRE.ROMFiles
 
         public static MiningTable Load()
         {
-            var table = new MiningTable { _all = GameTableFile.Read(RomInfo.GameTable.MiningTreasures, Size) };
+            MiningTable table = new MiningTable { _all = GameTableFile.Read(RomInfo.GameTable.MiningTreasures, Size) };
             byte[] items = GameTableFile.Read(RomInfo.GameTable.MiningItems, ItemListCount * 2);
             for (int r = 0; r < RowCount; r++)
             {
                 int at = r * RowSize;
                 int id = table._all[at + 14];
                 if (id >= FirstRockId) break;
-                var row = new Row { MiningId = id, Raw = table._all.AsSpan(at, RowSize).ToArray() };
+                Row row = new Row { MiningId = id, Raw = table._all.AsSpan(at, RowSize).ToArray() };
                 for (int c = 0; c < 4; c++) row.Weights[c] = BitConverter.ToUInt16(table._all, at + 4 + c * 2);
                 if (id > SphereCount && id - SphereCount - 1 < ItemListCount) row.BagItem = BitConverter.ToUInt16(items, (id - SphereCount - 1) * 2);
                 table.Treasures.Add(row);
@@ -78,7 +78,7 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToBytes()
         {
-            var data = (byte[])_all.Clone();
+            byte[] data = (byte[])_all.Clone();
             for (int r = 0; r < Treasures.Count; r++)
                 for (int c = 0; c < 4; c++) BitConverter.GetBytes(Treasures[r].Weights[c]).CopyTo(data, r * RowSize + 4 + c * 2);
             return data;

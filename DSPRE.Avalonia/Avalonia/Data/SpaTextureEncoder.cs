@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.Data
             if (texels == null || texels.Length < need)
                 return Fail($"The texture's stored pixel data is shorter than a {width}x{height} {FormatName(format)} image.");
 
-            var outTex = (byte[])texels.Clone();
+            byte[] outTex = (byte[])texels.Clone();
             if (format == 7) return EncodeDirect(pixels, rgba, outTex, palette);
 
             int indexBits = format switch { 1 => 5, 2 => 2, 3 => 4, 4 => 8, _ => 3 };
@@ -58,8 +58,8 @@ namespace DSPRE.Avalonia.Data
                 return Fail("This texture's palette has no room for a colour.");
 
             // Alpha level per pixel, and whether the pixel shows its colour.
-            var level = new int[pixels];
-            var shows = new bool[pixels];
+            int[] level = new int[pixels];
+            bool[] shows = new bool[pixels];
             for (int j = 0; j < pixels; j++)
             {
                 int a = rgba[j * 4 + 3];
@@ -74,8 +74,8 @@ namespace DSPRE.Avalonia.Data
                 }
             }
 
-            var histogram = new Dictionary<int, int>();
-            var order = new List<int>();
+            Dictionary<int, int> histogram = new Dictionary<int, int>();
+            List<int> order = new List<int>();
             for (int j = 0; j < pixels; j++)
             {
                 if (!shows[j]) continue;
@@ -84,9 +84,9 @@ namespace DSPRE.Avalonia.Data
                 else { histogram[c] = 1; order.Add(c); }
             }
 
-            var result = new SpaTextureEncoding { SourceColors = order.Count, Palette = (byte[])palette.Clone(), Texels = outTex };
+            SpaTextureEncoding result = new SpaTextureEncoding { SourceColors = order.Count, Palette = (byte[])palette.Clone(), Texels = outTex };
             int[] colors;   // palette colours at indices first..first+colors.Length-1
-            var existing = new int[slots];
+            int[] existing = new int[slots];
             for (int i = 0; i < slots; i++) existing[i] = (palette[(first + i) * 2] | (palette[(first + i) * 2 + 1] << 8)) & 0x7FFF;
 
             if (order.All(c => Array.IndexOf(existing, c) >= 0))
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.Data
                 }
             }
 
-            var nearest = new Dictionary<int, int>();
+            Dictionary<int, int> nearest = new Dictionary<int, int>();
             int IndexOf(int c)
             {
                 if (nearest.TryGetValue(c, out int idx)) return idx;
@@ -139,7 +139,7 @@ namespace DSPRE.Avalonia.Data
 
         private static SpaTextureEncoding EncodeDirect(int pixels, byte[] rgba, byte[] outTex, byte[] palette)
         {
-            var seen = new HashSet<int>();
+            HashSet<int> seen = new HashSet<int>();
             for (int j = 0; j < pixels; j++)
             {
                 int c = To555(rgba, j);
@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.Data
         // Weighted median cut in RGB555 space.
         private static int[] MedianCut(Dictionary<int, int> histogram, int count)
         {
-            var boxes = new List<List<KeyValuePair<int, int>>> { histogram.ToList() };
+            List<List<KeyValuePair<int, int>>> boxes = new List<List<KeyValuePair<int, int>>> { histogram.ToList() };
             while (boxes.Count < count)
             {
                 int pick = -1, pickRange = 0, pickChannel = 0;
@@ -189,14 +189,14 @@ namespace DSPRE.Avalonia.Data
                     for (int ch = 0; ch < 3; ch++)
                     {
                         int lo = 31, hi = 0;
-                        foreach (var kv in boxes[i]) { int v = (kv.Key >> (ch * 5)) & 0x1F; lo = Math.Min(lo, v); hi = Math.Max(hi, v); }
+                        foreach (KeyValuePair<int, int> kv in boxes[i]) { int v = (kv.Key >> (ch * 5)) & 0x1F; lo = Math.Min(lo, v); hi = Math.Max(hi, v); }
                         if (hi - lo > pickRange) { pickRange = hi - lo; pick = i; pickChannel = ch; }
                     }
                 }
                 if (pick < 0) break;
 
                 int shift = pickChannel * 5;
-                var box = boxes[pick].OrderBy(kv => (kv.Key >> shift) & 0x1F).ToList();
+                List<KeyValuePair<int, int>> box = boxes[pick].OrderBy(kv => (kv.Key >> shift) & 0x1F).ToList();
                 long total = box.Sum(kv => (long)kv.Value), run = 0;
                 int split = 1;
                 for (int i = 0; i < box.Count - 1; i++)
@@ -212,7 +212,7 @@ namespace DSPRE.Avalonia.Data
             return boxes.Select(b =>
             {
                 long w = 0, r = 0, g = 0, bl = 0;
-                foreach (var kv in b)
+                foreach (KeyValuePair<int, int> kv in b)
                 {
                     w += kv.Value;
                     r += (kv.Key & 0x1F) * kv.Value; g += ((kv.Key >> 5) & 0x1F) * kv.Value; bl += ((kv.Key >> 10) & 0x1F) * kv.Value;

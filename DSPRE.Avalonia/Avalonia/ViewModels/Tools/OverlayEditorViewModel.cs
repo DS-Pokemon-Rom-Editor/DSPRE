@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public void ToggleAllCompressed()
         {
-            foreach (var row in Overlays)
+            foreach (OverlayRow row in Overlays)
                 row.IsCompressed = _currentValComp;
             _currentValComp = !_currentValComp;
             RefreshMismatch();
@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public void ToggleAllMarked()
         {
-            foreach (var row in Overlays)
+            foreach (OverlayRow row in Overlays)
                 row.IsMarkedCompressed = _currentValMark;
             _currentValMark = !_currentValMark;
             RefreshMismatch();
@@ -181,14 +181,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 return;
             }
 
-            var original = BuildOriginalList();
-            var modified = new List<OverlayRow>();
-            var modifiedNumbers = new List<string>();
+            List<OverlayRow> original = BuildOriginalList();
+            List<OverlayRow> modified = new List<OverlayRow>();
+            List<string> modifiedNumbers = new List<string>();
 
             for (int i = 0; i < original.Count; i++)
             {
-                var orig = original[i];
-                var cur  = Overlays[i];
+                OverlayRow orig = original[i];
+                OverlayRow cur  = Overlays[i];
                 if (orig.IsCompressed != cur.IsCompressed || orig.IsMarkedCompressed != cur.IsMarkedCompressed)
                 {
                     modified.Add(cur);
@@ -213,7 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (!proceed) return;
 
             bool hasCompressing = false;
-            foreach (var ovl in modified)
+            foreach (OverlayRow ovl in modified)
             {
                 OverlayUtils.OverlayTable.SetDefaultCompressed(ovl.Number, ovl.IsMarkedCompressed);
                 if (ovl.IsCompressed && !OverlayUtils.IsCompressed(ovl.Number))
@@ -223,7 +223,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             }
 
             // Compressing is off, and a decompress can fail, so each row shows what is on disk now.
-            foreach (var ovl in modified)
+            foreach (OverlayRow ovl in modified)
                 ovl.IsCompressed = OverlayUtils.IsCompressed(ovl.Number);
             RefreshMismatch();
 
@@ -246,7 +246,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             int count = OverlayUtils.OverlayTable.GetNumberOfOverlays();
             for (int i = 0; i < count; i++)
             {
-                var row = new OverlayRow
+                OverlayRow row = new OverlayRow
                 {
                     Number             = i,
                     IsCompressed       = CompressedNow(i),
@@ -267,7 +267,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private List<OverlayRow> BuildOriginalList()
         {
             int count = OverlayUtils.OverlayTable.GetNumberOfOverlays();
-            var list = new List<OverlayRow>(count);
+            List<OverlayRow> list = new List<OverlayRow>(count);
             for (int i = 0; i < count; i++)
             {
                 list.Add(new OverlayRow
@@ -286,17 +286,17 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             if (_isDsRomProject)
             {
-                foreach (var r in Overlays) r.MismatchBrush = Brushes.Transparent;
+                foreach (OverlayRow r in Overlays) r.MismatchBrush = Brushes.Transparent;
                 return;
             }
-            foreach (var r in Overlays)
+            foreach (OverlayRow r in Overlays)
                 r.MismatchBrush = (r.IsCompressed != r.IsMarkedCompressed) ? StatusBrushes.Bad : StatusBrushes.None;
         }
 
         private bool HasMismatches()
         {
             if (_isDsRomProject) return false;
-            foreach (var r in Overlays)
+            foreach (OverlayRow r in Overlays)
                 if (r.IsCompressed != r.IsMarkedCompressed) return true;
             return false;
         }
@@ -332,7 +332,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private void ApplyState(byte[] state)
         {
-            var rows = DSPRE.Avalonia.UndoJson.Read<bool[][]>(state);
+            bool[][] rows = DSPRE.Avalonia.UndoJson.Read<bool[][]>(state);
             for (int i = 0; i < rows.Length && i < Overlays.Count; i++)
             {
                 Overlays[i].IsCompressed = rows[i][0];

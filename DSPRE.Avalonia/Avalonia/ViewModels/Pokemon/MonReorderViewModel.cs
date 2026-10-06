@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public MonReorderViewModel(IEnumerable<(int index, string display)> party)
         {
-            foreach (var p in party) Items.Add(new MonReorderItem(p.index, p.display));
+            foreach ((int index, string display) p in party) Items.Add(new MonReorderItem(p.index, p.display));
             if (Items.Count > 0) SelectedIndex = 0;
         }
 
@@ -58,7 +58,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int i = _selectedIndex;
             int j = i + delta;
             if (i < 0 || j < 0 || j >= Items.Count) return;
-            var item = Items[i];
+            MonReorderItem item = Items[i];
             Items.RemoveAt(i);
             Items.Insert(j, item);
             SelectedIndex = j;

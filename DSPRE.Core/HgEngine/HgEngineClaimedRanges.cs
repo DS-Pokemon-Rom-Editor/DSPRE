@@ -48,8 +48,8 @@ namespace DSPRE.HgEngine
         /// <summary>Everything claimed in one binary. -1 is arm9.</summary>
         public static IReadOnlyList<HgEngineClaim> For(int overlayNumber)
         {
-            var map = Load();
-            return map.TryGetValue(overlayNumber, out var claims) ? claims : Array.Empty<HgEngineClaim>();
+            Dictionary<int, List<HgEngineClaim>> map = Load();
+            return map.TryGetValue(overlayNumber, out List<HgEngineClaim> claims) ? claims : Array.Empty<HgEngineClaim>();
         }
 
         /// <summary>The first claim a write would land in, or null when nothing claims it.</summary>
@@ -84,7 +84,7 @@ namespace DSPRE.HgEngine
         /// </summary>
         internal static Dictionary<int, List<HgEngineClaim>> ReadAll(string root, Func<int, long> overlayRam)
         {
-            var map = new Dictionary<int, List<HgEngineClaim>>();
+            Dictionary<int, List<HgEngineClaim>> map = new Dictionary<int, List<HgEngineClaim>>();
 
             foreach (HgEnginePatchList list in HgEnginePatchList.ReadAllAt(root))
             {
@@ -93,7 +93,7 @@ namespace DSPRE.HgEngine
                     long offset = entry.FileOffset(overlayRam);
                     if (offset < 0) continue;
 
-                    if (!map.TryGetValue(entry.OverlayNumber, out var claims))
+                    if (!map.TryGetValue(entry.OverlayNumber, out List<HgEngineClaim> claims))
                     {
                         claims = new List<HgEngineClaim>();
                         map[entry.OverlayNumber] = claims;

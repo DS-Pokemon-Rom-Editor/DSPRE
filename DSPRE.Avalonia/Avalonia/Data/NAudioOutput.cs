@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.Data
             lock (_gate)
             {
                 EnsureStarted(sampleRate);
-                var voice = new PcmVoice(interleavedStereoPcm, sampleRate, loop);
+                PcmVoice voice = new PcmVoice(interleavedStereoPcm, sampleRate, loop);
                 _mixer.AddMixerInput(voice);
                 return voice;
             }

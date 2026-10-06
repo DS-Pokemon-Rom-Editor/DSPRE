@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Data
 
         public byte[] Render(Screen screen, string text, FieldFont font)
         {
-            if (!_built.TryGetValue(screen, out var b))
+            if (!_built.TryGetValue(screen, out Built b))
             {
                 try { b = Build(screen); }
                 catch (Exception ex) { AppLogger.Warn($"Move text preview ({screen}): {ex.Message}"); b = null; }
@@ -37,8 +37,8 @@ namespace DSPRE.Avalonia.Data
             }
             if (b?.Rgba == null) return null;
 
-            var rgba = (byte[])b.Rgba.Clone();
-            var ink = (byte[])b.Rgba.Clone();
+            byte[] rgba = (byte[])b.Rgba.Clone();
+            byte[] ink = (byte[])b.Rgba.Clone();
             string[] lines = (text ?? "").Split('\n');
             for (int i = 0; i < lines.Length; i++)
                 DsBgScreen.DrawText(ink, font, lines[i], b.TextX, b.TextY + i * 16, b.Ink, b.Shadow);
@@ -52,21 +52,21 @@ namespace DSPRE.Avalonia.Data
         // unpacked is read there, so edits show; any other is read straight from its packed file.
         private static Func<int, byte[]> Members(RomInfo.DirNames dir)
         {
-            if (!RomInfo.gameDirs.TryGetValue(dir, out var paths)) return null;
+            if (!RomInfo.gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
             ArchiveFiles files = System.IO.Directory.Exists(paths.unpackedDir)
                 ? ArchiveFiles.Mapped(dir)
                 : ArchiveFiles.Loose(paths.packedDir, dir.ToString());
             if (!files.Available) return null;
-            var cache = new byte[files.Count][];
+            byte[][] cache = new byte[files.Count][];
             return i => i < 0 || i >= cache.Length ? null : cache[i] ??= NitroBgCodec.Inflate(files.Get(i));
         }
 
         private static Built Build(Screen screen)
         {
             bool hg = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
-            var s = new DsBgScreen();
+            DsBgScreen s = new DsBgScreen();
             ushort[] text;
-            var b = new Built();
+            Built b = new Built();
 
             void Layer(Func<int, byte[]> m, int bg, int priority, int charBase, int ncgr, int nscr)
             {
@@ -86,9 +86,9 @@ namespace DSPRE.Avalonia.Data
             {
                 case Screen.Summary:
                 {
-                    var m = Members(RomInfo.DirNames.summaryGraphics);
+                        Func<int, byte[]> m = Members(RomInfo.DirNames.summaryGraphics);
                     if (m == null) return null;
-                    var colours = DsBgScreen.ReadColours(m(hg ? 0 : 1));
+                        ushort[] colours = DsBgScreen.ReadColours(m(hg ? 0 : 1));
                     Palettes(colours);
                     if (hg)
                     {
@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.Data
                         // first block and the left half of the second are what show.
                         s.InitLayer(1, 2, 0x8000);
                         s.LoadTiles(0x8000, m(20));
-                        var panel = DsBgScreen.ReadMap(m(21)).Entries;
+                            ushort[] panel = DsBgScreen.ReadMap(m(21)).Entries;
                         s.Copy(1, 0, 0, 16, 32, panel, 16, 0, 32);
                         if (panel.Length >= 2048) s.Copy(1, 16, 0, 16, 32, panel[1024..2048], 0, 0, 32);
                         Layer(m, 2, 3, 0, 1, 18);
@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 case Screen.Relearner:
                 {
-                    var m = Members(RomInfo.DirNames.moveRelearnerGraphics);
+                        Func<int, byte[]> m = Members(RomInfo.DirNames.moveRelearnerGraphics);
                     if (m == null) return null;
                     // The art's character base is past the 64 KB this screen keeps; nothing else uses the start.
                     if (hg)
@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.Data
                     }
                     else
                     {
-                        var colours = DsBgScreen.ReadColours(m(12));
+                            ushort[] colours = DsBgScreen.ReadColours(m(12));
                         Palettes(colours);
                         Layer(m, 2, 2, 0, 10, 11);
                         text = DsBgScreen.Row(colours, 15);
@@ -139,9 +139,9 @@ namespace DSPRE.Avalonia.Data
                 }
                 case Screen.Battle:
                 {
-                    var m = Members(RomInfo.DirNames.battlePartyGraphics);
+                        Func<int, byte[]> m = Members(RomInfo.DirNames.battlePartyGraphics);
                     if (m == null) return null;
-                    var colours = DsBgScreen.ReadColours(m(23));
+                        ushort[] colours = DsBgScreen.ReadColours(m(23));
                     Palettes(colours);
                     s.LoadTiles(0x8000, m(22));
                     Layer(m, 3, 3, 0x8000, -1, 6);
@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 case Screen.Bag:
                 {
-                    var m = Members(RomInfo.DirNames.bagGraphics);
+                        Func<int, byte[]> m = Members(RomInfo.DirNames.bagGraphics);
                     if (m == null) return null;
                     ushort[] colours;
                     if (hg)

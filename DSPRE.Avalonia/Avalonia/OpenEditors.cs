@@ -26,12 +26,12 @@ namespace DSPRE.Avalonia
         public static IReadOnlyList<UnsavedChangesDialog.UnsavedEditorInfo> GetUnsavedEditors(
             MainWindowView mainWindow = null)
         {
-            var result = new List<UnsavedChangesDialog.UnsavedEditorInfo>();
-            var seen = new HashSet<IEditorWithUnsavedChanges>();
+            List<UnsavedChangesDialog.UnsavedEditorInfo> result = new List<UnsavedChangesDialog.UnsavedEditorInfo>();
+            HashSet<IEditorWithUnsavedChanges> seen = new HashSet<IEditorWithUnsavedChanges>();
 
             if (mainWindow != null)
             {
-                foreach (var embedded in mainWindow.GetEmbeddedEditors())
+                foreach ((string EditorName, IEditorWithUnsavedChanges Editor) embedded in mainWindow.GetEmbeddedEditors())
                 {
                     AddIfDirty(result, seen, embedded.EditorName, embedded.Editor);
                 }
@@ -43,11 +43,11 @@ namespace DSPRE.Avalonia
                 return result;
             }
 
-            foreach (var window in desktop.Windows.ToList())
+            foreach (Window window in desktop.Windows.ToList())
             {
                 if (ReferenceEquals(window, mainWindow)) continue;
 
-                var editor = GetEditor(window);
+                IEditorWithUnsavedChanges editor = GetEditor(window);
                 if (editor == null) continue;
                 AddIfDirty(result, seen, GetWindowEditorName(window, editor), editor);
             }
@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia
                 return;
             }
 
-            foreach (var window in desktop.Windows.ToList())
+            foreach (Window window in desktop.Windows.ToList())
             {
                 if (ReferenceEquals(window, mainWindow)) continue;
                 if (GetEditor(window) != null || RomWindows.Contains(window)) window.Close();

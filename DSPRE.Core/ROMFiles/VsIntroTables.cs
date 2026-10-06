@@ -61,7 +61,7 @@ namespace DSPRE.ROMFiles
 
             public int Get(RecordField f)
             {
-                if (!Layout.TryGetValue(f, out var l)) return -1;
+                if (!Layout.TryGetValue(f, out (int Offset, int Size) l)) return -1;
                 byte[] b = Region.Now;
                 int o = At + l.Offset;
                 int v = l.Size switch { 1 => b[o], 2 => BitConverter.ToUInt16(b, o), _ => BitConverter.ToInt32(b, o) };
@@ -70,7 +70,7 @@ namespace DSPRE.ROMFiles
 
             public void Set(RecordField f, int value)
             {
-                if (!Layout.TryGetValue(f, out var l)) return;
+                if (!Layout.TryGetValue(f, out (int Offset, int Size) l)) return;
                 if (f == RecordField.EndX)
                 {
                     if (Get(f) == value) return;   // keeps any fraction a record has
@@ -177,7 +177,7 @@ namespace DSPRE.ROMFiles
             if (gameFamily != GameFamilies.DP && gameFamily != GameFamilies.Plat && gameFamily != GameFamilies.HGSS)
                 return "This game has no VS intros DSPRE knows about.";
             if (gameLanguage != GameLanguages.English) return "VS intros are not supported for this language yet. Only US English games can be edited.";
-            var sites = VsIntroCodeSites;
+            VsIntroSites sites = VsIntroCodeSites;
             if (sites == null) return "This version isn't supported yet.";
             if (!File.Exists(arm9Path)) return "arm9 is missing from this project.";
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
@@ -191,13 +191,13 @@ namespace DSPRE.ROMFiles
         {
             string why = WhyNot();
             if (why != null) throw new InvalidOperationException(why);
-            var sites = VsIntroCodeSites;
+            VsIntroSites sites = VsIntroCodeSites;
 
             // hg-engine's EXPAND_MUSIC_TABLES builds the combo, class and Pokemon tables from src/music_tables.c.
             bool source = isHGE && HgEngine.HgEngineMusicTables.TablesInSource;
-            var music = (source ? HgEngine.HgEngineMusicTables.ReadBattle() : BattleMusicTables.LoadRom()) ?? throw Mismatch("the battle music tables");
+            BattleMusicTables music = (source ? HgEngine.HgEngineMusicTables.ReadBattle() : BattleMusicTables.LoadRom()) ?? throw Mismatch("the battle music tables");
             if (!music.MusicPointerAgrees) throw Mismatch("the music half of the intro table");
-            var t = new VsIntroTables(sites, music) { FromSource = source };
+            VsIntroTables t = new VsIntroTables(sites, music) { FromSource = source };
             bool hgss = gameFamily == GameFamilies.HGSS;
 
             if (!source && hgss && sites.ComboMusicCount >= 0 && ARM9.ReadByte((uint)sites.ComboMusicCount) != music.Combos.Rows.Count)
@@ -211,7 +211,7 @@ namespace DSPRE.ROMFiles
             }
             else
             {
-                var jumps = music.ClassJumps ?? throw Mismatch("the trainer class switch");
+                BattleMusicTables.ClassJumpTable jumps = music.ClassJumps ?? throw Mismatch("the trainer class switch");
                 t._jumps = t.AddRegion(arm9Path, jumps.Start, 2 * jumps.Count);
             }
 
@@ -227,7 +227,7 @@ namespace DSPRE.ROMFiles
         {
             Scope = scope;
             bool trainers = scope == Part.Trainers;
-            foreach (var r in _regions)
+            foreach (Region r in _regions)
                 r.Owned = Enumerable.Repeat(r == _speciesRows ? !trainers : r != _combos && trainers, r.Now.Length).ToArray();
             for (int c = 0; c < ComboCount; c++)
                 if (IsTrainerCombo(c) == trainers) _combos.Owned[4 * c + 2] = _combos.Owned[4 * c + 3] = true;
@@ -245,14 +245,14 @@ namespace DSPRE.ROMFiles
         // Held in the ROM's own row encoding, so the editors read them the same way; Path stays null.
         private Region AddSourceRegion(byte[] now)
         {
-            var r = new Region { Now = now, Saved = (byte[])now.Clone() };
+            Region r = new Region { Now = now, Saved = (byte[])now.Clone() };
             _regions.Add(r);
             return r;
         }
 
         private static byte[] ComboBytes(BattleMusicTables music)
         {
-            var bytes = new byte[4 * music.Combos.Rows.Count];
+            byte[] bytes = new byte[4 * music.Combos.Rows.Count];
             for (int i = 0; i < music.Combos.Rows.Count; i++)
             {
                 BitConverter.GetBytes(music.Combos.Rows[i].Transition).CopyTo(bytes, 4 * i);
@@ -263,7 +263,7 @@ namespace DSPRE.ROMFiles
 
         private static byte[] Packed(List<(int Id, int Combo)> rows)
         {
-            var bytes = new byte[2 * rows.Count];
+            byte[] bytes = new byte[2 * rows.Count];
             for (int i = 0; i < rows.Count; i++)
                 BitConverter.GetBytes((ushort)((rows[i].Id & 0x3FF) | ((rows[i].Combo & 0x3F) << 10))).CopyTo(bytes, 2 * i);
             return bytes;
@@ -298,7 +298,7 @@ namespace DSPRE.ROMFiles
             if (!File.Exists(path) || offset < 0 || new FileInfo(path).Length < offset + length)
                 throw new InvalidDataException($"{Path.GetFileName(path)} is too short for the VS intro tables.");
             byte[] now = DSUtils.ReadFromFile(path, offset, length);
-            var r = new Region { Path = path, Offset = offset, Now = now, Saved = (byte[])now.Clone() };
+            Region r = new Region { Path = path, Offset = offset, Now = now, Saved = (byte[])now.Clone() };
             _regions.Add(r);
             return r;
         }
@@ -313,17 +313,17 @@ namespace DSPRE.ROMFiles
         {
             bool dp = Family == GameFamilies.DP;
             string records = OverlayFile(Sites.RecordOverlay);
-            var gym = AddRegion(records, Sites.GymTable, Sites.GymCount * Sites.GymSize);
+            Region gym = AddRegion(records, Sites.GymTable, Sites.GymCount * Sites.GymSize);
             for (int i = 0; i < Sites.GymCount; i++)
                 _records.Add(new Record { Kind = RecordKind.Gym, Index = i, Region = gym, At = i * Sites.GymSize, Layout = dp ? DpGymLayout : GymLayout });
             if (Sites.RivalRecord >= 0)
                 _records.Add(new Record { Kind = RecordKind.Rival, Index = 0, Region = AddRegion(records, Sites.RivalRecord, Sites.GymSize), At = 0, Layout = GymLayout });
-            var league = AddRegion(records, Sites.LeagueTable, 5 * 8);
+            Region league = AddRegion(records, Sites.LeagueTable, 5 * 8);
             for (int i = 0; i < 5; i++)
                 _records.Add(new Record { Kind = RecordKind.League, Index = i, Region = league, At = i * 8, Layout = dp ? DpLeagueLayout : LeagueLayout });
             if (Sites.ExecutiveOverlay >= 0)
             {
-                var exec = AddRegion(OverlayFile(Sites.ExecutiveOverlay), Sites.ExecutiveTable, 5 * 8);
+                Region exec = AddRegion(OverlayFile(Sites.ExecutiveOverlay), Sites.ExecutiveTable, 5 * 8);
                 for (int i = 0; i < 5; i++)
                     _records.Add(new Record { Kind = RecordKind.Executive, Index = i, Region = exec, At = i * 8, Layout = ExecutiveLayout });
             }
@@ -339,17 +339,17 @@ namespace DSPRE.ROMFiles
             byte[] task = File.ReadAllBytes(taskPath);
             if (Sites.TaskTable + 4 * Sites.TaskCount > task.Length) throw Mismatch("the intro routine table");
 
-            var address = new Dictionary<uint, Record>();
-            foreach (var r in _records)
+            Dictionary<uint, Record> address = new Dictionary<uint, Record>();
+            foreach (Record r in _records)
             {
                 int ov = r.Kind == RecordKind.Executive ? Sites.ExecutiveOverlay : Sites.RecordOverlay;
                 address[OverlayUtils.OverlayTable.GetRAMAddress(ov) + (uint)(r.Region.Offset + r.At)] = r;
             }
 
-            var cache = new Dictionary<int, byte[]>();
+            Dictionary<int, byte[]> cache = new Dictionary<int, byte[]>();
             for (int effect = 0; effect < Sites.TaskCount; effect++)
             {
-                var kind = KindOfEffect(effect);
+                IntroKind kind = KindOfEffect(effect);
                 bool hasRecord = kind is IntroKind.Gym or IntroKind.Rival or IntroKind.League
                                  || (kind == IntroKind.TeamLeader && Sites.ExecutiveOverlay >= 0);
                 if (!hasRecord) continue;
@@ -435,10 +435,10 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public bool IsTrainerCombo(int combo)
         {
-            var role = RoleOf(combo);
+            ComboRole role = RoleOf(combo);
             if (role is ComboRole.WildDouble or ComboRole.OrdinaryWild) return false;
             if (role != ComboRole.None) return true;
-            var kind = KindOfEffect(EffectOf(combo));
+            IntroKind kind = KindOfEffect(EffectOf(combo));
             if (kind is IntroKind.Gym or IntroKind.Rival or IntroKind.League or IntroKind.TeamGrunt or IntroKind.TeamLeader
                      or IntroKind.Kimono or IntroKind.OldBall or IntroKind.BallTrainer) return true;
             return ClassesUsing(combo).Count > 0;
@@ -457,18 +457,18 @@ namespace DSPRE.ROMFiles
         /// <summary>Species that pick <paramref name="combo"/>: the HGSS table's rows, or DP/Pt's fixed lists.</summary>
         public List<int> SpeciesUsing(int combo)
         {
-            var list = new List<int>();
+            List<int> list = new List<int>();
             if (_speciesRows != null)
             {
-                var seen = new HashSet<int>();
+                HashSet<int> seen = new HashSet<int>();
                 for (int i = 0; i < SpeciesRowCount; i++)
                 {
-                    var (sp, k) = SpeciesRow(i);
+                    (int sp, int k) = SpeciesRow(i);
                     if (seen.Add(sp) && k == combo) list.Add(sp);
                 }
                 return list;
             }
-            foreach (var kv in Music.CodeSpeciesCombos)
+            foreach (KeyValuePair<int, int> kv in Music.CodeSpeciesCombos)
                 if (kv.Value == combo) list.Add(kv.Key);
             list.Sort();
             return list;
@@ -481,7 +481,7 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes((ushort)Math.Clamp(sequence, 0, 0xFFFF)).CopyTo(_combos.Now, 4 * combo + 2);
 
         /// <summary>The record an intro effect draws from, or null.</summary>
-        public Record RecordFor(int effect) => _byEffect.TryGetValue(effect, out var r) ? r : null;
+        public Record RecordFor(int effect) => _byEffect.TryGetValue(effect, out Record r) ? r : null;
 
         /// <summary>Every effect that draws from <paramref name="record"/>.</summary>
         public IEnumerable<int> EffectsUsing(Record record) => _byEffect.Where(kv => kv.Value == record).Select(kv => kv.Key);
@@ -526,7 +526,7 @@ namespace DSPRE.ROMFiles
             {
                 for (int i = 0; i < ClassRowCount; i++)
                 {
-                    var (c, combo) = ClassRow(i);
+                    (int c, int combo) = ClassRow(i);
                     if (c == trainerClass) return combo;
                 }
                 return 41;
@@ -544,7 +544,7 @@ namespace DSPRE.ROMFiles
             int free = -1;
             for (int i = 0; i < ClassRowCount; i++)
             {
-                var (c, _) = ClassRow(i);
+                (int c, int _) = ClassRow(i);
                 if (c == trainerClass) { SetClassRow(i, trainerClass, combo); return true; }
                 if (free < 0 && c == FreeClass) free = i;
             }
@@ -566,13 +566,13 @@ namespace DSPRE.ROMFiles
         /// <summary>Classes that pick <paramref name="combo"/> directly, in table order.</summary>
         public List<int> ClassesUsing(int combo)
         {
-            var list = new List<int>();
+            List<int> list = new List<int>();
             if (_classRows != null)
             {
-                var seen = new HashSet<int>();
+                HashSet<int> seen = new HashSet<int>();
                 for (int i = 0; i < ClassRowCount; i++)
                 {
-                    var (c, k) = ClassRow(i);
+                    (int c, int k) = ClassRow(i);
                     if (c == FreeClass || !seen.Add(c)) continue;   // a later row for the same class is never reached
                     if (k == combo) list.Add(c);
                 }
@@ -670,7 +670,7 @@ namespace DSPRE.ROMFiles
         {
             if (state == null || state.Length != _regions.Sum(r => r.Now.Length)) return;
             int at = 0;
-            foreach (var r in _regions) { Array.Copy(state, at, r.Now, 0, r.Now.Length); at += r.Now.Length; }
+            foreach (Region r in _regions) { Array.Copy(state, at, r.Now, 0, r.Now.Length); at += r.Now.Length; }
         }
 
         /// <summary>
@@ -680,25 +680,25 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public void Save()
         {
-            var fresh = FromSource ? HgEngine.HgEngineMusicTables.ReadBattle() : null;
-            var disk = _regions.Select(r => r.Path == null ? SourceBytes(r, fresh) : DSUtils.ReadFromFile(r.Path, r.Offset, r.Now.Length)).ToList();
+            BattleMusicTables fresh = FromSource ? HgEngine.HgEngineMusicTables.ReadBattle() : null;
+            List<byte[]> disk = _regions.Select(r => r.Path == null ? SourceBytes(r, fresh) : DSUtils.ReadFromFile(r.Path, r.Offset, r.Now.Length)).ToList();
             for (int k = 0; k < _regions.Count; k++)
                 if (disk[k].Length != _regions[k].Now.Length)
                     throw new IOException("src/music_tables.c gained or lost rows since the VS intros were read. Discard and try again.");
             for (int k = 0; k < _regions.Count; k++)
             {
-                var r = _regions[k];
+                Region r = _regions[k];
                 for (int i = 0; i < r.Now.Length; i++)
                     if (r.Owns(i) && r.Now[i] != r.Saved[i] && disk[k][i] != r.Saved[i])
                         throw new IOException($"{(r.Path == null ? "src/music_tables.c" : Path.GetFileName(r.Path))} was changed by something else since the VS intros were read. Discard and try again.");
             }
             for (int k = 0; k < _regions.Count; k++)
             {
-                var r = _regions[k];
+                Region r = _regions[k];
                 for (int i = 0; i < r.Now.Length; i++)
                     if (!r.Owns(i) || r.Now[i] == r.Saved[i]) r.Now[i] = r.Saved[i] = disk[k][i];
             }
-            foreach (var r in _regions)
+            foreach (Region r in _regions)
             {
                 if (r.Path == null)
                 {

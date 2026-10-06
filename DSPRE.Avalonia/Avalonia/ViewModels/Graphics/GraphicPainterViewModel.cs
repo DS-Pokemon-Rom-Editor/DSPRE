@@ -267,7 +267,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void Redraw()
         {
             if (_art == null) return;
-            var whole = GraphicAssets.Flatten(_pixels, _colours, _art.Width, _art.Height);
+            byte[] whole = GraphicAssets.Flatten(_pixels, _colours, _art.Width, _art.Height);
 
             int vx = ViewX, vy = ViewY, vw = ViewWidth, vh = ViewHeight;
             if (vx == 0 && vy == 0 && vw == _art.Width && vh == _art.Height)
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return;
             }
 
-            var part = new byte[vw * vh * 4];
+            byte[] part = new byte[vw * vh * 4];
             for (int y = 0; y < vh; y++)
                 Array.Copy(whole, ((vy + y) * _art.Width + vx) * 4, part, y * vw * 4, vw * 4);
             Picture = ImageConverter.FromRgba(part, vw, vh);
@@ -314,7 +314,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void Undo()
         {
             if (_undo.Count == 0) return;
-            var (p, c) = _undo.Pop();
+            (byte[] p, uint[] c) = _undo.Pop();
             _pixels = p; _colours = c;
             BuildSwatches();
             Redraw();

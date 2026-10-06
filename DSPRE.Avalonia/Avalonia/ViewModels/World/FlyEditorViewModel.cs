@@ -128,11 +128,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         public FlyEditorViewModel(List<string> headerNames)
         {
             // The names the rest of the app shows, so a row reads New Bark Town and not T20R0201.
-            var friendly = HeaderLabels.Friendly();
+            IReadOnlyList<string> friendly = HeaderLabels.Friendly();
             if (friendly.Count == headerNames.Count)
-                foreach (var h in friendly) Headers.Add(h);
+                foreach (string h in friendly) Headers.Add(h);
             else
-                foreach (var h in headerNames) Headers.Add(h.TrimEnd('\0'));
+                foreach (string h in headerNames) Headers.Add(h.TrimEnd('\0'));
             LoadRows();
         }
 
@@ -147,7 +147,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // Add 3 dummy rows
                 for (int i = 0; i < 3; i++)
                 {
-                    var row = new FlyRow();
+                    FlyRow row = new FlyRow();
                     // Set properties to show something in the DataGrid
                     row.HeaderIdGameOver = i % Headers.Count;
                     row.HeaderIdFly = i % Headers.Count;
@@ -212,9 +212,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             Rows.Clear();
             try
             {
-                foreach (var r in FlyTable.Read())
+                foreach (FlyTable.Row r in FlyTable.Read())
                 {
-                    var row = new FlyRow
+                    FlyRow row = new FlyRow
                     {
                         HeaderIdGameOver = r.HeaderIdGameOver, LocalX = r.LocalX, LocalY = r.LocalY,
                         HeaderIdFly = r.HeaderIdFly, GlobalX = r.GlobalX, GlobalY = r.GlobalY,

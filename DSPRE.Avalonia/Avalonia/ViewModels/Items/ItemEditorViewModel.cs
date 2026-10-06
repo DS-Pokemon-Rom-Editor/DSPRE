@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // ── Runtime constructor ──────────────────────────────────────────────
         public ItemEditorViewModel(string[] itemNames)
         {
-            foreach (var n in itemNames) ItemNames.Add(n);
+            foreach (string n in itemNames) ItemNames.Add(n);
             PopulateEnumCollections();
             MaxItemIndex  = itemNames.Length - 1;
             MaxItemDataId = GetItemDataFileCount() - 1;
@@ -497,7 +497,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         /// <summary>The ROM's item names, with an unsaved new item shown at its id.</summary>
         private void SyncNames()
         {
-            var names = RomInfo.GetItemNames().ToList();
+            List<string> names = RomInfo.GetItemNames().ToList();
             if (_pendingItem != null)
             {
                 while (names.Count <= _pendingItem.Id) names.Add("");
@@ -538,9 +538,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
         /// <summary>Writes the new item's define, entry, fields and text in one save, then shows it as saved.</summary>
         private async Task<bool> SavePendingItemAsync()
         {
-            var pending = _pendingItem;
-            var data = _currentData;
-            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineItemExpansion.TryCommitItem(pending, data, out string commitError) ? null : commitError);
+            HgEngineItemExpansion.PendingItem pending = _pendingItem;
+            ItemData data = _currentData;
+            (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineItemExpansion.TryCommitItem(pending, data, out string commitError) ? null : commitError);
             if (!saved)
             {
                 if (error != null) await DialogHelper.ShowError($"{pending.DisplayName} was not saved.\n{error}", "Item Editor");
@@ -584,8 +584,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             string name = await DialogHelper.PromptText("New item's display name:", "Add New Item", owner: owner);
             if (name == null) return;
 
-            var data = new ItemData(new MemoryStream(new byte[ItemDataSize]), 0);
-            if (!HgEngineItemExpansion.TryPrepareItem(name, out var pending, out string error)
+            ItemData data = new ItemData(new MemoryStream(new byte[ItemDataSize]), 0);
+            if (!HgEngineItemExpansion.TryPrepareItem(name, out HgEngineItemExpansion.PendingItem pending, out string error)
                 || !HgEngineItemExpansion.TryReadTemplate(pending, data, out error))
             {
                 await DialogHelper.ShowError($"Could not add the item:\n{error}", "Add New Item", owner);
@@ -701,7 +701,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void UpdateSharedDataNote(int id)
         {
             if (RomInfo.isHGE || PlatPatches.Items() == null) { SharedDataNote = ""; return; }
-            var others = ItemTable.SharingData(id, (int)_currentEntry.itemData, ItemNames.Count);
+            List<int> others = ItemTable.SharingData(id, (int)_currentEntry.itemData, ItemNames.Count);
             if (others.Count == 0) { SharedDataNote = ""; return; }
             string names = string.Join(", ", others.Take(4).Select(i => i < ItemNames.Count ? ItemNames[i] : $"Item {i}"));
             SharedDataNote = $"Shares its item data with {names}{(others.Count > 4 ? $" and {others.Count - 4} more" : "")}; editing it changes those too.";
@@ -754,7 +754,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             string path = Path.Combine(RomInfo.gameDirs[DirNames.itemData].unpackedDir, dataId.ToString("D4"));
             if (!HgEngineProject.IsActive) return (ReadBuiltItemData(path, dataId), null);
             // The built copy only fills a field the entry lacks, which the save then reports.
-            var data = File.Exists(path) ? ReadBuiltItemData(path, dataId) : new ItemData(new MemoryStream(new byte[ItemDataSize]), dataId);
+            ItemData data = File.Exists(path) ? ReadBuiltItemData(path, dataId) : new ItemData(new MemoryStream(new byte[ItemDataSize]), dataId);
             HgEngineItemSource.TryLoad(dataId, data, out string loadError);
             return (data, loadError);
         }
@@ -768,7 +768,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private static ItemData ReadBuiltItemData(string path, int dataId)
         {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
             return new ItemData(stream, dataId);
         }
 
@@ -789,7 +789,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(FieldPocketIndex));
 
             // Battle pocket flags
-            var bp = _currentData.battlePocket;
+            BattlePocket bp = _currentData.battlePocket;
             _pokeBallsBattlePocket     = (bp & BattlePocket.PokeBalls)     != 0;
             _battleItemsBattlePocket   = (bp & BattlePocket.BattleItems)   != 0;
             _hpRestoreBattlePocket     = (bp & BattlePocket.HpRestore)     != 0;
@@ -837,7 +837,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             OnPropertyChanged(nameof(BattleUseFuncIndex));
 
             // Party params
-            var p = _currentData.PartyUseParam;
+            ItemPartyUseParam p = _currentData.PartyUseParam;
             _slpHeal = p.SlpHeal; _psnHeal = p.PsnHeal; _brnHeal = p.BrnHeal; _frzHeal = p.FrzHeal;
             _przHeal = p.PrzHeal; _cfsHeal = p.CfsHeal; _infHeal = p.InfHeal; _guardSpec = p.GuardSpec;
             _revive  = p.Revive;  _reviveAll = p.ReviveAll; _levelUp = p.LevelUp; _evolve = p.Evolve;
@@ -855,7 +855,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _friendshipLowValue = p.FriendshipLowValue; _friendshipMidValue = p.FriendshipMidValue;
             _friendshipHighValue = p.FriendshipHighValue;
 
-            foreach (var name in _partyPropNames) OnPropertyChanged(name);
+            foreach (string name in _partyPropNames) OnPropertyChanged(name);
         }
 
         private static readonly string[] _partyPropNames =
@@ -901,7 +901,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_currentData == null) return true;
             int item = (int)_currentEntry.itemData;
-            var data = _currentData;
+            ItemData data = _currentData;
             if (HgEngineProject.IsActive)
             {
                 if (SourceLoadError != null)
@@ -910,7 +910,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                     return false;
                 }
                 // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
-                var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineItemSource.TryWrite(item, data, out string writeError) ? null : writeError);
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineItemSource.TryWrite(item, data, out string writeError) ? null : writeError);
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError($"Item {item} was not saved.\n{error}", "Item Editor");
@@ -937,10 +937,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 string dir     = RomInfo.gameDirs[DirNames.itemIcons].unpackedDir;
                 string palFile = _currentEntry.itemPalette.ToString("D4");
                 string imgFile = _currentEntry.itemIcon.ToString("D4");
-                var palette = new NCLR(Path.Combine(dir, palFile), (int)_currentEntry.itemPalette, palFile);
-                var image   = new NCGR(Path.Combine(dir, imgFile), (int)_currentEntry.itemIcon,    imgFile);
-                var sprite  = new NCER(Path.Combine(dir, "0001"),  2, "0001");
-                var raw     = sprite.Get_RawImage(image, palette, 0, image.Width, image.Height, trans: true, currOAM: -1, draw_index: null);
+                NCLR palette = new NCLR(Path.Combine(dir, palFile), (int)_currentEntry.itemPalette, palFile);
+                NCGR image   = new NCGR(Path.Combine(dir, imgFile), (int)_currentEntry.itemIcon,    imgFile);
+                NCER sprite  = new NCER(Path.Combine(dir, "0001"),  2, "0001");
+                RawImage raw     = sprite.Get_RawImage(image, palette, 0, image.Width, image.Height, trans: true, currOAM: -1, draw_index: null);
                 ItemIcon = ImageConverter.ToAvaloniaBitmap(raw);
             }
             catch (Exception ex) { AppLogger.Error("UpdateIcon: " + ex); ItemIcon = null; }
@@ -949,11 +949,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void PopulateIconPaletteDropdowns()
         {
             string dir = RomInfo.gameDirs[DirNames.itemIcons].unpackedDir;
-            var files  = Directory.GetFiles(dir, "*", SearchOption.TopDirectoryOnly);
+            string[] files  = Directory.GetFiles(dir, "*", SearchOption.TopDirectoryOnly);
             uint idx   = 0;
-            foreach (var file in files)
+            foreach (string file in files)
             {
-                using var stream = File.OpenRead(file);
+                using FileStream stream = File.OpenRead(file);
                 byte[] header = new byte[4];
                 stream.Read(header, 0, 4);
                 string magic = Encoding.ASCII.GetString(header);

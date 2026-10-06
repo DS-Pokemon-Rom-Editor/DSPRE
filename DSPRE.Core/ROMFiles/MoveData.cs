@@ -71,13 +71,13 @@ namespace DSPRE {
         /// Gets the user-friendly name for an attack range value.
         /// </summary>
         public static string GetAttackRangeName(ushort targetValue) {
-            foreach (var range in AttackRangeDescriptions) {
+            foreach ((ushort value, string name, string description) range in AttackRangeDescriptions) {
                 if (range.value == targetValue) {
                     return range.name;
                 }
             }
             // If no exact match, build a combined string for multiple flags (shouldn't happen in vanilla)
-            var names = new List<string>();
+            List<string> names = new List<string>();
             for (int i = 0; i < AttackRangeDescriptions.Length; i++) {
                 if (AttackRangeDescriptions[i].value != 0 && (targetValue & AttackRangeDescriptions[i].value) != 0) {
                     names.Add(AttackRangeDescriptions[i].name);

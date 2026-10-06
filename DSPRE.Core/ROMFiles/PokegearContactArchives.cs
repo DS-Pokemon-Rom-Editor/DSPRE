@@ -45,7 +45,7 @@ namespace DSPRE
         internal static int[] Locate(byte[] arm9, uint loadAddress, int contactCount, int archiveCount)
         {
             int size = contactCount * 2;
-            var found = new HashSet<int>();
+            HashSet<int> found = new HashSet<int>();
 
             for (int at = 0; at + 4 <= arm9.Length; at += 4)
             {
@@ -63,7 +63,7 @@ namespace DSPRE
 
         private static bool LooksLikeTable(byte[] data, int offset, int count, int archiveCount)
         {
-            var seen = new HashSet<ushort>();
+            HashSet<ushort> seen = new HashSet<ushort>();
             ushort min = ushort.MaxValue, max = 0;
             for (int i = 0; i < count; i++)
             {
@@ -78,7 +78,7 @@ namespace DSPRE
         /// <summary>Each contact's name from its archive, or "Contact N" where it can't be read.</summary>
         public static string[] Names(int contactCount)
         {
-            var names = new string[contactCount];
+            string[] names = new string[contactCount];
             int[] archives = Find(contactCount);
             for (int i = 0; i < contactCount; i++)
             {

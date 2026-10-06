@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -157,7 +158,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Puts an undone or redone camera back without moving what counts as loaded.</summary>
         public void ApplyState(GameCamera cam)
         {
-            var loaded = _loaded;
+            GameCamera loaded = _loaded;
             LoadFrom(cam);
             _loaded = loaded;
         }
@@ -216,8 +217,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private byte[] TakeState()
         {
-            using var ms = new MemoryStream();
-            foreach (var row in Cameras) { byte[] b = row.ToGameCamera(IsHgss).ToByteArray(); ms.Write(b, 0, b.Length); }
+            using MemoryStream ms = new MemoryStream();
+            foreach (CameraRowVM row in Cameras) { byte[] b = row.ToGameCamera(IsHgss).ToByteArray(); ms.Write(b, 0, b.Length); }
             return ms.ToArray();
         }
 
@@ -267,7 +268,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _spots = FlyTable.Spots();
             PreviewPlaces.Clear();
-            foreach (var spot in _spots)
+            foreach (FlyTable.Spot spot in _spots)
             {
                 string name;
                 try { name = HeaderLabels.LocationNameOf(DSPRE.ROMFiles.MapHeader.GetMapHeader((ushort)spot.HeaderId)); }
@@ -335,7 +336,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             IsHgss = true;
             for (int i = 0; i < 3; i++)
             {
-                var row = new CameraRowVM(i);
+                CameraRowVM row = new CameraRowVM(i);
                 row.LoadFrom(new GameCamera());
                 Cameras.Add(row);
             }
@@ -368,7 +369,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     return;
                 }
 
-                var location = GameCameraTable.Locate();
+                GameCameraTable.Location location = GameCameraTable.Locate();
                 if (!location.PointersAgree)
                 {
                     await DialogHelper.ShowInfo(
@@ -379,10 +380,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _overlayCameraTblOffset = location.Offset;
 
                 Cameras.Clear();
-                var cameras = GameCameraTable.Read(location);
+                List<GameCamera> cameras = GameCameraTable.Read(location);
                 for (int i = 0; i < cameras.Count; i++)
                 {
-                    var row = new CameraRowVM(i);
+                    CameraRowVM row = new CameraRowVM(i);
                     row.LoadFrom(cameras[i]);
                     row.PropertyChanged += OnRowChanged;
                     Cameras.Add(row);
@@ -426,7 +427,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── Export / Import table ─────────────────────────────────────────────
         public async Task ExportTableAsync()
         {
-            var filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
             string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.projectName) + " - CameraTable.bin";
             string path = await DialogHelper.SaveFile(_owner, "Export Camera Table", new[] { filter }, suggested);
             if (path == null) return;
@@ -445,7 +446,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public async Task ImportTableAsync()
         {
-            var filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Camera Table File") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.OpenFile(_owner, "Import Camera Table", new[] { filter });
             if (path == null) return;
 
@@ -464,7 +465,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 for (int i = 0; i < nCameras && i < Cameras.Count; i++)
                 {
                     byte[] data = DSUtils.ReadFromFile(path, i * RomInfo.cameraSize, RomInfo.cameraSize);
-                    var cam = new GameCamera(data);
+                    GameCamera cam = new GameCamera(data);
                     Cameras[i].LoadFrom(cam);
                 }
 
@@ -482,7 +483,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             int index = SelectedCamera?.Index ?? -1;
             if (index < 0 || index >= Cameras.Count) return;
-            var filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
             string suggested = System.IO.Path.GetFileNameWithoutExtension(RomInfo.projectName) + $" - Camera {index}.bin";
             string path = await DialogHelper.SaveFile(_owner, $"Export Camera {index}", new[] { filter }, suggested);
             if (path == null) return;
@@ -504,14 +505,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             int index = SelectedCamera?.Index ?? -1;
             if (index < 0 || index >= Cameras.Count) return;
-            var filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Camera File") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.OpenFile(_owner, $"Import Camera {index}", new[] { filter });
             if (path == null) return;
 
             try
             {
                 byte[] data = File.ReadAllBytes(path);
-                var cam = new GameCamera(data);
+                GameCamera cam = new GameCamera(data);
                 Cameras[index].LoadFrom(cam);
                 Edited();
                 StatusText = $"Camera {index} imported.";
@@ -537,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Renames the selected camera everywhere its name shows; a blank name restores the original.</summary>
         public async Task RenameSelectedAsync()
         {
-            var row = SelectedCamera;
+            CameraRowVM row = SelectedCamera;
             if (row == null) return;
             string name = await DialogHelper.PromptText($"Camera {row.Index}", "Rename Camera", row.Name, _owner);
             if (name == null || name.Trim() == row.Name) return;
@@ -548,7 +549,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void OnLabelsChanged(object sender, EventArgs e)
         {
-            foreach (var row in Cameras) row.RefreshName();
+            foreach (CameraRowVM row in Cameras) row.RefreshName();
             PreviewWeather.LoadLabels(DSPRE.Avalonia.Data.LabelStore.WeatherKey);
             int keep = _previewWeatherIndex;
             _previewWeatherIndex = -1;

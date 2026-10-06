@@ -11,15 +11,15 @@ namespace DSPRE.Avalonia.Data
 
         public static List<Line> Build(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version)
         {
-            var lines = new List<Line>();
+            List<Line> lines = new List<Line>();
             int frame = 0;
             int loopDepth = 0;
-            foreach (var c in cmds)
+            foreach (WazaSeqCommand c in cmds)
             {
                 string name = BattleAnimCommands.Name(version, c.OpId) ?? $"#{c.OpId}";
                 int depth = loopDepth > 0 ? loopDepth : 0;
                 int stamp = frame;
-                var desc = Describe(name, c.Args, ref frame, ref loopDepth);
+                (string Icon, string Text)? desc = Describe(name, c.Args, ref frame, ref loopDepth);
                 if (desc == null) continue;
                 lines.Add(new Line("f" + stamp.ToString("D3"), depth, desc.Value.Icon, desc.Value.Text));
             }
@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.Data
 
             switch (name)
             {
-                case "Delay": { int n = a.Length > 0 ? a[0] : 0; var s = ("wait", $"wait {n} frame(s)"); frame += n < 0 ? 0 : n; return s; }
+                case "Delay": { int n = a.Length > 0 ? a[0] : 0; (string, string) s = ("wait", $"wait {n} frame(s)"); frame += n < 0 ? 0 : n; return s; }
                 case "WaitForAnimTasks": return ("wait", "wait for current action to finish");
                 case "End": return ("stop", "end");
 

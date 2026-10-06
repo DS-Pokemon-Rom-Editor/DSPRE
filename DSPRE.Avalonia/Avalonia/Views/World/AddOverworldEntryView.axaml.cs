@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private async void ChoosePng_Click(object sender, RoutedEventArgs e)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Choose overworld image (PNG)",
                 AllowMultiple = false,
@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Views.World
             // Raw NSBTX/BTX0 dumps (e.g. extracted from another ROM) commonly have no file
             // extension at all, so no FileTypeFilter here: any file can be picked and it's
             // validated as a real BTX0 texture right after selection.
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Choose a raw texture file (BTX0)",
                 AllowMultiple = false,

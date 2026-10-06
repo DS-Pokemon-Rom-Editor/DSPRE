@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public EggMoveEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            var vm = new EggMoveEditorViewModel();
+            EggMoveEditorViewModel vm = new EggMoveEditorViewModel();
             DataContext = vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
             EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);

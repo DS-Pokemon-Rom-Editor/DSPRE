@@ -21,14 +21,14 @@ namespace DSPRE.Avalonia.Views.Shell
         /// <summary>Asks for an emulator. The chosen kind and path, or null when cancelled.</summary>
         public static async System.Threading.Tasks.Task<(EmulatorKind Kind, string Path)?> AskAsync(Window owner)
         {
-            var view = new EmulatorPickerView();
+            EmulatorPickerView view = new EmulatorPickerView();
             await view.ShowDialog(owner);
             return view.VM.Confirmed ? (view.VM.Kind, view.VM.Path) : null;
         }
 
         private async void Browse_Click(object sender, RoutedEventArgs e)
         {
-            var filters = OperatingSystem.IsWindows()
+            List<FilePickerFileType> filters = OperatingSystem.IsWindows()
                 ? new List<FilePickerFileType> { new FilePickerFileType("Programs") { Patterns = new[] { "*.exe" } } }
                 : null;
             string path = await DialogHelper.OpenFile(this, "Choose the emulator", filters);

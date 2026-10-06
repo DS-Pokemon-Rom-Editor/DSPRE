@@ -5,6 +5,7 @@ using global::Avalonia.Controls;
 using DSPRE.Avalonia;
 using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
+using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.ViewModels.Shell
 {
@@ -174,7 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             get => SettingsManager.Settings?.buildAndRunCompiles ?? true;
             set
             {
-                var settings = SettingsManager.Settings;
+                DspreSettings settings = SettingsManager.Settings;
                 if (settings == null || settings.buildAndRunCompiles == value) return;
                 settings.buildAndRunCompiles = value;
                 SettingsManager.Save();
@@ -425,9 +426,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public void RefreshRecents()
         {
             RecentProjects.Clear();
-            var recents = SettingsManager.Settings?.recentProjects;
+            List<string> recents = SettingsManager.Settings?.recentProjects;
             if (recents != null)
-                foreach (var r in recents.Take(5)) RecentProjects.Add(r);
+                foreach (string r in recents.Take(5)) RecentProjects.Add(r);
             OnPropertyChanged(nameof(HasRecents));
         }
 

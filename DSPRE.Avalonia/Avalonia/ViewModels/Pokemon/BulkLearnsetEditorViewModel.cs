@@ -85,10 +85,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ApplyState(byte[] state)
         {
-            var rows = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
+            int[][] rows = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
             int keep = _selectedRow;
             _all.Clear();
-            foreach (var r in rows) _all.Add(new BulkLearnsetRow(SpeciesNames, MoveNames, r[0], r[1], r[2], Dirty));
+            foreach (int[] r in rows) _all.Add(new BulkLearnsetRow(SpeciesNames, MoveNames, r[0], r[1], r[2], Dirty));
             ApplyFilter();
             if (keep >= 0 && keep < Rows.Count) { _selectedRow = -1; SelectedRow = keep; }
             bool dirty = _undo.IsDirty;
@@ -106,8 +106,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.learnsets });
-                foreach (var n in GetPokemonNames()) SpeciesNames.Add(n);
-                foreach (var n in GetAttackNames()) MoveNames.Add(n);
+                foreach (string n in GetPokemonNames()) SpeciesNames.Add(n);
+                foreach (string n in GetAttackNames()) MoveNames.Add(n);
                 _learnsetCount = GetLearnsetFilesCount();
                 for (int i = 0; i < _learnsetCount; i++)
                     SpeciesFilter.Add(i < SpeciesNames.Count ? $"{i}: {SpeciesNames[i]}" : $"Species {i}");
@@ -134,14 +134,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (HgEngine.HgEngineProject.IsActive)
                 {
                     if (!HgEngine.HgEngineLearnsets.TryGetAllLevelMoves(out _sourceLists, out string error)) throw new InvalidOperationException(error);
-                    foreach (var (id, list) in _sourceLists.OrderBy(kv => kv.Key))
-                        foreach (var (level, move) in list)
+                    foreach ((int id, List<(int level, int move)> list) in _sourceLists.OrderBy(kv => kv.Key))
+                        foreach ((int level, int move) in list)
                             _all.Add(new BulkLearnsetRow(SpeciesNames, MoveNames, id, level, move, Dirty));
                 }
                 else for (int id = 0; id < _learnsetCount; id++)
                 {
-                    var ls = new LearnsetData(id);
-                    foreach (var (level, move) in ls.list)
+                    LearnsetData ls = new LearnsetData(id);
+                    foreach ((byte level, ushort move) in ls.list)
                         _all.Add(new BulkLearnsetRow(SpeciesNames, MoveNames, id, level, move, Dirty));
                 }
             }
@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             Rows.Clear();
             int sp = _filterIndex - 1; // 0 = "All species"
-            foreach (var r in _all)
+            foreach (BulkLearnsetRow r in _all)
                 if (_filterIndex == 0 || r.SpeciesIndex == sp) Rows.Add(r);
             OnPropertyChanged(nameof(Rows));
         }
@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddRow()
         {
             int sp = _filterIndex > 0 ? _filterIndex - 1 : 0;
-            var row = new BulkLearnsetRow(SpeciesNames, MoveNames, sp, 1, 0, Dirty);
+            BulkLearnsetRow row = new BulkLearnsetRow(SpeciesNames, MoveNames, sp, 1, 0, Dirty);
             _all.Add(row);
             if (_filterIndex == 0 || row.SpeciesIndex == sp) Rows.Add(row);
             Dirty();
@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RemoveSelected()
         {
             if (_selectedRow < 0 || _selectedRow >= Rows.Count) return;
-            var row = Rows[_selectedRow];
+            BulkLearnsetRow row = Rows[_selectedRow];
             _all.Remove(row);
             Rows.RemoveAt(_selectedRow);
             Dirty();
@@ -191,16 +191,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 // Group current rows by species and rewrite each species' learnset file.
-                var bySpecies = _all.GroupBy(r => r.SpeciesIndex).ToDictionary(g => g.Key, g => g.ToList());
+                Dictionary<int, List<BulkLearnsetRow>> bySpecies = _all.GroupBy(r => r.SpeciesIndex).ToDictionary(g => g.Key, g => g.ToList());
                 for (int id = 0; id < _learnsetCount; id++)
                 {
-                    var ls = new LearnsetData(id);
+                    LearnsetData ls = new LearnsetData(id);
                     byte[] was = ls.ToByteArray();
                     ls.list.Clear();
                     // Rows keep their order: the game does not need levels sorted (retail Pt species 354 isn't),
                     // and its default moveset follows the file order.
-                    if (bySpecies.TryGetValue(id, out var rows))
-                        foreach (var r in rows)
+                    if (bySpecies.TryGetValue(id, out List<BulkLearnsetRow> rows))
+                        foreach (BulkLearnsetRow r in rows)
                             if (!ls.list.Contains(((byte)r.Level, (ushort)r.MoveIndex)))
                                 ls.list.Add(((byte)r.Level, (ushort)r.MoveIndex));
                     if (ls.ToByteArray().AsSpan().SequenceEqual(was)) continue;
@@ -217,18 +217,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Only species whose rows changed are written into learnsets.json.
         private async Task SaveSourceAsync()
         {
-            var now = _all.GroupBy(r => r.SpeciesIndex).ToDictionary(g => g.Key,
+            Dictionary<int, List<(int Level, int MoveIndex)>> now = _all.GroupBy(r => r.SpeciesIndex).ToDictionary(g => g.Key,
                 g => g.Select(r => (r.Level, r.MoveIndex)).Distinct().ToList());
-            var changes = new Dictionary<int, IReadOnlyList<(int level, int move)>>();
-            foreach (var (id, rows) in now)
-                if (!_sourceLists.TryGetValue(id, out var was) || !was.SequenceEqual(rows)) changes[id] = rows;
+            Dictionary<int, IReadOnlyList<(int level, int move)>> changes = new Dictionary<int, IReadOnlyList<(int level, int move)>>();
+            foreach ((int id, List<(int Level, int MoveIndex)> rows) in now)
+                if (!_sourceLists.TryGetValue(id, out List<(int level, int move)> was) || !was.SequenceEqual(rows)) changes[id] = rows;
             foreach (int id in _sourceLists.Keys)
                 if (!now.ContainsKey(id)) changes[id] = new List<(int, int)>();
 
-            var (saved, error) = await HgEngineSave.RunAsync(() =>
+            (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 changes.Count == 0 || HgEngine.HgEngineLearnsets.TrySaveLevelMoves(changes, out string e) ? null : e);
             if (!saved) { if (error != null) await DialogHelper.ShowError("The learnsets were not saved:\n" + error, "Bulk Learnsets"); return; }
-            foreach (var (id, rows) in changes)
+            foreach ((int id, IReadOnlyList<(int level, int move)> rows) in changes)
                 if (rows.Count > 0) _sourceLists[id] = rows.ToList(); else _sourceLists.Remove(id);
             _undo?.MarkSaved();
             SetClean();

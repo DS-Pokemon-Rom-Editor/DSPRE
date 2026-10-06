@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Controls
 
         private void Refresh()
         {
-            var u = DataContext as ISupportsUndo;
+            ISupportsUndo u = DataContext as ISupportsUndo;
             _undo.IsEnabled = u?.CanUndo == true;
             _redo.IsEnabled = u?.CanRedo == true;
         }

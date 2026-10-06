@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
@@ -60,7 +61,7 @@ namespace DSPRE.ROMFiles
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
             if (UsesSource) return LoadSource();
-            var data = new MoveTutorData(gameFamily == GameFamilies.Plat);
+            MoveTutorData data = new MoveTutorData(gameFamily == GameFamilies.Plat);
             byte[] pool = GameTableFile.Read(GameTable.TutorPool, data.PoolSize * data.RecordSize);
             byte[] masks = data.Platinum ? GameTableFile.Read(GameTable.TutorCompatibility, Rows * 5) : File.ReadAllBytes(HgMaskPath);
             data.Restore(pool, masks);
@@ -73,7 +74,7 @@ namespace DSPRE.ROMFiles
             Pool.Clear();
             for (int i = 0; i < PoolSize; i++)
             {
-                var raw = pool.AsSpan(i * RecordSize, RecordSize).ToArray();
+                byte[] raw = pool.AsSpan(i * RecordSize, RecordSize).ToArray();
                 Pool.Add(Platinum
                     ? new Tutor { Move = BitConverter.ToUInt16(raw, 0), Costs = raw[2..6], Where = (int)BitConverter.ToUInt32(raw, 8), Raw = raw }
                     : new Tutor { Move = BitConverter.ToUInt16(raw, 0), Costs = new[] { raw[2] }, Where = raw[3], Raw = raw });
@@ -102,11 +103,11 @@ namespace DSPRE.ROMFiles
 
         public byte[] PoolBytes()
         {
-            var data = new byte[PoolSize * RecordSize];
+            byte[] data = new byte[PoolSize * RecordSize];
             for (int i = 0; i < PoolSize; i++)
             {
-                var t = Pool[i];
-                var raw = (byte[])t.Raw.Clone();
+                Tutor t = Pool[i];
+                byte[] raw = (byte[])t.Raw.Clone();
                 BitConverter.GetBytes(t.Move).CopyTo(raw, 0);
                 if (Platinum) { t.Costs.CopyTo(raw, 2); BitConverter.GetBytes((uint)t.Where).CopyTo(raw, 8); }
                 else { raw[2] = t.Costs[0]; raw[3] = (byte)t.Where; }
@@ -117,7 +118,7 @@ namespace DSPRE.ROMFiles
 
         public byte[] MaskBytes()
         {
-            var data = new byte[Masks.Length * MaskSize];
+            byte[] data = new byte[Masks.Length * MaskSize];
             for (int r = 0; r < Masks.Length; r++)
                 for (int b = 0; b < MaskSize; b++) data[r * MaskSize + b] = (byte)(Masks[r] >> (8 * b));
             return data;
@@ -128,7 +129,7 @@ namespace DSPRE.ROMFiles
         {
             for (int i = 0; i < PoolSize; i++)
             {
-                var t = Pool[i];
+                Tutor t = Pool[i];
                 if (t.Move == 0 || t.Move >= moveCount) return $"Tutor move {i + 1}: pick a move.";
                 if (t.Where < 0 || t.Where >= Places.Length) return $"Tutor move {i + 1}: pick where it's taught.";
                 // The game looks prices up by move and takes the first match.
@@ -145,22 +146,22 @@ namespace DSPRE.ROMFiles
         // A form with no list of its own uses its base species' one, as the build does.
         private static MoveTutorData LoadSource()
         {
-            if (!HgEngine.HgEngineMoveTutors.TryRead(out var tutors, out string error)
-                || !HgEngine.HgEngineLearnsets.TryGetAllMoveNames(HgEngine.HgEngineLearnsets.TutorMovesField, out var lists, out error))
+            if (!HgEngine.HgEngineMoveTutors.TryRead(out List<HgEngineMoveTutors.Tutor> tutors, out string error)
+                || !HgEngine.HgEngineLearnsets.TryGetAllMoveNames(HgEngine.HgEngineLearnsets.TutorMovesField, out Dictionary<int, List<int>> lists, out error))
                 throw new InvalidDataException(error);
             if (tutors.Count > 64) throw new InvalidDataException($"{HgEngine.HgEngineMoveTutors.SourceRelPath} has {tutors.Count} tutor moves; DSPRE edits up to 64.");
-            var data = new MoveTutorData(false) { FromSource = true, _sourcePool = tutors.Count };
-            foreach (var t in tutors)
+            MoveTutorData data = new MoveTutorData(false) { FromSource = true, _sourcePool = tutors.Count };
+            foreach (HgEngineMoveTutors.Tutor t in tutors)
                 data.Pool.Add(new Tutor { Move = (ushort)t.Move, Costs = new[] { (byte)t.Cost }, Where = t.Npc, Raw = new byte[4] });
-            var bases = HgEngine.HgEngineLearnsets.FormBases();
+            Dictionary<int, int> bases = HgEngine.HgEngineLearnsets.FormBases();
             int species = GetPokemonNames().Length;
             data.Masks = new ulong[species];
             data._sourceOwn = new List<List<int>>(species);
             for (int s = 0; s < species; s++)
             {
-                var own = lists.TryGetValue(s, out var l) ? l : new List<int>();
+                List<int> own = lists.TryGetValue(s, out List<int> l) ? l : new List<int>();
                 data._sourceOwn.Add(own);
-                var effective = own.Count > 0 || !bases.TryGetValue(s, out int b) || !lists.TryGetValue(b, out var inherited) ? own : inherited;
+                List<int> effective = own.Count > 0 || !bases.TryGetValue(s, out int b) || !lists.TryGetValue(b, out List<int> inherited) ? own : inherited;
                 for (int j = 0; j < tutors.Count; j++)
                     if (effective.Contains(tutors[j].Move)) data.Masks[s] |= 1UL << j;
             }
@@ -170,23 +171,23 @@ namespace DSPRE.ROMFiles
 
         private void SaveSource()
         {
-            var tutors = Pool.Select(t => new HgEngine.HgEngineMoveTutors.Tutor(t.Move, t.Costs[0], t.Where)).ToList();
+            List<HgEngineMoveTutors.Tutor> tutors = Pool.Select(t => new HgEngine.HgEngineMoveTutors.Tutor(t.Move, t.Costs[0], t.Where)).ToList();
             if (!HgEngine.HgEngineMoveTutors.TryWrite(tutors, out string error)) throw new IOException(error);
-            var changes = new Dictionary<int, IReadOnlyList<int>>();
-            var poolMoves = Pool.Select(t => (int)t.Move).ToHashSet();
+            Dictionary<int, IReadOnlyList<int>> changes = new Dictionary<int, IReadOnlyList<int>>();
+            HashSet<int> poolMoves = Pool.Select(t => (int)t.Move).ToHashSet();
             for (int s = 0; s < Masks.Length; s++)
             {
                 if (Masks[s] == _sourceMasks[s]) continue;
                 // Moves keep their place; a tutor's move goes when unticked and joins the end when ticked.
-                var learned = Enumerable.Range(0, Pool.Count).Where(j => Learns(s, j)).Select(j => (int)Pool[j].Move).ToHashSet();
-                var list = _sourceOwn[s].Where(m => !poolMoves.Contains(m) || learned.Contains(m)).ToList();
+                HashSet<int> learned = Enumerable.Range(0, Pool.Count).Where(j => Learns(s, j)).Select(j => (int)Pool[j].Move).ToHashSet();
+                List<int> list = _sourceOwn[s].Where(m => !poolMoves.Contains(m) || learned.Contains(m)).ToList();
                 for (int j = 0; j < Pool.Count; j++)
                     if (Learns(s, j) && !list.Contains(Pool[j].Move)) list.Add(Pool[j].Move);
                 changes[s] = list;
             }
             if (changes.Count > 0 && !HgEngine.HgEngineLearnsets.TrySaveMoveNames(HgEngine.HgEngineLearnsets.TutorMovesField, changes, out error))
                 throw new IOException(error);
-            foreach (var (s, list) in changes) _sourceOwn[s] = list.ToList();
+            foreach ((int s, IReadOnlyList<int> list) in changes) _sourceOwn[s] = list.ToList();
             _sourceMasks = (ulong[])Masks.Clone();
         }
 

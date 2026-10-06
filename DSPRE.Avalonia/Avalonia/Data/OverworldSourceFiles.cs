@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using DSPRE.HgEngine;
 
 namespace DSPRE.Avalonia.Data
@@ -15,7 +17,7 @@ namespace DSPRE.Avalonia.Data
         public static string Write(int member, byte[] btx)
         {
             if (!HgEngineProject.IsActive) return null;
-            var members = HgEngineOverworlds.Members(out string error);
+            List<HgEngineOverworlds.Member> members = HgEngineOverworlds.Members(out string error);
             if (members == null) return error;
             if (member < 0 || member >= members.Count) return $"The checkout has no source for overworld texture {member}.";
             return Write(members[member], btx);
@@ -30,13 +32,13 @@ namespace DSPRE.Avalonia.Data
                     if (!File.Exists(member.Bin) || !File.ReadAllBytes(member.Bin).AsSpan().SequenceEqual(btx)) File.WriteAllBytes(member.Bin, btx);
                     return null;
                 }
-                string problem = Check(member, btx, out byte[] indices, out var palettes, out byte[] oldIndices, out uint[] oldColours);
+                string problem = Check(member, btx, out byte[] indices, out List<int[]> palettes, out byte[] oldIndices, out uint[] oldColours);
                 if (problem != null) return problem;
 
                 // The build ignores the PNG's own colours, so they only follow a slot this save actually recoloured.
                 int[] oldPalette = member.Palettes.Count > 0 ? HgEngineOverworlds.ReadJasc(member.Palettes[0]) : null;
                 int length = Math.Max(oldColours.Length, indices.Max() + 1);
-                var colours = new uint[length];
+                uint[] colours = new uint[length];
                 for (int i = 0; i < length; i++)
                 {
                     uint before = i < oldColours.Length ? oldColours[i] : 0xFF000000u | (uint)palettes[0][Math.Min(i, 15)];
@@ -135,7 +137,7 @@ namespace DSPRE.Avalonia.Data
                         HgEngineOverworlds.CopyAsNew(pal, Path.Combine(dir, stem + Path.GetFileName(pal).Substring(from.Length)));
                 }
 
-                var member = new HgEngineOverworlds.Member(Path.GetFileName(target), target, json, PalettesOf(json, dir, stem), null);
+                HgEngineOverworlds.Member member = new HgEngineOverworlds.Member(Path.GetFileName(target), target, json, PalettesOf(json, dir, stem), null);
                 if (member.Palettes.Count == 0) return $"{Rel(json)} names no palettes.";
 
                 File.WriteAllBytes(target, IndexedPng.Write(indices, colours.Take(16).ToArray(), w, h, 4));
@@ -145,9 +147,9 @@ namespace DSPRE.Avalonia.Data
                 else if (member.Palettes.Count > 1)
                 {
                     // Slots the old drawing never used have no designed shiny colour.
-                    var used = indices.Distinct().ToHashSet();
-                    var before = oldIndices?.Distinct().ToHashSet();
-                    var fresh = before == null ? used : used.Where(i => !before.Contains(i)).ToHashSet();
+                    HashSet<byte> used = indices.Distinct().ToHashSet();
+                    HashSet<byte> before = oldIndices?.Distinct().ToHashSet();
+                    HashSet<byte> fresh = before == null ? used : used.Where(i => !before.Contains(i)).ToHashSet();
                     if (layoutPng != target)
                         warning = $"The shiny colours were copied from the template species. Import a shiny sheet or edit {Path.GetFileName(member.Palettes[1])} to match.";
                     else if (fresh.Count > 0)
@@ -166,11 +168,11 @@ namespace DSPRE.Avalonia.Data
 
         private static System.Collections.Generic.List<string> PalettesOf(string json, string dir, string stem)
         {
-            var list = new System.Collections.Generic.List<string>();
-            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(json));
-            if (doc.RootElement.TryGetProperty("palettes", out var pals))
-                foreach (var pal in pals.EnumerateObject())
-                    if (pal.Value.TryGetProperty("fileName", out var file))
+            List<string> list = new System.Collections.Generic.List<string>();
+            using JsonDocument doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(json));
+            if (doc.RootElement.TryGetProperty("palettes", out JsonElement pals))
+                foreach (JsonProperty pal in pals.EnumerateObject())
+                    if (pal.Value.TryGetProperty("fileName", out JsonElement file))
                         list.Add(Path.Combine(dir, stem + "-" + file.GetString()));
             return list;
         }

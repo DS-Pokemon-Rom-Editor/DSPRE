@@ -206,7 +206,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<MessagesState>(state);
+            MessagesState s = DSPRE.Avalonia.UndoJson.Read<MessagesState>(state);
             if (IsHgeActive)
                 _hgeCurrent = s.Hge.Select(m => new HgeMessage { Token = m[0], Value = int.Parse(m[1]), Text = m[2] }).ToList();
             else
@@ -238,13 +238,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (IsHgeActive)
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics });
-                    var table = HgEngineSymbolTable.Load(TrainerDataHeader);
+                    HgEngineSymbolTable table = HgEngineSymbolTable.Load(TrainerDataHeader);
                     _hgeTriggers = table == null ? Array.Empty<(int, string)>()
                         : table.ByName.Where(kv => kv.Key.StartsWith("TRMSG_", StringComparison.Ordinal))
                             .Select(kv => (kv.Value, kv.Key)).OrderBy(t => t.Item1).ToArray();
                     _hgeMaxMessages = table != null && table.TryGetValue("TRAINER_SOURCE_MAX_TEXT_ENTRY_COUNT", out int max) ? max : 0;
                     TriggerTypes.Clear();
-                    foreach (var t in _hgeTriggers) TriggerTypes.Add(t.name);
+                    foreach ((int value, string name) t in _hgeTriggers) TriggerTypes.Add(t.name);
                     ReadHgeTextOrder();
                     foreach (string entry in DSPRE.TrainerNames.GetAll()) Trainers.Add(entry);
                 }
@@ -256,8 +256,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     _archive = new TextArchive(trainerMessageTextNumber);
                     ReadTable();
 
-                    var trainerNames = GetSimpleTrainerNames();
-                    var classArchive = new TextArchive(trainerClassMessageNumber);
+                    string[] trainerNames = GetSimpleTrainerNames();
+                    TextArchive classArchive = new TextArchive(trainerClassMessageNumber);
                     for (int i = 0; i < trainerNames.Length; i++)
                     {
                         int classId = GetTrainerClassOf(i);
@@ -281,10 +281,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void ReadTable()
         {
-            var entries = new List<Entry>();
+            List<Entry> entries = new List<Entry>();
             try
             {
-                foreach (var e in TrainerMessageTable.Read())
+                foreach (TrainerMessageTable.Entry e in TrainerMessageTable.Read())
                     entries.Add(new Entry { messageID = e.MessageId, trainerId = e.TrainerId, triggerId = e.TriggerId });
             }
             catch (Exception ex) { AppLogger.Error("ReadTable: " + ex.Message); }
@@ -294,7 +294,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void ReadHgeTextOrder()
         {
-            if (HgEngineTrainerSource.TryReadTextOrder(out var listed, out string error)) _hgeTextOrder = listed;
+            if (HgEngineTrainerSource.TryReadTextOrder(out HashSet<int> listed, out string error)) _hgeTextOrder = listed;
             else { _hgeTextOrder = null; AppLogger.Error("Battle messages: " + error); }
         }
 
@@ -303,7 +303,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             try
             {
                 string path = Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, trainerId.ToString("D4"));
-                using var s = File.OpenRead(path);
+                using FileStream s = File.OpenRead(path);
                 return new TrainerProperties((ushort)trainerId, s).trainerClass;
             }
             catch { return 0; }
@@ -325,13 +325,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 try
                 {
                     string path = Path.Combine(gameDirs[DirNames.trainerProperties].unpackedDir, trainerId.ToString("D4"));
-                    using var s = File.OpenRead(path);
-                    var trp = new TrainerProperties((ushort)trainerId, s);
+                    using FileStream s = File.OpenRead(path);
+                    TrainerProperties trp = new TrainerProperties((ushort)trainerId, s);
                     _currentIsDouble = trp.doubleBattle;
                     ShowSprite(trp.trainerClass);
                 }
                 catch (Exception ex) { AppLogger.Error("LoadTrainer: " + ex.Message); }
-                _current = _byTrainer.TryGetValue((uint)trainerId, out var list) ? list : new List<Entry>();
+                _current = _byTrainer.TryGetValue((uint)trainerId, out List<Entry> list) ? list : new List<Entry>();
             }
             RefreshEntries(keepSelection: false);
             ResetUndo();
@@ -349,15 +349,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             _hgeCurrent = new List<HgeMessage>();
             _hgeLoadError = null;
-            if (!HgEngineTrainerSource.TryLoad(trainerId, out var block, out string error)) { _hgeLoadError = error; return; }
+            if (!HgEngineTrainerSource.TryLoad(trainerId, out HgEngineSourceBlock block, out string error)) { _hgeLoadError = error; return; }
 
-            var data = FieldPathSegment.Field("data");
+            FieldPathSegment data = FieldPathSegment.Field("data");
             ShowSprite(block.TryGetSymbol(new[] { data, FieldPathSegment.Field("trainerClass") }, TrainerClassHeader, out int trainerClass) ? trainerClass : 0);
             // An absent battle type is 0, a single battle.
             _currentIsDouble = block.TryGetSymbol(new[] { data, FieldPathSegment.Field("battleType") }, TrainerDataHeader, out int battleType) && battleType != 0;
 
             int number = 0;
-            foreach (var msg in block.GetArrayElements(new[] { FieldPathSegment.Field("text") }))
+            foreach (HgEngineSourceBlock msg in block.GetArrayElements(new[] { FieldPathSegment.Field("text") }))
             {
                 number++;
                 string token = msg.TryGetRaw(new[] { FieldPathSegment.Field("type") }, out string raw) ? raw : null;
@@ -379,11 +379,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             Entries.Clear();
             if (IsHgeActive)
             {
-                foreach (var m in _hgeCurrent) Entries.Add($"[{HgeLabel(m)}] {m.Text}");
+                foreach (HgeMessage m in _hgeCurrent) Entries.Add($"[{HgeLabel(m)}] {m.Text}");
             }
             else
             {
-                foreach (var e in _current)
+                foreach (Entry e in _current)
                 {
                     string trigger = TriggerName(e.triggerId);
                     string text = e.messageID >= 0 && e.messageID < _archive.messages.Count ? _archive.messages[e.messageID] : "<invalid>";
@@ -408,7 +408,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private string HgeTriggerName(int value)
         {
-            foreach (var t in _hgeTriggers) if (t.value == value) return t.name;
+            foreach ((int value, string name) t in _hgeTriggers) if (t.value == value) return t.name;
             return null;
         }
 
@@ -427,14 +427,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (index >= 0 && index < _hgeCurrent.Count)
                 {
-                    var m = _hgeCurrent[index];
+                    HgeMessage m = _hgeCurrent[index];
                     SelectedTriggerIndex = HgeTriggerComboIndex(m.Value);
                     MessageText = DisplayText(m.Text);
                 }
             }
             else if (index >= 0 && index < _current.Count)
             {
-                var e = _current[index];
+                Entry e = _current[index];
                 SelectedTriggerIndex = TriggerComboIndex(e.triggerId);
                 MessageText = DisplayText(e.messageID >= 0 && e.messageID < _archive.messages.Count ? _archive.messages[e.messageID] : "");
             }
@@ -444,7 +444,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // ── Display / raw text conversion (mirrors Scintilla helpers) ──────────────────
         private static string DisplayText(string raw)
         {
-            foreach (var b in new[] { "\\n", "\\r", "\\f" }) raw = raw.Replace(b, b + Environment.NewLine);
+            foreach (string b in new[] { "\\n", "\\r", "\\f" }) raw = raw.Replace(b, b + Environment.NewLine);
             return raw;
         }
 
@@ -452,7 +452,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static string RawText(string display)
         {
             string s = display.Replace("\r\n", "\n").Replace('\r', '\n');
-            var sb = new StringBuilder(s.Length);
+            StringBuilder sb = new StringBuilder(s.Length);
             foreach (char c in s)
             {
                 if (c != '\n') { sb.Append(c); continue; }
@@ -481,7 +481,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (HgeRefusesEdit("Add message") || _selectedTriggerIndex >= _hgeTriggers.Length) return;
                 if (_hgeMaxMessages > 0 && _hgeCurrent.Count >= _hgeMaxMessages)
                 { _ = DialogHelper.ShowError($"A trainer can have at most {_hgeMaxMessages} messages.", "Add message"); return; }
-                var t = _hgeTriggers[_selectedTriggerIndex];
+                (int value, string name) t = _hgeTriggers[_selectedTriggerIndex];
                 _hgeCurrent.Add(new HgeMessage { Token = t.name, Value = t.value, Text = RawText(_messageText) });
             }
             else
@@ -518,14 +518,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (HgeRefusesEdit("Change trigger") || _selectedTriggerIndex >= _hgeTriggers.Length) return;
                 if (_selectedEntryIndex < 0 || _selectedEntryIndex >= _hgeCurrent.Count) return;
-                var t = _hgeTriggers[_selectedTriggerIndex];
+                (int value, string name) t = _hgeTriggers[_selectedTriggerIndex];
                 _hgeCurrent[_selectedEntryIndex].Token = t.name;
                 _hgeCurrent[_selectedEntryIndex].Value = t.value;
             }
             else
             {
                 if (_selectedEntryIndex < 0 || _selectedEntryIndex >= _current.Count) return;
-                var e = _current[_selectedEntryIndex];
+                Entry e = _current[_selectedEntryIndex];
                 e.triggerId = (ushort)Triggers[_selectedTriggerIndex].type;
                 _current[_selectedEntryIndex] = e;
             }
@@ -545,7 +545,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 return;
             }
             if (_selectedEntryIndex < 0 || _selectedEntryIndex >= _current.Count) { _ = DialogHelper.ShowError("Select a message to overwrite.", "Save message"); return; }
-            var e = _current[_selectedEntryIndex];
+            Entry e = _current[_selectedEntryIndex];
             if (e.messageID >= 0 && e.messageID < _archive.messages.Count)
             {
                 _archive.messages[e.messageID] = RawText(_messageText);
@@ -564,10 +564,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 : null;
             if (problem != null) { await DialogHelper.ShowError($"Trainer {trainerId} messages were not saved. {problem}", "Save Error"); return; }
 
-            var messages = _hgeCurrent.Select(m => new HgeMessage { Token = HgeLabel(m), Value = m.Value, Text = m.Text }).ToList();
-            var (saved, error) = await HgEngineSave.RunAsync(() =>
+            List<HgeMessage> messages = _hgeCurrent.Select(m => new HgeMessage { Token = HgeLabel(m), Value = m.Value, Text = m.Text }).ToList();
+            (bool saved, string error) = await HgEngineSave.RunAsync(() =>
             {
-                var textPath = new[] { FieldPathSegment.Field("text") };
+                FieldPathSegment[] textPath = new[] { FieldPathSegment.Field("text") };
                 HgEngineFieldWrite write;
                 if (messages.Count == 0)
                 {
@@ -598,8 +598,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // Laid out like the rest of Trainers.c.
         private static string TextLiteral(IEnumerable<HgeMessage> messages)
         {
-            var sb = new StringBuilder("{");
-            foreach (var m in messages)
+            StringBuilder sb = new StringBuilder("{");
+            foreach (HgeMessage m in messages)
             {
                 sb.Append("\n            {");
                 sb.Append("\n                .type = ").Append(m.Token).Append(',');
@@ -623,7 +623,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             try
             {
-                var all = _byTrainer.SelectMany(kvp => kvp.Value).ToList();
+                List<Entry> all = _byTrainer.SelectMany(kvp => kvp.Value).ToList();
                 WriteTable(all);
                 SetClean();
                 StatusText = "Trainer messages saved.";
@@ -652,7 +652,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (_current.Any(e => e.trainerId != (uint)_currentTrainerId)) { Info("Error: Some entries have a trainer ID that does not match the selected trainer.", StatusBrushes.Bad); return; }
 
-            var dups = _current.GroupBy(e => e.triggerId).Where(g => g.Count() > 1).Select(g => TriggerName(g.Key)).ToList();
+            List<string> dups = _current.GroupBy(e => e.triggerId).Where(g => g.Count() > 1).Select(g => TriggerName(g.Key)).ToList();
             if (dups.Any()) { Info($"Warning: Duplicate message trigger types: {string.Join(", ", dups)}", StatusBrushes.Warn); return; }
 
             if (_current.Any(e => e.messageID >= 0 && e.messageID < _archive.messages.Count && string.IsNullOrWhiteSpace(_archive.messages[e.messageID])))
@@ -674,10 +674,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_hgeCurrent.Count > 0 && _hgeTextOrder != null && !_hgeTextOrder.Contains(_currentTrainerId))
             { Info("Warning: This trainer is not in sTrainerTextOrder, so the build leaves its messages out. Saving adds it.", StatusBrushes.Warn); return; }
 
-            var unknown = _hgeCurrent.Where(m => m.Value < 0).Select(HgeLabel).Distinct().ToList();
+            List<string> unknown = _hgeCurrent.Where(m => m.Value < 0).Select(HgeLabel).Distinct().ToList();
             if (unknown.Any()) { Info($"Warning: {string.Join(", ", unknown)} is not defined in trainer_data.h.", StatusBrushes.Warn); return; }
 
-            var dups = _hgeCurrent.GroupBy(m => m.Value).Where(g => g.Count() > 1).Select(g => HgeLabel(g.First())).ToList();
+            List<string> dups = _hgeCurrent.GroupBy(m => m.Value).Where(g => g.Count() > 1).Select(g => HgeLabel(g.First())).ToList();
             if (dups.Any()) { Info($"Warning: Duplicate message trigger types: {string.Join(", ", dups)}", StatusBrushes.Warn); return; }
 
             if (_hgeCurrent.Any(m => string.IsNullOrWhiteSpace(m.Text))) { Info("Warning: One or more messages are empty.", StatusBrushes.Warn); return; }

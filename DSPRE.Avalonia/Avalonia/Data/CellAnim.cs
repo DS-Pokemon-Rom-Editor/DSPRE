@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Images;
 
 namespace DSPRE.Avalonia.Data
@@ -17,7 +18,7 @@ namespace DSPRE.Avalonia.Data
         public CFrame[] Frames;
         public bool Loop;
         public int TotalDur()
-        { int t = 0; if (Frames != null) foreach (var f in Frames) t += f.Dur; return t; }
+        { int t = 0; if (Frames != null) foreach (CFrame f in Frames) t += f.Dur; return t; }
     }
 
     public sealed class CellActor
@@ -52,7 +53,7 @@ namespace DSPRE.Avalonia.Data
         private CellSequence Cur => (_seqs.Length == 0 || Seq >= _seqs.Length) ? null : _seqs[Seq];
         private CFrame CurFrame
         {
-            get { var s = Cur; return (s?.Frames != null && s.Frames.Length > 0) ? s.Frames[Math.Min(_frame, s.Frames.Length - 1)] : default; }
+            get { CellSequence s = Cur; return (s?.Frames != null && s.Frames.Length > 0) ? s.Frames[Math.Min(_frame, s.Frames.Length - 1)] : default; }
         }
 
         public int CellIndex => CurFrame.Cell;
@@ -65,7 +66,7 @@ namespace DSPRE.Avalonia.Data
 
         public void Tick()
         {
-            var s = Cur;
+            CellSequence s = Cur;
             if (s?.Frames == null || s.Frames.Length == 0) { Finished = true; return; }
             if (Finished && !s.Loop) return;
             _timer++;
@@ -83,16 +84,16 @@ namespace DSPRE.Avalonia.Data
 
         public static CellSequence[] FromNanr(NANR nanr)
         {
-            var anis = nanr?.Struct.abnk.anis;
+            NANR.sNANR.Animation[] anis = nanr?.Struct.abnk.anis;
             if (anis == null) return Array.Empty<CellSequence>();
-            var outp = new CellSequence[anis.Length];
+            CellSequence[] outp = new CellSequence[anis.Length];
             for (int i = 0; i < anis.Length; i++)
             {
-                var a = anis[i];
-                var frames = new CFrame[a.frames?.Length ?? 0];
+                NANR.sNANR.Animation a = anis[i];
+                CFrame[] frames = new CFrame[a.frames?.Length ?? 0];
                 for (int j = 0; j < frames.Length; j++)
                 {
-                    var d = a.frames[j].data;
+                    NANR.sNANR.Frame_Data d = a.frames[j].data;
                     double sx = a.dataType == 1 ? GetFrameInt(d, "scaleX", 4096) / 4096.0 : 1.0;
                     double sy = a.dataType == 1 ? GetFrameInt(d, "scaleY", 4096) / 4096.0 : 1.0;
                     double rot = a.dataType == 1 ? GetFrameUShort(d, "rotation", 0) / 65536.0 * 360.0 : 0.0;
@@ -106,19 +107,19 @@ namespace DSPRE.Avalonia.Data
 
         private static int GetFrameInt(NANR.sNANR.Frame_Data data, string fieldName, int defaultValue)
         {
-            var field = typeof(NANR.sNANR.Frame_Data).GetField(fieldName);
+            FieldInfo field = typeof(NANR.sNANR.Frame_Data).GetField(fieldName);
             return field == null ? defaultValue : Convert.ToInt32(field.GetValue(data));
         }
 
         private static ushort GetFrameUShort(NANR.sNANR.Frame_Data data, string fieldName, ushort defaultValue)
         {
-            var field = typeof(NANR.sNANR.Frame_Data).GetField(fieldName);
+            FieldInfo field = typeof(NANR.sNANR.Frame_Data).GetField(fieldName);
             return field == null ? defaultValue : Convert.ToUInt16(field.GetValue(data));
         }
 
         private static uint GetAnimationUInt(NANR.sNANR.Animation animation, string fieldName, uint defaultValue)
         {
-            var field = typeof(NANR.sNANR.Animation).GetField(fieldName);
+            FieldInfo field = typeof(NANR.sNANR.Animation).GetField(fieldName);
             return field == null ? defaultValue : Convert.ToUInt32(field.GetValue(animation));
         }
     }

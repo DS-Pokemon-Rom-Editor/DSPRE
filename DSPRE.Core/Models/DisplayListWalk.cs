@@ -52,13 +52,13 @@ namespace DSPRE.Models
 
         public int CornerCount
         {
-            get { int n = 0; foreach (var r in Runs) n += r.Corners.Count; return n; }
+            get { int n = 0; foreach (Run r in Runs) n += r.Corners.Count; return n; }
         }
 
         public static DisplayListWalk Read(byte[] dl, out string whynot)
         {
             whynot = null;
-            var walk = new DisplayListWalk();
+            DisplayListWalk walk = new DisplayListWalk();
             if (dl == null || dl.Length == 0) return walk;
 
             // Integer state so VTX_DIFF chains don't drift.
@@ -73,7 +73,7 @@ namespace DSPRE.Models
 
             while (at < dl.Length)
             {
-                var ops = new byte[4];
+                byte[] ops = new byte[4];
                 for (int k = 0; k < 4; k++) ops[k] = at + k < dl.Length ? dl[at + k] : (byte)0;
                 at += 4;
 

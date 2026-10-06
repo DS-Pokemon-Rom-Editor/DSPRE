@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia.Views.Battle
         /// growing a second brush here.</summary>
         private void HandOver(string piece)
         {
-            var vm = ViewModel;
+            BattleSceneBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
             {
                 _ = DialogHelper.ShowInfo("Pick a set of scenery on the left first.", "Battle scenes");

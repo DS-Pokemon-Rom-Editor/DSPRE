@@ -54,7 +54,7 @@ namespace DSPRE.Avalonia.Data
         public static List<string> Names()
         {
             Load();
-            var names = new List<string> { "None" };
+            List<string> names = new List<string> { "None" };
             for (int i = 0; i < _capsules.Length; i++)
             {
                 int count = _capsules[i].Seals.Count(s => s.Seal != 0);
@@ -69,11 +69,11 @@ namespace DSPRE.Avalonia.Data
         public static IReadOnlyList<(BallSeal Seal, double Left, double Top)> Placements(int number)
         {
             Load();
-            var placed = new List<(BallSeal, double, double)>();
+            List<(BallSeal, double, double)> placed = new List<(BallSeal, double, double)>();
             if (number < 1 || number > _capsules.Length) return placed;
-            foreach (var s in _capsules[number - 1].Seals)
+            foreach (BallCapsule.Placed s in _capsules[number - 1].Seals)
             {
-                if (s.Seal == 0 || !_seals.TryGetValue(s.Seal, out var seal)) continue;
+                if (s.Seal == 0 || !_seals.TryGetValue(s.Seal, out BallSeal seal)) continue;
                 placed.Add((seal, Thumb / 2 + (s.X - BallCapsule.BoardCentreX - 16) * Scale,
                                   Thumb / 2 + (s.Y - BallCapsule.BoardCentreY - 16) * Scale));
             }
@@ -83,10 +83,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The seals of capsule <paramref name="number"/> as pictures on the small ball.</summary>
         public static IReadOnlyList<CapsuleSticker> Stickers(int number)
         {
-            var shown = new List<CapsuleSticker>();
-            foreach (var (seal, left, top) in Placements(number))
+            List<CapsuleSticker> shown = new List<CapsuleSticker>();
+            foreach ((BallSeal seal, double left, double top) in Placements(number))
             {
-                if (!_stickers.TryGetValue(seal.Id, out var bitmap))
+                if (!_stickers.TryGetValue(seal.Id, out Bitmap bitmap))
                 {
                     try { bitmap = BallCapsuleGraphics.Sticker(seal); } catch { bitmap = null; }
                     _stickers[seal.Id] = bitmap;
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Trainers whose Pokemon carry each capsule. Slow, so run it behind the busy overlay.</summary>
         public static Dictionary<int, List<string>> UsedBy()
         {
-            var used = new Dictionary<int, List<string>>();
+            Dictionary<int, List<string>> used = new Dictionary<int, List<string>>();
             if (!Available || !gameDirs.ContainsKey(DirNames.trainerProperties) || !gameDirs.ContainsKey(DirNames.trainerParty))
                 return used;
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty });
@@ -120,15 +120,15 @@ namespace DSPRE.Avalonia.Data
                 if (!File.Exists(p) || !File.Exists(q)) break;
                 try
                 {
-                    using var ps = File.OpenRead(p);
-                    using var qs = File.OpenRead(q);
-                    var file = new TrainerFile(new TrainerProperties((ushort)i, ps), qs, i < names.Length ? names[i] : "");
+                    using FileStream ps = File.OpenRead(p);
+                    using FileStream qs = File.OpenRead(q);
+                    TrainerFile file = new TrainerFile(new TrainerProperties((ushort)i, ps), qs, i < names.Length ? names[i] : "");
                     string who = i < names.Length && !string.IsNullOrWhiteSpace(names[i]) ? names[i] : $"Trainer {i}";
                     for (int m = 0; m < file.trp.partyCount; m++)
                     {
-                        var mon = file.party[m];
+                        PartyPokemon mon = file.party[m];
                         if (mon == null || mon.CheckEmpty() || mon.ballSeals == 0) continue;
-                        if (!used.TryGetValue(mon.ballSeals, out var list)) used[mon.ballSeals] = list = new List<string>();
+                        if (!used.TryGetValue(mon.ballSeals, out List<string> list)) used[mon.ballSeals] = list = new List<string>();
                         if (!list.Contains(who)) list.Add(who);
                     }
                 }

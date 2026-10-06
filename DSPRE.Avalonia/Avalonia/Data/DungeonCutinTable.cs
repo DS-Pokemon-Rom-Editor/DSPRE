@@ -36,17 +36,17 @@ namespace DSPRE.Avalonia.Data
         /// SoulSilver do.</summary>
         public static List<Row> Read()
         {
-            var rows = new List<Row>();
+            List<Row> rows = new List<Row>();
             try
             {
                 RomInfo.SetDungeonCutinTableOffsetToRAMAddress();
                 if (RomInfo.dungeonCutinTableOffsetToRAMAddress == 0) return rows;
 
                 uint ram = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.dungeonCutinTableOffsetToRAMAddress, 4), 0);
-                using var reader = new ARM9.Reader(ram - ARM9.address);
+                using ARM9.Reader reader = new ARM9.Reader(ram - ARM9.address);
                 for (int i = 0; i < RowCount; i++)
                 {
-                    var row = new Row
+                    Row row = new Row
                     {
                         Number = i + 1,
                         HeaderIndex = reader.ReadInt32(),
@@ -79,8 +79,8 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static List<GraphicAssets.Unit> UnitsFor(GraphicAssets.Archive archive, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
             List<string> headerNames = null;
             try { headerNames = HeaderLists.GetHeaderListBoxNames(); } catch { }
@@ -99,12 +99,12 @@ namespace DSPRE.Avalonia.Data
             }
 
             // Rows naming the same files are the same screen shown in more than one place.
-            var byFiles = new Dictionary<string, GraphicAssets.Unit>();
+            Dictionary<string, GraphicAssets.Unit> byFiles = new Dictionary<string, GraphicAssets.Unit>();
 
-            foreach (var r in Read())
+            foreach (Row r in Read())
             {
-                var key = string.Join(",", r.Art.SelectMany(x => new[] { x.Palette, x.Tiles, x.Screen }));
-                if (byFiles.TryGetValue(key, out var already))
+                string key = string.Join(",", r.Art.SelectMany(x => new[] { x.Palette, x.Tiles, x.Screen }));
+                if (byFiles.TryGetValue(key, out GraphicAssets.Unit already))
                 {
                     string also = Where(r.HeaderIndex);
                     already.Name += also != null ? ", " + also : $", screen {r.Number}";
@@ -112,7 +112,7 @@ namespace DSPRE.Avalonia.Data
                 }
 
                 string place = Where(r.HeaderIndex);
-                var u = new GraphicAssets.Unit
+                GraphicAssets.Unit u = new GraphicAssets.Unit
                 {
                     Archive = archive,
                     Name = place != null ? $"Splash screen {r.Number}, {place}" : $"Splash screen {r.Number}",
@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia.Data
 
                 for (int t = 0; t < 4; t++)
                 {
-                    var (pal, tiles, screen) = r.Art[t];
+                    (int pal, int tiles, int screen) = r.Art[t];
                     void Add(int index, string what)
                     {
                         if (index < 0 || index >= fileCount) return;
@@ -143,7 +143,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < fileCount; i++)
             {
                 if (spokenFor.Contains(i)) continue;
-                var lone = new GraphicAssets.Unit { Archive = archive, Name = archive.Title };
+                GraphicAssets.Unit lone = new GraphicAssets.Unit { Archive = archive, Name = archive.Title };
                 lone.Parts.Add(new GraphicAssets.UnitPart { Archive = archive, Index = i, Name = "File " + i });
                 units.Add(lone);
             }
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The drawing one location uses at a given time of day, for an editor handing it over.</summary>
         public static int DrawingFor(int rowNumber, TimeOfDay when)
         {
-            foreach (var r in Read())
+            foreach (Row r in Read())
                 if (r.Number == rowNumber) return r.At(when).Tiles;
             return -1;
         }

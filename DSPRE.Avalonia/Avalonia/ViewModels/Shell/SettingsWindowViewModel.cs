@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-
+using Avalonia.Platform.Storage;
 using DSPRE.Avalonia;
 namespace DSPRE.Avalonia.ViewModels.Shell
 {
@@ -115,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private EmulatorKind? SelectedEmulator => _emulatorIndex > 0 ? Emulators.All[_emulatorIndex - 1] : null;
         public bool HasSelectedEmulator => SelectedEmulator != null;
-        public string EmulatorPath => SelectedEmulator is EmulatorKind k && _emulatorPaths.TryGetValue(k.ToString(), out var p) ? p : "";
+        public string EmulatorPath => SelectedEmulator is EmulatorKind k && _emulatorPaths.TryGetValue(k.ToString(), out string p) ? p : "";
 
         private void RaiseEmulator()
         {
@@ -125,12 +126,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public async Task ChangeEmulatorPathCommand(Window owner)
         {
-            var filters = OperatingSystem.IsWindows()
+            List<FilePickerFileType> filters = OperatingSystem.IsWindows()
                 ? new System.Collections.Generic.List<global::Avalonia.Platform.Storage.FilePickerFileType> { new("Programs") { Patterns = new[] { "*.exe" } } }
                 : null;
             string path = await DialogHelper.OpenFile(owner, "Choose the emulator", filters);
             if (path == null) return;
-            var kind = SelectedEmulator ?? Emulators.Guess(path) ?? EmulatorKind.BizHawk;
+            EmulatorKind kind = SelectedEmulator ?? Emulators.Guess(path) ?? EmulatorKind.BizHawk;
             _emulatorPaths[kind.ToString()] = path;
             _emulatorIndex = Array.IndexOf(Emulators.All, kind) + 1;
             OnPropertyChanged(nameof(EmulatorIndex));
@@ -213,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             CamInvertOrbitY  = SettingsManager.Settings.camInvertOrbitY;
             CamInvertZoom    = SettingsManager.Settings.camInvertZoom;
 
-            foreach (var kv in SettingsManager.Settings.emulatorPaths ?? new System.Collections.Generic.Dictionary<string, string>())
+            foreach (KeyValuePair<string, string> kv in SettingsManager.Settings.emulatorPaths ?? new System.Collections.Generic.Dictionary<string, string>())
                 _emulatorPaths[kv.Key] = kv.Value;
             _emulatorIndex = Enum.TryParse(SettingsManager.Settings.preferredEmulator, out EmulatorKind preferred)
                 ? Array.IndexOf(Emulators.All, preferred) + 1 : 0;

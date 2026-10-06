@@ -17,8 +17,8 @@ namespace DSPRE.ROMFiles
 
         public static List<Entry> Read()
         {
-            var entries = new List<Entry>();
-            using var reader = new DSUtils.EasyReader(TablePath);
+            List<Entry> entries = new List<Entry>();
+            using DSUtils.EasyReader reader = new DSUtils.EasyReader(TablePath);
             while (reader.BaseStream.Position + 4 <= reader.BaseStream.Length)
             {
                 int offset = (int)reader.BaseStream.Position;
@@ -37,14 +37,14 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static void Write(IEnumerable<Entry> entries, IReadOnlyList<string> messages)
         {
-            var sorted = entries.GroupBy(e => e.TrainerId).SelectMany(g => g).ToList();
-            var firstRow = new Dictionary<uint, ushort>();
-            var text = new List<string>();
+            List<Entry> sorted = entries.GroupBy(e => e.TrainerId).SelectMany(g => g).ToList();
+            Dictionary<uint, ushort> firstRow = new Dictionary<uint, ushort>();
+            List<string> text = new List<string>();
 
             // Truncate so entries deleted since the last save don't survive past the new end.
-            using (var writer = new DSUtils.EasyWriter(TablePath, 0, FileMode.Create))
+            using (DSUtils.EasyWriter writer = new DSUtils.EasyWriter(TablePath, 0, FileMode.Create))
             {
-                foreach (var e in sorted)
+                foreach (Entry e in sorted)
                 {
                     if (!firstRow.ContainsKey(e.TrainerId)) firstRow[e.TrainerId] = (ushort)writer.BaseStream.Position;
                     writer.Write((ushort)e.TrainerId);
@@ -55,8 +55,8 @@ namespace DSPRE.ROMFiles
 
             new TextArchive(RomInfo.trainerMessageTextNumber, text).SaveToExpandedDir(RomInfo.trainerMessageTextNumber, false);
 
-            using var offsetWriter = new DSUtils.EasyWriter(OffsetPath);
-            foreach (var kvp in firstRow)
+            using DSUtils.EasyWriter offsetWriter = new DSUtils.EasyWriter(OffsetPath);
+            foreach (KeyValuePair<uint, ushort> kvp in firstRow)
             {
                 offsetWriter.Seek((int)kvp.Key * 2, SeekOrigin.Begin);
                 offsetWriter.Write(kvp.Value);

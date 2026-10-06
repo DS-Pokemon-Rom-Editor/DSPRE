@@ -35,7 +35,7 @@ namespace DSPRE.ROMFiles
 
         public static BallCapsule Read(byte[] data, int at)
         {
-            var capsule = new BallCapsule();
+            BallCapsule capsule = new BallCapsule();
             for (int i = 0; i < Slots; i++)
             {
                 capsule.Seals[i].Seal = data[at + i * 3];
@@ -73,7 +73,7 @@ namespace DSPRE.ROMFiles
 
         public static BallCapsule[] ReadAll()
         {
-            var capsules = new BallCapsule[Count];
+            BallCapsule[] capsules = new BallCapsule[Count];
             byte[] data = Available && File.Exists(FilePath()) ? File.ReadAllBytes(FilePath()) : Array.Empty<byte>();
             for (int i = 0; i < Count; i++)
                 capsules[i] = (i + 1) * BallCapsule.Bytes <= data.Length ? BallCapsule.Read(data, i * BallCapsule.Bytes) : new BallCapsule();

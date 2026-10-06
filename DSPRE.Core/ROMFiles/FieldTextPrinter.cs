@@ -77,7 +77,7 @@ namespace DSPRE.ROMFiles
         {
             get
             {
-                var lines = new List<string>(_carried);
+                List<string> lines = new List<string>(_carried);
                 if (_printed > 0 || _carried.Count == 0)
                     lines.AddRange(_content.Substring(0, Math.Min(_printed, _content.Length)).Split('\n'));
                 return lines;
@@ -90,7 +90,7 @@ namespace DSPRE.ROMFiles
         private void StartPage(int index)
         {
             _page = index;
-            var page = _pages[index];
+            FieldMessageFrame page = _pages[index];
             int carried = 0;
             if (index > 0 && _pages[index - 1].Wait == MessageWait.Scroll)
                 carried = Math.Min(page.Lines.Count, Math.Max(0, _pages[index - 1].Lines.Count - 1));
@@ -145,7 +145,7 @@ namespace DSPRE.ROMFiles
             }
 
             // The code after the last letter is read on the letter's next turn.
-            var pageNow = _pages[_page];
+            FieldMessageFrame pageNow = _pages[_page];
             if (pageNow.Wait != MessageWait.None && _page + 1 < _pages.Count)
             {
                 WaitingForPress = true;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -82,7 +83,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static List<Match> FindAll()
         {
-            var found = new List<Match>();
+            List<Match> found = new List<Match>();
             string dir = SourceDir();
             if (dir == null || !Directory.Exists(dir)) return found;
 
@@ -106,7 +107,7 @@ namespace DSPRE.ROMFiles
 
         public static List<Match> ReadFile(int fileId)
         {
-            var found = new List<Match>();
+            List<Match> found = new List<Match>();
             string path = PathFor(fileId);
             if (!File.Exists(path)) return found;
 
@@ -120,7 +121,7 @@ namespace DSPRE.ROMFiles
                 int inContainer = 0;
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    var header = Container.Match(lines[i]);
+                    System.Text.RegularExpressions.Match header = Container.Match(lines[i]);
                     if (header.Success)
                     {
                         container = header.Groups[1].Value;
@@ -128,7 +129,7 @@ namespace DSPRE.ROMFiles
                         inContainer = 0;
                     }
 
-                    var m = Give.Match(lines[i]);
+                    System.Text.RegularExpressions.Match m = Give.Match(lines[i]);
                     if (!m.Success) continue;
 
                     string species = m.Groups[1].Value.Trim();
@@ -165,7 +166,7 @@ namespace DSPRE.ROMFiles
             if (!LooksLikeVariable(speciesArgument)) return false;
             for (int back = 1; back <= 3 && at - back >= 0; back++)
             {
-                var m = Starter.Match(lines[at - back]);
+                System.Text.RegularExpressions.Match m = Starter.Match(lines[at - back]);
                 if (!m.Success) continue;
                 return string.Equals(m.Groups[1].Value.Trim(), speciesArgument, StringComparison.OrdinalIgnoreCase);
             }
@@ -207,7 +208,7 @@ namespace DSPRE.ROMFiles
                 return "That line is no longer in the file.";
 
             string original = lines[m.LineNumber - 1];
-            var give = Give.Match(original);
+            System.Text.RegularExpressions.Match give = Give.Match(original);
             if (!give.Success) return "That line is no longer a GivePokemon, so nothing was changed.";
 
             string newLevel = level?.ToString() ?? give.Groups[2].Value.Trim();
@@ -246,7 +247,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 // Only this file decides: another source failing must not undo the starter edit.
-                var result = await RotomTool.CompileProjectAsync();
+                RotomTool.Result result = await RotomTool.CompileProjectAsync();
                 string failure = RotomTool.FailureFor(result, sourcePath);
                 if (failure != null)
                     return "The script did not compile, so it was put back as it was: " + failure;
@@ -279,7 +280,7 @@ namespace DSPRE.ROMFiles
         public static string ItemToken(string displayName)
         {
             if (string.IsNullOrWhiteSpace(displayName)) return null;
-            var sb = new System.Text.StringBuilder("ITEM_");
+            StringBuilder sb = new System.Text.StringBuilder("ITEM_");
             bool lastWasBreak = true;
             foreach (char c in displayName.Trim())
             {
@@ -332,13 +333,13 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static Check Verify(int fileId, string container)
         {
-            var inThere = FindAll()
+            List<Match> inThere = FindAll()
                 .Where(m => m.FileId == fileId)
                 .Where(m => string.IsNullOrWhiteSpace(container)
                          || string.Equals(m.Container, container.Trim(), StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            var usable = inThere.FirstOrDefault(m => m.SpeciesFromVariable);
+            Match usable = inThere.FirstOrDefault(m => m.SpeciesFromVariable);
             if (usable != null)
                 return new Check { Verdict = Verdict.Usable, Found = usable,
                                    Message = "Found it: " + usable.Summary + "." };
@@ -354,14 +355,14 @@ namespace DSPRE.ROMFiles
         /// <summary>The scripts in a file, so the picker can offer them rather than ask for a number.</summary>
         public static List<string> ContainersIn(int fileId)
         {
-            var names = new List<string>();
+            List<string> names = new List<string>();
             string path = PathFor(fileId);
             if (!File.Exists(path)) return names;
             try
             {
                 foreach (string line in File.ReadAllLines(path))
                 {
-                    var m = Container.Match(line);
+                    System.Text.RegularExpressions.Match m = Container.Match(line);
                     if (m.Success) names.Add(m.Groups[1].Value);
                 }
             }

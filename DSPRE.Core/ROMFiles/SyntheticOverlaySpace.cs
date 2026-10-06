@@ -29,7 +29,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Byte ranges already owned by a marked block.</summary>
         public static List<(long Start, long End)> Blocks(byte[] data, string onlyMarker = null)
         {
-            var ranges = new List<(long, long)>();
+            List<(long, long)> ranges = new List<(long, long)>();
             foreach (string marker in onlyMarker != null ? new[] { onlyMarker } : BlockMarkers)
             {
                 foreach (int hit in DSUtils.SearchBytes(data, Encoding.ASCII.GetBytes(marker)))
@@ -46,12 +46,12 @@ namespace DSPRE.ROMFiles
         /// <summary>Everything an allocator must not touch: marked blocks and the overworld expansion.</summary>
         public static List<(long Start, long End)> Reserved(byte[] data)
         {
-            var ranges = Blocks(data);
+            List<(long Start, long End)> ranges = Blocks(data);
             OverworldSpriteTableExpansion.Detect();
-            var ow = OverworldSpriteTableExpansion.GetReservedByteRange();
+            (long Start, long End)? ow = OverworldSpriteTableExpansion.GetReservedByteRange();
             if (ow.HasValue) ranges.Add(ow.Value);
             // A chart moved here by another patch has no marker.
-            var chart = TypeChart.UnmarkedRangeInExpansion();
+            (long Start, long End)? chart = TypeChart.UnmarkedRangeInExpansion();
             if (chart.HasValue) ranges.Add(chart.Value);
             ranges.AddRange(PlatPatchesBlocks(data));
             ranges.AddRange(TrainerClassTableExpansion.MovedTableRanges());
@@ -76,7 +76,7 @@ namespace DSPRE.ROMFiles
 
         public static IEnumerable<(long Start, long End)> PlatPatchesBlocks(byte[] data)
         {
-            foreach (var (marker, fixedLength) in PlatPatchesLayouts)
+            foreach ((string marker, int fixedLength) in PlatPatchesLayouts)
                 foreach (int hit in DSUtils.SearchBytes(data, Encoding.ASCII.GetBytes(marker)))
                 {
                     long length = fixedLength;

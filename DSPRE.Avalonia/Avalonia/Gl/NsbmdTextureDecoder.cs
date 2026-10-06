@@ -26,8 +26,8 @@ namespace DSPRE.Avalonia.Gl
             if (m.texdata == null || m.width <= 0 || m.height <= 0) return null;
 
             int pixels = m.width * m.height;
-            var img = new RGBA[pixels];
-            var pal = m.paldata;
+            RGBA[] img = new RGBA[pixels];
+            RGBA[] pal = m.paldata;
 
             try
             {
@@ -92,7 +92,7 @@ namespace DSPRE.Avalonia.Gl
             }
             catch { return null; }
 
-            var rgba = new byte[pixels * 4];
+            byte[] rgba = new byte[pixels * 4];
             for (int k = 0; k < pixels; k++)
             {
                 rgba[k * 4 + 0] = img[k].R;

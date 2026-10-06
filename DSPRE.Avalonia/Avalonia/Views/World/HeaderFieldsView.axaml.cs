@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.World
 {
@@ -53,13 +55,13 @@ namespace DSPRE.Avalonia.Views.World
 
         private void ShowCamera()
         {
-            var vm = VM;
+            HeaderEditorViewModel vm = VM;
             // The Maps workspace is built at startup, before any project is open.
             if (vm == null || !IsAttachedToVisualTree() || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var camera = DSPRE.ROMFiles.FieldCamera.Entry((int)vm.CameraValue, RomInfo.gameFamily);
+            FieldCameraEntry camera = DSPRE.ROMFiles.FieldCamera.Entry((int)vm.CameraValue, RomInfo.gameFamily);
             CameraPreviewBox.ShowWeather((int)vm.WeatherValue);
             // Framed where you arrive by Fly; a place without a fly spot borrows the starting town's.
-            var spots = DSPRE.FlyTable.Spots();
+            List<FlyTable.Spot> spots = DSPRE.FlyTable.Spots();
             int own = spots.FindIndex(s => s.HeaderId == vm.CurrentHeaderId);
             if (own >= 0) CameraPreviewBox.Show(spots[own].HeaderId, camera, (spots[own].X, spots[own].Z));
             else if (spots.Count > 0) CameraPreviewBox.Show(spots[0].HeaderId, camera, (spots[0].X, spots[0].Z));

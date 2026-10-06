@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Data
         private static int TileCapacity(byte[] chr, params byte[][] screens)
         {
             int capacity = NitroBgCodec.TileRoom(chr);
-            foreach (var scr in screens)
+            foreach (byte[] scr in screens)
                 capacity = Math.Min(capacity, NitroBgCodec.EntryBytes(scr) == 1 ? 256 : 1024);
             return capacity;
         }
@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Data
         {
             get
             {
-                foreach (var kv in _backup)
+                foreach (KeyValuePair<int, byte[]> kv in _backup)
                     if (!(_narc.Get(kv.Key) ?? Array.Empty<byte>()).AsSpan().SequenceEqual(kv.Value)) return true;
                 return false;
             }
@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.Data
 
         public void RevertAll()
         {
-            foreach (var kv in _backup) _narc.Put(kv.Key, kv.Value);
+            foreach (KeyValuePair<int, byte[]> kv in _backup) _narc.Put(kv.Key, kv.Value);
             _backup.Clear();
             History.Clear();
         }
@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.Data
 
         private RawImage ComposeCard(int rankIndex, bool front)
         {
-            var m = TrainerCardMembers;
+            (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
             int palId = m.rankPalettes[rankIndex];
             int scrId = front ? m.facaNscr : m.backNscr;
             return ComposeVia(m.ncgr, palId, scrId, transparentZero: false);
@@ -83,8 +83,8 @@ namespace DSPRE.Avalonia.Data
 
         public RawImage ComposeTrainer(bool male)
         {
-            var t = TrainerCardTrainerMembers;
-            var m = TrainerCardMembers;
+            (int ncgr, int maleNscr, int femaleNscr) t = TrainerCardTrainerMembers;
+            (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
             int scrId = male ? t.maleNscr : t.femaleNscr;
             return ComposeVia(t.ncgr, m.rankPalettes[0], scrId, transparentZero: true);
         }
@@ -106,7 +106,7 @@ namespace DSPRE.Avalonia.Data
 
         private static RawImage ToRawImage(NitroBgCodec.BgImage bg)
         {
-            var raw = new RawImage(bg.Width, bg.Height);
+            RawImage raw = new RawImage(bg.Width, bg.Height);
             byte[] src = bg.Rgba, dst = raw.Bgra;
             for (int i = 0; i + 3 < src.Length; i += 4)
             { dst[i] = src[i + 2]; dst[i + 1] = src[i + 1]; dst[i + 2] = src[i]; dst[i + 3] = src[i + 3]; }
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.Data
             if (png.Width != CardWidth || png.Height != CardHeight)
                 return $"Image must be exactly {CardWidth}x{CardHeight} (got {png.Width}x{png.Height}).";
 
-            var m = TrainerCardMembers;
+            (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
             byte[] chrRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.ncgr));
             byte[] facaRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.facaNscr));
             byte[] backRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.backNscr));
@@ -151,11 +151,11 @@ namespace DSPRE.Avalonia.Data
                 return $"Combined front + back design needs {total} colours, only 256 are available.";
 
             int backBase = frontTiles.Colors.Count;
-            var palette = new (byte r, byte g, byte b)[256];
+            (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < frontTiles.Colors.Count; i++) palette[i] = frontTiles.Colors[i];
             for (int i = 0; i < backTiles.Colors.Count; i++) palette[backBase + i] = backTiles.Colors[i];
 
-            var merged = MergeTilePools(frontTiles, backTiles, backBase, capacity, reserveZero: false);
+            MergedTiles merged = MergeTilePools(frontTiles, backTiles, backBase, capacity, reserveZero: false);
             if (merged == null)
                 return $"Front + back design needs more than {capacity} unique 8x8 tiles once deduplicated. Simplify the images.";
 
@@ -188,8 +188,8 @@ namespace DSPRE.Avalonia.Data
             if (png.Width != TrainerWidth || png.Height != TrainerHeight)
                 return $"Image must be exactly {TrainerWidth}x{TrainerHeight} (got {png.Width}x{png.Height}).";
 
-            var t = TrainerCardTrainerMembers;
-            var m = TrainerCardMembers;
+            (int ncgr, int maleNscr, int femaleNscr) t = TrainerCardTrainerMembers;
+            (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) m = TrainerCardMembers;
             byte[] chrRaw = NitroBgCodec.Inflate(GetAndSnapshot(t.ncgr));
             byte[] maleRaw = NitroBgCodec.Inflate(GetAndSnapshot(t.maleNscr));
             byte[] femaleRaw = NitroBgCodec.Inflate(GetAndSnapshot(t.femaleNscr));
@@ -217,11 +217,11 @@ namespace DSPRE.Avalonia.Data
                 return $"Combined male + female pose needs {total} colours, only 256 are available.";
 
             int femaleBase = 1 + maleTiles.Colors.Count;
-            var palette = new (byte r, byte g, byte b)[256];
+            (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < maleTiles.Colors.Count; i++) palette[1 + i] = maleTiles.Colors[i];
             for (int i = 0; i < femaleTiles.Colors.Count; i++) palette[femaleBase + i] = femaleTiles.Colors[i];
 
-            var merged = MergeTilePools(maleTiles, femaleTiles, femaleBase, capacity, reserveZero: true);
+            MergedTiles merged = MergeTilePools(maleTiles, femaleTiles, femaleBase, capacity, reserveZero: true);
             if (merged == null)
                 return $"Male + female pose needs more than {capacity} unique 8x8 tiles once deduplicated. Simplify the images.";
 
@@ -272,9 +272,9 @@ namespace DSPRE.Avalonia.Data
             int tileCapacity, int maxColors, bool reserveZero = false)
         {
             int w = tileCols * 8, h = tileRows * 8;
-            var colorToIndex = new Dictionary<int, byte>();
-            var colors = new List<(byte, byte, byte)>();
-            var raster = new byte[w * h];
+            Dictionary<int, byte> colorToIndex = new Dictionary<int, byte>();
+            List<(byte, byte, byte)> colors = new List<(byte, byte, byte)>();
+            byte[] raster = new byte[w * h];
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
@@ -300,9 +300,9 @@ namespace DSPRE.Avalonia.Data
                     raster[y * w + x] = v;
                 }
 
-            var tileList = new List<byte[]>();
-            var tileLookup = new Dictionary<string, int>();
-            var mapEntries = new ushort[tileCols * tileRows];
+            List<byte[]> tileList = new List<byte[]>();
+            Dictionary<string, int> tileLookup = new Dictionary<string, int>();
+            ushort[] mapEntries = new ushort[tileCols * tileRows];
             for (int ty = 0; ty < tileRows; ty++)
                 for (int tx = 0; tx < tileCols; tx++)
                 {
@@ -320,7 +320,7 @@ namespace DSPRE.Avalonia.Data
                     mapEntries[ty * tileCols + tx] = (ushort)tileIndex;
                 }
 
-            var tileData = new byte[tileCapacity * 64];
+            byte[] tileData = new byte[tileCapacity * 64];
             for (int i = 0; i < tileList.Count; i++)
                 Array.Copy(tileList[i], 0, tileData, i * 64, 64);
 
@@ -332,17 +332,17 @@ namespace DSPRE.Avalonia.Data
         private static MergedTiles MergeTilePools(EncodedTiles first, EncodedTiles second, int secondShift,
             int tileCapacity, bool reserveZero)
         {
-            var tileList = new List<byte[]>();
-            var tileLookup = new Dictionary<string, int>();
+            List<byte[]> tileList = new List<byte[]>();
+            Dictionary<string, int> tileLookup = new Dictionary<string, int>();
 
             ushort[] AddPool(EncodedTiles pool, int shift)
             {
                 int count = pool.MapEntries.Length;
-                var outEntries = new ushort[count];
+                ushort[] outEntries = new ushort[count];
                 for (int i = 0; i < count; i++)
                 {
                     int oldIndex = pool.MapEntries[i];
-                    var block = new byte[64];
+                    byte[] block = new byte[64];
                     Array.Copy(pool.TileData, oldIndex * 64, block, 0, 64);
                     if (shift != 0)
                         for (int b = 0; b < 64; b++)
@@ -366,7 +366,7 @@ namespace DSPRE.Avalonia.Data
             ushort[] backEntries = AddPool(second, secondShift);
             if (backEntries == null) return null;
 
-            var tileData = new byte[tileCapacity * 64];
+            byte[] tileData = new byte[tileCapacity * 64];
             for (int i = 0; i < tileList.Count; i++)
                 Array.Copy(tileList[i], 0, tileData, i * 64, 64);
 
@@ -375,7 +375,7 @@ namespace DSPRE.Avalonia.Data
 
         private static byte[] PackTile8bpp(byte[] raster, int w, int tx, int ty)
         {
-            var block = new byte[64];
+            byte[] block = new byte[64];
             for (int py = 0; py < 8; py++)
                 for (int px = 0; px < 8; px++)
                     block[py * 8 + px] = raster[(ty * 8 + py) * w + (tx * 8 + px)];
@@ -388,7 +388,7 @@ namespace DSPRE.Avalonia.Data
             int dataOffset = pltt + 0x18;
             for (int i = 0; i < palette.Length && dataOffset + i * 2 + 1 < palRaw.Length; i++)
             {
-                var (r, g, b) = palette[i];
+                (byte r, byte g, byte b) = palette[i];
                 ushort c = (ushort)(((r >> 3) & 0x1F) | (((g >> 3) & 0x1F) << 5) | (((b >> 3) & 0x1F) << 10));
                 palRaw[dataOffset + i * 2] = (byte)(c & 0xFF);
                 palRaw[dataOffset + i * 2 + 1] = (byte)(c >> 8);

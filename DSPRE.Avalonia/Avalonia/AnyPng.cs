@@ -23,7 +23,7 @@ namespace DSPRE.Avalonia
 
             int pos = 8, w = 0, h = 0, depth = 0, colour = -1, interlace = 0;
             byte[] plte = null, trns = null;
-            using var idat = new MemoryStream();
+            using MemoryStream idat = new MemoryStream();
 
             while (pos + 8 <= file.Length)
             {
@@ -65,8 +65,8 @@ namespace DSPRE.Avalonia
             try
             {
                 idat.Position = 0;
-                using var zlib = new ZLibStream(idat, CompressionMode.Decompress);
-                using var outMs = new MemoryStream();
+                using ZLibStream zlib = new ZLibStream(idat, CompressionMode.Decompress);
+                using MemoryStream outMs = new MemoryStream();
                 zlib.CopyTo(outMs);
                 raw = outMs.ToArray();
             }
@@ -78,13 +78,13 @@ namespace DSPRE.Avalonia
             if ((long)h * (stride + 1) > raw.Length)
             { whynot = "That PNG stops partway through its pixels."; return false; }
 
-            var lines = new byte[h * stride];
-            var prev = new byte[stride];
+            byte[] lines = new byte[h * stride];
+            byte[] prev = new byte[stride];
             int rp = 0;
             for (int y = 0; y < h; y++)
             {
                 byte kind = raw[rp++];
-                var cur = new byte[stride];
+                byte[] cur = new byte[stride];
                 Array.Copy(raw, rp, cur, 0, stride);
                 rp += stride;
                 IndexedPng.Unfilter(kind, cur, prev, filterStep);

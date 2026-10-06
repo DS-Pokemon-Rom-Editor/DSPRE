@@ -31,13 +31,13 @@ namespace DSPRE.HgEngine
         /// Unrecognized slot text is skipped rather than guessed; a save refuses such an entry.</summary>
         public static Dictionary<string, List<FormSlot>> LoadAll()
         {
-            var result = new Dictionary<string, List<FormSlot>>(StringComparer.Ordinal);
+            Dictionary<string, List<FormSlot>> result = new Dictionary<string, List<FormSlot>>(StringComparer.Ordinal);
             if (!HgEngineProject.IsLinked) return result;
             string text = ReadSource(RelPath);
             if (text == null) return result;
-            var table = Table(text);
+            CDeclaration table = Table(text);
             if (table == null) return result;
-            foreach (var entry in table.Init.Items)
+            foreach (CInitItem entry in table.Init.Items)
                 if (entry.IndexText != null && entry.List != null) result[entry.IndexText.Trim()] = ParseSlots(text, entry.List, out _);
             return result;
         }
@@ -48,15 +48,15 @@ namespace DSPRE.HgEngine
 
         private static List<FormSlot> ParseSlots(string text, CInitList list, out bool complete)
         {
-            var slots = new List<FormSlot>();
+            List<FormSlot> slots = new List<FormSlot>();
             complete = true;
-            foreach (var item in list.Items)
+            foreach (CInitItem item in list.Items)
             {
                 string raw = item.ValueText(text).Trim();
                 if (item.IsConditional) { complete = false; continue; }
-                var withReversion = Regex.Match(raw, @"^NEEDS_REVERSION\s*\|\s*(SPECIES_\w+)$");
+                Match withReversion = Regex.Match(raw, @"^NEEDS_REVERSION\s*\|\s*(SPECIES_\w+)$");
                 if (withReversion.Success) { slots.Add(new FormSlot(true, withReversion.Groups[1].Value)); continue; }
-                var plain = Regex.Match(raw, @"^(SPECIES_\w+)$");
+                Match plain = Regex.Match(raw, @"^(SPECIES_\w+)$");
                 if (plain.Success) { slots.Add(new FormSlot(false, plain.Groups[1].Value)); continue; }
                 complete = false;   // unrecognized: skipped, never guessed
             }
@@ -76,9 +76,9 @@ namespace DSPRE.HgEngine
             if (form <= 0 || !HgEngineProject.IsActive) return speciesId;
             return ResolveFormSpecies(speciesId, form, (baseId, formNo) =>
             {
-                var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+                HgEngineSymbolTable speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
                 if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseId, "SPECIES_", out string designator)) return 0;
-                if (!LoadAll().TryGetValue(designator, out var slots) || formNo - 1 >= slots.Count) return 0;
+                if (!LoadAll().TryGetValue(designator, out List<FormSlot> slots) || formNo - 1 >= slots.Count) return 0;
                 return speciesTable.TryGetValue(slots[formNo - 1].SpeciesSymbol, out int id) ? id : 0;
             });
         }
@@ -106,20 +106,20 @@ namespace DSPRE.HgEngine
             if (desiredSlots.Count > MaxFormSlots) { error = $"A species can have at most {MaxFormSlots} forms."; return false; }
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
 
-            var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
             if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseSpeciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {baseSpeciesId}."; return false; }
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, RelPath.Replace('/', Path.DirectorySeparatorChar));
             string text = ReadSource(RelPath);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
-            var table = Table(text);
+            CDeclaration table = Table(text);
             if (table == null) { error = $"{RelPath} has no form table."; return false; }
 
             string body = string.Concat(desiredSlots.Select(s =>
                 "\n        " + (s.NeedsReversion ? "NEEDS_REVERSION | " : "") + s.SpeciesSymbol + ","));
 
-            var entry = table.Init.Items.FirstOrDefault(i => i.IndexText != null && i.List != null
+            CInitItem entry = table.Init.Items.FirstOrDefault(i => i.IndexText != null && i.List != null
                 && (i.IndexText.Trim() == designator || (speciesTable.TryGetValue(i.IndexText.Trim(), out int v) && v == baseSpeciesId)));
             if (entry != null)
             {
@@ -135,9 +135,9 @@ namespace DSPRE.HgEngine
 
             if (!HgEngineVerifiedWrite.TryWrite(path, RelPath, text, written =>
                 {
-                    var back = Table(written)?.Init.Items.FirstOrDefault(i => i.IndexText?.Trim() == designator || (entry != null && i.IndexText?.Trim() == entry.IndexText.Trim()));
+                    CInitItem back = Table(written)?.Init.Items.FirstOrDefault(i => i.IndexText?.Trim() == designator || (entry != null && i.IndexText?.Trim() == entry.IndexText.Trim()));
                     if (back?.List == null) return "the entry is missing";
-                    var slots = ParseSlots(written, back.List, out bool ok);
+                    List<FormSlot> slots = ParseSlots(written, back.List, out bool ok);
                     return ok && slots.Select(x => (x.NeedsReversion, x.SpeciesSymbol)).SequenceEqual(desiredSlots.Select(x => (x.NeedsReversion, x.SpeciesSymbol))) ? null : "the forms differ";
                 }, out error)) return false;
             return MapFormsToBase(designator, desiredSlots, speciesTable, out error);
@@ -157,12 +157,12 @@ namespace DSPRE.HgEngine
             if (text == null || !species.TryGetValue("SPECIES_MEGA_START", out int megaStart)) return true;
             int? Index(string designator) => HgEngineSourceExpression.TryEvaluate(designator, n => species.TryGetValue(n, out int v) ? v : null, out int i) ? i : null;
             string original = text;
-            foreach (var slot in slots)
+            foreach (FormSlot slot in slots)
             {
                 if (!species.TryGetValue(slot.SpeciesSymbol, out int id) || id < megaStart) continue;
-                var table = Table(text);
+                CDeclaration table = Table(text);
                 if (table == null) { error = $"{MappingRelPath} has no table."; return false; }
-                var entry = table.Init.Items.FirstOrDefault(i => i.IndexText != null && Index(i.IndexText) == id - megaStart);
+                CInitItem entry = table.Init.Items.FirstOrDefault(i => i.IndexText != null && Index(i.IndexText) == id - megaStart);
                 if (entry != null)
                 {
                     if (entry.ValueText(text).Trim() != baseDesignator)
@@ -175,11 +175,11 @@ namespace DSPRE.HgEngine
             species.TryGetValue(baseDesignator, out int baseId);
             return HgEngineVerifiedWrite.TryWrite(path, MappingRelPath, text, written =>
             {
-                var table = Table(written);
-                foreach (var slot in slots)
+                CDeclaration table = Table(written);
+                foreach (FormSlot slot in slots)
                 {
                     if (!species.TryGetValue(slot.SpeciesSymbol, out int id) || id < megaStart) continue;
-                    var e = table?.Init.Items.FirstOrDefault(i => i.IndexText != null && Index(i.IndexText) == id - megaStart);
+                    CInitItem e = table?.Init.Items.FirstOrDefault(i => i.IndexText != null && Index(i.IndexText) == id - megaStart);
                     if (e == null || Index(e.ValueText(written)) != baseId) return $"{slot.SpeciesSymbol} doesn't map to {baseDesignator}";
                 }
                 return null;

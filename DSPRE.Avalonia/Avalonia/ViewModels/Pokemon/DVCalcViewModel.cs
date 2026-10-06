@@ -92,9 +92,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string[] pokeNames = GetPokemonNames();
             for (int i = 0; i < party.Count; i++)
             {
-                var p = party[i];
+                (int pokeId, int level, int genderIndex, int abilityIndex, int dv) p = party[i];
                 string label = (p.pokeId >= 0 && p.pokeId < pokeNames.Length ? pokeNames[p.pokeId] : "?") + " Lv. " + p.level;
-                var slot = new DVCalcSlotViewModel(i, p.pokeId, p.level, p.genderIndex, p.abilityIndex, p.dv, true, flagsEditable, label);
+                DVCalcSlotViewModel slot = new DVCalcSlotViewModel(i, p.pokeId, p.level, p.genderIndex, p.abilityIndex, p.dv, true, flagsEditable, label);
                 slot.Changed += (s, e) => UpdateNatures();
                 Slots.Add(slot);
             }
@@ -104,7 +104,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void UpdateNatures()
         {
             DVCalculator.ResetGenderMod(_maleTrainer);
-            foreach (var slot in Slots)
+            foreach (DVCalcSlotViewModel slot in Slots)
             {
                 try
                 {
@@ -131,8 +131,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
             }
 
-            var slot = Slots[index];
-            var triplets = DVCalculator.getAllNatures(_trainerId, _trainerClass, (uint)slot.PokeId, (byte)slot.Level,
+            DVCalcSlotViewModel slot = Slots[index];
+            List<DVIVNatureTriplet> triplets = DVCalculator.getAllNatures(_trainerId, _trainerClass, (uint)slot.PokeId, (byte)slot.Level,
                 new PokemonPersonalData(slot.PokeId).genderVec, slot.GenderIndex, slot.AbilityIndex);
 
             if (highestOnly) DVCalculator.filterHighestDV(ref triplets);

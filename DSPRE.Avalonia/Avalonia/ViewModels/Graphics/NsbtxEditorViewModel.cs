@@ -204,13 +204,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     StatusText = $"Pack {index}: no texture set.";
                     return;
                 }
-                using (var ms = new MemoryStream(raw))
+                using (MemoryStream ms = new MemoryStream(raw))
                     NSBTXLoader.LoadNsbtx(ms, out _textures, out _palettes);
 
                 _suppress = true;
                 TextureNames.Clear(); PaletteNames.Clear();
-                foreach (var t in _textures) TextureNames.Add(string.IsNullOrEmpty(t.texname) ? $"Texture {TextureNames.Count}" : t.texname);
-                foreach (var p in _palettes) PaletteNames.Add(string.IsNullOrEmpty(p.palname) ? $"Palette {PaletteNames.Count}" : p.palname);
+                foreach (NSBMDTexture t in _textures) TextureNames.Add(string.IsNullOrEmpty(t.texname) ? $"Texture {TextureNames.Count}" : t.texname);
+                foreach (NSBMDPalette p in _palettes) PaletteNames.Add(string.IsNullOrEmpty(p.palname) ? $"Palette {PaletteNames.Count}" : p.palname);
                 _suppress = false;
 
                 _textureIndex = TextureNames.Count > 0 ? 0 : -1;
@@ -257,7 +257,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             try
             {
-                var tex = _textures[_textureIndex];
+                NSBMDTexture tex = _textures[_textureIndex];
                 NSBMDPalette pal = _paletteIndex >= 0 && _paletteIndex < _palettes.Count
                     ? _palettes[_paletteIndex] : null;
                 if (tex.format != 7 && pal == null)
@@ -265,13 +265,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     PreviewReason = "This indexed texture needs a palette, but this pack contains none.";
                     return;
                 }
-                var mat = new NSBMDMaterial
+                NSBMDMaterial mat = new NSBMDMaterial
                 {
                     format = tex.format, width = tex.width, height = tex.height,
                     texdata = tex.texdata, spdata = tex.spdata, color0 = tex.color0,
                     paldata = pal?.paldata,
                 };
-                var decoded = NsbmdTextureDecoder.Decode(mat);
+                NsbmdTextureData decoded = NsbmdTextureDecoder.Decode(mat);
                 Preview = decoded != null ? RgbaToBitmap(decoded.Rgba, decoded.Width, decoded.Height) : null;
                 PreviewReason = decoded == null
                     ? "This texture is malformed or uses data the preview cannot decode." : "";
@@ -287,8 +287,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private static Bitmap RgbaToBitmap(byte[] rgba, int w, int h)
         {
             if (rgba == null || w <= 0 || h <= 0) return null;
-            var wb = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using (var fb = wb.Lock())
+            WriteableBitmap wb = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
+            using (ILockedFramebuffer fb = wb.Lock())
             {
                 int srcStride = w * 4, dstStride = fb.RowBytes;
                 if (dstStride == srcStride) Marshal.Copy(rgba, 0, fb.Address, Math.Min(rgba.Length, dstStride * h));
@@ -335,8 +335,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<Dictionary<string, byte[]>>(state);
-            foreach (var path in _historyOriginals.Keys)
+            Dictionary<string, byte[]> s = DSPRE.Avalonia.UndoJson.Read<Dictionary<string, byte[]>>(state);
+            foreach (string path in _historyOriginals.Keys)
             {
                 byte[] want = s.TryGetValue(path, out byte[] b) ? b : _historyOriginals[path];
                 try { if (want == null) { if (File.Exists(path)) File.Delete(path); } else File.WriteAllBytes(path, want); }
@@ -371,7 +371,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
         public void DiscardChanges()
         {
-            foreach (var (path, bytes) in _originals)
+            foreach ((string path, byte[] bytes) in _originals)
             {
                 try { if (bytes == null) { if (File.Exists(path)) File.Delete(path); } else File.WriteAllBytes(path, bytes); }
                 catch (Exception ex) { AppLogger.Error("Texture pack discard: " + ex.Message); }
@@ -434,7 +434,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public async Task ExportAsync()
         {
             if (_packIndex < 0) return;
-            var filter = new FilePickerFileType("NSBTX texture pack") { Patterns = new[] { "*.nsbtx", "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("NSBTX texture pack") { Patterns = new[] { "*.nsbtx", "*.bin" } };
             string suggested = $"Texture Pack {_packIndex}.nsbtx";
             string path = await DialogHelper.SaveFile(_owner, "Export texture pack", new[] { filter }, suggested);
             if (path == null) return;
@@ -445,7 +445,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public async Task ImportAsync()
         {
             if (_packIndex < 0) return;
-            var filter = new FilePickerFileType("NSBTX texture pack") { Patterns = new[] { "*.nsbtx", "*.bin", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("NSBTX texture pack") { Patterns = new[] { "*.nsbtx", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import texture pack", new[] { filter });
             if (path == null) return;
             try

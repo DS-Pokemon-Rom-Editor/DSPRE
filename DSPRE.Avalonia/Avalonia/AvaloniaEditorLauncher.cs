@@ -6,6 +6,9 @@ using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 using System.Linq;
+using Avalonia.Controls;
+using System.Text.RegularExpressions;
+using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia
 {
@@ -45,7 +48,7 @@ namespace DSPRE.Avalonia
         {
             try
             {
-                var all = names();
+                string[] all = names();
                 return index >= 0 && index < all.Length && !string.IsNullOrWhiteSpace(all[index]) ? " at " + all[index].Trim() : "";
             }
             catch { return ""; }
@@ -75,7 +78,7 @@ namespace DSPRE.Avalonia
                 catch { names = System.Array.Empty<string>(); }
 
                 await System.Threading.Tasks.Task.Yield();
-                var vm = new ViewModels.Audio.AudioEditorViewModel(names);
+                AudioEditorViewModel vm = new ViewModels.Audio.AudioEditorViewModel(names);
                 if (showCryFor > 0) vm.ShowCryFor(showCryFor);
                 new Views.Audio.AudioEditorView(vm).ShowManaged();
             }
@@ -106,7 +109,7 @@ namespace DSPRE.Avalonia
                 string[] moveNames = GetAttackNames();
 
                 int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Length - 1));
-                var vm = new PokemonEditorViewModel(fullList, moveNames, initialMon: mon);
+                PokemonEditorViewModel vm = new PokemonEditorViewModel(fullList, moveNames, initialMon: mon);
                 new PokemonEditorView(vm).ShowManaged();
             }
             catch (System.Exception ex)
@@ -121,7 +124,7 @@ namespace DSPRE.Avalonia
         public static void OpenHgEngineFormEditor()
         {
             if (Refused("HgEngineFormEditorView")) return;
-            var vm = new HgEngineFormEditorViewModel(GetPokemonNames());
+            HgEngineFormEditorViewModel vm = new HgEngineFormEditorViewModel(GetPokemonNames());
             new HgEngineFormEditorView(vm).ShowManaged();
         }
 
@@ -149,7 +152,7 @@ namespace DSPRE.Avalonia
             {
                 await RunBusyAsync("Opening Move Data Editor" + (initialIndex > 0 ? At(GetAttackNames, initialIndex) : "") + "…", "Reading every move.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData }));
-                var view = new MoveDataEditorView();
+                MoveDataEditorView view = new MoveDataEditorView();
                 if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
                     vm.SelectedMoveIndex = initialIndex;   // setter clamps + loads
                 view.ShowManaged();
@@ -163,7 +166,7 @@ namespace DSPRE.Avalonia
         public static void OpenTMEditor(int initialIndex = 0)
         {
             if (Refused("TMEditorView")) return;
-            var view = new TMEditorView();
+            TMEditorView view = new TMEditorView();
             if (initialIndex > 0 && view.DataContext is TMEditorViewModel vm)
                 vm.SelectedMachineIndex = initialIndex;   // setter loads the machine
             view.ShowManaged();
@@ -181,8 +184,8 @@ namespace DSPRE.Avalonia
         {
             // Refused too while hg-engine builds the particle archive, which has no source view yet.
             if (Refused("BattleScriptEditorView")) return;
-            var vm = new BattleScriptEditorViewModel();
-            var view = new BattleScriptEditorView { DataContext = vm };
+            BattleScriptEditorViewModel vm = new BattleScriptEditorViewModel();
+            BattleScriptEditorView view = new BattleScriptEditorView { DataContext = vm };
             if (vm.IsAvailable)
             {
                 vm.ArchiveIndex = System.Math.Clamp(archive, 0, 3);   // setter rebuilds the entry list
@@ -203,7 +206,7 @@ namespace DSPRE.Avalonia
                 await RunBusyAsync("Opening Item Editor" + (initialIndex > 1 ? At(GetItemNames, initialIndex) : "") + "…", "Reading every item and its icon.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData }));
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
-                var vm = new ItemEditorViewModel(GetItemNames());
+                ItemEditorViewModel vm = new ItemEditorViewModel(GetItemNames());
                 if (initialIndex > 0) vm.SelectedItemIndex = System.Math.Clamp(initialIndex, 0, vm.MaxItemIndex);
                 new ItemEditorView(vm).ShowManaged();
             }
@@ -224,7 +227,7 @@ namespace DSPRE.Avalonia
             if (Refused("MartEditorView")) return;
             try
             {
-                var vm = new MartEditorViewModel(MartData.LoadCurrent(), GetItemNames());
+                MartEditorViewModel vm = new MartEditorViewModel(MartData.LoadCurrent(), GetItemNames());
                 new EditorHostWindow("Mart editor", new MartEditorView(vm), 980, 700).ShowManaged();
             }
             catch (System.Exception ex)
@@ -244,7 +247,7 @@ namespace DSPRE.Avalonia
             {
                 await RunBusyAsync("Opening Trade Editor…", "Reading the in-game trades.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData }));
-                var view = new TradeEditorView();
+                TradeEditorView view = new TradeEditorView();
                 if (initialIndex > 0 && view.DataContext is TradeEditorViewModel vm)
                     _ = vm.ChangeTradeIDAsync(initialIndex);   // async load; freshly opened editor isn't dirty
                 view.ShowManaged();
@@ -300,7 +303,7 @@ namespace DSPRE.Avalonia
         public static string GoToScript(int scriptNumber, System.Func<int> pairedScriptFile, out bool opened)
         {
             opened = false;
-            var result = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            CommonScriptId.Result result = CommonScriptId.Resolve(gameFamily, scriptNumber);
             if (result.Kind == CommonScriptId.Kind.Discrepancy)
                 return $"Script {scriptNumber} is a Common Script in an ambiguous range ({result.RangeLower}-{result.RangeUpper}); it is one of: {string.Join(", ", result.CandidateArchives)}.";
             if (result.Kind == CommonScriptId.Kind.Resolved)
@@ -352,9 +355,9 @@ namespace DSPRE.Avalonia
             // Before anything reads the ROM: loading a table can decompress its overlay.
             if (Refused(typeof(TView).Name)) return;
             // Two windows on one table would each keep their own saved copy and overwrite each other.
-            var open = (global::Avalonia.Application.Current?.ApplicationLifetime
+            IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
                         as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
-            var already = open?.OfType<EditorHostWindow>().FirstOrDefault(w => w.Content is TView);
+            EditorHostWindow already = open?.OfType<EditorHostWindow>().FirstOrDefault(w => w.Content is TView);
             if (already != null)
             {
                 if (already.WindowState == global::Avalonia.Controls.WindowState.Minimized) already.WindowState = global::Avalonia.Controls.WindowState.Normal;
@@ -364,7 +367,7 @@ namespace DSPRE.Avalonia
             try
             {
                 if (whyNot() is string why) { _ = DialogHelper.ShowInfo(why, title); return; }
-                var window = new EditorHostWindow(title, make(), width, height)
+                EditorHostWindow window = new EditorHostWindow(title, make(), width, height)
                 {
                     MinWidth = System.Math.Min(width, minWidth),
                     MinHeight = System.Math.Min(height, minHeight),
@@ -419,8 +422,8 @@ namespace DSPRE.Avalonia
             {
                 await RunBusyAsync("Opening TM/HM Bulk Editor…", "Reading which Pokémon learn each TM and HM.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions }));
-                var vm = new TmHmBulkEditorViewModel(GetPokemonNames());
-                var window = new EditorHostWindow("TM/HM bulk editor", new TmHmBulkEditorView(vm), 1050, 700);
+                TmHmBulkEditorViewModel vm = new TmHmBulkEditorViewModel(GetPokemonNames());
+                EditorHostWindow window = new EditorHostWindow("TM/HM bulk editor", new TmHmBulkEditorView(vm), 1050, 700);
                 window.Closed += (_, _) => vm.Detach();
                 window.ShowManaged();
             }
@@ -457,15 +460,15 @@ namespace DSPRE.Avalonia
                 // needs Detach at all, matching every other embedded-editor VM's lifetime).
                 if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
                 {
-                    var vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
-                    var window = new EditorHostWindow("Wild Pokémon editor (DPPt)", new WildEditorDPPtView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
+                    WildEditorDPPtViewModel vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
+                    EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor (DPPt)", new WildEditorDPPtView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
                     window.Closed += (_, _) => vm.Detach();
                     window.ShowManaged();
                 }
                 else
                 {
-                    var vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
-                    var window = new EditorHostWindow("Wild Pokémon editor (HGSS)", new WildEditorHGSSView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
+                    WildEditorHGSSViewModel vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
+                    EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor (HGSS)", new WildEditorHGSSView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
                     window.Closed += (_, _) => vm.Detach();
                     window.ShowManaged();
                 }
@@ -480,8 +483,8 @@ namespace DSPRE.Avalonia
         {
             if (!IsRomLoaded) return;
             if (BringForward<HeaderEditorView, HeaderEditorViewModel>(vm => { if (initialIndex >= 0) vm.GoToHeader(initialIndex); })) return;
-            var model = new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex };
-            var window = new EditorHostWindow("Header editor", new HeaderEditorView(model));
+            HeaderEditorViewModel model = new HeaderEditorViewModel(true) { InitialHeaderId = initialIndex };
+            EditorHostWindow window = new EditorHostWindow("Header editor", new HeaderEditorView(model));
             window.Closed += (_, _) => model.Detach();
             window.ShowManaged();
         }
@@ -489,9 +492,9 @@ namespace DSPRE.Avalonia
         // Each copy of these windows saves everything it shows, so a second one would save over the first.
         private static bool BringForwardWindow<TWindow>() where TWindow : global::Avalonia.Controls.Window
         {
-            var open = (global::Avalonia.Application.Current?.ApplicationLifetime
+            IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
                         as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
-            var window = open?.OfType<TWindow>().FirstOrDefault();
+            TWindow window = open?.OfType<TWindow>().FirstOrDefault();
             if (window == null) return false;
             if (window.WindowState == global::Avalonia.Controls.WindowState.Minimized) window.WindowState = global::Avalonia.Controls.WindowState.Normal;
             window.Activate();
@@ -501,9 +504,9 @@ namespace DSPRE.Avalonia
         // One standalone window per world editor, since a second copy of the same file would go stale and save over the first.
         private static bool BringForward<TView, TModel>(System.Action<TModel> goTo) where TModel : class
         {
-            var open = (global::Avalonia.Application.Current?.ApplicationLifetime
+            IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
                         as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
-            var host = open?.OfType<EditorHostWindow>().FirstOrDefault(w => w.Content is TView);
+            EditorHostWindow host = open?.OfType<EditorHostWindow>().FirstOrDefault(w => w.Content is TView);
             if (host == null) return false;
             if (host.WindowState == global::Avalonia.Controls.WindowState.Minimized) host.WindowState = global::Avalonia.Controls.WindowState.Normal;
             host.Activate();
@@ -584,7 +587,7 @@ namespace DSPRE.Avalonia
             {
                 await RunBusyAsync("Opening Trainer Sprite Editor…", "Reading the trainer class sprites.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics }));
-                var window = new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex));
+                TrainerSpriteEditorView window = new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex));
                 if (closed != null) window.Closed += (_, _) => closed();
                 window.ShowManaged();
             }
@@ -740,7 +743,7 @@ namespace DSPRE.Avalonia
             {
                 // Reading every archive to find the animations takes a moment, so the looking happens
                 // behind the busy overlay. The window itself is built here, on the thread that owns it.
-                var vm = new ViewModels.Graphics.CellAnimationPickerViewModel();
+                CellAnimationPickerViewModel vm = new ViewModels.Graphics.CellAnimationPickerViewModel();
                 await RunBusyAsync("Looking for animations…",
                                    "Reading every archive in the ROM.", vm.Gather);
                 vm.Ready();
@@ -787,7 +790,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                var vm = new ViewModels.Graphics.CellAnimationEditorViewModel(
+                CellAnimationEditorViewModel vm = new ViewModels.Graphics.CellAnimationEditorViewModel(
                     source, animation, cells, sprites, palette, paletteRow, what, sharedSheet, poketchApp);
                 new Views.Graphics.CellAnimationEditorView(vm).ShowManaged();
             }
@@ -809,10 +812,10 @@ namespace DSPRE.Avalonia
 
             // A second window on the same screen would leave two views of one thing, each able to edit it.
             // So an open one is brought forward and pointed at the application asked for instead.
-            var open = (global::Avalonia.Application.Current?.ApplicationLifetime
+            IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
                         as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)
                        ?.Windows;
-            var already = open == null ? null
+            BottomScreenEditorView already = open == null ? null
                 : System.Linq.Enumerable.FirstOrDefault(
                     System.Linq.Enumerable.OfType<BottomScreenEditorView>(open));
             if (already != null)
@@ -822,7 +825,7 @@ namespace DSPRE.Avalonia
                 return;
             }
 
-            var view = new BottomScreenEditorView();
+            BottomScreenEditorView view = new BottomScreenEditorView();
             ShowPoketchApp(view, poketchApp);
             view.ShowManaged();
         }
@@ -878,7 +881,7 @@ namespace DSPRE.Avalonia
             if (Refused("ParticleEditorView")) return;
             try
             {
-                var vm = new ViewModels.Graphics.ParticleEditorViewModel(source, entry, what, changed, orthographic);
+                ParticleEditorViewModel vm = new ViewModels.Graphics.ParticleEditorViewModel(source, entry, what, changed, orthographic);
                 new Views.Graphics.ParticleEditorView(vm).ShowManaged();
             }
             catch (System.Exception ex)
@@ -896,7 +899,7 @@ namespace DSPRE.Avalonia
             if (Refused("ParticleLibraryView")) return;
             try
             {
-                var vm = new ViewModels.Graphics.ParticleLibraryViewModel();
+                ParticleLibraryViewModel vm = new ViewModels.Graphics.ParticleLibraryViewModel();
                 await RunBusyAsync("Looking for particles…", "Reading every archive in the ROM.", () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> {
@@ -938,7 +941,7 @@ namespace DSPRE.Avalonia
                 SetMonIconsPalTableAddress();
 
                 string[] names = GetPokemonNamesWithForms(GetPersonalFilesCount());
-                var vm = new ViewModels.Graphics.BallCapsuleEditorViewModel(names) { UsedBy = usedBy };
+                BallCapsuleEditorViewModel vm = new ViewModels.Graphics.BallCapsuleEditorViewModel(names) { UsedBy = usedBy };
                 if (trainerCapsule > 0) vm.CapsuleIndex = trainerCapsule;
                 new Views.Graphics.BallCapsuleEditorView(vm).ShowManaged();
             }
@@ -978,8 +981,8 @@ namespace DSPRE.Avalonia
         public static void OpenMapEditor(int mapIndex = -1)
         {
             if (!IsRomLoaded) return;
-            var vm = new MapEditorViewModel(true) { InitialMapIndex = mapIndex };
-            var window = new EditorHostWindow("Map editor", new MapEditorView(vm), 1200, 720);
+            MapEditorViewModel vm = new MapEditorViewModel(true) { InitialMapIndex = mapIndex };
+            EditorHostWindow window = new EditorHostWindow("Map editor", new MapEditorView(vm), 1200, 720);
             window.Closed += (_, _) => vm.Detach();
             window.ShowManaged();
         }
@@ -994,8 +997,8 @@ namespace DSPRE.Avalonia
         {
             if (!IsRomLoaded) return;
             if (BringForward<MatrixEditorView, MatrixEditorViewModel>(vm => { vm.SelectedMatrixIndex = initialIndex; vm.FocusHeader = focusHeader; })) return;
-            var model = new MatrixEditorViewModel(true) { InitialIndex = initialIndex, FocusHeader = focusHeader };
-            var window = new EditorHostWindow("Matrix editor", new MatrixEditorView(model), 860, 640);
+            MatrixEditorViewModel model = new MatrixEditorViewModel(true) { InitialIndex = initialIndex, FocusHeader = focusHeader };
+            EditorHostWindow window = new EditorHostWindow("Matrix editor", new MatrixEditorView(model), 860, 640);
             window.Closed += (_, _) => model.Detach();
             window.ShowManaged();
         }
@@ -1004,8 +1007,8 @@ namespace DSPRE.Avalonia
         {
             if (!IsRomLoaded) return;
             if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.SelectedEventIndex = initialIndex)) return;
-            var model = new EventEditorViewModel(true) { InitialIndex = initialIndex };
-            var window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
+            EventEditorViewModel model = new EventEditorViewModel(true) { InitialIndex = initialIndex };
+            EditorHostWindow window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
             window.Closed += (_, _) => model.DetachSaves();
             window.ShowManaged();
         }
@@ -1014,8 +1017,8 @@ namespace DSPRE.Avalonia
         {
             if (!IsRomLoaded) return;
             if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.GoToOverworld(eventFileId, owIndex))) return;
-            var model = new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialOverworldIndex = owIndex };
-            var window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
+            EventEditorViewModel model = new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialOverworldIndex = owIndex };
+            EditorHostWindow window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
             window.Closed += (_, _) => model.DetachSaves();
             window.ShowManaged();
         }
@@ -1023,8 +1026,8 @@ namespace DSPRE.Avalonia
         public static void OpenAreaDataEditor(int initialIndex = 0)
         {
             if (!IsRomLoaded) return;
-            var model = new AreaDataEditorViewModel(true) { InitialIndex = initialIndex };
-            var window = new EditorHostWindow("Area data editor", new AreaDataEditorView(model), 520, 380);
+            AreaDataEditorViewModel model = new AreaDataEditorViewModel(true) { InitialIndex = initialIndex };
+            EditorHostWindow window = new EditorHostWindow("Area data editor", new AreaDataEditorView(model), 520, 380);
             window.Closed += (_, _) => model.Detach();
             window.ShowManaged();
         }
@@ -1095,7 +1098,7 @@ namespace DSPRE.Avalonia
         {
             if (Refused("DistortionWorldView")) return;
 
-            var vm = new ViewModels.World.DistortionWorldViewModel();
+            DistortionWorldViewModel vm = new ViewModels.World.DistortionWorldViewModel();
             if (!vm.Available)
             {
                 AppMessages.Info("This ROM has no Distortion World data to edit.", "Distortion World");
@@ -1163,8 +1166,8 @@ namespace DSPRE.Avalonia
         /// <summary>Opens the Ctrl+P quick-open palette over the given window.</summary>
         public static void OpenCommandPalette(global::Avalonia.Controls.Window owner)
         {
-            var vm = new CommandPaletteViewModel(PaletteCommands(), DynamicCommands);
-            var view = new CommandPaletteView(vm);
+            CommandPaletteViewModel vm = new CommandPaletteViewModel(PaletteCommands(), DynamicCommands);
+            CommandPaletteView view = new CommandPaletteView(vm);
             if (owner != null) view.ShowDialog(owner); else view.ShowManaged();
         }
 
@@ -1176,7 +1179,7 @@ namespace DSPRE.Avalonia
         private static IEnumerable<CommandItem> DynamicCommands(string query)
         {
             if (!IsRomLoaded || string.IsNullOrWhiteSpace(query)) yield break;
-            var m = System.Text.RegularExpressions.Regex.Match(query, @"\d+");
+            Match m = System.Text.RegularExpressions.Regex.Match(query, @"\d+");
             if (!m.Success) yield break;
             int n = int.Parse(m.Value);
 
@@ -1207,7 +1210,7 @@ namespace DSPRE.Avalonia
                 ($"Go to Wild encounters #{n}","wild encounter grass surf",    () => OpenWildEditor(n)),
             };
 
-            foreach (var (label, keywords, run) in jumps)
+            foreach ((string label, string keywords, System.Action run) in jumps)
                 if (rest.Length == 0
                     || label.Contains(rest, System.StringComparison.OrdinalIgnoreCase)
                     || keywords.Contains(rest, System.StringComparison.OrdinalIgnoreCase))
@@ -1223,7 +1226,7 @@ namespace DSPRE.Avalonia
 
             try
             {
-                var vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
+                GraphicsBrowserViewModel vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
                 await RunBusyAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan);
                 vm.Publish();
                 new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
@@ -1253,7 +1256,7 @@ namespace DSPRE.Avalonia
                 return;
             }
             int first = -1;
-            foreach (var e in Data.ScreenGraphicsLayouts.For(RomInfo.DirNames.pokedexGraphics))
+            foreach (ScreenGraphicsLayouts.Entry e in Data.ScreenGraphicsLayouts.For(RomInfo.DirNames.pokedexGraphics))
                 if (e.Kind == "NSCR" && e.Drawing >= 0) { first = e.Index; break; }
             OpenGraphicAt(RomInfo.DirNames.pokedexGraphics, System.Math.Max(0, first), preferAssembled: true);
         }
@@ -1268,14 +1271,14 @@ namespace DSPRE.Avalonia
 
             try
             {
-                var a = Data.GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
+                GraphicAssets.Archive a = Data.GraphicAssets.All.FirstOrDefault(x => x.Dir == archive);
                 if (a == null)
                 {
                     await DialogHelper.ShowInfo("That kind of graphic is not one this window lists yet.", "Graphics");
                     return;
                 }
 
-                var vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
+                GraphicsBrowserViewModel vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
                 await RunBusyAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan);
                 vm.Publish();
                 bool found = vm.JumpTo(a, fileIndex, preferAssembled);
@@ -1318,7 +1321,7 @@ namespace DSPRE.Avalonia
 
                 case RomInfo.DirNames.monIcons:
                 {
-                    var icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(fileIndex);
+                        PokemonIconFiles.Icon icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(fileIndex);
                     if (icon == null) return null;
                     int entry = icon.EditorId;
                     return ("Pokemon Editor", () => { _ = OpenPokemonEditorAsync(entry); });
@@ -1362,7 +1365,7 @@ namespace DSPRE.Avalonia
         {
             try
             {
-                var names = RomInfo.GetItemNames();
+                string[] names = RomInfo.GetItemNames();
                 for (int item = 0; item < names.Length; item++)
                     if (Data.GraphicAssets.DrawingForItem(item) == fileIndex) return item;
             }
@@ -1454,7 +1457,7 @@ namespace DSPRE.Avalonia
             {
                 // Listing means reading every 3D archive to see what is in it, which is far too much
                 // file work to do on the click.
-                var vm = new ViewModels.Graphics.ModelBrowserViewModel();
+                ModelBrowserViewModel vm = new ViewModels.Graphics.ModelBrowserViewModel();
                 await RunBusyAsync("Opening Models…", "Finding every model and texture in the ROM.", vm.Scan);
                 vm.Publish();
                 new Views.Graphics.ModelBrowserView(vm).ShowManaged();

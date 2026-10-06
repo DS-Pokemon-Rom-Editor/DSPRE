@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.Data
         private SpaDocument(byte[] data, SpaArchive layout) { _data = data; _layout = layout; }
 
         public static SpaDocument Load(byte[] bytes)
-            => TryLoad(bytes, out var doc, out string error) ? doc : throw new InvalidDataException(error);
+            => TryLoad(bytes, out SpaDocument doc, out string error) ? doc : throw new InvalidDataException(error);
 
         /// <summary>Refuses any file whose records and textures do not account exactly for where they sit.</summary>
         public static bool TryLoad(byte[] bytes, out SpaDocument document, out string error)
@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Data
             if (bytes == null || bytes.Length < 32) { error = "The file is too short to be a particle archive."; return false; }
             if (BitConverter.ToUInt32(bytes, 0) != Magic) { error = "The file is not a particle archive."; return false; }
 
-            var data = (byte[])bytes.Clone();
+            byte[] data = (byte[])bytes.Clone();
             SpaArchive a;
             try { a = SpaArchive.Parse(data); }
             catch (Exception ex) { error = "The emitter records run past the end of the file: " + ex.Message; return false; }
@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.Data
             if (a.Textures.Count != a.TextureCount)
             { error = $"The header lists {a.TextureCount} textures but only {a.Textures.Count} could be found."; return false; }
 
-            foreach (var t in a.Textures)
+            foreach (SpaTexture t in a.Textures)
             {
                 int pos = t.ResourceOffset;
                 int texSize = BitConverter.ToInt32(data, pos + 8);
@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.Data
         {
             int pos = TexturePos(index);
             uint param = BitConverter.ToUInt32(_data, pos + 4);
-            var info = new SpaTextureInfo
+            SpaTextureInfo info = new SpaTextureInfo
             {
                 Index = index,
                 Format = (int)(param & 0xF),
@@ -137,7 +137,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Replaces a texture's pixels, keeping its size, format and palette length.</summary>
         public SpaTextureImport ReplaceTexture(int index, int width, int height, byte[] rgba)
         {
-            var info = GetTextureInfo(index);
+            SpaTextureInfo info = GetTextureInfo(index);
             if (info.CannotReplace != null) return new SpaTextureImport { Error = info.CannotReplace };
             if (width != info.Width || height != info.Height)
                 return new SpaTextureImport { Error = $"The image is {width}x{height}; this texture is {info.Width}x{info.Height}." };
@@ -145,12 +145,12 @@ namespace DSPRE.Avalonia.Data
             int pos = TexturePos(index);
             int texSize = BitConverter.ToInt32(_data, pos + 8);
             int palOfs = BitConverter.ToInt32(_data, pos + 12), palSize = BitConverter.ToInt32(_data, pos + 16);
-            var texels = new byte[texSize];
+            byte[] texels = new byte[texSize];
             Array.Copy(_data, pos + 32, texels, 0, texSize);
-            var palette = new byte[palSize];
+            byte[] palette = new byte[palSize];
             if (palSize > 0) Array.Copy(_data, pos + palOfs, palette, 0, palSize);
 
-            var enc = SpaTextureEncoder.Encode(info.Format, width, height, info.Color0Transparent, texels, palette, rgba);
+            SpaTextureEncoding enc = SpaTextureEncoder.Encode(info.Format, width, height, info.Color0Transparent, texels, palette, rgba);
             if (enc.Error != null) return new SpaTextureImport { Error = enc.Error };
 
             bool changed = !texels.AsSpan().SequenceEqual(enc.Texels) || !palette.AsSpan().SequenceEqual(enc.Palette);

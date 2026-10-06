@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using static DSPRE.RomInfo;
 
 using DSPRE.Avalonia.Data;
+using System.Text;
 namespace DSPRE.Avalonia.ViewModels.World
 {
     /// <summary>
@@ -64,7 +65,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// </summary>
         public System.Collections.Generic.List<FieldStringVar> GatherStringVars()
         {
-            var none = new System.Collections.Generic.List<FieldStringVar>();
+            List<FieldStringVar> none = new System.Collections.Generic.List<FieldStringVar>();
             if (TextArchiveId < 0) return none;
 
             System.Collections.Generic.List<string> lines;
@@ -74,17 +75,17 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             // Which scripts show which message. A script that could not be read is skipped rather than
             // stopping the rest.
-            var showsMessage = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
+            Dictionary<int, List<int>> showsMessage = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
             try
             {
-                var header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
+                MapHeader header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
                 if (header != null)
                 {
-                    var sf = new ScriptFile(header.scriptFileID);
+                    ScriptFile sf = new ScriptFile(header.scriptFileID);
                     for (int i = 0; i < (sf.allScripts?.Count ?? 0); i++)
                     {
                         int scriptNumber = i + 1;          // scripts are counted from one
-                        foreach (var cmd in sf.allScripts[i].commands ?? new System.Collections.Generic.List<ScriptCommand>())
+                        foreach (ScriptCommand cmd in sf.allScripts[i].commands ?? new System.Collections.Generic.List<ScriptCommand>())
                         {
                             // A command's name carries its parameters too ("Message 0x6"), so compare the
                             // first word. Several commands put something in the box, not just Message.
@@ -96,11 +97,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                              || name == "GetCommonMessageArchive" || name == "FreezeMessage") continue;
                             if (cmd.cmdParams == null || cmd.cmdParams.Count == 0) continue;
                             // A parameter arrives as its raw bytes, smallest first.
-                            var raw = cmd.cmdParams[0];
+                            byte[] raw = cmd.cmdParams[0];
                             if (raw == null || raw.Length == 0) continue;
                             int id = raw.Length >= 2 ? raw[0] | (raw[1] << 8) : raw[0];
                             if (id < 0 || id >= lines.Count) continue;
-                            if (!showsMessage.TryGetValue(id, out var who)) showsMessage[id] = who = new System.Collections.Generic.List<int>();
+                            if (!showsMessage.TryGetValue(id, out List<int> who)) showsMessage[id] = who = new System.Collections.Generic.List<int>();
                             if (!who.Contains(scriptNumber)) who.Add(scriptNumber);
                         }
                     }
@@ -108,11 +109,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             catch { }
 
-            var numbered = new System.Collections.Generic.List<(int, string)>(lines.Count);
+            List<(int, string)> numbered = new System.Collections.Generic.List<(int, string)>(lines.Count);
             for (int i = 0; i < lines.Count; i++) numbered.Add((i, lines[i]));
 
             return FieldStringVars.Gather(numbered,
-                id => showsMessage.TryGetValue(id, out var who) ? who : (System.Collections.Generic.IEnumerable<int>)new int[0]);
+                id => showsMessage.TryGetValue(id, out List<int> who) ? who : (System.Collections.Generic.IEnumerable<int>)new int[0]);
         }
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -424,11 +425,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _owTypeTable = OverworldEventTypes.For(RomInfo.gameFamily);
             OwEventTypes.Clear();
-            foreach (var t in _owTypeTable) OwEventTypes.Add(t.ToString());
+            foreach (OverworldEventType t in _owTypeTable) OwEventTypes.Add(t.ToString());
 
             _owMoveTable = OverworldMovements.For(RomInfo.gameFamily);
             OwMovementNames.Clear();
-            foreach (var m in _owMoveTable) OwMovementNames.Add(m.ToString());
+            foreach (OverworldMovement m in _owMoveTable) OwMovementNames.Add(m.ToString());
         }
 
         private void PopulateOwTrainerAndItemEntries()
@@ -486,8 +487,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 else
                 {
-                    var itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
-                    foreach (var entry in DSUtils.GetGroundItemScriptEntries(itemScript))
+                    ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+                    foreach ((int scriptIndex, int itemId, int quantity) entry in DSUtils.GetGroundItemScriptEntries(itemScript))
                     {
                         string name = entry.itemId < itemNames.Length ? itemNames[entry.itemId] : ("Item " + entry.itemId);
                         OwItemEntries.Add(entry.quantity + "x " + name);
@@ -722,7 +723,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (_ow == null || _owKind != OwKind.Normal || OwTalkRunsNothing || !OwScriptIndexOutOfRange) return null;
 
-                var result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_owScript);
+                CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_owScript);
                 switch (result.Kind)
                 {
                     case CommonScriptId.Kind.Resolved:
@@ -739,7 +740,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// file may still be a valid common/global script rather than a mistake.</summary>
         private static string CommonScriptInfo(int scriptNumber)
         {
-            var result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
+            CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.gameFamily, scriptNumber);
             switch (result.Kind)
             {
                 case CommonScriptId.Kind.Resolved:
@@ -836,10 +837,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 try
                 {
-                    var pix = OverworldSprites.Get(_ow.overlayTableEntry, (ushort)Math.Max((short)0, _ow.orientation));
+                    OverworldSprites.SpritePixels pix = OverworldSprites.Get(_ow.overlayTableEntry, (ushort)Math.Max((short)0, _ow.orientation));
                     if (pix != null && pix.Width > 0 && pix.Height > 0)
                     {
-                        var bgra = new byte[pix.Rgba.Length];
+                        byte[] bgra = new byte[pix.Rgba.Length];
                         for (int i = 0; i < bgra.Length; i += 4)
                         {
                             bgra[i] = pix.Rgba[i + 2]; bgra[i + 1] = pix.Rgba[i + 1];
@@ -961,12 +962,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             int spawn = _selSpawn, ow = _selOw, warp = _selWarp, trig = _selTrig;
             Event active = _current;
             int id = _file.ID;
-            using (var ms = new MemoryStream(state)) _file = new EventFile(ms) { ID = id };
+            using (MemoryStream ms = new MemoryStream(state)) _file = new EventFile(ms) { ID = id };
             _current = null; _spawn = null; _ow = null; _warp = null; _trig = null;
             _selSpawn = _selOw = _selWarp = _selTrig = -1;
             RefreshLists();
             int Keep(int i, int count) => i < count ? i : count - 1;
-            var order = new List<Action>
+            List<Action> order = new List<Action>
             {
                 () => SelectedSpawnableIndex = Keep(spawn, _file.spawnables.Count),
                 () => SelectedOverworldIndex = Keep(ow, _file.overworlds.Count),
@@ -976,7 +977,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             int last = active is Overworld ? 1 : active is Warp ? 2 : active is Trigger ? 3 : 0;
             for (int i = 0; i < order.Count; i++) if (i != last) order[i]();
             order[last]();
-            foreach (var n in new[] { nameof(HasSelectedEvent), nameof(HasSpawn), nameof(HasOw), nameof(HasWarp), nameof(HasTrig) })
+            foreach (string n in new[] { nameof(HasSelectedEvent), nameof(HasSpawn), nameof(HasOw), nameof(HasWarp), nameof(HasTrig) })
                 OnPropertyChanged(n);
             Dirty();
             RefreshMarkers();
@@ -1141,7 +1142,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // The old file's events must not stay editable through the shared boxes or the gizmo.
                 _current = null; _spawn = null; _ow = null; _warp = null; _trig = null;
                 _selSpawn = _selOw = _selWarp = _selTrig = -1;
-                foreach (var n in new[] { nameof(HasSelectedEvent), nameof(HasSpawn), nameof(HasOw), nameof(HasWarp), nameof(HasTrig),
+                foreach (string n in new[] { nameof(HasSelectedEvent), nameof(HasSpawn), nameof(HasOw), nameof(HasWarp), nameof(HasTrig),
                                           nameof(SelectedSpawnableIndex), nameof(SelectedOverworldIndex), nameof(SelectedWarpIndex), nameof(SelectedTriggerIndex) })
                     OnPropertyChanged(n);
                 RefreshLists();
@@ -1270,25 +1271,25 @@ namespace DSPRE.Avalonia.ViewModels.World
         private (int x, int y) NewEventCell()
         {
             if (_current != null) return (_current.xMatrixPosition, _current.yMatrixPosition);
-            var cells = HeaderCells();
+            HashSet<(int x, int y)> cells = HeaderCells();
             if (cells != null)
-                foreach (var c in cells) return c;
+                foreach ((int x, int y) c in cells) return c;
             return (0, 0);
         }
 
-        public void AddSpawnable() { if (_file == null) return; var (cx, cy) = NewEventCell(); _file.spawnables.Add(new Spawnable(cx, cy)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.spawnables.Count - 1; }
+        public void AddSpawnable() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.spawnables.Add(new Spawnable(cx, cy)); RefreshLists(); Dirty(); SelectedSpawnableIndex = _file.spawnables.Count - 1; }
         public void RemoveSpawnable() { if (_file == null || _selSpawn < 0 || _selSpawn >= _file.spawnables.Count) return; _file.spawnables.RemoveAt(_selSpawn); RefreshLists(); Dirty(); SelectedSpawnableIndex = -1; RefreshMarkers(); }
         public void AddOverworld()
         {
             if (_file == null) return;
-            var (cx, cy) = NewEventCell();
+            (int cx, int cy) = NewEventCell();
             _file.overworlds.Add(new Overworld(FreeOverworldId(), cx, cy));
             RefreshLists(); Dirty(); SelectedOverworldIndex = _file.overworlds.Count - 1;
         }
         public void RemoveOverworld() { if (_file == null || _selOw < 0 || _selOw >= _file.overworlds.Count) return; _file.overworlds.RemoveAt(_selOw); RefreshLists(); Dirty(); SelectedOverworldIndex = -1; RefreshMarkers(); }
-        public void AddWarp() { if (_file == null) return; var (cx, cy) = NewEventCell(); _file.warps.Add(new Warp(cx, cy)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.warps.Count - 1; }
+        public void AddWarp() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.warps.Add(new Warp(cx, cy)); RefreshLists(); Dirty(); SelectedWarpIndex = _file.warps.Count - 1; }
         public void RemoveWarp() { if (_file == null || _selWarp < 0 || _selWarp >= _file.warps.Count) return; _file.warps.RemoveAt(_selWarp); RefreshLists(); Dirty(); SelectedWarpIndex = -1; RefreshMarkers(); }
-        public void AddTrigger() { if (_file == null) return; var (cx, cy) = NewEventCell(); _file.triggers.Add(new Trigger(cx, cy)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
+        public void AddTrigger() { if (_file == null) return; (int cx, int cy) = NewEventCell(); _file.triggers.Add(new Trigger(cx, cy)); RefreshLists(); Dirty(); SelectedTriggerIndex = _file.triggers.Count - 1; }
         public void RemoveTrigger() { if (_file == null || _selTrig < 0 || _selTrig >= _file.triggers.Count) return; _file.triggers.RemoveAt(_selTrig); RefreshLists(); Dirty(); SelectedTriggerIndex = -1; RefreshMarkers(); }
 
         // ── Duplicate selected (copy ctors) ──────────────────────────────────────────────
@@ -1311,7 +1312,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_warp == null) return;
             try
             {
-                var h = MapHeader.GetMapHeader(_warp.header);
+                MapHeader h = MapHeader.GetMapHeader(_warp.header);
                 if (h == null) { StatusText = $"Destination header {_warp.header} not found."; return; }
                 int dest = h.eventFileID;
                 if (dest < 0 || dest >= EventNames.Count) { StatusText = $"Header {_warp.header} → event file {dest} (out of range)."; return; }
@@ -1364,7 +1365,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// </summary>
         private static Dictionary<int, (ushort, byte, ushort, ushort)> BuildEventHeaderLookup()
         {
-            var lookup = new Dictionary<int, (ushort, byte, ushort, ushort)>();
+            Dictionary<int, (ushort, byte, ushort, ushort)> lookup = new Dictionary<int, (ushort, byte, ushort, ushort)>();
             try
             {
                 int headerCount = GetHeaderCount();
@@ -1372,7 +1373,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     try
                     {
-                        var header = MapHeader.GetMapHeader(h);
+                        MapHeader header = MapHeader.GetMapHeader(h);
                         if (header == null) continue;
                         if (!lookup.ContainsKey(header.eventFileID))
                             lookup[header.eventFileID] = (header.matrixID, header.areaDataID, header.scriptFileID, h);
@@ -1392,7 +1393,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             int pairedScriptFileId = -1;
             try
             {
-                if (_eventToHeader != null && _eventToHeader.TryGetValue(eventIndex, out var hdr))
+                if (_eventToHeader != null && _eventToHeader.TryGetValue(eventIndex, out (ushort matrixId, byte areaId, ushort scriptFileId, ushort headerId) hdr))
                 {
                     _matrixId = hdr.Item1;
                     _matrix = new GameMatrix(hdr.Item1);
@@ -1427,8 +1428,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 try
                 {
-                    var scriptFile = new ScriptFile(scriptFileId);
-                    foreach (var container in scriptFile.allScripts)
+                    ScriptFile scriptFile = new ScriptFile(scriptFileId);
+                    foreach (ScriptCommandContainer container in scriptFile.allScripts)
                     {
                         _availableScriptIds.Add(container.manualUserID);
                         AvailableScripts.Add($"Script {container.manualUserID} ({container.commands?.Count ?? 0} cmds)");
@@ -1516,7 +1517,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>The box around every cell with an event, so the maps between them stitch without holes; capped against a stray far-off event.</summary>
         private HashSet<(int x, int y)> EventCells()
         {
-            var set = new HashSet<(int x, int y)>();
+            HashSet<(int x, int y)> set = new HashSet<(int x, int y)>();
             if (_file == null || _matrix == null) return set;
             int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
             void Note(Event e)
@@ -1526,10 +1527,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                 minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
                 minY = Math.Min(minY, y); maxY = Math.Max(maxY, y);
             }
-            foreach (var e in _file.overworlds) Note(e);
-            foreach (var e in _file.warps) Note(e);
-            foreach (var e in _file.triggers) Note(e);
-            foreach (var e in _file.spawnables) Note(e);
+            foreach (Overworld e in _file.overworlds) Note(e);
+            foreach (Warp e in _file.warps) Note(e);
+            foreach (Trigger e in _file.triggers) Note(e);
+            foreach (Spawnable e in _file.spawnables) Note(e);
             if (maxX < minX) return set;   // no events
 
             const int MaxSpan = 12;        // cap the bounding box per axis (keeps loads sane)
@@ -1561,8 +1562,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void RefreshMarkers()
         {
             MarkerMesh = null; MarkerVertexCount = 0;
-            var sprites = new List<NsbmdGlControl.SpriteInstance>();
-            var m = Model3D;
+            List<NsbmdGlControl.SpriteInstance> sprites = new List<NsbmdGlControl.SpriteInstance>();
+            NsbmdRenderModel m = Model3D;
             if (_file != null && m != null && m.CellStrideX != 0)
             {
                 float tileX = m.CellStrideX / MapTiles;
@@ -1576,17 +1577,17 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 (float x, float y, float z) Foot(Event e)
                 {
-                    var (rawX, rawZ) = Cell(e);
+                    (float rawX, float rawZ) = Cell(e);
                     return m.ToNormalized(rawX, EventY(rawX, rawZ, e), rawZ);
                 }
 
-                var v = new List<float>(256);
+                List<float> v = new List<float>(256);
                 void Quad(Event e, (float r, float g, float b) col)
                 {
                     bool sel = ReferenceEquals(e, _current);
-                    var c = sel ? (1f, 1f, 1f) : col;
+                    (float, float, float) c = sel ? (1f, 1f, 1f) : col;
                     float half = (sel ? 0.46f : 0.40f);
-                    var (rawX, rawZ) = Cell(e);
+                    (float rawX, float rawZ) = Cell(e);
                     AddMarker(v, m, rawX, EventY(rawX, rawZ, e), rawZ, half * tileX, half * tileZ, c);
                 }
 
@@ -1597,9 +1598,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     for (int gcy = 0; gcy < _matrix.height; gcy++)
                         for (int gcx = 0; gcx < _matrix.width; gcx++)
                         {
-                            if (!m.TryCellPlacement(gcx, gcy, out var gp)) continue;
+                            if (!m.TryCellPlacement(gcx, gcy, out NsbmdRenderModel.CellPlacement gp)) continue;
                             long key = ((long)gcy << 32) | (uint)gcx;
-                            if (!_collisionCache.TryGetValue(key, out var col))
+                            if (!_collisionCache.TryGetValue(key, out byte[,] col))
                             {
                                 col = null;
                                 try
@@ -1619,28 +1620,28 @@ namespace DSPRE.Avalonia.ViewModels.World
                                     float x0 = gp.OriginX + tx * tileX;
                                     float z0 = gp.OriginZ + ty * tileZ;
                                     float cx = x0 + tileX * 0.5f, cz = z0 + tileZ * 0.5f;
-                                    if (!m.TryBdhcSurfaceY(gcx, gcy, cx, cz, 0f, out var yc)) yc = m.SurfaceY(cx, cz);
+                                    if (!m.TryBdhcSurfaceY(gcx, gcy, cx, cz, 0f, out float yc)) yc = m.SurfaceY(cx, cz);
                                     yc += 0.01f;
                                     AddFlatQuad(v, m, x0 + inset, z0 + inset, x0 + tileX - inset, z0 + tileZ - inset, yc, (0.20f, 0.55f, 0.95f));
                                 }
                         }
                 }
 
-                if (_showWarp) foreach (var e in _file.warps) Quad(e, MarkerColor(1));
-                if (_showTrig) foreach (var e in _file.triggers) Quad(e, MarkerColor(2));
-                if (_showSpawn) foreach (var e in _file.spawnables) Quad(e, MarkerColor(3));
+                if (_showWarp) foreach (Warp e in _file.warps) Quad(e, MarkerColor(1));
+                if (_showTrig) foreach (Trigger e in _file.triggers) Quad(e, MarkerColor(2));
+                if (_showSpawn) foreach (Spawnable e in _file.spawnables) Quad(e, MarkerColor(3));
 
                 // Overworlds → real sprite billboards (foot anchored on the surface). Selected
                 // overworlds also get a white ground ring so the selection is obvious.
                 float spriteH = tileX * m.Scale * 1.6f;
                 if (_showOw)
-                    foreach (var ow in _file.overworlds)
+                    foreach (Overworld ow in _file.overworlds)
                     {
                         bool sel = ReferenceEquals(ow, _current);
                         if (sel) Quad(ow, (1f, 1f, 1f));
 
-                        var pix = OverworldSprites.Get(ow.overlayTableEntry, (ushort)Math.Max((short)0, ow.orientation));
-                        var foot = Foot(ow);
+                        OverworldSprites.SpritePixels pix = OverworldSprites.Get(ow.overlayTableEntry, (ushort)Math.Max((short)0, ow.orientation));
+                        (float x, float y, float z) foot = Foot(ow);
                         if (pix != null && pix.Width > 0 && pix.Height > 0)
                         {
                             float halfH = spriteH * 0.5f;
@@ -1672,7 +1673,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── Event world placement (shared by markers + the move gizmo) ────────────────────
         private (float x, float z) EventCellRaw(NsbmdRenderModel m, Event e)
         {
-            if (m.TryCellPlacement(e.xMatrixPosition, e.yMatrixPosition, out var p))
+            if (m.TryCellPlacement(e.xMatrixPosition, e.yMatrixPosition, out NsbmdRenderModel.CellPlacement p))
                 return (p.OriginX + (e.xMapPosition + 0.5f) / MapTiles * p.Width,
                         p.OriginZ + (e.yMapPosition + 0.5f) / MapTiles * p.Height);
             return (m.CellBaseX + (e.xMatrixPosition + (e.xMapPosition + 0.5f) / MapTiles) * m.CellStrideX,
@@ -1683,7 +1684,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             // A height hint only; BDHC/mesh lookup chooses the actual floor near it.
             float yHint = HeightHint(e);
-            if (m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rawX, rawZ, yHint, out var bdhcY)) return bdhcY;
+            if (m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rawX, rawZ, yHint, out float bdhcY)) return bdhcY;
             return e.zPosition == 0 ? m.SurfaceY(rawX, rawZ) : m.SurfaceY(rawX, rawZ, yHint);
         }
 
@@ -1716,7 +1717,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                var header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
+                MapHeader header = _headerId < 0 ? null : MapHeader.GetMapHeader((ushort)_headerId);
                 if (header == null) return null;
                 return ScriptWalker.ActionsById(new ScriptFile(header.scriptFileID)?.allActions)?.Invoke(movementNumber);
             }
@@ -1734,9 +1735,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             get
             {
-                var grid = new MapCollisionGrid();
+                MapCollisionGrid grid = new MapCollisionGrid();
                 if (_matrix == null) return grid;
-                foreach (var (x, y) in (HeaderCells() ?? (ISet<(int x, int y)>)EventCells()))
+                foreach ((int x, int y) in (HeaderCells() ?? (ISet<(int x, int y)>)EventCells()))
                 {
                     long key = ((long)y << 32) | (uint)x;
                     byte[,] col = null, types = null;
@@ -1745,7 +1746,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         int map = _matrix.maps[y, x];
                         if (map != GameMatrix.EMPTY)
                         {
-                            var mf = new MapFile(map, gameFamily, false, false);
+                            MapFile mf = new MapFile(map, gameFamily, false, false);
                             col = mf.collisions;
                             types = mf.types;
                         }
@@ -1771,15 +1772,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void UpdateHoverCoords(double px, double py,
                                       Func<float, float, float, (bool ok, float sx, float sy)> project)
         {
-            var m = Model3D;
+            NsbmdRenderModel m = Model3D;
             if (m == null || project == null) { HoverCoordsText = ""; return; }
 
-            var cells = HoverCells();
+            List<FieldTilePicker.CellQuad> cells = HoverCells();
             if (cells.Count == 0) { HoverCoordsText = ""; return; }
 
             (bool, float, float) ProjectRaw(float rawX, float rawZ)
             {
-                var (nx, ny, nz) = m.ToNormalized(rawX, m.SurfaceY(rawX, rawZ), rawZ);
+                (float nx, float ny, float nz) = m.ToNormalized(rawX, m.SurfaceY(rawX, rawZ), rawZ);
                 return project(nx, ny, nz);
             }
 
@@ -1800,16 +1801,16 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>The cells the pointer could be over, placed the way the scene placed them.</summary>
         private List<FieldTilePicker.CellQuad> HoverCells()
         {
-            var list = new List<FieldTilePicker.CellQuad>();
-            var m = Model3D;
+            List<FieldTilePicker.CellQuad> list = new List<FieldTilePicker.CellQuad>();
+            NsbmdRenderModel m = Model3D;
             if (m == null) return list;
 
-            var cells = HeaderCells() ?? (ISet<(int x, int y)>)EventCells();
+            ISet<(int x, int y)> cells = HeaderCells() ?? (ISet<(int x, int y)>)EventCells();
             if (cells == null) return list;
 
-            foreach (var (x, y) in cells)
+            foreach ((int x, int y) in cells)
             {
-                if (m.TryCellPlacement(x, y, out var p))
+                if (m.TryCellPlacement(x, y, out NsbmdRenderModel.CellPlacement p))
                     list.Add(new FieldTilePicker.CellQuad(x, y, p.OriginX, p.OriginZ, p.Width, p.Height));
                 else if (m.CellStrideX != 0)
                     list.Add(new FieldTilePicker.CellQuad(x, y,
@@ -1822,7 +1823,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Where a whole-matrix tile sits in the scene, for standing the player on it.</summary>
         public (float x, float y, float z) TileFoot(float tileX, float tileZ)
         {
-            var m = Model3D;
+            NsbmdRenderModel m = Model3D;
             if (m == null) return (0f, 0f, 0f);
 
             // Whole tiles pick the cell; the fraction is how far across it the walker has got.
@@ -1830,7 +1831,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             float inX = tileX - cellX * MapTiles, inZ = tileZ - cellZ * MapTiles;
 
             float rawX, rawZ;
-            if (m.TryCellPlacement(cellX, cellZ, out var p))
+            if (m.TryCellPlacement(cellX, cellZ, out NsbmdRenderModel.CellPlacement p))
             {
                 rawX = p.OriginX + (inX + 0.5f) / MapTiles * p.Width;
                 rawZ = p.OriginZ + (inZ + 0.5f) / MapTiles * p.Height;
@@ -1841,7 +1842,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 rawZ = m.CellBaseZ + (cellZ + (inZ + 0.5f) / MapTiles) * m.CellStrideZ;
             }
 
-            float rawY = m.TryBdhcSurfaceY(cellX, cellZ, rawX, rawZ, 0f, out var y) ? y : m.SurfaceY(rawX, rawZ);
+            float rawY = m.TryBdhcSurfaceY(cellX, cellZ, rawX, rawZ, 0f, out float y) ? y : m.SurfaceY(rawX, rawZ);
             return m.ToNormalized(rawX, rawY, rawZ);
         }
 
@@ -1856,7 +1857,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // A script id above 2000 does not live in the map's own file at all: the games keep whole
                 // separate files for common scripts, trainers, hidden items and the rest, and read the id
                 // relative to where that range starts (SetScriptDataSub in script.c).
-                var common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+                CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, scriptNumber);
                 if (common.Kind == CommonScriptId.Kind.Discrepancy) return null;
 
                 int scriptArchive, textArchive;
@@ -1867,13 +1868,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 else
                 {
-                    var header = MapHeader.GetMapHeader((ushort)_headerId);
+                    MapHeader header = MapHeader.GetMapHeader((ushort)_headerId);
                     if (header == null) return null;
                     scriptArchive = header.scriptFileID;
                     textArchive = header.textArchiveID;
                 }
 
-                var file = new ScriptFile(scriptArchive);
+                ScriptFile file = new ScriptFile(scriptArchive);
                 TextArchive text = null;
                 try { text = new TextArchive(textArchive); } catch { }
 
@@ -1893,7 +1894,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (archive < 0) return null;
             try
             {
-                if (!_previewArchives.TryGetValue(archive, out var text))
+                if (!_previewArchives.TryGetValue(archive, out TextArchive text))
                     _previewArchives[archive] = text = new TextArchive(archive);
                 return text?.messages != null && id >= 0 && id < text.messages.Count ? text.messages[id] : null;
             }
@@ -1914,14 +1915,14 @@ namespace DSPRE.Avalonia.ViewModels.World
                 which >= 0 && which < fieldSharedMessageArchives.Length ? fieldSharedMessageArchives[which] : -1;
             preview.CommonScripts = id =>
             {
-                if (_previewCommonScripts.TryGetValue(id, out var cached)) return cached;
+                if (_previewCommonScripts.TryGetValue(id, out ScriptSource cached)) return cached;
                 ScriptSource source = null;
                 try
                 {
-                    var common = CommonScriptId.Resolve(gameFamily, id);
+                    CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, id);
                     if (common.Kind == CommonScriptId.Kind.Resolved)
                     {
-                        var file = new ScriptFile(common.ScriptArchiveId);
+                        ScriptFile file = new ScriptFile(common.ScriptArchiveId);
                         int textArchive = common.TextArchiveId;
                         source = new ScriptSource
                         {
@@ -1942,14 +1943,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>The number to start the walker at. </summary>
         public int WalkerStartId(int scriptNumber)
         {
-            var common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, scriptNumber);
             return common.Kind == CommonScriptId.Kind.Resolved ? common.ManualUserId : scriptNumber;
         }
 
         /// <summary>Which file a script id really lives in, for the viewer to say so.</summary>
         public string ScriptHome(int scriptNumber)
         {
-            var common = CommonScriptId.Resolve(gameFamily, scriptNumber);
+            CommonScriptId.Result common = CommonScriptId.Resolve(gameFamily, scriptNumber);
             switch (common.Kind)
             {
                 case CommonScriptId.Kind.Resolved:
@@ -1966,9 +1967,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Where an event's feet sit in the scene, the same placement the markers use.</summary>
         public (float x, float y, float z) EventFoot(Event e)
         {
-            var m = Model3D;
+            NsbmdRenderModel m = Model3D;
             if (m == null || e == null) return (0f, 0f, 0f);
-            var (rx, rz) = EventCellRaw(m, e);
+            (float rx, float rz) = EventCellRaw(m, e);
             return m.ToNormalized(rx, EventSurfaceY(m, rx, rz, e), rz);
         }
 
@@ -2015,17 +2016,17 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void BuildWalkTint()
         {
             WalkTintOn = false;
-            var m = Model3D;
+            NsbmdRenderModel m = Model3D;
             if (_walkTile == null || m == null || m.CellStrideX == 0) return;
 
             int n = MapFile.mapSize;
             int gcx = FloorDiv(_walkTile.Value.x, n), gcy = FloorDiv(_walkTile.Value.z, n);
-            if (!m.TryCellPlacement(gcx, gcy, out var cp)) return;
+            if (!m.TryCellPlacement(gcx, gcy, out NsbmdRenderModel.CellPlacement cp)) return;
 
             int tx = _walkTile.Value.x - gcx * n, ty = _walkTile.Value.z - gcy * n;
             if (tx < 0 || ty < 0 || tx >= 32 || ty >= 32) return;
 
-            var rgba = new byte[32 * 32 * 4];        // all clear to start, so nothing else is touched
+            byte[] rgba = new byte[32 * 32 * 4];        // all clear to start, so nothing else is touched
             int i = (ty * 32 + tx) * 4;
             rgba[i] = 255; rgba[i + 1] = 214; rgba[i + 2] = 79; rgba[i + 3] = 255;
 
@@ -2049,11 +2050,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool EventAnchorNorm(Event e, out float nx, out float ny, out float nz)
         {
             nx = ny = nz = 0f;
-            var m = Model3D;
+            NsbmdRenderModel m = Model3D;
             if (m == null || e == null) return false;
-            var (rx, rz) = EventCellRaw(m, e);
+            (float rx, float rz) = EventCellRaw(m, e);
             float ry = EventSurfaceY(m, rx, rz, e);
-            var (a, b, c) = m.ToNormalized(rx, ry, rz);
+            (float a, float b, float c) = m.ToNormalized(rx, ry, rz);
             nx = a; ny = b; nz = c;
             return true;
         }
@@ -2063,10 +2064,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         public IEnumerable<(int type, int index, float nx, float ny, float nz)> EventAnchorsNorm()
         {
             if (_file == null || Model3D == null) yield break;
-            if (_showOw) for (int i = 0; i < _file.overworlds.Count; i++) if (EventAnchorNorm(_file.overworlds[i], out var x, out var y, out var z)) yield return (0, i, x, y, z);
-            if (_showWarp) for (int i = 0; i < _file.warps.Count; i++) if (EventAnchorNorm(_file.warps[i], out var x, out var y, out var z)) yield return (1, i, x, y, z);
-            if (_showTrig) for (int i = 0; i < _file.triggers.Count; i++) if (EventAnchorNorm(_file.triggers[i], out var x, out var y, out var z)) yield return (2, i, x, y, z);
-            if (_showSpawn) for (int i = 0; i < _file.spawnables.Count; i++) if (EventAnchorNorm(_file.spawnables[i], out var x, out var y, out var z)) yield return (3, i, x, y, z);
+            if (_showOw) for (int i = 0; i < _file.overworlds.Count; i++) if (EventAnchorNorm(_file.overworlds[i], out float x, out float y, out float z)) yield return (0, i, x, y, z);
+            if (_showWarp) for (int i = 0; i < _file.warps.Count; i++) if (EventAnchorNorm(_file.warps[i], out float x, out float y, out float z)) yield return (1, i, x, y, z);
+            if (_showTrig) for (int i = 0; i < _file.triggers.Count; i++) if (EventAnchorNorm(_file.triggers[i], out float x, out float y, out float z)) yield return (2, i, x, y, z);
+            if (_showSpawn) for (int i = 0; i < _file.spawnables.Count; i++) if (EventAnchorNorm(_file.spawnables[i], out float x, out float y, out float z)) yield return (3, i, x, y, z);
         }
 
         public void SelectEvent(int type, int index)
@@ -2093,7 +2094,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// the neighbouring matrix cell at the map edge; Y edits the event height (zPosition).</summary>
         public void NudgeSelectedEventRaw(int axis, float rawDelta)
         {
-            var m = Model3D;
+            NsbmdRenderModel m = Model3D;
             if (m == null || _current == null || rawDelta == 0f) return;
             if (axis == 1)
             {
@@ -2115,7 +2116,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         : (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, nz));
                 }
             }
-            else if (m.TryCellPlacement(_current.xMatrixPosition, _current.yMatrixPosition, out var p))
+            else if (m.TryCellPlacement(_current.xMatrixPosition, _current.yMatrixPosition, out NsbmdRenderModel.CellPlacement p))
             {
                 if (axis == 0)
                 {
@@ -2175,10 +2176,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         private static void AddMarker(List<float> v, NsbmdRenderModel m, float cx, float cy, float cz,
             float halfX, float halfZ, (float r, float g, float b) col)
         {
-            var a = m.ToNormalized(cx - halfX, cy, cz - halfZ);
-            var b = m.ToNormalized(cx + halfX, cy, cz - halfZ);
-            var c = m.ToNormalized(cx + halfX, cy, cz + halfZ);
-            var d = m.ToNormalized(cx - halfX, cy, cz + halfZ);
+            (float x, float y, float z) a = m.ToNormalized(cx - halfX, cy, cz - halfZ);
+            (float x, float y, float z) b = m.ToNormalized(cx + halfX, cy, cz - halfZ);
+            (float x, float y, float z) c = m.ToNormalized(cx + halfX, cy, cz + halfZ);
+            (float x, float y, float z) d = m.ToNormalized(cx - halfX, cy, cz + halfZ);
             void Vtx((float x, float y, float z) p) { v.Add(p.x); v.Add(p.y); v.Add(p.z); v.Add(0); v.Add(0); v.Add(col.r); v.Add(col.g); v.Add(col.b); }
             Vtx(a); Vtx(b); Vtx(c);
             Vtx(a); Vtx(c); Vtx(d);
@@ -2190,10 +2191,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         private static void AddFlatQuad(List<float> v, NsbmdRenderModel m, float x0, float z0, float x1, float z1, float y,
             (float r, float g, float b) col)
         {
-            var a = m.ToNormalized(x0, y, z0);
-            var b = m.ToNormalized(x1, y, z0);
-            var c = m.ToNormalized(x1, y, z1);
-            var d = m.ToNormalized(x0, y, z1);
+            (float x, float y, float z) a = m.ToNormalized(x0, y, z0);
+            (float x, float y, float z) b = m.ToNormalized(x1, y, z0);
+            (float x, float y, float z) c = m.ToNormalized(x1, y, z1);
+            (float x, float y, float z) d = m.ToNormalized(x0, y, z1);
             void Vtx((float x, float y, float z) p) { v.Add(p.x); v.Add(p.y); v.Add(p.z); v.Add(0); v.Add(0); v.Add(col.r); v.Add(col.g); v.Add(col.b); }
             Vtx(a); Vtx(b); Vtx(c);
             Vtx(a); Vtx(c); Vtx(d);
@@ -2213,12 +2214,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportAsync()
         {
             if (_selectedIndex < 0) return;
-            var filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev", "*.bin", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import event file", new[] { filter });
             if (path == null) return;
             try
             {
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read)) _file = new EventFile(fs);
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) _file = new EventFile(fs);
                 RefreshLists(); Dirty(); RefreshMarkers();
                 StatusText = "Imported event file (unsaved).";
             }
@@ -2231,8 +2232,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// placement issues. Paired with a PNG of the live render by the view.</summary>
         public string BuildDebugReport()
         {
-            var sb = new System.Text.StringBuilder();
-            var m = Model3D;
+            StringBuilder sb = new System.Text.StringBuilder();
+            NsbmdRenderModel m = Model3D;
             sb.AppendLine("=== DSPRE Event Editor 3D Debug Dump ===");
             sb.AppendLine($"Timestamp:   {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             sb.AppendLine($"Event file:  {_selectedIndex}");
@@ -2262,9 +2263,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     {
                         int map; try { map = _matrix.maps[cy, cx]; } catch { continue; }
                         if (map == GameMatrix.EMPTY) continue;
-                        if (!m.TryCellPlacement(cx, cy, out var p)) { sb.AppendLine($"({cx,2},{cy,2}) {map,5} | (no placement in scene)"); continue; }
-                        string rg = m.TryCellPlacement(cx + 1, cy, out var pr) ? (pr.OriginX - (p.OriginX + p.Width)).ToString("F3") : "  -";
-                        string bg = m.TryCellPlacement(cx, cy + 1, out var pb) ? (pb.OriginZ - (p.OriginZ + p.Height)).ToString("F3") : "  -";
+                        if (!m.TryCellPlacement(cx, cy, out NsbmdRenderModel.CellPlacement p)) { sb.AppendLine($"({cx,2},{cy,2}) {map,5} | (no placement in scene)"); continue; }
+                        string rg = m.TryCellPlacement(cx + 1, cy, out NsbmdRenderModel.CellPlacement pr) ? (pr.OriginX - (p.OriginX + p.Width)).ToString("F3") : "  -";
+                        string bg = m.TryCellPlacement(cx, cy + 1, out NsbmdRenderModel.CellPlacement pb) ? (pb.OriginZ - (p.OriginZ + p.Height)).ToString("F3") : "  -";
                         sb.AppendLine($"({cx,2},{cy,2}) {map,5} | {p.OriginX,7:F3} {p.OriginZ,7:F3} | {p.Width,6:F3} {p.Height,6:F3} | {rg,8} {bg,9}");
                     }
             }
@@ -2279,9 +2280,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     int i = 0;
                     foreach (Event e in list)
                     {
-                        var (rx, rz) = EventCellRaw(m, e);
+                        (float rx, float rz) = EventCellRaw(m, e);
                         float yHint = HeightHint(e);
-                        bool bdhc = m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rx, rz, yHint, out var sy);
+                        bool bdhc = m.TryBdhcSurfaceY(e.xMatrixPosition, e.yMatrixPosition, rx, rz, yHint, out float sy);
                         if (!bdhc) sy = EventSurfaceY(m, rx, rz, e);
                         sb.AppendLine($"{type,-10} {i,3} | ({e.xMatrixPosition},{e.yMatrixPosition})  ({e.xMapPosition,2},{e.yMapPosition,2}) | {e.zPosition,8} {yHint,7:F3} | {rx,7:F3} {rz,7:F3} {sy,8:F3} {(bdhc ? "bdhc" : "mesh")}");
                         i++;
@@ -2299,7 +2300,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportAsync()
         {
             if (_file == null) return;
-            var filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev" } };
+            FilePickerFileType filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev" } };
             string path = await DialogHelper.SaveFile(_owner, "Export event file", new[] { filter }, $"event_{_selectedIndex:D4}.ev");
             if (path == null) return;
             try { System.IO.File.WriteAllBytes(path, _file.ToByteArray()); StatusText = "Exported."; }

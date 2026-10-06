@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         public override void Render(DrawingContext ctx)
         {
-            var items = Items;
+            IReadOnlyList<string> items = Items;
             if (items == null || items.Count == 0) return;
 
             double w = Bounds.Width, h = Bounds.Height;
@@ -197,14 +197,14 @@ namespace DSPRE.Avalonia.Views.Controls
                 for (int y = 0; y < 7; y++)
                     for (int x = 0; x <= Math.Min(y, 6 - y); x++) Dot(tile + CursorX + 1 + x, cy + 4 + y, letter);
 
-            var bmp = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-            using (var buf = bmp.Lock())
+            WriteableBitmap bmp = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Unpremul);
+            using (ILockedFramebuffer buf = bmp.Lock())
             {
                 unsafe
                 {
                     for (int y = 0; y < height; y++)
                     {
-                        var row = (byte*)buf.Address + y * buf.RowBytes;
+                        byte* row = (byte*)buf.Address + y * buf.RowBytes;
                         for (int x = 0; x < width; x++)
                         {
                             int at = (y * width + x) * 4;
@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia.Views.Controls
         // A stand-in window for when the ROM's border cannot be read.
         private static byte[] PlainWindow(int width, int height, uint paper)
         {
-            var rgba = new byte[width * height * 4];
+            byte[] rgba = new byte[width * height * 4];
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                 {

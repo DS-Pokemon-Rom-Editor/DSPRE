@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public StarterEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            var vm = new StarterEditorViewModel();
+            StarterEditorViewModel vm = new StarterEditorViewModel();
             DataContext = vm;
             EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);
         }
@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Manage_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
-            var dialog = new StarterCommandDialogView(VM.NewCommandChoice());
+            StarterCommandDialogView dialog = new StarterCommandDialogView(VM.NewCommandChoice());
             bool ok = await dialog.ShowDialog<bool>(this);
             if (ok) VM.ApplyCommandChoice((StarterCommandDialogViewModel)dialog.DataContext);
         }

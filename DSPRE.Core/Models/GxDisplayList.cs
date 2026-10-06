@@ -80,16 +80,16 @@ namespace DSPRE.Models
 
         public byte[] ToBytes()
         {
-            var o = new MemoryStream();
+            MemoryStream o = new MemoryStream();
             int at = 0, taken = 0;
-            var ops = new List<byte>(_ops);
+            List<byte> ops = new List<byte>(_ops);
 
             while (ops.Count % 4 != 0) ops.Add(Nop);
             for (int i = 0; i < 4; i++) ops.Add(Nop);
 
             while (at < ops.Count)
             {
-                var four = new byte[4];
+                byte[] four = new byte[4];
                 int n = Math.Min(4, ops.Count - at);
                 for (int i = 0; i < n; i++) four[i] = ops[at + i];
                 o.Write(four, 0, 4);

@@ -25,7 +25,7 @@ namespace DSPRE.HgEngine
         private static string Swap(string text, bool toDspre)
         {
             if (string.IsNullOrEmpty(text)) return text;
-            foreach (var (checkout, dspre) in Pairs())
+            foreach ((string checkout, string dspre) in Pairs())
                 text = toDspre ? text.Replace(checkout, dspre, StringComparison.Ordinal) : text.Replace(dspre, checkout, StringComparison.Ordinal);
             return text;
         }
@@ -34,17 +34,17 @@ namespace DSPRE.HgEngine
         {
             string root = HgEngineProject.IsActive ? HgEngineProject.RepoRootWindows : null;
             if (root == _forRoot) return _pairs;
-            var pairs = new List<(string, string)>();
+            List<(string, string)> pairs = new List<(string, string)>();
             try
             {
                 string rel = root == null ? null : HgEngineOwnedFiles.CharMapRelPath(root);
                 string path = rel == null ? null : Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
-                var map = path != null && File.Exists(path) ? CharMapManager.GetCurrentCharMap() : null;
+                CharMap map = path != null && File.Exists(path) ? CharMapManager.GetCurrentCharMap() : null;
                 if (map != null)
                     foreach (string line in File.ReadLines(path))
                     {
                         Match m = CharLine.Match(line.TrimEnd('\r'));
-                        if (!m.Success || !map.CharacterMap.TryGetValue(m.Groups[1].Value.ToUpperInvariant(), out var entry)) continue;
+                        if (!m.Success || !map.CharacterMap.TryGetValue(m.Groups[1].Value.ToUpperInvariant(), out CharMapEntry entry)) continue;
                         string symbol = m.Groups[2].Value;
                         if (symbol != entry.Character && entry.Aliases?.Contains(symbol) == true && entry.Character.StartsWith("["))
                             pairs.Add((symbol, entry.Character));

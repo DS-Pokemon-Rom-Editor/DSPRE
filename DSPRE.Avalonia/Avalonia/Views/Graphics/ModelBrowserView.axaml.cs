@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private static ModelBrowserViewModel Loaded()
         {
-            var vm = new ModelBrowserViewModel();
+            ModelBrowserViewModel vm = new ModelBrowserViewModel();
             vm.Reload();
             return vm;
         }
@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Play_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            ModelBrowserViewModel vm = ViewModel;
             if (vm == null) return;
             vm.Playing = !vm.Playing;
         }
@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async System.Threading.Tasks.Task Save(bool glb)
         {
-            var vm = ViewModel;
+            ModelBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
             if (!vm.CanSaveModel)
             {
@@ -92,7 +92,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             }
 
             string ext = glb ? ".glb" : ".dae";
-            var type = glb
+            FilePickerFileType type = glb
                 ? new FilePickerFileType("glTF model") { Patterns = new[] { "*.glb" } }
                 : new FilePickerFileType("Collada model") { Patterns = new[] { "*.dae" } };
 
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void PutIn_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            ModelBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
             {
                 await DialogHelper.ShowInfo("Pick something on the left first.", "Import");
@@ -148,7 +148,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void SaveRaw_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            ModelBrowserViewModel vm = ViewModel;
             if (vm?.Selected == null)
             {
                 await DialogHelper.ShowInfo("Pick something on the left first.", "Export file");

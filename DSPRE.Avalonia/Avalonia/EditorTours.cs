@@ -55,9 +55,9 @@ namespace DSPRE.Avalonia
         /// <summary>Plays <paramref name="key"/>'s tour over <paramref name="root"/> now.</summary>
         public static void Start(Control root, string key)
         {
-            if (root == null || !All.TryGetValue(key ?? "", out var tour)) return;
-            var steps = new List<(Func<Control>, string, string, Action)>();
-            foreach (var step in tour.Steps)
+            if (root == null || !All.TryGetValue(key ?? "", out Tour tour)) return;
+            List<(Func<Control>, string, string, Action)> steps = new List<(Func<Control>, string, string, Action)>();
+            foreach (TourStep step in tour.Steps)
             {
                 string target = step.Target;
                 TabItem tab = null;
@@ -72,21 +72,21 @@ namespace DSPRE.Avalonia
                 }
                 // Outside a tab the controls already exist, so one only another game shows can be skipped now.
                 if (tab == null && target != null && target.Contains(':') && Resolve(root, target) == null) continue;
-                var capturedTab = tab;
+                TabItem capturedTab = tab;
                 string inner = target;
                 string title = step.Title;
                 Func<Control> resolve = () =>
                 {
                     Control scope = capturedTab != null ? (Control)capturedTab.Content ?? capturedTab : root;
                     if (inner == null) return capturedTab?.Parent as Control;
-                    var found = Resolve(scope, inner) ?? (scope != root ? Resolve(root, inner) : null);
+                    Control found = Resolve(scope, inner) ?? (scope != root ? Resolve(root, inner) : null);
                     if (found == null) AppLogger.Info($"Tour {key}: nothing to point at for \"{title}\" ({inner})");
                     return found;
                 };
                 Action onEnter = capturedTab == null ? null : () =>
                 {
                     // A tab inside another tab needs its outer tabs picked too.
-                    foreach (var t in capturedTab.GetLogicalAncestors().OfType<TabItem>().Reverse().Append(capturedTab))
+                    foreach (global::Avalonia.Controls.TabItem t in capturedTab.GetLogicalAncestors().OfType<TabItem>().Reverse().Append(capturedTab))
                         if (t.Parent is TabControl tc) tc.SelectedItem = t;
                 };
                 steps.Add((resolve, step.Title, step.Body, onEnter));
@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia
 
             bool buttonAdded = false;
             int visibleTicks = 0;
-            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+            DispatcherTimer timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
             timer.Tick += (_, _) =>
             {
                 if (!buttonAdded) buttonAdded = AddButton(root, key);
@@ -117,7 +117,7 @@ namespace DSPRE.Avalonia
                 // Give the editor a moment to fill in before offering.
                 if (++visibleTicks < 3) return;
                 timer.Stop();
-                var settings = SettingsManager.Settings;
+                DspreSettings settings = SettingsManager.Settings;
                 if (settings == null) return;
                 settings.editorToursShown ??= new List<string>();
                 if (settings.editorToursShown.Contains(key)) return;
@@ -161,19 +161,19 @@ namespace DSPRE.Avalonia
         /// <summary>Puts "?" at the end of the editor's first row of toolbar buttons, once the toolbar exists.</summary>
         private static bool AddButton(Control root, string key)
         {
-            var toolbar = Toolbar(root);
+            Border toolbar = Toolbar(root);
             if (toolbar == null) return false;
-            var rows = toolbar.GetVisualDescendants().OfType<Panel>().Prepend(toolbar.Child as Panel).Where(p => p != null).ToList();
+            List<Panel> rows = toolbar.GetVisualDescendants().OfType<Panel>().Prepend(toolbar.Child as Panel).Where(p => p != null).ToList();
             if (rows.Any(p => p.Children.OfType<Button>().Any(b => b.Content as string == "?"))) { HasButton.Add(root); return true; }
             static bool IsRow(Panel p) => p is WrapPanel || p is StackPanel { Orientation: Orientation.Horizontal };
             // The toolbar's own row, or the first row of a stacked toolbar; otherwise the last button row that is showing.
-            var top = toolbar.Child as Panel;
-            var row = top != null && IsRow(top) ? top
+            Panel top = toolbar.Child as Panel;
+            Panel row = top != null && IsRow(top) ? top
                     : (top as StackPanel)?.Orientation == Orientation.Vertical ? top.Children.OfType<Panel>().FirstOrDefault(p => IsRow(p) && p.IsVisible)
                     : rows.LastOrDefault(p => IsRow(p) && p.IsVisible && p.Children.OfType<Button>().Any());
             if (row == null) return true;
             HasButton.Add(root);
-            var help = new Button { Content = "?", Padding = new Thickness(8, 2) };
+            Button help = new Button { Content = "?", Padding = new Thickness(8, 2) };
             ToolTip.SetTip(help, "Tour (F1)");
             help.Click += (_, _) => Start(root, key);
             row.Children.Add(help);
@@ -183,20 +183,20 @@ namespace DSPRE.Avalonia
         /// <summary>A small card in the editor's corner asking whether to show the tour.</summary>
         private static void Offer(Control root, string key)
         {
-            var layer = OverlayLayer.GetOverlayLayer(root);
+            OverlayLayer layer = OverlayLayer.GetOverlayLayer(root);
             if (layer == null) return;
-            IBrush Res(string k, IBrush fallback) => root.TryFindResource(k, root.ActualThemeVariant, out var v) && v is IBrush b ? b : fallback;
+            IBrush Res(string k, IBrush fallback) => root.TryFindResource(k, root.ActualThemeVariant, out object v) && v is IBrush b ? b : fallback;
 
-            var show = new Button { Content = "Show me around", IsDefault = false };
-            var later = new Button { Content = "Not now" };
-            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
+            Button show = new Button { Content = "Show me around", IsDefault = false };
+            Button later = new Button { Content = "Not now" };
+            StackPanel buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, HorizontalAlignment = HorizontalAlignment.Right };
             buttons.Children.Add(later);
             buttons.Children.Add(show);
-            var stack = new StackPanel { Spacing = 8 };
+            StackPanel stack = new StackPanel { Spacing = 8 };
             stack.Children.Add(new TextBlock { Text = "New to the " + All[key].Name + "?", FontWeight = FontWeight.SemiBold, FontSize = 14, TextWrapping = TextWrapping.Wrap });
             stack.Children.Add(new TextBlock { Text = "A short tour shows what each part does. " + (HasButton.Contains(root) ? "F1 or ? shows it again later." : "F1 shows it again later."), TextWrapping = TextWrapping.Wrap, Opacity = 0.9 });
             stack.Children.Add(buttons);
-            var card = new Border
+            Border card = new Border
             {
                 Width = 300,
                 Background = Res("Editor.PanelBg", Brushes.Gray),
@@ -209,12 +209,12 @@ namespace DSPRE.Avalonia
             };
 
             // Anchored to the editor's corner, not the window's; no background so clicks outside reach the editor.
-            var holder = new Canvas { Background = null };
+            Canvas holder = new Canvas { Background = null };
             holder.Children.Add(card);
             void Place()
             {
                 holder.Width = layer.Bounds.Width; holder.Height = layer.Bounds.Height;
-                var origin = root.TranslatePoint(new Point(0, 0), layer) ?? new Point(0, 0);
+                Point origin = root.TranslatePoint(new Point(0, 0), layer) ?? new Point(0, 0);
                 card.Measure(new Size(300, double.PositiveInfinity));
                 Canvas.SetLeft(card, Math.Max(8, origin.X + root.Bounds.Width - 300 - 16));
                 Canvas.SetTop(card, Math.Max(8, origin.Y + root.Bounds.Height - card.DesiredSize.Height - 16));
@@ -243,13 +243,13 @@ namespace DSPRE.Avalonia
 
         private static Border Toolbar(Control root)
         {
-            if (!root.TryFindResource("Editor.ToolbarBg", root.ActualThemeVariant, out var bg)) return null;
+            if (!root.TryFindResource("Editor.ToolbarBg", root.ActualThemeVariant, out object bg)) return null;
             return root.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => ReferenceEquals(b.Background, bg) && b.IsEffectivelyVisible);
         }
 
         private static TabItem FindTab(Control root, string name)
         {
-            foreach (var tab in root.GetLogicalDescendants().OfType<TabItem>())
+            foreach (TabItem tab in root.GetLogicalDescendants().OfType<TabItem>())
             {
                 if (tab.Header is string s && s == name) return tab;
                 if (AutomationProperties.GetName(tab) == name) return tab;

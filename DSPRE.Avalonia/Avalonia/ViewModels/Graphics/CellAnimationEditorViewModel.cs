@@ -328,7 +328,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                var narc = _source;
+                ArchiveFiles narc = _source;
                 if (!narc.Available) { StatusText = "This game does not have that archive."; return; }
 
                 // These files are kept squeezed down in the ROM. How each was stored is remembered, so
@@ -360,7 +360,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 if (_palette >= 0)
                 {
-                    var all = DsBgScreen.ReadColours(NitroBgCodec.Inflate(narc.Get(_palette)));
+                    ushort[] all = DsBgScreen.ReadColours(NitroBgCodec.Inflate(narc.Get(_palette)));
                     _colours = DsBgScreen.Row(all, Math.Max(0, _paletteRow));
                 }
                 OnPropertyChanged(nameof(FileNote));
@@ -378,7 +378,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_file == null) return;
             for (int i = 0; i < _file.Sequences.Count; i++)
             {
-                var s = _file.Sequences[i];
+                NanrFile.Sequence s = _file.Sequences[i];
                 Sequences.Add(new CellSequenceRow
                 {
                     Number = i, Name = s.Name, Frames = s.Frames.Count,
@@ -392,15 +392,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_file == null) return;
             _filling = true;
-            foreach (var row in Frames) row.Changed = null;
+            foreach (CellFrameRow row in Frames) row.Changed = null;
             Frames.Clear();
 
             if (_sequence >= 0 && _sequence < _file.Sequences.Count)
             {
-                var s = _file.Sequences[_sequence];
+                NanrFile.Sequence s = _file.Sequences[_sequence];
                 for (int i = 0; i < s.Frames.Count; i++)
                 {
-                    var row = new CellFrameRow
+                    CellFrameRow row = new CellFrameRow
                     {
                         Number = i,
                         Element = s.ElementType,
@@ -456,7 +456,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             // A number box commits on every keystroke, so keystrokes on one frame collapse into one step.
             bool sameAsLast = _lastEditFrame == row.Number && _undo.Count > 0;
-            var before = Now();
+            Step before = Now();
 
             _file.SetDelay(_sequence, row.Number, row.Delay);
             if (row.Cell != _file.CellOf(_sequence, row.Number))
@@ -465,7 +465,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             string trouble = null;
             if (row.CanTurn)
             {
-                var (turn, across, down) = _file.TurnOf(_sequence, row.Number);
+                (double turn, double across, double down) = _file.TurnOf(_sequence, row.Number);
                 if (Differs(turn, row.Turn) || Differs(across, row.StretchAcross)
                                             || Differs(down, row.StretchDown))
                     trouble = _file.SetTurn(_sequence, row.Number, row.Turn,
@@ -473,7 +473,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             if (trouble == null && row.CanShift)
             {
-                var (across, down) = _file.ShiftOf(_sequence, row.Number);
+                (int across, int down) = _file.ShiftOf(_sequence, row.Number);
                 if (across != row.ShiftAcross || down != row.ShiftDown)
                     trouble = _file.SetShift(_sequence, row.Number, row.ShiftAcross, row.ShiftDown,
                                              _everywhere);
@@ -503,8 +503,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // Everything a row shows, taken from the file.
         private void Fill(CellFrameRow row)
         {
-            var (across, down) = _file.ShiftOf(_sequence, row.Number);
-            var (turn, stretchAcross, stretchDown) = _file.TurnOf(_sequence, row.Number);
+            (int across, int down) = _file.ShiftOf(_sequence, row.Number);
+            (double turn, double stretchAcross, double stretchDown) = _file.TurnOf(_sequence, row.Number);
             row.Quietly(_file.CellOf(_sequence, row.Number),
                         _file.Sequences[_sequence].Frames[row.Number].Delay,
                         turn, stretchAcross, stretchDown, across, down);
@@ -639,7 +639,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_file == null) return;
             Stop();
-            var before = Now();
+            Step before = Now();
             string trouble = _file.AddSequence();
             if (trouble != null) { StatusText = trouble; return; }
 
@@ -656,7 +656,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_file == null) return;
             Stop();
-            var before = Now();
+            Step before = Now();
             string trouble = _file.RemoveLastSequence();
             if (trouble != null) { StatusText = trouble; return; }
 
@@ -672,7 +672,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_file == null || _sequence < 0) return;
             Stop();
-            var before = Now();
+            Step before = Now();
             string trouble = _file.AddFrame(_sequence, number);
             if (trouble != null) { StatusText = trouble; return; }
 
@@ -690,7 +690,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_file == null || _sequence < 0) return;
             Stop();
-            var before = Now();
+            Step before = Now();
             string trouble = _file.RemoveFrame(_sequence, number);
             if (trouble != null) { StatusText = trouble; return; }
 
@@ -727,7 +727,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get
             {
                 if (_layout == null) return "Pieces";
-                var cell = _pieceCell >= 0 && _pieceCell < _layout.Cells.Count ? _layout.Cells[_pieceCell] : null;
+                NcerFile.Cell cell = _pieceCell >= 0 && _pieceCell < _layout.Cells.Count ? _layout.Cells[_pieceCell] : null;
                 int n = cell?.Pieces.Count ?? 0;
                 return $"Drawing {_pieceCell}: {n} piece{(n == 1 ? "" : "s")}";
             }
@@ -736,16 +736,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void FillPieces()
         {
             _fillingPieces = true;
-            foreach (var row in Pieces) row.Changed = null;
+            foreach (CellPieceRow row in Pieces) row.Changed = null;
             Pieces.Clear();
 
-            var cell = _layout != null && _pieceCell >= 0 && _pieceCell < _layout.Cells.Count
+            NcerFile.Cell cell = _layout != null && _pieceCell >= 0 && _pieceCell < _layout.Cells.Count
                      ? _layout.Cells[_pieceCell] : null;
             if (cell != null)
                 for (int i = 0; i < cell.Pieces.Count; i++)
                 {
-                    var p = cell.Pieces[i];
-                    var row = new CellPieceRow { Number = i, Size = $"{p.Width}x{p.Height}" };
+                    NcerFile.Piece p = cell.Pieces[i];
+                    CellPieceRow row = new CellPieceRow { Number = i, Size = $"{p.Width}x{p.Height}" };
                     row.Quietly(p.X, p.Y);
                     row.Changed = PieceMoved;
                     Pieces.Add(row);
@@ -764,12 +764,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             // The snapshot is taken before the move but only kept if the move happened, so a refused one
             // leaves nothing on the undo stack.
-            var before = Now();
+            Step before = Now();
             string trouble = _layout.Move(_pieceCell, row.Number, row.Across, row.Down);
             if (trouble != null)
             {
                 StatusText = trouble;
-                var p = _layout.PieceAt(_pieceCell, row.Number);
+                NcerFile.Piece p = _layout.PieceAt(_pieceCell, row.Number);
                 if (p != null)
                 {
                     _fillingPieces = true;
@@ -817,7 +817,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (from.Count == 0) return;
             to.Push(Now());
-            var step = from.Pop();
+            Step step = from.Pop();
 
             if (step.Animation != null) _file = NanrFile.Read(step.Animation);
             if (step.Layout != null)
@@ -859,7 +859,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     if (trouble != null) { StatusText = trouble; return; }
                 }
 
-                var files = new Dictionary<int, byte[]> { [_animation] = animation };
+                Dictionary<int, byte[]> files = new Dictionary<int, byte[]> { [_animation] = animation };
                 if (positions != null) files[_cells] = positions;
                 _source.Put(files);
 
@@ -968,7 +968,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             int due = (int)(_clock.Elapsed.TotalSeconds * 60 * TicksPerFrame);
             if (due - _ticksRun > 4 * TicksPerFrame) _ticksRun = due - 1;
 
-            var s = _file.Sequences[_sequence];
+            NanrFile.Sequence s = _file.Sequences[_sequence];
             bool loops = s.PlayMode == 2 || s.PlayMode == 4;
             bool backwards = s.PlayMode == 3 || s.PlayMode == 4;
             int loopStart = Math.Clamp(s.LoopStartFrame, 0, Frames.Count - 1);
@@ -1023,14 +1023,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 int cell = Frames[at].Cell;
                 // Several animations hold one drawing and move it, so the frame's own shift has to be
                 // applied or they look frozen.
-                var (sx, sy) = _file.ShiftOf(_sequence, at);
-                var (degrees, scaleX, scaleY) = _file.TurnOf(_sequence, at);
+                (int sx, int sy) = _file.ShiftOf(_sequence, at);
+                (double degrees, double scaleX, double scaleY) = _file.TurnOf(_sequence, at);
 
                 if (InPoketch && _inCasing)
                 {
                     // Seeing the frame is the point of this window, so one with no recorded position is
                     // drawn in the middle and said to be.
-                    var slots = _app.SpriteSlots ?? new[] { PoketchScreen.MiddleOfScreen };
+                    (int X, int Y)[] slots = _app.SpriteSlots ?? new[] { PoketchScreen.MiddleOfScreen };
                     Preview = ToBitmap(_casing.RenderApp(
                         false, 0, false, _app.Tiles, _app.Arrangement, _app.Sprites, _app.Cells, cell,
                         slots, _app.Fills,
@@ -1042,7 +1042,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     return;
                 }
 
-                var rgba = new byte[DsBgScreen.Width * DsBgScreen.Height * 4];
+                byte[] rgba = new byte[DsBgScreen.Width * DsBgScreen.Height * 4];
                 if (_banks.Count > 0 && _characters.Length > 0 && cell >= 0 && cell < _banks.Count)
                     DsBgScreen.DrawCellTurned(rgba, _banks[cell], _characters, _ => _colours,
                                               DsBgScreen.Width / 2 + sx, DsBgScreen.Height / 2 + sy,
@@ -1059,10 +1059,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static Bitmap ToBitmap(byte[] rgba)
         {
-            var wb = new WriteableBitmap(new global::Avalonia.PixelSize(DsBgScreen.Width, DsBgScreen.Height),
+            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(DsBgScreen.Width, DsBgScreen.Height),
                                          new global::Avalonia.Vector(96, 96),
                                          PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using (var fb = wb.Lock())
+            using (ILockedFramebuffer fb = wb.Lock())
                 System.Runtime.InteropServices.Marshal.Copy(rgba, 0, fb.Address, rgba.Length);
             return wb;
         }
@@ -1088,7 +1088,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             byte[] first = DsBgScreen.ReadCharacters(NitroBgCodec.Inflate(narc.Get(shared)));
             if (first.Length == 0) return mine;
 
-            var both = new byte[first.Length + mine.Length];
+            byte[] both = new byte[first.Length + mine.Length];
             first.CopyTo(both, 0);
             mine.CopyTo(both, first.Length);
             return both;

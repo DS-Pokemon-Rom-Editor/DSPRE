@@ -25,11 +25,11 @@ namespace DSPRE
 
         public static List<Entry> GetEntries()
         {
-            var itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
-            var used = GetUsedScriptNumbers();
-            var result = new List<Entry>();
+            ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+            HashSet<int> used = GetUsedScriptNumbers();
+            List<Entry> result = new List<Entry>();
 
-            foreach (var e in DSUtils.GetGroundItemScriptEntries(itemScript))
+            foreach ((int scriptIndex, int itemId, int quantity) e in DSUtils.GetGroundItemScriptEntries(itemScript))
             {
                 result.Add(new Entry
                 {
@@ -45,7 +45,7 @@ namespace DSPRE
 
         public static HashSet<int> GetUsedScriptNumbers()
         {
-            var used = new HashSet<int>();
+            HashSet<int> used = new HashSet<int>();
             int fileCount = Filesystem.GetEventFileCount();
 
             for (int i = 0; i < fileCount; i++)
@@ -93,15 +93,15 @@ namespace DSPRE
         {
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.scripts });
 
-            var itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+            ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
             int insertAt = itemScript.allScripts.FindLastIndex(DSUtils.IsGroundItemScriptEntry) + 1;
-            var cmdList = new List<ScriptCommand>
+            List<ScriptCommand> cmdList = new List<ScriptCommand>
             {
                 new ScriptCommand("SetVar 0x8008 " + itemId),
                 new ScriptCommand("SetVar 0x8009 " + quantity),
                 new ScriptCommand("Jump Function_#1")
             };
-            var newEntry = new ScriptCommandContainer(uint.MaxValue, ScriptFile.ContainerTypes.Script, commandList: cmdList);
+            ScriptCommandContainer newEntry = new ScriptCommandContainer(uint.MaxValue, ScriptFile.ContainerTypes.Script, commandList: cmdList);
             itemScript.allScripts.Insert(insertAt, newEntry);
             itemScript.RenumberContainers();
             itemScript.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
@@ -122,7 +122,7 @@ namespace DSPRE
                 return "This entry is currently used by an Overworld Item event and can't be removed.\nChange or delete that event first.";
             }
 
-            var itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
+            ScriptFile itemScript = new ScriptFile(RomInfo.itemScriptFileNumber);
             itemScript.allScripts.RemoveAt(scriptIndex);
             itemScript.RenumberContainers();
             itemScript.SaveToFileDefaultDir(RomInfo.itemScriptFileNumber, showSuccessMessage: false);
@@ -188,8 +188,8 @@ namespace DSPRE
 
             public List<Entry> Entries()
             {
-                var result = new List<Entry>();
-                foreach (var e in DSUtils.GetGroundItemScriptEntries(_script))
+                List<Entry> result = new List<Entry>();
+                foreach ((int scriptIndex, int itemId, int quantity) e in DSUtils.GetGroundItemScriptEntries(_script))
                 {
                     int? origin = _origin[e.scriptIndex];
                     result.Add(new Entry
@@ -204,7 +204,7 @@ namespace DSPRE
             public void Add(int itemId, int quantity)
             {
                 int insertAt = _script.allScripts.FindLastIndex(DSUtils.IsGroundItemScriptEntry) + 1;
-                var cmdList = new List<ScriptCommand>
+                List<ScriptCommand> cmdList = new List<ScriptCommand>
                 {
                     new ScriptCommand("SetVar 0x8008 " + itemId),
                     new ScriptCommand("SetVar 0x8009 " + quantity),
@@ -252,10 +252,10 @@ namespace DSPRE
                 if (!HasChanges) return;
                 // Every surviving entry's original script number to its new one. An add lands before any
                 // later scripts in the file, so moves go both ways.
-                var moved = new Dictionary<int, int>();
+                Dictionary<int, int> moved = new Dictionary<int, int>();
                 for (int i = 0; i < _origin.Count; i++)
                     if (_origin[i] != null) moved[ItemScrMin + _origin[i].Value] = ItemScrMin + i;
-                var removed = new List<int>(_removed);
+                List<int> removed = new List<int>(_removed);
                 int Remap(int n)
                 {
                     if (moved.TryGetValue(n, out int m)) return m;

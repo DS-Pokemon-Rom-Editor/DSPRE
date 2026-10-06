@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Data
         public static byte[] Palette(ushort[] colours, bool eightBit)
         {
             int data = colours.Length * 2;
-            var d = new byte[0x28 + data];
+            byte[] d = new byte[0x28 + data];
             Envelope(d, "RLCN", d.Length, 1);
             Tag(d, 0x10, "TTLP");
             U32(d, 0x14, d.Length - 0x10);
@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Data
         public static byte[] Tiles(byte[] pixels, int tileCount, bool eightBit)
         {
             int bytesPerTile = eightBit ? 64 : 32;
-            var data = new byte[tileCount * bytesPerTile];
+            byte[] data = new byte[tileCount * bytesPerTile];
             if (eightBit) Array.Copy(pixels, data, Math.Min(pixels.Length, data.Length));
             else
                 for (int i = 0; i + 1 < pixels.Length && i / 2 < data.Length; i += 2)
@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia.Data
 
             // Real sheets say how many tiles across and down they are. A sheet built here is one long
             // strip of tiles, so it is that many across and one down.
-            var d = new byte[0x30 + data.Length + 0x10];
+            byte[] d = new byte[0x30 + data.Length + 0x10];
             Envelope(d, "RGCN", d.Length, 2);
             d[6] = 0x01; d[7] = 0x01;           // the two-section sort the games write
             Tag(d, 0x10, "RAHC");
@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.Data
         public static byte[] Arrangement(ushort[] squares, int widthPixels, int heightPixels)
         {
             int data = squares.Length * 2;
-            var d = new byte[0x24 + data];
+            byte[] d = new byte[0x24 + data];
             Envelope(d, "RCSN", d.Length, 1);
             Tag(d, 0x10, "NRCS");
             U32(d, 0x14, d.Length - 0x10);

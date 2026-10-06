@@ -14,7 +14,7 @@ namespace DSPRE.HgEngine
         public static bool TryGetRawValue(string text, string designator, out string rawValue)
         {
             rawValue = null;
-            if (!TryLocate(text, designator, out var item, out _) || item == null) return false;
+            if (!TryLocate(text, designator, out CInitItem item, out _) || item == null) return false;
             rawValue = item.ValueText(text).Trim();
             return rawValue.Length > 0;
         }
@@ -25,7 +25,7 @@ namespace DSPRE.HgEngine
         public static bool TrySetRawValue(ref string text, string designator, string valueLiteral)
         {
             string edited;
-            if (TryLocate(text, designator, out var item, out var table))
+            if (TryLocate(text, designator, out CInitItem item, out CDeclaration table))
             {
                 if (item == null) return false;
                 edited = text.Substring(0, item.ValueStart) + valueLiteral + text.Substring(item.ValueEnd);
@@ -33,7 +33,7 @@ namespace DSPRE.HgEngine
             else
             {
                 if (table == null) return false;
-                var last = table.Init.Items.LastOrDefault();
+                CInitItem last = table.Init.Items.LastOrDefault();
                 string indent = last != null ? HgEngineSwarms.Indent(text, last.Start) : "    ";
                 int at = HgEngineSwarms.LineStart(text, table.Init.Close);
                 // An entry before the brace needs the previous one to end in a comma.
@@ -56,10 +56,10 @@ namespace DSPRE.HgEngine
                 .OrderByDescending(d => d.Init.Items.Count(i => i.IndexText != null)).FirstOrDefault();
             if (table == null) return false;
 
-            var species = HgEngineProject.IsActive ? HgEngineSymbolTable.Load(SpeciesH) : null;
+            HgEngineSymbolTable species = HgEngineProject.IsActive ? HgEngineSymbolTable.Load(SpeciesH) : null;
             int? wanted = species != null && species.TryGetValue(designator, out int w) ? w : null;
-            var matches = new List<CInitItem>();
-            foreach (var i in table.Init.Items)
+            List<CInitItem> matches = new List<CInitItem>();
+            foreach (CInitItem i in table.Init.Items)
             {
                 string name = i.IndexText?.Trim();
                 if (name == null) continue;

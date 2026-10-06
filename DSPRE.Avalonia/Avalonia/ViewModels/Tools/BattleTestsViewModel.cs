@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             string keep = _selected;
             Tests.Clear();
-            foreach (var t in _all.Where(t => _filter.Length == 0 || t.Contains(_filter, StringComparison.OrdinalIgnoreCase))) Tests.Add(t);
+            foreach (string t in _all.Where(t => _filter.Length == 0 || t.Contains(_filter, StringComparison.OrdinalIgnoreCase))) Tests.Add(t);
             if (keep != null && Tests.Contains(keep)) OnPropertyChanged(nameof(Selected));
         }
 

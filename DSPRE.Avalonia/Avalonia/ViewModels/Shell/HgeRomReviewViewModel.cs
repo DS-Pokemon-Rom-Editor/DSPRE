@@ -136,10 +136,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private void ApplySearch()
         {
             string needle = (_search ?? "").Trim().ToLowerInvariant();
-            var shown = needle.Length == 0 ? _allSpecies : _allSpecies.Where(s => s.Search.Contains(needle)).ToList();
+            List<SpeciesRow> shown = needle.Length == 0 ? _allSpecies : _allSpecies.Where(s => s.Search.Contains(needle)).ToList();
 
             Species.Clear();
-            foreach (var row in shown) Species.Add(row);
+            foreach (SpeciesRow row in shown) Species.Add(row);
 
             // Keep the open species if still listed, so typing does not redraw on each letter.
             int keep = _loadedSpeciesId >= 0 ? Species.ToList().FindIndex(r => r.Id == _loadedSpeciesId) : -1;
@@ -190,16 +190,16 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                     PaletteIsWrong = built.PaletteIsWrong;
                     SpriteNote = built.SpriteNote;
                     FollowerNote = built.FollowerNote;
-                    foreach (var tile in built.Icons) Icons.Add(tile);
-                    foreach (var tile in built.Followers) Followers.Add(tile);
-                    foreach (var tile in built.Sprites) Sprites.Add(tile);
+                    foreach (SpriteTile tile in built.Icons) Icons.Add(tile);
+                    foreach (SpriteTile tile in built.Followers) Followers.Add(tile);
+                    foreach (SpriteTile tile in built.Sprites) Sprites.Add(tile);
                 });
             });
         }
 
         private SpeciesView BuildSpeciesView(int species)
         {
-            var view = new SpeciesView();
+            SpeciesView view = new SpeciesView();
             LoadIcons(species, view);
             LoadSprites(species, view);
             LoadFollower(species, view);
@@ -228,13 +228,13 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             try
             {
-                var pictures = OverworldSprites.Pictures(model, palette);
+                List<OverworldSprites.SpritePixels> pictures = OverworldSprites.Pictures(model, palette);
                 if (pictures == null || pictures.Count == 0)
                 {
                     view.Followers.Add(new SpriteTile { Caption = $"Follower, {which}", Whynot = "No picture in this entry." });
                     return;
                 }
-                var first = pictures[0];
+                OverworldSprites.SpritePixels first = pictures[0];
                 view.Followers.Add(new SpriteTile
                 {
                     Caption = $"Follower, {which}",
@@ -257,7 +257,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
             if (HgEngineProject.IsActive)
             {
-                var fromCheckout = new ScriptNarc(DirNames.pokemonBattleSprites);
+                ScriptNarc fromCheckout = new ScriptNarc(DirNames.pokemonBattleSprites);
                 if (fromCheckout.Available && fromCheckout.Count > 0)
                 {
                     _spriteSourceNote = "From your checkout's build of pokegra.narc.";
@@ -285,7 +285,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             try
             {
                 // Vanilla follower entries remain too, so the species run is the last unbroken one.
-                var narc = OverworldArchive();
+                ScriptNarc narc = OverworldArchive();
                 for (int i = narc.Count - 1; i >= 0; i--)
                 {
                     byte[] member = narc.Get(i);
@@ -302,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         private static bool Contains(byte[] haystack, string needle)
         {
-            var bytes = System.Text.Encoding.ASCII.GetBytes(needle);
+            byte[] bytes = System.Text.Encoding.ASCII.GetBytes(needle);
             for (int i = 0; i + bytes.Length <= haystack.Length; i++)
             {
                 int k = 0;
@@ -315,7 +315,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Compares the ROM's icon palette bank with the checkout's; without a checkout shows every bank.</summary>
         private void LoadIcons(int species, SpeciesView view)
         {
-            var status = HgEngineCodeAddons.ReadIconPaletteId(species, out int inRom);
+            HgEngineCodeAddons.PaletteStatus status = HgEngineCodeAddons.ReadIconPaletteId(species, out int inRom);
             bool readable = status == HgEngineCodeAddons.PaletteStatus.Ok;
 
             string romSays = status switch
@@ -371,7 +371,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             try
             {
-                var raw = DSUtils.GetPokePicRaw(species, 32, 32, bank);
+                RawImage raw = DSUtils.GetPokePicRaw(species, 32, 32, bank);
                 return new SpriteTile { Caption = caption, Picture = ImageConverter.ToAvaloniaBitmap(raw) };
             }
             catch (Exception ex)
@@ -383,10 +383,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Single-gender species leave the female members empty.</summary>
         private void LoadSprites(int species, SpeciesView view)
         {
-            var archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.pokemonBattleSprites);
+            GraphicAssets.Archive archive = GraphicAssets.All.FirstOrDefault(a => a.Dir == DirNames.pokemonBattleSprites);
             if (archive == null) return;
 
-            var source = SpriteArchive();
+            ScriptNarc source = SpriteArchive();
             view.SpriteNote = _spriteSourceNote;
 
             string[] drawings = { "Back, female", "Back, male", "Front, female", "Front, male" };
@@ -406,7 +406,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             try
             {
-                var preview = GraphicAssets.Render(archive, index, shiny, source);
+                GraphicAssets.Preview preview = GraphicAssets.Render(archive, index, shiny, source);
                 return preview?.Rgba == null
                     ? new SpriteTile { Caption = caption, Whynot = preview?.Whynot ?? "No picture here." }
                     : new SpriteTile
@@ -444,7 +444,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             RepairNote = _layout.StaleMembers.Count > 0 ? HgEngineCodeAddonRepair.Describe(_layout) : "";
 
             Members.Clear();
-            foreach (var m in _layout.Members)
+            foreach (HgEngineCodeAddons.MemberInfo m in _layout.Members)
             {
                 Members.Add(new MemberRow
                 {

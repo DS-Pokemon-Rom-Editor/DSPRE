@@ -25,7 +25,7 @@ namespace DSPRE
                 if (!Repository.IsValid(pathToDbRepo))
                 {
                     Repository.Init(pathToDbRepo);
-                    using (var repo = new Repository(pathToDbRepo))
+                    using (Repository repo = new Repository(pathToDbRepo))
                     {
                         Remote remote = repo.Network.Remotes.Add("origin", "https://github.com/DS-Pokemon-Rom-Editor/scrcmd-database.git");
                         Commands.Fetch(repo, remote.Name, new string[] { "refs/heads/main:refs/heads/main" }, null, null);
@@ -37,9 +37,9 @@ namespace DSPRE
                     }
                 }
 
-                using (var repo = new Repository(pathToDbRepo))
+                using (Repository repo = new Repository(pathToDbRepo))
                 {
-                    var remote = repo.Network.Remotes["origin"];
+                    Remote remote = repo.Network.Remotes["origin"];
                     try
                     {
                         // Reset any changes
@@ -49,7 +49,7 @@ namespace DSPRE
                         }
 
                         // Clean up untracked files
-                        foreach (var item in repo.RetrieveStatus().Untracked)
+                        foreach (StatusEntry item in repo.RetrieveStatus().Untracked)
                         {
                             string fullPath = Path.Combine(pathToDbRepo, item.FilePath);
                             if (File.Exists(fullPath))
@@ -61,8 +61,8 @@ namespace DSPRE
                         Commands.Fetch(repo, remote.Name, remote.FetchRefSpecs.Select(x => x.Specification), null, null);
 
                         // Get the remote main branch and force checkout
-                        var remoteBranch = repo.Branches["origin/main"];
-                        var options = new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force };
+                        Branch remoteBranch = repo.Branches["origin/main"];
+                        CheckoutOptions options = new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force };
                         Commands.Checkout(repo, repo.Branches["main"], options);
                         repo.Reset(ResetMode.Hard, remoteBranch.Tip);
 

@@ -35,7 +35,7 @@ namespace LibNDSFormats {
         /// <param name="reader">Binary reader to use.</param>
         /// <returns>Trimmed string.</returns>
         public static string ReadNSBMDString(EndianBinaryReader reader) {
-            var str = new String(reader.ReadChars(System.Text.Encoding.ASCII, 16));
+            string str = new String(reader.ReadChars(System.Text.Encoding.ASCII, 16));
             str = str.Replace("\0", "");
 
             return str;

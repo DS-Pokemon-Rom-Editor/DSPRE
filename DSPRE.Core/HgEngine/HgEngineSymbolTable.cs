@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
@@ -31,7 +32,7 @@ namespace DSPRE.HgEngine
         {
             name = null;
             string adminFallback = null;
-            foreach (var kv in ByName)
+            foreach (KeyValuePair<string, int> kv in ByName)
             {
                 if (kv.Value != value || !kv.Key.StartsWith(prefix, StringComparison.Ordinal)) continue;
                 // A "_START"/"_MAX"/etc. range marker often aliases the same value as the real entry
@@ -55,8 +56,8 @@ namespace DSPRE.HgEngine
             expression = null;
             if (value == 0) return TryGetNameWithPrefix(0, prefix, out expression);
 
-            var bitNames = new SortedDictionary<int, string>();
-            foreach (var kv in ByName)
+            SortedDictionary<int, string> bitNames = new SortedDictionary<int, string>();
+            foreach (KeyValuePair<string, int> kv in ByName)
             {
                 if (!kv.Key.StartsWith(prefix, StringComparison.Ordinal)) continue;
                 int v = kv.Value;
@@ -66,8 +67,8 @@ namespace DSPRE.HgEngine
             }
 
             int remaining = value;
-            var parts = new List<string>();
-            foreach (var (bit, name) in bitNames)
+            List<string> parts = new List<string>();
+            foreach ((int bit, string name) in bitNames)
             {
                 if ((remaining & bit) == 0) continue;
                 parts.Add(name);
@@ -92,13 +93,13 @@ namespace DSPRE.HgEngine
         public static HgEngineSymbolTable Load(string headerRelPath)
         {
             if (!HgEngineProject.IsLinked) return null;
-            if (_cache.TryGetValue(headerRelPath, out var cached)) return cached;
+            if (_cache.TryGetValue(headerRelPath, out HgEngineSymbolTable cached)) return cached;
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, headerRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
             // #if conditions in other headers test config.h switches such as DISALLOW_DEXIT_GEN.
-            var config = headerRelPath == ConfigHeaderRelPath ? null : Load(ConfigHeaderRelPath)?.ByName;
-            var table = Parse(File.ReadAllText(path), config);
+            IReadOnlyDictionary<string, int> config = headerRelPath == ConfigHeaderRelPath ? null : Load(ConfigHeaderRelPath)?.ByName;
+            HgEngineSymbolTable table = Parse(File.ReadAllText(path), config);
             _cache[headerRelPath] = table;
             return table;
         }
@@ -110,7 +111,7 @@ namespace DSPRE.HgEngine
             text = StripLineComments(text);
             text = DropInactiveBranches(text, outside);
 
-            var rawExpr = new Dictionary<string, string>(StringComparer.Ordinal);
+            Dictionary<string, string> rawExpr = new Dictionary<string, string>(StringComparer.Ordinal);
 
             // [ \t]+ (not \s+): a value-less header guard must not match, or \s+ would cross the
             // newline and swallow the next line's real #define as this one's value.
@@ -122,12 +123,12 @@ namespace DSPRE.HgEngine
 
             ResolveImplicitEnumMembers(text, rawExpr);
 
-            var cache = new Dictionary<string, int>(StringComparer.Ordinal);
-            var byName = new Dictionary<string, int>(StringComparer.Ordinal);
-            var byValue = new Dictionary<int, string>();
+            Dictionary<string, int> cache = new Dictionary<string, int>(StringComparer.Ordinal);
+            Dictionary<string, int> byName = new Dictionary<string, int>(StringComparer.Ordinal);
+            Dictionary<int, string> byValue = new Dictionary<int, string>();
 
-            var resolved = new List<(string name, int value)>();
-            foreach (var name in rawExpr.Keys)
+            List<(string name, int value)> resolved = new List<(string name, int value)>();
+            foreach (string name in rawExpr.Keys)
             {
                 if (!TryResolve(name, rawExpr, cache, 0, out int value)) continue;
                 byName[name] = value;
@@ -136,9 +137,9 @@ namespace DSPRE.HgEngine
 
             // Administrative markers (SPECIES_MEGA_START, NUM_OF_FAKEMONS, ...) often alias the same
             // value as the real entity right after them; only win the tie if nothing else claims it.
-            foreach (var (name, value) in resolved)
+            foreach ((string name, int value) in resolved)
                 if (!IsAdministrativeName(name)) byValue.TryAdd(value, name);
-            foreach (var (name, value) in resolved)
+            foreach ((string name, int value) in resolved)
                 byValue.TryAdd(value, name);
 
             return new HgEngineSymbolTable(byName, byValue);
@@ -151,20 +152,20 @@ namespace DSPRE.HgEngine
         internal static string DropInactiveBranches(string text, IReadOnlyDictionary<string, int> outside)
         {
             if (!text.Contains("#if")) return text;
-            var lines = text.Split('\n');
-            var known = new Dictionary<string, string>(StringComparer.Ordinal);
+            string[] lines = text.Split('\n');
+            Dictionary<string, string> known = new Dictionary<string, string>(StringComparer.Ordinal);
             // Each open #if: whether its current branch is live, and whether an earlier branch already was.
-            var stack = new Stack<(bool live, bool taken, bool unknown)>();
+            Stack<(bool live, bool taken, bool unknown)> stack = new Stack<(bool live, bool taken, bool unknown)>();
             bool Live() => stack.All(s => s.live);
 
             for (int i = 0; i < lines.Length; i++)
             {
                 string line = lines[i].Trim();
-                var directive = Regex.Match(line, @"^#\s*(ifdef|ifndef|if|elif|else|endif)\b\s*(.*)$");
+                Match directive = Regex.Match(line, @"^#\s*(ifdef|ifndef|if|elif|else|endif)\b\s*(.*)$");
                 if (!directive.Success)
                 {
                     if (!Live()) { lines[i] = ""; continue; }
-                    var def = Regex.Match(line, @"^#\s*define[ \t]+([A-Za-z_]\w*)(?:[ \t]+(.*))?$");
+                    Match def = Regex.Match(line, @"^#\s*define[ \t]+([A-Za-z_]\w*)(?:[ \t]+(.*))?$");
                     if (def.Success) known[def.Groups[1].Value] = def.Groups[2].Success ? StripComment(def.Groups[2].Value) : "1";
                     continue;
                 }
@@ -192,7 +193,7 @@ namespace DSPRE.HgEngine
                     case "elif":
                         {
                             if (stack.Count == 0) break;
-                            var top = stack.Pop();
+                            (bool live, bool taken, bool unknown) top = stack.Pop();
                             bool? v = top.unknown ? null : value(cond);
                             if (v == null) stack.Push((true, top.taken, true));
                             else stack.Push((!top.taken && v.Value, top.taken || v.Value, false));
@@ -201,7 +202,7 @@ namespace DSPRE.HgEngine
                     case "else":
                         {
                             if (stack.Count == 0) break;
-                            var top = stack.Pop();
+                            (bool live, bool taken, bool unknown) top = stack.Pop();
                             stack.Push(top.unknown ? (true, true, true) : (!top.taken, true, false));
                             break;
                         }
@@ -230,14 +231,14 @@ namespace DSPRE.HgEngine
                 return 0;   // undefined in C
             }
 
-            var defined = Regex.Match(cond, @"^(!?)\s*defined\s*\(?\s*([A-Za-z_]\w*)\s*\)?$");
+            Match defined = Regex.Match(cond, @"^(!?)\s*defined\s*\(?\s*([A-Za-z_]\w*)\s*\)?$");
             if (defined.Success)
             {
                 bool isDefined = known.ContainsKey(defined.Groups[2].Value) || (outside?.ContainsKey(defined.Groups[2].Value) ?? false);
                 return defined.Groups[1].Value == "!" ? !isDefined : isDefined;
             }
 
-            var compare = Regex.Match(cond, @"^([A-Za-z_]\w*|-?\w+)\s*(==|!=|>=|<=|>|<)\s*([A-Za-z_]\w*|-?\w+)$");
+            Match compare = Regex.Match(cond, @"^([A-Za-z_]\w*|-?\w+)\s*(==|!=|>=|<=|>|<)\s*([A-Za-z_]\w*|-?\w+)$");
             if (compare.Success)
             {
                 long? left = Operand(compare.Groups[1].Value), right = Operand(compare.Groups[3].Value);
@@ -253,7 +254,7 @@ namespace DSPRE.HgEngine
                 };
             }
 
-            var single = Regex.Match(cond, @"^(!?)\s*([A-Za-z_]\w*|-?\d+)$");
+            Match single = Regex.Match(cond, @"^(!?)\s*([A-Za-z_]\w*|-?\d+)$");
             if (single.Success)
             {
                 long? v = Operand(single.Groups[2].Value);
@@ -279,8 +280,8 @@ namespace DSPRE.HgEngine
         /// keeping line breaks: a "#define" inside "/* ... */" is dead text, not a definition.</summary>
         private static string StripLineComments(string text)
         {
-            var sb = new System.Text.StringBuilder(text);
-            foreach (var t in CLexer.Tokenize(text, keepComments: true))
+            StringBuilder sb = new System.Text.StringBuilder(text);
+            foreach (CToken t in CLexer.Tokenize(text, keepComments: true))
             {
                 if (t.Kind != CTokenKind.Comment) continue;
                 for (int i = t.Start; i < t.End; i++)
@@ -302,7 +303,7 @@ namespace DSPRE.HgEngine
                 {
                     string trimmed = member.Trim();
                     if (trimmed.Length == 0) continue;
-                    var m = Regex.Match(trimmed, @"^([A-Za-z_]\w*)\s*(?:=\s*(.+))?$", RegexOptions.Singleline);
+                    Match m = Regex.Match(trimmed, @"^([A-Za-z_]\w*)\s*(?:=\s*(.+))?$", RegexOptions.Singleline);
                     if (!m.Success) { known = false; continue; }
 
                     string name = m.Groups[1].Value;
@@ -325,7 +326,7 @@ namespace DSPRE.HgEngine
         /// expression can't be mistaken for a member separator.</summary>
         private static List<string> SplitTopLevelCommas(string body)
         {
-            var result = new List<string>();
+            List<string> result = new List<string>();
             int depth = 0, start = 0;
             for (int i = 0; i < body.Length; i++)
             {
@@ -376,7 +377,7 @@ namespace DSPRE.HgEngine
             }
 
             // moves.h chains more than one operator, e.g. "(NUM_OF_MOVES - 1 + 1)"; C evaluates +/- left to right.
-            var chain = Regex.Match(expr, @"^([A-Za-z_]\w*|0[xX][0-9a-fA-F]+|\d+)((?:\s*[+-]\s*(?:[A-Za-z_]\w*|0[xX][0-9a-fA-F]+|\d+)){2,})$");
+            Match chain = Regex.Match(expr, @"^([A-Za-z_]\w*|0[xX][0-9a-fA-F]+|\d+)((?:\s*[+-]\s*(?:[A-Za-z_]\w*|0[xX][0-9a-fA-F]+|\d+)){2,})$");
             if (chain.Success)
             {
                 if (!TryResolveOperand(chain.Groups[1].Value, rawExpr, cache, depth, out int total)) return false;
@@ -391,7 +392,7 @@ namespace DSPRE.HgEngine
 
             // hg-engine declares bit-flag families as shift expressions (e.g. "(1 << 13)"), not just +/-.
             const string operand = @"[A-Za-z_]\w*|-?0[xX][0-9a-fA-F]+|-?\d+";
-            var m = Regex.Match(expr, $@"^({operand})\s*(?:(<<|>>|[+-])\s*({operand}))?$");
+            Match m = Regex.Match(expr, $@"^({operand})\s*(?:(<<|>>|[+-])\s*({operand}))?$");
             if (!m.Success) return false;
 
             if (!TryResolveOperand(m.Groups[1].Value, rawExpr, cache, depth, out int left)) return false;

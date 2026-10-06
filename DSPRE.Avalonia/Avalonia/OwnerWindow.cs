@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia
             get
             {
                 if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime d) return null;
-                if (_last != null && _last.TryGetTarget(out var w) && w.IsVisible && d.Windows.Contains(w)) return w;
+                if (_last != null && _last.TryGetTarget(out Window w) && w.IsVisible && d.Windows.Contains(w)) return w;
                 return d.Windows.FirstOrDefault(x => x.IsActive && x.IsVisible) ?? d.MainWindow;
             }
         }

@@ -17,15 +17,15 @@ namespace DSPRE.Models
 
         public static List<BdhcBuild.Piece> Load(int mapIndex)
         {
-            var plates = new List<BdhcBuild.Piece>();
+            List<BdhcBuild.Piece> plates = new List<BdhcBuild.Piece>();
             string path = PathFor(mapIndex);
             if (path == null || !File.Exists(path)) return plates;
             foreach (string line in File.ReadAllLines(path))
             {
-                var v = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                string[] v = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 if (v.Length != 8) continue;
-                var f = v.Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
-                var plate = new BdhcBuild.Piece { MinX = f[0], MinZ = f[1], MaxX = f[2], MaxZ = f[3], Nx = f[4], Ny = f[5], Nz = f[6], D = f[7], Mine = true };
+                float[] f = v.Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
+                BdhcBuild.Piece plate = new BdhcBuild.Piece { MinX = f[0], MinZ = f[1], MaxX = f[2], MaxZ = f[3], Nx = f[4], Ny = f[5], Nz = f[6], D = f[7], Mine = true };
                 plate.AtY = plate.Height;
                 plates.Add(plate);
             }

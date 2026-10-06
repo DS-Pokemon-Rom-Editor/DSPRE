@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                var raw = DSUtils.GetPokePicRaw(species, IconSize, IconSize);
+                RawImage raw = DSUtils.GetPokePicRaw(species, IconSize, IconSize);
                 icon = ImageConverter.ToAvaloniaBitmap(raw);
             }
             catch
@@ -306,10 +306,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_rowsHooked) return;
             _rowsHooked = true;
-            foreach (var coll in new[] { WalkingRows, DayRows, NightRows, SwarmRows, RadarRows, RubyRows,
+            foreach (ObservableCollection<WildEncounterRow> coll in new[] { WalkingRows, DayRows, NightRows, SwarmRows, RadarRows, RubyRows,
                                          SapphireRows, EmeraldRows, FireRedRows, LeafGreenRows,
                                          SurfRows, OldRodRows, GoodRodRows, SuperRodRows })
-                foreach (var row in coll)
+                foreach (WildEncounterRow row in coll)
                     row.PropertyChanged += (_, e) => { if (!_loading && e.PropertyName != nameof(WildEncounterRow.PokemonIcon) && e.PropertyName != nameof(WildEncounterRow.Label)) SetDirty(); };
         }
 
@@ -320,7 +320,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _totalHeaders = totalHeaders;
             SetMonIconsPalTableAddress();
 
-            foreach (var n in pokemonNames) PokemonNames.Add(n);
+            foreach (string n in pokemonNames) PokemonNames.Add(n);
             BuildEncounterNameList(totalHeaders);
             AppEvents.NamesChanged += OnNamesChanged;   // live-refresh species names from the Text editor
 
@@ -406,8 +406,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             EncounterNames.Clear();
             string[] files = Directory.GetFiles(_dirPath);
-            var locationMap = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<string>>();
-            var locationNames = GetLocationNames();
+            Dictionary<int, List<string>> locationMap = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<string>>();
+            List<string> locationNames = GetLocationNames();
             for (ushort i = 0; i < totalHeaders; i++)
             {
                 MapHeader h = ReadHeader(i);
@@ -436,7 +436,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Headers whose wild Pokémon come from this encounter file, read fresh.</summary>
         private List<ushort> HeadersUsing(int file)
         {
-            var users = new List<ushort>();
+            List<ushort> users = new List<ushort>();
             for (ushort i = 0; i < _totalHeaders; i++)
             {
                 MapHeader h = ReadHeader(i);
@@ -448,7 +448,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void LoadFile(int id)
         {
             string path = Path.Combine(_dirPath, id.ToString("D4"));
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
             _current = new EncounterFileDPPt(stream);
             PopulateRows();
             SetClean();
@@ -524,7 +524,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int count = EncounterNames.Count;
             if (count <= 1) return;
             int last = count - 1;
-            var users = HeadersUsing(last);
+            List<ushort> users = HeadersUsing(last);
             if (users.Count > 0)
             {
                 await DialogHelper.ShowError(
@@ -547,7 +547,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void ImportEncounterFile(string path)
         {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
             _current = new EncounterFileDPPt(stream);
             PopulateRows();
             SetDirty();
@@ -561,7 +561,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int n = Directory.GetFiles(_dirPath).Length;
             for (int i = 0; i < n; i++)
             {
-                using var s = new FileStream(Path.Combine(_dirPath, i.ToString("D4")), FileMode.Open, FileAccess.Read);
+                using FileStream s = new FileStream(Path.Combine(_dirPath, i.ToString("D4")), FileMode.Open, FileAccess.Read);
                 new EncounterFileDPPt(s).SaveToFileDefaultDir(i, showSuccessMessage: false);
             }
             LoadFile(_selectedEncounterIndex);

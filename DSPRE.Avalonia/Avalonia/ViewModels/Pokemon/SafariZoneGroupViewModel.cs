@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public SafariZoneGroupViewModel(ObservableCollection<string> speciesNames)
         {
             SpeciesNames = speciesNames ?? new ObservableCollection<string>();
-            foreach (var t in SafariZoneObjectRequirement.ObjectTypes.Values) ObjectTypeNames.Add(t);
+            foreach (string t in SafariZoneObjectRequirement.ObjectTypes.Values) ObjectTypeNames.Add(t);
         }
 
         public void SetData(SafariZoneEncounterGroup group)
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             col.Clear();
             if (src == null) return;
-            foreach (var e in src) col.Add(e.ToString());
+            foreach (SafariZoneEncounter e in src) col.Add(e.ToString());
         }
 
         private void RebuildObjects()

@@ -41,14 +41,14 @@ namespace DSPRE.HgEngine
 
         public static HgEngineWriteSession Begin()
         {
-            var session = new HgEngineWriteSession();
+            HgEngineWriteSession session = new HgEngineWriteSession();
             _current.Value = session;
             return session;
         }
 
         internal bool TryGetText(string path, out string text)
         {
-            text = _pending.TryGetValue(path, out var p) ? p.Text : null;
+            text = _pending.TryGetValue(path, out Pending p) ? p.Text : null;
             return text != null;
         }
 
@@ -56,7 +56,7 @@ namespace DSPRE.HgEngine
 
         internal void Record(string path, string original, string text, Encoding encoding, bool crlf)
         {
-            if (_pending.TryGetValue(path, out var p))
+            if (_pending.TryGetValue(path, out Pending p))
             {
                 p.Text = text;
                 p.Encoding = encoding;
@@ -67,8 +67,8 @@ namespace DSPRE.HgEngine
 
         public IReadOnlyList<HgEngineLostComment> LostComments()
         {
-            var lost = new List<HgEngineLostComment>();
-            foreach (var (path, p) in _pending)
+            List<HgEngineLostComment> lost = new List<HgEngineLostComment>();
+            foreach ((string path, Pending p) in _pending)
                 lost.AddRange(HgEngineSourceComments.Lost(path, p.Original, p.Text));
             return lost;
         }
@@ -78,7 +78,7 @@ namespace DSPRE.HgEngine
         {
             error = null;
             End();
-            foreach (var (path, p) in _pending)
+            foreach ((string path, Pending p) in _pending)
             {
                 string text = keepLostComments ? HgEngineSourceComments.AppendKept(p.Text, HgEngineSourceComments.Lost(path, p.Original, p.Text)) : p.Text;
                 try { HgEngineFileCache.WriteText(path, text, p.Encoding, p.Crlf, keepLostComments: false); }
@@ -117,18 +117,18 @@ namespace DSPRE.HgEngine
 
         internal static List<HgEngineLostComment> Lost(string path, string before, string after)
         {
-            var lost = new List<HgEngineLostComment>();
+            List<HgEngineLostComment> lost = new List<HgEngineLostComment>();
             if (before == null || after == null || !CommentedExtensions.Contains(Path.GetExtension(path))) return lost;
 
-            var remaining = new Dictionary<string, int>(StringComparer.Ordinal);
-            foreach (var c in Find(after)) remaining[c.Text] = remaining.GetValueOrDefault(c.Text) + 1;
+            Dictionary<string, int> remaining = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (Comment c in Find(after)) remaining[c.Text] = remaining.GetValueOrDefault(c.Text) + 1;
 
             List<(int Open, int Close, string Name)> entries = null;
-            foreach (var c in Find(before))
+            foreach (Comment c in Find(before))
             {
                 if (remaining.TryGetValue(c.Text, out int left) && left > 0) { remaining[c.Text] = left - 1; continue; }
                 entries ??= TopLevelEntries(before);
-                var (entry, place) = Locate(path, before, entries, c.Start);
+                (string entry, string place) = Locate(path, before, entries, c.Start);
                 lost.Add(new HgEngineLostComment { FilePath = path, Entry = entry, Place = place, Text = c.Text });
             }
             return lost;
@@ -138,12 +138,12 @@ namespace DSPRE.HgEngine
         internal static string AppendKept(string text, IReadOnlyList<HgEngineLostComment> lost)
         {
             if (lost.Count == 0) return text;
-            var sb = new StringBuilder(text);
+            StringBuilder sb = new StringBuilder(text);
             if (!text.EndsWith("\n", StringComparison.Ordinal)) sb.Append('\n');
-            foreach (var group in lost.GroupBy(c => c.Entry))
+            foreach (IGrouping<string, HgEngineLostComment> group in lost.GroupBy(c => c.Entry))
             {
                 sb.Append("\n// Comments that existed on ").Append(group.Key).Append(':');
-                foreach (var c in group)
+                foreach (HgEngineLostComment c in group)
                 {
                     if (c.Place.Length > 0) sb.Append(' ').Append(c.Place).Append(':');
                     sb.Append(' ').Append(c.Text);
@@ -155,7 +155,7 @@ namespace DSPRE.HgEngine
 
         private static List<Comment> Find(string text)
         {
-            var found = new List<Comment>();
+            List<Comment> found = new List<Comment>();
             int i = 0;
             while (i < text.Length)
             {
@@ -187,7 +187,7 @@ namespace DSPRE.HgEngine
 
         private static List<(int Open, int Close, string Name)> TopLevelEntries(string text)
         {
-            var entries = new List<(int, int, string)>();
+            List<(int, int, string)> entries = new List<(int, int, string)>();
             int lastClose = -1;
             foreach (Match m in EntryStart.Matches(text))
             {
@@ -201,7 +201,7 @@ namespace DSPRE.HgEngine
 
         private static (string entry, string place) Locate(string path, string text, List<(int Open, int Close, string Name)> entries, int offset)
         {
-            foreach (var (open, close, name) in entries)
+            foreach ((int open, int close, string name) in entries)
             {
                 if (offset < open || offset > close) continue;
                 string entry = Path.GetFileName(path).Equals("Trainers.c", StringComparison.OrdinalIgnoreCase) ? "trainer " + name : name;
@@ -212,15 +212,15 @@ namespace DSPRE.HgEngine
 
         private static string PlaceIn(string text, int open, int close, int offset)
         {
-            var words = new List<string>();
+            List<string> words = new List<string>();
             while (true)
             {
-                var spans = ElementScanner.ElementSpans(text, open, close);
+                List<(int Start, int End)> spans = ElementScanner.ElementSpans(text, open, close);
                 int k = ElementAt(text, spans, offset);
                 if (k < 0) break;
 
-                var (start, end) = spans[k];
-                var named = Designator.Match(text, start);
+                (int start, int end) = spans[k];
+                Match named = Designator.Match(text, start);
                 bool designated = named.Success && named.Index + named.Length <= end;
                 // Positions count from 1, as the editors number party slots and rows.
                 words.Add(!designated ? (k + 1).ToString() : named.Groups[1].Success ? named.Groups[1].Value : named.Groups[2].Value);

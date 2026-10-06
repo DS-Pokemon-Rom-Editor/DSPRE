@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using DSPRE.HgEngine;
+
 namespace DSPRE.Avalonia.Data
 {
     public enum WazaSeqVersion { DP, Plat, HGSS }
@@ -704,14 +707,14 @@ namespace DSPRE.Avalonia.Data
         // takes five jumps), so its macro wins on length; the game's names stay. A number it skips stays unknown.
         private static WazaSeqOp[] WithHgEngine(WazaSeqOp[] retail)
         {
-            var added = HgEngine.HgEngineScriptCommands.Battle();
+            IReadOnlyDictionary<int, HgEngineScriptCommands.Command> added = HgEngine.HgEngineScriptCommands.Battle();
             if (added.Count == 0) return retail;
             if (ReferenceEquals(added, _extendedFrom)) return _extended;
             int last = System.Math.Max(retail.Length - 1, System.Linq.Enumerable.Max(added.Keys));
-            var table = new WazaSeqOp[last + 1];
+            WazaSeqOp[] table = new WazaSeqOp[last + 1];
             for (int i = 0; i <= last; i++)
             {
-                bool own = added.TryGetValue(i, out var c);
+                bool own = added.TryGetValue(i, out HgEngineScriptCommands.Command c);
                 table[i] = i < retail.Length ? (own ? new WazaSeqOp(retail[i].Name, c.ArgCount) : retail[i])
                     : own ? new WazaSeqOp(c.Name, c.ArgCount)
                     : new WazaSeqOp("op" + i, -1);
@@ -724,7 +727,7 @@ namespace DSPRE.Avalonia.Data
 
         public static int ArgCount(WazaSeqVersion v, int id)
         {
-            var t = Table(v);
+            WazaSeqOp[] t = Table(v);
             return (id >= 0 && id < t.Length) ? t[id].ArgCount : -1;
         }
 
@@ -753,13 +756,13 @@ namespace DSPRE.Avalonia.Data
 
         public static string Name(WazaSeqVersion v, int id)
         {
-            var t = Table(v);
+            WazaSeqOp[] t = Table(v);
             return (id >= 0 && id < t.Length) ? t[id].Name : null;
         }
 
         public static int Id(WazaSeqVersion v, string name)
         {
-            var t = Table(v);
+            WazaSeqOp[] t = Table(v);
             for (int i = 0; i < t.Length; i++) if (t[i].Name == name) return i;
             return -1;
         }

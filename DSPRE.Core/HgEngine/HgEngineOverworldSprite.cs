@@ -20,7 +20,7 @@ namespace DSPRE.HgEngine
             absolutePngPath = null;
             if (!HgEngineProject.IsLinked) return false;
 
-            var map = LoadMap();
+            Dictionary<int, string> map = LoadMap();
             if (map == null) return false;
 
             int lookupId = HgEngineSpeciesExpansion.AdjustForPokegraMkLookup(speciesId);
@@ -41,7 +41,7 @@ namespace DSPRE.HgEngine
             string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
 
-            var map = ParseMap(File.ReadAllText(path));
+            Dictionary<int, string> map = ParseMap(File.ReadAllText(path));
             _cache = map;
             _cachedForRepo = repo;
             return map;
@@ -50,7 +50,7 @@ namespace DSPRE.HgEngine
         /// <summary>Matches "build/pokemonow/3_0025.btx0: .../overworld.png" rule lines (the "3_" prefix is this build's own bank number for the walk-sprite texture).</summary>
         internal static Dictionary<int, string> ParseMap(string pokegraMkText)
         {
-            var map = new Dictionary<int, string>();
+            Dictionary<int, string> map = new Dictionary<int, string>();
             foreach (Match m in Regex.Matches(pokegraMkText,
                 @"build/pokemonow/3_(\d+)\.btx0:\s*(data/graphics/sprites/[^\s/]+/overworld\.png)"))
             {

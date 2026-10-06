@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace DSPRE.ROMFiles
 {
@@ -66,12 +67,12 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToBytes()
         {
-            var data = new byte[Size + _tail.Length];
+            byte[] data = new byte[Size + _tail.Length];
             for (int o = 0; o < Opponents; o++)
                 for (int r = 0; r < RowsPerOpponent; r++)
                 {
                     int at = (o * RowsPerOpponent + r) * RowSize;
-                    var row = Rows[o, r];
+                    Row row = Rows[o, r];
                     data[at] = row.NationalDex;
                     data[at + 1] = row.Day;
                     BitConverter.GetBytes(row.Species).CopyTo(data, at + 2);
@@ -87,7 +88,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The opponents' names from the contest text, or numbered labels where that text is unknown.</summary>
         public static string[] OpponentNames()
         {
-            var names = new string[Opponents];
+            string[] names = new string[Opponents];
             List<string> lines = null;
             try { if (RomInfo.BugContestTextNumber >= 0) lines = new TextArchive(RomInfo.BugContestTextNumber).messages; }
             catch (Exception e) when (e is IOException || e is InvalidDataException) { }
@@ -95,7 +96,7 @@ namespace DSPRE.ROMFiles
             for (int o = 0; o < Opponents; o++)
             {
                 string line = lines != null && FirstNameLine + o < lines.Count ? lines[FirstNameLine + o] : null;
-                var match = line == null ? null : System.Text.RegularExpressions.Regex.Match(line, @"^\{TRAINER_NAME:(.+)\}$");
+                Match match = line == null ? null : System.Text.RegularExpressions.Regex.Match(line, @"^\{TRAINER_NAME:(.+)\}$");
                 names[o] = match != null && match.Success ? match.Groups[1].Value : $"Opponent {o + 1}";
             }
             return names;
@@ -111,7 +112,7 @@ namespace DSPRE.ROMFiles
         /// on a contest day.</summary>
         public List<string> Problems(Func<int, string> name)
         {
-            var problems = new List<string>();
+            List<string> problems = new List<string>();
             for (int o = 0; o < Opponents; o++)
             {
                 for (int r = 0; r < RowsPerOpponent; r++)
@@ -120,7 +121,7 @@ namespace DSPRE.ROMFiles
 
                 foreach (bool hasNationalDex in new[] { false, true })
                 {
-                    var missing = new List<string>();
+                    List<string> missing = new List<string>();
                     foreach (int day in ContestDays)
                     {
                         bool any = false;
@@ -138,11 +139,11 @@ namespace DSPRE.ROMFiles
         /// <summary>Rows whose score can fall below 0 or above what the results screen shows.</summary>
         public List<string> Warnings(Func<int, string> name)
         {
-            var warnings = new List<string>();
+            List<string> warnings = new List<string>();
             for (int o = 0; o < Opponents; o++)
                 for (int r = 0; r < RowsPerOpponent; r++)
                 {
-                    var row = Rows[o, r];
+                    Row row = Rows[o, r];
                     if (row.Variation == 0) continue;
                     if (row.LowestScore < 0 || row.HighestScore > HighestShownScore)
                         warnings.Add($"{name(o)}, row {r + 1}: scores {row.LowestScore} to {row.HighestScore} go outside 0 to {HighestShownScore}.");

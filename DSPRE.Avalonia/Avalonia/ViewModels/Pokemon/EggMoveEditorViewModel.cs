@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ApplyState(byte[] state)
         {
-            var rows = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
+            int[][] rows = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
             int keep = _selectedMonIndex;
             _eggMoveData = rows.Select(r => new EggMoveEntry(r[0], r.Skip(1).Select(m => (ushort)m).ToList())).ToList();
             RefreshMonList();
@@ -227,8 +227,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 };
 
                 // Populate observable collections
-                foreach (var n in _monNames) MonNames.Add(n);
-                foreach (var n in _moveNames) MoveNames.Add(n);
+                foreach (string n in _monNames) MonNames.Add(n);
+                foreach (string n in _moveNames) MoveNames.Add(n);
 
                 RefreshMonList();      // Uses _monNames and _eggMoveData
                 RefreshMoveList(0);    // Populates MoveList for first entry
@@ -241,8 +241,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _monNames  = RomInfo.GetPokemonNames();
             _moveNames = RomInfo.GetAttackNames();
 
-            foreach (var n in _monNames)  MonNames.Add(n);
-            foreach (var n in _moveNames) MoveNames.Add(n);
+            foreach (string n in _monNames)  MonNames.Add(n);
+            foreach (string n in _moveNames) MoveNames.Add(n);
             AppEvents.NamesChanged += OnNamesChanged;   // live-refresh names from the Text editor
 
             PopulateEggMoveData();
@@ -278,7 +278,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            foreach (var entry in _eggMoveData)
+            foreach (EggMoveEntry entry in _eggMoveData)
             {
                 if (entry.moveIDs.Count > _maxEggMoves)
                 {
@@ -301,7 +301,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddMonCommand()
         {
             if (CbMonIndex < 0) return;
-            var entry = new EggMoveEntry(CbMonIndex, new List<ushort>());
+            EggMoveEntry entry = new EggMoveEntry(CbMonIndex, new List<ushort>());
             _eggMoveData.Add(entry);
             MonList.Add(MonLabel(CbMonIndex));
             SelectedMonIndex = _eggMoveData.Count - 1;
@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void ReplaceMonCommand()
         {
             if (CbMonIndex < 0 || _selectedMonIndex < 0) return;
-            var entry = _eggMoveData[_selectedMonIndex];
+            EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
             entry.speciesID = CbMonIndex;
             _eggMoveData[_selectedMonIndex] = entry;
             MonList[_selectedMonIndex] = MonLabel(CbMonIndex);
@@ -334,7 +334,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddMoveCommand()
         {
             if (CbMoveIndex < 0 || _selectedMonIndex < 0) return;
-            var entry = _eggMoveData[_selectedMonIndex];
+            EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
             entry.moveIDs.Add((ushort)CbMoveIndex);
             _eggMoveData[_selectedMonIndex] = entry;
             MoveList.Add(MoveLabel((ushort)CbMoveIndex));
@@ -347,7 +347,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void ReplaceMoveCommand()
         {
             if (CbMoveIndex < 0 || _selectedMonIndex < 0 || _selectedMoveIndex < 0) return;
-            var entry = _eggMoveData[_selectedMonIndex];
+            EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
             entry.moveIDs[_selectedMoveIndex] = (ushort)CbMoveIndex;
             _eggMoveData[_selectedMonIndex] = entry;
             MoveList[_selectedMoveIndex] = MoveLabel((ushort)CbMoveIndex);
@@ -357,7 +357,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void DeleteMoveCommand()
         {
             if (_selectedMonIndex < 0 || _selectedMoveIndex < 0) return;
-            var entry = _eggMoveData[_selectedMonIndex];
+            EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
             entry.moveIDs.RemoveAt(_selectedMoveIndex);
             _eggMoveData[_selectedMonIndex] = entry;
             MoveList.RemoveAt(_selectedMoveIndex);
@@ -375,8 +375,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             ushort from = (ushort)CbReplaceeIndex, to = (ushort)CbReplacerIndex;
-            int count = 0; var affected = new List<string>();
-            foreach (var entry in _eggMoveData)
+            int count = 0; List<string> affected = new List<string>();
+            foreach (EggMoveEntry entry in _eggMoveData)
             {
                 for (int i = 0; i < entry.moveIDs.Count; i++)
                 {
@@ -403,8 +403,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             ushort del = (ushort)CbDeleteAllIndex;
-            int count = 0; var affected = new List<string>();
-            foreach (var entry in _eggMoveData)
+            int count = 0; List<string> affected = new List<string>();
+            foreach (EggMoveEntry entry in _eggMoveData)
             {
                 int before = entry.moveIDs.Count;
                 entry.moveIDs.RemoveAll(m => m == del);
@@ -430,7 +430,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SearchResults.Clear();
             if (string.IsNullOrWhiteSpace(SearchText)) return;
             string lower = SearchText.Trim().ToLower();
-            foreach (var entry in _eggMoveData)
+            foreach (EggMoveEntry entry in _eggMoveData)
             {
                 string name = entry.speciesID < _monNames.Length ? _monNames[entry.speciesID] : $"SPECIES_{entry.speciesID}";
                 if (name.ToLower().Contains(lower)) SearchResults.Add(name);
@@ -486,7 +486,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 int s = 2; // end marker
-                foreach (var e in _eggMoveData) s += e.GetSizeInBytes();
+                foreach (EggMoveEntry e in _eggMoveData) s += e.GetSizeInBytes();
                 return s;
             }
         }
@@ -538,14 +538,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshMonList()
         {
             MonList.Clear();
-            foreach (var e in _eggMoveData) MonList.Add(MonLabel(e.speciesID));
+            foreach (EggMoveEntry e in _eggMoveData) MonList.Add(MonLabel(e.speciesID));
         }
 
         private void RefreshMoveList(int monIdx)
         {
             MoveList.Clear();
             if (monIdx < 0 || monIdx >= _eggMoveData.Count) return;
-            foreach (var id in _eggMoveData[monIdx].moveIDs) MoveList.Add(MoveLabel(id));
+            foreach (ushort id in _eggMoveData[monIdx].moveIDs) MoveList.Add(MoveLabel(id));
         }
 
         private string MonLabel(int id)  => id >= 0 && id < _monNames.Length  ? _monNames[id]  : $"SPECIES_{id}";
@@ -624,7 +624,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                var (expanded, maxMoves) = EggMoveData.Layout();
+                (bool expanded, int maxMoves) = EggMoveData.Layout();
                 _useSpecialFormat = expanded;
                 if (expanded) _maxEggMoves = maxMoves;
                 _maxTableSize = expanded ? ushort.MaxValue : RomInfo.GetEggMoveTableMaxBytes();

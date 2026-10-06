@@ -70,9 +70,9 @@ namespace DSPRE.Models
 
             float perSquare = squareSize > 0f ? squareSize : MapTileset.TileWidth;
 
-            var materials = new List<Material>();
-            var pieces = new List<Piece>();
-            var smart = new List<List<int[]>>();
+            List<Material> materials = new List<Material>();
+            List<Piece> pieces = new List<Piece>();
+            List<List<int[]>> smart = new List<List<int[]>>();
             Material material = null;
             Piece piece = null;
 
@@ -119,46 +119,46 @@ namespace DSPRE.Models
                         { string s = Text(bytes, ref at, count); if (piece != null) piece.Name = s; break; }
 
                     case Wide:
-                        { var v = Ints(bytes, ref at, count); if (piece != null && v.Length > 0) piece.Wide = v[0]; break; }
+                        { int[] v = Ints(bytes, ref at, count); if (piece != null && v.Length > 0) piece.Wide = v[0]; break; }
                     case Deep:
-                        { var v = Ints(bytes, ref at, count); if (piece != null && v.Length > 0) piece.Deep = v[0]; break; }
+                        { int[] v = Ints(bytes, ref at, count); if (piece != null && v.Length > 0) piece.Deep = v[0]; break; }
 
                     case Corners:
-                        { var v = Floats(bytes, ref at, count); if (piece != null) piece.Corners = v; break; }
+                        { float[] v = Floats(bytes, ref at, count); if (piece != null) piece.Corners = v; break; }
                     case Places:
-                        { var v = Floats(bytes, ref at, count); if (piece != null) piece.Places = v; break; }
+                        { float[] v = Floats(bytes, ref at, count); if (piece != null) piece.Places = v; break; }
 
                     case WhichMaterials:
-                        { var v = Ints(bytes, ref at, count); if (piece != null) piece.Materials = v; break; }
+                        { int[] v = Ints(bytes, ref at, count); if (piece != null) piece.Materials = v; break; }
                     case QuadStarts:
-                        { var v = Ints(bytes, ref at, count); if (piece != null) piece.QuadStarts = v; break; }
+                        { int[] v = Ints(bytes, ref at, count); if (piece != null) piece.QuadStarts = v; break; }
                     case TriStarts:
-                        { var v = Ints(bytes, ref at, count); if (piece != null) piece.TriStarts = v; break; }
+                        { int[] v = Ints(bytes, ref at, count); if (piece != null) piece.TriStarts = v; break; }
 
                     case XOffset:
-                        { var v = Floats(bytes, ref at, count); if (piece != null && v.Length > 0) piece.XOffset = v[0]; break; }
+                        { float[] v = Floats(bytes, ref at, count); if (piece != null && v.Length > 0) piece.XOffset = v[0]; break; }
                     case YOffset:
-                        { var v = Floats(bytes, ref at, count); if (piece != null && v.Length > 0) piece.YOffset = v[0]; break; }
+                        { float[] v = Floats(bytes, ref at, count); if (piece != null && v.Length > 0) piece.YOffset = v[0]; break; }
                     case ZOffset:
-                        { var v = Floats(bytes, ref at, count); if (piece != null && v.Length > 0) piece.ZOffset = v[0]; break; }
+                        { float[] v = Floats(bytes, ref at, count); if (piece != null && v.Length > 0) piece.ZOffset = v[0]; break; }
 
                     case FacesQuad:
-                        { var f = Faces(bytes, ref at, count, 4, false); if (piece != null) piece.Quads = f; break; }
+                        { List<int[]> f = Faces(bytes, ref at, count, 4, false); if (piece != null) piece.Quads = f; break; }
                     case FacesTri:
-                        { var f = Faces(bytes, ref at, count, 3, false); if (piece != null) piece.Tris = f; break; }
+                        { List<int[]> f = Faces(bytes, ref at, count, 3, false); if (piece != null) piece.Tris = f; break; }
                     case FacesQuadExtended:
-                        { var f = Faces(bytes, ref at, count, 4, true); if (piece != null) piece.Quads = f; break; }
+                        { List<int[]> f = Faces(bytes, ref at, count, 4, true); if (piece != null) piece.Quads = f; break; }
                     case FacesTriExtended:
-                        { var f = Faces(bytes, ref at, count, 3, true); if (piece != null) piece.Tris = f; break; }
+                        { List<int[]> f = Faces(bytes, ref at, count, 3, true); if (piece != null) piece.Tris = f; break; }
 
                     case SmartGrid:
                         {
-                            var grid = new List<int[]>();
+                            List<int[]> grid = new List<int[]>();
                             for (int i = 0; i < count && at + 4 <= bytes.Length; i++)
                             {
                                 int inner = Int(bytes, ref at);
                                 if (inner < 0 || at + inner * 4 > bytes.Length) { at = bytes.Length + 1; break; }
-                                var column = new int[inner];
+                                int[] column = new int[inner];
                                 for (int j = 0; j < inner; j++) column[j] = Int(bytes, ref at);
                                 grid.Add(column);
                             }
@@ -171,7 +171,7 @@ namespace DSPRE.Models
                             int from = at;
                             Skip(bytes, ref at, count);
                             if (material == null || count < 3 || at > bytes.Length) break;
-                            var rgb = (bytes[from] & 31, bytes[from + 1] & 31, bytes[from + 2] & 31);
+                            (int, int, int) rgb = (bytes[from] & 31, bytes[from + 1] & 31, bytes[from + 2] & 31);
                             if (tag == Diffuse) material.Diffuse = rgb;
                             else if (tag == Ambient) material.Ambient = rgb;
                             else if (tag == Specular) material.Specular = rgb;
@@ -180,14 +180,14 @@ namespace DSPRE.Models
                         }
 
                     case Normals:
-                        { var v = Floats(bytes, ref at, count); if (piece != null) piece.Normals = v; break; }
+                        { float[] v = Floats(bytes, ref at, count); if (piece != null) piece.Normals = v; break; }
                     case Colours:
-                        { var v = Floats(bytes, ref at, count); if (piece != null) piece.Colours = v; break; }
+                        { float[] v = Floats(bytes, ref at, count); if (piece != null) piece.Colours = v; break; }
 
                     case Fog: case BothFaces: case Alpha: case TexGen: case TilingU: case TilingV:
                     case Light0: case Light1: case Light2: case Light3: case RenderBorder: case VertexColours:
                         {
-                            var v = Ints(bytes, ref at, count);
+                            int[] v = Ints(bytes, ref at, count);
                             if (material == null || v.Length == 0) break;
                             int n = v[0];
                             switch (tag)
@@ -210,7 +210,7 @@ namespace DSPRE.Models
 
                     case XTileable: case YTileable: case UTileable: case VTileable: case GlobalMapping:
                         {
-                            var v = Ints(bytes, ref at, count);
+                            int[] v = Ints(bytes, ref at, count);
                             if (piece == null || v.Length == 0) break;
                             bool on = v[0] != 0;
                             if (tag == XTileable) piece.XTileable = on;
@@ -221,7 +221,7 @@ namespace DSPRE.Models
                             break;
                         }
                     case GlobalScale:
-                        { var v = Floats(bytes, ref at, count); if (piece != null && v.Length > 0) piece.GlobalScale = v[0]; break; }
+                        { float[] v = Floats(bytes, ref at, count); if (piece != null && v.Length > 0) piece.GlobalScale = v[0]; break; }
 
                     case NormalOrient: case IncludeInModel: case ColourFormat:
                         Skip(bytes, ref at, count * 4);
@@ -237,20 +237,20 @@ namespace DSPRE.Models
 
             if (pieces.Count == 0) { whynot = "No tiles in file."; return null; }
 
-            var set = new MapTileset
+            MapTileset set = new MapTileset
             {
                 Name = Path.GetFileNameWithoutExtension(path),
                 PlacesArePartsOfThePicture = true,
             };
 
             string folder = Path.GetDirectoryName(path) ?? ".";
-            foreach (var m in materials)
+            foreach (Material m in materials)
                 set.PictureIsAt(string.IsNullOrEmpty(m.Picture) ? m.Name : m.Picture, folder, m.Image);
 
-            var tileOfPiece = new int[pieces.Count];
+            int[] tileOfPiece = new int[pieces.Count];
             for (int i = 0; i < pieces.Count; i++)
             {
-                var made = Build(pieces[i], materials, perSquare);
+                MapTileset.Tile made = Build(pieces[i], materials, perSquare);
                 tileOfPiece[i] = made == null ? -1 : set.Tiles.Count;
                 if (made == null) continue;
                 if (set.Tiles.Any(t => t.Name == made.Name)) made.Name += $"_{set.Tiles.Count}";
@@ -260,9 +260,9 @@ namespace DSPRE.Models
             if (set.Tiles.Count == 0) { whynot = "No usable tiles in file."; return null; }
             if (set.Tiles.Count != pieces.Count) set.TileOfListed = tileOfPiece;
 
-            foreach (var grid in smart)
+            foreach (List<int[]> grid in smart)
             {
-                var drawing = new SmartDrawing();
+                SmartDrawing drawing = new SmartDrawing();
                 for (int across = 0; across < grid.Count && across < SmartDrawing.Wide; across++)
                     for (int down = 0; down < grid[across].Length && down < SmartDrawing.Tall; down++)
                     {
@@ -278,7 +278,7 @@ namespace DSPRE.Models
         {
             if (piece.Corners.Length < 9) return null;
 
-            var tile = new MapTileset.Tile
+            MapTileset.Tile tile = new MapTileset.Tile
             {
                 Name = string.IsNullOrEmpty(piece.Name) ? "tile" : piece.Name,
                 Wide = Math.Max(1, Math.Min(MapTileset.MostSquares, piece.Wide)),
@@ -290,16 +290,16 @@ namespace DSPRE.Models
                 OffsetZ = -piece.YOffset * perSquare,
             };
 
-            var where = new Dictionary<(int corner, int place, int facing, int colour), int>();
+            Dictionary<(int corner, int place, int facing, int colour), int> where = new Dictionary<(int corner, int place, int facing, int colour), int>();
 
             void Add(List<int[]> faces, int[] starts, int perFace)
             {
                 for (int f = 0; f < faces.Count; f++)
                 {
-                    var face = faces[f];
-                    var material = MaterialFor(materials, piece.Materials, starts, f);
+                    int[] face = faces[f];
+                    Material material = MaterialFor(materials, piece.Materials, starts, f);
 
-                    var corners = new int[perFace];
+                    int[] corners = new int[perFace];
                     for (int i = 0; i < perFace; i++)
                     {
                         // Face indices are 1-based.
@@ -307,7 +307,7 @@ namespace DSPRE.Models
                         int place = face[perFace + i] - 1;
                         int facing = face.Length > perFace * 2 + i ? face[perFace * 2 + i] - 1 : -1;
                         int colour = face.Length > perFace * 3 + i ? face[perFace * 3 + i] - 1 : 0;
-                        var light = Light(piece, material, facing, colour);
+                        (int colour, bool faces, float nx, float ny, float nz) light = Light(piece, material, facing, colour);
                         if (!where.TryGetValue((corner, place, facing, colour), out int index))
                         {
                             index = tile.Corners.Count;
@@ -381,10 +381,10 @@ namespace DSPRE.Models
         private static List<int[]> Faces(byte[] b, ref int at, int count, int perFace, bool extended)
         {
             int runs = extended ? 4 : 3;
-            var faces = new List<int[]>();
+            List<int[]> faces = new List<int[]>();
             for (int i = 0; i < count; i++)
             {
-                var face = new int[perFace * runs];
+                int[] face = new int[perFace * runs];
                 for (int k = 0; k < face.Length; k++)
                     face[k] = at + 4 <= b.Length ? Int(b, ref at) : 0;
                 faces.Add(face);
@@ -402,14 +402,14 @@ namespace DSPRE.Models
 
         private static int[] Ints(byte[] b, ref int at, int count)
         {
-            var v = new int[Math.Max(0, count)];
+            int[] v = new int[Math.Max(0, count)];
             for (int i = 0; i < v.Length; i++) v[i] = Int(b, ref at);
             return v;
         }
 
         private static float[] Floats(byte[] b, ref int at, int count)
         {
-            var v = new float[Math.Max(0, count)];
+            float[] v = new float[Math.Max(0, count)];
             for (int i = 0; i < v.Length; i++) v[i] = BitConverter.Int32BitsToSingle(Int(b, ref at));
             return v;
         }

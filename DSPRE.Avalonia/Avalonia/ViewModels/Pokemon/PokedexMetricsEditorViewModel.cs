@@ -75,12 +75,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             nameof(FemaleTrainerScale), nameof(FemalePokemonScale), nameof(MaleTrainerScale), nameof(MalePokemonScale),
             nameof(FemaleTrainerYOffset), nameof(FemalePokemonYOffset), nameof(MaleTrainerYOffset), nameof(MalePokemonYOffset),
         };
-        private void RaiseFields() { foreach (var n in FieldNames) OnPropertyChanged(n); }
+        private void RaiseFields() { foreach (string n in FieldNames) OnPropertyChanged(n); }
 
         private void Edit(Action<PokedexMetrics> change)
         {
             if (_loading || _values[_forme] == null) return;
-            var next = _values[_forme].Clone();
+            PokedexMetrics next = _values[_forme].Clone();
             change(next);
             if (next.SameAs(_values[_forme])) return;
             _values[_forme] = next;
@@ -139,7 +139,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_areasSetUp) return;
             _areasSetUp = true;
-            var groups = new[] { new List<(int Id, string Name)>(), new List<(int Id, string Name)>() };
+            List<(int Id, string Name)>[] groups = new[] { new List<(int Id, string Name)>(), new List<(int Id, string Name)>() };
             if (UseHgEngineSource)
             {
                 if (!HgEnginePokedexAreas.TryGetAreas(out groups, out _)) return;
@@ -149,10 +149,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (!PokedexAreaData.TryLoad(out _areaData, out _)) return;
                 groups = _areaData.Areas();
             }
-            var lists = new[] { SpecialAreas, RouteAreas };
+            ObservableCollection<AreaRow>[] lists = new[] { SpecialAreas, RouteAreas };
             bool national = ShowNationalDexAreas;
             for (int g = 0; g < 2; g++)
-                foreach (var (id, name) in groups[g])
+                foreach ((int id, string name) in groups[g])
                     lists[g].Add(new AreaRow { Group = g, Id = id, Name = name, Changed = OnAreaChanged, ListIndex = AreaList, HasNationalDex = national });
             OnPropertyChanged(nameof(ShowNationalDexAreas));
         }
@@ -161,19 +161,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             SetUpAreas();
             if (SpecialAreas.Count + RouteAreas.Count == 0) return null;
-            if (UseHgEngineSource) return HgEnginePokedexAreas.TryLoad(id, out var lists, out _) ? lists : null;
+            if (UseHgEngineSource) return HgEnginePokedexAreas.TryLoad(id, out int[][] lists, out _) ? lists : null;
             return _areaData != null && id > 0 && id < _areaData.SpeciesCount ? _areaData.Get(id) : null;
         }
 
         private int AreaList(int group, int time) => _areaData != null ? _areaData.List(group, time) : PokedexAreaData.ListOf(group, time);
 
-        private void ShowAreaRows() { foreach (var r in SpecialAreas.Concat(RouteAreas)) r.Show(_areas); }
+        private void ShowAreaRows() { foreach (AreaRow r in SpecialAreas.Concat(RouteAreas)) r.Show(_areas); }
 
         private void OnAreaChanged(AreaRow row, int time, bool on)
         {
             if (_loading || _areas == null) return;
             int k = AreaList(row.Group, time);
-            var next = Copy(_areas);
+            int[][] next = Copy(_areas);
             next[k] = on ? next[k].Where(i => i != row.Id).Append(row.Id).ToArray() : next[k].Where(i => i != row.Id).ToArray();
             _areas = next;
             Capture();
@@ -216,7 +216,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_footprint != null)
                 using (ScriptNarc.Use(FootprintStaging()))
                 {
-                    var shown = GraphicAssets.Render(_footprintArchive, _footprintEntry);
+                    GraphicAssets.Preview shown = GraphicAssets.Render(_footprintArchive, _footprintEntry);
                     if (shown.Rgba != null) image = ImageConverter.FromRgba(shown.Rgba, shown.Width, shown.Height);
                 }
             FootprintImage = image;
@@ -306,9 +306,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ─── Construction, loading ────────────────────────────────────────────────
         public PokedexMetricsEditorViewModel()
         {
-            var names = UseHgEngineSource ? HgEnginePokedexMetrics.BodyShapeNames() : null;
-            if (names == null || names.Count == ShapeNames.Length) foreach (var n in ShapeNames) BodyShapes.Add(n);
-            else foreach (var n in names) BodyShapes.Add(char.ToUpper(n[0]) + n.Substring(1).ToLower().Replace('_', ' '));
+            List<string> names = UseHgEngineSource ? HgEnginePokedexMetrics.BodyShapeNames() : null;
+            if (names == null || names.Count == ShapeNames.Length) foreach (string n in ShapeNames) BodyShapes.Add(n);
+            else foreach (string n in names) BodyShapes.Add(char.ToUpper(n[0]) + n.Substring(1).ToLower().Replace('_', ' '));
         }
 
         public void LoadMon(int id)
@@ -323,7 +323,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 if (UseHgEngineSource)
                 {
-                    if (HgEnginePokedexMetrics.TryLoad(id, out var m, out string error)) _loaded[0] = m;
+                    if (HgEnginePokedexMetrics.TryLoad(id, out PokedexMetrics m, out string error)) _loaded[0] = m;
                     else why = $"This entry's Pokédex data could not be read: {error}";
                 }
                 else
@@ -367,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task RebuildSortListsAsync()
         {
             int listed = 0;
-            var (saved, error) = await HgEngineSave.RunAsync(() =>
+            (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 HgEnginePokedexMetrics.TryRebuildSortLists(out listed, out string writeError) ? null : writeError);
             if (saved) SaveNotice.Saved($"Pokédex size sorts ({listed} Pokémon)");
             else if (error != null) await DialogHelper.ShowError($"The size sorts were not rebuilt:\n{error}", "Pokédex");
@@ -386,13 +386,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!HasUnsavedChanges || _currentId < 0) return;
             int species = _currentId;
-            var values = _values.Select(v => v?.Clone()).ToArray();
-            var areas = SameAreas(_areas, _areasLoaded) ? null : Copy(_areas);
-            var footprint = _footprint;
+            PokedexMetrics[] values = _values.Select(v => v?.Clone()).ToArray();
+            int[][] areas = SameAreas(_areas, _areasLoaded) ? null : Copy(_areas);
+            byte[] footprint = _footprint;
 
             if (UseHgEngineSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                     !HgEnginePokedexMetrics.TryWrite(species, values[0], out string writeError) ? writeError
                     : areas != null && !HgEnginePokedexAreas.TryWrite(species, areas, out writeError) ? writeError
                     : WriteFootprintOrError());

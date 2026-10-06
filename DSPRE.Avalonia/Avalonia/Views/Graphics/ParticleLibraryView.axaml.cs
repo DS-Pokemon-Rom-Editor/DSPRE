@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Open()
         {
-            var pick = VM?.Selected;
+            ParticleFileRow pick = VM?.Selected;
             if (pick == null) return;
             AvaloniaEditorLauncher.OpenParticleEditor(pick.Source, pick.Index, pick.Name, null, pick.Orthographic);
         }

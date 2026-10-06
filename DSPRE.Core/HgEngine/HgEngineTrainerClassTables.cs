@@ -47,9 +47,9 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsActive) return false;
             string text = TryReadSource(MoneyRelPath, out _);
             if (text == null) return false;
-            var entry = MoneyEntry(text, trainerClassId, out var table);
+            CInitItem entry = MoneyEntry(text, trainerClassId, out CDeclaration table);
             if (table != null && CompiledOut(table)) return false;
-            var field = entry?.List.Field("multiplier");
+            CInitItem field = entry?.List.Field("multiplier");
             return field != null && HgEngineSourceExpression.TryEvaluate(field.ValueText(text), _ => null, out multiplier);
         }
 
@@ -63,12 +63,12 @@ namespace DSPRE.HgEngine
             string text = TryReadSource(MoneyRelPath, out string path);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
-            var entry = MoneyEntry(text, trainerClassId, out var table);
+            CInitItem entry = MoneyEntry(text, trainerClassId, out CDeclaration table);
             if (table == null) { error = $"{MoneyRelPath} has no {MoneyTable}."; return false; }
             if (CompiledOut(table)) { error = $"{MoneyTable} is only built with EXPAND_TRAINER_PRIZE_MONEY; turn it on in hg-engine Settings to change prize money."; return false; }
             if (entry != null)
             {
-                var field = entry.List.Field("multiplier");
+                CInitItem field = entry.List.Field("multiplier");
                 if (field == null) { error = $"{MoneyRelPath}: {designator}'s entry has no .multiplier."; return false; }
                 text = text.Substring(0, field.ValueStart) + multiplier + text.Substring(field.ValueEnd);
             }
@@ -79,7 +79,7 @@ namespace DSPRE.HgEngine
             }
             return HgEngineVerifiedWrite.TryWrite(path, MoneyRelPath, text, written =>
             {
-                var back = MoneyEntry(written, trainerClassId, out _)?.List.Field("multiplier");
+                CInitItem back = MoneyEntry(written, trainerClassId, out _)?.List.Field("multiplier");
                 return back != null && HgEngineSourceExpression.TryEvaluate(back.ValueText(written), _ => null, out int m) && m == multiplier ? null : "the multiplier differs";
             }, out error);
         }
@@ -91,7 +91,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsActive) return false;
             string text = TryReadSource(GenderRelPath, out _);
             if (text == null) return false;
-            var entry = GenderEntry(text, trainerClassId, out var table);
+            CInitItem entry = GenderEntry(text, trainerClassId, out CDeclaration table);
             if (entry == null || CompiledOut(table)) return false;
             string value = entry.ValueText(text).Trim();
             if (value != "TRAINER_MALE" && value != "TRAINER_FEMALE") return false;
@@ -110,7 +110,7 @@ namespace DSPRE.HgEngine
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
             string genderName = gender == 1 ? "TRAINER_FEMALE" : "TRAINER_MALE";
-            var entry = GenderEntry(text, trainerClassId, out var table);
+            CInitItem entry = GenderEntry(text, trainerClassId, out CDeclaration table);
             if (table == null) { error = $"{GenderRelPath} has no {GenderTable}."; return false; }
             if (CompiledOut(table)) { error = $"{GenderTable} is only built with EXPAND_TRAINER_GENDER_TABLE; turn it on in hg-engine Settings to change genders."; return false; }
             if (entry != null) text = text.Substring(0, entry.ValueStart) + genderName + text.Substring(entry.ValueEnd);

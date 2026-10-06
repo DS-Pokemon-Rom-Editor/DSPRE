@@ -36,7 +36,7 @@ namespace DSPRE.HgEngine
             if (!TryFindArrayBlock(text, out int open, out int close))
             { error = "Could not locate sHiddenItemParam[] in HiddenItems.c."; return false; }
 
-            var items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
+            HgEngineSymbolTable items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
             entries = ParseEntries(text.Substring(open, close - open + 1), items);
             return true;
         }
@@ -45,10 +45,10 @@ namespace DSPRE.HgEngine
         /// <see cref="TryLoad"/> so it's directly unit-testable against a real multi-entry excerpt.</summary>
         internal static List<Entry> ParseEntries(string arrayBlock, HgEngineSymbolTable items)
         {
-            var entries = new List<Entry>();
-            foreach (var el in HgEngineSourcePatcher.SplitArrayValue(arrayBlock))
+            List<Entry> entries = new List<Entry>();
+            foreach (string el in HgEngineSourcePatcher.SplitArrayValue(arrayBlock))
             {
-                var parts = HgEngineSourcePatcher.SplitArrayValue(el.Trim());
+                List<string> parts = HgEngineSourcePatcher.SplitArrayValue(el.Trim());
                 if (parts.Count < 5) continue;
                 entries.Add(new Entry
                 {
@@ -70,7 +70,7 @@ namespace DSPRE.HgEngine
             if (!TryFindArrayBlock(original, out int open, out int close))
             { error = "Could not locate sHiddenItemParam[] in HiddenItems.c."; return false; }
 
-            var items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
+            HgEngineSymbolTable items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
             string ItemSymbol(int id) => items != null && items.TryGetNameWithPrefix(id, "ITEM_", out string n) ? n : id.ToString();
             if (!TryBuildArrayBlock(original.Substring(open, close - open + 1), entries, ItemSymbol, out string newBlock, out error))
                 return false;
@@ -113,10 +113,10 @@ namespace DSPRE.HgEngine
             string inner = oldBlock.Replace("\r\n", "\n");
             inner = inner.Substring(1, inner.Length - 2);
 
-            var comments = new List<string>();
-            var unknowns = new List<(string, string)>();
-            var linesAbove = new List<List<string>>();
-            var pending = new List<string>();
+            List<string> comments = new List<string>();
+            List<(string, string)> unknowns = new List<(string, string)>();
+            List<List<string>> linesAbove = new List<List<string>>();
+            List<string> pending = new List<string>();
 
             foreach (string line in inner.Split('\n'))
             {
@@ -128,7 +128,7 @@ namespace DSPRE.HgEngine
                 { pending.Add(trimmed); continue; }
 
                 Match m = RowLine.Match(line);
-                var parts = m.Success ? HgEngineSourcePatcher.SplitArrayValue(m.Groups[1].Value) : null;
+                List<string> parts = m.Success ? HgEngineSourcePatcher.SplitArrayValue(m.Groups[1].Value) : null;
                 if (parts == null || parts.Count != 5)
                 { error = $"sHiddenItemParam[] has a line DSPRE can't rewrite safely: {trimmed}"; return false; }
 
@@ -138,11 +138,11 @@ namespace DSPRE.HgEngine
                 pending = new List<string>();
             }
 
-            var output = new List<string>(entries.Count);
+            List<string> output = new List<string>(entries.Count);
             for (int i = 0; i < entries.Count; i++)
             {
                 if (i < linesAbove.Count) foreach (string above in linesAbove[i]) output.Add("    " + above);
-                var e = entries[i];
+                Entry e = entries[i];
                 (string unk3, string unk4) = i < unknowns.Count ? unknowns[i] : ("0", "0");
                 string row = $"    {{ {itemSymbol(e.ItemId)}, {e.Quantity}, {unk3}, {unk4}, {e.Index} }},";
                 if (i < comments.Count && comments[i] != null) row += " " + comments[i];
@@ -159,7 +159,7 @@ namespace DSPRE.HgEngine
         private static bool TryFindArrayBlock(string text, out int open, out int close)
         {
             open = close = -1;
-            var m = ArrayAnchor.Match(text);
+            Match m = ArrayAnchor.Match(text);
             if (!m.Success) return false;
             int braceStart = m.Index + m.Length - 1;
             if (!BraceScanner.TryFindMatchingBrace(text, braceStart, out int braceEnd)) return false;

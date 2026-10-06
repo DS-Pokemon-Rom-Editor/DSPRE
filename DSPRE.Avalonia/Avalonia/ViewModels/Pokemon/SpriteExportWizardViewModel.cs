@@ -109,13 +109,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void SelectAll(bool selected)
         {
-            foreach (var i in IndividualSprites) i.IsSelected = selected;
-            foreach (var i in SpriteSheets) i.IsSelected = selected;
+            foreach (ExportPickItem i in IndividualSprites) i.IsSelected = selected;
+            foreach (ExportPickItem i in SpriteSheets) i.IsSelected = selected;
         }
 
         public async Task RunAsync()
         {
-            var selected = IndividualSprites.Concat(SpriteSheets).Where(i => i.IsSelected).ToList();
+            List<ExportPickItem> selected = IndividualSprites.Concat(SpriteSheets).Where(i => i.IsSelected).ToList();
             if (selected.Count == 0) { StatusText = "Nothing selected."; return; }
 
             string path = await DialogHelper.SaveFile(_owner, "Export Selected as ZIP",
@@ -125,17 +125,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                using (var zipStream = File.Create(path))
-                using (var zip = new ZipArchive(zipStream, ZipArchiveMode.Create))
+                using (FileStream zipStream = File.Create(path))
+                using (ZipArchive zip = new ZipArchive(zipStream, ZipArchiveMode.Create))
                 {
-                    foreach (var item in selected)
+                    foreach (ExportPickItem item in selected)
                     {
                         byte[] indices = item.GetIndices();
                         uint[] palette = item.GetPalette();
                         if (indices == null || palette == null) continue;
                         byte[] png = IndexedPng.Write(indices, palette, item.Width, item.Height);
-                        var entry = zip.CreateEntry(item.FileName);
-                        using (var entryStream = entry.Open())
+                        ZipArchiveEntry entry = zip.CreateEntry(item.FileName);
+                        using (Stream entryStream = entry.Open())
                             entryStream.Write(png, 0, png.Length);
                     }
                 }

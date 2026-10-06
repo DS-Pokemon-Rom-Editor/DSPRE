@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 
 namespace DSPRE.Avalonia.Controls
 {
@@ -25,7 +26,7 @@ namespace DSPRE.Avalonia.Controls
         {
             for (int i = 0; i < 5; i++)
             {
-                var bmp = Icon.Get(i <= Min ? "star_deep" : i <= Base || i <= Max ? "star" : "star_off", this);
+                Bitmap bmp = Icon.Get(i <= Min ? "star_deep" : i <= Base || i <= Max ? "star" : "star_off", this);
                 if (bmp == null) continue;
                 using (context.PushOpacity(i > Base && i <= Max ? 0.45 : 1))
                 using (context.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = global::Avalonia.Media.Imaging.BitmapInterpolationMode.None }))

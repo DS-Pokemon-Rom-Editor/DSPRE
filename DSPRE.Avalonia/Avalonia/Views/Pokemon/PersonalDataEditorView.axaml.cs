@@ -23,13 +23,13 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var window = TopLevel.GetTopLevel(this) as Window;
+            Window window = TopLevel.GetTopLevel(this) as Window;
             await ViewModel.ExportCommand(window);
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var window = TopLevel.GetTopLevel(this) as Window;
+            Window window = TopLevel.GetTopLevel(this) as Window;
             await ViewModel.ImportCommand(window);
         }
 
@@ -56,10 +56,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void ImportOwSprite_Click(object sender, RoutedEventArgs e)
         {
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null || ViewModel == null) return;
 
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import Overworld Follower Sprite Sheet PNG",
                 AllowMultiple = false,
@@ -72,7 +72,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             string shiny = null;
             if (await DialogHelper.AskYesNo("Also import a shiny version? It has to be the same drawing, only recoloured.", "Shiny colours", TopLevel.GetTopLevel(this) as Window))
             {
-                var shinyFiles = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                IReadOnlyList<IStorageFile> shinyFiles = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
                 {
                     Title = "Shiny follower sheet",
                     AllowMultiple = false,

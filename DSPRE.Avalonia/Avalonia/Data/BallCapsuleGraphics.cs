@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Data
         public static WeCellAnimRenderer StickerCells(BallSeal seal)
         {
             if (seal == null || !HasStickers) return null;
-            var renderer = new WeCellAnimRenderer();
+            WeCellAnimRenderer renderer = new WeCellAnimRenderer();
             return renderer.Load(DirNames.sealGraphics, seal.Sprite, DirNames.sealGraphics, StickerColours,
                                  DirNames.sealGraphics, StickerLayout, DirNames.sealGraphics, StickerAnimation)
                 ? renderer : null;
@@ -40,11 +40,11 @@ namespace DSPRE.Avalonia.Data
             if (!HasStickers || Johto) return null;
             try
             {
-                var narc = new ScriptNarc(DirNames.sealGraphics);
-                var ball = NitroBgCodec.Composite(NitroBgCodec.Inflate(narc.Get(BoardDrawing)), NitroBgCodec.Inflate(narc.Get(BoardColours)),
+                ScriptNarc narc = new ScriptNarc(DirNames.sealGraphics);
+                NitroBgCodec.BgImage ball = NitroBgCodec.Composite(NitroBgCodec.Inflate(narc.Get(BoardDrawing)), NitroBgCodec.Inflate(narc.Get(BoardColours)),
                                                   NitroBgCodec.Inflate(narc.Get(BoardOverview)), transparentZero: false);
                 if (ball?.Rgba == null) return null;
-                var rgba = new byte[256 * 192 * 4];
+                byte[] rgba = new byte[256 * 192 * 4];
                 for (int y = 0; y < Math.Min(192, ball.Height); y++)
                     Array.Copy(ball.Rgba, y * ball.Width * 4, rgba, y * 256 * 4, Math.Min(256, ball.Width) * 4);
                 return ImageConverter.FromRgba(rgba, 256, 192);

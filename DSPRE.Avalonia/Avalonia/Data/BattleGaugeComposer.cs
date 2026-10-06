@@ -122,7 +122,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>Where a gauge's centre sits on screen in this game.</summary>
         public static (int X, int Y) CentreOf(Kind kind) =>
-            TryLayout(kind, out var l) ? (l.X, l.Y) : (0, 0);
+            TryLayout(kind, out Layout l) ? (l.X, l.Y) : (0, 0);
 
         /// <summary>Where the green health fill starts on screen: Diamond and Pearl's bar begins a tile earlier.</summary>
         public static int HealthFillLeft(Kind kind) =>
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>Which gauge picture a slot uses, by the name the game gives it.</summary>
         public static string GraphicOf(Kind kind) =>
-            TryLayout(kind, out var l) ? l.Graphic : null;
+            TryLayout(kind, out Layout l) ? l.Graphic : null;
 
         public static string NameOf(Kind kind) => kind switch
         {
@@ -174,9 +174,9 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static Drawn Build(Kind kind, Showing showing)
         {
-            if (!BattleGaugeText.IsAvailable || !TryLayout(kind, out var layout)) return null;
+            if (!BattleGaugeText.IsAvailable || !TryLayout(kind, out Layout layout)) return null;
 
-            var narc = new ScriptNarc(RomInfo.DirNames.battleObj);
+            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.battleObj);
             if (!narc.Available) return null;
 
             int drawing = BattleObjects.Find(layout.Graphic, "Drawing");
@@ -191,14 +191,14 @@ namespace DSPRE.Avalonia.Data
 
             WriteTheText(tiles, layout, showing);
 
-            var temps = new List<string>();
+            List<string> temps = new List<string>();
             try
             {
-                var nclr = new NCLR(Temp(narc.Get(colours), temps), colours, "gauge.nclr");
-                var ncgr = new NCGR(Temp(tiles, temps), drawing, "gauge.ncgr");
-                var ncer = new NCER(Temp(narc.Get(cells), temps), cells, "gauge.ncer");
+                NCLR nclr = new NCLR(Temp(narc.Get(colours), temps), colours, "gauge.nclr");
+                NCGR ncgr = new NCGR(Temp(tiles, temps), drawing, "gauge.ncgr");
+                NCER ncer = new NCER(Temp(narc.Get(cells), temps), cells, "gauge.ncer");
 
-                var raw = ncer.Get_RawImage(ncgr, nclr, 0, Canvas, Canvas, true, -1, null);
+                RawImage raw = ncer.Get_RawImage(ncgr, nclr, 0, Canvas, Canvas, true, -1, null);
                 if (raw == null || raw.IsEmpty) return null;
 
                 return new Drawn
@@ -227,7 +227,7 @@ namespace DSPRE.Avalonia.Data
             byte[] name = BattleGaugeGlyphs.NameBlock(showing.Name);
             if (name != null)
             {
-                var n = layout.Name;
+                (int pos, int size)[] n = layout.Name;
                 Copy(name, 0, tiles, n[0], showing: n[0].size);
                 Copy(name, 8 * TileBytes, tiles, n[1], showing: n[1].size);
                 Copy(name, n[0].size * TileBytes, tiles, n[2], showing: n[2].size);
@@ -255,10 +255,10 @@ namespace DSPRE.Avalonia.Data
                 // it in the picture already, which is why only these two write one.
                 if (layout.Slash > 0)
                 {
-                    var slash = BattleGaugeText.Slash();
+                    BattleGaugeText.Tile slash = BattleGaugeText.Slash();
                     if (slash != null)
                     {
-                        var one = new byte[TileBytes];
+                        byte[] one = new byte[TileBytes];
                         for (int y = 0; y < 8; y++)
                             for (int x = 0; x < 8; x += 2)
                                 one[y * 4 + x / 2] = (byte)((BattleGaugeGlyphs.Ink(slash.At(x, y)) & 0xF)
@@ -267,7 +267,7 @@ namespace DSPRE.Avalonia.Data
                     }
                 }
 
-                var hp = layout.Hp[0].size > 0 ? layout.Hp[0] : layout.Hp[1];
+                (int pos, int size) hp = layout.Hp[0].size > 0 ? layout.Hp[0] : layout.Hp[1];
                 if (hp.size > 0)
                 {
                     // The games pad this one on the left so it sits against the "/".
@@ -329,7 +329,7 @@ namespace DSPRE.Avalonia.Data
 
         private static byte[] ToRgba(RawImage raw, int size)
         {
-            var made = new byte[size * size * 4];
+            byte[] made = new byte[size * size * 4];
             if (raw == null || raw.IsEmpty) return made;
             int wide = Math.Min(size, raw.Width), tall = Math.Min(size, raw.Height);
             for (int y = 0; y < tall; y++)

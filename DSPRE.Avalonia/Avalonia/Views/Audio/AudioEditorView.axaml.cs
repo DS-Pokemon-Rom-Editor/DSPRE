@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,10 +60,10 @@ namespace DSPRE.Avalonia.Views.Audio
         private async Task DrawSelected()
         {
             _rendering?.Cancel();
-            var mine = _rendering = new CancellationTokenSource();
-            var token = mine.Token;
+            CancellationTokenSource mine = _rendering = new CancellationTokenSource();
+            CancellationToken token = mine.Token;
 
-            var vm = ViewModel;
+            AudioEditorViewModel vm = ViewModel;
             _drawing = vm?.Selected != null;
             if (vm?.Selected == null)
             {
@@ -89,7 +90,7 @@ namespace DSPRE.Avalonia.Views.Audio
             if (_playWhenDrawn) { _playWhenDrawn = false; PlayFromStart(); }
 
             // The notes come from the sequence itself rather than from the sound, so a cry has none.
-            var notes = await Task.Run(() => { try { return vm.ReadSelectedNotes(); } catch { return null; } }, token);
+            IReadOnlyList<SseqPlayer.Note> notes = await Task.Run(() => { try { return vm.ReadSelectedNotes(); } catch { return null; } }, token);
             if (token.IsCancellationRequested) return;
             // A cry and a sound have no notes of their own: what is heard is the sound itself. Say that
             // rather than leaving a panel that reads as though nothing was picked.
@@ -141,7 +142,7 @@ namespace DSPRE.Avalonia.Views.Audio
             int from = (int)(Wave.MarkSeconds * Rate) * 2;
             if (from < 0 || from >= _pcm.Length) from = 0;
 
-            var part = _pcm;
+            short[] part = _pcm;
             if (from > 0)
             {
                 part = new short[_pcm.Length - from];
@@ -160,7 +161,7 @@ namespace DSPRE.Avalonia.Views.Audio
         private void OnPlayKeys(object sender, KeyEventArgs e)
         {
             if (e.KeyModifiers != KeyModifiers.None) return;
-            var focused = FocusManager?.GetFocusedElement();
+            IInputElement focused = FocusManager?.GetFocusedElement();
             if (focused is TextBox or ComboBox) return;
             if (e.Key is Key.Up or Key.Down)
             {
@@ -225,10 +226,10 @@ namespace DSPRE.Avalonia.Views.Audio
 
         private async void ExportSoundFont_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            AudioEditorViewModel vm = ViewModel;
             if (vm == null) return;
 
-            var sf2 = vm.BuildSoundFont(out string whynot, out string note);
+            byte[] sf2 = vm.BuildSoundFont(out string whynot, out string note);
             if (sf2 == null)
             {
                 vm.Status = whynot;
@@ -256,10 +257,10 @@ namespace DSPRE.Avalonia.Views.Audio
 
         private async void ExportMidi_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            AudioEditorViewModel vm = ViewModel;
             if (vm == null) return;
 
-            var midi = vm.BuildMidi(out string whynot);
+            byte[] midi = vm.BuildMidi(out string whynot);
             if (midi == null)
             {
                 vm.Status = whynot;
@@ -288,7 +289,7 @@ namespace DSPRE.Avalonia.Views.Audio
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            AudioEditorViewModel vm = ViewModel;
             if (vm?.Selected == null) return;
 
             string path = await DialogHelper.SaveFile(this, "Save this sound",
@@ -328,7 +329,7 @@ namespace DSPRE.Avalonia.Views.Audio
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            AudioEditorViewModel vm = ViewModel;
             if (vm?.Selected == null || !vm.CanImport) return;
 
             bool sample = vm.Selected.IsSample;
@@ -349,16 +350,16 @@ namespace DSPRE.Avalonia.Views.Audio
             try
             {
                 // Checked now so a bad file is refused at once, but nothing is written until Save.
-                var item = vm.Selected;
+                AudioItem item = vm.Selected;
                 string why;
                 if (!sample && SoundArchive.CriesGoToCheckout)
                 {
-                    var cry = SoundArchive.PrepareCheckoutCry(item.Number, path, out why);
+                    SoundArchive.PendingCry cry = SoundArchive.PrepareCheckoutCry(item.Number, path, out why);
                     if (cry != null) { vm.StageCry(item, cry); return; }
                 }
                 else
                 {
-                    var held = sample
+                    SoundArchive.PendingSample held = sample
                         ? SoundArchive.PrepareSample(item.WaveArc, item.SampleIndex, path, out why)
                         : SoundArchive.PrepareCry(item.Number, path, out why);
                     if (held != null) { vm.StageSample(item, held); return; }

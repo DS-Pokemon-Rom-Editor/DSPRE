@@ -2,6 +2,7 @@ using DSPRE.Avalonia;
 using DSPRE.Avalonia.Data;
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 
@@ -72,9 +73,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
                 return;
             }
-            var logo = _graphics.ComposeLogo();
-            var background = _graphics.ComposeBackground();
-            var copyright = _graphics.ComposeCopyright();
+            RawImage logo = _graphics.ComposeLogo();
+            RawImage background = _graphics.ComposeBackground();
+            RawImage copyright = _graphics.ComposeCopyright();
             LogoPreview = ImageConverter.ToAvaloniaBitmap(logo);
             BackgroundPreview = ImageConverter.ToAvaloniaBitmap(background);
             CopyrightPreview = ImageConverter.ToAvaloniaBitmap(copyright);
@@ -100,21 +101,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string ImportLogo(string pngPath)
         {
-            var raw = DecodePng(pngPath, out string err);
+            RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
             return Imported(_graphics.ImportLogo(raw));
         }
 
         public string ImportBackground(string pngPath)
         {
-            var raw = DecodePng(pngPath, out string err);
+            RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
             return Imported(_graphics.ImportBackground(raw));
         }
 
         public string ImportCopyright(string pngPath)
         {
-            var raw = DecodePng(pngPath, out string err);
+            RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
             return Imported(_graphics.ImportCopyright(raw));
         }
@@ -144,8 +145,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             error = null;
             try
             {
-                using var stream = System.IO.File.OpenRead(path);
-                var raw = ImageConverter.DecodeRawImage(stream);
+                using FileStream stream = System.IO.File.OpenRead(path);
+                RawImage raw = ImageConverter.DecodeRawImage(stream);
                 if (raw == null) error = "Could not read this PNG.";
                 return raw;
             }

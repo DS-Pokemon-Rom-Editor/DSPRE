@@ -32,7 +32,7 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToBytes()
         {
-            var data = new byte[Size];
+            byte[] data = new byte[Size];
             for (int r = 0; r < RowCount; r++)
             {
                 BitConverter.GetBytes(Rows[r].Baby).CopyTo(data, r * RowSize);
@@ -45,10 +45,10 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the table can't be saved, or null.</summary>
         public string Problem(int speciesCount, int itemCount)
         {
-            var seen = new HashSet<ushort>();
+            HashSet<ushort> seen = new HashSet<ushort>();
             for (int r = 0; r < RowCount; r++)
             {
-                var row = Rows[r];
+                Row row = Rows[r];
                 if (row.Baby >= speciesCount || row.Fallback >= speciesCount) return $"Row {r + 1}: pick a Pokémon from the list.";
                 if (row.Item >= itemCount) return $"Row {r + 1}: pick an item from the list.";
                 if (row.Baby != 0 && !seen.Add(row.Baby)) return $"Row {r + 1}: this baby already has a row above; the game only uses the first.";

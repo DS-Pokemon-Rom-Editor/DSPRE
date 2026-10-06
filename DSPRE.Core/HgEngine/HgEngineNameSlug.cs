@@ -18,7 +18,7 @@ namespace DSPRE.HgEngine
         {
             if (string.IsNullOrWhiteSpace(displayText)) return "UNNAMED";
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             bool lastWasUnderscore = false;
             foreach (char c in displayText.ToUpperInvariant())
             {

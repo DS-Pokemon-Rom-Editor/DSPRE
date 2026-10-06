@@ -48,17 +48,17 @@ namespace DSPRE.Avalonia.Views.Trainers
         // Takes the palette now so painting another part can't redirect the edit.
         private void OpenColourEditor(int index)
         {
-            var vm = VM;
+            TrainerSpriteEditorViewModel vm = VM;
             if (vm == null || !vm.Loaded || index < 0) return;
             vm.SelectedSwatchIndex = index;
             int bank = vm.ActivePaletteBank;
-            var editor = new DSPRE.Avalonia.ViewModels.Graphics.PaletteColorEditorViewModel(
+            PaletteColorEditorViewModel editor = new DSPRE.Avalonia.ViewModels.Graphics.PaletteColorEditorViewModel(
                 vm.PaletteTitle(bank, index), vm.SwatchColor(bank, index), argb => vm.SetSwatchColor(bank, index, argb));
-            var window = new DSPRE.Avalonia.Views.Graphics.PaletteColorEditorView(editor);
+            PaletteColorEditorView window = new DSPRE.Avalonia.Views.Graphics.PaletteColorEditorView(editor);
             // Outside the editor, so the palette and the sprite both stay in view while the colour changes.
-            var area = Screens.ScreenFromWindow(this)?.WorkingArea;
+            PixelRect? area = Screens.ScreenFromWindow(this)?.WorkingArea;
             double scale = RenderScaling;
-            var right = this.PointToScreen(new Point(Bounds.Width + 8, 0));
+            PixelPoint right = this.PointToScreen(new Point(Bounds.Width + 8, 0));
             int width = (int)(window.Width * scale);
             window.WindowStartupLocation = WindowStartupLocation.Manual;
             window.Position = area == null || right.X + width <= area.Value.Right
@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         // Without Ctrl the wheel still scrolls a drawing bigger than the window.
         private void Canvas_PointerWheelChanged(object sender, PointerWheelEventArgs e)
         {
-            var vm = VM;
+            TrainerSpriteEditorViewModel vm = VM;
             if (vm == null || !e.KeyModifiers.HasFlag(KeyModifiers.Control)) return;
             if (e.Delta.Y > 0) vm.ZoomIn(); else if (e.Delta.Y < 0) vm.ZoomOut();
             e.Handled = true;
@@ -115,9 +115,9 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void PaintAtPointer(PointerEventArgs e)
         {
-            var vm = VM;
+            TrainerSpriteEditorViewModel vm = VM;
             if (vm == null) return;
-            var pos = e.GetPosition(CanvasImage);
+            Point pos = e.GetPosition(CanvasImage);
             int x = (int)(pos.X / vm.ZoomFactor);
             int y = (int)(pos.Y / vm.ZoomFactor);
             vm.HandlePointer(x, y);
@@ -133,14 +133,14 @@ namespace DSPRE.Avalonia.Views.Trainers
         /// <summary>Opens the Graphics window at this sprite's drawing, the first of its five files.</summary>
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
-            var vm = DataContext as DSPRE.Avalonia.ViewModels.Trainers.TrainerSpriteEditorViewModel;
+            TrainerSpriteEditorViewModel vm = DataContext as DSPRE.Avalonia.ViewModels.Trainers.TrainerSpriteEditorViewModel;
             if (vm == null) return;
             DSPRE.Avalonia.AvaloniaEditorLauncher.OpenGraphicAt(vm.Archive, vm.SelectedClassIndex * 5);
         }
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import PNG",
                 AllowMultiple = false,
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export PNG",
                 DefaultExtension = "png",
@@ -189,18 +189,18 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void ShowSheetMenu(Control anchor, bool export)
         {
             if (VM == null) return;
-            var flyout = new MenuFlyout();
-            var frames = new MenuItem { Header = "Frames…" };
+            MenuFlyout flyout = new MenuFlyout();
+            MenuItem frames = new MenuItem { Header = "Frames…" };
             frames.Click += async (_, _) => { if (export) await ExportSheetAsync(null); else await ImportSheetAsync(false); };
             flyout.Items.Add(frames);
             if (VM.CanUseAnimationSheets)
             {
                 if (export)
                 {
-                    var animations = new MenuItem { Header = "Animation" };
-                    foreach (var choice in VM.AnimationSheetChoices(false))
+                    MenuItem animations = new MenuItem { Header = "Animation" };
+                    foreach (TrainerSheetImportViewModel.AnimationChoice choice in VM.AnimationSheetChoices(false))
                     {
-                        var item = new MenuItem { Header = choice.Label + "…" };
+                        MenuItem item = new MenuItem { Header = choice.Label + "…" };
                         item.Click += async (_, _) => await ExportSheetAsync(choice.Index);
                         animations.Items.Add(item);
                     }
@@ -208,7 +208,7 @@ namespace DSPRE.Avalonia.Views.Trainers
                 }
                 else
                 {
-                    var animation = new MenuItem { Header = "Animation…" };
+                    MenuItem animation = new MenuItem { Header = "Animation…" };
                     animation.Click += async (_, _) => await ImportSheetAsync(true);
                     flyout.Items.Add(animation);
                 }
@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async System.Threading.Tasks.Task ExportSheetAsync(int? animation)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = animation == null ? "Export frames sheet" : "Export animation sheet",
                 DefaultExtension = "png",
@@ -233,7 +233,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async System.Threading.Tasks.Task ImportSheetAsync(bool animation)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = animation ? "Open animation sheet" : "Open frames sheet",
                 AllowMultiple = false,
@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             string path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
             if (path == null) return;
 
-            var wizard = VM.OpenSheetImport(animation, path, out string why);
+            TrainerSheetImportViewModel wizard = VM.OpenSheetImport(animation, path, out string why);
             if (wizard == null)
             {
                 await DialogHelper.ShowError($"Import failed: {why}", owner: this);
@@ -282,7 +282,7 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private void HookVm()
         {
-            var vm = VM;
+            TrainerSpriteEditorViewModel vm = VM;
             if (ReferenceEquals(vm, _hookedVm)) return;
             if (_hookedVm != null) _hookedVm.PropertyChanged -= OnVmChanged;
             _hookedVm = vm;

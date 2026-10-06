@@ -57,7 +57,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void ShowWelcome_Click(object sender, global::Avalonia.Interactivity.RoutedEventArgs e)
         {
-            var main = (global::Avalonia.Application.Current?.ApplicationLifetime
+            MainWindowView main = (global::Avalonia.Application.Current?.ApplicationLifetime
                 as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow as MainWindowView;
             WelcomeView.ShowWelcome(main);
         }

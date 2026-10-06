@@ -262,7 +262,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             FollowerBounceOptions.Clear();
             _followerBounceValues = HgEngineFollowerProperties.GetBounceOptions();
-            foreach (var opt in _followerBounceValues) FollowerBounceOptions.Add(opt.Name);
+            foreach ((string Name, int Value) opt in _followerBounceValues) FollowerBounceOptions.Add(opt.Name);
             HgEngineFollowerProperties.TryGet(_currentId, out int size, out int bounce, out _, out _);
             _hgLoadedBounceValue = bounce;
             _hgFollowerSize = size; OnPropertyChanged(nameof(HgFollowerSize));
@@ -410,7 +410,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void RefreshOwPending()
         {
-            var parts = new List<string>();
+            List<string> parts = new List<string>();
             if (_owPendingCreate) parts.Add("The follower entry is created on save.");
             if (_owPendingSpritePath != null) parts.Add($"{Path.GetFileName(_owPendingSpritePath)} is imported on save"
                 + (_owPendingShinyPath != null ? $", with {Path.GetFileName(_owPendingShinyPath)} as its shiny colours." : "."));
@@ -463,7 +463,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 OwHasEntry = true;
                 _owSizeClassValues = HgEngineOverworldFollowerSprite.GetSizeClassOptions();
                 OwSizeClassOptions.Clear();
-                foreach (var s in _owSizeClassValues) OwSizeClassOptions.Add(s);
+                foreach (string s in _owSizeClassValues) OwSizeClassOptions.Add(s);
                 _owSizeClassIndex = _owSizeClassValues.IndexOf(sizeClass);
                 OnPropertyChanged(nameof(OwSizeClassIndex));
 
@@ -572,9 +572,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 TypeNames.Add("Normal"); TypeNames.Add("Fire"); TypeNames.Add("Water");
                 AbilityNames.Add("Overgrow"); AbilityNames.Add("Blaze"); AbilityNames.Add("Torrent");
                 ItemNames.Add("----"); ItemNames.Add("Oran Berry"); ItemNames.Add("Sitrus Berry");
-                foreach (var n in Enum.GetNames(typeof(PokemonGrowthCurve))) GrowthCurveNames.Add(n);
-                foreach (var n in Enum.GetNames(typeof(PokemonDexColor)))    DexColorNames.Add(n);
-                foreach (var n in Enum.GetNames(typeof(PokemonEggGroup)))    EggGroupNames.Add(n);
+                foreach (string n in Enum.GetNames(typeof(PokemonGrowthCurve))) GrowthCurveNames.Add(n);
+                foreach (string n in Enum.GetNames(typeof(PokemonDexColor)))    DexColorNames.Add(n);
+                foreach (string n in Enum.GetNames(typeof(PokemonEggGroup)))    EggGroupNames.Add(n);
                 AddedMachines.Add("TM01 - Focus Punch"); AddedMachines.Add("TM02 - Dragon Claw");
                 AddableMachines.Add("TM03 - Water Pulse"); AddableMachines.Add("TM04 - Calm Mind");
                 BaseHP = 45; BaseAtk = 49; BaseDef = 49; BaseSpe = 45; BaseSpA = 65; BaseSpD = 65;
@@ -594,10 +594,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Full pokemon name list (base + alt forms this ROM actually has data for + extra)
             _allFileNames = GetPokemonNamesWithForms(GetPersonalFilesCount());
 
-            foreach (var n in _allFileNames)    PokemonNames.Add(n);
-            foreach (var n in _typeNamesArr)    TypeNames.Add(n);
-            foreach (var n in _abilityNamesArr) AbilityNames.Add(n);
-            foreach (var n in _itemNamesArr)    ItemNames.Add(n);
+            foreach (string n in _allFileNames)    PokemonNames.Add(n);
+            foreach (string n in _typeNamesArr)    TypeNames.Add(n);
+            foreach (string n in _abilityNamesArr) AbilityNames.Add(n);
+            foreach (string n in _itemNamesArr)    ItemNames.Add(n);
             LoadEnumLabels();
 
             // LoadMon is called by parent PokemonEditorViewModel
@@ -616,10 +616,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _machineMoveNames = TMEditor.ReadMachineMoveNames().ToArray();
             _allFileNames     = pokemonNames;
 
-            foreach (var n in _allFileNames)    PokemonNames.Add(n);
-            foreach (var n in _typeNamesArr)    TypeNames.Add(n);
-            foreach (var n in _abilityNamesArr) AbilityNames.Add(n);
-            foreach (var n in _itemNamesArr)    ItemNames.Add(n);
+            foreach (string n in _allFileNames)    PokemonNames.Add(n);
+            foreach (string n in _typeNamesArr)    TypeNames.Add(n);
+            foreach (string n in _abilityNamesArr) AbilityNames.Add(n);
+            foreach (string n in _itemNamesArr)    ItemNames.Add(n);
             LoadEnumLabels();
             // LoadMon is called by parent PokemonEditorViewModel after all child VMs are ready
         }
@@ -657,17 +657,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            var saved = new PokemonPersonalData(new MemoryStream(_savedSnapshot.Data));
-            var was = new SortedSet<byte>(saved.machines.Where(m => m < FirstMaskMachine));
-            var now = new SortedSet<byte>(onDisk.machines.Where(m => m < FirstMaskMachine));
+            PokemonPersonalData saved = new PokemonPersonalData(new MemoryStream(_savedSnapshot.Data));
+            SortedSet<byte> was = new SortedSet<byte>(saved.machines.Where(m => m < FirstMaskMachine));
+            SortedSet<byte> now = new SortedSet<byte>(onDisk.machines.Where(m => m < FirstMaskMachine));
             foreach (byte m in was) if (!now.Contains(m)) _current.machines.Remove(m);
             foreach (byte m in now) if (!was.Contains(m)) _current.machines.Add(m);
             saved.machines = new SortedSet<byte>(now.Concat(saved.machines.Where(m => m >= FirstMaskMachine)));
 
-            var t = PlatPatches.Tms();
+            PlatPatches.ExtraTms t = PlatPatches.Tms();
             if (t != null)
             {
-                var maskNow = PlatPatches.Compatibility(t, new[] { id }, PlatPatches.PersonalMaskRows)
+                HashSet<int> maskNow = PlatPatches.Compatibility(t, new[] { id }, PlatPatches.PersonalMaskRows)
                     .Select(c => TMEditor.VanillaMachineCount + c.Row).ToHashSet();
                 foreach (int m in _extraMaskTmsSaved.Except(maskNow)) _extraMaskTms.Remove(m);
                 foreach (int m in maskNow.Except(_extraMaskTmsSaved)) _extraMaskTms.Add(m);
@@ -715,8 +715,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             bool partlySaved = false;
             if (HgEngineProject.IsActive)
             {
-                var pending = (_hgLoaded, _hgLoadedBounceValue, _owPendingCreate, _owPendingSpritePath);
-                var (committed, commitError) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
+                (HgStaged _hgLoaded, int _hgLoadedBounceValue, bool _owPendingCreate, string _owPendingSpritePath) pending = (_hgLoaded, _hgLoadedBounceValue, _owPendingCreate, _owPendingSpritePath);
+                (bool committed, string commitError) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
                 {
                     sourceError = SaveHgEngineSource(out partlySaved);
                     // Steps that did succeed are kept when a later one fails.
@@ -777,7 +777,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AppEvents.RaisePersonalDataSaved(this, _currentId);
             // hg-engine rebuilds pms.narc from data/BabyMons.c, which the Baby Pokémon picker edits.
             if (!HgEngineProject.IsActive) WriteHatchResult(_currentId, HatchResultIndex);
-            var saved = Snapshot();
+            PersonalSnapshot saved = Snapshot();
             _history.Capture(saved, coalesce: true);
             _history.MarkSaved();
             _savedSnapshot = saved;
@@ -795,8 +795,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!HgEngineProject.IsActive) return null;
             if (_hgLoadError != null) return _hgLoadError;
 
-            var s = CaptureHg();
-            var loaded = _hgLoaded ?? s;
+            HgStaged s = CaptureHg();
+            HgStaged loaded = _hgLoaded ?? s;
             string invalid = ValidateHgStaged(s, loaded, _followerBounceValues.Count, _owSizeClassValues.Count, HgEngineSpeciesOwFormFemale.TryValidateRawExpression);
             if (invalid != null) return invalid;
 
@@ -821,7 +821,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             partlySaved = true;
 
             int id = _currentId;
-            var failures = new List<string>();
+            List<string> failures = new List<string>();
             bool Step(bool changed, string what, Func<string> write)
             {
                 if (!changed) return false;
@@ -899,7 +899,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (path == null) return;
             try
             {
-                using var writer = new StreamWriter(path);
+                using StreamWriter writer = new StreamWriter(path);
                 writer.WriteLine("Pokemon ID,Pokemon Name,Type 1,Type 2,Base HP,Base Atk,Base Def,Base SpAtk,Base SpDef,Base Speed," +
                     "EV HP,EV Atk,EV Def,EV SpAtk,EV SpDef,EV Speed," +
                     "Ability 1,Ability 2,Item 1,Item 2," +
@@ -907,10 +907,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     "Egg Group 1,Egg Group 2,Escape Rate,Dex Color,Flip");
                 // The unpacked copy is the last build; Species.c is what the checkout holds now.
                 bool fromSource = HgEngineProject.IsActive;
-                var unread = new List<int>();
+                List<int> unread = new List<int>();
                 for (int i = 0; i < GetPersonalFilesCount(); i++)
                 {
-                    var d = new PokemonPersonalData(i);
+                    PokemonPersonalData d = new PokemonPersonalData(i);
                     if (fromSource && !HgEngineSpeciesPersonalFields.TryLoadInto(i, d, out _)) { unread.Add(i); continue; }
                     string pn = i < _allFileNames.Length ? _allFileNames[i] : $"Pokemon_{i}";
                     string t1 = (int)d.type1 < _typeNamesArr.Length ? _typeNamesArr[(int)d.type1] : d.type1.ToString();
@@ -941,19 +941,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (path == null) return;
             try
             {
-                var lines = File.ReadAllLines(path);
+                string[] lines = File.ReadAllLines(path);
                 if (lines.Length < 2) { await DialogHelper.ShowError("File is empty or has no data rows.", "Import Error"); return; }
                 int imported = 0, skipped = 0;
                 // The next build replaces the unpacked copy from Species.c, so on hg-engine that is where rows go.
                 bool toSource = HgEngineProject.IsActive;
-                var failed = new List<string>();
+                List<string> failed = new List<string>();
                 for (int i = 1; i < lines.Length; i++)
                 {
                     if (string.IsNullOrWhiteSpace(lines[i])) continue;
-                    var p = lines[i].Split(',');
+                    string[] p = lines[i].Split(',');
                     if (p.Length < 31) { skipped++; continue; }
                     if (!int.TryParse(p[0].Trim(), out int id) || id < 0 || id >= GetPersonalFilesCount()) { skipped++; continue; }
-                    var d = new PokemonPersonalData(id);
+                    PokemonPersonalData d = new PokemonPersonalData(id);
                     if (toSource && !HgEngineSpeciesPersonalFields.TryLoadInto(id, d, out string readError)) { failed.Add($"{id}: {readError}"); continue; }
                     if (byte.TryParse(p[4].Trim(), out byte v)) d.baseHP    = v;
                     if (byte.TryParse(p[5].Trim(), out v))  d.baseAtk   = v;
@@ -1060,8 +1060,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!HgEngineProject.IsActive || _currentId < 0) return;
             _machineMoveIds = TMEditor.ReadMachineMoves();
             // Inherited lists are the build's fallback for forms; saving gives the form a list of its own.
-            if (!HgEngineLearnsets.TryGetMoveNames(_currentId, HgEngineLearnsets.MachineMovesField, out var moves, out _, out string error)
-                || !HgEngineLearnsets.TryGetLevelMoves(_currentId, out var levelUp, out error))
+            if (!HgEngineLearnsets.TryGetMoveNames(_currentId, HgEngineLearnsets.MachineMovesField, out List<int> moves, out _, out string error)
+                || !HgEngineLearnsets.TryGetLevelMoves(_currentId, out List<(int level, int move)> levelUp, out error))
             {
                 AppLogger.Error($"learnsets.json read failed for species {_currentId}: {error}");
                 return;
@@ -1085,9 +1085,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void LoadExtraMaskTms()
         {
             _extraMaskTms = new HashSet<int>();
-            var t = PlatPatches.Tms();
+            PlatPatches.ExtraTms t = PlatPatches.Tms();
             if (t != null && _currentId >= 0)
-                foreach (var (row, _) in PlatPatches.Compatibility(t, new[] { _currentId }, PlatPatches.PersonalMaskRows))
+                foreach ((int row, int _) in PlatPatches.Compatibility(t, new[] { _currentId }, PlatPatches.PersonalMaskRows))
                     _extraMaskTms.Add(TMEditor.VanillaMachineCount + row);
             _extraMaskTmsSaved = new HashSet<int>(_extraMaskTms);
         }
@@ -1095,9 +1095,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Writes TM121+ changes for the current Pokémon; returns why it couldn't, or null.</summary>
         private string SaveExtraMaskTms()
         {
-            var t = PlatPatches.Tms();
+            PlatPatches.ExtraTms t = PlatPatches.Tms();
             if (t == null || _extraMaskTms.SetEquals(_extraMaskTmsSaved)) return null;
-            var changes = _extraMaskTms.Union(_extraMaskTmsSaved)
+            IEnumerable<(int, int _currentId, bool)> changes = _extraMaskTms.Union(_extraMaskTmsSaved)
                 .Where(i => _extraMaskTms.Contains(i) != _extraMaskTmsSaved.Contains(i))
                 .Select(i => (i - TMEditor.VanillaMachineCount, _currentId, _extraMaskTms.Contains(i)));
             try { PlatPatches.SetCanLearn(t, changes); }
@@ -1162,7 +1162,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             set
             {
                 if (Staged == null || value < 0 || value > 2) return;
-                var size = value == 0 ? HgssFollowers.Size.Small : value == 1 ? HgssFollowers.Size.SmallNoShadow : HgssFollowers.Size.Large;
+                HgssFollowers.Size size = value == 0 ? HgssFollowers.Size.Small : value == 1 ? HgssFollowers.Size.SmallNoShadow : HgssFollowers.Size.Large;
                 // Too tall also picks the large art in the Hall of Fame, so it follows the size on the model the game reads it from.
                 bool tooTall = OnBaseModel ? size == HgssFollowers.Size.Large : Staged.TooTall;
                 Stage(Staged with { Bits = HgssFollowers.BitsOf(size, Staged.Bits), TooTall = tooTall });
@@ -1200,7 +1200,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (Staged == null || _followerModelIndex >= _followerModels.Length) return "";
-                var m = _followerModels[_followerModelIndex];
+                HgssFollowers.Model m = _followerModels[_followerModelIndex];
                 bool large = HgssFollowers.SizeOf(Staged.Bits) == HgssFollowers.Size.Large;
                 return large && m.TextureWidth > 0 && m.TextureWidth < 64 ? $"Its art is {m.TextureWidth}x{m.TextureHeight}; a large follower needs 64x64 art." : "";
             }
@@ -1209,7 +1209,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ShowFollower()
         {
-            foreach (var name in new[] { nameof(FollowerModelIndex), nameof(FollowerSizeIndex), nameof(FollowerRawBits), nameof(FollowerTooTall),
+            foreach (string name in new[] { nameof(FollowerModelIndex), nameof(FollowerSizeIndex), nameof(FollowerRawBits), nameof(FollowerTooTall),
                                          nameof(FollowerMotionIndex), nameof(FollowerArtWarning), nameof(HasFollowerArtWarning),
                                          nameof(RetailFollowerEditable), nameof(RetailFollowerNote), nameof(HasRetailFollowerNote),
                                          nameof(HasFollowerModelChoice), nameof(FollowerTooTallEditable), nameof(FollowerMotionEditable),
@@ -1236,7 +1236,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     _followerWhyNot = e.Message;
                 }
-                foreach (var m in _followerModels) FollowerModelNames.Add(m.Label);
+                foreach (HgssFollowers.Model m in _followerModels) FollowerModelNames.Add(m.Label);
                 _followers = _followerModels.Select(m => new FollowerStaged(m.Bits, m.TooTall, m.Motion)).ToArray();
                 _followersLoaded = (FollowerStaged[])_followers.Clone();
             }
@@ -1251,7 +1251,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 for (int i = 0; i < _followers.Length; i++)
                 {
                     if (_followers[i] == _followersLoaded[i]) continue;
-                    var m = _followerModels[i];
+                    HgssFollowers.Model m = _followerModels[i];
                     m.Bits = _followers[i].Bits; m.TooTall = _followers[i].TooTall; m.Motion = _followers[i].Motion;
                     HgssFollowers.Write(m);
                     _followersLoaded[i] = _followers[i];
@@ -1302,7 +1302,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void StageAthlon(Action<PokeathlonPerformance> change)
         {
-            var record = AthlonRecord;
+            PokeathlonPerformance record = AthlonRecord;
             if (_loading || record == null) return;
             change(record);
             byte[] next = record.ToBytes();
@@ -1374,8 +1374,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ShowPokeathlonForm()
         {
-            foreach (var row in PokeathlonStats) row.Refresh();
-            foreach (var name in new[] { nameof(PokeathlonFormIndex), nameof(AthlonRaisedIndex), nameof(AthlonRaised), nameof(AthlonHitboxIndex), nameof(AthlonLiftIndex),
+            foreach (PokeathlonStatRow row in PokeathlonStats) row.Refresh();
+            foreach (string name in new[] { nameof(PokeathlonFormIndex), nameof(AthlonRaisedIndex), nameof(AthlonRaised), nameof(AthlonHitboxIndex), nameof(AthlonLiftIndex),
                                          nameof(AthlonOffsetIndex), nameof(PokeathlonProblem), nameof(HasPokeathlonProblem),
                                          nameof(PokeathlonEditable), nameof(PokeathlonNote), nameof(HasPokeathlonNote),
                                          nameof(HasPokeathlonFormChoice) })
@@ -1386,7 +1386,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         internal static (int species, int form) AthlonSpeciesOf(int personalId)
         {
             if (personalId >= 1 && personalId <= PokeathlonPerformance.LastSpecies) return (personalId, 0);
-            var extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
             int k = personalId - GetPokemonNames().Length;
             if (k < 0 || k >= extras.Length) return (0, 0);
             int form = Array.IndexOf(PokeathlonPerformance.FormNamesOf(extras[k].monId), extras[k].description);
@@ -1404,18 +1404,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             if (ShowPokeathlon)
             {
-                var (species, form) = AthlonSpeciesOf(_currentId);
+                (int species, int form) = AthlonSpeciesOf(_currentId);
                 _athlonSpecies = species;
                 try
                 {
                     _athlonWhyNot = PokeathlonPerformance.WhyNot();
                     if (_athlonWhyNot == null && species > 0)
                     {
-                        var names = PokeathlonPerformance.FormNamesOf(species);
-                        var records = new List<byte[]>();
+                        string[] names = PokeathlonPerformance.FormNamesOf(species);
+                        List<byte[]> records = new List<byte[]>();
                         for (int f = 0; f < PokeathlonPerformance.FormsOf(species); f++)
                         {
-                            var record = PokeathlonPerformance.Read(PokeathlonPerformance.MemberOf(species, f));
+                            PokeathlonPerformance record = PokeathlonPerformance.Read(PokeathlonPerformance.MemberOf(species, f));
                             if (record == null) { _athlonWhyNot = $"Pokéathlon record {PokeathlonPerformance.MemberOf(species, f)} is missing."; break; }
                             records.Add(record.ToBytes());
                             PokeathlonFormNames.Add(f < names.Length ? names[f] : $"Form {f}");
@@ -1518,7 +1518,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // Load sprite icon
             try
             {
-                var drawingImg = DSUtils.GetPokePicRaw(DSUtils.ResolveIconId(id), 64, 64);
+                RawImage drawingImg = DSUtils.GetPokePicRaw(DSUtils.ResolveIconId(id), 64, 64);
                 MonIconBitmap = ImageConverter.ToAvaloniaBitmap(drawingImg);
             }
             catch { MonIconBitmap = null; }
@@ -1594,11 +1594,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             string path = Path.Combine(dataPath, @"poketool/personal/pms.narc");
             if (!File.Exists(path)) return 0;
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
             int offset = monId * 2;
             if (offset + 2 > stream.Length) return 0;
             stream.Seek(offset, SeekOrigin.Begin);
-            using var reader = new BinaryReader(stream);
+            using BinaryReader reader = new BinaryReader(stream);
             return reader.ReadUInt16();
         }
 
@@ -1606,11 +1606,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             string path = Path.Combine(dataPath, @"poketool/personal/pms.narc");
             if (!File.Exists(path)) return;
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Write);
+            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Write);
             int offset = monId * 2;
             if (offset + 2 > stream.Length) return;
             stream.Seek(offset, SeekOrigin.Begin);
-            using var writer = new BinaryWriter(stream);
+            using BinaryWriter writer = new BinaryWriter(stream);
             writer.Write((ushort)value);
         }
     }

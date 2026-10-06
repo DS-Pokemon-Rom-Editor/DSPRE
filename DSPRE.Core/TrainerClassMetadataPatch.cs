@@ -33,16 +33,16 @@ namespace DSPRE
         private static Data Load()
         {
             if (_data != null) return _data;
-            using var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("DSPRE.Resources.ROMToolboxDB.TrainerClassMetadataPatch.bin")
+            using Stream s = Assembly.GetExecutingAssembly().GetManifestResourceStream("DSPRE.Resources.ROMToolboxDB.TrainerClassMetadataPatch.bin")
                 ?? throw new InvalidOperationException("The trainer class metadata patch data is missing from this build.");
-            using var r = new BinaryReader(s);
+            using BinaryReader r = new BinaryReader(s);
             if (Encoding.ASCII.GetString(r.ReadBytes(4)) != "TCMP" || r.ReadUInt16() != 1) throw new InvalidDataException("Unknown trainer class metadata patch data.");
-            var d = new Data { Payload = r.ReadBytes(r.ReadInt32()) };
-            Reloc ReadReloc() { var x = new Reloc { Kind = r.ReadByte(), Blx = r.ReadByte() != 0 }; r.ReadUInt16(); x.Offset = r.ReadUInt32(); x.Value = r.ReadUInt32(); return x; }
+            Data d = new Data { Payload = r.ReadBytes(r.ReadInt32()) };
+            Reloc ReadReloc() { Reloc x = new Reloc { Kind = r.ReadByte(), Blx = r.ReadByte() != 0 }; r.ReadUInt16(); x.Offset = r.ReadUInt32(); x.Value = r.ReadUInt32(); return x; }
             for (int i = r.ReadInt32(); i > 0; i--) d.PayloadRelocs.Add(ReadReloc());
             for (int f = r.ReadUInt16(); f > 0; f--)
             {
-                var t = new Target { Path = Encoding.ASCII.GetString(r.ReadBytes(r.ReadUInt16())) };
+                Target t = new Target { Path = Encoding.ASCII.GetString(r.ReadBytes(r.ReadUInt16())) };
                 for (int i = r.ReadInt32(); i > 0; i--)
                 {
                     uint off = r.ReadUInt32(); int len = r.ReadInt32();
@@ -76,9 +76,9 @@ namespace DSPRE
         /// <summary>The payload for a runtime address.</summary>
         public static byte[] BuildPayload(uint address)
         {
-            var d = Load();
+            Data d = Load();
             byte[] p = (byte[])d.Payload.Clone();
-            foreach (var x in d.PayloadRelocs)
+            foreach (Reloc x in d.PayloadRelocs)
             {
                 byte[] bytes = x.Kind == 0 ? Branch(address + x.Offset, x.Value, x.Blx) : BitConverter.GetBytes(address + x.Value);
                 bytes.CopyTo(p, (int)x.Offset);
@@ -111,13 +111,13 @@ namespace DSPRE
         /// <summary>Why the project can't take the patch as it stands, or null.</summary>
         public static string WhyNotApplicable()
         {
-            var d = Load();
-            foreach (var t in d.Targets)
+            Data d = Load();
+            foreach (Target t in d.Targets)
             {
                 int overlay = OverlayOf(t.Path);
                 if (overlay >= 0 && OverlayUtils.IsCompressed(overlay)) OverlayUtils.Decompress(overlay);
                 byte[] file = File.ReadAllBytes(PathOf(t.Path));
-                foreach (var s in t.Spans)
+                foreach (Span s in t.Spans)
                     if (s.Offset + s.Original.Length > file.Length || !file.AsSpan((int)s.Offset, s.Original.Length).SequenceEqual(s.Original))
                         return $"{t.Path} at 0x{s.Offset:X} is not the unmodified US HeartGold/SoulSilver code the patch hooks. " +
                             "Another patch or edit has changed it.";
@@ -130,16 +130,16 @@ namespace DSPRE
         /// <summary>Builds a/1/5/5 from the game's tables, then writes the payload and every hook.</summary>
         public static void Apply(uint payloadOffset)
         {
-            var d = Load();
+            Data d = Load();
             List<byte[]> records = BuildRecords();   // before the hooks retire the tables it reads
             uint address = SyntheticBase + payloadOffset;
-            foreach (var t in d.Targets)
+            foreach (Target t in d.Targets)
             {
                 string path = PathOf(t.Path);
                 byte[] file = File.ReadAllBytes(path);
-                foreach (var s in t.Spans) s.Patched.CopyTo(file, (int)s.Offset);
+                foreach (Span s in t.Spans) s.Patched.CopyTo(file, (int)s.Offset);
                 uint fileBase = t.Path == "arm9/arm9.bin" ? ARM9.address : OverlayUtils.OverlayTable.GetRAMAddress(OverlayOf(t.Path));
-                foreach (var x in t.Relocs)
+                foreach (Reloc x in t.Relocs)
                 {
                     byte[] bytes = x.Kind == 2 ? Branch(fileBase + x.Offset, address + x.Value, x.Blx) : BitConverter.GetBytes(address + x.Value);
                     bytes.CopyTo(file, (int)x.Offset);
@@ -218,41 +218,41 @@ namespace DSPRE
 
             byte[] genders = Slice(arm9, GenderOffset, ClassCount, "gender table");
             byte[] comboMap = Slice(arm9, TrainerComboOffset, TrainerComboCount * 2, "trainer-to-combo table");
-            var comboRows = Enumerable.Range(0, TrainerComboCount).Select(i => U16(comboMap, i * 2)).ToArray();
+            ushort[] comboRows = Enumerable.Range(0, TrainerComboCount).Select(i => U16(comboMap, i * 2)).ToArray();
             if (!comboRows.SequenceEqual(ExpectedTrainerComboRows))
                 throw new InvalidDataException("The trainer-to-combo table is not the retail US HeartGold/SoulSilver one, which the patch's builder needs.");
-            var comboByClass = comboRows.ToDictionary(r => r & 0x3FF, r => r >> 10);
+            Dictionary<int, int> comboByClass = comboRows.ToDictionary(r => r & 0x3FF, r => r >> 10);
 
             byte[] comboBlob = Slice(arm9, ComboTableOffset, ComboCount * 4, "combo table");
-            var combos = Enumerable.Range(0, ComboCount).Select(i => (Effect: U16(comboBlob, i * 4), Music: U16(comboBlob, i * 4 + 2))).ToArray();
+            (ushort Effect, ushort Music)[] combos = Enumerable.Range(0, ComboCount).Select(i => (Effect: U16(comboBlob, i * 4), Music: U16(comboBlob, i * 4 + 2))).ToArray();
             if (!combos.Select(c => c.Effect).SequenceEqual(ExpectedComboEffects))
                 throw new InvalidDataException("The combo table's effects are not the retail US HeartGold/SoulSilver ones.");
 
             byte[] eyeBlob = Slice(arm9, EyeMusicOffset, EyeMusicCount * 6, "eye-contact music table");
-            var eyeRows = Enumerable.Range(0, EyeMusicCount).Select(i => (Class: U16(eyeBlob, i * 6), Main: U16(eyeBlob, i * 6 + 2), Alt: U16(eyeBlob, i * 6 + 4))).ToArray();
+            (ushort Class, ushort Main, ushort Alt)[] eyeRows = Enumerable.Range(0, EyeMusicCount).Select(i => (Class: U16(eyeBlob, i * 6), Main: U16(eyeBlob, i * 6 + 2), Alt: U16(eyeBlob, i * 6 + 4))).ToArray();
             if (!eyeRows.Select(e => e.Class).SequenceEqual(ExpectedEyeMusicClasses))
                 throw new InvalidDataException("The eye-contact music table's classes are not the retail US HeartGold/SoulSilver ones.");
-            var eyeByClass = eyeRows.ToDictionary(e => (int)e.Class, e => (e.Main, e.Alt));
+            Dictionary<int, (ushort Main, ushort Alt)> eyeByClass = eyeRows.ToDictionary(e => (int)e.Class, e => (e.Main, e.Alt));
 
             byte[] prizeBlob = Slice(ov12, PrizeTableAddress - Ov12Base, ClassCount * 4, "prize table");
-            var prizeRows = Enumerable.Range(0, ClassCount).Select(i => (Class: (int)U16(prizeBlob, i * 4), Coefficient: U16(prizeBlob, i * 4 + 2))).ToArray();
+            (int Class, ushort Coefficient)[] prizeRows = Enumerable.Range(0, ClassCount).Select(i => (Class: (int)U16(prizeBlob, i * 4), Coefficient: U16(prizeBlob, i * 4 + 2))).ToArray();
             if (!prizeRows.Select(p => p.Class).OrderBy(x => x).SequenceEqual(Enumerable.Range(0, ClassCount)))
                 throw new InvalidDataException("The prize table does not hold each trainer class 0 to 128 once.");
-            var prizeByClass = prizeRows.ToDictionary(p => p.Class, p => p.Coefficient);
+            Dictionary<int, ushort> prizeByClass = prizeRows.ToDictionary(p => p.Class, p => p.Coefficient);
 
             byte[] brainTable = Slice(ov80, FrontierBrainTableAddress - Ov80Base, 6 * 0x0C, "Frontier Brain table");
 
-            var records = new List<byte[]>();
+            List<byte[]> records = new List<byte[]>();
             for (int c = 0; c < ClassCount; c++)
             {
-                var r = new byte[RecordSize];
+                byte[] r = new byte[RecordSize];
                 Put16(r, 0x00, genders[c]);
                 Put16(r, 0x02, prizeByClass[c]);
-                var (eyeMain, eyeAlt) = eyeByClass.TryGetValue(c, out var e) ? e : (DefaultEyeMusic, DefaultEyeMusic);
+                (ushort eyeMain, ushort eyeAlt) = eyeByClass.TryGetValue(c, out (ushort Main, ushort Alt) e) ? e : (DefaultEyeMusic, DefaultEyeMusic);
                 Put16(r, 0x04, eyeMain);
                 Put16(r, 0x06, eyeAlt);
                 int comboId = comboByClass.TryGetValue(c, out int cb) ? cb : DefaultCombo;
-                var (effect, battleMusic) = combos[comboId];
+                (ushort effect, ushort battleMusic) = combos[comboId];
                 Put16(r, 0x08, battleMusic);
 
                 if (Vs20RecordByEffect.TryGetValue(effect, out uint vs20))
@@ -309,9 +309,9 @@ namespace DSPRE
         /// <summary>Packs the records the way the builder does and writes both the packed and the unpacked archive.</summary>
         private static void WriteArchive(List<byte[]> records)
         {
-            var gmif = new List<byte>();
-            var fat = new List<byte>();
-            foreach (var rec in records)
+            List<byte> gmif = new List<byte>();
+            List<byte> fat = new List<byte>();
+            foreach (byte[] rec in records)
             {
                 int start = gmif.Count;
                 gmif.AddRange(rec);
@@ -319,20 +319,20 @@ namespace DSPRE
                 fat.AddRange(BitConverter.GetBytes(gmif.Count));
                 while (gmif.Count % 4 != 0) gmif.Add(0xFF);
             }
-            var btaf = Encoding.ASCII.GetBytes("BTAF").Concat(BitConverter.GetBytes(12 + fat.Count)).Concat(BitConverter.GetBytes((ushort)records.Count))
+            byte[] btaf = Encoding.ASCII.GetBytes("BTAF").Concat(BitConverter.GetBytes(12 + fat.Count)).Concat(BitConverter.GetBytes((ushort)records.Count))
                 .Concat(BitConverter.GetBytes((ushort)0)).Concat(fat).ToArray();
-            var btnf = Encoding.ASCII.GetBytes("BTNF").Concat(BitConverter.GetBytes(16)).Concat(BitConverter.GetBytes(4)).Concat(BitConverter.GetBytes(0x00010000)).ToArray();
-            var gmifChunk = Encoding.ASCII.GetBytes("GMIF").Concat(BitConverter.GetBytes(8 + gmif.Count)).Concat(gmif).ToArray();
+            byte[] btnf = Encoding.ASCII.GetBytes("BTNF").Concat(BitConverter.GetBytes(16)).Concat(BitConverter.GetBytes(4)).Concat(BitConverter.GetBytes(0x00010000)).ToArray();
+            byte[] gmifChunk = Encoding.ASCII.GetBytes("GMIF").Concat(BitConverter.GetBytes(8 + gmif.Count)).Concat(gmif).ToArray();
             int total = 16 + btaf.Length + btnf.Length + gmifChunk.Length;
-            var narc = Encoding.ASCII.GetBytes("NARC").Concat(BitConverter.GetBytes((ushort)0xFFFE)).Concat(BitConverter.GetBytes((ushort)0x0100))
+            byte[] narc = Encoding.ASCII.GetBytes("NARC").Concat(BitConverter.GetBytes((ushort)0xFFFE)).Concat(BitConverter.GetBytes((ushort)0x0100))
                 .Concat(BitConverter.GetBytes(total)).Concat(BitConverter.GetBytes((ushort)16)).Concat(BitConverter.GetBytes((ushort)3))
                 .Concat(btaf).Concat(btnf).Concat(gmifChunk).ToArray();
 
-            var (packed, unpacked) = RomInfo.gameDirs[RomInfo.DirNames.trainerClassMetadata];
+            (string packed, string unpacked) = RomInfo.gameDirs[RomInfo.DirNames.trainerClassMetadata];
             File.WriteAllBytes(packed, narc);
             if (Directory.Exists(unpacked))
             {
-                foreach (var f in Directory.GetFiles(unpacked)) File.Delete(f);
+                foreach (string f in Directory.GetFiles(unpacked)) File.Delete(f);
                 for (int i = 0; i < records.Count; i++) File.WriteAllBytes(Path.Combine(unpacked, i.ToString("D4")), records[i]);
             }
         }

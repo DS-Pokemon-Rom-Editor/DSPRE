@@ -16,7 +16,7 @@ namespace DSPRE.HgEngine
 
         private static FieldPathSegment[] P(string field, string sub = null, int index = -1)
         {
-            var path = new List<FieldPathSegment> { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field(field) };
+            List<FieldPathSegment> path = new List<FieldPathSegment> { FieldPathSegment.Field("speciesData"), FieldPathSegment.Field(field) };
             if (sub != null) path.Add(FieldPathSegment.Field(sub));
             if (index >= 0) path.Add(FieldPathSegment.At(index));
             return path.ToArray();
@@ -74,7 +74,7 @@ namespace DSPRE.HgEngine
         /// fields the entry doesn't declare.</summary>
         public static bool TryLoadInto(int speciesId, PokemonPersonalData data, out string error)
         {
-            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out var entry, out error)) return false;
+            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
             return TryRead(entry, data, HgEngineSymbolTable.Load, out error);
         }
 
@@ -82,13 +82,13 @@ namespace DSPRE.HgEngine
         /// all or nothing.</summary>
         public static bool TryWriteSource(int speciesId, PokemonPersonalData data, out string error)
         {
-            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out var entry, out error)) return false;
-            var writes = CollapseAbsentParents(BuildWrites(data, entry, HgEngineSymbolTable.Load), p => entry.TryGetRaw(p, out _));
+            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
+            List<HgEngineFieldWrite> writes = CollapseAbsentParents(BuildWrites(data, entry, HgEngineSymbolTable.Load), p => entry.TryGetRaw(p, out _));
             // Rewriting an unchanged entry would still touch the file and make the next build redo it.
             if (writes.All(w => entry.TryGetRaw(w.Path, out string raw) && raw == w.ValueLiteral)) return true;
 
-            var typeFields = All.Where(f => f.Path[1].Name == "types").ToArray();
-            var oldTypes = typeFields.Select(f => entry.TryGetRaw(f.Path, out string raw)
+            HgEngineSourceField<PokemonPersonalData>[] typeFields = All.Where(f => f.Path[1].Name == "types").ToArray();
+            int[] oldTypes = typeFields.Select(f => entry.TryGetRaw(f.Path, out string raw)
                 && HgEngineSourceExpression.TryEvaluate(raw, HgEngineSourceFields.NameLookup(f.Headers, HgEngineSymbolTable.Load), out int v) ? v : -1).ToArray();
 
             if (!HgEngineWriter.TryWriteFields(HgEngineDomain.Species, speciesId, writes, out _, out error, allowInsert: true, allOrNothing: true))
@@ -107,14 +107,14 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
-            var info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineDomainInfo info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (info == null || species == null) { error = "include/constants/species.h could not be read."; return false; }
             string path = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', System.IO.Path.DirectorySeparatorChar));
             if (!System.IO.File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
 
-            var abilityFields = All.Where(f => f.Path[1].Name == "abilities").ToArray();
-            var lookups = abilityFields.Select(f => HgEngineSourceFields.NameLookup(f.Headers, HgEngineSymbolTable.Load)).ToArray();
+            HgEngineSourceField<PokemonPersonalData>[] abilityFields = All.Where(f => f.Path[1].Name == "abilities").ToArray();
+            Func<string, int?>[] lookups = abilityFields.Select(f => HgEngineSourceFields.NameLookup(f.Headers, HgEngineSymbolTable.Load)).ToArray();
             string text = HgEngineFileCache.GetText(path);
             int lastClose = -1;
             foreach (System.Text.RegularExpressions.Match m in SpeciesEntry.Matches(text))
@@ -124,8 +124,8 @@ namespace DSPRE.HgEngine
                 lastClose = close;
                 if (!species.TryGetValue(m.Groups[1].Value, out int id)) continue;
 
-                var entry = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
-                var values = new int[abilityFields.Length];
+                HgEngineSourceBlock entry = new HgEngineSourceBlock(text.Substring(open, close - open + 1));
+                int[] values = new int[abilityFields.Length];
                 for (int i = 0; i < abilityFields.Length; i++)
                 {
                     if (!entry.TryGetRaw(abilityFields[i].Path, out string raw)) { values[i] = -1; continue; }
@@ -152,12 +152,12 @@ namespace DSPRE.HgEngine
         public static List<HgEngineFieldWrite> CollapseAbsentParents(IReadOnlyList<HgEngineFieldWrite> fields, Func<IReadOnlyList<FieldPathSegment>, bool> exists)
         {
             static string Key(IEnumerable<FieldPathSegment> path) => string.Concat(path.Select(p => p.ToString()));
-            var result = new List<HgEngineFieldWrite>();
-            var parentExists = new Dictionary<string, bool>();
-            foreach (var field in fields)
+            List<HgEngineFieldWrite> result = new List<HgEngineFieldWrite>();
+            Dictionary<string, bool> parentExists = new Dictionary<string, bool>();
+            foreach (HgEngineFieldWrite field in fields)
             {
                 if (field.Path.Count < 3 || field.ValueLiteral == null) { result.Add(field); continue; }
-                var parentPath = field.Path.Take(field.Path.Count - 1).ToArray();
+                FieldPathSegment[] parentPath = field.Path.Take(field.Path.Count - 1).ToArray();
                 string key = Key(parentPath);
                 if (parentExists.TryGetValue(key, out bool known))
                 {
@@ -167,7 +167,7 @@ namespace DSPRE.HgEngine
                 parentExists[key] = exists(parentPath);
                 if (parentExists[key]) { result.Add(field); continue; }
 
-                var group = fields.Where(f => f.Path.Count == field.Path.Count && f.ValueLiteral != null && Key(f.Path.Take(f.Path.Count - 1)) == key).ToList();
+                List<HgEngineFieldWrite> group = fields.Where(f => f.Path.Count == field.Path.Count && f.ValueLiteral != null && Key(f.Path.Take(f.Path.Count - 1)) == key).ToList();
                 string literal = field.Path[^1].IsIndex
                     ? "{ " + string.Join(", ", group.OrderBy(f => f.Path[^1].Index).Select(f => f.ValueLiteral)) + " }"
                     : "{\n" + string.Concat(group.Select(f => $"                .{f.Path[^1].Name} = {f.ValueLiteral},\n")) + "            }";

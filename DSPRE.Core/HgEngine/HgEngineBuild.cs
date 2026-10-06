@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace DSPRE.HgEngine
 {
@@ -49,14 +50,14 @@ namespace DSPRE.HgEngine
             stdout = ""; stderr = "";
             if (!HgEngineProject.IsLinked) { stderr = "No hg-engine checkout linked."; return false; }
 
-            using var proc = new Process { StartInfo = BuildStartInfo(bashCommand, redirectOutput: true) };
+            using Process proc = new Process { StartInfo = BuildStartInfo(bashCommand, redirectOutput: true) };
             AppLogger.Info("hg-engine: " + bashCommand);
 
             try
             {
                 proc.Start();
-                var outTask = proc.StandardOutput.ReadToEndAsync();
-                var errTask = proc.StandardError.ReadToEndAsync();
+                Task<string> outTask = proc.StandardOutput.ReadToEndAsync();
+                Task<string> errTask = proc.StandardError.ReadToEndAsync();
                 proc.WaitForExit();
                 stdout = outTask.Result;
                 stderr = errTask.Result.Trim();
@@ -79,11 +80,11 @@ namespace DSPRE.HgEngine
 
         private static bool RunStreaming(string bashCommand, Action<string> onOutputLine, out string stderr)
         {
-            var errBuf = new StringBuilder();
+            StringBuilder errBuf = new StringBuilder();
             stderr = "";
             if (!HgEngineProject.IsLinked) { stderr = "No hg-engine checkout linked."; return false; }
 
-            using var proc = new Process { StartInfo = BuildStartInfo(bashCommand, redirectOutput: true), EnableRaisingEvents = true };
+            using Process proc = new Process { StartInfo = BuildStartInfo(bashCommand, redirectOutput: true), EnableRaisingEvents = true };
             proc.OutputDataReceived += (_, e) => { if (e.Data != null) onOutputLine?.Invoke(e.Data); };
             proc.ErrorDataReceived += (_, e) => { if (e.Data != null) { errBuf.AppendLine(e.Data); onOutputLine?.Invoke(e.Data); } };
 
@@ -120,7 +121,7 @@ namespace DSPRE.HgEngine
 
         private static ProcessStartInfo BuildStartInfo(string bashCommand, bool redirectOutput)
         {
-            var psi = new ProcessStartInfo
+            ProcessStartInfo psi = new ProcessStartInfo
             {
                 UseShellExecute = false,
                 RedirectStandardOutput = redirectOutput,

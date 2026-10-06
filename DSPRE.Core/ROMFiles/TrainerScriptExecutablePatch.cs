@@ -97,7 +97,7 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            var literalOffsets = new List<int>();
+            List<int> literalOffsets = new List<int>();
             for (int offset = 0; offset + sizeof(uint) <= source.Length; offset += sizeof(uint))
             {
                 if (BinaryPrimitives.ReadUInt32LittleEndian(source.Slice(offset, sizeof(uint))) ==
@@ -114,7 +114,7 @@ namespace DSPRE.ROMFiles
             }
 
             int literalOffset = literalOffsets[0];
-            var references = new List<int>();
+            List<int> references = new List<int>();
             for (int offset = 0; offset + sizeof(ushort) <= source.Length; offset += sizeof(ushort))
             {
                 ushort instruction = BinaryPrimitives.ReadUInt16LittleEndian(

@@ -37,19 +37,19 @@ namespace DSPRE.HgEngine
                 return ids.Where(id => id != DirNames.learnsets).ToList();
             }
 
-            var remaining = new List<DirNames>();
-            var domainsToSync = new HashSet<HgEngineDomain>();
+            List<DirNames> remaining = new List<DirNames>();
+            HashSet<HgEngineDomain> domainsToSync = new HashSet<HgEngineDomain>();
 
-            foreach (var id in ids)
+            foreach (DirNames id in ids)
             {
-                var domain = HgEngineDomains.IsOwned(id) ? HgEngineDomains.ForDir(id) : null;
+                HgEngineDomainInfo domain = HgEngineDomains.IsOwned(id) ? HgEngineDomains.ForDir(id) : null;
                 if (domain != null) domainsToSync.Add(domain.Domain);
                 else remaining.Add(id);
             }
 
-            foreach (var domainKey in domainsToSync)
+            foreach (HgEngineDomain domainKey in domainsToSync)
             {
-                var domain = HgEngineDomains.All.First(d => d.Domain == domainKey);
+                HgEngineDomainInfo domain = HgEngineDomains.All.First(d => d.Domain == domainKey);
                 if (!SyncDomain(domain, out string error))
                     AppLogger.Error($"hg-engine sync failed for {domain.Domain}: {error}");
             }
@@ -73,7 +73,7 @@ namespace DSPRE.HgEngine
                 if (domain.SyncOncePerSession)
                 {
                     stillExtracted = _syncedOnceThisSession.Contains(domain.Domain) && domain.NarcByDir.Keys.All(dir =>
-                        gameDirs.TryGetValue(dir, out var p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
+                        gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
                 }
                 else
                 {
@@ -82,9 +82,9 @@ namespace DSPRE.HgEngine
                         .Select(p => SafeMtime(Path.Combine(HgEngineProject.RepoPathUnc, p.Replace('/', Path.DirectorySeparatorChar))))
                         .ToArray();
 
-                    bool unchanged = _lastSyncedMtimes.TryGetValue(domain.Domain, out var cached) && cached.SequenceEqual(currentMtimes);
+                    bool unchanged = _lastSyncedMtimes.TryGetValue(domain.Domain, out DateTime[] cached) && cached.SequenceEqual(currentMtimes);
                     stillExtracted = unchanged && domain.NarcByDir.Keys.All(dir =>
-                        gameDirs.TryGetValue(dir, out var p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
+                        gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir) && Directory.GetFiles(p.unpackedDir).Length > 0);
                 }
 
                 if (stillExtracted) return true;
@@ -97,7 +97,7 @@ namespace DSPRE.HgEngine
 
                 int speciesCount = -1;   // only needed for the learnsets transform, resolved lazily below
 
-                foreach (var kv in domain.NarcByDir)
+                foreach (KeyValuePair<DirNames, string> kv in domain.NarcByDir)
                 {
                     if (!gameDirs.TryGetValue(kv.Key, out (string packedDir, string unpackedDir) paths))
                         continue;
@@ -154,9 +154,9 @@ namespace DSPRE.HgEngine
         private static bool SplitBuiltLearnsets(out string error)
         {
             error = null;
-            var (packed, unpacked) = gameDirs[DirNames.learnsets];
+            (string packed, string unpacked) = gameDirs[DirNames.learnsets];
             if (!File.Exists(packed)) { error = $"{packed} is missing."; return false; }
-            var stamp = (File.GetLastWriteTimeUtc(packed), new FileInfo(packed).Length);
+            (DateTime, long Length) stamp = (File.GetLastWriteTimeUtc(packed), new FileInfo(packed).Length);
             lock (_buildLock)
             {
                 if (stamp == _splitLearnsetsFrom && Directory.Exists(unpacked) && Directory.GetFiles(unpacked).Length > 0) return true;
@@ -185,7 +185,7 @@ namespace DSPRE.HgEngine
                 Narc personal = File.Exists(personalPath) ? Narc.Open(personalPath) : null;
                 if (personal != null) return personal.ElementCount;
             }
-            return gameDirs.TryGetValue(DirNames.personalPokeData, out var p) && Directory.Exists(p.unpackedDir)
+            return gameDirs.TryGetValue(DirNames.personalPokeData, out (string packedDir, string unpackedDir) p) && Directory.Exists(p.unpackedDir)
                 ? Directory.GetFiles(p.unpackedDir).Length
                 : -1;
         }

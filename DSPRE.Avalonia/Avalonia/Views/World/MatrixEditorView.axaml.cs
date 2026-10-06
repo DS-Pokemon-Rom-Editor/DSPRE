@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.World
@@ -54,7 +56,7 @@ namespace DSPRE.Avalonia.Views.World
                     "No header for this cell");
                 return;
             }
-            var names = HeaderLists.GetHeaderListBoxNames();
+            List<string> names = HeaderLists.GetHeaderListBoxNames();
             new SpawnEditorView(null, names, header, VM.SelCol, VM.SelRow).ShowManaged();
         }
 
@@ -75,9 +77,9 @@ namespace DSPRE.Avalonia.Views.World
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
-            var vm = VM;
+            MatrixEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
+            Window owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
             if (!_setupDone)
             {
@@ -105,7 +107,7 @@ namespace DSPRE.Avalonia.Views.World
         // Outlines the current header's cells in every grid and scrolls the visible one to them.
         private void ApplyFocus()
         {
-            foreach (var g in new[] { MapGrid, HeaderGrid, HeightGrid })
+            foreach (MatrixGridControl g in new[] { MapGrid, HeaderGrid, HeightGrid })
             {
                 g.HeaderAt = VM.HeaderOfCell;
                 g.CellColour = VM.CellColour;
@@ -114,7 +116,7 @@ namespace DSPRE.Avalonia.Views.World
             }
             global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                foreach (var g in new[] { MapGrid, HeaderGrid, HeightGrid })
+                foreach (MatrixGridControl g in new[] { MapGrid, HeaderGrid, HeightGrid })
                     if (g.Parent is ScrollViewer sv && g.FocusBounds() is global::Avalonia.Rect b)
                         sv.Offset = new global::Avalonia.Vector(
                             System.Math.Max(0, b.Center.X - sv.Viewport.Width / 2),

@@ -33,7 +33,7 @@ namespace DSPRE.HgEngine
         /// <summary>What would stop hg-engine's make before it starts, each with how to fix it. Empty when nothing does.</summary>
         public static List<string> Problems(string checkout)
         {
-            var problems = new List<string>();
+            List<string> problems = new List<string>();
             string dotGit = Path.Combine(checkout, ".git");
             if (!Directory.Exists(dotGit) && !File.Exists(dotGit))
                 problems.Add("It is not a git repository. Clone hg-engine with git rather than downloading it as a zip.");
@@ -65,9 +65,9 @@ namespace DSPRE.HgEngine
         {
             try
             {
-                using var f = File.OpenRead(romPath);
+                using FileStream f = File.OpenRead(romPath);
                 if (f.Length < 0x10) return null;
-                var b = new byte[4];
+                byte[] b = new byte[4];
                 f.Position = 0x0C;
                 return f.Read(b, 0, 4) == 4 ? Encoding.ASCII.GetString(b) : null;
             }
@@ -79,7 +79,7 @@ namespace DSPRE.HgEngine
 
         public static string Sha1Of(string path)
         {
-            using var f = File.OpenRead(path);
+            using FileStream f = File.OpenRead(path);
             return Convert.ToHexString(SHA1.HashData(f)).ToLowerInvariant();
         }
 
@@ -89,9 +89,9 @@ namespace DSPRE.HgEngine
         /// <summary>The packed archives the project has unpacked, by hash, taken just before make runs.</summary>
         public static Dictionary<RomInfo.DirNames, string> SnapshotUnpackedArchives()
         {
-            var hashes = new Dictionary<RomInfo.DirNames, string>();
+            Dictionary<RomInfo.DirNames, string> hashes = new Dictionary<RomInfo.DirNames, string>();
             if (RomInfo.gameDirs == null) return hashes;
-            foreach (var (dir, paths) in RomInfo.gameDirs)
+            foreach ((RomInfo.DirNames dir, (string packedDir, string unpackedDir) paths) in RomInfo.gameDirs)
             {
                 if (KeptAfterBuild.Contains(dir) || !Directory.Exists(paths.unpackedDir) || !File.Exists(paths.packedDir)) continue;
                 try { hashes[dir] = Sha1Of(paths.packedDir); }
@@ -111,10 +111,10 @@ namespace DSPRE.HgEngine
             HgEngineOwnedFiles.ClearCache();
             HgEngineBuiltPngs.ClearCache();
 
-            var changed = new List<RomInfo.DirNames>();
-            foreach (var (dir, hash) in before)
+            List<RomInfo.DirNames> changed = new List<RomInfo.DirNames>();
+            foreach ((RomInfo.DirNames dir, string hash) in before)
             {
-                var paths = RomInfo.gameDirs[dir];
+                (string packedDir, string unpackedDir) paths = RomInfo.gameDirs[dir];
                 try
                 {
                     if (!File.Exists(paths.packedDir) || Sha1Of(paths.packedDir) == hash) continue;

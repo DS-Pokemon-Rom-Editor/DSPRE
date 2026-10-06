@@ -40,7 +40,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The pending bytes for an entry, or null when it has none. Safe from any thread.</summary>
         public byte[] Read(DirNames dir, int id)
         {
-            var importing = _importing;
+            Dictionary<(DirNames, int), byte[]> importing = _importing;
             if (importing != null && importing.TryGetValue((dir, id), out byte[] fresh)) return fresh;
             if (_state.TryGetValue((dir, id), out byte[] now)) return now;
             return _first.TryGetValue((dir, id), out byte[] first) ? first : null;
@@ -66,12 +66,12 @@ namespace DSPRE.Avalonia.Data
                 using (ScriptNarc.Use(_staging)) error = import();
             }
             catch { _importing = null; throw; }
-            var written = _importing;
+            Dictionary<(DirNames, int), byte[]> written = _importing;
             _importing = null;
             if (error != null || written.Count == 0) return error;
 
-            var next = new Dictionary<(DirNames, int), byte[]>(_state);
-            foreach (var kv in written) next[kv.Key] = kv.Value;
+            Dictionary<(DirNames, int), byte[]> next = new Dictionary<(DirNames, int), byte[]>(_state);
+            foreach (KeyValuePair<(DirNames, int), byte[]> kv in written) next[kv.Key] = kv.Value;
             _state = next;
             _history.Capture(next);
             Changed?.Invoke();
@@ -84,11 +84,11 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Writes every pending entry that differs from the project.</summary>
         public void Save()
         {
-            foreach (var kv in _first)
+            foreach (KeyValuePair<(DirNames, int), byte[]> kv in _first)
             {
                 byte[] bytes = _state.TryGetValue(kv.Key, out byte[] now) ? now : kv.Value;
                 if (bytes == null) continue;
-                var narc = new ScriptNarc(kv.Key.Item1);
+                ScriptNarc narc = new ScriptNarc(kv.Key.Item1);
                 byte[] onDisk = narc.GetFromDisk(kv.Key.Item2);
                 if (onDisk == null || !onDisk.AsSpan().SequenceEqual(bytes)) narc.Put(kv.Key.Item2, bytes);
             }

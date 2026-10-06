@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using DSPRE.ROMFiles;
 using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.OpenGL;
@@ -143,8 +144,8 @@ namespace DSPRE.Avalonia.Gl
             if (_swapTexIds.TryGetValue((materialKey, name), out int hit)) return hit;
             int id = 0;
             if (_model != null
-                && _model.SwappableTextures.TryGetValue(materialKey, out var byName)
-                && byName.TryGetValue(name, out var tex))
+                && _model.SwappableTextures.TryGetValue(materialKey, out Dictionary<string, NsbmdTextureData> byName)
+                && byName.TryGetValue(name, out NsbmdTextureData tex))
                 id = UploadTexture(tex);
             _swapTexIds[(materialKey, name)] = id;
             return id;
@@ -185,7 +186,7 @@ namespace DSPRE.Avalonia.Gl
         {
             sx = sy = 0f;
             if (_lastMvp == null) return false;
-            var m = _lastMvp;
+            float[] m = _lastMvp;
             float cx = m[0] * x + m[4] * y + m[8] * z + m[12];
             float cy = m[1] * x + m[5] * y + m[9] * z + m[13];
             float cw = m[3] * x + m[7] * y + m[11] * z + m[15];
@@ -202,7 +203,7 @@ namespace DSPRE.Avalonia.Gl
             ox = oy = oz = dx = dy = dz = 0f;
             if (_lastMvp == null || _lastLogW <= 0 || _lastLogH <= 0) return false;
 
-            var inv = Mat4.Invert(_lastMvp);
+            float[] inv = Mat4.Invert(_lastMvp);
             if (inv == null) return false;
 
             float nx = px / _lastLogW * 2f - 1f;
@@ -242,7 +243,7 @@ namespace DSPRE.Avalonia.Gl
             int best = -1; float bestD = threshold;
             for (int a = 0; a < 3; a++)
             {
-                var (dx, dy, dz) = AxisDir(a);
+                (float dx, float dy, float dz) = AxisDir(a);
                 if (!WorldToScreen(_gtx + dx * len, _gty + dy * len, _gtz + dz * len, out float tx, out float ty)) continue;
                 float d = DistToSegment(px, py, ox, oy, tx, ty);
                 if (d < bestD) { bestD = d; best = a; }
@@ -265,7 +266,7 @@ namespace DSPRE.Avalonia.Gl
         {
             if (!WorldToScreen(_gtx, _gty, _gtz, out float ox, out float oy)) return 0f;
             float len = GizmoLength;
-            var (ax, ay, az) = AxisDir(axis);
+            (float ax, float ay, float az) = AxisDir(axis);
             if (!WorldToScreen(_gtx + ax * len, _gty + ay * len, _gtz + az * len, out float tx, out float ty)) return 0f;
             float sxv = tx - ox, syv = ty - oy;
             float denom = sxv * sxv + syv * syv; if (denom < 1e-4f) return 0f;
@@ -337,7 +338,7 @@ namespace DSPRE.Avalonia.Gl
             // Fog alpha below full lets the layer under the 3D show through, which in the field is the black
             // backdrop, so the fog colour is scaled towards black.
             float a = Math.Clamp(fog.Alpha, 0, 31) / 31f;
-            var table = new float[32];
+            float[] table = new float[32];
             for (int i = 0; i < 32; i++) table[i] = fog.Density(i);
             _fog = (fog.Offset, 0x400 >> fog.Slope,
                     ((fog.Colour & 31) / 31f * a, ((fog.Colour >> 5) & 31) / 31f * a, ((fog.Colour >> 10) & 31) / 31f * a),
@@ -379,12 +380,12 @@ namespace DSPRE.Avalonia.Gl
 
         private void RenderScreenLayers(bool behind, int stride)
         {
-            var layers = _screenLayers;
+            IReadOnlyList<ScreenLayer> layers = _screenLayers;
             if (layers == null || layers.Count == 0) return;
 
             if (_screenDirty)
             {
-                while (_screenTex.Count < layers.Count) { var t = new int[1]; _f.GenTextures(1, t); _screenTex.Add(t[0]); }
+                while (_screenTex.Count < layers.Count) { int[] t = new int[1]; _f.GenTextures(1, t); _screenTex.Add(t[0]); }
                 for (int i = 0; i < layers.Count; i++)
                 {
                     if (layers[i]?.Rgba == null) continue;
@@ -400,9 +401,9 @@ namespace DSPRE.Avalonia.Gl
 
             if (_screenVbo == 0)
             {
-                var a = new int[1]; _f.GenBuffers(1, a); _screenVbo = a[0];
+                int[] a = new int[1]; _f.GenBuffers(1, a); _screenVbo = a[0];
                 _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _screenVbo);
-                var h = GCHandle.Alloc(ScreenQuad, GCHandleType.Pinned);
+                GCHandle h = GCHandle.Alloc(ScreenQuad, GCHandleType.Pinned);
                 try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(ScreenQuad.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
                 finally { h.Free(); }
             }
@@ -413,7 +414,7 @@ namespace DSPRE.Avalonia.Gl
             _f.EnableVertexAttribArray(1); _f.VertexAttribPointer(1, 2, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(3 * sizeof(float)));
             _f.EnableVertexAttribArray(2); _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
 
-            var identity = Mat4.Identity();
+            float[] identity = Mat4.Identity();
             _f.UniformMatrix4fv(_mvpLoc, 1, false, identity);
             if (_viewLoc >= 0) _f.UniformMatrix4fv(_viewLoc, 1, false, identity);
             if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
@@ -433,7 +434,7 @@ namespace DSPRE.Avalonia.Gl
 
             for (int i = 0; i < layers.Count; i++)
             {
-                var l = layers[i];
+                ScreenLayer l = layers[i];
                 if (l?.Rgba == null || l.Behind != behind) continue;
                 float eva = Math.Clamp(l.Eva, 0, 16) / 16f, evb = Math.Clamp(l.Evb, 0, 16) / 16f;
                 if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, eva, eva, eva);
@@ -481,18 +482,18 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Where the camera sits in this view's space.</summary>
         public (float x, float y, float z) EyePosition()
         {
-            var view = Mat4.Multiply(Mat4.Multiply(Mat4.RotateZ(_roll * (float)Math.PI / 180f), Mat4.OrbitView(_distance, _yaw, _pitch)),
+            float[] view = Mat4.Multiply(Mat4.Multiply(Mat4.RotateZ(_roll * (float)Math.PI / 180f), Mat4.OrbitView(_distance, _yaw, _pitch)),
                                      Mat4.Translate(-_targetX, -_targetY, -_targetZ));
-            var inv = Mat4.Invert(view);
+            float[] inv = Mat4.Invert(view);
             return inv == null ? (_targetX, _targetY, _targetZ) : (inv[12], inv[13], inv[14]);
         }
 
         private void ApplySpot(float[] view)
         {
-            var spot = _spot;
+            LightSpot spot = _spot;
             if (_spotOnLoc < 0) return;
             if (spot == null || spot.Triangles == null) { _f.Uniform1i(_spotOnLoc, 0); return; }
-            var inv = Mat4.Invert(view);
+            float[] inv = Mat4.Invert(view);
             if (inv == null) { _f.Uniform1i(_spotOnLoc, 0); return; }
             // The model draws its front face only, so from behind it lights nothing.
             float camZ = inv[14];
@@ -500,7 +501,7 @@ namespace DSPRE.Avalonia.Gl
 
             if (_spotDirty)
             {
-                if (_spotTex == 0) { var t = new int[1]; _f.GenTextures(1, t); _spotTex = t[0]; }
+                if (_spotTex == 0) { int[] t = new int[1]; _f.GenTextures(1, t); _spotTex = t[0]; }
                 _f.ActiveTexture(GlFunctions.GL_TEXTURE2);
                 _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _spotTex);
                 _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, spot.Width, spot.Height, 0, GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, spot.Rgba);
@@ -551,7 +552,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Orbit (rotate) the camera from a mouse drag, in raw screen-pixel deltas.</summary>
         public void OrbitByDrag(float screenDx, float screenDy)
         {
-            var c = Cam;
+            DspreSettings c = Cam;
             float spd = (c?.camOrbitSpeed ?? 1f) * 0.5f;
             Yaw   += screenDx * spd * ((c?.camInvertOrbitX ?? false) ? -1f : 1f);
             Pitch += screenDy * spd * ((c?.camInvertOrbitY ?? false) ? -1f : 1f);
@@ -561,7 +562,7 @@ namespace DSPRE.Avalonia.Gl
         /// direction grabs the world (the scene follows the cursor); invert flags flip each axis.</summary>
         public void PanByDrag(float screenDx, float screenDy)
         {
-            var c = Cam;
+            DspreSettings c = Cam;
             float spd = c?.camPanSpeed ?? 1f;
             PanByScreen(screenDx * spd * ((c?.camInvertPanX ?? false) ? -1f : 1f),
                         screenDy * spd * ((c?.camInvertPanY ?? false) ? -1f : 1f));
@@ -570,7 +571,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Zoom from a mouse-wheel notch (raw wheel delta-Y).</summary>
         public void ZoomByWheel(float wheelDeltaY)
         {
-            var c = Cam;
+            DspreSettings c = Cam;
             Distance -= wheelDeltaY * 0.4f * (c?.camZoomSpeed ?? 1f) * ((c?.camInvertZoom ?? false) ? -1f : 1f);
         }
 
@@ -631,7 +632,7 @@ namespace DSPRE.Avalonia.Gl
 
         private void FreeHighlight()
         {
-            foreach (var h in _highlightGpu) if (h.Vbo != 0) _f?.DeleteBuffers(1, new[] { h.Vbo });
+            foreach ((int Vbo, int Count, int MaterialKey, float R, float G, float B) h in _highlightGpu) if (h.Vbo != 0) _f?.DeleteBuffers(1, new[] { h.Vbo });
             _highlightGpu.Clear();
         }
 
@@ -804,7 +805,7 @@ namespace DSPRE.Avalonia.Gl
                 _spotRightLoc = _f.GetUniformLocation(_program, "uSpotRight");
                 _spotUpLoc = _f.GetUniformLocation(_program, "uSpotUp");
 
-                var arr = new int[1];
+                int[] arr = new int[1];
                 _f.GenVertexArrays(1, arr); _vao = arr[0];
                 // Deinit threw away every GPU object, which happens whenever the control leaves the visual
                 // tree, so flag all the still-held CPU meshes for re-upload, not just the model.
@@ -847,7 +848,7 @@ namespace DSPRE.Avalonia.Gl
         private void FreeGpuParts()
         {
             if (_f == null) return;
-            foreach (var p in _parts)
+            foreach (GpuPart p in _parts)
             {
                 if (p.Vbo != 0) _f.DeleteBuffers(1, new[] { p.Vbo });
                 if (p.TextureId != 0) _f.DeleteTextures(1, new[] { p.TextureId });
@@ -868,7 +869,7 @@ namespace DSPRE.Avalonia.Gl
         private void FreeGpuSprites()
         {
             if (_f != null)
-                foreach (var kv in _spriteTexCache)
+                foreach (KeyValuePair<byte[], int> kv in _spriteTexCache)
                     if (kv.Value != 0) _f.DeleteTextures(1, new[] { kv.Value });
             _spriteTexCache.Clear();
             _gpuSprites.Clear();
@@ -878,12 +879,12 @@ namespace DSPRE.Avalonia.Gl
         {
             _gpuSprites.Clear();
             if (_sprites != null)
-                foreach (var s in _sprites)
+                foreach (SpriteInstance s in _sprites)
                 {
                     if (s.Rgba == null || s.Width <= 0 || s.Height <= 0) continue;
                     if (!_spriteTexCache.TryGetValue(s.Rgba, out int id))
                     {
-                        var arr = new int[1];
+                        int[] arr = new int[1];
                         _f.GenTextures(1, arr); id = arr[0];
                         _f.BindTexture(GlFunctions.GL_TEXTURE_2D, id);
                         _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, s.Width, s.Height, 0,
@@ -904,13 +905,13 @@ namespace DSPRE.Avalonia.Gl
             FreeGpuParts();
             if (_model == null) return;
 
-            foreach (var part in _model.Parts)
+            foreach (NsbmdMeshPart part in _model.Parts)
             {
                 if (part.VertexCount == 0) continue;
-                var arr = new int[1];
+                int[] arr = new int[1];
                 _f.GenBuffers(1, arr); int vbo = arr[0];
                 _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, vbo);
-                var h = GCHandle.Alloc(part.Vertices, GCHandleType.Pinned);
+                GCHandle h = GCHandle.Alloc(part.Vertices, GCHandleType.Pinned);
                 try
                 {
                     _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(part.Vertices.Length * sizeof(float)),
@@ -938,15 +939,15 @@ namespace DSPRE.Avalonia.Gl
 
             for (int i = 0; i < _parts.Count; i++)
             {
-                var part = _parts[i];
+                GpuPart part = _parts[i];
                 if (part.Vbo == 0) continue;
-                if (!_movedParts.TryGetValue(part.MaterialKey, out var verts) || verts == null) continue;
+                if (!_movedParts.TryGetValue(part.MaterialKey, out float[] verts) || verts == null) continue;
 
                 int count = verts.Length / 8;
                 if (count == 0) continue;
 
                 _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, part.Vbo);
-                var h = GCHandle.Alloc(verts, GCHandleType.Pinned);
+                GCHandle h = GCHandle.Alloc(verts, GCHandleType.Pinned);
                 try
                 {
                     _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(verts.Length * sizeof(float)),
@@ -961,7 +962,7 @@ namespace DSPRE.Avalonia.Gl
 
         private int UploadTexture(NsbmdTextureData tex)
         {
-            var arr = new int[1];
+            int[] arr = new int[1];
             _f.GenTextures(1, arr); int id = arr[0];
             _f.BindTexture(GlFunctions.GL_TEXTURE_2D, id);
             _f.TexImage2D(GlFunctions.GL_TEXTURE_2D, 0, GlFunctions.GL_RGBA, tex.Width, tex.Height, 0,
@@ -1033,26 +1034,26 @@ namespace DSPRE.Avalonia.Gl
         private void StepFieldAnimations()
         {
             StepBuildings();
-            var scrolls = _model?.GroundScrolls;
+            List<(int MaterialKey, TextureSrtAnimation Anim, int Index)> scrolls = _model?.GroundScrolls;
             if (!PlayFieldAnimations || scrolls == null || scrolls.Count == 0) _groundMatrices = null;
             else
             {
                 long tick = (long)(_fieldClock.Elapsed.TotalSeconds * 30);
                 _groundMatrices ??= new Dictionary<int, float[]>();
-                foreach (var (key, anim, index) in scrolls)
+                foreach ((int key, TextureSrtAnimation anim, int index) in scrolls)
                     _groundMatrices[key] = anim.Evaluate(index, (int)(tick % Math.Max(1, anim.FrameCount))).ToMatrix3();
             }
 
-            var anims = _model?.FieldAnimations;
+            List<(int MaterialKey, List<(string Swap, int Frames)> Sequence)> anims = _model?.FieldAnimations;
             if (!PlayFieldAnimations || anims == null || anims.Count == 0) { _fieldFrame = null; return; }
             long step = (long)(_fieldClock.Elapsed.TotalSeconds * 30);
             _fieldFrame ??= new Dictionary<int, string>();
-            foreach (var (key, sequence) in anims)
+            foreach ((int key, List<(string Swap, int Frames)> sequence) in anims)
             {
                 int total = 0;
-                foreach (var s in sequence) total += s.Frames;
+                foreach ((string Swap, int Frames) s in sequence) total += s.Frames;
                 long at = total > 0 ? step % total : 0;
-                foreach (var s in sequence)
+                foreach ((string Swap, int Frames) s in sequence)
                 {
                     if (at < s.Frames) { _fieldFrame[key] = s.Swap; break; }
                     at -= s.Frames;
@@ -1082,12 +1083,12 @@ namespace DSPRE.Avalonia.Gl
             // The flat view frames the same amount as the perspective one does at the target, so
             // switching between them keeps the same zoom instead of jumping.
             float halfFov = _fovDegrees * 0.5f * (float)Math.PI / 180f;
-            var proj = _orthographic
+            float[] proj = _orthographic
                 ? Mat4.Ortho(_distance * (float)Math.Tan(halfFov), aspect, -1000f, 1000f)
                 : Mat4.Perspective(_fovDegrees * (float)Math.PI / 180f, aspect, 0.05f, 1000f);
-            var view = Mat4.Multiply(Mat4.Multiply(Mat4.RotateZ(_roll * (float)Math.PI / 180f), Mat4.OrbitView(_distance, _yaw, _pitch)),
+            float[] view = Mat4.Multiply(Mat4.Multiply(Mat4.RotateZ(_roll * (float)Math.PI / 180f), Mat4.OrbitView(_distance, _yaw, _pitch)),
                                      Mat4.Translate(-_targetX, -_targetY, -_targetZ));
-            var mvp = Mat4.Multiply(proj, view);
+            float[] mvp = Mat4.Multiply(proj, view);
             _lastMvp = mvp; _lastLogW = (float)Math.Max(1.0, Bounds.Width); _lastLogH = (float)Math.Max(1.0, Bounds.Height);
 
             _f.UseProgram(_program);
@@ -1110,7 +1111,7 @@ namespace DSPRE.Avalonia.Gl
             // texture to unit 1 and hand the shader the tile grid. uTint>0 mixes it into each opaque texel.
             if (_tintOn)
             {
-                if (_collTex == 0) { var ct = new int[1]; _f.GenTextures(1, ct); _collTex = ct[0]; _collDirty = true; }
+                if (_collTex == 0) { int[] ct = new int[1]; _f.GenTextures(1, ct); _collTex = ct[0]; _collDirty = true; }
                 _f.ActiveTexture(GlFunctions.GL_TEXTURE1);
                 _f.BindTexture(GlFunctions.GL_TEXTURE_2D, _collTex);
                 if (_collDirty && _collRgb != null)
@@ -1135,7 +1136,7 @@ namespace DSPRE.Avalonia.Gl
             int stride = 8 * sizeof(float);
             // Translucent textures go last, so opaque geometry behind them is already there to blend over.
             for (int pass = 0; pass < 2; pass++)
-            foreach (var part in _parts)
+            foreach (GpuPart part in _parts)
             {
                 if (part.TexAlpha != (pass == 1)) continue;
                 if (_hiddenNodes != null && _hiddenNodes.Contains(part.NodeIndex)) continue;
@@ -1192,15 +1193,15 @@ namespace DSPRE.Avalonia.Gl
 
                 // A texture animation replaces the material's own texture matrix while it plays, as on the DS.
                 float[] texMtx = part.TexMatrix ?? IdentityTexMatrix;
-                if (_texMatrices != null && _texMatrices.TryGetValue(part.MaterialKey, out var m) && m != null && m.Length == 9)
+                if (_texMatrices != null && _texMatrices.TryGetValue(part.MaterialKey, out float[] m) && m != null && m.Length == 9)
                     texMtx = m;
-                else if (_groundMatrices != null && _groundMatrices.TryGetValue(part.MaterialKey, out var g) && g != null && g.Length == 9)
+                else if (_groundMatrices != null && _groundMatrices.TryGetValue(part.MaterialKey, out float[] g) && g != null && g.Length == 9)
                     texMtx = g;
                 if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, texMtx);
 
                 if (_matColorLoc >= 0)
                 {
-                    var c = _matColours != null && _matColours.TryGetValue(part.MaterialKey, out var got)
+                        (float, float, float) c = _matColours != null && _matColours.TryGetValue(part.MaterialKey, out (float r, float g, float b) got)
                         ? got : (1f, 1f, 1f);
                     _f.Uniform3f(_matColorLoc, c.Item1, c.Item2, c.Item3);
                 }
@@ -1246,7 +1247,7 @@ namespace DSPRE.Avalonia.Gl
 
             if (_captureCb != null)
             {
-                var cb = _captureCb; _captureCb = null;
+                Action<byte[], int, int> cb = _captureCb; _captureCb = null;
                 byte[] px = null;
                 try { px = new byte[pw * ph * 4]; _f.ReadPixels(0, 0, pw, ph, GlFunctions.GL_RGBA, GlFunctions.GL_UNSIGNED_BYTE, px); }
                 catch { px = null; }
@@ -1265,14 +1266,14 @@ namespace DSPRE.Avalonia.Gl
         private void RenderEditGizmo(int stride)
         {
             // Camera basis (world space) from the orbit rotation, for billboarding the axis lines.
-            var rot = Mat4.Multiply(Mat4.RotateX(_pitch * (float)Math.PI / 180f), Mat4.RotateY(_yaw * (float)Math.PI / 180f));
-            var fwd = (x: -rot[2], y: -rot[6], z: -rot[10]);   // camera forward in world space
+            float[] rot = Mat4.Multiply(Mat4.RotateX(_pitch * (float)Math.PI / 180f), Mat4.RotateY(_yaw * (float)Math.PI / 180f));
+            (float x, float y, float z) fwd = (x: -rot[2], y: -rot[6], z: -rot[10]);   // camera forward in world space
             float len = GizmoLength, hw = len * 0.03f, hh = len * 0.10f;
-            var v = new List<float>(192);
+            List<float> v = new List<float>(192);
 
             for (int a = 0; a < 3; a++)
             {
-                var (dx, dy, dz) = AxisDir(a);
+                (float dx, float dy, float dz) = AxisDir(a);
                 // perpendicular to the axis and the view direction → keeps the line edge-on to camera.
                 float px = dy * fwd.z - dz * fwd.y, py = dz * fwd.x - dx * fwd.z, pz = dx * fwd.y - dy * fwd.x;
                 float pl = (float)Math.Sqrt(px * px + py * py + pz * pz);
@@ -1294,10 +1295,10 @@ namespace DSPRE.Avalonia.Gl
                             ex - ux * hh, ey - uy * hh, ez - uz * hh, r, g, b);
             }
 
-            var data = v.ToArray();
-            if (!_haveEditVbo) { var arr = new int[1]; _f.GenBuffers(1, arr); _editVbo = arr[0]; _haveEditVbo = true; }
+            float[] data = v.ToArray();
+            if (!_haveEditVbo) { int[] arr = new int[1]; _f.GenBuffers(1, arr); _editVbo = arr[0]; _haveEditVbo = true; }
             _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _editVbo);
-            var hnd = GCHandle.Alloc(data, GCHandleType.Pinned);
+            GCHandle hnd = GCHandle.Alloc(data, GCHandleType.Pinned);
             try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(data.Length * sizeof(float)), hnd.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
             finally { hnd.Free(); }
 
@@ -1326,9 +1327,9 @@ namespace DSPRE.Avalonia.Gl
                 if (_gizmoVbo != 0) { _f.DeleteBuffers(1, new[] { _gizmoVbo }); _gizmoVbo = 0; }
                 if (_gizmoMesh != null && _gizmoCount > 0)
                 {
-                    var arr = new int[1]; _f.GenBuffers(1, arr); _gizmoVbo = arr[0];
+                    int[] arr = new int[1]; _f.GenBuffers(1, arr); _gizmoVbo = arr[0];
                     _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _gizmoVbo);
-                    var h = GCHandle.Alloc(_gizmoMesh, GCHandleType.Pinned);
+                    GCHandle h = GCHandle.Alloc(_gizmoMesh, GCHandleType.Pinned);
                     try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(_gizmoMesh.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
                     finally { h.Free(); }
                 }
@@ -1354,9 +1355,9 @@ namespace DSPRE.Avalonia.Gl
                 if (_overlayVbo != 0) { _f.DeleteBuffers(1, new[] { _overlayVbo }); _overlayVbo = 0; }
                 if (_overlayMesh != null && _overlayCount > 0)
                 {
-                    var arr = new int[1]; _f.GenBuffers(1, arr); _overlayVbo = arr[0];
+                    int[] arr = new int[1]; _f.GenBuffers(1, arr); _overlayVbo = arr[0];
                     _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _overlayVbo);
-                    var h = GCHandle.Alloc(_overlayMesh, GCHandleType.Pinned);
+                    GCHandle h = GCHandle.Alloc(_overlayMesh, GCHandleType.Pinned);
                     try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(_overlayMesh.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
                     finally { h.Free(); }
                 }
@@ -1391,12 +1392,12 @@ namespace DSPRE.Avalonia.Gl
             {
                 FreeHighlight();
                 if (_highlight != null)
-                    foreach (var batch in _highlight)
+                    foreach (HighlightBatch batch in _highlight)
                     {
                         if (batch.Mesh == null || batch.Mesh.Length < 24) continue;
-                        var arr = new int[1]; _f.GenBuffers(1, arr);
+                        int[] arr = new int[1]; _f.GenBuffers(1, arr);
                         _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, arr[0]);
-                        var h = GCHandle.Alloc(batch.Mesh, GCHandleType.Pinned);
+                        GCHandle h = GCHandle.Alloc(batch.Mesh, GCHandleType.Pinned);
                         try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(batch.Mesh.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
                         finally { h.Free(); }
                         _highlightGpu.Add((arr[0], batch.Mesh.Length / 8, batch.MaterialKey, batch.R, batch.G, batch.B));
@@ -1416,10 +1417,10 @@ namespace DSPRE.Avalonia.Gl
             _f.Uniform1f(_alphaLoc, 0.6f);
             if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
 
-            foreach (var h in _highlightGpu)
+            foreach ((int Vbo, int Count, int MaterialKey, float R, float G, float B) h in _highlightGpu)
             {
                 int texId = 0;
-                foreach (var part in _parts) if (part.MaterialKey == h.MaterialKey) { texId = part.TextureId; break; }
+                foreach (GpuPart part in _parts) if (part.MaterialKey == h.MaterialKey) { texId = part.TextureId; break; }
                 if (texId != 0 && _showTextures) { _f.BindTexture(GlFunctions.GL_TEXTURE_2D, texId); _f.Uniform1i(_hasTexLoc, 1); }
                 else _f.Uniform1i(_hasTexLoc, 0);
                 if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, h.R, h.G, h.B);
@@ -1445,9 +1446,9 @@ namespace DSPRE.Avalonia.Gl
                 if (_markerVbo != 0) { _f.DeleteBuffers(1, new[] { _markerVbo }); _markerVbo = 0; }
                 if (_markerMesh != null && _markerCount > 0)
                 {
-                    var arr = new int[1]; _f.GenBuffers(1, arr); _markerVbo = arr[0];
+                    int[] arr = new int[1]; _f.GenBuffers(1, arr); _markerVbo = arr[0];
                     _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _markerVbo);
-                    var h = GCHandle.Alloc(_markerMesh, GCHandleType.Pinned);
+                    GCHandle h = GCHandle.Alloc(_markerMesh, GCHandleType.Pinned);
                     try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(_markerMesh.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
                     finally { h.Free(); }
                 }
@@ -1476,7 +1477,7 @@ namespace DSPRE.Avalonia.Gl
         {
             if (_spritesDirty) UploadSprites();
             if (_gpuSprites.Count == 0) return;
-            if (_spriteVbo == 0) { var a = new int[1]; _f.GenBuffers(1, a); _spriteVbo = a[0]; }
+            if (_spriteVbo == 0) { int[] a = new int[1]; _f.GenBuffers(1, a); _spriteVbo = a[0]; }
 
             // Full camera-facing billboard: both "right" and "up" rotate with the camera (yaw + pitch),
             // so the sprite always faces the viewer head-on instead of only staying upright.
@@ -1501,11 +1502,11 @@ namespace DSPRE.Avalonia.Gl
             _f.ActiveTexture(GlFunctions.GL_TEXTURE0);
 
             // Without depth writes the last sprite drawn wins, so the farthest go first.
-            var order = new List<GpuSprite>(_gpuSprites);
+            List<GpuSprite> order = new List<GpuSprite>(_gpuSprites);
             order.Sort((a, b) => (a.Cx * tx + a.Cy * ty + a.Cz * tz).CompareTo(b.Cx * tx + b.Cy * ty + b.Cz * tz));
 
-            var buf = new float[6 * 8];
-            foreach (var s in order)
+            float[] buf = new float[6 * 8];
+            foreach (GpuSprite s in order)
             {
                 float turn = s.Roll * (float)(Math.PI / 180.0);
                 float ct = (float)Math.Cos(turn), st = (float)Math.Sin(turn);
@@ -1528,7 +1529,7 @@ namespace DSPRE.Avalonia.Gl
                 V(blx, bly, blz, 0, 1); V(trx, try_, trz, 1, 0); V(tlx, tly, tlz, 0, 0);
 
                 _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _spriteVbo);
-                var h = GCHandle.Alloc(buf, GCHandleType.Pinned);
+                GCHandle h = GCHandle.Alloc(buf, GCHandleType.Pinned);
                 try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(buf.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
                 finally { h.Free(); }
 
@@ -1570,18 +1571,18 @@ namespace DSPRE.Avalonia.Gl
                 {(-s,-s,-s),( s,-s,-s),( s,-s, s),(-s,-s,-s),( s,-s, s),(-s,-s, s)},
             };
 
-            var data = new float[6 * 6 * 8];
+            float[] data = new float[6 * 6 * 8];
             int idx = 0;
             for (int face = 0; face < 6; face++)
                 for (int vtx = 0; vtx < 6; vtx++)
                 {
-                    var p = faces[face, vtx];
+                    (float, float, float) p = faces[face, vtx];
                     data[idx++] = p.Item1; data[idx++] = p.Item2; data[idx++] = p.Item3;
                     data[idx++] = 0f; data[idx++] = 0f; // uv
                     data[idx++] = col[face].Item1; data[idx++] = col[face].Item2; data[idx++] = col[face].Item3;
                 }
 
-            var model = new NsbmdRenderModel { TotalVertices = 36 };
+            NsbmdRenderModel model = new NsbmdRenderModel { TotalVertices = 36 };
             model.Parts.Add(new NsbmdMeshPart { MaterialIndex = -1, Vertices = data, VertexCount = 36 });
             return model;
         }

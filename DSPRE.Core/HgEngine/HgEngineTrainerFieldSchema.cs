@@ -35,11 +35,11 @@ namespace DSPRE.HgEngine
         /// Falls back to known-good defaults only if the header couldn't be read at all.</summary>
         public static IReadOnlyList<NamedFlag> GetBattleTypes()
         {
-            var table = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(HeaderRelPath);
             if (table == null) return DefaultBattleTypes;
 
-            var result = new List<NamedFlag>();
-            foreach (var name in BattleTypeNames)
+            List<NamedFlag> result = new List<NamedFlag>();
+            foreach (string name in BattleTypeNames)
                 if (table.TryGetValue(name, out int value)) result.Add(new NamedFlag(name, value));
             return result.Count > 0 ? result : DefaultBattleTypes;
         }
@@ -56,11 +56,11 @@ namespace DSPRE.HgEngine
         /// (distinct from the optional `.ability` field gated by TRAINER_DATA_TYPE_ABILITY).</summary>
         public static IReadOnlyList<NamedFlag> GetAbilitySlots()
         {
-            var table = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(HeaderRelPath);
             if (table == null) return DefaultAbilitySlots;
 
-            var result = new List<NamedFlag>();
-            foreach (var name in AbilitySlotNames)
+            List<NamedFlag> result = new List<NamedFlag>();
+            foreach (string name in AbilitySlotNames)
                 if (table.TryGetValue(name, out int value)) result.Add(new NamedFlag(name, value));
             return result.Count > 0 ? result : DefaultAbilitySlots;
         }
@@ -75,11 +75,11 @@ namespace DSPRE.HgEngine
         // Skips 0-valued markers and multi-bit combo aliases, which would double-count bits if toggled directly.
         private static IReadOnlyList<NamedFlag> GetSingleBitFlags(string prefix)
         {
-            var table = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(HeaderRelPath);
             if (table == null) return Array.Empty<NamedFlag>();
 
-            var result = new List<NamedFlag>();
-            foreach (var kv in table.ByName)
+            List<NamedFlag> result = new List<NamedFlag>();
+            foreach (KeyValuePair<string, int> kv in table.ByName)
             {
                 if (!kv.Key.StartsWith(prefix, StringComparison.Ordinal)) continue;
                 int v = kv.Value;

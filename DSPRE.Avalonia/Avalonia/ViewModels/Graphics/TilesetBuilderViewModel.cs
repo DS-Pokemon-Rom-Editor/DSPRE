@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             if (_built.Whynot == null)
             {
-                var img = NitroBgCodec.Composite(_built.Tiles, _built.Colours, _built.Arrangement,
+                NitroBgCodec.BgImage img = NitroBgCodec.Composite(_built.Tiles, _built.Colours, _built.Arrangement,
                                                  _built.ClearSlotKept);
                 After = ImageConverter.FromRgba(img.Rgba, img.Width, img.Height);
 

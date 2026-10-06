@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
@@ -46,30 +48,30 @@ namespace DSPRE.HgEngine
             bodyOpen = bodyClose = -1;
             error = null;
 
-            var source = CSourceFile.For(text);
-            var table = source.Find(TableName)?.Init;
+            CSourceFile source = CSourceFile.For(text);
+            CInitList table = source.Find(TableName)?.Init;
             if (table == null) { error = $"{TableRelPath} has no {TableName} table DSPRE can read."; return false; }
             bodyOpen = table.Open;
             bodyClose = table.Close;
 
-            var macros = new Dictionary<string, Macro>(StringComparer.Ordinal);
-            foreach (var token in source.Tokens.Where(t => t.Kind == CTokenKind.Directive))
+            Dictionary<string, Macro> macros = new Dictionary<string, Macro>(StringComparer.Ordinal);
+            foreach (CToken token in source.Tokens.Where(t => t.Kind == CTokenKind.Directive))
             {
                 Match m = FunctionMacro.Match(token.Text(text));
                 if (!m.Success) continue;
-                var macro = new Macro(m.Groups[1].Value, m.Groups[2].Value.Split(',').Select(p => p.Trim()).ToArray(),
+                Macro macro = new Macro(m.Groups[1].Value, m.Groups[2].Value.Split(',').Select(p => p.Trim()).ToArray(),
                     Regex.Replace(m.Groups[3].Value, @"\\\r?\n", " ").Trim());
                 if (macro.Body.Contains(".tag")) macros[macro.Name] = macro;
             }
-            var lookup = HgEngineSourceFields.NameLookup(Headers);
+            Func<string, int?> lookup = HgEngineSourceFields.NameLookup(Headers);
 
-            foreach (var item in table.Items)
+            foreach (CInitItem item in table.Items)
             {
                 if (item.IsConditional && HgEngineConfigState.Compiles(item.Conditions) == false) continue;
 
                 if (item.List != null)
                 {
-                    if (!TryRow(item.List, text, lookup, out int t, out int g, out int p, out var cbItem))
+                    if (!TryRow(item.List, text, lookup, out int t, out int g, out int p, out CInitItem cbItem))
                     { error = $"{TableName} has a row DSPRE can't evaluate: {Line(text, item.Start)}"; return false; }
                     if (t == 0xFFFF) break;
                     entries.Add(new Entry(t, g, p, item.Start, item.End - item.Start,
@@ -78,13 +80,13 @@ namespace DSPRE.HgEngine
                 }
 
                 // Rows written as macro calls; the macro supplies the comma, so several calls can share one element.
-                var tokens = CLexer.Tokenize(text, item.ValueStart, item.ValueEnd);
+                List<CToken> tokens = CLexer.Tokenize(text, item.ValueStart, item.ValueEnd);
                 for (int k = 0; k < tokens.Count;)
                 {
                     // A brace row can follow the calls in the same element, as the 0xFFFF terminator does.
                     if (tokens[k].Is(text, "{") && source.ListAt(tokens[k].Start) is CInitList braced)
                     {
-                        if (!TryRow(braced, text, lookup, out int bt, out int bg, out int bp, out var bcb))
+                        if (!TryRow(braced, text, lookup, out int bt, out int bg, out int bp, out CInitItem bcb))
                         { error = $"{TableName} has a row DSPRE can't evaluate: {Line(text, tokens[k].Start)}"; return false; }
                         if (bt == 0xFFFF) return true;
                         int bEnd = braced.Close + 1;
@@ -107,7 +109,7 @@ namespace DSPRE.HgEngine
                         if (tk is "(" or "{" or "[") depth++;
                         else if (tk is ")" or "}" or "]" && --depth == 0) close = j;
                     }
-                    var args = new List<(int Start, int End)>();
+                    List<(int Start, int End)> args = new List<(int Start, int End)>();
                     for (int j = k + 2, from = k + 2, depth = 0; close >= 0 && j <= close; j++)
                     {
                         string tk = tokens[j].Kind == CTokenKind.Punct ? tokens[j].Text(text) : null;
@@ -123,14 +125,14 @@ namespace DSPRE.HgEngine
                     if (args.Count != macro.Params.Length) { error = $"{macro.Name} is called with {args.Count} arguments: {Line(text, tokens[k].Start)}"; return false; }
 
                     string expanded = Expand(macro, args.Select(a => text.Substring(a.Start, a.End - a.Start)).ToArray());
-                    var row = CSourceFile.For("int row[] = { " + expanded + " };").Find("row")?.Init?.Items.FirstOrDefault()?.List;
+                    CInitList row = CSourceFile.For("int row[] = { " + expanded + " };").Find("row")?.Init?.Items.FirstOrDefault()?.List;
                     int callStart = tokens[k].Start, callEnd = tokens[close].End;
                     if (row == null || !TryRow(row, "int row[] = { " + expanded + " };", lookup, out int tag, out int gfx, out int props, out _))
                     { error = $"{TableName} has a row DSPRE can't evaluate: {Line(text, callStart)}"; return false; }
                     if (tag == 0xFFFF) return true;
 
                     // A row whose callback_params is a parameter is written there, in the call itself.
-                    var cb = Regex.Match(macro.Body, @"\.callback_params\s*=\s*(\w+)");
+                    Match cb = Regex.Match(macro.Body, @"\.callback_params\s*=\s*(\w+)");
                     int param = cb.Success ? Array.IndexOf(macro.Params, cb.Groups[1].Value) : -1;
                     int at = param >= 0 ? args[param].Start : -1, len = param >= 0 ? args[param].End - args[param].Start : 0;
                     entries.Add(new Entry(tag, gfx, props, callStart, callEnd - callStart, at, len, expanded, macro.Name));
@@ -144,12 +146,12 @@ namespace DSPRE.HgEngine
         public static bool TrySetProperties(int tag, int properties, out string error)
         {
             if (!TryReadTableText(out string text, out string path, out error)) return false;
-            if (!TryParseTable(text, out var entries, out _, out _, out error)) return false;
-            var entry = entries.FirstOrDefault(e => e.Tag == tag);
+            if (!TryParseTable(text, out List<Entry> entries, out _, out _, out error)) return false;
+            Entry entry = entries.FirstOrDefault(e => e.Tag == tag);
             if (entry == null) { error = $"{TableName} has no row for tag {tag}."; return false; }
             if (entry.Properties == properties) return true;
 
-            var table = HgEngineSymbolTable.Load(TableRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(TableRelPath);
             string literal = table?.TryGetNameWithPrefix(properties, SizePrefix, out string named) == true ? named : $"0x{properties:X4}";
             if (entry.PropertiesAt >= 0)
                 text = text.Substring(0, entry.PropertiesAt) + literal + text.Substring(entry.PropertiesAt + entry.PropertiesLength);
@@ -174,15 +176,15 @@ namespace DSPRE.HgEngine
             tag = gfx = -1;
             added = null;
             if (!TryReadTableText(out string text, out string tablePath, out error)) return false;
-            var table = HgEngineSymbolTable.Load(TableRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(TableRelPath);
             if (table == null || !table.TryGetValue("NEW_NPC_GFX_START", out int npcGfxStart) || !table.TryGetValue("NEW_NPC_TAG_START", out int npcTagStart)
                 || !table.TryGetValue("MON_OVERWORLD_GFX_START", out int monGfxStart))
             { error = $"{TableRelPath} doesn't define NEW_NPC_GFX_START, NEW_NPC_TAG_START and MON_OVERWORLD_GFX_START."; return false; }
 
-            var members = Members(out error);
+            List<Member> members = Members(out error);
             if (members == null) return false;
-            var custom = members.Where(m => m.Name.StartsWith("2_", StringComparison.Ordinal)).ToList();
-            if (!TryParseTable(text, out var rows, out _, out _, out error)) return false;
+            List<Member> custom = members.Where(m => m.Name.StartsWith("2_", StringComparison.Ordinal)).ToList();
+            if (!TryParseTable(text, out List<Entry> rows, out _, out _, out error)) return false;
             int calls = rows.Count(r => r.MacroName == NpcMacro);
             if (custom.Count != calls || monGfxStart != npcGfxStart + custom.Count)
             {
@@ -193,7 +195,7 @@ namespace DSPRE.HgEngine
 
             if (templateGfx < 0 || templateGfx >= members.Count || members[templateGfx].Png == null)
             { error = "Pick an overworld drawn from a PNG to copy, not one stored as a raw file."; return false; }
-            var template = members[templateGfx];
+            Member template = members[templateGfx];
 
             int number = custom.Count;
             string stem = number.ToString("D4");
@@ -204,7 +206,7 @@ namespace DSPRE.HgEngine
             string dir = Path.Combine(SpritesDir(), CustomFolder);
             Directory.CreateDirectory(dir);
             string png = Path.Combine(dir, stem + ".png"), json = Path.Combine(dir, stem + ".json");
-            var palettes = new List<string>();
+            List<string> palettes = new List<string>();
             CopyAsNew(template.Png, png);
             CopyAsNew(template.Json, json);
             foreach (string pal in template.Palettes)
@@ -248,7 +250,7 @@ namespace DSPRE.HgEngine
             string dir = SpritesDir();
             if (!Directory.Exists(dir)) { error = $"{Rel(dir)} is missing from the checkout."; return null; }
 
-            var members = new List<Member>();
+            List<Member> members = new List<Member>();
             foreach (string png in Directory.GetFiles(dir, "*.png"))
                 members.Add(FromPng("1_" + Path.GetFileNameWithoutExtension(png) + ".btx0", png));
             foreach (string bin in Directory.GetFiles(dir, "*.bin"))
@@ -270,15 +272,15 @@ namespace DSPRE.HgEngine
         private static Member FromPng(string name, string png)
         {
             string json = Path.ChangeExtension(png, ".json");
-            var palettes = new List<string>();
+            List<string> palettes = new List<string>();
             if (File.Exists(json))
             {
                 try
                 {
-                    using var doc = System.Text.Json.JsonDocument.Parse(HgEngineFileCache.GetText(json));
-                    if (doc.RootElement.TryGetProperty("palettes", out var pals))
-                        foreach (var pal in pals.EnumerateObject())
-                            if (pal.Value.TryGetProperty("fileName", out var file))
+                    using JsonDocument doc = System.Text.Json.JsonDocument.Parse(HgEngineFileCache.GetText(json));
+                    if (doc.RootElement.TryGetProperty("palettes", out JsonElement pals))
+                        foreach (JsonProperty pal in pals.EnumerateObject())
+                            if (pal.Value.TryGetProperty("fileName", out JsonElement file))
                                 palettes.Add(Path.Combine(Path.GetDirectoryName(png), Path.GetFileNameWithoutExtension(png) + "-" + file.GetString()));
                 }
                 catch (System.Text.Json.JsonException ex) { AppLogger.Error($"HgEngineOverworlds: {json}: {ex.Message}"); }
@@ -323,7 +325,7 @@ namespace DSPRE.HgEngine
             if (colours < 16) colours = 16;
             for (int p = 0; p < count; p++)
             {
-                var pal = new int[16];
+                int[] pal = new int[16];
                 for (int c = 0; c < 16; c++)
                 {
                     int at = paletteData + (p * colours + c) * 2;
@@ -343,12 +345,12 @@ namespace DSPRE.HgEngine
         {
             try
             {
-                var lines = File.ReadAllLines(path);
+                string[] lines = File.ReadAllLines(path);
                 if (lines.Length < 3 || lines[0].Trim() != "JASC-PAL" || !int.TryParse(lines[2].Trim(), out int n)) return null;
-                var colours = new int[n];
+                int[] colours = new int[n];
                 for (int i = 0; i < n && 3 + i < lines.Length; i++)
                 {
-                    var rgb = lines[3 + i].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    string[] rgb = lines[3 + i].Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     colours[i] = (int.Parse(rgb[0]) << 16) | (int.Parse(rgb[1]) << 8) | int.Parse(rgb[2]);
                 }
                 return colours;
@@ -369,7 +371,7 @@ namespace DSPRE.HgEngine
             int[] before = File.Exists(path) ? ReadJasc(path) : null;
             // The file's own line endings are kept; JASC's are CRLF.
             string nl = before != null && !File.ReadAllText(path).Contains("\r\n") ? "\n" : "\r\n";
-            var sb = new System.Text.StringBuilder("JASC-PAL").Append(nl).Append("0100").Append(nl).Append(colours.Count).Append(nl);
+            StringBuilder sb = new System.Text.StringBuilder("JASC-PAL").Append(nl).Append("0100").Append(nl).Append(colours.Count).Append(nl);
             for (int i = 0; i < colours.Count; i++)
             {
                 int c = before != null && i < before.Length && (before[i] & 0xF8F8F8) == (colours[i] & 0xF8F8F8) ? before[i] : colours[i];
@@ -399,7 +401,7 @@ namespace DSPRE.HgEngine
             string rel = "data/graphics/overworlds";
             if (File.Exists(narcs))
             {
-                var m = Regex.Match(HgEngineFileCache.GetText(narcs), @"^\s*OVERWORLDS_DEPENDENCIES_DIR\s*:?=\s*(\S+)\s*$", RegexOptions.Multiline);
+                Match m = Regex.Match(HgEngineFileCache.GetText(narcs), @"^\s*OVERWORLDS_DEPENDENCIES_DIR\s*:?=\s*(\S+)\s*$", RegexOptions.Multiline);
                 if (m.Success && !m.Groups[1].Value.Contains("$(")) rel = m.Groups[1].Value;
             }
             return Path.Combine(root, rel.Replace('/', Path.DirectorySeparatorChar));
@@ -436,9 +438,9 @@ namespace DSPRE.HgEngine
 
         private static string Expand(Macro macro, string[] args)
         {
-            var sb = new System.Text.StringBuilder();
+            StringBuilder sb = new System.Text.StringBuilder();
             int last = 0;
-            foreach (var token in CLexer.Tokenize(macro.Body))
+            foreach (CToken token in CLexer.Tokenize(macro.Body))
             {
                 int p = token.Kind == CTokenKind.Identifier ? Array.IndexOf(macro.Params, token.Text(macro.Body)) : -1;
                 if (p < 0) continue;

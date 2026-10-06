@@ -10,6 +10,7 @@ using Avalonia.Interactivity;
 using DSPRE.Avalonia.Gl;
 using DSPRE.ROMFiles;
 using DSPRE.Avalonia.ViewModels;
+using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Views.World
 {
@@ -119,9 +120,9 @@ namespace DSPRE.Avalonia.Views.World
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
-            var vm = VM;
+            MapEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
+            Window owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
 
             if (!_setupDone)
@@ -224,14 +225,14 @@ namespace DSPRE.Avalonia.Views.World
                 await DialogHelper.ShowError("Load a map first, so there is something to animate.", "Animated preview");
                 return;
             }
-            var win = new AnimatedPreviewWindow();
+            AnimatedPreviewWindow win = new AnimatedPreviewWindow();
             win.ShowFor(TopLevel.GetTopLevel(this) as Window, VM.Model3D, VM.Area, null, null, VM.Collision,
                         cameraId: VM.CameraId, musicDayId: VM.MusicDayId, musicNightId: VM.MusicNightId);
         }
 
         private async void EditModel_Click(object sender, RoutedEventArgs e)
         {
-            var vm = DataContext as MapEditorViewModel;
+            MapEditorViewModel vm = DataContext as MapEditorViewModel;
             if (vm == null) return;
 
             if (TopLevel.GetTopLevel(this) is not Window owner || !vm.PrepareModelEdit()) return;
@@ -239,14 +240,14 @@ namespace DSPRE.Avalonia.Views.World
             try
             {
                 vm.MapModel.Tiles.ImportedSinceOpen = false;
-                var permissionsBefore = vm.PermissionsNow();
-                var window = new MapModelEditorView(vm.MapModel);
+                (byte[,] collisions, byte[,] types) permissionsBefore = vm.PermissionsNow();
+                MapModelEditorView window = new MapModelEditorView(vm.MapModel);
                 await window.ShowDialog(owner);
 
                 vm.AfterMapModelEdited();
                 if (vm.MapModel.Tiles.ImportedSinceOpen)
                 {
-                    var clashes = vm.EventsOnUnwalkableSquares(permissionsBefore);
+                    List<MapEditorViewModel.EventClash> clashes = vm.EventsOnUnwalkableSquares(permissionsBefore);
                     if (clashes.Count > 0) await new EventsAfterImportView(vm, clashes).ShowDialog(owner);
                 }
             }
@@ -279,7 +280,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM == null) return;
             string report = VM.ScanUsedTypes();
-            var clip = TopLevel.GetTopLevel(this)?.Clipboard;
+            IClipboard clip = TopLevel.GetTopLevel(this)?.Clipboard;
             clip?.SetTextAsync(report);
             await DialogHelper.ShowInfo($"Used types across all maps (copied to clipboard):\n\n{report}", "Used collision types");
         }

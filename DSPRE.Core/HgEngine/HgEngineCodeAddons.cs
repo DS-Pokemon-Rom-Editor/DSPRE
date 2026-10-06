@@ -81,7 +81,7 @@ namespace DSPRE.HgEngine
         {
             try
             {
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.personalPokeData, out var dirs)) return 0;
+                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.personalPokeData, out (string packedDir, string unpackedDir) dirs)) return 0;
                 return File.Exists(dirs.packedDir) ? new Editors.Utils.NarcReader(dirs.packedDir).Entrys : 0;
             }
             catch (Exception ex)
@@ -160,7 +160,7 @@ namespace DSPRE.HgEngine
         public static Layout Describe(int speciesCount)
         {
             int count = MemberCount();
-            var members = new byte[count][];
+            byte[][] members = new byte[count][];
             for (int i = 0; i < count; i++) members[i] = Member(i);
             return DescribeMembers(members, speciesCount);
         }
@@ -168,7 +168,7 @@ namespace DSPRE.HgEngine
         /// <summary>The reading of a layout on its own, for callers that already hold the members.</summary>
         public static Layout DescribeMembers(IReadOnlyList<byte[]> memberBytes, int speciesCount)
         {
-            var layout = new Layout();
+            Layout layout = new Layout();
             int count = memberBytes?.Count ?? 0;
             if (count == 0)
             {
@@ -176,7 +176,7 @@ namespace DSPRE.HgEngine
                 return layout;
             }
 
-            var members = new List<MemberInfo>();
+            List<MemberInfo> members = new List<MemberInfo>();
             for (int i = 0; i < count; i++)
             {
                 members.Add(new MemberInfo { Index = i, Length = memberBytes[i]?.Length ?? 0, ReadAs = NameOfTable(i) });
@@ -192,9 +192,9 @@ namespace DSPRE.HgEngine
             {
                 for (int t = 0; t < TableCount; t++) members[layout.TableBlockStart + t].Holds = TableNames[t];
 
-                var keep = new HashSet<int>(Enumerable.Range(0, VanillaMembers)
+                HashSet<int> keep = new HashSet<int>(Enumerable.Range(0, VanillaMembers)
                     .Concat(Enumerable.Range(layout.TableBlockStart, TableCount)));
-                var stale = Enumerable.Range(0, count).Where(i => !keep.Contains(i)).ToList();
+                List<int> stale = Enumerable.Range(0, count).Where(i => !keep.Contains(i)).ToList();
                 foreach (int i in stale) members[i].IsStale = true;
                 layout.StaleMembers = stale;
             }

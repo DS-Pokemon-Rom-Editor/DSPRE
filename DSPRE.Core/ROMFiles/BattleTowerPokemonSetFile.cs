@@ -95,7 +95,7 @@ namespace DSPRE.ROMFiles {
         public override byte[] ToByteArray() {
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (var set in Sets) {
+                foreach (BattleTowerPokemonSet set in Sets) {
                     set.Write(bw, keepUnread: false);
                 }
                 return ms.ToArray();

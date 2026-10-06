@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>(ball id, name) for every ball but the Park Ball, which never has a send-out.</summary>
         public static List<(int Ball, string Name)> Balls()
         {
-            var list = new List<(int, string)>();
+            List<(int, string)> list = new List<(int, string)>();
             string[] items = null;
             try { items = GetItemNames(); } catch { }
             string Name(int item, string fallback) =>
@@ -47,8 +47,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Unpacks every archive a send-out reads. Slow, so call it off the UI thread.</summary>
         public static void Unpack()
         {
-            var dirs = new List<DirNames>();
-            foreach (var d in new[] { DirNames.battleObj, DirNames.ballParticles, DirNames.trainerGraphics, DirNames.trainerBackGraphics,
+            List<DirNames> dirs = new List<DirNames>();
+            foreach (DirNames d in new[] { DirNames.battleObj, DirNames.ballParticles, DirNames.trainerGraphics, DirNames.trainerBackGraphics,
                                       DirNames.trainerProperties, DirNames.wazaEffectSub, DirNames.wazaParticle })
                 if (gameDirs.ContainsKey(d)) dirs.Add(d);
             DSUtils.TryUnpackNarcs(dirs);
@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One cell of a ball, drawn 64×64 around the ball's own centre.</summary>
         public AvaBitmap BallCell(int ball, int cell)
         {
-            if (_ballCells.TryGetValue((ball, cell), out var bmp)) return bmp;
+            if (_ballCells.TryGetValue((ball, cell), out AvaBitmap bmp)) return bmp;
             bmp = LoadBall(ball).Cells?.RenderCell(cell, 64, 64);
             _ballCells[(ball, cell)] = bmp;
             return bmp;
@@ -73,9 +73,9 @@ namespace DSPRE.Avalonia.Data
 
         private (WeCellAnimRenderer Cells, CellSequence[] Seqs) LoadBall(int ball)
         {
-            if (_balls.TryGetValue(ball, out var loaded)) return loaded;
-            var cells = new WeCellAnimRenderer();
-            var f = BallFiles(ball);
+            if (_balls.TryGetValue(ball, out (WeCellAnimRenderer Cells, CellSequence[] Seqs) loaded)) return loaded;
+            WeCellAnimRenderer cells = new WeCellAnimRenderer();
+            (int Ncgr, int Nclr, int Ncer, int Nanr) f = BallFiles(ball);
             bool ok = gameDirs.ContainsKey(DirNames.battleObj)
                    && cells.Load(DirNames.battleObj, f.Ncgr, DirNames.battleObj, f.Nclr, DirNames.battleObj, f.Ncer, DirNames.battleObj, f.Nanr);
             loaded = ok ? (cells, cells.BuildSequences()) : (null, Array.Empty<CellSequence>());
@@ -91,9 +91,9 @@ namespace DSPRE.Avalonia.Data
         public bool AddBurst(SpaParticlePreview into, int ball, bool enemySide)
         {
             int entry = BurstEntry(ball);
-            if (!_bursts.TryGetValue(entry, out var arc))
+            if (!_bursts.TryGetValue(entry, out SpaArchive arc))
             {
-                var bytes = _burstNarc.Available ? _burstNarc.Get(entry) : null;
+                byte[] bytes = _burstNarc.Available ? _burstNarc.Get(entry) : null;
                 arc = bytes != null ? SpaArchive.Parse(bytes) : null;
                 _bursts[entry] = arc;
             }
@@ -101,11 +101,11 @@ namespace DSPRE.Avalonia.Data
 
             double baseX = enemySide ? EnemyBurstX : PlayerBurstX, baseY = enemySide ? EnemyBurstY : PlayerBurstY;
             double depth = enemySide ? EnemyDepth : PlayerDepth;
-            foreach (var em in arc.Emitters)
+            foreach (SpaEmitter em in arc.Emitters)
             {
-                var tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
+                SpaTexture tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
                 double cx = baseX + em.PosX, cy = baseY - em.PosY;
-                var sim = new SpaSimulator(em, em.AxisX, em.AxisY) { AnchorX = cx, AnchorY = cy };
+                SpaSimulator sim = new SpaSimulator(em, em.AxisX, em.AxisY) { AnchorX = cx, AnchorY = cy };
                 into.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
                     em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
                     baseZ: depth + em.PosZ, viewReversed: false, flipS: em.FlipS, flipT: em.FlipT, em: em));
@@ -117,20 +117,20 @@ namespace DSPRE.Avalonia.Data
         public bool AddSeal(SpaParticlePreview into, BallSeal seal, int x, int y, bool enemySide)
         {
             if (seal == null) return false;
-            if (!_bursts.TryGetValue(seal.Particle, out var arc))
+            if (!_bursts.TryGetValue(seal.Particle, out SpaArchive arc))
             {
-                var bytes = _burstNarc.Available ? _burstNarc.Get(seal.Particle) : null;
+                byte[] bytes = _burstNarc.Available ? _burstNarc.Get(seal.Particle) : null;
                 arc = bytes != null ? SpaArchive.Parse(bytes) : null;
                 _bursts[seal.Particle] = arc;
             }
             if (arc == null || arc.Emitters.Count == 0) return false;
 
-            var em = arc.Emitters[0];
-            var (baseX, baseY) = SealEffect.ScreenPosition(x, y, enemySide);
-            var tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
+            SpaEmitter em = arc.Emitters[0];
+            (double baseX, double baseY) = SealEffect.ScreenPosition(x, y, enemySide);
+            SpaTexture tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
             double cx = baseX + em.PosX, cy = baseY - em.PosY;
             // One shared generator, so no two bursts repeat.
-            var sim = new SpaSimulator(em, em.AxisX, em.AxisY, seed: _sealRandom.Next()) { AnchorX = cx, AnchorY = cy };
+            SpaSimulator sim = new SpaSimulator(em, em.AxisX, em.AxisY, seed: _sealRandom.Next()) { AnchorX = cx, AnchorY = cy };
             into.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
                 em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
                 baseZ: em.PosZ, viewReversed: false, flipS: em.FlipS, flipT: em.FlipT, em: em, orthographic: true));
@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Every trainer as "id: Class Name", or empty when they cannot be read.</summary>
         public static List<string> TrainerList()
         {
-            var list = new List<string>();
+            List<string> list = new List<string>();
             try
             {
                 foreach (string entry in TrainerNames.GetAll())
@@ -172,7 +172,7 @@ namespace DSPRE.Avalonia.Data
             string name = "";
             try
             {
-                if (HgEngineProject.IsActive && HgEngineTrainerSource.TryLoad(trainerId, out var block, out _))
+                if (HgEngineProject.IsActive && HgEngineTrainerSource.TryLoad(trainerId, out HgEngineSourceBlock block, out _))
                 {
                     block.TryGetSymbol(new[] { FieldPathSegment.Field("data"), FieldPathSegment.Field("trainerClass") },
                         "include/constants/trainerclass.h", out cls);
@@ -182,9 +182,9 @@ namespace DSPRE.Avalonia.Data
                 {
                     // The class is the second byte of the trainer's record.
                     string path = Filesystem.GetTrainerPropertiesPath(trainerId);
-                    var bytes = System.IO.File.Exists(path) ? System.IO.File.ReadAllBytes(path) : null;
+                    byte[] bytes = System.IO.File.Exists(path) ? System.IO.File.ReadAllBytes(path) : null;
                     if (bytes != null && bytes.Length > 1) cls = bytes[1];
-                    var names = GetSimpleTrainerNames();
+                    string[] names = GetSimpleTrainerNames();
                     if (trainerId >= 0 && trainerId < names.Length) name = names[trainerId];
                 }
             }
@@ -192,7 +192,7 @@ namespace DSPRE.Avalonia.Data
             string className = "";
             try
             {
-                var classes = GetTrainerClassNames();
+                string[] classes = GetTrainerClassNames();
                 if (cls >= 0 && cls < classes.Length) className = classes[cls];
             }
             catch { }
@@ -204,12 +204,12 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                var classes = GetTrainerClassNames();
+                string[] classes = GetTrainerClassNames();
                 int youngster = Array.FindIndex(classes, c => c != null && c.Trim().Equals("Youngster", StringComparison.OrdinalIgnoreCase));
                 int count = Filesystem.GetTrainerPropertiesCount();
                 for (int id = 1; youngster >= 0 && id < count; id++)
                 {
-                    var bytes = System.IO.File.ReadAllBytes(Filesystem.GetTrainerPropertiesPath(id));
+                    byte[] bytes = System.IO.File.ReadAllBytes(Filesystem.GetTrainerPropertiesPath(id));
                     if (bytes.Length > 1 && bytes[1] == youngster) return id;
                 }
             }
@@ -223,7 +223,7 @@ namespace DSPRE.Avalonia.Data
             {
                 _front = LoadTrainer(trainerClass, DirNames.trainerGraphics);
                 _frontClass = trainerClass;
-                foreach (var key in new List<(bool, int)>(_trainerBanks.Keys)) if (!key.Item1) _trainerBanks.Remove(key);
+                foreach ((bool, int) key in new List<(bool, int)>(_trainerBanks.Keys)) if (!key.Item1) _trainerBanks.Remove(key);
                 _trainerFrames.Clear();
             }
             return _front;
@@ -236,34 +236,34 @@ namespace DSPRE.Avalonia.Data
         public int EnemyTrainerSequenceTicks(int trainerClass, int seq)
         {
             int units = 0;
-            foreach (var f in Front(trainerClass).Sequence(seq)) units += Math.Max(1, f.Duration);
+            foreach ((int Bank, int Duration) f in Front(trainerClass).Sequence(seq)) units += Math.Max(1, f.Duration);
             return (units + 1) / 2;
         }
 
         /// <summary>The enemy trainer <paramref name="ticks"/> into an animation, 160×160 around its position.</summary>
         public AvaBitmap EnemyTrainer(int trainerClass, int seq, int ticks)
         {
-            var r = Front(trainerClass);
-            var frames = r.Sequence(seq);
+            TrainerClassSpriteRenderer r = Front(trainerClass);
+            (int Bank, int Duration)[] frames = r.Sequence(seq);
             if (frames.Length == 0)
             {
-                if (!_trainerFrames.TryGetValue(r.DefaultFrame, out var still)) _trainerFrames[r.DefaultFrame] = still = r.Render(r.DefaultFrame, 160, 160);
+                if (!_trainerFrames.TryGetValue(r.DefaultFrame, out AvaBitmap still)) _trainerFrames[r.DefaultFrame] = still = r.Render(r.DefaultFrame, 160, 160);
                 return still;
             }
             int units = Math.Max(0, ticks) * 2, at = 0, bank = frames[frames.Length - 1].Bank;
-            foreach (var f in frames)
+            foreach ((int Bank, int Duration) f in frames)
             {
                 if (units < at + Math.Max(1, f.Duration)) { bank = f.Bank; break; }
                 at += Math.Max(1, f.Duration);
             }
-            if (!_trainerBanks.TryGetValue((false, bank), out var bmp)) _trainerBanks[(false, bank)] = bmp = r.RenderBank(bank, 160, 160);
+            if (!_trainerBanks.TryGetValue((false, bank), out AvaBitmap bmp)) _trainerBanks[(false, bank)] = bmp = r.RenderBank(bank, 160, 160);
             return bmp;
         }
 
         /// <summary>The player's back sprite <paramref name="ticks"/> into its throw, or its resting pose for −1.</summary>
         public AvaBitmap PlayerTrainer(int ticks)
         {
-            var r = _back ??= LoadTrainer(0, DirNames.trainerBackGraphics);
+            TrainerClassSpriteRenderer r = _back ??= LoadTrainer(0, DirNames.trainerBackGraphics);
             if (r.FrameCount == 0) return null;
             int frame = r.DefaultFrame;
             if (ticks >= 0)
@@ -278,13 +278,13 @@ namespace DSPRE.Avalonia.Data
                 frame = 0;
                 for (int i = 0; i < _backFrameStarts.Length; i++) if (ticks >= _backFrameStarts[i]) frame = i;
             }
-            if (!_trainerBanks.TryGetValue((true, frame), out var bmp)) _trainerBanks[(true, frame)] = bmp = r.Render(frame, 160, 160);
+            if (!_trainerBanks.TryGetValue((true, frame), out AvaBitmap bmp)) _trainerBanks[(true, frame)] = bmp = r.Render(frame, 160, 160);
             return bmp;
         }
 
         private static TrainerClassSpriteRenderer LoadTrainer(int trainerClass, DirNames archive)
         {
-            var r = new TrainerClassSpriteRenderer();
+            TrainerClassSpriteRenderer r = new TrainerClassSpriteRenderer();
             if (gameDirs.ContainsKey(archive)) r.Load(trainerClass, archive);
             return r;
         }
@@ -310,11 +310,11 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Both rows drawn into one 256×192 picture, or null when neither is showing.</summary>
         public AvaBitmap ComposeRows(params (SendOutSequence.RowState Row, CellActor[] Balls, bool Player)[] rows)
         {
-            var seqs = PartyRowSequences();
+            CellSequence[] seqs = PartyRowSequences();
             if (_row == null) return null;
-            var buffer = new byte[256 * 192 * 4];
+            byte[] buffer = new byte[256 * 192 * 4];
             bool any = false;
-            foreach (var (row, balls, player) in rows)
+            foreach ((SendOutSequence.RowState row, CellActor[] balls, bool player) in rows)
             {
                 if (!row.Visible || row.Alpha <= 0) continue;
                 any = true;
@@ -362,14 +362,14 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The shiny sparkle on the battler at (<paramref name="x"/>, <paramref name="y"/>), or null.</summary>
         public BattleAnimPlayer Sparkle(bool enemySide, double x, double y)
         {
-            var version = gameFamily == GameFamilies.HGSS ? WazaSeqVersion.HGSS : WazaSeqVersion.Plat;
+            WazaSeqVersion version = gameFamily == GameFamilies.HGSS ? WazaSeqVersion.HGSS : WazaSeqVersion.Plat;
             if (!_sparkleTried)
             {
                 _sparkleTried = true;
                 _sparkleBytes = gameDirs.ContainsKey(DirNames.wazaEffectSub) ? new ScriptNarc(DirNames.wazaEffectSub).Get(ShinySparkleSubscript) : null;
             }
             if (_sparkleBytes == null) return null;
-            var cmds = BattleAnimScript.Parse(_sparkleBytes, version);
+            List<WazaSeqCommand> cmds = BattleAnimScript.Parse(_sparkleBytes, version);
             if (cmds == null || cmds.Count == 0) return null;
             _effectParticles ??= new ScriptNarc(DirNames.wazaParticle);
             return new BattleAnimPlayer(cmds, version, _effectParticles, x, y, x, y, 256, 192, attackerIsEnemy: enemySide, selfTarget: true);
@@ -382,14 +382,14 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Renders a sound effect by its sequence name in the background, once.</summary>
         public Task<short[]> Sound(string seqName)
         {
-            if (_named.TryGetValue(seqName, out var task)) return task;
+            if (_named.TryGetValue(seqName, out Task<short[]> task)) return task;
             return _named[seqName] = Task.Run(() =>
             {
                 try
                 {
-                    var sdat = SoundArchive.Load();
+                    SdatArchive sdat = SoundArchive.Load();
                     if (sdat == null) return null;
-                    foreach (var kv in sdat.SeqNames)
+                    foreach (KeyValuePair<int, string> kv in sdat.SeqNames)
                         if (kv.Value == seqName) return SseqPlayer.Render(sdat, kv.Key);
                 }
                 catch { }
@@ -400,12 +400,12 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Renders a sound effect by its sequence number in the background, once.</summary>
         public Task<short[]> Sound(int seqId)
         {
-            if (_numbered.TryGetValue(seqId, out var task)) return task;
+            if (_numbered.TryGetValue(seqId, out Task<short[]> task)) return task;
             return _numbered[seqId] = Task.Run(() =>
             {
                 try
                 {
-                    var sdat = SoundArchive.Load();
+                    SdatArchive sdat = SoundArchive.Load();
                     return sdat != null ? SseqPlayer.Render(sdat, seqId) : null;
                 }
                 catch { return null; }
@@ -442,21 +442,21 @@ namespace DSPRE.Avalonia.Data
 
         public static string SequenceName(int seqId)
         {
-            var sdat = SoundArchive.Load();
-            return sdat?.SeqNames != null && sdat.SeqNames.TryGetValue(seqId, out var name) ? name : $"Sequence {seqId}";
+            SdatArchive sdat = SoundArchive.Load();
+            return sdat?.SeqNames != null && sdat.SeqNames.TryGetValue(seqId, out string name) ? name : $"Sequence {seqId}";
         }
 
         /// <summary>Renders a battle theme once, starting where it is when the intro begins.</summary>
         public Task<short[]> Music(int seqId)
         {
             if (seqId < 0) return Task.FromResult<short[]>(null);
-            if (_music.TryGetValue(seqId, out var task)) return task;
+            if (_music.TryGetValue(seqId, out Task<short[]> task)) return task;
             return _music[seqId] = Task.Run(() =>
             {
                 try
                 {
-                    var sdat = SoundArchive.Load();
-                    var pcm = sdat != null ? SseqPlayer.Render(sdat, seqId, 32000, MusicSeconds + MusicLeadInSeconds) : null;
+                    SdatArchive sdat = SoundArchive.Load();
+                    short[] pcm = sdat != null ? SseqPlayer.Render(sdat, seqId, 32000, MusicSeconds + MusicLeadInSeconds) : null;
                     int skip = (int)(MusicLeadInSeconds * 32000) * 2;
                     return pcm == null || pcm.Length <= skip ? pcm : pcm[skip..];
                 }

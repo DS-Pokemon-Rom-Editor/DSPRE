@@ -56,7 +56,7 @@ namespace DSPRE.Models
                 get
                 {
                     if (Corners.Count == 0) return false;
-                    var flats = CoveringFlats().ToList();
+                    List<float> flats = CoveringFlats().ToList();
                     return flats.Count > 0 && Corners.Max(c => c.Y) - flats.Max() <= TileWidth + 1e-3f;
                 }
             }
@@ -65,20 +65,20 @@ namespace DSPRE.Models
             private IEnumerable<float> CoveringFlats()
             {
                 float whole = Wide * Deep * TileWidth * TileWidth;
-                var byHeight = new Dictionary<int, (float y, float area)>();
-                foreach (var face in Faces)
+                Dictionary<int, (float y, float area)> byHeight = new Dictionary<int, (float y, float area)>();
+                foreach (Face face in Faces)
                 {
                     if (face.Corners == null || face.Corners.Length < 3) continue;
-                    var c = face.Corners.Select(i => Corners[i]).ToArray();
+                    Corner[] c = face.Corners.Select(i => Corners[i]).ToArray();
                     if (c.Any(q => Math.Abs(q.Y - c[0].Y) > 1e-3f)) continue;
                     float area = 0;
                     for (int i = 0; i < c.Length; i++)
                     {
-                        var p = c[i]; var q = c[(i + 1) % c.Length];
+                        Corner p = c[i]; Corner q = c[(i + 1) % c.Length];
                         area += p.X * q.Z - q.X * p.Z;
                     }
                     int key = (int)MathF.Round(c[0].Y * 1000f);
-                    byHeight.TryGetValue(key, out var had);
+                    byHeight.TryGetValue(key, out (float y, float area) had);
                     byHeight[key] = (c[0].Y, had.area + Math.Abs(area) / 2f);
                 }
                 return byHeight.Values.Where(h => h.area >= whole * 0.9f).Select(h => h.y);
@@ -94,11 +94,11 @@ namespace DSPRE.Models
             {
                 get
                 {
-                    var area = new Dictionary<string, float>();
-                    foreach (var face in Faces)
+                    Dictionary<string, float> area = new Dictionary<string, float>();
+                    foreach (Face face in Faces)
                     {
                         if (string.IsNullOrEmpty(face.Picture) || face.Corners == null || face.Corners.Length < 3) continue;
-                        var c = face.Corners.Select(i => Corners[i]).ToArray();
+                        Corner[] c = face.Corners.Select(i => Corners[i]).ToArray();
                         float sum = 0;
                         for (int i = 1; i + 1 < c.Length; i++)
                         {
@@ -111,7 +111,7 @@ namespace DSPRE.Models
                     }
                     bool Shadow(string p) => p.Contains("kage", StringComparison.OrdinalIgnoreCase)
                                           || p.Contains("shadow", StringComparison.OrdinalIgnoreCase);
-                    var pick = area.Where(kv => !Shadow(kv.Key)).DefaultIfEmpty().MaxBy(kv => kv.Value);
+                    KeyValuePair<string, float> pick = area.Where(kv => !Shadow(kv.Key)).DefaultIfEmpty().MaxBy(kv => kv.Value);
                     return pick.Key ?? area.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).FirstOrDefault();
                 }
             }
@@ -122,14 +122,14 @@ namespace DSPRE.Models
                 get
                 {
                     float top = SurfaceY;
-                    var near = CoveringFlats().Where(y => y >= top - TileWidth / 2f).ToList();
+                    List<float> near = CoveringFlats().Where(y => y >= top - TileWidth / 2f).ToList();
                     if (near.Count == 0) return MainFace;
                     float y = near.Min();
                     float Area(Face f)
                     {
-                        var c = f.Corners.Select(i => Corners[i]).ToArray();
+                        Corner[] c = f.Corners.Select(i => Corners[i]).ToArray();
                         float a = 0;
-                        for (int i = 0; i < c.Length; i++) { var p = c[i]; var q = c[(i + 1) % c.Length]; a += p.X * q.Z - q.X * p.Z; }
+                        for (int i = 0; i < c.Length; i++) { Corner p = c[i]; Corner q = c[(i + 1) % c.Length]; a += p.X * q.Z - q.X * p.Z; }
                         return Math.Abs(a) / 2f;
                     }
                     return Faces.Where(f => f.Corners != null && f.Corners.Length >= 3
@@ -181,9 +181,9 @@ namespace DSPRE.Models
 
             public int[,] CollisionGrid(int layer)
             {
-                if (CollisionDefaults.TryGetValue(layer, out var had)
+                if (CollisionDefaults.TryGetValue(layer, out int[,] had)
                     && had.GetLength(0) == FootprintWide && had.GetLength(1) == FootprintDeep) return had;
-                var grid = new int[FootprintWide, FootprintDeep];
+                int[,] grid = new int[FootprintWide, FootprintDeep];
                 for (int x = 0; x < FootprintWide; x++)
                     for (int y = 0; y < FootprintDeep; y++)
                         grid[x, y] = had != null && x < had.GetLength(0) && y < had.GetLength(1) ? had[x, y] : -1;
@@ -194,14 +194,14 @@ namespace DSPRE.Models
             public void SetWholeCollision(int layer, int value)
             {
                 if (value < 0) { CollisionDefaults.Remove(layer); return; }
-                var grid = CollisionGrid(layer);
+                int[,] grid = CollisionGrid(layer);
                 for (int x = 0; x < grid.GetLength(0); x++) for (int y = 0; y < grid.GetLength(1); y++) grid[x, y] = value & 0xff;
             }
 
             public int WholeCollision(int layer)
             {
-                if (!CollisionDefaults.TryGetValue(layer, out var grid)) return -1;
-                var values = grid.Cast<int>().Distinct().ToList();
+                if (!CollisionDefaults.TryGetValue(layer, out int[,] grid)) return -1;
+                List<int> values = grid.Cast<int>().Distinct().ToList();
                 return values.Count == 1 ? values[0] : -2;
             }
         }
@@ -218,8 +218,8 @@ namespace DSPRE.Models
             if (tile < 0 || tile >= Tiles.Count) return;
             Tiles.RemoveAt(tile);
             int To(int t) => t == tile ? -1 : t > tile ? t - 1 : t;
-            foreach (var d in SmartDrawings) d.Renumber(To);
-            foreach (var g in painted) g?.Renumber(To);
+            foreach (SmartDrawing d in SmartDrawings) d.Renumber(To);
+            foreach (TileGrid g in painted) g?.Renumber(To);
         }
 
         public void SwapTiles(int a, int b, params TileGrid[] painted)
@@ -227,15 +227,15 @@ namespace DSPRE.Models
             if (a < 0 || b < 0 || a >= Tiles.Count || b >= Tiles.Count || a == b) return;
             (Tiles[a], Tiles[b]) = (Tiles[b], Tiles[a]);
             int To(int t) => t == a ? b : t == b ? a : t;
-            foreach (var d in SmartDrawings) d.Renumber(To);
-            foreach (var g in painted) g?.Renumber(To);
+            foreach (SmartDrawing d in SmartDrawings) d.Renumber(To);
+            foreach (TileGrid g in painted) g?.Renumber(To);
         }
 
         public int DuplicateTile(int tile)
         {
             if (tile < 0 || tile >= Tiles.Count) return -1;
-            var was = Tiles[tile];
-            var copy = new Tile
+            Tile was = Tiles[tile];
+            Tile copy = new Tile
             {
                 Name = was.Name + "_copy", Wide = was.Wide, Deep = was.Deep,
                 AcrossTileable = was.AcrossTileable, DownTileable = was.DownTileable,
@@ -256,24 +256,24 @@ namespace DSPRE.Models
         {
             int first = Tiles.Count;
             if (other == null) return first;
-            foreach (var tile in other.Tiles)
+            foreach (Tile tile in other.Tiles)
             {
                 if (Tiles.Any(t => t.Name == tile.Name)) tile.Name += $"_{Tiles.Count}";
                 Tiles.Add(tile);
             }
-            foreach (var d in other.SmartDrawings)
+            foreach (SmartDrawing d in other.SmartDrawings)
             {
-                var copy = d.Clone();
+                SmartDrawing copy = d.Clone();
                 copy.Renumber(t => t + first);
                 SmartDrawings.Add(copy);
             }
-            foreach (var kv in other.PictureFiles) PictureFiles.TryAdd(kv.Key, kv.Value);
+            foreach (KeyValuePair<string, string> kv in other.PictureFiles) PictureFiles.TryAdd(kv.Key, kv.Value);
             return first;
         }
 
         public static void Nudge(Tile tile, float dx, float dy, float dz)
         {
-            foreach (var c in tile.Corners) { c.X += dx; c.Y += dy; c.Z += dz; }
+            foreach (Corner c in tile.Corners) { c.X += dx; c.Y += dy; c.Z += dz; }
             tile.OffsetX += dx;
             tile.OffsetZ += dz;
         }
@@ -281,7 +281,7 @@ namespace DSPRE.Models
         public static void TurnShape(Tile tile)
         {
             float d = tile.Deep * TileWidth;
-            foreach (var c in tile.Corners)
+            foreach (Corner c in tile.Corners)
             {
                 (c.X, c.Z) = (d - c.Z, c.X);
                 if (c.Faces) (c.NX, c.NZ) = (-c.NZ, c.NX);
@@ -292,14 +292,14 @@ namespace DSPRE.Models
         public static void Mirror(Tile tile)
         {
             float w = tile.Wide * TileWidth;
-            foreach (var c in tile.Corners) { c.X = w - c.X; if (c.Faces) c.NX = -c.NX; }
-            foreach (var f in tile.Faces) Array.Reverse(f.Corners);
+            foreach (Corner c in tile.Corners) { c.X = w - c.X; if (c.Faces) c.NX = -c.NX; }
+            foreach (Face f in tile.Faces) Array.Reverse(f.Corners);
         }
 
         public void ChangeLook(string picture, Func<MaterialLook, MaterialLook> change)
         {
-            foreach (var tile in Tiles)
-                foreach (var face in tile.Faces)
+            foreach (Tile tile in Tiles)
+                foreach (Face face in tile.Faces)
                     if (face.Picture == picture)
                         face.Look = change(face.Look ?? MaterialLook.Plain);
         }
@@ -326,12 +326,12 @@ namespace DSPRE.Models
         {
             if (!PlacesArePartsOfThePicture || sizeOf == null) return;
 
-            foreach (var tile in Tiles)
+            foreach (Tile tile in Tiles)
             {
-                var byCorner = new Dictionary<int, (int wide, int tall)>();
-                foreach (var face in tile.Faces)
+                Dictionary<int, (int wide, int tall)> byCorner = new Dictionary<int, (int wide, int tall)>();
+                foreach (Face face in tile.Faces)
                 {
-                    var size = sizeOf(face.Picture);
+                    (int wide, int tall) size = sizeOf(face.Picture);
                     if (size.wide <= 0 || size.tall <= 0) continue;
                     foreach (int c in face.Corners)
                         if (!byCorner.ContainsKey(c)) byCorner[c] = size;
@@ -339,15 +339,15 @@ namespace DSPRE.Models
 
                 for (int c = 0; c < tile.Corners.Count; c++)
                 {
-                    if (!byCorner.TryGetValue(c, out var size)) continue;
+                    if (!byCorner.TryGetValue(c, out (int wide, int tall) size)) continue;
                     tile.Corners[c].S *= size.wide;
                     tile.Corners[c].T *= size.tall;
                 }
 
-                foreach (var face in tile.Faces)
+                foreach (Face face in tile.Faces)
                 {
                     if (face.Look == null) continue;
-                    var size = sizeOf(face.Picture);
+                    (int wide, int tall) size = sizeOf(face.Picture);
                     if (size.wide > 0 && size.tall > 0) face.Look = face.Look.WithPictureSize(size.wide, size.tall);
                 }
             }
@@ -358,15 +358,15 @@ namespace DSPRE.Models
         public static MapTileset FromMap(MapMesh mesh, Func<int, string> pictureOf, string name = null,
                                          Func<int, string> paletteOf = null)
         {
-            var set = new MapTileset { Name = name ?? "from map" };
+            MapTileset set = new MapTileset { Name = name ?? "from map" };
             if (mesh == null) return set;
 
-            var already = new Dictionary<string, Tile>();
-            foreach (var piece in PiecesOf(mesh))
+            Dictionary<string, Tile> already = new Dictionary<string, Tile>();
+            foreach (Piece piece in PiecesOf(mesh))
             {
-                var tile = piece.TileOf(mesh, pictureOf, paletteOf, out _);
+                Tile tile = piece.TileOf(mesh, pictureOf, paletteOf, out _);
                 string print = Print(tile);
-                if (already.TryGetValue(print, out var had)) { had.Seen++; continue; }
+                if (already.TryGetValue(print, out Tile had)) { had.Seen++; continue; }
 
                 tile.Seen = 1;
                 tile.Name = $"tile{set.Tiles.Count:D3}";
@@ -376,8 +376,8 @@ namespace DSPRE.Models
 
             set.Tiles.Sort((a, b) => b.Seen.CompareTo(a.Seen));
             // Named after the main picture, with its size when wider than a square; repeats are numbered.
-            var used = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            foreach (var tile in set.Tiles)
+            Dictionary<string, int> used = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (Tile tile in set.Tiles)
             {
                 string label = tile.MainPicture ?? "tile";
                 if (tile.Spreads) label += $" {tile.Wide}x{tile.Deep}";
@@ -397,9 +397,9 @@ namespace DSPRE.Models
             public Tile TileOf(MapMesh mesh, Func<int, string> pictureOf, Func<int, string> paletteOf, out float baseY)
             {
                 baseY = float.MaxValue;
-                foreach (var face in Faces)
+                foreach (MapMesh.Face face in Faces)
                     foreach (int c in face.Corners) baseY = Math.Min(baseY, mesh.Vertices[c].Y);
-                var tile = TileOver(mesh, Faces, -HalfMap + X * TileWidth, -HalfMap + Z * TileWidth, baseY, pictureOf, paletteOf);
+                Tile tile = TileOver(mesh, Faces, -HalfMap + X * TileWidth, -HalfMap + Z * TileWidth, baseY, pictureOf, paletteOf);
                 tile.Wide = Wide;
                 tile.Deep = Deep;
                 return tile;
@@ -412,32 +412,32 @@ namespace DSPRE.Models
                                            Dictionary<MapMesh.Face, List<MapMesh.Face>> split = null)
         {
             const float Slack = 1e-3f;
-            var bySquare = new Dictionary<(int x, int z), Piece>();
-            var wide = new List<(MapMesh.Face face, float x0, float x1, float z0, float z1)>();
+            Dictionary<(int x, int z), Piece> bySquare = new Dictionary<(int x, int z), Piece>();
+            List<(MapMesh.Face face, float x0, float x1, float z0, float z1)> wide = new List<(MapMesh.Face face, float x0, float x1, float z0, float z1)>();
 
             void BySquare(MapMesh.Face face)
             {
                 float mx = 0, mz = 0;
                 foreach (int c in face.Corners) { mx += mesh.Vertices[c].X; mz += mesh.Vertices[c].Z; }
-                var key = (Square(mx / face.Corners.Length), Square(mz / face.Corners.Length));
-                if (!bySquare.TryGetValue(key, out var here)) bySquare[key] = here = new Piece { X = key.Item1, Z = key.Item2 };
+                (int, int) key = (Square(mx / face.Corners.Length), Square(mz / face.Corners.Length));
+                if (!bySquare.TryGetValue(key, out Piece here)) bySquare[key] = here = new Piece { X = key.Item1, Z = key.Item2 };
                 here.Faces.Add(face);
             }
 
-            var pieces = new List<Piece>();
-            var byFootprint = new Dictionary<(int x, int z, int wide, int deep), Piece>();
+            List<Piece> pieces = new List<Piece>();
+            Dictionary<(int x, int z, int wide, int deep), Piece> byFootprint = new Dictionary<(int x, int z, int wide, int deep), Piece>();
 
             // Parts over the same squares are one tile whatever their heights, so a cliff of stacked strips needs one layer.
             void Place(MapMesh.Face part)
             {
-                var v = part.Corners.Select(c => mesh.Vertices[c]).ToArray();
+                MapMesh.Vertex[] v = part.Corners.Select(c => mesh.Vertices[c]).ToArray();
                 int Edge(float at) => (int)Math.Round((at + HalfMap) / TileWidth);
                 int left = Math.Clamp(Edge(v.Min(q => q.X)), 0, 31), top = Math.Clamp(Edge(v.Min(q => q.Z)), 0, 31);
                 int across = Math.Max(1, Math.Min(32 - left, Edge(v.Max(q => q.X)) - left));
                 int down = Math.Max(1, Math.Min(32 - top, Edge(v.Max(q => q.Z)) - top));
                 if (across == 1 && down == 1) { BySquare(part); return; }
-                var key = (left, top, across, down);
-                if (!byFootprint.TryGetValue(key, out var piece))
+                (int left, int top, int across, int down) key = (left, top, across, down);
+                if (!byFootprint.TryGetValue(key, out Piece piece))
                 {
                     byFootprint[key] = piece = new Piece { X = left, Z = top, Wide = across, Deep = down, Spans = true };
                     pieces.Add(piece);
@@ -448,22 +448,22 @@ namespace DSPRE.Models
             // Pictures repeating within two squares are cut per square, others into the largest tiles, so a long road gives few tiles.
             List<MapMesh.Face> Cut(MapMesh.Face face) => CutIntoSquares(mesh, face, CutsIntoFewTiles(mesh, face) ? 1 : MostSquares);
 
-            foreach (var face in mesh.Faces)
+            foreach (MapMesh.Face face in mesh.Faces)
             {
                 if (face.Corners == null || face.Corners.Length < 3) continue;
                 float x0 = float.MaxValue, x1 = float.MinValue, z0 = float.MaxValue, z1 = float.MinValue;
                 foreach (int c in face.Corners)
                 {
-                    var v = mesh.Vertices[c];
+                    MapMesh.Vertex v = mesh.Vertices[c];
                     x0 = Math.Min(x0, v.X); x1 = Math.Max(x1, v.X); z0 = Math.Min(z0, v.Z); z1 = Math.Max(z1, v.Z);
                 }
                 if (x1 - x0 <= TileWidth + Slack && z1 - z0 <= TileWidth + Slack) BySquare(face);
                 // A face bigger than any tile would pull every object it lies under into one group, so it is cut first.
                 else if (x1 - x0 > MostSquares * TileWidth + Slack || z1 - z0 > MostSquares * TileWidth + Slack)
                 {
-                    var parts = Cut(face);
+                    List<MapMesh.Face> parts = Cut(face);
                     if (parts == null) BySquare(face);
-                    else { cut?.Add(face); if (split != null) split[face] = parts; foreach (var part in parts) Place(part); }
+                    else { cut?.Add(face); if (split != null) split[face] = parts; foreach (MapMesh.Face part in parts) Place(part); }
                 }
                 else wide.Add((face, x0, x1, z0, z1));
             }
@@ -475,7 +475,7 @@ namespace DSPRE.Models
                 float y = mesh.Vertices[f.Corners[0]].Y;
                 return f.Corners.All(c => Math.Abs(mesh.Vertices[c].Y - y) < Slack);
             }
-            var standing = wide.Where(w => !Flat(w.face)).ToList();
+            List<(MapMesh.Face face, float x0, float x1, float z0, float z1)> standing = wide.Where(w => !Flat(w.face)).ToList();
             bool Under((MapMesh.Face face, float x0, float x1, float z0, float z1) w, (MapMesh.Face face, float x0, float x1, float z0, float z1) o)
                 => Math.Max(0, Math.Min(o.x1, w.x1) - Math.Max(o.x0, w.x0)) * Math.Max(0, Math.Min(o.z1, w.z1) - Math.Max(o.z0, w.z0))
                    >= (w.x1 - w.x0) * (w.z1 - w.z0) * 0.9f;
@@ -487,24 +487,24 @@ namespace DSPRE.Models
                                  >= Math.Min((o.x1 - o.x0) * (o.z1 - o.z0), (w.x1 - w.x0) * (w.z1 - w.z0)) * 0.5f);
             for (int i = wide.Count - 1; i >= 0; i--)
             {
-                var w = wide[i];
+                (MapMesh.Face face, float x0, float x1, float z0, float z1) w = wide[i];
                 if (!Flat(w.face) || !CutsIntoFewTiles(mesh, w.face) || standing.Any(o => Under(w, o)) || Stacked(w)) continue;
-                var parts = CutIntoSquares(mesh, w.face);
+                List<MapMesh.Face> parts = CutIntoSquares(mesh, w.face);
                 if (parts == null) continue;
                 cut?.Add(w.face);
                 if (split != null) split[w.face] = parts;
-                foreach (var part in parts) BySquare(part);
+                foreach (MapMesh.Face part in parts) BySquare(part);
                 wide.RemoveAt(i);
             }
 
             // Stacked faces over the same ground (a tree's tiers) are one object.
-            var root = Enumerable.Range(0, wide.Count).ToArray();
+            int[] root = Enumerable.Range(0, wide.Count).ToArray();
             int Find(int i) { while (root[i] != i) i = root[i] = root[root[i]]; return i; }
             const float Thin = 0.01f;
             for (int i = 0; i < wide.Count; i++)
                 for (int j = i + 1; j < wide.Count; j++)
                 {
-                    var a = wide[i]; var b = wide[j];
+                    (MapMesh.Face face, float x0, float x1, float z0, float z1) a = wide[i]; (MapMesh.Face face, float x0, float x1, float z0, float z1) b = wide[j];
                     // A flat patch that cannot be cut (a triangle, a slanted quad) is not part of an object beside it.
                     bool fa = Flat(a.face), fb = Flat(b.face);
                     if (fa != fb && !(fa ? Under(a, b) : Under(b, a))) continue;
@@ -515,9 +515,9 @@ namespace DSPRE.Models
                     if (ox * oz >= smaller * 0.5f) root[Find(i)] = Find(j);
                 }
 
-            foreach (var group in Enumerable.Range(0, wide.Count).GroupBy(Find))
+            foreach (IGrouping<int, int> group in Enumerable.Range(0, wide.Count).GroupBy(Find))
             {
-                var faces = group.Select(i => wide[i]).ToList();
+                List<(MapMesh.Face face, float x0, float x1, float z0, float z1)> faces = group.Select(i => wide[i]).ToList();
                 int Edge(float at) => (int)Math.Round((at + HalfMap) / TileWidth);
                 int left = Math.Clamp(Edge(faces.Min(f => f.x0)), 0, 31), top = Math.Clamp(Edge(faces.Min(f => f.z0)), 0, 31);
                 int across = Math.Max(1, Math.Min(32 - left, Edge(faces.Max(f => f.x1)) - left));
@@ -525,25 +525,25 @@ namespace DSPRE.Models
                 if (across > MostSquares || down > MostSquares)
                 {
                     // Too big to be one tile: flat ground is cut into its squares, anything else stays whole.
-                    foreach (var f in faces)
+                    foreach ((MapMesh.Face face, float x0, float x1, float z0, float z1) f in faces)
                     {
-                        var parts = Cut(f.face);
+                        List<MapMesh.Face> parts = Cut(f.face);
                         if (parts == null) { BySquare(f.face); continue; }
                         cut?.Add(f.face);
                         if (split != null) split[f.face] = parts;
-                        foreach (var part in parts) Place(part);
+                        foreach (MapMesh.Face part in parts) Place(part);
                     }
                     continue;
                 }
                 // Groups reaching past the map's edge anchor on the edge squares; those on the same squares are one tile.
                 bool past = Edge(faces.Min(f => f.x0)) < 0 || Edge(faces.Min(f => f.z0)) < 0
                          || Edge(faces.Max(f => f.x1)) > 32 || Edge(faces.Max(f => f.z1)) > 32;
-                if (past && byFootprint.TryGetValue((left, top, across, down), out var over))
+                if (past && byFootprint.TryGetValue((left, top, across, down), out Piece over))
                 {
                     over.Faces.AddRange(faces.Select(f => f.face));
                     continue;
                 }
-                var made = new Piece { X = left, Z = top, Wide = across, Deep = down, Spans = true, Faces = faces.Select(f => f.face).ToList() };
+                Piece made = new Piece { X = left, Z = top, Wide = across, Deep = down, Spans = true, Faces = faces.Select(f => f.face).ToList() };
                 pieces.Add(made);
                 if (past) byFootprint[(left, top, across, down)] = made;
             }
@@ -556,7 +556,7 @@ namespace DSPRE.Models
         {
             if (face.Colour != null && face.Colour.Distinct().Count() > 1) return false;
             if (face.OnPicture == null || face.OnPicture.Length < 3) return true;
-            var look = face.Material >= 0 ? mesh.LookOf(face.Material) : null;
+            MaterialLook look = face.Material >= 0 ? mesh.LookOf(face.Material) : null;
             if (look == null) return true;
             int pw = BitConverter.ToUInt16(look.Record, 32), ph = BitConverter.ToUInt16(look.Record, 34);
             int param = look.ImageParam;
@@ -564,14 +564,14 @@ namespace DSPRE.Models
             float periodS = pw * ((param & (1 << 18)) != 0 ? 2 : 1), periodT = ph * ((param & (1 << 19)) != 0 ? 2 : 1);
 
             // Picture units a square spans, along each picture axis.
-            var v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
+            MapMesh.Vertex[] v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
             float across = Math.Max(1e-4f, (v.Max(q => q.X) - v.Min(q => q.X)) / TileWidth);
             float down = Math.Max(1e-4f, (v.Max(q => q.Z) - v.Min(q => q.Z)) / TileWidth);
             float spanS = face.OnPicture.Max(q => q.s) - face.OnPicture.Min(q => q.s);
             float spanT = face.OnPicture.Max(q => q.t) - face.OnPicture.Min(q => q.t);
             // The picture's axes may run along or across the map's; the pairing that gives square pixels is the one.
             float sx = spanS / across, tz = spanT / down, sz = spanS / down, tx = spanT / across;
-            var (perS, perT) = Math.Abs(sx - tz) <= Math.Abs(sz - tx) ? (sx, tz) : (sz, tx);
+            (float perS, float perT) = Math.Abs(sx - tz) <= Math.Abs(sz - tx) ? (sx, tz) : (sz, tx);
             // Maps often inset a picture by half a texel, so a two-square repeat reads a little over two.
             return periodS / Math.Max(1e-4f, perS) <= 2.2f && periodT / Math.Max(1e-4f, perT) <= 2.2f;
         }
@@ -581,12 +581,12 @@ namespace DSPRE.Models
         {
             const float Near = 1e-3f;
             if (face.Corners == null || face.Corners.Length != 4) return null;
-            var v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
+            MapMesh.Vertex[] v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
             float x0 = v.Min(q => q.X), x1 = v.Max(q => q.X), z0 = v.Min(q => q.Z), z1 = v.Max(q => q.Z);
             if (x1 - x0 < Near || z1 - z0 < Near) return null;
 
             // Each corner must sit on the rectangle's own corner; (u, w) says which one.
-            var at = new (int u, int w)[4];
+            (int u, int w)[] at = new (int u, int w)[4];
             for (int i = 0; i < 4; i++)
             {
                 bool left = Math.Abs(v[i].X - x0) < Near, right = Math.Abs(v[i].X - x1) < Near;
@@ -614,27 +614,27 @@ namespace DSPRE.Models
             }
 
             // Pictures repeat, so each part's placement is moved back by whole repeats to keep its tile common.
-            var look = face.Material >= 0 ? mesh.LookOf(face.Material) : null;
+            MaterialLook look = face.Material >= 0 ? mesh.LookOf(face.Material) : null;
             int pw = look == null ? 0 : BitConverter.ToUInt16(look.Record, 32);
             int ph = look == null ? 0 : BitConverter.ToUInt16(look.Record, 34);
             int param = look?.ImageParam ?? 0;
             float periodS = pw * ((param & (1 << 18)) != 0 ? 2 : 1), periodT = ph * ((param & (1 << 19)) != 0 ? 2 : 1);
             bool repeatS = (param & (1 << 16)) != 0 && periodS > 0, repeatT = (param & (1 << 17)) != 0 && periodT > 0;
 
-            var cutsX = new List<float> { x0 };
-            var cutsZ = new List<float> { z0 };
+            List<float> cutsX = new List<float> { x0 };
+            List<float> cutsZ = new List<float> { z0 };
             int firstX = (int)Math.Floor((x0 + HalfMap) / TileWidth + Near), firstZ = (int)Math.Floor((z0 + HalfMap) / TileWidth + Near);
             for (int k = firstX + every; -HalfMap + k * TileWidth < x1 - Near; k += every) cutsX.Add(-HalfMap + k * TileWidth);
             for (int k = firstZ + every; -HalfMap + k * TileWidth < z1 - Near; k += every) cutsZ.Add(-HalfMap + k * TileWidth);
             cutsX.Add(x1); cutsZ.Add(z1);
 
-            var parts = new List<MapMesh.Face>();
+            List<MapMesh.Face> parts = new List<MapMesh.Face>();
             for (int j = 0; j + 1 < cutsZ.Count; j++)
                 for (int i = 0; i + 1 < cutsX.Count; i++)
                 {
-                    var corners = new int[4];
-                    var uv = new (float s, float t)[4];
-                    var colour = face.Colour == null ? null : new int[4];
+                    int[] corners = new int[4];
+                    (float s, float t)[] uv = new (float s, float t)[4];
+                    int[] colour = face.Colour == null ? null : new int[4];
                     for (int k = 0; k < 4; k++)
                     {
                         float px = cutsX[i + at[k].u], pz = cutsZ[j + at[k].w];
@@ -663,52 +663,52 @@ namespace DSPRE.Models
         public static MapTileset FromObj(string path, out string whynot, float scale = 1f)
         {
             whynot = null;
-            var mesh = ObjMesh.Read(path, out whynot);
+            ObjMesh mesh = ObjMesh.Read(path, out whynot);
             if (mesh == null) return null;
             if (mesh.Groups.Count == 0 && mesh.Faces.Count == 0)
             { whynot = "No faces in file."; return null; }
 
-            var set = new MapTileset
+            MapTileset set = new MapTileset
             {
                 Name = Path.GetFileNameWithoutExtension(path),
                 PlacesArePartsOfThePicture = true,
             };
 
-            var groups = mesh.Groups.Count > 0
+            List<ObjMesh.Group> groups = mesh.Groups.Count > 0
                 ? mesh.Groups
                 : new List<ObjMesh.Group> { new ObjMesh.Group { Name = set.Name, First = 0, Count = mesh.Faces.Count } };
 
-            foreach (var group in groups)
+            foreach (ObjMesh.Group group in groups)
             {
                 if (group.Count <= 0) continue;
 
-                var faces = mesh.Faces.Skip(group.First).Take(group.Count).ToList();
-                var tile = new Tile { Name = group.Name };
+                List<ObjMesh.Face> faces = mesh.Faces.Skip(group.First).Take(group.Count).ToList();
+                Tile tile = new Tile { Name = group.Name };
 
                 bool alreadyPlaced = group.Wide > 0 && group.Deep > 0;
                 float lowX = float.MaxValue, lowY = float.MaxValue, lowZ = float.MaxValue;
-                foreach (var face in faces)
-                    foreach (var corner in face.Corners)
+                foreach (ObjMesh.Face face in faces)
+                    foreach (ObjMesh.Corner corner in face.Corners)
                     {
-                        var p = mesh.Positions[corner.Position];
+                        ObjMesh.Vec3 p = mesh.Positions[corner.Position];
                         lowX = Math.Min(lowX, p.X * scale);
                         lowY = Math.Min(lowY, p.Y * scale);
                         lowZ = Math.Min(lowZ, p.Z * scale);
                     }
                 if (alreadyPlaced) { lowX = 0f; lowY = 0f; lowZ = 0f; }
 
-                foreach (var face in faces)
+                foreach (ObjMesh.Face face in faces)
                 {
-                    var corners = new int[face.Corners.Count];
+                    int[] corners = new int[face.Corners.Count];
                     for (int i = 0; i < face.Corners.Count; i++)
                     {
-                        var c = face.Corners[i];
-                        var p = mesh.Positions[c.Position];
-                        var uv = c.TexCoord >= 0 && c.TexCoord < mesh.TexCoords.Count
+                        ObjMesh.Corner c = face.Corners[i];
+                        ObjMesh.Vec3 p = mesh.Positions[c.Position];
+                        ObjMesh.Vec2 uv = c.TexCoord >= 0 && c.TexCoord < mesh.TexCoords.Count
                             ? mesh.TexCoords[c.TexCoord] : new ObjMesh.Vec2();
 
                         corners[i] = tile.Corners.Count;
-                        var made = new Corner
+                        Corner made = new Corner
                         {
                             X = p.X * scale - lowX,
                             Y = p.Y * scale - lowY,
@@ -719,12 +719,12 @@ namespace DSPRE.Models
                         };
                         if (c.Normal >= 0 && c.Normal < mesh.Normals.Count)
                         {
-                            var n = mesh.Normals[c.Normal];
+                            ObjMesh.Vec3 n = mesh.Normals[c.Normal];
                             made.Faces = true; made.NX = n.X; made.NY = n.Y; made.NZ = n.Z;
                         }
                         tile.Corners.Add(made);
                     }
-                    var material = face.Material >= 0 && face.Material < mesh.Materials.Count
+                    ObjMesh.Material material = face.Material >= 0 && face.Material < mesh.Materials.Count
                         ? mesh.Materials[face.Material] : null;
                     string picture = material == null ? "" : material.PictureName ?? material.Name;
                     tile.Faces.Add(new Face
@@ -771,11 +771,11 @@ namespace DSPRE.Models
                 if (!string.IsNullOrEmpty(group.Collision))
                     foreach (string cell in group.Collision.Split(';'))
                     {
-                        var parts = cell.Split(',');
+                        string[] parts = cell.Split(',');
                         if (parts.Length != 4 || !int.TryParse(parts[0], out int layer) || !int.TryParse(parts[1], out int cx)
                             || !int.TryParse(parts[2], out int cy)
                             || !int.TryParse(parts[3], NumberStyles.HexNumber, null, out int value)) continue;
-                        var grid = tile.CollisionGrid(layer);
+                        int[,] grid = tile.CollisionGrid(layer);
                         if (cx >= 0 && cy >= 0 && cx < grid.GetLength(0) && cy < grid.GetLength(1)) grid[cx, cy] = value;
                     }
 
@@ -786,12 +786,12 @@ namespace DSPRE.Models
 
             if (set.Tiles.Count == 0) { whynot = "No tiles in file."; return null; }
 
-            var index = new Dictionary<string, int>(StringComparer.Ordinal);
+            Dictionary<string, int> index = new Dictionary<string, int>(StringComparer.Ordinal);
             for (int i = 0; i < set.Tiles.Count; i++) index[Safe(set.Tiles[i].Name)] = i;
             foreach (string said in mesh.SmartDrawings)
             {
-                var names = said.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                var drawing = new SmartDrawing();
+                string[] names = said.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                SmartDrawing drawing = new SmartDrawing();
                 for (int i = 0; i < names.Length && i < SmartDrawing.Slots; i++)
                     drawing[i] = index.TryGetValue(names[i], out int t) ? t : -1;
                 if (!drawing.IsEmpty) set.SmartDrawings.Add(drawing);
@@ -803,20 +803,20 @@ namespace DSPRE.Models
         {
             if (Tiles.Count == 0) return "No tiles to export.";
 
-            var obj = new StringBuilder();
-            var mtl = new StringBuilder();
-            var inv = CultureInfo.InvariantCulture;
+            StringBuilder obj = new StringBuilder();
+            StringBuilder mtl = new StringBuilder();
+            CultureInfo inv = CultureInfo.InvariantCulture;
             string mtlPath = Path.ChangeExtension(path, ".mtl");
 
             obj.AppendLine("# DSPRE tileset: one object per tile.");
             obj.AppendLine($"mtllib {Path.GetFileName(mtlPath)}");
 
-            foreach (var drawing in SmartDrawings)
+            foreach (SmartDrawing drawing in SmartDrawings)
                 obj.AppendLine("# smart " + string.Join(" ", Enumerable.Range(0, SmartDrawing.Slots)
                     .Select(i => drawing[i] >= 0 && drawing[i] < Tiles.Count ? Safe(Tiles[drawing[i]].Name) : "-")));
 
-            var materialName = new Dictionary<string, string>(StringComparer.Ordinal);
-            var perPicture = new Dictionary<string, int>(StringComparer.Ordinal);
+            Dictionary<string, string> materialName = new Dictionary<string, string>(StringComparer.Ordinal);
+            Dictionary<string, int> perPicture = new Dictionary<string, int>(StringComparer.Ordinal);
             string MaterialFor(Face face)
             {
                 string key = face.Picture + "\n" + face.Palette + "\n" + face.Look?.Key;
@@ -840,15 +840,15 @@ namespace DSPRE.Models
             }
 
             int corner = 1, place = 1, facing = 1;
-            foreach (var tile in Tiles)
+            foreach (Tile tile in Tiles)
             {
                 obj.AppendLine($"o {Safe(tile.Name)}");
                 obj.AppendLine($"# squares {tile.Wide} {tile.Deep}");
                 if (tile.CollisionDefaults.Count > 0)
                 {
                     obj.AppendLine($"# footprint {tile.CollisionWide} {tile.CollisionDeep} {tile.CollisionAnchorX} {tile.CollisionAnchorY}");
-                    var cells = new List<string>();
-                    foreach (var (layer, grid) in tile.CollisionDefaults)
+                    List<string> cells = new List<string>();
+                    foreach ((int layer, int[,] grid) in tile.CollisionDefaults)
                         for (int x = 0; x < grid.GetLength(0); x++)
                             for (int y = 0; y < grid.GetLength(1); y++)
                                 if (grid[x, y] >= 0) cells.Add($"{layer},{x},{y},{grid[x, y]:X2}");
@@ -858,7 +858,7 @@ namespace DSPRE.Models
                     obj.AppendLine(FormattableString.Invariant(
                         $"# tileable {B(tile.AcrossTileable)} {B(tile.DownTileable)} {B(tile.PictureRepeatsAcross)} {B(tile.PictureRepeatsDown)} {B(tile.PictureAcrossTheMap)} {tile.PictureScale} {tile.OffsetX} {tile.OffsetZ}"));
 
-                foreach (var c in tile.Corners)
+                foreach (Corner c in tile.Corners)
                 {
                     string at = $"v {c.X.ToString("0.######", inv)} {c.Y.ToString("0.######", inv)} "
                               + $"{c.Z.ToString("0.######", inv)}";
@@ -868,18 +868,18 @@ namespace DSPRE.Models
                             + $"{(((c.Colour >> 10) & 31) / 31f).ToString("0.####", inv)}";
                     obj.AppendLine(at);
                 }
-                var last = tile.Corners.Select((c, i) => (c, i)).Where(x => x.c.ColourLast).Select(x => corner + x.i).ToList();
+                List<int> last = tile.Corners.Select((c, i) => (c, i)).Where(x => x.c.ColourLast).Select(x => corner + x.i).ToList();
                 if (last.Count > 0) obj.AppendLine("# colourlast " + string.Join(" ", last));
 
-                foreach (var c in tile.Corners)
+                foreach (Corner c in tile.Corners)
                     obj.AppendLine($"vt {c.S.ToString("0.######", inv)} "
                                  + $"{(1f - c.T).ToString("0.######", inv)}");
 
-                var facingOf = new int[tile.Corners.Count];
+                int[] facingOf = new int[tile.Corners.Count];
                 int faced = 0;
                 for (int i = 0; i < tile.Corners.Count; i++)
                 {
-                    var c = tile.Corners[i];
+                    Corner c = tile.Corners[i];
                     if (!c.Faces) { facingOf[i] = -1; continue; }
                     facingOf[i] = facing + faced++;
                     obj.AppendLine($"vn {c.NX.ToString("0.######", inv)} {c.NY.ToString("0.######", inv)} "
@@ -887,7 +887,7 @@ namespace DSPRE.Models
                 }
 
                 string painting = null;
-                foreach (var face in tile.Faces)
+                foreach (Face face in tile.Faces)
                 {
                     string name = MaterialFor(face);
                     if (name != painting)
@@ -934,23 +934,23 @@ namespace DSPRE.Models
                                     float originZ, float baseY, Func<int, string> pictureOf,
                                     Func<int, string> paletteOf)
         {
-            var tile = new Tile();
-            var where = new Dictionary<(int, int, int, int, int, string), int>();
+            Tile tile = new Tile();
+            Dictionary<(int, int, int, int, int, string), int> where = new Dictionary<(int, int, int, int, int, string), int>();
 
-            foreach (var face in faces)
+            foreach (MapMesh.Face face in faces)
             {
-                var corners = new int[face.Corners.Length];
+                int[] corners = new int[face.Corners.Length];
                 for (int i = 0; i < face.Corners.Length; i++)
                 {
-                    var v = mesh.Vertices[face.Corners[i]];
-                    var (s, t) = face.OnPicture != null && i < face.OnPicture.Length
+                    MapMesh.Vertex v = mesh.Vertices[face.Corners[i]];
+                    (float s, float t) = face.OnPicture != null && i < face.OnPicture.Length
                         ? face.OnPicture[i] : (0f, 0f);
 
                     float x = v.X - originX, y = v.Y - baseY, z = v.Z - originZ;
-                    var corner = new Corner { X = x, Y = y, Z = z, S = s, T = t };
+                    Corner corner = new Corner { X = x, Y = y, Z = z, S = s, T = t };
                     CarryLight(corner, face, i);
 
-                    var key = (Fine(x), Fine(y), Fine(z), Fine(s), Fine(t), LightKey(corner));
+                    (int, int, int, int, int, string) key = (Fine(x), Fine(y), Fine(z), Fine(s), Fine(t), LightKey(corner));
                     if (!where.TryGetValue(key, out int at))
                     {
                         at = tile.Corners.Count;
@@ -976,7 +976,7 @@ namespace DSPRE.Models
             if (face.ColourLast != null && i < face.ColourLast.Length) corner.ColourLast = face.ColourLast[i];
             if (face.Normal != null && i < face.Normal.Length && face.Normal[i] >= 0)
             {
-                var (nx, ny, nz) = Unpack(face.Normal[i]);
+                (float nx, float ny, float nz) = Unpack(face.Normal[i]);
                 corner.Faces = true; corner.NX = nx; corner.NY = ny; corner.NZ = nz;
             }
         }
@@ -993,14 +993,14 @@ namespace DSPRE.Models
 
         public static string Print(Tile tile)
         {
-            var sb = new StringBuilder();
-            foreach (var face in tile.Faces)
+            StringBuilder sb = new StringBuilder();
+            foreach (Face face in tile.Faces)
             {
                 sb.Append(face.Picture).Append(':').Append(face.Palette).Append(':')
                   .Append(face.Look?.Key ?? "").Append('|');
                 foreach (int i in face.Corners)
                 {
-                    var c = tile.Corners[i];
+                    Corner c = tile.Corners[i];
                     sb.Append(Fine(c.X)).Append(',').Append(Fine(c.Y)).Append(',').Append(Fine(c.Z))
                       .Append(',').Append(Fine(c.S)).Append(',').Append(Fine(c.T))
                       .Append(',').Append(LightKey(c)).Append(';');

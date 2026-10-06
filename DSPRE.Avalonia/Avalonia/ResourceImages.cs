@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia
             get
             {
                 if (_index != null) return _index;
-                var idx = new Dictionary<string, Uri>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, Uri> idx = new Dictionary<string, Uri>(StringComparer.OrdinalIgnoreCase);
                 foreach (Uri uri in AssetLoader.GetAssets(new Uri(AssetRoot), null))
                 {
                     string file = Uri.UnescapeDataString(uri.AbsolutePath);
@@ -72,7 +72,7 @@ namespace DSPRE.Avalonia
             get
             {
                 if (_gifIndex != null) return _gifIndex;
-                var idx = new Dictionary<string, Uri>(StringComparer.OrdinalIgnoreCase);
+                Dictionary<string, Uri> idx = new Dictionary<string, Uri>(StringComparer.OrdinalIgnoreCase);
                 foreach (Uri uri in AssetLoader.GetAssets(new Uri(AssetRoot), null))
                 {
                     string file = Uri.UnescapeDataString(uri.AbsolutePath);
@@ -129,7 +129,7 @@ namespace DSPRE.Avalonia
                 try
                 {
                     using Stream s = AssetLoader.Open(uri);
-                    using var ms = new MemoryStream();
+                    using MemoryStream ms = new MemoryStream();
                     s.CopyTo(ms);
                     source = new GifBytesSource(ms.ToArray());
                 }
@@ -147,7 +147,7 @@ namespace DSPRE.Avalonia
             public GifBytesSource(byte[] bytes)
             {
                 _bytes = bytes;
-                using var probe = GifStreamSource.FromStream(new MemoryStream(bytes, writable: false));
+                using GifStreamSource probe = GifStreamSource.FromStream(new MemoryStream(bytes, writable: false));
                 Size = probe.Size;
             }
 

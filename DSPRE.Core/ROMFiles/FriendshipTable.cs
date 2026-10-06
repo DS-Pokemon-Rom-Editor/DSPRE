@@ -42,7 +42,7 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToBytes()
         {
-            var data = new byte[Size];
+            byte[] data = new byte[Size];
             for (int e = 0; e < Events; e++)
                 for (int b = 0; b < Bands; b++)
                     data[e * Bands + b] = unchecked((byte)Values[e, b]);

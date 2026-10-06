@@ -33,8 +33,8 @@ namespace DSPRE.HgEngine
         {
             if (!HgEngineProject.IsActive) return "No hg-engine checkout is open.";
             if (!File.Exists(FullPath)) return $"{RelPath} isn't in the checkout.";
-            var hooks = HgEnginePatchList.ReadAll().FirstOrDefault(l => l.Kind == HgEnginePatchKind.Hook);
-            var wrong = hooks?.Entries.Where(e => e.Parsed && e.Symbol.StartsWith("EncounterSlot_WildMonSlotRoll_") && e.OverlayNumber != 2).ToList();
+            HgEnginePatchList hooks = HgEnginePatchList.ReadAll().FirstOrDefault(l => l.Kind == HgEnginePatchKind.Hook);
+            List<HgEnginePatchEntry> wrong = hooks?.Entries.Where(e => e.Parsed && e.Symbol.StartsWith("EncounterSlot_WildMonSlotRoll_") && e.OverlayNumber != 2).ToList();
             if (wrong != null && wrong.Count > 0)
                 return $"The checkout's hooks list sends {wrong.Count} slot rolls to arm9 rather than overlay 2, where the game's rolls are, "
                      + "so the odds in encounter_check.c are never used. Change those hooks to 0002 in hg-engine Patches first.";
@@ -50,16 +50,16 @@ namespace DSPRE.HgEngine
             try { text = File.ReadAllText(FullPath); }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { error = ex.Message; return false; }
 
-            foreach (var (function, name, slots) in Rolls)
+            foreach ((string function, string name, int slots) in Rolls)
             {
                 if (!TryBody(text, function, out int open, out int close)) { error = $"{function} isn't in {RelPath}."; return false; }
-                var bounds = Bounds(text.Substring(open + 1, close - open - 1));
+                List<int> bounds = Bounds(text.Substring(open + 1, close - open - 1));
                 if (bounds == null || bounds.Count != slots - 1 || bounds.Zip(bounds.Skip(1)).Any(p => p.Second < p.First) || bounds[^1] > 100)
                 {
                     error = $"{function} isn't a chain of roll comparisons DSPRE can read; edit it in {RelPath}.";
                     return false;
                 }
-                var p = new int[slots];
+                int[] p = new int[slots];
                 int previous = 0;
                 for (int i = 0; i < bounds.Count; i++) { p[i] = bounds[i] - previous; previous = bounds[i]; }
                 p[^1] = 100 - previous;
@@ -72,14 +72,14 @@ namespace DSPRE.HgEngine
         // "rnd >= N ? 1 : 0" gives N. Lower bounds ("rnd >= a &&") repeat the previous slot's and are skipped.
         private static List<int> Bounds(string body)
         {
-            var ternary = Regex.Match(body, @"return\s+rnd\s*>=\s*(\d+)\s*\?\s*1\s*:\s*0\s*;");
+            Match ternary = Regex.Match(body, @"return\s+rnd\s*>=\s*(\d+)\s*\?\s*1\s*:\s*0\s*;");
             if (ternary.Success) return new List<int> { int.Parse(ternary.Groups[1].Value) };
-            var bounds = new List<int>();
+            List<int> bounds = new List<int>();
             foreach (Match m in Regex.Matches(body, @"\bif\s*\(([^)]*)\)"))
             {
                 string cond = m.Groups[1].Value;
-                var lt = Regex.Match(cond, @"rnd\s*<\s*(\d+)");
-                var eq = Regex.Match(cond, @"rnd\s*==\s*(\d+)");
+                Match lt = Regex.Match(cond, @"rnd\s*<\s*(\d+)");
+                Match eq = Regex.Match(cond, @"rnd\s*==\s*(\d+)");
                 if (lt.Success) bounds.Add(int.Parse(lt.Groups[1].Value));
                 else if (eq.Success) bounds.Add(int.Parse(eq.Groups[1].Value) + 1);
                 else return null;
@@ -90,7 +90,7 @@ namespace DSPRE.HgEngine
         private static bool TryBody(string text, string function, out int open, out int close)
         {
             open = close = -1;
-            var m = Regex.Match(text, @"\b" + Regex.Escape(function) + @"\s*\([^)]*\)\s*\{");
+            Match m = Regex.Match(text, @"\b" + Regex.Escape(function) + @"\s*\([^)]*\)\s*\{");
             if (!m.Success) return false;
             open = m.Index + m.Length - 1;
             return BraceScanner.TryFindMatchingBrace(text, open, out close);
@@ -99,7 +99,7 @@ namespace DSPRE.HgEngine
         /// <summary>Rewrites the functions whose odds changed as a plain chain of comparisons. Null on success.</summary>
         public static string Write(IReadOnlyList<int[]> percents)
         {
-            if (!TryLoad(out var current, out string error)) return error;
+            if (!TryLoad(out List<int[]> current, out string error)) return error;
             string text = File.ReadAllText(FullPath);
             string nl = text.Contains("\r\n") ? "\r\n" : "\n";
             for (int r = Rolls.Length - 1; r >= 0; r--)
@@ -116,7 +116,7 @@ namespace DSPRE.HgEngine
 
         private static string Body(int[] percents, string nl)
         {
-            var b = new StringBuilder();
+            StringBuilder b = new StringBuilder();
             b.Append(nl).Append("    u8 rnd = LCRandRange(100);").Append(nl).Append(nl);
             int bound = 0;
             for (int i = 0; i < percents.Length - 1; i++)

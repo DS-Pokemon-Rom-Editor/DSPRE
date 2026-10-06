@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _saved = _table.Snapshot();
             _speciesCache.Clear();
             Rebuild();
-            foreach (var n in new[] { nameof(HeaderNames), nameof(HasMethod), nameof(Loaded) }) Raise(n);
+            foreach (string n in new[] { nameof(HeaderNames), nameof(HasMethod), nameof(Loaded) }) Raise(n);
             StartUndo();
             Changed();
         }
@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
             w.Write(_table.Rows.Count);
-            foreach (var r in _table.Rows) { w.Write(r.Header); w.Write(r.Method); }
+            foreach (SwarmTable.Row r in _table.Rows) { w.Write(r.Header); w.Write(r.Method); }
         });
 
         private void ApplyState(byte[] state)
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void Rebuild()
         {
             Rows.Clear();
-            foreach (var r in _table.Rows) Rows.Add(new RowViewModel(this, r));
+            foreach (SwarmTable.Row r in _table.Rows) Rows.Add(new RowViewModel(this, r));
         }
 
         public sealed class RowViewModel : INotifyPropertyChanged
@@ -114,7 +114,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             internal void Refresh()
             {
-                foreach (var n in new[] { nameof(Header), nameof(Method), nameof(Species), nameof(SpeciesIds) })
+                foreach (string n in new[] { nameof(Header), nameof(Method), nameof(Species), nameof(SpeciesIds) })
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             ushort file = EncounterFileOf(row.Header);
             if (file == ushort.MaxValue) return ("No wild encounters", Array.Empty<int>(), false);
-            if (_speciesCache.TryGetValue((ushort)(file * 4 + row.Method), out var cached)) return cached;
+            if (_speciesCache.TryGetValue((ushort)(file * 4 + row.Method), out (string Text, int[] Ids, bool Read) cached)) return cached;
             string text;
             int[] ids = Array.Empty<int>();
             bool read = false;
@@ -136,7 +136,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (DSPRE.HgEngine.HgEngineProject.IsActive)
                 {
                     // Encounters.c is what the next build uses; the built file only fills what an entry leaves out.
-                    var source = File.Exists(path) ? new EncounterFileHGSS(new MemoryStream(File.ReadAllBytes(path))) : new EncounterFileHGSS();
+                    EncounterFileHGSS source = File.Exists(path) ? new EncounterFileHGSS(new MemoryStream(File.ReadAllBytes(path))) : new EncounterFileHGSS();
                     if (!DSPRE.HgEngine.HgEngineEncounterSource.TryLoad(file, source, out string sourceError)) throw new IOException(sourceError);
                     enc = source;
                 }
@@ -163,7 +163,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // An unreadable file is left to the other checks rather than reported as empty.
         private bool HasSwarmSpecies(SwarmTable.Row row)
         {
-            var s = SpeciesFor(row);
+            (string Text, int[] Ids, bool Read) s = SpeciesFor(row);
             return !s.Read || s.Ids.Length > 0;
         }
 
@@ -171,7 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                var h = MapHeader.GetMapHeader(header);
+                MapHeader h = MapHeader.GetMapHeader(header);
                 return h == null || h.wildPokemon == nullEncounterID ? ushort.MaxValue : h.wildPokemon;
             }
             catch (Exception e) when (e is IOException || e is ArgumentException) { return ushort.MaxValue; }
@@ -180,9 +180,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Add()
         {
             if (_table == null) return;
-            var row = new SwarmTable.Row { Header = _table.Rows.LastOrDefault()?.Header ?? 0 };
+            SwarmTable.Row row = new SwarmTable.Row { Header = _table.Rows.LastOrDefault()?.Header ?? 0 };
             _table.Rows.Add(row);
-            var vm = new RowViewModel(this, row);
+            RowViewModel vm = new RowViewModel(this, row);
             Rows.Add(vm);
             Selected = vm;
             Changed();
@@ -204,7 +204,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_table == null) return;
             _speciesCache.Clear();
-            foreach (var r in Rows) r.Refresh();
+            foreach (RowViewModel r in Rows) r.Refresh();
         }
 
         public void Remove()
@@ -227,7 +227,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         internal void Changed()
         {
-            foreach (var n in new[] { nameof(Status), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
+            foreach (string n in new[] { nameof(Status), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
             _undo?.Record();
         }
 
@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Swarms"); return false; }
             if (_table.FromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 {
                     try { _table.Save(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies); return null; }
                     catch (InvalidOperationException e) { return e.Message; }
@@ -267,7 +267,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             _saved = _table.Snapshot();
             _speciesCache.Clear();
-            foreach (var r in Rows) r.Refresh();
+            foreach (RowViewModel r in Rows) r.Refresh();
             Changed();
             SaveNotice.Saved(UnsavedChangesDescription);
             return true;

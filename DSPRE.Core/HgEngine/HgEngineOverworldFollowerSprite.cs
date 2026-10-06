@@ -44,10 +44,10 @@ namespace DSPRE.HgEngine
 
         public static List<string> GetSizeClassOptions()
         {
-            var result = new List<string>();
-            var table = HgEngineSymbolTable.Load(TableRelPath);
+            List<string> result = new List<string>();
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(TableRelPath);
             if (table == null) return result;
-            foreach (var kv in table.ByName)
+            foreach (KeyValuePair<string, int> kv in table.ByName)
                 if (kv.Key.StartsWith(SizeClassPrefix, System.StringComparison.Ordinal)) result.Add(kv.Key);
             result.Sort();
             return result;
@@ -60,18 +60,18 @@ namespace DSPRE.HgEngine
         {
             gfxIndex = -1; sizeClassName = null; error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
             string text = TryReadTable(out string path);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
-            if (!TryFindEntry(text, designator, out var m))
+            if (!TryFindEntry(text, designator, out Match m))
             { error = $"No overworld follower entry for {designator} yet."; return false; }
             sizeClassName = m.Groups[2].Value;
 
-            var table = HgEngineSymbolTable.Load(TableRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(TableRelPath);
             if (table == null || !table.TryGetValue("MON_OVERWORLD_GFX_START", out int baseGfx))
             { error = "Could not resolve MON_OVERWORLD_GFX_START."; return false; }
 
@@ -83,16 +83,16 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
             string text = TryReadTable(out string path);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
-            if (!TryFindEntry(text, designator, out var m))
+            if (!TryFindEntry(text, designator, out Match m))
             { error = $"No overworld follower entry for {designator} yet."; return false; }
 
-            var g2 = m.Groups[2];
+            Group g2 = m.Groups[2];
             text = text.Substring(0, g2.Index) + sizeClassName + text.Substring(g2.Index + g2.Length);
             HgEngineFileCache.WriteText(path, text);
             return true;
@@ -105,7 +105,7 @@ namespace DSPRE.HgEngine
             if (TryGetAssignment(speciesId, out gfxIndex, out _, out _)) { error = null; return true; }
 
             gfxIndex = -1; error = null;
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
@@ -115,7 +115,7 @@ namespace DSPRE.HgEngine
             { error = "Could not locate the overworld table's terminator entry to insert next to."; return false; }
             HgEngineFileCache.WriteText(path, text);
 
-            var table = HgEngineSymbolTable.Load(TableRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(TableRelPath);
             if (table == null || !table.TryGetValue("MON_OVERWORLD_GFX_START", out int baseGfx))
             { error = "Could not resolve MON_OVERWORLD_GFX_START."; return false; }
             gfxIndex = baseGfx + speciesId;

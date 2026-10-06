@@ -32,7 +32,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 if (frameIndex < 0 || frameIndex >= FrameCount) frameIndex = 0;
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.windowFrames, out var dirs)) return null;
+                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.windowFrames, out (string packedDir, string unpackedDir) dirs)) return null;
                 string path = dirs.packedDir;
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
 
@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.windowFrames, out var dirs)) return null;
+                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.windowFrames, out (string packedDir, string unpackedDir) dirs)) return null;
                 string path = dirs.packedDir;
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
 
@@ -91,7 +91,7 @@ namespace DSPRE.ROMFiles
             int w = cols * TileSize, h = rows * TileSize;
             width = w; height = h;
 
-            var rgba = new byte[w * h * 4];
+            byte[] rgba = new byte[w * h * 4];
             void Put(int col, int row, int tile)
             {
                 for (int y = 0; y < TileSize; y++)
@@ -132,7 +132,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 if (RomInfo.systemFontPaletteEntry < 0) return null;
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out var dirs)) return null;
+                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out (string packedDir, string unpackedDir) dirs)) return null;
                 string path = dirs.packedDir;
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
                 byte[] pal = NarcEntry(File.ReadAllBytes(path), RomInfo.systemFontPaletteEntry);
@@ -154,7 +154,7 @@ namespace DSPRE.ROMFiles
             int w = cols * TileSize, h = rows * TileSize;
             width = w; height = h;
 
-            var rgba = new byte[w * h * 4];
+            byte[] rgba = new byte[w * h * 4];
             void Put(int col, int row, int tile)
             {
                 for (int y = 0; y < TileSize; y++)
@@ -198,7 +198,7 @@ namespace DSPRE.ROMFiles
             int at = section + 32;
             if (size < count * 32 || at + size > ncgr.Length) return null;
 
-            var tiles = new byte[count * TileSize * TileSize];
+            byte[] tiles = new byte[count * TileSize * TileSize];
             for (int t = 0; t < count; t++)
                 for (int i = 0; i < 32; i++)
                 {
@@ -218,7 +218,7 @@ namespace DSPRE.ROMFiles
             int at = 0x10 + 24;
             if (at + 32 > nclr.Length) return null;
 
-            var colours = new uint[16];
+            uint[] colours = new uint[16];
             for (int i = 0; i < 16; i++)
             {
                 ushort v = BitConverter.ToUInt16(nclr, at + i * 2);
@@ -262,7 +262,7 @@ namespace DSPRE.ROMFiles
             int to = BitConverter.ToInt32(narc, at + 4);
             if (to < from || images + to > narc.Length) return null;
 
-            var blob = new byte[to - from];
+            byte[] blob = new byte[to - from];
             Array.Copy(narc, images + from, blob, 0, blob.Length);
             return blob;
         }

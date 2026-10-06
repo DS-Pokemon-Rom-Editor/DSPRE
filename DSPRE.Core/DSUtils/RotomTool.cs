@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using DSPRE.ROMFiles;
 
 namespace DSPRE
 {
@@ -37,7 +39,7 @@ namespace DSPRE
         /// </summary>
         public static async Task<Result> InitProjectAsync()
         {
-            var staged = new System.Collections.Generic.List<string>();
+            List<string> staged = new System.Collections.Generic.List<string>();
             try
             {
                 if (RomInfo.HgEngineDsRomMetaDir != null)
@@ -45,7 +47,7 @@ namespace DSPRE
                     Stage(RomInfo.arm9Path, Path.Combine(ProjectRoot, "arm9.bin"), staged);
                     Stage(Path.Combine(RomInfo.HgEngineDsRomMetaDir, "config.yaml"), Path.Combine(ProjectRoot, "config.yaml"), staged);
                 }
-                var result = await RunAsync("init", "--non-interactive").ConfigureAwait(false);
+                Result result = await RunAsync("init", "--non-interactive").ConfigureAwait(false);
                 if (result.Success) DSPRE.ROMFiles.RotomDatabaseUpdate.OverlayHgEngineFlags();
                 return result;
             }
@@ -101,17 +103,17 @@ namespace DSPRE
         {
             await DSPRE.ROMFiles.ScriptSourceSync.WhenIdleAsync().ConfigureAwait(false);
             SetAsideHgEngineOwnedSources();
-            var archivesBefore = TextArchiveTimes();
-            var guard = DSPRE.ROMFiles.RotomRebuildGuard.Before(ProjectRoot);
-            var result = await RunAsync("compile", "--json").ConfigureAwait(false);
+            Dictionary<int, DateTime> archivesBefore = TextArchiveTimes();
+            RotomRebuildGuard guard = DSPRE.ROMFiles.RotomRebuildGuard.Before(ProjectRoot);
+            Result result = await RunAsync("compile", "--json").ConfigureAwait(false);
             if (guard != null) result.KeptBinaries = guard.After();
             // A compile appends inline messages to the text archives, which open text editors must reload.
-            foreach (var (id, time) in TextArchiveTimes())
-                if (!archivesBefore.TryGetValue(id, out var before) || before != time)
+            foreach ((int id, DateTime time) in TextArchiveTimes())
+                if (!archivesBefore.TryGetValue(id, out DateTime before) || before != time)
                     DSPRE.ROMFiles.TextArchive.RaiseSaved(Compiler, id);
             if (!result.Success && string.IsNullOrWhiteSpace(result.Stdout))
             {
-                var plain = await RunAsync("compile").ConfigureAwait(false);
+                Result plain = await RunAsync("compile").ConfigureAwait(false);
                 string message = !string.IsNullOrWhiteSpace(plain.Stderr) ? plain.Stderr : plain.Stdout;
                 if (!string.IsNullOrWhiteSpace(message)) result.Stderr = message;
             }
@@ -123,7 +125,7 @@ namespace DSPRE
 
         private static System.Collections.Generic.Dictionary<int, DateTime> TextArchiveTimes()
         {
-            var times = new System.Collections.Generic.Dictionary<int, DateTime>();
+            Dictionary<int, DateTime> times = new System.Collections.Generic.Dictionary<int, DateTime>();
             string dir = Path.Combine(ProjectRoot, "expanded", "textArchives");
             if (!Directory.Exists(dir)) return times;
             foreach (string file in Directory.GetFiles(dir, "*.json"))
@@ -138,16 +140,16 @@ namespace DSPRE
             if (result == null || string.IsNullOrWhiteSpace(result.Stdout)) return result?.Success == false ? FormatResult(result) : null;
             try
             {
-                using var doc = JsonDocument.Parse(result.Stdout);
-                if (!doc.RootElement.TryGetProperty("failures", out var failures)) return null;
+                using JsonDocument doc = JsonDocument.Parse(result.Stdout);
+                if (!doc.RootElement.TryGetProperty("failures", out JsonElement failures)) return null;
                 string wanted = Path.GetFullPath(sourcePath);
-                foreach (var failure in failures.EnumerateArray())
+                foreach (JsonElement failure in failures.EnumerateArray())
                 {
-                    if (!failure.TryGetProperty("path", out var path)) continue;
+                    if (!failure.TryGetProperty("path", out JsonElement path)) continue;
                     string full = Path.GetFullPath(Path.Combine(ProjectRoot, path.GetString() ?? ""));
                     if (!string.Equals(full, wanted, StringComparison.OrdinalIgnoreCase)) continue;
-                    return failure.TryGetProperty("error", out var error) && error.TryGetProperty("details", out var details)
-                        && details.TryGetProperty("message", out var message) ? message.GetString() : error.ToString();
+                    return failure.TryGetProperty("error", out JsonElement error) && error.TryGetProperty("details", out JsonElement details)
+                        && details.TryGetProperty("message", out JsonElement message) ? message.GetString() : error.ToString();
                 }
                 return null;
             }
@@ -161,7 +163,7 @@ namespace DSPRE
                 throw new FileNotFoundException("rotom was not found in DSPRE's Tools folder.", ExePath);
 
             await OneAtATime.WaitAsync().ConfigureAwait(false);
-            using var quiet = DSPRE.ROMFiles.ProjectSourceWatcher.Hold();
+            using IDisposable quiet = DSPRE.ROMFiles.ProjectSourceWatcher.Hold();
             try { return await RunLockedAsync(workingDirectory, args).ConfigureAwait(false); }
             finally { OneAtATime.Release(); }
         }
@@ -169,7 +171,7 @@ namespace DSPRE
         private static async Task<Result> RunLockedAsync(string workingDirectory, string[] args)
         {
 
-            using var process = new Process
+            using Process process = new Process
             {
                 StartInfo =
                 {
@@ -193,8 +195,8 @@ namespace DSPRE
                 return new Result { ExitCode = -1, Stderr = error };
             }
 
-            var stdout = new StringBuilder();
-            var stderr = new StringBuilder();
+            StringBuilder stdout = new StringBuilder();
+            StringBuilder stderr = new StringBuilder();
             process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.AppendLine(e.Data); };
             process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.AppendLine(e.Data); };
 
@@ -221,27 +223,27 @@ namespace DSPRE
         /// <summary>"file, line N: message" per failing source, or rotom's own error text when it names none.</summary>
         public static System.Collections.Generic.List<string> FailureLines(Result result)
         {
-            var lines = new System.Collections.Generic.List<string>();
+            List<string> lines = new System.Collections.Generic.List<string>();
             if (result == null || result.Success) return lines;
             try
             {
-                using var doc = JsonDocument.Parse(result.Stdout ?? "");
-                if (doc.RootElement.TryGetProperty("failures", out var failures) && failures.ValueKind == JsonValueKind.Array)
+                using JsonDocument doc = JsonDocument.Parse(result.Stdout ?? "");
+                if (doc.RootElement.TryGetProperty("failures", out JsonElement failures) && failures.ValueKind == JsonValueKind.Array)
                 {
-                    foreach (var failure in failures.EnumerateArray())
+                    foreach (JsonElement failure in failures.EnumerateArray())
                     {
-                        string rel = failure.TryGetProperty("path", out var p) ? p.GetString() ?? "" : "";
+                        string rel = failure.TryGetProperty("path", out JsonElement p) ? p.GetString() ?? "" : "";
                         string message = null;
                         int start = -1;
-                        if (failure.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.Object)
+                        if (failure.TryGetProperty("error", out JsonElement error) && error.ValueKind == JsonValueKind.Object)
                         {
-                            if (error.TryGetProperty("details", out var details) && details.ValueKind == JsonValueKind.Object)
+                            if (error.TryGetProperty("details", out JsonElement details) && details.ValueKind == JsonValueKind.Object)
                             {
-                                if (details.TryGetProperty("message", out var m)) message = m.GetString();
-                                if (details.TryGetProperty("span", out var span) && span.ValueKind == JsonValueKind.Object
-                                    && span.TryGetProperty("start", out var s) && s.TryGetInt32(out int at)) start = at;
+                                if (details.TryGetProperty("message", out JsonElement m)) message = m.GetString();
+                                if (details.TryGetProperty("span", out JsonElement span) && span.ValueKind == JsonValueKind.Object
+                                    && span.TryGetProperty("start", out JsonElement s) && s.TryGetInt32(out int at)) start = at;
                             }
-                            if (message == null && error.TryGetProperty("type", out var type)) message = type.GetString();
+                            if (message == null && error.TryGetProperty("type", out JsonElement type)) message = type.GetString();
                         }
                         string full = Path.GetFullPath(Path.Combine(ProjectRoot, rel));
                         int line = start < 0 ? 0 : LineOfByte(full, start);
@@ -282,9 +284,9 @@ namespace DSPRE
             {
                 try
                 {
-                    using var doc = JsonDocument.Parse(result.Stdout);
-                    if (doc.RootElement.TryGetProperty("successes", out var successes)
-                        && doc.RootElement.TryGetProperty("failures", out var failures))
+                    using JsonDocument doc = JsonDocument.Parse(result.Stdout);
+                    if (doc.RootElement.TryGetProperty("successes", out JsonElement successes)
+                        && doc.RootElement.TryGetProperty("failures", out JsonElement failures))
                     {
                         int ok = successes.GetArrayLength();
                         int failed = failures.GetArrayLength();
@@ -302,7 +304,7 @@ namespace DSPRE
         {
             if (result == null) return "";
 
-            var details = new StringBuilder();
+            StringBuilder details = new StringBuilder();
             details.AppendLine(FormatResult(result));
             if (!string.IsNullOrWhiteSpace(result.Stderr))
             {
@@ -316,7 +318,7 @@ namespace DSPRE
             {
                 try
                 {
-                    using var doc = JsonDocument.Parse(result.Stdout);
+                    using JsonDocument doc = JsonDocument.Parse(result.Stdout);
                     stdoutSummarizedAsJson = doc.RootElement.TryGetProperty("successes", out _)
                         && doc.RootElement.TryGetProperty("failures", out _);
                 }

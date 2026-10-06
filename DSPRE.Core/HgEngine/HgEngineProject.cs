@@ -187,7 +187,7 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) return null;
             try
             {
-                var cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path));
+                HgEngineConfig cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path));
                 if (cfg == null || !Enum.TryParse(cfg.shell, out HgEngineShell shell)) return null;
                 if (HostIsPosix) return shell == HgEngineShell.Native ? shell : null;
                 if (shell == HgEngineShell.Native) return null;
@@ -205,7 +205,7 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) return;
             try
             {
-                var cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path));
+                HgEngineConfig cfg = JsonSerializer.Deserialize<HgEngineConfig>(File.ReadAllText(path));
                 if (cfg == null) return;
                 // The shell only matters on Windows, and a WSL path can only build one way.
                 if (!HostIsPosix && !IsWslPath(checkout) && Enum.TryParse(cfg.shell, out HgEngineShell stored) && stored != HgEngineShell.Native)
@@ -350,7 +350,7 @@ namespace DSPRE.HgEngine
             if (path == null) return;
             try
             {
-                var cfg = new HgEngineConfig
+                HgEngineConfig cfg = new HgEngineConfig
                 {
                     rootWindows = RepoRootWindows,
                     shell = Shell.ToString(),

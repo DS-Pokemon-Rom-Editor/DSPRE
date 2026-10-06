@@ -194,8 +194,8 @@ namespace DSPRE.LibNDSFormats
             Require(bytes, dictionary, dictionaryLength, "texture dictionary");
             RequireWithinSection(bytes, tex0Offset, sectionSize, dictionaryOffset, dictionaryLength, "texture dictionary");
 
-            var groups = new Dictionary<int, int>();
-            var result = new Btx0TextureEntry[count];
+            Dictionary<int, int> groups = new Dictionary<int, int>();
+            Btx0TextureEntry[] result = new Btx0TextureEntry[count];
             for (int i = 0; i < count; i++)
             {
                 int entry = checked(entryStart + i * 8);
@@ -238,7 +238,7 @@ namespace DSPRE.LibNDSFormats
             Require(bytes, dictionary, dictionaryLength, "palette dictionary");
             RequireWithinSection(bytes, tex0Offset, sectionSize, dictionaryOffset, dictionaryLength, "palette dictionary");
 
-            var offsets = new int[count];
+            int[] offsets = new int[count];
             for (int i = 0; i < count; i++)
             {
                 offsets[i] = checked(ReadUInt16(bytes, entryStart + i * 4, "palette offset") * 8);
@@ -246,8 +246,8 @@ namespace DSPRE.LibNDSFormats
                     throw new FormatException($"Palette {i} points outside the declared palette data region.");
             }
 
-            var groups = new Dictionary<int, int>();
-            var result = new Btx0PaletteEntry[count];
+            Dictionary<int, int> groups = new Dictionary<int, int>();
+            Btx0PaletteEntry[] result = new Btx0PaletteEntry[count];
             for (int i = 0; i < count; i++)
             {
                 int next = paletteDataSize;

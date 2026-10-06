@@ -42,11 +42,11 @@ namespace DSPRE.ROMFiles
             if (!File.Exists(statePath)) return null;
             try
             {
-                using var doc = JsonDocument.Parse(File.ReadAllText(statePath));
-                var root = doc.RootElement;
-                var guard = new RotomRebuildGuard(statePath, Version(root), DbHash(root));
-                if (!root.TryGetProperty("entries", out var entries)) return guard;
-                foreach (var e in entries.EnumerateObject())
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(statePath));
+                JsonElement root = doc.RootElement;
+                RotomRebuildGuard guard = new RotomRebuildGuard(statePath, Version(root), DbHash(root));
+                if (!root.TryGetProperty("entries", out JsonElement entries)) return guard;
+                foreach (JsonProperty e in entries.EnumerateObject())
                 {
                     string binary = BinaryFor(e.Name);
                     if (binary == null || !File.Exists(binary)) continue;
@@ -72,18 +72,18 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public List<int> After()
         {
-            var kept = new List<int>();
+            List<int> kept = new List<int>();
             if (!File.Exists(_statePath)) return kept;
             try
             {
-                var state = JsonNode.Parse(File.ReadAllText(_statePath)) as JsonObject;
+                JsonObject state = JsonNode.Parse(File.ReadAllText(_statePath)) as JsonObject;
                 if (state == null) return kept;
                 bool rebuilt = (string)state["compiler_version"] != _version || (state["db_hash"]?.GetValue<ulong>() ?? 0) != _dbHash;
                 if (!rebuilt || !(state["entries"] is JsonObject entries)) return kept;
 
-                foreach (var (name, node) in entries)
+                foreach ((string name, JsonNode node) in entries)
                 {
-                    if (!(node is JsonObject entry) || !_entries.TryGetValue(name, out var before)) continue;
+                    if (!(node is JsonObject entry) || !_entries.TryGetValue(name, out Entry before)) continue;
                     if (entry["source_hash"]?.GetValue<ulong>() != before.SourceHash) continue;
                     if (DependencyChanged(before.Dependencies, Dependencies(JsonDocument.Parse(entry.ToJsonString()).RootElement))) continue;
 
@@ -112,23 +112,23 @@ namespace DSPRE.ROMFiles
         }
 
         private static string Version(JsonElement root)
-            => root.TryGetProperty("compiler_version", out var v) ? v.GetString() : null;
+            => root.TryGetProperty("compiler_version", out JsonElement v) ? v.GetString() : null;
 
         private static ulong DbHash(JsonElement root)
-            => root.TryGetProperty("db_hash", out var v) && v.ValueKind == JsonValueKind.Number ? v.GetUInt64() : 0;
+            => root.TryGetProperty("db_hash", out JsonElement v) && v.ValueKind == JsonValueKind.Number ? v.GetUInt64() : 0;
 
         private static Dictionary<string, string> Dependencies(JsonElement entry)
         {
-            var found = new Dictionary<string, string>(StringComparer.Ordinal);
-            if (entry.TryGetProperty("dependency_hashes", out var deps) && deps.ValueKind == JsonValueKind.Object)
-                foreach (var d in deps.EnumerateObject()) found[d.Name] = d.Value.GetRawText();
+            Dictionary<string, string> found = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (entry.TryGetProperty("dependency_hashes", out JsonElement deps) && deps.ValueKind == JsonValueKind.Object)
+                foreach (JsonProperty d in deps.EnumerateObject()) found[d.Name] = d.Value.GetRawText();
             return found;
         }
 
         // A dependency the script already had that now differs is a real change; one first recorded by this
         // rebuild is not, since a decompiled source starts with none.
         private static bool DependencyChanged(Dictionary<string, string> before, Dictionary<string, string> after)
-            => before.Any(d => !after.TryGetValue(d.Key, out var now) || now != d.Value);
+            => before.Any(d => !after.TryGetValue(d.Key, out string now) || now != d.Value);
 
         private static string BinaryFor(string entryName)
         {

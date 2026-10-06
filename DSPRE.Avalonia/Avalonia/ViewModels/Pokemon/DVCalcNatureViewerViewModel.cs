@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public DVCalcNatureViewerViewModel(IEnumerable<DVIVNatureTriplet> rows)
         {
-            foreach (var r in rows) Rows.Add(r);
+            foreach (DVIVNatureTriplet r in rows) Rows.Add(r);
         }
 
         public bool ConfirmSelection()

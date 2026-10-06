@@ -25,16 +25,16 @@ namespace DSPRE.HgEngine
 
             try
             {
-                var members = Directory.GetFiles(unpackedDir)
+                List<string> members = Directory.GetFiles(unpackedDir)
                     .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                var keep = members.Where((_, i) => !staleMembers.Contains(i)).ToList();
+                List<string> keep = members.Where((_, i) => !staleMembers.Contains(i)).ToList();
                 if (keep.Count == 0) { error = "That would drop every member."; return false; }
 
                 // Renaming in place would overwrite members not moved yet, so every kept member goes to a
                 // temporary name first.
-                var staged = new List<string>(keep.Count);
+                List<string> staged = new List<string>(keep.Count);
                 foreach (string path in keep)
                 {
                     string temp = path + ".repair";

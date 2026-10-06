@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.Data
 
             try
             {
-                var sdat = SdatArchive.Parse(File.ReadAllBytes(path));
+                SdatArchive sdat = SdatArchive.Parse(File.ReadAllBytes(path));
                 if (sdat == null || sdat.Sequences.Count == 0) return null;
                 // A different ROM keeps its cry sequence at its own index, so that has to be found again.
                 _cached = sdat; _cachedFor = path; _crySequence = null;
@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia.Data
             if (_crySequence != null) return _crySequence.Value;
             int found = -1;
             if (sdat?.SeqNames != null)
-                foreach (var kv in sdat.SeqNames)
+                foreach (KeyValuePair<int, string> kv in sdat.SeqNames)
                     if (string.Equals(kv.Value, CrySequenceName, StringComparison.Ordinal)) { found = kv.Key; break; }
             _crySequence = found;
             return found;
@@ -65,10 +65,10 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static List<int> CryBanks()
         {
-            var list = new List<int>();
-            var sdat = Load();
+            List<int> list = new List<int>();
+            SdatArchive sdat = Load();
             if (sdat == null) return list;
-            foreach (var kv in sdat.BankNames)
+            foreach (KeyValuePair<int, string> kv in sdat.BankNames)
                 if (kv.Value != null && kv.Value.StartsWith(CryBankPrefix, StringComparison.Ordinal)
                     && kv.Key > 0 && kv.Key < sdat.Banks.Count && sdat.Banks[kv.Key] != null)
                     list.Add(kv.Key);
@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (sdat?.WaveArcNames == null || cryNumber <= 0) return -1;
             string want = CryWaveArcPrefix + cryNumber.ToString("D3");
-            foreach (var kv in sdat.WaveArcNames)
+            foreach (KeyValuePair<int, string> kv in sdat.WaveArcNames)
                 if (string.Equals(kv.Value, want, StringComparison.Ordinal)
                     && kv.Key >= 0 && kv.Key < sdat.WaveArcs.Count && sdat.WaveArcs[kv.Key] != null)
                     return kv.Key;
@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.Data
         private static int CryBankFor(SdatArchive sdat, int species)
         {
             if (!CriesLiveInWaveArchives) return species;
-            foreach (var kv in sdat.BankNames)
+            foreach (KeyValuePair<int, string> kv in sdat.BankNames)
                 if (kv.Value != null && kv.Value.StartsWith(CryBankPrefix, StringComparison.Ordinal)
                     && kv.Key > 0 && kv.Key < sdat.Banks.Count && sdat.Banks[kv.Key] != null)
                     return kv.Key;
@@ -123,8 +123,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Every cry this ROM has, as the numbers the game plays them with, in order.</summary>
         public static List<int> CryNumbers()
         {
-            var list = new List<int>();
-            var sdat = Load();
+            List<int> list = new List<int>();
+            SdatArchive sdat = Load();
             if (sdat == null) return list;
 
             if (!CriesLiveInWaveArchives)
@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.Data
                 return list;
             }
 
-            foreach (var kv in sdat.WaveArcNames)
+            foreach (KeyValuePair<int, string> kv in sdat.WaveArcNames)
             {
                 if (kv.Value == null || !kv.Value.StartsWith(CryWaveArcPrefix, StringComparison.Ordinal)) continue;
                 if (kv.Key < 0 || kv.Key >= sdat.WaveArcs.Count || sdat.WaveArcs[kv.Key] == null) continue;
@@ -147,13 +147,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Which wave archive holds a species' cry, or -1 when it has none.</summary>
         public static int CryWaveArchive(int species)
         {
-            var sdat = Load();
+            SdatArchive sdat = Load();
             if (sdat == null || species <= 0) return -1;
 
             if (CriesLiveInWaveArchives) return CryWaveArcByName(sdat, CryNumberFor(species));
 
             if (species >= sdat.Banks.Count) return -1;
-            var bank = sdat.Banks[species];
+            SdatBankInfo bank = sdat.Banks[species];
             if (bank == null) return -1;
             foreach (int w in bank.WaveArcNo)
                 if (w != 0xffff && w >= 0 && w < sdat.WaveArcs.Count) return w;
@@ -169,14 +169,14 @@ namespace DSPRE.Avalonia.Data
         {
             int arc = CryWaveArchive(species);
             if (sdat == null || arc < 0 || arc >= sdat.WaveArcs.Count) return null;
-            var waves = sdat.GetWaveArchive(arc);
+            List<SwavSample> waves = sdat.GetWaveArchive(arc);
             return waves != null && waves.Count > 0 ? waves[0] : null;
         }
 
         /// <summary>Writes a species' cry out as a WAV. False when this ROM has no cry for it.</summary>
         public static bool ExportCry(int species, string path)
         {
-            var sample = CrySample(species);
+            SwavSample sample = CrySample(species);
             if (sample == null || sample.Pcm == null || sample.Pcm.Length == 0) return false;
             File.WriteAllBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
             return true;
@@ -203,29 +203,29 @@ namespace DSPRE.Avalonia.Data
                 return false;
             }
 
-            var sdat = Load();
+            SdatArchive sdat = Load();
             string sdatPath = PathFor();
             if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return false; }
             if (RefusedByHgEngine(sdatPath, out problem)) return false;
 
             int arc = CryWaveArchive(species);
             if (arc < 0) { problem = "This ROM has no cry for that Pokemon to replace."; return false; }
-            var arcInfo = sdat.WaveArcs[arc];
+            SdatWaveArcInfo arcInfo = sdat.WaveArcs[arc];
             if (arcInfo == null) { problem = "This ROM has no cry for that Pokemon to replace."; return false; }
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
             catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return false; }
 
-            var pcm = CryFiles.ReadWav(file, out int rate, out problem);
+            short[] pcm = CryFiles.ReadWav(file, out int rate, out problem);
             if (pcm == null) return false;
             if (pcm.Length == 0) { problem = "That WAV has no sound in it."; return false; }
 
             // Keep whatever else was in the archive; a cry archive holds one wave, but do not assume it.
-            var waves = sdat.GetWaveArchive(arc) ?? new System.Collections.Generic.List<SwavSample>();
-            var replaced = new System.Collections.Generic.List<SwavSample>(waves);
+            List<SwavSample> waves = sdat.GetWaveArchive(arc) ?? new System.Collections.Generic.List<SwavSample>();
+            List<SwavSample> replaced = new System.Collections.Generic.List<SwavSample>(waves);
             // Keep the replaced cry's sample encoding.
-            var fresh = new SwavSample
+            SwavSample fresh = new SwavSample
             {
                 SampleRate = rate, Loop = false, LoopStartSample = 0, Pcm = pcm,
                 Encoding = waves.Count > 0 ? waves[0].Encoding : 0,
@@ -266,7 +266,7 @@ namespace DSPRE.Avalonia.Data
                 return null;
             }
 
-            var sdat = Load();
+            SdatArchive sdat = Load();
             string sdatPath = PathFor();
             if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return null; }
             if (RefusedByHgEngine(sdatPath, out problem)) return null;
@@ -274,11 +274,11 @@ namespace DSPRE.Avalonia.Data
             int arc = CryWaveArchive(species);
             if (arc < 0 || sdat.WaveArcs[arc] == null) { problem = "This ROM has no cry for that Pokemon to replace."; return null; }
 
-            var pcm = ReadImport(path, out int rate, out problem);
+            short[] pcm = ReadImport(path, out int rate, out problem);
             if (pcm == null) return null;
 
-            var waves = sdat.GetWaveArchive(arc) ?? new List<SwavSample>();
-            var fresh = new SwavSample
+            List<SwavSample> waves = sdat.GetWaveArchive(arc) ?? new List<SwavSample>();
+            SwavSample fresh = new SwavSample
             {
                 SampleRate = rate, Loop = false, LoopStartSample = 0, Pcm = pcm,
                 Encoding = waves.Count > 0 ? waves[0].Encoding : 0,
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.Data
         public static PendingSample PrepareSample(int waveArc, int index, string path, out string problem)
         {
             problem = null;
-            var sdat = Load();
+            SdatArchive sdat = Load();
             string sdatPath = PathFor();
             if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return null; }
             if (RefusedByHgEngine(sdatPath, out problem)) return null;
@@ -303,12 +303,12 @@ namespace DSPRE.Avalonia.Data
             if (waves == null || index < 0 || index >= waves.Count)
             { problem = "There is no such sound in that set to replace."; return null; }
 
-            var pcm = ReadImport(path, out int rate, out problem);
+            short[] pcm = ReadImport(path, out int rate, out problem);
             if (pcm == null) return null;
 
             // Looping and encoding stay the slot's own, as ImportSample explains.
-            var old = waves[index];
-            var fresh = new SwavSample
+            SwavSample old = waves[index];
+            SwavSample fresh = new SwavSample
             {
                 SampleRate = rate,
                 Loop = old.Loop,
@@ -326,7 +326,7 @@ namespace DSPRE.Avalonia.Data
             try { file = File.ReadAllBytes(path); }
             catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return null; }
 
-            var pcm = CryFiles.ReadWav(file, out rate, out problem);
+            short[] pcm = CryFiles.ReadWav(file, out rate, out problem);
             if (pcm == null) return null;
             if (pcm.Length == 0) { problem = "That WAV has no sound in it."; return null; }
             return pcm;
@@ -341,12 +341,12 @@ namespace DSPRE.Avalonia.Data
             problem = null;
             if (sdat == null) { problem = "This ROM has no sound archive to write to."; return null; }
 
-            var order = new List<int>();
-            var byArc = new Dictionary<int, List<PendingSample>>();
-            foreach (var p in pending ?? Array.Empty<PendingSample>())
+            List<int> order = new List<int>();
+            Dictionary<int, List<PendingSample>> byArc = new Dictionary<int, List<PendingSample>>();
+            foreach (PendingSample p in pending ?? Array.Empty<PendingSample>())
             {
                 if (p?.Sample == null) continue;
-                if (!byArc.TryGetValue(p.WaveArc, out var list))
+                if (!byArc.TryGetValue(p.WaveArc, out List<PendingSample> list))
                 {
                     byArc[p.WaveArc] = list = new List<PendingSample>();
                     order.Add(p.WaveArc);
@@ -355,7 +355,7 @@ namespace DSPRE.Avalonia.Data
             }
             if (order.Count == 0) { problem = "There is nothing to save."; return null; }
 
-            var current = sdat;
+            SdatArchive current = sdat;
             byte[] whole = null;
             for (int k = 0; k < order.Count; k++)
             {
@@ -365,8 +365,8 @@ namespace DSPRE.Avalonia.Data
 
                 List<SwavSample> waves;
                 try { waves = current.GetWaveArchive(arc); } catch { waves = null; }
-                var replaced = new List<SwavSample>(waves ?? new List<SwavSample>());
-                foreach (var p in byArc[arc])
+                List<SwavSample> replaced = new List<SwavSample>(waves ?? new List<SwavSample>());
+                foreach (PendingSample p in byArc[arc])
                 {
                     if (p.Index >= 0 && p.Index < replaced.Count) replaced[p.Index] = p.Sample;
                     else if (p.Index == 0 && replaced.Count == 0) replaced.Add(p.Sample);
@@ -392,7 +392,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Writes every held sample into the ROM's sound archive with one rewrite of the file.</summary>
         public static bool WriteSamples(IReadOnlyList<PendingSample> pending, out string problem)
         {
-            var sdat = Load();
+            SdatArchive sdat = Load();
             string sdatPath = PathFor();
             if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return false; }
             if (RefusedByHgEngine(sdatPath, out problem)) return false;
@@ -437,7 +437,7 @@ namespace DSPRE.Avalonia.Data
 
             // Parsed only to refuse a file its build would choke on; what gets written is the WAV itself,
             // since the build converts it with its own tool and settings.
-            var pcm = CryFiles.ReadWav(file, out _, out problem);
+            short[] pcm = CryFiles.ReadWav(file, out _, out problem);
             if (pcm == null) return null;
             if (pcm.Length == 0) { problem = "That WAV has no sound in it."; return null; }
 
@@ -495,13 +495,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Every wave archive that is not a cry bank's, with how many sounds it holds.</summary>
         public static List<(int Arc, string Name, int Count)> SampleArchives()
         {
-            var found = new List<(int, string, int)>();
-            var sdat = Load();
+            List<(int, string, int)> found = new List<(int, string, int)>();
+            SdatArchive sdat = Load();
             if (sdat == null) return found;
 
             // Which archives are already listed as cries, so they are not offered a second time as
             // ordinary samples. On hg-engine that is one archive per cry rather than one per cry bank.
-            var cryArcs = new HashSet<int>();
+            HashSet<int> cryArcs = new HashSet<int>();
             if (CriesLiveInWaveArchives)
             {
                 foreach (int cry in CryNumbers())
@@ -526,7 +526,7 @@ namespace DSPRE.Avalonia.Data
                 int n;
                 try { n = sdat.GetWaveArchive(i)?.Count ?? 0; } catch { continue; }
                 if (n == 0) continue;
-                string name = sdat.WaveArcNames.TryGetValue(i, out var nm) && !string.IsNullOrWhiteSpace(nm)
+                string name = sdat.WaveArcNames.TryGetValue(i, out string nm) && !string.IsNullOrWhiteSpace(nm)
                     ? nm : "Wave archive " + i;
                 found.Add((i, name, n));
             }
@@ -549,7 +549,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Writes one sample out as a WAV. False when there is nothing there to write.</summary>
         public static bool ExportSample(int waveArc, int index, string path)
         {
-            var sample = Sample(waveArc, index);
+            SwavSample sample = Sample(waveArc, index);
             if (sample?.Pcm == null || sample.Pcm.Length == 0) return false;
             File.WriteAllBytes(path, CryFiles.WriteWav(sample.Pcm, sample.SampleRate));
             return true;
@@ -560,7 +560,7 @@ namespace DSPRE.Avalonia.Data
         internal static bool ImportSample(int waveArc, int index, string path, out string problem)
         {
             problem = null;
-            var sdat = Load();
+            SdatArchive sdat = Load();
             string sdatPath = PathFor();
             if (sdat == null || sdatPath == null) { problem = "This ROM has no sound archive to write to."; return false; }
             if (RefusedByHgEngine(sdatPath, out problem)) return false;
@@ -576,14 +576,14 @@ namespace DSPRE.Avalonia.Data
             try { file = File.ReadAllBytes(path); }
             catch (Exception ex) { problem = "That file could not be read: " + ex.Message; return false; }
 
-            var pcm = CryFiles.ReadWav(file, out int rate, out problem);
+            short[] pcm = CryFiles.ReadWav(file, out int rate, out problem);
             if (pcm == null) return false;
             if (pcm.Length == 0) { problem = "That WAV has no sound in it."; return false; }
 
             // Keep whatever looping the sample had. An instrument that loops and is replaced by one that
             // does not stops sounding when the note is still being held.
-            var old = waves[index];
-            var replaced = new List<SwavSample>(waves);
+            SwavSample old = waves[index];
+            List<SwavSample> replaced = new List<SwavSample>(waves);
             replaced[index] = new SwavSample
             {
                 SampleRate = rate,
@@ -611,7 +611,7 @@ namespace DSPRE.Avalonia.Data
         {
             problem = null;
             string archive = DSPRE.HgEngine.HgEngineOwnedFiles.ArchiveOfPath(sdatPath);
-            var rule = DSPRE.HgEngine.HgEngineOwnedFiles.RuleForArchive(archive);
+            HgEngineRule rule = DSPRE.HgEngine.HgEngineOwnedFiles.RuleForArchive(archive);
             if (rule == null || !rule.ReplacesWholeArchive) return false;
 
             problem = $"hg-engine builds the {rule.Label} from {rule.SourceDirRelPath} on every build, "

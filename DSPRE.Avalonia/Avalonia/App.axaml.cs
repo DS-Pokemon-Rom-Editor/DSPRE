@@ -1,7 +1,10 @@
-﻿using Avalonia;
+﻿using System.Runtime.CompilerServices;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
+using Avalonia.Rendering.Composition;
 
 namespace DSPRE
 {
@@ -33,10 +36,10 @@ namespace DSPRE
             AvaloniaXamlLoader.Load(this);
 
             // A cleared number box would sit blank over an unchanged value, so it gets its last number back on losing focus.
-            var lastNumber = new System.Runtime.CompilerServices.ConditionalWeakTable<NumericUpDown, object>();
+            ConditionalWeakTable<NumericUpDown, object> lastNumber = new System.Runtime.CompilerServices.ConditionalWeakTable<NumericUpDown, object>();
             void RestoreIfEmpty(NumericUpDown box) => global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                if (box.Value == null && !box.IsKeyboardFocusWithin && lastNumber.TryGetValue(box, out var last))
+                if (box.Value == null && !box.IsKeyboardFocusWithin && lastNumber.TryGetValue(box, out object last))
                     box.SetCurrentValue(NumericUpDown.ValueProperty, (decimal)last);
             });
             NumericUpDown.ValueChangedEvent.AddClassHandler<NumericUpDown>((box, e) =>
@@ -54,8 +57,8 @@ namespace DSPRE
         {
             try
             {
-                var compositor = global::Avalonia.Rendering.Composition.ElementComposition.GetElementVisual(window)?.Compositor;
-                var interop = compositor == null ? null : await compositor.TryGetCompositionGpuInterop();
+                Compositor compositor = global::Avalonia.Rendering.Composition.ElementComposition.GetElementVisual(window)?.Compositor;
+                ICompositionGpuInterop interop = compositor == null ? null : await compositor.TryGetCompositionGpuInterop();
                 AppLogger.Info(interop != null ? "Rendering: GPU" : "Rendering: software, 3D views unavailable");
             }
             catch (System.Exception ex) { AppLogger.Warn("Rendering mode unknown: " + ex.Message); }
@@ -88,7 +91,7 @@ namespace DSPRE
                 InstallPaletteShortcut();
 
                 // Grey secondary text in list rows is unreadable on the blue selection, in both themes.
-                var subtleOnSelection = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xD8, 0xE8, 0xF4));
+                SolidColorBrush subtleOnSelection = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromRgb(0xD8, 0xE8, 0xF4));
                 void Selected(global::Avalonia.Controls.Control row, bool on)
                 {
                     if (on) row.Resources["Editor.Subtle"] = subtleOnSelection;
@@ -144,7 +147,7 @@ namespace DSPRE
                     if (SettingsManager.Settings?.automaticallyCheckForUpdates == true)
                         DSPRE.Avalonia.ShellIntegration.CheckForUpdates(silent: true);
 
-                    var main = new DSPRE.Avalonia.Views.Shell.MainWindowView(new DSPRE.Avalonia.ViewModels.Shell.MainWindowViewModel(true));
+                    MainWindowView main = new DSPRE.Avalonia.Views.Shell.MainWindowView(new DSPRE.Avalonia.ViewModels.Shell.MainWindowViewModel(true));
                     desktop.MainWindow = main;
                     desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;   // closing the shell exits the app
                     main.Show();

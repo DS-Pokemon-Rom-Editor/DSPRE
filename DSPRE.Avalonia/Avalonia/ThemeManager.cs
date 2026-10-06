@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia
         {
             get
             {
-                var v = Application.Current?.RequestedThemeVariant;
+                ThemeVariant v = Application.Current?.RequestedThemeVariant;
                 // Default (unset) follows the app default, which is Dark.
                 return v == null || v == ThemeVariant.Default || v == ThemeVariant.Dark;
             }
@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia
         /// <summary>Puts back the skin the last session was left on.</summary>
         public static void ApplySaved()
         {
-            var s = DSPRE.SettingsManager.Settings;
+            DspreSettings s = DSPRE.SettingsManager.Settings;
             if (s != null && Application.Current != null)
                 Application.Current.RequestedThemeVariant = s.darkTheme ? ThemeVariant.Dark : ThemeVariant.Light;
             WatchTitleBars();

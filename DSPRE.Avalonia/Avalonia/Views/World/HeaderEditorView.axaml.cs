@@ -28,9 +28,9 @@ namespace DSPRE.Avalonia.Views.World
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
             if (_setupDone || Design.IsDesignMode) return;
-            var vm = VM;
+            HeaderEditorViewModel vm = VM;
             if (vm == null) return;
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            Window owner = TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
             _setupDone = true;
             await vm.SetupAsync(owner);

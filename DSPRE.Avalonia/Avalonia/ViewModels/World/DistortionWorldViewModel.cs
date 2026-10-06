@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using static DSPRE.RomInfo;
+using System.IO;
 
 namespace DSPRE.Avalonia.ViewModels.World
 {
@@ -88,8 +89,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
 
-            var row = MapCells[_selectedMapCell];
-            if (!_shapeEdited.TryGetValue(row.MapId, out var map))
+            MapCellRow row = MapCells[_selectedMapCell];
+            if (!_shapeEdited.TryGetValue(row.MapId, out MapFile map))
             {
                 try { map = new MapFile(row.MapId, gameFamily, discardMoveperms: false, showMessages: false); }
                 catch (Exception ex) { AppLogger.Error("DistortionWorld.OpenShape: " + ex.Message); return; }
@@ -188,11 +189,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
 
-            var platform = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < Platforms.Count
+            TornWorldFile.FloatingPlatform platform = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < Platforms.Count
                 ? Platforms[_selectedPlatformIndex] : null;
             if (platform == null) { HoverNote = ""; return; }
 
-            var bounds = platform.Bounds;
+            TornWorldFile.Bounds bounds = platform.Bounds;
             int c = col.Value, r = row.Value;
 
             int worldX, worldY, worldZ = bounds.StartZ + r;
@@ -252,7 +253,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void FillPainters()
         {
             BehaviourPainters.Clear();
-            foreach (var b in TilePermissions.BehavioursFor(gameFamily))
+            foreach (TileBehaviour b in TilePermissions.BehavioursFor(gameFamily))
                 BehaviourPainters.Add(new Painter(b.Value, b.Label));
             _behaviourPainterIndex = 0;
             Raise(nameof(BehaviourPainterIndex));
@@ -278,9 +279,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (table == null) { Status = "This ROM has no Distortion World data."; return; }
 
                 _table = new TornWorldMapTable(table);
-                var labels = HeaderNames();
+                IReadOnlyList<string> labels = HeaderNames();
 
-                foreach (var floor in _table.Floors)
+                foreach (TornWorldMapTable.Floor floor in _table.Floors)
                 {
                     string name = labels != null && floor.HeaderId < labels.Count ? labels[(int)floor.HeaderId] : null;
                     Floors.Add(new FloorRow
@@ -320,17 +321,17 @@ namespace DSPRE.Avalonia.ViewModels.World
             _shownFloorIndex = _selectedFloorIndex;
             if (_selectedFloorIndex < 0 || _selectedFloorIndex >= Floors.Count) { FloorNote = ""; return; }
 
-            var row = Floors[_selectedFloorIndex];
-            foreach (var platform in row.Data.Platforms) Platforms.Add(platform);
-            foreach (var jump in row.Data.JumpPoints) JumpPoints.Add(jump);
-            foreach (var region in row.Data.CameraRegions) CameraRegions.Add(region);
-            foreach (var prop in row.Data.GhostProps) GhostProps.Add(prop);
-            foreach (var trigger in row.Data.GhostTriggers) GhostTriggers.Add(trigger);
+            FloorRow row = Floors[_selectedFloorIndex];
+            foreach (TornWorldFile.FloatingPlatform platform in row.Data.Platforms) Platforms.Add(platform);
+            foreach (TornWorldFile.JumpPoint jump in row.Data.JumpPoints) JumpPoints.Add(jump);
+            foreach (TornWorldFile.CameraRegion region in row.Data.CameraRegions) CameraRegions.Add(region);
+            foreach (TornWorldFile.GhostProp prop in row.Data.GhostProps) GhostProps.Add(prop);
+            foreach (TornWorldFile.GhostTrigger trigger in row.Data.GhostTriggers) GhostTriggers.Add(trigger);
 
             _shownGrids.Clear();
-            foreach (var platform in row.Data.Platforms)
+            foreach (TornWorldFile.FloatingPlatform platform in row.Data.Platforms)
             {
-                var grid = Grid(platform.AttributeId);
+                ushort[] grid = Grid(platform.AttributeId);
                 if (grid != null) _shownGrids[platform.AttributeId] = grid;
             }
             RememberGridShapes();
@@ -367,11 +368,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public (float x, float y, float z)? SelectedFloorCentre()
         {
-            var floor = CurrentFloor?.Floor;
+            TornWorldMapTable.Floor floor = CurrentFloor?.Floor;
             if (Model3D == null || floor == null) return null;
 
             int index = 0;
-            foreach (var (i, shown) in ShownFloors()) if (shown == CurrentFloor) { index = i; break; }
+            foreach ((int i, FloorRow shown) in ShownFloors()) if (shown == CurrentFloor) { index = i; break; }
             if (!TryTile(index, floor, floor.OffsetX, floor.OffsetZ, out float originX, out float originZ, out _, out _, out _))
                 return null;
 
@@ -382,7 +383,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private int IndexOfShown(FloorRow floor)
         {
-            foreach (var (index, shown) in ShownFloors()) if (shown == floor) return index;
+            foreach ((int index, FloorRow shown) in ShownFloors()) if (shown == floor) return index;
             return 0;
         }
 
@@ -415,13 +416,13 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             try
             {
-                var cells = new List<(int gridX, int gridY, MapFile map, byte areaId, float altitude,
+                List<(int gridX, int gridY, MapFile map, byte areaId, float altitude, float originX, float originZ)> cells = new List<(int gridX, int gridY, MapFile map, byte areaId, float altitude,
                                       float originX, float originZ)>();
                 MapCells.Clear();
 
                 for (int index = 0; index < floors.Count; index++)
                 {
-                    var floor = floors[index].Floor;
+                    TornWorldMapTable.Floor floor = floors[index].Floor;
                     MapHeader header;
                     try { header = MapHeader.GetMapHeader((ushort)floor.HeaderId); } catch { header = null; }
                     if (header == null) continue;
@@ -435,7 +436,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         try { Events = new EventFile(header.eventFileID); } catch { Events = null; }
                     }
 
-                    var matrix = new GameMatrix(header.matrixID);
+                    GameMatrix matrix = new GameMatrix(header.matrixID);
                     for (int y = 0; y < matrix.height; y++)
                         for (int x = 0; x < matrix.width; x++)
                         {
@@ -466,12 +467,12 @@ namespace DSPRE.Avalonia.ViewModels.World
 
                 if (cells.Count == 0) return;
 
-                foreach (var c in cells) _cellAltitude[(c.gridX, c.gridY)] = c.altitude;
-                var standing = StandingModels(floors);
+                foreach ((int gridX, int gridY, MapFile map, byte areaId, float altitude, float originX, float originZ) c in cells) _cellAltitude[(c.gridX, c.gridY)] = c.altitude;
+                List<(int cellX, int cellY, PlacedBuilding placed)> standing = StandingModels(floors);
                 BuildWalkable(floors, cells);
 
                 int leastX = cells.Min(c => c.gridX), leastY = cells.Min(c => c.gridY);
-                var placed = cells.Select(c => (c.gridX, c.gridY, c.map, c.areaId, c.altitude,
+                List<(int gridX, int gridY, MapFile map, byte areaId, float altitude, float, float)> placed = cells.Select(c => (c.gridX, c.gridY, c.map, c.areaId, c.altitude,
                         c.originX - (c.gridX - leastX) * NsbmdGeometry.MapStride,
                         c.originZ - (c.gridY - leastY) * NsbmdGeometry.MapStride))
                     .ToList();
@@ -532,7 +533,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void BuildWalkable(IReadOnlyList<FloorRow> floors,
             IReadOnlyList<(int gridX, int gridY, MapFile map, byte areaId, float altitude, float originX, float originZ)> maps)
         {
-            var walkable = new MapCollisionGrid();
+            MapCollisionGrid walkable = new MapCollisionGrid();
             _surfaces.Clear();
             SurfaceRows.Clear();
             WalkableTiles = 0;
@@ -541,24 +542,24 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             for (int index = 0; index < floors.Count; index++)
             {
-                var floor = floors[index].Floor;
+                TornWorldMapTable.Floor floor = floors[index].Floor;
 
                 MapFile MapAt(int across, int down)
                 {
-                    foreach (var cell in maps)
+                    foreach ((int gridX, int gridY, MapFile map, byte areaId, float altitude, float originX, float originZ) cell in maps)
                         if (cell.gridX == index * GridBand + across && cell.gridY == down) return cell.map;
                     return null;
                 }
 
                 int wide = 1, deep = 1;
-                foreach (var cell in maps)
+                foreach ((int gridX, int gridY, MapFile map, byte areaId, float altitude, float originX, float originZ) cell in maps)
                     if (cell.gridX >= index * GridBand && cell.gridX < (index + 1) * GridBand)
                     {
                         wide = Math.Max(wide, cell.gridX - index * GridBand + 1);
                         deep = Math.Max(deep, cell.gridY + 1);
                     }
 
-                foreach (var surface in TornWorldSurfaces.ForFloor(floor, floors[index].Data, MapAt, Grid,
+                foreach (TornWorldSurfaces.Surface surface in TornWorldSurfaces.ForFloor(floor, floors[index].Data, MapAt, Grid,
                                                                   wide, deep, index, GridBand))
                 {
                     _surfaces[(surface.PatchX, surface.PatchY)] = surface;
@@ -601,9 +602,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public (int x, int z)? WhereToStand()
         {
-            var standing = new List<(int x, int z)>();
+            List<(int x, int z)> standing = new List<(int x, int z)>();
 
-            var chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
+            TornWorldSurfaces.Surface chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
                 ? SurfaceRows[_selectedPlatformIndex].Surface : null;
             if (chosen != null && !chosen.IsGround)
                 for (int row = 0; row < MapFile.mapSize; row++)
@@ -611,7 +612,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         if (chosen.CanWalk(col, row)) standing.Add(chosen.WalkTile(col, row));
 
             if (standing.Count == 0)
-            foreach (var surface in _surfaces.Values)
+            foreach (TornWorldSurfaces.Surface surface in _surfaces.Values)
             {
                 if (!surface.IsGround) continue;
                 for (int row = 0; row < MapFile.mapSize; row++)
@@ -619,7 +620,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         if (surface.CanWalk(col, row)) standing.Add(surface.WalkTile(col, row));
             }
             if (standing.Count == 0)
-                foreach (var surface in _surfaces.Values)
+                foreach (TornWorldSurfaces.Surface surface in _surfaces.Values)
                     for (int row = 0; row < MapFile.mapSize; row++)
                         for (int col = 0; col < MapFile.mapSize; col++)
                             if (surface.CanWalk(col, row)) standing.Add(surface.WalkTile(col, row));
@@ -629,7 +630,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             double midX = standing.Average(t => t.x), midZ = standing.Average(t => t.z);
             (int x, int z) best = standing[0];
             double nearest = double.MaxValue;
-            foreach (var tile in standing)
+            foreach ((int x, int z) tile in standing)
             {
                 double dx = tile.x - midX, dz = tile.z - midZ;
                 double away = dx * dx + dz * dz;
@@ -640,17 +641,17 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public (float pitch, float yaw, float roll, int steps)? CameraAt(int tileX, int tileZ, MoveFacing facing)
         {
-            if (!TrySurface(tileX, tileZ, out var surface, out int col, out int row)) return null;
+            if (!TrySurface(tileX, tileZ, out TornWorldSurfaces.Surface surface, out int col, out int row)) return null;
 
             FloorRow shown = ShownFloorAt(surface.FloorIndex);
             if (shown == null) return null;
 
-            var (worldX, worldY, worldZ) = surface.EventAt(col, row);
+            (int worldX, int worldY, int worldZ) = surface.EventAt(col, row);
 
             int looking = Direction(facing);
 
             TornWorldFile.CameraRegion found = null;
-            foreach (var region in shown.Data.CameraRegions)
+            foreach (TornWorldFile.CameraRegion region in shown.Data.CameraRegions)
                 if (region.PlayerDirection == looking && region.Bounds.Contains(worldX, worldY, worldZ))
                     found = region;
 
@@ -665,7 +666,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private FloorRow ShownFloorAt(int floorIndex)
         {
-            foreach (var (at, floor) in ShownFloors()) if (at == floorIndex) return floor;
+            foreach ((int at, FloorRow floor) in ShownFloors()) if (at == floorIndex) return floor;
             return null;
         }
 
@@ -709,7 +710,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _lastCamera = null;
             _lastTickFrame = -1;
 
-            var floor = CurrentFloor;
+            FloorRow floor = CurrentFloor;
             _activeHeader = floor != null ? (uint)floor.Floor.HeaderId : 0;
             _runtime = new TornWorldRuntime(_activeHeader);
             _runtime.EnterFloor(floor?.Data);
@@ -724,7 +725,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool GhostVisible(uint header, long group)
         {
             if (header == _activeHeader) return _runtime.IsGroupVisible(group);
-            var file = Floors.FirstOrDefault(f => (uint)f.Floor.HeaderId == header)?.Data;
+            TornWorldFile file = Floors.FirstOrDefault(f => (uint)f.Floor.HeaderId == header)?.Data;
             return file != null && group >= 0 && group < TornWorldRuntime.GhostGroupCount
                 && (file.DefaultVisibleGroups & (1L << (int)group)) != 0;
         }
@@ -732,7 +733,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>How see-through a placed prop is in the walk preview, or null to draw it as it is.</summary>
         public float? OpacityOf(int modelId)
         {
-            if (!_placed.TryGetValue(modelId, out var placed)) return null;
+            if (!_placed.TryGetValue(modelId, out PlacedProp placed)) return null;
 
             if (placed.Carried) return RideActive && modelId == _rideAnchor ? (float?)null : 0f;
             if (placed.GhostGroup >= 0) return GhostVisible(placed.Header, placed.GhostGroup) ? (float?)null : 0f;
@@ -765,7 +766,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             for (int i = 0; i < elapsed && RideActive; i++)
             {
-                var happened = _ride.Tick();
+                TornWorldRuntime.RideEvent happened = _ride.Tick();
                 if (happened == TornWorldRuntime.RideEvent.ChangedFloor)
                 {
                     EnterFloor(_ride.Header);
@@ -807,30 +808,30 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void FinishRide()
         {
-            var ride = _ride;
+            TornWorldRuntime.ElevatorRide ride = _ride;
             _ride = null;
             _rideAnchor = 0;
             if (ride == null) return;
 
-            var tile = WalkTileFor(ride.Header, ride.EndX, ride.EndY, ride.EndZ);
+            (int x, int z)? tile = WalkTileFor(ride.Header, ride.EndX, ride.EndY, ride.EndZ);
             if (tile != null) PutPlayerOn?.Invoke(tile.Value.x, tile.Value.z, _rideFacing);
         }
 
         private (int x, int z)? WalkTileFor(uint header, int worldX, int worldY, int worldZ)
         {
             int floorIndex = -1;
-            foreach (var (at, floor) in ShownFloors())
+            foreach ((int at, FloorRow floor) in ShownFloors())
                 if ((uint)floor.Floor.HeaderId == header) { floorIndex = at; break; }
             if (floorIndex < 0) return null;
 
-            foreach (var surface in _surfaces.Values)
+            foreach (TornWorldSurfaces.Surface surface in _surfaces.Values)
             {
                 if (surface.FloorIndex != floorIndex || surface.IsGround) continue;
                 if (surface.TryTileFor(worldX, worldY, worldZ, out int col, out int row)) return surface.WalkTile(col, row);
             }
 
             // Ground height comes from the land data, so only X and Z pick the tile.
-            foreach (var surface in _surfaces.Values)
+            foreach (TornWorldSurfaces.Surface surface in _surfaces.Values)
             {
                 if (surface.FloorIndex != floorIndex || !surface.IsGround) continue;
                 int col = worldX - surface.GroundX, row = worldZ - surface.GroundZ;
@@ -843,7 +844,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             LastGravityChange = null;
             if (RideActive) return;
-            if (!TrySurface(tileX, tileZ, out var surface, out int col, out int row)) return;
+            if (!TrySurface(tileX, tileZ, out TornWorldSurfaces.Surface surface, out int col, out int row)) return;
 
             FloorRow shown = ShownFloorAt(surface.FloorIndex);
             if (shown == null) return;
@@ -851,7 +852,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             uint header = (uint)shown.Floor.HeaderId;
             if (header != _activeHeader) EnterFloor(header);
 
-            var (worldX, worldY, worldZ) = surface.EventAt(col, row);
+            (int worldX, int worldY, int worldZ) = surface.EventAt(col, row);
             int looking = Direction(facing);
 
             // HandleGhostPropTriggerAt only runs after a real step, which is the only way here.
@@ -864,13 +865,13 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private bool TryStartRide(int tileX, int tileZ, int frame, MoveFacing facing)
         {
-            if (!_elevatorTiles.TryGetValue((tileX, tileZ), out var placed)) return false;
+            if (!_elevatorTiles.TryGetValue((tileX, tileZ), out PlacedProp placed)) return false;
             if (!_runtime.IsPresent(placed.Platform)) return false;
 
-            var tables = TornWorldCodeTables.Read(out _);
+            TornWorldCodeTables.Tables tables = TornWorldCodeTables.Read(out _);
             if (tables == null) return false;
 
-            var foot = RawFoot(tileX, tileZ);
+            (float x, float y, float z)? foot = RawFoot(tileX, tileZ);
             if (foot == null) return false;
 
             _ride = new TornWorldRuntime.ElevatorRide(_runtime, tables, placed.Header, placed.Platform);
@@ -885,7 +886,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public float RollAt(int tileX, int tileZ)
         {
-            if (!TrySurface(tileX, tileZ, out var surface, out _, out _)) return 0f;
+            if (!TrySurface(tileX, tileZ, out TornWorldSurfaces.Surface surface, out _, out _)) return 0f;
 
             if (_crossing != null && CurrentFrame != null
                 && tileX == _crossing.ToTileX && tileZ == _crossing.ToTileZ)
@@ -914,7 +915,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_crossing == null || CurrentFrame == null) return (0f, 0f, 0f);
             int step = CurrentFrame() - _crossing.StartFrame;
-            var (x, y, z) = TornWorldRuntime.HopOffset(_crossing.Point, step);
+            (float x, float y, float z) = TornWorldRuntime.HopOffset(_crossing.Point, step);
             return (x / 16f, y / 16f, z / 16f);
         }
 
@@ -947,7 +948,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (PutPlayerOn == null) return;
 
-            var point = TornWorldRuntime.JumpPointAt(shown.Data, worldX, worldY, worldZ, looking);
+            TornWorldFile.JumpPoint point = TornWorldRuntime.JumpPointAt(shown.Data, worldX, worldY, worldZ, looking);
             if (point == null) return;
 
             int toX = worldX + point.DisplacementX;
@@ -956,7 +957,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             bool toGround = point.TargetKind == (int)TornWorldFile.PlatformKind.Invalid;
 
-            foreach (var landing in _surfaces.Values)
+            foreach (TornWorldSurfaces.Surface landing in _surfaces.Values)
             {
                 if (landing.FloorIndex != surface.FloorIndex) continue;
                 if (landing == surface) continue;
@@ -976,7 +977,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 if (!landing.CanWalk(toCol, toRow)) continue;
 
-                var (walkX, walkZ) = landing.WalkTile(toCol, toRow);
+                (int walkX, int walkZ) = landing.WalkTile(toCol, toRow);
 
                 // A walk that starts on a wall has no roll of its own yet; the wall's turn is the one being left.
                 float wasRoll = _playerRoll != 0f ? _playerRoll : SurfaceRoll(surface);
@@ -1043,7 +1044,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public (float x, float y, float z) TileFoot(float tileX, float tileZ)
         {
-            var scene = Model3D;
+            NsbmdRenderModel scene = Model3D;
             if (scene == null) return (0f, 0f, 0f);
 
             if (RideActive && (int)Math.Floor(tileX) == _rideTile.x && (int)Math.Floor(tileZ) == _rideTile.z)
@@ -1054,21 +1055,21 @@ namespace DSPRE.Avalonia.ViewModels.World
                     _rideFootRaw.z + (_ride.Z - _ride.StartZ) * NsbmdGeometry.TileSize);
             }
 
-            var raw = RawFoot(tileX, tileZ);
+            (float x, float y, float z)? raw = RawFoot(tileX, tileZ);
             return raw == null ? (0f, 0f, 0f) : scene.ToNormalized(raw.Value.x, raw.Value.y, raw.Value.z);
         }
 
         private (float x, float y, float z)? RawFoot(float tileX, float tileZ)
         {
-            var scene = Model3D;
-            if (scene == null || !TrySurface(tileX, tileZ, out var surface, out int col, out int row)) return null;
+            NsbmdRenderModel scene = Model3D;
+            if (scene == null || !TrySurface(tileX, tileZ, out TornWorldSurfaces.Surface surface, out int col, out int row)) return null;
 
             float acrossCol = tileX - (float)Math.Floor(tileX);
             float acrossRow = tileZ - (float)Math.Floor(tileZ);
 
-            var (x0, y0, z0) = surface.WorldAt(col, row);
-            var (x1, y1, z1) = surface.WorldAt(col + 1, row);
-            var (x2, y2, z2) = surface.WorldAt(col, row + 1);
+            (int x0, int y0, int z0) = surface.WorldAt(col, row);
+            (int x1, int y1, int z1) = surface.WorldAt(col + 1, row);
+            (int x2, int y2, int z2) = surface.WorldAt(col, row + 1);
 
             float worldX = x0 + (x1 - x0) * acrossCol + (x2 - x0) * acrossRow;
             float worldY = y0 + (y1 - y0) * acrossCol + (y2 - y0) * acrossRow;
@@ -1079,10 +1080,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 float through = _crossing.Through(CurrentFrame());
                 if (through >= 1f) _crossing = null;
-                else if (through >= 0f && TrySurface(_crossing.FromTileX, _crossing.FromTileZ, out var was,
+                else if (through >= 0f && TrySurface(_crossing.FromTileX, _crossing.FromTileZ, out TornWorldSurfaces.Surface was,
                                                     out int wasCol, out int wasRow))
                 {
-                    var (fx, fy, fz) = was.WorldAt(wasCol, wasRow);
+                    (int fx, int fy, int fz) = was.WorldAt(wasCol, wasRow);
                     worldX = fx + (worldX - fx) * through;
                     worldY = fy + (worldY - fy) * through;
                     worldZ = fz + (worldZ - fz) * through;
@@ -1117,9 +1118,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private List<(int cellX, int cellY, PlacedBuilding placed)> StandingModels(IReadOnlyList<FloorRow> floors)
         {
-            var standing = new List<(int, int, PlacedBuilding)>();
+            List<(int, int, PlacedBuilding)> standing = new List<(int, int, PlacedBuilding)>();
 
-            var tables = TornWorldCodeTables.Read(out string why);
+            TornWorldCodeTables.Tables tables = TornWorldCodeTables.Read(out string why);
             if (tables == null)
             {
                 if (why != null) AppLogger.Error("DistortionWorld.StandingModels: " + why);
@@ -1129,14 +1130,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             for (int index = 0; index < floors.Count; index++)
             {
                 uint header = (uint)floors[index].Floor.HeaderId;
-                foreach (var platform in tables.PlatformsOn(header))
+                foreach (TornWorldCodeTables.MovingPlatform platform in tables.PlatformsOn(header))
                     Place(standing, tables, floors[index].Floor, index, platform.PropKind,
                           platform.TileX, platform.TileY, platform.TileZ,
                           new PlacedProp { Header = header, Platform = platform });
-                foreach (var prop in tables.PropsOn(header))
+                foreach (TornWorldCodeTables.Prop prop in tables.PropsOn(header))
                     Place(standing, tables, floors[index].Floor, index, prop.PropKind,
                           prop.TileX, prop.TileY, prop.TileZ, new PlacedProp { Header = header });
-                foreach (var ghost in floors[index].Data.GhostProps)
+                foreach (TornWorldFile.GhostProp ghost in floors[index].Data.GhostProps)
                     Place(standing, tables, floors[index].Floor, index, ghost.PropKind,
                           ghost.TileX, ghost.TileY, ghost.TileZ,
                           new PlacedProp { Header = header, GhostGroup = ghost.GroupId });
@@ -1163,7 +1164,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             TornWorldMapTable.Floor floor, int floorIndex, int propKind, int tileX, int tileY, int tileZ,
             PlacedProp info)
         {
-            var model = PropModel(tables.ModelFor(propKind));
+            NSBMDModel model = PropModel(tables.ModelFor(propKind));
             if (model == null) return 0;
             if (!TryTile(floorIndex, floor, tileX, tileZ, out _, out _, out int col, out int row, out float altitude)) return 0;
 
@@ -1173,7 +1174,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _placed[modelId] = info;
             RegisterMotion(tables, propKind, modelId, info.Platform != null || info.Carried);
 
-            var (offX, offY, offZ) = tables.OffsetFor(propKind);
+            (float offX, float offY, float offZ) = tables.OffsetFor(propKind);
             float unit = NsbmdGeometry.TileSize / 16f;
 
             float x = (col + 0.5f) * NsbmdGeometry.TileSize - NsbmdGeometry.MapStride / 2f + offX * unit;
@@ -1182,7 +1183,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             // sPropScaleByKind only sizes the culling box (IsPropInView); props are drawn unscaled.
             float scale = (model.modelScale == 0 ? 1f : model.modelScale) / 64f;
-            var transform = Mat4.Multiply(Mat4.Scale(scale, scale, scale),
+            float[] transform = Mat4.Multiply(Mat4.Scale(scale, scale, scale),
                                           Mat4.Translate(x / scale, y / scale, z / scale));
 
             int gridX = floorIndex * GridBand + (tileX - floor.OffsetX) / MapFile.mapSize;
@@ -1218,14 +1219,14 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             if (member < 0)
             {
-                var hover = tables.HoverOffsets.Length > 0
+                BuildingAnimationSet.HoverAnimation hover = tables.HoverOffsets.Length > 0
                     ? new BuildingAnimationSet.HoverAnimation(tables.HoverOffsets, tables.HoverStep) : null;
                 if (rides) BuildingAnimationSet.Register(modelId, motion: new PlatformMotion(this, modelId, hover));
                 else if (hover != null) BuildingAnimationSet.Register(modelId, motion: hover);
                 return;
             }
 
-            if (!_kindAnimations.TryGetValue(propKind, out var loaded))
+            if (!_kindAnimations.TryGetValue(propKind, out (TextureSrtAnimation scrolling, JointAnimation joint) loaded))
             {
                 loaded = (null, null);
                 byte[] raw = FieldEffectMember(member);
@@ -1263,8 +1264,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             public override (float x, float y, float z) At(int frame)
             {
-                var (hx, hy, hz) = _hover?.At(frame) ?? (0f, 0f, 0f);
-                var (rx, ry, rz) = _owner.RideShift(_modelId);
+                (float hx, float hy, float hz) = _hover?.At(frame) ?? (0f, 0f, 0f);
+                (float rx, float ry, float rz) = _owner.RideShift(_modelId);
                 return (hx + rx, hy + ry, hz + rz);
             }
         }
@@ -1285,7 +1286,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private NSBMDModel PropModel(int member)
         {
             if (member < 0) return null;
-            if (_propModels.TryGetValue(member, out var cached)) return cached;
+            if (_propModels.TryGetValue(member, out NSBMDModel cached)) return cached;
 
             NSBMDModel model = null;
             try
@@ -1295,8 +1296,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     string path = System.IO.Path.Combine(gameDirs[DirNames.fieldEffectModels].unpackedDir, member.ToString("D4"));
                     if (System.IO.File.Exists(path))
                     {
-                        using var file = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read);
-                        var nsbmd = NSBMDLoader.LoadNSBMD(file);
+                        using FileStream file = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read);
+                        NSBMD nsbmd = NSBMDLoader.LoadNSBMD(file);
                         if (nsbmd?.models != null && nsbmd.models.Length > 0)
                         {
                             try { nsbmd.MatchTextures(); } catch { /* it draws untextured */ }
@@ -1316,11 +1317,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void RebuildOverlay()
         {
-            var mesh = new List<float>();
+            List<float> mesh = new List<float>();
             if (Model3D != null && _showGravity)
-                foreach (var (floorIndex, floor) in ShownFloors())
+                foreach ((int floorIndex, FloorRow floor) in ShownFloors())
                 {
-                    var chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
+                    TornWorldSurfaces.Surface chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
                         ? SurfaceRows[_selectedPlatformIndex].Surface : null;
                     bool selected = floor == CurrentFloor;
 
@@ -1345,14 +1346,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void AppendPlatform(List<float> mesh, TornWorldFile.FloatingPlatform platform,
             TornWorldMapTable.Floor floor, int floorIndex, bool selected)
         {
-            var grid = Grid(platform.AttributeId);
+            ushort[] grid = Grid(platform.AttributeId);
             if (grid == null) return;
 
             int kind = (int)platform.Kind;
-            var (r, g, b) = kind >= 0 && kind < KindColours.Length ? KindColours[kind] : (0.6f, 0.6f, 0.6f);
+            (float r, float g, float b) = kind >= 0 && kind < KindColours.Length ? KindColours[kind] : (0.6f, 0.6f, 0.6f);
             if (selected) { r = Math.Min(1f, r * 1.6f); g = Math.Min(1f, g * 1.6f); b = Math.Min(1f, b * 1.6f); }
 
-            var bounds = platform.Bounds;
+            TornWorldFile.Bounds bounds = platform.Bounds;
             for (int z = 0; z <= bounds.SizeZ; z++)
                 for (int x = 0; x <= bounds.SizeX; x++)
                     for (int y = 0; y <= bounds.SizeY; y++)
@@ -1368,7 +1369,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         float height = HeightOf(tileY) + Lift + (float)_overlayHeight;
 
                         float insetX = sizeX * TileInset, insetZ = sizeZ * TileInset;
-                        var special = (tile & 0xFF) != 0;
+                        bool special = (tile & 0xFF) != 0;
                         AddQuad(mesh, x0 + insetX, x0 + sizeX - insetX, z0 + insetZ, z0 + sizeZ - insetZ, height,
                             special ? 0.89f : r, special ? 0.76f : g, special ? 0.33f : b);
                     }
@@ -1378,7 +1379,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             void Vertex(float x, float z)
             {
-                var (nx, ny, nz) = Model3D.ToNormalized(x, y, z);
+                (float nx, float ny, float nz) = Model3D.ToNormalized(x, y, z);
                 v.Add(nx); v.Add(ny); v.Add(nz); v.Add(0); v.Add(0); v.Add(r); v.Add(g); v.Add(b);
             }
             Vertex(x0, z0); Vertex(x1, z0); Vertex(x1, z1);
@@ -1386,7 +1387,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         private ushort[] Grid(int attributeId)
         {
-            if (_gridCache.TryGetValue(attributeId, out var cached)) return cached;
+            if (_gridCache.TryGetValue(attributeId, out ushort[] cached)) return cached;
             if (!_attributes.Available) return null;
 
             try
@@ -1394,7 +1395,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 byte[] raw = _attributes.Get(attributeId);
                 if (raw == null) return null;
 
-                var grid = TornWorldSurfaces.GridFromBytes(raw);
+                ushort[] grid = TornWorldSurfaces.GridFromBytes(raw);
                 _gridCache[attributeId] = grid;
                 return grid;
             }
@@ -1414,7 +1415,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     BehaviourCells[row, col] = 0;
                 }
 
-            var chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
+            TornWorldSurfaces.Surface chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
                 ? SurfaceRows[_selectedPlatformIndex].Surface : null;
 
             if (chosen == null)
@@ -1443,8 +1444,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 bool upright = chosen.Kind == TornWorldFile.PlatformKind.WestWall
                             || chosen.Kind == TornWorldFile.PlatformKind.EastWall;
-                var platform = chosen.PlatformIndex < Platforms.Count ? Platforms[chosen.PlatformIndex] : null;
-                var (columns, rows) = platform != null ? TornWorldSurfaces.PaintedExtent(platform) : (0, 0);
+                TornWorldFile.FloatingPlatform platform = chosen.PlatformIndex < Platforms.Count ? Platforms[chosen.PlatformIndex] : null;
+                (int columns, int rows) = platform != null ? TornWorldSurfaces.PaintedExtent(platform) : (0, 0);
                 UsedColumns = columns;
                 UsedRows = rows;
                 PlatformNote = $"{columns} across ({(upright ? "height" : "x")}) x {rows} down (z)";
@@ -1476,7 +1477,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void ApplyPaintedGrid()
         {
-            var chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
+            TornWorldSurfaces.Surface chosen = _selectedPlatformIndex >= 0 && _selectedPlatformIndex < SurfaceRows.Count
                 ? SurfaceRows[_selectedPlatformIndex].Surface : null;
             if (chosen == null) return;
 
@@ -1495,8 +1496,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 PaintedGroundWarning = null;
 
-                var platform = Platforms.Count > chosen.PlatformIndex ? Platforms[chosen.PlatformIndex] : null;
-                if (platform != null && _shownGrids.TryGetValue(platform.AttributeId, out var grid))
+                TornWorldFile.FloatingPlatform platform = Platforms.Count > chosen.PlatformIndex ? Platforms[chosen.PlatformIndex] : null;
+                if (platform != null && _shownGrids.TryGetValue(platform.AttributeId, out ushort[] grid))
                 {
                     TornWorldSurfaces.WriteBack(platform, grid, CollisionCells, BehaviourCells);
                     // Cells past the grid stay blocked, as the game treats them.
@@ -1519,8 +1520,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void BuildCollisionFromSurfaces()
         {
-            var walkable = new MapCollisionGrid();
-            foreach (var surface in _surfaces.Values)
+            MapCollisionGrid walkable = new MapCollisionGrid();
+            foreach (TornWorldSurfaces.Surface surface in _surfaces.Values)
             {
                 walkable.Add(surface.PatchX, surface.PatchY, surface.Collisions);
                 walkable.AddTypes(surface.PatchX, surface.PatchY, surface.Types);
@@ -1536,7 +1537,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void RememberGridShapes()
         {
             _gridShapes.Clear();
-            foreach (var platform in Platforms)
+            foreach (TornWorldFile.FloatingPlatform platform in Platforms)
                 _gridShapes[platform] = (platform.AttributeId, platform.TilesVertical, platform.TilesHorizontal);
         }
 
@@ -1547,9 +1548,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             string refused = null;
             bool gridsChanged = false;
-            foreach (var platform in Platforms)
+            foreach (TornWorldFile.FloatingPlatform platform in Platforms)
             {
-                if (!_gridShapes.TryGetValue(platform, out var was))
+                if (!_gridShapes.TryGetValue(platform, out (int attribute, int vertical, int horizontal) was))
                 {
                     _gridShapes[platform] = (platform.AttributeId, platform.TilesVertical, platform.TilesHorizontal);
                     continue;
@@ -1577,7 +1578,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     }
                     else
                     {
-                        var grid = Grid(platform.AttributeId);
+                        ushort[] grid = Grid(platform.AttributeId);
                         if (grid != null)
                         {
                             _gridCache[platform.AttributeId] = TornWorldSurfaces.ResizeGrid(grid,
@@ -1610,9 +1611,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void RefreshSurfaces()
         {
             _shownGrids.Clear();
-            foreach (var platform in Platforms)
+            foreach (TornWorldFile.FloatingPlatform platform in Platforms)
             {
-                var grid = Grid(platform.AttributeId);
+                ushort[] grid = Grid(platform.AttributeId);
                 if (grid != null) _shownGrids[platform.AttributeId] = grid;
             }
 
@@ -1662,7 +1663,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static bool SameState(WorldState a, WorldState b) =>
             a.Floors.Length == b.Floors.Length && a.Floors.Zip(b.Floors).All(z => z.First.AsSpan().SequenceEqual(z.Second))
-            && a.Grids.Count == b.Grids.Count && a.Grids.All(kv => b.Grids.TryGetValue(kv.Key, out var g) && kv.Value.AsSpan().SequenceEqual(g));
+            && a.Grids.Count == b.Grids.Count && a.Grids.All(kv => b.Grids.TryGetValue(kv.Key, out ushort[] g) && kv.Value.AsSpan().SequenceEqual(g));
 
         private void ResetSteps()
         {
@@ -1676,7 +1677,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void Recorded()
         {
             if (_lastState == null) return;
-            var now = TakeState();
+            WorldState now = TakeState();
             if (SameState(now, _lastState)) return;
             _undoSteps.Push((_lastState, now));
             _redoSteps.Clear();
@@ -1690,7 +1691,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Undo()
         {
             if (_undoSteps.Count == 0) return;
-            var step = _undoSteps.Pop();
+            (WorldState Before, WorldState After) step = _undoSteps.Pop();
             _redoSteps.Push(step);
             Restore(step.Before, step.After);
         }
@@ -1698,7 +1699,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Redo()
         {
             if (_redoSteps.Count == 0) return;
-            var step = _redoSteps.Pop();
+            (WorldState Before, WorldState After) step = _redoSteps.Pop();
             _undoSteps.Push(step);
             Restore(step.After, step.Before);
         }
@@ -1714,7 +1715,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 Floors[i].Data = new TornWorldFile(state.Floors[i]);
                 if (changed < 0) changed = i;
             }
-            foreach (var kv in state.Grids) _gridCache[kv.Key] = (ushort[])kv.Value.Clone();
+            foreach (KeyValuePair<int, ushort[]> kv in state.Grids) _gridCache[kv.Key] = (ushort[])kv.Value.Clone();
             foreach (int id in from.Grids.Keys.Where(id => !state.Grids.ContainsKey(id)).ToList()) _gridCache.Remove(id);
             _editedMembers.Clear(); _editedMembers.UnionWith(state.EditedMembers);
             _editedGrids.Clear(); _editedGrids.UnionWith(state.EditedGrids);
@@ -1748,18 +1749,18 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 CommitShownFloor();
-                foreach (var row in Floors.Where(f => _editedMembers.Contains(f.Floor.DataMember)))
+                foreach (FloorRow row in Floors.Where(f => _editedMembers.Contains(f.Floor.DataMember)))
                 {
                     _archive.Put(row.Floor.DataMember, row.Data.ToByteArray());
                 }
 
                 foreach (int id in _editedGrids)
                 {
-                    if (!_gridCache.TryGetValue(id, out var grid)) continue;
+                    if (!_gridCache.TryGetValue(id, out ushort[] grid)) continue;
                     _attributes.Put(id, TornWorldSurfaces.GridToBytes(grid));
                 }
 
-                foreach (var kv in _shapeEdited)
+                foreach (KeyValuePair<int, MapFile> kv in _shapeEdited)
                 {
                     if (!_shapeChanged.Contains(kv.Key)) continue;
                     kv.Value.SaveToFileDefaultDir(kv.Key, showSuccessMessage: false);
@@ -1784,7 +1785,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_shownFloorIndex < 0 || _shownFloorIndex >= Floors.Count) return;
 
-            var data = Floors[_shownFloorIndex].Data;
+            TornWorldFile data = Floors[_shownFloorIndex].Data;
             data.Platforms.Clear(); data.Platforms.AddRange(Platforms);
             data.JumpPoints.Clear(); data.JumpPoints.AddRange(JumpPoints);
             data.CameraRegions.Clear(); data.CameraRegions.AddRange(CameraRegions);

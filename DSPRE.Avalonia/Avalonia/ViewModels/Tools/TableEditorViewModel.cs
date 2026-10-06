@@ -307,7 +307,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<TablesState>(state);
+            TablesState s = DSPRE.Avalonia.UndoJson.Read<TablesState>(state);
             for (int i = 0; _condMusicTable != null && i < s.Cond.Length && i < _condMusicTable.Count; i++)
                 _condMusicTable[i] = ((ushort)s.Cond[i][0], (ushort)s.Cond[i][1], (ushort)s.Cond[i][2]);
             for (int i = 0; _effectsComboTable != null && i < s.Combos.Length && i < _effectsComboTable.Count; i++)
@@ -343,7 +343,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         // Rows count as changed while they differ from what was last read or saved, so undoing back clears them.
         private void RecountDirty()
         {
-            var now = Current();
+            TablesState now = Current();
             _condDirty = !Same(now.Cond, _saved.Cond);
             _dirtyCombos.Clear();
             for (int i = 0; i < now.Combos.Length; i++)
@@ -381,8 +381,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public TableEditorViewModel(IEnumerable<string> headerNames)
         {
             // One label for a header across the whole app, place name and all.
-            var friendly = HeaderLabels.Friendly();
-            var given = headerNames?.ToArray() ?? Array.Empty<string>();
+            IReadOnlyList<string> friendly = HeaderLabels.Friendly();
+            string[] given = headerNames?.ToArray() ?? Array.Empty<string>();
             _headerNames = friendly.Count == given.Length ? friendly.ToArray() : given;
         }
 
@@ -431,13 +431,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             // Header names for the combo / entry labels.
             HeaderNames.Clear();
-            foreach (var h in _headerNames) HeaderNames.Add(h);
+            foreach (string h in _headerNames) HeaderNames.Add(h);
 
-            var (start, rows) = ConditionalMusicTable.Read();
+            (uint start, List<ConditionalMusicTable.Row> rows) = ConditionalMusicTable.Read();
             _condMusicStartAddr = start;
             _condMusicTable = new List<(ushort, ushort, ushort)>();
             CondMusicItems.Clear();
-            foreach (var row in rows)
+            foreach (ConditionalMusicTable.Row row in rows)
             {
                 _condMusicTable.Add((row.Header, row.Flag, row.Music));
                 CondMusicItems.Add(HeaderNameAt(row.Header));
@@ -473,7 +473,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 ShowVsTables = false;
                 return;
             }
-            var tables = _fromSource ? HgEngineMusicTables.ReadBattle() : BattleMusicTables.LoadRom();
+            BattleMusicTables tables = _fromSource ? HgEngineMusicTables.ReadBattle() : BattleMusicTables.LoadRom();
             if (tables == null)
             {
                 ShowEffectsCombos = false;
@@ -508,7 +508,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 for (int i = 0; i < _trcNames.Length; i++) TrainerNames.Add($"[{i:D3}] {_trcNames[i]}");
 
                 VsTrainerItems.Clear();
-                foreach (var (classID, comboID) in _vsTrainerList)
+                foreach ((int classID, int comboID) in _vsTrainerList)
                     VsTrainerItems.Add($"{TrainerLabel(classID)} uses Combo #{comboID}");
 
                 VsPokemonItems.Clear();
@@ -539,7 +539,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _suppress = true;
             try
             {
-                var e = _condMusicTable[index];
+                (ushort header, ushort flag, ushort music) e = _condMusicTable[index];
                 CondHeaderIndex = e.header;
                 CondFlag = e.flag;
                 CondMusic = e.music;
@@ -552,7 +552,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private void UpdateCondTuple(ushort? header = null, ushort? flag = null, ushort? music = null)
         {
             if (_condMusicTable == null || _condSelectedIndex < 0 || _condSelectedIndex >= _condMusicTable.Count) return;
-            var cur = _condMusicTable[_condSelectedIndex];
+            (ushort header, ushort flag, ushort music) cur = _condMusicTable[_condSelectedIndex];
             _condMusicTable[_condSelectedIndex] = (header ?? cur.header, flag ?? cur.flag, music ?? cur.music);
             MarkDirty(ref _condDirty);
             Edited();
@@ -576,7 +576,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _suppress = true;
             try
             {
-                var e = _effectsComboTable[index];
+                (ushort vsGraph, ushort battleSSEQ) e = _effectsComboTable[index];
                 VsAnimation = e.vsGraph;
                 BattleSseq = e.battleSSEQ;
             }
@@ -586,11 +586,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private async Task SaveEffectCombosAsync()
         {
             if (_effectsComboTable == null) return;
-            var rows = _dirtyCombos.Where(i => i >= 0 && i < _effectsComboTable.Count).OrderBy(i => i).ToList();
+            List<int> rows = _dirtyCombos.Where(i => i >= 0 && i < _effectsComboTable.Count).OrderBy(i => i).ToList();
 
             if (_fromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 {
                     foreach (int i in rows)
                         if (!HgEngineMusicTables.TrySetCombo(i, _effectsComboTable[i].vsGraph, _effectsComboTable[i].battleSSEQ, out string e)) return e;
@@ -634,7 +634,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _suppress = true;
             try
             {
-                var e = _vsTrainerList[index];
+                (int trainerClass, int comboID) e = _vsTrainerList[index];
                 TrainerClassIndex = e.trainerClass;
                 TrainerComboIndex = e.comboID;
             }
@@ -644,11 +644,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private async Task SaveVsTrainersAsync()
         {
             if (_vsTrainerList == null) return;
-            var rows = _dirtyVsTrainers.Where(i => i >= 0 && i < _vsTrainerList.Count).OrderBy(i => i).ToList();
+            List<int> rows = _dirtyVsTrainers.Where(i => i >= 0 && i < _vsTrainerList.Count).OrderBy(i => i).ToList();
 
             if (_fromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 {
                     foreach (int i in rows)
                         if (!HgEngineMusicTables.TrySetClassCombo(i, _vsTrainerList[i].trainerClass, _vsTrainerList[i].comboID, out string e)) return e;
@@ -688,7 +688,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         // ── VS Pokémon handlers ────────────────────────────────────────────────────
         private string PokemonRowLabel(int row)
         {
-            var (pokeID, comboID) = _vsPokemonList[row];
+            (int pokeID, int comboID) = _vsPokemonList[row];
             string name = pokeID >= 0 && pokeID < _pokeNames.Length ? _pokeNames[pokeID] : "UNKNOWN";
             return $"[{pokeID:D3}] {name} uses Combo #{comboID}";
         }
@@ -710,13 +710,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private async Task SaveVsPokemonAsync()
         {
             if (_vsPokemonList == null) return;
-            var rows = _dirtyVsPokemon.Where(i => i >= 0 && i < _vsPokemonList.Count).OrderBy(i => i).ToList();
+            List<int> rows = _dirtyVsPokemon.Where(i => i >= 0 && i < _vsPokemonList.Count).OrderBy(i => i).ToList();
             // Rows store the species in 10 bits.
-            var tooBig = rows.FirstOrDefault(i => _vsPokemonList[i].pokemonID > 0x3FF, -1);
+            int tooBig = rows.FirstOrDefault(i => _vsPokemonList[i].pokemonID > 0x3FF, -1);
             if (tooBig >= 0) { StatusText = $"Row {tooBig}: species above 1023 can't have their own battle music."; return; }
             if (_fromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 {
                     foreach (int i in rows)
                         if (!HgEngineMusicTables.TrySetSpeciesCombo(i, _vsPokemonList[i].pokemonID, _vsPokemonList[i].comboID, out string e)) return e;
@@ -742,7 +742,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (!CanAddVsPokemonRows) return;
             if (HasUnsavedChanges) { StatusText = "Save or discard your changes first."; return; }
             int species = Math.Max(0, _pokemonIndex), combo = Math.Max(0, _pokemonComboIndex);
-            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TryAddSpeciesRow(species, combo, out string e) ? null : e);
+            (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TryAddSpeciesRow(species, combo, out string e) ? null : e);
             if (!saved) { if (error != null) StatusText = error; return; }
             ReloadVsPokemon(_vsPokemonList.Count);
             StatusText = $"Row added to {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it.";
@@ -753,7 +753,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             int row = _vsPokemonSelectedIndex;
             if (!CanAddVsPokemonRows || row < 0 || row >= _vsPokemonList.Count) return;
             if (HasUnsavedChanges) { StatusText = "Save or discard your changes first."; return; }
-            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TryRemoveSpeciesRow(row, out string e) ? null : e);
+            (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineMusicTables.TryRemoveSpeciesRow(row, out string e) ? null : e);
             if (!saved) { if (error != null) StatusText = error; return; }
             ReloadVsPokemon(Math.Min(row, _vsPokemonList.Count - 2));
             StatusText = $"Row removed from {HgEngineMusicTables.SourceRelPath}. Compile the ROM to apply it.";
@@ -774,7 +774,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _suppress = true;
             try
             {
-                var e = _vsPokemonList[index];
+                (int pokemonID, int comboID) e = _vsPokemonList[index];
                 PokemonIndex = e.pokemonID >= 0 && e.pokemonID < PokemonNames.Count ? e.pokemonID : 0;
                 PokemonComboIndex = e.comboID;
             }

@@ -48,11 +48,11 @@ namespace DSPRE.Models
 
         public static List<Piece> Read(byte[] terrain)
         {
-            var plates = new List<Piece>();
-            if (terrain == null || !BdhcFile.TryParse(terrain, out var file)) return plates;
-            foreach (var p in file.Plates())
+            List<Piece> plates = new List<Piece>();
+            if (terrain == null || !BdhcFile.TryParse(terrain, out BdhcFile file)) return plates;
+            foreach (BdhcFile.PlateShape p in file.Plates())
             {
-                var piece = new Piece { MinX = p.MinX, MaxX = p.MaxX, MinZ = p.MinZ, MaxZ = p.MaxZ, Nx = p.Nx, Ny = p.Ny, Nz = p.Nz, D = p.D };
+                Piece piece = new Piece { MinX = p.MinX, MaxX = p.MaxX, MinZ = p.MinZ, MaxZ = p.MaxZ, Nx = p.Nx, Ny = p.Ny, Nz = p.Nz, D = p.D };
                 piece.AtY = piece.Height;
                 plates.Add(piece);
             }
@@ -65,17 +65,17 @@ namespace DSPRE.Models
                                           Func<int, int, bool> changed = null, Func<int, int, float?> want = null)
         {
             // Plates lying only over unchanged squares stay exactly as the map has them.
-            var keep = new List<Piece>(mine ?? Array.Empty<Piece>());
+            List<Piece> keep = new List<Piece>(mine ?? Array.Empty<Piece>());
             if (changed != null)
-                foreach (var p in Read(terrainNow))
+                foreach (Piece p in Read(terrainNow))
                 {
                     if (keep.Any(k => Same(k, p))) continue;
-                    var under = SquaresUnder(p).ToList();
+                    List<(int c, int r)> under = SquaresUnder(p).ToList();
                     if (!under.Any(s => changed(s.c, s.r))) { keep.Add(p); continue; }
                     // The plate stays over the squares nothing changed, cut into rectangles on its own plane.
-                    foreach (var (c, r, w, d) in Rectangles(under.Where(s => !changed(s.c, s.r))))
+                    foreach ((int c, int r, int w, int d) in Rectangles(under.Where(s => !changed(s.c, s.r))))
                     {
-                        var part = p.Copy();
+                        Piece part = p.Copy();
                         part.MinX = Math.Max(p.MinX, -HalfMap + c * SquareSize);
                         part.MaxX = Math.Min(p.MaxX, -HalfMap + (c + w) * SquareSize);
                         part.MinZ = Math.Max(p.MinZ, -HalfMap + r * SquareSize);
@@ -86,11 +86,11 @@ namespace DSPRE.Models
             mine = keep;
             Func<int, int, bool> blocked = collisions == null ? null : (c, r) => (collisions[r, c] & 0x80) != 0;
             Func<int, int, float?> guide = null;
-            if (terrainNow != null && BdhcFile.TryParse(terrainNow, out var now))
+            if (terrainNow != null && BdhcFile.TryParse(terrainNow, out BdhcFile now))
                 guide = (c, r) => now.TryGetHeight((c + 0.5f) * 0.25f, (r + 0.5f) * 0.25f, 0f, out float y) ? y * UnitsPerRaw : null;
             if (want != null)
             {
-                var was = guide;
+                Func<int, int, float?> was = guide;
                 guide = (c, r) => want(c, r) ?? was?.Invoke(c, r);
             }
             return Squares(PiecesOf(mesh, mesh?.ModelScale ?? 0f), blocked, guide, mine);
@@ -98,18 +98,18 @@ namespace DSPRE.Models
 
         public static List<Piece> PiecesOf(MapMesh mesh, float modelScale, float steepest = 0.5f)
         {
-            var pieces = new List<Piece>();
+            List<Piece> pieces = new List<Piece>();
             if (mesh == null) return pieces;
 
             float toRaw = (modelScale == 0f ? 1f : modelScale) / 64f;
 
-            foreach (var face in mesh.Faces)
+            foreach (MapMesh.Face face in mesh.Faces)
             {
                 if (face.Corners == null || face.Corners.Length < 3) continue;
 
-                var a = At(mesh, face.Corners[0], toRaw);
-                var b = At(mesh, face.Corners[1], toRaw);
-                var c = At(mesh, face.Corners[2], toRaw);
+                (float x, float y, float z) a = At(mesh, face.Corners[0], toRaw);
+                (float x, float y, float z) b = At(mesh, face.Corners[1], toRaw);
+                (float x, float y, float z) c = At(mesh, face.Corners[2], toRaw);
 
                 float ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z;
                 float vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z;
@@ -128,7 +128,7 @@ namespace DSPRE.Models
                 float minZ = float.MaxValue, maxZ = float.MinValue, lowest = float.MaxValue;
                 foreach (int corner in face.Corners)
                 {
-                    var p = At(mesh, corner, toRaw);
+                    (float x, float y, float z) p = At(mesh, corner, toRaw);
                     minX = Math.Min(minX, p.x); maxX = Math.Max(maxX, p.x);
                     minZ = Math.Min(minZ, p.z); maxZ = Math.Max(maxZ, p.z);
                     lowest = Math.Min(lowest, p.y);
@@ -150,11 +150,11 @@ namespace DSPRE.Models
 
         private static List<Piece> Merged(List<Piece> pieces)
         {
-            var done = new List<Piece>();
+            List<Piece> done = new List<Piece>();
 
-            foreach (var group in pieces.GroupBy(p => (Fx(p.Nx), Fx(p.Ny), Fx(p.Nz), Fx(p.D))))
+            foreach (IGrouping<(int, int, int, int), Piece> group in pieces.GroupBy(p => (Fx(p.Nx), Fx(p.Ny), Fx(p.Nz), Fx(p.D))))
             {
-                var here = group.ToList();
+                List<Piece> here = group.ToList();
 
                 for (int pass = 0; pass < 3; pass++)
                 {
@@ -171,16 +171,16 @@ namespace DSPRE.Models
 
         private static List<Piece> Join(List<Piece> pieces, bool alongX)
         {
-            var order = pieces
+            List<Piece> order = pieces
                 .OrderBy(p => alongX ? Fx(p.MinZ) : Fx(p.MinX))
                 .ThenBy(p => alongX ? Fx(p.MaxZ) : Fx(p.MaxX))
                 .ThenBy(p => alongX ? Fx(p.MinX) : Fx(p.MinZ))
                 .ToList();
 
-            var done = new List<Piece>();
+            List<Piece> done = new List<Piece>();
             Piece open = null;
 
-            foreach (var piece in order)
+            foreach (Piece piece in order)
             {
                 bool joins = open != null
                     && (alongX
@@ -217,7 +217,7 @@ namespace DSPRE.Models
         public static int BlockUngrounded(byte[] terrain, byte[,] collisions)
         {
             if (terrain == null || collisions == null) return 0;
-            var plates = Read(terrain);
+            List<Piece> plates = Read(terrain);
             int blocked = 0;
             for (int r = 0; r < Across; r++)
                 for (int c = 0; c < Across; c++)
@@ -243,8 +243,8 @@ namespace DSPRE.Models
         /// <summary>Covers a set of squares with as few rectangles as a greedy sweep finds.</summary>
         private static List<(int c, int r, int w, int d)> Rectangles(IEnumerable<(int c, int r)> squares)
         {
-            var left = new HashSet<(int c, int r)>(squares);
-            var found = new List<(int, int, int, int)>();
+            HashSet<(int c, int r)> left = new HashSet<(int c, int r)>(squares);
+            List<(int, int, int, int)> found = new List<(int, int, int, int)>();
             for (int r = 0; r < Across; r++)
                 for (int c = 0; c < Across; c++)
                 {
@@ -282,38 +282,38 @@ namespace DSPRE.Models
                 float x = -HalfMap + (c + 0.5f) * SquareSize, z = -HalfMap + (r + 0.5f) * SquareSize;
                 return mine.Any(p => p.Covers(x, z));
             }
-            var ground = new Piece[Across, Across];
-            var groundY = new float[Across, Across];
-            var upper = new Dictionary<Piece, List<(int c, int r)>>();
+            Piece[,] ground = new Piece[Across, Across];
+            float[,] groundY = new float[Across, Across];
+            Dictionary<Piece, List<(int c, int r)>> upper = new Dictionary<Piece, List<(int c, int r)>>();
 
             for (int r = 0; r < Across; r++)
                 for (int c = 0; c < Across; c++)
                 {
                     float x = -HalfMap + (c + 0.5f) * SquareSize, z = -HalfMap + (r + 0.5f) * SquareSize;
                     if (Kept(c, r)) continue;
-                    var here = pieces.Where(p => x >= p.MinX && x <= p.MaxX && z >= p.MinZ && z <= p.MaxZ)
+                    List<(Piece p, float y)> here = pieces.Where(p => x >= p.MinX && x <= p.MaxX && z >= p.MinZ && z <= p.MaxZ)
                                      .Select(p => (p, y: HeightOf(p, x, z)))
                                      .OrderBy(h => h.y).ToList();
                     if (here.Count == 0) continue;
 
-                    var chosen = guide?.Invoke(c, r) is float want
+                    (Piece p, float y) chosen = guide?.Invoke(c, r) is float want
                         ? here.OrderBy(h => Math.Abs(h.y - want)).First() : here[0];
                     ground[c, r] = chosen.p;
                     groundY[c, r] = chosen.y;
                     if (blocked(c, r)) continue;
 
                     float kept = chosen.y;
-                    foreach (var (p, y) in here.Where(h => h.y > chosen.y))
+                    foreach ((Piece p, float y) in here.Where(h => h.y > chosen.y))
                     {
                         if (p.Ny < 0.99f || y - kept < SquareSize) continue;
-                        if (!upper.TryGetValue(p, out var at)) upper[p] = at = new List<(int, int)>();
+                        if (!upper.TryGetValue(p, out List<(int c, int r)> at)) upper[p] = at = new List<(int, int)>();
                         at.Add((c, r));
                         kept = y;
                     }
                 }
 
-            var done = new List<Piece>();
-            var taken = new bool[Across, Across];
+            List<Piece> done = new List<Piece>();
+            bool[,] taken = new bool[Across, Across];
             for (int r = 0; r < Across; r++)
                 for (int c = 0; c < Across; c++) taken[c, r] = Kept(c, r);
             // Walkable squares seed plates first; blocked squares join any plate that passes close to their own ground.
@@ -322,8 +322,8 @@ namespace DSPRE.Models
                     for (int c = 0; c < Across; c++)
                     {
                         if (taken[c, r] || ground[c, r] == null || blocked(c, r) != seedBlocked) continue;
-                        var seed = ground[c, r];
-                        var plane = Key(seed);
+                        Piece seed = ground[c, r];
+                        (long, long, long, long) plane = Key(seed);
                         bool Fits(int cc, int rr)
                         {
                             if (taken[cc, rr]) return false;
@@ -352,8 +352,8 @@ namespace DSPRE.Models
 
             done = Merged(done);
 
-            var levels = new List<Piece>();
-            foreach (var (p, at) in upper)
+            List<Piece> levels = new List<Piece>();
+            foreach ((Piece p, List<(int c, int r)> at) in upper)
             {
                 if (at.Count < 3) continue;
                 levels.AddRange(at.Select(s => Over(p, s.c, s.r, 1, 1)));
@@ -380,7 +380,7 @@ namespace DSPRE.Models
 
         private static (float x, float y, float z) At(MapMesh mesh, int corner, float toRaw)
         {
-            var v = mesh.Vertices[corner];
+            MapMesh.Vertex v = mesh.Vertices[corner];
             return (v.X * toRaw * UnitsPerRaw, v.Y * toRaw * UnitsPerRaw, v.Z * toRaw * UnitsPerRaw);
         }
 
@@ -395,12 +395,12 @@ namespace DSPRE.Models
             if (pieces == null || pieces.Count == 0)
             { whynot = "No walkable faces."; return null; }
 
-            var points = new Shared<(int x, int z)>();
-            var normals = new Shared<(int x, int y, int z)>();
-            var constants = new Shared<int>();
+            Shared<(int x, int z)> points = new Shared<(int x, int z)>();
+            Shared<(int x, int y, int z)> normals = new Shared<(int x, int y, int z)>();
+            Shared<int> constants = new Shared<int>();
 
-            var plates = new List<(ushort a, ushort b, ushort n, ushort d)>();
-            foreach (var piece in pieces)
+            List<(ushort a, ushort b, ushort n, ushort d)> plates = new List<(ushort a, ushort b, ushort n, ushort d)>();
+            foreach (Piece piece in pieces)
             {
                 ushort a = (ushort)points.Of((Fx(piece.MinX), Fx(piece.MinZ)));
                 ushort b = (ushort)points.Of((Fx(piece.MaxX), Fx(piece.MaxZ)));
@@ -415,8 +415,8 @@ namespace DSPRE.Models
             if (highZ <= lowZ) highZ = lowZ + 1f;
             float step = (highZ - lowZ) / Bands;
 
-            var strips = new List<(int scanline, ushort count, ushort start)>();
-            var access = new List<ushort>();
+            List<(int scanline, ushort count, ushort start)> strips = new List<(int scanline, ushort count, ushort start)>();
+            List<ushort> access = new List<ushort>();
 
             for (int i = 0; i < Bands; i++)
             {
@@ -426,7 +426,7 @@ namespace DSPRE.Models
                 int start = access.Count;
                 for (int p = 0; p < pieces.Count; p++)
                 {
-                    var piece = pieces[p];
+                    Piece piece = pieces[p];
                     if (piece.MaxZ < from || piece.MinZ > to) continue;
                     access.Add((ushort)p);
                 }
@@ -443,8 +443,8 @@ namespace DSPRE.Models
                 return null;
             }
 
-            using var stream = new MemoryStream();
-            using var write = new BinaryWriter(stream);
+            using MemoryStream stream = new MemoryStream();
+            using BinaryWriter write = new BinaryWriter(stream);
             write.Write(new[] { (byte)'B', (byte)'D', (byte)'H', (byte)'C' });
             write.Write((ushort)points.Count);
             write.Write((ushort)normals.Count);
@@ -453,11 +453,11 @@ namespace DSPRE.Models
             write.Write((ushort)strips.Count);
             write.Write((ushort)access.Count);
 
-            foreach (var (x, z) in points.InOrder) { write.Write(x); write.Write(z); }
-            foreach (var (x, y, z) in normals.InOrder) { write.Write(x); write.Write(y); write.Write(z); }
+            foreach ((int x, int z) in points.InOrder) { write.Write(x); write.Write(z); }
+            foreach ((int x, int y, int z) in normals.InOrder) { write.Write(x); write.Write(y); write.Write(z); }
             foreach (int c in constants.InOrder) write.Write(c);
-            foreach (var (a, b, n, d) in plates) { write.Write(a); write.Write(b); write.Write(n); write.Write(d); }
-            foreach (var (scanline, count, start) in strips)
+            foreach ((ushort a, ushort b, ushort n, ushort d) in plates) { write.Write(a); write.Write(b); write.Write(n); write.Write(d); }
+            foreach ((int scanline, ushort count, ushort start) in strips)
             { write.Write(scanline); write.Write(count); write.Write(start); }
             foreach (ushort a in access) write.Write(a);
 
@@ -480,17 +480,17 @@ namespace DSPRE.Models
             if (pieces == null || pieces.Count == 0)
             { whynot = "No walkable faces."; return null; }
 
-            var vertices = new Shared<(int x, int y, int z)>();
-            var normals = new Shared<(int x, int y, int z)>();
-            var triangles = new List<(ushort a, ushort b, ushort c, ushort n, int d, float x0, float x1, float z0, float z1)>();
-            foreach (var p in pieces)
+            Shared<(int x, int y, int z)> vertices = new Shared<(int x, int y, int z)>();
+            Shared<(int x, int y, int z)> normals = new Shared<(int x, int y, int z)>();
+            List<(ushort a, ushort b, ushort c, ushort n, int d, float x0, float x1, float z0, float z1)> triangles = new List<(ushort a, ushort b, ushort c, ushort n, int d, float x0, float x1, float z0, float z1)>();
+            foreach (Piece p in pieces)
             {
                 (int, int, int) At(float x, float z) => (Fx(x), Fx(HeightOf(p, x, z)), Fx(z));
-                var corners = new[] { At(p.MinX, p.MaxZ), At(p.MaxX, p.MaxZ), At(p.MaxX, p.MinZ), At(p.MinX, p.MinZ) };
+                (int, int, int)[] corners = new[] { At(p.MinX, p.MaxZ), At(p.MaxX, p.MaxZ), At(p.MaxX, p.MinZ), At(p.MinX, p.MinZ) };
                 ushort n = (ushort)normals.Of((Fx(p.Nx), Fx(p.Ny), Fx(p.Nz)));
                 int d = Fx(p.D);
                 // The same turn as the game's own triangles when seen from above.
-                foreach (var (i, j, k) in new[] { (0, 1, 2), (0, 2, 3) })
+                foreach ((int i, int j, int k) in new[] { (0, 1, 2), (0, 2, 3) })
                     triangles.Add(((ushort)vertices.Of(corners[i]), (ushort)vertices.Of(corners[j]), (ushort)vertices.Of(corners[k]),
                                    n, d, p.MinX, p.MaxX, p.MinZ, p.MaxZ));
             }
@@ -498,9 +498,9 @@ namespace DSPRE.Models
             // Grid sizes and bounds as the game's own maps have them.
             int cells = triangles.Count <= 24 ? 1 : triangles.Count <= 160 ? 4 : 8;
             float start = -257f, end = 256f + cells / 2f, size = (end - start) / cells;
-            var grid = new List<(ushort lines, ushort first)>();
-            var lines = new List<(ushort count, int z, int offset)>();
-            var ids = new List<ushort>();
+            List<(ushort lines, ushort first)> grid = new List<(ushort lines, ushort first)>();
+            List<(ushort count, int z, int offset)> lines = new List<(ushort count, int z, int offset)>();
+            List<ushort> ids = new List<ushort>();
             int mostLines = 0, mostInLine = 0;
             for (int gz = 0; gz < cells; gz++)
                 for (int gx = 0; gx < cells; gx++)
@@ -509,13 +509,13 @@ namespace DSPRE.Models
                     // A point clamped into an edge cell can lie beyond it, so edge cells reach to the map's end.
                     if (gx == 0) cx0 = float.MinValue; if (gx == cells - 1) cx1 = float.MaxValue;
                     if (gz == 0) cz0 = float.MinValue; if (gz == cells - 1) cz1 = float.MaxValue;
-                    var here = Enumerable.Range(0, triangles.Count)
+                    List<int> here = Enumerable.Range(0, triangles.Count)
                         .Where(t => triangles[t].x1 >= cx0 && triangles[t].x0 <= cx1 && triangles[t].z1 >= cz0 && triangles[t].z0 <= cz1)
                         .ToList();
 
                     // Band edges: every triangle's Z bounds inside the cell, so each band is crossed cleanly.
                     float lo = Math.Max(start + gz * size, -256f), hi = Math.Min(start + (gz + 1) * size, 256f);
-                    var edges = here.SelectMany(t => new[] { triangles[t].z0, triangles[t].z1 })
+                    List<float> edges = here.SelectMany(t => new[] { triangles[t].z0, triangles[t].z1 })
                                     .Where(z => z > lo + 1e-3f && z < hi - 1e-3f).Select(z => (float)Math.Round(z, 3))
                                     .Distinct().OrderBy(z => z).ToList();
                     edges.Add(hi);
@@ -525,7 +525,7 @@ namespace DSPRE.Models
                     {
                         // The game takes the first band whose edge lies past the point; the last reaches past the map.
                         float to = e == edges.Count - 1 ? float.MaxValue : edges[e];
-                        var inBand = here.Where(t => triangles[t].z1 >= from && triangles[t].z0 <= to).ToList();
+                        List<int> inBand = here.Where(t => triangles[t].z1 >= from && triangles[t].z0 <= to).ToList();
                         lines.Add(((ushort)inBand.Count, e == edges.Count - 1 ? int.MaxValue : Fx(edges[e]), ids.Count));
                         foreach (int t in inBand) ids.Add((ushort)t);
                         mostInLine = Math.Max(mostInLine, inBand.Count);
@@ -538,8 +538,8 @@ namespace DSPRE.Models
             if (vertices.Count > ushort.MaxValue || triangles.Count > ushort.MaxValue || lines.Count > ushort.MaxValue || ids.Count > ushort.MaxValue)
             { whynot = $"Too many triangles ({triangles.Count}) for Diamond and Pearl terrain."; return null; }
 
-            using var stream = new MemoryStream();
-            using var write = new BinaryWriter(stream);
+            using MemoryStream stream = new MemoryStream();
+            using BinaryWriter write = new BinaryWriter(stream);
             write.Write(new[] { (byte)'B', (byte)'D', (byte)'H', (byte)'C' });
             write.Write(32);
             write.Write((ushort)12); write.Write((ushort)vertices.Count);
@@ -554,11 +554,11 @@ namespace DSPRE.Models
             write.Write((ushort)cells); write.Write((ushort)cells);
             write.Write(Fx(start)); write.Write(Fx(start)); write.Write(Fx(end)); write.Write(Fx(end));
             write.Write(Fx(size)); write.Write(Fx(size));
-            foreach (var (x, y, z) in vertices.InOrder) { write.Write(x); write.Write(y); write.Write(z); }
-            foreach (var (x, y, z) in normals.InOrder) { write.Write(x); write.Write(y); write.Write(z); }
-            foreach (var t in triangles) { write.Write(t.a); write.Write(t.b); write.Write(t.c); write.Write(t.n); write.Write(t.d); }
-            foreach (var (count, first) in grid) { write.Write(count); write.Write(first); }
-            foreach (var (count, z, offset) in lines) { write.Write(count); write.Write(z); write.Write(offset); }
+            foreach ((int x, int y, int z) in vertices.InOrder) { write.Write(x); write.Write(y); write.Write(z); }
+            foreach ((int x, int y, int z) in normals.InOrder) { write.Write(x); write.Write(y); write.Write(z); }
+            foreach ((ushort a, ushort b, ushort c, ushort n, int d, float x0, float x1, float z0, float z1) t in triangles) { write.Write(t.a); write.Write(t.b); write.Write(t.c); write.Write(t.n); write.Write(t.d); }
+            foreach ((ushort count, ushort first) in grid) { write.Write(count); write.Write(first); }
+            foreach ((ushort count, int z, int offset) in lines) { write.Write(count); write.Write(z); write.Write(offset); }
             foreach (ushort id in ids) write.Write(id);
             write.Flush();
 
@@ -573,25 +573,25 @@ namespace DSPRE.Models
         /// </summary>
         public static List<Piece> FromTriangles(byte[] data)
         {
-            var pieces = new List<Piece>();
-            using var read = new BinaryReader(new MemoryStream(data));
+            List<Piece> pieces = new List<Piece>();
+            using BinaryReader read = new BinaryReader(new MemoryStream(data));
             read.BaseStream.Position = 8;
-            var counts = Enumerable.Range(0, 12).Select(_ => read.ReadUInt16()).ToArray();
+            ushort[] counts = Enumerable.Range(0, 12).Select(_ => read.ReadUInt16()).ToArray();
             int vn = counts[1], nn = counts[3], pn = counts[5];
             read.BaseStream.Position = 40 + 28;
-            var v = Enumerable.Range(0, vn).Select(_ => (x: read.ReadInt32() / Fx32One, y: read.ReadInt32() / Fx32One, z: read.ReadInt32() / Fx32One)).ToArray();
-            var n = Enumerable.Range(0, nn).Select(_ => (x: read.ReadInt32() / Fx32One, y: read.ReadInt32() / Fx32One, z: read.ReadInt32() / Fx32One)).ToArray();
-            var t = Enumerable.Range(0, pn).Select(_ => (a: read.ReadUInt16(), b: read.ReadUInt16(), c: read.ReadUInt16(), n: read.ReadUInt16(), d: read.ReadInt32() / Fx32One)).ToArray();
+            (float x, float y, float z)[] v = Enumerable.Range(0, vn).Select(_ => (x: read.ReadInt32() / Fx32One, y: read.ReadInt32() / Fx32One, z: read.ReadInt32() / Fx32One)).ToArray();
+            (float x, float y, float z)[] n = Enumerable.Range(0, nn).Select(_ => (x: read.ReadInt32() / Fx32One, y: read.ReadInt32() / Fx32One, z: read.ReadInt32() / Fx32One)).ToArray();
+            (ushort a, ushort b, ushort c, ushort n, float d)[] t = Enumerable.Range(0, pn).Select(_ => (a: read.ReadUInt16(), b: read.ReadUInt16(), c: read.ReadUInt16(), n: read.ReadUInt16(), d: read.ReadInt32() / Fx32One)).ToArray();
             for (int i = 0; i < t.Length; i++)
             {
-                var corners = new List<(float x, float y, float z)> { v[t[i].a], v[t[i].b], v[t[i].c] };
+                List<(float x, float y, float z)> corners = new List<(float x, float y, float z)> { v[t[i].a], v[t[i].b], v[t[i].c] };
                 if (i + 1 < t.Length && t[i + 1].n == t[i].n && Math.Abs(t[i + 1].d - t[i].d) < 1e-4f)
                 {
                     corners.AddRange(new[] { v[t[i + 1].a], v[t[i + 1].b], v[t[i + 1].c] });
                     i++;
                 }
-                var nrm = n[t[i].n];
-                var piece = new Piece
+                (float x, float y, float z) nrm = n[t[i].n];
+                Piece piece = new Piece
                 {
                     MinX = corners.Min(c => c.x), MaxX = corners.Max(c => c.x), MinZ = corners.Min(c => c.z), MaxZ = corners.Max(c => c.z),
                     Nx = nrm.x, Ny = nrm.y, Nz = nrm.z, D = t[i].d,

@@ -16,6 +16,7 @@ using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 using DSPRE.Avalonia.Data;
+
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     /// <summary>
@@ -113,12 +114,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ApplyState(byte[] state)
         {
-            var sets = DSPRE.Avalonia.UndoJson.Read<int[][][]>(state);
+            int[][][] sets = DSPRE.Avalonia.UndoJson.Read<int[][][]>(state);
             for (int s = 0; s < sets.Length && s < _file.Sets.Count; s++)
                 for (int i = 0; i < sets[s].Length && i < _file.Sets[s].Encounters.Count; i++)
                 {
-                    var en = _file.Sets[s].Encounters[i];
-                    var v = sets[s][i];
+                    BugContestEncounter en = _file.Sets[s].Encounters[i];
+                    int[] v = sets[s][i];
                     en.Species = (ushort)v[0]; en.MinLevel = (byte)v[1]; en.MaxLevel = (byte)v[2];
                     en.Rate = (byte)v[3]; en.Score = (byte)v[4]; en.Dummy = (ushort)v[5];
                 }
@@ -172,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetMonIconsPalTableAddress();
 
             SpeciesNames.Clear();
-            foreach (var n in GetPokemonNames()) SpeciesNames.Add(n);
+            foreach (string n in GetPokemonNames()) SpeciesNames.Add(n);
 
             LoadFile(() => new BugContestEncounterFile(true));
         }
@@ -184,7 +185,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _file = factory();
                 _suppress = true;
                 SetNames.Clear();
-                foreach (var s in _file.Sets) SetNames.Add(s.ToString());
+                foreach (BugContestEncounterSet s in _file.Sets) SetNames.Add(s.ToString());
                 _suppress = false;
                 // Reset first so set 0 of a newly imported file still refreshes.
                 _selectedSetIndex = -1;
@@ -204,13 +205,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void RefreshSetDisplay()
         {
-            var set = CurrentSet;
+            BugContestEncounterSet set = CurrentSet;
             if (set == null) return;
             SetDescription = set.Description;
 
             _suppress = true;
             EncounterRows.Clear();
-            foreach (var enc in set.Encounters) EncounterRows.Add(enc.ToString());
+            foreach (BugContestEncounter enc in set.Encounters) EncounterRows.Add(enc.ToString());
             _suppress = false;
 
             // Reset first so entry 0 of the new set still loads its fields.
@@ -222,9 +223,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void LoadEncounter(int index)
         {
-            var set = CurrentSet;
+            BugContestEncounterSet set = CurrentSet;
             if (set == null || index < 0 || index >= set.Encounters.Count) { ClearFields(); return; }
-            var enc = set.Encounters[index];
+            BugContestEncounter enc = set.Encounters[index];
 
             _suppress = true;
             SpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : -1;
@@ -254,9 +255,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Only the edited field is written, so a value the boxes can't show survives other edits.
         private void ApplyEdit(Action<BugContestEncounter> change)
         {
-            var set = CurrentSet;
+            BugContestEncounterSet set = CurrentSet;
             if (set == null || _selectedEncounterIndex < 0 || _selectedEncounterIndex >= set.Encounters.Count) return;
-            var enc = set.Encounters[_selectedEncounterIndex];
+            BugContestEncounter enc = set.Encounters[_selectedEncounterIndex];
             change(enc);
 
             Edited();
@@ -279,7 +280,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 if (species <= 0) { PokemonIcon = null; return; }
-                var gdi = DSUtils.GetPokePicRaw(species, 64, 64);
+                RawImage gdi = DSUtils.GetPokePicRaw(species, 64, 64);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
             catch { PokemonIcon = null; }
@@ -288,7 +289,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Effective-rate calculation + validation (ported verbatim) ───────────────
         private int CalculateEffectiveRate(int index)
         {
-            var set = CurrentSet;
+            BugContestEncounterSet set = CurrentSet;
             if (set == null || index < 0 || index >= set.Encounters.Count) return 0;
             int currentRate = set.Encounters[index].Rate;
             if (index == 0) return Math.Max(0, 100 - currentRate);
@@ -298,9 +299,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private string ValidateRates()
         {
-            var set = CurrentSet;
+            BugContestEncounterSet set = CurrentSet;
             if (set == null) return "";
-            var warnings = new List<string>();
+            List<string> warnings = new List<string>();
 
             var rateGroups = set.Encounters
                 .Select((enc, idx) => new { enc.Rate, Index = idx })
@@ -309,7 +310,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 .Where(g => g.Count() > 1);
             foreach (var group in rateGroups)
             {
-                var indices = group.Select(x => x.Index + 1).ToArray();
+                int[] indices = group.Select(x => x.Index + 1).ToArray();
                 warnings.Add($"Rate {group.Key} duplicated at entries {string.Join(", ", indices)} - only first triggers!");
             }
 
@@ -357,7 +358,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task ExportAsync()
         {
             if (_file == null) return;
-            var filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.SaveFile(_owner, "Export Bug Contest Encounters",
                 new[] { filter }, "mushi_encount.bin");
             if (path == null) return;
@@ -366,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task ImportAsync()
         {
-            var filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.OpenFile(_owner, "Import Bug Contest Encounters", new[] { filter });
             if (path == null) return;
 

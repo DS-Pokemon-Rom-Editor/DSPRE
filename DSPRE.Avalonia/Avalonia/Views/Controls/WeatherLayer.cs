@@ -45,19 +45,19 @@ namespace DSPRE.Avalonia.Views.Controls
             _background = _lightning = null;
             _gl.SetScreenLayers(null);
 
-            var spec = FieldWeather.For(RomInfo.gameFamily, headerWeather);
+            FieldWeather.Spec spec = FieldWeather.For(RomInfo.gameFamily, headerWeather);
             if (spec.Particles < 0 && spec.Background < 0 && spec.Companion == null) return;
 
             try
             {
-                var narc = Narc.Open(RomInfo.WeatherSysNarcPath);
+                Narc narc = Narc.Open(RomInfo.WeatherSysNarcPath);
                 if (narc == null) return;
                 try
                 {
                     if (spec.Particles >= 0) _particles = Graphics.Load(narc, FieldWeather.ParticleSets[spec.Particles]);
                     if (spec.Background >= 0)
                     {
-                        var layer = Layer(narc, FieldWeather.BackgroundSets[spec.Background]);
+                        byte[] layer = Layer(narc, FieldWeather.BackgroundSets[spec.Background]);
                         if (spec.Kind == FieldWeather.Kind.Lightning) _lightning = layer; else _background = layer;
                     }
                     if (spec.Companion?.Background is int bolt and >= 0)
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private void Tick()
         {
-            var sim = _sim;
+            FieldWeatherSim sim = _sim;
             if (sim == null) return;
             sim.Step();
             Publish(sim);
@@ -88,10 +88,10 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private void Publish(FieldWeatherSim sim)
         {
-            var layers = new List<NsbmdGlControl.ScreenLayer>();
+            List<NsbmdGlControl.ScreenLayer> layers = new List<NsbmdGlControl.ScreenLayer>();
             if (_background != null)
             {
-                var (eva, evb) = sim.Blend ?? (16, 0);
+                (int eva, int evb) = sim.Blend ?? (16, 0);
                 layers.Add(new NsbmdGlControl.ScreenLayer
                 {
                     Rgba = Scroll(_background, sim.BgX, sim.BgY), Eva = eva, Evb = evb, Behind = sim.Spec.BackgroundBehind,
@@ -100,13 +100,13 @@ namespace DSPRE.Avalonia.Views.Controls
             if (_lightning != null && sim.LightningEva > 0)
                 layers.Add(new NsbmdGlControl.ScreenLayer { Rgba = Scroll(_lightning, 0, 0), Eva = sim.LightningEva, Evb = 31 });
 
-            var g = _particles;
+            Graphics g = _particles;
             if (g != null)
             {
-                var sprites = new byte[DsBgScreen.Width * DsBgScreen.Height * 4];
-                foreach (var p in sim.Particles)
+                byte[] sprites = new byte[DsBgScreen.Width * DsBgScreen.Height * 4];
+                foreach (FieldWeatherSim.Particle p in sim.Particles)
                 {
-                    var cell = g.Cell(p.Frame);
+                    DsBgScreen.Oam[] cell = g.Cell(p.Frame);
                     if (cell != null) DsBgScreen.DrawCell(sprites, cell, g.Characters, g.PaletteFor, p.X, p.Y);
                 }
                 layers.Add(new NsbmdGlControl.ScreenLayer { Rgba = sprites });
@@ -117,7 +117,7 @@ namespace DSPRE.Avalonia.Views.Controls
         // The visible 256 by 192 of a 256 by 256 layer at a scroll, which wraps the way BG2 does.
         private static byte[] Scroll(byte[] layer, int scrollX, int scrollY)
         {
-            var frame = new byte[DsBgScreen.Width * DsBgScreen.Height * 4];
+            byte[] frame = new byte[DsBgScreen.Width * DsBgScreen.Height * 4];
             for (int y = 0; y < DsBgScreen.Height; y++)
             {
                 int ly = ((y + scrollY) % 256 + 256) % 256;
@@ -137,8 +137,8 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             ushort[] colours = DsBgScreen.Row(DsBgScreen.ReadColours(narc.GetElementBytes(set.Nclr)), 0);
             byte[] chars = DsBgScreen.ReadCharacters(narc.GetElementBytes(set.Ncgr));
-            var (widthTiles, entries) = DsBgScreen.ReadMap(narc.GetElementBytes(set.Nscr));
-            var rgba = new byte[256 * 256 * 4];
+            (int widthTiles, ushort[] entries) = DsBgScreen.ReadMap(narc.GetElementBytes(set.Nscr));
+            byte[] rgba = new byte[256 * 256 * 4];
             if (widthTiles <= 0) return rgba;
             for (int i = 0; i < entries.Length; i++)
             {
@@ -182,18 +182,18 @@ namespace DSPRE.Avalonia.Views.Controls
 
             public static Graphics Load(Narc narc, (int Ncer, int Nanr, int Ncgr, int Nclr) set)
             {
-                var g = new Graphics
+                Graphics g = new Graphics
                 {
                     Characters = DsBgScreen.ReadCharacters(narc.GetElementBytes(set.Ncgr)),
                     Cells = DsBgScreen.ReadCells(narc.GetElementBytes(set.Ncer)),
                     Colours = DsBgScreen.ReadColours(narc.GetElementBytes(set.Nclr)),
                 };
-                var anim = NanrFile.Read(narc.GetElementBytes(set.Nanr));
+                NanrFile anim = NanrFile.Read(narc.GetElementBytes(set.Nanr));
                 if (anim != null && anim.Sequences.Count > 0)
-                    foreach (var f in anim.Sequences[0].Frames)
+                    foreach (NanrFile.Frame f in anim.Sequences[0].Frames)
                     {
                         int cell = -1;
-                        foreach (var r in anim.Results) if (r.Offset == f.ResultAt) { cell = r.Cell; break; }
+                        foreach (NanrFile.Result r in anim.Results) if (r.Offset == f.ResultAt) { cell = r.Cell; break; }
                         g.FrameCells.Add(cell);
                     }
                 return g;

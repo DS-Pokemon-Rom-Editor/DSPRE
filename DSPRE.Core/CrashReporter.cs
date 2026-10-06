@@ -77,7 +77,7 @@ namespace DSPRE
         {
             string romPath;
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
 
             sb.AppendLine("===== Crash Report =====");
             sb.AppendLine($"Timestamp: {DateTime.Now}");

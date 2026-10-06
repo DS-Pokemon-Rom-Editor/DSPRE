@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Data
         /// <param name="name">What to call the bank inside the file.</param>
         public static Result Build(SdatArchive sdat, int bankNo, string name)
         {
-            var r = new Result();
+            Result r = new Result();
             if (sdat == null) return Fail(r, "No sound archive is loaded.");
             if (bankNo < 0 || bankNo >= sdat.Banks.Count || sdat.Banks[bankNo] == null)
                 return Fail(r, "This game has no instrument bank with that number.");
@@ -43,24 +43,24 @@ namespace DSPRE.Avalonia.Data
             if (instruments == null || instruments.Count == 0)
                 return Fail(r, "That bank holds no instruments.");
 
-            var slots = sdat.Banks[bankNo].WaveArcNo;
-            var waves = new Dictionary<int, List<SwavSample>>();
+            int[] slots = sdat.Banks[bankNo].WaveArcNo;
+            Dictionary<int, List<SwavSample>> waves = new Dictionary<int, List<SwavSample>>();
             List<SwavSample> WavesIn(int slot)
             {
                 if (slot < 0 || slot >= slots.Length) return null;
                 int arc = slots[slot];
                 if (arc == 0xffff || arc < 0 || arc >= sdat.WaveArcs.Count) return null;
-                if (waves.TryGetValue(arc, out var got)) return got;
+                if (waves.TryGetValue(arc, out List<SwavSample> got)) return got;
                 try { got = sdat.GetWaveArchive(arc); } catch { got = null; }
                 waves[arc] = got;
                 return got;
             }
 
             // One entry per distinct recording, so a sample used by ten note ranges is written once.
-            var pool = new List<(string Name, SwavSample Sample)>();
-            var known = new Dictionary<string, int>();
+            List<(string Name, SwavSample Sample)> pool = new List<(string Name, SwavSample Sample)>();
+            Dictionary<string, int> known = new Dictionary<string, int>();
 
-            var built = new List<(string Name, List<(SbnkRegion Region, int Recording)> Zones)>();
+            List<(string Name, List<(SbnkRegion Region, int Recording)> Zones)> built = new List<(string Name, List<(SbnkRegion Region, int Recording)> Zones)>();
             int leftOut = 0;
 
             for (int i = 0; i < instruments.Count; i++)
@@ -68,8 +68,8 @@ namespace DSPRE.Avalonia.Data
                 // A bank's programs are numbered with gaps in them, so some of these are simply not there.
                 if (instruments[i]?.Regions == null) continue;
 
-                var zones = new List<(SbnkRegion, int)>();
-                foreach (var region in instruments[i].Regions)
+                List<(SbnkRegion, int)> zones = new List<(SbnkRegion, int)>();
+                foreach (SbnkRegion region in instruments[i].Regions)
                 {
                     if (region == null) { leftOut++; continue; }
                     if (region.Silent) continue;
@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia.Data
                     }
                     else
                     {
-                        var list = WavesIn(region.WaveArcSlot);
+                        List<SwavSample> list = WavesIn(region.WaveArcSlot);
                         sample = list != null && region.WaveIndex >= 0 && region.WaveIndex < list.Count
                             ? list[region.WaveIndex] : null;
                         key = $"w{region.WaveArcSlot}-{region.WaveIndex}";
@@ -151,8 +151,8 @@ namespace DSPRE.Avalonia.Data
             List<(string Name, SwavSample Sample)> pool)
         {
             // Where each recording lands in the one long run of samples, with room either side of it.
-            var starts = new int[pool.Count];
-            var ends = new int[pool.Count];
+            int[] starts = new int[pool.Count];
+            int[] ends = new int[pool.Count];
             int at = 0;
             for (int i = 0; i < pool.Count; i++)
             {
@@ -161,7 +161,7 @@ namespace DSPRE.Avalonia.Data
                 at = ends[i] + Margin + Padding;
             }
 
-            var samples = new byte[at * 2];
+            byte[] samples = new byte[at * 2];
             void Put(int slot, short value)
             {
                 samples[slot * 2] = (byte)value;
@@ -170,8 +170,8 @@ namespace DSPRE.Avalonia.Data
 
             for (int i = 0; i < pool.Count; i++)
             {
-                var s = pool[i].Sample;
-                var pcm = s.Pcm;
+                SwavSample s = pool[i].Sample;
+                short[] pcm = s.Pcm;
                 for (int n = 0; n < pcm.Length; n++) Put(starts[i] + n, pcm[n]);
 
                 if (!s.Loop) continue;
@@ -188,25 +188,25 @@ namespace DSPRE.Avalonia.Data
                 }
             }
 
-            var info = new MemoryStream();
+            MemoryStream info = new MemoryStream();
             WriteChunk(info, "ifil", new byte[] { 2, 0, 1, 0 });                 // SoundFont 2.01
             WriteChunk(info, "isng", Zstring("EMU8000"));
             WriteChunk(info, "INAM", Zstring(bankName));
             WriteChunk(info, "ISFT", Zstring("DSPRE"));
 
-            var sdta = new MemoryStream();
+            MemoryStream sdta = new MemoryStream();
             WriteChunk(sdta, "smpl", samples);
 
-            var pdta = new MemoryStream();
+            MemoryStream pdta = new MemoryStream();
             BuildTables(instruments, pool, starts, ends, pdta);
 
-            var body = new MemoryStream();
+            MemoryStream body = new MemoryStream();
             Ascii(body, "sfbk");
             WriteList(body, "INFO", info.ToArray());
             WriteList(body, "sdta", sdta.ToArray());
             WriteList(body, "pdta", pdta.ToArray());
 
-            var file = new MemoryStream();
+            MemoryStream file = new MemoryStream();
             Ascii(file, "RIFF");
             U32(file, (int)body.Length);
             body.Position = 0;
@@ -220,9 +220,9 @@ namespace DSPRE.Avalonia.Data
         {
             // One preset per instrument, each holding one zone that points at the instrument of the same
             // number. Presets are what a music program lists; instruments are what they are made of.
-            var phdr = new MemoryStream();
-            var pbag = new MemoryStream();
-            var pgen = new MemoryStream();
+            MemoryStream phdr = new MemoryStream();
+            MemoryStream pbag = new MemoryStream();
+            MemoryStream pgen = new MemoryStream();
             for (int i = 0; i < instruments.Count; i++)
             {
                 Name20(phdr, instruments[i].Name);
@@ -240,15 +240,15 @@ namespace DSPRE.Avalonia.Data
             U16(pbag, instruments.Count); U16(pbag, 0);
             U16(pgen, 0); U16(pgen, 0);
 
-            var inst = new MemoryStream();
-            var ibag = new MemoryStream();
-            var igen = new MemoryStream();
+            MemoryStream inst = new MemoryStream();
+            MemoryStream ibag = new MemoryStream();
+            MemoryStream igen = new MemoryStream();
             int zone = 0, gen = 0;
-            foreach (var (name, zones) in instruments)
+            foreach ((string name, List<(SbnkRegion Region, int Recording)> zones) in instruments)
             {
                 Name20(inst, name);
                 U16(inst, zone);
-                foreach (var (region, recording) in zones)
+                foreach ((SbnkRegion region, int recording) in zones)
                 {
                     U16(ibag, gen); U16(ibag, 0);
                     zone++;
@@ -259,7 +259,7 @@ namespace DSPRE.Avalonia.Data
                                            | ((Clamp7(region.HighKey) & 0xFF) << 8));
                     gen++;
 
-                    var shape = NitroEnvelope.Compute(region.Attack, region.Decay,
+                    NitroEnvelope.Shape shape = NitroEnvelope.Compute(region.Attack, region.Decay,
                                                       region.Sustain, region.Release);
                     U16(igen, 34); U16(igen, (ushort)(short)Timecents(AttackSeconds(shape.AttackRate)));
                     U16(igen, 36); U16(igen, (ushort)(short)Timecents(shape.DecaySeconds));
@@ -280,10 +280,10 @@ namespace DSPRE.Avalonia.Data
             U16(ibag, gen); U16(ibag, 0);
             U16(igen, 0); U16(igen, 0);
 
-            var shdr = new MemoryStream();
+            MemoryStream shdr = new MemoryStream();
             for (int i = 0; i < pool.Count; i++)
             {
-                var s = pool[i].Sample;
+                SwavSample s = pool[i].Sample;
                 // A recording that does not loop still has to carry loop points, and nothing reads them.
                 // Putting them a little inside it keeps other programs from complaining about numbers
                 // they are going to ignore anyway.
@@ -378,8 +378,8 @@ namespace DSPRE.Avalonia.Data
 
         private static byte[] Zstring(string text)
         {
-            var b = Encoding.ASCII.GetBytes(text ?? "");
-            var o = new byte[b.Length + (b.Length % 2 == 0 ? 2 : 1)];
+            byte[] b = Encoding.ASCII.GetBytes(text ?? "");
+            byte[] o = new byte[b.Length + (b.Length % 2 == 0 ? 2 : 1)];
             Array.Copy(b, o, b.Length);
             return o;
         }
@@ -387,14 +387,14 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Names in these tables are exactly twenty bytes, cut short if need be.</summary>
         private static void Name20(Stream s, string text)
         {
-            var b = Encoding.ASCII.GetBytes(ShortName(text));
+            byte[] b = Encoding.ASCII.GetBytes(ShortName(text));
             for (int i = 0; i < 20; i++) s.WriteByte(i < b.Length ? b[i] : (byte)0);
         }
 
         private static string ShortName(string text)
         {
             text = (text ?? "").Trim();
-            var clean = new string(text.Where(c => c >= 32 && c < 127).ToArray());
+            string clean = new string(text.Where(c => c >= 32 && c < 127).ToArray());
             if (clean.Length == 0) clean = "sound";
             return clean.Length > 19 ? clean.Substring(0, 19) : clean;
         }

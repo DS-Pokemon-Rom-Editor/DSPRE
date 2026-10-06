@@ -42,7 +42,7 @@ namespace DSPRE.ROMFiles
         public static SpeciesSpriteData Parse(byte[] data)
         {
             if (data == null || data.Length < Size) return null;
-            var rec = new SpeciesSpriteData();
+            SpeciesSpriteData rec = new SpeciesSpriteData();
             ReadFace(data, 0, rec.Front);
             ReadFace(data, FaceSize, rec.Back);
             rec.YOffset = (sbyte)data[FaceSize * 2];
@@ -53,7 +53,7 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToBytes()
         {
-            var data = new byte[Size];
+            byte[] data = new byte[Size];
             WriteFace(data, 0, Front);
             WriteFace(data, FaceSize, Back);
             data[FaceSize * 2] = (byte)(sbyte)YOffset;
@@ -82,7 +82,7 @@ namespace DSPRE.ROMFiles
             for (int i = 0; i < FrameCount; i++)
             {
                 int o = at + 3 + i * 4;
-                var s = face.Frames[i];
+                SpriteFrameSlot s = face.Frames[i];
                 data[o] = (byte)(sbyte)s.FrameNo;
                 data[o + 1] = (byte)s.Duration;
                 data[o + 2] = (byte)(sbyte)s.HorizontalShift;

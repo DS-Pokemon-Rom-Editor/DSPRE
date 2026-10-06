@@ -156,7 +156,7 @@ namespace DSPRE
             else if (family == RomInfo.GameFamilies.HGSS) table = HgssBrackets;
             else return new Result { Kind = Kind.NotCommon };
 
-            foreach (var b in table)
+            foreach (Bracket b in table)
             {
                 if (scriptNumber < b.Lower || scriptNumber >= b.Upper)
                 {

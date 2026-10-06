@@ -15,6 +15,7 @@ using static DSPRE.RomInfo;
 using Avalonia.Threading;
 using DSPRE.Avalonia.Data;
 using DSPRE.ROMFiles;
+using DSPRE.HgEngine;
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
     public sealed class OverworldGraphicsProfileOption
@@ -107,7 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 try
                 {
-                    foreach (var p in OverworldSprites.Pictures(_btxData, _isShiny && HasShinyPalette ? 1 : 0))
+                    foreach (OverworldSprites.SpritePixels p in OverworldSprites.Pictures(_btxData, _isShiny && HasShinyPalette ? 1 : 0))
                         _pictures.Add(p != null ? ImageConverter.FromRgba(p.Rgba, p.Width, p.Height) : null);
                 }
                 catch (Exception ex)
@@ -121,9 +122,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (count >= 4)
             {
                 int per = FieldSpriteAnimation.PerFacing(count);
-                var first = _pictures.FirstOrDefault(b => b != null);
+                Bitmap first = _pictures.FirstOrDefault(b => b != null);
                 double width = (first?.PixelSize.Width ?? 32) * 3, height = (first?.PixelSize.Height ?? 32) * 3;
-                foreach (var (facing, label) in new[] { (1, "Down"), (0, "Up"), (2, "Left"), (3, "Right") })
+                foreach ((int facing, string label) in new[] { (1, "Down"), (0, "Up"), (2, "Left"), (3, "Right") })
                     Facings.Add(new FacingPreview
                     {
                         Label = label, Facing = facing, Width = width, Height = height,
@@ -155,7 +156,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             int count = _pictures.Count;
             bool pair = FieldSpriteAnimation.PerFacing(count) == 2;
-            foreach (var f in Facings)
+            foreach (FacingPreview f in Facings)
             {
                 f.Looking = PictureAt(FieldSpriteAnimation.PictureFor(count, f.Facing, pair ? _walk : null));
                 if (f.HasWalking) f.Walking = PictureAt(FieldSpriteAnimation.PictureFor(count, f.Facing, _walk));
@@ -230,12 +231,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static byte[] DiskFile(uint key)
         {
-            if (!RomInfo.OverworldTable.TryGetValue(key, out var entry)) return null;
+            if (!RomInfo.OverworldTable.TryGetValue(key, out (uint spriteID, ushort properties) entry)) return null;
             string path = Path.Combine(RomInfo.gameDirs[DirNames.OWSprites].unpackedDir, entry.spriteID.ToString("D4"));
             return File.Exists(path) ? File.ReadAllBytes(path) : null;
         }
 
-        private static int[] DiskRender(uint key) => OverworldSpriteTableExpansion.TryReadRenderState(key, out var s)
+        private static int[] DiskRender(uint key) => OverworldSpriteTableExpansion.TryReadRenderState(key, out OverworldSpriteTableExpansion.OwRenderState s)
             ? new[] { s.DrawType, s.ShadowType, s.FootmarkType, s.ReflectType } : null;
 
         private void TouchFile(uint key) { if (!_originalFiles.ContainsKey(key)) _originalFiles[key] = DiskFile(key); }
@@ -243,19 +244,19 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private byte[] TakeState()
         {
-            var files = new Dictionary<uint, byte[]>();
+            Dictionary<uint, byte[]> files = new Dictionary<uint, byte[]>();
             foreach (uint key in _originalFiles.Keys)
                 files[key] = _modifiedFiles.TryGetValue(key, out byte[] mod) ? mod : DiskFile(key);
-            var render = new Dictionary<uint, int[]>();
+            Dictionary<uint, int[]> render = new Dictionary<uint, int[]>();
             foreach (uint key in _originalRender.Keys)
-                render[key] = _pendingRender.TryGetValue(key, out var r)
+                render[key] = _pendingRender.TryGetValue(key, out OverworldSpriteTableExpansion.OwRenderState r)
                     ? new[] { r.DrawType, r.ShadowType, r.FootmarkType, r.ReflectType } : DiskRender(key);
             return DSPRE.Avalonia.UndoJson.Take(new OwState(files, render));
         }
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<OwState>(state);
+            OwState s = DSPRE.Avalonia.UndoJson.Read<OwState>(state);
             foreach (uint key in _originalFiles.Keys)
             {
                 byte[] want = s.Files != null && s.Files.TryGetValue(key, out byte[] f) ? f : _originalFiles[key];
@@ -268,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 else
                 {
                     _modifiedFiles[key] = want;
-                    if (_knownPatches.TryGetValue(key, out var patch)) _metadataPatches[key] = patch;
+                    if (_knownPatches.TryGetValue(key, out OverworldSpriteProfileMetadataPatch patch)) _metadataPatches[key] = patch;
                 }
             }
             foreach (uint key in _originalRender.Keys)
@@ -364,7 +365,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             _owKeys = RomInfo.OverworldTable.Keys.ToList();
             OwEntries.Clear();
-            foreach (var key in _owKeys)
+            foreach (uint key in _owKeys)
                 OwEntries.Add(OverworldLabels.Of(key)
                     + (IsExpansionApplied && OverworldSpriteTableExpansion.IsCustomEntry(key) ? " (custom)" : ""));
         }
@@ -435,7 +436,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             IsSelectedEntryCustom = OverworldSpriteTableExpansion.IsCustomEntry(key);
 
             _loadingRenderState = true;
-            if (_pendingRender.TryGetValue(key, out var state) || OverworldSpriteTableExpansion.TryReadRenderState(key, out state))
+            if (_pendingRender.TryGetValue(key, out OverworldSpriteTableExpansion.OwRenderState state) || OverworldSpriteTableExpansion.TryReadRenderState(key, out state))
             {
                 DrawTypeIndex = state.DrawType;
                 ShadowTypeIndex = state.ShadowType;
@@ -470,7 +471,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_loadingRenderState || !HasRenderState || !HasSelectedEntry) return;
             uint key = _owKeys[_selectedIndex];
-            var state = new OverworldSpriteTableExpansion.OwRenderState
+            OverworldSpriteTableExpansion.OwRenderState state = new OverworldSpriteTableExpansion.OwRenderState
             {
                 DrawType = _drawTypeIndex,
                 ShadowType = _shadowTypeIndex,
@@ -486,7 +487,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private bool SaveRenderState(uint key)
         {
-            if (!_pendingRender.TryGetValue(key, out var state)) return true;
+            if (!_pendingRender.TryGetValue(key, out OverworldSpriteTableExpansion.OwRenderState state)) return true;
             if (!OverworldSpriteTableExpansion.TryWriteRenderState(key, state, out string error))
             {
                 StatusText = "Render-state write failed: " + error;
@@ -573,15 +574,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (rawBtxPath != null && !TryBuildRawBtx(templateMember, rawBtxPath, out image, out error)) return error;
             if (pngPath != null && !TryBuildPngBtx(templateMember, pngPath, out image, out error)) return error;
 
-            var members = HgEngine.HgEngineOverworlds.Members(out error);
+            List<HgEngineOverworlds.Member> members = HgEngine.HgEngineOverworlds.Members(out error);
             if (members == null) return error;
             if (templateMember >= members.Count) return "The checkout has no source for that template.";
             if (image != null && OverworldSourceFiles.Check(members[(int)templateMember], image) is string problem) return problem;
 
-            if (!HgEngine.HgEngineOverworlds.TryAddNpc((int)templateMember, out int tag, out int gfx, out var added, out error)) return error;
+            if (!HgEngine.HgEngineOverworlds.TryAddNpc((int)templateMember, out int tag, out int gfx, out HgEngineOverworlds.Member added, out error)) return error;
             if (image != null && OverworldSourceFiles.Write(added, image) is string written)
                 return $"NPC {tag} was added but its picture couldn't be saved: {written}";
-            int props = RomInfo.OverworldTable.TryGetValue(cloneFrom, out var clone) ? clone.properties : 0;
+            int props = RomInfo.OverworldTable.TryGetValue(cloneFrom, out (uint spriteID, ushort properties) clone) ? clone.properties : 0;
             if (props != 0 && !HgEngine.HgEngineOverworlds.TrySetProperties(tag, props, out error))
                 return $"NPC {tag} was added but its properties couldn't be copied: {error}";
 
@@ -630,7 +631,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (!targetStructure.HasSameProfileAs(sourceStructure))
                 { error = "The raw BTX uses a different dictionary, frame-reuse, texture, or palette layout than the selected profile."; return false; }
 
-                var source = BTX0.ReadRaw(sourceData, 0);
+                RawImage source = BTX0.ReadRaw(sourceData, 0);
                 if (source == null) { error = "Source file isn't a texture DSPRE can write (BTX0, 16-color format)."; return false; }
 
                 stagedImage = sourceData;
@@ -657,10 +658,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 byte[] btxData = File.ReadAllBytes(templatePath);
                 RawImage import;
-                using (var fs = File.OpenRead(pngPath))
+                using (FileStream fs = File.OpenRead(pngPath))
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null) { error = "Image could not be decoded."; return false; }
-                var current = BTX0.ReadRaw(btxData, 0);
+                RawImage current = BTX0.ReadRaw(btxData, 0);
                 if (current == null) { error = "Template texture slot is unreadable."; return false; }
                 if (import.Width != current.Width || import.Height != current.Height)
                 { error = $"Size mismatch. Template slot: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}"; return false; }
@@ -679,7 +680,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private static bool TryValidateTemplateForCloneSource(uint templateMember, uint cloneFrom, out string error)
         {
             error = null;
-            if (!RomInfo.OverworldTable.TryGetValue(cloneFrom, out var cloneEntry))
+            if (!RomInfo.OverworldTable.TryGetValue(cloneFrom, out (uint spriteID, ushort properties) cloneEntry))
             {
                 error = "The clone source is no longer present in the overworld table.";
                 return false;
@@ -763,7 +764,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_btxData == null) { CurrentImage = null; return; }
             try
             {
-                var raw = BTX0.ReadRaw(_btxData, 0);
+                RawImage raw = BTX0.ReadRaw(_btxData, 0);
                 HasShinyPalette = raw != null && BTX0.PaletteSize == 64 && BTX0.PaletteCount == 2;
                 OnPropertyChanged(nameof(ShinyPaletteNote));
                 if (CurrentPaletteIndex != 0)
@@ -792,10 +793,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 RawImage import;
-                using (var fs = File.OpenRead(filePath))
+                using (FileStream fs = File.OpenRead(filePath))
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null) return "Image could not be decoded.";
-                var current = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
+                RawImage current = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
                 if (current == null) return "This entry's texture file isn't a readable image (it may be a 3D model, not a flat texture).";
                 if (import.Width != current.Width || import.Height != current.Height)
                     return $"Size mismatch. Existing texture: {current.Width}×{current.Height}, PNG: {import.Width}×{import.Height}";
@@ -843,7 +844,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 RawImage import;
-                using (var fs = File.OpenRead(filePath))
+                using (FileStream fs = File.OpenRead(filePath))
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null)
                 {
@@ -863,11 +864,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 uint colorCount = CountColors(import);
                 uint targetKey = _owKeys[_selectedIndex];
                 string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
-                var structures = new Dictionary<uint, Btx0Structure>();
-                var sharedCounts = RomInfo.OverworldTable.Values
+                Dictionary<uint, Btx0Structure> structures = new Dictionary<uint, Btx0Structure>();
+                Dictionary<uint, int> sharedCounts = RomInfo.OverworldTable.Values
                     .GroupBy(v => v.spriteID)
                     .ToDictionary(g => g.Key, g => g.Count());
-                foreach (var entry in RomInfo.OverworldTable)
+                foreach (KeyValuePair<uint, (uint spriteID, ushort properties)> entry in RomInfo.OverworldTable)
                 {
                     if (entry.Key == targetKey || entry.Value.spriteID == 0x3D3D) continue;
                     if (!structures.TryGetValue(entry.Value.spriteID, out Btx0Structure structure))
@@ -911,7 +912,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string ImportPngUsingProfile(string filePath, uint sourceAppearanceId)
         {
             if (_btxData == null || !HasSelectedEntry) return "No entry selected.";
-            if (!RomInfo.OverworldTable.TryGetValue(sourceAppearanceId, out var sourceEntry))
+            if (!RomInfo.OverworldTable.TryGetValue(sourceAppearanceId, out (uint spriteID, ushort properties) sourceEntry))
                 return "The selected profile is no longer present in the overworld table.";
 
             uint targetAppearanceId = _owKeys[_selectedIndex];
@@ -923,7 +924,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 RawImage import;
-                using (var fs = File.OpenRead(filePath))
+                using (FileStream fs = File.OpenRead(filePath))
                     import = ImageConverter.DecodeRawImage(fs);
                 if (import == null) return "Image could not be decoded.";
 
@@ -990,7 +991,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_btxData == null) return false;
             try
             {
-                var raw = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
+                RawImage raw = BTX0.ReadRaw(_btxData, CurrentPaletteIndex);
                 if (raw == null) return false;
                 ImageConverter.ToAvaloniaBitmap(raw).Save(filePath, PngBitmapEncoderOptions.Default);
                 return true;
@@ -1027,7 +1028,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             int saved = 0;
             foreach (uint key in _pendingRender.Keys.ToList())
                 if (SaveRenderState(key) && !_modifiedFiles.ContainsKey(key)) saved++;
-            foreach (var kvp in _modifiedFiles.ToList())
+            foreach (KeyValuePair<uint, byte[]> kvp in _modifiedFiles.ToList())
             {
                 if (SaveEntry(kvp.Key, kvp.Value)) saved++;
             }

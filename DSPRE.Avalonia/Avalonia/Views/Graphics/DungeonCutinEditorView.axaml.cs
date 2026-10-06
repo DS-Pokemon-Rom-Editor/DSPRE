@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         /// the one most locations reuse for the other three times of day.</summary>
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
-            var vm = DataContext as DSPRE.Avalonia.ViewModels.Graphics.DungeonCutinEditorViewModel;
+            DungeonCutinEditorViewModel vm = DataContext as DSPRE.Avalonia.ViewModels.Graphics.DungeonCutinEditorViewModel;
             int row = vm?.SelectedRow?.RowNumber ?? 0;
             int drawing = row > 0
                 ? Data.DungeonCutinTable.DrawingFor(row, Data.DungeonCutinTable.TimeOfDay.Noon) : -1;
@@ -57,7 +57,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export Dungeon Cutin Table",
                 DefaultExtension = "csv",
@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import Dungeon Cutin Table",
                 AllowMultiple = false,
@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (_vm.SelectedRow == null) { await DialogHelper.ShowError("Select a row first.", "Import Error", this); return; }
 
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import Image",
                 AllowMultiple = false,
@@ -122,7 +122,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (_vm.SelectedRow == null) { await DialogHelper.ShowError("Select a row first.", "Export Error", this); return; }
 
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export Image",
                 DefaultExtension = "png",

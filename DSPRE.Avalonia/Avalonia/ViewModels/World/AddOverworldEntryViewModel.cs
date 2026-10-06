@@ -128,9 +128,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void LoadOptions()
         {
-            var used = new HashSet<uint>(RomInfo.OverworldTable.Values.Select(v => v.spriteID));
+            HashSet<uint> used = new HashSet<uint>(RomInfo.OverworldTable.Values.Select(v => v.spriteID));
             string dir = RomInfo.gameDirs[DirNames.OWSprites].unpackedDir;
-            var unusedCandidates = Directory.Exists(dir)
+            List<uint> unusedCandidates = Directory.Exists(dir)
                 ? Directory.GetFiles(dir)
                     .Select(Path.GetFileName)
                     .Select(n => uint.TryParse(n, out uint id) ? (uint?)id : null)
@@ -148,7 +148,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _allSlots.Add(new SlotInfo { Id = id, Width = w, Height = h, ColorLimit = colorLimit, Structure = structure, BaseLabel = $"Unused slot #{id}" });
                 added++;
             }
-            foreach (var kv in RomInfo.OverworldTable)
+            foreach (KeyValuePair<uint, (uint spriteID, ushort properties)> kv in RomInfo.OverworldTable)
             {
                 string path = Path.Combine(dir, kv.Value.spriteID.ToString("D4"));
                 if (!TryReadTextureInfo(path, out int w, out int h, out uint colorLimit, out Btx0Structure structure)) continue;
@@ -157,7 +157,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             RebuildSlotOptions();
 
-            foreach (var key in RomInfo.OverworldTable.Keys)
+            foreach (uint key in RomInfo.OverworldTable.Keys)
                 CloneOptions.Add(new OwIdOption { Id = key, Label = OverworldLabels.Of(key) });
             SelectedCloneSource = CloneOptions.FirstOrDefault(o => o.Id == 0x78) ?? CloneOptions.FirstOrDefault();
 
@@ -167,7 +167,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void RebuildSlotOptions()
         {
-            var previouslySelectedId = SelectedSlot?.Id;
+            uint? previouslySelectedId = SelectedSlot?.Id;
             SlotOptions.Clear();
             bool haveTarget = _targetWidth > 0;
             bool haveProfile = SelectedCloneSource != null && _cloneProfiles.ContainsKey(SelectedCloneSource.Id);
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 ? _allSlots.OrderByDescending(s => Fits(s))
                 : _allSlots;
 
-            foreach (var s in ordered)
+            foreach (SlotInfo s in ordered)
             {
                 bool fits = (haveTarget || haveProfile) && Fits(s);
                 string label = haveTarget || haveProfile
@@ -212,7 +212,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 RawImage raw;
-                using (var fs = File.OpenRead(path))
+                using (FileStream fs = File.OpenRead(path))
                     raw = ImageConverter.DecodeRawImage(fs);
                 if (raw == null)
                 {
@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             RawBtxPath = path;
             try
             {
-                var raw = BTX0.ReadRaw(File.ReadAllBytes(path), 0);
+                RawImage raw = BTX0.ReadRaw(File.ReadAllBytes(path), 0);
                 if (raw == null)
                 {
                     RawBtxPath = null;
@@ -307,7 +307,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 byte[] data = File.ReadAllBytes(path);
                 if (!Btx0Structure.TryInspect(data, out structure, out _)) return false;
-                var raw = BTX0.ReadRaw(data, 0);
+                RawImage raw = BTX0.ReadRaw(data, 0);
                 if (raw == null) return false;
                 width = raw.Width; height = raw.Height; colorLimit = BTX0.ColorCount;
                 return true;

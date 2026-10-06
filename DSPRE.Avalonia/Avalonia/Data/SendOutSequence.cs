@@ -230,7 +230,7 @@ namespace DSPRE.Avalonia.Data
 
         private IEnumerator<int> Tracked(IEnumerable<int> task, Action<int> finished)
         {
-            foreach (var _ in task) yield return 0;
+            foreach (int _ in task) yield return 0;
             finished(Tick);
         }
 
@@ -257,7 +257,7 @@ namespace DSPRE.Avalonia.Data
 
             if (rows)
             {
-                foreach (var _ in Until(48)) yield return 0;
+                foreach (int _ in Until(48)) yield return 0;
                 int pending = (_enemy ? 1 : 0) + (_player ? 1 : 0);
                 if (pending == 0) rowsDone = Tick;
                 if (_enemy) Start(RowShowTask(EnemyRow, player: false, midBattle: false), t => { if (--pending == 0) rowsDone = t; });
@@ -268,51 +268,51 @@ namespace DSPRE.Avalonia.Data
             {
                 if (_enemy)
                 {
-                    foreach (var _ in Until(Landing)) yield return 0;
+                    foreach (int _ in Until(Landing)) yield return 0;
                     Start(HealthbarTask(enemySide: true), t => gaugeDone = t);
-                    foreach (var _ in UntilSet(() => enemyDone >= 0 && gaugeDone >= 0 && rowsDone >= 0)) yield return 0;
-                    foreach (var _ in Until(Math.Max(Math.Max(enemyDone, gaugeDone), rowsDone) + NextCommand)) yield return 0;
+                    foreach (int _ in UntilSet(() => enemyDone >= 0 && gaugeDone >= 0 && rowsDone >= 0)) yield return 0;
+                    foreach (int _ in Until(Math.Max(Math.Max(enemyDone, gaugeDone), rowsDone) + NextCommand)) yield return 0;
                     Print(wild ? SendOutMessage.WildAppeared : SendOutMessage.Challenged);
-                    foreach (var _ in UntilSet(() => !_printing)) yield return 0;
+                    foreach (int _ in UntilSet(() => !_printing)) yield return 0;
                     if (!_player) yield break;
-                    foreach (var _ in Until(PrintFinishedTick + AfterButtonWait)) yield return 0;
+                    foreach (int _ in Until(PrintFinishedTick + AfterButtonWait)) yield return 0;
                 }
                 else
                 {
-                    foreach (var _ in UntilSet(() => rowsDone >= 0)) yield return 0;
-                    foreach (var _ in Until(Math.Max(Tick, Landing + 1 + NextCommand))) yield return 0;
+                    foreach (int _ in UntilSet(() => rowsDone >= 0)) yield return 0;
+                    foreach (int _ in Until(Math.Max(Tick, Landing + 1 + NextCommand))) yield return 0;
                 }
                 // A wild battle waits for "Go!" to finish printing before the throw.
                 Print(SendOutMessage.Go);
                 if (rows) Start(RowHideTask(PlayerRow, player: true, midBattle: false));
-                foreach (var _ in UntilSet(() => !_printing)) yield return 0;
-                foreach (var _ in Until(PrintFinishedTick + 1)) yield return 0;
+                foreach (int _ in UntilSet(() => !_printing)) yield return 0;
+                foreach (int _ in Until(PrintFinishedTick + 1)) yield return 0;
             }
             else
             {
                 if (_enemy)
                 {
-                    foreach (var _ in Until(50)) yield return 0;
+                    foreach (int _ in Until(50)) yield return 0;
                     Print(SendOutMessage.Challenged);
-                    foreach (var _ in UntilSet(() => !_printing && enemyDone >= 0 && rowsDone >= 0)) yield return 0;
+                    foreach (int _ in UntilSet(() => !_printing && enemyDone >= 0 && rowsDone >= 0)) yield return 0;
                     int cleared = Math.Max(PrintFinishedTick, Math.Max(enemyDone, rowsDone)) + 1;
-                    foreach (var _ in Until(cleared + AfterButtonWait - 1)) yield return 0;
+                    foreach (int _ in Until(cleared + AfterButtonWait - 1)) yield return 0;
 
                     // The throw's task runs from the next tick, alongside "sent out" printing.
                     Print(SendOutMessage.EnemySentOut);
                     int throwDone = -1;
                     if (rows) Start(RowHideTask(EnemyRow, player: false, midBattle: false));
                     Start(EnemyThrowTask(), t => throwDone = t);
-                    foreach (var _ in Until(Tick + EnemyHealthbarDelay)) yield return 0;
+                    foreach (int _ in Until(Tick + EnemyHealthbarDelay)) yield return 0;
                     Start(HealthbarTask(enemySide: true), t => gaugeDone = t);
-                    foreach (var _ in UntilSet(() => throwDone >= 0 && gaugeDone >= 0)) yield return 0;
+                    foreach (int _ in UntilSet(() => throwDone >= 0 && gaugeDone >= 0)) yield return 0;
                     if (!_player) yield break;
-                    foreach (var _ in Until(Math.Max(throwDone, gaugeDone) + 2)) yield return 0;
+                    foreach (int _ in Until(Math.Max(throwDone, gaugeDone) + 2)) yield return 0;
                 }
                 else
                 {
-                    foreach (var _ in UntilSet(() => rowsDone >= 0)) yield return 0;
-                    foreach (var _ in Until(Math.Max(Tick, 1 + Landing + NextCommand - 1))) yield return 0;
+                    foreach (int _ in UntilSet(() => rowsDone >= 0)) yield return 0;
+                    foreach (int _ in Until(Math.Max(Tick, 1 + Landing + NextCommand - 1))) yield return 0;
                 }
             }
 
@@ -326,9 +326,9 @@ namespace DSPRE.Avalonia.Data
                 Print(SendOutMessage.Go);
                 if (rows) Start(RowHideTask(PlayerRow, player: true, midBattle: false));
             }
-            foreach (var _ in Until(throwStart + PlayerHealthbarDelay - 1)) yield return 0;
+            foreach (int _ in Until(throwStart + PlayerHealthbarDelay - 1)) yield return 0;
             Start(HealthbarTask(enemySide: false), t => playerGauge = t);
-            foreach (var _ in UntilSet(() => playerDone >= 0 && playerGauge >= 0)) yield return 0;
+            foreach (int _ in UntilSet(() => playerDone >= 0 && playerGauge >= 0)) yield return 0;
         }
 
         private IEnumerator<int> MidBattleScript()
@@ -340,28 +340,28 @@ namespace DSPRE.Avalonia.Data
                 if (rows)
                 {
                     Start(RowShowTask(EnemyRow, player: false, midBattle: true), t => done = t);
-                    foreach (var _ in UntilSet(() => done >= 0)) yield return 0;
-                    foreach (var _ in Until(done + NextCommand)) yield return 0;
+                    foreach (int _ in UntilSet(() => done >= 0)) yield return 0;
+                    foreach (int _ in Until(done + NextCommand)) yield return 0;
                 }
                 Print(SendOutMessage.EnemySentOut);
-                foreach (var _ in UntilSet(() => !_printing)) yield return 0;
-                foreach (var _ in Until(PrintFinishedTick + NextCommand)) yield return 0;
+                foreach (int _ in UntilSet(() => !_printing)) yield return 0;
+                foreach (int _ in Until(PrintFinishedTick + NextCommand)) yield return 0;
                 if (rows)
                 {
                     done = -1;
                     Start(RowHideTask(EnemyRow, player: false, midBattle: true), t => done = t);
-                    foreach (var _ in UntilSet(() => done >= 0)) yield return 0;
-                    foreach (var _ in Until(done + NextCommand)) yield return 0;
+                    foreach (int _ in UntilSet(() => done >= 0)) yield return 0;
+                    foreach (int _ in Until(done + NextCommand)) yield return 0;
                 }
-                foreach (var _ in SendOutAndHealthbar(enemySide: true)) yield return 0;
+                foreach (int _ in SendOutAndHealthbar(enemySide: true)) yield return 0;
             }
             if (_player)
             {
                 // Your row is never drawn mid-battle.
                 Print(SendOutMessage.Go);
-                foreach (var _ in UntilSet(() => !_printing)) yield return 0;
-                foreach (var _ in Until(PrintFinishedTick + NextCommand)) yield return 0;
-                foreach (var _ in SendOutAndHealthbar(enemySide: false)) yield return 0;
+                foreach (int _ in UntilSet(() => !_printing)) yield return 0;
+                foreach (int _ in Until(PrintFinishedTick + NextCommand)) yield return 0;
+                foreach (int _ in SendOutAndHealthbar(enemySide: false)) yield return 0;
             }
         }
 
@@ -370,10 +370,10 @@ namespace DSPRE.Avalonia.Data
             int shown = -1, gauge = -1;
             Start(ShowPokemonTask(enemySide), t => shown = t);
             int sent = Tick;
-            foreach (var _ in Until(sent + MidBattleHealthbarDelay)) yield return 0;
+            foreach (int _ in Until(sent + MidBattleHealthbarDelay)) yield return 0;
             Start(HealthbarTask(enemySide), t => gauge = t);
-            foreach (var _ in UntilSet(() => shown >= 0 && gauge >= 0)) yield return 0;
-            foreach (var _ in Until(Math.Max(shown, gauge) + NextCommand)) yield return 0;
+            foreach (int _ in UntilSet(() => shown >= 0 && gauge >= 0)) yield return 0;
+            foreach (int _ in Until(Math.Max(shown, gauge) + NextCommand)) yield return 0;
         }
 
         // ── Text printer ───────────────────────────────────────────────────────────────────────────
@@ -455,7 +455,7 @@ namespace DSPRE.Avalonia.Data
 
         private IEnumerable<int> EnemyTrainerSlideTask()
         {
-            var tr = EnemyTrainer;
+            TrainerState tr = EnemyTrainer;
             tr.Visible = true;
             tr.Y = EnemyTrainerY;
             // A class with a third animation holds its first frame during the slide.
@@ -477,7 +477,7 @@ namespace DSPRE.Avalonia.Data
 
         private IEnumerator<int> PlayerTrainerSlideTask()
         {
-            var tr = PlayerTrainer;
+            TrainerState tr = PlayerTrainer;
             tr.Visible = true; tr.Y = PlayerTrainerY; tr.AnimTicks = -1;
             for (int t = 0; t <= Landing; t++)
             {
@@ -491,7 +491,7 @@ namespace DSPRE.Avalonia.Data
 
         private IEnumerable<int> WildSlideTask()
         {
-            var mon = Enemy;
+            MonState mon = Enemy;
             mon.Visible = true;
             mon.Scale = 1;
             mon.TintRgb = 0x000000;
@@ -511,7 +511,7 @@ namespace DSPRE.Avalonia.Data
             // The task holds until the frame run and movement script are over.
             yield return 0;
             while (EnemyBusy) yield return 0;
-            foreach (var _ in Finish(enemySide: true)) yield return 0;
+            foreach (int _ in Finish(enemySide: true)) yield return 0;
         }
 
         private IEnumerator<int> FadeTask(MonState mon, int from, int everyTicks)
@@ -556,7 +556,7 @@ namespace DSPRE.Avalonia.Data
 
         private IEnumerable<int> EnemyThrowTask()
         {
-            var tr = EnemyTrainer;
+            TrainerState tr = EnemyTrainer;
             for (int e = 0; ; e++)
             {
                 tr.Visible = e <= 20;
@@ -566,7 +566,7 @@ namespace DSPRE.Avalonia.Data
                 yield return 0;
             }
             EnemyBall.Visible = false;
-            foreach (var _ in Finish(enemySide: true)) yield return 0;
+            foreach (int _ in Finish(enemySide: true)) yield return 0;
         }
 
         private static void StepEnemyBall(BallState ball, int e)
@@ -580,8 +580,8 @@ namespace DSPRE.Avalonia.Data
 
         private IEnumerable<int> PlayerThrowTask()
         {
-            var tr = PlayerTrainer;
-            var ball = PlayerBall;
+            TrainerState tr = PlayerTrainer;
+            BallState ball = PlayerBall;
             for (int p = 0; ; p++)
             {
                 tr.Visible = p <= 21;
@@ -612,7 +612,7 @@ namespace DSPRE.Avalonia.Data
                 if (p >= 47 && !StepAppearance(Player, p - 47, _playerCryDelay, enemySide: false)) break;
                 yield return 0;
             }
-            foreach (var _ in Finish(enemySide: false)) yield return 0;
+            foreach (int _ in Finish(enemySide: false)) yield return 0;
         }
 
         // Mid-battle: the enemy's ball appears where it opens, yours is thrown in from the left edge.
@@ -627,7 +627,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 else
                 {
-                    var ball = PlayerBall;
+                    BallState ball = PlayerBall;
                     ball.Sequence = 0;
                     ball.Animating = f >= 1;
                     ball.Visible = f >= 1 && f <= 31;
@@ -641,7 +641,7 @@ namespace DSPRE.Avalonia.Data
                 yield return 0;
             }
             (enemySide ? EnemyBall : PlayerBall).Visible = false;
-            foreach (var _ in Finish(enemySide)) yield return 0;
+            foreach (int _ in Finish(enemySide)) yield return 0;
         }
 
         // Ticks from the ball opening: 8 to grow, then the animation, cry and tint fade (slower while the burst
@@ -683,7 +683,7 @@ namespace DSPRE.Avalonia.Data
             double barRest = player ? PlayerBarRestX : EnemyBarRestX;
             for (int s = 0; s < 6; s++)
             {
-                var b = row.Balls[s];
+                RowBall b = row.Balls[s];
                 b.Visible = true;
                 b.X = player ? 276 : -20;
                 b.Y = player ? PlayerRowBallY : EnemyRowBallY;
@@ -703,7 +703,7 @@ namespace DSPRE.Avalonia.Data
                 yield break;
             }
 
-            var arrived = new bool[6];
+            bool[] arrived = new bool[6];
             for (int g = 1; ; g++)
             {
                 yield return 0;
@@ -711,7 +711,7 @@ namespace DSPRE.Avalonia.Data
                 if (g <= 8) row.BarX = Toward(row.BarX, barRest, 18);
                 for (int s = 0; s < 6; s++)
                 {
-                    var b = row.Balls[s];
+                    RowBall b = row.Balls[s];
                     if (g < 3 * s + 6 || arrived[s]) continue;
                     b.Animating = true;
                     b.X = Toward(b.X, OvershootX(player, s), 18);
@@ -733,7 +733,7 @@ namespace DSPRE.Avalonia.Data
                 moving = false;
                 for (int s = 0; s < 6; s++)
                 {
-                    var b = row.Balls[s];
+                    RowBall b = row.Balls[s];
                     b.X = Toward(b.X, RestX(player, s), 6);
                     if (b.X != RestX(player, s)) moving = true;
                 }

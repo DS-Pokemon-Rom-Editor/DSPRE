@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-        private void Raise(params string[] names) { foreach (var n in names) Raise(n); }
+        private void Raise(params string[] names) { foreach (string n in names) Raise(n); }
 
         public const string Title = "Wild Pokémon Intro Editor";
 
@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (SpeciesEditable)
                 for (int i = 0; i < _t.SpeciesRowCount; i++) SpeciesRows.Add(new IntroRow { Class = i });
             else
-                foreach (var kv in _t.Music.CodeSpeciesCombos.OrderBy(k => k.Key)) SpeciesRows.Add(new IntroRow { Class = kv.Key, Combo = kv.Value });
+                foreach (KeyValuePair<int, int> kv in _t.Music.CodeSpeciesCombos.OrderBy(k => k.Key)) SpeciesRows.Add(new IntroRow { Class = kv.Key, Combo = kv.Value });
             ComboRows.Clear();
             foreach (int c in _comboIds) ComboRows.Add(new IntroRow { Combo = c });
             Rename();
@@ -92,13 +92,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Rename()
         {
-            foreach (var row in SpeciesRows)
+            foreach (IntroRow row in SpeciesRows)
             {
-                var (sp, combo) = SpeciesOf(row);
+                (int sp, int combo) = SpeciesOf(row);
                 row.Title = _names.SpeciesName(sp);
                 row.Detail = _names.Combo(_t, combo);
             }
-            foreach (var row in ComboRows)
+            foreach (IntroRow row in ComboRows)
             {
                 row.Title = _names.Combo(_t, row.Combo);
                 row.Detail = _names.Sequence(_t.SequenceOf(row.Combo));
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (!HasCombo) return "";
-                var list = _t.SpeciesUsing(Combo).Select(_names.SpeciesName).ToList();
+                List<string> list = _t.SpeciesUsing(Combo).Select(_names.SpeciesName).ToList();
                 return list.Count == 0 ? "" : "Used by " + string.Join(", ", list) + ".";
             }
         }
@@ -208,7 +208,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // hg-engine's music rows are source text, saved as one hg-engine write like the other editors.
             if (_t.FromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => { _t.Save(); return null; });
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError("The wild Pokémon intros were not saved:\n" + error, Title);

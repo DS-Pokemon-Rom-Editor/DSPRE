@@ -5,11 +5,11 @@ namespace DSPRE.Avalonia.Data
     public static class WazaSeqSchema
     {
 
-        public static string Display(string opName) => Names.TryGetValue(opName, out var n) ? n : null;
+        public static string Display(string opName) => Names.TryGetValue(opName, out string n) ? n : null;
 
-        public static string Doc(string opName) => Docs.TryGetValue(opName, out var d) ? d : "";
+        public static string Doc(string opName) => Docs.TryGetValue(opName, out string d) ? d : "";
 
-        public static string[] Params(string opName) => ParamLabels.TryGetValue(opName, out var p) ? p : null;
+        public static string[] Params(string opName) => ParamLabels.TryGetValue(opName, out string[] p) ? p : null;
 
         private static readonly Dictionary<string, string> Names = new()
         {

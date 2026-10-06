@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             get
             {
-                var bits = new List<string>();
+                List<string> bits = new List<string>();
                 if (Drawing >= 0) bits.Add("drawing " + Drawing);
                 if (Arrangement >= 0) bits.Add("arrangement " + Arrangement);
                 if (Cells >= 0) bits.Add("layout " + Cells);
@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (HasPoketch)
             {
                 AppNames.Add("Pokétch frame");
-                foreach (var a in PoketchApps.All) AppNames.Add(a.Name);
+                foreach (PoketchApps.App a in PoketchApps.All) AppNames.Add(a.Name);
             }
 
             try
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             catch (Exception ex) { AppLogger.Error("Bottom screen font: " + ex.Message); }
 
-            var now = System.DateTime.Now;
+            DateTime now = System.DateTime.Now;
             _hour = now.Hour;
             _minute = now.Minute;
 
@@ -351,7 +351,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void DiscardChanges()
         {
-            foreach (var ((dir, member), bytes) in _originals)
+            foreach (((DirNames dir, int member), byte[] bytes) in _originals)
             {
                 try { new ScriptNarc(dir).Put(member, bytes); }
                 catch (Exception ex) { AppLogger.Error("Bottom screen discard: " + ex.Message); }
@@ -399,7 +399,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             NoteSharing(_pieces);
 
             Pieces.Clear();
-            foreach (var p in _pieces) Pieces.Add(new BottomScreenPieceRow { Piece = p });
+            foreach (BottomScreenPiece p in _pieces) Pieces.Add(new BottomScreenPieceRow { Piece = p });
 
             // Keep whatever was picked, and otherwise start on the first piece. Landing on "nothing picked"
             // with the buttons greyed out every time the screen changes is a click for no reason.
@@ -444,7 +444,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public static List<BottomScreenPiece> PiecesFor(Tab tab, bool female = false, int theme = 0,
                                                         bool backlight = false, int app = 0)
         {
-            var list = new List<BottomScreenPiece>();
+            List<BottomScreenPiece> list = new List<BottomScreenPiece>();
             if (tab == Tab.Menu)
             {
                 list.Add(new BottomScreenPiece
@@ -498,7 +498,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             else if (app >= 1)
             {
-                var a = PoketchApps.All[Math.Min(app - 1, PoketchApps.All.Length - 1)];
+                PoketchApps.App a = PoketchApps.All[Math.Min(app - 1, PoketchApps.All.Length - 1)];
                 int row = theme * 2 + (backlight ? 1 : 0);
 
                 if (a.ReadOnlyBecause != null)
@@ -603,10 +603,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         public static void NoteSharing(List<BottomScreenPiece> pieces)
         {
-            foreach (var p in pieces)
+            foreach (BottomScreenPiece p in pieces)
             {
                 if (p.PaletteMember < 0) { p.SharedWith = null; continue; }
-                var others = pieces.Where(o => !ReferenceEquals(o, p)
+                List<string> others = pieces.Where(o => !ReferenceEquals(o, p)
                                             && o.Archive == p.Archive
                                             && o.PaletteMember == p.PaletteMember
                                             && Overlaps(o, p))
@@ -635,7 +635,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 {
                     // Picking a layout on the left shows that layout, so the boxes for five answers are
                     // seen where they land rather than described.
-                    var (labels, yesNo) = ChoiceShown();
+                    (string[] labels, bool yesNo) = ChoiceShown();
                     rgba = _hgss.RenderChoices(_font, labels, yesNo, 0, labels != null);
                 }
                 else if (HasPoketch && _poketch != null)
@@ -672,7 +672,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (NoPoketchYet) { BankCount = 0; return _poketch.RenderUnavailable(); }
 
-            var app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
+            PoketchApps.App app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
             if (app == null || app.Name == "Digital Watch")
             {
                 BankCount = 0;
@@ -734,7 +734,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (_animation == null) return null;
                 if (_sequence < 0 || _sequence >= _animation.Sequences.Count) return null;
-                var s = _animation.Sequences[_sequence];
+                NanrFile.Sequence s = _animation.Sequences[_sequence];
                 string mode = s.PlayMode switch
                 {
                     2 => "loops",
@@ -755,7 +755,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _motion = PoketchScreen.Motion.Still;
             try
             {
-                var app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
+                PoketchApps.App app = _app >= 1 && _app <= PoketchApps.All.Length ? PoketchApps.All[_app - 1] : null;
                 if (app == null || app.Animation < 0) return;
                 _animation = NanrFile.Read(
                     NitroBgCodec.Inflate(new ScriptNarc(DirNames.poketch).Get(app.Animation)));
@@ -811,7 +811,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void Beat(object sender, EventArgs e)
         {
             if (!CanPlay || _sequence < 0 || _sequence >= _animation.Sequences.Count) { Stop(); return; }
-            var s = _animation.Sequences[_sequence];
+            NanrFile.Sequence s = _animation.Sequences[_sequence];
             if (s.Frames.Count == 0) { Stop(); return; }
 
             int due = (int)(_clock.Elapsed.TotalSeconds * 60 * TicksPerRefresh);
@@ -856,8 +856,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void ShowFrame()
         {
             if (_animation == null) return;
-            var (turn, across, down) = _animation.TurnOf(_sequence, _shown);
-            var (shiftX, shiftY) = _animation.ShiftOf(_sequence, _shown);
+            (double turn, double across, double down) = _animation.TurnOf(_sequence, _shown);
+            (int shiftX, int shiftY) = _animation.ShiftOf(_sequence, _shown);
             _motion = new PoketchScreen.Motion(turn, across, down, shiftX, shiftY);
 
             int cell = _animation.CellOf(_sequence, _shown);
@@ -880,7 +880,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             int count = ChoiceCount;
             bool yesNo = YesNo;
 
-            var p = Selected;
+            BottomScreenPiece p = Selected;
             if (p != null && p.Arrangement >= 0)
             {
                 if (p.Arrangement == YesNoMap) { yesNo = true; count = 2; }
@@ -914,7 +914,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void BuildSwatches()
         {
             Swatches.Clear();
-            var p = Selected;
+            BottomScreenPiece p = Selected;
             if (p == null || p.PaletteMember < 0) return;
 
             ushort[] colours = ReadColours(p);
@@ -949,12 +949,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         public void SetColour(int at, uint argb)
         {
-            var p = Selected;
+            BottomScreenPiece p = Selected;
             if (p == null || p.PaletteMember < 0) return;
             try
             {
                 Remember(p.Archive, p.PaletteMember, $"the colour change to {p.Name}");
-                var narc = new ScriptNarc(p.Archive);
+                ScriptNarc narc = new ScriptNarc(p.Archive);
                 byte[] file = narc.Get(p.PaletteMember);
                 string trouble = GraphicAssets.PatchPalette(ref file, new[] { argb }, at);
                 if (trouble != null) { StatusText = trouble; return; }
@@ -995,7 +995,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void TakeBackLastStep()
         {
             if (_undo.Count == 0) return;
-            var step = _undo.Pop();
+            Step step = _undo.Pop();
             try { new ScriptNarc(step.Dir).Put(step.Member, step.Bytes); }
             catch (Exception ex) { AppLogger.Error("Bottom screen take back: " + ex.Message); }
             if (!_undo.Any(s => s.Dir == step.Dir && s.Member == step.Member))
@@ -1049,10 +1049,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void StepAcross(Stack<Step> from, Stack<Step> to, string said)
         {
             if (from.Count == 0) return;
-            var step = from.Pop();
+            Step step = from.Pop();
             try
             {
-                var narc = new ScriptNarc(step.Dir);
+                ScriptNarc narc = new ScriptNarc(step.Dir);
                 byte[] now = narc.Get(step.Member);
                 narc.Put(step.Member, step.Bytes);
                 if (now != null) to.Push(new Step(step.Dir, step.Member, now, step.What));
@@ -1090,10 +1090,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static Bitmap ToBitmap(byte[] rgba, int width, int height)
         {
-            var wb = new WriteableBitmap(new global::Avalonia.PixelSize(width, height),
+            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(width, height),
                                          new global::Avalonia.Vector(96, 96),
                                          PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using (var fb = wb.Lock())
+            using (ILockedFramebuffer fb = wb.Lock())
                 System.Runtime.InteropServices.Marshal.Copy(rgba, 0, fb.Address, rgba.Length);
             return wb;
         }

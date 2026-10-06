@@ -62,8 +62,8 @@ namespace LibNDSFormats.NSBMD {
         /// </summary>
         /// <returns>Clone of matrix.</returns>
         public MTX44 Clone() {
-            var clone = new MTX44();
-            for (var i = 0; i < 4 * 4; ++i) {
+            MTX44 clone = new MTX44();
+            for (int i = 0; i < 4 * 4; ++i) {
                 clone._array[i] = _array[i];
             }
             return clone;

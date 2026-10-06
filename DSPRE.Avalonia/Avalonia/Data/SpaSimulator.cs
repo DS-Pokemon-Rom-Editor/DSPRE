@@ -130,7 +130,7 @@ namespace DSPRE.Avalonia.Data
             // Update + cull.
             for (int i = _ptcls.Count - 1; i >= 0; i--)
             {
-                var p = _ptcls[i];
+                P p = _ptcls[i];
                 // SPLAnim_Alpha draws once per frame for every alpha-animated particle, before the behaviours.
                 if (_e.UseAlphaAnm) p.AlpK = _rng.ScaledRange(_e.AlpFlick);
                 // Behaviours read the undamped velocity; then vel = vel*air + acc (SPLEmitter_Update).
@@ -210,7 +210,7 @@ namespace DSPRE.Avalonia.Data
             // (zeroes behaviorCount otherwise).
             for (int i = _children.Count - 1; i >= 0; i--)
             {
-                var c = _children[i];
+                Child c = _children[i];
                 double aX = 0, aY = 0, aZ = 0;
                 if (_e.ChildUsesBehaviors)
                 {
@@ -258,7 +258,7 @@ namespace DSPRE.Avalonia.Data
             // Circles, cylinders and hemispheres lie on two axes across circle_axis; spheres ignore it.
             // Draws follow SPLEmitter_EmitParticles: shape, velocity magnitudes, centre direction, scale,
             // colour, angle, spin, life, texture, loop offset.
-            var (c1, c2, up) = OrthogonalAxes();
+            ((double X, double Y, double Z) c1, (double X, double Y, double Z) c2, (double X, double Y, double Z) up) = OrthogonalAxes();
             double R() => _rng.Range(1.0);
             (double, double, double) Tilt(double lx, double ly, double lz) =>
                 (lx * c1.X + ly * c2.X + lz * up.X, lx * c1.Y + ly * c2.Y + lz * up.Y, lx * c1.Z + ly * c2.Z + lz * up.Z);
@@ -269,13 +269,13 @@ namespace DSPRE.Avalonia.Data
             {
                 case 1:   // sphere surface
                 {
-                    var (sx, sy, sz) = _rng.Vec();
+                    (double sx, double sy, double sz) = _rng.Vec();
                     posX = sx * _e.Radius; posY = sy * _e.Radius; posZ = sz * _e.Radius;
                     break;
                 }
                 case 2:   // circle border
                 {
-                    var (cx, cy) = _rng.VecXY();
+                    (double cx, double cy) = _rng.VecXY();
                     (posX, posY, posZ) = Tilt(cx * _e.Radius, cy * _e.Radius, 0);
                     break;
                 }
@@ -287,20 +287,20 @@ namespace DSPRE.Avalonia.Data
                 }
                 case 4:   // SPHERE: each component scaled by its own random factor
                 {
-                    var (sx, sy, sz) = _rng.Vec();
+                    (double sx, double sy, double sz) = _rng.Vec();
                     posX = sx * _e.Radius * R(); posY = sy * _e.Radius * R(); posZ = sz * _e.Radius * R();
                     break;
                 }
                 case 5:   // CIRCLE
                 {
-                    var (cx, cy) = _rng.VecXY();
+                    (double cx, double cy) = _rng.VecXY();
                     double lx = cx * _e.Radius * R(), ly = cy * _e.Radius * R();
                     (posX, posY, posZ) = Tilt(lx, ly, 0);
                     break;
                 }
                 case 6:   // cylinder surface
                 {
-                    var (cx, cy) = _rng.VecXY();
+                    (double cx, double cy) = _rng.VecXY();
                     (posX, posY, posZ) = Tilt(cx * _e.Radius, cy * _e.Radius, _rng.Range(_e.Length));
                     (tanX, tanY, tanZ) = Tilt(cx, cy, 0);
                     ringVelocity = true;
@@ -308,7 +308,7 @@ namespace DSPRE.Avalonia.Data
                 }
                 case 7:   // CYLINDER
                 {
-                    var (cx, cy) = _rng.VecXY();
+                    (double cx, double cy) = _rng.VecXY();
                     double lx = cx * _e.Radius * R(), ly = cy * _e.Radius * R();
                     (posX, posY, posZ) = Tilt(lx, ly, _rng.Range(_e.Length));
                     break;
@@ -316,7 +316,7 @@ namespace DSPRE.Avalonia.Data
                 case 8:   // hemisphere surface: flipped onto the side the axes face
                 case 9:   // HEMISPHERE
                 {
-                    var (sx, sy, sz) = _rng.Vec();
+                    (double sx, double sy, double sz) = _rng.Vec();
                     double d = sx * up.X + sy * up.Y + sz * up.Z;
                     if (_e.InitPosType == 8 ? d <= 0 : d < 0) { sx = -sx; sy = -sy; sz = -sz; }
                     if (_e.InitPosType == 8) { posX = sx * _e.Radius; posY = sy * _e.Radius; posZ = sz * _e.Radius; }
@@ -412,9 +412,9 @@ namespace DSPRE.Avalonia.Data
             // The world up vector, unless the axis is up itself.
             double vx = 0, vy = 1, vz = 0;
             if (Math.Abs(Math.Abs(ay) - 1.0) < 1e-9) { vx = 1; vy = 0; }
-            var c1 = Norm(ay * vz - az * vy, az * vx - ax * vz, ax * vy - ay * vx);
-            var c2 = Norm(ay * c1.Z - az * c1.Y, az * c1.X - ax * c1.Z, ax * c1.Y - ay * c1.X);
-            var up = Norm(c1.Y * c2.Z - c1.Z * c2.Y, c1.Z * c2.X - c1.X * c2.Z, c1.X * c2.Y - c1.Y * c2.X);
+            (double X, double Y, double Z) c1 = Norm(ay * vz - az * vy, az * vx - ax * vz, ax * vy - ay * vx);
+            (double X, double Y, double Z) c2 = Norm(ay * c1.Z - az * c1.Y, az * c1.X - ax * c1.Z, ax * c1.Y - ay * c1.X);
+            (double X, double Y, double Z) up = Norm(c1.Y * c2.Z - c1.Z * c2.Y, c1.Z * c2.X - c1.X * c2.Z, c1.X * c2.Y - c1.Y * c2.X);
             return (c1, c2, up);
         }
 
@@ -439,9 +439,9 @@ namespace DSPRE.Avalonia.Data
             // drawChildrenFirst / hideParent (the resource flags bits 21/22): parent/child render order,
             // and "only children are rendered" (the parent is just an invisible child-spawner).
             if (_e.DrawChildrenFirst)
-                foreach (var s in ChildStates()) yield return s;
+                foreach (SpaParticleState s in ChildStates()) yield return s;
             if (!_e.HideParent)
-            foreach (var p in _ptcls)
+            foreach (P p in _ptcls)
             {
                 int lr = (int)(255.0 * p.Age / Math.Max(1, p.Life));   // lifeRate 0..255 (once through the life)
                 if (lr > 255) lr = 255;
@@ -492,14 +492,14 @@ namespace DSPRE.Avalonia.Data
                 };
             }
             if (!_e.DrawChildrenFirst)
-                foreach (var s in ChildStates()) yield return s;
+                foreach (SpaParticleState s in ChildStates()) yield return s;
         }
 
         // Children (the child-resource block): scale 1→scl_e, alpha fades out over life, own colour if use_chld_clr;
         // rotation per rotationType (inherited at spawn, optionally still spinning).
         private IEnumerable<SpaParticleState> ChildStates()
         {
-            foreach (var c in _children)
+            foreach (Child c in _children)
             {
                 double t = (double)c.Age / Math.Max(1, c.Life);
                 // the child scale-animation step/ChildAlpha run ONLY when the child flags request them; otherwise the

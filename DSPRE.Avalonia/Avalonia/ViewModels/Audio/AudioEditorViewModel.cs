@@ -108,13 +108,13 @@ namespace DSPRE.Avalonia.ViewModels.Audio
 
         public AudioEditorViewModel(IReadOnlyList<string> pokemonNames)
         {
-            var sdat = SoundArchive.Load();
+            SdatArchive sdat = SoundArchive.Load();
             if (sdat == null) { Status = "This ROM has no sound archive."; return; }
 
-            foreach (var kv in sdat.SeqNames.OrderBy(k => k.Key))
+            foreach (KeyValuePair<int, string> kv in sdat.SeqNames.OrderBy(k => k.Key))
             {
                 string name = kv.Value ?? "";
-                var item = new AudioItem { Number = kv.Key, Name = name };
+                AudioItem item = new AudioItem { Number = kv.Key, Name = name };
 
                 // The cry sequence is what the Cries tab stands for, so it is not listed twice.
                 if (name == SoundArchive.CrySequenceName) continue;
@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
 
             // The samples that are not cries. These are what the tunes and the sound effects are actually
             // made of, and nothing in DSPRE could reach them before.
-            foreach (var set in SoundArchive.SampleArchives())
+            foreach ((int Arc, string Name, int Count) set in SoundArchive.SampleArchives())
             {
                 string shown = set.Name.StartsWith("WAVE_ARC_", StringComparison.Ordinal)
                     ? set.Name.Substring("WAVE_ARC_".Length) : set.Name;
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             void Fill(ObservableCollection<AudioItem> into, List<AudioItem> from)
             {
                 into.Clear();
-                foreach (var i in from)
+                foreach (AudioItem i in from)
                     if (string.IsNullOrWhiteSpace(_search)
                      || SearchMatch.Contains(i.Name, _search)
                      || i.Number.ToString().Contains(_search))
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public void ShowCryFor(int species)
         {
             Search = "";
-            var row = Cries.FirstOrDefault(c => c.NamedNumber == species)
+            AudioItem row = Cries.FirstOrDefault(c => c.NamedNumber == species)
                    ?? Cries.FirstOrDefault(c => c.Number == species);
             if (row == null) return;
             SelectedTab = 0;
@@ -278,7 +278,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         {
             get
             {
-                var it = Selected;
+                AudioItem it = Selected;
                 if (it == null) return "Pick something to hear it.";
                 if (it.IsCry && it.IsPending) return it.Name + ". The new cry is not saved yet.";
                 if (it.IsSample && it.IsPending) return $"{it.Detail}, sound {it.SampleIndex}. The new sound is not saved yet.";
@@ -357,13 +357,13 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             {
                 was = _pendingCries.Keys.Concat(_pendingSamples.Select(h => h.Item)).ToList();
                 _pendingCries.Clear();
-                foreach (var kv in held.Cries) _pendingCries[kv.Key] = kv.Value;
+                foreach (KeyValuePair<AudioItem, SoundArchive.PendingCry> kv in held.Cries) _pendingCries[kv.Key] = kv.Value;
                 _pendingSamples.Clear();
-                foreach (var (item, sample) in held.Samples) _pendingSamples.Add(new HeldSample { Item = item, Sample = sample });
+                foreach ((AudioItem item, SoundArchive.PendingSample sample) in held.Samples) _pendingSamples.Add(new HeldSample { Item = item, Sample = sample });
                 _withHeld = null; _heldVersion++;
             }
-            foreach (var item in was) item.IsPending = false;
-            foreach (var item in held.Cries.Keys.Concat(held.Samples.Select(h => h.Item))) item.IsPending = true;
+            foreach (AudioItem item in was) item.IsPending = false;
+            foreach (AudioItem item in held.Cries.Keys.Concat(held.Samples.Select(h => h.Item))) item.IsPending = true;
             PendingChanged();
         }
 
@@ -373,7 +373,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public void Undo()
         {
             if (_undoSteps.Count == 0) return;
-            var step = _undoSteps.Pop();
+            (Held Before, Held After) step = _undoSteps.Pop();
             _redoSteps.Push(step);
             RestoreHeld(step.Before);
             RaiseSteps();
@@ -382,7 +382,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public void Redo()
         {
             if (_redoSteps.Count == 0) return;
-            var step = _redoSteps.Pop();
+            (Held Before, Held After) step = _redoSteps.Pop();
             _undoSteps.Push(step);
             RestoreHeld(step.After);
             RaiseSteps();
@@ -423,7 +423,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public void StageCry(AudioItem item, SoundArchive.PendingCry cry)
         {
             if (item == null || cry == null) return;
-            var before = TakeHeld();
+            Held before = TakeHeld();
             lock (_heldLock) _pendingCries[item] = cry;
             item.IsPending = true;
             PendingChanged();
@@ -435,10 +435,10 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public void StageSample(AudioItem item, SoundArchive.PendingSample sample)
         {
             if (item == null || sample?.Sample == null) return;
-            var before = TakeHeld();
+            Held before = TakeHeld();
             lock (_heldLock)
             {
-                var same = _pendingSamples.FirstOrDefault(h => h.Sample.WaveArc == sample.WaveArc && h.Sample.Index == sample.Index);
+                HeldSample same = _pendingSamples.FirstOrDefault(h => h.Sample.WaveArc == sample.WaveArc && h.Sample.Index == sample.Index);
                 if (same == null) _pendingSamples.Add(new HeldSample { Item = item, Sample = sample });
                 else
                 {
@@ -469,7 +469,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             }
 
             // Built outside the lock: encoding takes long enough that the UI thread must not wait on it.
-            var built = SoundArchive.WithSamples(held, out string problem);
+            SdatArchive built = SoundArchive.WithSamples(held, out string problem);
             if (built == null)
             {
                 AppLogger.Error("Held sounds could not be previewed: " + problem);
@@ -495,13 +495,13 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                     return problem;
                 }
                 lock (_heldLock) { _pendingSamples.Clear(); _withHeld = null; _heldVersion++; }
-                foreach (var h in samples) h.Item.IsPending = false;
+                foreach (HeldSample h in samples) h.Item.IsPending = false;
             }
 
             bool wroteCheckout = false;
             List<KeyValuePair<AudioItem, SoundArchive.PendingCry>> cries;
             lock (_heldLock) cries = _pendingCries.ToList();
-            foreach (var kv in cries)
+            foreach (KeyValuePair<AudioItem, SoundArchive.PendingCry> kv in cries)
             {
                 if (!SoundArchive.WriteCheckoutCry(kv.Value, out string problem))
                 {
@@ -538,7 +538,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 _pendingSamples.Clear();
                 _withHeld = null; _heldVersion++;
             }
-            foreach (var item in items) item.IsPending = false;
+            foreach (AudioItem item in items) item.IsPending = false;
             PendingChanged();
             ForgetSteps();
         }
@@ -554,24 +554,24 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         /// <summary>The sound of whatever is picked, ready to play or save.</summary>
         public short[] RenderSelected(int playAt = 32000)
         {
-            var item = Selected;
+            AudioItem item = Selected;
             if (item == null) return null;
 
             // A checkout cry only becomes part of the archive when the ROM is compiled, so the WAV itself
             // is what can be heard before then.
             if (item.IsCry && HeldCheckoutWav(item) is byte[] wav)
             {
-                var pcm = CryFiles.ReadWav(wav, out int rate, out _);
+                short[] pcm = CryFiles.ReadWav(wav, out int rate, out _);
                 return pcm == null ? null : Stereo(Resample(pcm, rate, playAt));
             }
 
-            var sdat = Archive();
+            SdatArchive sdat = Archive();
             if (item.IsCry) return SoundArchive.RenderCry(sdat, item.Number);
 
             // A sound has no sequence to play it, so what is heard is the sample itself.
             if (item.IsSample)
             {
-                var s = SoundArchive.Sample(sdat, item.WaveArc, item.SampleIndex);
+                SwavSample s = SoundArchive.Sample(sdat, item.WaveArc, item.SampleIndex);
                 if (s?.Pcm == null || s.Pcm.Length == 0) return null;
                 return Stereo(Resample(s.Pcm, s.SampleRate, playAt));
             }
@@ -581,14 +581,14 @@ namespace DSPRE.Avalonia.ViewModels.Audio
 
         private byte[] HeldCheckoutWav(AudioItem item)
         {
-            lock (_heldLock) return _pendingCries.TryGetValue(item, out var cry) ? cry.Wav : null;
+            lock (_heldLock) return _pendingCries.TryGetValue(item, out SoundArchive.PendingCry cry) ? cry.Wav : null;
         }
 
         /// <summary>Writes the picked cry or sound out as a WAV, as it will be once saved. False when there is
         /// nothing there to write.</summary>
         public bool ExportSelectedSample(string path)
         {
-            var item = Selected;
+            AudioItem item = Selected;
             if (item == null || !(item.IsCry || item.IsSample)) return false;
 
             if (item.IsCry && HeldCheckoutWav(item) is byte[] wav)
@@ -597,8 +597,8 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                 return true;
             }
 
-            var sdat = Archive();
-            var sample = item.IsCry
+            SdatArchive sdat = Archive();
+            SwavSample sample = item.IsCry
                 ? SoundArchive.CrySample(sdat, item.Number)
                 : SoundArchive.Sample(sdat, item.WaveArc, item.SampleIndex);
             if (sample?.Pcm == null || sample.Pcm.Length == 0) return false;
@@ -616,7 +616,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         private static short[] Stereo(short[] mono)
         {
             if (mono == null) return null;
-            var both = new short[mono.Length * 2];
+            short[] both = new short[mono.Length * 2];
             for (int i = 0; i < mono.Length; i++) both[i * 2] = both[i * 2 + 1] = mono[i];
             return both;
         }
@@ -627,7 +627,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             if (from <= 0 || to <= 0 || from == to) return pcm;
             long length = (long)pcm.Length * to / from;
             if (length <= 0) return pcm;
-            var outp = new short[length];
+            short[] outp = new short[length];
             for (int i = 0; i < outp.Length; i++)
             {
                 double at = (double)i * from / to;
@@ -643,10 +643,10 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         /// sample rather than written-out notes, so there are none for one.</summary>
         public System.Collections.Generic.IReadOnlyList<SseqPlayer.Note> ReadSelectedNotes()
         {
-            var item = Selected;
+            AudioItem item = Selected;
             // A sample's number is which set it lives in, not a sequence, so it must not be read as one.
             if (item == null || item.IsCry || item.IsSample) return null;
-            var sdat = SoundArchive.Load();
+            SdatArchive sdat = SoundArchive.Load();
             if (sdat == null) return null;
             try { return SseqPlayer.ReadNotes(sdat, item.Number); } catch { return null; }
         }
@@ -677,11 +677,11 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         {
             get
             {
-                var item = Selected;
+                AudioItem item = Selected;
                 if (item == null) return -1;
                 if (item.IsCry) return item.Number;             // a cry is listed by its own bank
                 if (item.IsSample) return -1;                   // one recording, not a set of instruments
-                var sdat = SoundArchive.Load();
+                SdatArchive sdat = SoundArchive.Load();
                 if (sdat == null || item.Number < 0 || item.Number >= sdat.Sequences.Count) return -1;
                 return sdat.Sequences[item.Number]?.BankNo ?? -1;
             }
@@ -693,15 +693,15 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         {
             get
             {
-                var item = Selected;
+                AudioItem item = Selected;
                 if (item == null) return "Pick a cry, a piece of music, a fanfare or a sound effect first.";
                 if (item.IsSample)
                     return "This is a single recording, so there is no bank to save. Save it as a WAV.";
                 if (BankOfSelection < 0)
                     return "This does not say which bank of instruments it plays on, so there is nothing "
                          + "to save.";
-                var sdat = SoundArchive.Load();
-                string name = sdat != null && sdat.BankNames.TryGetValue(BankOfSelection, out var n)
+                SdatArchive sdat = SoundArchive.Load();
+                string name = sdat != null && sdat.BankNames.TryGetValue(BankOfSelection, out string n)
                               && !string.IsNullOrWhiteSpace(n) ? n : "bank " + BankOfSelection;
                 return $"Saves {name}, the instruments this plays on, as a SoundFont. Open it with the MIDI "
                      + "to hear the game's own sounds.";
@@ -715,10 +715,10 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             int bank = BankOfSelection;
             if (bank < 0) { whynot = SaveSoundFontHelp; return null; }
 
-            var sdat = Archive();
-            string name = sdat != null && sdat.BankNames.TryGetValue(bank, out var n)
+            SdatArchive sdat = Archive();
+            string name = sdat != null && sdat.BankNames.TryGetValue(bank, out string n)
                           && !string.IsNullOrWhiteSpace(n) ? n : "Bank " + bank;
-            var made = SoundFontWriter.Build(sdat, bank, name);
+            SoundFontWriter.Result made = SoundFontWriter.Build(sdat, bank, name);
             if (made.Whynot != null) { whynot = made.Whynot; return null; }
             note = made.Summary + " " + string.Join(" ", made.Notes);
             return made.Bytes;
@@ -728,8 +728,8 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public string SuggestedSoundFontName()
         {
             int bank = BankOfSelection;
-            var sdat = SoundArchive.Load();
-            string name = sdat != null && sdat.BankNames.TryGetValue(bank, out var n)
+            SdatArchive sdat = SoundArchive.Load();
+            string name = sdat != null && sdat.BankNames.TryGetValue(bank, out string n)
                           && !string.IsNullOrWhiteSpace(n) ? n : "bank" + bank;
             return new string(name.Where(c => char.IsLetterOrDigit(c) || c == '_').ToArray()) + ".sf2";
         }
@@ -738,20 +738,20 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public byte[] BuildMidi(out string whynot)
         {
             whynot = null;
-            var item = Selected;
+            AudioItem item = Selected;
             if (item == null) { whynot = "Pick something first."; return null; }
             if (item.IsCry) { whynot = SaveMidiHelp; return null; }
 
             // The preview only renders the first few seconds, which is all anyone wants to hear before
             // deciding. A file is different: it should hold the whole tune, so this reads much further.
-            var sdat = SoundArchive.Load();
+            SdatArchive sdat = SoundArchive.Load();
             if (sdat == null) { whynot = "This game's sound archive could not be read."; return null; }
             System.Collections.Generic.IReadOnlyList<SseqPlayer.Note> notes;
             try { notes = SseqPlayer.ReadNotes(sdat, item.Number, WholeTuneSeconds); }
             catch { notes = null; }
             if (notes == null) { whynot = "This sequence could not be read."; return null; }
             if (notes.Count == 0) { whynot = "This sequence plays no notes, so a MIDI of it would be empty."; return null; }
-            var midi = MidiFile.FromNotes(notes, item.Name);
+            byte[] midi = MidiFile.FromNotes(notes, item.Name);
             if (midi == null) { whynot = "This sequence could not be turned into a MIDI."; return null; }
             return midi;
         }
@@ -766,7 +766,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         /// <summary>A sensible file name for saving what is picked.</summary>
         public string SuggestedFileName()
         {
-            var item = Selected;
+            AudioItem item = Selected;
             if (item == null) return "sound.wav";
             string name = item.Name;
             int space = name.IndexOf(' ');

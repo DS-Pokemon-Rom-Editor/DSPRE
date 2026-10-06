@@ -125,7 +125,7 @@ namespace DSPRE
 
         public static void Save()
         {
-            var directory = Path.GetDirectoryName(SettingsFile);
+            string directory = Path.GetDirectoryName(SettingsFile);
 
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
@@ -140,7 +140,7 @@ namespace DSPRE
         public static void RecordRecentProject(string path)
         {
             if (Settings == null || string.IsNullOrWhiteSpace(path)) return;
-            var list = Settings.recentProjects ?? (Settings.recentProjects = new List<string>());
+            List<string> list = Settings.recentProjects ?? (Settings.recentProjects = new List<string>());
             list.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
             list.Insert(0, path);
             if (list.Count > MaxRecentProjects)

@@ -83,7 +83,7 @@ namespace DSPRE.Models
         public static ObjMesh Read(string path, out string whynot)
         {
             whynot = null;
-            var m = new ObjMesh { Name = Path.GetFileNameWithoutExtension(path) };
+            ObjMesh m = new ObjMesh { Name = Path.GetFileNameWithoutExtension(path) };
             string[] lines;
             try { lines = File.ReadAllLines(path); }
             catch (Exception ex) { whynot = "Could not read file: " + ex.Message; return null; }
@@ -93,14 +93,14 @@ namespace DSPRE.Models
             Group group = null;
             int[] pendingColours = null;
             bool[] pendingLast = null;
-            var byName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> byName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             foreach (string raw in lines)
             {
                 string line = raw.Trim();
                 if (line.StartsWith("# squares ", StringComparison.Ordinal))
                 {
-                    var said = line.Substring(10).Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                    string[] said = line.Substring(10).Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                     if (said.Length >= 2 && group != null
                         && int.TryParse(said[0], out int w) && int.TryParse(said[1], out int d))
                     { group.Wide = w; group.Deep = d; }
@@ -108,7 +108,7 @@ namespace DSPRE.Models
                 }
                 if (line.StartsWith("# colours ", StringComparison.Ordinal))
                 {
-                    var said = line.Substring(10).Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                    string[] said = line.Substring(10).Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                     pendingColours = said.Select(v => int.TryParse(v.TrimEnd('!'), out int c) ? c : -1).ToArray();
                     pendingLast = said.Select(v => v.EndsWith("!")).ToArray();
                     continue;
@@ -144,7 +144,7 @@ namespace DSPRE.Models
                     continue;
                 }
                 if (line.Length == 0 || line[0] == '#') continue;
-                var bits = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                string[] bits = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                 switch (bits[0])
                 {
                     case "v":
@@ -170,10 +170,10 @@ namespace DSPRE.Models
                         break;
                     case "f":
                     {
-                        var face = new Face { Material = Math.Max(0, material) };
+                            Face face = new Face { Material = Math.Max(0, material) };
                         for (int i = 1; i < bits.Length; i++)
                         {
-                            var c = ParseCorner(bits[i], m.Positions.Count, m.TexCoords.Count, m.Normals.Count);
+                                Corner c = ParseCorner(bits[i], m.Positions.Count, m.TexCoords.Count, m.Normals.Count);
                             if (c.Position < 0) { face = null; break; }
                             face.Corners.Add(c);
                         }
@@ -269,7 +269,7 @@ namespace DSPRE.Models
                     continue;
                 }
                 if (line.Length == 0 || line[0] == '#') continue;
-                var bits = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                string[] bits = line.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                 switch (bits[0].ToLowerInvariant())
                 {
                     case "newmtl":
@@ -308,8 +308,8 @@ namespace DSPRE.Models
 
         private static Corner ParseCorner(string s, int positions, int texCoords, int normals)
         {
-            var c = new Corner { Position = -1, Normal = -1, TexCoord = -1 };
-            var parts = s.Split('/');
+            Corner c = new Corner { Position = -1, Normal = -1, TexCoord = -1 };
+            string[] parts = s.Split('/');
             c.Position = Index(parts.Length > 0 ? parts[0] : null, positions);
             c.TexCoord = Index(parts.Length > 1 ? parts[1] : null, texCoords);
             c.Normal = Index(parts.Length > 2 ? parts[2] : null, normals);

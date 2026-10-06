@@ -147,7 +147,7 @@ namespace DSPRE.Avalonia.Data
 
         public static SpaArchive Parse(byte[] d)
         {
-            var a = new SpaArchive();
+            SpaArchive a = new SpaArchive();
             if (d == null || d.Length < HdrSize) return a;
 
             int U16(int o) => d[o] | (d[o + 1] << 8);
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia.Data
             {
                 if (off + BaseSize > d.Length) break;
                 uint flag = (uint)I32(off);
-                var e = new SpaEmitter
+                SpaEmitter e = new SpaEmitter
                 {
                     InitPosType = (int)(flag & 0xF),
                     DrawType = (int)((flag >> 4) & 0x3),
@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.Data
                 e.OffsetX = (short)U16(off + 80) / 4096.0;
                 e.OffsetY = (short)U16(off + 82) / 4096.0;
                 a.Emitters.Add(e);
-                var layout = new SpaRecordLayout { Offset = off, Flags = flag };
+                SpaRecordLayout layout = new SpaRecordLayout { Offset = off, Flags = flag };
                 layout.SetBlock(SpaBlock.Header, off);
 
                 // parse / advance past this record's variable-length blocks (in flag order)
@@ -367,7 +367,7 @@ namespace DSPRE.Avalonia.Data
             SpaTexture tex;
             if (overlapped && sharedNo >= 0 && sharedNo < earlier.Count)
             {
-                var shared = earlier[sharedNo];
+                SpaTexture shared = earlier[sharedNo];
                 tex = new SpaTexture { Width = shared.Width, Height = shared.Height, Rgba = shared.Rgba, Format = shared.Format };
             }
             else
@@ -387,14 +387,14 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                var mat = new NSBMDMaterial
+                NSBMDMaterial mat = new NSBMDMaterial
                 {
                     format = fmt, width = w, height = h,
                     texdata = texdata, paldata = pal, spdata = spdata,
                     color0 = color0Transparent ? 1 : 0,
                     repeatS = 0, repeatT = 0, flipS = 0, flipT = 0,
                 };
-                var dec = NsbmdTextureDecoder.Decode(mat);
+                NsbmdTextureData dec = NsbmdTextureDecoder.Decode(mat);
                 if (dec != null) return new SpaTexture { Width = dec.Width, Height = dec.Height, Rgba = dec.Rgba, Format = fmt };
             }
             catch { }
@@ -404,7 +404,7 @@ namespace DSPRE.Avalonia.Data
         private static byte[] Slice(byte[] d, int off, int len)
         {
             if (off < 0 || len <= 0 || off + len > d.Length) return Array.Empty<byte>();
-            var b = new byte[len];
+            byte[] b = new byte[len];
             Array.Copy(d, off, b, 0, len);
             return b;
         }
@@ -412,7 +412,7 @@ namespace DSPRE.Avalonia.Data
         private static RGBA[] ReadPalette(byte[] d, int off, int size, Func<int, int> ru16)
         {
             int n = size / 2;
-            var pal = new RGBA[Math.Max(n, 256)];   // pad so format index lookups never overrun
+            RGBA[] pal = new RGBA[Math.Max(n, 256)];   // pad so format index lookups never overrun
             for (int i = 0; i < n; i++)
             {
                 if (off + i * 2 + 1 >= d.Length) break;
@@ -497,7 +497,7 @@ namespace DSPRE.Avalonia.Data
         private static void ParseTexAnm(SpaEmitter e, int p, byte[] d)
         {
             if (p + 12 > d.Length) return;
-            var seq = new int[8];
+            int[] seq = new int[8];
             for (int i = 0; i < 8; i++) seq[i] = d[p + i];
             int etc = d[p + 8] | (d[p + 9] << 8) | (d[p + 10] << 16) | (d[p + 11] << 24);
             e.TexSeq = seq;

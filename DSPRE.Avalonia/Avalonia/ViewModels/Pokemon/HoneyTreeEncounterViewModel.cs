@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ApplyState(byte[] state)
         {
-            var species = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
+            int[][] species = DSPRE.Avalonia.UndoJson.Read<int[][]>(state);
             for (int g = 0; g < species.Length && g < _file.Groups.Count; g++)
                 for (int s = 0; s < species[g].Length && s < _file.Groups[g].Encounters.Count; s++)
                     _file.Groups[g].Encounters[s].Species = (ushort)species[g][s];
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SetMonIconsPalTableAddress();
 
             SpeciesNames.Clear();
-            foreach (var n in GetPokemonNames()) SpeciesNames.Add(n);
+            foreach (string n in GetPokemonNames()) SpeciesNames.Add(n);
 
             LoadFile();
         }
@@ -167,7 +167,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _file = new HoneyTreeEncounterFile(true);
                 _suppress = true;
                 GroupNames.Clear();
-                foreach (var g in _file.Groups) GroupNames.Add(g.Name);
+                foreach (HoneyTreeEncounterGroup g in _file.Groups) GroupNames.Add(g.Name);
                 _suppress = false;
 
                 if (GroupNames.Count > 0) SelectedGroupIndex = 0;
@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshGroupDisplay()
         {
             if (_file == null || _selectedGroupIndex < 0 || _selectedGroupIndex >= _file.Groups.Count) return;
-            var group = _file.Groups[_selectedGroupIndex];
+            HoneyTreeEncounterGroup group = _file.Groups[_selectedGroupIndex];
             GroupDescription = group.Description;
 
             _suppress = true;
@@ -201,10 +201,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void LoadSlot(int slot)
         {
             if (_file == null || slot < 0) { ClearFields(); return; }
-            var group = _file.Groups[_selectedGroupIndex];
+            HoneyTreeEncounterGroup group = _file.Groups[_selectedGroupIndex];
             if (slot >= group.Encounters.Count) { ClearFields(); return; }
 
-            var enc = group.Encounters[slot];
+            HoneyTreeEncounter enc = group.Encounters[slot];
             _suppress = true;
             SelectedSpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : 0;
             EncounterRateText = slot < HoneyTreeEncounterGroup.SlotRates.Length
@@ -226,7 +226,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void OnSpeciesChanged(int species)
         {
             if (_file == null || _selectedGroupIndex < 0 || _selectedSlotIndex < 0) return;
-            var group = _file.Groups[_selectedGroupIndex];
+            HoneyTreeEncounterGroup group = _file.Groups[_selectedGroupIndex];
             if (_selectedSlotIndex >= group.Encounters.Count) return;
 
             group.Encounters[_selectedSlotIndex].Species = (ushort)(species >= 0 ? species : 0);
@@ -251,7 +251,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 if (species <= 0) { PokemonIcon = null; return; }
-                var gdi = DSUtils.GetPokePicRaw(species, 64, 64);
+                RawImage gdi = DSUtils.GetPokePicRaw(species, 64, 64);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
             catch { PokemonIcon = null; }
@@ -271,7 +271,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task ExportAsync()
         {
             if (_file == null) return;
-            var filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.SaveFile(_owner, "Export Honey Tree Encounters",
                 new[] { filter }, "honey_tree_encounters.bin");
             if (path == null) return;
@@ -281,7 +281,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task ImportAsync()
         {
             if (_file == null) return;
-            var filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.OpenFile(_owner, "Import Honey Tree Encounters", new[] { filter });
             if (path == null) return;
 
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     _suppress = true;
                     GroupNames.Clear();
-                    foreach (var g in _file.Groups) GroupNames.Add(g.Name);
+                    foreach (HoneyTreeEncounterGroup g in _file.Groups) GroupNames.Add(g.Name);
                     _suppress = false;
 
                     if (GroupNames.Count > 0) SelectedGroupIndex = 0;

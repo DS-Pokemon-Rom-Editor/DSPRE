@@ -24,7 +24,7 @@ namespace DSPRE.HgEngine
             string text = TryReadSource(out _);
             if (text == null) return false;
 
-            var value = FindValue(text, speciesId, DesignatorFor(speciesId));
+            Group value = FindValue(text, speciesId, DesignatorFor(speciesId));
             if (value == null) return false;
             paletteId = int.Parse(value.Value);
             return true;
@@ -60,7 +60,7 @@ namespace DSPRE.HgEngine
 
         internal static bool TryReplaceValue(ref string text, int speciesId, string designator, int paletteId)
         {
-            var value = FindValue(text, speciesId, designator);
+            Group value = FindValue(text, speciesId, designator);
             if (value == null) return false;
             text = string.Concat(text.AsSpan(0, value.Index), paletteId.ToString(), text.AsSpan(value.Index + value.Length));
             return true;
@@ -68,7 +68,7 @@ namespace DSPRE.HgEngine
 
         private static string DesignatorFor(int speciesId)
         {
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             return species != null && species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator) ? designator : null;
         }
 

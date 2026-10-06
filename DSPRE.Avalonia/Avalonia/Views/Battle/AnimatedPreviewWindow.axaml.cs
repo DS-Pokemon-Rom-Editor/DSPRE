@@ -154,7 +154,7 @@ namespace DSPRE.Avalonia.Views.Battle
             _clock = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000.0 / AnimatedPreviewViewModel.FramesPerSecond) };
             _clock.Tick += (_, _) =>
             {
-                var now = DateTime.UtcNow;
+                DateTime now = DateTime.UtcNow;
                 double seconds = (now - _lastTick).TotalSeconds;
                 _lastTick = now;
 
@@ -196,16 +196,16 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private void PlaceCameraBehindPlayer()
         {
-            var player = _vm.Player;
-            var scene = _vm.Scene;
+            FieldPlayer player = _vm.Player;
+            NsbmdRenderModel scene = _vm.Scene;
             if (player == null || scene == null) return;
 
-            var cam = _vm.CameraEntry;
+            FieldCameraEntry cam = _vm.CameraEntry;
             float tile = scene.CellStrideX / MapFile.mapSize;
             float unit = tile * scene.Scale;
 
             // The shift moves the camera and what it looks at together, so it lands on the target.
-            var (x, y, z) = _vm.CameraTarget();
+            (float x, float y, float z) = _vm.CameraTarget();
             // A shake pushes what the camera looks at, which is what the games move too.
             GlView.LookAt(x + (cam.ShiftXInTiles + _vm.CameraShiftX + _vm.ShakeOffsetX) * unit,
                           y + (cam.ShiftYInTiles + _vm.CameraShiftY + _vm.ShakeOffsetY) * unit,
@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.Views.Battle
             GlView.VerticalFieldOfViewDegrees = cam.FieldOfViewDegrees;
 
             float wantYaw = FieldCamera.YawDegrees, wantPitch = _vm.CameraPitchDegrees;
-            var own = _vm.CameraAnglesAt?.Invoke(player.TileX, player.TileZ, player.Facing);
+            (float pitch, float yaw, float roll, int steps)? own = _vm.CameraAnglesAt?.Invoke(player.TileX, player.TileZ, player.Facing);
             if (own != null)
             {
                 float part = 1f / Math.Max(1, own.Value.steps);
@@ -270,7 +270,7 @@ namespace DSPRE.Avalonia.Views.Battle
             if (kind == ScriptEffectKind.Music) { StartMusic(id); return; }
             if (!_vm.PlaySounds) { _vm.SoundLength(kind, 0); return; }
 
-            var sdat = Sdat();
+            SdatArchive sdat = Sdat();
             if (sdat == null) { _vm.SoundLength(kind, 0); return; }
 
             // A fanfare holds the music , and the music carries on once it is over.
@@ -311,7 +311,7 @@ namespace DSPRE.Avalonia.Views.Battle
         {
             StopMusic();
             if (!_vm.PlaySounds) return;
-            var sdat = Sdat();
+            SdatArchive sdat = Sdat();
             if (sdat == null) return;
 
             int token = ++_musicToken;
@@ -366,7 +366,7 @@ namespace DSPRE.Avalonia.Views.Battle
         private void PlaceStartAt(global::Avalonia.Point p)
         {
             if (_vm == null) return;
-            var tile = _vm.TileAtScreen(p.X, p.Y, (x, y, z) =>
+            (int x, int z)? tile = _vm.TileAtScreen(p.X, p.Y, (x, y, z) =>
                 GlView.WorldToScreen(x, y, z, out float sx, out float sy) ? (sx, sy) : ((float, float)?)null);
             if (tile != null) _vm.StandOn(tile.Value.x, tile.Value.z);
         }

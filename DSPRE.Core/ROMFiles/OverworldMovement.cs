@@ -63,7 +63,7 @@ namespace DSPRE.ROMFiles
 
         private static OverworldMovement[] BuildCommon()
         {
-            var list = new List<OverworldMovement>
+            List<OverworldMovement> list = new List<OverworldMovement>
             {
                 new OverworldMovement { Value = 0, Name = "None",   Kind = MoveKind.Static },
                 new OverworldMovement { Value = 1, Name = "Player", Kind = MoveKind.Player },
@@ -88,7 +88,7 @@ namespace DSPRE.ROMFiles
                     Facings = Parse(set),
                 });
 
-            foreach (var (val, set) in new (byte, string)[] { (14, "U"), (15, "D"), (16, "L"), (17, "R") })
+            foreach ((byte val, string set) in new (byte, string)[] { (14, "U"), (15, "D"), (16, "L"), (17, "R") })
                 list.Add(new OverworldMovement
                 {
                     Value = val,
@@ -124,7 +124,7 @@ namespace DSPRE.ROMFiles
             list.Add(new OverworldMovement { Value = 45, Name = "Look around, up, down",    Kind = MoveKind.TurnRandom, Facings = Parse("UD") });
             list.Add(new OverworldMovement { Value = 46, Name = "Look around, left, right", Kind = MoveKind.TurnRandom, Facings = Parse("LR") });
 
-            foreach (var (val, name) in new (byte, string)[]
+            foreach ((byte val, string name) in new (byte, string)[]
             {
                 (BerryPatch, "Berry patch"), (48, "Follow the player"), (49, "Spin, ready for a rematch"),
                 (50, "Follow partner trainer"),

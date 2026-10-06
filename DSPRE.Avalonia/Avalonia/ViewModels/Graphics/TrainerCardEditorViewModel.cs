@@ -1,6 +1,7 @@
 using DSPRE.Avalonia.Data;
 using System;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 
@@ -65,8 +66,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(nameof(HasChanges)); OnPropertyChanged(nameof(HasUnsavedChanges));
                 return;
             }
-            var front = _graphics.ComposeCardFront(SelectedRankIndex);
-            var back = _graphics.ComposeCardBack(SelectedRankIndex);
+            RawImage front = _graphics.ComposeCardFront(SelectedRankIndex);
+            RawImage back = _graphics.ComposeCardBack(SelectedRankIndex);
             CardFrontPreview = ImageConverter.ToAvaloniaBitmap(front);
             CardBackPreview = ImageConverter.ToAvaloniaBitmap(back);
             StatusText = (front == null || back == null) ? "Could not decode the current card design." : string.Empty;
@@ -88,28 +89,28 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string ImportCardFront(string pngPath)
         {
-            var raw = DecodePng(pngPath, out string err);
+            RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
             return Imported(_graphics.ImportCardFront(raw));
         }
 
         public string ImportCardBack(string pngPath)
         {
-            var raw = DecodePng(pngPath, out string err);
+            RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
             return Imported(_graphics.ImportCardBack(raw));
         }
 
         public string ImportTrainerMale(string pngPath)
         {
-            var raw = DecodePng(pngPath, out string err);
+            RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
             return Imported(_graphics.ImportTrainerMale(raw));
         }
 
         public string ImportTrainerFemale(string pngPath)
         {
-            var raw = DecodePng(pngPath, out string err);
+            RawImage raw = DecodePng(pngPath, out string err);
             if (raw == null) return err;
             return Imported(_graphics.ImportTrainerFemale(raw));
         }
@@ -152,8 +153,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             error = null;
             try
             {
-                using var stream = System.IO.File.OpenRead(path);
-                var raw = ImageConverter.DecodeRawImage(stream);
+                using FileStream stream = System.IO.File.OpenRead(path);
+                RawImage raw = ImageConverter.DecodeRawImage(stream);
                 if (raw == null) error = "Could not read this PNG.";
                 return raw;
             }

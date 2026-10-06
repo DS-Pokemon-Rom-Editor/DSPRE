@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -42,7 +43,7 @@ namespace DSPRE.Avalonia.Data
 
         public int PieceCount
         {
-            get { int n = 0; foreach (var c in Cells) n += c.Pieces.Count; return n; }
+            get { int n = 0; foreach (Cell c in Cells) n += c.Pieces.Count; return n; }
         }
 
         private static readonly (int W, int H)[,] Sizes =
@@ -62,7 +63,7 @@ namespace DSPRE.Avalonia.Data
             int kbec = NitroBgCodec.Find(d, "KBEC", 0);
             if (kbec < 0 || kbec + 16 > d.Length) return null;
 
-            var f = new NcerFile { _bytes = (byte[])d.Clone() };
+            NcerFile f = new NcerFile { _bytes = (byte[])d.Clone() };
             int count = NitroBgCodec.U16(d, kbec + 8);
             int type = NitroBgCodec.U16(d, kbec + 10);
             f.Extended = type == 1;
@@ -75,7 +76,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < count; i++)
             {
                 int at = table + i * entry;
-                var cell = new Cell { Number = i };
+                Cell cell = new Cell { Number = i };
                 int n = NitroBgCodec.U16(d, at);
                 int from = area + (int)NitroBgCodec.U32(d, at + 4);
 
@@ -86,7 +87,7 @@ namespace DSPRE.Avalonia.Data
                     int a0 = NitroBgCodec.U16(d, o), a1 = NitroBgCodec.U16(d, o + 2), a2 = NitroBgCodec.U16(d, o + 4);
                     int y = a0 & 0xFF; if (y > 127) y -= 256;
                     int x = a1 & 0x1FF; if (x > 255) x -= 512;
-                    var (w, h) = Sizes[(a0 >> 14) & 3, (a1 >> 14) & 3];
+                    (int w, int h) = Sizes[(a0 >> 14) & 3, (a1 >> 14) & 3];
                     cell.Pieces.Add(new Piece
                     {
                         At = o, X = x, Y = y, Width = w, Height = h,
@@ -110,7 +111,7 @@ namespace DSPRE.Avalonia.Data
 
             long size = NitroBgCodec.U32(_bytes, at + 4);
             int list = at + 8;
-            var starts = new List<int>();
+            List<int> starts = new List<int>();
             for (int i = 0; i < Cells.Count; i++)
             {
                 int p = list + i * 4;
@@ -124,7 +125,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < starts.Count && i < Cells.Count; i++)
             {
                 int p = text + starts[i];
-                var sb = new System.Text.StringBuilder();
+                StringBuilder sb = new System.Text.StringBuilder();
                 while (p < _bytes.Length && _bytes[p] != 0) sb.Append((char)_bytes[p++]);
                 Cells[i].Name = sb.ToString();
             }
@@ -135,7 +136,7 @@ namespace DSPRE.Avalonia.Data
         public Piece PieceAt(int cell, int piece)
         {
             if (cell < 0 || cell >= Cells.Count) return null;
-            var pieces = Cells[cell].Pieces;
+            List<Piece> pieces = Cells[cell].Pieces;
             return piece < 0 || piece >= pieces.Count ? null : pieces[piece];
         }
 
@@ -145,7 +146,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public string Move(int cell, int piece, int x, int y)
         {
-            var p = PieceAt(cell, piece);
+            Piece p = PieceAt(cell, piece);
             if (p == null) return "There is no such piece.";
             if (x < MinX || x > MaxX) return $"Across has to be between {MinX} and {MaxX}.";
             if (y < MinY || y > MaxY) return $"Down has to be between {MinY} and {MaxY}.";

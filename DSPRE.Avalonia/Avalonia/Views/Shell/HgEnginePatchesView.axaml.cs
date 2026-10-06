@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private async void Reload_Click(object sender, RoutedEventArgs e)
         {
-            var vm = VM;
+            HgEnginePatchesViewModel vm = VM;
             if (vm == null) return;
             // Reading the lists again drops patches that were added and not saved.
             if (vm.HasUnsavedChanges && !await DialogHelper.AskYesNo(

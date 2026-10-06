@@ -45,7 +45,7 @@ namespace DSPRE.ROMFiles {
         public HashSet<(int x, int y)> CellsOfHeader(int headerId)
         {
             if (!hasHeadersSection || headerId < 0) return null;
-            var set = new HashSet<(int x, int y)>();
+            HashSet<(int x, int y)> set = new HashSet<(int x, int y)>();
             for (int y = 0; y < height; y++)
                 for (int x = 0; x < width; x++)
                     if (headers[y, x] == headerId)

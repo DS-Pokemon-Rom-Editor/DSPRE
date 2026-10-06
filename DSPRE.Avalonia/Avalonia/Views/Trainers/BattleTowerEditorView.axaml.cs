@@ -29,10 +29,10 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null || VM == null) return;
             bool sets = SetsTabActive;
-            var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = sets ? "Export Battle Tower Pokémon Sets" : "Export Battle Tower Trainers",
                 DefaultExtension = "bin",
@@ -46,10 +46,10 @@ namespace DSPRE.Avalonia.Views.Trainers
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null || VM == null) return;
             bool sets = SetsTabActive;
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = sets ? "Import Battle Tower Pokémon Sets" : "Import Battle Tower Trainers",
                 AllowMultiple = false,

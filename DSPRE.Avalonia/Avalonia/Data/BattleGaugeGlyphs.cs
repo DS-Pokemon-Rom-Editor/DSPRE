@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia.Data
             if (font == null) return null;
 
             const int wide = 8 * Tile, tall = 2 * Tile;
-            var pixels = new byte[wide * tall];
+            byte[] pixels = new byte[wide * tall];
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Background;
 
             int at = 0;
@@ -47,11 +47,11 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The gender symbol and the "Lv" beside it: two tiles across, two down.</summary>
         public static byte[] GenderAndLvBlock(BattleGaugeText.Gender gender)
         {
-            var block = BattleGaugeText.GenderAndLv(gender);
+            BattleGaugeText.Tile[] block = BattleGaugeText.GenderAndLv(gender);
             if (block == null || block.Length < 4) return null;
 
             // the game keeps this as four tiles already, upper pair then lower pair
-            var made = new byte[4 * TileBytes];
+            byte[] made = new byte[4 * TileBytes];
             for (int t = 0; t < 4; t++) PackTile(block[t], made, t * TileBytes);
             return made;
         }
@@ -66,14 +66,14 @@ namespace DSPRE.Avalonia.Data
             if (tiles <= 0) return null;
 
             int wide = tiles * Tile;
-            var pixels = new byte[wide * Tile];
+            byte[] pixels = new byte[wide * Tile];
             for (int i = 0; i < pixels.Length; i++) pixels[i] = Background;
 
             string digits = Math.Clamp(value, 0, 999).ToString();
             int from = againstTheRight ? Math.Max(0, tiles - digits.Length) : 0;
             for (int i = 0; i < digits.Length && from + i < tiles; i++)
             {
-                var tile = BattleGaugeText.Digit(digits[i] - '0');
+                BattleGaugeText.Tile tile = BattleGaugeText.Digit(digits[i] - '0');
                 if (tile == null) continue;
                 for (int y = 0; y < Tile; y++)
                     for (int x = 0; x < Tile; x++)
@@ -85,10 +85,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The word for what is wrong with a Pokemon, three tiles across.</summary>
         public static byte[] StatusRow(BattleGaugeText.Status status)
         {
-            var tiles = BattleGaugeText.StatusWord(status);
+            BattleGaugeText.Tile[] tiles = BattleGaugeText.StatusWord(status);
             if (tiles == null) return null;
 
-            var made = new byte[tiles.Length * TileBytes];
+            byte[] made = new byte[tiles.Length * TileBytes];
             for (int t = 0; t < tiles.Length; t++) PackTile(tiles[t], made, t * TileBytes);
             return made;
         }
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.Data
         private static byte[] Pack(byte[] pixels, int wide, int tall)
         {
             int across = wide / Tile, down = tall / Tile;
-            var made = new byte[across * down * TileBytes];
+            byte[] made = new byte[across * down * TileBytes];
             for (int t = 0; t < across * down; t++)
             {
                 int col = t % across, row = t / across;

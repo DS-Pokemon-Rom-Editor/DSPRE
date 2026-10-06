@@ -64,11 +64,11 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                var (arm9, synth) = Files();
+                (byte[] arm9, byte[] synth) = Files();
                 if (arm9 == null) return null;
                 int i = FollowHook(arm9, synth, ItemFileIdHook, "ITEMEXPV2");
                 if (i < 0 || i + 0x298 > synth.Length) return null;
-                var e = new ItemExpansion
+                ItemExpansion e = new ItemExpansion
                 {
                     Marker = i,
                     FirstItem = BitConverter.ToUInt16(synth, i + 0x290),
@@ -84,7 +84,7 @@ namespace DSPRE.ROMFiles
         public static bool TryReadItem(int itemId, out ItemNarcTableEntry entry)
         {
             entry = default;
-            var e = Items();
+            ItemExpansion e = Items();
             if (e == null || !e.Covers(itemId)) return false;
             byte[] synth = Files().synth;
             int o = e.RowsAt + (itemId - e.FirstItem) * 8;
@@ -100,7 +100,7 @@ namespace DSPRE.ROMFiles
 
         public static bool TryWriteItem(int itemId, ItemNarcTableEntry entry)
         {
-            var e = Items();
+            ItemExpansion e = Items();
             if (e == null || !e.Covers(itemId)) return false;
             byte[] synth = (byte[])Files().synth.Clone();
             int o = e.RowsAt + (itemId - e.FirstItem) * 8;
@@ -132,7 +132,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                var (arm9, synth) = Files();
+                (byte[] arm9, byte[] synth) = Files();
                 if (arm9 == null) return null;
                 int m = FollowHook(arm9, synth, ItemIsTmHmHook, "EXTRATMSV1");
                 if (m < 0 || m + 0x608 > synth.Length) return null;
@@ -140,7 +140,7 @@ namespace DSPRE.ROMFiles
                 if (table != synthOverlayLoadAddress + (uint)m + 0x510) return null;
                 int count = (int)BitConverter.ToUInt32(synth, m + 0x510);
                 if (count < 0 || count > MaxExtraTms) return null;
-                var t = new ExtraTms { Marker = m, Count = count };
+                ExtraTms t = new ExtraTms { Marker = m, Count = count };
                 for (int i = 0; i < MaxExtraTms; i++)
                 {
                     t.ItemIds[i] = BitConverter.ToUInt16(synth, m + 0x518 + i * 2);
@@ -157,12 +157,12 @@ namespace DSPRE.ROMFiles
         /// <summary>Writes extra TM moves by row in one write, skipping rows that already hold that move.</summary>
         public static void SetExtraTmMoves(IReadOnlyDictionary<int, ushort> moves)
         {
-            var t = Tms() ?? throw new InvalidOperationException("The Extra TMs patch isn't installed.");
+            ExtraTms t = Tms() ?? throw new InvalidOperationException("The Extra TMs patch isn't installed.");
             if (moves.Keys.Any(r => r < 0 || r >= t.Count)) throw new ArgumentOutOfRangeException(nameof(moves));
-            var changed = moves.Where(kv => t.MoveIds[kv.Key] != kv.Value).ToList();
+            List<KeyValuePair<int, ushort>> changed = moves.Where(kv => t.MoveIds[kv.Key] != kv.Value).ToList();
             if (changed.Count == 0) return;
             byte[] synth = (byte[])Files().synth.Clone();
-            foreach (var (row, move) in changed) BitConverter.GetBytes(move).CopyTo(synth, t.Marker + 0x590 + row * 2);
+            foreach ((int row, ushort move) in changed) BitConverter.GetBytes(move).CopyTo(synth, t.Marker + 0x590 + row * 2);
             File.WriteAllBytes(Filesystem.expArmPath, synth);
             Forget();
         }
@@ -196,14 +196,14 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static void SetCanLearn(ExtraTms t, IEnumerable<(int Row, int PersonalId, bool Can)> changes)
         {
-            var list = changes.ToList();
+            List<(int Row, int PersonalId, bool Can)> list = changes.ToList();
             if (list.Any(c => c.Row < 0 || c.Row >= t.Count)) throw new ArgumentOutOfRangeException(nameof(changes));
             byte[] synth = (byte[])Files().synth.Clone();
             if (list.Any(c => c.Row >= PersonalMaskRows && c.Can && t.MasksAt + c.PersonalId * 4 + 4 > synth.Length))
                 throw new InvalidOperationException("A Pokémon is past the Extra TMs compatibility table.");
 
             bool synthChanged = false;
-            foreach (var c in list.Where(c => c.Row >= PersonalMaskRows))
+            foreach ((int Row, int PersonalId, bool Can) c in list.Where(c => c.Row >= PersonalMaskRows))
             {
                 int o = t.MasksAt + c.PersonalId * 4;
                 if (o + 4 > synth.Length) continue;   // only "can't learn" gets here, already true
@@ -213,12 +213,12 @@ namespace DSPRE.ROMFiles
                 BitConverter.GetBytes(next).CopyTo(synth, o);
                 synthChanged = true;
             }
-            foreach (var file in list.Where(c => c.Row < PersonalMaskRows).GroupBy(c => c.PersonalId))
+            foreach (IGrouping<int, (int Row, int PersonalId, bool Can)> file in list.Where(c => c.Row < PersonalMaskRows).GroupBy(c => c.PersonalId))
             {
                 string path = PersonalPath(file.Key);
                 byte[] p = File.ReadAllBytes(path);
                 uint mask = BitConverter.ToUInt32(p, PersonalMaskOffset), next = mask;
-                foreach (var c in file)
+                foreach ((int Row, int PersonalId, bool Can) c in file)
                 {
                     uint bit = 1u << (c.Row + PersonalMaskFirstBit);
                     next = c.Can ? next | bit : next & ~bit;
@@ -233,7 +233,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Every (row, personal file) pair that can learn, for rows from <paramref name="firstRow"/>, read in one pass.</summary>
         public static HashSet<(int Row, int PersonalId)> Compatibility(ExtraTms t, IEnumerable<int> personalIds, int firstRow = 0)
         {
-            var result = new HashSet<(int, int)>();
+            HashSet<(int, int)> result = new HashSet<(int, int)>();
             byte[] synth = Files().synth;
             foreach (int id in personalIds)
             {
@@ -286,7 +286,7 @@ namespace DSPRE.ROMFiles
             if (string.IsNullOrEmpty(arm9Path) || !File.Exists(arm9Path)) return new TableLimits();
             string key = arm9Path + "|" + File.GetLastWriteTimeUtc(arm9Path).Ticks + "|" + itemTableOffset + "|" + isHGE;
             if (_limits.key == key && _limits.limits != null) return _limits.limits;
-            var limits = isHGE ? ComputedLimits() : ComputeLimits(File.ReadAllBytes(arm9Path));
+            TableLimits limits = isHGE ? ComputedLimits() : ComputeLimits(File.ReadAllBytes(arm9Path));
             _limits = (key, limits);
             return limits;
         }
@@ -361,7 +361,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                if (gameDirs == null || !gameDirs.TryGetValue(dir, out var dirs)) return int.MaxValue;
+                if (gameDirs == null || !gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) dirs)) return int.MaxValue;
                 if (Directory.Exists(dirs.unpackedDir))
                 {
                     int n = Directory.GetFiles(dirs.unpackedDir).Length;
@@ -387,7 +387,7 @@ namespace DSPRE.ROMFiles
                 if (itemId < 0) throw new InvalidOperationException($"Item {itemId} has no row in the item table.");
                 return ComputedRow(itemId);
             }
-            if (PlatPatches.TryReadItem(itemId, out var e)) return e;
+            if (PlatPatches.TryReadItem(itemId, out ItemNarcTableEntry e)) return e;
             if (itemId < 0 || itemId >= VanillaCount) throw new InvalidOperationException($"Item {itemId} has no row in the item table.");
             uint o = itemTableOffset + (uint)itemId * 8;
             return new ItemNarcTableEntry
@@ -420,7 +420,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Item-data members for items 0 to <paramref name="itemCount"/> - 1, read in one pass; -1 where an item has no row.</summary>
         public static int[] DataMembers(int itemCount)
         {
-            var members = new int[itemCount];
+            int[] members = new int[itemCount];
             int vanilla = VanillaCount;
             if (isHGE)
             {
@@ -428,11 +428,11 @@ namespace DSPRE.ROMFiles
                 return members;
             }
             byte[] table = ARM9.ReadBytes(itemTableOffset, vanilla * 8);
-            var expansion = PlatPatches.Items();
+            PlatPatches.ItemExpansion expansion = PlatPatches.Items();
             for (int i = 0; i < itemCount; i++)
             {
                 if (i < vanilla) members[i] = BitConverter.ToUInt16(table, i * 8);
-                else members[i] = expansion != null && expansion.Covers(i) && PlatPatches.TryReadItem(i, out var e) ? (int)e.itemData : -1;
+                else members[i] = expansion != null && expansion.Covers(i) && PlatPatches.TryReadItem(i, out ItemNarcTableEntry e) ? (int)e.itemData : -1;
             }
             return members;
         }

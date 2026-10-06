@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Data
         // so the colour has to come from the theme rather than be written into the editor.
         private static IBrush Look(string key, IBrush fallback)
         {
-            var app = Application.Current;
+            Application app = Application.Current;
             if (app != null && app.TryGetResource(key, app.ActualThemeVariant, out object found) && found is IBrush b)
                 return b;
             return fallback;

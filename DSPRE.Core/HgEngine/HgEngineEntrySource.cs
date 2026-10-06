@@ -13,7 +13,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
 
-            var info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
+            HgEngineDomainInfo info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
             if (info == null) { error = $"{domain} has no source file."; return false; }
             if (!HgEngineDesignators.TryResolve(domain, id, out string designator))
             { error = $"No source name was found for {domain} {id}."; return false; }

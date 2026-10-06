@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
             if (_setupDone || Design.IsDesignMode) return;
-            var vm = VM;
+            BulkLearnsetEditorViewModel vm = VM;
             if (vm == null) return;
             _setupDone = true;
             await vm.SetupAsync(this);

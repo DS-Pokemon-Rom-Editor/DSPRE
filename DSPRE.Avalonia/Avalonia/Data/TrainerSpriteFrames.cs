@@ -37,9 +37,9 @@ namespace DSPRE.Avalonia.Data
         public static TrainerSpriteFrames Read(byte[] ncgr, byte[] ncer, byte[] nanr, out string why)
         {
             why = null;
-            var cells = TrainerCellFile.Read(ncer);
+            TrainerCellFile cells = TrainerCellFile.Read(ncer);
             if (cells == null) { why = "The cell file is not laid out like a trainer sprite's."; return null; }
-            var anims = NanrFile.Read(nanr);
+            NanrFile anims = NanrFile.Read(nanr);
             if (anims == null) { why = "The animation file could not be read."; return null; }
 
             int rahc = ncgr != null && ncgr.Length > 0x30 ? BitConverter.ToUInt16(ncgr, 0xC) : -1;
@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Data
             int end = rahc + BitConverter.ToInt32(ncgr, rahc + 4);
             if (data + size != end || end > ncgr.Length) { why = "The drawing's pixel block is not the usual shape."; return null; }
 
-            foreach (var c in cells.Cells)
+            foreach (TrainerCellFile.Cell c in cells.Cells)
                 if (c.TransferOffset + c.TransferSize > size) { why = "A frame points past the end of the drawing."; return null; }
 
             return new TrainerSpriteFrames(cells, anims, ncgr[..data], ncgr[data..end], ncgr[end..], rahc);
@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.Data
 
         public (byte[] Ncgr, byte[] Ncer, byte[] Nanr) Write()
         {
-            var ncgr = new byte[_ncgrHead.Length + Tiles.Length + _ncgrTail.Length];
+            byte[] ncgr = new byte[_ncgrHead.Length + Tiles.Length + _ncgrTail.Length];
             _ncgrHead.CopyTo(ncgr, 0);
             Tiles.CopyTo(ncgr, _ncgrHead.Length);
             _ncgrTail.CopyTo(ncgr, _ncgrHead.Length + Tiles.Length);
@@ -83,13 +83,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Pixels as palette * 16 + colour, 0 for none; a few sprites use a second palette.</summary>
         public int[] Draw(int frame)
         {
-            var canvas = new int[Canvas * Canvas];
-            var c = Cells.Cells[frame];
+            int[] canvas = new int[Canvas * Canvas];
+            TrainerCellFile.Cell c = Cells.Cells[frame];
             if (c.IsBlank) return canvas;
             // The first piece is in front.
             for (int i = c.Pieces.Count - 1; i >= 0; i--)
             {
-                var p = TrainerCellFile.Describe(c.Pieces[i]);
+                TrainerCellFile.Piece p = TrainerCellFile.Describe(c.Pieces[i]);
                 ForEachPixel(c, p, (cx, cy, at, high) =>
                 {
                     int v = high ? Tiles[at] >> 4 : Tiles[at] & 0xF;
@@ -102,12 +102,12 @@ namespace DSPRE.Avalonia.Data
         /// <summary>A bit per palette that can draw each pixel, since pieces can overlap.</summary>
         public int[] PalettesOf(int frame)
         {
-            var canvas = new int[Canvas * Canvas];
-            var c = Cells.Cells[frame];
+            int[] canvas = new int[Canvas * Canvas];
+            TrainerCellFile.Cell c = Cells.Cells[frame];
             if (c.IsBlank) c = Template();
-            foreach (var piece in c.Pieces)
+            foreach (ushort[] piece in c.Pieces)
             {
-                var p = TrainerCellFile.Describe(piece);
+                TrainerCellFile.Piece p = TrainerCellFile.Describe(piece);
                 ForEachPixel(c, p, (cx, cy, _, _) => canvas[cy * Canvas + cx] |= 1 << p.Palette);
             }
             return canvas;
@@ -116,8 +116,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>A drawing outside the frame's window moves the window; a blank frame drawn on becomes real.</summary>
         public string SetDrawing(int frame, int[] canvas)
         {
-            var c = Cells.Cells[frame];
-            var box = Bounds(canvas);
+            TrainerCellFile.Cell c = Cells.Cells[frame];
+            (int MinX, int MinY, int MaxX, int MaxY)? box = Bounds(canvas);
             if (box == null)
             {
                 if (!c.IsBlank) Paint(c, canvas);
@@ -130,8 +130,8 @@ namespace DSPRE.Avalonia.Data
                 c = Cells.Cells[frame];
             }
 
-            var (minX, minY, maxX, maxY) = box.Value;
-            var win = Window(c);
+            (int minX, int minY, int maxX, int maxY) = box.Value;
+            (int MinX, int MinY, int MaxX, int MaxY) win = Window(c);
             if (!Covers(c, canvas))
             {
                 int dx = minX < win.MinX ? minX - win.MinX : maxX > win.MaxX ? maxX - win.MaxX : 0;
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.Data
 
         public int AddFrame()
         {
-            var cell = Template().Clone();
+            TrainerCellFile.Cell cell = Template().Clone();
             cell.TransferOffset = (uint)Tiles.Length;
             Tiles = Tiles.Concat(new byte[cell.TransferSize]).ToArray();
             Cells.Cells.Add(cell);
@@ -162,16 +162,16 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Steps that showed a removed frame show the first kept one.</summary>
         public void RemoveFrames(ICollection<int> frames)
         {
-            var gone = new HashSet<int>(frames.Where(f => f >= 0 && f < FrameCount));
+            HashSet<int> gone = new HashSet<int>(frames.Where(f => f >= 0 && f < FrameCount));
             if (gone.Count == 0 || gone.Count >= FrameCount) return;
 
-            var map = new int[FrameCount];
+            int[] map = new int[FrameCount];
             int next = 0;
             for (int i = 0; i < FrameCount; i++) map[i] = gone.Contains(i) ? -1 : next++;
             int fallback = Array.FindIndex(map, m => m >= 0);
 
             // Collected first, since steps share results.
-            var moves = new List<(int S, int F, int To)>();
+            List<(int S, int F, int To)> moves = new List<(int S, int F, int To)>();
             for (int s = 0; s < Animations.Sequences.Count; s++)
                 for (int f = 0; f < Animations.Sequences[s].Frames.Count; f++)
                 {
@@ -179,19 +179,19 @@ namespace DSPRE.Avalonia.Data
                     int to = cell < map.Length && map[cell] >= 0 ? map[cell] : map[fallback];
                     if (to != cell) moves.Add((s, f, to));
                 }
-            foreach (var (s, f, to) in moves) Animations.SetCell(s, f, to, everywhere: true);
+            foreach ((int s, int f, int to) in moves) Animations.SetCell(s, f, to, everywhere: true);
 
-            var kept = new List<TrainerCellFile.Cell>();
+            List<TrainerCellFile.Cell> kept = new List<TrainerCellFile.Cell>();
             for (int i = 0; i < FrameCount; i++) if (!gone.Contains(i)) kept.Add(Cells.Cells[i]);
-            var blocks = kept.Where(k => !k.IsBlank).OrderBy(k => k.TransferOffset).ToList();
-            var tiles = new List<byte>();
-            foreach (var k in blocks)
+            List<TrainerCellFile.Cell> blocks = kept.Where(k => !k.IsBlank).OrderBy(k => k.TransferOffset).ToList();
+            List<byte> tiles = new List<byte>();
+            foreach (TrainerCellFile.Cell k in blocks)
             {
                 uint at = (uint)tiles.Count;
                 tiles.AddRange(Tiles.AsSpan((int)k.TransferOffset, (int)k.TransferSize).ToArray());
                 k.TransferOffset = at;
             }
-            foreach (var k in kept.Where(k => k.IsBlank)) k.TransferOffset = (uint)tiles.Count;
+            foreach (TrainerCellFile.Cell k in kept.Where(k => k.IsBlank)) k.TransferOffset = (uint)tiles.Count;
             Tiles = tiles.ToArray();
             Cells.Cells.Clear();
             Cells.Cells.AddRange(kept);
@@ -211,7 +211,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (steps == null || steps.Count == 0) return "An animation needs at least one step.";
             if (sequence > Animations.Sequences.Count) return $"There is no animation {sequence - 1} to follow.";
-            foreach (var st in steps)
+            foreach (Step st in steps)
                 if (st.Frame < 0 || st.Frame >= FrameCount) return $"There is no frame {st.Frame}.";
 
             if (sequence == Animations.Sequences.Count)
@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia.Data
                 Animations.SetLoopStart(sequence, 0);
             }
 
-            var seq = Animations.Sequences[sequence];
+            NanrFile.Sequence seq = Animations.Sequences[sequence];
             while (seq.Frames.Count < steps.Count) Animations.AddFrame(sequence, seq.Frames.Count - 1);
             while (seq.Frames.Count > steps.Count) Animations.RemoveFrame(sequence, seq.Frames.Count - 1);
 
@@ -242,12 +242,12 @@ namespace DSPRE.Avalonia.Data
 
         public IReadOnlyList<Step> StepsOf(int sequence)
         {
-            var list = new List<Step>();
+            List<Step> list = new List<Step>();
             if (sequence < 0 || sequence >= Animations.Sequences.Count) return list;
-            var seq = Animations.Sequences[sequence];
+            NanrFile.Sequence seq = Animations.Sequences[sequence];
             for (int i = 0; i < seq.Frames.Count; i++)
             {
-                var (x, y) = Animations.ShiftOf(sequence, i);
+                (int x, int y) = Animations.ShiftOf(sequence, i);
                 list.Add(new Step(Animations.CellOf(sequence, i), seq.Frames[i].Delay, x, y));
             }
             return list;
@@ -258,15 +258,15 @@ namespace DSPRE.Avalonia.Data
         // New frames copy the first drawn frame's layout.
         private TrainerCellFile.Cell Template()
         {
-            var real = Cells.Cells.FirstOrDefault(c => !c.IsBlank);
+            TrainerCellFile.Cell real = Cells.Cells.FirstOrDefault(c => !c.IsBlank);
             if (real == null) throw new InvalidOperationException("The sprite has no drawn frame to copy the layout of.");
             return real;
         }
 
         private string MakeReal(int frame)
         {
-            var t = Template();
-            var cell = Cells.Cells[frame];
+            TrainerCellFile.Cell t = Template();
+            TrainerCellFile.Cell cell = Cells.Cells[frame];
             cell.Pieces = t.Clone().Pieces;
             cell.Attr = t.Attr;
             cell.MinX = t.MinX; cell.MinY = t.MinY; cell.MaxX = t.MaxX; cell.MaxY = t.MaxY;
@@ -292,9 +292,9 @@ namespace DSPRE.Avalonia.Data
         private static (int MinX, int MinY, int MaxX, int MaxY) Window(TrainerCellFile.Cell c)
         {
             int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
-            foreach (var p in c.Pieces)
+            foreach (ushort[] p in c.Pieces)
             {
-                var d = TrainerCellFile.Describe(p);
+                TrainerCellFile.Piece d = TrainerCellFile.Describe(p);
                 minX = Math.Min(minX, Origin + d.X); minY = Math.Min(minY, Origin + d.Y);
                 maxX = Math.Max(maxX, Origin + d.X + d.Width - 1); maxY = Math.Max(maxY, Origin + d.Y + d.Height - 1);
             }
@@ -304,10 +304,10 @@ namespace DSPRE.Avalonia.Data
         // The pieces over each pixel, front first.
         private List<(int Palette, int At, bool High)>[] Layers(TrainerCellFile.Cell c)
         {
-            var layers = new List<(int, int, bool)>[Canvas * Canvas];
-            foreach (var piece in c.Pieces)
+            List<(int, int, bool)>[] layers = new List<(int, int, bool)>[Canvas * Canvas];
+            foreach (ushort[] piece in c.Pieces)
             {
-                var p = TrainerCellFile.Describe(piece);
+                TrainerCellFile.Piece p = TrainerCellFile.Describe(piece);
                 ForEachPixel(c, p, (cx, cy, at, high) => (layers[cy * Canvas + cx] ??= new()).Add((p.Palette, at, high)));
             }
             return layers;
@@ -315,7 +315,7 @@ namespace DSPRE.Avalonia.Data
 
         private bool Covers(TrainerCellFile.Cell c, int[] canvas)
         {
-            var layers = Layers(c);
+            List<(int Palette, int At, bool High)>[] layers = Layers(c);
             for (int i = 0; i < canvas.Length; i++)
                 if ((canvas[i] & 0xF) != 0 && (layers[i] == null || !layers[i].Exists(l => l.Palette == canvas[i] >> 4))) return false;
             return true;
@@ -324,16 +324,16 @@ namespace DSPRE.Avalonia.Data
         // The frontmost piece with the pixel's palette takes it; pieces in front of it are cleared there.
         private void Paint(TrainerCellFile.Cell c, int[] canvas)
         {
-            var layers = Layers(c);
+            List<(int Palette, int At, bool High)>[] layers = Layers(c);
             for (int i = 0; i < canvas.Length; i++)
             {
-                var stack = layers[i];
+                List<(int Palette, int At, bool High)> stack = layers[i];
                 if (stack == null) continue;
                 int v = canvas[i] & 0xF, bank = canvas[i] >> 4;
                 int target = v == 0 ? stack.Count : stack.FindIndex(l => l.Palette == bank);
                 for (int k = 0; k < stack.Count && k <= target; k++)
                 {
-                    var (_, at, high) = stack[k];
+                    (int _, int at, bool high) = stack[k];
                     int put = k == target ? v : 0;
                     Tiles[at] = high ? (byte)((Tiles[at] & 0x0F) | (put << 4)) : (byte)((Tiles[at] & 0xF0) | put);
                 }

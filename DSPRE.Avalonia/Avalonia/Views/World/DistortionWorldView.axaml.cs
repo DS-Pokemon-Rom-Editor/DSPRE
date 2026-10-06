@@ -7,6 +7,7 @@ using DSPRE.ROMFiles;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels.World;
 using DSPRE.Avalonia.Views.Battle;
+using System.Collections;
 
 namespace DSPRE.Avalonia.Views.World
 {
@@ -85,7 +86,7 @@ namespace DSPRE.Avalonia.Views.World
         private async void EditModel_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            var window = new MapModelEditorView(VM.MapModel);
+            MapModelEditorView window = new MapModelEditorView(VM.MapModel);
             await window.ShowDialog(this);
             VM.ShowFloorAgain();
         }
@@ -102,9 +103,9 @@ namespace DSPRE.Avalonia.Views.World
                 await DialogHelper.ShowError("This floor has no map to play.", "Distortion World");
                 return;
             }
-            var vm = VM;
-            var preview = new AnimatedPreviewWindow();
-            var walk = preview.ViewModel;
+            DistortionWorldViewModel vm = VM;
+            AnimatedPreviewWindow preview = new AnimatedPreviewWindow();
+            AnimatedPreviewViewModel walk = preview.ViewModel;
             vm.StartWalk();
             walk.CameraAnglesAt = (x, z, facing) => vm.CameraAt(x, z, facing);
             walk.PlayerArrivedOn = (x, z, frame) => vm.SomebodyStoodOn(x, z, frame, walk.Player?.Facing ?? MoveFacing.Down);
@@ -121,7 +122,7 @@ namespace DSPRE.Avalonia.Views.World
             {
                 if (!vm.ShowRideFloor()) return;
                 preview.ReplaceScene(vm.Model3D, vm.Area, vm.Events, vm.Collision);
-                var tile = vm.RideWalkTile();
+                (int x, int z)? tile = vm.RideWalkTile();
                 if (tile != null) walk.StandOn(tile.Value.x, tile.Value.z, vm.RideFacing);
                 if (walk.Player != null) vm.RideContinuesFrom(walk.Player.TileX, walk.Player.TileZ, walk.Frame);
             });
@@ -142,7 +143,7 @@ namespace DSPRE.Avalonia.Views.World
             // The rows raise no change of their own, so the grid only shows the value put back once it rebinds.
             Dispatcher.UIThread.Post(() =>
             {
-                var rows = grid.ItemsSource;
+                IEnumerable rows = grid.ItemsSource;
                 grid.ItemsSource = null;
                 grid.ItemsSource = rows;
             });

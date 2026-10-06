@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using DSPRE;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
@@ -59,7 +60,7 @@ namespace DSPRE.Avalonia.Data
             {
                 "Cells" => "As it appears",
                 "Screen" => "Arrangement",
-                var p => p,
+                string p => p,
             };
             return (name[..at], part);
         }
@@ -69,7 +70,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (string.IsNullOrEmpty(thing)) return null;
 
-            foreach (var (name, says) in Spoken)
+            foreach ((string name, string says) in Spoken)
                 if (thing.Equals(name, StringComparison.Ordinal)) return says;
 
             string[] w = thing.Split('.');
@@ -132,7 +133,7 @@ namespace DSPRE.Avalonia.Data
             try { items = RomInfo.GetItemNames(); } catch { }
 
             int rows = johto ? 28 : SinnohDrawingForRow.Length;
-            var said = new List<string>();
+            List<string> said = new List<string>();
             for (int row = 0; row < rows; row++)
             {
                 int usesDrawing = johto ? row + 1
@@ -238,9 +239,9 @@ namespace DSPRE.Avalonia.Data
                 if (_banksFor == rom) return _banks;
                 _banksFor = rom;
                 _banks = null;
-                var t = BattleUiTables.ReadIconTables();
+                BattleUiTables.IconTables t = BattleUiTables.ReadIconTables();
                 if (t == null) return null;
-                var names = Names();
+                IReadOnlyList<string> names = Names();
                 for (int i = 0; i < IconOrder.Length; i++)
                     if (IndexOf(names, IconOrder[i], "Drawing") != t.TypeMembers[i]) return null;
                 return _banks = t;
@@ -250,7 +251,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Whether this entry is one of the type, contest or move-category icons.</summary>
         private static bool IsIcon(string name)
         {
-            var (thing, part) = Split(name);
+            (string thing, string part) = Split(name);
             return part == "Drawing" && thing != null
                 && (thing.StartsWith("TypeIcon.", StringComparison.Ordinal)
                     || thing.StartsWith("ContestIcon.", StringComparison.Ordinal)
@@ -260,7 +261,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The icons are thirty two by sixteen. Nothing in the file says so, so it is said here.</summary>
         public static int WidthFor(int index)
         {
-            var names = Names();
+            IReadOnlyList<string> names = Names();
             if (index < 0 || index >= names.Count) return 0;
             return IsIcon(names[index]) ? 32 : 0;
         }
@@ -268,11 +269,11 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Which bank of the shared icon colours an icon is painted with.</summary>
         public static int ColourBankFor(int index)
         {
-            var names = Names();
+            IReadOnlyList<string> names = Names();
             if (index < 0 || index >= names.Count) return 0;
             if (!IsIcon(names[index])) return 0;
             string thing = Split(names[index]).Thing;
-            var game = GameBanks();
+            BattleUiTables.IconTables game = GameBanks();
             int at = Array.IndexOf(IconOrder, thing);
             if (game != null && at >= 0) return game.TypeBanks[at];
             at = Array.IndexOf(KindOrder, thing);
@@ -284,7 +285,7 @@ namespace DSPRE.Avalonia.Data
         private static string Pretty(string name)
         {
             if (string.IsNullOrEmpty(name)) return name;
-            var sb = new System.Text.StringBuilder();
+            StringBuilder sb = new System.Text.StringBuilder();
             for (int i = 0; i < name.Length; i++)
             {
                 if (i > 0 && char.IsUpper(name[i]) && !char.IsUpper(name[i - 1])) sb.Append(' ');
@@ -312,19 +313,19 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static List<GraphicAssets.Unit> Units(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var names = Names();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            IReadOnlyList<string> names = Names();
+            HashSet<int> spokenFor = new HashSet<int>();
 
             // Keep the order the game lists them in, so the rows read the way the archive is built.
-            var order = new List<string>();
-            var pieces = new Dictionary<string, List<(int Index, string Part)>>();
+            List<string> order = new List<string>();
+            Dictionary<string, List<(int Index, string Part)>> pieces = new Dictionary<string, List<(int Index, string Part)>>();
 
             for (int i = 0; i < fileCount && i < names.Count; i++)
             {
-                var (thing, part) = Split(names[i]);
+                (string thing, string part) = Split(names[i]);
                 if (thing == null) continue;
-                if (!pieces.TryGetValue(thing, out var list))
+                if (!pieces.TryGetValue(thing, out List<(int Index, string Part)> list))
                 {
                     pieces[thing] = list = new List<(int, string)>();
                     order.Add(thing);
@@ -335,7 +336,7 @@ namespace DSPRE.Avalonia.Data
 
             foreach (string thing in order)
             {
-                var u = new GraphicAssets.Unit
+                GraphicAssets.Unit u = new GraphicAssets.Unit
                 {
                     Archive = a,
                     Name = Friendly(thing),
@@ -343,7 +344,7 @@ namespace DSPRE.Avalonia.Data
                 };
                 // Drawing first, then how it is put together, then its colours: the order somebody works
                 // in rather than the order the archive happens to store them.
-                foreach (var (index, part) in pieces[thing].OrderBy(p => Rank(p.Part)).ThenBy(p => p.Index))
+                foreach ((int index, string part) in pieces[thing].OrderBy(p => Rank(p.Part)).ThenBy(p => p.Index))
                     u.Parts.Add(new GraphicAssets.UnitPart { Archive = a, Index = index, Name = part });
                 units.Add(u);
             }
@@ -351,7 +352,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < fileCount; i++)
             {
                 if (spokenFor.Contains(i)) continue;
-                var lone = new GraphicAssets.Unit { Archive = a, Name = a.Title, In = GroupFor(Section.Screen) };
+                GraphicAssets.Unit lone = new GraphicAssets.Unit { Archive = a, Name = a.Title, In = GroupFor(Section.Screen) };
                 lone.Parts.Add(new GraphicAssets.UnitPart { Archive = a, Index = i, Name = "File " + i });
                 units.Add(lone);
             }
@@ -375,9 +376,9 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static int DrawingFor(int fileIndex)
         {
-            var names = Names();
+            IReadOnlyList<string> names = Names();
             if (fileIndex < 0 || fileIndex >= names.Count) return -1;
-            var (thing, part) = Split(names[fileIndex]);
+            (string thing, string part) = Split(names[fileIndex]);
             if (thing == null) return -1;
             return IndexOf(names, thing, "Drawing");
         }
@@ -385,9 +386,9 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The colours a battle drawing is meant to use, where the game says so plainly.</summary>
         public static int ColoursFor(int fileIndex)
         {
-            var names = Names();
+            IReadOnlyList<string> names = Names();
             if (fileIndex < 0 || fileIndex >= names.Count) return -1;
-            var (thing, part) = Split(names[fileIndex]);
+            (string thing, string part) = Split(names[fileIndex]);
             if (thing == null || part == "Colours") return -1;
 
             // A thing's own colours, when it has some.
@@ -411,7 +412,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             // Everything on the gauge shares one set, which is what the games load for all of them.
-            var section = SectionOf(thing);
+            Section section = SectionOf(thing);
             if (section == Section.Gauges)
             {
                 int shared = IndexOf(names, "HpBar.Shared", "Colours");
@@ -430,7 +431,7 @@ namespace DSPRE.Avalonia.Data
         {
             for (int i = 0; i < names.Count; i++)
             {
-                var (t, p) = Split(names[i]);
+                (string t, string p) = Split(names[i]);
                 if (t == thing && p == part) return i;
             }
             return -1;
@@ -439,9 +440,9 @@ namespace DSPRE.Avalonia.Data
         /// <summary>What one file is, for the line above the picture.</summary>
         public static string NameOf(int fileIndex)
         {
-            var names = Names();
+            IReadOnlyList<string> names = Names();
             if (fileIndex < 0 || fileIndex >= names.Count) return null;
-            var (thing, part) = Split(names[fileIndex]);
+            (string thing, string part) = Split(names[fileIndex]);
             if (thing == null) return null;
             string friendly = Friendly(thing);
             if (part == "File") return friendly;

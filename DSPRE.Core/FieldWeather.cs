@@ -84,7 +84,7 @@ namespace DSPRE
         // HGSS darkness fills the table with 0xFF, so every fogged pixel is fully fogged.
         private static readonly byte[] FullFog = Fill(32, 0xFF);
 
-        private static byte[] Fill(int n, byte v) { var a = new byte[n]; Array.Fill(a, v); return a; }
+        private static byte[] Fill(int n, byte v) { byte[] a = new byte[n]; Array.Fill(a, v); return a; }
 
         private static ushort Rgb(int r, int g, int b) => (ushort)(r | (g << 5) | (b << 10));
 
@@ -100,7 +100,7 @@ namespace DSPRE
             int count = family == RomInfo.GameFamilies.Plat ? 31 : 23;
             if (id < 0 || id >= count) return new Spec { Kind = Kind.None, Id = id };
 
-            var grey = Rgb(26, 26, 26);
+            ushort grey = Rgb(26, 26, 26);
             Spec s = id switch
             {
                 1 => new Spec { Kind = Kind.Cloudy, Background = 5, Blend = (4, 12) },
@@ -145,7 +145,7 @@ namespace DSPRE
         // there is no lightning.
         private static Spec Hgss(int id)
         {
-            var grey = Rgb(26, 26, 26);
+            ushort grey = Rgb(26, 26, 26);
             Spec s = id switch
             {
                 1 or 2 or 3 => new Spec { Kind = Kind.Rain, Particles = 0, FogSettings = new Fog(3, 0x726F, grey) },
@@ -279,7 +279,7 @@ namespace DSPRE
             int steps = 0;
             for (int i = 0; i < n && first + i < Particles.Count; i++)
             {
-                var p = Particles[first + i];
+                Particle p = Particles[first + i];
                 for (int k = 0; k < steps && !p.Gone; k++) Move(p);
                 if (i >= every && i % every == 0) steps += add;
             }
@@ -325,7 +325,7 @@ namespace DSPRE
 
         private void MoveAll()
         {
-            foreach (var p in Particles.ToArray()) if (!p.Gone) Move(p);
+            foreach (Particle p in Particles.ToArray()) if (!p.Gone) Move(p);
             Particles.RemoveAll(p => p.Gone);
         }
 
@@ -338,7 +338,7 @@ namespace DSPRE
         private Particle Add()
         {
             if (Particles.Count >= _pool) return null;
-            var p = new Particle();
+            Particle p = new Particle();
             Particles.Add(p);
             return p;
         }
@@ -367,7 +367,7 @@ namespace DSPRE
         {
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 uint r = Next();
                 int t = (int)(r % 3), e = (int)(r % 20);
                 p.Frame = t;
@@ -386,7 +386,7 @@ namespace DSPRE
             int m = Gust[_w2 / 60];
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 uint r = Next();
                 int t = (int)(r % 3);
                 p.Frame = t;
@@ -403,7 +403,7 @@ namespace DSPRE
             int pct = Gust[_w2 / 60] * 100;
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 int t = R(3);
                 p.Frame = t;
                 p.W[4] = -24 * (t + 1) * pct / 100; p.W[2] = 24 * (t + 1) * pct / 100;
@@ -418,7 +418,7 @@ namespace DSPRE
             if (_double) n *= 2;
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 p.Frame = R(4);
                 p.W[4] = 10; p.W[5] = 0; p.W[6] = 0; p.W[8] = 0;
                 uint r = Next();
@@ -437,7 +437,7 @@ namespace DSPRE
             int[] periods = { 16, 32, 16, 10 };
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 if (++_w1 >= 800) _w1 = 0;
                 int ph = _w1 / 200;
                 p.W[5] = periods[ph];
@@ -459,7 +459,7 @@ namespace DSPRE
             int ph = _w1 / 512;
             for (int i = 0; i < n * 4; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 p.W[0] = 0;
                 p.W[1] = 18 + R(6);
                 int t = R(4);
@@ -480,7 +480,7 @@ namespace DSPRE
             int ph = _w1 / 40;
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 p.W[0] = 0;
                 p.W[1] = 15 + R(20);
                 int t = 3 - (p.W[1] - 15) / 6;
@@ -498,7 +498,7 @@ namespace DSPRE
             if (_double) n *= 2;
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 p.Frame = R(4);
                 p.W[4] = 10; p.W[5] = 0;
                 p.W[1] = Next() % 2 == 0 ? 1 : -1;
@@ -514,7 +514,7 @@ namespace DSPRE
         {
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 p.W[0] = 0;
                 p.W[1] = 7 + R(5);
                 R(1000); R(6); R(5);   // a drift direction and pace the games draw and never use
@@ -532,7 +532,7 @@ namespace DSPRE
         {
             for (int i = 0; i < n; i++)
             {
-                var p = Add(); if (p == null) break;
+                Particle p = Add(); if (p == null) break;
                 int f = R(14);
                 p.Frame = f;
                 int s = f / 4 + 1;

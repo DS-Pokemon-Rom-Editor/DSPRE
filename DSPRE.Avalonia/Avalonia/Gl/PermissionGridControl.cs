@@ -103,11 +103,11 @@ namespace DSPRE.Avalonia.Gl
             ctx.FillRectangle(Brushes.Black, new Rect(0, 0, full, full));
             if (_data == null) return;
 
-            var grid = new Pen(new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)));
+            Pen grid = new Pen(new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)));
             for (int row = 0; row < Size; row++)
                 for (int col = 0; col < Size; col++)
                 {
-                    var brush = PermissionColors.Brush(_data[row, col], IsCollision);
+                    IBrush brush = PermissionColors.Brush(_data[row, col], IsCollision);
                     ctx.FillRectangle(brush, new Rect(col * cs, row * cs, cs, cs));
                     if (row >= UsedRows || col >= UsedColumns)
                         ctx.FillRectangle(new SolidColorBrush(Color.FromArgb(190, 0, 0, 0)),
@@ -120,7 +120,7 @@ namespace DSPRE.Avalonia.Gl
                 ctx.DrawLine(grid, new Point(0, i * cs), new Point(full, i * cs));
             }
 
-            var every = new Pen(new SolidColorBrush(Color.FromArgb(110, 255, 255, 255)));
+            Pen every = new Pen(new SolidColorBrush(Color.FromArgb(110, 255, 255, 255)));
             for (int i = 0; i <= Size; i += 4)
             {
                 ctx.DrawLine(every, new Point(i * cs, 0), new Point(i * cs, full));
@@ -129,7 +129,7 @@ namespace DSPRE.Avalonia.Gl
 
             if (_marked is (int mc, int mr) && mc >= 0 && mr >= 0 && mc < Size && mr < Size)
             {
-                var ring = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xD8, 0x40)), 2);
+                Pen ring = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xD8, 0x40)), 2);
                 ctx.DrawRectangle(null, ring, new Rect(mc * cs, mr * cs, cs, cs));
             }
         }
@@ -140,7 +140,7 @@ namespace DSPRE.Avalonia.Gl
     {
         public static IBrush Brush(byte value, bool isCollision)
         {
-            var (r, g, b) = Rgb(value, isCollision);
+            (float r, float g, float b) = Rgb(value, isCollision);
             return new SolidColorBrush(Color.FromRgb((byte)(r * 255), (byte)(g * 255), (byte)(b * 255)));
         }
 

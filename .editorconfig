@@ -1,0 +1,8 @@
+root = true
+
+# Explicit types instead of var (AGENTS.md). Anonymous types are exempt by the analyzer.
+[{DSPRE.Core,DSPRE.Avalonia}/**.cs]
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = false:warning
+csharp_style_var_elsewhere = false:warning
+dotnet_diagnostic.IDE0008.severity = warning

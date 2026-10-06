@@ -21,8 +21,8 @@ namespace DSPRE.Avalonia.Controls
         private static void OnTextInput(ComboBox box, TextInputEventArgs e)
         {
             if (e.Handled || !box.IsTextSearchEnabled || string.IsNullOrEmpty(e.Text)) return;
-            var typed = Terms.GetOrCreateValue(box);
-            var now = DateTime.UtcNow;
+            Typed typed = Terms.GetOrCreateValue(box);
+            DateTime now = DateTime.UtcNow;
             if (now - typed.Last > Pause) typed.Term = "";
             typed.Last = now;
             typed.Term += e.Text;

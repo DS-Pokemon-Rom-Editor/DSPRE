@@ -189,7 +189,7 @@ namespace DSPRE
 
         public static List<Row> ReadAll(Location location)
         {
-            var rows = new List<Row>();
+            List<Row> rows = new List<Row>();
             if (location == null) return rows;
 
             byte[] data = File.ReadAllBytes(location.Path);
@@ -198,7 +198,7 @@ namespace DSPRE
                 long at = location.Offset + (long)r * RowSize;
                 if (at + RowSize > data.Length) break;
 
-                var row = new Row();
+                Row row = new Row();
                 for (int slot = 0; slot < SlotCount; slot++)
                 {
                     row.Ids[slot] = BitConverter.ToUInt16(data, (int)(at + slot * 2));
@@ -312,7 +312,7 @@ namespace DSPRE
         /// </summary>
         private static long FindTableOffset(byte[] data, uint ramBase, int dataEnd)
         {
-            var candidates = new HashSet<long>();
+            HashSet<long> candidates = new HashSet<long>();
             for (int at = 0; at + 4 <= data.Length; at += 4)
             {
                 uint word = BitConverter.ToUInt32(data, at);

@@ -24,7 +24,7 @@ namespace DSPRE.HgEngine
         public static bool TryRead(out List<Tutor> tutors, out string error)
         {
             tutors = null;
-            if (!TryRows(out string text, out var rows, out var moves, out var npcs, out error)) return false;
+            if (!TryRows(out string text, out List<Match> rows, out HgEngineSymbolTable moves, out HgEngineSymbolTable npcs, out error)) return false;
             tutors = new List<Tutor>();
             foreach (Match m in rows)
             {
@@ -38,13 +38,13 @@ namespace DSPRE.HgEngine
         /// <summary>Rewrites the rows that changed; the list must have as many rows as the file.</summary>
         public static bool TryWrite(IReadOnlyList<Tutor> tutors, out string error)
         {
-            if (!TryRows(out string text, out var rows, out var moves, out var npcs, out error)) return false;
+            if (!TryRows(out string text, out List<Match> rows, out HgEngineSymbolTable moves, out HgEngineSymbolTable npcs, out error)) return false;
             if (rows.Count != tutors.Count) { error = $"{SourceRelPath} has {rows.Count} tutor moves, not {tutors.Count}."; return false; }
             string updated = text;
             for (int i = rows.Count - 1; i >= 0; i--)
             {
                 Match m = rows[i];
-                var t = tutors[i];
+                Tutor t = tutors[i];
                 string move = Token(t.Move, m.Groups[1].Value, moves, "MOVE_"), cost = Token(t.Cost, m.Groups[2].Value, null, null),
                        npc = Token(t.Npc, m.Groups[3].Value, npcs, "MOVE_TUTOR_NPC_");
                 if (move == m.Groups[1].Value && cost == m.Groups[2].Value && npc == m.Groups[3].Value) continue;

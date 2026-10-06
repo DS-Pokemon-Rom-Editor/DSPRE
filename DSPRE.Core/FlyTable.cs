@@ -31,11 +31,11 @@ namespace DSPRE
 
         public static List<Row> Read()
         {
-            var rows = new List<Row>(RomInfo.FlyTableRows);
-            using var r = new ARM9.Reader(RomInfo.FlyTableOffset);
+            List<Row> rows = new List<Row>(RomInfo.FlyTableRows);
+            using ARM9.Reader r = new ARM9.Reader(RomInfo.FlyTableOffset);
             for (int i = 0; i < RomInfo.FlyTableRows; i++)
             {
-                var row = new Row();
+                Row row = new Row();
                 if (Hgss)
                 {
                     row.FlagIdx = r.ReadByte();
@@ -71,8 +71,8 @@ namespace DSPRE
 
         public static void Write(IReadOnlyList<Row> rows)
         {
-            using var w = new ARM9.Writer(RomInfo.FlyTableOffset);
-            foreach (var row in rows)
+            using ARM9.Writer w = new ARM9.Writer(RomInfo.FlyTableOffset);
+            foreach (Row row in rows)
             {
                 if (Hgss)
                 {
@@ -114,11 +114,11 @@ namespace DSPRE
         /// <summary>Every town's fly spot, the starting town first, one per town.</summary>
         public static List<Spot> Spots()
         {
-            var spots = new List<Spot>();
-            var rows = TryRead();
+            List<Spot> spots = new List<Spot>();
+            List<Row> rows = TryRead();
             if (rows == null) return spots;
-            var seen = new HashSet<int>();
-            foreach (var row in rows)
+            HashSet<int> seen = new HashSet<int>();
+            foreach (Row row in rows)
                 if (seen.Add(row.HeaderIdFly))
                     spots.Add(new Spot(row.HeaderIdFly, row.GlobalX, row.GlobalY));
             return spots;

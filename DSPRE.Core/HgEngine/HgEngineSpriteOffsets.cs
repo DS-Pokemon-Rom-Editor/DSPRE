@@ -36,8 +36,8 @@ namespace DSPRE.HgEngine
         /// -1 is a counted jump and -1 itself ends the run, so a truncated read misreads the animation.</summary>
         public static List<SpriteFrameSlot> ReadFrameSlots(HgEngineSourceBlock block, string frameArrayField)
         {
-            var slots = new List<SpriteFrameSlot>();
-            foreach (var el in block.GetArrayElements(new[] { FieldPathSegment.Field(frameArrayField) }))
+            List<SpriteFrameSlot> slots = new List<SpriteFrameSlot>();
+            foreach (HgEngineSourceBlock el in block.GetArrayElements(new[] { FieldPathSegment.Field(frameArrayField) }))
             {
                 el.TryGetInt(new[] { FieldPathSegment.Field("frameNo") }, out int frameNo);
                 el.TryGetInt(new[] { FieldPathSegment.Field("duration") }, out int duration);
@@ -54,7 +54,7 @@ namespace DSPRE.HgEngine
         {
             for (int i = 0; i < slots.Count; i++)
             {
-                var s = slots[i];
+                SpriteFrameSlot s = slots[i];
                 FieldPathSegment[] Path(string field) => new[]
                 {
                     FieldPathSegment.Field(frameArrayField), FieldPathSegment.At(i), FieldPathSegment.Field(field)

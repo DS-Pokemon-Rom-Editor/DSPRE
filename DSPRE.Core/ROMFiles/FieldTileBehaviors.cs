@@ -29,7 +29,7 @@ namespace DSPRE.ROMFiles
 
         public static bool TryJump(byte behavior, out int dx, out int dz, out int tiles)
         {
-            if (Jumps.TryGetValue(behavior, out var jump))
+            if (Jumps.TryGetValue(behavior, out (int dx, int dz, int tiles) jump))
             {
                 (dx, dz, tiles) = jump;
                 return true;

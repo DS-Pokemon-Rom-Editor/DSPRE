@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.Views.Controls
             double w = Bounds.Width, h = Bounds.Height;
             if (w <= 1 || h <= 1) return;
 
-            var mid = new Pen(new SolidColorBrush(Color.FromArgb(70, 128, 128, 128)), 1);
+            Pen mid = new Pen(new SolidColorBrush(Color.FromArgb(70, 128, 128, 128)), 1);
             double halfH = h / 2;
 
             if (_pcm == null || _pcm.Length < 4)
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia.Views.Controls
             }
 
             int frames = _pcm.Length / 2;
-            var brush = WaveBrush ?? Brushes.SteelBlue;
+            IBrush brush = WaveBrush ?? Brushes.SteelBlue;
 
             for (int channel = 0; channel < 2; channel++)
             {

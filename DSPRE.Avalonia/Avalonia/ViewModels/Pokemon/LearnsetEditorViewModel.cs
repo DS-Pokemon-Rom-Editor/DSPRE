@@ -1,10 +1,12 @@
 using Avalonia.Controls;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -111,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Entries.Add(new LearnsetEntryRow { Level = 1, MoveIndex = 1 });
             Entries.Add(new LearnsetEntryRow { Level = 4, MoveIndex = 2 });
             Entries.Add(new LearnsetEntryRow { Level = 7, MoveIndex = 3 });
-            foreach (var e in Entries) e.UpdateDisplay(_moveNamesArr);
+            foreach (LearnsetEntryRow e in Entries) e.UpdateDisplay(_moveNamesArr);
             EntryCount = Entries.Count;
         }
 
@@ -119,7 +121,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public LearnsetEditorViewModel(string[] moveNames)
         {
             _moveNamesArr = moveNames;
-            foreach (var n in moveNames) MoveNames.Add(n);
+            foreach (string n in moveNames) MoveNames.Add(n);
         }
 
         public int CurrentId => _currentId;
@@ -127,9 +129,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Builds the current mon's learnset as CSV (level, move id, move name).</summary>
         public string BuildCsv()
         {
-            var sb = new System.Text.StringBuilder();
+            StringBuilder sb = new System.Text.StringBuilder();
             sb.AppendLine("Level,MoveID,MoveName");
-            foreach (var e in Entries)
+            foreach (LearnsetEntryRow e in Entries)
                 sb.AppendLine($"{e.Level},{e.MoveIndex},{(e.MoveIndex >= 0 && e.MoveIndex < MoveNames.Count ? MoveNames[e.MoveIndex] : "")}");
             return sb.ToString();
         }
@@ -148,9 +150,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Entries.Clear();
             if (_current != null)
             {
-                foreach (var (level, move) in _current.list)
+                foreach ((byte level, ushort move) in _current.list)
                 {
-                    var row = new LearnsetEntryRow { Level = level, MoveIndex = move };
+                    LearnsetEntryRow row = new LearnsetEntryRow { Level = level, MoveIndex = move };
                     row.UpdateDisplay(_moveNamesArr);
                     Entries.Add(row);
                 }
@@ -181,9 +183,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private byte[] LearnsetState()
         {
-            var bytes = new byte[_current.list.Count * 3];
+            byte[] bytes = new byte[_current.list.Count * 3];
             int i = 0;
-            foreach (var (level, move) in _current.list) { bytes[i++] = level; bytes[i++] = (byte)move; bytes[i++] = (byte)(move >> 8); }
+            foreach ((byte level, ushort move) in _current.list) { bytes[i++] = level; bytes[i++] = (byte)move; bytes[i++] = (byte)(move >> 8); }
             return bytes;
         }
 
@@ -201,11 +203,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             error = null;
             if (!DSPRE.HgEngine.HgEngineProject.IsActive) return new LearnsetData(id);
 
-            var bytes = new System.Collections.Generic.List<byte>();
-            bool read = DSPRE.HgEngine.HgEngineLearnsets.TryGetLevelMoves(id, out var moves, out error);
+            List<byte> bytes = new System.Collections.Generic.List<byte>();
+            bool read = DSPRE.HgEngine.HgEngineLearnsets.TryGetLevelMoves(id, out List<(int level, int move)> moves, out error);
             if (read)
             {
-                foreach (var (level, move) in moves)
+                foreach ((int level, int move) in moves)
                 {
                     if (level < 0 || level > byte.MaxValue || move < 0 || move >= 0xFFFF)
                     {
@@ -218,7 +220,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (error != null) bytes.Clear();
             bytes.AddRange(System.BitConverter.GetBytes(DSPRE.HgEngine.HgEngineLearnsets.Terminator));
 
-            var data = new LearnsetData(new System.IO.MemoryStream(bytes.ToArray()), wide: true);
+            LearnsetData data = new LearnsetData(new System.IO.MemoryStream(bytes.ToArray()), wide: true);
             // The list drops repeated rows, so a save would silently remove them.
             if (error == null && data.list.Count != moves.Count)
                 error = "learnsets.json repeats a level and move.";
@@ -229,7 +231,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddEntry()
         {
             if (_current == null || _addLevel < 1 || _addLevel > 100 || _addMoveIndex <= 0) return;
-            var entry = ((byte)_addLevel, (ushort)_addMoveIndex);
+            (byte, ushort) entry = ((byte)_addLevel, (ushort)_addMoveIndex);
             if (_current.list.Contains(entry)) { StatusText = "Entry already exists!"; return; }
 
             int insertAt = _current.list.FindIndex(x => x.level > entry.Item1 || (x.level == entry.Item1 && x.move > entry.Item2));
@@ -280,8 +282,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     _ = DialogHelper.ShowError("The learnset could not be saved.\n" + _loadError, "Save Error");
                     return;
                 }
-                var entries = new System.Collections.Generic.List<(int level, int move)>(_current.list.Count);
-                foreach (var (level, move) in _current.list) entries.Add((level, move));
+                List<(int level, int move)> entries = new System.Collections.Generic.List<(int level, int move)>(_current.list.Count);
+                foreach ((byte level, ushort move) in _current.list) entries.Add((level, move));
                 string error;
                 bool ok;
                 try { ok = DSPRE.HgEngine.HgEngineLearnsets.TrySaveLevelMoves(_currentId, entries, out error); }
@@ -308,9 +310,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshEntries()
         {
             Entries.Clear();
-            foreach (var (level, move) in _current.list)
+            foreach ((byte level, ushort move) in _current.list)
             {
-                var row = new LearnsetEntryRow { Level = level, MoveIndex = move };
+                LearnsetEntryRow row = new LearnsetEntryRow { Level = level, MoveIndex = move };
                 row.UpdateDisplay(_moveNamesArr);
                 Entries.Add(row);
             }
@@ -329,7 +331,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void SwapEntries(int a, int b)
         {
             if (_current == null) return;
-            var tmp = _current.list[a];
+            (byte level, ushort move) tmp = _current.list[a];
             _current.list[a] = _current.list[b];
             _current.list[b] = tmp;
             RefreshEntries();

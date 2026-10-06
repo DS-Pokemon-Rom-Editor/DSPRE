@@ -37,7 +37,7 @@ namespace DSPRE.ROMFiles
             {
                 if (IsGround) return (GroundX + col, GroundY, GroundZ + row);
 
-                var b = Bounds;
+                TornWorldFile.Bounds b = Bounds;
                 switch (Kind)
                 {
                     case TornWorldFile.PlatformKind.WestWall:
@@ -57,7 +57,7 @@ namespace DSPRE.ROMFiles
             /// </summary>
             public (int x, int y, int z) EventAt(int col, int row)
             {
-                var at = WorldAt(col, row);
+                (int x, int y, int z) at = WorldAt(col, row);
                 return IsGround ? (at.x, at.y + Lift(col, row), at.z) : at;
             }
 
@@ -76,7 +76,7 @@ namespace DSPRE.ROMFiles
                 }
                 else
                 {
-                    var b = Bounds;
+                    TornWorldFile.Bounds b = Bounds;
                     if (!b.Contains(worldX, worldY, worldZ)) return false;
                     row = worldZ - b.StartZ;
                     switch (Kind)
@@ -99,13 +99,13 @@ namespace DSPRE.ROMFiles
             Func<int, int, MapFile> mapAt, Func<int, ushort[]> gridFor,
             int cellsAcross, int cellsDown, int floorIndex, int gridBand, int firstPlatformRow = 8)
         {
-            var surfaces = new List<Surface>();
+            List<Surface> surfaces = new List<Surface>();
             if (floor == null) return surfaces;
 
             for (int down = 0; down < cellsDown; down++)
                 for (int across = 0; across < cellsAcross; across++)
                 {
-                    var map = mapAt?.Invoke(across, down);
+                    MapFile map = mapAt?.Invoke(across, down);
                     if (map?.collisions == null) continue;
 
                     surfaces.Add(new Surface
@@ -126,11 +126,11 @@ namespace DSPRE.ROMFiles
 
             for (int i = 0; i < data.Platforms.Count; i++)
             {
-                var platform = data.Platforms[i];
-                var grid = gridFor?.Invoke(platform.AttributeId);
+                TornWorldFile.FloatingPlatform platform = data.Platforms[i];
+                ushort[] grid = gridFor?.Invoke(platform.AttributeId);
                 if (grid == null) continue;
 
-                var surface = new Surface
+                Surface surface = new Surface
                 {
                     FloorIndex = floorIndex,
                     PatchX = floorIndex * gridBand,
@@ -173,7 +173,7 @@ namespace DSPRE.ROMFiles
                     surface.Types[row, col] = 0;
                 }
 
-            var (columns, rows) = PaintedExtent(platform);
+            (int columns, int rows) = PaintedExtent(platform);
             for (int row = 0; row < rows; row++)
                 for (int col = 0; col < columns; col++)
                 {
@@ -190,7 +190,7 @@ namespace DSPRE.ROMFiles
         public static void WriteBack(TornWorldFile.FloatingPlatform platform, ushort[] grid,
             byte[,] collisions, byte[,] types)
         {
-            var (columns, rows) = PaintedExtent(platform);
+            (int columns, int rows) = PaintedExtent(platform);
             for (int row = 0; row < rows; row++)
                 for (int col = 0; col < columns; col++)
                 {
@@ -203,7 +203,7 @@ namespace DSPRE.ROMFiles
         /// <summary>A grid of another size, keeping every cell that still fits; new cells are blocked.</summary>
         public static ushort[] ResizeGrid(ushort[] grid, int oldVertical, int oldHorizontal, int newVertical, int newHorizontal)
         {
-            var resized = new ushort[Math.Max(0, newVertical) * Math.Max(0, newHorizontal)];
+            ushort[] resized = new ushort[Math.Max(0, newVertical) * Math.Max(0, newHorizontal)];
             for (int i = 0; i < resized.Length; i++) resized[i] = 0x8000;
             if (grid == null) return resized;
 
@@ -220,14 +220,14 @@ namespace DSPRE.ROMFiles
         public static ushort[] GridFromBytes(byte[] raw)
         {
             if (raw == null) return null;
-            var grid = new ushort[raw.Length / 2];
+            ushort[] grid = new ushort[raw.Length / 2];
             for (int i = 0; i < grid.Length; i++) grid[i] = (ushort)(raw[i * 2] | (raw[i * 2 + 1] << 8));
             return grid;
         }
 
         public static byte[] GridToBytes(ushort[] grid)
         {
-            var raw = new byte[grid.Length * 2];
+            byte[] raw = new byte[grid.Length * 2];
             for (int i = 0; i < grid.Length; i++)
             {
                 raw[i * 2] = (byte)(grid[i] & 0xFF);
@@ -240,7 +240,7 @@ namespace DSPRE.ROMFiles
         {
             int total = 0;
             if (surfaces == null) return 0;
-            foreach (var surface in surfaces)
+            foreach (Surface surface in surfaces)
                 for (int row = 0; row < MapFile.mapSize; row++)
                     for (int col = 0; col < MapFile.mapSize; col++)
                         if (surface.CanWalk(col, row)) total++;
@@ -252,10 +252,10 @@ namespace DSPRE.ROMFiles
         private static int[,] TerrainLift(MapFile map)
         {
             int n = MapFile.mapSize;
-            var lift = new int[n, n];
-            if (map?.bdhc == null || !BdhcFile.TryParse(map.bdhc, out var terrain)) return lift;
+            int[,] lift = new int[n, n];
+            if (map?.bdhc == null || !BdhcFile.TryParse(map.bdhc, out BdhcFile terrain)) return lift;
 
-            var found = new bool[n, n];
+            bool[,] found = new bool[n, n];
             for (int row = 0; row < n; row++)
                 for (int col = 0; col < n; col++)
                     if (terrain.TryGetHeight((col + 0.5f) * 0.25f, (row + 0.5f) * 0.25f, 0f, out float y))
@@ -264,7 +264,7 @@ namespace DSPRE.ROMFiles
                         found[row, col] = true;
                     }
 
-            var filled = (int[,])lift.Clone();
+            int[,] filled = (int[,])lift.Clone();
             for (int row = 0; row < n; row++)
                 for (int col = 0; col < n; col++)
                 {

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
 {
@@ -20,7 +21,7 @@ namespace DSPRE.HgEngine
         public static bool TryGetVanillaBoundary(out int lastVanillaMoveId)
         {
             lastVanillaMoveId = -1;
-            var moves = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable moves = HgEngineSymbolTable.Load(HeaderRelPath);
             // NUM_OF_CANONICAL_MOVES is a count, not a max id.
             if (moves == null || !moves.TryGetValue("NUM_OF_CANONICAL_MOVES", out int canonicalCount) || canonicalCount <= 0)
                 return false;
@@ -33,7 +34,7 @@ namespace DSPRE.HgEngine
         {
             firstCustomId = -1;
             count = 0;
-            var moves = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable moves = HgEngineSymbolTable.Load(HeaderRelPath);
             if (moves == null) return false;
             if (!moves.TryGetValue("NUM_OF_CANONICAL_MOVES", out int canonicalCount)) return false;
             if (!moves.TryGetValue("NUM_OF_CUSTOM_MOVES", out int customCount)) return false;
@@ -97,7 +98,7 @@ namespace DSPRE.HgEngine
         public static void CompleteAdd(PendingMove pending)
         {
             HgEngineSymbolTable.ClearCache();
-            var names = new ROMFiles.TextArchive(RomInfo.attackNamesTextNumber);
+            TextArchive names = new ROMFiles.TextArchive(RomInfo.attackNamesTextNumber);
             while (names.messages.Count < pending.Id) names.messages.Add("");
             names.messages.Insert(pending.Id, pending.DisplayName);
             names.SaveToExpandedDir(RomInfo.attackNamesTextNumber, showSuccessMessage: false);
@@ -127,7 +128,7 @@ namespace DSPRE.HgEngine
             pending = null;
             newHeader = newSource = null;
             error = null;
-            var moves = HgEngineSymbolTable.Parse(headerText, config);
+            HgEngineSymbolTable moves = HgEngineSymbolTable.Parse(headerText, config);
             if (!moves.TryGetValue("NUM_OF_CANONICAL_MOVES", out int canonicalCount))
             { error = "Could not find NUM_OF_CANONICAL_MOVES in moves.h."; return false; }
             if (!moves.TryGetValue("NUM_OF_CUSTOM_MOVES", out int customCount))
@@ -156,7 +157,7 @@ namespace DSPRE.HgEngine
             Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, out string newHeader, out string newSource, out string error)
         {
             newHeader = newSource = null;
-            if (!TryPrepare(headerText, sourceText, pending.DisplayName, config, out var fresh, out string header, out string source, out error)) return false;
+            if (!TryPrepare(headerText, sourceText, pending.DisplayName, config, out PendingMove fresh, out string header, out string source, out error)) return false;
             if (fresh.Id != pending.Id || fresh.Designator != pending.Designator)
             { error = "moves.h changed after the move was added, so it was not saved. Discard it and add it again."; return false; }
             if (!HgEngineMoveSource.TryApply(ref source, new[] { (pending.Designator, move) }, lookupFor, out error)) return false;
@@ -180,10 +181,10 @@ namespace DSPRE.HgEngine
             if (!HgEngineHeaderEditor.TryReplaceDefineValue(ref newHeader, "NUM_OF_CUSTOM_MOVES", (customCount + 1).ToString()))
             { error = "Could not update NUM_OF_CUSTOM_MOVES."; return false; }
 
-            var rebuilt = HgEngineSymbolTable.Parse(newHeader, config);
+            HgEngineSymbolTable rebuilt = HgEngineSymbolTable.Parse(newHeader, config);
             if (!rebuilt.TryGetValue(designator, out int newId) || newId != candidateId)
             { error = $"moves.h would not number {designator} as {candidateId}, so nothing was added."; return false; }
-            var clash = rebuilt.ByName
+            string clash = rebuilt.ByName
                 .Where(kv => kv.Value == candidateId && kv.Key != designator && kv.Key.StartsWith(Prefix, StringComparison.Ordinal))
                 .Select(kv => kv.Key).FirstOrDefault();
             if (clash != null)
@@ -260,7 +261,7 @@ namespace DSPRE.HgEngine
         public static List<HgEngineFieldWrite> Preserve(HgEngineDomain domain, int id, IEnumerable<Write> writes)
         {
             HgEngineSourceBlock? entry = null;
-            var info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
+            HgEngineDomainInfo info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
             if (HgEngineProject.IsActive && info != null && HgEngineDesignators.TryResolve(domain, id, out string designator))
             {
                 string path = System.IO.Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
@@ -278,12 +279,12 @@ namespace DSPRE.HgEngine
         /// already-loaded entry; a null entry keeps no spelling.</summary>
         internal static List<HgEngineFieldWrite> Preserve(HgEngineSourceBlock? entry, IEnumerable<Write> writes, Func<Write, Func<string, int?>> lookupFor)
         {
-            var result = new List<HgEngineFieldWrite>();
-            foreach (var w in writes)
+            List<HgEngineFieldWrite> result = new List<HgEngineFieldWrite>();
+            foreach (Write w in writes)
             {
                 string raw = null;
                 entry?.TryGetRaw(w.Path, out raw);
-                var lookup = lookupFor(w);
+                Func<string, int?> lookup = lookupFor(w);
                 // Whole expressions resolve, so an unchanged OR of names or a config ternary keeps its text.
                 int? Resolve(string token) => HgEngineSourceExpression.TryEvaluate(token, lookup, out int v) ? v : null;
                 string literal = w.IsFlags ? MergeFlags(raw, w.Value, w.Literal, Resolve) : KeepSpelling(raw, w.Value, w.Literal, Resolve);
@@ -302,7 +303,7 @@ namespace DSPRE.HgEngine
         {
             if (string.IsNullOrWhiteSpace(originalRaw)) return newExpression;
 
-            var terms = originalRaw.Split('|').Select(t => t.Trim()).Where(t => t.Length > 0).ToList();
+            List<string> terms = originalRaw.Split('|').Select(t => t.Trim()).Where(t => t.Length > 0).ToList();
             int value = 0;
             bool known = true;
             foreach (string term in terms)
@@ -314,7 +315,7 @@ namespace DSPRE.HgEngine
             if (known && value == newValue) return originalRaw;
 
             // Keeping the original order leaves the added or removed flag as the only change in the diff.
-            var parts = new List<string>();
+            List<string> parts = new List<string>();
             int covered = 0;
             foreach (string term in terms)
             {

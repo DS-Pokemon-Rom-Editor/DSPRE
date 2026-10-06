@@ -12,6 +12,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using static DSPRE.RomInfo;
 using AvBitmap = global::Avalonia.Media.Imaging.Bitmap;
+using LibNDSFormats.NSBMD;
+using Avalonia.Platform;
+using Avalonia.Media.Imaging;
 
 namespace DSPRE.Avalonia.ViewModels.World
 {
@@ -153,7 +156,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             for (int i = 0; i < TileGrid.Layers; i++)
             {
-                var row = new LayerRow { Index = i };
+                LayerRow row = new LayerRow { Index = i };
                 row.VisibilityChanged += (_, _) => GridChanged?.Invoke(this, EventArgs.Empty);
                 Layers.Add(row);
             }
@@ -382,7 +385,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_rampFillIndex == FillBrushPicture)
             {
                 if (Brush < 0 || Brush >= _set.Tiles.Count) return null;
-                var tile = _set.Tiles[Brush];
+                MapTileset.Tile tile = _set.Tiles[Brush];
                 return tile.Faces.FirstOrDefault(f => f.Look != null && f.Picture == tile.MainPicture) ?? tile.Faces.FirstOrDefault(f => f.Look != null);
             }
             string name = RampFills[_rampFillIndex];
@@ -391,8 +394,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private List<(int x, int z)> SelectedSquares()
         {
-            var mask = _painter.Selection;
-            var picked = new List<(int, int)>();
+            bool[,] mask = _painter.Selection;
+            List<(int, int)> picked = new List<(int, int)>();
             if (mask == null) return picked;
             for (int z = 0; z < TileGrid.Across; z++)
                 for (int x = 0; x < TileGrid.Across; x++)
@@ -404,7 +407,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _rampRuns.RemoveAll(r => r.Squares.Count == 0);
             _ramps.Clear();
-            foreach (var run in _rampRuns) _ramps.UnionWith(run.Squares);
+            foreach (TileRamps.Run run in _rampRuns) _ramps.UnionWith(run.Squares);
             Note = _rampRuns.Count == 0 ? "No ramps."
                  : $"{_rampRuns.Count} ramp{(_rampRuns.Count > 1 ? "s" : "")} ({_ramps.Count} squares), built on Apply.";
             Raise(nameof(RampCount));
@@ -414,11 +417,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Marks the selection as one ramp run, replacing any ramp already on those squares.</summary>
         public void MarkRamp()
         {
-            var picked = SelectedSquares();
+            List<(int x, int z)> picked = SelectedSquares();
             if (picked.Count == 0) return;
-            foreach (var run in _rampRuns) run.Squares.ExceptWith(picked);
-            var template = RampTemplate();
-            var fill = RampFill();
+            foreach (TileRamps.Run run in _rampRuns) run.Squares.ExceptWith(picked);
+            MapTileset.Tile template = RampTemplate();
+            MapTileset.Face fill = RampFill();
             if (_rampFillIndex == FillBrushTile && template == null) { Warning = "Select the slope tile to fit first."; return; }
             if (_rampFillIndex != FillGround && _rampFillIndex != FillBrushTile && fill == null) { Warning = "That picture has no look to copy; pick another fill."; return; }
             _rampRuns.Add(new TileRamps.Run
@@ -433,8 +436,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void UnmarkRamp()
         {
-            var picked = SelectedSquares();
-            foreach (var run in _rampRuns) run.Squares.ExceptWith(picked);
+            List<(int x, int z)> picked = SelectedSquares();
+            foreach (TileRamps.Run run in _rampRuns) run.Squares.ExceptWith(picked);
             RampsChanged();
         }
 
@@ -449,7 +452,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private float SurfaceOf(TileGrid grid, int x, int z, int l)
         {
-            var sq = grid.At(x, z, l);
+            TileGrid.Square sq = grid.At(x, z, l);
             if (sq.Tile < 0 || sq.Tile >= _set.Tiles.Count) return sq.Lift;
             if (_walkedLayer != null && x >= 0 && z >= 0 && x < TileGrid.Across && z < TileGrid.Across
                 && _walkedLayer[x, z] == l && _walkedTile[x, z] == sq.Tile)
@@ -469,7 +472,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _walkedLayer = null;
             _walkedAbove = null;
             _walkedTile = null;
-            if (_map?.bdhc == null || !BdhcFile.TryParse(_map.bdhc, out var terrain)) return;
+            if (_map?.bdhc == null || !BdhcFile.TryParse(_map.bdhc, out BdhcFile terrain)) return;
             float toUnits = 16f / MapTileset.TileWidth;
             _walkedLayer = new int[TileGrid.Across, TileGrid.Across];
             _walkedAbove = new float[TileGrid.Across, TileGrid.Across];
@@ -483,9 +486,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     float best = float.MaxValue;
                     for (int l = 0; l < TileGrid.Layers; l++)
                     {
-                        var sq = grid.At(x, z, l);
+                        TileGrid.Square sq = grid.At(x, z, l);
                         if (sq.Tile < 0) continue;
-                        var tile = _set.Tiles[sq.Tile];
+                        MapTileset.Tile tile = _set.Tiles[sq.Tile];
                         float bottom = grid.BaseLift + sq.Lift, top = bottom + tile.Corners.DefaultIfEmpty().Max(c => c?.Y ?? 0f);
                         float walk = walkY * 64f / toUnits;
                         // The walked height has to lie within the tile; among those, the tile whose ground is nearest wins.
@@ -594,7 +597,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_map?.mapModelData == null) return;
             _knownModel = _map.mapModelData;
 
-            var mesh = MapMesh.Read(_map.mapModelData, out string whynot);
+            MapMesh mesh = MapMesh.Read(_map.mapModelData, out string whynot);
             if (mesh == null) { Warning = whynot; return; }
             // Squares are measured at scale 64; a few maps declare another, which would misplace every tile.
             mesh.ScaleTo(TileScale);
@@ -610,20 +613,20 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return named >= 0 ? mesh.NameOfColours(named) : "";
             };
 
-            var set = MapTileset.FromMap(mesh, pictureOf, "this map", paletteOf);
-            var left = new List<MapMesh.Face>();
-            var grid = TileGrid.Of(mesh, set, pictureOf, out int unmatched, paletteOf, left);
+            MapTileset set = MapTileset.FromMap(mesh, pictureOf, "this map", paletteOf);
+            List<MapMesh.Face> left = new List<MapMesh.Face>();
+            TileGrid grid = TileGrid.Of(mesh, set, pictureOf, out int unmatched, paletteOf, left);
             int learned = TileCollisions.Learn(grid, set, _map.types, _map.collisions);
             Load(set, grid);
             _ripped = grid.Clone();
             FindWalkedLayers(grid);
             _painter.GroundSurface = (x, z, l) => SurfaceOf(_painter.Grid, x, z, l);
-            var cut = new List<MapMesh.Face>();
-            var split = new Dictionary<MapMesh.Face, List<MapMesh.Face>>();
+            List<MapMesh.Face> cut = new List<MapMesh.Face>();
+            Dictionary<MapMesh.Face, List<MapMesh.Face>> split = new Dictionary<MapMesh.Face, List<MapMesh.Face>>();
             MapTileset.PiecesOf(mesh, cut, split);
             _wholeFaces = TileBake.WholeFaces(mesh, cut, pictureOf, paletteOf, split);
             // Pieces with no free layer stay until painted over; cut faces come back whole, so only the map's own faces count.
-            var own = new HashSet<MapMesh.Face>(mesh.Faces);
+            HashSet<MapMesh.Face> own = new HashSet<MapMesh.Face>(mesh.Faces);
             _leftFaces = TileBake.WholeFaces(mesh, left.Where(own.Contains), pictureOf, paletteOf);
 
             Note = $"{_set.Tiles.Count} tiles, {grid.Painted} cells"
@@ -651,8 +654,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             for (int layer = 0; layer < TileGrid.Layers; layer++)
             {
-                var now = _painter.Grid.At(x, z, layer);
-                var was = _ripped.At(x, z, layer);
+                TileGrid.Square now = _painter.Grid.At(x, z, layer);
+                TileGrid.Square was = _ripped.At(x, z, layer);
                 if (now.Tile != was.Tile || now.Turn != was.Turn || now.FromX != was.FromX || now.FromZ != was.FromZ
                     || _painter.Grid.HeightAt(x, z, layer) != _ripped.HeightAt(x, z, layer)) return true;
             }
@@ -681,7 +684,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _fromAbove.Clear();
             _thumbs.Clear();
             _pictures = PicturesOfTheArea();
-            foreach (var kv in PicturesOfTheSet(set)) _pictures.TryAdd(kv.Key, kv.Value);
+            foreach (KeyValuePair<string, (byte[] rgba, int w, int h)> kv in PicturesOfTheSet(set)) _pictures.TryAdd(kv.Key, kv.Value);
 
             FillList();
             FillSmart();
@@ -704,7 +707,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
 
             bool theirs = Path.GetExtension(path).Equals(".pdsts", StringComparison.OrdinalIgnoreCase);
-            var set = theirs
+            MapTileset set = theirs
                 ? PdstsFile.Read(path, out string whynot)
                 : MapTileset.FromObj(path, out whynot);
             if (set == null) { Warning = whynot; return; }
@@ -728,21 +731,21 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void SizePlaces(MapTileset set)
         {
-            var own = PicturesOfTheSet(set);
-            var area = PicturesOfTheArea();
+            Dictionary<string, (byte[] rgba, int w, int h)> own = PicturesOfTheSet(set);
+            Dictionary<string, (byte[] rgba, int w, int h)> area = PicturesOfTheArea();
             set.TurnPlacesIntoDots(name =>
                 name == null ? (0, 0)
-                : own.TryGetValue(name, out var mine) ? (mine.w, mine.h)
-                : area.TryGetValue(name, out var found) ? (found.w, found.h) : (0, 0));
+                : own.TryGetValue(name, out (byte[] rgba, int w, int h) mine) ? (mine.w, mine.h)
+                : area.TryGetValue(name, out (byte[] rgba, int w, int h) found) ? (found.w, found.h) : (0, 0));
         }
 
         private string MissingPictures(MapTileset set)
         {
             // Only placed tiles count. A picture and its palette must both be in the pack under 16-character names, or it draws pink.
-            var (pictures, palettes) = WhatTheAreaCarries();
-            var placed = new HashSet<int>(_painter.Grid?.Placed().Select(p => p.square.Tile) ?? Enumerable.Empty<int>());
-            var faces = placed.Where(t => t >= 0 && t < set.Tiles.Count).SelectMany(t => set.Tiles[t].Faces).ToList();
-            var missing = faces.Select(f => f.Picture)
+            (HashSet<string> pictures, HashSet<string> palettes) = WhatTheAreaCarries();
+            HashSet<int> placed = new HashSet<int>(_painter.Grid?.Placed().Select(p => p.square.Tile) ?? Enumerable.Empty<int>());
+            List<MapTileset.Face> faces = placed.Where(t => t >= 0 && t < set.Tiles.Count).SelectMany(t => set.Tiles[t].Faces).ToList();
+            List<string> missing = faces.Select(f => f.Picture)
                                .Where(p => !string.IsNullOrEmpty(p) && !pictures.Contains(NitroDictionary.Fit(p)))
                                .Concat(faces.Select(f => f.Palette)
                                             .Where(p => !string.IsNullOrEmpty(p) && !palettes.Contains(NitroDictionary.Fit(p)))
@@ -790,7 +793,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void BringInProject(string path)
         {
-            var project = PdsmapFile.Read(path, out string whynot);
+            PdsmapFile.Project project = PdsmapFile.Read(path, out string whynot);
             if (project == null) { Warning = whynot; return; }
             if (string.IsNullOrEmpty(project.TilesetPath) || !File.Exists(project.TilesetPath))
             {
@@ -798,7 +801,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 return;
             }
 
-            var set = PdstsFile.Read(project.TilesetPath, out whynot);
+            MapTileset set = PdstsFile.Read(project.TilesetPath, out whynot);
             if (set == null) { Warning = whynot; return; }
             TileCollisions.ReadMeta(project.TilesetPath, set);
             SizePlaces(set);
@@ -808,7 +811,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _projectFamily = FamilyOf(project.Game);
             _projectMadeFor = _projectFamily is GameFamilies made && made != _family ? GameName(project.Game) : null;
             ProjectMaps.Clear();
-            foreach (var m in project.Maps) ProjectMaps.Add($"Map {m.X},{m.Y}  ·  area {m.Area}");
+            foreach (PdsmapFile.Map m in project.Maps) ProjectMaps.Add($"Map {m.X},{m.Y}  ·  area {m.Area}");
             Raise(nameof(HasProject));
 
             Load(set, new TileGrid());
@@ -843,7 +846,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void PaintProjectMap()
         {
-            var map = _project.Maps[_projectMap];
+            PdsmapFile.Map map = _project.Maps[_projectMap];
 
             _saved.Clear();
             string stem = Path.Combine(Path.GetDirectoryName(_projectPath) ?? ".",
@@ -855,7 +858,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             Raise(nameof(HasSaved));
             Raise(nameof(SavedNote));
-            var grid = PdsmapFile.ToGrid(map, _set, out int dropped);
+            TileGrid grid = PdsmapFile.ToGrid(map, _set, out int dropped);
             int smart = _painter.SmartIndex;
             _painter.Load(grid, _set);
             _atLoad = grid.Clone();
@@ -881,7 +884,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void CameFrom(string path, MapTileset set)
         {
-            foreach (var (tile, listed) in TileCollisions.ListedPlaces(set))
+            foreach ((MapTileset.Tile tile, int listed) in TileCollisions.ListedPlaces(set))
                 _tileSource[tile] = (path, listed);
             Raise(nameof(ChosenFromTileset));
         }
@@ -895,7 +898,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void SaveCollisionToTileset()
         {
             int written = 0;
-            foreach (var file in _tileSource.GroupBy(kv => kv.Value.path, StringComparer.OrdinalIgnoreCase))
+            foreach (IGrouping<string, KeyValuePair<MapTileset.Tile, (string path, int listed)>> file in _tileSource.GroupBy(kv => kv.Value.path, StringComparer.OrdinalIgnoreCase))
             {
                 int n = TileCollisions.WriteMeta(file.Key, file.Select(kv => (kv.Key, kv.Value.listed)), out string whynot);
                 if (n < 0) { Warning = $"Could not write {Path.GetFileName(file.Key)}.meta: {whynot}"; return; }
@@ -946,7 +949,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 get
                 {
-                    var same = Pictures.Where(p => p.Said == Same).Select(p => p.Name).ToList();
+                    List<string> same = Pictures.Where(p => p.Said == Same).Select(p => p.Name).ToList();
                     return same.Count == 0 ? null : $"Already in the pack, nothing to add: {string.Join(", ", same.Take(12))}{(same.Count > 12 ? $" and {same.Count - 12} more" : "")}.";
                 }
             }
@@ -970,20 +973,20 @@ namespace DSPRE.Avalonia.ViewModels.World
         public TexturePlan PlanPictures()
         {
             if (_set == null || _set.PictureFiles.Count == 0) { Warning = "This tileset has no texture files."; return null; }
-            var used = new HashSet<string>(PicturesInUse(), StringComparer.OrdinalIgnoreCase);
-            var wanted = _set.PictureFiles.Where(kv => used.Contains(kv.Key)).ToList();
+            HashSet<string> used = new HashSet<string>(PicturesInUse(), StringComparer.OrdinalIgnoreCase);
+            List<KeyValuePair<string, string>> wanted = _set.PictureFiles.Where(kv => used.Contains(kv.Key)).ToList();
             if (wanted.Count == 0) { Warning = "No painted tile uses the tileset's textures."; return null; }
             if (wanted.Count > NsbtxWriter.MostPictures) { Warning = $"{wanted.Count} textures needed, a texture pack holds {NsbtxWriter.MostPictures}."; return null; }
 
-            var plan = new TexturePlan();
-            var ours = new Dictionary<string, (byte[] rgba, int w, int h)>(StringComparer.OrdinalIgnoreCase);
-            foreach (var kv in wanted)
+            TexturePlan plan = new TexturePlan();
+            Dictionary<string, (byte[] rgba, int w, int h)> ours = new Dictionary<string, (byte[] rgba, int w, int h)>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<string, string> kv in wanted)
             {
                 try
                 {
                     if (!AnyPng.TryReadRgba(File.ReadAllBytes(kv.Value), out byte[] rgba, out int w, out int h, out _))
                     { plan.Unreadable.Add(Path.GetFileName(kv.Value)); continue; }
-                    var texture = DsTexture.From(rgba, w, h, kv.Key);
+                    DsTexture texture = DsTexture.From(rgba, w, h, kv.Key);
                     texture.PaletteNames = OwnFaces().Where(f => f.Picture == kv.Key && !string.IsNullOrEmpty(f.Palette))
                         .Select(f => f.Palette).Prepend(kv.Key).Distinct().ToList();
                     ours[kv.Key] = AsTheGameHasIt(texture) ?? (rgba, w, h);
@@ -994,29 +997,29 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (plan.Pictures.Count == 0) { Warning = "No texture could be read."; return null; }
 
             // Every area whose headers show this map; areas sharing a pack share the new one.
-            var areas = AreasOfMap?.Invoke() ?? new List<byte>();
+            List<byte> areas = AreasOfMap?.Invoke() ?? new List<byte>();
             if (!areas.Contains(_areaId)) areas.Insert(0, _areaId);
             string folder = gameDirs[DirNames.mapTextures].unpackedDir;
-            foreach (var g in areas.GroupBy(a => (int)new AreaData(a).mapTileset)) plan.Packs.Add((g.Key, g.ToList()));
+            foreach (IGrouping<int, byte> g in areas.GroupBy(a => (int)new AreaData(a).mapTileset)) plan.Packs.Add((g.Key, g.ToList()));
 
-            var theirs = new Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)>();
-            foreach (var (pack, _) in plan.Packs)
+            Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)> theirs = new Dictionary<int, (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures)>();
+            foreach ((int pack, List<byte> _) in plan.Packs)
             {
                 string path = Path.Combine(folder, pack.ToString("D4"));
-                var bytes = File.Exists(path) ? File.ReadAllBytes(path) : null;
+                byte[] bytes = File.Exists(path) ? File.ReadAllBytes(path) : null;
                 theirs[pack] = (bytes == null ? null : NsbtxWriter.Read(bytes),
                                 bytes == null ? new Dictionary<string, (byte[] rgba, int w, int h)>() : PicturesInPack(bytes, PalettesOf));
             }
 
-            foreach (var choice in plan.Pictures)
+            foreach (PictureChoice choice in plan.Pictures)
             {
                 bool clash = false, missing = false;
-                foreach (var (pack, _) in plan.Packs)
+                foreach ((int pack, List<byte> _) in plan.Packs)
                 {
-                    var (contents, pictures) = theirs[pack];
+                    (NsbtxWriter.Contents contents, Dictionary<string, (byte[] rgba, int w, int h)> pictures) = theirs[pack];
                     string had = contents?.Textures.FirstOrDefault(n => string.Equals(n, NitroDictionary.Fit(choice.Name), StringComparison.OrdinalIgnoreCase));
                     if (had == null) { missing = true; continue; }
-                    if (pictures.TryGetValue(had, out var their) && !LooksTheSame(ours[choice.Name], their))
+                    if (pictures.TryGetValue(had, out (byte[] rgba, int w, int h) their) && !LooksTheSame(ours[choice.Name], their))
                     {
                         clash = true;
                         choice.Theirs ??= ImageConverter.FromRgba(their.rgba, their.w, their.h);
@@ -1028,11 +1031,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             // Video memory the field needs for this area afterwards: its map pack plus its buildings.
             int worstTex = 0, worstPal = 0;
-            foreach (var (pack, packAreas) in plan.Packs)
+            foreach ((int pack, List<byte> packAreas) in plan.Packs)
             {
-                var contents = theirs[pack].contents;
+                NsbtxWriter.Contents contents = theirs[pack].contents;
                 int tex = contents?.TextureBytes ?? 0, pal = contents?.PaletteBytes ?? 0;
-                foreach (var c in plan.Pictures.Where(c => c.Said != Same))
+                foreach (PictureChoice c in plan.Pictures.Where(c => c.Said != Same))
                 {
                     tex += c.Texture.Pixels?.Length ?? 0;
                     pal += c.Texture.Colours.Length * 2;
@@ -1041,7 +1044,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 try
                 {
                     string bld = Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, new AreaData(packAreas[0]).buildingsTileset.ToString("D4"));
-                    var b = File.Exists(bld) ? NsbtxWriter.Read(File.ReadAllBytes(bld)) : null;
+                    NsbtxWriter.Contents b = File.Exists(bld) ? NsbtxWriter.Read(File.ReadAllBytes(bld)) : null;
                     buildings = b?.TextureBytes ?? 0; buildingPalettes = b?.PaletteBytes ?? 0;
                 }
                 catch { }
@@ -1086,13 +1089,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (plan == null || _set == null) return "Nothing to add.";
             string folder = gameDirs[DirNames.mapTextures].unpackedDir;
-            var packBytes = plan.Packs.ToDictionary(p => p.pack, p =>
+            Dictionary<int, byte[]> packBytes = plan.Packs.ToDictionary(p => p.pack, p =>
             {
                 string path = Path.Combine(folder, p.pack.ToString("D4"));
                 return File.Exists(path) ? File.ReadAllBytes(path) : null;
             });
-            var contents = packBytes.ToDictionary(kv => kv.Key, kv => kv.Value == null ? null : NsbtxWriter.Read(kv.Value));
-            var taken = new HashSet<string>(contents.Values.Where(c => c != null).SelectMany(c => c.Textures.Concat(c.Palettes.Keys)), StringComparer.OrdinalIgnoreCase);
+            Dictionary<int, NsbtxWriter.Contents> contents = packBytes.ToDictionary(kv => kv.Key, kv => kv.Value == null ? null : NsbtxWriter.Read(kv.Value));
+            HashSet<string> taken = new HashSet<string>(contents.Values.Where(c => c != null).SelectMany(c => c.Textures.Concat(c.Palettes.Keys)), StringComparer.OrdinalIgnoreCase);
             taken.UnionWith(_set.Tiles.SelectMany(t => t.Faces).SelectMany(f => new[] { f.Picture, f.Palette }).Where(n => !string.IsNullOrEmpty(n)));
             string Fresh(string name)
             {
@@ -1105,23 +1108,23 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             void Rename(string picture, Func<MapTileset.Face, bool> which, Action<MapTileset.Face> change)
             {
-                foreach (var f in OwnFaces().Where(f => f.Picture == picture && which(f)).ToList()) change(f);
+                foreach (MapTileset.Face f in OwnFaces().Where(f => f.Picture == picture && which(f)).ToList()) change(f);
             }
 
-            var adding = new List<DsTexture>();
-            var replace = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var renamed = new List<string>();
-            foreach (var c in plan.Pictures)
+            List<DsTexture> adding = new List<DsTexture>();
+            HashSet<string> replace = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<string> renamed = new List<string>();
+            foreach (PictureChoice c in plan.Pictures)
             {
                 if (c.Said == Same) continue;
-                var t = c.Texture;
+                DsTexture t = c.Texture;
                 if (c.Clash && c.Choice == 1)
                 {
                     string old = t.Name, now = Fresh(old);
-                    var palettes = new Dictionary<string, string>();
+                    Dictionary<string, string> palettes = new Dictionary<string, string>();
                     foreach (string pal in t.PaletteNames) palettes[pal] = Fresh(pal);
-                    Rename(old, f => true, f => { if (f.Palette != null && palettes.TryGetValue(f.Palette, out var p2)) f.Palette = p2; f.Picture = now; });
-                    if (_set.PictureFiles.TryGetValue(old, out var file)) _set.PictureFiles[now] = file;
+                    Rename(old, f => true, f => { if (f.Palette != null && palettes.TryGetValue(f.Palette, out string p2)) f.Palette = p2; f.Picture = now; });
+                    if (_set.PictureFiles.TryGetValue(old, out string file)) _set.PictureFiles[now] = file;
                     t.Name = now;
                     t.PaletteNames = t.PaletteNames.Select(pal => palettes[pal]).ToList();
                     renamed.Add($"{old} as {now}");
@@ -1135,7 +1138,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     for (int i = 0; i < t.PaletteNames.Count; i++)
                     {
                         string pal = t.PaletteNames[i];
-                        bool differs = contents.Values.Any(cn => cn != null && cn.Palettes.TryGetValue(NitroDictionary.Fit(pal), out var theirs)
+                        bool differs = contents.Values.Any(cn => cn != null && cn.Palettes.TryGetValue(NitroDictionary.Fit(pal), out byte[] theirs)
                                                                  && !theirs.Take(mine.Length).SequenceEqual(mine.Take(theirs.Length)));
                         if (!differs) continue;
                         string now = Fresh(pal);
@@ -1147,20 +1150,20 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             if (adding.Count == 0) { Warning = null; Note = "Nothing added."; return null; }
 
-            var wrote = new List<string>();
+            List<string> wrote = new List<string>();
             try
             {
-                foreach (var (pack, packAreas) in plan.Packs)
+                foreach ((int pack, List<byte> packAreas) in plan.Packs)
                 {
-                    var bytes = packBytes[pack];
-                    var made = bytes != null ? NsbtxWriter.Extend(bytes, adding, replace) : null;
+                    byte[] bytes = packBytes[pack];
+                    NsbtxWriter.Result made = bytes != null ? NsbtxWriter.Extend(bytes, adding, replace) : null;
                     if (made == null || made.Whynot != null) made = NsbtxWriter.Build(adding);
                     if (made.Whynot != null) { Warning = made.Whynot; return made.Whynot; }
                     int newPack = Directory.GetFiles(folder).Length;
                     File.WriteAllBytes(Path.Combine(folder, newPack.ToString("D4")), made.Bytes);
                     foreach (byte a in packAreas)
                     {
-                        var area = new AreaData(a);
+                        AreaData area = new AreaData(a);
                         area.mapTileset = (ushort)newPack;
                         area.SaveToFileDefaultDir(a, showSuccessMessage: false);
                         AppEvents.RaiseAreaDataSaved(this, a);
@@ -1169,7 +1172,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
 
                 _pictures = PicturesOfTheArea();
-                foreach (var kv in PicturesOfTheSet(_set)) _pictures.TryAdd(kv.Key, kv.Value);
+                foreach (KeyValuePair<string, (byte[] rgba, int w, int h)> kv in PicturesOfTheSet(_set)) _pictures.TryAdd(kv.Key, kv.Value);
                 _fromAbove.Clear();
                 _thumbs.Clear();
                 FillList();
@@ -1192,16 +1195,16 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             // The game copies its own frames over any texture with an animated name.
             string[] Formats = { "none", "A3I5", "4-colour", "16-colour", "256-colour", "compressed", "A5I3", "direct" };
-            var anims = MatrixSceneBuilder.FieldAnimations();
-            var clashes = new List<string>();
-            foreach (var t in adding)
+            FieldTextureAnimations anims = MatrixSceneBuilder.FieldAnimations();
+            List<string> clashes = new List<string>();
+            foreach (DsTexture t in adding)
             {
-                var entry = anims?.For(t.Name);
+                FieldTextureAnimations.Entry entry = anims?.For(t.Name);
                 if (entry?.FramePack == null) continue;
                 try
                 {
-                    NSBTXLoader.LoadNsbtx(new MemoryStream(entry.FramePack), out var frames, out _);
-                    var first = frames?.FirstOrDefault();
+                    NSBTXLoader.LoadNsbtx(new MemoryStream(entry.FramePack), out List<NSBMDTexture> frames, out _);
+                    NSBMDTexture first = frames?.FirstOrDefault();
                     if (first != null && (first.width != t.Width || first.height != t.Height || first.format != (int)t.Format))
                         clashes.Add($"{t.Name} ({t.Width}x{t.Height} {Formats[(int)t.Format & 7]} here, frames {first.width}x{first.height} {Formats[first.format & 7]})");
                 }
@@ -1218,8 +1221,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Pictures the painted tiles need that the tileset itself supplies.
         private IEnumerable<string> PicturesInUse()
         {
-            var tiles = new HashSet<int>();
-            foreach (var p in _painter.Grid.Placed())
+            HashSet<int> tiles = new HashSet<int>();
+            foreach ((int x, int z, TileGrid.Square square) p in _painter.Grid.Placed())
                 if (_ownTiles.Contains(p.square.Tile)) tiles.Add(p.square.Tile);
             return tiles.Where(t => t >= 0 && t < _set.Tiles.Count)
                         .SelectMany(t => _set.Tiles[t].Pictures)
@@ -1232,26 +1235,26 @@ namespace DSPRE.Avalonia.ViewModels.World
         // How a picture looks once it is in the game's format, so it compares like for like with a pack's.
         private static (byte[] rgba, int w, int h)? AsTheGameHasIt(DsTexture t)
         {
-            var made = NsbtxWriter.Build(new[] { t });
+            NsbtxWriter.Result made = NsbtxWriter.Build(new[] { t });
             if (made.Whynot != null) return null;
-            return PicturesInPack(made.Bytes).TryGetValue(t.Name, out var got) ? got : null;
+            return PicturesInPack(made.Bytes).TryGetValue(t.Name, out (byte[] rgba, int w, int h) got) ? got : null;
         }
 
         /// <param name="palettesFor">Palette names a texture is drawn with, best first; a pack alone does not say which goes with which.</param>
         private static Dictionary<string, (byte[] rgba, int w, int h)> PicturesInPack(byte[] bytes, Func<string, IEnumerable<string>> palettesFor = null)
         {
-            var known = new Dictionary<string, (byte[], int, int)>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, (byte[], int, int)> known = new Dictionary<string, (byte[], int, int)>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                var container = new global::LibNDSFormats.NSBMD.NSBMD();
+                NSBMD container = new global::LibNDSFormats.NSBMD.NSBMD();
                 container.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(bytes), out container.Textures, out container.Palettes);
-                foreach (var mat in container.materials ?? new List<global::LibNDSFormats.NSBMD.NSBMDMaterial>())
+                foreach (NSBMDMaterial mat in container.materials ?? new List<global::LibNDSFormats.NSBMD.NSBMDMaterial>())
                 {
                     if (string.IsNullOrEmpty(mat.texname) || known.ContainsKey(mat.texname)) continue;
-                    var wanted = (palettesFor?.Invoke(mat.texname) ?? Enumerable.Empty<string>()).Append(mat.texname).Append(mat.texname + "_pl");
-                    var pal = wanted.Select(n => container.Palettes?.FirstOrDefault(q => q.palname == n)).FirstOrDefault(q => q != null);
+                    IEnumerable<string> wanted = (palettesFor?.Invoke(mat.texname) ?? Enumerable.Empty<string>()).Append(mat.texname).Append(mat.texname + "_pl");
+                    NSBMDPalette pal = wanted.Select(n => container.Palettes?.FirstOrDefault(q => q.palname == n)).FirstOrDefault(q => q != null);
                     if (pal != null) { mat.palname = pal.palname; mat.paldata = pal.paldata; }
-                    var picture = NsbmdTextureDecoder.Decode(mat);
+                    NsbmdTextureData picture = NsbmdTextureDecoder.Decode(mat);
                     if (picture?.Rgba != null) known[mat.texname] = (picture.Rgba, picture.Width, picture.Height);
                 }
             }
@@ -1261,19 +1264,19 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private (HashSet<string> pictures, HashSet<string> palettes) WhatTheAreaCarries()
         {
-            var pictures = new HashSet<string>(StringComparer.Ordinal);
-            var palettes = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> pictures = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> palettes = new HashSet<string>(StringComparer.Ordinal);
             try
             {
-                var area = new AreaData(_areaId);
+                AreaData area = new AreaData(_areaId);
                 string path = Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir,
                                            area.mapTileset.ToString("D4"));
                 if (!File.Exists(path)) return (pictures, palettes);
 
-                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)), out var textures, out var colours);
-                foreach (var t in textures ?? new List<global::LibNDSFormats.NSBMD.NSBMDTexture>())
+                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)), out List<NSBMDTexture> textures, out List<NSBMDPalette> colours);
+                foreach (NSBMDTexture t in textures ?? new List<global::LibNDSFormats.NSBMD.NSBMDTexture>())
                     if (!string.IsNullOrEmpty(t.texname)) pictures.Add(t.texname.TrimEnd('\0'));
-                foreach (var p in colours ?? new List<global::LibNDSFormats.NSBMD.NSBMDPalette>())
+                foreach (NSBMDPalette p in colours ?? new List<global::LibNDSFormats.NSBMD.NSBMDPalette>())
                     if (!string.IsNullOrEmpty(p.palname)) palettes.Add(p.palname.TrimEnd('\0'));
             }
             catch (Exception ex) { AppLogger.Error("MapTiles.AreaPictures: " + ex.Message); }
@@ -1287,10 +1290,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             Tiles.Clear();
             if (_set == null) { Brush = -1; _tileOrder.Clear(); ShowTileList(); return; }
 
-            var uses = TileUses();
+            int[] uses = TileUses();
             for (int i = 0; i < _set.Tiles.Count; i++)
             {
-                var tile = _set.Tiles[i];
+                MapTileset.Tile tile = _set.Tiles[i];
                 int n = i;
                 Tiles.Add(new TileRow
                 {
@@ -1327,7 +1330,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             foreach (int i in _tileOrder)
             {
                 if (i >= Tiles.Count) continue;
-                var row = Tiles[i];
+                TileRow row = Tiles[i];
                 if (words.All(w => row.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
                                 || row.Pictures.Contains(w, StringComparison.OrdinalIgnoreCase)))
                     ShownTiles.Add(row);
@@ -1338,14 +1341,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>How many times each tile is placed on the grid, every layer counted.</summary>
         private int[] TileUses()
         {
-            var uses = new int[_set?.Tiles.Count ?? 0];
-            var grid = _painter.Grid;
+            int[] uses = new int[_set?.Tiles.Count ?? 0];
+            TileGrid grid = _painter.Grid;
             if (grid == null) return uses;
             for (int l = 0; l < TileGrid.Layers; l++)
                 for (int z = 0; z < TileGrid.Across; z++)
                     for (int x = 0; x < TileGrid.Across; x++)
                     {
-                        var sq = grid.At(x, z, l);
+                        TileGrid.Square sq = grid.At(x, z, l);
                         if (sq.Tile >= 0 && sq.Tile < uses.Length && sq.FromX == x && sq.FromZ == z) uses[sq.Tile]++;
                     }
             return uses;
@@ -1353,7 +1356,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void CountUses()
         {
-            var uses = TileUses();
+            int[] uses = TileUses();
             for (int i = 0; i < Tiles.Count && i < uses.Length; i++) Tiles[i].Uses = uses[i];
         }
 
@@ -1373,7 +1376,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void FillSlots()
         {
             Slots.Clear();
-            var drawing = _painter.Drawing;
+            SmartDrawing drawing = _painter.Drawing;
             if (drawing == null) return;
             for (int slot = 0; slot < SmartDrawing.Slots; slot++)
             {
@@ -1389,7 +1392,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void SetSlot(int slot, bool empty)
         {
-            var drawing = _painter.Drawing;
+            SmartDrawing drawing = _painter.Drawing;
             if (drawing == null || slot < 0 || slot >= SmartDrawing.Slots) return;
             drawing[slot] = empty ? -1 : Brush;
             FillSlots();
@@ -1414,15 +1417,15 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private Dictionary<string, (byte[] rgba, int w, int h)> PicturesOfTheArea()
         {
-            var known = new Dictionary<string, (byte[], int, int)>(StringComparer.Ordinal);
+            Dictionary<string, (byte[], int, int)> known = new Dictionary<string, (byte[], int, int)>(StringComparer.Ordinal);
             try
             {
-                var area = new AreaData(_areaId);
+                AreaData area = new AreaData(_areaId);
                 string path = Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir,
                                            area.mapTileset.ToString("D4"));
                 if (!File.Exists(path)) return known;
 
-                var container = new global::LibNDSFormats.NSBMD.NSBMD();
+                NSBMD container = new global::LibNDSFormats.NSBMD.NSBMD();
                 container.materials = NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(path)),
                                                             out container.Textures, out container.Palettes);
                 if (container.materials == null) return known;
@@ -1431,15 +1434,15 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _paired.Clear();
 
                 // The map's own materials say which palette each texture is drawn with.
-                var drawnWith = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (var m in _map?.mapModel?.models?.FirstOrDefault()?.Materials ?? new List<global::LibNDSFormats.NSBMD.NSBMDMaterial>())
+                Dictionary<string, string> drawnWith = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (NSBMDMaterial m in _map?.mapModel?.models?.FirstOrDefault()?.Materials ?? new List<global::LibNDSFormats.NSBMD.NSBMDMaterial>())
                     if (!string.IsNullOrEmpty(m.texname) && !string.IsNullOrEmpty(m.palname)) drawnWith.TryAdd(m.texname, m.palname);
-                foreach (var mat in container.materials)
+                foreach (NSBMDMaterial mat in container.materials)
                 {
                     if (string.IsNullOrEmpty(mat.texname) || known.ContainsKey(mat.texname)) continue;
-                    if (drawnWith.TryGetValue(mat.texname, out var palName) && container.Palettes?.FirstOrDefault(q => q.palname == palName) is var pal && pal != null)
+                    if (drawnWith.TryGetValue(mat.texname, out string palName) && container.Palettes?.FirstOrDefault(q => q.palname == palName) is NSBMDPalette pal)
                     { mat.palname = pal.palname; mat.paldata = pal.paldata; }
-                    var picture = NsbmdTextureDecoder.Decode(mat);
+                    NsbmdTextureData picture = NsbmdTextureDecoder.Decode(mat);
                     if (picture?.Rgba != null)
                         known[mat.texname] = (picture.Rgba, picture.Width, picture.Height);
                 }
@@ -1450,9 +1453,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static Dictionary<string, (byte[] rgba, int w, int h)> PicturesOfTheSet(MapTileset set)
         {
-            var known = new Dictionary<string, (byte[], int, int)>(StringComparer.Ordinal);
+            Dictionary<string, (byte[], int, int)> known = new Dictionary<string, (byte[], int, int)>(StringComparer.Ordinal);
             if (set == null) return known;
-            foreach (var kv in set.PictureFiles)
+            foreach (KeyValuePair<string, string> kv in set.PictureFiles)
             {
                 try
                 {
@@ -1469,11 +1472,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (name != null && !string.IsNullOrEmpty(colours))
             {
                 string key = name + "|" + colours;
-                if (!_paired.TryGetValue(key, out var pair))
+                if (!_paired.TryGetValue(key, out (byte[] rgba, int w, int h) pair))
                     _paired[key] = pair = Decode(name, colours);
                 if (pair.rgba != null) { rgba = pair.rgba; width = pair.w; height = pair.h; return true; }
             }
-            if (name != null && _pictures.TryGetValue(name, out var found))
+            if (name != null && _pictures.TryGetValue(name, out (byte[] rgba, int w, int h) found))
             { rgba = found.rgba; width = found.w; height = found.h; return true; }
             rgba = null; width = height = 0; return false;
         }
@@ -1486,17 +1489,17 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                var tex = _areaTextures.FirstOrDefault(t => t.texname == picture);
-                var pal = _areaPalettes.FirstOrDefault(p => p.palname == colours);
+                NSBMDTexture tex = _areaTextures.FirstOrDefault(t => t.texname == picture);
+                NSBMDPalette pal = _areaPalettes.FirstOrDefault(p => p.palname == colours);
                 if (tex == null || pal == null) return (null, 0, 0);
-                var stand_in = new global::LibNDSFormats.NSBMD.NSBMDMaterial
+                NSBMDMaterial stand_in = new global::LibNDSFormats.NSBMD.NSBMDMaterial
                 {
                     texdata = tex.texdata, spdata = tex.spdata, texname = tex.texname,
                     texoffset = tex.texoffset, texsize = tex.texsize,
                     width = tex.width, height = tex.height, format = tex.format, color0 = tex.color0,
                     paldata = pal.paldata, palname = pal.palname, paloffset = pal.paloffset, palsize = pal.palsize,
                 };
-                var data = NsbmdTextureDecoder.Decode(stand_in);
+                NsbmdTextureData data = NsbmdTextureDecoder.Decode(stand_in);
                 return data?.Rgba == null ? (null, 0, 0) : (data.Rgba, data.Width, data.Height);
             }
             catch (Exception ex) { AppLogger.Error("MapTiles.Decode: " + ex.Message); return (null, 0, 0); }
@@ -1516,7 +1519,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private AvBitmap Thumbnail(int tile)
         {
-            if (_thumbs.TryGetValue(tile, out var had)) return had;
+            if (_thumbs.TryGetValue(tile, out AvBitmap had)) return had;
             const int Size = 44;
             AvBitmap made = null;
             try
@@ -1531,13 +1534,13 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public TileGridControl.Look? FromAbove(int tile, int turn)
         {
-            if (_fromAbove.TryGetValue((tile, turn), out var had)) return had;
+            if (_fromAbove.TryGetValue((tile, turn), out TileGridControl.Look? had)) return had;
             TileGridControl.Look? made = null;
             try
             {
                 if (_set != null && tile >= 0 && tile < _set.Tiles.Count)
                 {
-                    var drawn = TileThumbnail.DrawWholeFromAbove(_set.Tiles[tile], turn, 16, Picture);
+                    (byte[] rgba, int wide, int tall, int fromX, int fromZ, int across, int down) drawn = TileThumbnail.DrawWholeFromAbove(_set.Tiles[tile], turn, 16, Picture);
                     if (drawn.wide > 0 && drawn.tall > 0)
                         made = new TileGridControl.Look(ToBitmap(drawn.rgba, drawn.wide, drawn.tall),
                                                         drawn.fromX, drawn.fromZ, drawn.across, drawn.down);
@@ -1551,13 +1554,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         private AvBitmap SmartPicture(SmartDrawing drawing)
         {
             const int Cell = 20;
-            var rgba = new byte[SmartDrawing.Wide * Cell * SmartDrawing.Tall * Cell * 4];
+            byte[] rgba = new byte[SmartDrawing.Wide * Cell * SmartDrawing.Tall * Cell * 4];
             int stride = SmartDrawing.Wide * Cell;
             for (int slot = 0; slot < SmartDrawing.Slots; slot++)
             {
                 int tile = drawing[slot];
                 if (_set == null || tile < 0 || tile >= _set.Tiles.Count) continue;
-                var (dots, w, h) = TileThumbnail.DrawFromAbove(_set.Tiles[tile], 0, Cell, Picture);
+                (byte[] dots, int w, int h) = TileThumbnail.DrawFromAbove(_set.Tiles[tile], 0, Cell, Picture);
                 int ox = (slot % SmartDrawing.Wide) * Cell, oy = (slot / SmartDrawing.Wide) * Cell;
                 for (int y = 0; y < Math.Min(h, Cell); y++)
                     Array.Copy(dots, y * w * 4, rgba, ((oy + y) * stride + ox) * 4, Math.Min(w, Cell) * 4);
@@ -1567,10 +1570,10 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static AvBitmap ToBitmap(byte[] rgba, int w, int h)
         {
-            var bitmap = new global::Avalonia.Media.Imaging.WriteableBitmap(
+            WriteableBitmap bitmap = new global::Avalonia.Media.Imaging.WriteableBitmap(
                 new global::Avalonia.PixelSize(w, h), new global::Avalonia.Vector(96, 96),
                 global::Avalonia.Platform.PixelFormat.Rgba8888, global::Avalonia.Platform.AlphaFormat.Unpremul);
-            using (var locked = bitmap.Lock())
+            using (ILockedFramebuffer locked = bitmap.Lock())
                 for (int y = 0; y < h; y++)
                     System.Runtime.InteropServices.Marshal.Copy(rgba, y * w * 4, locked.Address + y * locked.RowBytes, w * 4);
             return bitmap;
@@ -1578,9 +1581,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public IReadOnlyList<TileGridControl.Placed> PlacedTiles()
         {
-            var hidden = new List<(int layer, int x, int z)>();
+            List<(int layer, int x, int z)> hidden = new List<(int layer, int x, int z)>();
             if (_set != null) TileBake.Laid(_painter.Grid, _set, hidden);
-            var skip = new HashSet<(int, int, int)>(hidden);
+            HashSet<(int, int, int)> skip = new HashSet<(int, int, int)>(hidden);
             return _painter.Grid.Placed()
                 .Where(p => !skip.Contains((p.square.Layer, p.x, p.z)))
                 // Drawn from the lowest top to the highest, so a tree is never hidden under a flat decal.
@@ -1618,20 +1621,20 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.buildingTextures });
-                var area = new AreaData(_areaId);
+                AreaData area = new AreaData(_areaId);
                 string packPath = Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, area.buildingsTileset.ToString("D4"));
                 if (!File.Exists(packPath)) return null;
-                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(packPath)), out var textures, out var colours);
-                var have = new HashSet<string>((textures ?? new List<global::LibNDSFormats.NSBMD.NSBMDTexture>()).Select(t => t.texname.TrimEnd('\0'))
+                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(packPath)), out List<NSBMDTexture> textures, out List<NSBMDPalette> colours);
+                HashSet<string> have = new HashSet<string>((textures ?? new List<global::LibNDSFormats.NSBMD.NSBMDTexture>()).Select(t => t.texname.TrimEnd('\0'))
                     .Concat((colours ?? new List<global::LibNDSFormats.NSBMD.NSBMDPalette>()).Select(c => c.palname.TrimEnd('\0'))), StringComparer.Ordinal);
                 string dir = BuildingModelsDir();
-                var bad = new SortedDictionary<uint, List<string>>();
+                SortedDictionary<uint, List<string>> bad = new SortedDictionary<uint, List<string>>();
                 foreach (uint id in _map.buildings.Select(b => b.modelID).Distinct())
                 {
                     string path = Path.Combine(dir, id.ToString("D4"));
-                    var mesh = File.Exists(path) ? MapMesh.Read(File.ReadAllBytes(path), out _) : null;
+                    MapMesh mesh = File.Exists(path) ? MapMesh.Read(File.ReadAllBytes(path), out _) : null;
                     if (mesh == null) { bad[id] = new List<string> { "no such model" }; continue; }
-                    var lacking = mesh.Faces.Select(f => f.Material).Distinct()
+                    List<string> lacking = mesh.Faces.Select(f => f.Material).Distinct()
                         .SelectMany(m => new[] { mesh.PictureFor(m) >= 0 ? mesh.NameOfPicture(mesh.PictureFor(m)) : null,
                                                   mesh.ColoursFor(m) >= 0 ? mesh.NameOfColours(mesh.ColoursFor(m)) : null })
                         .Where(n => !string.IsNullOrEmpty(n) && !have.Contains(NitroDictionary.Fit(n))).Distinct().ToList();
@@ -1648,21 +1651,21 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Where the map's buildings stand, in squares, so painting under a house is not a surprise.</summary>
         public List<(int index, double x0, double z0, double x1, double z1)> BuildingSquares()
         {
-            var found = new List<(int, double, double, double, double)>();
+            List<(int, double, double, double, double)> found = new List<(int, double, double, double, double)>();
             if (_map?.buildings == null) return found;
             int number = -1;
             string dir;
             try { dir = BuildingModelsDir(); } catch { return found; }
-            foreach (var b in _map.buildings)
+            foreach (Building b in _map.buildings)
             {
                 number++;
-                if (!_modelExtent.TryGetValue((dir, b.modelID), out var extent))
+                if (!_modelExtent.TryGetValue((dir, b.modelID), out (float x0, float x1, float z0, float z1)? extent))
                 {
                     extent = null;
                     try
                     {
                         string path = Path.Combine(dir, b.modelID.ToString("D4"));
-                        var mesh = File.Exists(path) ? MapMesh.Read(File.ReadAllBytes(path), out _) : null;
+                        MapMesh mesh = File.Exists(path) ? MapMesh.Read(File.ReadAllBytes(path), out _) : null;
                         if (mesh != null && mesh.Vertices.Count > 0)
                         {
                             float s = mesh.ModelScale == 0f ? 1f : mesh.ModelScale;
@@ -1673,7 +1676,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     catch { }
                     _modelExtent[(dir, b.modelID)] = extent;
                 }
-                if (extent is not var (ex0, ex1, ez0, ez1)) continue;
+                if (extent is not (float ex0, float ex1, float ez0, float ez1)) continue;
                 // Sizes are scale factors where 16 is one; a quarter turn about y swaps across and down.
                 double sx = Math.Max(1u, b.width) / 16.0, sz = Math.Max(1u, b.length) / 16.0;
                 double a0 = ex0 * sx / 16, a1 = ex1 * sx / 16, c0 = ez0 * sz / 16, c1 = ez1 * sz / 16;
@@ -1704,8 +1707,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_map?.buildings == null || index < 0 || index >= _map.buildings.Count) return;
             SelectedBuilding = index;
-            var b = _map.buildings[index];
-            var rect = BuildingSquares().FirstOrDefault(r => r.index == index);
+            Building b = _map.buildings[index];
+            (int index, double x0, double z0, double x1, double z1) rect = BuildingSquares().FirstOrDefault(r => r.index == index);
             _buildingAtPress = (b.xPosition, b.zPosition, (rect.x0, rect.z0, rect.x1, rect.z1));
             Note = $"Building {index:D2}, model {b.modelID}, at {b.xPosition},{b.zPosition}. Drag to move it.";
         }
@@ -1713,7 +1716,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void DragBuilding(int index, int dx, int dz)
         {
             if (_buildingAtPress is not (short x, short z, _) || index != _selectedBuilding) return;
-            var b = _map.buildings[index];
+            Building b = _map.buildings[index];
             b.xPosition = (short)(x + dx);
             b.zPosition = (short)(z + dz);
             GridChanged?.Invoke(this, EventArgs.Empty);
@@ -1721,14 +1724,14 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void ReleaseBuilding(int index, int dx, int dz)
         {
-            if (_buildingAtPress is not (_, _, var was) || index != _selectedBuilding) return;
+            if (_buildingAtPress is not (_, _, (double x0, double z0, double x1, double z1) was) || index != _selectedBuilding) return;
             _buildingAtPress = null;
             if (dx == 0 && dz == 0) return;
             DragBuilding(index, dx, dz);
             Dirty = true;
             int moved = MovePermissions(was, dx, dz);
             int warps = WarpsFollow?.Invoke(was, dx, dz) ?? 0;
-            var b = _map.buildings[index];
+            Building b = _map.buildings[index];
             Note = $"Moved building {index:D2} to {b.xPosition},{b.zPosition}"
                  + (moved > 0 ? $", its {moved} blocked squares" : "")
                  + (warps > 0 ? $" and {warps} warp{(warps > 1 ? "s" : "")}." : ".")
@@ -1744,25 +1747,25 @@ namespace DSPRE.Avalonia.ViewModels.World
             bool Within(int x, int z, double reach)
                 => x + 0.5 >= was.x0 - reach && x + 0.5 <= was.x1 + reach && z + 0.5 >= was.z0 - reach && z + 0.5 <= was.z1 + reach;
             bool Used(int x, int z) => _map.collisions[z, x] != 0 || _map.types[z, x] != 0;
-            var taken = new HashSet<(int x, int z)>();
-            var queue = new Queue<(int x, int z)>();
+            HashSet<(int x, int z)> taken = new HashSet<(int x, int z)>();
+            Queue<(int x, int z)> queue = new Queue<(int x, int z)>();
             for (int z = 0; z < n; z++)
                 for (int x = 0; x < n; x++)
                     if (Within(x, z, 0.6) && Used(x, z) && taken.Add((x, z))) queue.Enqueue((x, z));
             while (queue.Count > 0)
             {
-                var (qx, qz) = queue.Dequeue();
-                foreach (var (ox, oz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                (int qx, int qz) = queue.Dequeue();
+                foreach ((int ox, int oz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
                 {
                     int x = qx + ox, z = qz + oz;
                     if (x < 0 || z < 0 || x >= n || z >= n || !Within(x, z, 1.2) || !Used(x, z) || !taken.Add((x, z))) continue;
                     queue.Enqueue((x, z));
                 }
             }
-            var carried = taken.Select(q => (q.x, q.z, walk: _map.collisions[q.z, q.x], type: _map.types[q.z, q.x])).ToList();
-            foreach (var (x, z, _, _) in carried) { _map.collisions[z, x] = 0; _map.types[z, x] = 0; }
+            List<(int x, int z, byte walk, byte type)> carried = taken.Select(q => (q.x, q.z, walk: _map.collisions[q.z, q.x], type: _map.types[q.z, q.x])).ToList();
+            foreach ((int x, int z, byte _, byte _) in carried) { _map.collisions[z, x] = 0; _map.types[z, x] = 0; }
             int moved = 0;
-            foreach (var (x, z, walk, type) in carried)
+            foreach ((int x, int z, byte walk, byte type) in carried)
             {
                 int tx = x + dx, tz = z + dz;
                 if (tx < 0 || tz < 0 || tx >= n || tz >= n) continue;
@@ -1776,18 +1779,18 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void OverBuilding(int? index)
         {
             if (index is not int i || _map?.buildings == null || i >= _map.buildings.Count) return;
-            var b = _map.buildings[i];
+            Building b = _map.buildings[i];
             Under = $"Building {i:D2}  ·  model {b.modelID}  ·  at {b.xPosition},{b.zPosition}  ·  drag the outline to move it";
         }
 
         public float[,] ActiveHeights()
         {
-            var h = new float[TileGrid.Across, TileGrid.Across];
+            float[,] h = new float[TileGrid.Across, TileGrid.Across];
             for (int z = 0; z < TileGrid.Across; z++)
                 for (int x = 0; x < TileGrid.Across; x++)
                 {
                     // Only where this layer has a tile, at the top you walk on.
-                    var sq = _painter.Grid.At(x, z, _painter.Layer);
+                    TileGrid.Square sq = _painter.Grid.At(x, z, _painter.Layer);
                     h[z, x] = sq.Tile < 0 ? float.NaN : SurfaceOf(_painter.Grid, x, z, _painter.Layer) / TileGrid.Step;
                 }
             return h;
@@ -1888,16 +1891,16 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void Over(int? x, int? z)
         {
-            var ghost = (ValueTuple<int, int, int, int>?)null;
+            (int, int, int, int)? ghost = (ValueTuple<int, int, int, int>?)null;
             _hover = x != null && z != null ? (x.Value, z.Value) : null;
             if (_painter.Pasting) PendingChanged?.Invoke(this, EventArgs.Empty);
             if (_set == null || x == null || z == null) { Under = ""; SetGhost(null); return; }
 
             if (!ShowHeights && _painter.Current == TilePainter.Tool.Paint && Brush >= 0 && Brush < _set.Tiles.Count)
             {
-                var tile = _set.Tiles[Brush];
-                var (across, down) = TileGrid.Footprint(tile.Wide, tile.Deep, (byte)Turn);
-                var (ax, az) = _painter.AnchorFor(x.Value, z.Value, Brush);
+                MapTileset.Tile tile = _set.Tiles[Brush];
+                (int across, int down) = TileGrid.Footprint(tile.Wide, tile.Deep, (byte)Turn);
+                (int ax, int az) = _painter.AnchorFor(x.Value, z.Value, Brush);
                 ghost = (ax, az, across, down);
             }
             SetGhost(ghost);
@@ -1905,17 +1908,17 @@ namespace DSPRE.Avalonia.ViewModels.World
             // Everything on the square, layer by layer, so it is clear what an edit will touch.
             string Said(int layer)
             {
-                var q = _painter.Grid.At(x.Value, z.Value, layer);
+                TileGrid.Square q = _painter.Grid.At(x.Value, z.Value, layer);
                 if (q.Tile < 0 || q.Tile >= _set.Tiles.Count) return null;
-                var t = _set.Tiles[q.Tile];
+                MapTileset.Tile t = _set.Tiles[q.Tile];
                 string what = string.IsNullOrEmpty(t.Name) ? t.Picture : t.Name;
                 string size = t.Spreads && !what.Contains($"{t.Wide}x{t.Deep}") ? $" {t.Wide}x{t.Deep}" : "";
                 return $"{layer + 1}: {what}{size}{(q.Turn > 0 ? $" {q.Turn * 90}°" : "")}"
                      + $" at {(int)Math.Round(SurfaceOf(_painter.Grid, x.Value, z.Value, layer) / TileGrid.Step)}";
             }
-            var here = Enumerable.Range(0, TileGrid.Layers).Select(Said).Where(t => t != null).ToList();
+            List<string> here = Enumerable.Range(0, TileGrid.Layers).Select(Said).Where(t => t != null).ToList();
             string active = Said(ActiveLayer) ?? $"{ActiveLayer + 1}: empty";
-            var others = here.Where(t => !t.StartsWith($"{ActiveLayer + 1}:")).ToList();
+            List<string> others = here.Where(t => !t.StartsWith($"{ActiveLayer + 1}:")).ToList();
             Under = $"{x},{z}  ·  layer {active}" + (others.Count > 0 ? $"  ·  also {string.Join(", ", others)}" : "")
                   + (here.Count == 0 ? "  ·  nothing here, a hole" : "");
         }
@@ -1940,7 +1943,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             get
             {
                 if (!CanAnimate) return "";
-                var entry = MatrixSceneBuilder.FieldAnimations()?.For(_lookPicture);
+                FieldTextureAnimations.Entry entry = MatrixSceneBuilder.FieldAnimations()?.For(_lookPicture);
                 return entry == null ? $"{_lookPicture} is not animated."
                     : $"{_lookPicture}: {entry.Frames.Count} frames, {string.Join(" ", entry.Frames.Select(f => f.Duration))} steps.";
             }
@@ -1954,17 +1957,17 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 string pack = Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir, new AreaData(_areaId).mapTileset.ToString("D4"));
-                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(pack)), out var textures, out var palettes);
-                var target = textures?.FirstOrDefault(t => t.texname == name);
+                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(pack)), out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes);
+                NSBMDTexture target = textures?.FirstOrDefault(t => t.texname == name);
                 if (target == null) return Fail($"{name} is not in this area's textures. Add textures to ROM first.");
 
-                var face = _set.Tiles.SelectMany(t => t.Faces).FirstOrDefault(f => f.Picture == name && !string.IsNullOrEmpty(f.Palette));
-                var palette = palettes?.FirstOrDefault(pl => pl.palname == (face?.Palette ?? name))
+                MapTileset.Face face = _set.Tiles.SelectMany(t => t.Faces).FirstOrDefault(f => f.Picture == name && !string.IsNullOrEmpty(f.Palette));
+                NSBMDPalette palette = palettes?.FirstOrDefault(pl => pl.palname == (face?.Palette ?? name))
                               ?? palettes?.FirstOrDefault(pl => pl.palname == name + "_pl") ?? palettes?.FirstOrDefault(pl => pl.palname == name);
-                var colours = palette?.paldata?.Select(c => (ushort)((c.R >> 3) | ((c.G >> 3) << 5) | ((c.B >> 3) << 10))).ToArray()
+                ushort[] colours = palette?.paldata?.Select(c => (ushort)((c.R >> 3) | ((c.G >> 3) << 5) | ((c.B >> 3) << 10))).ToArray()
                               ?? Array.Empty<ushort>();
 
-                var frames = new List<DsTexture>();
+                List<DsTexture> frames = new List<DsTexture>();
                 for (int i = 0; i < framePaths.Count; i++)
                 {
                     if (!AnyPng.TryReadRgba(File.ReadAllBytes(framePaths[i]), out byte[] rgba, out int w, out int h, out _))
@@ -1979,11 +1982,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (frames.Count == 0 || frames.Count > FieldTextureAnimations.MostFrames)
                     return Fail($"Give 1 to {FieldTextureAnimations.MostFrames} frames.");
 
-                var built = NsbtxWriter.Build(frames);
+                NsbtxWriter.Result built = NsbtxWriter.Build(frames);
                 if (built.Whynot != null) return Fail(built.Whynot);
 
-                var list = MatrixSceneBuilder.FieldAnimations(reload: true);
-                var entry = list.For(name);
+                FieldTextureAnimations list = MatrixSceneBuilder.FieldAnimations(reload: true);
+                FieldTextureAnimations.Entry entry = list.For(name);
                 if (entry == null) { entry = new FieldTextureAnimations.Entry { Name = name }; list.Entries.Add(entry); }
                 entry.FramePack = built.Bytes;
                 entry.Frames = Enumerable.Range(0, frames.Count).Select(i => ((byte)i, (byte)AnimationStep)).ToList();
@@ -2003,8 +2006,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void StopAnimatingChosen()
         {
-            var list = MatrixSceneBuilder.FieldAnimations(reload: true);
-            var entry = list?.For(_lookPicture);
+            FieldTextureAnimations list = MatrixSceneBuilder.FieldAnimations(reload: true);
+            FieldTextureAnimations.Entry entry = list?.For(_lookPicture);
             if (entry == null) return;
             list.Entries.Remove(entry);
             list.Save();
@@ -2043,11 +2046,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void Resize(int wide, int deep)
         {
-            var tile = Chosen;
+            MapTileset.Tile tile = Chosen;
             if (tile == null || (tile.Wide == wide && tile.Deep == deep)) return;
             tile.Wide = wide; tile.Deep = deep;
             int dropped = 0;
-            foreach (var g in _painter.AllGrids) dropped += g.Resized(Brush, wide, deep);
+            foreach (TileGrid g in _painter.AllGrids) dropped += g.Resized(Brush, wide, deep);
             if (dropped > 0) Warning = "";
             SetChanged(redraw: true);
         }
@@ -2064,7 +2067,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (Chosen == null) return;
             MapTileset.TurnShape(Chosen);
-            foreach (var g in _painter.AllGrids) g.Resized(Brush, Chosen.Wide, Chosen.Deep);
+            foreach (TileGrid g in _painter.AllGrids) g.Resized(Brush, Chosen.Wide, Chosen.Deep);
             SetChanged(redraw: true);
         }
 
@@ -2112,18 +2115,18 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_set == null) return;
             bool theirs = Path.GetExtension(path).Equals(".pdsts", StringComparison.OrdinalIgnoreCase);
-            var other = theirs ? PdstsFile.Read(path, out string whynot) : MapTileset.FromObj(path, out whynot);
+            MapTileset other = theirs ? PdstsFile.Read(path, out string whynot) : MapTileset.FromObj(path, out whynot);
             if (other == null) { Warning = whynot; return; }
             if (theirs) TileCollisions.ReadMeta(path, other);
             SizePlaces(other);
-            var places = theirs ? TileCollisions.ListedPlaces(other) : null;
+            Dictionary<MapTileset.Tile, int> places = theirs ? TileCollisions.ListedPlaces(other) : null;
             int first = _set.Append(other);
             if (theirs)
                 for (int i = first; i < _set.Tiles.Count; i++)
                     if (places.TryGetValue(other.Tiles[i - first], out int listed)) _tileSource[_set.Tiles[i]] = (path, listed);
             if (other.PictureFiles.Count > 0)
                 for (int i = first; i < _set.Tiles.Count; i++) _ownTiles.Add(i);
-            foreach (var kv in PicturesOfTheSet(other)) _pictures.TryAdd(kv.Key, kv.Value);
+            foreach (KeyValuePair<string, (byte[] rgba, int w, int h)> kv in PicturesOfTheSet(other)) _pictures.TryAdd(kv.Key, kv.Value);
             SetChanged(redraw: false);
             FillSmart();
             Brush = first;
@@ -2183,7 +2186,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (names.Count == 0)
             {
                 names.Add("No default"); values.Add(-1);
-                foreach (var (value, label) in table) { names.Add(label); values.Add(value); }
+                foreach ((byte value, string label) in table) { names.Add(label); values.Add(value); }
             }
             if (also >= 0 && !values.Contains(also)) { names.Add(unknown((byte)also)); values.Add(also); }
         }
@@ -2203,16 +2206,16 @@ namespace DSPRE.Avalonia.ViewModels.World
         private int CellValue(int layer)
         {
             if (Chosen == null || _chosenCell >= CollisionCells.Count) return -1;
-            var grid = Chosen.CollisionGrid(layer);
-            var cell = CollisionCells[_chosenCell];
+            int[,] grid = Chosen.CollisionGrid(layer);
+            CollisionCell cell = CollisionCells[_chosenCell];
             return cell.X < grid.GetLength(0) && cell.Y < grid.GetLength(1) ? grid[cell.X, cell.Y] : -1;
         }
 
         private void SetCellValue(int layer, int value)
         {
             if (Chosen == null || _chosenCell >= CollisionCells.Count) return;
-            var grid = Chosen.CollisionGrid(layer);
-            var cell = CollisionCells[_chosenCell];
+            int[,] grid = Chosen.CollisionGrid(layer);
+            CollisionCell cell = CollisionCells[_chosenCell];
             if (grid[cell.X, cell.Y] == value) return;
             grid[cell.X, cell.Y] = value;
             Dirty = true;
@@ -2249,9 +2252,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             if (Chosen != null)
             {
-                var walk = Chosen.CollisionGrid(TileCollisions.CollisionLayer);
-                var type = Chosen.CollisionGrid(TileCollisions.TypeLayer);
-                var family = RomInfo.gameFamily;
+                int[,] walk = Chosen.CollisionGrid(TileCollisions.CollisionLayer);
+                int[,] type = Chosen.CollisionGrid(TileCollisions.TypeLayer);
+                GameFamilies family = RomInfo.gameFamily;
                 if (family != _choicesFamily)
                 {
                     WalkChoices.Clear(); _walkValues.Clear();
@@ -2260,7 +2263,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 string WalkName(byte v) => TilePermissions.CollisionLabel(v, family);
                 string TypeName(byte v) => TilePermissions.BehaviourLabel(v, family);
-                foreach (var cell in CollisionCells)
+                foreach (CollisionCell cell in CollisionCells)
                 {
                     int w = walk[cell.X, cell.Y], t = type[cell.X, cell.Y];
                     Choices(WalkChoices, _walkValues, TilePermissions.CollisionsFor(family).Select(c => (c.Value, c.Label)), w, WalkName);
@@ -2361,7 +2364,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             else if (Brush >= 0)
             {
                 _thumbs.Remove(Brush);
-                foreach (var key in _fromAbove.Keys.Where(k => k.tile == Brush).ToList()) _fromAbove.Remove(key);
+                foreach ((int tile, int turn) key in _fromAbove.Keys.Where(k => k.tile == Brush).ToList()) _fromAbove.Remove(key);
             }
             FillList();
             FillSlots();
@@ -2376,7 +2379,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_set == null || _map == null) return;
 
-            var baked = TileBake.Of(_painter.Grid, _set);
+            TileBake.Result baked = TileBake.Of(_painter.Grid, _set);
             if (baked.Whynot != null) { Warning = baked.Whynot; Model3D = null; Raise(nameof(Model3D)); Changed?.Invoke(this, EventArgs.Empty); return; }
             PutBackUntouched(baked, _ramps);
             TileBake.JoinFlat(baked);
@@ -2386,7 +2389,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             try
             {
-                var shown = new MapFile(new MemoryStream(_map.ToByteArray()), _family,
+                MapFile shown = new MapFile(new MemoryStream(_map.ToByteArray()), _family,
                                         discardMoveperms: false, showMessages: false);
                 shown.LoadMapModel(model, showMessages: false);
                 shown.mapModelData = model;
@@ -2436,16 +2439,16 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int PlatesApplyWouldReplace()
         {
             if (_map?.bdhc == null || _set == null || !AlsoTerrain || (AlsoSaved && _saved.ContainsKey("bdhc") && !LeavesOut("bdhc"))) return 0;
-            var baked = TileBake.Of(_painter.Grid, _set);
+            TileBake.Result baked = TileBake.Of(_painter.Grid, _set);
             if (baked.Whynot != null) return 0;
             PutBackUntouched(baked, _ramps);
             TileBake.JoinFlat(baked);
             if (AlsoWalls) TileBake.AddWalls(baked, _painter.Grid, _set, HeightChanged, _ramps, null,
                                              (x, z) => WalkedLayer(_painter.Grid, x, z), (x, z, l) => SurfaceOf(_painter.Grid, x, z, l));
             byte[] model = TileBake.ToModel(baked, out _, TileScale);
-            var mesh = model == null ? null : MapMesh.Read(model, out _);
+            MapMesh mesh = model == null ? null : MapMesh.Read(model, out _);
             if (mesh == null) return 0;
-            var changed = ChangedSquares;
+            Func<int, int, bool> changed = ChangedSquares;
             Func<int, int, bool> changedOrRamp = changed == null ? null : (c, r) => changed(c, r) || _ramps.Contains((c, r));
             return BdhcBuild.Replaced(_map.bdhc, BdhcBuild.Propose(mesh, _map.collisions, _map.bdhc, _map.KeptPlates, changedOrRamp,
                                                                        WantedGround(new HashSet<(int x, int z)>(_ramps))));
@@ -2457,7 +2460,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // The height a changed square is meant to be walked at, in map units: its ground tile, or a ramp's middle.
         private Func<int, int, float?> WantedGround(ISet<(int x, int z)> ramps)
         {
-            var grid = _painter.Grid;
+            TileGrid grid = _painter.Grid;
             float toUnits = 16f / MapTileset.TileWidth;
             float? Ground(int x, int z)
             {
@@ -2473,7 +2476,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (ramps.Contains((c, r)))
                 {
                     float up = h;
-                    foreach (var (dx, dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                    foreach ((int dx, int dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
                         if (Ground(c + dx, r + dz) is float n && n > up) up = n;
                     h = (h + up) / 2f;
                 }
@@ -2487,41 +2490,41 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_project != null) ImportedSinceOpen = true;
 
             // A ramp square's flat ground is left out and a slope laid in its place.
-            var bakeGrid = _painter.Grid;
-            var ramps = new HashSet<(int x, int z)>();
-            var cannot = new List<(int x, int z)>();
-            foreach (var (x, z) in _ramps)
+            TileGrid bakeGrid = _painter.Grid;
+            HashSet<(int x, int z)> ramps = new HashSet<(int x, int z)>();
+            List<(int x, int z)> cannot = new List<(int x, int z)>();
+            foreach ((int x, int z) in _ramps)
             {
                 int l = GroundLayer(_painter.Grid, x, z);
-                var sq = l < 0 ? default : _painter.Grid.At(x, z, l);
+                TileGrid.Square sq = l < 0 ? default : _painter.Grid.At(x, z, l);
                 // A ramp replaces its square's ground, which a tile spanning several squares cannot give up alone.
                 if (l < 0 || sq.Wide > 1 || sq.Deep > 1) { cannot.Add((x, z)); continue; }
                 if (ReferenceEquals(bakeGrid, _painter.Grid)) bakeGrid = _painter.Grid.Clone();
                 bakeGrid.Clear(x, z, l);
                 ramps.Add((x, z));
             }
-            var baked = TileBake.Of(bakeGrid, _set);
+            TileBake.Result baked = TileBake.Of(bakeGrid, _set);
             if (baked.Whynot != null) { Warning = baked.Whynot; return; }
             PutBackUntouched(baked, ramps);
             TileBake.JoinFlat(baked);
-            var runs = _rampRuns.Select(run => new TileRamps.Run
+            List<TileRamps.Run> runs = _rampRuns.Select(run => new TileRamps.Run
             {
                 Squares = new HashSet<(int x, int z)>(run.Squares.Where(ramps.Contains)),
                 Kind = run.Kind, Fill = run.Fill, Template = run.Template,
             }).Where(run => run.Squares.Count > 0).ToList();
-            var laid = TileRamps.Lay(baked, _painter.Grid, runs, (x, z) =>
+            TileRamps.Report laid = TileRamps.Lay(baked, _painter.Grid, runs, (x, z) =>
             {
                 int l = GroundLayer(_painter.Grid, x, z);
                 if (l < 0) return (0f, null);
-                var sq = _painter.Grid.At(x, z, l);
-                var tile = _set.Tiles[sq.Tile];
+                TileGrid.Square sq = _painter.Grid.At(x, z, l);
+                MapTileset.Tile tile = _set.Tiles[sq.Tile];
                 float height = SurfaceOf(_painter.Grid, x, z, l), top = height - sq.Lift;
                 // Use the ground face, not a decal a sliver above it or a hidden surface below.
-                var skin = tile.GroundFace ?? tile.Faces.OrderBy(f => f.Corners.Max(i => Math.Abs(tile.Corners[i].Y - top))).FirstOrDefault();
+                MapTileset.Face skin = tile.GroundFace ?? tile.Faces.OrderBy(f => f.Corners.Max(i => Math.Abs(tile.Corners[i].Y - top))).FirstOrDefault();
                 return (height, skin);
             });
             int rampsMade = laid.Made;
-            var belowWalls = new List<(int x, int z)>();
+            List<(int x, int z)> belowWalls = new List<(int x, int z)>();
             int walls = AlsoWalls ? TileBake.AddWalls(baked, _painter.Grid, _set, HeightChanged, ramps, belowWalls,
                                                       (x, z) => WalkedLayer(_painter.Grid, x, z), (x, z, l) => SurfaceOf(_painter.Grid, x, z, l)) : 0;
 
@@ -2537,7 +2540,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _map.mapModelData = model;
             _knownModel = model;
 
-            var brought = new List<string>();
+            List<string> brought = new List<string>();
             bool savedGround = false, savedMovement = false;
             if (AlsoSaved && _saved.Count > 0)
             {
@@ -2564,21 +2567,21 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             // A wall is a cliff: nobody walks up or down it, so the square at its foot is blocked.
             int cliffs = 0;
-            foreach (var (x, z) in belowWalls.Distinct())
+            foreach ((int x, int z) in belowWalls.Distinct())
                 if ((_map.collisions[z, x] & 0x80) == 0) { _map.collisions[z, x] = 0x80; cliffs++; }
-            foreach (var (x, z) in ramps)
+            foreach ((int x, int z) in ramps)
                 if ((_map.collisions[z, x] & 0x80) != 0) _map.collisions[z, x] = 0x00;
 
             int ungrounded = 0;
             if (AlsoTerrain && !savedGround)
             {
-                var mesh = MapMesh.Read(model, out _);
+                MapMesh mesh = MapMesh.Read(model, out _);
                 if (mesh != null)
                 {
-                    var changed = ChangedSquares;
+                    Func<int, int, bool> changed = ChangedSquares;
                     Func<int, int, bool> changedOrRamp = changed == null ? null : (c, r) => changed(c, r) || ramps.Contains((c, r));
                     // Ramps and stairs are walked on the plates laid with them, whatever steps are drawn.
-                    var kept = (_map.KeptPlates ?? new List<BdhcBuild.Piece>()).Concat(laid.Plates).ToList();
+                    List<BdhcBuild.Piece> kept = (_map.KeptPlates ?? new List<BdhcBuild.Piece>()).Concat(laid.Plates).ToList();
                     byte[] terrain = BdhcBuild.ForMap(mesh, _map.collisions, _map.bdhc, out _, kept, changedOrRamp, WantedGround(ramps));
                     if (terrain != null) _map.ImportTerrain(terrain);
                     ungrounded = BdhcBuild.BlockUngrounded(_map.bdhc, _map.collisions);
@@ -2587,7 +2590,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             Dirty = true;
             if (brought.Count == 0 || Warning?.StartsWith("What Map Studio") != true) Warning = null;
-            var notBuilt = new List<string>(laid.Skipped);
+            List<string> notBuilt = new List<string>(laid.Skipped);
             if (cannot.Count > 0)
                 notBuilt.Add($"{cannot.Count} ramp square{(cannot.Count > 1 ? "s" : "")} ({string.Join(" ", cannot.Take(6).Select(c => $"{c.x},{c.z}"))}"
                            + $"{(cannot.Count > 6 ? " ..." : "")}) with no ground or on a tile wider than a square");
@@ -2615,7 +2618,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             try
             {
-                var was = new MapFile(new MemoryStream(whole), _family,
+                MapFile was = new MapFile(new MemoryStream(whole), _family,
                                       discardMoveperms: false, showMessages: false);
                 _map.LoadMapModel(was.mapModelData, showMessages: false);
                 _map.mapModelData = was.mapModelData;
@@ -2641,14 +2644,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 try
                 {
-                    var tile = _set.Tiles[Brush];
-                    var one = new TileGrid();
+                    MapTileset.Tile tile = _set.Tiles[Brush];
+                    TileGrid one = new TileGrid();
                     one.Put(12, 12, Brush, 0f, (byte)Turn, tile.Wide, tile.Deep);
 
                     byte[] model = TileBake.ToModel(TileBake.Of(one, _set), out _, TileScale);
                     if (model != null)
                     {
-                        var shown = new MapFile(new MemoryStream(_map.ToByteArray()), _family,
+                        MapFile shown = new MapFile(new MemoryStream(_map.ToByteArray()), _family,
                                                 discardMoveperms: false, showMessages: false);
                         shown.LoadMapModel(model, showMessages: false);
                         shown.mapModelData = model;
@@ -2673,7 +2676,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void Describe()
         {
             if (_set == null || Brush < 0 || Brush >= _set.Tiles.Count) return;
-            var tile = _set.Tiles[Brush];
+            MapTileset.Tile tile = _set.Tiles[Brush];
             Note = $"{tile.Name}  ·  {string.Join(", ", tile.Pictures)}"
                  + (tile.Spreads ? $"  ·  {tile.Wide}x{tile.Deep}" : "");
         }

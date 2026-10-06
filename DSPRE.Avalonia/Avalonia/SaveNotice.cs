@@ -56,8 +56,8 @@ namespace DSPRE.Avalonia
         {
             try
             {
-                var window = ActiveWindow();
-                var layer = window == null ? null : OverlayLayer.GetOverlayLayer(window);
+                Window window = ActiveWindow();
+                OverlayLayer layer = window == null ? null : OverlayLayer.GetOverlayLayer(window);
                 if (layer == null) return;
 
                 // Only ever one notice on screen. A composite editor saves several children in a row,
@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia
 
         private static IBrush Theme(string key, IBrush fallback)
         {
-            var app = Application.Current;
+            Application app = Application.Current;
             return app != null && app.TryGetResource(key, app.ActualThemeVariant, out object found) && found is IBrush b
                 ? b
                 : fallback;

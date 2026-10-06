@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia
                 ? "This " + what
                 : editor.UnsavedChangesDescription;
 
-            var choice = await DialogHelper.AskThreeWay(
+            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWay(
                 $"{subject} has unsaved changes.\n\n{question ?? $"Save them before switching to another {what}?"}",
                 "Unsaved Changes", "Save", "Discard");
 

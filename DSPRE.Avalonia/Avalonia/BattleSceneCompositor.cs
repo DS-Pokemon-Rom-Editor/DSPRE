@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using DSPRE.Avalonia.Data;
 using global::Avalonia;
 using global::Avalonia.Media.Imaging;
 using global::Avalonia.Platform;
@@ -44,7 +45,7 @@ namespace DSPRE.Avalonia
             bool bgBehind = player != null && player.HasBackground && !player.BackgroundIsOverlay;
             if (bgBehind) CrossfadeBg(player, player.BgCa);
 
-            foreach (var s in _statics) BlitAxisAligned(s.rgba, s.w, s.h, s.left, s.top);
+            foreach ((byte[] rgba, int w, int h, int left, int top) s in _statics) BlitAxisAligned(s.rgba, s.w, s.h, s.left, s.top);
 
             if (player != null && player.Grayscale)
                 for (int i = 0; i < W * H * 3; i += 3)
@@ -79,14 +80,14 @@ namespace DSPRE.Avalonia
 
             byte tr = player?.TintR ?? 0, tg = player?.TintG ?? 0, tb = player?.TintB ?? 0;
             if (player != null)
-                foreach (var gh in player.Ghosts)
+                foreach (BattleAnimPlayer.MonGhost gh in player.Ghosts)
                 {
-                    var gs = gh.Mon == 0 ? _back : _front;
+                    (byte[] rgba, int w, int h, int left, int top) gs = gh.Mon == 0 ? _back : _front;
                     BlitMon(gs, true, gh.Dx, gh.Dy, gh.ScaleX, gh.ScaleY, 0, gh.TintA, gh.TintR, gh.TintG, gh.TintB, gh.Alpha);
                 }
             for (int m = 0; m < 2; m++)
             {
-                var s = m == 0 ? _back : _front;
+                (byte[] rgba, int w, int h, int left, int top) s = m == 0 ? _back : _front;
                 bool vis = player?.MonVisible[m] ?? true;
                 double dx = (player?.MonDX[m] ?? 0) + (player?.MonShakeX[m] ?? 0);
                 double dy = (player?.MonDY[m] ?? 0) + (player?.MonShakeY[m] ?? 0);
@@ -100,12 +101,12 @@ namespace DSPRE.Avalonia
 
             if (player != null)
             {
-                var caps = new List<BattleAnimPlayer.DroppedCap>(player.Caps);
+                List<BattleAnimPlayer.DroppedCap> caps = new List<BattleAnimPlayer.DroppedCap>(player.Caps);
                 caps.Sort((x, y) => y.Priority.CompareTo(x.Priority));
-                foreach (var cap in caps)
+                foreach (BattleAnimPlayer.DroppedCap cap in caps)
                 {
                     if (!cap.Visible) continue;
-                    var cs = cap.SrcMon == 0 ? _back : _front;
+                    (byte[] rgba, int w, int h, int left, int top) cs = cap.SrcMon == 0 ? _back : _front;
                     BlitMon(cs, true, cap.Dx, cap.Dy, cap.ScaleX, cap.ScaleY, cap.RotDeg, cap.TintA, cap.TintR, cap.TintG, cap.TintB, cap.Alpha, (int)cap.Mosaic,
                             clipOutX0: cap.ClipOutX0, clipOutY0: cap.ClipOutY0, clipOutX1: cap.ClipOutX1, clipOutY1: cap.ClipOutY1);
                 }
@@ -119,8 +120,8 @@ namespace DSPRE.Avalonia
             {
                 _out[j + 0] = _scene[i + 2]; _out[j + 1] = _scene[i + 1]; _out[j + 2] = _scene[i + 0]; _out[j + 3] = 255;
             }
-            var wb = new WriteableBitmap(new PixelSize(W, H), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
-            using (var fb = wb.Lock())
+            WriteableBitmap wb = new WriteableBitmap(new PixelSize(W, H), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+            using (ILockedFramebuffer fb = wb.Lock())
             {
                 int rb = fb.RowBytes;
                 if (rb == W * 4) Marshal.Copy(_out, 0, fb.Address, _out.Length);
@@ -131,12 +132,12 @@ namespace DSPRE.Avalonia
 
         private void BlitCellActors(BattleAnimPlayer player)
         {
-            var cells = player.Cells;
+            WeCellAnimRenderer cells = player.Cells;
             if (cells == null || !cells.Loaded) return;
-            foreach (var a in player.SpriteActors)
+            foreach (CellActor a in player.SpriteActors)
             {
                 if (!a.Visible || a.Alpha <= 0) continue;
-                var cp = cells.RenderCellRgba(a.CellIndex);
+                WeCellAnimRenderer.CellPixels cp = cells.RenderCellRgba(a.CellIndex);
                 if (cp.Rgba == null) continue;
                 int S = cp.Size; double half = S / 2.0;
                 double sclX = a.ScaleX * a.FrameScaleX, sclY = a.ScaleY * a.FrameScaleY;

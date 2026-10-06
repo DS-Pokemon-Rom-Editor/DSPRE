@@ -229,7 +229,7 @@ namespace DSPRE.ROMFiles
             {
                 foreach ((int id, string path) in NumberedFiles(directory))
                 {
-                    using var input = File.OpenRead(path);
+                    using FileStream input = File.OpenRead(path);
                     FindEventReferences(RomInfo.gameFamily, id, new EventFile(input), trainerIds,
                         references);
                 }
@@ -257,7 +257,7 @@ namespace DSPRE.ROMFiles
             {
                 foreach ((int id, _) in NumberedFiles(directory))
                 {
-                    var scriptFile = new ScriptFile(id, readFunctions: true, readActions: false);
+                    ScriptFile scriptFile = new ScriptFile(id, readFunctions: true, readActions: false);
                     if (scriptFile.parseFailedDueToInvalidCommand)
                     {
                         error = $"Script file {id} did not parse completely, so trainer removal was cancelled.";

@@ -161,13 +161,13 @@ namespace DSPRE
         /// <summary>How the gated editors fall across the menus, for a short summary line.</summary>
         public static IEnumerable<KeyValuePair<string, int>> CountByArea()
         {
-            var by = new Dictionary<string, int>();
+            Dictionary<string, int> by = new Dictionary<string, int>();
             foreach (string window in Testing.Keys)
             {
                 string area = AreaOf(window);
                 by[area] = by.TryGetValue(area, out int n) ? n + 1 : 1;
             }
-            var order = new List<KeyValuePair<string, int>>(by);
+            List<KeyValuePair<string, int>> order = new List<KeyValuePair<string, int>>(by);
             order.Sort((a, b) => b.Value != a.Value
                 ? b.Value.CompareTo(a.Value)
                 : string.Compare(a.Key, b.Key, StringComparison.Ordinal));

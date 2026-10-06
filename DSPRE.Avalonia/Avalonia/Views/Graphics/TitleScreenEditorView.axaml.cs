@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.ViewModels;
 using System.Collections.Generic;
@@ -34,7 +35,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async System.Threading.Tasks.Task ImportPng(System.Func<string, string> import)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import Image",
                 AllowMultiple = false,
@@ -51,7 +52,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async System.Threading.Tasks.Task ExportPng(System.Func<string, string> export, string suggestedName)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export Image",
                 DefaultExtension = "png",
@@ -68,7 +69,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void ImportPalette_Click(object sender, RoutedEventArgs e)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import colours",
                 AllowMultiple = false,
@@ -96,7 +97,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void ExportPalette_Click(object sender, RoutedEventArgs e)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export colours",
                 DefaultExtension = "nclr",
@@ -123,11 +124,11 @@ namespace DSPRE.Avalonia.Views.Graphics
         /// </summary>
         private async void PlayIntro_Click(object sender, RoutedEventArgs e)
         {
-            var button = (Button)sender;
+            Button button = (Button)sender;
             button.IsEnabled = false;
             try
             {
-                var transform = (global::Avalonia.Media.TranslateTransform)_logoOverlay.RenderTransform;
+                TranslateTransform transform = (global::Avalonia.Media.TranslateTransform)_logoOverlay.RenderTransform;
                 _logoOverlay.Opacity = 0;
                 transform.Y = 15 * PreviewScale;
 

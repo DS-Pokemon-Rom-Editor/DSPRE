@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
@@ -27,7 +28,7 @@ namespace DSPRE.HgEngine
         public static bool TryFindEntry(string text, string designatorToken, out int openBrace, out int closeBrace)
         {
             openBrace = closeBrace = -1;
-            var m = Regex.Match(text, @"\[\s*" + Regex.Escape(designatorToken) + @"\s*\]\s*=\s*\{");
+            Match m = Regex.Match(text, @"\[\s*" + Regex.Escape(designatorToken) + @"\s*\]\s*=\s*\{");
             if (!m.Success) return false;
             int brace = m.Index + m.Length - 1;
             if (!BraceScanner.TryFindMatchingBrace(text, brace, out int close)) return false;
@@ -64,7 +65,7 @@ namespace DSPRE.HgEngine
 
         private static string Tokens(string s)
         {
-            var sb = new System.Text.StringBuilder(s.Length);
+            StringBuilder sb = new System.Text.StringBuilder(s.Length);
             int i = 0;
             while (i < s.Length)
             {
@@ -102,7 +103,7 @@ namespace DSPRE.HgEngine
             if (!TryFindEntry(text, designatorToken, out int open, out int close)) return false;
             if (!ElementScanner.TryLocateParentBlock(text, open, close, path, out int parentOpen, out int parentClose)) return false;
 
-            var fields = ElementScanner.ElementSpans(text, parentOpen, parentClose);
+            List<(int Start, int End)> fields = ElementScanner.ElementSpans(text, parentOpen, parentClose);
             if (fields.Count > 0)
             {
                 // New field goes on its own line after the last one, at the same indent.
@@ -128,8 +129,8 @@ namespace DSPRE.HgEngine
             if (!TryFindEntry(text, designatorToken, out int open, out int close)) return false;
             if (!ElementScanner.TryLocateParentBlock(text, open, close, path, out int parentOpen, out int parentClose)) return false;
 
-            var fields = ElementScanner.ElementSpans(text, parentOpen, parentClose);
-            var named = new Regex(@"\G\.\s*" + Regex.Escape(path[^1].Name) + @"\s*=(?!=)");
+            List<(int Start, int End)> fields = ElementScanner.ElementSpans(text, parentOpen, parentClose);
+            Regex named = new Regex(@"\G\.\s*" + Regex.Escape(path[^1].Name) + @"\s*=(?!=)");
             for (int i = 0; i < fields.Count; i++)
             {
                 if (!named.IsMatch(text, fields[i].Start)) continue;
@@ -152,7 +153,7 @@ namespace DSPRE.HgEngine
             {
                 if (count == 0) return true;
                 string indent = IndentOfLine(text, entryOpen) + "        ";
-                var literal = new System.Text.StringBuilder("{");
+                StringBuilder literal = new System.Text.StringBuilder("{");
                 for (int i = 0; i < count; i++) literal.Append('\n').Append(indent).Append(newElement(i, indent)).Append(',');
                 literal.Append('\n').Append(indent, 0, indent.Length - 4).Append('}');
                 return TryUpsertField(ref text, designatorToken, arrayPath, literal.ToString());
@@ -161,7 +162,7 @@ namespace DSPRE.HgEngine
             while (vs < ve && char.IsWhiteSpace(text[vs])) vs++;
             if (vs >= ve || text[vs] != '{' || !BraceScanner.TryFindMatchingBrace(text, vs, out int close)) return false;
 
-            var spans = ElementScanner.ElementSpans(text, vs, close);
+            List<(int Start, int End)> spans = ElementScanner.ElementSpans(text, vs, close);
             int n = spans.Count;
             if (count == n) return true;
 
@@ -174,7 +175,7 @@ namespace DSPRE.HgEngine
             }
 
             string elementIndent = n > 0 ? IndentOfLine(text, spans[0].Start) : IndentOfLine(text, vs) + "    ";
-            var added = new System.Text.StringBuilder();
+            StringBuilder added = new System.Text.StringBuilder();
             for (int i = n; i < count; i++) added.Append('\n').Append(elementIndent).Append(newElement(i, elementIndent)).Append(',');
             if (n > 0)
             {
@@ -269,7 +270,7 @@ namespace DSPRE.HgEngine
         /// substrings, respecting nested braces/parens/brackets and string/char literals.</summary>
         public static List<string> SplitArrayValue(string arrayFieldValue)
         {
-            var result = new List<string>();
+            List<string> result = new List<string>();
             if (string.IsNullOrEmpty(arrayFieldValue) || arrayFieldValue[0] != '{') return result;
             if (!BraceScanner.TryFindMatchingBrace(arrayFieldValue, 0, out int close)) return result;
             return ElementScanner.SplitElementValues(arrayFieldValue, 0, close);
@@ -352,7 +353,7 @@ namespace DSPRE.HgEngine
             int open = openBrace, close = closeBrace;
             for (int segIdx = 0; segIdx < path.Count; segIdx++)
             {
-                var elements = Split(text, open, close);
+                List<Element> elements = Split(text, open, close);
                 if (!TryFind(elements, path[segIdx], out Element match))
                 {
                     valueStart = valueEnd = -1;
@@ -392,7 +393,7 @@ namespace DSPRE.HgEngine
             int open = openBrace, close = closeBrace;
             for (int segIdx = 0; segIdx < path.Count - 1; segIdx++)
             {
-                var elements = Split(text, open, close);
+                List<Element> elements = Split(text, open, close);
                 if (!TryFind(elements, path[segIdx], out Element match))
                 {
                     parentOpen = parentClose = -1;
@@ -421,24 +422,24 @@ namespace DSPRE.HgEngine
         /// <summary>Where each top-level element starts (designator included) and where its value ends.</summary>
         internal static List<(int Start, int End)> ElementSpans(string text, int openBrace, int closeBrace)
         {
-            var list = new CSourceFile(text, openBrace, closeBrace + 1).ListAt(openBrace);
-            var spans = new List<(int, int)>();
-            if (list != null) foreach (var item in list.Items) spans.Add((item.Start, item.End));
+            CInitList list = new CSourceFile(text, openBrace, closeBrace + 1).ListAt(openBrace);
+            List<(int, int)> spans = new List<(int, int)>();
+            if (list != null) foreach (CInitItem item in list.Items) spans.Add((item.Start, item.End));
             return spans;
         }
 
         /// <summary>Wraps <see cref="Split"/> for callers that just need each element's raw value text.</summary>
         internal static List<string> SplitElementValues(string text, int openBrace, int closeBrace)
         {
-            var elements = Split(text, openBrace, closeBrace);
-            var result = new List<string>(elements.Count);
-            foreach (var e in elements) result.Add(text.Substring(e.ValueStart, e.ValueEnd - e.ValueStart));
+            List<Element> elements = Split(text, openBrace, closeBrace);
+            List<string> result = new List<string>(elements.Count);
+            foreach (Element e in elements) result.Add(text.Substring(e.ValueStart, e.ValueEnd - e.ValueStart));
             return result;
         }
 
         private static bool TryFind(List<Element> elements, FieldPathSegment seg, out Element match)
         {
-            foreach (var e in elements)
+            foreach (Element e in elements)
             {
                 if (seg.IsIndex ? e.Index == seg.Index : e.DesignatorName == seg.Name)
                 {
@@ -454,11 +455,11 @@ namespace DSPRE.HgEngine
         // numeric [N] designator names or numbers the element; anything else, a symbolic [NAME] included, counts by position.
         private static List<Element> Split(string text, int openBrace, int closeBrace)
         {
-            var result = new List<Element>();
-            var list = new CSourceFile(text, openBrace, closeBrace + 1).ListAt(openBrace);
+            List<Element> result = new List<Element>();
+            CInitList list = new CSourceFile(text, openBrace, closeBrace + 1).ListAt(openBrace);
             if (list == null) return result;
             int autoIndex = 0;
-            foreach (var item in list.Items)
+            foreach (CInitItem item in list.Items)
             {
                 string name = null;
                 int index = autoIndex;

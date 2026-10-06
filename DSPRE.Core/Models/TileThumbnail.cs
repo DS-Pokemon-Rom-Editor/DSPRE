@@ -12,20 +12,20 @@ namespace DSPRE.Models
         public static byte[] Draw(MapTileset.Tile tile, int size, Picture pictures,
                                   float yawDegrees = 35f, float pitchDegrees = 30f)
         {
-            var rgba = new byte[size * size * 4];
+            byte[] rgba = new byte[size * size * 4];
             if (tile == null || tile.Corners.Count == 0 || size <= 0) return rgba;
 
             double yaw = yawDegrees * Math.PI / 180.0, pitch = pitchDegrees * Math.PI / 180.0;
             double cy = Math.Cos(yaw), sy = Math.Sin(yaw);
             double cp = Math.Cos(pitch), sp = Math.Sin(pitch);
 
-            var at = new (float x, float y, float depth)[tile.Corners.Count];
+            (float x, float y, float depth)[] at = new (float x, float y, float depth)[tile.Corners.Count];
             float lowX = float.MaxValue, highX = float.MinValue;
             float lowY = float.MaxValue, highY = float.MinValue;
 
             for (int i = 0; i < tile.Corners.Count; i++)
             {
-                var c = tile.Corners[i];
+                MapTileset.Corner c = tile.Corners[i];
                 double rx = c.X * cy - c.Z * sy;
                 double rz = c.X * sy + c.Z * cy;
                 double ry = c.Y * cp - rz * sp;
@@ -45,18 +45,18 @@ namespace DSPRE.Models
                          size / 2f + (at[i].y - middleY) * scale,
                          at[i].depth);
 
-            var nearest = new float[size * size];
+            float[] nearest = new float[size * size];
             for (int i = 0; i < nearest.Length; i++) nearest[i] = float.MinValue;
 
-            var known = new Dictionary<string, (byte[] rgba, int w, int h)>();
+            Dictionary<string, (byte[] rgba, int w, int h)> known = new Dictionary<string, (byte[] rgba, int w, int h)>();
 
-            foreach (var face in tile.Faces)
+            foreach (MapTileset.Face face in tile.Faces)
             {
                 if (face.Corners == null || face.Corners.Length < 3) continue;
 
-                if (!known.TryGetValue((face.Picture ?? "") + "|" + face.Palette, out var picture))
+                if (!known.TryGetValue((face.Picture ?? "") + "|" + face.Palette, out (byte[] rgba, int w, int h) picture))
                 {
-                    picture = pictures != null && pictures(face.Picture, face.Palette, out var dots, out int pw, out int ph)
+                    picture = pictures != null && pictures(face.Picture, face.Palette, out byte[] dots, out int pw, out int ph)
                         ? (dots, pw, ph) : (null, 0, 0);
                     known[(face.Picture ?? "") + "|" + face.Palette] = picture;
                 }
@@ -74,8 +74,8 @@ namespace DSPRE.Models
         public static (byte[] rgba, int wide, int tall) DrawFromAbove(MapTileset.Tile tile, int turn,
                                                                        int perSquare, Picture pictures)
         {
-            var (across, down) = TileGrid.Footprint(tile?.Wide ?? 1, tile?.Deep ?? 1, (byte)(turn & 3));
-            var drawn = DrawFromAbove(tile, turn, perSquare, pictures, 0, 0, across, down);
+            (int across, int down) = TileGrid.Footprint(tile?.Wide ?? 1, tile?.Deep ?? 1, (byte)(turn & 3));
+            (byte[] rgba, int wide, int tall) drawn = DrawFromAbove(tile, turn, perSquare, pictures, 0, 0, across, down);
             return (drawn.rgba, drawn.wide, drawn.tall);
         }
 
@@ -85,9 +85,9 @@ namespace DSPRE.Models
             if (tile == null || tile.Corners.Count == 0) return (Array.Empty<byte>(), 0, 0, 0, 0, 0, 0);
             float w = tile.Wide * MapTileset.TileWidth, d = tile.Deep * MapTileset.TileWidth;
             float lowX = float.MaxValue, lowZ = float.MaxValue, highX = float.MinValue, highZ = float.MinValue;
-            foreach (var c in tile.Corners)
+            foreach (MapTileset.Corner c in tile.Corners)
             {
-                var (x, z) = Turn(c.X, c.Z, turn, w, d);
+                (float x, float z) = Turn(c.X, c.Z, turn, w, d);
                 lowX = Math.Min(lowX, x); highX = Math.Max(highX, x);
                 lowZ = Math.Min(lowZ, z); highZ = Math.Max(highZ, z);
             }
@@ -97,7 +97,7 @@ namespace DSPRE.Models
             int toZ = Math.Max(fromZ + 1, (int)Math.Ceiling(highZ / MapTileset.TileWidth - 1e-3f));
             int span = Math.Max(toX - fromX, toZ - fromZ);
             int per = span > 8 ? Math.Max(2, perSquare * 8 / span) : perSquare;
-            var drawn = DrawFromAbove(tile, turn, per, pictures, fromX, fromZ, toX - fromX, toZ - fromZ);
+            (byte[] rgba, int wide, int tall) drawn = DrawFromAbove(tile, turn, per, pictures, fromX, fromZ, toX - fromX, toZ - fromZ);
             return (drawn.rgba, drawn.wide, drawn.tall, fromX, fromZ, toX - fromX, toZ - fromZ);
         }
 
@@ -114,18 +114,18 @@ namespace DSPRE.Models
         {
             if (tile == null || perSquare <= 0) return (Array.Empty<byte>(), 0, 0);
             int wide = across * perSquare, tall = down * perSquare;
-            var rgba = new byte[wide * tall * 4];
-            var nearest = new float[wide * tall];
+            byte[] rgba = new byte[wide * tall * 4];
+            float[] nearest = new float[wide * tall];
             for (int i = 0; i < nearest.Length; i++) nearest[i] = float.MinValue;
 
             float w = tile.Wide * MapTileset.TileWidth, d = tile.Deep * MapTileset.TileWidth;
             float dotsPer = perSquare / MapTileset.TileWidth;
 
-            var at = new (float x, float y, float depth)[tile.Corners.Count];
+            (float x, float y, float depth)[] at = new (float x, float y, float depth)[tile.Corners.Count];
             for (int i = 0; i < at.Length; i++)
             {
-                var c = tile.Corners[i];
-                var (x, z) = (turn & 3) switch
+                MapTileset.Corner c = tile.Corners[i];
+                (float x, float z) = (turn & 3) switch
                 {
                     1 => (d - c.Z, c.X),
                     2 => (w - c.X, d - c.Z),
@@ -139,14 +139,14 @@ namespace DSPRE.Models
             static bool Shadow(MapTileset.Face f) => (f.Picture ?? "").IndexOf("kage", StringComparison.OrdinalIgnoreCase) >= 0
                                                   || (f.Picture ?? "").IndexOf("shadow", StringComparison.OrdinalIgnoreCase) >= 0;
             bool onlyShadow = tile.Faces.All(Shadow);
-            var known = new Dictionary<string, (byte[] rgba, int w, int h)>();
-            foreach (var face in tile.Faces)
+            Dictionary<string, (byte[] rgba, int w, int h)> known = new Dictionary<string, (byte[] rgba, int w, int h)>();
+            foreach (MapTileset.Face face in tile.Faces)
             {
                 if (face.Corners == null || face.Corners.Length < 3) continue;
                 if (!onlyShadow && Shadow(face)) continue;
-                if (!known.TryGetValue((face.Picture ?? "") + "|" + face.Palette, out var picture))
+                if (!known.TryGetValue((face.Picture ?? "") + "|" + face.Palette, out (byte[] rgba, int w, int h) picture))
                 {
-                    picture = pictures != null && pictures(face.Picture, face.Palette, out var dots, out int pw, out int ph)
+                    picture = pictures != null && pictures(face.Picture, face.Palette, out byte[] dots, out int pw, out int ph)
                         ? (dots, pw, ph) : (null, 0, 0);
                     known[(face.Picture ?? "") + "|" + face.Palette] = picture;
                 }

@@ -34,7 +34,7 @@ namespace DSPRE.HgEngine
         public static bool TryRead(out List<Row> rows, out string error)
         {
             rows = null;
-            if (!TryLoad(out var table, out error)) return false;
+            if (!TryLoad(out Table table, out error)) return false;
             rows = table.Rows.Select(r => r.Row).ToList();
             return true;
         }
@@ -42,12 +42,12 @@ namespace DSPRE.HgEngine
         /// <summary>Writes the chart as <paramref name="wanted"/> lists it: every pair not listed is neutral.</summary>
         public static bool TryWrite(IReadOnlyList<Row> wanted, out string error)
         {
-            if (!TryLoad(out var table, out error)) return false;
-            var constants = HgEngineSymbolTable.Load(ConstantsRelPath);
+            if (!TryLoad(out Table table, out error)) return false;
+            HgEngineSymbolTable constants = HgEngineSymbolTable.Load(ConstantsRelPath);
             string text = table.Text;
             // A type is written the way the table already spells it, else by its TYPE_ name.
-            var spelled = new Dictionary<int, string>();
-            foreach (var (row, item) in table.Rows)
+            Dictionary<int, string> spelled = new Dictionary<int, string>();
+            foreach ((Row row, CInitItem item) in table.Rows)
             {
                 spelled.TryAdd(row.Attacker, item.List.Items[0].ValueText(text).Trim());
                 spelled.TryAdd(row.Defender, item.List.Items[1].ValueText(text).Trim());
@@ -59,23 +59,23 @@ namespace DSPRE.HgEngine
             string Mul(int tenths) => constants != null && constants.TryGetNameWithPrefix(tenths, "TYPE_MUL_", out string n) ? n : tenths.ToString();
             string Entry(Row r) => $"{{ {Type(r.Attacker)}, {Type(r.Defender)}, {Mul(r.Tenths)} }},";
 
-            var edits = new List<(int Start, int End, string Text)>();
-            var add = new Dictionary<Section, List<string>> { [Section.Main] = new(), [Section.RingTarget] = new(), [Section.Foresight] = new() };
-            var byPair = wanted.GroupBy(w => (w.Attacker, w.Defender)).ToDictionary(g => g.Key, g => g.Last());
-            var seen = new HashSet<(int, int)>();
+            List<(int Start, int End, string Text)> edits = new List<(int Start, int End, string Text)>();
+            Dictionary<Section, List<string>> add = new Dictionary<Section, List<string>> { [Section.Main] = new(), [Section.RingTarget] = new(), [Section.Foresight] = new() };
+            Dictionary<(int Attacker, int Defender), Row> byPair = wanted.GroupBy(w => (w.Attacker, w.Defender)).ToDictionary(g => g.Key, g => g.Last());
+            HashSet<(int, int)> seen = new HashSet<(int, int)>();
 
-            foreach (var (row, item) in table.Rows)
+            foreach ((Row row, CInitItem item) in table.Rows)
             {
-                var pair = (row.Attacker, row.Defender);
+                (int Attacker, int Defender) pair = (row.Attacker, row.Defender);
                 if (!seen.Add(pair)) continue;
-                if (!byPair.TryGetValue(pair, out var want)) { edits.Add(Removal(text, item)); continue; }
+                if (!byPair.TryGetValue(pair, out Row want)) { edits.Add(Removal(text, item)); continue; }
                 if (want.Section != row.Section) { edits.Add(Removal(text, item)); add[want.Section].Add(Entry(want)); continue; }
                 if (want.Tenths == row.Tenths) continue;
                 // Keeps the row's own spelling of its types.
-                var mul = item.List.Items[2];
+                CInitItem mul = item.List.Items[2];
                 edits.Add((mul.ValueStart, mul.ValueEnd, Mul(want.Tenths)));
             }
-            foreach (var want in byPair.Values)
+            foreach (Row want in byPair.Values)
                 if (!seen.Contains((want.Attacker, want.Defender))) add[want.Section].Add(Entry(want));
 
             if (edits.Count == 0 && add.Values.All(a => a.Count == 0)) return true;
@@ -89,17 +89,17 @@ namespace DSPRE.HgEngine
                     int at = HgEngineSwarms.LineStart(text, table.Marker[s].Start);
                     edits.Add((at, at, string.Concat(add[(Section)s].Select(e => indent + e + "\n"))));
                 }
-            foreach (var e in edits.OrderByDescending(e => e.Start).ThenByDescending(e => e.End)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
+            foreach ((int Start, int End, string Text) e in edits.OrderByDescending(e => e.Start).ThenByDescending(e => e.End)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
 
-            var expected = byPair.Values.ToDictionary(w => (w.Attacker, w.Defender));
+            Dictionary<(int Attacker, int Defender), Row> expected = byPair.Values.ToDictionary(w => (w.Attacker, w.Defender));
             try
             {
                 return HgEngineVerifiedWrite.TryWrite(FilePath, SourceRelPath, text, written =>
                 {
-                    string problem = Parse(written, out var back);
+                    string problem = Parse(written, out Table back);
                     if (problem != null) return problem;
-                    var got = back.Rows.GroupBy(r => (r.Row.Attacker, r.Row.Defender)).ToDictionary(g => g.Key, g => g.First().Row);
-                    if (got.Count != expected.Count || got.Any(kv => !expected.TryGetValue(kv.Key, out var w) || w.Tenths != kv.Value.Tenths || w.Section != kv.Value.Section))
+                    Dictionary<(int Attacker, int Defender), Row> got = back.Rows.GroupBy(r => (r.Row.Attacker, r.Row.Defender)).ToDictionary(g => g.Key, g => g.First().Row);
+                    if (got.Count != expected.Count || got.Any(kv => !expected.TryGetValue(kv.Key, out Row w) || w.Tenths != kv.Value.Tenths || w.Section != kv.Value.Section))
                         return "the matchups differ";
                     return null;
                 }, out error);
@@ -122,7 +122,7 @@ namespace DSPRE.HgEngine
         private static string Parse(string text, out Table table)
         {
             table = new Table { Text = text };
-            var constants = HgEngineSymbolTable.Load(ConstantsRelPath);
+            HgEngineSymbolTable constants = HgEngineSymbolTable.Load(ConstantsRelPath);
             if (constants == null) return $"{ConstantsRelPath} is missing from the checkout.";
             table.Decl = CSourceFile.For(text).Find(TableName);
             if (table.Decl == null) return $"{SourceRelPath} has no {TableName}.";
@@ -130,8 +130,8 @@ namespace DSPRE.HgEngine
             int ring = constants.TryGetValue("TYPE_RING_TARGET", out int r) ? r : 0xFD;
             int foresight = constants.TryGetValue("TYPE_FORESIGHT", out int f) ? f : 0xFE;
             int end = constants.TryGetValue("TYPE_ENDTABLE", out int e) ? e : 0xFF;
-            var section = Section.Main;
-            foreach (var item in table.Decl.Init.Items)
+            Section section = Section.Main;
+            foreach (CInitItem item in table.Decl.Init.Items)
             {
                 // A row an #if switches off is left as it is; one DSPRE can't decide about counts as compiled.
                 if (item.IsConditional && HgEngineConfigState.Compiles(item.Conditions) == false) continue;

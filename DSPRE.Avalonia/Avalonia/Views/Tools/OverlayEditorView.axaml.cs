@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia.Views.Tools
         public OverlayEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            var vm = new OverlayEditorViewModel();
+            OverlayEditorViewModel vm = new OverlayEditorViewModel();
             DataContext = vm;
             // The VM owns the bound Title; the chrome adds Ctrl+S and the close guard.
             EditorWindowChrome.Attach(this, vm, manageTitle: false);

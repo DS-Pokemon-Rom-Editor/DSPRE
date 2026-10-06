@@ -62,10 +62,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public BallCapsuleEditorViewModel(string[] speciesNames)
         {
             _seals = BallSeals.Read();
-            foreach (var seal in _seals.Where(s => s != null))
+            foreach (BallSeal seal in _seals.Where(s => s != null))
                 Seals.Add(new SealChoice { Seal = seal, Sticker = BallCapsuleGraphics.Sticker(seal) });
 
-            foreach (var choice in Seals) ShownSeals.Add(choice);
+            foreach (SealChoice choice in Seals) ShownSeals.Add(choice);
 
             CapsuleNames.Add("Your design");
             if (TrainerCapsules.Available)
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static byte[] Pack(IEnumerable<BallCapsule> capsules) => ByteStateUndo.Pack(w =>
         {
-            foreach (var c in capsules) foreach (var p in c.Seals) { w.Write(p.Seal); w.Write(p.X); w.Write(p.Y); }
+            foreach (BallCapsule c in capsules) foreach (BallCapsule.Placed p in c.Seals) { w.Write(p.Seal); w.Write(p.X); w.Write(p.Y); }
         });
 
         private byte[] _savedTrainer;
@@ -110,12 +110,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // Shows the capsule the step changed.
         private void ApplyState(byte[] state)
         {
-            var all = AllCapsules().ToList();
+            List<BallCapsule> all = AllCapsules().ToList();
             int changed = -1;
             ByteStateUndo.Unpack(state, r =>
             {
                 for (int i = 0; i < all.Count; i++)
-                    foreach (var p in all[i].Seals)
+                    foreach (BallCapsule.Placed p in all[i].Seals)
                     {
                         int seal = r.ReadInt32(), x = r.ReadInt32(), y = r.ReadInt32();
                         if (p.Seal == seal && p.X == x && p.Y == y) continue;
@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get
             {
                 if (_capsuleIndex == 0) return "";
-                if (!_usedBy.TryGetValue(_capsuleIndex, out var who) || who.Count == 0) return "No trainer's Pokemon carries this capsule.";
+                if (!_usedBy.TryGetValue(_capsuleIndex, out List<string> who) || who.Count == 0) return "No trainer's Pokemon carries this capsule.";
                 return "Carried by " + (who.Count <= 6 ? string.Join(", ", who) : $"{string.Join(", ", who.Take(6))} and {who.Count - 6} more");
             }
         }
@@ -181,7 +181,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 int Rank(SealChoice c) =>
                     c.Seal.Name.Equals(want, StringComparison.OrdinalIgnoreCase) ? 0
                     : c.Seal.Name.StartsWith(want, StringComparison.OrdinalIgnoreCase) ? 1 : 2;
-                foreach (var choice in Seals.Where(c => want.Length == 0 || c.Title.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0)
+                foreach (SealChoice choice in Seals.Where(c => want.Length == 0 || c.Title.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0)
                                             .OrderBy(Rank))
                     ShownSeals.Add(choice);
             }
@@ -243,7 +243,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 x = (int)Math.Round(BallCapsule.BoardCentreX + dx * BallCapsule.BoardRadius / d);
                 y = (int)Math.Round(BallCapsule.BoardCentreY + dy * BallCapsule.BoardRadius / d);
             }
-            var s = Current.Seals[slot];
+            BallCapsule.Placed s = Current.Seals[slot];
             if (s.X == x && s.Y == y) return;
             s.X = x; s.Y = y;
             Touched();
@@ -258,7 +258,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public void Clear()
         {
-            foreach (var s in Current.Seals) s.Seal = 0;
+            foreach (BallCapsule.Placed s in Current.Seals) s.Seal = 0;
             Touched();
         }
 

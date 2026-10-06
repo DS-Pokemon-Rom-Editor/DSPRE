@@ -61,7 +61,7 @@ namespace DSPRE.Avalonia.Views.Controls
         public override void Render(DrawingContext ctx)
         {
             int n = FieldFont.CellSize;
-            var model = Model;
+            FontEditorViewModel model = Model;
 
             for (int y = 0; y < n; y++)
                 for (int x = 0; x < n; x++)
@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia.Views.Controls
                     ctx.FillRectangle(Shades[v & 3], new Rect(x * Zoom, y * Zoom, Zoom, Zoom));
                 }
 
-            var grid = new Pen(new SolidColorBrush(Color.FromArgb(40, 0, 0, 0)));
+            Pen grid = new Pen(new SolidColorBrush(Color.FromArgb(40, 0, 0, 0)));
             for (int i = 0; i <= n; i++)
             {
                 ctx.DrawLine(grid, new Point(i * Zoom, 0), new Point(i * Zoom, n * Zoom));
@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia.Views.Controls
             // Where the next letter starts. Anything drawn past this line is not rubbed out, it simply
             // sits under whatever comes next.
             int w = Math.Clamp(LetterWidth, 0, n);
-            var edge = new Pen(new SolidColorBrush(Color.FromRgb(0xE0, 0x60, 0x40)), 2);
+            Pen edge = new Pen(new SolidColorBrush(Color.FromRgb(0xE0, 0x60, 0x40)), 2);
             ctx.DrawLine(edge, new Point(w * Zoom, 0), new Point(w * Zoom, n * Zoom));
         }
 
@@ -94,7 +94,7 @@ namespace DSPRE.Avalonia.Views.Controls
         protected override void OnPointerMoved(PointerEventArgs e)
         {
             base.OnPointerMoved(e);
-            var props = e.GetCurrentPoint(this).Properties;
+            PointerPointProperties props = e.GetCurrentPoint(this).Properties;
             if (props.IsLeftButtonPressed || props.IsRightButtonPressed)
                 Paint(e.GetPosition(this), props.IsRightButtonPressed);
         }
@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private void Paint(Point p, bool rubOut)
         {
-            var model = Model;
+            FontEditorViewModel model = Model;
             if (model == null || !model.HasGlyph) return;
             int x = (int)(p.X / Zoom), y = (int)(p.Y / Zoom);
             if (x < 0 || y < 0 || x >= FieldFont.CellSize || y >= FieldFont.CellSize) return;

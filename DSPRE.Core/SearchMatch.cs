@@ -15,7 +15,7 @@ namespace DSPRE
             foreach (char c in s) if (c > 0x7F) { ascii = false; break; }
             if (ascii) return s.ToLowerInvariant();
 
-            var sb = new StringBuilder(s.Length);
+            StringBuilder sb = new StringBuilder(s.Length);
             foreach (char c in s.Normalize(NormalizationForm.FormD))
                 if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
                     sb.Append(char.ToLowerInvariant(c));

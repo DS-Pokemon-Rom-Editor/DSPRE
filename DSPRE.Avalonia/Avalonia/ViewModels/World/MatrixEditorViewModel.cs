@@ -11,6 +11,7 @@ using DSPRE.Avalonia;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
+using Avalonia.Media;
 
 namespace DSPRE.Avalonia.ViewModels.World
 {
@@ -150,12 +151,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             int h = HeaderForColour(c, r);
             if (h < 0) return null;
-            if (!_kindOfHeader.TryGetValue(h, out var kind))
+            if (!_kindOfHeader.TryGetValue(h, out PlaceKind kind))
             {
                 try { kind = KindOf(h, MapHeader.GetMapHeader((ushort)h)); } catch { kind = PlaceKind.None; }
                 _kindOfHeader[h] = kind;
             }
-            foreach (var k in Kinds) if (k.Kind == kind) return k.Colour;
+            foreach ((PlaceKind Kind, string Name, Color Colour) k in Kinds) if (k.Kind == kind) return k.Colour;
             return null;
         }
 
@@ -181,12 +182,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 catch { }
             }
-            var seen = new HashSet<global::Avalonia.Media.Color>();
+            HashSet<Color> seen = new HashSet<global::Avalonia.Media.Color>();
             for (int r = 0; r < Height; r++)
                 for (int c = 0; c < Width; c++)
                     if (CellColour(c, r) is global::Avalonia.Media.Color col) seen.Add(col);
             Legend.Clear();
-            foreach (var k in Kinds)
+            foreach ((PlaceKind Kind, string Name, Color Colour) k in Kinds)
                 if (seen.Contains(k.Colour))
                     Legend.Add(new LegendEntry { Name = k.Name, Brush = new global::Avalonia.Media.SolidColorBrush(k.Colour) });
         }
@@ -219,7 +220,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (!InBounds) return null;
                 if (_matrix.hasHeadersSection) return (ushort)_matrix.headers[_selRow, _selCol];
-                var users = new List<int>();
+                List<int> users = new List<int>();
                 try
                 {
                     for (int h = 0; h < GetHeaderCount(); h++)
@@ -267,7 +268,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 int? id = _matrix.id;
                 GameMatrix restored;
-                using (var ms = new MemoryStream(state)) restored = new GameMatrix(ms);
+                using (MemoryStream ms = new MemoryStream(state)) restored = new GameMatrix(ms);
                 _matrix = id is int keep ? new GameMatrix(restored, keep) : restored;
                 RebuildLegend();
                 MarkDirty();
@@ -401,12 +402,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportAsync()
         {
             if (_selectedIndex < 0) return;
-            var filter = new FilePickerFileType("Matrix file") { Patterns = new[] { "*.mtx", "*.bin", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("Matrix file") { Patterns = new[] { "*.mtx", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import matrix", new[] { filter });
             if (path == null) return;
             try
             {
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read)) _matrix = new GameMatrix(fs);
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) _matrix = new GameMatrix(fs);
                 MarkDirty();
                 StatusText = "Imported matrix (unsaved).";
                 RaiseLoaded();
@@ -417,7 +418,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportAsync()
         {
             if (_matrix == null) return;
-            var filter = new FilePickerFileType("Matrix file") { Patterns = new[] { "*.mtx" } };
+            FilePickerFileType filter = new FilePickerFileType("Matrix file") { Patterns = new[] { "*.mtx" } };
             string path = await DialogHelper.SaveFile(_owner, "Export matrix", new[] { filter }, $"matrix_{_selectedIndex:D4}.mtx");
             if (path == null) return;
             try { File.WriteAllBytes(path, _matrix.ToByteArray()); StatusText = "Exported."; }

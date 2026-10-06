@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Platform;
 
 namespace DSPRE.Avalonia
 {
@@ -30,14 +31,14 @@ namespace DSPRE.Avalonia
 
             try
             {
-                var active = ActiveWindow();
+                Window active = ActiveWindow();
                 if (active != null && !ReferenceEquals(active, w) && active.WindowState != WindowState.Minimized)
                 {
                     // Anchor the pop-up on the active window's screen. Prefer centering on that screen; fall back to a
                     // small cascade offset from the active window (which is always on the right monitor) if the screen
                     // metrics aren't available yet.
                     w.WindowStartupLocation = WindowStartupLocation.Manual;
-                    var p = active.Position;
+                    PixelPoint p = active.Position;
                     w.Position = new PixelPoint(p.X + 48, p.Y + 48);
                 }
             }
@@ -60,7 +61,7 @@ namespace DSPRE.Avalonia
             {
                 try
                 {
-                    var screen = w.Screens?.ScreenFromWindow(w) ?? w.Screens?.Primary;
+                    Screen screen = w.Screens?.ScreenFromWindow(w) ?? w.Screens?.Primary;
                     double scale = screen?.Scaling ?? 1;
                     // Room for the title bar and frame, which ClientSize leaves out.
                     double room = screen != null ? screen.WorkingArea.Height / scale - 40 : double.PositiveInfinity;
@@ -68,7 +69,7 @@ namespace DSPRE.Avalonia
                     if (w.MinHeight > cap) w.MinHeight = cap;
 
                     double overflow = 0;
-                    foreach (var sv in global::Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(w))
+                    foreach (Visual sv in global::Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(w))
                     {
                         if (sv is not ScrollViewer s || s.TemplatedParent != null || !s.IsEffectivelyVisible) continue;
                         overflow = Math.Max(overflow, s.Extent.Height - s.Viewport.Height);

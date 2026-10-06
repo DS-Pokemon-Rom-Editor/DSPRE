@@ -147,7 +147,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 _curMachineMoves[_selectedMachineIndex] = value;
                 string label = TMEditor.MachineLabelFromIndex(_selectedMachineIndex);
-                var row = new MachineRow { Text = $"{label} - {GetMoveNameFromID(value)}", Move = value };
+                MachineRow row = new MachineRow { Text = $"{label} - {GetMoveNameFromID(value)}", Move = value };
                 ChangeMachineList(() => MachineItems[Pos(_selectedMachineIndex)] = row);
                 SetDirty(true);
             }
@@ -299,7 +299,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                using var writer = new StreamWriter(path);
+                using StreamWriter writer = new StreamWriter(path);
                 writer.WriteLine("Machine,Move ID,Move Name,Palette ID");
                 for (int i = 0; i < _curMachineMoves.Length; i++)
                 {
@@ -330,11 +330,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                var lines = File.ReadAllLines(path);
+                string[] lines = File.ReadAllLines(path);
                 int skipped = 0;
                 for (int i = 1; i < lines.Length; i++) // skip header
                 {
-                    var parts = lines[i].Split(',');
+                    string[] parts = lines[i].Split(',');
                     if (parts.Length < 4) continue;
 
                     string machineLabel = parts[0].Trim();
@@ -406,7 +406,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void PopulateMoveNames()
         {
             MoveNames.Clear();
-            foreach (var name in RomInfo.GetAttackNames())
+            foreach (string name in RomInfo.GetAttackNames())
                 MoveNames.Add(name);
         }
 
@@ -421,13 +421,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void PopulateTypeNames()
         {
             TypeNames.Clear();
-            foreach (var name in RomInfo.GetTypeNames())
+            foreach (string name in RomInfo.GetTypeNames())
                 TypeNames.Add(name);
         }
 
         private string GetMoveNameFromID(int moveId)
         {
-            var names = RomInfo.GetAttackNames();
+            string[] names = RomInfo.GetAttackNames();
             return (moveId >= 0 && moveId < names.Length) ? names[moveId] : $"UNK_{moveId}";
         }
 
@@ -438,7 +438,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!await DialogHelper.AskYesNo($"Rewrite the item descriptions of {labels} for their new moves?", "TM/HM Editor")) return;
             try
             {
-                var result = TmItemDescriptions.Update(moved);
+                TmItemDescriptions.Result result = TmItemDescriptions.Update(moved);
                 if (result.Kept.Count > 0)
                     await DialogHelper.ShowInfo("Too long for the bag, left as they were: " + string.Join(", ", result.Kept) + ".", "TM/HM Editor");
             }
@@ -453,7 +453,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 TMEditor.WriteMachines(_curMachineMoves, _palettesKnown ? _curMachinePalettes : null);
-                var moved = Enumerable.Range(0, Math.Min(_curMachineMoves.Length, _savedMachineMoves.Length))
+                List<(int i, int, int)> moved = Enumerable.Range(0, Math.Min(_curMachineMoves.Length, _savedMachineMoves.Length))
                     .Where(i => _curMachineMoves[i] != _savedMachineMoves[i])
                     .Select(i => (i, _savedMachineMoves[i], _curMachineMoves[i])).ToList();
                 _savedMachineMoves = (int[])_curMachineMoves.Clone();
@@ -486,7 +486,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private int GetMoveType(int moveId)
         {
-            var moveData = new MoveData(moveId);
+            MoveData moveData = new MoveData(moveId);
             return (int)moveData.movetype;
         }
 

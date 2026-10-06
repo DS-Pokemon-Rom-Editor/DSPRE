@@ -93,9 +93,9 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             base.OnPointerPressed(e);
             if (Screen == null || Brightness < 1) return;
-            var (scale, ox, oy) = Fit();
+            (double scale, double ox, double oy) = Fit();
             if (scale <= 0) return;
-            var p = e.GetPosition(this);
+            Point p = e.GetPosition(this);
             int x = (int)((p.X - ox) / scale), y = (int)((p.Y - oy) / scale);
             e.Handled = true;
 
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.Views.Controls
                 return;
             }
 
-            var (spot, which) = HgssTouchScreen.HitMenu(x, y);
+            (HgssTouchScreen.MenuSpot spot, int which) = HgssTouchScreen.HitMenu(x, y);
             switch (spot)
             {
                 case HgssTouchScreen.MenuSpot.AButton:
@@ -154,13 +154,13 @@ namespace DSPRE.Avalonia.Views.Controls
 
         public override void Render(DrawingContext ctx)
         {
-            var (scale, ox, oy) = Fit();
+            (double scale, double ox, double oy) = Fit();
             if (scale <= 0) return;
-            var target = new Rect(ox, oy, DsBgScreen.Width * scale, DsBgScreen.Height * scale);
-            var screen = Screen;
+            Rect target = new Rect(ox, oy, DsBgScreen.Width * scale, DsBgScreen.Height * scale);
+            HgssTouchScreen screen = Screen;
             if (screen == null) { ctx.FillRectangle(Brushes.Black, target); return; }
 
-            var choices = Choices;
+            IReadOnlyList<string> choices = Choices;
             string key = ShowsChoices
                 ? $"c|{(choices == null ? "" : string.Join("", choices))}|{YesNo}|{Cursor}|{CursorShown}|{Brightness:0.00}"
                 : $"m|{Dimmed}|{_aHeld}|{_shoesOn}|{_highlight}|{ALabel}|{Brightness:0.00}";
@@ -183,14 +183,14 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private static WriteableBitmap ToBitmap(byte[] rgba)
         {
-            var bmp = new WriteableBitmap(new PixelSize(DsBgScreen.Width, DsBgScreen.Height), new Vector(96, 96),
+            WriteableBitmap bmp = new WriteableBitmap(new PixelSize(DsBgScreen.Width, DsBgScreen.Height), new Vector(96, 96),
                                           PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-            using var buf = bmp.Lock();
+            using ILockedFramebuffer buf = bmp.Lock();
             unsafe
             {
                 for (int y = 0; y < DsBgScreen.Height; y++)
                 {
-                    var row = (byte*)buf.Address + y * buf.RowBytes;
+                    byte* row = (byte*)buf.Address + y * buf.RowBytes;
                     for (int x = 0; x < DsBgScreen.Width; x++)
                     {
                         int at = (y * DsBgScreen.Width + x) * 4;

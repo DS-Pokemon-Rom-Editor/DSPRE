@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles
             string header = Path.Combine(Folder, "0000");
             if (!File.Exists(header)) return null;
 
-            var read = Parse(File.ReadAllBytes(header), i =>
+            FieldTextureAnimations read = Parse(File.ReadAllBytes(header), i =>
             {
                 string p = Path.Combine(Folder, (i + 1).ToString("D4"));
                 return File.Exists(p) ? File.ReadAllBytes(p) : null;
@@ -50,7 +50,7 @@ namespace DSPRE.ROMFiles
 
         public static FieldTextureAnimations Parse(byte[] header, Func<int, byte[]> framePack)
         {
-            var set = new FieldTextureAnimations();
+            FieldTextureAnimations set = new FieldTextureAnimations();
             if (header == null || header.Length < 4) return set;
             int count = BitConverter.ToInt32(header, 0);
             for (int i = 0; i < count && 4 + (i + 1) * EntrySize <= header.Length; i++)
@@ -58,7 +58,7 @@ namespace DSPRE.ROMFiles
                 int at = 4 + i * EntrySize;
                 int n = 0;
                 while (n < NameLength && header[at + n] != 0) n++;
-                var entry = new Entry { Name = Encoding.ASCII.GetString(header, at, n), FramePack = framePack?.Invoke(i) };
+                Entry entry = new Entry { Name = Encoding.ASCII.GetString(header, at, n), FramePack = framePack?.Invoke(i) };
                 for (int f = 0; f < MostFrames; f++)
                 {
                     byte frame = header[at + NameLength + f * 2], duration = header[at + NameLength + f * 2 + 1];
@@ -72,12 +72,12 @@ namespace DSPRE.ROMFiles
 
         public byte[] HeaderBytes()
         {
-            var b = new byte[4 + Entries.Count * EntrySize];
+            byte[] b = new byte[4 + Entries.Count * EntrySize];
             BitConverter.GetBytes(Entries.Count).CopyTo(b, 0);
             for (int i = 0; i < Entries.Count; i++)
             {
                 int at = 4 + i * EntrySize;
-                var name = Encoding.ASCII.GetBytes(Entries[i].Name ?? "");
+                byte[] name = Encoding.ASCII.GetBytes(Entries[i].Name ?? "");
                 Array.Copy(name, 0, b, at, Math.Min(name.Length, NameLength - 1));
                 for (int f = 0; f < MostFrames; f++)
                 {

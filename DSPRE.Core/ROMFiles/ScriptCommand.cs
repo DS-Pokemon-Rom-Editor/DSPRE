@@ -19,7 +19,7 @@ namespace DSPRE.ROMFiles
             this.id = id;
             cmdParams = parameterData;
 
-            var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
+            Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
             ScriptCommandInfo cmdInfo = null;
             commandInfoDict?.TryGetValue(id, out cmdInfo);
 
@@ -40,13 +40,13 @@ namespace DSPRE.ROMFiles
             {
                 for (int i = 0; i < Math.Min(paramTypes.Count, parameterData.Count); i++)
                 {
-                    var param = new ScriptParameter(parameterData[i], paramTypes[i]);
+                    ScriptParameter param = new ScriptParameter(parameterData[i], paramTypes[i]);
                     name += " " + param.DisplayValue;
                 }
             }
             else if (parameterData != null)
             {
-                foreach (var param in parameterData)
+                foreach (byte[] param in parameterData)
                 {
                     name += " " + new ScriptParameter(param, ScriptParameter.ParameterType.Integer).DisplayValue;
                 }
@@ -67,7 +67,7 @@ namespace DSPRE.ROMFiles
             name = wholeLine;
             cmdParams = new List<byte[]>();
 
-            var processedLine = ProcessBracketedItems(wholeLine);
+            string processedLine = ProcessBracketedItems(wholeLine);
             string[] nameParts = processedLine.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries); // Separate command code from parameters
             /* Get command id, which is always first in the description */
 
@@ -209,49 +209,49 @@ namespace DSPRE.ROMFiles
                             try
                             {
                                 string paramToCheck = CheckAndCompareParam(nameParts[i + 1]);
-                                var first = ScriptDatabase.specialOverworlds.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                KeyValuePair<ushort, string> first = ScriptDatabase.specialOverworlds.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                 if (!string.IsNullOrWhiteSpace(first.Value))
                                 {
                                     result = first.Key;
                                 }
                                 else
                                 {
-                                    var direction = ScriptDatabase.overworldDirections.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                    KeyValuePair<byte, string> direction = ScriptDatabase.overworldDirections.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                     if (!string.IsNullOrWhiteSpace(direction.Value))
                                     {
                                         result = direction.Key;
                                     }
                                     else
                                     {
-                                        var pokemon = ScriptDatabase.pokemonNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                        KeyValuePair<ushort, string> pokemon = ScriptDatabase.pokemonNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                         if (!string.IsNullOrWhiteSpace(pokemon.Value))
                                         {
                                             result = pokemon.Key;
                                         }
                                         else
                                         {
-                                            var item = ScriptDatabase.itemNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                            KeyValuePair<ushort, string> item = ScriptDatabase.itemNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                             if (!string.IsNullOrWhiteSpace(item.Value))
                                             {
                                                 result = item.Key;
                                             }
                                             else
                                             {
-                                                var move = ScriptDatabase.moveNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                KeyValuePair<ushort, string> move = ScriptDatabase.moveNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                 if (!string.IsNullOrWhiteSpace(move.Value))
                                                 {
                                                     result = move.Key;
                                                 }
                                                 else
                                                 {
-                                                    var sound = ScriptDatabase.soundNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                    KeyValuePair<ushort, string> sound = ScriptDatabase.soundNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                     if (!string.IsNullOrWhiteSpace(sound.Value))
                                                     {
                                                         result = sound.Key;
                                                     }
                                                     else
                                                     {
-                                                        var trainer = ScriptDatabase.trainerNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                        KeyValuePair<ushort, string> trainer = ScriptDatabase.trainerNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                         if (!string.IsNullOrWhiteSpace(trainer.Value))
                                                         {
                                                             result = trainer.Key;
@@ -303,7 +303,7 @@ namespace DSPRE.ROMFiles
 
             if (id != null)
             {
-                var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
+                Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
                 ScriptCommandInfo cmdInfo = null;
                 commandInfoDict?.TryGetValue((ushort)id, out cmdInfo);
 
@@ -322,13 +322,13 @@ namespace DSPRE.ROMFiles
                 {
                     for (int i = 0; i < Math.Min(paramTypes.Count, cmdParams.Count); i++)
                     {
-                        var param = new ScriptParameter(cmdParams[i], paramTypes[i]);
+                        ScriptParameter param = new ScriptParameter(cmdParams[i], paramTypes[i]);
                         name += " " + param.DisplayValue;
                     }
                 }
                 else if (cmdParams != null)
                 {
-                    foreach (var param in cmdParams)
+                    foreach (byte[] param in cmdParams)
                     {
                         name += " " + new ScriptParameter(param, ScriptParameter.ParameterType.Integer).DisplayValue;
                     }
@@ -392,31 +392,31 @@ namespace DSPRE.ROMFiles
         {
 
             // Check for Pokemon names first
-            var pokemon = ScriptDatabase.pokemonNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> pokemon = ScriptDatabase.pokemonNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(pokemon.Value))
             {
                 return pokemon.Value;
             }
-            var item = ScriptDatabase.itemNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> item = ScriptDatabase.itemNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(item.Value))
             {
                 return item.Value;
             }
-            var move = ScriptDatabase.moveNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> move = ScriptDatabase.moveNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(move.Value))
             {
                 return move.Value;
             }
-            var sound = ScriptDatabase.soundNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> sound = ScriptDatabase.soundNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(sound.Value))
             {
                 return sound.Value;
             }
-            var trainer = ScriptDatabase.trainerNames.FirstOrDefault(x =>
+            KeyValuePair<ushort, string> trainer = ScriptDatabase.trainerNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(trainer.Value))
             {

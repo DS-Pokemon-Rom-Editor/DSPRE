@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             FontNames.Clear();
             _fontEntries.Clear();
-            var files = FieldFont.UnpackedEntries();
+            string[] files = FieldFont.UnpackedEntries();
             for (int i = 0; i < files.Length; i++)
             {
                 FieldFont f;
@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             string looking = (_search ?? "").Trim();
             bool byNumber = int.TryParse(looking, out int wanted);
 
-            foreach (var row in _all)
+            foreach (GlyphRow row in _all)
             {
                 bool passes = _showWhat switch
                 {
@@ -245,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             if (_font == null || _selectedGlyphIndex < 0) return null;
             int cell = FieldFont.CellSize;
-            var pixels = new byte[cell * cell];
+            byte[] pixels = new byte[cell * cell];
             for (int y = 0; y < cell; y++)
                 for (int x = 0; x < cell; x++)
                     pixels[y * cell + x] = _font.PixelAt(_selectedGlyphIndex, x, y);
@@ -259,7 +259,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         private void RecordStep()
         {
-            var step = Snapshot();
+            Step step = Snapshot();
             if (step == null) return;
             // One drag is one step, so long as it stays on the same letter.
             bool sameStroke = (DateTime.UtcNow - _lastStep).TotalMilliseconds < SameStrokeMs
@@ -276,7 +276,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         private void RestartSteps()
         {
-            var step = Snapshot();
+            Step step = Snapshot();
             if (step != null) _steps.Reset(step);
             _lastStep = DateTime.MinValue;
             _lastStepGlyph = step?.Glyph ?? -1;
@@ -361,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             try
             {
-                var image = new DSPRE.RawImage(across * cell, down * cell);
+                RawImage image = new DSPRE.RawImage(across * cell, down * cell);
                 for (int i = 0; i < (wholeFont ? _font.GlyphCount : 1); i++)
                 {
                     int glyph = wholeFont ? i : _selectedGlyphIndex;
@@ -399,7 +399,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 DSPRE.RawImage image;
-                using (var stream = System.IO.File.OpenRead(path)) image = ImageConverter.DecodeRawImage(stream);
+                using (FileStream stream = System.IO.File.OpenRead(path)) image = ImageConverter.DecodeRawImage(stream);
                 if (image == null) return "That picture could not be read.";
                 if (image.Width != wantAcross || image.Height != wantDown)
                     return $"That picture is {image.Width} by {image.Height} and this wants "
@@ -531,7 +531,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             // building this too early once left every letter blank for the rest of the session.
             if (_lettersByGlyph == null || _lettersByGlyph.Count == 0)
             {
-                var built = new Dictionary<int, string>();
+                Dictionary<int, string> built = new Dictionary<int, string>();
                 try
                 {
                     if (FieldFontCharacters.Ready)
@@ -553,7 +553,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void RaiseGlyph()
         {
-            foreach (var n in new[]
+            foreach (string n in new[]
             {
                 nameof(HasGlyph), nameof(GlyphTitle), nameof(GlyphChanged),
                 nameof(CanUsePictureCommand),

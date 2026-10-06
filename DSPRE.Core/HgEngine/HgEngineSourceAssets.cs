@@ -69,7 +69,7 @@ namespace DSPRE.HgEngine
             foreach (System.Text.RegularExpressions.Match m in ConvertedPalette.Matches(text))
             {
                 if (int.Parse(m.Groups[3].Value) != member) continue;
-                var rule = HgEngineOwnedFiles.RuleForArchive(archive);
+                HgEngineRule rule = HgEngineOwnedFiles.RuleForArchive(archive);
                 if (rule == null || rule.Variable != m.Groups[1].Value || rule.SourceDirRelPath == null) continue;
                 return System.IO.Path.Combine(HgEngineProject.RepoPathUnc, (rule.SourceDirRelPath + "/" + m.Groups[2].Value).Replace('/', System.IO.Path.DirectorySeparatorChar));
             }
@@ -79,7 +79,7 @@ namespace DSPRE.HgEngine
         // Members in the copy DSPRE edits, else in the packed archive; -1 when neither can be read.
         private static int MemberCount(RomInfo.DirNames dir)
         {
-            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out var dirs)) return -1;
+            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) dirs)) return -1;
             try
             {
                 if (System.IO.Directory.Exists(dirs.unpackedDir))

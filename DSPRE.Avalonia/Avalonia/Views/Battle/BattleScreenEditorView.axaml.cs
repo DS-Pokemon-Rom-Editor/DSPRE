@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -26,7 +27,7 @@ namespace DSPRE.Avalonia.Views.Battle
         private void Pick(object sender, PointerPressedEventArgs e, bool touch)
         {
             if (sender is not Control c) return;
-            var p = e.GetPosition(c);
+            Point p = e.GetPosition(c);
             int x = (int)(p.X / 2), y = (int)(p.Y / 2);
             VM?.PickAt(touch, x, y);
         }
@@ -39,9 +40,9 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private async void Paint_Click(object sender, RoutedEventArgs e)
         {
-            var piece = VM?.Selected?.Piece;
+            BattleScreenRenderer.Piece piece = VM?.Selected?.Piece;
             if (piece == null) return;
-            var archive = ArchiveOf(piece);
+            GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null)
             {
                 await DialogHelper.ShowError("This piece's archive is not one the painter can open.", "Battle Screen");
@@ -59,7 +60,7 @@ namespace DSPRE.Avalonia.Views.Battle
         /// </summary>
         private async void HandOver_Click(object sender, RoutedEventArgs e)
         {
-            var piece = VM?.Selected?.Piece;
+            BattleScreenRenderer.Piece piece = VM?.Selected?.Piece;
             if (piece == null || piece.Drawing < 0)
             {
                 await DialogHelper.ShowInfo("This piece is not drawn from a single file in an archive.",
@@ -71,9 +72,9 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var piece = VM?.Selected?.Piece;
+            BattleScreenRenderer.Piece piece = VM?.Selected?.Piece;
             if (piece == null) return;
-            var archive = ArchiveOf(piece);
+            GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
 
             string path = await DialogHelper.SaveFile(this, "Save this piece as a PNG",
@@ -89,9 +90,9 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var piece = VM?.Selected?.Piece;
+            BattleScreenRenderer.Piece piece = VM?.Selected?.Piece;
             if (piece == null) return;
-            var archive = ArchiveOf(piece);
+            GraphicAssets.Archive archive = ArchiveOf(piece);
             if (archive == null) return;
             if (!await WarnIfShared(piece)) return;
 

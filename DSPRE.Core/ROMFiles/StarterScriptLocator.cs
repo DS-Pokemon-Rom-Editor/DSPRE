@@ -80,14 +80,14 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static Result Locate(string rememberedKey, string knownFingerprint)
         {
-            var result = new Result();
+            Result result = new Result();
             if (RomInfo.starterHeldItemScriptFileID < 0)
             {
                 result.Outcome = Outcome.NotApplicable;
                 return result;
             }
 
-            var vanilla = ReadVanillaSlot();
+            Candidate vanilla = ReadVanillaSlot();
             if (vanilla != null && string.IsNullOrEmpty(rememberedKey))
             {
                 result.Outcome = Outcome.Vanilla;
@@ -96,12 +96,12 @@ namespace DSPRE.ROMFiles
                 return result;
             }
 
-            var all = FindCandidates();
+            List<Candidate> all = FindCandidates();
             result.Candidates = all;
 
             if (!string.IsNullOrEmpty(rememberedKey))
             {
-                var kept = all.FirstOrDefault(c => c.Key == rememberedKey);
+                Candidate kept = all.FirstOrDefault(c => c.Key == rememberedKey);
                 if (kept != null)
                 {
                     result.Chosen = kept;
@@ -131,11 +131,11 @@ namespace DSPRE.ROMFiles
             ScriptFile f = TryParse(RomInfo.starterHeldItemScriptFileID);
             if (f?.allScripts == null) return null;
 
-            var container = f.allScripts.FirstOrDefault(c => c.manualUserID == (uint)RomInfo.starterCommandScriptNumber);
-            var cmds = container?.commands;
+            ScriptCommandContainer container = f.allScripts.FirstOrDefault(c => c.manualUserID == (uint)RomInfo.starterCommandScriptNumber);
+            List<ScriptCommand> cmds = container?.commands;
             if (cmds == null || RomInfo.starterCommandIndex >= cmds.Count) return null;
 
-            var made = Describe(RomInfo.starterHeldItemScriptFileID, false,
+            Candidate made = Describe(RomInfo.starterHeldItemScriptFileID, false,
                                 RomInfo.starterCommandScriptNumber, RomInfo.starterCommandIndex,
                                 cmds[RomInfo.starterCommandIndex]);
             return made != null && made.FromVariable ? made : null;
@@ -144,7 +144,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Every give-a-Pokemon command in the game, best guess first.</summary>
         public static List<Candidate> FindCandidates()
         {
-            var found = new List<Candidate>();
+            List<Candidate> found = new List<Candidate>();
             if (!RomInfo.gameDirs.ContainsKey(RomInfo.DirNames.scripts)) return found;
 
             string dir = RomInfo.gameDirs[RomInfo.DirNames.scripts].unpackedDir;
@@ -153,7 +153,7 @@ namespace DSPRE.ROMFiles
             int count = Directory.GetFiles(dir).Length;
             for (int id = 0; id < count; id++)
             {
-                var f = TryParse(id);
+                ScriptFile f = TryParse(id);
                 if (f == null) continue;
                 Collect(found, id, f.allScripts, false);
                 Collect(found, id, f.allFunctions, true);
@@ -172,13 +172,13 @@ namespace DSPRE.ROMFiles
                                     List<ScriptCommandContainer> containers, bool functions)
         {
             if (containers == null) return;
-            foreach (var c in containers)
+            foreach (ScriptCommandContainer c in containers)
             {
-                var cmds = c.commands;
+                List<ScriptCommand> cmds = c.commands;
                 if (cmds == null) continue;
                 for (int i = 0; i < cmds.Count; i++)
                 {
-                    var made = Describe(fileId, functions, (int)c.manualUserID, i, cmds[i]);
+                    Candidate made = Describe(fileId, functions, (int)c.manualUserID, i, cmds[i]);
                     if (made != null) into.Add(made);
                 }
             }
@@ -195,7 +195,7 @@ namespace DSPRE.ROMFiles
             if (!name.StartsWith("GivePokemon", StringComparison.OrdinalIgnoreCase)) return null;
             if (name.StartsWith("GivePokemonEgg", StringComparison.OrdinalIgnoreCase)) return null;
 
-            var ps = cmd.cmdParams;
+            List<byte[]> ps = cmd.cmdParams;
             if (ps == null || ps.Count < 3) return null;
 
             return new Candidate

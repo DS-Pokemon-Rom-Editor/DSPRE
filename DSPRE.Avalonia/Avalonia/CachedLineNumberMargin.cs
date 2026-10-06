@@ -33,11 +33,11 @@ namespace DSPRE.Avalonia
 
         public override void Render(DrawingContext drawingContext)
         {
-            var textView = TextView;
+            TextView textView = TextView;
             if (textView is not { VisualLinesValid: true }) return;
 
             EnsureTypeface();
-            var foreground = GetValue(TextBlock.ForegroundProperty);
+            IBrush foreground = GetValue(TextBlock.ForegroundProperty);
             if (!Equals(_cachedForeground, foreground))
             {
                 _cachedForeground = foreground;
@@ -46,10 +46,10 @@ namespace DSPRE.Avalonia
             }
 
             double width = Bounds.Width;
-            foreach (var line in textView.VisualLines)
+            foreach (VisualLine line in textView.VisualLines)
             {
                 int lineNumber = line.FirstDocumentLine.LineNumber;
-                if (!_lineNumbers.TryGetValue(lineNumber, out var text))
+                if (!_lineNumbers.TryGetValue(lineNumber, out FormattedText text))
                 {
                     text = CreateFormattedText(lineNumber.ToString(CultureInfo.CurrentCulture), foreground);
                     _lineNumbers[lineNumber] = text;

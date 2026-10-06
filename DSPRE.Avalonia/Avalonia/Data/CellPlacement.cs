@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.Data
             int at = oams + (int)BitConverter.ToUInt32(ncer, cells + 4);
             if (at + count * 6 > ncer.Length) return null;
 
-            var pieces = new List<Piece>();
+            List<Piece> pieces = new List<Piece>();
             for (int i = 0; i < count; i++, at += 6)
             {
                 int a0 = BitConverter.ToUInt16(ncer, at), a1 = BitConverter.ToUInt16(ncer, at + 2), a2 = BitConverter.ToUInt16(ncer, at + 4);
@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.Data
                 // 1D mapping counts characters in 32-byte steps times 2^mapping; an 8bpp tile is two of them.
                 int tile = (a2 & 0x3FF) << mapping;
                 if (bitsPerPixel == 8) tile /= 2;
-                var (w, h) = Sizes[shape, size];
+                (int w, int h) = Sizes[shape, size];
                 pieces.Add(new Piece(x, (sbyte)(a0 & 0xFF), w, h, tile));
             }
             return pieces.Count > 0 ? pieces : null;
@@ -62,7 +62,7 @@ namespace DSPRE.Avalonia.Data
             width = pieces.Max(p => p.X + p.Width) - minX;
             height = pieces.Max(p => p.Y + p.Height) - minY;
             picture = new byte[width * height];
-            foreach (var (tile, px, py) in Tiles(pieces, minX, minY))
+            foreach ((int tile, int px, int py) in Tiles(pieces, minX, minY))
             {
                 if ((tile + 1) * 64 > tiles.Length) return false;
                 for (int y = 0; y < 8; y++)
@@ -75,7 +75,7 @@ namespace DSPRE.Avalonia.Data
         public static bool Unplace(byte[] picture, int width, List<Piece> pieces, byte[] tiles)
         {
             int minX = pieces.Min(p => p.X), minY = pieces.Min(p => p.Y);
-            foreach (var (tile, px, py) in Tiles(pieces, minX, minY))
+            foreach ((int tile, int px, int py) in Tiles(pieces, minX, minY))
             {
                 if ((tile + 1) * 64 > tiles.Length) return false;
                 for (int y = 0; y < 8; y++)
@@ -87,7 +87,7 @@ namespace DSPRE.Avalonia.Data
         // Each 8x8 tile of each piece, in 1D order across the piece, with where it lands in the picture.
         private static IEnumerable<(int Tile, int X, int Y)> Tiles(List<Piece> pieces, int minX, int minY)
         {
-            foreach (var p in pieces)
+            foreach (Piece p in pieces)
                 for (int ty = 0; ty < p.Height / 8; ty++)
                     for (int tx = 0; tx < p.Width / 8; tx++)
                         yield return (p.FirstTile + ty * (p.Width / 8) + tx, p.X - minX + tx * 8, p.Y - minY + ty * 8);

@@ -1,3 +1,4 @@
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
 using AvaloniaEdit.CodeCompletion;
@@ -70,20 +71,20 @@ namespace DSPRE.Avalonia.Views.Text
 
         private async Task ShowCompletionAsync()
         {
-            var caret = RotomEditor.TextArea.Caret;
-            var items = await VM.CompletionAsync(caret.Line, caret.Column);
+            Caret caret = RotomEditor.TextArea.Caret;
+            List<RotomLspCompletion> items = await VM.CompletionAsync(caret.Line, caret.Column);
             if (items.Count == 0 || _completion != null) return;
 
             _completion = new CompletionWindow(RotomEditor.TextArea) { StartOffset = WordStart() };
-            foreach (var item in items) _completion.CompletionList.CompletionData.Add(new CompletionItem(item));
+            foreach (RotomLspCompletion item in items) _completion.CompletionList.CompletionData.Add(new CompletionItem(item));
             _completion.Closed += (_, _) => _completion = null;
             _completion.Show();
         }
 
         private async Task ShowSignatureAsync()
         {
-            var caret = RotomEditor.TextArea.Caret;
-            var signature = await VM.SignatureHelpAsync(caret.Line, caret.Column);
+            Caret caret = RotomEditor.TextArea.Caret;
+            RotomLspSignature signature = await VM.SignatureHelpAsync(caret.Line, caret.Column);
             if (signature == null)
             {
                 _signature?.Close();
@@ -182,7 +183,7 @@ namespace DSPRE.Avalonia.Views.Text
                 string label = signature.Label ?? "";
                 int start = signature.ActiveStart, end = signature.ActiveEnd;
                 if (start < 0 || end <= start || end > label.Length) return label;
-                var block = new global::Avalonia.Controls.TextBlock();
+                TextBlock block = new global::Avalonia.Controls.TextBlock();
                 block.Inlines.Add(new global::Avalonia.Controls.Documents.Run(label[..start]));
                 block.Inlines.Add(new global::Avalonia.Controls.Documents.Run(label[start..end]) { FontWeight = FontWeight.Bold });
                 block.Inlines.Add(new global::Avalonia.Controls.Documents.Run(label[end..]));
@@ -203,13 +204,13 @@ namespace DSPRE.Avalonia.Views.Text
 
             public void Set(TextDocument document, IReadOnlyList<RotomLspInlineText> texts)
             {
-                var items = new List<(int, string)>();
+                List<(int, string)> items = new List<(int, string)>();
                 if (document != null && texts != null)
                 {
-                    foreach (var t in texts)
+                    foreach (RotomLspInlineText t in texts)
                     {
                         if (t.Line < 1 || t.Line > document.LineCount) continue;
-                        var line = document.GetLineByNumber(t.Line);
+                        DocumentLine line = document.GetLineByNumber(t.Line);
                         int offset = t.Column < 0 ? line.EndOffset : Math.Min(line.Offset + t.Column - 1, line.EndOffset);
                         items.Add((offset, t.Column < 0 ? "   " + t.Text : t.Text));
                     }
@@ -220,7 +221,7 @@ namespace DSPRE.Avalonia.Views.Text
             public override int GetFirstInterestedOffset(int startOffset)
             {
                 int end = CurrentContext.VisualLine.LastDocumentLine.EndOffset;
-                foreach (var (offset, _) in _items)
+                foreach ((int offset, string _) in _items)
                     if (offset >= startOffset && offset <= end) return offset;
                 return -1;
             }

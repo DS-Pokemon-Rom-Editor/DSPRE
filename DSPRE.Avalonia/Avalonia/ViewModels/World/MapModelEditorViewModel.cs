@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Edits land in the map file, so every header that shows it gets them.
         public void CountHeaders()
         {
-            var headers = HeadersOfMap?.Invoke();
+            List<ushort> headers = HeadersOfMap?.Invoke();
             Shared = headers != null && headers.Count > 1 ? $"Shown by {headers.Count} headers" : null;
             SharedTip = Shared == null ? null : $"Headers {string.Join(", ", headers)} all change with this map.";
         }

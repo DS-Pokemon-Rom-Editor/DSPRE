@@ -63,7 +63,7 @@ namespace DSPRE.HgEngine
 
             try
             {
-                var found = new List<string>();
+                List<string> found = new List<string>();
                 foreach (Match m in Regex.Matches(File.ReadAllText(path), @"a028/(\S+)"))
                 {
                     string name = m.Groups[1].Value.Trim();

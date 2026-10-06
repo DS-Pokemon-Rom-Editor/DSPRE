@@ -27,13 +27,13 @@ namespace DSPRE.HgEngine
             archive = line = -1;
             if (!HgEngineProject.IsActive || itemId < 0) return false;
             string header = Read(ItemHeaderRelPath);
-            var items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
-            var files = HgEngineSymbolTable.Load(FileHeaderRelPath);
+            HgEngineSymbolTable items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
+            HgEngineSymbolTable files = HgEngineSymbolTable.Load(FileHeaderRelPath);
             Match macro = header == null ? Match.Empty : Generation.Match(header);
             if (!macro.Success || items == null || files == null) return false;
 
             string body = macro.Groups[1].Value.Replace("\\\r\n", " ").Replace("\\\n", " ");
-            var steps = new List<(int Last, string Gen)>();
+            List<(int Last, string Gen)> steps = new List<(int Last, string Gen)>();
             foreach (Match m in Step.Matches(body))
             {
                 if (!items.TryGetValue(m.Groups[1].Value, out int last)) return false;

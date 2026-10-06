@@ -95,16 +95,16 @@ namespace DSPRE.Avalonia.Data
 
         public static List<Folded> Find(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version)
         {
-            var found = new List<Folded>();
+            List<Folded> found = new List<Folded>();
             if (cmds == null) return found;
 
             int i = 0;
             while (i < cmds.Count)
             {
                 Folded? hit = null;
-                foreach (var m in All)
+                foreach (BattleAnimMacro m in All)
                 {
-                    var settings = TryMatch(cmds, i, m, version);
+                    int[] settings = TryMatch(cmds, i, m, version);
                     if (settings == null) continue;
                     if (hit == null || m.Steps.Length > hit.Value.Count)
                         hit = new Folded(m, i, m.Steps.Length, settings);
@@ -120,14 +120,14 @@ namespace DSPRE.Avalonia.Data
             if (at + m.Steps.Length > cmds.Count) return null;
 
             int slots = 0;
-            foreach (var s in m.Steps) foreach (int w in s.Words) if (w < 0) slots = Math.Max(slots, -w);
-            var settings = new int[slots];
-            var filled = new bool[slots];
+            foreach (BattleAnimMacroStep s in m.Steps) foreach (int w in s.Words) if (w < 0) slots = Math.Max(slots, -w);
+            int[] settings = new int[slots];
+            bool[] filled = new bool[slots];
 
             for (int k = 0; k < m.Steps.Length; k++)
             {
-                var step = m.Steps[k];
-                var c = cmds[at + k];
+                BattleAnimMacroStep step = m.Steps[k];
+                WazaSeqCommand c = cmds[at + k];
                 if (BattleAnimCommands.Name(version, c.OpId) != step.Opcode) return null;
                 if (c.Args.Length != step.Words.Length) return null;
 
@@ -152,12 +152,12 @@ namespace DSPRE.Avalonia.Data
 
         public static List<WazaSeqCommand> Unfold(BattleAnimMacro m, int[] settings, WazaSeqVersion version)
         {
-            var outp = new List<WazaSeqCommand>(m.Steps.Length);
-            foreach (var step in m.Steps)
+            List<WazaSeqCommand> outp = new List<WazaSeqCommand>(m.Steps.Length);
+            foreach (BattleAnimMacroStep step in m.Steps)
             {
                 int op = BattleAnimCommands.Id(version, step.Opcode);
                 if (op < 0) return null;
-                var args = new int[step.Words.Length];
+                int[] args = new int[step.Words.Length];
                 for (int w = 0; w < args.Length; w++)
                 {
                     int want = step.Words[w];

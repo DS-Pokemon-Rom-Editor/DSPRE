@@ -27,7 +27,7 @@ namespace DSPRE.HgEngine
         public static bool TryRead(out List<(int Item, int Badges)> badgeMart, out List<Specialty> specialty, out string error)
         {
             badgeMart = null; specialty = null;
-            if (!TryLoad(out string text, out var items, out var order, out error)) return false;
+            if (!TryLoad(out string text, out HgEngineSymbolTable items, out List<string> order, out error)) return false;
             error = Parse(text, items, order, out badgeMart, out specialty, out _, out _);
             return error == null;
         }
@@ -36,10 +36,10 @@ namespace DSPRE.HgEngine
             out List<Specialty> specialty, out CDeclaration badgeDecl, out List<CDeclaration> arrays)
         {
             badgeMart = new List<(int, int)>(); specialty = new List<Specialty>(); arrays = new List<CDeclaration>();
-            var file = CSourceFile.For(text);
+            CSourceFile file = CSourceFile.For(text);
             badgeDecl = file.Find("sBadgeMart");
             if (badgeDecl == null) return $"{SourceRelPath} has no sBadgeMart.";
-            foreach (var row in badgeDecl.Init.Items)
+            foreach (CInitItem row in badgeDecl.Init.Items)
             {
                 if (row.IsConditional) return $"{SourceRelPath}: a badge mart row sits under #if, which DSPRE doesn't edit.";
                 if (row.List == null || row.List.Items.Count != 2) return $"{SourceRelPath}: {row.ValueText(text)} isn't {{ item, badges }}.";
@@ -49,11 +49,11 @@ namespace DSPRE.HgEngine
             }
             foreach (string array in order)
             {
-                var decl = file.Find(array);
+                CDeclaration decl = file.Find(array);
                 if (decl == null) return $"{SourceRelPath} has no {array}, which {RepointsRelPath} puts in a mart slot.";
                 arrays.Add(decl);
-                var list = new List<int>();
-                foreach (var entry in decl.Init.Items)
+                List<int> list = new List<int>();
+                foreach (CInitItem entry in decl.Init.Items)
                 {
                     if (entry.IsConditional) return $"{SourceRelPath}: {array} has an item under #if, which DSPRE doesn't edit.";
                     string token = entry.ValueText(text).Trim();
@@ -70,18 +70,18 @@ namespace DSPRE.HgEngine
         /// <summary>Writes the lists that changed, keeping each item's spelling where it stays at the same place.</summary>
         public static bool TryWrite(IReadOnlyList<(int Item, int Badges)> badgeMart, IReadOnlyList<IReadOnlyList<int>> specialty, out string error)
         {
-            if (!TryLoad(out string text, out var items, out var order, out error)) return false;
-            if ((error = Parse(text, items, order, out var oldBadge, out var oldSpecialty, out var badgeDecl, out var arrays)) != null) return false;
+            if (!TryLoad(out string text, out HgEngineSymbolTable items, out List<string> order, out error)) return false;
+            if ((error = Parse(text, items, order, out List<(int Item, int Badges)> oldBadge, out List<Specialty> oldSpecialty, out CDeclaration badgeDecl, out List<CDeclaration> arrays)) != null) return false;
             if (specialty.Count != oldSpecialty.Count) { error = "hg-engine's specialty marts are fixed slots; their number can't change."; return false; }
             if (badgeMart.Count > BadgeMartLimit) { error = $"The badge mart can list at most {BadgeMartLimit} items."; return false; }
             string Name(int item, string kept) => kept != null && Value(kept, items) == item ? kept
                 : items.TryGetNameWithPrefix(item, "ITEM_", out string n) ? n : item.ToString();
 
-            var edits = new List<(int Start, int End, string Text)>();
+            List<(int Start, int End, string Text)> edits = new List<(int Start, int End, string Text)>();
             if (!badgeMart.SequenceEqual(oldBadge))
             {
                 // Rows change in place, so their comments stay; new ones follow the last, removed ones lose their line.
-                var rows = badgeDecl.Init.Items;
+                List<CInitItem> rows = badgeDecl.Init.Items;
                 string indent = rows.Count > 0 ? HgEngineSwarms.Indent(text, rows[0].Start) : "    ";
                 for (int i = 0; i < Math.Min(rows.Count, badgeMart.Count); i++)
                     if (oldBadge[i] != badgeMart[i])
@@ -97,20 +97,20 @@ namespace DSPRE.HgEngine
             for (int s = 0; s < specialty.Count; s++)
             {
                 if (specialty[s].SequenceEqual(oldSpecialty[s].Items)) continue;
-                var init = arrays[s].Init;
-                var tokens = init.Items.Select(i => i.ValueText(text).Trim()).ToList();
+                CInitList init = arrays[s].Init;
+                List<string> tokens = init.Items.Select(i => i.ValueText(text).Trim()).ToList();
                 string indent = init.Items.Count > 0 ? HgEngineSwarms.Indent(text, init.Items[0].Start) : "    ";
-                var names = specialty[s].Select((item, i) => Name(item, i < tokens.Count ? tokens[i] : null)).Append("0xFFFF");
+                IEnumerable<string> names = specialty[s].Select((item, i) => Name(item, i < tokens.Count ? tokens[i] : null)).Append("0xFFFF");
                 edits.Add((init.Open + 1, init.Close, "\n" + indent + string.Join(", ", names) + "\n"));
             }
             if (edits.Count == 0) return true;
-            foreach (var e in edits.OrderByDescending(e => e.Start)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
+            foreach ((int Start, int End, string Text) e in edits.OrderByDescending(e => e.Start)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
 
             try
             {
                 return HgEngineVerifiedWrite.TryWrite(Path(SourceRelPath), SourceRelPath, text, written =>
                 {
-                    string problem = Parse(written, items, order, out var badge, out var spec, out _, out _);
+                    string problem = Parse(written, items, order, out List<(int Item, int Badges)> badge, out List<Specialty> spec, out _, out _);
                     if (problem != null) return problem;
                     if (!badge.SequenceEqual(badgeMart)) return "the badge mart differs";
                     for (int s = 0; s < specialty.Count; s++) if (!spec[s].Items.SequenceEqual(specialty[s])) return $"{spec[s].Array} differs";

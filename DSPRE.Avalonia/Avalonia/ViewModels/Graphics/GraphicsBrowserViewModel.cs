@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (archive == null) return false;
 
             // Land on the tab that holds it, so the row is not filtered out of view.
-            var tab = Tabs.FirstOrDefault(t => t.Only == archive.In) ?? Tabs.FirstOrDefault();
+            CategoryTab tab = Tabs.FirstOrDefault(t => t.Only == archive.In) ?? Tabs.FirstOrDefault();
             if (tab != null && !ReferenceEquals(tab, _selectedTab))
             {
                 _selectedTab = tab;
@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             Search = "";
 
-            var row = _everything.FirstOrDefault(i => i.Archive.Dir == archive.Dir
+            Item row = _everything.FirstOrDefault(i => i.Archive.Dir == archive.Dir
                                                    && i.Unit != null
                                                    && i.Unit.Parts.Any(pt => pt.Index == fileIndex
                                                         && (pt.Archive == null || pt.Archive.Dir == archive.Dir)))
@@ -133,25 +133,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         public void Scan()
         {
-            var found = new List<Item>();
-            var tabs = new List<CategoryTab>();
+            List<Item> found = new List<Item>();
+            List<CategoryTab> tabs = new List<CategoryTab>();
             GraphicAssets.Forget();
 
-            foreach (var g in Enum.GetValues<GraphicAssets.Group>())
+            foreach (GraphicAssets.Group g in Enum.GetValues<GraphicAssets.Group>())
             {
                 int inGroup = 0;
                 // A row can name its own tab, so an archive holding several different things is read for
                 // every tab rather than only its own.
-                foreach (var a in GraphicAssets.All)
+                foreach (GraphicAssets.Archive a in GraphicAssets.All)
                 {
                     int n;
                     try { n = GraphicAssets.Count(a); } catch { n = 0; }
                     if (n == 0) continue;      // this game does not have it
 
-                    var units = GraphicAssets.Units(a, n);
+                    List<GraphicAssets.Unit> units = GraphicAssets.Units(a, n);
                     if (a.In != g && !units.Any(u => u.In == g)) continue;
 
-                    foreach (var u in units)
+                    foreach (GraphicAssets.Unit u in units)
                     {
                         if ((u.In ?? a.In) != g) continue;
                         // Count the things, not the files: a row is a whole Pokemon or a whole trainer now,
@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _everything.Clear();
             _everything.AddRange(_scannedItems ?? new List<Item>());
             Tabs.Clear();
-            foreach (var tab in _scannedTabs ?? new List<CategoryTab>()) Tabs.Add(tab);
+            foreach (CategoryTab tab in _scannedTabs ?? new List<CategoryTab>()) Tabs.Add(tab);
             _selectedTab = Tabs.FirstOrDefault();
             OnPropertyChanged(nameof(SelectedTab));
 
@@ -194,7 +194,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// rows rather than assuming an archive belongs to one tab.</summary>
         private static string WhatIsOn(GraphicAssets.Group g, IEnumerable<Item> items)
         {
-            var titles = items.Where(i => i.In == g).Select(i => i.Archive.Title).Distinct();
+            IEnumerable<string> titles = items.Where(i => i.In == g).Select(i => i.Archive.Title).Distinct();
             return string.Join("  ", titles);
         }
 
@@ -241,7 +241,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_selectedTab?.Only != null) hits = hits.Where(i => i.In == _selectedTab.Only.Value);
             if (!string.IsNullOrEmpty(q)) hits = hits.Where(i => i.Search.Contains(q));
             // Thousands of entries would make the list crawl, so show the first slice and say so.
-            foreach (var i in hits.Take(ShowAtMost)) Shown.Add(i);
+            foreach (Item i in hits.Take(ShowAtMost)) Shown.Add(i);
             if (_selected == null || !Shown.Contains(_selected))
                 Selected = FirstWorthSelecting();
             OnPropertyChanged(nameof(FoundSummary));
@@ -253,7 +253,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         private Item FirstWorthSelecting()
         {
-            var first = Shown.FirstOrDefault();
+            Item first = Shown.FirstOrDefault();
             if (first == null) return null;
             return Shown.FirstOrDefault(item => !string.Equals(
                 item.Name, item.Archive?.Title, StringComparison.Ordinal)) ?? first;
@@ -289,7 +289,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             Parts.Clear();
             if (_selected?.Unit != null && _selected.Unit.Parts.Count > 1)
-                foreach (var up in _selected.Unit.Parts)
+                foreach (GraphicAssets.UnitPart up in _selected.Unit.Parts)
                     Parts.Add(new Part { Index = up.Index, Archive = up.Archive, Name = up.Name, Kind = up.Kind });
 
             _partIndex = -1;
@@ -331,7 +331,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// the game does not name its files.</summary>
         private string Showing(GraphicAssets.Archive a)
         {
-            var arc = ShowingArchive ?? a;
+            GraphicAssets.Archive arc = ShowingArchive ?? a;
             try
             {
                 string name = arc.NameOf?.Invoke(ShowingIndex);
@@ -356,7 +356,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             get
             {
-                var a = ShowingArchive;
+                GraphicAssets.Archive a = ShowingArchive;
                 if (a == null) return null;
                 try { return AvaloniaEditorLauncher.EditorForGraphic(a.Dir, ShowingIndex)?.Name; }
                 catch { return null; }
@@ -375,7 +375,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Opens whatever owns this graphic. Does nothing when nothing does.</summary>
         public void OpenOwningEditor()
         {
-            var a = ShowingArchive;
+            GraphicAssets.Archive a = ShowingArchive;
             if (a == null) return;
             try { AvaloniaEditorLauncher.EditorForGraphic(a.Dir, ShowingIndex)?.Open?.Invoke(); }
             catch (Exception ex) { AppLogger.Error("OpenOwningEditor failed: " + ex.Message); }
@@ -436,11 +436,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return;
             }
 
-            var a = _selected.Archive;
+            GraphicAssets.Archive a = _selected.Archive;
             try
             {
-                using var pending = _pending.Reading();
-                var p = GraphicAssets.Render(ShowingArchive ?? a, ShowingIndex, _showShiny);
+                using IDisposable pending = _pending.Reading();
+                GraphicAssets.Preview p = GraphicAssets.Render(ShowingArchive ?? a, ShowingIndex, _showShiny);
                 if (p.Rgba != null && p.Width > 0)
                 {
                     Picture = ImageConverter.FromRgba(p.Rgba, p.Width, p.Height);
@@ -542,14 +542,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string SavePicture(string path)
         {
             if (_selected == null) return "Pick something first.";
-            using var pending = _pending.Reading();
+            using IDisposable pending = _pending.Reading();
             return GraphicAssets.ExportPng(ShowingArchive ?? _selected.Archive, ShowingIndex, path);
         }
 
         public string SaveFileAsItIs(string path)
         {
             if (_selected == null) return "Pick something first.";
-            using var pending = _pending.Reading();
+            using IDisposable pending = _pending.Reading();
             return GraphicAssets.ExportRaw(ShowingArchive ?? _selected.Archive, ShowingIndex, path);
         }
 
@@ -562,7 +562,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             note = null;
             if (_selected == null) return "Pick something first.";
-            var archive = ShowingArchive ?? _selected.Archive;
+            GraphicAssets.Archive archive = ShowingArchive ?? _selected.Archive;
             int index = ShowingIndex;
             string said = null;
             string err = _pending.Import(() => GraphicAssets.ImportPng(archive, index, path, out said));

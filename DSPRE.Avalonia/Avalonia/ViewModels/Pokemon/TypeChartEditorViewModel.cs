@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -191,7 +192,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void RaiseSelection()
         {
-            foreach (var n in new[] { nameof(SelectedAttacker), nameof(SelectedDefender), nameof(SelectedTitle), nameof(AttackerIcon), nameof(DefenderIcon), nameof(SelectedChoice),
+            foreach (string n in new[] { nameof(SelectedAttacker), nameof(SelectedDefender), nameof(SelectedTitle), nameof(AttackerIcon), nameof(DefenderIcon), nameof(SelectedChoice),
                                       nameof(IsCustom), nameof(Multiplier), nameof(Foresight), nameof(CanForesight) })
                 Raise(n);
         }
@@ -208,7 +209,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (_chart == null) return "";
-                var notes = _chart.Unusual.Select(m => $"{NameOf(m.Attacker)} → {NameOf(m.Defender)} {m.Tenths / 10m}×").ToList();
+                List<string> notes = _chart.Unusual.Select(m => $"{NameOf(m.Attacker)} → {NameOf(m.Defender)} {m.Tenths / 10m}×").ToList();
                 if (notes.Count == 0) return "";
                 return "Battle messages and Conversion 2 only know 0×, ½× and 2×: " + string.Join(", ", notes.Take(6)) + (notes.Count > 6 ? "…" : "") + ". "
                     + "Stealth Rock only deals 0, ½, 1, 2 or 4 times its damage, and Wonder Guard, Filter, Solid Rock, Expert Belt "
@@ -220,7 +221,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void Changed()
         {
             RaiseSelection();
-            foreach (var n in new[] { nameof(Room), nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(HasUnsavedChanges) })
+            foreach (string n in new[] { nameof(Room), nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(HasUnsavedChanges) })
                 Raise(n);
             CellsChanged?.Invoke(this, EventArgs.Empty);
             RefreshSummary();
@@ -244,7 +245,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Type Chart"); return false; }
             if (_chart.FromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() => { _chart.Save(); return null; });
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => { _chart.Save(); return null; });
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError("The type chart was not saved:\n" + error, "Type Chart");

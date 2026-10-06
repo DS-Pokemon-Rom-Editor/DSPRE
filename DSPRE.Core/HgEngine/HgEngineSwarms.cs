@@ -36,16 +36,16 @@ namespace DSPRE.HgEngine
 
         private static string TryParse(string text, out Parsed parsed)
         {
-            var p = parsed = new Parsed { File = new CSourceFile(text) };
+            Parsed p = parsed = new Parsed { File = new CSourceFile(text) };
             p.Table = p.File.Find(Table);
-            var count = Count.Match(text);
+            Match count = Count.Match(text);
             if (p.Table == null || !count.Success) return $"{RelPath} has no {Table} or SWARM_MAP_COUNT that DSPRE can read.";
             foreach (Match d in Define.Matches(text)) p.Methods[d.Groups[1].Value] = int.Parse(d.Groups[2].Value);
             p.Methods.Remove("SWARM_MAP_COUNT");
 
-            var maps = HgEngineSymbolTable.Load(MapsH);
+            HgEngineSymbolTable maps = HgEngineSymbolTable.Load(MapsH);
             int? Map(string name) => maps != null && maps.TryGetValue(name, out int v) ? v : null;
-            foreach (var item in parsed.Table.Init.Items)
+            foreach (CInitItem item in parsed.Table.Init.Items)
             {
                 if (item.IsConditional) return $"{RelPath}: a swarm row sits under #if, which DSPRE doesn't edit.";
                 if (item.List == null || item.List.Items.Count != 2) return $"{RelPath}: swarm row {parsed.Raw.Count} isn't {{ map, kind }}.";
@@ -74,7 +74,7 @@ namespace DSPRE.HgEngine
         public static bool TryRead(out List<(ushort Header, ushort Method)> rows, out string error)
         {
             rows = new List<(ushort, ushort)>();
-            if (!TryLoadParsed(out var p, out error)) return false;
+            if (!TryLoadParsed(out Parsed p, out error)) return false;
             rows = p.Rows;
             return true;
         }
@@ -83,18 +83,18 @@ namespace DSPRE.HgEngine
         public static bool TryWrite(IReadOnlyList<(ushort Header, ushort Method)> rows, out string error)
         {
             if (rows.Count == 0 || rows.Count > 256) { error = "hg-engine picks a swarm with a byte, so it needs 1 to 256 rows."; return false; }
-            if (!TryLoadParsed(out var p, out error)) return false;
+            if (!TryLoadParsed(out Parsed p, out error)) return false;
             if (p.Rows.SequenceEqual(rows)) return true;
 
             string text = p.File.Text;
-            var maps = HgEngineSymbolTable.Load(MapsH);
+            HgEngineSymbolTable maps = HgEngineSymbolTable.Load(MapsH);
             string MapName(ushort v) => maps?.TryGetNameWithPrefix(v, "MAP_", out string n) == true ? n : v.ToString();
             string MethodName(ushort v) => p.Methods.FirstOrDefault(kv => kv.Value == v).Key ?? v.ToString();
-            var items = p.Table.Init.Items;
+            List<CInitItem> items = p.Table.Init.Items;
             string indent = items.Count > 0 ? Indent(text, items[0].Start) : "    ";
 
             // Changed rows are replaced in place and new ones go after the last, so comments stay where they were.
-            var edits = new List<(int Start, int End, string Text)>();
+            List<(int Start, int End, string Text)> edits = new List<(int Start, int End, string Text)>();
             for (int i = 0; i < Math.Min(rows.Count, items.Count); i++)
                 if (p.Rows[i] != rows[i]) edits.Add((items[i].Start, items[i].End, $"{{ {MapName(rows[i].Header)}, {MethodName(rows[i].Method)} }}"));
             if (rows.Count > items.Count)
@@ -107,11 +107,11 @@ namespace DSPRE.HgEngine
                 int start = LineStart(text, items[i].Start), end = LineEnd(text, items[i].End);
                 edits.Add((start - 1, end, ""));
             }
-            foreach (var e in edits.OrderByDescending(e => e.Start)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
+            foreach ((int Start, int End, string Text) e in edits.OrderByDescending(e => e.Start)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
             text = Count.Replace(text, m => m.Groups[1].Value + rows.Count, 1);
 
             return HgEngineVerifiedWrite.TryWrite(FilePath, RelPath, text, written =>
-                TryParse(written, out var back) ?? (back.Rows.SequenceEqual(rows) ? null : "the rows differ"), out error, keepLostComments: false);
+                TryParse(written, out Parsed back) ?? (back.Rows.SequenceEqual(rows) ? null : "the rows differ"), out error, keepLostComments: false);
         }
 
         internal static string Indent(string text, int at)

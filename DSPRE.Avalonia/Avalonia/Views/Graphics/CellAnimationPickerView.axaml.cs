@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Open()
         {
-            var pick = VM?.Selected;
+            CellAnimationFound pick = VM?.Selected;
             if (pick == null) return;
             AvaloniaEditorLauncher.OpenCellAnimationEditor(
                 pick.Source, pick.Animation, pick.Cells, pick.Sprites, pick.Palette, pick.PaletteRow,
@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         // Routing on the name the graphics census records keeps this from guessing at archives.
         private void DeepEditor_Click(object sender, RoutedEventArgs e)
         {
-            var pick = VM?.Selected;
+            CellAnimationFound pick = VM?.Selected;
             if (pick?.DeepEditor == null) return;
 
             // The animation's number says which class or Pokemon; files per trainer class vary by game.

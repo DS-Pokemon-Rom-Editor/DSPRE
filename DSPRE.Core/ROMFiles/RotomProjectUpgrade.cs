@@ -33,7 +33,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The version rotom reports, without the "rotom " prefix.</summary>
         public static async Task<string> CurrentVersionAsync()
         {
-            var result = await RotomTool.RunAsync("--version").ConfigureAwait(false);
+            RotomTool.Result result = await RotomTool.RunAsync("--version").ConfigureAwait(false);
             string text = (result.Stdout ?? "").Trim();
             return text.StartsWith("rotom ", StringComparison.OrdinalIgnoreCase) ? text.Substring(6).Trim() : text;
         }
@@ -44,11 +44,11 @@ namespace DSPRE.ROMFiles
             if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || !File.Exists(StatePath)) return null;
             string current = await CurrentVersionAsync().ConfigureAwait(false);
 
-            var recordedScripts = RecordedScripts(out string recorded);
+            List<RecordedScript> recordedScripts = RecordedScripts(out string recorded);
             if (string.Equals(recorded, current, StringComparison.Ordinal)) return null;
 
-            var assessment = new Assessment { RecordedVersion = recorded, CurrentVersion = current };
-            foreach (var script in recordedScripts)
+            Assessment assessment = new Assessment { RecordedVersion = recorded, CurrentVersion = current };
+            foreach (RecordedScript script in recordedScripts)
             {
                 bool binaryChanged = Hash(script.Binary) != script.OutputHash;
                 bool sourceChanged = Hash(script.Source) != script.SourceHash;
@@ -66,14 +66,14 @@ namespace DSPRE.ROMFiles
         internal static List<RecordedScript> RecordedScripts(out string compilerVersion)
         {
             compilerVersion = null;
-            var scripts = new List<RecordedScript>();
+            List<RecordedScript> scripts = new List<RecordedScript>();
             if (!File.Exists(StatePath)) return scripts;
-            using var doc = JsonDocument.Parse(File.ReadAllText(StatePath));
-            var state = doc.RootElement;
-            compilerVersion = state.TryGetProperty("compiler_version", out var v) ? v.GetString() : null;
-            if (!state.TryGetProperty("entries", out var entries)) return scripts;
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(StatePath));
+            JsonElement state = doc.RootElement;
+            compilerVersion = state.TryGetProperty("compiler_version", out JsonElement v) ? v.GetString() : null;
+            if (!state.TryGetProperty("entries", out JsonElement entries)) return scripts;
 
-            foreach (var entry in entries.EnumerateObject())
+            foreach (JsonProperty entry in entries.EnumerateObject())
             {
                 string source = Path.Combine(RotomTool.ProjectRoot, entry.Name.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
                 if (!int.TryParse(Path.GetFileNameWithoutExtension(source), out int id)) continue;
@@ -96,15 +96,15 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static async Task<(string Problem, List<int> Kept)> ApplyAsync(Assessment assessment, bool keepBinaries, bool regenerateAll)
         {
-            var regenerate = assessment.BinaryChanged.Concat(keepBinaries ? assessment.BothChanged : Enumerable.Empty<int>()).ToList();
+            List<int> regenerate = assessment.BinaryChanged.Concat(keepBinaries ? assessment.BothChanged : Enumerable.Empty<int>()).ToList();
             if (regenerate.Count > 0)
             {
                 await ScriptSourceSync.RefreshAsync(regenerate).ConfigureAwait(false);
                 await ScriptSourceSync.WhenIdleAsync().ConfigureAwait(false);
             }
 
-            var compiled = await RotomTool.CompileProjectAsync().ConfigureAwait(false);
-            var kept = compiled.KeptBinaries;
+            RotomTool.Result compiled = await RotomTool.CompileProjectAsync().ConfigureAwait(false);
+            List<int> kept = compiled.KeptBinaries;
             if (!compiled.Success) return ("The project did not compile on the new rotom: " + RotomTool.FormatResult(compiled), kept);
 
             if (!regenerateAll) return (null, kept);
@@ -118,7 +118,7 @@ namespace DSPRE.ROMFiles
                 Directory.CreateDirectory(Path.GetDirectoryName(dest));
                 File.Copy(file, dest, overwrite: true);
             }
-            var decompiled = await RotomTool.RunAsync("decompile").ConfigureAwait(false);
+            RotomTool.Result decompiled = await RotomTool.RunAsync("decompile").ConfigureAwait(false);
             return (decompiled.Success ? null : "Regenerating the sources failed, the originals are in " + backup + ": " + RotomTool.FormatResult(decompiled), kept);
         }
     }

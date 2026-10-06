@@ -14,8 +14,8 @@ namespace DSPRE.ROMFiles
 
         public static List<Point> Read()
         {
-            var points = new List<Point>();
-            using var reader = new ARM9.Reader(FlyTableOffset);
+            List<Point> points = new List<Point>();
+            using ARM9.Reader reader = new ARM9.Reader(FlyTableOffset);
             for (int i = 0; i < FlyTableRows; i++)
             {
                 if (gameFamily == GameFamilies.HGSS)

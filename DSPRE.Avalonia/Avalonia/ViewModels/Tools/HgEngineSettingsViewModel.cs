@@ -71,16 +71,16 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
-            foreach (var s in _settings) { w.Write(s.Enabled); w.Write(s.Value != null); w.Write(s.Value ?? ""); }
+            foreach (HgEngineConfig.Setting s in _settings) { w.Write(s.Enabled); w.Write(s.Value != null); w.Write(s.Value ?? ""); }
         });
 
         private void ApplyState(byte[] state)
         {
             ByteStateUndo.Unpack(state, r =>
             {
-                foreach (var s in _settings) { s.Enabled = r.ReadBoolean(); bool has = r.ReadBoolean(); string v = r.ReadString(); s.Value = has ? v : null; }
+                foreach (HgEngineConfig.Setting s in _settings) { s.Enabled = r.ReadBoolean(); bool has = r.ReadBoolean(); string v = r.ReadString(); s.Value = has ? v : null; }
             });
-            foreach (var row in _all) row.Refresh();
+            foreach (HgEngineSettingRow row in _all) row.Refresh();
             Changed();
         }
 
@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             CodeSettings.Clear();
             AssemblerSettings.Clear();
-            foreach (var row in _all.Where(r => _filter.Length == 0 || SearchMatch.Contains(r.Name + " " + r.Description, _filter)))
+            foreach (HgEngineSettingRow row in _all.Where(r => _filter.Length == 0 || SearchMatch.Contains(r.Name + " " + r.Description, _filter)))
                 (row.Setting.File == HgEngineConfig.HeaderRelPath ? CodeSettings : AssemblerSettings).Add(row);
         }
 
@@ -124,7 +124,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public async Task<bool> SaveChangesAsync()
         {
             if (!HasUnsavedChanges) return true;
-            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineConfig.TryWrite(_settings, out string e) ? null : e);
+            (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineConfig.TryWrite(_settings, out string e) ? null : e);
             if (!saved)
             {
                 if (error != null) await DialogHelper.ShowError("The settings were not saved:\n" + error, "hg-engine Settings");

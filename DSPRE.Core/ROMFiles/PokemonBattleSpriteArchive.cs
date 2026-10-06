@@ -26,7 +26,7 @@ namespace DSPRE.ROMFiles
 
         public static PokemonBattleSpriteArchive Open(RomInfo.DirNames dir)
         {
-            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out var paths)) return null;
+            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
             if (!HgEngineDomains.IsOwned(dir))
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { dir });
             string unpacked = Directory.Exists(paths.unpackedDir) && Directory.EnumerateFiles(paths.unpackedDir).Any()
@@ -42,15 +42,15 @@ namespace DSPRE.ROMFiles
             if (idx < 0) return null;
             if (_unpacked != null)
             {
-                var file = new FileInfo(MemberPath(idx));
+                FileInfo file = new FileInfo(MemberPath(idx));
                 return file.Exists && file.Length == size ? File.ReadAllBytes(file.FullName) : null;
             }
-            var narc = new NarcReader(_packed);
+            NarcReader narc = new NarcReader(_packed);
             if (idx >= narc.fe.Length || narc.fe[idx].Size != size) return null;
             narc.OpenEntry(idx);
             try
             {
-                var buffer = new byte[size];
+                byte[] buffer = new byte[size];
                 narc.fs.ReadExactly(buffer);
                 return buffer;
             }
@@ -64,14 +64,14 @@ namespace DSPRE.ROMFiles
             bool written = false;
             if (_unpacked != null)
             {
-                var file = new FileInfo(MemberPath(idx));
+                FileInfo file = new FileInfo(MemberPath(idx));
                 if (!file.Exists || file.Length != data.Length) return false;
                 File.WriteAllBytes(file.FullName, data);
                 written = true;
             }
             if (_packed != null)
             {
-                var narc = new NarcReader(_packed);
+                NarcReader narc = new NarcReader(_packed);
                 if (idx < narc.fe.Length && narc.fe[idx].Size == data.Length)
                 {
                     narc.OpenEntry(idx);
@@ -145,7 +145,7 @@ namespace DSPRE.ROMFiles
 
         public static uint[] DecodePalette(byte[] entry)
         {
-            var pal = new uint[16];
+            uint[] pal = new uint[16];
             for (int j = 0; j < 16; j++)
             {
                 ushort v = (ushort)(entry[40 + j * 2] | (entry[41 + j * 2] << 8));
@@ -205,7 +205,7 @@ namespace DSPRE.ROMFiles
                 }
             }
 
-            var entry = new byte[SpriteEntrySize];
+            byte[] entry = new byte[SpriteEntrySize];
             if (kept != null) Array.Copy(template, entry, 48);
             else SpriteHeader.CopyTo(entry, 0);
             for (int l = 0; l < Words; l++) { entry[48 + l * 2] = (byte)packed[l]; entry[49 + l * 2] = (byte)(packed[l] >> 8); }
@@ -215,7 +215,7 @@ namespace DSPRE.ROMFiles
         /// <param name="template">The member being replaced: its header is kept, and so is each colour word that still decodes to the same colour.</param>
         public static byte[] EncodePalette(uint[] palette, byte[] template = null)
         {
-            var entry = new byte[PaletteEntrySize];
+            byte[] entry = new byte[PaletteEntrySize];
             bool keep = template != null && template.Length == PaletteEntrySize;
             uint[] was = keep ? DecodePalette(template) : null;
             if (keep) Array.Copy(template, entry, 40);

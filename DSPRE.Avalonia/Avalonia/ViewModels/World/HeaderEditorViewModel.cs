@@ -21,6 +21,7 @@ using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 using DSPRE.Avalonia.Data;
+using Avalonia.Platform.Storage;
 namespace DSPRE.Avalonia.ViewModels.World
 {
     /// <summary>
@@ -36,12 +37,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Load<TKey>(Dictionary<TKey, string> dict) where TKey : struct, IConvertible
         {
             Names.Clear(); Keys.Clear();
-            foreach (var kv in dict) { Keys.Add(Convert.ToInt32(kv.Key)); Names.Add(kv.Value); }
+            foreach (KeyValuePair<TKey, string> kv in dict) { Keys.Add(Convert.ToInt32(kv.Key)); Names.Add(kv.Value); }
         }
         /// <summary>Fills from a label category, value = position, updating in place so selections hold.</summary>
         public void LoadLabels(string category)
         {
-            var labels = LabelStore.Get(category);
+            IReadOnlyList<string> labels = LabelStore.Get(category);
             ListSync.Apply(Names, labels);
             Keys.Clear();
             for (int i = 0; i < labels.Count; i++) Keys.Add(i);
@@ -277,7 +278,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void UpdateWeatherRoom()
         {
             OnPropertyChanged(nameof(WeatherRoomChecked));
-            var room = FieldWeatherRoom.Check((int)_weatherValue, (int)_areaDataId);
+            FieldWeatherRoom.Result room = FieldWeatherRoom.Check((int)_weatherValue, (int)_areaDataId);
             WeatherRoomDetail = room == null ? null
                 : $"Background needs {room.Needed:N0} bytes. Area {(int)_areaDataId} leaves about {Math.Max(0, room.Free):N0}.";
             WeatherRoomWarning = room == null || room.Fits ? null : "May black-screen on door, Fly or save loads";
@@ -410,7 +411,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public HeaderEditorViewModel()
         {
             if (!Design.IsDesignMode) return;
-            var folder = new HeaderTreeFolder { DisplayName = "Jubilife City", IsExpanded = true };
+            HeaderTreeFolder folder = new HeaderTreeFolder { DisplayName = "Jubilife City", IsExpanded = true };
             folder.Children.Add(new HeaderTreeLeaf { HeaderId = 3, DisplayName = "003 -   JUBILIFE_CITY" });
             TreeFolders.Add(folder);
         }
@@ -488,7 +489,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     MusicDay.Load(PokeDatabase.MusicDB.DPMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.DPMusicDict);
                     Weather.LoadLabels(LabelStore.WeatherKey);
-                    foreach (var s in PokeDatabase.MapType.DPPtValues) AreaSettingsItems.Add(s);
+                    foreach (string s in PokeDatabase.MapType.DPPtValues) AreaSettingsItems.Add(s);
                     ShowAreaIcon = false;
                     WildPokeMax = 65535;
                     break;
@@ -497,8 +498,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     MusicDay.Load(PokeDatabase.MusicDB.PtMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.PtMusicDict);
                     Weather.LoadLabels(LabelStore.WeatherKey);
-                    foreach (var s in PokeDatabase.MapType.DPPtValues) AreaSettingsItems.Add(s);
-                    foreach (var s in PokeDatabase.Area.PtAreaIconValues) AreaIconItems.Add(s);
+                    foreach (string s in PokeDatabase.MapType.DPPtValues) AreaSettingsItems.Add(s);
+                    foreach (string s in PokeDatabase.Area.PtAreaIconValues) AreaIconItems.Add(s);
                     ShowAreaIcon = true;
                     WildPokeMax = 65535;
                     break;
@@ -507,8 +508,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                     MusicDay.Load(PokeDatabase.MusicDB.HGSSMusicDict);
                     MusicNight.Load(PokeDatabase.MusicDB.HGSSMusicDict);
                     Weather.LoadLabels(LabelStore.WeatherKey);
-                    foreach (var s in PokeDatabase.Area.HGSSAreaProperties) AreaSettingsItems.Add(s);
-                    foreach (var s in PokeDatabase.Area.HGSSAreaIconsDict.Values) AreaIconItems.Add(s);
+                    foreach (string s in PokeDatabase.Area.HGSSAreaProperties) AreaSettingsItems.Add(s);
+                    foreach (string s in PokeDatabase.Area.HGSSAreaIconsDict.Values) AreaIconItems.Add(s);
                     ShowAreaIcon = true;
                     WildPokeMax = 255;
                     break;
@@ -526,7 +527,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void LoadLocationNames()
         {
             LocationNames.Clear();
-            foreach (var m in ReadLocationNames()) LocationNames.Add(m);
+            foreach (string m in ReadLocationNames()) LocationNames.Add(m);
         }
 
         private List<string> ReadLocationNames()
@@ -596,7 +597,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_headerSearchIndex.Count == 0 || _allTreeFolders.Count == 0) return;
 
             string query = (TreeFilterText ?? "").Trim();
-            var input = new TreeFilterInput(_headerSearchIndex, query, _fuzzySearch);
+            TreeFilterInput input = new TreeFilterInput(_headerSearchIndex, query, _fuzzySearch);
             if (!input.Filtering)
             {
                 ApplyTreeFilter(input, new HashSet<ushort>());
@@ -604,7 +605,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
 
             int generation = unchecked(++_treeFilterGeneration);
-            var cancellation = new CancellationTokenSource();
+            CancellationTokenSource cancellation = new CancellationTokenSource();
             _treeFilterCancellation = cancellation;
             _ = RebuildTreeAsync(cancellation, generation, input);
         }
@@ -653,9 +654,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static TreeBuildResult BuildTreeStructure(TreeBuildInput input)
         {
-            var byName = new Dictionary<string, HeaderTreeFolder>(StringComparer.OrdinalIgnoreCase);
-            var order = new List<HeaderTreeFolder>();
-            var searchIndex = new List<HeaderSearchEntry>(input.HeaderNames.Count);
+            Dictionary<string, HeaderTreeFolder> byName = new Dictionary<string, HeaderTreeFolder>(StringComparer.OrdinalIgnoreCase);
+            List<HeaderTreeFolder> order = new List<HeaderTreeFolder>();
+            List<HeaderSearchEntry> searchIndex = new List<HeaderSearchEntry>(input.HeaderNames.Count);
 
             for (int id = 0; id < input.HeaderNames.Count; id++)
             {
@@ -664,13 +665,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 string locationName = LocationNameFor(input, headerId);
                 string folderName = FolderNameFor(locationName);
 
-                if (!byName.TryGetValue(folderName, out var folder))
+                if (!byName.TryGetValue(folderName, out HeaderTreeFolder folder))
                 {
                     folder = new HeaderTreeFolder { DisplayName = folderName };
                     byName[folderName] = folder;
                     order.Add(folder);
                 }
-                var leaf = new HeaderTreeLeaf { HeaderId = headerId, DisplayName = label };
+                HeaderTreeLeaf leaf = new HeaderTreeLeaf { HeaderId = headerId, DisplayName = label };
                 folder.Children.Add(leaf);
                 searchIndex.Add(new HeaderSearchEntry(headerId, label, locationName, folderName));
             }
@@ -682,10 +683,10 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private static HashSet<ushort> BuildTreeFilter(TreeFilterInput input, CancellationToken cancellationToken)
         {
-            var matches = new HashSet<ushort>();
+            HashSet<ushort> matches = new HashSet<ushort>();
             if (!input.Filtering) return matches;
 
-            foreach (var entry in input.Entries)
+            foreach (HeaderSearchEntry entry in input.Entries)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (HeaderMatchesFilter(input.Query, entry, input.Fuzzy))
@@ -700,7 +701,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _headerSearchIndex = result.SearchIndex;
             _treeFolders.Clear();
             _treeFolders.AddRange(result.Folders);
-            var input = new TreeFilterInput(_headerSearchIndex, query, fuzzy);
+            TreeFilterInput input = new TreeFilterInput(_headerSearchIndex, query, fuzzy);
             ApplyTreeFilter(input, BuildTreeFilter(input, CancellationToken.None));
         }
 
@@ -718,10 +719,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                         _filterTreeActive = true;
                     }
 
-                    foreach (var folder in _allTreeFolders)
+                    foreach (HeaderTreeFolder folder in _allTreeFolders)
                     {
                         bool hasMatch = false;
-                        foreach (var leaf in folder.Children.OfType<HeaderTreeLeaf>())
+                        foreach (HeaderTreeLeaf leaf in folder.Children.OfType<HeaderTreeLeaf>())
                         {
                             bool visible = matches.Contains(leaf.HeaderId);
                             leaf.IsVisible = visible;
@@ -736,10 +737,10 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 else
                 {
-                    foreach (var folder in _allTreeFolders)
+                    foreach (HeaderTreeFolder folder in _allTreeFolders)
                     {
                         folder.IsVisible = true;
-                        foreach (var leaf in folder.Children.OfType<HeaderTreeLeaf>())
+                        foreach (HeaderTreeLeaf leaf in folder.Children.OfType<HeaderTreeLeaf>())
                             leaf.IsVisible = true;
 
                         if (_filterTreeActive && _folderExpansionBeforeFilter != null
@@ -761,7 +762,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void CancelPendingTreeRebuild()
         {
-            var cancellation = _treeFilterCancellation;
+            CancellationTokenSource cancellation = _treeFilterCancellation;
             _treeFilterCancellation = null;
             try { cancellation?.Cancel(); }
             catch (ObjectDisposedException) { }
@@ -846,8 +847,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             return fuzzy && (SearchMatch.NearMiss(entry.LocationName, q) || SearchMatch.NearMiss(entry.Label, q));
         }
 
-        public void ExpandAllFolders() { foreach (var f in TreeFolders) f.IsExpanded = true; }
-        public void CollapseAllFolders() { foreach (var f in TreeFolders) f.IsExpanded = false; }
+        public void ExpandAllFolders() { foreach (HeaderTreeNode f in TreeFolders) f.IsExpanded = true; }
+        public void CollapseAllFolders() { foreach (HeaderTreeNode f in TreeFolders) f.IsExpanded = false; }
 
         /// <summary>Brings a header into view and selects it (initial load, Go-to, add/remove).</summary>
         public void SelectHeader(ushort headerId)
@@ -862,7 +863,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void ExpandFolderContaining(ushort headerId)
         {
-            foreach (var folder in _allTreeFolders)
+            foreach (HeaderTreeFolder folder in _allTreeFolders)
                 if (folder.Children.OfType<HeaderTreeLeaf>().Any(l => l.HeaderId == headerId))
                 {
                     folder.IsExpanded = true;
@@ -872,9 +873,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private HeaderTreeLeaf FindLeaf(ushort headerId)
         {
-            foreach (var folder in _allTreeFolders)
+            foreach (HeaderTreeFolder folder in _allTreeFolders)
             {
-                var leaf = folder.Children.OfType<HeaderTreeLeaf>().FirstOrDefault(l => l.HeaderId == headerId);
+                HeaderTreeLeaf leaf = folder.Children.OfType<HeaderTreeLeaf>().FirstOrDefault(l => l.HeaderId == headerId);
                 if (leaf != null) return leaf;
             }
             return null;
@@ -905,7 +906,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void ReloadLocationNames()
         {
             if (_headerListNames.Count == 0) return;   // not set up yet
-            var fresh = ReadLocationNames();
+            List<string> fresh = ReadLocationNames();
             if (fresh.SequenceEqual(LocationNames)) return;   // archive untouched: leave the combo alone
 
             // Capture before touching the collection: clearing the ItemsSource makes the ComboBox
@@ -913,7 +914,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             int keepLoc = _locationNameIndex;
             _suppress = true;
             LocationNames.Clear();
-            foreach (var m in fresh) LocationNames.Add(m);
+            foreach (string m in fresh) LocationNames.Add(m);
             _locationNameIndex = -1;
             LocationNameIndex = keepLoc < LocationNames.Count ? keepLoc : -1;   // suppressed: restores the combo without re-applying
             _suppress = false;
@@ -977,7 +978,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         AreaSettingsIndex = FindAreaSettingsBySpecifier(_header.locationSpecifier);
                         break;
                     default:
-                        var h = (HeaderHGSS)_header;
+                        HeaderHGSS h = (HeaderHGSS)_header;
                         LocationNameIndex = h.locationName;
                         AreaIconIndex = h.areaIcon;
                         AreaSettingsIndex = h.locationType;
@@ -1130,7 +1131,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 case GameFamilies.DP: name = "dpareaicon"; break;
                 case GameFamilies.Plat: if (_areaIconIndex >= 0) name = "areaicon0" + _areaIconIndex; break;
                 default:
-                    if (_areaIconIndex >= 0 && PokeDatabase.System.AreaPics.hgssAreaPicDict.TryGetValue(_areaIconIndex, out var n)) name = n;
+                    if (_areaIconIndex >= 0 && PokeDatabase.System.AreaPics.hgssAreaPicDict.TryGetValue(_areaIconIndex, out string n)) name = n;
                     break;
             }
             AreaIconImage = name != null ? ResImage(name) : null;
@@ -1176,7 +1177,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (_header == null || _clipboard.Bytes == null) { StatusText = "Nothing to paste."; return; }
             if (_clipboard.Family != gameFamily) { StatusText = $"The copied header is from a {_clipboard.Family} ROM and can't be pasted here."; return; }
-            var h = MapHeader.LoadFromByteArray(_clipboard.Bytes, (ushort)_header.ID, gameFamily);
+            MapHeader h = MapHeader.LoadFromByteArray(_clipboard.Bytes, (ushort)_header.ID, gameFamily);
             if (h == null) { StatusText = "Clipboard header is incompatible."; return; }
             _header = h;
             PopulateFromHeader();
@@ -1193,14 +1194,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportAsync()
         {
             if (_header == null) return;
-            var filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header")
+            FilePickerFileType filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header")
             { Patterns = new[] { "*.dsh", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import header", new[] { filter });
             if (path == null) return;
             try
             {
                 if (new FileInfo(path).Length > 48) throw new InvalidDataException();
-                var h = MapHeader.LoadFromFile(path, (ushort)_header.ID, 0);
+                MapHeader h = MapHeader.LoadFromFile(path, (ushort)_header.ID, 0);
                 if (h == null) throw new InvalidDataException();
                 _header = h;
                 PopulateFromHeader();
@@ -1213,7 +1214,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportAsync()
         {
             if (_header == null) return;
-            var filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header") { Patterns = new[] { "*.dsh" } };
+            FilePickerFileType filter = new global::Avalonia.Platform.Storage.FilePickerFileType("DSPRE header") { Patterns = new[] { "*.dsh" } };
             string path = await DialogHelper.SaveFile(_owner, "Export header", new[] { filter }, $"header_{_header.ID:D4}.dsh");
             if (path == null) return;
             try { File.WriteAllBytes(path, _header.ToByteArray()); StatusText = "Exported header."; }

@@ -61,7 +61,7 @@ namespace DSPRE.ROMFiles
             if (file == ManaphyEggFile)
                 return new Icon { File = file, Species = ManaphySpecies, IsEgg = true, Form = "Egg", EditorId = ManaphySpecies };
 
-            foreach (var run in FormRuns)
+            foreach ((int First, int Species, string[] Forms, GameFamilies? OnlyFrom) run in FormRuns)
             {
                 int at = file - run.First;
                 if (at < 0 || at >= run.Forms.Length || !GameHas(run.OnlyFrom)) continue;
@@ -73,7 +73,7 @@ namespace DSPRE.ROMFiles
         /// <summary>A form with a Pokémon Editor entry of its own opens that entry, any other its species.</summary>
         private static int EditorEntry(int file, int species)
         {
-            var extras = PokeDatabase.PersonalData.personalExtraFiles;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = PokeDatabase.PersonalData.personalExtraFiles;
             for (int i = 0; i < FormEntriesInThisGame && i < extras.Length; i++)
                 if (extras[i].iconId == file - SharedFiles) return NameBankEntries + i;
             return species;

@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.Controls
         {
             string name = EditorName(GetTo(c));
 
-            var item = new MenuItem { Header = "Open in " + name };
+            MenuItem item = new MenuItem { Header = "Open in " + name };
             item.Click += (_, _) => Go(c);
             if (c.ContextMenu == null && c.ContextFlyout == null) c.ContextMenu = new ContextMenu { ItemsSource = new[] { item } };
             else if (c.ContextMenu != null) c.ContextMenu.Items.Add(item);
@@ -98,7 +98,7 @@ namespace DSPRE.Avalonia.Controls
             }, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
 
             // The link button sits just inside the right edge, left of a drop-down arrow, and only while hovered.
-            var arrow = new Button
+            Button arrow = new Button
             {
                 Content = Icon.Image("OpenLink"), Padding = new Thickness(2, 0), MinWidth = 0, MinHeight = 0, Height = 20,
                 HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center,
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.Controls
             ToolTip.SetTip(arrow, $"Open in {name} (or right-click, or Ctrl+click)");
             global::Avalonia.Automation.AutomationProperties.SetName(arrow, $"Open in {name}");
             arrow.Click += (_, _) => Go(c);
-            var host = new Panel { IsHitTestVisible = true, Background = null, Children = { arrow } };
+            Panel host = new Panel { IsHitTestVisible = true, Background = null, Children = { arrow } };
 
             bool over = false, overArrow = false;
             void Update() => arrow.IsVisible = (over || overArrow) && IdOf(c) >= 0;
@@ -119,7 +119,7 @@ namespace DSPRE.Avalonia.Controls
 
             c.AttachedToVisualTree += (_, _) =>
             {
-                var layer = AdornerLayer.GetAdornerLayer(c);
+                AdornerLayer layer = AdornerLayer.GetAdornerLayer(c);
                 if (layer == null || layer.Children.Contains(host)) return;
                 AdornerLayer.SetAdornedElement(host, c);
                 layer.Children.Add(host);

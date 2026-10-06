@@ -107,10 +107,10 @@ namespace DSPRE.ROMFiles
             }
 
             public IReadOnlyList<MovingPlatform> PlatformsOn(uint headerId)
-                => MovingPlatforms.TryGetValue(headerId, out var list) ? list : (IReadOnlyList<MovingPlatform>)Array.Empty<MovingPlatform>();
+                => MovingPlatforms.TryGetValue(headerId, out List<MovingPlatform> list) ? list : (IReadOnlyList<MovingPlatform>)Array.Empty<MovingPlatform>();
 
             public IReadOnlyList<Prop> PropsOn(uint headerId)
-                => Props.TryGetValue(headerId, out var list) ? list : (IReadOnlyList<Prop>)Array.Empty<Prop>();
+                => Props.TryGetValue(headerId, out List<Prop> list) ? list : (IReadOnlyList<Prop>)Array.Empty<Prop>();
 
             public int ModelFor(int propKind)
                 => propKind >= 0 && propKind < ModelByPropKind.Length ? ModelByPropKind[propKind] : -1;
@@ -151,7 +151,7 @@ namespace DSPRE.ROMFiles
             uint ramBase = OverlayUtils.OverlayTable.GetRAMAddress(OverlayNumber);
             if (ramBase == 0) { error = $"Overlay {OverlayNumber} has no load address in the overlay table."; return null; }
 
-            var tables = new Tables();
+            Tables tables = new Tables();
             long movingAt = FindFloorList(data, ramBase, MovingPlatformFloors, exact: true);
             if (movingAt >= 0) ReadMovingPlatforms(data, ramBase, movingAt, tables);
 
@@ -210,7 +210,7 @@ namespace DSPRE.ROMFiles
                 long list = Offset(Word(data, at + i * 8 + 4), ramBase, data.Length);
                 if (list < 0) continue;
 
-                var platforms = new List<MovingPlatform>();
+                List<MovingPlatform> platforms = new List<MovingPlatform>();
                 for (long p = list; p + 4 <= data.Length; p += 4)
                 {
                     uint entry = Word(data, p);
@@ -244,7 +244,7 @@ namespace DSPRE.ROMFiles
                 long list = Offset(Word(data, at + i * 8 + 4), ramBase, data.Length);
                 if (list < 0) continue;
 
-                var props = new List<Prop>();
+                List<Prop> props = new List<Prop>();
                 for (long p = list; p + PropSize <= data.Length; p += PropSize)
                 {
                     uint kind = Half(data, p + 4);
@@ -276,7 +276,7 @@ namespace DSPRE.ROMFiles
                 for (int i = 1; i < PropKindCount && run; i++) run = Word(data, at + i * 4) == first + i;
                 if (!run) continue;
 
-                var members = new int[PropKindCount];
+                int[] members = new int[PropKindCount];
                 for (int i = 0; i < PropKindCount; i++) members[i] = (int)(first + i);
                 return members;
             }
@@ -291,7 +291,7 @@ namespace DSPRE.ROMFiles
                 for (int i = 0; i < PropKindCount && run; i++) run = Half(data, at + i * 8) == i;
                 if (!run) continue;
 
-                var kinds = new int[PropKindCount];
+                int[] kinds = new int[PropKindCount];
                 bool anyAnimated = false;
                 for (int i = 0; i < PropKindCount; i++)
                 {
@@ -308,7 +308,7 @@ namespace DSPRE.ROMFiles
         {
             for (long at = 0; at + AnimationKindCount * 4 <= data.Length; at += 4)
             {
-                var members = new int[AnimationKindCount];
+                int[] members = new int[AnimationKindCount];
                 bool plausible = true;
                 for (int i = 0; i < AnimationKindCount && plausible; i++)
                 {
@@ -335,7 +335,7 @@ namespace DSPRE.ROMFiles
             {
                 if (Word(data, at) != 0) continue;
 
-                var drops = new float[HoverStepCount];
+                float[] drops = new float[HoverStepCount];
                 bool sinking = true;
                 int previous = 0;
                 for (int i = 1; i < HoverStepCount && sinking; i++)
@@ -362,7 +362,7 @@ namespace DSPRE.ROMFiles
                 }
                 if (!run) continue;
 
-                var paths = new List<ElevatorPath>();
+                List<ElevatorPath> paths = new List<ElevatorPath>();
                 for (int i = 0; i < ElevatorPathCount; i++)
                 {
                     long record = at + i * ElevatorPathSize;
@@ -394,7 +394,7 @@ namespace DSPRE.ROMFiles
             const int stride = 12;
             for (long at = 0; at + PropKindCount * stride <= data.Length; at += 4)
             {
-                var first = (Signed32(data, at), Signed32(data, at + 4), Signed32(data, at + 8));
+                (int, int, int) first = (Signed32(data, at), Signed32(data, at + 4), Signed32(data, at + 8));
                 if (offsets)
                 {
                     if (first.Item1 != 0 || first.Item2 >= 0 || first.Item2 < -64 * FixedOne) continue;
@@ -410,7 +410,7 @@ namespace DSPRE.ROMFiles
                 for (int i = 0; i < PropKindCount && sane; i++)
                 {
                     long record = at + i * stride;
-                    var entry = (Signed32(data, record), Signed32(data, record + 4), Signed32(data, record + 8));
+                    (int, int, int) entry = (Signed32(data, record), Signed32(data, record + 4), Signed32(data, record + 8));
                     sane = Math.Abs(entry.Item1) <= 64 * FixedOne
                         && Math.Abs(entry.Item2) <= 64 * FixedOne
                         && Math.Abs(entry.Item3) <= 64 * FixedOne;
@@ -418,7 +418,7 @@ namespace DSPRE.ROMFiles
                 }
                 if (!sane || same < 15) continue;
 
-                var found = new (float, float, float)[PropKindCount];
+                (float, float, float)[] found = new (float, float, float)[PropKindCount];
                 for (int i = 0; i < PropKindCount; i++)
                 {
                     long record = at + i * stride;

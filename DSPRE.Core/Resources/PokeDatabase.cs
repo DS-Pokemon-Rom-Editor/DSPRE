@@ -657,7 +657,7 @@ namespace DSPRE.Resources {
                 {
                     lock (collisionLabels)
                     {
-                        if (!collisionLabels.TryGetValue(RomInfo.gameFamily, out var labels))
+                        if (!collisionLabels.TryGetValue(RomInfo.gameFamily, out Dictionary<byte, string> labels))
                             collisionLabels[RomInfo.gameFamily] = labels = TilePermissions.CollisionsFor(RomInfo.gameFamily).ToDictionary(c => c.Value, c => c.Label);
                         return labels;
                     }
@@ -671,7 +671,7 @@ namespace DSPRE.Resources {
                 {
                     lock (behaviourLabels)
                     {
-                        if (!behaviourLabels.TryGetValue(RomInfo.gameFamily, out var labels))
+                        if (!behaviourLabels.TryGetValue(RomInfo.gameFamily, out Dictionary<byte, string> labels))
                             behaviourLabels[RomInfo.gameFamily] = labels = TilePermissions.BehavioursFor(RomInfo.gameFamily).ToDictionary(b => b.Value, b => b.Label);
                         return labels;
                     }

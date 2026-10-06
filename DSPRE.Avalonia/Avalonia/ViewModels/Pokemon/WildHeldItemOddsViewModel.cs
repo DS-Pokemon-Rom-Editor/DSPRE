@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void RaiseAll()
         {
-            foreach (var n in new[] { nameof(NormalNone), nameof(NormalCommon), nameof(NormalRare),
+            foreach (string n in new[] { nameof(NormalNone), nameof(NormalCommon), nameof(NormalRare),
                                       nameof(EyesNone), nameof(EyesCommon), nameof(EyesRare), nameof(HasUnsavedChanges),
                                       nameof(NormalCommonMax), nameof(EyesCommonMax), nameof(NormalParts), nameof(EyesParts) })
                 Raise(n);

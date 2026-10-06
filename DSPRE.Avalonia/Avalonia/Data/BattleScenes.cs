@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Reads every header and gathers which scenery each place fights on.</summary>
         public static List<Scene> Read()
         {
-            var byId = new Dictionary<int, Scene>();
+            Dictionary<int, Scene> byId = new Dictionary<int, Scene>();
 
             // The internal names are codes like D02 and R213.
             int headers = 0;
@@ -101,9 +101,9 @@ namespace DSPRE.Avalonia.Data
                 if (h == null) continue;
 
                 int id = h.battleBackground;
-                if (!byId.TryGetValue(id, out var scene))
+                if (!byId.TryGetValue(id, out Scene scene))
                 {
-                    var files = BattleBgRenderer.BackdropFiles(id);
+                    (int Drawing, int Tilemap, int PaletteDay) files = BattleBgRenderer.BackdropFiles(id);
                     byId[id] = scene = new Scene
                     {
                         BackgroundId = id,
@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia.Data
             for (int id = 0; id < BattleBgRenderer.BackdropCount; id++)
             {
                 if (byId.ContainsKey(id)) continue;
-                var files = BattleBgRenderer.BackdropFiles(id);
+                (int Drawing, int Tilemap, int PaletteDay) files = BattleBgRenderer.BackdropFiles(id);
                 byId[id] = new Scene
                 {
                     BackgroundId = id,

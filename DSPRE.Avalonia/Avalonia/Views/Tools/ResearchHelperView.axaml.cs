@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             if (sender is DataGrid dg && dg.SelectedItem is VariableUsageResult r)
             {
-                var clip = TopLevel.GetTopLevel(this)?.Clipboard;
+                IClipboard clip = TopLevel.GetTopLevel(this)?.Clipboard;
                 clip?.SetTextAsync($"{r.FileType} {r.FileID}");
                 if (VM != null) VM.StatusText = $"{r.FileType} {r.FileID} copied to clipboard";
             }
@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             if (sender is DataGrid dg && dg.SelectedItem is FlagUsageResult r)
             {
-                var clip = TopLevel.GetTopLevel(this)?.Clipboard;
+                IClipboard clip = TopLevel.GetTopLevel(this)?.Clipboard;
                 clip?.SetTextAsync($"{r.FileType} {r.FileID}");
                 if (VM != null) VM.StatusText = $"{r.FileType} {r.FileID} copied to clipboard";
             }
@@ -86,7 +86,7 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             if (sender is DataGrid dg && dg.SelectedItem is ScriptFileReferenceResult r)
             {
-                var clip = TopLevel.GetTopLevel(this)?.Clipboard;
+                IClipboard clip = TopLevel.GetTopLevel(this)?.Clipboard;
                 clip?.SetTextAsync($"{r.ReferenceType} {r.ReferenceID}");
                 if (VM != null) VM.StatusText = $"{r.ReferenceType} {r.ReferenceID} copied to clipboard";
             }
@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             if (sender is DataGrid dg && dg.SelectedItem is ScriptIdUsageResult r)
             {
-                var clip = TopLevel.GetTopLevel(this)?.Clipboard;
+                IClipboard clip = TopLevel.GetTopLevel(this)?.Clipboard;
                 clip?.SetTextAsync($"Event {r.EventFileID} {r.EventType}[{r.EventIndex}]");
                 if (VM != null) VM.StatusText = $"Event {r.EventFileID} {r.EventType}[{r.EventIndex}] copied to clipboard";
             }
@@ -114,7 +114,7 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             if (sender is DataGrid dg && dg.SelectedItem is HeaderProperty p)
             {
-                var clip = TopLevel.GetTopLevel(this)?.Clipboard;
+                IClipboard clip = TopLevel.GetTopLevel(this)?.Clipboard;
                 clip?.SetTextAsync(p.Value ?? "");
                 if (VM != null) VM.StatusText = $"{p.Name} value copied to clipboard";
             }
@@ -130,7 +130,7 @@ namespace DSPRE.Avalonia.Views.Tools
                 {
                     try
                     {
-                        var h = MapHeader.GetMapHeader((ushort)i);
+                        MapHeader h = MapHeader.GetMapHeader((ushort)i);
                         if (h != null && h.eventFileID == r.EventFileID)
                         {
                             VM.NavigateToHeader(i);

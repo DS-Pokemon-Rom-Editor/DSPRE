@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 using static DSPRE.RomInfo;
 using FormSpriteData = DSPRE.Avalonia.Data.AlternateFormSprites.Form;
+using Avalonia.Media;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -57,7 +58,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<SpriteState>(state);
+            SpriteState s = DSPRE.Avalonia.UndoJson.Read<SpriteState>(state);
             _rawSprites = s.Raw ?? new byte[4][];
             _normalPal = s.Normal;
             _shinyPal = s.Shiny;
@@ -125,7 +126,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ROM-loaded palettes are always all-real; only import can leave some slots as placeholders.
         private bool[] _normalPalUsed = AllUsed();
         private bool[] _shinyPalUsed = AllUsed();
-        private static bool[] AllUsed() { var a = new bool[16]; Array.Fill(a, true); return a; }
+        private static bool[] AllUsed() { bool[] a = new bool[16]; Array.Fill(a, true); return a; }
 
         // --- Frame animation: shows one 80×80 half of the sprite at a time instead of the full strip.
         // Each cell picks its own frame independently; Animate just drives them all off one timer,
@@ -251,7 +252,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             backIndex = frontIndex = -1;
             if (_currentFormData == null || _selectedFormIndex < 0 || _selectedFormIndex >= _currentFormData.Length)
                 return false;
-            var f = _currentFormData[_selectedFormIndex];
+            FormSpriteData f = _currentFormData[_selectedFormIndex];
             if (f.BackSpriteIndex < 0 || f.FrontSpriteIndex < 0) return false; // hg-engine-native entries have no vanilla index
             backIndex = f.BackSpriteIndex;
             frontIndex = f.FrontSpriteIndex;
@@ -360,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (HgEngineProject.IsActive) return null;
             int extraIndex = id - RomInfo.GetPokemonNames().Length;
-            var extras = PokeDatabase.PersonalData.personalExtraFiles;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = PokeDatabase.PersonalData.personalExtraFiles;
             if (extraIndex < 0 || extraIndex >= extras.Length) return null;
             return (extras[extraIndex].monId, extras[extraIndex].description);
         }
@@ -369,7 +370,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private static int ResolveFormPseudoId(int baseId, string formName)
         {
             if (HgEngineProject.IsActive) return -1;
-            var extras = PokeDatabase.PersonalData.personalExtraFiles;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = PokeDatabase.PersonalData.personalExtraFiles;
             for (int i = 0; i < extras.Length; i++)
                 if (extras[i].monId == baseId && FormNameMatchesDescription(formName, extras[i].description))
                     return RomInfo.GetPokemonNames().Length + i;
@@ -380,9 +381,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private static int ResolveHgEngineMigratedFormId(int baseId, int formIndex)
         {
             if (formIndex <= 0) return -1;
-            var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
             if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseId, "SPECIES_", out string designator)) return -1;
-            if (!HgEngineFormRegistry.LoadAll().TryGetValue(designator, out var slots)) return -1;
+            if (!HgEngineFormRegistry.LoadAll().TryGetValue(designator, out List<HgEngineFormRegistry.FormSlot> slots)) return -1;
             int slotIndex = formIndex - 1;
             if (slotIndex >= slots.Count) return -1;
             return speciesTable.TryGetValue(slots[slotIndex].SpeciesSymbol, out int migratedId) ? migratedId : -1;
@@ -401,13 +402,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 : RomInfo.GetPokemonNames();
             if (_currentId >= names.Length) return Array.Empty<FormSpriteData>();
 
-            var matches = BuildFamilyForms(_currentId, names[_currentId], names);
+            List<FormSpriteData> matches = BuildFamilyForms(_currentId, names[_currentId], names);
             if (matches.Count == 0 && HgEngineProject.IsActive)
             {
                 int? baseId = FindHgEngineFormFamilyBase(_currentId);
                 if (baseId.HasValue && baseId.Value != _currentId && baseId.Value < names.Length)
                 {
-                    var familyMatches = BuildFamilyForms(baseId.Value, names[baseId.Value], names);
+                    List<FormSpriteData> familyMatches = BuildFamilyForms(baseId.Value, names[baseId.Value], names);
                     if (familyMatches.Count > 0) { matches = familyMatches; _currentFormFamilyBaseId = baseId.Value; }
                 }
             }
@@ -416,8 +417,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private List<FormSpriteData> BuildFamilyForms(int baseId, string baseName, string[] names)
         {
-            var matches = new List<FormSpriteData>();
-            foreach (var f in GetFormDataForCurrentGame())
+            List<FormSpriteData> matches = new List<FormSpriteData>();
+            foreach (FormSpriteData f in GetFormDataForCurrentGame())
             {
                 string prefix = SpeciesNamePrefix(f.Name);
                 if (prefix != null && string.Equals(prefix, baseName, StringComparison.OrdinalIgnoreCase))
@@ -431,12 +432,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static IEnumerable<FormSpriteData> GetHgEngineNativeForms(int baseId, string baseName, string[] names)
         {
-            var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
             if (speciesTable == null || !speciesTable.TryGetNameWithPrefix(baseId, "SPECIES_", out string designator)) yield break;
-            if (!HgEngineFormRegistry.LoadAll().TryGetValue(designator, out var slots) || slots.Count == 0) yield break;
+            if (!HgEngineFormRegistry.LoadAll().TryGetValue(designator, out List<HgEngineFormRegistry.FormSlot> slots) || slots.Count == 0) yield break;
 
             yield return new FormSpriteData(baseName, baseId);
-            foreach (var slot in slots)
+            foreach (HgEngineFormRegistry.FormSlot slot in slots)
             {
                 if (speciesTable.TryGetValue(slot.SpeciesSymbol, out int formId) && formId >= 0 && formId < names.Length)
                     yield return new FormSpriteData(names[formId], formId);
@@ -447,12 +448,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // species id that's itself a form target, finds which base species' PokeFormDataTbl.c entry lists it.
         private static int? FindHgEngineFormFamilyBase(int id)
         {
-            var speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable speciesTable = HgEngineSymbolTable.Load("include/constants/species.h");
             if (speciesTable == null) return null;
-            foreach (var kvp in HgEngineFormRegistry.LoadAll())
+            foreach (KeyValuePair<string, List<HgEngineFormRegistry.FormSlot>> kvp in HgEngineFormRegistry.LoadAll())
             {
                 if (!speciesTable.TryGetValue(kvp.Key, out int baseId)) continue;
-                foreach (var slot in kvp.Value)
+                foreach (HgEngineFormRegistry.FormSlot slot in kvp.Value)
                     if (speciesTable.TryGetValue(slot.SpeciesSymbol, out int slotId) && slotId == id)
                         return baseId;
             }
@@ -486,15 +487,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                var narc = PokemonBattleSpriteArchive.Open(DirNames.otherPokemonBattleSprites);
+                PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.otherPokemonBattleSprites);
                 if (narc == null)
                 {
                     StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
                     return;
                 }
 
-                var form = _currentFormData[formIndex];
-                var rawBmps = new byte[4][];
+                FormSpriteData form = _currentFormData[formIndex];
+                byte[][] rawBmps = new byte[4][];
 
                 byte[] backSprite = narc.ReadSprite(form.BackSpriteIndex);
                 if (backSprite != null) { rawBmps[0] = backSprite; rawBmps[1] = backSprite; }
@@ -544,7 +545,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 string path = Path.Combine(RomInfo.gameDirs[DirNames.personalPokeData].unpackedDir, speciesId.ToString("D4"));
                 if (!File.Exists(path)) return 127;
-                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read);
+                using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read);
                 return new SpeciesFile(fs).GenderRatioMaleToFemale;
             }
             catch { return 127; }
@@ -581,7 +582,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _frameTimer.Tick += (_, __) =>
             {
                 if (!AnimateFrames) return;
-                foreach (var cell in AllFrameCells) if (cell.ShowFrameToggle) cell.Frame = 1 - cell.Frame;
+                foreach (FrameCellState cell in AllFrameCells) if (cell.ShowFrameToggle) cell.Frame = 1 - cell.Frame;
             };
             _frameTimer.Start();
         }
@@ -598,7 +599,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             FormSharesBaseData = false;
 
             // Ids past the real Pokédex are pseudo-species (Deoxys/Wormadam/Giratina/Shaymin/Rotom formes); redirect straight to that form.
-            var pseudo = ResolvePseudoFormId(id);
+            (int baseId, string description)? pseudo = ResolvePseudoFormId(id);
             _currentId = pseudo?.baseId ?? id;
             // This applies under hg-engine too: it only intercepts sprite loading for the handful of species
             // in its own PokeFormDataTbl.c (Castform/Cherrim/Shellos/Gastrodon's newest forms); everything
@@ -643,7 +644,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             try
             {
-                var narc = PokemonBattleSpriteArchive.Open(DirNames.pokemonBattleSprites);
+                PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.pokemonBattleSprites);
                 if (narc == null)
                 {
                     StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
@@ -652,8 +653,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                 int baseOffset = id * 6;
 
-                var rawBmps = new byte[4][];
-                var hasRealSprite = new bool[4];
+                byte[][] rawBmps = new byte[4][];
+                bool[] hasRealSprite = new bool[4];
                 for (int i = 0; i < 4; i++)
                 {
                     rawBmps[i] = narc.ReadSprite(baseOffset + i);
@@ -703,8 +704,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 int normalSlot = skipMale ? 2 : 3;   // Front: Female or Male
                 int shinySlot  = skipMale ? 0 : 1;   // Back: Female or Male
 
-                var rawBmps = new byte[4][];
-                var hasRealSprite = new bool[4];
+                byte[][] rawBmps = new byte[4][];
+                bool[] hasRealSprite = new bool[4];
                 uint[] normalPal = null, shinyPal = null;
                 for (int i = 0; i < 4; i++)
                 {
@@ -746,7 +747,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private static uint[] Pad16(uint[] palette)
         {
             if (palette.Length == 16) return palette;
-            var padded = new uint[16];
+            uint[] padded = new uint[16];
             Array.Copy(palette, padded, palette.Length);
             for (int i = palette.Length; i < 16; i++) padded[i] = 0xFF000000u;
             return padded;
@@ -764,7 +765,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 byte[] fileBytes = File.ReadAllBytes(path);
                 RawImage imported;
-                using (var ms = new MemoryStream(fileBytes))
+                using (MemoryStream ms = new MemoryStream(fileBytes))
                     imported = ImageConverter.DecodeRawImage(ms);
                 if (imported == null)
                 {
@@ -865,7 +866,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 byte[] fileBytes = File.ReadAllBytes(path);
                 RawImage imported;
-                using (var ms = new MemoryStream(fileBytes))
+                using (MemoryStream ms = new MemoryStream(fileBytes))
                     imported = ImageConverter.DecodeRawImage(ms);
                 if (imported == null)
                 {
@@ -954,7 +955,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private byte[] BuildSheetIndices(params int[] slots)
         {
             foreach (int s in slots) if (_rawSprites[s] == null) return null;
-            var sheet = new byte[SpriteWidth * slots.Length * SpriteHeight];
+            byte[] sheet = new byte[SpriteWidth * slots.Length * SpriteHeight];
             for (int y = 0; y < SpriteHeight; y++)
                 for (int i = 0; i < slots.Length; i++)
                     Array.Copy(_rawSprites[slots[i]], y * SpriteWidth, sheet, y * SpriteWidth * slots.Length + i * SpriteWidth, SpriteWidth);
@@ -965,15 +966,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             for (int i = 0; i < slots.Length; i++)
             {
-                var arr = new byte[SpriteWidth * SpriteHeight];
+                byte[] arr = new byte[SpriteWidth * SpriteHeight];
                 for (int y = 0; y < SpriteHeight; y++)
                     Array.Copy(sheetIndices, y * SpriteWidth * slots.Length + i * SpriteWidth, arr, y * SpriteWidth, SpriteWidth);
                 _rawSprites[slots[i]] = arr;
             }
         }
 
-        private byte[] BuildGenderSheetIndices(bool female) { var (b, f) = GenderSlots(female); return BuildSheetIndices(b, f); }
-        private void WriteGenderSheetIndices(bool female, byte[] sheetIndices) { var (b, f) = GenderSlots(female); WriteSheetIndices(sheetIndices, b, f); }
+        private byte[] BuildGenderSheetIndices(bool female) { (int b, int f) = GenderSlots(female); return BuildSheetIndices(b, f); }
+        private void WriteGenderSheetIndices(bool female, byte[] sheetIndices) { (int b, int f) = GenderSlots(female); WriteSheetIndices(sheetIndices, b, f); }
 
         // Both genders together (Female Back, Male Back, Female Front, Male Front), for editing a species with real gender differences in one pass.
         private byte[] BuildFullSheetIndices() => BuildSheetIndices(0, 1, 2, 3);
@@ -1034,7 +1035,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (string.IsNullOrEmpty(path)) return (null, null);
             byte[] fileBytes = File.ReadAllBytes(path);
             RawImage imported;
-            using (var ms = new MemoryStream(fileBytes))
+            using (MemoryStream ms = new MemoryStream(fileBytes))
                 imported = ImageConverter.DecodeRawImage(ms);
             if (imported == null) { StatusText = "Image could not be decoded."; return (null, null); }
             int expectedWidth = SpriteWidth * poseCount;
@@ -1051,7 +1052,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string genderLabel = female ? "Female" : "Male";
             try
             {
-                var (imported, fileBytes) = await OpenGenderSheet(owner, $"Import {genderLabel} Sprite Sheet");
+                (RawImage imported, byte[] fileBytes) = await OpenGenderSheet(owner, $"Import {genderLabel} Sprite Sheet");
                 if (imported == null) return;
 
                 byte[] oldSheetIndices = BuildGenderSheetIndices(female);
@@ -1128,7 +1129,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     StatusText = $"Import {genderLabel}'s Back and Front artwork first, then you can get the shiny palette from a reference sheet.";
                     return;
                 }
-                var (imported, fileBytes) = await OpenGenderSheet(owner, $"Import {genderLabel} Shiny Reference Sheet");
+                (RawImage imported, byte[] fileBytes) = await OpenGenderSheet(owner, $"Import {genderLabel} Shiny Reference Sheet");
                 if (imported == null) return;
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] childIndices, out uint[] childPalette, out _))
                 {
@@ -1157,7 +1158,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                var (imported, fileBytes) = await OpenFullSheet(owner, "Import Sprite Sheet (Both Genders)");
+                (RawImage imported, byte[] fileBytes) = await OpenFullSheet(owner, "Import Sprite Sheet (Both Genders)");
                 if (imported == null) return;
 
                 byte[] oldSheetIndices = BuildFullSheetIndices();
@@ -1233,7 +1234,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     StatusText = "Import both genders' Back and Front artwork first, then you can get the shiny palette from a reference sheet.";
                     return;
                 }
-                var (imported, fileBytes) = await OpenFullSheet(owner, "Import Shiny Reference Sheet (Both Genders)");
+                (RawImage imported, byte[] fileBytes) = await OpenFullSheet(owner, "Import Shiny Reference Sheet (Both Genders)");
                 if (imported == null) return;
                 if (!TryReadIndexedOrQuantize(fileBytes, imported, out byte[] childIndices, out uint[] childPalette, out _))
                 {
@@ -1265,7 +1266,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int i = 0; i < palette.Length; i++)
             {
                 uint c = palette[i];
-                var color = global::Avalonia.Media.Color.FromArgb((byte)(c >> 24), (byte)(c >> 16), (byte)(c >> 8), (byte)c);
+                Color color = global::Avalonia.Media.Color.FromArgb((byte)(c >> 24), (byte)(c >> 16), (byte)(c >> 8), (byte)c);
                 target.Add(new PaletteSwatch
                 {
                     Brush = new global::Avalonia.Media.SolidColorBrush(color),
@@ -1369,7 +1370,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private System.Collections.Generic.IReadOnlyList<AvaBitmap> RenderFrames(int slot, uint[] palette, int count)
         {
             if (!HasSlot(slot)) return null;
-            var frames = new AvaBitmap[count];
+            AvaBitmap[] frames = new AvaBitmap[count];
             for (int i = 0; i < count; i++) frames[i] = RenderBattleSprite(slot, palette, i);
             return frames;
         }
@@ -1378,7 +1379,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                var raw = ComposeSprite(slot, palette, transparentIndex0: false, frame: -1);
+                RawImage raw = ComposeSprite(slot, palette, transparentIndex0: false, frame: -1);
                 // Scale up 2× so sprites are legible (160×80 → 320×160)
                 return raw != null ? ImageConverter.ToAvaloniaBitmap(Scale2x(raw)) : null;
             }
@@ -1388,7 +1389,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Re-renders all 8 pose previews at whichever frame each one is already showing (new pixel/palette data, same frame selection).</summary>
         private void RenderCurrentFrameForAllCells()
         {
-            foreach (var cell in AllFrameCells) cell.OnChanged(cell.Frame);
+            foreach (FrameCellState cell in AllFrameCells) cell.OnChanged(cell.Frame);
         }
 
         // Crops the 80×80 cell at frame index `frame` (cell at x = frame*80) out of the sheet,
@@ -1397,7 +1398,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             try
             {
-                var raw = ComposeSprite(slot, palette, transparentIndex0: true, frame: frame);
+                RawImage raw = ComposeSprite(slot, palette, transparentIndex0: true, frame: frame);
                 return raw != null ? ImageConverter.ToAvaloniaBitmap(raw) : null;
             }
             catch { return null; }
@@ -1422,7 +1423,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (x0 + fw > srcW) return null;
             }
 
-            var outImg = new RawImage(w, srcH);
+            RawImage outImg = new RawImage(w, srcH);
             for (int y = 0; y < srcH; y++)
             {
                 for (int x = 0; x < w; x++)
@@ -1443,7 +1444,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Nearest-neighbor 2× upscale (pixel art, keeps edges crisp).
         private static RawImage Scale2x(RawImage src)
         {
-            var dst = new RawImage(src.Width * 2, src.Height * 2);
+            RawImage dst = new RawImage(src.Width * 2, src.Height * 2);
             for (int y = 0; y < src.Height; y++)
             {
                 for (int x = 0; x < src.Width; x++)
@@ -1475,7 +1476,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _normalPalUsed = AllUsed(); _shinyPalUsed = AllUsed();
             NormalSwatches.Clear();
             ShinySwatches.Clear();
-            foreach (var cell in AllFrameCells) cell.Frame = 0;
+            foreach (FrameCellState cell in AllFrameCells) cell.Frame = 0;
             CanAddOppositeGenderSprites = false;
             AddOppositeGenderLabel = "";
             _loadedFromHgEngine = false;
@@ -1655,7 +1656,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            var narc = PokemonBattleSpriteArchive.Open(DirNames.pokemonBattleSprites);
+            PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.pokemonBattleSprites);
             if (narc == null)
             {
                 StatusText = "Battle sprites NARC not found. Make sure the ROM is loaded.";
@@ -1663,7 +1664,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             int baseOffset = _currentId * 6;
-            var failed = new List<string>();
+            List<string> failed = new List<string>();
             try
             {
                 for (int i = 0; i < 4; i++)
@@ -1712,16 +1713,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void SaveAlternateForm()
         {
             if (_currentFormData == null || _selectedFormIndex < 0 || _selectedFormIndex >= _currentFormData.Length) return;
-            var form = _currentFormData[_selectedFormIndex];
+            FormSpriteData form = _currentFormData[_selectedFormIndex];
 
-            var narc = PokemonBattleSpriteArchive.Open(DirNames.otherPokemonBattleSprites);
+            PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.otherPokemonBattleSprites);
             if (narc == null)
             {
                 StatusText = "Alternate forms NARC not found. Make sure the ROM is loaded.";
                 return;
             }
 
-            var failed = new List<string>();
+            List<string> failed = new List<string>();
             try
             {
                 if (_rawSprites[1] != null && !narc.WriteSprite(form.BackSpriteIndex, _rawSprites[1]))
@@ -1734,7 +1735,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     failed.Add("Shiny palette: this form has no palette file of its own.");
 
                 // hg-engine converts a few of these palettes from its own JASC files on every build.
-                foreach (var (index, colours) in new[] { (form.NormalPaletteIndex, _normalPal), (form.ShinyPaletteIndex, _shinyPal) })
+                foreach ((int index, uint[] colours) in new[] { (form.NormalPaletteIndex, _normalPal), (form.ShinyPaletteIndex, _shinyPal) })
                     if (colours != null && HgEngineSourceAssets.ConvertedPaletteFor(DirNames.otherPokemonBattleSprites, index) is string pal)
                         HgEngineOverworlds.WriteJasc(pal, colours.Take(16).Select(c => (int)(c & 0xFFFFFF)).ToArray());
             }
@@ -1801,7 +1802,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             palette = new uint[16];
             usedCount = 0;
 
-            var seen = new System.Collections.Generic.Dictionary<uint, byte>();
+            Dictionary<uint, byte> seen = new System.Collections.Generic.Dictionary<uint, byte>();
             for (int p = 0; p < n; p++)
             {
                 int o = p * 4;
@@ -1832,7 +1833,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static bool[] MakeUsedMask(int usedCount)
         {
-            var a = new bool[16];
+            bool[] a = new bool[16];
             for (int i = 0; i < usedCount && i < 16; i++) a[i] = true;
             return a;
         }
@@ -1899,8 +1900,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Matches colors by value first; a color with no match takes a genuine placeholder slot, never a used one, if any remain.
         private static byte[] RemapToExistingPalette(byte[] newIndices, uint[] newPalette, int usedCount, uint[] existingPalette, bool[] existingUsed, out uint[] mergedPalette, out bool[] mergedUsed)
         {
-            var indexMap = new byte[16];
-            var claimed = new bool[16];
+            byte[] indexMap = new byte[16];
+            bool[] claimed = new bool[16];
 
             for (int i = 0; i < usedCount; i++)
             {
@@ -1929,7 +1930,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 mergedUsed[freeSlot] = true;
             }
 
-            var outIdx = new byte[newIndices.Length];
+            byte[] outIdx = new byte[newIndices.Length];
             for (int p = 0; p < newIndices.Length; p++) outIdx[p] = indexMap[newIndices[p]];
             return outIdx;
         }
@@ -1939,8 +1940,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             used = null;
             if (parentIndices == null || childIndices == null || parentIndices.Length != childIndices.Length) return null;
-            var result = new uint[16];
-            var found = new bool[16];
+            uint[] result = new uint[16];
+            bool[] found = new bool[16];
             for (int p = 0; p < parentIndices.Length; p++)
             {
                 int i = parentIndices[p] & 0xF;

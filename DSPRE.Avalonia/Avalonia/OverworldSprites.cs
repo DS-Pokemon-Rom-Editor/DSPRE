@@ -39,9 +39,9 @@ namespace DSPRE.Avalonia
             try
             {
                 if (OverworldTable == null) { SetOWtable(); ReadOWTable(); }
-                if (OverworldTable != null && OverworldTable.TryGetValue(eventEntryID, out var r) && r.spriteID != 0x3D3D)
+                if (OverworldTable != null && OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) r) && r.spriteID != 0x3D3D)
                 {
-                    using var s = new FileStream(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, r.spriteID.ToString("D4")), FileMode.Open, FileAccess.Read);
+                    using FileStream s = new FileStream(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, r.spriteID.ToString("D4")), FileMode.Open, FileAccess.Read);
                     n = new NSBTX_File(s).texInfo.num_objs;
                 }
             }
@@ -54,12 +54,12 @@ namespace DSPRE.Avalonia
 
         private static SpritePixels GetCached(ushort eventEntryID, ushort cacheDir, ushort orientation, int picture)
         {
-            var key = (eventEntryID, cacheDir);
-            if (_cache.TryGetValue(key, out var cached)) return cached;
+            (ushort eventEntryID, ushort cacheDir) key = (eventEntryID, cacheDir);
+            if (_cache.TryGetValue(key, out SpritePixels cached)) return cached;
             SpritePixels result = null;
             try
             {
-                var raw = LoadRaw(eventEntryID, orientation, picture);
+                RawImage raw = LoadRaw(eventEntryID, orientation, picture);
                 if (raw != null) result = ToRgba(raw);
             }
             catch (Exception ex) { AppLogger.Error("OW sprite load failed: " + ex.Message); }
@@ -87,8 +87,8 @@ namespace DSPRE.Avalonia
 
             try
             {
-                using var stream = new FileStream(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4")), FileMode.Open, FileAccess.Read);
-                var nsbtx = new NSBTX_File(stream);
+                using FileStream stream = new FileStream(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4")), FileMode.Open, FileAccess.Read);
+                NSBTX_File nsbtx = new NSBTX_File(stream);
                 int n = nsbtx.texInfo.num_objs;
                 if (n <= 1) return nsbtx.GetRawImage(0, 0).bmp;
                 if (n < 8) return nsbtx.GetRawImage(Math.Min(orientation, (ushort)(n - 1)), 0).bmp;
@@ -108,10 +108,10 @@ namespace DSPRE.Avalonia
         /// <summary>Every picture of a sprite bank in the order their names number them, drawn with one of its palettes.</summary>
         public static List<SpritePixels> Pictures(byte[] btx0, int palette = 0)
         {
-            var pictures = new List<SpritePixels>();
+            List<SpritePixels> pictures = new List<SpritePixels>();
             if (btx0 == null || btx0.Length <= 4) return pictures;
-            using var stream = new MemoryStream(btx0, writable: false);
-            var nsbtx = new NSBTX_File(stream);
+            using MemoryStream stream = new MemoryStream(btx0, writable: false);
+            NSBTX_File nsbtx = new NSBTX_File(stream);
             if (nsbtx.texInfo.names == null || nsbtx.texInfo.num_objs <= 0) return pictures;
             int pal = palette > 0 && palette < nsbtx.palInfo.num_objs ? palette : 0;
             foreach (int i in NumericOrder(nsbtx))
@@ -126,8 +126,8 @@ namespace DSPRE.Avalonia
         private static int[] NumericOrder(NSBTX_File nsbtx)
         {
             int n = nsbtx.texInfo.num_objs;
-            var order = new int[n];
-            var rank = new int[n];
+            int[] order = new int[n];
+            int[] rank = new int[n];
             for (int i = 0; i < n; i++)
             {
                 string name = nsbtx.texInfo.names[i] ?? "";
@@ -147,7 +147,7 @@ namespace DSPRE.Avalonia
             int w = src.Width, h = src.Height;
             byte kb = src.Bgra[0], kg = src.Bgra[1], kr = src.Bgra[2];   // top-left pixel = colour key
 
-            var rgba = new byte[w * h * 4];
+            byte[] rgba = new byte[w * h * 4];
             for (int i = 0; i < w * h; i++)
             {
                 byte b = src.Bgra[i * 4 + 0], g = src.Bgra[i * 4 + 1], r = src.Bgra[i * 4 + 2], a = src.Bgra[i * 4 + 3];

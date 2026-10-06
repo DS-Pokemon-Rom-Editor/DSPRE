@@ -8,10 +8,10 @@ namespace DSPRE.Avalonia.Data
         public static string Build(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version)
         {
             if (cmds == null || cmds.Count == 0) return "(empty script)";
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             for (int i = 0; i < cmds.Count; i++)
             {
-                var c = cmds[i];
+                WazaSeqCommand c = cmds[i];
                 string op = WazaSeqOpcodes.Name(version, c.OpId) ?? ("op" + c.OpId);
                 sb.Append((i + 1).ToString("D3")).Append(".  ").Append(BattleAnimSchema.OpcodeDisplay(op, script: true));
 

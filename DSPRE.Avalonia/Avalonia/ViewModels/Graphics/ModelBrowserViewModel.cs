@@ -117,24 +117,24 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         public void Scan()
         {
-            var found = new List<Item>();
-            var tabs = new List<CategoryTab>();
+            List<Item> found = new List<Item>();
+            List<CategoryTab> tabs = new List<CategoryTab>();
             try { _buildingTextureSets = BuildingModelTextureSets.ReadCurrentRom(); }
             catch (Exception ex)
             {
                 _buildingTextureSets = Array.Empty<BuildingModelTextureSet>();
                 AppLogger.Error("ModelBrowser could not read building texture associations: " + ex.Message);
             }
-            foreach (var g in Enum.GetValues<ModelAssets.Group>())
+            foreach (ModelAssets.Group g in Enum.GetValues<ModelAssets.Group>())
             {
                 int inGroup = 0;
-                foreach (var a in ModelAssets.All.Where(x => x.In == g))
+                foreach (ModelAssets.Archive a in ModelAssets.All.Where(x => x.In == g))
                 {
                     int n;
                     try { n = ModelAssets.Count(a); } catch { n = 0; }
                     if (n == 0) continue;
                     inGroup += ModelAssets.Units(a, n).Count;
-                    foreach (var u in ModelAssets.Units(a, n))
+                    foreach (ModelAssets.Unit u in ModelAssets.Units(a, n))
                         found.Add(new Item
                         {
                             Archive = a, In = g, Index = u.First, Unit = u,
@@ -171,7 +171,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public void Publish()
         {
             Tabs.Clear();
-            foreach (var t in _scanned ?? new List<CategoryTab>()) Tabs.Add(t);
+            foreach (CategoryTab t in _scanned ?? new List<CategoryTab>()) Tabs.Add(t);
             _selectedTab = Tabs.FirstOrDefault();
             OnPropertyChanged(nameof(SelectedTab));
             ApplyFilter();
@@ -184,15 +184,15 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         private static void MarkTheUnclaimed(List<Item> found)
         {
-            var modelNames = found
+            List<string> modelNames = found
                 .Where(f => !string.IsNullOrWhiteSpace(f.Name))
                 .Select(f => f.Name)
                 .Distinct()
                 .ToList();
 
-            foreach (var item in found)
+            foreach (Item item in found)
             {
-                var kind = KindOf(item);
+                ModelAssets.Kind? kind = KindOf(item);
                 if (kind == null) continue;
 
                 IReadOnlyList<string> names;
@@ -206,11 +206,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                var narc = new ScriptNarc(item.Archive.Dir);
+                ScriptNarc narc = new ScriptNarc(item.Archive.Dir);
                 if (!narc.Available) return null;
-                var b = narc.Get(item.Index);
+                byte[] b = narc.Get(item.Index);
                 if (b == null) return null;
-                var k = ModelAssets.Identify(b);
+                ModelAssets.Kind k = ModelAssets.Identify(b);
                 return IsAnAnimation(k) ? k : (ModelAssets.Kind?)null;
             }
             catch { return null; }
@@ -218,9 +218,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static IReadOnlyList<string> AnimationNames(Item item, ModelAssets.Kind kind)
         {
-            var narc = new ScriptNarc(item.Archive.Dir);
+            ScriptNarc narc = new ScriptNarc(item.Archive.Dir);
             if (!narc.Available) return Array.Empty<string>();
-            var b = narc.Get(item.Index);
+            byte[] b = narc.Get(item.Index);
             if (b == null) return Array.Empty<string>();
             return kind switch
             {
@@ -264,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_selectedTab?.OnlyUnclaimed == true) hits = hits.Where(i => i.Unclaimed);
             else if (_selectedTab?.Only != null) hits = hits.Where(i => i.In == _selectedTab.Only.Value);
             if (!string.IsNullOrEmpty(q)) hits = hits.Where(i => i.Search.Contains(q));
-            foreach (var i in hits.Take(ShowAtMost)) Shown.Add(i);
+            foreach (Item i in hits.Take(ShowAtMost)) Shown.Add(i);
             if (_selected == null || !Shown.Contains(_selected))
                 Selected = Shown.FirstOrDefault();
             OnPropertyChanged(nameof(FoundSummary));
@@ -308,7 +308,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             Parts.Clear();
             if (_selected?.Unit != null && _selected.Unit.Parts.Count > 1)
-                foreach (var up in _selected.Unit.Parts)
+                foreach (ModelAssets.UnitPart up in _selected.Unit.Parts)
                     Parts.Add(new Part { Index = up.Index, Name = up.Name });
 
             _partIndex = -1;
@@ -383,7 +383,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 return;
             }
 
-            var a = _selected.Archive;
+            ModelAssets.Archive a = _selected.Archive;
             _options = ModelAssets.WhatCanBeDone(a, ShowingIndex);
             BaseDetails = $"{Named}, number {ShowingIndex}. {ModelAssets.ShortName(_options.Kind)}.";
             Details = BaseDetails;
@@ -452,30 +452,30 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             TextureChoices.Add(embedded ? "Its own pictures" : "No embedded pictures");
             _textureSetEntries.Add(-1);
             int sets = ModelAssets.TextureSetCount(a);
-            var uses = _buildingTextureSets
+            List<BuildingModelTextureSet> uses = _buildingTextureSets
                 .Where(x => x.Indoor == a.Indoor && x.ModelIds.Contains(ShowingIndex))
                 .OrderBy(x => x.TextureSetId).ToList();
-            var authoritative = new HashSet<int>(uses.Select(x => x.TextureSetId));
-            var model = ModelAssets.LoadModel(a, ShowingIndex);
+            HashSet<int> authoritative = new HashSet<int>(uses.Select(x => x.TextureSetId));
+            NSBMD model = ModelAssets.LoadModel(a, ShowingIndex);
 
-            foreach (var use in uses)
+            foreach (BuildingModelTextureSet use in uses)
             {
                 if (use.TextureSetId < 0 || use.TextureSetId >= sets) continue;
-                var coverage = ModelAssets.Coverage(model, ModelAssets.TextureSet(a, use.TextureSetId));
+                ModelAssets.TextureCoverage coverage = ModelAssets.Coverage(model, ModelAssets.TextureSet(a, use.TextureSetId));
                 string areas = string.Join(", ", use.AreaIds.Take(4));
                 if (use.AreaIds.Count > 4) areas += ", …";
                 AddTextureChoice(use.TextureSetId,
                     $"ROM uses set {use.TextureSetId} · {CoverageText(coverage)} · area{(use.AreaIds.Count == 1 ? "" : "s")} {areas}");
             }
 
-            var compatible = new List<(int id, ModelAssets.TextureCoverage coverage)>();
+            List<(int id, ModelAssets.TextureCoverage coverage)> compatible = new List<(int id, ModelAssets.TextureCoverage coverage)>();
             for (int i = 0; uses.Count == 0 && i < sets; i++)
             {
                 if (authoritative.Contains(i)) continue;
-                var coverage = ModelAssets.Coverage(model, ModelAssets.TextureSet(a, i));
+                ModelAssets.TextureCoverage coverage = ModelAssets.Coverage(model, ModelAssets.TextureSet(a, i));
                 if (coverage.HasMatches) compatible.Add((i, coverage));
             }
-            foreach (var candidate in compatible
+            foreach ((int id, ModelAssets.TextureCoverage coverage) candidate in compatible
                 .OrderByDescending(x => x.coverage.Complete)
                 .ThenByDescending(x => x.coverage.MatchedTextures)
                 .ThenBy(x => x.id))
@@ -557,10 +557,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _fillingTexturePreview = true;
             PreviewTextureNames.Clear();
             PreviewPaletteNames.Clear();
-            foreach (var texture in _previewTextures)
+            foreach (NSBMDTexture texture in _previewTextures)
                 PreviewTextureNames.Add(string.IsNullOrWhiteSpace(texture.texname)
                     ? $"Texture {PreviewTextureNames.Count}" : texture.texname);
-            foreach (var palette in _previewPalettes)
+            foreach (NSBMDPalette palette in _previewPalettes)
                 PreviewPaletteNames.Add(string.IsNullOrWhiteSpace(palette.palname)
                     ? $"Palette {PreviewPaletteNames.Count}" : palette.palname);
             _previewTextureIndex = _previewTextures.Count > 0 ? 0 : -1;
@@ -589,10 +589,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 OnPropertyChanged(nameof(HasNoModel));
                 return;
             }
-            var texture = _previewTextures[_previewTextureIndex];
+            NSBMDTexture texture = _previewTextures[_previewTextureIndex];
             RGBA[] palette = _previewPaletteIndex >= 0 && _previewPaletteIndex < _previewPalettes.Count
                 ? _previewPalettes[_previewPaletteIndex].paldata : null;
-            var decoded = NsbmdTextureDecoder.Decode(new NSBMDMaterial
+            NsbmdTextureData decoded = NsbmdTextureDecoder.Decode(new NSBMDMaterial
             {
                 format = texture.format,
                 width = texture.width,
@@ -622,9 +622,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static Bitmap RgbaToBitmap(byte[] rgba, int width, int height)
         {
-            var bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96),
+            WriteableBitmap bitmap = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96),
                 PixelFormat.Rgba8888, AlphaFormat.Unpremul);
-            using var buffer = bitmap.Lock();
+            using ILockedFramebuffer buffer = bitmap.Lock();
             int sourceStride = width * 4;
             if (buffer.RowBytes == sourceStride)
                 Marshal.Copy(rgba, 0, buffer.Address, Math.Min(rgba.Length, buffer.RowBytes * height));
@@ -701,11 +701,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             // The game's own table says which movements belong to this model, so those go first and one of
             // them is what the box starts on.
-            var own = ModelAssets.OwnAnimations(a, ShowingIndex);
+            IReadOnlyList<int> own = ModelAssets.OwnAnimations(a, ShowingIndex);
             int startOn = 0;
             foreach (int code in own)
             {
-                var anim = ModelAssets.AnimationFor(a, ShowingIndex, code);
+                JointAnimation anim = ModelAssets.AnimationFor(a, ShowingIndex, code);
                 if (anim == null) continue;
                 if (startOn == 0) startOn = AnimationChoices.Count;
                 AnimationChoices.Add($"The one it uses: {Called(anim, code)}, {anim.FrameCount} frames");
@@ -716,14 +716,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             // Those come next, best match first, and one of them is where the box starts when the table
             // gave nothing. Everything else follows, so there is always the whole list to pick from.
             string modelName = ModelAssets.NameOf(a, ShowingIndex);
-            var named = new List<(int code, int howWell, JointAnimation anim)>();
-            var rest = new List<(int code, JointAnimation anim)>();
+            List<(int code, int howWell, JointAnimation anim)> named = new List<(int code, int howWell, JointAnimation anim)>();
+            List<(int code, JointAnimation anim)> rest = new List<(int code, JointAnimation anim)>();
 
             int n = ModelAssets.AnimationCount(a);
             for (int i = 0; i < n; i++)
             {
                 if (own.Contains(i)) continue;
-                var anim = ModelAssets.AnimationFor(a, ShowingIndex, i);
+                JointAnimation anim = ModelAssets.AnimationFor(a, ShowingIndex, i);
                 if (anim == null) continue;
                 int howWell = ModelAssets.NameMatch(modelName, anim.Name);
                 if (howWell > 0) named.Add((i, howWell, anim));
@@ -731,13 +731,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
 
             _namedForThisModel = named.Count;
-            foreach (var (code, howWell, anim) in named.OrderByDescending(x => x.howWell).ThenBy(x => x.code))
+            foreach ((int code, int howWell, JointAnimation anim) in named.OrderByDescending(x => x.howWell).ThenBy(x => x.code))
             {
                 if (startOn == 0) startOn = AnimationChoices.Count;
                 AnimationChoices.Add($"{NamedPrefix}: {Called(anim, code)}, {anim.FrameCount} frames");
                 _animationEntries.Add(code);
             }
-            foreach (var (code, anim) in rest)
+            foreach ((int code, JointAnimation anim) in rest)
             {
                 AnimationChoices.Add($"{Called(anim, code)}, {anim.FrameCount} frames");
                 _animationEntries.Add(code);
@@ -806,7 +806,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     case Belonging.Name:
                         return "Named after this model, so very likely its own.";
                     default:
-                        var own = ModelAssets.OwnAnimations(_selected.Archive, ShowingIndex);
+                        IReadOnlyList<int> own = ModelAssets.OwnAnimations(_selected.Archive, ShowingIndex);
                         if (own.Count == 0 && _namedForThisModel == 0) return "";
                         return "Borrowed from something else.";
                 }
@@ -849,13 +849,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             try
             {
-                var model = nsbmd.models[0];
+                NSBMDModel model = nsbmd.models[0];
                 float scale = model.modelScale;
-                var still = NsbmdGeometry.BuildModel(model);
+                NsbmdRenderModel still = NsbmdGeometry.BuildModel(model);
                 bool differs = false;
                 for (int f = 1; f < anim.FrameCount && !differs; f++)
                 {
-                    var at = NsbmdGeometry.BuildModel(model,
+                    NsbmdRenderModel at = NsbmdGeometry.BuildModel(model,
                         (objectId, part) => anim.MatrixFor(objectId, f, part, scale), still);
                     differs = Differs(still, at);
                 }
@@ -879,7 +879,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (a?.Parts == null || b?.Parts == null || a.Parts.Count != b.Parts.Count) return true;
             for (int m = 0; m < a.Parts.Count; m++)
             {
-                var va = a.Parts[m].Vertices; var vb = b.Parts[m].Vertices;
+                float[] va = a.Parts[m].Vertices; float[] vb = b.Parts[m].Vertices;
                 if (va == null || vb == null || va.Length != vb.Length) return true;
                 for (int i = 0; i < va.Length; i++)
                     if (Math.Abs(va[i] - vb[i]) > 1e-6f) return true;
@@ -890,7 +890,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Moves on one frame and redraws. Called by the view on a timer.</summary>
         public void Step()
         {
-            var anim = Chosen();
+            JointAnimation anim = Chosen();
             int length = Math.Max(anim?.FrameCount ?? 0, CompanionFrames);
             if (length <= 0) { Playing = false; return; }
             _frame = (_frame + 1) % length;
@@ -912,7 +912,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             get
             {
-                var anim = Chosen();
+                JointAnimation anim = Chosen();
                 return Math.Max(1, Math.Max(anim?.FrameCount ?? 0, CompanionFrames));
             }
         }
@@ -936,7 +936,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             get
             {
-                var anim = Chosen();
+                JointAnimation anim = Chosen();
                 int length = Math.Max(anim?.FrameCount ?? 0, CompanionFrames);
                 return length <= 1 ? "" : $"Frame {_frame + 1} of {length}";
             }
@@ -944,12 +944,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void Draw()
         {
-            var a = _selected.Archive;
+            ModelAssets.Archive a = _selected.Archive;
             Model3D = null;
             Whynot = "";
             try
             {
-                var nsbmd = ModelAssets.LoadModel(a, ShowingIndex);
+                NSBMD nsbmd = ModelAssets.LoadModel(a, ShowingIndex);
                 if (nsbmd == null || nsbmd.models == null || nsbmd.models.Length == 0)
                 {
                     Whynot = "This model would not open.";
@@ -958,10 +958,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 int textureSet = _textureChoice >= 0 && _textureChoice < _textureSetEntries.Count
                     ? _textureSetEntries[_textureChoice] : -1;
-                var textures = ModelAssets.TexturesFor(a, ShowingIndex, textureSet);
+                byte[] textures = ModelAssets.TexturesFor(a, ShowingIndex, textureSet);
                 bool dressed = ModelAssets.Dress(nsbmd, textures);
 
-                var anim = Chosen();
+                JointAnimation anim = Chosen();
                 if (_movementJustPicked)
                 {
                     _movementJustPicked = false;
@@ -1076,7 +1076,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             note = null;
             if (_selected == null) return "Pick something first.";
             if (_cannotImport != null) return _cannotImport;
-            var archive = _selected.Archive;
+            ModelAssets.Archive archive = _selected.Archive;
             int index = ShowingIndex;
             string said = null;
             string err = string.Equals(Path.GetExtension(path), ".obj", StringComparison.OrdinalIgnoreCase)
@@ -1099,11 +1099,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_selected == null) return "Pick something first.";
             if (!CanSaveModel) return _options?.SaveNote ?? "This is not a model.";
 
-            var narc = new ScriptNarc(_selected.Archive.Dir);
-            var model = narc.Get(ShowingIndex);
+            ScriptNarc narc = new ScriptNarc(_selected.Archive.Dir);
+            byte[] model = narc.Get(ShowingIndex);
             int textureSet = _textureChoice >= 0 && _textureChoice < _textureSetEntries.Count
                 ? _textureSetEntries[_textureChoice] : -1;
-            var textures = ModelAssets.TexturesFor(_selected.Archive, ShowingIndex, textureSet);
+            byte[] textures = ModelAssets.TexturesFor(_selected.Archive, ShowingIndex, textureSet);
 
             try
             {

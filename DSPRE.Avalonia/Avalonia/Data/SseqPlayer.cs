@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -26,13 +27,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Reads a sequence's notes without sound, once through: loops are not followed.</summary>
         public static IReadOnlyList<Note> ReadNotes(SdatArchive sdat, int seqIndex, double maxSeconds = 8.0)
         {
-            var settings = new NitroSoundDriver.Settings { Mix = false, FollowLoops = false, MaxSeconds = maxSeconds };
-            var driver = CreateDriver(sdat, seqIndex, settings, -1, -1);
+            NitroSoundDriver.Settings settings = new NitroSoundDriver.Settings { Mix = false, FollowLoops = false, MaxSeconds = maxSeconds };
+            NitroSoundDriver driver = CreateDriver(sdat, seqIndex, settings, -1, -1);
             if (driver == null) return null;
             driver.Run();
 
             double t = NitroSoundTables.UpdateSeconds;
-            var ticks = driver.TickUpdates;
+            List<int> ticks = driver.TickUpdates;
             double TickTime(long tick)
             {
                 if (tick < ticks.Count) return ticks[(int)tick] * t;
@@ -41,8 +42,8 @@ namespace DSPRE.Avalonia.Data
                 return last + (tick - Math.Max(0, ticks.Count - 1)) * t * 240.0 / Math.Max(1, driver.LastTempo);
             }
 
-            var notes = new List<Note>(driver.Notes.Count);
-            foreach (var e in driver.Notes)
+            List<Note> notes = new List<Note>(driver.Notes.Count);
+            foreach (NitroSoundDriver.NoteEvent e in driver.Notes)
             {
                 double start = e.Update * t;
                 if (start >= maxSeconds) continue;
@@ -87,14 +88,14 @@ namespace DSPRE.Avalonia.Data
                                                      int bankOverride, int waveArcOverride)
         {
             if (sdat == null || seqIndex < 0 || seqIndex >= sdat.Sequences.Count) return null;
-            var seq = sdat.Sequences[seqIndex];
+            SdatSeqInfo seq = sdat.Sequences[seqIndex];
             if (seq == null) return null;
-            var seqBytes = sdat.GetFileBytes(seq.FileId);
+            byte[] seqBytes = sdat.GetFileBytes(seq.FileId);
             if (seqBytes == null || seqBytes.Length < 0x1C) return null;
             int bankNo = bankOverride >= 0 ? bankOverride : seq.BankNo;
             if (bankNo < 0 || bankNo >= sdat.Banks.Count || sdat.Banks[bankNo] == null) return null;
-            var bank = sdat.Banks[bankNo];
-            var instruments = sdat.GetBankInstruments(bankNo);
+            SdatBankInfo bank = sdat.Banks[bankNo];
+            List<SbnkInstrument> instruments = sdat.GetBankInstruments(bankNo);
             if (instruments == null) return null;
 
             // hg-engine keeps each cry in its own wave archive and shares one bank.
@@ -114,14 +115,14 @@ namespace DSPRE.Avalonia.Data
         public static void WriteWav(string path, short[] interleavedStereoPcm, int sampleRate)
         {
             int dataBytes = interleavedStereoPcm.Length * 2;
-            using var fs = new System.IO.FileStream(path, System.IO.FileMode.Create);
-            using var w = new System.IO.BinaryWriter(fs);
+            using FileStream fs = new System.IO.FileStream(path, System.IO.FileMode.Create);
+            using BinaryWriter w = new System.IO.BinaryWriter(fs);
             void Str(string s) => w.Write(System.Text.Encoding.ASCII.GetBytes(s));
             Str("RIFF"); w.Write(36 + dataBytes); Str("WAVE");
             Str("fmt "); w.Write(16); w.Write((short)1); w.Write((short)2);
             w.Write(sampleRate); w.Write(sampleRate * 2 * 2); w.Write((short)4); w.Write((short)16);
             Str("data"); w.Write(dataBytes);
-            foreach (var s in interleavedStereoPcm) w.Write(s);
+            foreach (short s in interleavedStereoPcm) w.Write(s);
         }
     }
 }

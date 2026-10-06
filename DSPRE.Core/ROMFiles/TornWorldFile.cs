@@ -123,7 +123,7 @@ namespace DSPRE.ROMFiles
             if (data == null || data.Length < HeaderSize)
                 throw new ArgumentException("A Distortion World map file is at least " + HeaderSize + " bytes.");
 
-            using (var reader = new BinaryReader(new MemoryStream(data)))
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(data)))
             {
                 Unknown00 = reader.ReadInt32();
                 int platformBytes = reader.ReadInt32();
@@ -147,7 +147,7 @@ namespace DSPRE.ROMFiles
             int count = reader.ReadInt32();
             for (int i = 0; i < count; i++)
             {
-                var platform = new FloatingPlatform { Kind = (PlatformKind)reader.ReadInt16(), AttributeId = reader.ReadUInt16() };
+                FloatingPlatform platform = new FloatingPlatform { Kind = (PlatformKind)reader.ReadInt16(), AttributeId = reader.ReadUInt16() };
                 ReadBounds(reader, platform.Bounds);
                 platform.TilesVertical = reader.ReadUInt16();
                 platform.TilesHorizontal = reader.ReadUInt16();
@@ -161,7 +161,7 @@ namespace DSPRE.ROMFiles
             int count = reader.ReadInt32();
             for (int i = 0; i < count; i++)
             {
-                var jump = new JumpPoint { HandlerIndex = reader.ReadUInt16(), PlayerDirection = reader.ReadInt16(), Unknown04 = reader.ReadInt32() };
+                JumpPoint jump = new JumpPoint { HandlerIndex = reader.ReadUInt16(), PlayerDirection = reader.ReadInt16(), Unknown04 = reader.ReadInt32() };
                 ReadBounds(reader, jump.Bounds);
                 jump.DisplacementX = reader.ReadInt16();
                 jump.DisplacementY = reader.ReadInt16();
@@ -183,7 +183,7 @@ namespace DSPRE.ROMFiles
             int count = reader.ReadInt32();
             for (int i = 0; i < count; i++)
             {
-                var region = new CameraRegion();
+                CameraRegion region = new CameraRegion();
                 ReadBounds(reader, region.Bounds);
                 region.AngleX = reader.ReadUInt16();
                 region.AngleY = reader.ReadUInt16();
@@ -215,7 +215,7 @@ namespace DSPRE.ROMFiles
 
             for (int i = 0; i < triggerCount; i++)
             {
-                var trigger = new GhostTrigger
+                GhostTrigger trigger = new GhostTrigger
                 {
                     GroupId = reader.ReadUInt32(),
                     PlayerDirection = reader.ReadInt16(),
@@ -253,8 +253,8 @@ namespace DSPRE.ROMFiles
             byte[] cameras = CameraBytes();
             byte[] ghosts = GhostBytes();
 
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
             {
                 writer.Write(Unknown00);
                 writer.Write(platforms.Length);
@@ -272,11 +272,11 @@ namespace DSPRE.ROMFiles
         private byte[] PlatformBytes()
         {
             if (Platforms.Count == 0) return Array.Empty<byte>();
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
             {
                 writer.Write(Platforms.Count);
-                foreach (var platform in Platforms)
+                foreach (FloatingPlatform platform in Platforms)
                 {
                     writer.Write((short)platform.Kind);
                     writer.Write((ushort)platform.AttributeId);
@@ -291,11 +291,11 @@ namespace DSPRE.ROMFiles
         private byte[] JumpPointBytes()
         {
             if (JumpPoints.Count == 0) return Array.Empty<byte>();
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
             {
                 writer.Write(JumpPoints.Count);
-                foreach (var jump in JumpPoints)
+                foreach (JumpPoint jump in JumpPoints)
                 {
                     writer.Write((ushort)jump.HandlerIndex);
                     writer.Write(jump.PlayerDirection);
@@ -319,11 +319,11 @@ namespace DSPRE.ROMFiles
         private byte[] CameraBytes()
         {
             if (CameraRegions.Count == 0) return Array.Empty<byte>();
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
             {
                 writer.Write(CameraRegions.Count);
-                foreach (var region in CameraRegions)
+                foreach (CameraRegion region in CameraRegions)
                 {
                     WriteBounds(writer, region.Bounds);
                     writer.Write((ushort)region.AngleX);
@@ -339,13 +339,13 @@ namespace DSPRE.ROMFiles
         private byte[] GhostBytes()
         {
             if (GhostProps.Count == 0 && GhostTriggers.Count == 0) return Array.Empty<byte>();
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
             {
                 writer.Write(GhostProps.Count);
                 writer.Write(GhostTriggers.Count);
                 writer.Write((uint)DefaultVisibleGroups);
-                foreach (var prop in GhostProps)
+                foreach (GhostProp prop in GhostProps)
                 {
                     writer.Write((uint)prop.GroupId);
                     writer.Write((ushort)prop.PropKind);
@@ -353,7 +353,7 @@ namespace DSPRE.ROMFiles
                     writer.Write(prop.TileY);
                     writer.Write(prop.TileZ);
                 }
-                foreach (var trigger in GhostTriggers)
+                foreach (GhostTrigger trigger in GhostTriggers)
                 {
                     writer.Write((uint)trigger.GroupId);
                     writer.Write(trigger.PlayerDirection);
@@ -368,7 +368,7 @@ namespace DSPRE.ROMFiles
         {
             if (platform == null || !platform.Bounds.Contains(tileX, tileY, tileZ)) return null;
 
-            var bounds = platform.Bounds;
+            Bounds bounds = platform.Bounds;
             switch (platform.Kind)
             {
                 case PlatformKind.Floor:
@@ -386,7 +386,7 @@ namespace DSPRE.ROMFiles
 
         public static ushort? AttributeAt(FloatingPlatform platform, ushort[] grid, int tileX, int tileY, int tileZ)
         {
-            var position = GridPosition(platform, tileX, tileY, tileZ);
+            (int vertical, int horizontal)? position = GridPosition(platform, tileX, tileY, tileZ);
             if (position == null || grid == null) return null;
 
             int index = position.Value.vertical + position.Value.horizontal * platform.TilesVertical;

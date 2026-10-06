@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.Data
 
         private byte[] Plain()
         {
-            var rgba = new byte[DsBgScreen.Width * DsBgScreen.Height * 4];
+            byte[] rgba = new byte[DsBgScreen.Width * DsBgScreen.Height * 4];
             for (int i = 0; i < rgba.Length; i += 4) Put(rgba, i, Field);
             return rgba;
         }
@@ -104,18 +104,18 @@ namespace DSPRE.Avalonia.Data
         {
             byte[] tiles = _member(ncgr), pal = _member(nclr);
             if (tiles == null || pal == null) return null;
-            var screen = new DsBgScreen();
+            DsBgScreen screen = new DsBgScreen();
             ushort[] colours = DsBgScreen.ReadColours(pal);
             int rows = Math.Max(1, colours.Length / 16);
             for (int slot = 0; slot < 16; slot++) screen.SetPalette(slot, DsBgScreen.Row(colours, rows == 1 ? 0 : slot % rows));
-            var backdrop = DsBgScreen.Row(colours, 0);
+            ushort[] backdrop = DsBgScreen.Row(colours, 0);
             backdrop[0] = Field;
             screen.SetPalette(0, backdrop);
             screen.LoadTiles(0, tiles);
             int bg = 0;
             foreach (int nscr in screens)
             {
-                var (w, entries) = DsBgScreen.ReadMap(_member(nscr));
+                (int w, ushort[] entries) = DsBgScreen.ReadMap(_member(nscr));
                 if (w <= 0) continue;
                 screen.InitLayer(bg, bg, 0);
                 screen.LoadMap(bg, entries, w);
@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (m == null || m.Length < 3) return null;
             byte[] tiles = DsBgScreen.ReadCharacters(_member(m[1]));
-            var cells = DsBgScreen.ReadCells(_member(m[2]));
+            List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(_member(m[2]));
             if (tiles.Length == 0 || cells.Count == 0) return null;
             ushort[] all = colours ?? DsBgScreen.ReadColours(_member(m[0]));
             return (cells[0], tiles, p => DsBgScreen.Row(all, rows ? p % Math.Max(1, all.Length / 16) : 0));
@@ -266,7 +266,7 @@ namespace DSPRE.Avalonia.Data
             int away = frame >= leave ? (frame - leave) * 24 : 0;
 
             ushort[] frameColours = DsBgScreen.ReadColours(_member(s.FramePalette));
-            var frameSprite = s.Frame != null ? Sprite(new[] { -1, s.Frame[0], s.Frame[1] }, frameColours, rows: true) : null;
+            (DsBgScreen.Oam[] Cell, byte[] Tiles, Func<int, ushort[]> Colours)? frameSprite = s.Frame != null ? Sprite(new[] { -1, s.Frame[0], s.Frame[1] }, frameColours, rows: true) : null;
             int oppX = (int)(304 + (ox - 304) * t) + shake + away, oppY = oy - away;
             int plX = (int)(-48 + (px + 48) * t) - shake - away, plY = py + away;
 

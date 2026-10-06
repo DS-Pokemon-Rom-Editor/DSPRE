@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using DSPRE.ROMFiles;
 using NarcAPI;
 using static DSPRE.RomInfo;
 
@@ -31,16 +32,16 @@ namespace DSPRE
         public static Result Check(int weather, int areaDataId)
         {
             if (gameFamily != GameFamilies.Plat) return null;
-            var spec = FieldWeather.For(gameFamily, weather);
+            FieldWeather.Spec spec = FieldWeather.For(gameFamily, weather);
             long needed = 0;
             try
             {
-                var sizes = BackgroundSizes();
+                long[] sizes = BackgroundSizes();
                 if (sizes == null) return null;
                 foreach (int set in new[] { spec.Background, spec.Companion?.Background ?? -1 })
                 {
                     if (set < 0) continue;
-                    var (nclr, ncgr, nscr) = FieldWeather.BackgroundSets[set];
+                    (int nclr, int ncgr, int nscr) = FieldWeather.BackgroundSets[set];
                     foreach (int member in new[] { nclr, ncgr, nscr })
                         if (member < sizes.Length) needed = Math.Max(needed, Block(sizes[member]));
                 }
@@ -66,7 +67,7 @@ namespace DSPRE
                 DirNames.areaData, DirNames.mapTextures, DirNames.buildingTextures, DirNames.buildingConfigFiles,
                 DirNames.exteriorBuildingModels, DirNames.buildingAnimations, DirNames.buildingAnimListOut,
             });
-            var area = new ROMFiles.AreaData((byte)areaDataId);
+            AreaData area = new ROMFiles.AreaData((byte)areaDataId);
 
             byte[] list = File.ReadAllBytes(Member(DirNames.buildingConfigFiles, area.buildingsTileset));
             int count = BitConverter.ToUInt16(list, 0);
@@ -107,7 +108,7 @@ namespace DSPRE
         // A texture file is cut back to its TEX0 texture data offset once the textures are in VRAM.
         private static long KeptTextureSize(string path)
         {
-            using var reader = new BinaryReader(File.OpenRead(path));
+            using BinaryReader reader = new BinaryReader(File.OpenRead(path));
             if (reader.BaseStream.Length < 0x14) return reader.BaseStream.Length;
             reader.BaseStream.Position = 0x10;
             uint tex0 = reader.ReadUInt32();
@@ -124,11 +125,11 @@ namespace DSPRE
             string path = WeatherSysNarcPath;
             if (_sizes != null && _sizesPath == path) return _sizes;
             if (!File.Exists(path)) return null;
-            var narc = Narc.Open(path);
+            Narc narc = Narc.Open(path);
             if (narc == null) return null;
             try
             {
-                var sizes = new long[narc.ElementCount];
+                long[] sizes = new long[narc.ElementCount];
                 for (int i = 0; i < sizes.Length; i++) sizes[i] = narc.GetElementBytes(i).Length;
                 _sizesPath = path;
                 return _sizes = sizes;

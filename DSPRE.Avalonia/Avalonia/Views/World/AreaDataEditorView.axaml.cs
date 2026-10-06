@@ -36,9 +36,9 @@ namespace DSPRE.Avalonia.Views.World
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
-            var vm = VM;
+            AreaDataEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
+            Window owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
             _setupDone = true;
             await vm.SetupAsync(owner);

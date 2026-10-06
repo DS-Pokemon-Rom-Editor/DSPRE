@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia.Gl
 
         private void Select(Point p)
         {
-            var (c, r) = CellAt(p);
+            (int c, int r) = CellAt(p);
             if (_get == null || c < 0 || c >= _w || r < 0 || r >= _h) return;
             _selCol = c; _selRow = r;
             CellSelected?.Invoke(this, (c, r, _get(c, r)));
@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia.Gl
         private void Paint(Point p)
         {
             if (_get == null) return;
-            var (c, r) = CellAt(p);
+            (int c, int r) = CellAt(p);
             if (c < 0 || c >= _w || r < 0 || r >= _h) return;
             if (_get(c, r) == PaintValue) return;
             _set(c, r, PaintValue);
@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.Gl
         }
 
         private IBrush Res(string key, IBrush fallback) =>
-            this.TryFindResource(key, ActualThemeVariant, out var v) && v is IBrush b ? b : fallback;
+            this.TryFindResource(key, ActualThemeVariant, out object v) && v is IBrush b ? b : fallback;
 
         public override void Render(DrawingContext ctx)
         {
@@ -129,15 +129,15 @@ namespace DSPRE.Avalonia.Gl
             ctx.FillRectangle(back, new Rect(0, 0, _w * CW, _h * CH));
             if (_get == null) return;
 
-            var grid = new Pen(new SolidColorBrush(dark ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(40, 0, 0, 0)));
-            var typeface = new Typeface(FontFamily.Default);
+            Pen grid = new Pen(new SolidColorBrush(dark ? Color.FromArgb(40, 255, 255, 255) : Color.FromArgb(40, 0, 0, 0)));
+            Typeface typeface = new Typeface(FontFamily.Default);
             bool anyFocus = HeaderAt != null && _focusHeader >= 0;
 
             for (int row = 0; row < _h; row++)
                 for (int col = 0; col < _w; col++)
                 {
                     int val = _get(col, row);
-                    var rect = new Rect(col * CW, row * CH, CW, CH);
+                    Rect rect = new Rect(col * CW, row * CH, CW, CH);
                     if (val != EMPTY)
                     {
                         Color fill = RampByValue ? Ramp(val) : CellColour?.Invoke(col, row) ?? Color.FromRgb(0x4A, 0x50, 0x58);
@@ -146,7 +146,7 @@ namespace DSPRE.Avalonia.Gl
                     ctx.DrawRectangle(grid, rect);
                     if (val != EMPTY)
                     {
-                        var t = new FormattedText(val.ToString(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                        FormattedText t = new FormattedText(val.ToString(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
                             typeface, 11, Brushes.White);
                         ctx.DrawText(t, new Point(rect.X + (CW - t.Width) / 2, rect.Y + (CH - t.Height) / 2));
                     }
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.Gl
             // Outline the current header's cells along the edges they don't share with each other.
             if (anyFocus)
             {
-                var edge = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xD5, 0x3D)), 3);
+                Pen edge = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xD5, 0x3D)), 3);
                 for (int r = 0; r < _h; r++)
                     for (int c = 0; c < _w; c++)
                     {

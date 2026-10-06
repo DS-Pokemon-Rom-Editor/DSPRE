@@ -143,7 +143,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_dirtyRows.Count > 0 && IsSupported)
             {
-                var saved = PokegearRematchTable.ReadAll(out _, out _);
+                List<RematchTable.Row> saved = PokegearRematchTable.ReadAll(out _, out _);
                 foreach (int r in _dirtyRows)
                     if (r < saved.Count && r < _rows.Count) _rows[r] = saved[r];
 
@@ -181,7 +181,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void ApplyState(byte[] state)
         {
-            var ids = DSPRE.Avalonia.UndoJson.Read<List<ushort[]>>(state);
+            List<ushort[]> ids = DSPRE.Avalonia.UndoJson.Read<List<ushort[]>>(state);
             for (int r = 0; r < ids.Count && r < _rows.Count; r++) _rows[r].Ids = ids[r];
             RecountDirtyRows();
             RefreshRowLabels();
@@ -225,11 +225,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
 
-            foreach (var n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
+            foreach (string n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
 
             RematchChoices.Add("(end of chain - 0x0000)");
             RematchChoices.Add("(skip this level - 0xFFFF)");
-            foreach (var n in TrainerNames) RematchChoices.Add(n);
+            foreach (string n in TrainerNames) RematchChoices.Add(n);
 
             _rows = PokegearRematchTable.ReadAll(out _location, out _loadError);
 
@@ -272,9 +272,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_phoneEntryByTrainer.Count == 0) return;
 
-            var rowTrainers = new HashSet<ushort>(_rows.Where(r => !r.IsEmpty).Select(r => r.BaseTrainerId));
+            HashSet<ushort> rowTrainers = new HashSet<ushort>(_rows.Where(r => !r.IsEmpty).Select(r => r.BaseTrainerId));
             int unreachableRows = _rows.Count(r => !r.IsEmpty && !_phoneEntryByTrainer.ContainsKey(r.BaseTrainerId));
-            var callersWithoutRow = _phoneEntryByTrainer.Keys.Where(id => !rowTrainers.Contains(id)).ToList();
+            List<ushort> callersWithoutRow = _phoneEntryByTrainer.Keys.Where(id => !rowTrainers.Contains(id)).ToList();
 
             if (unreachableRows == 0 && callersWithoutRow.Count == 0)
             {
@@ -283,7 +283,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 return;
             }
 
-            var parts = new List<string>();
+            List<string> parts = new List<string>();
             if (unreachableRows > 0)
             {
                 parts.Add($"{unreachableRows} row(s) have a base trainer no Pokégear entry calls, " +
@@ -299,7 +299,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private string RowLabel(int rowIndex)
         {
-            var row = _rows[rowIndex];
+            RematchTable.Row row = _rows[rowIndex];
             if (row.IsEmpty) return $"Row {rowIndex}: (empty)";
 
             string label = $"Row {rowIndex}: {TrainerLabel(row.BaseTrainerId)}";
@@ -335,7 +335,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadRowIntoDetail(int rowIndex)
         {
             _suppress = true;
-            var row = _rows[rowIndex];
+            RematchTable.Row row = _rows[rowIndex];
 
             BaseTrainerIndex = row.BaseTrainerId < TrainerNames.Count ? row.BaseTrainerId : -1;
 
@@ -357,7 +357,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_suppress || _currentRowIndex < 0) return;
 
-            var row = _rows[_currentRowIndex];
+            RematchTable.Row row = _rows[_currentRowIndex];
             if (BaseTrainerIndex >= 0) row.BaseTrainerId = (ushort)BaseTrainerIndex;
 
             int[] slots = { Rematch1, Rematch2, Rematch3, Rematch4, Rematch5 };

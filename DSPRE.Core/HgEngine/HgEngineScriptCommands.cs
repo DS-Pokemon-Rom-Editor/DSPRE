@@ -34,8 +34,8 @@ namespace DSPRE.HgEngine
             string key = path;
             lock (_cache)
             {
-                if (_cache.TryGetValue(key, out var hit) && hit.Stamp == stamp) return hit.Commands;
-                var commands = read(HgEngineFileCache.GetText(path));
+                if (_cache.TryGetValue(key, out (DateTime Stamp, Dictionary<int, Command> Commands) hit) && hit.Stamp == stamp) return hit.Commands;
+                Dictionary<int, Command> commands = read(HgEngineFileCache.GetText(path));
                 _cache[key] = (stamp, commands);
                 return commands;
             }
@@ -46,7 +46,7 @@ namespace DSPRE.HgEngine
 
         internal static Dictionary<int, Command> ReadAnimation(string text)
         {
-            var map = new Dictionary<int, Command>();
+            Dictionary<int, Command> map = new Dictionary<int, Command>();
             foreach (Match m in AnimMacro.Matches(text.Replace("\r\n", "\n")))
             {
                 int op = Number(m.Groups[2].Value);
@@ -62,11 +62,11 @@ namespace DSPRE.HgEngine
 
         internal static Dictionary<int, Command> ReadBattle(string text)
         {
-            var map = new Dictionary<int, Command>();
+            Dictionary<int, Command> map = new Dictionary<int, Command>();
             foreach (Match m in BattleMacro.Matches(text.Replace("\r\n", "\n")))
             {
-                var longs = m.Groups[2].Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                var first = Regex.Match(longs[0], @"\.long\s+(0x[0-9A-Fa-f]+|\d+)\s*$");
+                string[] longs = m.Groups[2].Value.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                Match first = Regex.Match(longs[0], @"\.long\s+(0x[0-9A-Fa-f]+|\d+)\s*$");
                 if (!first.Success) continue;
                 int op = Number(first.Groups[1].Value);
                 if (op >= 0) map.TryAdd(op, new Command(m.Groups[1].Value, longs.Length - 1));

@@ -21,11 +21,11 @@ namespace DSPRE.Avalonia.Gl
             float w = Math.Max(1, b.width), h = Math.Max(1, b.height), l = Math.Max(1, b.length);
             const float d2r = (float)Math.PI / 180f;
 
-            var scale = Mat4.Scale(sf * w, sf * h, sf * l);
-            var trans = Mat4.Translate(fx * tf / w, fy * tf / h, fz * tf / l);
-            var rx = Mat4.RotateX(Building.U16ToDeg(b.xRotation) * d2r);
-            var ry = Mat4.RotateY(Building.U16ToDeg(b.yRotation) * d2r);
-            var rz = Mat4.RotateZ(Building.U16ToDeg(b.zRotation) * d2r);
+            float[] scale = Mat4.Scale(sf * w, sf * h, sf * l);
+            float[] trans = Mat4.Translate(fx * tf / w, fy * tf / h, fz * tf / l);
+            float[] rx = Mat4.RotateX(Building.U16ToDeg(b.xRotation) * d2r);
+            float[] ry = Mat4.RotateY(Building.U16ToDeg(b.yRotation) * d2r);
+            float[] rz = Mat4.RotateZ(Building.U16ToDeg(b.zRotation) * d2r);
             // The engine applies rotations to a building's local axes in X, then Y, then Z order,
             // so X must be innermost here.
             return Mat4.Multiply(scale, Mat4.Multiply(trans, Mat4.Multiply(rz, Mat4.Multiply(ry, rx))));

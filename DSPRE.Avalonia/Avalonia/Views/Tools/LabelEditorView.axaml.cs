@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.Views.Tools
         public LabelEditorView()
         {
             InitializeComponent();
-            var vm = new LabelEditorViewModel();
+            LabelEditorViewModel vm = new LabelEditorViewModel();
             DataContext = vm;
             EditorWindowChrome.AttachUndoKeys(this, vm);
         }
@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Views.Tools
             if (VM != null && VM.HasUnsavedChanges && !_closeConfirmed)
             {
                 e.Cancel = true;
-                var r = await DialogHelper.AskYesNoCancel(
+                DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(
                     "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
                 if (r == DialogHelper.MsgResult.Cancel) return;   // stay open
                 if (r == DialogHelper.MsgResult.Yes) VM.Save(); else VM.Discard();

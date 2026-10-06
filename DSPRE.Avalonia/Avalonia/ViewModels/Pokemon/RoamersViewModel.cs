@@ -66,15 +66,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             HeaderNames = HeaderLists.GetHeaderListBoxNames().ToArray();
             if (HgEngineProject.IsActive)
             {
-                if (!HgEngineRoamers.TryRead(out var slots, out var routes, out string error)) { WhyNotLoaded = error; Raise(nameof(WhyNotLoaded)); return; }
+                if (!HgEngineRoamers.TryRead(out List<HgEngineRoamers.Slot> slots, out List<int> routes, out string error)) { WhyNotLoaded = error; Raise(nameof(WhyNotLoaded)); return; }
                 _fromSource = true;
                 for (int s = 0; s < slots.Count; s++) AddSlot(s, slots[s].Species, slots[s].Level);
                 string why = HgEngineRoamers.RoutesReadOnlyReason();
                 _hgeRoutes = why == null;
-                var adjacency = _hgeRoutes ? HgEngineRoamers.ReadAdjacency() : null;
+                List<List<int>> adjacency = _hgeRoutes ? HgEngineRoamers.ReadAdjacency() : null;
                 for (int r = 0; r < routes.Count; r++)
                 {
-                    var row = new RouteRow { Number = r + 1, Header = routes[r], Next = adjacency != null ? string.Join(", ", adjacency[r].Select(a => a + 1)) : null };
+                    RouteRow row = new RouteRow { Number = r + 1, Header = routes[r], Next = adjacency != null ? string.Join(", ", adjacency[r].Select(a => a + 1)) : null };
                     if (_hgeRoutes) row.Changed = Changed;
                     Routes.Add(row);
                 }
@@ -87,7 +87,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 for (int s = 0; s < _data.Slots.Count; s++) AddSlot(s, _data.Slots[s].Species, _data.Slots[s].Level);
                 for (int r = 0; r < _data.Routes.Count; r++)
                 {
-                    var row = new RouteRow { Number = r + 1, Header = _data.Routes[r], Next = string.Join(", ", _data.Adjacency[r].Select(a => a + 1)) };
+                    RouteRow row = new RouteRow { Number = r + 1, Header = _data.Routes[r], Next = string.Join(", ", _data.Adjacency[r].Select(a => a + 1)) };
                     row.Changed = Changed;
                     Routes.Add(row);
                 }
@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     RoutesNote = $"Roamers 1 and 2 move within routes {g[0].Start + 1} to {g[0].Start + g[0].Count}, the others within {g[1].Start + 1} to {g[1].Start + g[1].Count}.";
             }
             _saved = Snapshot();
-            foreach (var n in new[] { nameof(PokemonNames), nameof(HeaderNames), nameof(Loaded), nameof(RoutesEditable), nameof(RoutesNote), nameof(HasRoutesNote) }) Raise(n);
+            foreach (string n in new[] { nameof(PokemonNames), nameof(HeaderNames), nameof(Loaded), nameof(RoutesEditable), nameof(RoutesNote), nameof(HasRoutesNote) }) Raise(n);
             _undo = new ByteStateUndo(TakeState, ApplyState, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
             Raise(nameof(CanUndo)); Raise(nameof(CanRedo));
             Changed();
@@ -109,14 +109,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
-            foreach (var s in Slots) { w.Write(s.Species); w.Write(s.Level); }
-            foreach (var r in Routes) { w.Write(r.Header); w.Write(r.Next ?? ""); }
+            foreach (SlotRow s in Slots) { w.Write(s.Species); w.Write(s.Level); }
+            foreach (RouteRow r in Routes) { w.Write(r.Header); w.Write(r.Next ?? ""); }
         });
 
         private void ApplyState(byte[] state) => ByteStateUndo.Unpack(state, r =>
         {
-            foreach (var s in Slots) { s.Species = r.ReadInt32(); s.Level = r.ReadInt32(); }
-            foreach (var row in Routes) { row.Header = r.ReadInt32(); row.Next = r.ReadString(); }
+            foreach (SlotRow s in Slots) { s.Species = r.ReadInt32(); s.Level = r.ReadInt32(); }
+            foreach (RouteRow row in Routes) { row.Header = r.ReadInt32(); row.Next = r.ReadString(); }
             Changed();
         });
 
@@ -128,7 +128,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Changed()
         {
-            foreach (var n in new[] { nameof(HasUnsavedChanges), nameof(Problem), nameof(HasProblem) }) Raise(n);
+            foreach (string n in new[] { nameof(HasUnsavedChanges), nameof(Problem), nameof(HasProblem) }) Raise(n);
             _undo?.Record();
         }
 
@@ -140,8 +140,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int r = 0; r < Routes.Count; r++)
             {
                 _data.Routes[r] = Routes[r].Header;
-                var next = (Routes[r].Next ?? "").Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                var list = new System.Collections.Generic.List<int>();
+                string[] next = (Routes[r].Next ?? "").Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                List<int> list = new System.Collections.Generic.List<int>();
                 foreach (string n in next)
                 {
                     if (!int.TryParse(n, out int k)) return $"Route {r + 1}: \"{n}\" isn't a route number.";
@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             adjacency = new List<IReadOnlyList<int>>();
             for (int r = 0; r < Routes.Count; r++)
             {
-                var list = new List<int>();
+                List<int> list = new List<int>();
                 foreach (string n in (Routes[r].Next ?? "").Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     if (!int.TryParse(n, out int k) || k < 1 || k > Routes.Count) return $"Route {r + 1}: \"{n}\" isn't a route number from 1 to {Routes.Count}.";
@@ -201,10 +201,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Roamers"); return false; }
             if (_fromSource)
             {
-                var slots = Slots.Select(s => new HgEngineRoamers.Slot(s.Species, s.Level)).ToList();
+                List<HgEngineRoamers.Slot> slots = Slots.Select(s => new HgEngineRoamers.Slot(s.Species, s.Level)).ToList();
                 bool routesChanged = _hgeRoutes && RoutesText() != _hgeRoutesSaved;
-                ReadHgeRoutes(out var routes, out var adjacency);
-                var (saved, error) = await HgEngineSave.RunAsync(() =>
+                ReadHgeRoutes(out List<int> routes, out List<IReadOnlyList<int>> adjacency);
+                (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                     !HgEngineRoamers.TryWrite(slots, out string e) ? e
                     : routesChanged && !HgEngineRoamers.TryWriteRoutes(routes, adjacency, out e) ? e : null);
                 if (!saved) { if (error != null) await DialogHelper.ShowError("The roamers were not saved:\n" + error, "Roamers"); return false; }

@@ -30,10 +30,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public CopyMachinesDialogViewModel(string[] pokemonNames, IReadOnlyList<List<int>> families, int preselectedSourceId, System.Func<int, string> labelFor)
         {
-            foreach (var name in pokemonNames) SpeciesNames.Add(name);
+            foreach (string name in pokemonNames) SpeciesNames.Add(name);
             SourceIndex = preselectedSourceId >= 0 && preselectedSourceId < SpeciesNames.Count ? preselectedSourceId : 0;
 
-            foreach (var fam in families)
+            foreach (List<int> fam in families)
             {
                 if (fam.Count == 1)
                 {
@@ -41,8 +41,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
                 else
                 {
-                    var group = new SpeciesGroupNode { FamilyRootId = fam[0], DisplayName = $"{labelFor(fam[0])} family", OnCheckedChanged = OnGroupChecked };
-                    foreach (var id in fam)
+                    SpeciesGroupNode group = new SpeciesGroupNode { FamilyRootId = fam[0], DisplayName = $"{labelFor(fam[0])} family", OnCheckedChanged = OnGroupChecked };
+                    foreach (int id in fam)
                         group.Children.Add(new SpeciesLeafNode { SpeciesId = id, DisplayName = labelFor(id), OnCheckedChanged = OnLeafChecked });
                     TargetTree.Add(group);
                 }
@@ -55,12 +55,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             else _selectedTargetIds.Remove(leaf.SpeciesId);
 
             if (_suppress) return;
-            foreach (var node in TargetTree)
+            foreach (SpeciesFamilyTreeNode node in TargetTree)
                 if (node is SpeciesGroupNode group && group.Children.Contains(leaf))
                 {
                     int total = group.Children.Count;
                     int checkedCount = 0;
-                    foreach (var c in group.Children) if (c.IsChecked) checkedCount++;
+                    foreach (SpeciesLeafNode c in group.Children) if (c.IsChecked) checkedCount++;
                     group.SetCheckedSilent(checkedCount == total);
                 }
         }
@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_suppress) return;
             _suppress = true;
-            foreach (var child in group.Children) child.IsChecked = group.IsChecked;
+            foreach (SpeciesLeafNode child in group.Children) child.IsChecked = group.IsChecked;
             _suppress = false;
         }
 

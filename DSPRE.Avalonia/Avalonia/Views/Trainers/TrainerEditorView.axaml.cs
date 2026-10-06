@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -32,7 +33,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
             if (_setupDone || Design.IsDesignMode) return;
-            var vm = VM;
+            TrainerEditorViewModel vm = VM;
             if (vm == null) return;
             _setupDone = true;
             await vm.SetupAsync(this);
@@ -86,8 +87,8 @@ namespace DSPRE.Avalonia.Views.Trainers
         private async void Search_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            var dlgVm = new TrainerSearchViewModel(VM.TrainerNames);
-            var dlg = new TrainerSearchView(dlgVm);
+            TrainerSearchViewModel dlgVm = new TrainerSearchViewModel(VM.TrainerNames);
+            TrainerSearchView dlg = new TrainerSearchView(dlgVm);
             await dlg.ShowDialog(this);
             if (dlgVm.Confirmed) VM.GoToTrainer(dlgVm.ResultIndex);
         }
@@ -95,8 +96,8 @@ namespace DSPRE.Avalonia.Views.Trainers
         private async void Reorder_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            var dlgVm = new MonReorderViewModel(VM.GetPartyForReorder());
-            var dlg = new MonReorderView(dlgVm);
+            MonReorderViewModel dlgVm = new MonReorderViewModel(VM.GetPartyForReorder());
+            MonReorderView dlg = new MonReorderView(dlgVm);
             await dlg.ShowDialog(this);
             if (dlgVm.Confirmed) VM.ReorderParty(dlgVm.ResultOrder);
         }
@@ -104,15 +105,15 @@ namespace DSPRE.Avalonia.Views.Trainers
         private async void DVCalc_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            var input = VM.GetDVCalcInput();
+            (ushort trainerId, byte trainerClass, List<(int pokeId, int level, int gender, int ability, int dv)> party) input = VM.GetDVCalcInput();
             if (input.party.Count == 0) return;
-            var dlgVm = new DVCalcViewModel(input.trainerId, input.trainerClass, input.party);
-            var dlg = new DVCalcView(dlgVm);
+            DVCalcViewModel dlgVm = new DVCalcViewModel(input.trainerId, input.trainerClass, input.party);
+            DVCalcView dlg = new DVCalcView(dlgVm);
             await dlg.ShowDialog(this);
             if (dlgVm.Confirmed)
             {
-                var results = new System.Collections.Generic.List<(int dv, int gender, int ability)>();
-                foreach (var s in dlgVm.Slots) results.Add(((int)s.DV, s.GenderIndex, s.AbilityIndex));
+                List<(int dv, int gender, int ability)> results = new System.Collections.Generic.List<(int dv, int gender, int ability)>();
+                foreach (DVCalcSlotViewModel s in dlgVm.Slots) results.Add(((int)s.DV, s.GenderIndex, s.AbilityIndex));
                 VM.ApplyDVCalc(results);
             }
         }

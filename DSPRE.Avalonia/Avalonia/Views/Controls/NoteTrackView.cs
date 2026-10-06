@@ -67,8 +67,8 @@ namespace DSPRE.Avalonia.Views.Controls
 
             if (_notes == null || _notes.Count == 0)
             {
-                var faint = new SolidColorBrush(Color.FromArgb(110, 128, 128, 128));
-                var text = new FormattedText(_emptyBecause,
+                SolidColorBrush faint = new SolidColorBrush(Color.FromArgb(110, 128, 128, 128));
+                FormattedText text = new FormattedText(_emptyBecause,
                     System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
                     Typeface.Default, 12, faint);
                 ctx.DrawText(text, new Point(10, h / 2 - text.Height / 2));
@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia.Views.Controls
             double lane = h / span;
 
             // A line at every C, so the pitch can be read off rather than guessed at.
-            var ruler = new Pen(new SolidColorBrush(Color.FromArgb(48, 128, 128, 128)), 1);
+            Pen ruler = new Pen(new SolidColorBrush(Color.FromArgb(48, 128, 128, 128)), 1);
             for (int note = lowest; note <= highest; note++)
                 if (note % 12 == 0)
                 {
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.Views.Controls
                 }
 
             double minWidth = 1.5;
-            foreach (var n in _notes)
+            foreach (SseqPlayer.Note n in _notes)
             {
                 double x = n.StartSeconds / _seconds * w;
                 double length = n.NoLengthGiven || n.DurationSeconds <= 0 ? 0.25 : n.DurationSeconds;
@@ -102,17 +102,17 @@ namespace DSPRE.Avalonia.Views.Controls
                 if (x + bw > w) bw = w - x;
 
                 double y = h - (n.Number - lowest + 1) * lane;
-                var c = TrackColours[Math.Abs(n.Track) % TrackColours.Length];
+                Color c = TrackColours[Math.Abs(n.Track) % TrackColours.Length];
                 // Quieter notes are drawn fainter, so the tune stands out from what is behind it.
                 byte alpha = (byte)Math.Clamp(90 + n.Velocity, 90, 255);
-                var brush = new SolidColorBrush(Color.FromArgb(alpha, c.R, c.G, c.B));
+                SolidColorBrush brush = new SolidColorBrush(Color.FromArgb(alpha, c.R, c.G, c.B));
                 ctx.FillRectangle(brush, new Rect(x, y, bw, Math.Max(1.5, lane - 1)));
             }
 
             if (_playhead > 0 && _playhead <= _seconds)
             {
                 double x = _playhead / _seconds * w;
-                var head = new Pen(new SolidColorBrush(Color.FromArgb(200, 220, 80, 80)), 1);
+                Pen head = new Pen(new SolidColorBrush(Color.FromArgb(200, 220, 80, 80)), 1);
                 ctx.DrawLine(head, new Point(x, 0), new Point(x, h));
             }
         }

@@ -10,7 +10,7 @@ namespace DSPRE.HgEngine
         /// <summary>Replaces a #define's value. Fails (no mutation) if the name isn't found.</summary>
         public static bool TryReplaceDefineValue(ref string text, string defineName, string newValue)
         {
-            var m = Regex.Match(text, $@"#define[ \t]+{Regex.Escape(defineName)}[ \t]+[^\r\n]+");
+            Match m = Regex.Match(text, $@"#define[ \t]+{Regex.Escape(defineName)}[ \t]+[^\r\n]+");
             if (!m.Success) return false;
             text = string.Concat(text.AsSpan(0, m.Index), $"#define {defineName} {newValue}", text.AsSpan(m.Index + m.Length));
             return true;
@@ -19,7 +19,7 @@ namespace DSPRE.HgEngine
         /// <summary>Inserts before the line that defines <paramref name="anchorDefineName"/>.</summary>
         public static bool TryInsertBeforeDefine(ref string text, string anchorDefineName, string newLines)
         {
-            var m = Regex.Match(text, $@"#define[ \t]+{Regex.Escape(anchorDefineName)}[ \t]+");
+            Match m = Regex.Match(text, $@"#define[ \t]+{Regex.Escape(anchorDefineName)}[ \t]+");
             if (!m.Success) return false;
             text = string.Concat(text.AsSpan(0, m.Index), newLines, text.AsSpan(m.Index));
             return true;

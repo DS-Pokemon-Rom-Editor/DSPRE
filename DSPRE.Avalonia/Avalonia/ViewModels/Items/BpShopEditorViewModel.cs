@@ -84,8 +84,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void Rebuild()
         {
             Left.Clear(); Right.Clear();
-            foreach (var e in _shop.Left) Left.Add(new EntryViewModel(e, Changed));
-            foreach (var e in _shop.Right) Right.Add(new EntryViewModel(e, Changed));
+            foreach (BpShopData.Entry e in _shop.Left) Left.Add(new EntryViewModel(e, Changed));
+            foreach (BpShopData.Entry e in _shop.Right) Right.Add(new EntryViewModel(e, Changed));
         }
 
         private List<BpShopData.Entry> ListOf(bool right) => right ? _shop.Right : _shop.Left;
@@ -94,9 +94,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Add(bool right)
         {
             if (!CanResize) return;
-            var e = new BpShopData.Entry { Item = right ? (ushort)328 : (ushort)1, Price = 1 };
+            BpShopData.Entry e = new BpShopData.Entry { Item = right ? (ushort)328 : (ushort)1, Price = 1 };
             ListOf(right).Add(e);
-            var row = new EntryViewModel(e, Changed);
+            EntryViewModel row = new EntryViewModel(e, Changed);
             RowsOf(right).Add(row);
             if (right) SelectedRight = row; else SelectedLeft = row;
             Changed();
@@ -115,21 +115,21 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public void Remove(bool right)
         {
-            var row = right ? SelectedRight : SelectedLeft;
+            EntryViewModel row = right ? SelectedRight : SelectedLeft;
             if (!CanResize || row == null) return;
             int at = RowsOf(right).IndexOf(row);
             ListOf(right).Remove(row.Entry);
             RowsOf(right).Remove(row);
-            var next = RowsOf(right).ElementAtOrDefault(Math.Min(at, RowsOf(right).Count - 1));
+            EntryViewModel next = RowsOf(right).ElementAtOrDefault(Math.Min(at, RowsOf(right).Count - 1));
             if (right) SelectedRight = next; else SelectedLeft = next;
             Changed();
         }
 
         public void Move(bool right, int by)
         {
-            var row = right ? SelectedRight : SelectedLeft;
+            EntryViewModel row = right ? SelectedRight : SelectedLeft;
             if (_shop == null || row == null) return;
-            var list = ListOf(right);
+            List<BpShopData.Entry> list = ListOf(right);
             int from = list.IndexOf(row.Entry), to = from + by;
             if (to < 0 || to >= list.Count) return;
             list.RemoveAt(from); list.Insert(to, row.Entry);
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         /// <summary>Moves the selected entry to the end of the other counter.</summary>
         public void Transfer(bool fromRight)
         {
-            var row = fromRight ? SelectedRight : SelectedLeft;
+            EntryViewModel row = fromRight ? SelectedRight : SelectedLeft;
             if (!CanResize || row == null) return;
             ListOf(fromRight).Remove(row.Entry);
             RowsOf(fromRight).Remove(row);
@@ -175,7 +175,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void Changed()
         {
-            foreach (var n in new[] { nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(Status),
+            foreach (string n in new[] { nameof(Problem), nameof(HasProblem), nameof(Warning), nameof(HasWarning), nameof(Status),
                 nameof(LeftHeader), nameof(RightHeader), nameof(HasUnsavedChanges) })
                 Raise(n);
             _undo?.Record();

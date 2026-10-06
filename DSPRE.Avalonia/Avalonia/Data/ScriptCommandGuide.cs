@@ -24,20 +24,20 @@ namespace DSPRE.Avalonia.Data
     {
         public static IReadOnlyList<GuideEntry> ForWest()
         {
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var list = new List<GuideEntry>();
-            foreach (var op in BattleAnimCommands.Table(WazaSeqVersion.Plat)) Add(list, seen, op.Name, false);
-            foreach (var op in BattleAnimCommands.Table(WazaSeqVersion.HGSS)) Add(list, seen, op.Name, false);
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<GuideEntry> list = new List<GuideEntry>();
+            foreach (BattleAnimCommand op in BattleAnimCommands.Table(WazaSeqVersion.Plat)) Add(list, seen, op.Name, false);
+            foreach (BattleAnimCommand op in BattleAnimCommands.Table(WazaSeqVersion.HGSS)) Add(list, seen, op.Name, false);
             list.Sort((a, b) => string.CompareOrdinal(a.Command, b.Command));
             return list;
         }
 
         public static IReadOnlyList<GuideEntry> ForWazaSeq()
         {
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var list = new List<GuideEntry>();
-            foreach (var v in new[] { WazaSeqVersion.DP, WazaSeqVersion.Plat, WazaSeqVersion.HGSS })
-                foreach (var op in WazaSeqOpcodes.Table(v)) Add(list, seen, op.Name, true);
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<GuideEntry> list = new List<GuideEntry>();
+            foreach (WazaSeqVersion v in new[] { WazaSeqVersion.DP, WazaSeqVersion.Plat, WazaSeqVersion.HGSS })
+                foreach (WazaSeqOp op in WazaSeqOpcodes.Table(v)) Add(list, seen, op.Name, true);
             list.Sort((a, b) => string.CompareOrdinal(a.Command, b.Command));
             return list;
         }
@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.Data
             string command = BattleAnimSchema.CommandName(opName, script);
             string title = BattleAnimSchema.OpcodeDisplay(opName, script);
             string desc = BattleAnimSchema.OpcodeDoc(opName, script);
-            var ps = new List<string>();
+            List<string> ps = new List<string>();
             for (int i = 0; i < 16; i++)
             {
                 string label = BattleAnimSchema.ParamName(opName, i, script);

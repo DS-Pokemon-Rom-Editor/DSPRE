@@ -28,7 +28,7 @@ namespace DSPRE.ROMFiles
 
             string dir = gameDirs[DirNames.groundAnimations].unpackedDir;
             if (dir != _cacheDir) { Cache.Clear(); _cacheDir = dir; }
-            if (Cache.TryGetValue(index, out var hit)) return hit;
+            if (Cache.TryGetValue(index, out TextureSrtAnimation hit)) return hit;
 
             TextureSrtAnimation anim = null;
             try

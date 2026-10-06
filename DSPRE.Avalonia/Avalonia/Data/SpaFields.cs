@@ -72,7 +72,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (bits < 0) bits = size * 8;
             if (bits == 1 && kind == SpaFieldKind.Number) kind = SpaFieldKind.Flag;
-            var f = new SpaField(name, block, offset, size, shift, bits, signed, divisor, kind, max, layout);
+            SpaField f = new SpaField(name, block, offset, size, shift, bits, signed, divisor, kind, max, layout);
             _all.Add(f);
             return f;
         }

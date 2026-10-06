@@ -100,12 +100,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<TowerState>(state);
+            TowerState s = DSPRE.Avalonia.UndoJson.Read<TowerState>(state);
             int trainer = Math.Max(0, _selectedTrainerIndex), set = Math.Max(0, _selectedSetIndex);
             _trainerFile.Trainers.Clear();
-            foreach (var t in s.Trainers) _trainerFile.Trainers.Add(t);
+            foreach (BattleTowerTrainer t in s.Trainers) _trainerFile.Trainers.Add(t);
             _setFile.Sets.Clear();
-            foreach (var p in s.Sets) _setFile.Sets.Add(p);
+            foreach (BattleTowerPokemonSet p in s.Sets) _setFile.Sets.Add(p);
             RefreshTrainerList(trainer);
             RefreshSetList(set);
             // The list may keep the same index, which skips the setter's reload.
@@ -242,11 +242,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _setFile = new BattleTowerPokemonSetFile(true);
             _trainerFile = new BattleTowerTrainerFile(true);
 
-            foreach (var n in GetTrainerClassNames()) TrainerClassNames.Add(n);
-            foreach (var n in GetPokemonNames()) PokemonNames.Add(n);
-            foreach (var n in GetAttackNames()) MoveNames.Add(n);
-            foreach (var n in GetItemNames()) ItemNames.Add(n);
-            foreach (var n in BattleTowerPokemonSet.NatureNames) NatureNames.Add(n);
+            foreach (string n in GetTrainerClassNames()) TrainerClassNames.Add(n);
+            foreach (string n in GetPokemonNames()) PokemonNames.Add(n);
+            foreach (string n in GetAttackNames()) MoveNames.Add(n);
+            foreach (string n in GetItemNames()) ItemNames.Add(n);
+            foreach (string n in BattleTowerPokemonSet.NatureNames) NatureNames.Add(n);
 
             RefreshTrainerList();
             RefreshSetList();
@@ -279,7 +279,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadTrainer(int index)
         {
             _suppress = true;
-            var trainer = CurrentTrainer;
+            BattleTowerTrainer trainer = CurrentTrainer;
             if (trainer == null)
             {
                 TrainerClassIndex = -1;
@@ -319,7 +319,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public void AddSetToTrainer()
         {
-            var trainer = CurrentTrainer;
+            BattleTowerTrainer trainer = CurrentTrainer;
             if (trainer == null) return;
             int setId = AddSetNumber;
             if (setId <= 0) return; // set 0 is the blank/unused placeholder entry
@@ -331,7 +331,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public void RemoveSetFromTrainer()
         {
-            var trainer = CurrentTrainer;
+            BattleTowerTrainer trainer = CurrentTrainer;
             if (trainer == null || SelectedSetIdIndex < 0 || SelectedSetIdIndex >= trainer.SetIDs.Count) return;
             trainer.SetIDs.RemoveAt(SelectedSetIdIndex);
             trainer.UnreadBytes = null;
@@ -342,7 +342,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Double-click a set-ID row in the trainer's list: jump to that set on the Sets tab.</summary>
         public void NavigateToSetId()
         {
-            var trainer = CurrentTrainer;
+            BattleTowerTrainer trainer = CurrentTrainer;
             if (trainer == null || SelectedSetIdIndex < 0 || SelectedSetIdIndex >= trainer.SetIDs.Count) return;
             int setId = trainer.SetIDs[SelectedSetIdIndex];
             if (setId < 0 || setId >= SetLabels.Count) return;
@@ -384,7 +384,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadSet(int index)
         {
             _suppress = true;
-            var set = CurrentSet;
+            BattleTowerPokemonSet set = CurrentSet;
             if (set == null)
             {
                 SpeciesIcon = null;
@@ -420,7 +420,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // A list reports -1 when cleared, which is not an edit.
         private void SetFieldChanged(SetField field)
         {
-            var set = CurrentSet;
+            BattleTowerPokemonSet set = CurrentSet;
             if (set == null) return;
 
             switch (field)

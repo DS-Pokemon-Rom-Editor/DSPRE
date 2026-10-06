@@ -5,6 +5,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.ViewModels.Pokemon;
 
@@ -35,8 +36,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
         // Scales the chart up to fill the window but never below natural size; a small window scrolls instead.
         private void Fit()
         {
-            var natural = Cells.DesiredSize;
-            var room = Host.Bounds.Size;
+            Size natural = Cells.DesiredSize;
+            Size room = Host.Bounds.Size;
             if (natural.Width <= 0 || natural.Height <= 0 || room.Width <= 0) return;
             // The window can't shrink below the whole chart plus the panel.
             if (!_minSet && TopLevel.GetTopLevel(this) is Window win && win.ClientSize.Width > 0)
@@ -57,7 +58,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         // Arrows move the selection; Enter or Space steps the selected cell like a second click.
         private void Cells_KeyDown(object sender, KeyEventArgs e)
         {
-            var vm = VM;
+            TypeChartEditorViewModel vm = VM;
             if (vm == null || vm.SelectedAttacker < 0) return;
             int a = vm.SelectedAttacker, d = vm.SelectedDefender, n = vm.TypeCount;
             switch (e.Key)
@@ -78,7 +79,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private void BuildGrid()
         {
-            var vm = VM;
+            TypeChartEditorViewModel vm = VM;
             int n = vm.TypeCount;
             const double size = 34;
             for (int i = 0; i <= n; i++)
@@ -87,7 +88,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
                 Cells.RowDefinitions.Add(new RowDefinition(new GridLength(i == 0 ? 20 : size)));
             }
             _cells = new Border[n, n];
-            var corner = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+            StackPanel corner = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
             corner.Children.Add(new TextBlock { Text = "Atk", FontSize = 10, VerticalAlignment = VerticalAlignment.Center });
             corner.Children.Add(DSPRE.Avalonia.Controls.Icon.Image("arrowdown"));
             corner.Children.Add(new TextBlock { Text = "Def", FontSize = 10, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) });
@@ -95,7 +96,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             Cells.Children.Add(corner);
             for (int t = 0; t < n; t++)
             {
-                var icon = TypeIcons.For(t);
+                Bitmap icon = TypeIcons.For(t);
                 Control across = icon != null
                     ? new Image { Source = icon, Width = 32, Height = 16, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
                     : new TextBlock { Text = Short(vm.NameOf(t)), FontSize = 10, HorizontalAlignment = HorizontalAlignment.Center };
@@ -106,8 +107,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
                 ToolTip.SetTip(down, vm.NameOf(t));
                 int type = t;
                 // The type icons toggle a highlighted row (attacking) or column (defending).
-                var acrossHit = Clickable(across, () => VM?.ToggleColumn(type));
-                var downHit = Clickable(down, () => VM?.ToggleRow(type));
+                Control acrossHit = Clickable(across, () => VM?.ToggleColumn(type));
+                Control downHit = Clickable(down, () => VM?.ToggleRow(type));
                 Grid.SetRow(acrossHit, 0); Grid.SetColumn(acrossHit, t + 1);
                 Grid.SetRow(downHit, t + 1); Grid.SetColumn(downHit, 0);
                 Cells.Children.Add(acrossHit); Cells.Children.Add(downHit);
@@ -117,7 +118,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
                 {
                     int attacker = a, defender = d;
                     // A Border, not a Button: the button theme repaints hovered and pressed cells over their colour.
-                    var cell = new Border
+                    Border cell = new Border
                     {
                         Width = size - 2, Height = size - 2, CornerRadius = new CornerRadius(3), Cursor = new Cursor(StandardCursorType.Hand),
                         Child = new TextBlock { FontSize = 12, FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
@@ -153,7 +154,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private Border Overlay(Thickness sides, Color colour)
         {
-            var b = new Border { BorderThickness = sides, BorderBrush = new SolidColorBrush(colour), CornerRadius = new CornerRadius(3),
+            Border b = new Border { BorderThickness = sides, BorderBrush = new SolidColorBrush(colour), CornerRadius = new CornerRadius(3),
                                  IsHitTestVisible = false, IsVisible = false, ZIndex = 10 };
             Cells.Children.Add(b);
             return b;
@@ -161,7 +162,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private static Control Clickable(Control inner, System.Action toggle)
         {
-            var hit = new Border { Background = Brushes.Transparent, Cursor = new Cursor(StandardCursorType.Hand), Child = inner };
+            Border hit = new Border { Background = Brushes.Transparent, Cursor = new Cursor(StandardCursorType.Hand), Child = inner };
             ToolTip.SetTip(hit, ToolTip.GetTip(inner));
             ToolTip.SetTip(inner, null);
             hit.PointerPressed += (_, e) => { if (e.GetCurrentPoint(hit).Properties.IsLeftButtonPressed) { toggle(); e.Handled = true; } };
@@ -172,18 +173,18 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private void Paint()
         {
-            var vm = VM;
+            TypeChartEditorViewModel vm = VM;
             if (vm == null || _cells == null) return;
             int n = vm.TypeCount;
-            IBrush subtle = this.TryFindResource("Editor.Subtle", ActualThemeVariant, out var s) && s is IBrush sb ? sb : Brushes.Gray;
-            IBrush fore = this.TryFindResource("Editor.Text", ActualThemeVariant, out var f) && f is IBrush fb ? fb : subtle;
+            IBrush subtle = this.TryFindResource("Editor.Subtle", ActualThemeVariant, out object s) && s is IBrush sb ? sb : Brushes.Gray;
+            IBrush fore = this.TryFindResource("Editor.Text", ActualThemeVariant, out object f) && f is IBrush fb ? fb : subtle;
             IBrush back = BackgroundBehind();
             for (int a = 0; a < n; a++)
                 for (int d = 0; d < n; d++)
                 {
                     int t = vm.TenthsAt(a, d);
-                    var cell = _cells[a, d];
-                    var text = (TextBlock)cell.Child;
+                    Border cell = _cells[a, d];
+                    TextBlock text = (TextBlock)cell.Child;
                     text.Text = t switch { 10 => "", 20 => "2", 5 => "½", 0 => vm.ForesightAt(a, d) ? "0*" : "0", _ => (t / 10m).ToString("0.#") };
                     cell.Background = new SolidColorBrush(t switch
                     {
@@ -211,7 +212,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         // The colour the chart sits on: the nearest ancestor that paints one.
         private IBrush BackgroundBehind()
         {
-            for (var v = Cells.Parent; v != null; v = v.Parent)
+            for (StyledElement v = Cells.Parent; v != null; v = v.Parent)
             {
                 IBrush b = v switch { Panel p => p.Background, Border bd => bd.Background, TemplatedControl t => t.Background, _ => null };
                 if (b is ISolidColorBrush sc && sc.Color.A == 0) continue;

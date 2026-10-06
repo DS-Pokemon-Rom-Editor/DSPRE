@@ -240,7 +240,7 @@ namespace DSPRE {
         }
 
         public static int GetSafariZoneCount() {
-            var files = GetSafariZoneFiles();
+            string[] files = GetSafariZoneFiles();
             return files?.Length ?? 0;
         }
 
@@ -253,7 +253,7 @@ namespace DSPRE {
         }
 
         public static int GetHeadbuttCount() {
-            var files = GetHeadbuttFiles();
+            string[] files = GetHeadbuttFiles();
             return files?.Length ?? 0;
         }
 
@@ -266,7 +266,7 @@ namespace DSPRE {
         }
 
         public static int GetRockSmashCount() {
-            var files = GetRockSmashFiles();
+            string[] files = GetRockSmashFiles();
             return files?.Length ?? 0;
         }
 

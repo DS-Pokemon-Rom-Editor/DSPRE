@@ -159,7 +159,7 @@ namespace DSPRE
                     return null;
                 }
 
-                var book = new Book { _original = (byte[])data.Clone() };
+                Book book = new Book { _original = (byte[])data.Clone() };
                 for (int i = 0; i < count; i++)
                     book.Entries.Add(Entry.Read(data.AsSpan(HeaderSize + i * EntrySize, EntrySize)));
                 return book;
@@ -222,7 +222,7 @@ namespace DSPRE
             {
                 int count = Entries.Count;
                 return Enumerable.Range(0, count)
-                    .OrderBy(i => Entries[i].Rank(key) is var rank && rank >= 1 && rank <= count ? rank : int.MaxValue)
+                    .OrderBy(i => Entries[i].Rank(key) is byte rank && rank >= 1 && rank <= count ? rank : int.MaxValue)
                     .ThenBy(i => i)
                     .ToList();
             }
@@ -230,10 +230,10 @@ namespace DSPRE
             /// <summary>Ranks every contact by its text, then by the tie-break text, then by position.</summary>
             public void RankBy(SortKey key, IReadOnlyList<string> text, IReadOnlyList<string> tieBreak = null)
             {
-                var compare = StringComparer.Create(System.Globalization.CultureInfo.InvariantCulture, ignoreCase: true);
+                StringComparer compare = StringComparer.Create(System.Globalization.CultureInfo.InvariantCulture, ignoreCase: true);
                 string At(IReadOnlyList<string> list, int i) => list != null && i < list.Count ? list[i] ?? "" : "";
 
-                var order = Enumerable.Range(0, Entries.Count)
+                List<int> order = Enumerable.Range(0, Entries.Count)
                     .OrderBy(i => At(text, i), compare)
                     .ThenBy(i => At(tieBreak, i), compare)
                     .ThenBy(i => i)

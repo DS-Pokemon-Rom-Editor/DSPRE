@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia.Data
         private static string GroupOfCall(int[] args)
         {
             if (args.Length < 1) return "What happens";
-            var r = BattleAnimFuncs.Get(args[0]);
+            BattleAnimFunc r = BattleAnimFuncs.Get(args[0]);
             if (r == null) return "What happens";
 
             for (int w = 0; w < r.Words.Length && w + 2 < args.Length; w++)
@@ -89,13 +89,13 @@ namespace DSPRE.Avalonia.Data
         public static List<BattleAnimLine> Build(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version,
                                            BattleAnimViewMode mode, Func<int, string> soundName = null)
         {
-            var lines = new List<BattleAnimLine>();
+            List<BattleAnimLine> lines = new List<BattleAnimLine>();
             if (cmds == null || cmds.Count == 0) return lines;
 
             if (mode == BattleAnimViewMode.Raw) { BuildRaw(cmds, version, lines); return lines; }
 
-            var folds = BattleAnimMacros.Find(cmds, version);
-            var foldAt = folds.ToDictionary(f => f.From);
+            List<BattleAnimMacros.Folded> folds = BattleAnimMacros.Find(cmds, version);
+            Dictionary<int, BattleAnimMacros.Folded> foldAt = folds.ToDictionary(f => f.From);
 
             if (mode == BattleAnimViewMode.Guided) BuildGuided(cmds, version, folds, foldAt, lines, soundName);
             else BuildScript(cmds, version, foldAt, lines, soundName);
@@ -106,9 +106,9 @@ namespace DSPRE.Avalonia.Data
         {
             for (int i = 0; i < cmds.Count; i++)
             {
-                var c = cmds[i];
+                WazaSeqCommand c = cmds[i];
                 string name = BattleAnimCommands.Name(version, c.OpId) ?? "?";
-                var sb = new StringBuilder();
+                StringBuilder sb = new StringBuilder();
                 sb.Append($"{c.WordPos,5}  {c.OpId,3}  {(name ?? ""),-26}");
                 foreach (int a in c.Args) sb.Append($" {a,11}");
                 if (c.Args.Length > 0)
@@ -133,14 +133,14 @@ namespace DSPRE.Avalonia.Data
             int depth = 0;
             for (int i = 0; i < cmds.Count; )
             {
-                if (foldAt.TryGetValue(i, out var fold))
+                if (foldAt.TryGetValue(i, out BattleAnimMacros.Folded fold))
                 {
                     lines.Add(FoldLine(fold, depth));
                     i += fold.Count;
                     continue;
                 }
 
-                var c = cmds[i];
+                WazaSeqCommand c = cmds[i];
                 string name = BattleAnimCommands.Name(version, c.OpId) ?? "?";
                 bool closes = name is "EndLoop" or "Return";
                 if (closes) depth = Math.Max(0, depth - 1);
@@ -163,16 +163,16 @@ namespace DSPRE.Avalonia.Data
                                         List<BattleAnimMacros.Folded> folds, Dictionary<int, BattleAnimMacros.Folded> foldAt,
                                         List<BattleAnimLine> lines, Func<int, string> soundName)
         {
-            var byGroup = new List<(string group, BattleAnimLine line)>();
+            List<(string group, BattleAnimLine line)> byGroup = new List<(string group, BattleAnimLine line)>();
             for (int i = 0; i < cmds.Count; )
             {
-                if (foldAt.TryGetValue(i, out var fold))
+                if (foldAt.TryGetValue(i, out BattleAnimMacros.Folded fold))
                 {
                     byGroup.Add(("What it loads", FoldLine(fold, 0)));
                     i += fold.Count;
                     continue;
                 }
-                var c = cmds[i];
+                WazaSeqCommand c = cmds[i];
                 string name = BattleAnimCommands.Name(version, c.OpId) ?? "?";
                 string group = name is "CallFunc" or "Nop11"
                     ? GroupOfCall(c.Args) : GroupOf(name);
@@ -186,27 +186,27 @@ namespace DSPRE.Avalonia.Data
                 i++;
             }
 
-            var order = new[]
+            string[] order = new[]
             {
                 "What it loads", "Which version plays", "Settings for the next command",
                 "What the attacker does", "What happens", "What hits the target",
                 "What the screen does", "What it sounds like", "How it is timed",
                 "What it puts back", "Where it ends",
             };
-            var groups = byGroup.Select(x => x.group).Distinct()
+            List<string> groups = byGroup.Select(x => x.group).Distinct()
                                 .OrderBy(g => { int at = Array.IndexOf(order, g); return at < 0 ? order.Length : at; })
                                 .ToList();
-            foreach (var g in groups)
+            foreach (string g in groups)
             {
                 lines.Add(new BattleAnimLine { IsHeading = true, Text = g });
-                foreach (var (group, line) in byGroup)
+                foreach ((string group, BattleAnimLine line) in byGroup)
                     if (group == g) { line.Depth = 1; lines.Add(line); }
             }
         }
 
         private static BattleAnimLine FoldLine(BattleAnimMacros.Folded f, int depth)
         {
-            var sb = new StringBuilder((f.Macro.Name ?? "").PadRight(26));
+            StringBuilder sb = new StringBuilder((f.Macro.Name ?? "").PadRight(26));
             for (int s = 0; s < f.Settings.Length; s++)
             {
                 string label = s < f.Macro.Settings.Length ? f.Macro.Settings[s] : "setting " + s;
@@ -226,7 +226,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (opName is "CallFunc" or "Nop11" && args.Length >= 2)
             {
-                var call = new StringBuilder((opName ?? "").PadRight(22));
+                StringBuilder call = new StringBuilder((opName ?? "").PadRight(22));
                 call.Append(RoutineName(args[0]).PadRight(24));
                 for (int w = 2; w < args.Length; w++)
                 {
@@ -238,7 +238,7 @@ namespace DSPRE.Avalonia.Data
                 return call.ToString();
             }
 
-            var sb = new StringBuilder((opName ?? "").PadRight(22));
+            StringBuilder sb = new StringBuilder((opName ?? "").PadRight(22));
             for (int i = 0; i < args.Length; i++)
             {
                 string label = BattleAnimSchema.ParamName(opName, i) ?? ("arg " + i);
@@ -269,10 +269,10 @@ namespace DSPRE.Avalonia.Data
                 if (!string.IsNullOrEmpty(n)) return n;
             }
 
-            var options = BattleAnimSchema.EnumFor(opName, i);
+            BattleAnimSchema.EnumOption[] options = BattleAnimSchema.EnumFor(opName, i);
             if (options != null)
             {
-                foreach (var o in options)
+                foreach (BattleAnimSchema.EnumOption o in options)
                     if (o.Value == v) return o.Label;
             }
             return v.ToString();
@@ -282,10 +282,10 @@ namespace DSPRE.Avalonia.Data
         {
             if (opName is "CallFunc" or "Nop11" && args.Length > 0)
             {
-                var r = BattleAnimFuncs.Get(args[0]);
+                BattleAnimFunc r = BattleAnimFuncs.Get(args[0]);
                 if (r != null)
                 {
-                    var sb = new StringBuilder(r.Summary);
+                    StringBuilder sb = new StringBuilder(r.Summary);
                     for (int w = 0; w + 2 < args.Length; w++)
                     {
                         string m = BattleAnimFuncs.WordMeaning(args[0], w);

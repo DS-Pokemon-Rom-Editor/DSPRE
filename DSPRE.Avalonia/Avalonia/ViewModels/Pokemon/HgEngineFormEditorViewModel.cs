@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
             w.Write(Slots.Count);
-            foreach (var row in Slots) { w.Write(row.PokemonIndex); w.Write(row.NeedsReversion); }
+            foreach (FormSlotRow row in Slots) { w.Write(row.PokemonIndex); w.Write(row.NeedsReversion); }
         });
 
         private void ApplyState(byte[] state)
@@ -107,7 +107,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Runtime constructor ──────────────────────────────────────────────
         public HgEngineFormEditorViewModel(string[] pokemonNames)
         {
-            foreach (var n in pokemonNames) PokemonNames.Add(n);
+            foreach (string n in pokemonNames) PokemonNames.Add(n);
             _species = HgEngineSymbolTable.Load("include/constants/species.h");
             _table = HgEngineFormRegistry.LoadAll();
             _selectedSpeciesIndex = 1;
@@ -118,9 +118,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             Slots.Clear();
             string designator = SelectedSpeciesDesignator;
-            if (designator != null && _table.TryGetValue(designator, out var slots))
+            if (designator != null && _table.TryGetValue(designator, out List<HgEngineFormRegistry.FormSlot> slots))
             {
-                foreach (var slot in slots)
+                foreach (HgEngineFormRegistry.FormSlot slot in slots)
                 {
                     int id = _species != null && _species.TryGetValue(slot.SpeciesSymbol, out int v) ? v : -1;
                     AddRow(id, slot.NeedsReversion);
@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void AddRow(int pokemonIndex, bool needsReversion)
         {
-            var row = new FormSlotRow { PokemonIndex = pokemonIndex < 0 ? 0 : pokemonIndex, NeedsReversion = needsReversion };
+            FormSlotRow row = new FormSlotRow { PokemonIndex = pokemonIndex < 0 ? 0 : pokemonIndex, NeedsReversion = needsReversion };
             row.Changed = SetDirty;   // wired after construction, so populating initial values here never marks dirty
             Slots.Add(row);
         }
@@ -170,8 +170,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_selectedSpeciesIndex < 0 || _species == null) return;
             string SymbolFor(int id) => _species.TryGetNameWithPrefix(id, "SPECIES_", out string n) ? n : null;
 
-            var desired = new List<HgEngineFormRegistry.FormSlot>();
-            foreach (var row in Slots)
+            List<HgEngineFormRegistry.FormSlot> desired = new List<HgEngineFormRegistry.FormSlot>();
+            foreach (FormSlotRow row in Slots)
             {
                 string symbol = SymbolFor(row.PokemonIndex);
                 if (symbol == null) continue;   // couldn't resolve, skip rather than write garbage
@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
 
             int species = _selectedSpeciesIndex;
-            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
+            (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
                 HgEngineFormRegistry.TrySaveSpeciesForms(species, desired, out string writeError) ? null : writeError);
             if (!saved)
             {

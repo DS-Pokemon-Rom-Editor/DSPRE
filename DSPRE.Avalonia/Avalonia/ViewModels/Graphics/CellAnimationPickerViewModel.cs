@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             get
             {
-                var bits = new List<string>
+                List<string> bits = new List<string>
                 {
                     $"{Sequences} sequence{(Sequences == 1 ? "" : "s")}",
                     $"{Frames} frame{(Frames == 1 ? "" : "s")}",
@@ -187,11 +187,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
 
             // After the search, so the count describes what was held back from what is on screen.
-            var matched = rows.ToList();
+            List<CellAnimationFound> matched = rows.ToList();
             int specialised = matched.Count(DoneBetterElsewhere);
             if (_hideSpecialised) matched = matched.Where(r => !DoneBetterElsewhere(r)).ToList();
 
-            foreach (var r in matched) Found.Add(r);
+            foreach (CellAnimationFound r in matched) Found.Add(r);
             _selected = Found.Count > 0 ? 0 : -1;
             OnPropertyChanged(nameof(SelectedIndex));
             RaiseSelection();
@@ -211,9 +211,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Every animation in the ROM, mapped archives first, then unmapped NARCs so none is missed.</summary>
         public static List<CellAnimationFound> Everywhere()
         {
-            var found = new List<CellAnimationFound>();
-            var mappedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var dir in gameDirs?.Keys.ToList() ?? new List<DirNames>())
+            List<CellAnimationFound> found = new List<CellAnimationFound>();
+            HashSet<string> mappedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (DirNames dir in gameDirs?.Keys.ToList() ?? new List<DirNames>())
             {
                 try { mappedFiles.Add(Path.GetFullPath(Path.Combine(workDir ?? "", gameDirs[dir].packedDir))); } catch { }
                 // That slot holds map headers once the dynamic headers patch is applied, not graphics.
@@ -237,8 +237,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                using var s = File.OpenRead(path);
-                var head = new byte[4];
+                using FileStream s = File.OpenRead(path);
+                byte[] head = new byte[4];
                 return s.Read(head, 0, 4) == 4 && head[0] == 'N' && head[1] == 'A' && head[2] == 'R' && head[3] == 'C';
             }
             catch { return false; }
@@ -249,14 +249,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public static List<CellAnimationFound> InArchive(ArchiveFiles narc)
         {
-            var found = new List<CellAnimationFound>();
+            List<CellAnimationFound> found = new List<CellAnimationFound>();
             try { if (!narc.Available) return found; } catch { return found; }
             DirNames dir = narc.Dir ?? default;
 
             // What each file in this archive is, so neighbours can be recognised.
             int count = narc.Count;
-            var kinds = new GraphicAssets.Kind[count];
-            var bytes = new byte[count][];
+            GraphicAssets.Kind[] kinds = new GraphicAssets.Kind[count];
+            byte[][] bytes = new byte[count][];
             for (int i = 0; i < count; i++)
             {
                 try
@@ -268,17 +268,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
 
             // This archive's own entry hooks, where it has them, beat a guess from neighbouring files.
-            var described = narc.Dir == null ? null : GraphicAssets.All.FirstOrDefault(a => a.Dir == dir);
+            GraphicAssets.Archive described = narc.Dir == null ? null : GraphicAssets.All.FirstOrDefault(a => a.Dir == dir);
 
             // Reading a layout or a sheet is not free and the same one is asked about repeatedly, so each is
             // read once per archive.
-            var banksAt = new Dictionary<int, List<DsBgScreen.Oam[]>>();
-            var tilesAt = new Dictionary<int, int>();
+            Dictionary<int, List<DsBgScreen.Oam[]>> banksAt = new Dictionary<int, List<DsBgScreen.Oam[]>>();
+            Dictionary<int, int> tilesAt = new Dictionary<int, int>();
 
             List<DsBgScreen.Oam[]> BanksOf(int at)
             {
                 if (at < 0 || at >= count) return new List<DsBgScreen.Oam[]>();
-                if (!banksAt.TryGetValue(at, out var banks))
+                if (!banksAt.TryGetValue(at, out List<DsBgScreen.Oam[]> banks))
                 {
                     try { banks = DsBgScreen.ReadCells(bytes[at]); }
                     catch { banks = new List<DsBgScreen.Oam[]>(); }
@@ -303,7 +303,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (narc.Dir == DirNames.monIcons)
             {
                 const int IconAnimation = 1, IconLayout = 2, IconPalette = 0;
-                var iconFile = IconAnimation < count && kinds[IconAnimation] == GraphicAssets.Kind.CellAnimation
+                NanrFile iconFile = IconAnimation < count && kinds[IconAnimation] == GraphicAssets.Kind.CellAnimation
                     ? NanrFile.Read(bytes[IconAnimation]) : null;
                 if (iconFile != null)
                 {
@@ -312,7 +312,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     int banks = BanksOf(IconLayout).Count;
                     for (int f = PokemonIconFiles.SharedFiles + 1; f < count; f++)
                     {
-                        var icon = PokemonIconFiles.Describe(f);
+                        PokemonIconFiles.Icon icon = PokemonIconFiles.Describe(f);
                         if (icon == null) continue;
                         int row;
                         try { row = DSUtils.GetMonIconPaletteId(f - PokemonIconFiles.SharedFiles); } catch { row = 0; }
@@ -335,12 +335,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 if (narc.Dir == DirNames.monIcons) break;
                 if (kinds[i] != GraphicAssets.Kind.CellAnimation) continue;
-                var file = NanrFile.Read(bytes[i]);
+                NanrFile file = NanrFile.Read(bytes[i]);
                 if (file == null) continue;
 
                 // Which drawings this animation actually names. A layout too short to hold them is the wrong
                 // layout however close it sits.
-                var wanted = new SortedSet<int>();
+                SortedSet<int> wanted = new SortedSet<int>();
                 for (int s = 0; s < file.Sequences.Count; s++)
                     for (int f = 0; f < file.Sequences[s].Frames.Count; f++)
                     {
@@ -351,7 +351,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 int cells = BestFit(kinds, i, GraphicAssets.Kind.CellLayout,
                                     at => BanksOf(at).Count > topCell);
-                var chosen = BanksOf(cells);
+                List<DsBgScreen.Oam[]> chosen = BanksOf(cells);
                 int topTile = HighestTile(chosen, wanted);
 
                 // A file the archive names outright beats one picked by distance, and still has to reach
@@ -410,7 +410,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             foreach (int b in used)
             {
                 if (b < 0 || b >= banks.Count) continue;
-                foreach (var piece in banks[b])
+                foreach (DsBgScreen.Oam piece in banks[b])
                 {
                     if (piece == null) continue;
                     int wide = Math.Max(1, piece.Width / 8), tall = Math.Max(1, piece.Height / 8);

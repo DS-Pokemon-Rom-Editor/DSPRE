@@ -24,7 +24,7 @@ namespace DSPRE
         {
             if (FromHgEngineSource) return (true, int.MaxValue);
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return (false, 0);
-            using var reader = new BinaryReader(File.OpenRead(OverlayUtils.GetPath(OVERLAY_NUMBER)));
+            using BinaryReader reader = new BinaryReader(File.OpenRead(OverlayUtils.GetPath(OVERLAY_NUMBER)));
             reader.BaseStream.Seek(RomInfo.GetEggMoveTableOffset(), SeekOrigin.Begin);
             int magic = reader.ReadInt32(), maxMoves = reader.ReadInt32();
             return magic == ExpandedMagic ? (true, maxMoves) : (false, 0);
@@ -41,9 +41,9 @@ namespace DSPRE
             if (FromHgEngineSource) { WriteSource(entries); return; }
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {
-                var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
-                using var stream = File.OpenWrite(path);
-                using var w = new BinaryWriter(stream);
+                string path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
+                using FileStream stream = File.OpenWrite(path);
+                using BinaryWriter w = new BinaryWriter(stream);
                 WriteTable(w, entries);
                 if (stream.Position < stream.Length) stream.SetLength(stream.Position);
             }
@@ -51,25 +51,25 @@ namespace DSPRE
             {
                 string folder = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
                 Directory.CreateDirectory(folder);
-                var hasFile = new HashSet<int>();
-                foreach (var e in entries)
+                HashSet<int> hasFile = new HashSet<int>();
+                foreach (EggMoveEntry e in entries)
                 {
-                    using var w = new BinaryWriter(File.Create(Path.Combine(folder, e.speciesID.ToString("D4"))));
-                    foreach (var m in e.moveIDs) w.Write(m);
+                    using BinaryWriter w = new BinaryWriter(File.Create(Path.Combine(folder, e.speciesID.ToString("D4"))));
+                    foreach (ushort m in e.moveIDs) w.Write(m);
                     w.Write((ushort)0xFFFF);
                     hasFile.Add(e.speciesID);
                 }
                 for (int i = 0; i < speciesCount; i++)
                 {
                     if (hasFile.Contains(i)) continue;
-                    using var w = new BinaryWriter(File.Create(Path.Combine(folder, i.ToString("D4"))));
+                    using BinaryWriter w = new BinaryWriter(File.Create(Path.Combine(folder, i.ToString("D4"))));
                     w.Write((ushort)0xFFFF);
                 }
             }
             else
             {
-                using var stream = File.OpenWrite(OverlayUtils.GetPath(OVERLAY_NUMBER));
-                using var w = new BinaryWriter(stream);
+                using FileStream stream = File.OpenWrite(OverlayUtils.GetPath(OVERLAY_NUMBER));
+                using BinaryWriter w = new BinaryWriter(stream);
                 stream.Seek(RomInfo.GetEggMoveTableOffset(), SeekOrigin.Begin);
                 WriteTable(w, entries);
             }
@@ -79,12 +79,12 @@ namespace DSPRE
         private static void WriteSource(IReadOnlyList<EggMoveEntry> entries)
         {
             string field = HgEngine.HgEngineLearnsets.EggMovesField;
-            if (!HgEngine.HgEngineLearnsets.TryGetAllMoveNames(field, out var before, out string error)) throw new IOException(error);
-            var now = new Dictionary<int, List<int>>();
-            foreach (var e in entries) now[e.speciesID] = e.moveIDs.Select(m => (int)m).ToList();
-            var changes = new Dictionary<int, IReadOnlyList<int>>();
-            foreach (var (species, moves) in now)
-                if (!before.TryGetValue(species, out var was) ? moves.Count > 0 : !was.SequenceEqual(moves)) changes[species] = moves;
+            if (!HgEngine.HgEngineLearnsets.TryGetAllMoveNames(field, out Dictionary<int, List<int>> before, out string error)) throw new IOException(error);
+            Dictionary<int, List<int>> now = new Dictionary<int, List<int>>();
+            foreach (EggMoveEntry e in entries) now[e.speciesID] = e.moveIDs.Select(m => (int)m).ToList();
+            Dictionary<int, IReadOnlyList<int>> changes = new Dictionary<int, IReadOnlyList<int>>();
+            foreach ((int species, List<int> moves) in now)
+                if (!before.TryGetValue(species, out List<int> was) ? moves.Count > 0 : !was.SequenceEqual(moves)) changes[species] = moves;
             foreach (int species in before.Keys)
                 if (!now.ContainsKey(species)) changes[species] = new List<int>();
             if (!HgEngine.HgEngineLearnsets.TrySaveMoveNames(field, changes, out error)) throw new IOException(error);
@@ -92,17 +92,17 @@ namespace DSPRE
 
         private static List<EggMoveEntry> ReadSource()
         {
-            if (!HgEngine.HgEngineLearnsets.TryGetAllMoveNames(HgEngine.HgEngineLearnsets.EggMovesField, out var lists, out string error))
+            if (!HgEngine.HgEngineLearnsets.TryGetAllMoveNames(HgEngine.HgEngineLearnsets.EggMovesField, out Dictionary<int, List<int>> lists, out string error))
                 throw new IOException(error);
             return lists.OrderBy(kv => kv.Key).Select(kv => new EggMoveEntry(kv.Key, kv.Value.Select(m => (ushort)m).ToList())).ToList();
         }
 
         private static void WriteTable(BinaryWriter w, IReadOnlyList<EggMoveEntry> entries)
         {
-            foreach (var e in entries)
+            foreach (EggMoveEntry e in entries)
             {
                 w.Write((ushort)(e.speciesID + SPECIES_CONSTANT));
-                foreach (var m in e.moveIDs) w.Write(m);
+                foreach (ushort m in e.moveIDs) w.Write(m);
             }
             w.Write((ushort)0xFFFF);
         }
@@ -111,7 +111,7 @@ namespace DSPRE
         {
             if (FromHgEngineSource) return ReadSource();
             const int overlayNum = OVERLAY_NUMBER;
-            var result = new List<EggMoveEntry>();
+            List<EggMoveEntry> result = new List<EggMoveEntry>();
             bool useSpecial = false;
 
             EndianBinaryReader reader = null;
@@ -120,7 +120,7 @@ namespace DSPRE
                 if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
                 {
                     DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eggMoves });
-                    var path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
+                    string path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir, "0000");
                     reader = new EndianBinaryReader(File.OpenRead(path), Endianness.LittleEndian);
                 }
                 else
@@ -139,11 +139,11 @@ namespace DSPRE
                     reader?.Close();
                     DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.eggMoves });
                     string folder = RomInfo.gameDirs[RomInfo.DirNames.eggMoves].unpackedDir;
-                    foreach (var file in Directory.GetFiles(folder))
+                    foreach (string file in Directory.GetFiles(folder))
                     {
                         if (!int.TryParse(Path.GetFileName(file), out int speciesID)) continue;
-                        var moves = new List<ushort>();
-                        using var r = new EndianBinaryReader(File.OpenRead(file), Endianness.LittleEndian);
+                        List<ushort> moves = new List<ushort>();
+                        using EndianBinaryReader r = new EndianBinaryReader(File.OpenRead(file), Endianness.LittleEndian);
                         while (r.BaseStream.Position < r.BaseStream.Length)
                         {
                             ushort id = r.ReadUInt16();
@@ -167,7 +167,7 @@ namespace DSPRE
                         }
                         else if (idx >= 0)
                         {
-                            var e = result[idx]; e.moveIDs.Add(read); result[idx] = e;
+                            EggMoveEntry e = result[idx]; e.moveIDs.Add(read); result[idx] = e;
                         }
                     }
                 }

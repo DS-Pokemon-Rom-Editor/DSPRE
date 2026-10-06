@@ -40,7 +40,7 @@ namespace DSPRE.ROMFiles
         public (float r, float g, float b)? ColourAt(int material, int frame)
         {
             if (material < 0 || material >= _tracks.Count) return null;
-            var track = _tracks[material].Diffuse;
+            ushort[] track = _tracks[material].Diffuse;
             if (track == null || track.Length == 0) return null;
             int c = track[Math.Clamp(frame, 0, track.Length - 1)];
             return ((c & 0x1F) / 31f, ((c >> 5) & 0x1F) / 31f, ((c >> 10) & 0x1F) / 31f);
@@ -66,7 +66,7 @@ namespace DSPRE.ROMFiles
 
             // The outer list names the MODEL the animation belongs to and points at one chunk per model.
             // The materials it actually fades are named inside that chunk.
-            var result = new MaterialColourAnimation();
+            MaterialColourAnimation result = new MaterialColourAnimation();
             foreach (int chunk in ChunkOffsets(d, section))
             {
                 if (chunk + 12 > d.Length) continue;
@@ -151,7 +151,7 @@ namespace DSPRE.ROMFiles
             int start = chunk + value;
             if (start < 0 || start + frames * 2 > d.Length) return null;
 
-            var track = new ushort[frames];
+            ushort[] track = new ushort[frames];
             for (int f = 0; f < frames; f++) track[f] = BitConverter.ToUInt16(d, start + f * 2);
             return track;
         }
@@ -166,7 +166,7 @@ namespace DSPRE.ROMFiles
             int start = chunk + value;
             if (start + frames > d.Length) return null;
 
-            var track = new byte[frames];
+            byte[] track = new byte[frames];
             for (int f = 0; f < frames; f++)
             {
                 byte v = d[start + f];
@@ -184,7 +184,7 @@ namespace DSPRE.ROMFiles
         public float? Evaluate(int material, int frame)
         {
             if (material < 0 || material >= _tracks.Count) return null;
-            var track = _tracks[material].Alpha;
+            byte[] track = _tracks[material].Alpha;
             if (track == null || track.Length == 0) return null;
             if (frame < 0) frame = 0;
             return track[frame % track.Length] / (float)SolidAlpha;
@@ -196,7 +196,7 @@ namespace DSPRE.ROMFiles
         public bool IsStatic(int material)
         {
             if (material < 0 || material >= _tracks.Count) return true;
-            var track = _tracks[material].Alpha;
+            byte[] track = _tracks[material].Alpha;
             return track == null || track.Distinct().Count() <= 1;
         }
     }

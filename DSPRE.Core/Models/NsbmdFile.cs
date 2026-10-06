@@ -61,7 +61,7 @@ namespace DSPRE.Models
             whynot = null;
             if (bytes == null || bytes.Length < 0x18) { whynot = "No model data."; return null; }
 
-            var f = new NsbmdFile { Bytes = bytes };
+            NsbmdFile f = new NsbmdFile { Bytes = bytes };
             if (U32(bytes, 0) != MagicBmd0) { whynot = "Not an NSBMD file."; return null; }
 
             int said = (int)U32(bytes, 8);
@@ -169,7 +169,7 @@ namespace DSPRE.Models
             int size = U16(Bytes, record + 2);
             if (size < 44 || record + size > Bytes.Length) return null;
 
-            var copy = new byte[size];
+            byte[] copy = new byte[size];
             Array.Copy(Bytes, record, copy, 0, size);
             return copy;
         }
@@ -179,7 +179,7 @@ namespace DSPRE.Models
             whynot = null;
             if (replaced == null || replaced.Count == 0) return (byte[])Bytes.Clone();
 
-            foreach (var kv in replaced)
+            foreach (KeyValuePair<int, byte[]> kv in replaced)
             {
                 if (kv.Key < 0 || kv.Key >= _shapes.Count)
                     { whynot = $"No shape {kv.Key}."; return null; }
@@ -190,19 +190,19 @@ namespace DSPRE.Models
             }
 
             int lastRecordEnd = 0;
-            foreach (var s in _shapes) lastRecordEnd = Math.Max(lastRecordEnd, s.RecordAt + 16);
+            foreach (Shape s in _shapes) lastRecordEnd = Math.Max(lastRecordEnd, s.RecordAt + 16);
             int firstDl = int.MaxValue;
-            foreach (var s in _shapes) firstDl = Math.Min(firstDl, s.DisplayListAt);
+            foreach (Shape s in _shapes) firstDl = Math.Min(firstDl, s.DisplayListAt);
             if (_shapes.Count > 0 && firstDl < lastRecordEnd)
                 { whynot = "Unsupported layout: display list before shape record."; return null; }
 
-            var order = new List<int>();
+            List<int> order = new List<int>();
             for (int i = 0; i < _shapes.Count; i++) order.Add(i);
             order.Sort((a, b) => _shapes[a].DisplayListAt.CompareTo(_shapes[b].DisplayListAt));
 
-            var taken = new List<byte[]>();
+            List<byte[]> taken = new List<byte[]>();
             foreach (int at in order)
-                taken.Add(replaced.TryGetValue(at, out var made)
+                taken.Add(replaced.TryGetValue(at, out byte[] made)
                     ? made
                     : Slice(Bytes, _shapes[at].DisplayListAt, _shapes[at].DisplayListSize));
 
@@ -212,14 +212,14 @@ namespace DSPRE.Models
                 wasEnd = Math.Max(wasEnd, _shapes[at].DisplayListAt + _shapes[at].DisplayListSize);
 
             int nowEnd = region;
-            foreach (var b in taken) nowEnd += b.Length;
+            foreach (byte[] b in taken) nowEnd += b.Length;
             int delta = nowEnd - wasEnd;
 
-            var outBytes = new byte[Bytes.Length + delta];
+            byte[] outBytes = new byte[Bytes.Length + delta];
             Array.Copy(Bytes, 0, outBytes, 0, region);
 
             int write = region;
-            var placed = new int[order.Count];
+            int[] placed = new int[order.Count];
             for (int i = 0; i < order.Count; i++)
             {
                 placed[i] = write;
@@ -232,7 +232,7 @@ namespace DSPRE.Models
 
             for (int i = 0; i < order.Count; i++)
             {
-                var s = _shapes[order[i]];
+                Shape s = _shapes[order[i]];
                 Put32(outBytes, s.RecordAt + 8, (uint)(placed[i] - s.RecordAt));
                 Put32(outBytes, s.RecordAt + 12, (uint)taken[i].Length);
             }
@@ -266,7 +266,7 @@ namespace DSPRE.Models
 
             for (int i = 0; i < count; i++)
             {
-                var named = new Named { NameAt = names + i * 16 };
+                Named named = new Named { NameAt = names + i * 16 };
                 named.Name = Name(bytes, named.NameAt);
 
                 uint flags = U32(bytes, entries + i * 4);
@@ -282,7 +282,7 @@ namespace DSPRE.Models
         public byte[] WithNames(IReadOnlyDictionary<int, string> pictures,
                                 IReadOnlyDictionary<int, string> colours, out string whynot)
         {
-            var made = (byte[])Bytes.Clone();
+            byte[] made = (byte[])Bytes.Clone();
             return ApplyNamesTo(made, pictures, colours, out whynot) ? made : null;
         }
 
@@ -300,12 +300,12 @@ namespace DSPRE.Models
                                    IReadOnlyDictionary<int, string> want, string what, ref string whynot)
         {
             if (want == null) return true;
-            foreach (var kv in want)
+            foreach (KeyValuePair<int, string> kv in want)
             {
                 if (kv.Key < 0 || kv.Key >= have.Count)
                 { whynot = $"No {what} {kv.Key}."; return false; }
 
-                var raw = Encoding.ASCII.GetBytes(kv.Value ?? "");
+                byte[] raw = Encoding.ASCII.GetBytes(kv.Value ?? "");
                 if (raw.Length > 16)
                 { whynot = $"\"{kv.Value}\" is {raw.Length} letters and a name holds sixteen."; return false; }
 
@@ -320,7 +320,7 @@ namespace DSPRE.Models
 
         private static byte[] Slice(byte[] from, int at, int count)
         {
-            var b = new byte[count];
+            byte[] b = new byte[count];
             Array.Copy(from, at, b, 0, count);
             return b;
         }

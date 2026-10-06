@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia.Data
         /// other set is the shiny one, so there is nothing to work out from the file's position.</summary>
         public static int ColoursFor(int fileIndex, bool shiny)
         {
-            foreach (var f in FormsAndExtras())
+            foreach (Form f in FormsAndExtras())
             {
                 if (f.HgEngineSpeciesId >= 0) continue;
                 if (fileIndex == f.BackSpriteIndex || fileIndex == f.FrontSpriteIndex)
@@ -68,25 +68,25 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The forms, each as its four files, plus whatever the table does not account for.</summary>
         public static List<GraphicAssets.Unit> UnitsFor(GraphicAssets.Archive archive, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
             // Several forms can share one pair of drawings: the table gives Egg and Bad Egg the same art,
             // and listing them as separate rows showing the same picture helps nobody.
-            var byDrawing = new Dictionary<(int, int), List<Form>>();
-            foreach (var f in FormsAndExtras())
+            Dictionary<(int, int), List<Form>> byDrawing = new Dictionary<(int, int), List<Form>>();
+            foreach (Form f in FormsAndExtras())
             {
                 if (f.HgEngineSpeciesId >= 0) continue;     // no place in this archive at all
-                var key = (f.BackSpriteIndex, f.FrontSpriteIndex);
-                if (!byDrawing.TryGetValue(key, out var list)) byDrawing[key] = list = new List<Form>();
+                (int BackSpriteIndex, int FrontSpriteIndex) key = (f.BackSpriteIndex, f.FrontSpriteIndex);
+                if (!byDrawing.TryGetValue(key, out List<Form> list)) byDrawing[key] = list = new List<Form>();
                 list.Add(f);
             }
 
-            foreach (var group in byDrawing.Values)
+            foreach (List<Form> group in byDrawing.Values)
             {
-                var first = group[0];
-                var names = group.Select(g => g.Name).Distinct().ToList();
-                var u = new GraphicAssets.Unit
+                Form first = group[0];
+                List<string> names = group.Select(g => g.Name).Distinct().ToList();
+                GraphicAssets.Unit u = new GraphicAssets.Unit
                 {
                     Archive = archive,
                     Name = names.Count == 1 ? names[0] : string.Join(" / ", names),
@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Data
                 bool oneDrawing = first.BackSpriteIndex == first.FrontSpriteIndex;
                 Add(first.BackSpriteIndex, oneDrawing ? "Drawing" : "Back");
                 Add(first.FrontSpriteIndex, "Front");
-                foreach (var g in group)
+                foreach (Form g in group)
                 {
                     Add(g.NormalPaletteIndex, "Colours");
                     Add(g.ShinyPaletteIndex, "Shiny colours");
@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < fileCount; i++)
             {
                 if (spokenFor.Contains(i)) continue;
-                var u = new GraphicAssets.Unit { Archive = archive, Name = archive.Title };
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = archive, Name = archive.Title };
                 u.Parts.Add(new GraphicAssets.UnitPart { Archive = archive, Index = i, Name = "File " + i });
                 units.Add(u);
             }
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The form a given file belongs to, and which of its four parts that file is.</summary>
         public static (Form Form, string Part)? WhoOwns(int fileIndex)
         {
-            foreach (var f in FormsAndExtras())
+            foreach (Form f in FormsAndExtras())
             {
                 if (f.HgEngineSpeciesId >= 0) continue;
                 if (fileIndex == f.BackSpriteIndex) return (f, f.BackSpriteIndex == f.FrontSpriteIndex ? "Drawing" : "Back");

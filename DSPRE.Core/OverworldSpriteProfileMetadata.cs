@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using DSPRE.HgEngine;
 
 namespace DSPRE
 {
@@ -43,8 +45,8 @@ namespace DSPRE
 
         private bool TrySetSource(int expected, int value, out string error)
         {
-            if (!HgEngine.HgEngineOverworlds.TryReadTable(out var rows, out error)) return false;
-            var row = rows.Find(r => r.Tag == _sourceTag);
+            if (!HgEngine.HgEngineOverworlds.TryReadTable(out List<HgEngineOverworlds.Entry> rows, out error)) return false;
+            HgEngineOverworlds.Entry row = rows.Find(r => r.Tag == _sourceTag);
             if (row == null) { error = $"overworld_table.c no longer has tag {_sourceTag}."; return false; }
             if (row.Properties != expected)
             {
@@ -109,9 +111,9 @@ namespace DSPRE
             {
                 if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && HgEngine.HgEngineProject.IsActive)
                 {
-                    if (!HgEngine.HgEngineOverworlds.TryReadTable(out var rows, out error)) return false;
-                    var target = rows.Find(r => r.Tag == targetAppearanceId);
-                    var source = rows.Find(r => r.Tag == sourceAppearanceId);
+                    if (!HgEngine.HgEngineOverworlds.TryReadTable(out List<HgEngineOverworlds.Entry> rows, out error)) return false;
+                    HgEngineOverworlds.Entry target = rows.Find(r => r.Tag == targetAppearanceId);
+                    HgEngineOverworlds.Entry source = rows.Find(r => r.Tag == sourceAppearanceId);
                     if (target == null || source == null) { error = "The selected profile is missing from overworld_table.c."; return false; }
                     patch = new OverworldSpriteProfileMetadataPatch(target.Tag, target.Properties, source.Properties);
                     return true;
@@ -246,8 +248,8 @@ namespace DSPRE
                 return false;
             }
 
-            var expected = new byte[length];
-            var replacement = new byte[length];
+            byte[] expected = new byte[length];
+            byte[] replacement = new byte[length];
             Array.Copy(data, targetOffset, expected, 0, length);
             Array.Copy(data, sourceOffset, replacement, 0, length);
             patch = new OverworldSpriteProfileMetadataPatch(path, targetOffset, expected, replacement);

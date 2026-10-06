@@ -363,8 +363,8 @@ namespace DSPRE.ROMFiles {
         /// <summary>Reads record <paramref name="id"/> of the unpacked archives, the way the editor opens a trainer.</summary>
         public static TrainerFile Load(int id, string name = "") {
             string file = id.ToString("D4");
-            using var prop = File.OpenRead(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerProperties].unpackedDir, file));
-            using var party = File.OpenRead(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerParty].unpackedDir, file));
+            using FileStream prop = File.OpenRead(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerProperties].unpackedDir, file));
+            using FileStream party = File.OpenRead(Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.trainerParty].unpackedDir, file));
             return new TrainerFile(new TrainerProperties((ushort)id, prop), party, name);
         }
     }

@@ -87,7 +87,7 @@ namespace DSPRE.Avalonia.Data
             try { bg = NitroBgCodec.Composite(chr, pal, scr); }
             catch { return null; }
 
-            var raw = new RawImage(bg.Width, bg.Height);
+            RawImage raw = new RawImage(bg.Width, bg.Height);
             byte[] src = bg.Rgba, dst = raw.Bgra;
             for (int i = 0; i + 3 < src.Length; i += 4)
             {
@@ -114,10 +114,10 @@ namespace DSPRE.Avalonia.Data
 
             // Index 0 is reserved for transparency, so at most MaxPaletteColors-1 distinct opaque
             // colours are usable.
-            var colorToIndex = new Dictionary<int, byte>();
-            var palette = new Color[256];
+            Dictionary<int, byte> colorToIndex = new Dictionary<int, byte>();
+            Color[] palette = new Color[256];
             int cols = img.Width / 8, rows = img.Height / 8;
-            var tiles = new byte[cols * rows * 64];
+            byte[] tiles = new byte[cols * rows * 64];
 
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)
@@ -159,26 +159,26 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 tmpNclrIn = MemberPath(_templateNclr.Value); // NCLR members are never compressed on disk
-                var nclr = new NCLR(tmpNclrIn, _templateNclr.Value);
+                NCLR nclr = new NCLR(tmpNclrIn, _templateNclr.Value);
                 nclr.Set_Palette(palette, ColorFormat.colors256, true);
                 tmpNclrOut = Path.GetTempFileName();
                 nclr.Write(tmpNclrOut);
                 byte[] nclrBytes = File.ReadAllBytes(tmpNclrOut);
 
                 tmpNcgrIn = DecompressedTemplatePath(_templateNcgr.Value);
-                var ncgr = new NCGR(tmpNcgrIn, _templateNcgr.Value);
+                NCGR ncgr = new NCGR(tmpNcgrIn, _templateNcgr.Value);
                 ncgr.Set_Tiles(tiles, img.Width, img.Height, ColorFormat.colors256, TileForm.Horizontal, true);
                 tmpNcgrOut = Path.GetTempFileName();
                 ncgr.Write(tmpNcgrOut, nclr);
                 byte[] ncgrBytes = NSMBe4.ROM.LZ77_Compress(File.ReadAllBytes(tmpNcgrOut));
 
-                var map = new NTFS[cols * rows];
+                NTFS[] map = new NTFS[cols * rows];
                 for (int ty = 0; ty < rows; ty++)
                     for (int tx = 0; tx < cols; tx++)
                         map[ty * cols + tx] = new NTFS { nPalette = 0, xFlip = 0, yFlip = 0, nTile = (ushort)(ty * cols + tx) };
 
                 tmpNscrIn = DecompressedTemplatePath(_templateNscr.Value);
-                var nscr = new NSCR(tmpNscrIn, _templateNscr.Value);
+                NSCR nscr = new NSCR(tmpNscrIn, _templateNscr.Value);
                 nscr.Set_Map(map, true, img.Width, img.Height);
                 tmpNscrOut = Path.GetTempFileName();
                 nscr.Write(tmpNscrOut, ncgr, nclr);
@@ -200,7 +200,7 @@ namespace DSPRE.Avalonia.Data
             }
             finally
             {
-                foreach (var p in new[] { tmpNcgrIn, tmpNscrIn, tmpNclrOut, tmpNcgrOut, tmpNscrOut })
+                foreach (string p in new[] { tmpNcgrIn, tmpNscrIn, tmpNclrOut, tmpNcgrOut, tmpNscrOut })
                     if (p != null) { try { File.Delete(p); } catch { } }
             }
         }

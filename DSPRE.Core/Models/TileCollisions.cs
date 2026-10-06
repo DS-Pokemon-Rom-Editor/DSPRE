@@ -19,12 +19,12 @@ namespace DSPRE.Models
             int found = 0;
             foreach (string line in File.ReadAllLines(path))
             {
-                var f = line.Split('|');
+                string[] f = line.Split('|');
                 if (f.Length < 6 || f[0] != "tile") continue;
                 if (!int.TryParse(f[1], out int listed)) continue;
                 int index = set.TileOfListed != null ? (listed < set.TileOfListed.Length ? set.TileOfListed[listed] : -1) : listed;
                 if (index < 0 || index >= set.Tiles.Count) continue;
-                var tile = set.Tiles[index];
+                MapTileset.Tile tile = set.Tiles[index];
 
                 int field = 5;
                 if (f.Length >= 12)
@@ -47,22 +47,22 @@ namespace DSPRE.Models
                     {
                         foreach (string pair in chunk.Split(','))
                         {
-                            var parts = pair.Split(':');
+                            string[] parts = pair.Split(':');
                             if (parts.Length != 2 || !int.TryParse(parts[0], out int layer)) continue;
                             if (!int.TryParse(parts[1], NumberStyles.HexNumber, null, out int value)) continue;
-                            var grid = tile.CollisionGrid(layer);
+                            int[,] grid = tile.CollisionGrid(layer);
                             for (int x = 0; x < grid.GetLength(0); x++)
                                 for (int y = 0; y < grid.GetLength(1); y++) grid[x, y] = value & 0xff;
                         }
                     }
                     else
                     {
-                        var parts = chunk.Split(',');
+                        string[] parts = chunk.Split(',');
                         if (parts.Length != 4) continue;
                         if (!int.TryParse(parts[0], out int layer) || !int.TryParse(parts[1], out int x)
                             || !int.TryParse(parts[2], out int y)
                             || !int.TryParse(parts[3], NumberStyles.HexNumber, null, out int value)) continue;
-                        var grid = tile.CollisionGrid(layer);
+                        int[,] grid = tile.CollisionGrid(layer);
                         if (x >= 0 && y >= 0 && x < grid.GetLength(0) && y < grid.GetLength(1)) grid[x, y] = value & 0xff;
                     }
                 }
@@ -76,7 +76,7 @@ namespace DSPRE.Models
         /// <summary>The .pdsts position of each tile, keyed by the tile itself so later reordering does not matter.</summary>
         public static Dictionary<MapTileset.Tile, int> ListedPlaces(MapTileset set)
         {
-            var places = new Dictionary<MapTileset.Tile, int>(ReferenceEqualityComparer.Instance);
+            Dictionary<MapTileset.Tile, int> places = new Dictionary<MapTileset.Tile, int>(ReferenceEqualityComparer.Instance);
             if (set == null) return places;
             if (set.TileOfListed == null)
                 for (int i = 0; i < set.Tiles.Count; i++) places[set.Tiles[i]] = i;
@@ -95,19 +95,19 @@ namespace DSPRE.Models
         {
             whynot = null;
             string path = tilesetPath + ".meta";
-            var lines = File.Exists(path) ? File.ReadAllLines(path).ToList() : new List<string>();
+            List<string> lines = File.Exists(path) ? File.ReadAllLines(path).ToList() : new List<string>();
             int header = lines.FindIndex(l => l.StartsWith("# Pokemon DS Map Studio tile metadata v", StringComparison.Ordinal));
             if (header >= 0) lines[header] = MetaHeader; else lines.Insert(0, MetaHeader);
 
-            var lineOf = new Dictionary<int, int>();
+            Dictionary<int, int> lineOf = new Dictionary<int, int>();
             for (int i = 0; i < lines.Count; i++)
             {
-                var f = lines[i].Split('|');
+                string[] f = lines[i].Split('|');
                 if (f.Length >= 6 && f[0] == "tile" && int.TryParse(f[1], out int listed)) lineOf[listed] = i;
             }
 
             int written = 0;
-            foreach (var (tile, listed) in tiles)
+            foreach ((MapTileset.Tile tile, int listed) in tiles)
             {
                 if (tile == null || listed < 0) continue;
                 string cells = CellsText(tile);
@@ -144,8 +144,8 @@ namespace DSPRE.Models
         // Same order as PDSMS: layer, then column, then row; row 0 is the tile's top.
         private static string CellsText(MapTileset.Tile tile)
         {
-            var parts = new List<string>();
-            foreach (var (layer, grid) in tile.CollisionDefaults.OrderBy(kv => kv.Key))
+            List<string> parts = new List<string>();
+            foreach ((int layer, int[,] grid) in tile.CollisionDefaults.OrderBy(kv => kv.Key))
                 for (int x = 0; x < grid.GetLength(0); x++)
                     for (int y = 0; y < grid.GetLength(1); y++)
                         if (grid[x, y] >= 0) parts.Add($"{layer},{x},{y},{grid[x, y] & 0xff:X2}");
@@ -157,37 +157,37 @@ namespace DSPRE.Models
         {
             if (grid == null || set == null || types == null || collisions == null) return 0;
             int n = TileGrid.Across;
-            var seen = new Dictionary<(int tile, int layer, int ix, int iy), List<int>>();
-            foreach (var (ax, az, square) in grid.Placed())
+            Dictionary<(int tile, int layer, int ix, int iy), List<int>> seen = new Dictionary<(int tile, int layer, int ix, int iy), List<int>>();
+            foreach ((int ax, int az, TileGrid.Square square) in grid.Placed())
             {
                 if (square.Tile < 0 || square.Tile >= set.Tiles.Count || !square.WhereItWasPut) continue;
-                var tile = set.Tiles[square.Tile];
+                MapTileset.Tile tile = set.Tiles[square.Tile];
                 for (int ix = 0; ix < tile.FootprintWide; ix++)
                     for (int iy = 0; iy < tile.FootprintDeep; iy++)
                     {
-                        var (mx, mz) = OnMap(tile, square, ax, az, ix, iy);
+                        (int mx, int mz) = OnMap(tile, square, ax, az, ix, iy);
                         if (mx < 0 || mz < 0 || mx >= n || mz >= n) continue;
-                        foreach (var (layer, from) in new[] { (TypeLayer, types), (CollisionLayer, collisions) })
+                        foreach ((int layer, byte[,] from) in new[] { (TypeLayer, types), (CollisionLayer, collisions) })
                         {
-                            if (!seen.TryGetValue((square.Tile, layer, ix, iy), out var values)) seen[(square.Tile, layer, ix, iy)] = values = new List<int>();
+                            if (!seen.TryGetValue((square.Tile, layer, ix, iy), out List<int> values)) seen[(square.Tile, layer, ix, iy)] = values = new List<int>();
                             values.Add(from[mz, mx]);
                         }
                     }
             }
 
             int learned = 0;
-            foreach (var byTile in seen.GroupBy(kv => kv.Key.tile))
+            foreach (IGrouping<int, KeyValuePair<(int tile, int layer, int ix, int iy), List<int>>> byTile in seen.GroupBy(kv => kv.Key.tile))
             {
-                var tile = set.Tiles[byTile.Key];
+                MapTileset.Tile tile = set.Tiles[byTile.Key];
                 bool any = false;
-                foreach (var byLayer in byTile.GroupBy(kv => kv.Key.layer))
+                foreach (IGrouping<int, KeyValuePair<(int tile, int layer, int ix, int iy), List<int>>> byLayer in byTile.GroupBy(kv => kv.Key.layer))
                 {
-                    var cells = new int[tile.FootprintWide, tile.FootprintDeep];
+                    int[,] cells = new int[tile.FootprintWide, tile.FootprintDeep];
                     for (int x = 0; x < cells.GetLength(0); x++) for (int y = 0; y < cells.GetLength(1); y++) cells[x, y] = -1;
                     bool anyCell = false;
-                    foreach (var kv in byLayer)
+                    foreach (KeyValuePair<(int tile, int layer, int ix, int iy), List<int>> kv in byLayer)
                     {
-                        var most = kv.Value.GroupBy(v => v).OrderByDescending(g => g.Count()).First();
+                        IGrouping<int, int> most = kv.Value.GroupBy(v => v).OrderByDescending(g => g.Count()).First();
                         if (most.Count() * 3 < kv.Value.Count * 2) continue;
                         cells[kv.Key.ix, kv.Key.iy] = most.Key;
                         anyCell = true;
@@ -206,7 +206,7 @@ namespace DSPRE.Models
         {
             float cx = ix - tile.FootprintAnchorX + 0.5f;
             float cz = tile.Deep - 1 + (iy - tile.FootprintAnchorY) + 0.5f;
-            var (tx, tz) = Turn(cx, cz, square.Turn, tile.Wide, tile.Deep);
+            (float tx, float tz) = Turn(cx, cz, square.Turn, tile.Wide, tile.Deep);
             return (ax + (int)Math.Floor(tx), az - square.PastNorth + (int)Math.Floor(tz));
         }
 
@@ -216,15 +216,15 @@ namespace DSPRE.Models
         {
             if (grid == null || set == null) return 0;
             int n = TileGrid.Across;
-            var value = new int[2, n, n];
+            int[,,] value = new int[2, n, n];
             for (int l = 0; l < 2; l++) for (int z = 0; z < n; z++) for (int x = 0; x < n; x++) value[l, z, x] = -1;
 
             for (int layer = 0; layer < TileGrid.Layers; layer++)
-                foreach (var (ax, az, square) in grid.Placed().Where(p => p.square.Layer == layer))
+                foreach ((int ax, int az, TileGrid.Square square) in grid.Placed().Where(p => p.square.Layer == layer))
                 {
                     if (square.Tile < 0 || square.Tile >= set.Tiles.Count) continue;
-                    var tile = set.Tiles[square.Tile];
-                    foreach (var (which, cells) in tile.CollisionDefaults)
+                    MapTileset.Tile tile = set.Tiles[square.Tile];
+                    foreach ((int which, int[,] cells) in tile.CollisionDefaults)
                     {
                         if (which < 0 || which > 1) continue;
                         for (int ix = 0; ix < cells.GetLength(0); ix++)
@@ -233,7 +233,7 @@ namespace DSPRE.Models
                                 int v = cells[ix, iy];
                                 if (v < 0) continue;
 
-                                var (mx, mz) = OnMap(tile, square, ax, az, ix, iy);
+                                (int mx, int mz) = OnMap(tile, square, ax, az, ix, iy);
                                 if (mx < 0 || mz < 0 || mx >= n || mz >= n) continue;
                                 value[which, mz, mx] = v;
                             }

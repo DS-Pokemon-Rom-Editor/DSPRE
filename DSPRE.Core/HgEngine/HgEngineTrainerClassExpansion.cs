@@ -30,10 +30,10 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return -1; }
-            var names = NameFile(RomInfo.trainerClassMessageNumber);
-            if (names == null || !HgEngineOwnedFiles.TryReadLines(names, out var lines, out error)) { error ??= "The trainer class names text isn't in the checkout."; return -1; }
+            HgEngineOwnedFile names = NameFile(RomInfo.trainerClassMessageNumber);
+            if (names == null || !HgEngineOwnedFiles.TryReadLines(names, out List<string> lines, out error)) { error ??= "The trainer class names text isn't in the checkout."; return -1; }
             int next = lines.Count;
-            var classes = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable classes = HgEngineSymbolTable.Load(HeaderRelPath);
             if (classes == null) { error = $"{HeaderRelPath} is missing from the checkout."; return -1; }
             if (classes.TryGetNameWithPrefix(next, Prefix, out string taken))
             { error = $"{taken} already uses {next}, the id after the last class name. Make the names and constants agree first."; return -1; }
@@ -50,14 +50,14 @@ namespace DSPRE.HgEngine
         {
             if (!HgEngineProject.IsActive) return "No hg-engine checkout linked.";
             if (name != null && string.IsNullOrWhiteSpace(name)) return "Give the class a name.";
-            var defined = HgEngineConfigState.DefinedNames();
+            HashSet<string> defined = HgEngineConfigState.DefinedNames();
             if (!defined.Contains(GenderSwitch))
                 return $"Turn on {GenderSwitch} in hg-engine Settings first. Without it the game reads a new class's gender from past the end of its own table.";
             if (!defined.Contains(MoneySwitch))
                 return $"Turn on {MoneySwitch} in hg-engine Settings first. Without it the game has no prize money row for a new class.";
             foreach (int archive in new[] { RomInfo.trainerClassMessageNumber, RomInfo.trainerClassMessageNumber + 1 })
             {
-                var file = NameFile(archive);
+                HgEngineOwnedFile file = NameFile(archive);
                 if (file == null) return $"Text {archive} isn't in the checkout.";
                 if (file.Ownership != HgEngineOwnership.EditableSource) return $"hg-engine generates text {archive} during its build, so a class name can't be added there.";
             }
@@ -85,15 +85,15 @@ namespace DSPRE.HgEngine
             if (!TryInsertAfterValue(asm, @"^(\s*\.equ\s+)(" + Prefix + @"\w+)(,\s*)(\d+)", id - 1, symbol, id, out string newAsm))
             { error = $"{AsmRelPath} has no .equ line for class {id - 1} to add after."; return false; }
 
-            var nameFile = NameFile(RomInfo.trainerClassMessageNumber);
-            var articleFile = NameFile(RomInfo.trainerClassMessageNumber + 1);
-            if (!HgEngineOwnedFiles.TryReadLines(nameFile, out var nameLines, out error)) return false;
-            if (!HgEngineOwnedFiles.TryReadLines(articleFile, out var articleLines, out error)) return false;
+            HgEngineOwnedFile nameFile = NameFile(RomInfo.trainerClassMessageNumber);
+            HgEngineOwnedFile articleFile = NameFile(RomInfo.trainerClassMessageNumber + 1);
+            if (!HgEngineOwnedFiles.TryReadLines(nameFile, out List<string> nameLines, out error)) return false;
+            if (!HgEngineOwnedFiles.TryReadLines(articleFile, out List<string> articleLines, out error)) return false;
             if (nameLines.Count != id || articleLines.Count != id)
             { error = $"Texts {RomInfo.trainerClassMessageNumber} and {RomInfo.trainerClassMessageNumber + 1} should both have {id} lines; make them agree first."; return false; }
 
             string sprites = Path.GetDirectoryName(HgEngineTrainerGraphicsSource.Stem(false, id));
-            var copies = new List<(string From, string To)>();
+            List<(string From, string To)> copies = new List<(string From, string To)>();
             if (spriteFrom >= 0)
             {
                 foreach (string suffix in SpriteSuffixes)
@@ -113,13 +113,13 @@ namespace DSPRE.HgEngine
             if (bytes == null) { error = $"{ByteReplacementRelPath} is missing from the checkout."; return false; }
 
             // Original text of every file touched, put back if any step fails.
-            var originals = new Dictionary<string, string>
+            Dictionary<string, string> originals = new Dictionary<string, string>
             {
                 [headerPath] = header, [asmPath] = asm, [bytesPath] = bytes,
             };
             foreach (string rel in new[] { MoneyRelPath, "src/pokemon.c", "src/music_tables.c" })
                 if (Read(rel, out string p) is string t) originals[p] = t;
-            var created = new List<string>();
+            List<string> created = new List<string>();
             try
             {
                 HgEngineFileCache.WriteText(headerPath, newHeader);
@@ -131,7 +131,7 @@ namespace DSPRE.HgEngine
                     throw new IOException(error);
 
                 // A copy keeps its template's date, and make rebuilds secondary files only from newer sources.
-                foreach (var (from, to) in copies) { HgEngineOverworlds.CopyAsNew(from, to); created.Add(to); }
+                foreach ((string from, string to) in copies) { HgEngineOverworlds.CopyAsNew(from, to); created.Add(to); }
 
                 if (!HgEngineTrainerClassTables.TrySetGender(id, gender, out error)) throw new IOException(error);
                 if (!HgEngineTrainerClassTables.TrySetPrizeMultiplier(id, prizeMultiplier, out error)) throw new IOException(error);
@@ -140,11 +140,11 @@ namespace DSPRE.HgEngine
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
             {
-                foreach (var (path, text) in originals)
+                foreach ((string path, string text) in originals)
                 {
                     try { HgEngineFileCache.WriteText(path, text); } catch (Exception undo) { AppLogger.Error("HgEngineTrainerClassExpansion rollback: " + undo.Message); }
                 }
-                foreach (var (file, lines) in new[] { (nameFile, nameLines), (articleFile, articleLines) })
+                foreach ((HgEngineOwnedFile file, List<string> lines) in new[] { (nameFile, nameLines), (articleFile, articleLines) })
                     HgEngineOwnedFiles.TryWriteLines(file, lines, out _);
                 foreach (string path in created)
                 {
@@ -166,7 +166,7 @@ namespace DSPRE.HgEngine
         {
             string stem = Prefix + Regex.Replace(Regex.Replace(name.ToUpperInvariant(), @"[^A-Z0-9]+", "_"), "^_+|_+$", "");
             if (stem == Prefix) stem = Prefix + "NEW";
-            var classes = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable classes = HgEngineSymbolTable.Load(HeaderRelPath);
             string symbol = stem;
             for (int n = 2; classes != null && classes.TryGetValue(symbol, out _); n++) symbol = stem + "_" + n;
             return symbol;
@@ -197,7 +197,7 @@ namespace DSPRE.HgEngine
             error = null;
             string text = HgEngineFileCache.GetText(bytesPath);
             string money = Read(MoneyRelPath, out _);
-            var table = money == null ? null : CSourceFile.For(money).Find("PrizeMoney");
+            CDeclaration table = money == null ? null : CSourceFile.For(money).Find("PrizeMoney");
             if (table == null) { error = $"{MoneyRelPath} has no PrizeMoney table."; return false; }
             int rows = table.Init.Items.Count(i => i.List != null && HgEngineConfigState.Compiles(i.Conditions) != false);
 
@@ -207,9 +207,9 @@ namespace DSPRE.HgEngine
             if (heading < 0 || (stop >= 0 && heading > stop))
             { error = $"{ByteReplacementRelPath} has no PrizeMoney table range under #ifdef {MoneySwitch}."; return false; }
 
-            var sb = new StringBuilder(text);
+            StringBuilder sb = new StringBuilder(text);
             int at = text.IndexOf('\n', heading) + 1, changed = 0;
-            var countLine = new Regex(@"^[ \t]*\w+[ \t]+[0-9A-Fa-f]{8}[ \t]+([0-9A-Fa-f]{2})[ \t]*\r?$");
+            Regex countLine = new Regex(@"^[ \t]*\w+[ \t]+[0-9A-Fa-f]{8}[ \t]+([0-9A-Fa-f]{2})[ \t]*\r?$");
             while (at > 0 && at < text.Length)
             {
                 int end = text.IndexOf('\n', at);

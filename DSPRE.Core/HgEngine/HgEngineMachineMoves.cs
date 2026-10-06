@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
@@ -31,7 +32,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine folder is open."; return false; }
 
-            var moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
+            HgEngineSymbolTable moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
             if (moves == null) { error = "Could not read include/constants/moves.h from the checkout."; return false; }
             string text = ReadSource(out string path);
             if (text == null) { error = $"Could not read {SourceRelPath} from the checkout."; return false; }
@@ -72,13 +73,13 @@ namespace DSPRE.HgEngine
         /// <summary>Writes every machine's move back by name, leaving the comments and layout as they were.</summary>
         public static bool TryWrite(IReadOnlyList<int> moves, out string error)
         {
-            if (!TryRead(out var machines, out error)) return false;
+            if (!TryRead(out List<Machine> machines, out error)) return false;
             if (moves.Count != machines.Count)
             { error = "The number of machines in src/item.c changed since the editor opened. Reopen it to edit them."; return false; }
 
-            var table = HgEngineSymbolTable.Load(MovesHeaderRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(MovesHeaderRelPath);
             string text = ReadSource(out string path);
-            var sb = new System.Text.StringBuilder(text);
+            StringBuilder sb = new System.Text.StringBuilder(text);
             // From the end, so earlier positions stay valid as names change length.
             for (int i = machines.Count - 1; i >= 0; i--)
             {

@@ -21,7 +21,7 @@ namespace LibNDSFormats.NSBCA {
         /// <returns>Material definitions.</returns>
         public static IEnumerable<NSBMDAnimation> LoadNsbca(Stream stream) {
             List<NSBMDAnimation> animation = new List<NSBMDAnimation>();
-            var reader = new EndianBinaryReader(stream, Endianness.LittleEndian);
+            EndianBinaryReader reader = new EndianBinaryReader(stream, Endianness.LittleEndian);
             byte[] id = reader.ReadBytes(4);
             if (id == new byte[] { 0x42, 0x43, 0x41, 0x30 }) {
                 throw new Exception();
@@ -52,7 +52,7 @@ namespace LibNDSFormats.NSBCA {
         /// <returns>Material definitions.</returns>
         public static IEnumerable<NSBMDAnimation> LoadNsbca(FileInfo fileInfo) {
             IEnumerable<NSBMDAnimation> result = null;
-            using (var fileStream = new FileStream(fileInfo.FullName, FileMode.Open)) {
+            using (FileStream fileStream = new FileStream(fileInfo.FullName, FileMode.Open)) {
                 result = LoadNsbca(fileStream);
             }
             return result;

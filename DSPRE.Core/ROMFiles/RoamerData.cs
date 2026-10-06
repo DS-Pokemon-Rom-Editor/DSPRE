@@ -86,7 +86,7 @@ namespace DSPRE.ROMFiles
 
         private static int FindOne(byte[] code, string signature, int from = 0, int to = -1)
         {
-            var (bytes, any) = S(signature);
+            (byte[] bytes, bool[] any) = S(signature);
             if (to < 0) to = code.Length;
             int found = -1;
             for (int i = from; i + bytes.Length <= to; i += 2)
@@ -102,7 +102,7 @@ namespace DSPRE.ROMFiles
 
         private static bool At(byte[] code, int at, string signature)
         {
-            var (bytes, any) = S(signature);
+            (byte[] bytes, bool[] any) = S(signature);
             if (at < 0 || at + bytes.Length > code.Length) return false;
             for (int j = 0; j < bytes.Length; j++) if (!any[j] && code[at + j] != bytes[j]) return false;
             return true;
@@ -120,13 +120,13 @@ namespace DSPRE.ROMFiles
             data = null;
             if (HgEngine.HgEngineProject.IsActive) { error = "hg-engine keeps its roamers in src/field_roamer.c."; return false; }
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) { error = "arm9 is still compressed. Convert this project to ds-rom format first."; return false; }
-            var family = gameFamily switch { GameFamilies.DP => Family.DP, GameFamilies.Plat => Family.Plat, GameFamilies.HGSS => Family.HGSS, _ => (Family?)null };
+            Family? family = gameFamily switch { GameFamilies.DP => Family.DP, GameFamilies.Plat => Family.Plat, GameFamilies.HGSS => Family.HGSS, _ => (Family?)null };
             if (family == null) { error = "This game has no roamers DSPRE knows."; return false; }
             byte[] code;
             try { code = File.ReadAllBytes(arm9Path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { error = e.Message; return false; }
 
-            var d = new RoamerData { _code = code, _family = family.Value };
+            RoamerData d = new RoamerData { _code = code, _family = family.Value };
             error = d.Read();
             if (error != null) return false;
             data = d;
@@ -135,7 +135,7 @@ namespace DSPRE.ROMFiles
 
         private string Read()
         {
-            var layout = Layouts[_family];
+            Layout layout = Layouts[_family];
             string fail = "the roamer code isn't the game's own, so it may have been patched";
 
             // Routes: the lookup's cmp gives the count, the literal after it the table.
@@ -188,11 +188,11 @@ namespace DSPRE.ROMFiles
             }
             else
             {
-                var cases = CaseAddresses(layout);
+                List<int> cases = CaseAddresses(layout);
                 if (cases == null) return $"The roamer slot switch isn't the game's own; {fail}.";
                 foreach (int c in cases)
                 {
-                    var slot = DecodeCase(c, layout);
+                    Slot slot = DecodeCase(c, layout);
                     if (slot == null) return $"A roamer slot at 0x{ARM9.address + c:X8} isn't coded the way DSPRE reads; {fail}.";
                     Slots.Add(slot);
                 }
@@ -266,7 +266,7 @@ namespace DSPRE.ROMFiles
 
         private List<int> CaseAddresses(Layout layout)
         {
-            var cases = new List<int>();
+            List<int> cases = new List<int>();
             if (_family == Family.DP)
             {
                 // cmp r5,#k; beq case, for k = 0, 1, 2, then b default.
@@ -317,23 +317,23 @@ namespace DSPRE.ROMFiles
                 if (Slots[s].Level < 1 || Slots[s].Level > 100) return $"Roamer {s + 1}'s level must be 1 to 100.";
             }
             // The battled roamer is found by its species.
-            var dup = Slots.GroupBy(s => s.Species).FirstOrDefault(g => g.Count() > 1);
+            IGrouping<int, Slot> dup = Slots.GroupBy(s => s.Species).FirstOrDefault(g => g.Count() > 1);
             if (dup != null) return "Two roamers can't be the same species: the game finds the one you battled by species.";
             for (int r = 0; r < Routes.Count; r++)
             {
                 if (Routes[r] < 0 || Routes[r] >= mapCount) return $"Route {r + 1} points at a header that doesn't exist.";
-                var adj = Adjacency[r];
+                List<int> adj = Adjacency[r];
                 if (adj.Count < 1 || adj.Count > AdjacencyMax) return $"Route {r + 1} needs 1 to {AdjacencyMax} next routes.";
                 if (adj.Any(a => a < 0 || a >= Routes.Count)) return $"Route {r + 1} has a next route that isn't in the list.";
                 // The game rerolls until the map differs from the last, so a choice of one map would never end.
                 if (adj.Count > 1 && adj.Select(a => Routes[a]).Distinct().Count() < 2) return $"Route {r + 1}'s next routes need at least two different maps.";
             }
-            var regions = Regions ?? new[] { (0, Routes.Count) };
+            (int Start, int Count)[] regions = Regions ?? new[] { (0, Routes.Count) };
             // HGSS keeps each roamer in its region, so a next route has to be in the same one.
             int RegionOf(int r) => Array.FindIndex(regions, g => r >= g.Item1 && r < g.Item1 + g.Item2);
             for (int r = 0; r < Routes.Count; r++)
                 if (Adjacency[r].Any(a => RegionOf(a) != RegionOf(r))) return $"Route {r + 1}'s next routes have to be in its own region.";
-            foreach (var (start, count) in regions)
+            foreach ((int start, int count) in regions)
                 if (Routes.Skip(start).Take(count).Distinct().Count() < 3) return "Each roaming area needs at least three different maps, or the game can't move a roamer.";
             return null;
         }
@@ -342,7 +342,7 @@ namespace DSPRE.ROMFiles
         public void Save(int mapCount, int speciesCount)
         {
             if (Problem(mapCount, speciesCount) is string p) throw new InvalidOperationException(p);
-            var layout = Layouts[_family];
+            Layout layout = Layouts[_family];
             byte[] code = (byte[])_code.Clone();
 
             for (int r = 0; r < Routes.Count; r++) BitConverter.GetBytes((uint)Routes[r]).CopyTo(code, _routeTable + r * 4);
@@ -359,7 +359,7 @@ namespace DSPRE.ROMFiles
             }
 
             // The slot switch becomes a table lookup in the same bytes; the default path after it stays put.
-            var region = new byte[layout.SwitchLength];
+            byte[] region = new byte[layout.SwitchLength];
             layout.PatchedCode.CopyTo(region, 0);
             region[0] = (byte)(Slots.Count - 1);
             for (int s = 0; s < Slots.Count; s++)
@@ -374,7 +374,7 @@ namespace DSPRE.ROMFiles
 
             if (_family == Family.Plat)
             {
-                var fn = new byte[PtReverseLength];
+                byte[] fn = new byte[PtReverseLength];
                 PtReversePatched.CopyTo(fn, 0);
                 BitConverter.GetBytes(tableRam).CopyTo(fn, 0x28);
                 BitConverter.GetBytes(ARM9.address + (uint)_reverse + 0x30).CopyTo(fn, 0x2C);
@@ -383,7 +383,7 @@ namespace DSPRE.ROMFiles
             }
             else if (_family == Family.HGSS)
             {
-                var fn = new byte[HgReverseLength];
+                byte[] fn = new byte[HgReverseLength];
                 HgReversePatched.CopyTo(fn, 0);
                 BitConverter.GetBytes(tableRam).CopyTo(fn, 0x18);
                 fn.CopyTo(code, _reverse);

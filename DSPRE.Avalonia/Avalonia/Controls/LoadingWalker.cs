@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia.Controls
         {
             base.OnDetachedFromVisualTree(e);
             _timer.Stop();
-            foreach (var b in _pictures.Values) b.Dispose();
+            foreach (Bitmap b in _pictures.Values) b.Dispose();
             _pictures.Clear();
             _shown = null;
         }
@@ -73,7 +73,7 @@ namespace DSPRE.Avalonia.Controls
             try
             {
                 if (!AvaloniaEditorLauncher.IsRomLoaded) return false;
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.OWSprites, out var dirs)) return false;
+                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.OWSprites, out (string packedDir, string unpackedDir) dirs)) return false;
                 if (!Directory.Exists(dirs.unpackedDir) || Directory.GetFiles(dirs.unpackedDir).Length == 0) return false;
 
                 _pace = Pace.Walk;
@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.Controls
                     int first = Pick.Next(Players.Length);
                     for (int i = 0; i < Players.Length; i++)
                     {
-                        var (entry, pace) = Players[(first + i) % Players.Length];
+                        (ushort entry, Pace pace) = Players[(first + i) % Players.Length];
                         int frames = OverworldSprites.FrameCount(entry);
                         if (frames <= 0) continue;
                         _entry = entry; _frames = frames; _pace = pace;
@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia.Controls
         private void NextWalker()
         {
             _x = -32 * Scale;
-            foreach (var b in _pictures.Values) b.Dispose();
+            foreach (Bitmap b in _pictures.Values) b.Dispose();
             _pictures.Clear();
             _shown = null;
             if (!Choose()) { _timer.Stop(); IsVisible = false; }
@@ -129,12 +129,12 @@ namespace DSPRE.Avalonia.Controls
 
         private Bitmap PictureAt(int picture)
         {
-            if (_pictures.TryGetValue(picture, out var b)) return b;
-            var pix = OverworldSprites.Get(_entry, FacingRight, picture);
+            if (_pictures.TryGetValue(picture, out Bitmap b)) return b;
+            OverworldSprites.SpritePixels pix = OverworldSprites.Get(_entry, FacingRight, picture);
             if (pix == null || pix.Width <= 0 || pix.Height <= 0) return null;
-            var bmp = new WriteableBitmap(new PixelSize(pix.Width, pix.Height), new Vector(96, 96),
+            WriteableBitmap bmp = new WriteableBitmap(new PixelSize(pix.Width, pix.Height), new Vector(96, 96),
                                           PixelFormats.Rgba8888, AlphaFormat.Unpremul);
-            using (var fb = bmp.Lock())
+            using (ILockedFramebuffer fb = bmp.Lock())
             {
                 for (int y = 0; y < pix.Height; y++)
                     System.Runtime.InteropServices.Marshal.Copy(pix.Rgba, y * pix.Width * 4, fb.Address + y * fb.RowBytes, pix.Width * 4);

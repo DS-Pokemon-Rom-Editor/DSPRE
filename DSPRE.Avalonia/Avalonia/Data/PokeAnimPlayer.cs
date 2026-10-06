@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Data
         private static readonly int[] Sin = BuildTable(Math.Sin), Cos = BuildTable(Math.Cos);
         private static int[] BuildTable(Func<double, double> f)
         {
-            var t = new int[4096];
+            int[] t = new int[4096];
             for (int i = 0; i < t.Length; i++) t[i] = (int)Math.Round(f(i * 2.0 * Math.PI / 4096) * 4096);
             return t;
         }
@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Data
             _request = false;
 
             int invalid = 0;
-            foreach (var mf in _mfs)
+            foreach (Mf mf in _mfs)
             {
                 if (mf == null || !mf.Valid) { invalid++; continue; }
                 if (mf.Wait > 0) mf.Wait--;
@@ -129,7 +129,7 @@ namespace DSPRE.Avalonia.Data
 
         private void RunCmd(PokemonAnimCommand c, ref int next)
         {
-            var a = c.Args;
+            int[] a = c.Args;
             switch (c.Op)
             {
                 case PokemonAnimOp.End: RunEnd(); break;
@@ -239,7 +239,7 @@ namespace DSPRE.Avalonia.Data
             int slot = Array.FindIndex(_mfs, m => m == null || !m.Valid);
             if (slot < 0) return;   // the game has four slots and asserts past them
 
-            var mf = new Mf { Kind = kind };
+            Mf mf = new Mf { Kind = kind };
             mf.Apply = Arg(a, 0) & 0xFF;
             mf.Wait = Arg(a, 1) & 0xFF;
             for (int i = 0; i < paramNum && i + 2 < a.Length; i++) mf.W[i] = a[i + 2];
@@ -252,7 +252,7 @@ namespace DSPRE.Avalonia.Data
 
         private void StepMf(Mf mf)
         {
-            var w = mf.W;
+            int[] w = mf.W;
             switch (mf.Kind)
             {
                 case Mk.Curve:

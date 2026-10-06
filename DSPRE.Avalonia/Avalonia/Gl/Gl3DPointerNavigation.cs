@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.Gl
 
         private void OnPressed(object sender, PointerPressedEventArgs e)
         {
-            var pt = e.GetCurrentPoint(_host);
+            PointerPoint pt = e.GetCurrentPoint(_host);
             _dragAxis = -1; _painting = false; _orbiting = false; _panning = false;
 
             if (IsPaintModeActive?.Invoke() == true)
@@ -87,7 +87,7 @@ namespace DSPRE.Avalonia.Gl
         private void OnMoved(object sender, PointerEventArgs e)
         {
             if (_lastPointer is not Point last) return;
-            var p = e.GetPosition(_host);
+            Point p = e.GetPosition(_host);
 
             if (_painting) { PaintAt?.Invoke(p); _lastPointer = p; return; }
             if (IsPaintModeActive?.Invoke() == true) { _lastPointer = p; return; }   // camera locked while the paint tool is active

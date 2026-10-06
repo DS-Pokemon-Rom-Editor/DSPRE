@@ -27,7 +27,7 @@ namespace DSPRE.HgEngine
         public static string TryParse(string text, out HgEngineDexSortLists lists)
         {
             lists = new HgEngineDexSortLists { Text = text };
-            foreach (var decl in CSourceFile.For(text).Declarations)
+            foreach (CDeclaration decl in CSourceFile.For(text).Declarations)
             {
                 if (!decl.Name.StartsWith(Prefix, StringComparison.Ordinal) || decl.Dimensions.Count != 1) continue;
                 if (decl.Init.Items.Any(i => i.IsConditional || i.Designators.Count > 0 || i.List != null))
@@ -59,17 +59,17 @@ namespace DSPRE.HgEngine
             string text = Text;
             foreach (string name in changed.OrderByDescending(n => _declarations[n].Init.Open))
             {
-                var init = _declarations[name].Init;
+                CInitList init = _declarations[name].Init;
                 string body = "\n" + string.Join("\n", Lists[name].Chunk(8).Select(row => "    " + string.Join(" ", row.Select(t => t + ",")))) + "\n";
                 text = text.Substring(0, init.Open + 1) + body + text.Substring(init.Close);
             }
-            var expected = changed.ToDictionary(n => n, n => Lists[n].ToList());
+            Dictionary<string, List<string>> expected = changed.ToDictionary(n => n, n => Lists[n].ToList());
             return HgEngineVerifiedWrite.TryWrite(FilePath, RelPath, text, written =>
             {
-                string problem = TryParse(written, out var back);
+                string problem = TryParse(written, out HgEngineDexSortLists back);
                 if (problem != null) return problem;
-                foreach (var (name, list) in expected)
-                    if (!back.Lists.TryGetValue(name, out var reread) || !reread.SequenceEqual(list)) return $"{Prefix}{name} differs";
+                foreach ((string name, List<string> list) in expected)
+                    if (!back.Lists.TryGetValue(name, out List<string> reread) || !reread.SequenceEqual(list)) return $"{Prefix}{name} differs";
                 return null;
             }, out error);
         }

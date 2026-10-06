@@ -1,4 +1,7 @@
+using DSPRE.Editors;
 using DSPRE.HgEngine;
+using DSPRE.Resources;
+using DSPRE.ROMFiles;
 using Ekona.Images;
 using Images;
 using LibNDSFormats.NSBMD;
@@ -38,8 +41,8 @@ namespace DSPRE {
         /// </summary>
         public static List<int> ReplaceTextInArchives(IEnumerable<(string searchString, string replaceString, bool caseSensitive)> replacements,
             int first, int last, Func<int, bool> skip = null, object sender = null, bool wholeWord = false) {
-            var edited = new List<int>();
-            var pairs = replacements.Where(r => !string.IsNullOrEmpty(r.searchString) && r.searchString != r.replaceString).ToList();
+            List<int> edited = new List<int>();
+            List<(string searchString, string replaceString, bool caseSensitive)> pairs = replacements.Where(r => !string.IsNullOrEmpty(r.searchString) && r.searchString != r.replaceString).ToList();
             if (pairs.Count == 0) {
                 return edited;
             }
@@ -50,12 +53,12 @@ namespace DSPRE {
                     continue;
                 }
 
-                var archive = new DSPRE.ROMFiles.TextArchive(i);
+                TextArchive archive = new DSPRE.ROMFiles.TextArchive(i);
                 bool changed = false;
 
                 for (int j = 0; j < archive.messages.Count; j++) {
                     string text = archive.messages[j];
-                    foreach (var pair in pairs) {
+                    foreach ((string searchString, string replaceString, bool caseSensitive) pair in pairs) {
                         text = ReplaceInText(text, pair.searchString, pair.replaceString, pair.caseSensitive, ref changed, wholeWord);
                     }
                     archive.messages[j] = text;
@@ -108,10 +111,10 @@ namespace DSPRE {
         }
 
         public static List<(int scriptIndex, int itemId, int quantity)> GetGroundItemScriptEntries(DSPRE.ROMFiles.ScriptFile itemScript) {
-            var result = new List<(int scriptIndex, int itemId, int quantity)>();
+            List<(int scriptIndex, int itemId, int quantity)> result = new List<(int scriptIndex, int itemId, int quantity)>();
 
             for (int i = 0; i < itemScript.allScripts.Count; i++) {
-                var container = itemScript.allScripts[i];
+                ScriptCommandContainer container = itemScript.allScripts[i];
                 if (!IsGroundItemScriptEntry(container)) {
                     continue;
                 }
@@ -222,7 +225,7 @@ namespace DSPRE {
         /// <summary>Returns every offset in <paramref name="haystack"/> where <paramref name="needle"/> occurs
         /// (naive scan; needles here are short fixed byte patterns, not large enough to need Boyer-Moore).</summary>
         public static List<int> SearchBytes(byte[] haystack, byte[] needle) {
-            var matches = new List<int>();
+            List<int> matches = new List<int>();
             if (haystack == null || needle == null || needle.Length == 0 || needle.Length > haystack.Length) {
                 return matches;
             }
@@ -408,7 +411,7 @@ namespace DSPRE {
         {
             if (string.IsNullOrEmpty(arguments)) return arguments;
 
-            var converted = new StringBuilder(arguments.Length);
+            StringBuilder converted = new StringBuilder(arguments.Length);
             int index = 0;
             while (index < arguments.Length)
             {
@@ -562,8 +565,8 @@ namespace DSPRE {
             {
                 AppMessages.PumpEvents();
                 unpack.Start();
-                var outputTask = unpack.StandardOutput.ReadToEndAsync();
-                var errorTask = unpack.StandardError.ReadToEndAsync();
+                Task<string> outputTask = unpack.StandardOutput.ReadToEndAsync();
+                Task<string> errorTask = unpack.StandardError.ReadToEndAsync();
                 unpack.WaitForExit();
                 output = outputTask.Result;
                 errors = errorTask.Result.Trim();
@@ -661,8 +664,8 @@ namespace DSPRE {
             {
                 AppMessages.PumpEvents();
                 repack.Start();
-                var outputTask = repack.StandardOutput.ReadToEndAsync();
-                var errorTask = repack.StandardError.ReadToEndAsync();
+                Task<string> outputTask = repack.StandardOutput.ReadToEndAsync();
+                Task<string> errorTask = repack.StandardError.ReadToEndAsync();
                 repack.WaitForExit();
                 output = outputTask.Result;
                 errors = errorTask.Result.Trim();
@@ -874,7 +877,7 @@ namespace DSPRE {
                 AppLogger.Info("Building temp ROM: " + buildTemp.StartInfo.Arguments);
                 AppMessages.PumpEvents();
                 buildTemp.Start();
-                var errorTask = buildTemp.StandardError.ReadToEndAsync();
+                Task<string> errorTask = buildTemp.StandardError.ReadToEndAsync();
                 buildTemp.WaitForExit();
                 string errors = errorTask.Result;
 
@@ -889,8 +892,8 @@ namespace DSPRE {
                 if (!UnpackRomDsRom(tempRomPath, tempDsRomDir))
                 {
                     AppLogger.Error("ds-rom extraction failed during conversion. This may indicate overlay compression issues.");
-                    
-                    var result = AppMessages.ConfirmYesNoCancel(
+
+                    AppMessages.ConfirmResult result = AppMessages.ConfirmYesNoCancel(
                         "Conversion to ds-rom format failed during ROM extraction.\n\n" +
                         "This is usually caused by corrupted or incompatible overlay compression in the ndstool project.\n\n" +
                         "Would you like to:\n" +
@@ -937,19 +940,19 @@ namespace DSPRE {
                 string[] oldFiles = { "arm9.bin", "arm7.bin", "y9.bin", "y7.bin", "banner.bin", "header.bin" };
                 string[] oldDirs = { "data", "overlay" };
 
-                foreach (var f in oldFiles)
+                foreach (string f in oldFiles)
                 {
                     string path = Path.Combine(workDir, f);
                     if (File.Exists(path)) File.Delete(path);
                 }
-                foreach (var d in oldDirs)
+                foreach (string d in oldDirs)
                 {
                     string path = Path.Combine(workDir, d);
                     if (Directory.Exists(path)) Directory.Delete(path, true);
                 }
 
                 // 7. Move temp contents to workDir
-                foreach (var entry in Directory.GetFileSystemEntries(tempDsRomDir))
+                foreach (string entry in Directory.GetFileSystemEntries(tempDsRomDir))
                 {
                     string destPath = Path.Combine(workDir, Path.GetFileName(entry));
                     if (File.Exists(entry))
@@ -1004,12 +1007,12 @@ namespace DSPRE {
         try
         {
             // Delete current contents, never the backup being restored
-            foreach (var file in Directory.GetFiles(workDir))
+            foreach (string file in Directory.GetFiles(workDir))
             {
                 if (string.Equals(Path.GetFullPath(file), Path.GetFullPath(backupPath), StringComparison.OrdinalIgnoreCase)) continue;
                 File.Delete(file);
             }
-            foreach (var dir in Directory.GetDirectories(workDir))
+            foreach (string dir in Directory.GetDirectories(workDir))
             {
                 Directory.Delete(dir, true);
             }
@@ -1158,14 +1161,14 @@ namespace DSPRE {
             // Bad Egg has no icon of its own; shows the plain egg icon.
             if (id == names.Length - 1) id = names.Length - 2;
             int excess = id - names.Length;
-            var extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
             return (excess >= 0 && excess < extras.Length) ? extras[excess].iconId : id;
         }
 
         /// <summary>Sprite-offset and animation NARCs hold one record per real species; alt-form pseudo-ids share their base species' record.</summary>
         public static int ResolveBaseSpeciesId(int id) {
             int excess = id - GetPokemonNames().Length;
-            var extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
+            PokeDatabase.PersonalData.PersonalExtraFiles[] extras = DSPRE.Resources.PokeDatabase.PersonalData.personalExtraFiles;
             return (excess >= 0 && excess < extras.Length) ? extras[excess].monId : id;
         }
 
@@ -1186,13 +1189,13 @@ namespace DSPRE {
         public static RawImage GetItemPicRaw(int itemId, int w, int h) {
             try {
                 if (!DSPRE.ROMFiles.ItemTable.Exists(itemId)) return null;
-                var entry = DSPRE.ROMFiles.ItemTable.Read(itemId);   // PlatPatches' expanded items resolve through its overflow table
+                ItemNarcTableEntry entry = DSPRE.ROMFiles.ItemTable.Read(itemId);   // PlatPatches' expanded items resolve through its overflow table
                 int itemIconId = (int)entry.itemIcon;
                 int itemPaletteId = (int)entry.itemPalette;
                 string itemIconsDir = gameDirs[DirNames.itemIcons].unpackedDir;
 
                 string paletteFilename = itemPaletteId.ToString("D4");
-                var itemPalette = new NCLR(Path.Combine(itemIconsDir, paletteFilename), itemPaletteId, paletteFilename);
+                NCLR itemPalette = new NCLR(Path.Combine(itemIconsDir, paletteFilename), itemPaletteId, paletteFilename);
 
                 string spriteFilename = itemIconId.ToString("D4");
                 ImageBase imageBase = new NCGR(Path.Combine(itemIconsDir, spriteFilename), itemIconId, spriteFilename);
@@ -1274,7 +1277,7 @@ namespace DSPRE {
             int tilesTall = Math.Max(1, totalTiles / MonIconTilesWide);
             int h = tilesTall * MonIconTileSize;
 
-            var raw = new RawImage(MonIconWidth, h);
+            RawImage raw = new RawImage(MonIconWidth, h);
             int pos = 0;   // increments once per pixel, tile-sequential order (matches how bytes are laid out)
             for (int ty = 0; ty < tilesTall; ty++)
                 for (int tx = 0; tx < MonIconTilesWide; tx++)

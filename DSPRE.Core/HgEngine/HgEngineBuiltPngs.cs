@@ -44,8 +44,8 @@ namespace DSPRE.HgEngine
         public static Source For(string archive, int member, int memberCount)
         {
             if (!HgEngineProject.IsActive || archive == null) return null;
-            var all = Load();
-            if (all == null || !all.TryGetValue(HgEngineOwnedFiles.Normalise(archive), out var list)) return null;
+            Dictionary<string, List<Source>> all = Load();
+            if (all == null || !all.TryGetValue(HgEngineOwnedFiles.Normalise(archive), out List<Source> list)) return null;
             if (list.Count != memberCount)
             {
                 lock (_reportedMismatch)
@@ -77,16 +77,16 @@ namespace DSPRE.HgEngine
             string root = HgEngineProject.RepoPathUnc;
             string makefile = Path.Combine(root, "Makefile");
             if (!File.Exists(makefile)) return null;
-            var members = new Dictionary<string, List<Source>>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, List<Source>> members = new Dictionary<string, List<Source>>(StringComparer.OrdinalIgnoreCase);
             try
             {
                 string top = HgEngineFileCache.GetText(makefile);
-                var includes = Include.Matches(top).Select(inc => Full(root, inc.Groups[1].Value)).Where(File.Exists).ToList();
+                List<string> includes = Include.Matches(top).Select(inc => Full(root, inc.Groups[1].Value)).Where(File.Exists).ToList();
                 // Species added by script rewrite pokegra.mk, so any fragment changing reads them all again.
                 DateTime stamp = includes.Append(makefile).Max(File.GetLastWriteTimeUtc);
                 if (_members != null && _cachedFor == root && _cachedStamp == stamp) return _members;
 
-                var vars = Variables(top, new Dictionary<string, string>());
+                Dictionary<string, string> vars = Variables(top, new Dictionary<string, string>());
                 foreach (string path in includes)
                 {
                     string text = HgEngineFileCache.GetText(path);
@@ -113,21 +113,21 @@ namespace DSPRE.HgEngine
 
         private static void Read(string root, string text, Dictionary<string, string> vars, Dictionary<string, List<Source>> into)
         {
-            var pngs = new List<(string Target, Part Part, string Png)>();
+            List<(string Target, Part Part, string Png)> pngs = new List<(string Target, Part Part, string Png)>();
             foreach (Match m in PngRule.Matches(text))
                 if (!m.Groups[1].Value.Contains('%'))
                     pngs.Add((Expand(m.Groups[1].Value, vars), m.Groups[2].Value == "NCGR" ? Part.Pixels : Part.Colours, Expand(m.Groups[3].Value, vars)));
-            var patterns = PatternRule.Matches(text).Cast<Match>()
+            List<(string Target, Part Part, string Png)> patterns = PatternRule.Matches(text).Cast<Match>()
                 .Select(m => (Target: Expand(m.Groups[1].Value, vars), Part: m.Groups[2].Value == "NCGR" ? Part.Pixels : Part.Colours, Png: Expand(m.Groups[3].Value, vars)))
                 .ToList();
-            var chains = ChainRule.Matches(text).Cast<Match>()
+            List<(string Target, string From)> chains = ChainRule.Matches(text).Cast<Match>()
                 .Select(m => (Target: Expand(m.Groups[1].Value, vars), From: Expand(m.Groups[3].Value, vars)))
                 .ToList();
             // A packed picture whose .2bpp is made from a PNG counts as drawn from that PNG.
-            foreach (var (t, from) in chains)
+            foreach ((string t, string from) in chains)
             {
                 if (!t.EndsWith(".lz", StringComparison.Ordinal) || !from.EndsWith(".2bpp", StringComparison.Ordinal)) continue;
-                var art = chains.FirstOrDefault(c => c.Target == from && c.From.EndsWith(".png", StringComparison.Ordinal));
+                (string Target, string From) art = chains.FirstOrDefault(c => c.Target == from && c.From.EndsWith(".png", StringComparison.Ordinal));
                 if (art.From != null) patterns.Add((t, Part.Pixels, art.From));
             }
 
@@ -139,8 +139,8 @@ namespace DSPRE.HgEngine
                 string dirVar = create.Groups[1].Value;
                 string buildDir = Expand("$(" + dirVar + ")", vars).TrimEnd('/');
 
-                var byName = new SortedDictionary<string, Source>(StringComparer.Ordinal);
-                foreach (var (t, part, png) in pngs)
+                SortedDictionary<string, Source> byName = new SortedDictionary<string, Source>(StringComparer.Ordinal);
+                foreach ((string t, Part part, string png) in pngs)
                     if (Path.GetDirectoryName(t)?.Replace('\\', '/') == buildDir)
                         byName[Path.GetFileName(t)] = new Source(Full(root, png), part);
 
@@ -173,11 +173,11 @@ namespace DSPRE.HgEngine
                 bool ownedByEditor = HgEngineDomains.All.Any(d => d.Domain == HgEngineDomain.TrainerGraphics && d.MakeTargets.Contains(narc));
                 if (names != null && !fromSource && !ownedByEditor)
                 {
-                    var sourceDirs = SourceDirs(recipe.Value, vars, root);
+                    List<string> sourceDirs = SourceDirs(recipe.Value, vars, root);
                     foreach (string n in names)
                     {
                         if (byName.ContainsKey(n)) continue;
-                        var found = FromPattern(n, buildDir, patterns, root) ?? FromLoop(n, body, sourceDirs);
+                        Source found = FromPattern(n, buildDir, patterns, root) ?? FromLoop(n, body, sourceDirs);
                         if (found != null) byName[n] = found;
                     }
                 }
@@ -186,7 +186,7 @@ namespace DSPRE.HgEngine
                 // Built members are listed whole, sourced or not, so positions match the archive; without a build
                 // only the sourced members are known, as before.
                 into[HgEngineOwnedFiles.Normalise(target)] = names != null
-                    ? names.Select(n => byName.TryGetValue(n, out var src) ? src : null).ToList()
+                    ? names.Select(n => byName.TryGetValue(n, out Source src) ? src : null).ToList()
                     : byName.Values.ToList();
             }
         }
@@ -194,7 +194,7 @@ namespace DSPRE.HgEngine
         // A pattern rule such as $(BAGGFX_DIR)/5_%.NCGR: $(BAGGFX_DEPENDENCIES_DIR)/%.png names the PNG by the member's stem.
         private static Source FromPattern(string name, string buildDir, List<(string Target, Part Part, string Png)> patterns, string root)
         {
-            foreach (var (t, part, png) in patterns)
+            foreach ((string t, Part part, string png) in patterns)
             {
                 if (Path.GetDirectoryName(t)?.Replace('\\', '/') != buildDir) continue;
                 string file = Path.GetFileName(t);

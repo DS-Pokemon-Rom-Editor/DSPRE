@@ -20,7 +20,7 @@ namespace DSPRE.Avalonia
         /// index 0 is written fully transparent (matches DSPRE's icon-graphic convention).</summary>
         public static byte[] Encode4Bpp(byte[] indices, int width, int height, Color[] palette)
         {
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             ms.Write(Signature, 0, Signature.Length);
 
             WriteChunk(ms, "IHDR", BuildIhdr(width, height));
@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia
 
         private static byte[] BuildIhdr(int width, int height)
         {
-            var b = new byte[13];
+            byte[] b = new byte[13];
             WriteUInt32BE(b, 0, (uint)width);
             WriteUInt32BE(b, 4, (uint)height);
             b[8] = 4;   // bit depth
@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia
         private static byte[] BuildPalette(Color[] palette)
         {
             int count = Math.Min(16, palette?.Length ?? 0);
-            var b = new byte[count * 3];
+            byte[] b = new byte[count * 3];
             for (int i = 0; i < count; i++)
             {
                 b[i * 3] = palette[i].R;
@@ -61,7 +61,7 @@ namespace DSPRE.Avalonia
         private static byte[] BuildTransparency(int paletteCount)
         {
             int count = Math.Min(16, paletteCount);
-            var b = new byte[count];
+            byte[] b = new byte[count];
             b[0] = 0; // index 0 fully transparent
             for (int i = 1; i < count; i++) b[i] = 255;
             return b;
@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia
         private static byte[] BuildIdat(byte[] indices, int width, int height)
         {
             int rowBytes = (width + 1) / 2; // 2 pixels/byte, high nibble first
-            var raw = new byte[(rowBytes + 1) * height]; // +1 per row for the filter-type byte
+            byte[] raw = new byte[(rowBytes + 1) * height]; // +1 per row for the filter-type byte
 
             int outPos = 0;
             for (int y = 0; y < height; y++)
@@ -84,24 +84,24 @@ namespace DSPRE.Avalonia
                 }
             }
 
-            using var compressed = new MemoryStream();
-            using (var zlib = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
+            using MemoryStream compressed = new MemoryStream();
+            using (ZLibStream zlib = new ZLibStream(compressed, CompressionLevel.Optimal, leaveOpen: true))
                 zlib.Write(raw, 0, raw.Length);
             return compressed.ToArray();
         }
 
         private static void WriteChunk(Stream s, string type, byte[] data)
         {
-            var lenBuf = new byte[4];
+            byte[] lenBuf = new byte[4];
             WriteUInt32BE(lenBuf, 0, (uint)data.Length);
             s.Write(lenBuf, 0, 4);
 
-            var typeBytes = System.Text.Encoding.ASCII.GetBytes(type);
+            byte[] typeBytes = System.Text.Encoding.ASCII.GetBytes(type);
             s.Write(typeBytes, 0, 4);
             s.Write(data, 0, data.Length);
 
             uint crc = Crc32(typeBytes, data);
-            var crcBuf = new byte[4];
+            byte[] crcBuf = new byte[4];
             WriteUInt32BE(crcBuf, 0, crc);
             s.Write(crcBuf, 0, 4);
         }
@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia
 
         private static uint[] BuildCrcTable()
         {
-            var table = new uint[256];
+            uint[] table = new uint[256];
             for (uint n = 0; n < 256; n++)
             {
                 uint c = n;

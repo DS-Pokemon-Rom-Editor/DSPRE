@@ -29,7 +29,7 @@ namespace DSPRE.ROMFiles
         public bool Visible(int animation, int part, int frame)
         {
             if (animation < 0 || animation >= _tracks.Count) return true;
-            var v = _tracks[animation].Visible;
+            bool[][] v = _tracks[animation].Visible;
             if (part < 0 || part >= v.Length || v[part].Length == 0) return true;
             return v[part][Math.Clamp(frame, 0, v[part].Length - 1)];
         }
@@ -38,7 +38,7 @@ namespace DSPRE.ROMFiles
         public IReadOnlyList<int> PartsThatChange(int animation)
         {
             if (animation < 0 || animation >= _tracks.Count) return Array.Empty<int>();
-            var v = _tracks[animation].Visible;
+            bool[][] v = _tracks[animation].Visible;
             return Enumerable.Range(0, v.Length).Where(p => v[p].Any(x => !x)).ToArray();
         }
 
@@ -60,8 +60,8 @@ namespace DSPRE.ROMFiles
             int section = BitConverter.ToInt32(d, 16);
             if (section + 8 > d.Length || Encoding.ASCII.GetString(d, section, 4) != "VIS0") return null;
 
-            var result = new VisibilityAnimation();
-            var names = NamesIn(d, section).ToList();
+            VisibilityAnimation result = new VisibilityAnimation();
+            List<string> names = NamesIn(d, section).ToList();
             int at = 0;
             foreach (int chunk in ChunkOffsets(d, section))
             {
@@ -73,7 +73,7 @@ namespace DSPRE.ROMFiles
                 int parts = BitConverter.ToUInt16(d, chunk + 6);
                 if (frames <= 0 || parts <= 0) continue;
 
-                var track = new bool[parts][];
+                bool[][] track = new bool[parts][];
                 for (int p = 0; p < parts; p++) track[p] = new bool[frames];
 
                 int q = chunk + 12;

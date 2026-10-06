@@ -21,18 +21,18 @@ namespace DSPRE.Avalonia.Data
         {
             int columns = rows.Max(r => r.Count);
             int w = Width(columns), h = Height(rows.Count);
-            var colours = new List<uint>();
-            foreach (var p in palettes) for (int i = 0; i < 16; i++) colours.Add(0xFF000000 | (i < p.Length ? p[i] : 0));
+            List<uint> colours = new List<uint>();
+            foreach (uint[] p in palettes) for (int i = 0; i < 16; i++) colours.Add(0xFF000000 | (i < p.Length ? p[i] : 0));
 
 
-            var px = new byte[w * h];
+            byte[] px = new byte[w * h];
             for (int r = 0; r < rows.Count; r++)
             {
                 int y0 = CellY(r);
                 for (int c = 0; c < rows[r].Count; c++)
                 {
                     int x0 = CellX(c);
-                    var cell = rows[r][c];
+                    Cell cell = rows[r][c];
                     if (cell.Canvas == null) continue;
                     for (int y = 0; y < CellSize; y++)
                         for (int x = 0; x < CellSize; x++)
@@ -60,9 +60,9 @@ namespace DSPRE.Avalonia.Data
         {
             why = null;
             int w, h;
-            var sheet = new Read();
+            Read sheet = new Read();
             int[] ids;
-            if (IndexedPng.TryRead(png, out var indices, out var plte, out w, out h))
+            if (IndexedPng.TryRead(png, out byte[] indices, out uint[] plte, out w, out h))
             {
                 sheet.Indexed = true;
                 sheet.Colours.AddRange(plte.Select(c => c | 0xFF000000));
@@ -73,10 +73,10 @@ namespace DSPRE.Avalonia.Data
                     ids[i] = (plte[indices[i]] >> 24) < 128 ? 0 : indices[i];
                 }
             }
-            else if (AnyPng.TryReadRgba(png, out var rgba, out w, out h, out why))
+            else if (AnyPng.TryReadRgba(png, out byte[] rgba, out w, out h, out why))
             {
                 uint Colour(int i) => rgba[i * 4 + 3] < 128 ? 0 : 0xFF000000u | ((uint)rgba[i * 4] << 16) | ((uint)rgba[i * 4 + 1] << 8) | rgba[i * 4 + 2];
-                var seen = new Dictionary<uint, int>();
+                Dictionary<uint, int> seen = new Dictionary<uint, int>();
                 // Without a palette the background is the top left pixel.
                 uint bg = Colour(0);
                 seen[bg] = 0; seen[0] = 0;
@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.Data
             for (int r = 0; r < sheet.Rows; r++)
                 for (int c = 0; c < sheet.Columns; c++)
                 {
-                    var cell = new int[CellSize * CellSize];
+                    int[] cell = new int[CellSize * CellSize];
                     for (int y = 0; y < CellSize; y++)
                         for (int x = 0; x < CellSize; x++)
                             cell[y * CellSize + x] = ids[(CellY(r) + y) * w + CellX(c) + x];
@@ -127,7 +127,7 @@ namespace DSPRE.Avalonia.Data
         public static int[] WithSheetColours(int[] cell, int[] palettesUnder, int paletteCount, string where, out string why)
         {
             why = null;
-            var canvas = new int[cell.Length];
+            int[] canvas = new int[cell.Length];
             for (int i = 0; i < cell.Length; i++)
             {
                 int id = cell[i];
@@ -144,8 +144,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>A colour with no exact match takes the nearest, counted in <paramref name="approximated"/>.</summary>
         public static int[] WithSpriteColours(int[] cell, IReadOnlyList<uint> sheetColours, int[] palettesUnder, IReadOnlyList<uint[]> palettes, ref int approximated)
         {
-            var canvas = new int[cell.Length];
-            var cache = new Dictionary<(int, int), (int Value, bool Exact)>();
+            int[] canvas = new int[cell.Length];
+            Dictionary<(int, int), (int Value, bool Exact)> cache = new Dictionary<(int, int), (int Value, bool Exact)>();
             int all = (1 << palettes.Count) - 1;
             for (int i = 0; i < cell.Length; i++)
             {
@@ -153,13 +153,13 @@ namespace DSPRE.Avalonia.Data
                 if (id == 0) continue;
                 int banks = palettesUnder[i] & all;
                 if (banks == 0) banks = 1;
-                if (!cache.TryGetValue((id, banks), out var hit))
+                if (!cache.TryGetValue((id, banks), out (int Value, bool Exact) hit))
                 {
                     (int Value, int Distance) best = (0, int.MaxValue);
                     for (int b = 0; b < palettes.Count; b++)
                     {
                         if ((banks & (1 << b)) == 0) continue;
-                        var (index, distance) = Nearest(sheetColours[id], palettes[b]);
+                        (int index, int distance) = Nearest(sheetColours[id], palettes[b]);
                         if (distance < best.Distance) best = (b * 16 + index, distance);
                     }
                     cache[(id, banks)] = hit = (best.Value, best.Distance == 0);
@@ -189,7 +189,7 @@ namespace DSPRE.Avalonia.Data
 
         public static uint[][] SheetPalettes(Read sheet, IReadOnlyList<uint[]> current)
         {
-            var result = current.Select(p => (uint[])p.Clone()).ToArray();
+            uint[][] result = current.Select(p => (uint[])p.Clone()).ToArray();
             for (int b = 0; b < result.Length; b++)
                 for (int i = 0; i < 16 && i < result[b].Length; i++)
                 {

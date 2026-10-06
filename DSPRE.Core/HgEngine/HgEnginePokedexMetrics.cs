@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using DSPRE.ROMFiles;
 
@@ -44,8 +45,8 @@ namespace DSPRE.HgEngine
         /// <summary>The checkout's body shape names in value order, without their prefix.</summary>
         public static List<string> BodyShapeNames()
         {
-            var table = HgEngineSymbolTable.Load(PokemonH);
-            var names = new List<string>();
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(PokemonH);
+            List<string> names = new List<string>();
             if (table == null) return names;
             for (int v = 0; table.TryGetNameWithPrefix(v, BodyShapePrefix, out string name); v++)
                 names.Add(name.Substring(BodyShapePrefix.Length));
@@ -56,7 +57,7 @@ namespace DSPRE.HgEngine
         public static bool TryLoad(int speciesId, out PokedexMetrics metrics, out string error)
         {
             metrics = new PokedexMetrics();
-            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out var entry, out error)) return false;
+            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
             return HgEngineSourceFields.TryRead(entry, Fields, metrics, HgEngineSymbolTable.Load, out error);
         }
 
@@ -64,8 +65,8 @@ namespace DSPRE.HgEngine
         /// its body shape lists if those values changed.</summary>
         public static bool TryWrite(int speciesId, PokedexMetrics metrics, out string error)
         {
-            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out var entry, out error)) return false;
-            var before = new PokedexMetrics();
+            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Species, speciesId, out HgEngineSourceBlock entry, out error)) return false;
+            PokedexMetrics before = new PokedexMetrics();
             if (!HgEngineSourceFields.TryRead(entry, Fields, before, HgEngineSymbolTable.Load, out error)) return false;
             if (before.SameAs(metrics)) return true;
 
@@ -102,8 +103,8 @@ namespace DSPRE.HgEngine
             all = new Dictionary<int, PokedexMetrics>();
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout is linked."; return false; }
-            var info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineDomainInfo info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (info == null || species == null) { error = "include/constants/species.h could not be read."; return false; }
             string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
@@ -116,7 +117,7 @@ namespace DSPRE.HgEngine
                 if (open < lastClose || !BraceScanner.TryFindMatchingBrace(text, open, out int close)) continue;
                 lastClose = close;
                 if (!species.TryGetValue(m.Groups[1].Value, out int id)) continue;
-                var metrics = new PokedexMetrics();
+                PokedexMetrics metrics = new PokedexMetrics();
                 if (!HgEngineSourceFields.TryRead(new HgEngineSourceBlock(text.Substring(open, close - open + 1)), Fields, metrics, HgEngineSymbolTable.Load, out error))
                 { error = $"{m.Groups[1].Value}: {error}"; return false; }
                 all[id] = metrics;
@@ -139,22 +140,22 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineDexSortLists.Exists) return true;
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (species == null) { error = "include/constants/species.h could not be read."; return false; }
-            if (!HgEngineDexSortLists.TryLoad(out var sort, out error)) return false;
-            var tokens = sort.Lists;
-            var Id = SpeciesIds(species);
-            var changed = new HashSet<string>();
+            if (!HgEngineDexSortLists.TryLoad(out HgEngineDexSortLists sort, out error)) return false;
+            Dictionary<string, List<string>> tokens = sort.Lists;
+            Func<string, int?> Id = SpeciesIds(species);
+            HashSet<string> changed = new HashSet<string>();
 
             void Resort(string list, Func<PokedexMetrics, int> key, bool descending)
             {
-                if (!tokens.TryGetValue(list, out var order)) return;
+                if (!tokens.TryGetValue(list, out List<string> order)) return;
                 int at = order.FindIndex(t => Id(t) == speciesId);
                 if (at < 0 || key(before) == key(after)) return;
                 string token = order[at];
                 order.RemoveAt(at);
                 int value = key(after);
-                int insert = order.FindIndex(t => Id(t) is int id && all.TryGetValue(id, out var m)
+                int insert = order.FindIndex(t => Id(t) is int id && all.TryGetValue(id, out PokedexMetrics m)
                     && (descending ? key(m) < value : key(m) > value));
                 order.Insert(insert < 0 ? order.Count : insert, token);
                 changed.Add(list);
@@ -167,17 +168,17 @@ namespace DSPRE.HgEngine
             if (before.BodyShape != after.BodyShape)
             {
                 // The body shape lists follow the shape values in file order.
-                var shapeLists = sort.Names.Where(n => n.StartsWith("BodyType", StringComparison.Ordinal)).ToList();
+                List<string> shapeLists = sort.Names.Where(n => n.StartsWith("BodyType", StringComparison.Ordinal)).ToList();
                 if (before.BodyShape < shapeLists.Count && after.BodyShape < shapeLists.Count)
                 {
-                    var from = tokens[shapeLists[before.BodyShape]];
+                    List<string> from = tokens[shapeLists[before.BodyShape]];
                     int at = from.FindIndex(t => Id(t) == speciesId);
                     if (at >= 0)
                     {
                         string token = from[at];
                         from.RemoveAt(at);
                         changed.Add(shapeLists[before.BodyShape]);
-                        var to = tokens[shapeLists[after.BodyShape]];
+                        List<string> to = tokens[shapeLists[after.BodyShape]];
                         if (!to.Any(t => Id(t) == speciesId)) { to.Add(token); changed.Add(shapeLists[after.BodyShape]); }
                     }
                 }
@@ -195,28 +196,28 @@ namespace DSPRE.HgEngine
         public static bool TryRebuildSortLists(out int listed, out string error)
         {
             listed = 0;
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (species == null) { error = "include/constants/species.h could not be read."; return false; }
-            if (!TryLoadAll(out var all, out error)) return false;
-            if (!TryLoadAllTypes(out var types, out error)) return false;
-            if (!HgEngineDexSortLists.TryLoad(out var sort, out error)) return false;
-            var tokens = sort.Lists;
-            if (!tokens.TryGetValue("NationalNum", out var national)) { error = $"{HgEngineDexSortLists.RelPath} has no sPokedexSort_NationalNum."; return false; }
+            if (!TryLoadAll(out Dictionary<int, PokedexMetrics> all, out error)) return false;
+            if (!TryLoadAllTypes(out Dictionary<int, (int, int)> types, out error)) return false;
+            if (!HgEngineDexSortLists.TryLoad(out HgEngineDexSortLists sort, out error)) return false;
+            Dictionary<string, List<string>> tokens = sort.Lists;
+            if (!tokens.TryGetValue("NationalNum", out List<string> national)) { error = $"{HgEngineDexSortLists.RelPath} has no sPokedexSort_NationalNum."; return false; }
 
-            var Id = SpeciesIds(species);
-            var known = national.Distinct().Where(t => Id(t) is int id && all.ContainsKey(id)).Select(t => (Token: t, Id: Id(t).Value)).ToList();
+            Func<string, int?> Id = SpeciesIds(species);
+            List<(string Token, int Id)> known = national.Distinct().Where(t => Id(t) is int id && all.ContainsKey(id)).Select(t => (Token: t, Id: Id(t).Value)).ToList();
             listed = known.Count;
 
-            var nameSource = HgEngineGeneratedText.For(237);
+            HgEngineGeneratedText.Source nameSource = HgEngineGeneratedText.For(237);
             int count = known.Count == 0 ? 0 : known.Max(k => k.Id) + 1;
-            if (nameSource == null || !HgEngineGeneratedText.TryReadLines(nameSource, count, out var names, out error))
+            if (nameSource == null || !HgEngineGeneratedText.TryReadLines(nameSource, count, out string[] names, out error))
             { error ??= "The species names could not be read."; return false; }
 
-            var changed = new HashSet<string>();
+            HashSet<string> changed = new HashSet<string>();
             void Set(string list, IEnumerable<(string Token, int Id)> order)
             {
                 if (!tokens.ContainsKey(list)) return;
-                var next = order.Select(o => o.Token).ToList();
+                List<string> next = order.Select(o => o.Token).ToList();
                 if (next.SequenceEqual(tokens[list])) return;
                 tokens[list] = next;
                 changed.Add(list);
@@ -228,7 +229,7 @@ namespace DSPRE.HgEngine
             Set("Smallest", known.OrderBy(k => all[k.Id].Height).ThenBy(k => k.Id));
 
             string Key(int id) => SortKey(id < names.Length ? names[id] : null);
-            var byName = known.OrderBy(k => Key(k.Id), StringComparer.Ordinal).ThenBy(k => k.Id).ToList();
+            List<(string Token, int Id)> byName = known.OrderBy(k => Key(k.Id), StringComparer.Ordinal).ThenBy(k => k.Id).ToList();
             Set("NameAToZ", byName);
             for (char letter = 'A'; letter <= 'Z'; letter++)
             {
@@ -236,15 +237,15 @@ namespace DSPRE.HgEngine
                 Set("Name" + l, byName.Where(k => Key(k.Id).StartsWith(l)));
             }
 
-            var shapeLists = sort.Names.Where(n => n.StartsWith("BodyType", StringComparison.Ordinal)).ToList();
+            List<string> shapeLists = sort.Names.Where(n => n.StartsWith("BodyType", StringComparison.Ordinal)).ToList();
             for (int shape = 0; shape < shapeLists.Count; shape++)
             {
                 int value = shape;
                 Set(shapeLists[shape], known.Where(k => all[k.Id].BodyShape == value).OrderBy(k => k.Id));
             }
 
-            var typeTable = HgEngineSymbolTable.Load(PokemonH);
-            var battleTypes = HgEngineSymbolTable.Load("include/constants/battle_constants.h");
+            HgEngineSymbolTable typeTable = HgEngineSymbolTable.Load(PokemonH);
+            HgEngineSymbolTable battleTypes = HgEngineSymbolTable.Load("include/constants/battle_constants.h");
             int TypeValue(string name) => typeTable?.TryGetValue(name, out int v) == true ? v : battleTypes?.TryGetValue(name, out int w) == true ? w : -1;
             int normal = TypeValue("TYPE_NORMAL"), fairy = TypeValue("TYPE_FAIRY");
             bool fairyList = tokens.Keys.Any(k => k.Equals("TypeFairy", StringComparison.OrdinalIgnoreCase));
@@ -255,7 +256,7 @@ namespace DSPRE.HgEngine
                 if (type < 0) continue;
                 bool Has(int id)
                 {
-                    if (!types.TryGetValue(id, out var t)) return false;
+                    if (!types.TryGetValue(id, out (int, int) t)) return false;
                     if (t.Item1 == type || t.Item2 == type) return true;
                     return type == normal && !fairyList && fairy >= 0 && (t.Item1 == fairy || t.Item2 == fairy);
                 }
@@ -269,7 +270,7 @@ namespace DSPRE.HgEngine
         public static string SortKey(string name)
         {
             if (string.IsNullOrEmpty(name)) return "";
-            var b = new System.Text.StringBuilder();
+            StringBuilder b = new System.Text.StringBuilder();
             foreach (char c in name.Normalize(System.Text.NormalizationForm.FormKD))
             {
                 if (c == '\u2640') b.Append('0');
@@ -286,11 +287,11 @@ namespace DSPRE.HgEngine
         {
             types = new Dictionary<int, (int, int)>();
             error = null;
-            var info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineDomainInfo info = HgEngineDomains.All.FirstOrDefault(d => d.Domain == HgEngineDomain.Species);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (info == null || species == null) { error = "include/constants/species.h could not be read."; return false; }
-            var typeTable = HgEngineSymbolTable.Load(PokemonH);
-            var battleTypes = HgEngineSymbolTable.Load("include/constants/battle_constants.h");
+            HgEngineSymbolTable typeTable = HgEngineSymbolTable.Load(PokemonH);
+            HgEngineSymbolTable battleTypes = HgEngineSymbolTable.Load("include/constants/battle_constants.h");
             int Value(string token) => int.TryParse(token, out int n) ? n
                 : typeTable?.TryGetValue(token, out int v) == true ? v : battleTypes?.TryGetValue(token, out int w) == true ? w : -1;
             string path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
@@ -303,7 +304,7 @@ namespace DSPRE.HgEngine
                 if (open < lastClose || !BraceScanner.TryFindMatchingBrace(text, open, out int close)) continue;
                 lastClose = close;
                 if (!species.TryGetValue(m.Groups[1].Value, out int id)) continue;
-                var t = TypesField.Match(text, open, close - open);
+                Match t = TypesField.Match(text, open, close - open);
                 if (t.Success) types[id] = (Value(t.Groups[1].Value), Value(t.Groups[2].Value));
             }
             return true;
@@ -317,11 +318,11 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (before == after || !HgEngineDexSortLists.Exists) return true;
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (species == null) { error = "include/constants/species.h could not be read."; return false; }
-            if (!HgEngineDexSortLists.TryLoad(out var sort, out error)) return false;
-            var tokens = sort.Lists;
-            var Id = SpeciesIds(species);
+            if (!HgEngineDexSortLists.TryLoad(out HgEngineDexSortLists sort, out error)) return false;
+            Dictionary<string, List<string>> tokens = sort.Lists;
+            Func<string, int?> Id = SpeciesIds(species);
 
             // TYPE_FIGHTING's list is TypeFighting.
             string ListOf(int type)
@@ -336,15 +337,15 @@ namespace DSPRE.HgEngine
             }
             static bool Has((int, int) t, int type) => t.Item1 == type || t.Item2 == type;
 
-            var oldLists = new[] { before.Item1, before.Item2 }.Distinct().Select(ListOf).Where(l => l != null).ToList();
+            List<string> oldLists = new[] { before.Item1, before.Item2 }.Distinct().Select(ListOf).Where(l => l != null).ToList();
             string token = oldLists.SelectMany(l => tokens[l]).FirstOrDefault(t => Id(t) == speciesId);
             if (token == null) return true;
 
-            var changed = new HashSet<string>();
+            HashSet<string> changed = new HashSet<string>();
             foreach (int type in new[] { before.Item1, before.Item2, after.Item1, after.Item2 }.Distinct())
             {
                 if (Has(before, type) == Has(after, type) || ListOf(type) is not string list) continue;
-                var order = tokens[list];
+                List<string> order = tokens[list];
                 if (Has(after, type)) { if (!order.Any(t => Id(t) == speciesId)) order.Add(token); }
                 else order.RemoveAll(t => Id(t) == speciesId);
                 changed.Add(list);

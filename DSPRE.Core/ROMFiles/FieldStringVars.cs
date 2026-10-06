@@ -140,17 +140,17 @@ namespace DSPRE.ROMFiles
         public static List<FieldStringVar> Gather(IEnumerable<(int message, string text)> messages,
                                                   Func<int, IEnumerable<int>> scriptOf = null)
         {
-            var found = new Dictionary<string, FieldStringVar>();
-            var order = new List<FieldStringVar>();
+            Dictionary<string, FieldStringVar> found = new Dictionary<string, FieldStringVar>();
+            List<FieldStringVar> order = new List<FieldStringVar>();
             if (messages == null) return order;
 
-            foreach (var (id, text) in messages)
+            foreach ((int id, string text) in messages)
             {
                 if (!Any(text)) continue;
-                foreach (var (family, kind, buffer, _) in Find(text))
+                foreach ((int family, int kind, int buffer, string _) in Find(text))
                 {
                     string key = KeyOf(family, kind, buffer);
-                    if (!found.TryGetValue(key, out var v))
+                    if (!found.TryGetValue(key, out FieldStringVar v))
                     {
                         v = new FieldStringVar { Family = family, Kind = kind, Buffer = buffer };
                         found[key] = v;
@@ -163,7 +163,7 @@ namespace DSPRE.ROMFiles
                 }
             }
 
-            foreach (var v in order)
+            foreach (FieldStringVar v in order)
             {
                 v.Scripts.Sort();
                 v.Messages.Sort();

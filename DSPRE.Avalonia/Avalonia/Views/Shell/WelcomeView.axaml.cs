@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia.Views.Shell
         /// <summary>Opens the Welcome window (over the main shell window when available).</summary>
         public static void ShowWelcome(MainWindowView main)
         {
-            var w = new WelcomeView(main);
+            WelcomeView w = new WelcomeView(main);
             if (main != null) w.ShowDialog(main);
             else w.Show();
         }
@@ -35,21 +35,21 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private async void OpenRom_Click(object sender, RoutedEventArgs e)
         {
-            var main = _main;
+            MainWindowView main = _main;
             Close();
             if (main != null) await main.OpenRomInteractiveAsync();
         }
 
         private async void OpenFolder_Click(object sender, RoutedEventArgs e)
         {
-            var main = _main;
+            MainWindowView main = _main;
             Close();
             if (main != null) await main.OpenFolderInteractiveAsync();
         }
 
         private async void OpenHgEngineFolder_Click(object sender, RoutedEventArgs e)
         {
-            var main = _main;
+            MainWindowView main = _main;
             Close();
             if (main != null) await main.OpenHgEngineFolderInteractiveAsync();
         }
@@ -57,7 +57,7 @@ namespace DSPRE.Avalonia.Views.Shell
         private async void Recent_DoubleTapped(object sender, TappedEventArgs e)
         {
             if (RecentList.SelectedItem is not string path) return;
-            var main = _main;
+            MainWindowView main = _main;
             Close();
             if (main != null) await main.OpenRecentAsync(path);
         }

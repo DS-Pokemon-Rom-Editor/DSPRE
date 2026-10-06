@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia
                 if (_cached != null) return _cached;
                 try
                 {
-                    using var reader = XmlReader.Create(new StringReader(Xshd));
+                    using XmlReader reader = XmlReader.Create(new StringReader(Xshd));
                     _cached = HighlightingLoader.Load(reader, HighlightingManager.Instance);
                 }
                 catch { _cached = null; }

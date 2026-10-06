@@ -44,7 +44,7 @@ namespace DSPRE.Avalonia
         public static void Start(MainWindowView main)
         {
             if (main == null || _active != null) return;
-            var layer = main.FindControl<Canvas>("TourLayer");
+            Canvas layer = main.FindControl<Canvas>("TourLayer");
             if (layer == null) return;
 
             // Whether it gets finished or skipped, the tour no longer auto-starts after this.
@@ -62,13 +62,13 @@ namespace DSPRE.Avalonia
         public static void StartSteps(Control root, List<(Func<Control> target, string title, string body, Action onEnter)> steps)
         {
             if (root == null || _active != null || steps.Count == 0) return;
-            var overlay = OverlayLayer.GetOverlayLayer(root);
+            OverlayLayer overlay = OverlayLayer.GetOverlayLayer(root);
             if (overlay == null) return;
-            var layer = new Canvas { Background = null };
+            Canvas layer = new Canvas { Background = null };
             overlay.Children.Add(layer);
 
-            var list = new List<Step>();
-            foreach (var (target, title, body, onEnter) in steps) list.Add(new Step { Target = target, Title = title, Body = body, OnEnter = onEnter });
+            List<Step> list = new List<Step>();
+            foreach ((Func<Control> target, string title, string body, Action onEnter) in steps) list.Add(new Step { Target = target, Title = title, Body = body, OnEnter = onEnter });
             _active = new GuidedTour(root, layer, list);
             _active.Begin();
         }
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia
             _root = main;
             _main = main;
             _layer = layer;
-            var maps = main.FindControl<MapsWorkspaceView>("Maps");
+            MapsWorkspaceView maps = main.FindControl<MapsWorkspaceView>("Maps");
 
             // Helper: a step that switches the Maps workspace to a specific tab and spotlights the
             // tab area, so the tour walks through each embedded editor showing the real thing.
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia
             {
                 OnEnter = () =>
                 {
-                    var tabs = maps?.FindControl<TabControl>("MapTabs");
+                    TabControl tabs = maps?.FindControl<TabControl>("MapTabs");
                     if (tabs != null && index < tabs.ItemCount) tabs.SelectedIndex = index;
                 },
                 Target = () => maps?.FindControl<Control>("MapTabs"),
@@ -226,7 +226,7 @@ namespace DSPRE.Avalonia
                 {
                     OnEnter = () =>
                     {
-                        var tabs = maps?.FindControl<TabControl>("MapTabs");
+                        TabControl tabs = maps?.FindControl<TabControl>("MapTabs");
                         if (tabs != null) tabs.SelectedIndex = 0;
                     },
                     Target = null,
@@ -259,11 +259,11 @@ namespace DSPRE.Avalonia
         /// <summary>What is switched on, short enough to fit a callout card.</summary>
         private static string BetaSummary()
         {
-            var areas = new List<string>();
-            foreach (var a in BetaEditors.CountByArea()) areas.Add($"{a.Value} in {a.Key}");
+            List<string> areas = new List<string>();
+            foreach (KeyValuePair<string, int> a in BetaEditors.CountByArea()) areas.Add($"{a.Value} in {a.Key}");
 
-            var features = new List<string>();
-            foreach (var f in BetaEditors.Features) features.Add(f.Name);
+            List<string> features = new List<string>();
+            foreach (BetaEditors.BetaFeature f in BetaEditors.Features) features.Add(f.Name);
 
             return $"{BetaEditors.Count} editors that are normally hidden are available to you: "
                  + string.Join(", ", areas) + ".\n\n"
@@ -307,7 +307,7 @@ namespace DSPRE.Avalonia
 
             // The tab-walk steps switch the live Maps tab; don't leave the user parked on a
             // random one if they bailed out mid-tour.
-            var tabs = _main.FindControl<MapsWorkspaceView>("Maps")?.FindControl<TabControl>("MapTabs");
+            TabControl tabs = _main.FindControl<MapsWorkspaceView>("Maps")?.FindControl<TabControl>("MapTabs");
             if (tabs != null) tabs.SelectedIndex = 0;
         }
 
@@ -350,14 +350,14 @@ namespace DSPRE.Avalonia
 
         private IBrush Res(string key, Color fallback)
         {
-            if (_root.TryFindResource(key, _root.ActualThemeVariant, out var v) && v is IBrush b) return b;
+            if (_root.TryFindResource(key, _root.ActualThemeVariant, out object v) && v is IBrush b) return b;
             return new SolidColorBrush(fallback);
         }
 
         private void Render()
         {
             _layer.Children.Clear();
-            var step = _steps[_index];
+            Step step = _steps[_index];
 
             // An editor tour's canvas sits in the window's overlay layer, which does not stretch its children.
             if (_main == null && _layer.Parent is Control overlayHost)
@@ -365,7 +365,7 @@ namespace DSPRE.Avalonia
                 _layer.Width = overlayHost.Bounds.Width;
                 _layer.Height = overlayHost.Bounds.Height;
             }
-            var layerSize = _main == null ? new Size(_layer.Width, _layer.Height) : _layer.Bounds.Size;
+            Size layerSize = _main == null ? new Size(_layer.Width, _layer.Height) : _layer.Bounds.Size;
             if (double.IsNaN(layerSize.Width)) layerSize = default;
             if (layerSize.Width <= 0 || layerSize.Height <= 0)
             {
@@ -376,14 +376,14 @@ namespace DSPRE.Avalonia
                 return;
             }
             _sizeRetries = 0;
-            var full = new Rect(layerSize);
+            Rect full = new Rect(layerSize);
 
             // Resolve the spotlight rectangle in layer coordinates (null => centered card only).
             Rect? hole = null;
-            var target = step.Target?.Invoke();
+            Control target = step.Target?.Invoke();
             if (target != null && target.IsVisible && target.Bounds.Width > 0)
             {
-                var origin = target.TranslatePoint(new Point(0, 0), _layer);
+                Point? origin = target.TranslatePoint(new Point(0, 0), _layer);
                 if (origin.HasValue)
                 {
                     hole = new Rect(origin.Value, target.Bounds.Size).Inflate(4)
@@ -403,12 +403,12 @@ namespace DSPRE.Avalonia
                 Fill = new SolidColorBrush(Color.FromArgb(0xA8, 0x00, 0x00, 0x00)),
             });
 
-            var accent = Res("SystemAccentColor", Color.FromRgb(0x4F, 0x9D, 0xFF)) is ISolidColorBrush sb
+            IBrush accent = Res("SystemAccentColor", Color.FromRgb(0x4F, 0x9D, 0xFF)) is ISolidColorBrush sb
                 ? (IBrush)sb : new SolidColorBrush(Color.FromRgb(0x4F, 0x9D, 0xFF));
 
             if (hole.HasValue)
             {
-                var ring = new Border
+                Border ring = new Border
                 {
                     Width = hole.Value.Width,
                     Height = hole.Value.Height,
@@ -429,28 +429,28 @@ namespace DSPRE.Avalonia
         {
             const double calloutWidth = 330;
 
-            var title = new TextBlock
+            TextBlock title = new TextBlock
             {
                 Text = step.Title, FontSize = 15, FontWeight = FontWeight.Bold,
                 TextWrapping = TextWrapping.Wrap,
             };
-            var body = new TextBlock
+            TextBlock body = new TextBlock
             {
                 Text = step.Body, TextWrapping = TextWrapping.Wrap, LineHeight = 20, Opacity = 0.95,
             };
 
-            var backBtn = new Button { Content = Controls.Icon.Content("arrowleft", "Back"), MinWidth = 70, IsEnabled = _index > 0 };
+            Button backBtn = new Button { Content = Controls.Icon.Content("arrowleft", "Back"), MinWidth = 70, IsEnabled = _index > 0 };
             global::Avalonia.Automation.AutomationProperties.SetName(backBtn, "Back");
             backBtn.Click += (_, _) => Back();
             bool last = _index == _steps.Count - 1;
-            var nextBtn = new Button { Content = last ? "Finish" : Controls.Icon.Content("arrowright", "Next", after: true), MinWidth = 70 };
+            Button nextBtn = new Button { Content = last ? "Finish" : Controls.Icon.Content("arrowright", "Next", after: true), MinWidth = 70 };
             global::Avalonia.Automation.AutomationProperties.SetName(nextBtn, last ? "Finish" : "Next");
             nextBtn.Click += (_, _) => Next();
-            var skipBtn = new Button { Content = "Skip tour", Opacity = 0.75 };
+            Button skipBtn = new Button { Content = "Skip tour", Opacity = 0.75 };
             skipBtn.Click += (_, _) => End();
 
-            var buttons = new DockPanel { Margin = new Thickness(0, 12, 0, 0) };
-            var navRight = new StackPanel
+            DockPanel buttons = new DockPanel { Margin = new Thickness(0, 12, 0, 0) };
+            StackPanel navRight = new StackPanel
             {
                 Orientation = Orientation.Horizontal, Spacing = 6,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -461,7 +461,7 @@ namespace DSPRE.Avalonia
             buttons.Children.Add(skipBtn);
             buttons.Children.Add(navRight);
 
-            var stack = new StackPanel { Spacing = 8 };
+            StackPanel stack = new StackPanel { Spacing = 8 };
             stack.Children.Add(title);
             stack.Children.Add(body);
             stack.Children.Add(new TextBlock
@@ -470,7 +470,7 @@ namespace DSPRE.Avalonia
             });
             stack.Children.Add(buttons);
 
-            var card = new Border
+            Border card = new Border
             {
                 Width = calloutWidth,
                 Background = Res("Editor.PanelBg", Color.FromRgb(0x2B, 0x2B, 0x2B)),
@@ -493,7 +493,7 @@ namespace DSPRE.Avalonia
             double x, y;
             if (hole.HasValue)
             {
-                var hv = hole.Value;
+                Rect hv = hole.Value;
                 if (hv.Bottom + 10 + h <= full.Height)
                 {
                     x = Math.Max(8, Math.Min(hv.X, full.Width - calloutWidth - 8));

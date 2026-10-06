@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using DSPRE.Editors;
@@ -117,12 +118,12 @@ namespace DSPRE.Avalonia
             window.KeyBindings.Add(new KeyBinding
             {
                 Gesture = new KeyGesture(Key.Z, KeyModifiers.Control),
-                Command = new RelayCommand(() => { var u = UndoTarget(window, undo); if (u.CanUndo) u.Undo(); }),
+                Command = new RelayCommand(() => { ISupportsUndo u = UndoTarget(window, undo); if (u.CanUndo) u.Undo(); }),
             });
             window.KeyBindings.Add(new KeyBinding
             {
                 Gesture = new KeyGesture(Key.Y, KeyModifiers.Control),
-                Command = new RelayCommand(() => { var u = UndoTarget(window, undo); if (u.CanRedo) u.Redo(); }),
+                Command = new RelayCommand(() => { ISupportsUndo u = UndoTarget(window, undo); if (u.CanRedo) u.Redo(); }),
             });
         }
 
@@ -130,7 +131,7 @@ namespace DSPRE.Avalonia
         // nearest undoable editor around the focused control wins over the window's.
         private static ISupportsUndo UndoTarget(Window window, ISupportsUndo fallback)
         {
-            for (var v = window.FocusManager?.GetFocusedElement() as global::Avalonia.Visual; v != null && v != window;
+            for (Visual v = window.FocusManager?.GetFocusedElement() as global::Avalonia.Visual; v != null && v != window;
                  v = global::Avalonia.VisualTree.VisualExtensions.GetVisualParent(v))
                 if (v is global::Avalonia.StyledElement se && se.DataContext is ISupportsUndo u) return u;
             return fallback;

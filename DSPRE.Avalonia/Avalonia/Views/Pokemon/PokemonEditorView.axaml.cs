@@ -5,6 +5,7 @@ using DSPRE.Avalonia;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.ViewModels;
+using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Views.Pokemon
 {
@@ -44,7 +45,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void ImportPokewalker_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.Tag is not PokewalkerViewModel.Picture picture) return;
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import Pokéwalker picture",
                 AllowMultiple = false,
@@ -59,7 +60,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void ExportPokewalker_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.Tag is not PokewalkerViewModel.Picture picture) return;
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export Pokéwalker picture",
                 DefaultExtension = "png",
@@ -74,7 +75,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void ImportFootprint_Click(object sender, RoutedEventArgs e)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import footprint",
                 AllowMultiple = false,
@@ -88,7 +89,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void ExportFootprint_Click(object sender, RoutedEventArgs e)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export footprint",
                 DefaultExtension = "png",
@@ -111,7 +112,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
             {
                 try
                 {
-                    var pcm = SoundArchive.RenderCry(species);
+                    short[] pcm = SoundArchive.RenderCry(species);
                     if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
                 }
                 catch { /* an editor should not put up a dialog because a sound would not play */ }
@@ -147,8 +148,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Learnset_Export_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel.LearnsetVM;
-            var filter = new global::Avalonia.Platform.Storage.FilePickerFileType("CSV") { Patterns = new[] { "*.csv" } };
+            LearnsetEditorViewModel vm = ViewModel.LearnsetVM;
+            FilePickerFileType filter = new global::Avalonia.Platform.Storage.FilePickerFileType("CSV") { Patterns = new[] { "*.csv" } };
             string path = await DialogHelper.SaveFile(this, "Export learnset (CSV)", new[] { filter }, $"learnset_{vm.CurrentId:D4}.csv");
             if (path == null) return;
             try { System.IO.File.WriteAllText(path, vm.BuildCsv()); }

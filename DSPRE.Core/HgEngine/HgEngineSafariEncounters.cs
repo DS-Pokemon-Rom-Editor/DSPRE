@@ -3,6 +3,7 @@ using System.Linq;
 using System.ComponentModel;
 using System.IO;
 using DSPRE.ROMFiles;
+using System.Text;
 
 namespace DSPRE.HgEngine
 {
@@ -27,7 +28,7 @@ namespace DSPRE.HgEngine
         /// Add/Remove Object Slot in the UI) never guess at a fixed number either.</summary>
         public static int GetBonusSlotCount(RodType type)
         {
-            var header = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable header = HgEngineSymbolTable.Load(HeaderRelPath);
             return header != null && header.TryGetValue(BonusCountDefineFor(type), out int n) ? n : 0;
         }
 
@@ -35,25 +36,25 @@ namespace DSPRE.HgEngine
         {
             group = null; error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var areas = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable areas = HgEngineSymbolTable.Load(HeaderRelPath);
             if (areas == null || !areas.TryGetNameWithPrefix(areaId, AreaPrefix, out string areaDesignator))
             { error = $"Could not resolve a safari area designator for id {areaId}."; return false; }
 
             string text = TryReadSource(out string path);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             string typeField = FieldNameFor(type);
             group = new SafariZoneEncounterGroup();
             string unreadable = null;
 
             void ReadSlotArray(string fieldName, BindingList<SafariZoneEncounter> dest)
             {
-                var fieldPath = new[] { FieldPathSegment.Field(typeField), FieldPathSegment.Field(fieldName) };
+                FieldPathSegment[] fieldPath = new[] { FieldPathSegment.Field(typeField), FieldPathSegment.Field(fieldName) };
                 if (!HgEngineSourcePatcher.TryGetFieldValue(text, areaDesignator, fieldPath, out string raw)) return;
-                foreach (var el in HgEngineSourcePatcher.SplitArrayValue(raw))
+                foreach (string el in HgEngineSourcePatcher.SplitArrayValue(raw))
                 {
-                    var parts = HgEngineSourcePatcher.SplitArrayValue(el.Trim());
+                    List<string> parts = HgEngineSourcePatcher.SplitArrayValue(el.Trim());
                     if (parts.Count < 2) continue;
                     dest.Add(new SafariZoneEncounter
                     {
@@ -72,16 +73,16 @@ namespace DSPRE.HgEngine
             // Saving would write SPECIES_NONE over it.
             if (unreadable != null) { error = $"SafariEncounters.c has a species DSPRE can't read: {unreadable}"; group = null; return false; }
 
-            var condPath = new[] { FieldPathSegment.Field(typeField), FieldPathSegment.Field("bonusUnlockConditions") };
+            FieldPathSegment[] condPath = new[] { FieldPathSegment.Field(typeField), FieldPathSegment.Field("bonusUnlockConditions") };
             if (HgEngineSourcePatcher.TryGetFieldValue(text, areaDesignator, condPath, out string rawConds))
             {
-                var objectTypes = HgEngineSymbolTable.Load(HeaderRelPath);
-                foreach (var el in HgEngineSourcePatcher.SplitArrayValue(rawConds))
+                HgEngineSymbolTable objectTypes = HgEngineSymbolTable.Load(HeaderRelPath);
+                foreach (string el in HgEngineSourcePatcher.SplitArrayValue(rawConds))
                 {
                     SafariZoneObjectRequirement req = new(), opt = new();
                     if (HgEngineSourcePatcher.TryGetFieldValueInBlock(el.Trim(), new[] { FieldPathSegment.Field("objects") }, out string rawObjects))
                     {
-                        var objs = HgEngineSourcePatcher.SplitArrayValue(rawObjects);
+                        List<string> objs = HgEngineSourcePatcher.SplitArrayValue(rawObjects);
                         if (objs.Count > 0) req = ParseRequirement(objs[0], objectTypes);
                         if (objs.Count > 1) opt = ParseRequirement(objs[1], objectTypes);
                     }
@@ -102,15 +103,15 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var areas = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable areas = HgEngineSymbolTable.Load(HeaderRelPath);
             if (areas == null || !areas.TryGetNameWithPrefix(areaId, AreaPrefix, out string areaDesignator))
             { error = $"Could not resolve a safari area designator for id {areaId}."; return false; }
 
             string text = TryReadSource(out string path);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
-            var failed = new List<string>();
-            foreach (var (type, group) in groups)
+            List<string> failed = new List<string>();
+            foreach ((RodType type, SafariZoneEncounterGroup group) in groups)
             {
                 if (group == null) continue;
                 foreach (string field in ApplyGroup(ref text, areaDesignator, type, group))
@@ -128,19 +129,19 @@ namespace DSPRE.HgEngine
         /// <summary>Patches one rod type's fields into <paramref name="text"/> and returns the ones it couldn't place.</summary>
         private static List<string> ApplyGroup(ref string text, string areaDesignator, RodType type, SafariZoneEncounterGroup group)
         {
-            var header = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable header = HgEngineSymbolTable.Load(HeaderRelPath);
             if (header == null || !header.TryGetValue("NUM_ENCOUNTERS_SAFARI", out int mainCount)) mainCount = 10;
             if (header == null || !header.TryGetValue(BonusCountDefineFor(type), out int bonusCount)) bonusCount = 0;
 
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             string typeField = FieldNameFor(type);
 
             List<string> SlotItems(BindingList<SafariZoneEncounter> list, int count)
             {
-                var items = new List<string>(count);
+                List<string> items = new List<string>(count);
                 for (int i = 0; i < count; i++)
                 {
-                    var e = i < list.Count ? list[i] : new SafariZoneEncounter();
+                    SafariZoneEncounter e = i < list.Count ? list[i] : new SafariZoneEncounter();
                     string sp = HgEngineTrainerSource.FormatPackedSpecies(e.pokemonID, SpeciesHeaderRelPath);
                     items.Add($"{{ {sp}, {e.level} }}");
                 }
@@ -149,11 +150,11 @@ namespace DSPRE.HgEngine
 
             List<string> CondItems(BindingList<SafariZoneObjectRequirement> req, BindingList<SafariZoneObjectRequirement> opt, int count)
             {
-                var items = new List<string>(count);
+                List<string> items = new List<string>(count);
                 for (int i = 0; i < count; i++)
                 {
-                    var r = i < req.Count ? req[i] : new SafariZoneObjectRequirement();
-                    var o = i < opt.Count ? opt[i] : new SafariZoneObjectRequirement();
+                    SafariZoneObjectRequirement r = i < req.Count ? req[i] : new SafariZoneObjectRequirement();
+                    SafariZoneObjectRequirement o = i < opt.Count ? opt[i] : new SafariZoneObjectRequirement();
                     string rt = header != null && header.TryGetNameWithPrefix(r.typeID, ObjectTypePrefix, out string rn) ? rn : r.typeID.ToString();
                     string ot = header != null && header.TryGetNameWithPrefix(o.typeID, ObjectTypePrefix, out string on) ? on : o.typeID.ToString();
                     items.Add($"{{ .objects = {{ {{ {rt}, {r.quantity} }}, {{ {ot}, {o.quantity} }} }} }}");
@@ -161,7 +162,7 @@ namespace DSPRE.HgEngine
                 return items;
             }
 
-            var writes = new (string Field, List<string> Items)[]
+            (string Field, List<string> Items)[] writes = new (string Field, List<string> Items)[]
             {
                 ("speciesMorning", SlotItems(group.MorningEncounters, mainCount)),
                 ("speciesDay", SlotItems(group.DayEncounters, mainCount)),
@@ -172,10 +173,10 @@ namespace DSPRE.HgEngine
                 ("bonusUnlockConditions", CondItems(group.ObjectRequirements, group.OptionalObjectRequirements, bonusCount)),
             };
 
-            var failedFields = new List<string>();
-            foreach (var (field, items) in writes)
+            List<string> failedFields = new List<string>();
+            foreach ((string field, List<string> items) in writes)
             {
-                var fieldPath = new[] { FieldPathSegment.Field(typeField), FieldPathSegment.Field(field) };
+                FieldPathSegment[] fieldPath = new[] { FieldPathSegment.Field(typeField), FieldPathSegment.Field(field) };
                 HgEngineSourcePatcher.TryGetFieldValue(text, areaDesignator, fieldPath, out string original);
                 if (!HgEngineSourcePatcher.TryReplaceField(ref text, areaDesignator, fieldPath, ListLiteral(original, items)))
                     failedFields.Add(field);
@@ -199,7 +200,7 @@ namespace DSPRE.HgEngine
             string closeIndent = last.Substring(0, last.Length - last.TrimStart().Length);
             bool trailingComma = lines.Take(lines.Length - 1).LastOrDefault(l => l.Trim().Length > 0)?.TrimEnd().EndsWith(",") == true;
 
-            var sb = new System.Text.StringBuilder("{");
+            StringBuilder sb = new System.Text.StringBuilder("{");
             for (int i = 0; i < items.Count; i++)
                 sb.Append('\n').Append(itemIndent).Append(items[i]).Append(i < items.Count - 1 || trailingComma ? "," : "");
             return sb.Append('\n').Append(closeIndent).Append('}').ToString();
@@ -207,7 +208,7 @@ namespace DSPRE.HgEngine
 
         private static SafariZoneObjectRequirement ParseRequirement(string block, HgEngineSymbolTable objectTypes)
         {
-            var parts = HgEngineSourcePatcher.SplitArrayValue(block.Trim());
+            List<string> parts = HgEngineSourcePatcher.SplitArrayValue(block.Trim());
             if (parts.Count < 2) return new SafariZoneObjectRequirement();
             return new SafariZoneObjectRequirement((byte)ResolveToken(parts[0], objectTypes), (byte)ResolveToken(parts[1], null));
         }

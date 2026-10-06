@@ -64,13 +64,13 @@ namespace DSPRE.HgEngine
         public static bool TryReadLines(Source source, int count, out string[] lines, out string error)
         {
             lines = null;
-            if (!TryLoad(source, out string text, out var byId, out error)) return false;
+            if (!TryLoad(source, out string text, out Dictionary<int, (string Designator, int Open, int Close)> byId, out error)) return false;
 
             lines = new string[count];
-            var path = PathOf(source);
+            IReadOnlyList<FieldPathSegment> path = PathOf(source);
             for (int line = 0; line < count; line++)
             {
-                if (!byId.TryGetValue(line / source.LinesPerEntry, out var entry)) continue;
+                if (!byId.TryGetValue(line / source.LinesPerEntry, out (string Designator, int Open, int Close) entry)) continue;
                 if (!ElementScanner.TryLocateValueSpan(text, entry.Open, entry.Close, path, out int vs, out int ve)) continue;
                 string value = Unquote(text.Substring(vs, ve - vs));
                 lines[line] = source.Wraps == null ? value : source.Wraps[line % source.LinesPerEntry] + value + source.Suffix;
@@ -83,14 +83,14 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!source.IsMain) { error = $"Text archive {source.Archive} follows archive {source.MainArchive}; edit that one."; return false; }
-            if (!TryLoad(source, out string text, out var byId, out error)) return false;
+            if (!TryLoad(source, out string text, out Dictionary<int, (string Designator, int Open, int Close)> byId, out error)) return false;
 
-            var changed = new Dictionary<int, (string Designator, string Value)>();
+            Dictionary<int, (string Designator, string Value)> changed = new Dictionary<int, (string Designator, string Value)>();
             for (int line = 0; line < lines.Count; line++)
             {
                 if (line < before.Count && lines[line] == before[line]) continue;
                 int id = line / source.LinesPerEntry;
-                if (!byId.TryGetValue(id, out var entry))
+                if (!byId.TryGetValue(id, out (string Designator, int Open, int Close) entry))
                 {
                     error = $"{source.RelPath} has no entry for line {line}, so it cannot be edited here.";
                     return false;
@@ -107,7 +107,7 @@ namespace DSPRE.HgEngine
                     }
                     value = value.Substring(wrap.Length, value.Length - wrap.Length - source.Suffix.Length);
                 }
-                if (changed.TryGetValue(id, out var other) && other.Value != value)
+                if (changed.TryGetValue(id, out (string Designator, string Value) other) && other.Value != value)
                 {
                     error = $"Lines for {entry.Designator} give two different {source.FieldLabel} values; they all come from one field.";
                     return false;
@@ -116,8 +116,8 @@ namespace DSPRE.HgEngine
             }
             if (changed.Count == 0) return true;
 
-            var path = PathOf(source);
-            foreach (var (_, (designator, value)) in changed)
+            IReadOnlyList<FieldPathSegment> path = PathOf(source);
+            foreach ((int _, (string designator, string value)) in changed)
             {
                 string literal = HgEngineTrainerSource.ToCStringLiteral(value);
                 if (!HgEngineSourcePatcher.TryUpsertField(ref text, designator, path, literal))
@@ -152,7 +152,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsLinked) { error = "No hg-engine checkout is linked."; return false; }
             string full = FullPath(source);
             if (!File.Exists(full)) { error = $"{source.RelPath} was not found in the checkout."; return false; }
-            var symbols = HgEngineSymbolTable.Load(source.Header);
+            HgEngineSymbolTable symbols = HgEngineSymbolTable.Load(source.Header);
             if (symbols == null) { error = $"{source.Header} could not be read."; return false; }
 
             text = HgEngineFileCache.GetText(full);
@@ -160,7 +160,7 @@ namespace DSPRE.HgEngine
             int from = 0;
             while (true)
             {
-                var m = EntryStart.Match(text, from);
+                Match m = EntryStart.Match(text, from);
                 if (!m.Success) break;
                 int open = m.Index + m.Length - 1;
                 if (!BraceScanner.TryFindMatchingBrace(text, open, out int close)) break;
@@ -176,7 +176,7 @@ namespace DSPRE.HgEngine
         {
             raw = raw.Trim();
             if (raw.Length < 2 || raw[0] != '"' || raw[^1] != '"') return raw;
-            var sb = new StringBuilder(raw.Length - 2);
+            StringBuilder sb = new StringBuilder(raw.Length - 2);
             for (int i = 1; i < raw.Length - 1; i++)
             {
                 if (raw[i] == '\\' && i + 1 < raw.Length - 1 && (raw[i + 1] == '\\' || raw[i + 1] == '"')) i++;

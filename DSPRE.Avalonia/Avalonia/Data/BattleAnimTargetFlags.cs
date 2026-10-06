@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Data
 
         public static List<int> Targets(int flag, int attacker, int defender)
         {
-            var list = new List<int>(2);
+            List<int> list = new List<int>(2);
             if ((flag & SpecificBattler) != 0)
             {
                 if ((flag & Attacker) != 0) list.Add(PlayerSlot);
@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Data
 
         public static string Describe(int flag, bool brief = false)
         {
-            var parts = new List<string>();
+            List<string> parts = new List<string>();
             if ((flag & PokemonSprites) != 0)
             {
                 if ((flag & PokemonSprite0) != 0) parts.Add("copy 0");

@@ -26,10 +26,10 @@ namespace DSPRE.ROMFiles
         /// <summary>Everything that runs on arriving at the map, in the order the engine runs it.</summary>
         public static List<LevelScriptTrigger> OnArrival(LevelScriptFile file)
         {
-            var found = new List<LevelScriptTrigger>();
+            List<LevelScriptTrigger> found = new List<LevelScriptTrigger>();
             if (file?.bufferSet == null) return found;
             foreach (int kind in ArrivalOrder)
-                foreach (var t in file.bufferSet)
+                foreach (LevelScriptTrigger t in file.bufferSet)
                     if (t != null && t.triggerType == kind) found.Add(t);
             return found;
         }
@@ -47,9 +47,9 @@ namespace DSPRE.ROMFiles
         public static List<VariableValueTrigger> ReadyToFire(LevelScriptFile file,
                                                              Func<int, int> valueOf)
         {
-            var ready = new List<VariableValueTrigger>();
+            List<VariableValueTrigger> ready = new List<VariableValueTrigger>();
             if (valueOf == null) return ready;
-            foreach (var t in Watchers(file))
+            foreach (VariableValueTrigger t in Watchers(file))
                 if (IsSatisfied(t, valueOf)) ready.Add(t);
             return ready;
         }
@@ -72,7 +72,7 @@ namespace DSPRE.ROMFiles
             switch (trigger.triggerType)
             {
                 case LevelScriptTrigger.VARIABLEVALUE:
-                    var v = trigger as VariableValueTrigger;
+                    VariableValueTrigger v = trigger as VariableValueTrigger;
                     return v == null
                         ? "Every step, once a variable holds the right value"
                         : $"Every step, once {FieldScriptValues.Describe(v.variableToWatch)} holds "

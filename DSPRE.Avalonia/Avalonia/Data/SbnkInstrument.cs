@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The region that plays for MIDI note <paramref name="note"/>, or null if none covers it.</summary>
         public SbnkRegion Resolve(int note)
         {
-            foreach (var r in Regions) if (note >= r.LowKey && note <= r.HighKey) return r;
+            foreach (SbnkRegion r in Regions) if (note >= r.LowKey && note <= r.HighKey) return r;
             return null;
         }
     }
@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.Data
     {
         public static List<SbnkInstrument> ParseBank(byte[] d)
         {
-            var list = new List<SbnkInstrument>();
+            List<SbnkInstrument> list = new List<SbnkInstrument>();
             if (d == null || d.Length < 16 + 8 + 4) return list;
 
             int U16(int o) => d[o] | (d[o + 1] << 8);
@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.Data
                 // The offset is relative to this SBNK sub-file's own byte 0, NOT the DATA block's start (same
                 // base the format's own instCount lookup uses).
                 int at = relOff;
-                var inst = new SbnkInstrument();
+                SbnkInstrument inst = new SbnkInstrument();
 
                 switch (recordType)
                 {
@@ -106,7 +106,7 @@ namespace DSPRE.Avalonia.Data
                     // Covers the whole key range.
                     case 1 when at + 5 <= d.Length:
                     {
-                        var rgn = new SbnkRegion { LowKey = 0, HighKey = 127, WaveIndex = U16(at), WaveArcSlot = U16(at + 2), BaseNote = d[at + 4] };
+                            SbnkRegion rgn = new SbnkRegion { LowKey = 0, HighKey = 127, WaveIndex = U16(at), WaveArcSlot = U16(at + 2), BaseNote = d[at + 4] };
                         ReadEnvelope(d, at + 5, rgn);
                         inst.Regions.Add(rgn);
                         break;
@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia.Data
                         {
                             int rgnAt = at + 2 + r * 12;
                             if (rgnAt + 7 > d.Length) break;
-                            var rgn = SubRegion(d, rgnAt, lowKey + r, lowKey + r);
+                                SbnkRegion rgn = SubRegion(d, rgnAt, lowKey + r, lowKey + r);
                             if (!rgn.Silent) inst.Regions.Add(rgn);
                         }
                         break;
@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.Data
                     // any other and only a region past the end of the record stops the walk.
                     case 0x11 when at + 8 <= d.Length:
                     {
-                        var keyRanges = new int[8];
+                            int[] keyRanges = new int[8];
                         int nRgns = 0;
                         for (int k = 0; k < 8; k++)
                         {
@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.Data
                     case 2 when at + 5 <= d.Length:
                     case 3 when at + 5 <= d.Length:
                     {
-                        var rgn = new SbnkRegion
+                            SbnkRegion rgn = new SbnkRegion
                         {
                             LowKey = 0, HighKey = 127, BaseNote = d[at + 4],
                             Psg = recordType == 2 ? PsgKind.Square : PsgKind.Noise,
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.Data
         private static SbnkRegion SubRegion(byte[] d, int rgnAt, int lowKey, int highKey)
         {
             int type = d[rgnAt];
-            var rgn = new SbnkRegion
+            SbnkRegion rgn = new SbnkRegion
             {
                 LowKey = lowKey, HighKey = highKey,
                 WaveIndex = d[rgnAt + 2] | (d[rgnAt + 3] << 8),

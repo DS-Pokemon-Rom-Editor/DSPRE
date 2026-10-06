@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.Controls
 
         private void UpdateItemsSourceCollectionSubscription()
         {
-            var collection = ItemsSource as INotifyCollectionChanged;
+            INotifyCollectionChanged collection = ItemsSource as INotifyCollectionChanged;
             if (ReferenceEquals(collection, _itemsSourceCollection))
             {
                 return;
@@ -169,7 +169,7 @@ namespace DSPRE.Avalonia.Controls
             }
 
             int itemCount = 0;
-            foreach (var item in ItemsSource)
+            foreach (object item in ItemsSource)
             {
                 itemCount++;
             }

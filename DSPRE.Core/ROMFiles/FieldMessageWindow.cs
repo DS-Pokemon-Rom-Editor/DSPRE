@@ -57,13 +57,13 @@ namespace DSPRE.ROMFiles
         /// <summary>The lines the text breaks into, keeping the breaks the text already asks for.</summary>
         public List<string> Lines(string text)
         {
-            var lines = new List<string>();
+            List<string> lines = new List<string>();
             if (string.IsNullOrEmpty(text)) return lines;
 
             foreach (string paragraph in Split(text))
             {
                 if (paragraph.Length == 0) { lines.Add(""); continue; }
-                var line = new StringBuilder();
+                StringBuilder line = new StringBuilder();
                 foreach (string word in paragraph.Split(' '))
                 {
                     if (word.Length == 0) continue;
@@ -90,8 +90,8 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public List<string> Pages(string text)
         {
-            var pages = new List<string>();
-            var lines = Lines(text);
+            List<string> pages = new List<string>();
+            List<string> lines = Lines(text);
             for (int i = 0; i < lines.Count; i += _linesPerPage)
                 pages.Add(string.Join("\n", lines.GetRange(i, Math.Min(_linesPerPage, lines.Count - i))));
             return pages;

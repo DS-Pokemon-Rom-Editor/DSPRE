@@ -119,7 +119,7 @@ namespace DSPRE.Avalonia.Views.World
             else if (ctrl && e.Key == Key.D) { VM.SelectNone(); e.Handled = true; }
             else if (e.Key == Key.Delete) { VM.DeleteSelection(); e.Handled = true; }
             else if (e.Key == Key.Escape) { VM.SelectNone(); e.Handled = true; }
-            else if (!ctrl && ToolKeys.TryGetValue(e.Key, out var tool))
+            else if (!ctrl && ToolKeys.TryGetValue(e.Key, out TilePainter.Tool tool))
             {
                 if (tool == TilePainter.Tool.Smart && e.KeyModifiers.HasFlag(KeyModifiers.Shift)) tool = TilePainter.Tool.SmartInverted;
                 int at = VM.Tools.ToList().FindIndex(t => t.Tool == tool);
@@ -132,10 +132,10 @@ namespace DSPRE.Avalonia.Views.World
         private async void BringIn_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null) return;
 
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import tileset or map",
                 AllowMultiple = false,
@@ -155,10 +155,10 @@ namespace DSPRE.Avalonia.Views.World
         private async void SaveSet_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null || !VM.Ready) return;
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null) return;
 
-            var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export tileset",
                 SuggestedFileName = "tileset.obj",
@@ -174,11 +174,11 @@ namespace DSPRE.Avalonia.Views.World
 
         private async void PutPictures_Click(object sender, RoutedEventArgs e)
         {
-            var vm = VM;
+            MapTilesViewModel vm = VM;
             if (vm == null || !vm.HasOwnPictures) return;
-            var plan = vm.PlanPictures();
+            MapTilesViewModel.TexturePlan plan = vm.PlanPictures();
             if (plan == null) return;
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            Window owner = TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
             bool add = await new AddTexturesDialogView(plan).ShowDialog<bool>(owner);
             if (add && VM == vm) vm.PutPicturesIntoTheRom(plan);
@@ -195,9 +195,9 @@ namespace DSPRE.Avalonia.Views.World
         private async void AnimFrames_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null) return;
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Animation frames",
                 AllowMultiple = true,
@@ -214,9 +214,9 @@ namespace DSPRE.Avalonia.Views.World
         private async void AddTiles_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null) return;
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Append tiles",
                 AllowMultiple = false,
@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia.Views.World
         private void FlipDown_Click(object sender, RoutedEventArgs e) => VM?.FlipSelectionDown();
         private async void Apply_Click(object sender, RoutedEventArgs e)
         {
-            var vm = VM;
+            MapTilesViewModel vm = VM;
             if (vm == null) return;
             int replaced = vm.PlatesApplyWouldReplace();
             bool terrain = vm.AlsoTerrain;
@@ -262,7 +262,7 @@ namespace DSPRE.Avalonia.Views.World
                 if (!replace) vm.AlsoTerrain = false;
             }
             bool bringInBuildings = true;
-            var swap = vm.BuildingsApplyWouldReplace();
+            (int newBuildings, int currentBuildings)? swap = vm.BuildingsApplyWouldReplace();
             if (swap != null)
             {
                 bringInBuildings = await DSPRE.Avalonia.DialogHelper.AskYesNo(

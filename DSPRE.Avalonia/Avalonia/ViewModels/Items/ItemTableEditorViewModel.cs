@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => (int)Data.Type;
             set
             {
-                var t = (RockSmashData.TableType)value;
+                RockSmashData.TableType t = (RockSmashData.TableType)value;
                 if (Data.Type == t) return;
                 Data.Type = t;
                 OnPC();
@@ -470,7 +470,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<TablesState>(state);
+            TablesState s = DSPRE.Avalonia.UndoJson.Read<TablesState>(state);
             _applyingUndo = true;
             try
             {
@@ -485,7 +485,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
                 int keep = _selectedHiddenItem != null ? HiddenItems.IndexOf(_selectedHiddenItem) : -1;
                 HiddenItems.Clear();
-                foreach (var h in s.Hidden)
+                foreach (int[] h in s.Hidden)
                     HiddenItems.Add(new HiddenItemRowVM((ushort)h[0], (ushort)h[1], (ushort)h[2], _rawItemNames) { Range = (byte)h[3], Padding = (ushort)h[4] });
                 SelectedHiddenItem = HiddenItems.Count > 0 ? HiddenItems[Math.Clamp(keep, 0, HiddenItems.Count - 1)] : null;
                 OnPropertyChanged(nameof(HiddenEntryCount));
@@ -495,7 +495,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                     RockSmashRows[i].Odds = s.RockSmash[i][0];
                     RockSmashRows[i].TypeIndex = s.RockSmash[i][1];
                 }
-                var tables = new[] { RockSmashDefaultTable, RockSmashRuinsOfAlphTable, RockSmashCliffCaveTable };
+                RockSmashItemSlotsRow[] tables = new[] { RockSmashDefaultTable, RockSmashRuinsOfAlphTable, RockSmashCliffCaveTable };
                 for (int t = 0; t < s.Slots.Length && t < tables.Length; t++)
                 {
                     if (tables[t] == null) continue;
@@ -564,7 +564,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // ── Pickup load ───────────────────────────────────────────────────────
         private void LoadPickupTable()
         {
-            var table = PickupTable.Read();
+            PickupTable table = PickupTable.Read();
             _commonIDs.Clear();
             _commonIDs.AddRange(table.Common);
             _rareIDs.Clear();
@@ -591,12 +591,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void RefreshCommonAdjacent(int absIdx)
         {
-            foreach (var row in CommonRows) row.RefreshSlots(absIdx);
+            foreach (CommonPickupRow row in CommonRows) row.RefreshSlots(absIdx);
         }
 
         private void RefreshRareAdjacent(int absIdx)
         {
-            foreach (var row in RareRows) row.RefreshSlots(absIdx);
+            foreach (RarePickupRow row in RareRows) row.RefreshSlots(absIdx);
         }
 
         private void BuildActivationRows()
@@ -612,7 +612,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             if (ActivationRows.Count == 0)
             {
                 // Build initial rows
-                var divisorRow = new ActivationRowVM("Activation %", _activationDivisor);
+                ActivationRowVM divisorRow = new ActivationRowVM("Activation %", _activationDivisor);
                 divisorRow.Probability  = $"{chance:F2}%";
                 divisorRow.Description  = "1/divisor × 100 (modulo-based)";
                 ActivationRows.Add(divisorRow);
@@ -623,7 +623,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                     int thresh = _weightTable[i];
                     int range  = thresh - prev;
                     double prob = chance / 100.0 * range;
-                    var row = new ActivationRowVM($"Slot {i + 1}", thresh);
+                    ActivationRowVM row = new ActivationRowVM($"Slot {i + 1}", thresh);
                     row.Probability  = $"{prob:F2}%";
                     row.Description  = $"{prev}, {thresh - 1} ({range} values)";
                     ActivationRows.Add(row);
@@ -632,7 +632,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
                 // Rare
                 double rareProb = chance / 100.0 * 2;
-                var rareRow = new ActivationRowVM("Rare (98-99)", 0);
+                ActivationRowVM rareRow = new ActivationRowVM("Rare (98-99)", 0);
                 rareRow.Probability = $"{rareProb:F2}%";
                 rareRow.Description = "98 to 99 (2 values)";
                 ActivationRows.Add(rareRow);
@@ -647,7 +647,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                     int thresh = _weightTable[i];
                     int range  = thresh - prev;
                     double prob = chance / 100.0 * range;
-                    var row = ActivationRows[i + 1];
+                    ActivationRowVM row = ActivationRows[i + 1];
                     row.Value       = thresh;
                     row.Probability = $"{prob:F2}%";
                     row.Description = $"{prev}, {thresh - 1} ({range} values)";
@@ -678,9 +678,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             if (HgEngineProject.IsActive)
             {
-                if (HgEngineHiddenItems.TryLoad(out var entries, out string err))
+                if (HgEngineHiddenItems.TryLoad(out List<HgEngineHiddenItems.Entry> entries, out string err))
                 {
-                    foreach (var e in entries)
+                    foreach (HgEngineHiddenItems.Entry e in entries)
                         HiddenItems.Add(new HiddenItemRowVM((ushort)e.ItemId, (ushort)e.Quantity, (ushort)e.Index, _rawItemNames));
                 }
                 else
@@ -703,7 +703,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
             tableLen = Math.Min(tableLen, _hiddenMaxCapacity);
 
-            foreach (var e in HiddenItemTable.Read(tableLen))
+            foreach (HiddenItemTable.Entry e in HiddenItemTable.Read(tableLen))
                 HiddenItems.Add(new HiddenItemRowVM(e.Item, e.Quantity, e.Script, _rawItemNames) { Range = e.Range, Padding = e.Padding });
 
             if (HiddenItems.Count > 0) SelectedHiddenItem = HiddenItems[0];
@@ -715,7 +715,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private static List<int> HiddenItemUsers(int index)
         {
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.eventFiles });
-            var files = new List<int>();
+            List<int> files = new List<int>();
             int script = HIDDEN_SCRIPT_BASE + index;
             int fileCount = Filesystem.GetEventFileCount();
             for (int i = 0; i < fileCount; i++)
@@ -733,10 +733,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void AddHiddenItem()
         {
             if (!HgEngineProject.IsActive && HiddenItems.Count >= _hiddenMaxCapacity) return;
-            var used = new HashSet<ushort>(HiddenItems.Select(h => h.ScriptID));
+            HashSet<ushort> used = new HashSet<ushort>(HiddenItems.Select(h => h.ScriptID));
             ushort sid = 95;
             while (used.Contains(sid) && sid < 256) sid++;
-            var entry = new HiddenItemRowVM(0, 1, sid, _rawItemNames);
+            HiddenItemRowVM entry = new HiddenItemRowVM(0, 1, sid, _rawItemNames);
             HiddenItems.Add(entry);
             SelectedHiddenItem = entry;
             SetHiddenDirty();
@@ -746,7 +746,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public async System.Threading.Tasks.Task RemoveSelectedHiddenItemAsync()
         {
             if (_selectedHiddenItem == null) return;
-            var users = HiddenItemUsers(_selectedHiddenItem.ScriptID);
+            List<int> users = HiddenItemUsers(_selectedHiddenItem.ScriptID);
             if (users.Count > 0)
             {
                 await DialogHelper.ShowError(
@@ -770,7 +770,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             int headerCount = RomInfo.GetHeaderCount();
             for (int i = 0; i < headerCount; i++)
             {
-                var data = new RockSmashData((ushort)i);
+                RockSmashData data = new RockSmashData((ushort)i);
                 string name = i < _headerNames.Length ? _headerNames[i] : $"Header {i}";
                 RockSmashRows.Add(new RockSmashHeaderRow(data, name, SetRockSmashDirty));
             }
@@ -836,10 +836,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private async System.Threading.Tasks.Task SaveHiddenItemsToSourceAsync()
         {
-            var entries = new List<HgEngineHiddenItems.Entry>(HiddenItems.Count);
-            foreach (var e in HiddenItems)
+            List<HgEngineHiddenItems.Entry> entries = new List<HgEngineHiddenItems.Entry>(HiddenItems.Count);
+            foreach (HiddenItemRowVM e in HiddenItems)
                 entries.Add(new HgEngineHiddenItems.Entry { ItemId = e.ItemID, Quantity = e.Amount, Index = e.ScriptID });
-            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() => HgEngineHiddenItems.TrySave(entries, out string err) ? null : err);
+            (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() => HgEngineHiddenItems.TrySave(entries, out string err) ? null : err);
             if (!saved)
             {
                 if (error != null) await DialogHelper.ShowError($"Hidden items were not saved.\n{error}", "Item Tables");
@@ -886,7 +886,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return;
             }
 
-            var empty = HiddenItems.FirstOrDefault(h => h.ItemID == 0);
+            HiddenItemRowVM empty = HiddenItems.FirstOrDefault(h => h.ItemID == 0);
             string refusal = !_hiddenSitesValid ? "The ARM9 count checks aren't where expected."
                 : HiddenItems.Count > _hiddenMaxCapacity ? $"There is room for {_hiddenMaxCapacity} entries."
                 : empty != null ? $"Script {empty.ScriptID} has no item. Pick one or remove the entry."
@@ -913,7 +913,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             // Whole-file overwrite per header (matches Headbutt's per-header-NARC convention);
             // File.WriteAllBytes creates the file if it didn't exist, so headers that were "missing"
             // from a/2/5/3 (modified ROM, or a header added since) get materialized here.
-            foreach (var row in RockSmashRows)
+            foreach (RockSmashHeaderRow row in RockSmashRows)
             {
                 row.Data.SaveToFile();
                 row.RefreshMissing();

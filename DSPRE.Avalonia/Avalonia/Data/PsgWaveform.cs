@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.Data
             if (kind == PsgKind.Square)
             {
                 int high = HighEighths[duty] * (PointsPerCycle / 8);
-                var pcm = new short[PointsPerCycle];
+                short[] pcm = new short[PointsPerCycle];
                 for (int i = 0; i < PointsPerCycle; i++) pcm[i] = i < high ? (short)10000 : (short)-10000;
                 return new SwavSample
                 {
@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.Data
 
             // One full turn of the shift register: fifteen bits, so 32767 steps before it repeats.
             const int Steps = 32767;
-            var noise = new short[Steps];
+            short[] noise = new short[Steps];
             int lfsr = 0x7FFF;
             for (int i = 0; i < Steps; i++)
             {

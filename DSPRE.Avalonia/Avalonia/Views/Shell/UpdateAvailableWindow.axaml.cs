@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Views.Shell
             MinHeight = 320;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-            var headline = new TextBlock
+            TextBlock headline = new TextBlock
             {
                 Text = preview
                     ? "This is how the update prompt will look for this release."
@@ -38,25 +38,25 @@ namespace DSPRE.Avalonia.Views.Shell
                 FontSize = 15
             };
 
-            var details = new TextBlock
+            TextBlock details = new TextBlock
             {
                 Text = $"Installed: {currentVersion}          Available: {availableVersion}",
                 Opacity = 0.7,
                 Margin = new Thickness(0, 2, 0, 0)
             };
 
-            var body = new StackPanel { Spacing = 6 };
+            StackPanel body = new StackPanel { Spacing = 6 };
             RenderMarkdown(body, string.IsNullOrWhiteSpace(notes)
                 ? "Release notes are not available for this version."
                 : notes);
 
-            var scroller = new ScrollViewer
+            ScrollViewer scroller = new ScrollViewer
             {
                 Content = new Border { Padding = new Thickness(10), Child = body },
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
             };
 
-            var buttons = new StackPanel
+            StackPanel buttons = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 8,
@@ -65,16 +65,16 @@ namespace DSPRE.Avalonia.Views.Shell
 
             if (!preview)
             {
-                var install = new Button { Content = "Install now", IsDefault = true };
+                Button install = new Button { Content = "Install now", IsDefault = true };
                 install.Click += (_, _) => { Install = true; Close(); };
                 buttons.Children.Add(install);
             }
 
-            var close = new Button { Content = preview ? "Close" : "Not now", IsCancel = true };
+            Button close = new Button { Content = preview ? "Close" : "Not now", IsCancel = true };
             close.Click += (_, _) => Close();
             buttons.Children.Add(close);
 
-            var grid = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), Margin = new Thickness(14) };
+            Grid grid = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), Margin = new Thickness(14) };
             Grid.SetRow(headline, 0);
             Grid.SetRow(details, 1);
             Grid.SetRow(scroller, 2);
@@ -156,12 +156,12 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private static Control Paragraph(string text, bool bullet)
         {
-            var block = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
+            SelectableTextBlock block = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
             AddInlines(block, text);
             if (!bullet) return block;
 
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("14,*") };
-            var dot = new TextBlock { Text = "•", VerticalAlignment = VerticalAlignment.Top };
+            Grid row = new Grid { ColumnDefinitions = new ColumnDefinitions("14,*") };
+            TextBlock dot = new TextBlock { Text = "•", VerticalAlignment = VerticalAlignment.Top };
             Grid.SetColumn(dot, 0);
             Grid.SetColumn(block, 1);
             row.Children.Add(dot);
@@ -172,7 +172,7 @@ namespace DSPRE.Avalonia.Views.Shell
         private static void AddInlines(SelectableTextBlock block, string text)
         {
             // Links first: they carry their own click behaviour, the rest is plain styling.
-            var pieces = new List<(string text, string url, FontStyle style, FontWeight weight)>();
+            List<(string text, string url, FontStyle style, FontWeight weight)> pieces = new List<(string text, string url, FontStyle style, FontWeight weight)>();
             int pos = 0;
             foreach (Match m in LinkPattern.Matches(text))
             {
@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (pos < text.Length) AddStyled(pieces, text.Substring(pos));
 
             string firstUrl = null;
-            foreach (var (t, url, style, weight) in pieces)
+            foreach ((string t, string url, FontStyle style, FontWeight weight) in pieces)
             {
                 if (url != null)
                 {

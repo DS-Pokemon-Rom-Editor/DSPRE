@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ApplyState(byte[] state)
         {
-            var species = DSPRE.Avalonia.UndoJson.Read<int[]>(state);
+            int[] species = DSPRE.Avalonia.UndoJson.Read<int[]>(state);
             for (int i = 0; i < species.Length && i < _file.Encounters.Count; i++) _file.Encounters[i].Species = (ushort)species[i];
             int slot = _selectedSlotIndex;
             RefreshSlotLabels();
@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons });
             SetMonIconsPalTableAddress();
 
-            foreach (var name in GetPokemonNames()) PokemonNames.Add(name);
+            foreach (string name in GetPokemonNames()) PokemonNames.Add(name);
 
             LoadEncounterFile();
         }
@@ -163,7 +163,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            var encounter = _file.Encounters[index];
+            GreatMarshEncounter encounter = _file.Encounters[index];
             SpeciesIndex = encounter.Species < PokemonNames.Count ? encounter.Species : -1;
             SlotInfoText = $"Slot number: {index:D2}";
             PokemonIcon = _icons.Get(encounter.Species);
@@ -174,7 +174,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_file == null || SpeciesIndex < 0 || _selectedSlotIndex < 0 || _selectedSlotIndex >= _file.Encounters.Count) return;
 
-            var encounter = _file.Encounters[_selectedSlotIndex];
+            GreatMarshEncounter encounter = _file.Encounters[_selectedSlotIndex];
             encounter.Species = (ushort)SpeciesIndex;
 
             int slot = _selectedSlotIndex;

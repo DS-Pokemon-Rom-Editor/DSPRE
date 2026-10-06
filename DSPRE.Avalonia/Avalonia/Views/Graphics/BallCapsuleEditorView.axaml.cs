@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -31,7 +32,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             AvaloniaXamlLoader.Load(this);
             _canvas = this.FindControl<Canvas>("BoardCanvas");
             _ghost = this.FindControl<Image>("Ghost");
-            var ring = this.FindControl<global::Avalonia.Controls.Shapes.Ellipse>("BoardRing");
+            Ellipse ring = this.FindControl<global::Avalonia.Controls.Shapes.Ellipse>("BoardRing");
             if (ring != null)
             {
                 Canvas.SetLeft(ring, ToCanvasX(BallCapsule.BoardCentreX - BallCapsule.BoardRadius));
@@ -62,9 +63,9 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (_canvas == null || VM == null) return;
             // The first three children are the board picture, its ring and the drag ghost.
             for (int i = _canvas.Children.Count - 1; i >= 3; i--) _canvas.Children.RemoveAt(i);
-            foreach (var placed in VM.Placed)
+            foreach (PlacedSeal placed in VM.Placed)
             {
-                var image = new Image
+                Image image = new Image
                 {
                     Source = placed.Sticker, Width = 32 * Zoom, Height = 32 * Zoom, Tag = placed.Slot,
                     Stretch = global::Avalonia.Media.Stretch.Fill, Cursor = new Cursor(StandardCursorType.SizeAll),
@@ -128,7 +129,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private void Window_PointerReleased(object sender, PointerReleasedEventArgs e)
         {
             if (_carrying == null) return;
-            var seal = _carrying;
+            SealChoice seal = _carrying;
             _carrying = null;
             if (_ghost != null) _ghost.IsVisible = false;
             if (!_carryMoved || VM == null) return;

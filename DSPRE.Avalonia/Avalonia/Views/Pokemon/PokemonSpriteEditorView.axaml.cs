@@ -28,15 +28,15 @@ namespace DSPRE.Avalonia.Views.Pokemon
         // --- Import Wizard -------------------------------------------------------------
         private async void OpenImportWizard_Click(object sender, RoutedEventArgs e)
         {
-            var wizardVm = new SpriteImportWizardViewModel(VM, OwnerWindow);
-            var wizard = new SpriteImportWizardView(wizardVm);
+            SpriteImportWizardViewModel wizardVm = new SpriteImportWizardViewModel(VM, OwnerWindow);
+            SpriteImportWizardView wizard = new SpriteImportWizardView(wizardVm);
             await wizard.ShowDialog(OwnerWindow);
         }
 
         private async void OpenExportWizard_Click(object sender, RoutedEventArgs e)
         {
-            var wizardVm = new SpriteExportWizardViewModel(VM, OwnerWindow);
-            var wizard = new SpriteExportWizardView(wizardVm);
+            SpriteExportWizardViewModel wizardVm = new SpriteExportWizardViewModel(VM, OwnerWindow);
+            SpriteExportWizardView wizard = new SpriteExportWizardView(wizardVm);
             await wizard.ShowDialog(OwnerWindow);
         }
 
@@ -135,8 +135,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void PaletteSwatch_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Button)?.Tag is not PokemonSpriteEditorViewModel.PaletteSwatch swatch) return;
-            var vm = new PaletteColorEditorViewModel(VM, swatch.Shiny, swatch.Index);
-            var popup = new PaletteColorEditorView(vm);
+            PaletteColorEditorViewModel vm = new PaletteColorEditorViewModel(VM, swatch.Shiny, swatch.Index);
+            PaletteColorEditorView popup = new PaletteColorEditorView(vm);
             popup.Show(OwnerWindow);
         }
     }

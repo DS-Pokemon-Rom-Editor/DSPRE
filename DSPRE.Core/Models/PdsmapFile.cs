@@ -36,7 +36,7 @@ namespace DSPRE.Models
             try { lines = File.ReadAllLines(path); }
             catch (Exception ex) { whynot = "Could not read file: " + ex.Message; return null; }
 
-            var project = new Project();
+            Project project = new Project();
             string folder = Path.GetDirectoryName(path) ?? ".";
             Map map = null;
             int tileLayer = 0, heightLayer = 0;
@@ -52,7 +52,7 @@ namespace DSPRE.Models
                     project.TilesetPath = Path.Combine(folder, Next());
                 else if (line.StartsWith("mapstart", StringComparison.Ordinal))
                 {
-                    var bits = Next().Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                    string[] bits = Next().Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                     map = new Map();
                     if (bits.Length >= 2) { int.TryParse(bits[0], out map.X); int.TryParse(bits[1], out map.Y); }
                     tileLayer = heightLayer = 0;
@@ -64,10 +64,10 @@ namespace DSPRE.Models
                 else if (line.StartsWith("tilegrid", StringComparison.Ordinal) || line.StartsWith("heightgrid", StringComparison.Ordinal))
                 {
                     bool tiles = line[0] == 't';
-                    var grid = new int[Across, Across];
+                    int[,] grid = new int[Across, Across];
                     for (int row = 0; row < Across; row++)
                     {
-                        var numbers = Next().Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+                        string[] numbers = Next().Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
                         if (numbers.Length < Across)
                         { whynot = $"Layer row {row} has {numbers.Length} values, expected {Across}."; return null; }
                         for (int col = 0; col < Across; col++)
@@ -93,13 +93,13 @@ namespace DSPRE.Models
         public static TileGrid ToGrid(Map map, MapTileset set, out int dropped)
         {
             dropped = 0;
-            var grid = new TileGrid();
+            TileGrid grid = new TileGrid();
             if (map == null) return grid;
 
             for (int layer = 0; layer < Layers && layer < TileGrid.Layers; layer++)
             {
-                var heights = map.Heights[layer];
-                var tiles = map.Tiles[layer];
+                int[,] heights = map.Heights[layer];
+                int[,] tiles = map.Tiles[layer];
 
                 if (heights != null)
                     for (int col = 0; col < Across; col++)
@@ -118,7 +118,7 @@ namespace DSPRE.Models
                             : listed;
                         if (set == null || tile < 0 || tile >= set.Tiles.Count) { dropped++; continue; }
 
-                        var t = set.Tiles[tile];
+                        MapTileset.Tile t = set.Tiles[tile];
                         // PDSMS anchors at the south-west square, we anchor at the north-west one.
                         int z = Across - 1 - row - (t.Deep - 1);
                         if (!grid.Stamp(col, z, tile, t.Wide, t.Deep, layer)) dropped++;

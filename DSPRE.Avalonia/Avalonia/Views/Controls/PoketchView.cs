@@ -78,10 +78,10 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             base.OnPointerPressed(e);
             if (Screen == null || !Owned) return;
-            var (scale, ox, oy) = Fit();
+            (double scale, double ox, double oy) = Fit();
             if (scale <= 0) return;
-            var p = e.GetPosition(this);
-            var spot = PoketchScreen.HitTest((int)((p.X - ox) / scale), (int)((p.Y - oy) / scale));
+            Point p = e.GetPosition(this);
+            PoketchScreen.Spot spot = PoketchScreen.HitTest((int)((p.X - ox) / scale), (int)((p.Y - oy) / scale));
             if (spot == PoketchScreen.Spot.None) return;
 
             e.Pointer.Capture(this);
@@ -93,7 +93,7 @@ namespace DSPRE.Avalonia.Views.Controls
             }
             else
             {
-                var look = ScriptRunning ? PoketchScreen.Look.Lock : PoketchScreen.Look.Hold;
+                PoketchScreen.Look look = ScriptRunning ? PoketchScreen.Look.Lock : PoketchScreen.Look.Hold;
                 if (spot == PoketchScreen.Spot.Up) _up = look; else _down = look;
                 PlaySound?.Invoke(ScriptRunning ? PoketchScreen.LockSound : PoketchScreen.HoldSound);
             }
@@ -123,10 +123,10 @@ namespace DSPRE.Avalonia.Views.Controls
 
         public override void Render(DrawingContext ctx)
         {
-            var (scale, ox, oy) = Fit();
+            (double scale, double ox, double oy) = Fit();
             if (scale <= 0) return;
-            var screen = Screen;
-            var now = DateTime.Now;
+            PoketchScreen screen = Screen;
+            DateTime now = DateTime.Now;
             string key = screen == null ? "none"
                 : $"{Owned}|{Female}|{_lit}|{_up}|{_down}|{now.Hour}:{now.Minute}|{screen.GetHashCode()}";
             if (_picture == null || _key != key)
@@ -138,21 +138,21 @@ namespace DSPRE.Avalonia.Views.Controls
                 _picture = rgba == null ? null : ToBitmap(rgba);
                 _key = key;
             }
-            var target = new Rect(ox, oy, DsBgScreen.Width * scale, DsBgScreen.Height * scale);
+            Rect target = new Rect(ox, oy, DsBgScreen.Width * scale, DsBgScreen.Height * scale);
             if (_picture == null) { ctx.FillRectangle(Brushes.Black, target); return; }
             ctx.DrawImage(_picture, new Rect(0, 0, DsBgScreen.Width, DsBgScreen.Height), target);
         }
 
         private static WriteableBitmap ToBitmap(byte[] rgba)
         {
-            var bmp = new WriteableBitmap(new PixelSize(DsBgScreen.Width, DsBgScreen.Height), new Vector(96, 96),
+            WriteableBitmap bmp = new WriteableBitmap(new PixelSize(DsBgScreen.Width, DsBgScreen.Height), new Vector(96, 96),
                                           PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-            using var buf = bmp.Lock();
+            using ILockedFramebuffer buf = bmp.Lock();
             unsafe
             {
                 for (int y = 0; y < DsBgScreen.Height; y++)
                 {
-                    var row = (byte*)buf.Address + y * buf.RowBytes;
+                    byte* row = (byte*)buf.Address + y * buf.RowBytes;
                     for (int x = 0; x < DsBgScreen.Width; x++)
                     {
                         int at = (y * DsBgScreen.Width + x) * 4;

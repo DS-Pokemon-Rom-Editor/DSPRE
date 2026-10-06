@@ -38,14 +38,14 @@ namespace DSPRE
             byte[] data = File.ReadAllBytes(bannerBinPath);
             if (data.Length < IconPaletteOffset + 32) return null;
 
-            var palette = new (byte r, byte g, byte b)[16];
+            (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[16];
             for (int i = 0; i < 16; i++)
             {
                 ushort v = (ushort)(data[IconPaletteOffset + i * 2] | (data[IconPaletteOffset + i * 2 + 1] << 8));
                 palette[i] = ((byte)((v & 0x1F) * 8), (byte)(((v >> 5) & 0x1F) * 8), (byte)(((v >> 10) & 0x1F) * 8));
             }
 
-            var img = new RawImage(IconSize, IconSize);
+            RawImage img = new RawImage(IconSize, IconSize);
             int pos = IconBitmapOffset;
             for (int tileY = 0; tileY < 4; tileY++)
                 for (int tileX = 0; tileX < 4; tileX++)
@@ -62,7 +62,7 @@ namespace DSPRE
 
         private static void SetPaletted(RawImage img, int x, int y, int palId, (byte r, byte g, byte b)[] palette)
         {
-            var c = palette[palId];
+            (byte r, byte g, byte b) c = palette[palId];
             img.SetPixel(x, y, c.r, c.g, c.b, palId == 0 ? (byte)0 : (byte)255);
         }
 
@@ -107,7 +107,7 @@ namespace DSPRE
             try
             {
                 if (!File.Exists(DsRomYamlPath)) return null;
-                var deserializer = new DeserializerBuilder().IgnoreUnmatchedProperties().Build();
+                IDeserializer deserializer = new DeserializerBuilder().IgnoreUnmatchedProperties().Build();
                 return deserializer.Deserialize<BannerYaml>(File.ReadAllText(DsRomYamlPath));
             }
             catch (Exception ex)
@@ -119,7 +119,7 @@ namespace DSPRE
 
         public static void WriteDsRomYaml(BannerYaml banner)
         {
-            var serializer = new SerializerBuilder().Build();
+            ISerializer serializer = new SerializerBuilder().Build();
             File.WriteAllText(DsRomYamlPath, serializer.Serialize(banner));
         }
 
@@ -134,7 +134,7 @@ namespace DSPRE
             if (img == null) return "The image could not be decoded.";
             if (img.Width != IconSize || img.Height != IconSize)
                 return $"The icon must be exactly {IconSize}×{IconSize} pixels (got {img.Width}×{img.Height}).";
-            var colours = new HashSet<int>();
+            HashSet<int> colours = new HashSet<int>();
             byte[] src = img.Bgra;
             for (int i = 0; i < src.Length; i += 4)
                 if (src[i + 3] >= 128) colours.Add((src[i + 2] << 16) | (src[i + 1] << 8) | src[i]);
@@ -150,9 +150,9 @@ namespace DSPRE
                 return $"The icon must be exactly {IconSize}×{IconSize} pixels (got {img.Width}×{img.Height}).";
 
             // Normalize: alpha < 128 → the transparent slot; opaque pixels forced to alpha 255.
-            var normalized = new RawImage(IconSize, IconSize);
-            var opaqueColors = new List<(byte r, byte g, byte b)>();
-            var colorIndex = new Dictionary<int, int>(); // packed rgb → palette slot (1-based)
+            RawImage normalized = new RawImage(IconSize, IconSize);
+            List<(byte r, byte g, byte b)> opaqueColors = new List<(byte r, byte g, byte b)>();
+            Dictionary<int, int> colorIndex = new Dictionary<int, int>(); // packed rgb → palette slot (1-based)
             byte[] src = img.Bgra, dst = normalized.Bgra;
             for (int i = 0; i < src.Length; i += 4)
             {
@@ -170,10 +170,10 @@ namespace DSPRE
                 dst[i] = b; dst[i + 1] = g; dst[i + 2] = r; dst[i + 3] = 255;
             }
 
-            var palette = new RawImage(16, 1);
+            RawImage palette = new RawImage(16, 1);
             for (int slot = 0; slot < opaqueColors.Count; slot++)
             {
-                var c = opaqueColors[slot];
+                (byte r, byte g, byte b) c = opaqueColors[slot];
                 palette.SetPixel(slot + 1, 0, c.r, c.g, c.b, 255);
             }
 
@@ -189,7 +189,7 @@ namespace DSPRE
 
         public static void WritePng(string path, RawImage img)
         {
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
 
             // Raw scanlines, filter byte 0 per row, RGBA order.
             byte[] raw = new byte[img.Height * (1 + img.Width * 4)];
@@ -208,9 +208,9 @@ namespace DSPRE
             }
 
             byte[] compressed;
-            using (var cms = new MemoryStream())
+            using (MemoryStream cms = new MemoryStream())
             {
-                using (var z = new ZLibStream(cms, CompressionLevel.Optimal, leaveOpen: true))
+                using (ZLibStream z = new ZLibStream(cms, CompressionLevel.Optimal, leaveOpen: true))
                     z.Write(raw, 0, raw.Length);
                 compressed = cms.ToArray();
             }

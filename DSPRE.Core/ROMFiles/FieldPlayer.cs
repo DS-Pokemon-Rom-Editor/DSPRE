@@ -176,7 +176,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The tile the player is looking at, which is what an interaction reaches.</summary>
         public (int x, int z) TileAhead
         {
-            get { var (dx, dz) = Step(Facing); return (TileX + dx, TileZ + dz); }
+            get { (int dx, int dz) = Step(Facing); return (TileX + dx, TileZ + dz); }
         }
 
         /// <summary>Presses a direction. </summary>
@@ -187,7 +187,7 @@ namespace DSPRE.ROMFiles
 
             if (Facing != dir) { Facing = dir; _cycle.Face(dir); return StepResult.Turned; }
 
-            var (dx, dz) = Step(dir);
+            (int dx, int dz) = Step(dir);
             int nx = TileX + dx, nz = TileZ + dz;
 
             if (_collision != null && !_collision.IsEmpty
@@ -295,9 +295,9 @@ namespace DSPRE.ROMFiles
         /// <summary>Every tile an overworld occupies, for the player to bump into.</summary>
         public static HashSet<(int x, int z)> OccupiedTiles(EventFile events, Func<ushort, bool> flagIsSet = null)
         {
-            var set = new HashSet<(int, int)>();
+            HashSet<(int, int)> set = new HashSet<(int, int)>();
             if (events?.overworlds == null) return set;
-            foreach (var o in events.overworlds)
+            foreach (Overworld o in events.overworlds)
                 if (IsPresent(o, flagIsSet)) set.Add((TileX(o), TileZ(o)));
             return set;
         }
@@ -305,10 +305,10 @@ namespace DSPRE.ROMFiles
         /// <summary>The tile a talk reaches. </summary>
         public static (int x, int z) TalkTile(FieldPlayer player, MapCollisionGrid map)
         {
-            var (x, z) = player.TileAhead;
+            (int x, int z) = player.TileAhead;
             if (map != null && map.IsCounter(x, z))
             {
-                var (dx, dz) = FieldPlayer.Step(player.Facing);
+                (int dx, int dz) = FieldPlayer.Step(player.Facing);
                 return (x + dx, z + dz);
             }
             return (x, z);
@@ -319,7 +319,7 @@ namespace DSPRE.ROMFiles
                                             MoveFacing playerFacing, Func<Spawnable, bool> hiddenStillThere = null)
         {
             if (events?.spawnables == null) return null;
-            foreach (var s in events.spawnables)
+            foreach (Spawnable s in events.spawnables)
             {
                 if (TileX(s) != tileX || TileZ(s) != tileZ) continue;
 
@@ -336,7 +336,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Whether a spawnable answers someone facing this way.</summary>
         public static bool CanTalkFrom(int spawnableDir, MoveFacing playerFacing)
         {
-            var approach = (SpawnableApproach)spawnableDir;
+            SpawnableApproach approach = (SpawnableApproach)spawnableDir;
             if (approach == SpawnableApproach.AnyWay) return true;
             switch (playerFacing)
             {
@@ -355,7 +355,7 @@ namespace DSPRE.ROMFiles
         public static Trigger TriggerAt(EventFile events, int tileX, int tileZ, Func<ushort, int> variableValue)
         {
             if (events?.triggers == null) return null;
-            foreach (var t in events.triggers)
+            foreach (Trigger t in events.triggers)
             {
                 int x = TileX(t), z = TileZ(t);
                 if (tileX < x || tileX >= x + Math.Max(1, (int)t.widthX)) continue;

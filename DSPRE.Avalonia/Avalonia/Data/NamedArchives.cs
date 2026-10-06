@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Data
             catch { }
 
             if (packed == null) return Array.Empty<string>();
-            var names = packed.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            List<string> names = packed.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                               .Select(n => n == "-" ? "" : n)
                               .ToList();
             // Diamond and Pearl lack the two three-file weather sets Platinum keeps at entries 55 to 60.
@@ -45,14 +45,14 @@ namespace DSPRE.Avalonia.Data
 
             if (IsWeather(dir))
             {
-                foreach (var (name, says) in Weather)
+                foreach ((string name, string says) in Weather)
                     if (thing.Equals(name, StringComparison.Ordinal)) return says;
                 return Pretty(thing);
             }
 
             if (dir == DirNames.fonts)
             {
-                foreach (var (name, says) in Fonts)
+                foreach ((string name, string says) in Fonts)
                     if (thing.Equals(name, StringComparison.Ordinal)) return says;
                 return Pretty(thing);
             }
@@ -109,18 +109,18 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One row per thing, with its pieces together, in the order the game lists them.</summary>
         public static List<GraphicAssets.Unit> Units(GraphicAssets.Archive a, int fileCount)
         {
-            var names = Names(a.Dir);
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            IReadOnlyList<string> names = Names(a.Dir);
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
-            var order = new List<string>();
-            var pieces = new Dictionary<string, List<(int Index, string Part)>>();
+            List<string> order = new List<string>();
+            Dictionary<string, List<(int Index, string Part)>> pieces = new Dictionary<string, List<(int Index, string Part)>>();
 
             for (int i = 0; i < fileCount && i < names.Count; i++)
             {
-                var (thing, part) = BattleObjects.Split(names[i]);
+                (string thing, string part) = BattleObjects.Split(names[i]);
                 if (thing == null) continue;
-                if (!pieces.TryGetValue(thing, out var list))
+                if (!pieces.TryGetValue(thing, out List<(int Index, string Part)> list))
                 {
                     pieces[thing] = list = new List<(int, string)>();
                     order.Add(thing);
@@ -131,8 +131,8 @@ namespace DSPRE.Avalonia.Data
 
             foreach (string thing in order)
             {
-                var u = new GraphicAssets.Unit { Archive = a, Name = Friendly(a.Dir, thing) };
-                foreach (var (index, part) in pieces[thing].OrderBy(p => Rank(p.Part)).ThenBy(p => p.Index))
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = Friendly(a.Dir, thing) };
+                foreach ((int index, string part) in pieces[thing].OrderBy(p => Rank(p.Part)).ThenBy(p => p.Index))
                     u.Parts.Add(new GraphicAssets.UnitPart { Archive = a, Index = index, Name = part });
                 units.Add(u);
             }
@@ -140,7 +140,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < fileCount; i++)
             {
                 if (spokenFor.Contains(i)) continue;
-                var lone = new GraphicAssets.Unit { Archive = a, Name = a.Title };
+                GraphicAssets.Unit lone = new GraphicAssets.Unit { Archive = a, Name = a.Title };
                 lone.Parts.Add(new GraphicAssets.UnitPart { Archive = a, Index = i, Name = "File " + i });
                 units.Add(lone);
             }
@@ -154,18 +154,18 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The drawing a layout or arrangement belongs with, which is the one of the same thing.</summary>
         public static int DrawingFor(DirNames dir, int fileIndex)
         {
-            var names = Names(dir);
+            IReadOnlyList<string> names = Names(dir);
             if (fileIndex < 0 || fileIndex >= names.Count) return -1;
-            var (thing, _) = BattleObjects.Split(names[fileIndex]);
+            (string thing, string _) = BattleObjects.Split(names[fileIndex]);
             return thing == null ? -1 : IndexOf(names, thing, "Drawing");
         }
 
         /// <summary>The colours a drawing is meant to use, where the list says so.</summary>
         public static int ColoursFor(DirNames dir, int fileIndex)
         {
-            var names = Names(dir);
+            IReadOnlyList<string> names = Names(dir);
             if (fileIndex < 0 || fileIndex >= names.Count) return -1;
-            var (thing, part) = BattleObjects.Split(names[fileIndex]);
+            (string thing, string part) = BattleObjects.Split(names[fileIndex]);
             if (thing == null || part == "Colours") return -1;
             return IndexOf(names, thing, "Colours");
         }
@@ -173,9 +173,9 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The arrangement a drawing is laid out by, where the list says so.</summary>
         public static int ArrangementFor(DirNames dir, int fileIndex)
         {
-            var names = Names(dir);
+            IReadOnlyList<string> names = Names(dir);
             if (fileIndex < 0 || fileIndex >= names.Count) return -1;
-            var (thing, part) = BattleObjects.Split(names[fileIndex]);
+            (string thing, string part) = BattleObjects.Split(names[fileIndex]);
             if (thing == null || part != "Drawing") return -1;
             return IndexOf(names, thing, "Arrangement");
         }
@@ -184,7 +184,7 @@ namespace DSPRE.Avalonia.Data
         {
             for (int i = 0; i < names.Count; i++)
             {
-                var (t, p) = BattleObjects.Split(names[i]);
+                (string t, string p) = BattleObjects.Split(names[i]);
                 if (t == thing && p == part) return i;
             }
             return -1;
@@ -193,9 +193,9 @@ namespace DSPRE.Avalonia.Data
         /// <summary>What one file is, for the line above the picture.</summary>
         public static string NameOf(DirNames dir, int fileIndex)
         {
-            var names = Names(dir);
+            IReadOnlyList<string> names = Names(dir);
             if (fileIndex < 0 || fileIndex >= names.Count) return null;
-            var (thing, part) = BattleObjects.Split(names[fileIndex]);
+            (string thing, string part) = BattleObjects.Split(names[fileIndex]);
             if (thing == null) return null;
             string friendly = Friendly(dir, thing);
             return part == "File" ? friendly : $"{friendly}, {part.ToLowerInvariant()}";

@@ -30,11 +30,11 @@ namespace DSPRE.Avalonia.Data
             if (_loose != null) return _loose;
             _loose = Array.Empty<byte[]>();
             if (!File.Exists(LoosePath)) return _loose;
-            var narc = Narc.Open(LoosePath);
+            Narc narc = Narc.Open(LoosePath);
             if (narc == null) return _loose;
             try
             {
-                var files = new byte[narc.ElementCount][];
+                byte[][] files = new byte[narc.ElementCount][];
                 for (int i = 0; i < files.Length; i++) files[i] = narc.GetElementBytes(i);
                 _loose = files;
             }
@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Data
             // As ScriptNarc does for mapped archives: a member hg-engine copies in from its own file is that file.
             if (HgEngine.HgEngineSourceAssets.ReadVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOfPath(LoosePath), index) is byte[] source)
                 return source;
-            var files = LooseFiles();
+            byte[][] files = LooseFiles();
             return index >= 0 && index < files.Length ? files[index] : null;
         }
 
@@ -61,17 +61,17 @@ namespace DSPRE.Avalonia.Data
         {
             if (_mapped != null)
             {
-                foreach (var file in files) _mapped.Put(file.Key, file.Value);
+                foreach (KeyValuePair<int, byte[]> file in files) _mapped.Put(file.Key, file.Value);
                 return;
             }
 
-            foreach (var file in files)
+            foreach (KeyValuePair<int, byte[]> file in files)
                 HgEngine.HgEngineSourceAssets.WriteVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOfPath(LoosePath), file.Key, file.Value);
 
-            var narc = Narc.Open(LoosePath) ?? throw new IOException("That archive could not be read.");
+            Narc narc = Narc.Open(LoosePath) ?? throw new IOException("That archive could not be read.");
             try
             {
-                foreach (var file in files)
+                foreach (KeyValuePair<int, byte[]> file in files)
                 {
                     if (file.Key < 0 || file.Key >= narc.ElementCount)
                         throw new IOException($"That archive has no file {file.Key}.");

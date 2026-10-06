@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using DSPRE.ROMFiles;
+using Avalonia.Media.Imaging;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -108,7 +109,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void RefreshStarterIcon(int slot)
         {
-            var icon = _pokemonIcons.Get(slot == 1 ? _starter1 : slot == 2 ? _starter2 : _starter3);
+            Bitmap icon = _pokemonIcons.Get(slot == 1 ? _starter1 : slot == 2 ? _starter2 : _starter3);
             if (slot == 1) Starter1Icon = icon;
             else if (slot == 2) Starter2Icon = icon;
             else Starter3Icon = icon;
@@ -119,7 +120,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!IsHeldItemSupported || _heldItem <= 0) { HeldItemIcon = null; return; }
             try
             {
-                var raw = DSUtils.GetItemPicRaw(_heldItem, 32, 32);
+                RawImage raw = DSUtils.GetItemPicRaw(_heldItem, 32, 32);
                 HeldItemIcon = raw != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(raw) : null;
             }
             catch { HeldItemIcon = null; }
@@ -192,8 +193,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<RomInfo.DirNames> { RomInfo.DirNames.monIcons, RomInfo.DirNames.itemIcons });
             RomInfo.SetMonIconsPalTableAddress();
 
-            foreach (var n in RomInfo.GetPokemonNames()) PokemonNames.Add(n);
-            foreach (var n in RomInfo.GetItemNames()) ItemNames.Add(n);
+            foreach (string n in RomInfo.GetPokemonNames()) PokemonNames.Add(n);
+            foreach (string n in RomInfo.GetItemNames()) ItemNames.Add(n);
             ReloadFromRom();
 
             AppEvents.NamesChanged -= OnNamesChanged;
@@ -254,7 +255,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_command == null)
                 {
                     // The starter is not where it should be, so now it is worth reading the whole game.
-                    var all = StarterRotomSource.FindAll();
+                    List<StarterRotomSource.Match> all = StarterRotomSource.FindAll();
                     _command = all.FirstOrDefault(c => c.NamedAsStarter);
 
                     // Say once that the give commands are not what they were, so a romhack that has
@@ -281,7 +282,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static string KnownFingerprint()
         {
-            var map = SettingsManager.Settings?.starterCommandFingerprint;
+            Dictionary<string, string> map = SettingsManager.Settings?.starterCommandFingerprint;
             return map != null && map.TryGetValue(ProjectKey(), out string f) ? f : null;
         }
 
@@ -297,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static string RememberedChoice()
         {
-            var map = SettingsManager.Settings?.starterCommandChoice;
+            Dictionary<string, string> map = SettingsManager.Settings?.starterCommandChoice;
             return map != null && map.TryGetValue(ProjectKey(), out string key) ? key : null;
         }
 
@@ -352,8 +353,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Commands ──────────────────────────────────────────────────────────
         public void SaveChanges()
         {
-            var newStarters = new[] { Starter1, Starter2, Starter3 };
-            var touchedScripts = new List<int>();
+            int[] newStarters = new[] { Starter1, Starter2, Starter3 };
+            List<int> touchedScripts = new List<int>();
             // Applying starters also patches the selection scene, the rival's teams and the dialogue,
             // which a level or held item change has no business touching.
             bool speciesChanged = _saved == null
@@ -431,7 +432,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// </summary>
         private async System.Threading.Tasks.Task SaveThroughTheScriptAsync()
         {
-            var command = _command;
+            StarterRotomSource.Match command = _command;
             int item = HeldItem;
             int level = StarterLevel;
             string itemName = item > 0 && item < ItemNames.Count

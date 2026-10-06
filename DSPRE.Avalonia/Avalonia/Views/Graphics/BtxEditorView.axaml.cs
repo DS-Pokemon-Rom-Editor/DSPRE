@@ -22,7 +22,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import PNG",
                 AllowMultiple = false,
@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             if (VM == null) return;
 
-            bool needsProfile = VM.TryGetCompatibleProfiles(path, out var profiles, out string analysisError);
+            bool needsProfile = VM.TryGetCompatibleProfiles(path, out List<OverworldGraphicsProfileOption> profiles, out string analysisError);
             if (analysisError != null)
             {
                 await DialogHelper.ShowError($"Import failed: {analysisError}");
@@ -48,8 +48,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             string error;
             if (needsProfile)
             {
-                var pickerVm = new OverworldProfilePickerViewModel(profiles);
-                var picker = new OverworldProfilePickerView(pickerVm);
+                OverworldProfilePickerViewModel pickerVm = new OverworldProfilePickerViewModel(profiles);
+                OverworldProfilePickerView picker = new OverworldProfilePickerView(pickerVm);
                 bool accepted = await picker.ShowDialog<bool>(this);
                 if (!accepted || pickerVm.SelectedProfile == null) return;
 
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export PNG",
                 DefaultExtension = "png",
@@ -110,8 +110,8 @@ namespace DSPRE.Avalonia.Views.Graphics
         {
             if (VM == null) return;
 
-            var dlgVm = new AddOverworldEntryViewModel();
-            var dlg = new AddOverworldEntryView(dlgVm);
+            AddOverworldEntryViewModel dlgVm = new AddOverworldEntryViewModel();
+            AddOverworldEntryView dlg = new AddOverworldEntryView(dlgVm);
             await dlg.ShowDialog(this);
             if (!dlgVm.Confirmed) return;
 

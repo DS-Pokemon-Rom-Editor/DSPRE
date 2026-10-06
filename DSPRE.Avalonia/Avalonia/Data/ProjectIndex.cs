@@ -36,13 +36,13 @@ namespace DSPRE.Avalonia.Data
 
         private static List<HeaderRefs> ScanHeaders()
         {
-            var list = new List<HeaderRefs>();
+            List<HeaderRefs> list = new List<HeaderRefs>();
             int count = GetHeaderCount();
             for (ushort i = 0; i < count; i++)
             {
                 try
                 {
-                    var h = MapHeader.GetMapHeader(i);
+                    MapHeader h = MapHeader.GetMapHeader(i);
                     if (h == null) continue;
                     list.Add(new HeaderRefs
                     {
@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia.Data
 
         public static List<ValidationIssue> Validate()
         {
-            var issues = new List<ValidationIssue>();
+            List<ValidationIssue> issues = new List<ValidationIssue>();
             ValidateHeaders(issues);
             ValidateEvolutions(issues);
             ValidateTrainers(issues);
@@ -89,13 +89,13 @@ namespace DSPRE.Avalonia.Data
 
         private static void ValidateHeaders(List<ValidationIssue> issues)
         {
-            var headers = ScanHeaders();
+            List<HeaderRefs> headers = ScanHeaders();
             foreach (RefKind kind in Enum.GetValues<RefKind>())
             {
                 int count = CountFor(kind);
                 if (count <= 0) continue;
                 int none = NoneFor(kind);
-                foreach (var h in headers)
+                foreach (HeaderRefs h in headers)
                 {
                     int v = RefValue(h, kind);
                     if (v == none) continue;        // unset / not used
@@ -127,7 +127,7 @@ namespace DSPRE.Avalonia.Data
                     if (ef.data == null) continue;
                     for (int slot = 0; slot < ef.data.Length; slot++)
                     {
-                        var d = ef.data[slot];
+                        EvolutionData d = ef.data[slot];
                         if (!d.isValid()) continue;
                         void Add(string msg) => issues.Add(new ValidationIssue
                         { Category = "Evolution", Where = $"{Name(species, mons)} (slot {slot + 1})", Message = msg });
@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.Data
                         if (d.target < 0 || d.target >= mons)
                             Add($"target species {d.target} is out of range (only {mons} exist)");
 
-                        var meaning = (EvolutionParamMeaning)LabelStore.GetAttr("evolution_methods", (int)d.method);
+                        EvolutionParamMeaning meaning = (EvolutionParamMeaning)LabelStore.GetAttr("evolution_methods", (int)d.method);
                         int p = d.param;
                         if (meaning == EvolutionParamMeaning.PokemonName && (p < 0 || p >= mons))
                             Add($"parameter species {p} is out of range (only {mons} exist)");
@@ -176,8 +176,8 @@ namespace DSPRE.Avalonia.Data
                     TrainerFile tf;
                     try
                     {
-                        using var propStream = new FileStream(propDir + suffix, FileMode.Open, FileAccess.Read);
-                        using var partyStream = new FileStream(partyDir + suffix, FileMode.Open, FileAccess.Read);
+                        using FileStream propStream = new FileStream(propDir + suffix, FileMode.Open, FileAccess.Read);
+                        using FileStream partyStream = new FileStream(partyDir + suffix, FileMode.Open, FileAccess.Read);
                         tf = new TrainerFile(new TrainerProperties((ushort)id, propStream), partyStream,
                             id < names.Length ? names[id] : "");
                     }
@@ -213,15 +213,15 @@ namespace DSPRE.Avalonia.Data
 
         private static string Name(int species, int mons)
         {
-            try { var n = GetPokemonNames(); return species < n.Length ? $"{n[species]} (#{species})" : $"Pokémon {species}"; }
+            try { string[] n = GetPokemonNames(); return species < n.Length ? $"{n[species]} (#{species})" : $"Pokémon {species}"; }
             catch { return $"Pokémon {species}"; }
         }
 
         /// <summary>Header ids that reference the given file id of the given kind.</summary>
         public static List<ushort> HeadersUsing(RefKind kind, int id)
         {
-            var result = new List<ushort>();
-            foreach (var h in ScanHeaders())
+            List<ushort> result = new List<ushort>();
+            foreach (HeaderRefs h in ScanHeaders())
                 if (RefValue(h, kind) == id) result.Add(h.Id);
             return result;
         }

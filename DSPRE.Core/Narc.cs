@@ -162,7 +162,7 @@ namespace NarcAPI {
         public int ElementCount => Elements.Length;
 
         public byte[] GetElementBytes(int index) {
-            var stream = Elements[index];
+            MemoryStream stream = Elements[index];
             byte[] buffer = new byte[stream.Length];
             stream.Seek(0, SeekOrigin.Begin);
             stream.Read(buffer, 0, buffer.Length);

@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels.World;
 using System;
+using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Views.World
 {
@@ -71,7 +72,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM == null || !VM.Ready) return;
 
-            var point = e.GetCurrentPoint(GlView);
+            PointerPoint point = e.GetCurrentPoint(GlView);
             if (!point.Properties.IsLeftButtonPressed) return;
 
             if (GlView.HitTestGizmoAxis((float)point.Position.X, (float)point.Position.Y) >= 0) return;
@@ -106,10 +107,10 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM == null || !VM.Ready) return;
 
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null) return;
 
-            var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export map model",
                 SuggestedFileName = "map.obj",
@@ -124,9 +125,9 @@ namespace DSPRE.Avalonia.Views.World
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null) return;
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import map model",
                 AllowMultiple = false,

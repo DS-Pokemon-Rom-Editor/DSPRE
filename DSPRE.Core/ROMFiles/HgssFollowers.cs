@@ -1,4 +1,5 @@
 using DSPRE.HgEngine;
+using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
 using System;
 using System.Collections.Generic;
@@ -71,8 +72,8 @@ namespace DSPRE.ROMFiles
 
         private static ushort[] Lut(int offset, int count)
         {
-            var bytes = DSUtils.ReadFromFile(arm9Path, offset, count * 2);
-            var values = new ushort[count];
+            byte[] bytes = DSUtils.ReadFromFile(arm9Path, offset, count * 2);
+            ushort[] values = new ushort[count];
             for (int i = 0; i < count; i++) values[i] = BitConverter.ToUInt16(bytes, i * 2);
             return values;
         }
@@ -80,7 +81,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The models a species walks as: the base one, then its female or form models.</summary>
         public static List<(int index, string label)> ModelsOf(int species)
         {
-            var list = new List<(int, string)>();
+            List<(int, string)> list = new List<(int, string)>();
             if (species < 1 || species > SpeciesCount) return list;
             int first = Lut(FollowerModelTableOffset + species * 2, 1)[0];
             list.Add((first, "Normal"));
@@ -95,7 +96,7 @@ namespace DSPRE.ROMFiles
         private static long RowOffset(int sprite)
         {
             if (string.IsNullOrEmpty(OWtablePath) || !File.Exists(OWtablePath)) return -1;
-            using var reader = new BinaryReader(File.OpenRead(OWtablePath));
+            using BinaryReader reader = new BinaryReader(File.OpenRead(OWtablePath));
             reader.BaseStream.Position = OWTableOffset;
             while (reader.BaseStream.Position + 6 <= reader.BaseStream.Length)
             {
@@ -110,8 +111,8 @@ namespace DSPRE.ROMFiles
 
         private static List<long> RowsUsingModelFile(ushort modelFile)
         {
-            var rows = new List<long>();
-            using var reader = new BinaryReader(File.OpenRead(OWtablePath));
+            List<long> rows = new List<long>();
+            using BinaryReader reader = new BinaryReader(File.OpenRead(OWtablePath));
             reader.BaseStream.Position = OWTableOffset;
             while (reader.BaseStream.Position + 6 <= reader.BaseStream.Length)
             {
@@ -133,12 +134,12 @@ namespace DSPRE.ROMFiles
         {
             long row = RowOffset(FirstSprite + model);
             if (row < 0) return null;
-            var rowBytes = DSUtils.ReadFromFile(OWtablePath, row, 6);
+            byte[] rowBytes = DSUtils.ReadFromFile(OWtablePath, row, 6);
             string paramPath = ParamPath(model);
-            var param = File.Exists(paramPath) ? File.ReadAllBytes(paramPath) : new byte[4];
+            byte[] param = File.Exists(paramPath) ? File.ReadAllBytes(paramPath) : new byte[4];
             if (param.Length < 4) Array.Resize(ref param, 4);
 
-            var m = new Model
+            Model m = new Model
             {
                 Index = model, Label = label, Bits = BitConverter.ToUInt16(rowBytes, 4),
                 TooTall = param[1] != 0, Motion = param[2], Param = param,
@@ -148,7 +149,7 @@ namespace DSPRE.ROMFiles
                 string art = Filesystem.GetOWSpritePath(BitConverter.ToUInt16(rowBytes, 2));
                 if (File.Exists(art))
                 {
-                    NSBTXLoader.LoadNsbtx(new FileInfo(art), out var texs, out _);
+                    NSBTXLoader.LoadNsbtx(new FileInfo(art), out List<NSBMDTexture> texs, out _);
                     if (texs?.Count > 0) { m.TextureWidth = texs[0].width; m.TextureHeight = texs[0].height; }
                 }
             }
@@ -166,7 +167,7 @@ namespace DSPRE.ROMFiles
             foreach (long other in RowsUsingModelFile(modelFile))
                 if (other != row) DSUtils.WriteToFile(OWtablePath, BitConverter.GetBytes(m.Bits), (uint)(other + 4));
 
-            var param = (byte[])m.Param.Clone();
+            byte[] param = (byte[])m.Param.Clone();
             param[1] = (byte)(m.TooTall ? 1 : 0);
             param[2] = m.Motion;
             File.WriteAllBytes(ParamPath(m.Index), param);

@@ -87,13 +87,13 @@ namespace DSPRE.ROMFiles
         {
             if (data == null || data.Length < 4) return null;
             if (Encoding.ASCII.GetString(data, 0, 4) != "BTA0") return null;
-            var file = NSBTA.Read(data);
+            NSBTA.NSBTA_File file = NSBTA.Read(data);
             return file.Header.ID == "BTA0" && file.SRTData != null ? new TextureSrtAnimation(file) : null;
         }
 
         private IEnumerable<decimal[]> Tracks(int material)
         {
-            var d = _file.SRTData[material];
+            NSBTA.NSBTA_File.srtData d = _file.SRTData[material];
             yield return d.scaleS; yield return d.scaleT;
             yield return d.translateS; yield return d.translateT;
         }
@@ -114,8 +114,8 @@ namespace DSPRE.ROMFiles
             if (material < 0 || material >= MaterialNames.Count) return Srt.Identity;
             if (frame < 0) frame = 0;
 
-            var d = _file.SRTData[material];
-            var srt = new Srt
+            NSBTA.NSBTA_File.srtData d = _file.SRTData[material];
+            Srt srt = new Srt
             {
                 ScaleS = At(d.scaleS, frame, 1f),
                 ScaleT = At(d.scaleT, frame, 1f),
@@ -142,7 +142,7 @@ namespace DSPRE.ROMFiles
         public bool IsStatic(int material)
         {
             if (material < 0 || material >= MaterialNames.Count) return true;
-            var rot = _file.SRTData[material].rotate;
+            decimal[] rot = _file.SRTData[material].rotate;
             if (rot != null && rot.Length > 2) return false;
             return Tracks(material).All(t => t == null || t.Length <= 1);
         }

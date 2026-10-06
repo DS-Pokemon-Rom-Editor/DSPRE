@@ -50,8 +50,8 @@ namespace DSPRE.ROMFiles {
         /// <summary>What would hang in game, or null.</summary>
         public string Problem() {
             // The daily pick rerolls until it differs from both active picks, comparing whole 4-byte entries.
-            var distinct = new HashSet<uint>();
-            foreach (var e in Encounters) distinct.Add(e.Species | ((uint)e.Padding << 16));
+            HashSet<uint> distinct = new HashSet<uint>();
+            foreach (GreatMarshEncounter e in Encounters) distinct.Add(e.Species | ((uint)e.Padding << 16));
             return distinct.Count < 3
                 ? "The pool needs at least 3 different species, or the game freezes picking a new daily Pokemon."
                 : null;
@@ -60,7 +60,7 @@ namespace DSPRE.ROMFiles {
         public override byte[] ToByteArray() {
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (var encounter in Encounters) {
+                foreach (GreatMarshEncounter encounter in Encounters) {
                     encounter.Write(bw);
                 }
                 return ms.ToArray();

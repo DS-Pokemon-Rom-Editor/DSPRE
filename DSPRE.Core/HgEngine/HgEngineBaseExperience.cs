@@ -15,7 +15,7 @@ namespace DSPRE.HgEngine
         {
             baseExp = 0;
             if (!HgEngineProject.IsActive) return false;
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator)) return false;
 
             string text = TryReadSource(out _);
@@ -27,7 +27,7 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 

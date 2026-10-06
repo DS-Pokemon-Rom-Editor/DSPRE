@@ -135,7 +135,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public MartEditorViewModel()
         {
             if (!Design.IsDesignMode) return;
-            var sample = new MartShopVM("Common Mart", "Stock unlocked as the story advances");
+            MartShopVM sample = new MartShopVM("Common Mart", "Stock unlocked as the story advances");
             Shops.Add(sample);
             SelectedShop = sample;
         }
@@ -164,9 +164,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
             w.Write(_data.CommonItems.Count);
-            foreach (var e in _data.CommonItems) { w.Write(e.ItemId); w.Write(e.RequiredTier); }
+            foreach (MartData.CommonEntry e in _data.CommonItems) { w.Write(e.ItemId); w.Write(e.RequiredTier); }
             w.Write(_data.SpecialtyShops.Count);
-            foreach (var shop in _data.SpecialtyShops) { w.Write(shop.Items.Count); foreach (ushort item in shop.Items) w.Write(item); }
+            foreach (MartData.SpecialtyShop shop in _data.SpecialtyShops) { w.Write(shop.Items.Count); foreach (ushort item in shop.Items) w.Write(item); }
         });
 
         // Shows the mart the step changed.
@@ -176,7 +176,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             int changed = -1;
             ByteStateUndo.Unpack(state, r =>
             {
-                var common = new System.Collections.Generic.List<MartData.CommonEntry>();
+                System.Collections.Generic.List<MartData.CommonEntry> common = new System.Collections.Generic.List<MartData.CommonEntry>();
                 for (int n = r.ReadInt32(), i = 0; i < n; i++) common.Add(new MartData.CommonEntry { ItemId = r.ReadUInt16(), RequiredTier = r.ReadUInt16() });
                 if (common.Count != _data.CommonItems.Count || common.Where((e, i) => e.ItemId != _data.CommonItems[i].ItemId || e.RequiredTier != _data.CommonItems[i].RequiredTier).Any())
                     changed = 0;
@@ -188,23 +188,23 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 while (_data.SpecialtyShops.Count < shops) _data.AddSpecialtyShop();
                 for (int s = 0; s < shops; s++)
                 {
-                    var items = new System.Collections.Generic.List<ushort>();
+                    System.Collections.Generic.List<ushort> items = new System.Collections.Generic.List<ushort>();
                     for (int n = r.ReadInt32(), i = 0; i < n; i++) items.Add(r.ReadUInt16());
-                    var list = _data.SpecialtyShops[s].Items;
+                    System.Collections.Generic.List<ushort> list = _data.SpecialtyShops[s].Items;
                     if (changed < 0 && !list.SequenceEqual(items)) changed = s + 1;
                     list.Clear();
                     list.AddRange(items);
                 }
             });
             PopulateShops(changed >= 0 ? changed : Math.Max(0, Shops.IndexOf(SelectedShop)));
-            foreach (var n in new[] { nameof(SelectedShopDescription), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop), nameof(HasUnsavedChanges) })
+            foreach (string n in new[] { nameof(SelectedShopDescription), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop), nameof(HasUnsavedChanges) })
                 Notify(n);
         }
 
         private void PopulateShops(int selectedIndex = 0)
         {
             Shops.Clear();
-            var common = new MartShopVM("Common Mart", "Stock unlocked as the story advances");
+            MartShopVM common = new MartShopVM("Common Mart", "Stock unlocked as the story advances");
             for (int i = 0; i < _data.CommonItems.Count; i++)
             {
                 MartData.CommonEntry entry = _data.CommonItems[i];
@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             foreach (MartData.SpecialtyShop source in _data.SpecialtyShops)
             {
-                var shop = new MartShopVM(source.Name, $"Specialty Mart ID {source.Id}", source);
+                MartShopVM shop = new MartShopVM(source.Name, $"Specialty Mart ID {source.Id}", source);
                 for (int i = 0; i < source.Items.Count; i++)
                 {
                     int index = i;
@@ -299,7 +299,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _data = MartData.LoadCurrent();
             PopulateShops();
             StartUndo();
-            foreach (var n in new[] { nameof(CanResize), nameof(CanAddShop), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop),
+            foreach (string n in new[] { nameof(CanResize), nameof(CanAddShop), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop),
                                       nameof(ResizeStatus), nameof(CanOfferExpansion) })
                 Notify(n);
         }
@@ -311,7 +311,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 int selected = Math.Max(0, Shops.IndexOf(SelectedShop));
                 _data = MartData.LoadCurrent();
                 PopulateShops(selected);
-                foreach (var n in new[] { nameof(SelectedShopDescription), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop) })
+                foreach (string n in new[] { nameof(SelectedShopDescription), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop) })
                     Notify(n);
                 StartUndo();
             }

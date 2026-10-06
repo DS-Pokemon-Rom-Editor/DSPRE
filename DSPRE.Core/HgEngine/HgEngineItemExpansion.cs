@@ -22,7 +22,7 @@ namespace DSPRE.HgEngine
         public static bool TryGetVanillaBoundary(out int lastVanillaItemId)
         {
             lastVanillaItemId = -1;
-            var items = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable items = HgEngineSymbolTable.Load(HeaderRelPath);
             return items != null && items.TryGetValue("MAX_BASE_ITEM_NUM", out lastVanillaItemId);
         }
 
@@ -45,8 +45,8 @@ namespace DSPRE.HgEngine
         {
             pending = null;
             if (!TryReadSources(out _, out string headerText, out _, out string sourceText, out error)) return false;
-            var config = HgEngineSymbolTable.Load(ConfigRelPath)?.ByName;
-            if (!TryPrepare(headerText, sourceText, displayName, config, out var prepared, out _, out _, out error)) return false;
+            IReadOnlyDictionary<string, int> config = HgEngineSymbolTable.Load(ConfigRelPath)?.ByName;
+            if (!TryPrepare(headerText, sourceText, displayName, config, out PendingItem prepared, out _, out _, out error)) return false;
             if (!TryPlanTextWrites(headerText, HgEngineSymbolTable.Parse(headerText, config), prepared.Id, displayName, out _, out error)) return false;
             pending = prepared;
             return true;
@@ -61,25 +61,25 @@ namespace DSPRE.HgEngine
         public static bool TryCommitItem(PendingItem pending, ItemData item, out string error)
         {
             if (!TryReadSources(out string headerPath, out string headerOriginal, out string sourcePath, out string sourceOriginal, out error)) return false;
-            var config = HgEngineSymbolTable.Load(ConfigRelPath)?.ByName;
+            IReadOnlyDictionary<string, int> config = HgEngineSymbolTable.Load(ConfigRelPath)?.ByName;
             if (!TryBuildCommit(headerOriginal, sourceOriginal, pending, item, config, w => HgEngineSourceFields.NameLookup(w.Headers),
                     HgEngineSourceFields.NameLookup(HgEngineItemSource.Headers), out string headerText, out string sourceText, out error))
                 return false;
-            if (!TryPlanTextWrites(headerOriginal, HgEngineSymbolTable.Parse(headerOriginal, config), pending.Id, pending.DisplayName, out var textWrites, out error))
+            if (!TryPlanTextWrites(headerOriginal, HgEngineSymbolTable.Parse(headerOriginal, config), pending.Id, pending.DisplayName, out List<(HgEngineOwnedFile File, List<string> Original, List<string> Updated)> textWrites, out error))
                 return false;
 
-            var undo = new List<Action>();
+            List<Action> undo = new List<Action>();
             try
             {
                 HgEngineFileCache.WriteText(headerPath, headerText);
                 undo.Add(() => HgEngineFileCache.WriteText(headerPath, headerOriginal));
                 HgEngineFileCache.WriteText(sourcePath, sourceText);
                 undo.Add(() => HgEngineFileCache.WriteText(sourcePath, sourceOriginal));
-                foreach (var w in textWrites)
+                foreach ((HgEngineOwnedFile File, List<string> Original, List<string> Updated) w in textWrites)
                 {
                     if (!HgEngineOwnedFiles.TryWriteLines(w.File, w.Updated, out string writeError))
                         throw new IOException(writeError);
-                    var captured = w;
+                    (HgEngineOwnedFile File, List<string> Original, List<string> Updated) captured = w;
                     undo.Add(() => HgEngineOwnedFiles.TryWriteLines(captured.File, captured.Original, out _));
                 }
             }
@@ -100,7 +100,7 @@ namespace DSPRE.HgEngine
         public static void CompleteAdd(PendingItem pending)
         {
             HgEngineSymbolTable.ClearCache();
-            var names = new ROMFiles.TextArchive(RomInfo.itemNamesTextNumber);
+            TextArchive names = new ROMFiles.TextArchive(RomInfo.itemNamesTextNumber);
             while (names.messages.Count <= pending.Id) names.messages.Add("");
             names.messages[pending.Id] = pending.DisplayName;
             names.SaveToExpandedDir(RomInfo.itemNamesTextNumber, showSuccessMessage: false);
@@ -127,11 +127,11 @@ namespace DSPRE.HgEngine
             pending = null;
             newHeader = newSource = null;
             error = null;
-            var items = HgEngineSymbolTable.Parse(headerText, config);
+            HgEngineSymbolTable items = HgEngineSymbolTable.Parse(headerText, config);
 
             // Scan for the real max rather than using MAX_BASE_ITEM_NUM: that only tracks the vanilla boundary.
             int maxId = -1;
-            foreach (var kv in items.ByName)
+            foreach (KeyValuePair<string, int> kv in items.ByName)
                 if (kv.Key.StartsWith(Prefix, StringComparison.Ordinal) && kv.Value > maxId) maxId = kv.Value;
             if (maxId < 0) { error = "Could not find any existing ITEM_* constants."; return false; }
             int candidateId = maxId + 1;
@@ -175,7 +175,7 @@ namespace DSPRE.HgEngine
             out string newHeader, out string newSource, out string error)
         {
             newHeader = newSource = null;
-            if (!TryPrepare(headerText, sourceText, pending.DisplayName, config, out var fresh, out string header, out string source, out error)) return false;
+            if (!TryPrepare(headerText, sourceText, pending.DisplayName, config, out PendingItem fresh, out string header, out string source, out error)) return false;
             if (fresh.Id != pending.Id || fresh.Designator != pending.Designator)
             { error = "item.h changed after the item was added, so it was not saved. Discard it and add it again."; return false; }
             if (!TrySpliceItem(ref source, pending.Designator, item, lookupFor, priceLookup, out error)) return false;
@@ -191,28 +191,28 @@ namespace DSPRE.HgEngine
         {
             textWrites = new List<(HgEngineOwnedFile File, List<string> Original, List<string> Updated)>();
             string textArchive = HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.textArchives);
-            var nameFile = HgEngineOwnedFiles.Get(textArchive, RomInfo.itemNamesTextNumber);
-            if (!TryPlanLine(nameFile, "item names", out var nameLines, out error)) return false;
+            HgEngineOwnedFile nameFile = HgEngineOwnedFiles.Get(textArchive, RomInfo.itemNamesTextNumber);
+            if (!TryPlanLine(nameFile, "item names", out List<string> nameLines, out error)) return false;
             if (nameLines != null)
                 textWrites.Add((nameFile, nameLines, SetLine(nameLines, candidateId, displayName, "")));
 
             int customOffset = CustomMessageOffset(headerText, items, candidateId);
             if (customOffset < 0) return true;
 
-            var fileIds = HgEngineSymbolTable.Load(FileIdsHeaderRelPath);
+            HgEngineSymbolTable fileIds = HgEngineSymbolTable.Load(FileIdsHeaderRelPath);
             foreach (string define in new[] { "MSG_DATA_ITEM_DESCRIPTION_CUSTOM", "MSG_DATA_ITEM_NAME_ARTICLE_CUSTOM",
                                               "MSG_DATA_ITEM_NAME_PLURAL_CUSTOM", "MSG_DATA_ITEM_GIVE_ITEM_CUSTOM" })
             {
                 if (fileIds == null || !fileIds.TryGetValue(define, out int archiveId)) continue;
-                var file = HgEngineOwnedFiles.Get(textArchive, archiveId);
-                if (!TryPlanLine(file, define, out var lines, out error)) return false;
+                HgEngineOwnedFile file = HgEngineOwnedFiles.Get(textArchive, archiveId);
+                if (!TryPlanLine(file, define, out List<string> lines, out error)) return false;
                 if (lines == null) continue;
 
                 int firstCustomId = candidateId - customOffset;
                 string firstCustomName = customOffset > 0 && nameLines != null && firstCustomId < nameLines.Count
                     ? nameLines[firstCustomId] : null;
                 bool isDescription = define == "MSG_DATA_ITEM_DESCRIPTION_CUSTOM";
-                var updated = isDescription
+                List<string> updated = isDescription
                     ? PadCustomLines(lines, customOffset)
                     : WithCustomNameLine(lines, customOffset, displayName, firstCustomName);
                 textWrites.Add((file, lines, updated));
@@ -257,7 +257,7 @@ namespace DSPRE.HgEngine
             { error = $"{designator} is not in {SourceRelPath}, so nothing was written."; return false; }
 
             HgEngineEntryIndex.TryPatch(text.Substring(open, close - open + 1), HgEngineItemSource.Fields, item, HgEngineItemSource.Headers,
-                lookupFor, out string block, out var unresolved);
+                lookupFor, out string block, out List<string> unresolved);
             const string key = "[X] = ";
             string keyed = key + block;
             if (!TryReplacePrice(ref keyed, "X", item.FullPrice, priceLookup)) unresolved.Add("price");
@@ -349,8 +349,8 @@ namespace DSPRE.HgEngine
         private static bool? FindPriceMacro(string text, int open, int close, out int argStart, out int argEnd)
         {
             argStart = argEnd = -1;
-            var macro = new Regex(@"\GITEM_PRICE\s*\(");
-            foreach (var (start, end) in ElementScanner.ElementSpans(text, open, close))
+            Regex macro = new Regex(@"\GITEM_PRICE\s*\(");
+            foreach ((int start, int end) in ElementScanner.ElementSpans(text, open, close))
             {
                 Match m = macro.Match(text, start);
                 if (!m.Success) continue;
@@ -470,7 +470,7 @@ namespace DSPRE.HgEngine
 
         internal static List<string> SetLine(List<string> lines, int index, string value, string pad)
         {
-            var updated = new List<string>(lines);
+            List<string> updated = new List<string>(lines);
             while (updated.Count <= index) updated.Add(pad);
             updated[index] = value;
             return updated;
@@ -479,7 +479,7 @@ namespace DSPRE.HgEngine
         /// <summary>Descriptions have no name in them; missing ones repeat the checkout's placeholder.</summary>
         internal static List<string> PadCustomLines(List<string> lines, int index)
         {
-            var updated = new List<string>(lines);
+            List<string> updated = new List<string>(lines);
             string pad = updated.Count > 0 ? updated[0] : "";
             while (updated.Count <= index) updated.Add(pad);
             return updated;
@@ -489,7 +489,7 @@ namespace DSPRE.HgEngine
         /// in. The template is the first line, which names either the placeholder or the first custom item.</summary>
         internal static List<string> WithCustomNameLine(List<string> lines, int index, string displayName, string firstCustomName)
         {
-            var updated = new List<string>(lines);
+            List<string> updated = new List<string>(lines);
             string template = updated.Count > 0 ? updated[0] : "";
             string known = template.Contains(CustomPlaceholderName, StringComparison.Ordinal) ? CustomPlaceholderName
                 : !string.IsNullOrEmpty(firstCustomName) && template.Contains(firstCustomName, StringComparison.Ordinal) ? firstCustomName

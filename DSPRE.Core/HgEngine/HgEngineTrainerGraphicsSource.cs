@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using Ekona.Images;
+using System.Collections.Generic;
 
 namespace DSPRE.HgEngine
 {
@@ -22,7 +23,7 @@ namespace DSPRE.HgEngine
         // The built drawing is the PNG cut into 8x8 tiles in reading order, each tile read row by row.
         public static byte[] RasterToTiles(byte[] raster, int width, int height)
         {
-            var tiles = new byte[raster.Length];
+            byte[] tiles = new byte[raster.Length];
             int at = 0;
             for (int ty = 0; ty < height / 8; ty++)
                 for (int tx = 0; tx < width / 8; tx++)
@@ -34,7 +35,7 @@ namespace DSPRE.HgEngine
 
         public static byte[] TilesToRaster(byte[] tiles, int width, int height)
         {
-            var raster = new byte[width * height];
+            byte[] raster = new byte[width * height];
             int at = 0;
             for (int ty = 0; ty < height / 8; ty++)
                 for (int tx = 0; tx < width / 8; tx++)
@@ -47,14 +48,14 @@ namespace DSPRE.HgEngine
         /// <summary>4bpp data to one index per pixel, low nibble first.</summary>
         public static byte[] Unpack4(byte[] data)
         {
-            var indices = new byte[data.Length * 2];
+            byte[] indices = new byte[data.Length * 2];
             for (int i = 0; i < data.Length; i++) { indices[i * 2] = (byte)(data[i] & 0xF); indices[i * 2 + 1] = (byte)(data[i] >> 4); }
             return indices;
         }
 
         public static byte[] Pack4(byte[] indices)
         {
-            var data = new byte[(indices.Length + 1) / 2];
+            byte[] data = new byte[(indices.Length + 1) / 2];
             for (int i = 0; i < indices.Length; i++) data[i / 2] |= (byte)((indices[i] & 0xF) << (i % 2 == 0 ? 0 : 4));
             return data;
         }
@@ -64,7 +65,7 @@ namespace DSPRE.HgEngine
         {
             try
             {
-                var root = AnimJsonRoot.Parse(File.ReadAllText(animJsonPath));
+                AnimJsonRoot root = AnimJsonRoot.Parse(File.ReadAllText(animJsonPath));
                 return root?.Sequences.Select(seq => seq.FrameData.Select(f => (f.CellIndex, f.FrameDelay)).ToArray()).ToArray();
             }
             catch { return null; }
@@ -82,13 +83,13 @@ namespace DSPRE.HgEngine
             banks = new Bank[doc.Cells.Length];
             for (int i = 0; i < doc.Cells.Length; i++)
             {
-                var c = doc.Cells[i];
-                var oams = (c.OAM ?? Array.Empty<OamJson>())
+                CellEntry c = doc.Cells[i];
+                List<OAM> oams = (c.OAM ?? Array.Empty<OamJson>())
                     .Select((o, idx) => BuildOam(o, (ushort)idx))
                     .ToList();
                 oams.Sort(Actions.Comparision_OAM);
 
-                var transfer = doc.TransferData != null && i < doc.TransferData.Length ? doc.TransferData[i] : null;
+                TransferEntry transfer = doc.TransferData != null && i < doc.TransferData.Length ? doc.TransferData[i] : null;
                 banks[i] = new Bank
                 {
                     oams = oams.ToArray(),
@@ -117,7 +118,7 @@ namespace DSPRE.HgEngine
             // The real (possibly multi-frame) animation is whichever sequence has the most frames; the
             // other sequence(s) are single-frame idle/default poses. See TrainerClassSpriteRenderer.Load
             // for how DefaultFrame then picks the "CellAnime0"-named bank out of this played sequence.
-            var longest = doc.Sequences.OrderByDescending(s => s.FrameData?.Length ?? 0).First();
+            SequenceJson longest = doc.Sequences.OrderByDescending(s => s.FrameData?.Length ?? 0).First();
             if (longest.FrameData == null || longest.FrameData.Length == 0) { error = "Empty sequence in " + animJsonPath; return false; }
 
             cells = longest.FrameData
@@ -129,7 +130,7 @@ namespace DSPRE.HgEngine
 
         private static OAM BuildOam(OamJson o, ushort numCell)
         {
-            var size = Actions.Get_OAMSize((byte)o.Attr0.Shape, (byte)o.Attr1.Size);
+            System.Drawing.Size size = Actions.Get_OAMSize((byte)o.Attr0.Shape, (byte)o.Attr1.Size);
             return new OAM
             {
                 num_cell = numCell,

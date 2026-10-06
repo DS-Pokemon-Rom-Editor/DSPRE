@@ -154,7 +154,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Opens track 0 at the start of the data and allocates the tracks its first command asks for.</summary>
         private void Prepare(int playerChannelMask)
         {
-            var t0 = NewTrack(0);
+            Track t0 = NewTrack(0);
             t0.Opened = true;
             t0.Cur = _base;
             _tracks[0] = t0;
@@ -167,7 +167,7 @@ namespace DSPRE.Avalonia.Data
                     if ((mask & 1) != 0) _tracks[n] = NewTrack(n);
             }
             if (playerChannelMask != 0)
-                foreach (var t in _tracks)
+                foreach (Track t in _tracks)
                     if (t != null) { t.ChannelMask = playerChannelMask & 0xFFFF; t.ChannelMaskFlag = true; }
             _playerActive = true;
         }
@@ -180,8 +180,8 @@ namespace DSPRE.Avalonia.Data
             int rate = _s.SampleRate;
             long maxUpdates = (long)Math.Ceiling(_s.MaxSeconds / NitroSoundTables.UpdateSeconds);
             int samplesPerUpdate = (int)Math.Ceiling(rate * NitroSoundTables.UpdateSeconds) + 1;
-            var mixL = new float[samplesPerUpdate];
-            var mixR = new float[samplesPerUpdate];
+            float[] mixL = new float[samplesPerUpdate];
+            float[] mixR = new float[samplesPerUpdate];
             int maxSamples = (int)Math.Min(int.MaxValue / 2 - 1, (long)(_s.MaxSeconds * rate));
 
             short[] pcm = _s.Mix ? new short[Math.Min(maxSamples, rate * 2) * 2] : null;
@@ -206,7 +206,7 @@ namespace DSPRE.Avalonia.Data
                     {
                         Array.Clear(mixL, 0, n);
                         Array.Clear(mixR, 0, n);
-                        foreach (var c in _channels) if (c.HwActive) MixChannel(c, mixL, mixR, n, rate);
+                        foreach (Channel c in _channels) if (c.HwActive) MixChannel(c, mixL, mixR, n, rate);
                         if ((produced + n) * 2 > pcm.Length)
                             Array.Resize(ref pcm, (int)Math.Min((long)maxSamples * 2, Math.Max((long)pcm.Length * 2, (produced + n) * 2L)));
                         for (int i = 0; i < n; i++)
@@ -217,7 +217,7 @@ namespace DSPRE.Avalonia.Data
                     }
                     else
                     {
-                        foreach (var c in _channels) if (c.HwActive) Advance(c, n, rate);
+                        foreach (Channel c in _channels) if (c.HwActive) Advance(c, n, rate);
                     }
                     produced += n;
                 }
@@ -255,7 +255,7 @@ namespace DSPRE.Avalonia.Data
 
         private bool AnythingSounding()
         {
-            foreach (var c in _channels) if (c.Active || c.HwActive || c.Sync != 0) return true;
+            foreach (Channel c in _channels) if (c.Active || c.HwActive || c.Sync != 0) return true;
             return false;
         }
 
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.Data
 
         private void UpdateExChannel()
         {
-            foreach (var c in _channels)
+            foreach (Channel c in _channels)
             {
                 if (c.Sync == 0) continue;
                 if ((c.Sync & SyncStop) != 0) c.HwActive = false;
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.Data
                     if ((c.Sync & SyncPan) != 0) c.HwPan = c.Pan;
                 }
             }
-            foreach (var c in _channels)
+            foreach (Channel c in _channels)
             {
                 if (c.Sync == 0) continue;
                 if ((c.Sync & SyncStart) != 0)
@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.Data
             {
                 case Kind.Pcm:
                 {
-                    var w = c.HwWave;
+                        SwavSample w = c.HwWave;
                     short[] d = w.Pcm;
                     int len = d.Length;
                     int loopStart = Math.Clamp(w.LoopStartSample, 0, len - 1);
@@ -384,7 +384,7 @@ namespace DSPRE.Avalonia.Data
         private void Advance(Channel c, int n, int rate)
         {
             if (c.HwKind != Kind.Pcm) return;
-            var w = c.HwWave;
+            SwavSample w = c.HwWave;
             int len = w.Pcm.Length;
             double pos = c.HwPos + (double)NitroSoundTables.TimerClock / Math.Max(1, c.HwTimer) / rate * n;
             if (pos >= len)
@@ -400,7 +400,7 @@ namespace DSPRE.Avalonia.Data
 
         private void ExChannelMain()
         {
-            foreach (var c in _channels)
+            foreach (Channel c in _channels)
             {
                 if (!c.Active) continue;
 
@@ -529,7 +529,7 @@ namespace DSPRE.Avalonia.Data
             foreach (int no in ChannelOrder)
             {
                 if ((mask & (1 << no)) == 0) continue;
-                var c = _channels[no];
+                Channel c = _channels[no];
                 if (best == null) { best = c; continue; }
                 if (c.Prio > best.Prio) continue;
                 if (c.Prio == best.Prio && CompareVolume(best, c) >= 0) continue;
@@ -592,7 +592,7 @@ namespace DSPRE.Avalonia.Data
             bool active = false;
             for (int n = 0; n < TrackCount; n++)
             {
-                var t = _tracks[n];
+                Track t = _tracks[n];
                 if (t == null || !t.Opened) continue;
                 if (TrackSeqMain(t) == 0) active = true;
                 else ClosePlayerTrack(n);
@@ -608,7 +608,7 @@ namespace DSPRE.Avalonia.Data
 
         private void ClosePlayerTrack(int n)
         {
-            var t = _tracks[n];
+            Track t = _tracks[n];
             if (t == null) return;
             CloseTrack(t);
             _tracks[n] = null;
@@ -623,7 +623,7 @@ namespace DSPRE.Avalonia.Data
         private void ReleaseTrackChannelAll(Track t, int release)
         {
             UpdateTrackChannel(t, false);
-            foreach (var c in t.Channels)
+            foreach (Channel c in t.Channels)
             {
                 if (!c.Active) continue;
                 if (release >= 0) c.Release = NitroSoundTables.FallRate(release);
@@ -634,13 +634,13 @@ namespace DSPRE.Avalonia.Data
 
         private static void FreeTrackChannelAll(Track t)
         {
-            foreach (var c in t.Channels) c.Owner = null;
+            foreach (Channel c in t.Channels) c.Owner = null;
             t.Channels.Clear();
         }
 
         private void UpdatePlayerChannel()
         {
-            foreach (var t in _tracks) if (t != null) UpdateTrackChannel(t, true);
+            foreach (Track t in _tracks) if (t != null) UpdateTrackChannel(t, true);
         }
 
         /// <summary>Updates the track's sounding notes and keys off the ones whose length has run out.</summary>
@@ -660,7 +660,7 @@ namespace DSPRE.Avalonia.Data
 
             for (int i = 0; i < t.Channels.Count; i++)
             {
-                var c = t.Channels[i];
+                Channel c = t.Channels[i];
                 c.UserDecay2 = (short)decay2;
                 if (c.Env == Env.Release) continue;
                 c.UserDecay = (short)decay;
@@ -725,7 +725,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One sequence tick of one track. Returns -1 when the track has ended.</summary>
         private int TrackSeqMain(Track t)
         {
-            foreach (var c in t.Channels)
+            foreach (Channel c in t.Channels)
             {
                 if (c.Length > 0) c.Length--;
                 if (!c.AutoSweep && c.SweepCounter < c.SweepLength) c.SweepCounter++;
@@ -802,7 +802,7 @@ namespace DSPRE.Avalonia.Data
                                 int no = ReadByte(t);
                                 int offset = Read24(t);
                                 if (!exec) break;
-                                var other = no < TrackCount ? _tracks[no] : null;
+                                    Track other = no < TrackCount ? _tracks[no] : null;
                                 if (other == null || other == t) break;
                                 CloseTrack(other);
                                 other.Cur = _base + offset;
@@ -972,7 +972,7 @@ namespace DSPRE.Avalonia.Data
 
             if (c == null)
             {
-                var region = ResolveRegion(t.Prg, key);
+                SbnkRegion region = ResolveRegion(t.Prg, key);
                 if (region == null) return;
                 int mask = region.Psg == PsgKind.Square ? PsgMask : region.Psg == PsgKind.Noise ? NoiseMask : PcmMask;
                 c = AllocChannel(mask & t.ChannelMask, _playerPrio + t.Prio, t.ChannelMaskFlag, t);
@@ -1010,7 +1010,7 @@ namespace DSPRE.Avalonia.Data
         private SbnkRegion ResolveRegion(int prg, int key)
         {
             if (prg < 0 || prg >= _instruments.Count) return null;
-            var region = _instruments[prg]?.Resolve(key);
+            SbnkRegion region = _instruments[prg]?.Resolve(key);
             return region == null || region.Silent ? null : region;
         }
 
@@ -1023,9 +1023,9 @@ namespace DSPRE.Avalonia.Data
             {
                 case PsgKind.None:
                 {
-                    var waves = _wavesForSlot(region.WaveArcSlot);
+                        List<SwavSample> waves = _wavesForSlot(region.WaveArcSlot);
                     if (waves == null || region.WaveIndex < 0 || region.WaveIndex >= waves.Count) return false;
-                    var wave = waves[region.WaveIndex];
+                        SwavSample wave = waves[region.WaveIndex];
                     if (wave?.Pcm == null) return false;
                     c.Kind = Kind.Pcm;
                     c.Wave = wave;

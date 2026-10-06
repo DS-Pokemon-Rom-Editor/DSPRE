@@ -32,7 +32,7 @@ namespace DSPRE.Models
 
         public MaterialLook With(int? alpha = null, bool? bothSides = null, bool? fog = null, int? lights = null)
         {
-            var r = (byte[])Record.Clone();
+            byte[] r = (byte[])Record.Clone();
             int poly = BitConverter.ToInt32(r, 12);
             if (alpha is int a)
             {
@@ -50,7 +50,7 @@ namespace DSPRE.Models
 
         public MaterialLook WithPictureSize(int wide, int tall)
         {
-            var r = (byte[])Record.Clone();
+            byte[] r = (byte[])Record.Clone();
             Put16(r, 32, wide);
             Put16(r, 34, tall);
             return new MaterialLook(r);
@@ -78,7 +78,7 @@ namespace DSPRE.Models
 
             int image = RepeatBits(across, 16, 18) | RepeatBits(down, 17, 19) | ((placesFrom & 3) << 30);
 
-            var r = new byte[PlainSize];
+            byte[] r = new byte[PlainSize];
             Put16(r, 0, 0);
             Put16(r, 2, PlainSize);
             // Bit 15: diffuse is used as the vertex colour.

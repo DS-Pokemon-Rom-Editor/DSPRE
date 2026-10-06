@@ -27,8 +27,8 @@ namespace LibNDSFormats.NSBTX
         {
             texs = new List<NSBMDTexture>();
             pals = new List<NSBMDPalette>();
-            var materials = new List<NSBMDMaterial>();
-            var reader = new BinaryReader(stream);
+            List<NSBMDMaterial> materials = new List<NSBMDMaterial>();
+            BinaryReader reader = new BinaryReader(stream);
             int id = reader.ReadInt32();
             if (id != NSBMD.NSBMD.NDS_TYPE_BTX0) {
                 //Console.WriteLine("The header of this texture file is null!!!");
@@ -66,7 +66,7 @@ namespace LibNDSFormats.NSBTX
             texs = new List<NSBMDTexture>();
             pals = new List<NSBMDPalette>();
             IEnumerable<NSBMDMaterial> result = null;
-            using (var fileStream = new FileStream(fileInfo.FullName, FileMode.Open))
+            using (FileStream fileStream = new FileStream(fileInfo.FullName, FileMode.Open))
             {
                 result = LoadNsbtx(fileStream, out texs, out pals);
             }
@@ -152,7 +152,7 @@ namespace LibNDSFormats.NSBTX
                 int width;
                 int height;
 
-                var mat = material[i];
+                NSBMDMaterial mat = material[i];
 
                 offset = (uint)(reader.ReadUInt16() << 3);
                 param = reader.ReadUInt16(); // texture parameter
@@ -194,7 +194,7 @@ namespace LibNDSFormats.NSBTX
             {
                 int[] bpp = { 0, 8, 2, 4, 8, 2, 8, 16 };
 
-                var mat = material[i];
+                NSBMDMaterial mat = material[i];
                 mat.texsize = (uint)(mat.width * mat.height * bpp[mat.format] / 8);
                 //Console.WriteLine("tex {0} '{1}': offset = {2} size = {3} [W,H] = [{4}, {5}]",
                 //i, mat.texname, mat.texoffset, mat.texsize, mat.width, mat.height);
@@ -219,7 +219,7 @@ namespace LibNDSFormats.NSBTX
             // copy palette names
             for (i = 0; i < palnum; i++)
             {
-                var mat = material[i];
+                NSBMDMaterial mat = material[i];
                 mat.palname = Utils.ReadNSBMDString(reader);
                 reader.BaseStream.Position -= 16;
                 pals[i].palname = Utils.ReadNSBMDString(reader);
@@ -283,7 +283,7 @@ namespace LibNDSFormats.NSBTX
             // traverse each texture
             for (i = 0; i < texnum; i++)
             {
-                var mat = material[i];
+                NSBMDMaterial mat = material[i];
                 stream.Seek(mat.texoffset, SeekOrigin.Begin);
 
                 ////////////////////////////////////////////////
@@ -318,7 +318,7 @@ namespace LibNDSFormats.NSBTX
                 try
                 {
                     NSBMDMaterial mat = material[i];
-                    var palentry = mat.palsize >> 1;
+                    uint palentry = mat.palsize >> 1;
 
                     RGBA[] rgbq = new RGBA[palentry];
 

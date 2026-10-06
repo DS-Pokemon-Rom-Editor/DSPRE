@@ -14,6 +14,7 @@ using DSPRE.Resources;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.MoveData;
 using static DSPRE.RomInfo;
+using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -180,7 +181,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Effect labels, plus plain numbers for any id past them so every stored byte can show.
         private void SyncContestEffects(int need)
         {
-            var labels = DSPRE.Avalonia.Data.LabelStore.Get("move_contest_effects").ToList();
+            List<string> labels = DSPRE.Avalonia.Data.LabelStore.Get("move_contest_effects").ToList();
             for (int i = labels.Count; i <= need; i++) labels.Add(i.ToString());
             DSPRE.Avalonia.Data.ListSync.Apply(ContestEffectNames, labels);
         }
@@ -241,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _savedBagText = _bagItem >= 0 ? Shown(_bagBank.Messages[_bagItem]) : "";
             BagText = _savedBagText;
             _loading = was;
-            foreach (var n in new[] { nameof(DescriptionReadOnly), nameof(DescriptionReadOnlyReason), nameof(HasBag), nameof(BagLabel), nameof(BagReadOnly) })
+            foreach (string n in new[] { nameof(DescriptionReadOnly), nameof(DescriptionReadOnlyReason), nameof(HasBag), nameof(BagLabel), nameof(BagReadOnly) })
                 OnPropertyChanged(n);
             if (IsBagTab && !HasBag) PreviewTab = 0;
             RefreshPreview();
@@ -287,7 +288,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private string Overflow(string text, int width, int maxLines)
         {
-            var lines = (text ?? "").Split('\n').ToList();
+            List<string> lines = (text ?? "").Split('\n').ToList();
             if (lines.Count > 1 && lines[^1].Length == 0) lines.RemoveAt(lines.Count - 1);
             if (lines.Count > maxLines) return $"Only {maxLines} lines show";
             if (SystemFont == null) return null;
@@ -301,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void RaiseTextChecks()
         {
-            foreach (var n in new[] { nameof(DescriptionWarning), nameof(HasDescriptionWarning), nameof(BagWarning), nameof(HasBagWarning) })
+            foreach (string n in new[] { nameof(DescriptionWarning), nameof(HasDescriptionWarning), nameof(BagWarning), nameof(HasBagWarning) })
                 OnPropertyChanged(n);
             RefreshPreview();
         }
@@ -321,7 +322,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshPreview()
         {
             if (_descBank == null) return;
-            var screen = (DSPRE.Avalonia.Data.MoveTextScreens.Screen)Math.Clamp(_previewTab, 0, 3);
+            MoveTextScreens.Screen screen = (DSPRE.Avalonia.Data.MoveTextScreens.Screen)Math.Clamp(_previewTab, 0, 3);
             byte[] rgba = _screens.Render(screen, screen == DSPRE.Avalonia.Data.MoveTextScreens.Screen.Bag ? _bagText : _description, SystemFont);
             Preview = rgba == null ? null : DSPRE.Avalonia.ImageConverter.FromRgba(rgba, 256, 192);
             OnPropertyChanged(nameof(Preview));
@@ -363,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void ApplyState(byte[] bytes)
         {
             if (bytes == null) return;
-            var state = DSPRE.Avalonia.UndoJson.Read<UndoState>(bytes);
+            UndoState state = DSPRE.Avalonia.UndoJson.Read<UndoState>(bytes);
             _loading = true;
             _currentFile = new MoveData(new MemoryStream(state.Move));
             PopulateFromCurrentFile();
@@ -417,19 +418,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string[] battleSeqFiles = GetBattleEffectSequenceFiles();
             string[] db = PokeDatabase.MoveData.battleSequenceDescriptions;
 
-            foreach (var n in moveNames) MoveNames.Add(n);
+            foreach (string n in moveNames) MoveNames.Add(n);
             OnPropertyChanged(nameof(MaxMoveIndex));
-            foreach (var n in typeNames) TypeNames.Add(n);
+            foreach (string n in typeNames) TypeNames.Add(n);
             // Split / contest dropdowns come from the customisable LabelStore (Tools ▸ Edit Dropdown Labels).
             ReloadSplitContest();
-            foreach (var r in AttackRangeDescriptions) RangeItems.Add($"{r.name}: {r.description}");
+            foreach ((ushort value, string name, string description) r in AttackRangeDescriptions) RangeItems.Add($"{r.name}: {r.description}");
 
             for (int i = 0; i < battleSeqFiles.Length; i++)
                 BattleSeqItems.Add(i < db.Length && db[i] != null ? $"{i:D3} - {db[i]}" : $"{i:D3} - Undocumented");
 
-            foreach (var flagName in Enum.GetNames(typeof(MoveFlags)).Skip(1))
+            foreach (string flagName in Enum.GetNames(typeof(MoveFlags)).Skip(1))
             {
-                var entry = new FlagEntry { Name = flagName };
+                FlagEntry entry = new FlagEntry { Name = flagName };
                 entry.PropertyChanged += (_, __) => { if (!_loading && _currentFile != null) { RebuildFlagField(); SetDirty(); } };
                 Flags.Add(entry);
             }
@@ -468,7 +469,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>The ROM's move names, with an unsaved new move shown at its id.</summary>
         private void SyncNames()
         {
-            var names = RomInfo.GetAttackNames().ToList();
+            List<string> names = RomInfo.GetAttackNames().ToList();
             if (_pendingMove != null)
             {
                 while (names.Count < _pendingMove.Id) names.Add("");
@@ -511,16 +512,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
             int id = _currentId;
-            var move = _currentFile;
-            var pending = _pendingMove;
+            MoveData move = _currentFile;
+            HgEngineMoveExpansion.PendingMove pending = _pendingMove;
             // The shown record wins over an import staged for the same move.
-            var records = new Dictionary<int, MoveData>(_pendingImports) { [id] = move };
+            Dictionary<int, MoveData> records = new Dictionary<int, MoveData>(_pendingImports) { [id] = move };
             string subject = pending != null ? pending.DisplayName : records.Count > 1 ? $"{records.Count} moves" : $"Move {id}";
 
             // The source is what the next sync rebuilds from, so a save that can't reach it is no save.
             if (HgEngineProject.IsActive)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() => pending != null
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => pending != null
                     ? (HgEngineMoveExpansion.TryCommitMove(pending, move, out string addError) ? null : addError)
                     : (HgEngineMoveSource.TryWriteMany(records, out string writeError) ? null : writeError));
                 if (!saved)
@@ -546,7 +547,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             else
             {
-                foreach (var (importId, imported) in records)
+                foreach ((int importId, MoveData imported) in records)
                     if (importId != id) imported.SaveToFileDefaultDir(importId, showSuccessMessage: false);
                 move.SaveToFileDefaultDir(id, showSuccessMessage: false);
                 if (SaveTexts() is string textError)
@@ -568,7 +569,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             error = null;
             if (!HgEngineProject.IsActive) return new MoveData(id);
             string built = Path.Combine(gameDirs[DirNames.moveData].unpackedDir, id.ToString("D4"));
-            var move = File.Exists(built) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
+            MoveData move = File.Exists(built) ? new MoveData(id) : new MoveData(new MemoryStream(new byte[16]));
             HgEngineMoveSource.TryLoad(id, move, out error);
             return move;
         }
@@ -590,8 +591,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string name = await DialogHelper.PromptText("New move's display name:", "Add New Move", owner: owner);
             if (name == null) return;
 
-            var move = new MoveData(new MemoryStream(new byte[16]));
-            if (!HgEngineMoveExpansion.TryPrepareMove(name, out var pending, out string error)
+            MoveData move = new MoveData(new MemoryStream(new byte[16]));
+            if (!HgEngineMoveExpansion.TryPrepareMove(name, out HgEngineMoveExpansion.PendingMove pending, out string error)
                 || !HgEngineMoveExpansion.TryReadTemplate(pending, move, out error))
             {
                 await DialogHelper.ShowError($"Could not add the move:\n{error}", "Add New Move", owner);
@@ -630,8 +631,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 string[] typeNames = GetTypeNames();
                 // What is on disk, without this editor's unsaved moves.
                 string[] names = RomInfo.GetAttackNames();
-                var moves = new SortedDictionary<int, MoveData>();
-                var skipped = new List<string>();
+                SortedDictionary<int, MoveData> moves = new SortedDictionary<int, MoveData>();
+                List<string> skipped = new List<string>();
                 if (HgEngineProject.IsActive)
                 {
                     string builtDir = gameDirs[DirNames.moveData].unpackedDir;
@@ -647,10 +648,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     for (int i = 0; i < names.Length; i++) moves[i] = new MoveData(i);
                 }
 
-                using (var writer = new StreamWriter(path))
+                using (StreamWriter writer = new StreamWriter(path))
                 {
                     writer.WriteLine("Move ID,Move Name,Move Type,Move Split,Power,Accuracy,Priority,Side Effect Probability,PP,Range");
-                    foreach (var (i, move) in moves)
+                    foreach ((int i, MoveData move) in moves)
                     {
                         string typeStr  = (int)move.movetype < typeNames.Length ? typeNames[(int)move.movetype] : $"UnknownType_{(int)move.movetype}";
                         string rangeStr = MoveData.GetAttackRangeName(move.target);
@@ -682,10 +683,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (path == null) return;
 
             string[] typeNamesArr = GetTypeNames();
-            var result = ValidateAndParseCSV(path, typeNamesArr);
+            MoveDataImportResult result = ValidateAndParseCSV(path, typeNamesArr);
 
             // Build preview text
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             sb.AppendLine($"Total rows read:  {result.TotalRowsRead}");
             sb.AppendLine($"Valid entries:    {result.ValidCount}");
             sb.AppendLine($"Errors:           {result.ErrorCount}");
@@ -695,12 +696,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (result.HasErrors)
             {
                 sb.AppendLine("\nERRORS:");
-                foreach (var e in result.Errors) sb.AppendLine($"  {e}");
+                foreach (MoveImportError e in result.Errors) sb.AppendLine($"  {e}");
             }
             if (result.HasWarnings)
             {
                 sb.AppendLine("\nWARNINGS:");
-                foreach (var w in result.Warnings) sb.AppendLine($"  {w}");
+                foreach (MoveImportWarning w in result.Warnings) sb.AppendLine($"  {w}");
             }
             if (result.ValidCount == 0)
             {
@@ -746,7 +747,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _loading = true;
             _currentId   = id;
             string loadError = null;
-            _currentFile = _pendingImports.TryGetValue(id, out var imported) ? Copy(imported) : LoadRecord(id, out loadError);
+            _currentFile = _pendingImports.TryGetValue(id, out MoveData imported) ? Copy(imported) : LoadRecord(id, out loadError);
             SourceLoadError = loadError;
             PopulateFromCurrentFile();
             LoadTexts();
@@ -788,7 +789,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(RangeIndex));
 
             // Flags
-            var flagNames = Enum.GetNames(typeof(MoveFlags)).Skip(1).ToArray();
+            string[] flagNames = Enum.GetNames(typeof(MoveFlags)).Skip(1).ToArray();
             for (int i = 0; i < Flags.Count && i < flagNames.Length; i++)
                 Flags[i].IsSet = (_currentFile.flagField & (1 << i)) != 0;
         }
@@ -814,19 +815,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _splitNameToEnum[s.ToString()] = s;
 
             _rangeNameToValue = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
-            foreach (var r in AttackRangeDescriptions)
+            foreach ((ushort value, string name, string description) r in AttackRangeDescriptions)
                 _rangeNameToValue[r.name] = r.value;
         }
 
         private MoveDataImportResult ValidateAndParseCSV(string filePath, string[] typeNames)
         {
-            var result = new MoveDataImportResult();
+            MoveDataImportResult result = new MoveDataImportResult();
             try
             {
-                var lines = File.ReadAllLines(filePath);
+                string[] lines = File.ReadAllLines(filePath);
                 if (lines.Length == 0) { result.Errors.Add(new MoveImportError(0, "File is empty.")); return result; }
 
-                var header = lines[0].Split(',');
+                string[] header = lines[0].Split(',');
                 if (header.Length < 10 || !header[0].Trim().Equals("Move ID", StringComparison.OrdinalIgnoreCase))
                 { result.Errors.Add(new MoveImportError(1, "Invalid CSV header.")); return result; }
 
@@ -835,10 +836,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 for (int i = 1; i < lines.Length; i++)
                 {
                     if (string.IsNullOrWhiteSpace(lines[i])) continue;
-                    var parts = ParseCSVLine(lines[i]);
+                    string[] parts = ParseCSVLine(lines[i]);
                     if (parts.Length < 10) { result.Errors.Add(new MoveImportError(i + 1, $"Expected 10 columns, got {parts.Length}.")); continue; }
 
-                    var rowResult = ValidateRow(i + 1, parts, typeNames);
+                    MoveRowValidationResult rowResult = ValidateRow(i + 1, parts, typeNames);
                     result.Warnings.AddRange(rowResult.Warnings);
                     result.NameMismatches.AddRange(rowResult.NameMismatches);
                     if (rowResult.IsValid) result.ValidEntries.Add(rowResult.Entry);
@@ -851,8 +852,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static string[] ParseCSVLine(string line)
         {
-            var list = new List<string>();
-            var cur  = new StringBuilder();
+            List<string> list = new List<string>();
+            StringBuilder cur  = new StringBuilder();
             bool inQ = false;
             foreach (char c in line)
             {
@@ -866,8 +867,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private MoveRowValidationResult ValidateRow(int lineNumber, string[] parts, string[] typeNames)
         {
-            var res = new MoveRowValidationResult { LineNumber = lineNumber };
-            var entry = new MoveDataImportEntry();
+            MoveRowValidationResult res = new MoveRowValidationResult { LineNumber = lineNumber };
+            MoveDataImportEntry entry = new MoveDataImportEntry();
 
             if (!int.TryParse(parts[0].Trim(), out int moveId) || moveId < 0 || moveId >= MoveNames.Count)
             { res.Errors.Add(new MoveImportError(lineNumber, $"Invalid Move ID '{parts[0]}'.")); }
@@ -918,8 +919,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             int staged = 0;
             bool currentChanged = false;
-            var failures = new List<string>();
-            foreach (var e in entries)
+            List<string> failures = new List<string>();
+            foreach (MoveDataImportEntry e in entries)
             {
                 MoveData move;
                 if (e.MoveID == _currentId && _currentFile != null)

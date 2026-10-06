@@ -18,7 +18,7 @@ namespace DSPRE.ROMFiles
         public static PickupTable Read()
         {
             string path = Overlay;
-            var t = new PickupTable
+            PickupTable t = new PickupTable
             {
                 Divisor = DSUtils.ReadFromFile(path, RomInfo.pickupActivationDivisorOffset, 1)[0],
                 Weights = DSUtils.ReadFromFile(path, RomInfo.pickupWeightTableOffset, WeightSize),
@@ -41,7 +41,7 @@ namespace DSPRE.ROMFiles
 
         internal static byte[] Words(IReadOnlyList<ushort> values, int count)
         {
-            var bytes = new byte[count * 2];
+            byte[] bytes = new byte[count * 2];
             for (int i = 0; i < count && i < values.Count; i++) BitConverter.GetBytes(values[i]).CopyTo(bytes, i * 2);
             return bytes;
         }
@@ -68,7 +68,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The count every loop agrees on, or -1 when a count site is not the expected instruction.</summary>
         public static int Count()
         {
-            var sites = RomInfo.hiddenItemCountSites;
+            uint[] sites = RomInfo.hiddenItemCountSites;
             if (sites.Length == 0) return -1;
             int count = int.MaxValue;
             foreach (uint site in sites)
@@ -83,7 +83,7 @@ namespace DSPRE.ROMFiles
         public static List<Entry> Read(int count)
         {
             byte[] table = ARM9.ReadBytes(RomInfo.hiddenItemTableOffset, count * EntrySize);
-            var entries = new List<Entry>(count);
+            List<Entry> entries = new List<Entry>(count);
             for (int i = 0; i < count; i++)
             {
                 int at = i * EntrySize;
@@ -106,7 +106,7 @@ namespace DSPRE.ROMFiles
             for (int i = 0; i < entries.Count; i++)
             {
                 int at = i * EntrySize;
-                var e = entries[i];
+                Entry e = entries[i];
                 BitConverter.GetBytes(e.Item).CopyTo(table, at);
                 table[at + 2] = e.Quantity;
                 table[at + 3] = e.Range;
@@ -133,7 +133,7 @@ namespace DSPRE.ROMFiles
                     ? items : throw new InvalidOperationException(error);
             if (OverlayUtils.IsCompressed(Overlay)) OverlayUtils.Decompress(Overlay);
             byte[] raw = DSUtils.ReadFromFile(OverlayUtils.GetPath(Overlay), offset, Slots * 2);
-            var slots = new ushort[Slots];
+            ushort[] slots = new ushort[Slots];
             for (int i = 0; i < Slots; i++) slots[i] = BitConverter.ToUInt16(raw, i * 2);
             return slots;
         }

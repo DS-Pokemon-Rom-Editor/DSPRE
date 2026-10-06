@@ -30,8 +30,8 @@ namespace DSPRE.ROMFiles
         {
             if (!Available || modelId < 0) return null;
             Refresh();
-            var key = (indoor, modelId);
-            if (InfoCache.TryGetValue(key, out var hit)) return hit;
+            (bool indoor, int modelId) key = (indoor, modelId);
+            if (InfoCache.TryGetValue(key, out BuildingAnimationInfo hit)) return hit;
 
             BuildingAnimationInfo info = null;
             try
@@ -71,10 +71,10 @@ namespace DSPRE.ROMFiles
             public override (float x, float y, float z) At(int frame)
             {
                 float x = 0, y = 0, z = 0;
-                foreach (var part in _parts)
+                foreach (WholeModelMotion part in _parts)
                 {
                     if (part == null) continue;
-                    var (px, py, pz) = part.At(frame);
+                    (float px, float py, float pz) = part.At(frame);
                     x += px; y += py; z += pz;
                 }
                 return (x, y, z);
@@ -111,7 +111,7 @@ namespace DSPRE.ROMFiles
         private static readonly Dictionary<int, WholeModelMotion> ExtraMotion = new Dictionary<int, WholeModelMotion>();
 
         public static WholeModelMotion MotionFor(int modelId)
-            => ExtraMotion.TryGetValue(modelId, out var motion) ? motion : null;
+            => ExtraMotion.TryGetValue(modelId, out WholeModelMotion motion) ? motion : null;
 
         public static void Register(int modelId, TextureSrtAnimation scrolling = null, JointAnimation joint = null,
             WholeModelMotion motion = null)
@@ -119,12 +119,12 @@ namespace DSPRE.ROMFiles
             if (motion != null) ExtraMotion[modelId] = motion;
             if (scrolling != null)
             {
-                if (!ExtraScrolling.TryGetValue(modelId, out var list)) ExtraScrolling[modelId] = list = new List<TextureSrtAnimation>();
+                if (!ExtraScrolling.TryGetValue(modelId, out List<TextureSrtAnimation> list)) ExtraScrolling[modelId] = list = new List<TextureSrtAnimation>();
                 if (!list.Contains(scrolling)) list.Add(scrolling);
             }
             if (joint != null && joint.Moves)
             {
-                if (!ExtraJoints.TryGetValue(modelId, out var list)) ExtraJoints[modelId] = list = new List<JointAnimation>();
+                if (!ExtraJoints.TryGetValue(modelId, out List<JointAnimation> list)) ExtraJoints[modelId] = list = new List<JointAnimation>();
                 if (!list.Contains(joint)) list.Add(joint);
             }
         }
@@ -134,11 +134,11 @@ namespace DSPRE.ROMFiles
         /// <summary>The texture-scrolling animations a building model plays. </summary>
         public static IReadOnlyList<TextureSrtAnimation> ScrollingFor(int modelId, bool indoor, FieldTimeZone? timeOfDay = null)
         {
-            var result = new List<TextureSrtAnimation>();
-            if (ExtraScrolling.TryGetValue(modelId, out var registered)) result.AddRange(registered);
+            List<TextureSrtAnimation> result = new List<TextureSrtAnimation>();
+            if (ExtraScrolling.TryGetValue(modelId, out List<TextureSrtAnimation> registered)) result.AddRange(registered);
             foreach (int code in CodesToPlay(modelId, indoor, timeOfDay))
             {
-                var anim = LoadScrolling(code);
+                TextureSrtAnimation anim = LoadScrolling(code);
                 if (anim != null) result.Add(anim);
             }
             return result;
@@ -149,10 +149,10 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static IReadOnlyList<TexturePatternAnimation> PatternsFor(int modelId, bool indoor, FieldTimeZone? timeOfDay = null)
         {
-            var result = new List<TexturePatternAnimation>();
+            List<TexturePatternAnimation> result = new List<TexturePatternAnimation>();
             foreach (int code in CodesToPlay(modelId, indoor, timeOfDay))
             {
-                var anim = LoadPattern(code);
+                TexturePatternAnimation anim = LoadPattern(code);
                 if (anim != null) result.Add(anim);
             }
             return result;
@@ -161,11 +161,11 @@ namespace DSPRE.ROMFiles
         /// <summary>The animations that move a building model's separate parts about.</summary>
         public static IReadOnlyList<JointAnimation> JointsFor(int modelId, bool indoor, FieldTimeZone? timeOfDay = null)
         {
-            var result = new List<JointAnimation>();
-            if (ExtraJoints.TryGetValue(modelId, out var registered)) result.AddRange(registered);
+            List<JointAnimation> result = new List<JointAnimation>();
+            if (ExtraJoints.TryGetValue(modelId, out List<JointAnimation> registered)) result.AddRange(registered);
             foreach (int code in CodesToPlay(modelId, indoor, timeOfDay))
             {
-                var anim = LoadJoint(code);
+                JointAnimation anim = LoadJoint(code);
                 if (anim != null && anim.Moves) result.Add(anim);
             }
             return result;
@@ -174,7 +174,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Which of a model's animation slots actually run. </summary>
         public static IEnumerable<int> CodesToPlay(int modelId, bool indoor, FieldTimeZone? timeOfDay)
         {
-            var info = InfoFor(modelId, indoor);
+            BuildingAnimationInfo info = InfoFor(modelId, indoor);
             if (info == null || !info.Animates) yield break;
 
             if (info.IsTimeOfDay)
@@ -196,10 +196,10 @@ namespace DSPRE.ROMFiles
         /// <summary>The animations that fade a building model's materials in and out.</summary>
         public static IReadOnlyList<MaterialColourAnimation> FadesFor(int modelId, bool indoor, FieldTimeZone? timeOfDay = null)
         {
-            var result = new List<MaterialColourAnimation>();
+            List<MaterialColourAnimation> result = new List<MaterialColourAnimation>();
             foreach (int code in CodesToPlay(modelId, indoor, timeOfDay))
             {
-                var anim = LoadFade(code);
+                MaterialColourAnimation anim = LoadFade(code);
                 if (anim != null && anim.Fades) result.Add(anim);
             }
             return result;
@@ -207,16 +207,16 @@ namespace DSPRE.ROMFiles
 
         private static MaterialColourAnimation LoadFade(int code)
         {
-            if (FadeCache.TryGetValue(code, out var hit)) return hit;
-            var anim = MaterialColourAnimation.Load(Raw(code));
+            if (FadeCache.TryGetValue(code, out MaterialColourAnimation hit)) return hit;
+            MaterialColourAnimation anim = MaterialColourAnimation.Load(Raw(code));
             FadeCache[code] = anim;
             return anim;
         }
 
         private static JointAnimation LoadJoint(int code)
         {
-            if (JointCache.TryGetValue(code, out var hit)) return hit;
-            var anim = JointAnimation.Load(Raw(code));
+            if (JointCache.TryGetValue(code, out JointAnimation hit)) return hit;
+            JointAnimation anim = JointAnimation.Load(Raw(code));
             JointCache[code] = anim;
             return anim;
         }
@@ -226,7 +226,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static string DoorSound(int modelId, bool indoor, bool opening)
         {
-            var info = InfoFor(modelId, indoor);
+            BuildingAnimationInfo info = InfoFor(modelId, indoor);
             switch (info?.DoorKind ?? 0)
             {
                 case 1: return opening ? "a door opening" : "a door closing";
@@ -241,17 +241,17 @@ namespace DSPRE.ROMFiles
         public static (IReadOnlyList<JointAnimation> Joints, IReadOnlyList<TexturePatternAnimation> Patterns)
             DoorAnimations(int modelId, bool indoor)
         {
-            var info = InfoFor(modelId, indoor);
+            BuildingAnimationInfo info = InfoFor(modelId, indoor);
             if (info == null || !info.Animates || !info.IsDoor)
                 return (Array.Empty<JointAnimation>(), Array.Empty<TexturePatternAnimation>());
 
-            var joints = new List<JointAnimation>();
-            var patterns = new List<TexturePatternAnimation>();
+            List<JointAnimation> joints = new List<JointAnimation>();
+            List<TexturePatternAnimation> patterns = new List<TexturePatternAnimation>();
             foreach (int code in info.UsedCodes)
             {
-                var j = LoadJoint(code);
+                JointAnimation j = LoadJoint(code);
                 if (j != null && j.Moves) joints.Add(j);
-                var t = LoadPattern(code);
+                TexturePatternAnimation t = LoadPattern(code);
                 if (t != null) patterns.Add(t);
             }
             return (joints, patterns);
@@ -260,25 +260,25 @@ namespace DSPRE.ROMFiles
         /// <summary>What a building model's animations wait for, when they do not just run on their own.</summary>
         public static (bool Door, bool TimeOfDay) WaitsFor(int modelId, bool indoor)
         {
-            var info = InfoFor(modelId, indoor);
+            BuildingAnimationInfo info = InfoFor(modelId, indoor);
             if (info == null || !info.Animates) return (false, false);
             return (info.IsDoor, info.IsTimeOfDay);
         }
 
         private static TextureSrtAnimation LoadScrolling(int code)
         {
-            if (ScrollCache.TryGetValue(code, out var hit)) return hit;
+            if (ScrollCache.TryGetValue(code, out TextureSrtAnimation hit)) return hit;
             // Load returns null for anything that isn't a scrolling animation, which is most of the
             // archive, so the other kinds simply fall out here.
-            var anim = TextureSrtAnimation.Load(Raw(code));
+            TextureSrtAnimation anim = TextureSrtAnimation.Load(Raw(code));
             ScrollCache[code] = anim;
             return anim;
         }
 
         private static TexturePatternAnimation LoadPattern(int code)
         {
-            if (PatternCache.TryGetValue(code, out var hit)) return hit;
-            var anim = TexturePatternAnimation.Load(Raw(code));
+            if (PatternCache.TryGetValue(code, out TexturePatternAnimation hit)) return hit;
+            TexturePatternAnimation anim = TexturePatternAnimation.Load(Raw(code));
             PatternCache[code] = anim;
             return anim;
         }
@@ -287,7 +287,7 @@ namespace DSPRE.ROMFiles
         {
             if (code < 0) return null;
             Refresh();
-            if (RawCache.TryGetValue(code, out var hit)) return hit;
+            if (RawCache.TryGetValue(code, out byte[] hit)) return hit;
 
             byte[] data = null;
             try

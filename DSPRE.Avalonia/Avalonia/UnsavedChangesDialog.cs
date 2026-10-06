@@ -48,9 +48,9 @@ namespace DSPRE.Avalonia
             CanResize = true;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-            var root = new DockPanel { Margin = new Thickness(16) };
+            DockPanel root = new DockPanel { Margin = new Thickness(16) };
 
-            var buttons = new StackPanel
+            StackPanel buttons = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -59,23 +59,23 @@ namespace DSPRE.Avalonia
             };
             DockPanel.SetDock(buttons, Dock.Bottom);
 
-            var cancel = new Button { Content = "Cancel", MinWidth = 90 };
+            Button cancel = new Button { Content = "Cancel", MinWidth = 90 };
             cancel.Click += (_, _) => Finish(false);
             _buttons.Add(cancel);
             buttons.Children.Add(cancel);
 
-            var discardAll = new Button { Content = "Discard All", MinWidth = 100 };
+            Button discardAll = new Button { Content = "Discard All", MinWidth = 100 };
             discardAll.Click += async (_, _) => await DiscardAllAsync();
             _buttons.Add(discardAll);
             buttons.Children.Add(discardAll);
 
-            var saveSelected = new Button { Content = "Save Selected", MinWidth = 110 };
+            Button saveSelected = new Button { Content = "Save Selected", MinWidth = 110 };
             saveSelected.Click += async (_, _) => await SaveSelectedAsync();
             _buttons.Add(saveSelected);
             buttons.Children.Add(saveSelected);
             root.Children.Add(buttons);
 
-            var header = new StackPanel { Spacing = 4 };
+            StackPanel header = new StackPanel { Spacing = 4 };
             header.Children.Add(new TextBlock
             {
                 Text = "The following editors have unsaved changes:",
@@ -90,10 +90,10 @@ namespace DSPRE.Avalonia
             DockPanel.SetDock(header, Dock.Top);
             root.Children.Add(header);
 
-            var editorList = new StackPanel { Spacing = 5 };
-            foreach (var editor in _editors)
+            StackPanel editorList = new StackPanel { Spacing = 5 };
+            foreach (UnsavedEditorInfo editor in _editors)
             {
-                var check = new CheckBox
+                CheckBox check = new CheckBox
                 {
                     Content = editor.ToString(),
                     IsChecked = true,
@@ -199,7 +199,7 @@ namespace DSPRE.Avalonia
             Window owner,
             IEnumerable<UnsavedEditorInfo> editorsWithChanges)
         {
-            var editors = (editorsWithChanges ?? Enumerable.Empty<UnsavedEditorInfo>())
+            List<UnsavedEditorInfo> editors = (editorsWithChanges ?? Enumerable.Empty<UnsavedEditorInfo>())
                 .Where(info => info?.Editor != null && info.Editor.HasUnsavedChanges)
                 .ToList();
             if (editors.Count == 0)
@@ -207,7 +207,7 @@ namespace DSPRE.Avalonia
                 return true;
             }
 
-            var dialog = new UnsavedChangesDialog(editors);
+            UnsavedChangesDialog dialog = new UnsavedChangesDialog(editors);
             if (owner != null)
             {
                 await dialog.ShowDialog(owner);
@@ -227,7 +227,7 @@ namespace DSPRE.Avalonia
             SetButtonsEnabled(false);
             try
             {
-                var failures = new List<string>();
+                List<string> failures = new List<string>();
 
                 // Save first. If any save fails, leave the dialog open so the user can retry or cancel;
                 // explicitly unselected editors must not be discarded as a side effect of a failed save.
@@ -236,7 +236,7 @@ namespace DSPRE.Avalonia
                     if (_completed) return;
                     if (_editorChecks[i].IsChecked != true) continue;
 
-                    var info = _editors[i];
+                    UnsavedEditorInfo info = _editors[i];
                     AppLogger.Info($"UnsavedChangesDialog: Saving {info.EditorName}");
                     string failure = await TrySaveEditorAsync(info.Editor);
                     if (failure != null)
@@ -261,7 +261,7 @@ namespace DSPRE.Avalonia
                     if (_completed) return;
                     if (_editorChecks[i].IsChecked == true) continue;
 
-                    var info = _editors[i];
+                    UnsavedEditorInfo info = _editors[i];
                     AppLogger.Info($"UnsavedChangesDialog: Discarding changes for {info.EditorName}");
                     string failure = TryDiscardEditor(info.Editor);
                     if (failure != null)
@@ -307,8 +307,8 @@ namespace DSPRE.Avalonia
             SetButtonsEnabled(false);
             try
             {
-                var failures = new List<string>();
-                foreach (var info in _editors)
+                List<string> failures = new List<string>();
+                foreach (UnsavedEditorInfo info in _editors)
                 {
                     if (_completed) return;
                     AppLogger.Info($"UnsavedChangesDialog: Discarding changes for {info.EditorName}");
@@ -352,7 +352,7 @@ namespace DSPRE.Avalonia
 
         private void SetButtonsEnabled(bool enabled)
         {
-            foreach (var b in _buttons) b.IsEnabled = enabled;
+            foreach (Button b in _buttons) b.IsEnabled = enabled;
         }
 
         private void Finish(bool result)

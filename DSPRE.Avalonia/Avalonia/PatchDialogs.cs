@@ -33,11 +33,11 @@ namespace DSPRE.Avalonia
 
         private static Window ActiveOwner(Window exclude = null)
         {
-            var current = OwnerWindow.Current;
+            Window current = OwnerWindow.Current;
             if (current != null && !ReferenceEquals(current, exclude)) return current;
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime d)
             {
-                foreach (var w in d.Windows)
+                foreach (Window w in d.Windows)
                     if (w.IsActive && !ReferenceEquals(w, exclude)) return w;
                 if (d.MainWindow != null && !ReferenceEquals(d.MainWindow, exclude)) return d.MainWindow;
             }
@@ -54,8 +54,8 @@ namespace DSPRE.Avalonia
                 while (!isDone()) Thread.Sleep(10);
                 return;
             }
-            var frame = new DispatcherFrame();
-            var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Background,
+            DispatcherFrame frame = new DispatcherFrame();
+            DispatcherTimer timer = new DispatcherTimer(TimeSpan.FromMilliseconds(10), DispatcherPriority.Background,
                 (_, _) => { if (isDone()) frame.Continue = false; });
             timer.Start();
             try { Dispatcher.UIThread.PushFrame(frame); }
@@ -67,7 +67,7 @@ namespace DSPRE.Avalonia
             int result = 0;   // 0 = No / closed, 1 = Yes / OK
             bool closed = false;
 
-            var win = new Window
+            Window win = new Window
             {
                 Title = title,
                 Width = 460,
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia
                 ShowInTaskbar = false,
             };
 
-            var msgText = new TextBlock
+            TextBlock msgText = new TextBlock
             {
                 Text = message,
                 TextWrapping = TextWrapping.Wrap,
@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia
             // ternary) used to win over the theme at Local priority and rendered the text invisible.
             if (error) msgText.Foreground = new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
 
-            var btnRow = new StackPanel
+            StackPanel btnRow = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -99,7 +99,7 @@ namespace DSPRE.Avalonia
 
             void AddBtn(string label, int r, bool isDefault = false)
             {
-                var btn = new Button { Content = label, MinWidth = 80, IsDefault = isDefault };
+                Button btn = new Button { Content = label, MinWidth = 80, IsDefault = isDefault };
                 btn.Click += (_, _) => { result = r; win.Close(); };
                 btnRow.Children.Add(btn);
             }
@@ -109,12 +109,12 @@ namespace DSPRE.Avalonia
 
             win.Closed += (_, _) => closed = true;
 
-            var root = new StackPanel();
+            StackPanel root = new StackPanel();
             root.Children.Add(msgText);
             root.Children.Add(btnRow);
             win.Content = root;
 
-            var owner = ActiveOwner(win);
+            Window owner = ActiveOwner(win);
             if (owner != null)
                 _ = win.ShowDialog(owner);   // modal; disables owner. We drive the pump ourselves below.
             else
@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia
             bool rangeOccupied = false;
             uint parsedOffset = defaultOffset;
 
-            var win = new Window
+            Window win = new Window
             {
                 Title = "Choose synthetic overlay offset",
                 Width = 460,
@@ -144,21 +144,21 @@ namespace DSPRE.Avalonia
                 ShowInTaskbar = false,
             };
 
-            var messageText = new TextBlock
+            TextBlock messageText = new TextBlock
             {
                 Text = patchName + " will be written to the synthetic overlay. Enter the file offset to use.",
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(16, 16, 16, 8),
             };
 
-            var offsetBox = new TextBox { Text = defaultOffset.ToString("X"), Margin = new Thickness(16, 0, 16, 8) };
-            var rangeText = new TextBlock { Margin = new Thickness(16, 0, 16, 4) };
-            var runtimeText = new TextBlock { Margin = new Thickness(16, 0, 16, 4) };
-            var statusText = new TextBlock { Margin = new Thickness(16, 0, 16, 8), TextWrapping = TextWrapping.Wrap };
+            TextBox offsetBox = new TextBox { Text = defaultOffset.ToString("X"), Margin = new Thickness(16, 0, 16, 8) };
+            TextBlock rangeText = new TextBlock { Margin = new Thickness(16, 0, 16, 4) };
+            TextBlock runtimeText = new TextBlock { Margin = new Thickness(16, 0, 16, 4) };
+            TextBlock statusText = new TextBlock { Margin = new Thickness(16, 0, 16, 8), TextWrapping = TextWrapping.Wrap };
 
-            var okBtn = new Button { Content = "OK", MinWidth = 80, IsDefault = true, IsEnabled = false };
-            var cancelBtn = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
-            var btnRow = new StackPanel
+            Button okBtn = new Button { Content = "OK", MinWidth = 80, IsDefault = true, IsEnabled = false };
+            Button cancelBtn = new Button { Content = "Cancel", MinWidth = 80, IsCancel = true };
+            StackPanel btnRow = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -168,8 +168,8 @@ namespace DSPRE.Avalonia
             btnRow.Children.Add(cancelBtn);
             btnRow.Children.Add(okBtn);
 
-            var errorBrush = new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
-            var okBrush = new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
+            SolidColorBrush errorBrush = new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
+            SolidColorBrush okBrush = new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
 
             void Evaluate()
             {
@@ -254,7 +254,7 @@ namespace DSPRE.Avalonia
             cancelBtn.Click += (_, _) => { result = null; win.Close(); };
             win.Closed += (_, _) => closed = true;
 
-            var root = new StackPanel();
+            StackPanel root = new StackPanel();
             root.Children.Add(messageText);
             root.Children.Add(offsetBox);
             root.Children.Add(rangeText);
@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia
 
             Evaluate();
 
-            var owner = ActiveOwner(win);
+            Window owner = ActiveOwner(win);
             if (owner != null)
                 _ = win.ShowDialog(owner);
             else

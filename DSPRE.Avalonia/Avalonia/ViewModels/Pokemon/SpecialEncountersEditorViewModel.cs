@@ -52,14 +52,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public bool HasUnsavedChanges
         {
-            get { foreach (var c in Children) if (c?.HasUnsavedChanges ?? false) return true; return false; }
+            get { foreach (IEditorWithUnsavedChanges c in Children) if (c?.HasUnsavedChanges ?? false) return true; return false; }
         }
         public string UnsavedChangesDescription
         {
             get
             {
-                var parts = new List<string>();
-                foreach (var c in Children)
+                List<string> parts = new List<string>();
+                foreach (IEditorWithUnsavedChanges c in Children)
                     if (c?.HasUnsavedChanges ?? false) parts.Add(c.UnsavedChangesDescription);
                 return parts.Count > 0 ? string.Join(", ", parts) : Title;
             }
@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task<bool> SaveChangesAsync()
         {
-            foreach (var c in Children)
+            foreach (IEditorWithUnsavedChanges c in Children)
                 if (c?.HasUnsavedChanges ?? false) await c.SaveChangesAsync();
             // A tab can refuse to save, so only a full save is announced.
             if (HasUnsavedChanges) return false;
@@ -77,7 +77,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         public void DiscardChanges()
         {
-            foreach (var c in Children) c?.DiscardChanges();
+            foreach (IEditorWithUnsavedChanges c in Children) c?.DiscardChanges();
         }
 
         // Undo and redo act on the tab that is showing; the window sets it.

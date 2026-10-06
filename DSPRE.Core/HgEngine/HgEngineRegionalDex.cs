@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -17,7 +18,7 @@ namespace DSPRE.HgEngine
         {
             dexNumber = 0;
             if (!HgEngineProject.IsActive) return false;
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator)) return false;
 
             string text = TryReadSource(out _);
@@ -30,7 +31,7 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
@@ -51,12 +52,12 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineDexSortLists.Exists) return true;
-            if (!HgEngineDexSortLists.TryLoad(out var sort, out error)) return false;
+            if (!HgEngineDexSortLists.TryLoad(out HgEngineDexSortLists sort, out error)) return false;
             if (!sort.Lists.ContainsKey("RegionalNum")) { error = $"{HgEngineDexSortLists.RelPath} has no sPokedexSort_RegionalNum to keep in order."; return false; }
 
-            var table = CSourceFile.For(regionalDex).Find("RegionalDex");
+            CDeclaration table = CSourceFile.For(regionalDex).Find("RegionalDex");
             if (table == null) { error = $"{SourceRelPath} has no RegionalDex table."; return false; }
-            var order = table.Init.Items
+            List<string> order = table.Init.Items
                 .Select((item, i) => (Species: item.IndexText?.Trim(), Number: int.TryParse(item.ValueText(regionalDex).Trim(), out int n) ? n : 0, At: i))
                 .Where(e => e.Species != null && e.Number > 0).OrderBy(e => e.Number).ThenBy(e => e.At).Select(e => e.Species).ToList();
             if (sort.Lists["RegionalNum"].SequenceEqual(order)) return true;

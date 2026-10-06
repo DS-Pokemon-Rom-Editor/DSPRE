@@ -39,20 +39,20 @@ namespace DSPRE.Avalonia.Views.Shell
                 if (!_updating && _sectionBox.SelectedItem is string s) _versionBox.Text = s;
             };
 
-            var browse = new Button { Content = "Browse…" };
+            Button browse = new Button { Content = "Browse…" };
             browse.Click += async (_, _) =>
             {
                 string picked = await DialogHelper.OpenFolder(this, "Changelogs folder");
                 if (!string.IsNullOrEmpty(picked)) _folderBox.Text = picked;
             };
 
-            var preview = new Button { Content = "Show preview", IsDefault = true };
+            Button preview = new Button { Content = "Show preview", IsDefault = true };
             preview.Click += async (_, _) => await ShowPreview();
 
-            var close = new Button { Content = "Close", IsCancel = true };
+            Button close = new Button { Content = "Close", IsCancel = true };
             close.Click += (_, _) => Close();
 
-            var panel = new StackPanel { Spacing = 10, Margin = new Thickness(14) };
+            StackPanel panel = new StackPanel { Spacing = 10, Margin = new Thickness(14) };
             panel.Children.Add(new TextBlock
             {
                 Text = "Builds the release notes the same way the release workflow does, then shows the update " +
@@ -77,9 +77,9 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private static StackPanel Row(string label, params Control[] controls)
         {
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            StackPanel row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
             row.Children.Add(new TextBlock { Text = label, Width = 120, VerticalAlignment = VerticalAlignment.Center });
-            foreach (var c in controls) row.Children.Add(c);
+            foreach (Control c in controls) row.Children.Add(c);
             return row;
         }
 
@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia.Views.Shell
             {
                 _loadedFor = path;
                 _updating = true;
-                var items = new List<string>();
+                List<string> items = new List<string>();
                 if (File.Exists(path))
                     foreach (string line in File.ReadAllLines(path))
                         if (line.StartsWith("## ")) items.Add(line.Substring(3).Trim());
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.Views.Shell
             if (v[2] == 0) { notes = text; return true; }
 
             string heading = "## " + DisplayVersion(_versionBox.Text);
-            var kept = new List<string>();
+            List<string> kept = new List<string>();
             bool found = false;
             foreach (string line in text.Replace("\r\n", "\n").Split('\n'))
             {
@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             if (!found) { notes = text; return true; }
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             foreach (string line in kept) sb.AppendLine(line);
             notes = sb.ToString();
             sectionOnly = true;
@@ -162,7 +162,7 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             string[] bits = (text ?? "").Trim().Split('.');
             if (bits.Length == 0 || bits.Length > 4) return null;
-            var v = new int[4];
+            int[] v = new int[4];
             for (int i = 0; i < 4; i++)
                 if (i < bits.Length && !int.TryParse(bits[i], out v[i])) return null;
             return v;
@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.Views.Shell
         {
             try
             {
-                var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+                DirectoryInfo dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
                 for (int depth = 0; dir != null && depth < 8; depth++)
                 {
                     string candidate = Path.Combine(dir.FullName, "Changelogs");

@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<ClassState>(state);
+            ClassState s = DSPRE.Avalonia.UndoJson.Read<ClassState>(state);
             _suppress = true;
             ClassName = s.Name; MusicMain = s.MusicMain; MusicAlt = s.MusicAlt;
             GenderIndex = s.Gender; PrizeMultiplier = s.Prize; BattleMusic = s.BattleMusic;
@@ -439,15 +439,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_musicFromSource)
             {
-                foreach (var kv in HgEngineMusicTables.ReadEncounterMusic())
+                foreach (KeyValuePair<int, (int Johto, int Kanto)> kv in HgEngineMusicTables.ReadEncounterMusic())
                     if (kv.Key is >= 0 and <= 255) _musicDict[(byte)kv.Key] = (0, (ushort)kv.Value.Johto, (ushort)kv.Value.Kanto);
                 return;
             }
-            var (where, rows) = EncounterMusicTable.Read();
+            (EncounterMusicTable.Location where, List<EncounterMusicTable.Row> rows) = EncounterMusicTable.Read();
             _musicWhere = where;
             _musicTableRepointed = where.Repointed;
             RomPatchState.flag_TrainerEncounterBGMTableRepointed = where.Repointed;
-            foreach (var row in rows) _musicDict[(byte)row.Class] = (row.Offset, row.Music, row.NightMusic);
+            foreach (EncounterMusicTable.Row row in rows) _musicDict[(byte)row.Class] = (row.Offset, row.Music, row.NightMusic);
         }
 
         private EncounterMusicTable.Location _musicWhere;
@@ -459,7 +459,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _suppress = true;
             ClassName = ClassNames[index].Substring(ClassNames[index].IndexOf(' ') + 1);
 
-            if (_musicDict.TryGetValue((byte)index, out var entry))
+            if (_musicDict.TryGetValue((byte)index, out (uint entryOffset, ushort musicD, ushort? musicN) entry))
             {
                 MusicEnabled = true;
                 MusicMain = entry.musicD;
@@ -478,7 +478,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _metadataFields = null;
                 if (_metadata == TrainerClassMetadataDetectionState.SchemaV1)
                 {
-                    if (TrainerClassMetadataStore.TryReadCommonFields(index, out var fields, out string metadataError)) _metadataFields = fields;
+                    if (TrainerClassMetadataStore.TryReadCommonFields(index, out TrainerClassMetadataCommonFields fields, out string metadataError)) _metadataFields = fields;
                     else StatusText = metadataError;
                 }
                 bool known = _metadataFields != null;
@@ -577,7 +577,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private bool SavePendingClass()
         {
-            var p = _pendingClass;
+            PendingClass p = _pendingClass;
             string error = null;
             bool added = HgEngineProject.IsActive
                 ? HgEngine.HgEngineTrainerClassExpansion.TryAdd(p.Name, p.NameWithArticle, p.Gender, p.Prize, p.SpriteFrom, p.AddMusic ? p.MusicMain : (ushort)0, out _, out error)
@@ -612,8 +612,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_selectedIndex < 0) return false;
             byte idx = (byte)_selectedIndex;
 
-            var failures = new List<string>();
-            bool hasMusic = _musicDict.TryGetValue(idx, out var entry);
+            List<string> failures = new List<string>();
+            bool hasMusic = _musicDict.TryGetValue(idx, out (uint entryOffset, ushort musicD, ushort? musicN) entry);
             if (_metadata != TrainerClassMetadataDetectionState.Stock)
             {
                 // The intro half of the record is the VS intro editor's to write.
@@ -724,7 +724,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 ? HgEngineOwnedFiles.Get(HgEngineOwnedFiles.ArchiveOf(DirNames.textArchives), trainerClassMessageNumber) : null;
             if (owned == null)
             {
-                var ta = new TextArchive(trainerClassMessageNumber);
+                TextArchive ta = new TextArchive(trainerClassMessageNumber);
                 ta.messages[index] = name;
                 ta.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
                 return true;
@@ -734,7 +734,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 error = "hg-engine generates the class names, so they can't be renamed here.";
                 return false;
             }
-            if (!HgEngineOwnedFiles.TryReadLines(owned, out var lines, out error)) return false;
+            if (!HgEngineOwnedFiles.TryReadLines(owned, out List<string> lines, out error)) return false;
             if (index >= lines.Count) { error = $"The class name source has no line for class {index}."; return false; }
             if (lines[index] == name) return true;
             lines[index] = name;

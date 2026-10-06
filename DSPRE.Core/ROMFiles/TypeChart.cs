@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.ROMFiles
@@ -61,7 +62,7 @@ namespace DSPRE.ROMFiles
         public static TypeChart Load()
         {
             if (UsesSource) return LoadSource();
-            var chart = new TypeChart();
+            TypeChart chart = new TypeChart();
             chart.Locate();
             byte[] data = File.ReadAllBytes(chart._path);
             int records = 0;
@@ -72,7 +73,7 @@ namespace DSPRE.ROMFiles
                 if (a == End) { records++; break; }
                 if (a == Boundary) { foresight = true; continue; }
                 if (records > 4096) throw new InvalidDataException("The type chart has no end marker.");
-                var existing = chart.Matchups.FirstOrDefault(x => x.Attacker == a && x.Defender == d);
+                Matchup existing = chart.Matchups.FirstOrDefault(x => x.Attacker == a && x.Defender == d);
                 if (existing != null) throw new InvalidDataException($"The type chart lists types {a} and {d} twice; DSPRE can't edit it without changing damage.");
                 chart.Matchups.Add(new Matchup { Attacker = a, Defender = d, Tenths = m, ForesightRemovable = foresight });
             }
@@ -83,9 +84,9 @@ namespace DSPRE.ROMFiles
         // hg-engine repoints the battle code to its own table, sized by the compiler, so there is no fixed room.
         private static TypeChart LoadSource()
         {
-            if (!HgEngine.HgEngineTypeChart.TryRead(out var rows, out string error)) throw new InvalidDataException(error);
-            var chart = new TypeChart { FromSource = true, InExpansion = true, Capacity = 4096, Where = "in " + HgEngine.HgEngineTypeChart.SourceRelPath };
-            foreach (var r in rows)
+            if (!HgEngine.HgEngineTypeChart.TryRead(out List<HgEngineTypeChart.Row> rows, out string error)) throw new InvalidDataException(error);
+            TypeChart chart = new TypeChart { FromSource = true, InExpansion = true, Capacity = 4096, Where = "in " + HgEngine.HgEngineTypeChart.SourceRelPath };
+            foreach (HgEngineTypeChart.Row r in rows)
             {
                 if (chart.Find(r.Attacker, r.Defender) != null)
                     throw new InvalidDataException($"The type chart lists types {r.Attacker} and {r.Defender} twice; DSPRE can't edit it without changing damage.");
@@ -103,15 +104,15 @@ namespace DSPRE.ROMFiles
         private void Locate()
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
-            var spot = SpotOf(GameTable.TypeChart).Value;
-            var sites = TypeChartPointerSites.Value;
+            TableSpot spot = SpotOf(GameTable.TypeChart).Value;
+            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = TypeChartPointerSites.Value;
             string ovPath = GameTableFile.PathOf(spot);
             _ovPath = ovPath;
             if (OverlayUtils.IsCompressed(spot.Overlay)) OverlayUtils.Decompress(spot.Overlay);
             byte[] ov = File.ReadAllBytes(ovPath);
             uint ovBase = OverlayUtils.OverlayTable.GetRAMAddress(spot.Overlay);
 
-            var targets = sites.col0.Select(o => BitConverter.ToUInt32(ov, o)).Distinct().ToList();
+            List<uint> targets = sites.col0.Select(o => BitConverter.ToUInt32(ov, o)).Distinct().ToList();
             if (targets.Count != 1) throw new InvalidDataException("The battle code points at more than one type chart; DSPRE can't tell which is used.");
             uint ram = targets[0];
             if (sites.col1.Any(o => BitConverter.ToUInt32(ov, o) != ram + 1) || sites.col2.Any(o => BitConverter.ToUInt32(ov, o) != ram + 2))
@@ -151,7 +152,7 @@ namespace DSPRE.ROMFiles
         private void RepairModulus()
         {
             if (!InExpansion || !_countIsCompare || !_modulusIsMovs) return;
-            var sites = TypeChartPointerSites.Value;
+            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = TypeChartPointerSites.Value;
             byte[] ov = File.ReadAllBytes(_ovPath);
             if (ov[sites.countModulus] == ov[sites.countCompare]) return;
             DSUtils.WriteToFile(_ovPath, new[] { ov[sites.countCompare] }, (uint)sites.countModulus);
@@ -160,8 +161,8 @@ namespace DSPRE.ROMFiles
         /// <summary>DP and Pt's Pokétch copy: an 18x18 grid of 1 (super effective), -1 (not very), -10 (none) and 0.</summary>
         public static byte[] PoketchGrid(IEnumerable<Matchup> matchups)
         {
-            var grid = new byte[VanillaTypes * VanillaTypes];
-            foreach (var m in matchups)
+            byte[] grid = new byte[VanillaTypes * VanillaTypes];
+            foreach (Matchup m in matchups)
             {
                 if (m.Attacker >= VanillaTypes || m.Defender >= VanillaTypes) continue;
                 sbyte v = m.Tenths == 0 ? (sbyte)-10 : m.Tenths < Neutral ? (sbyte)-1 : m.Tenths > Neutral ? (sbyte)1 : (sbyte)0;
@@ -172,11 +173,11 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToBytes()
         {
-            var data = new List<byte>();
+            List<byte> data = new List<byte>();
             void Add(byte a, byte d, byte m) { data.Add(a); data.Add(d); data.Add(m); }
-            foreach (var m in Matchups.Where(x => !x.ForesightRemovable)) Add(m.Attacker, m.Defender, m.Tenths);
+            foreach (Matchup m in Matchups.Where(x => !x.ForesightRemovable)) Add(m.Attacker, m.Defender, m.Tenths);
             Add(Boundary, Boundary, 0);
-            foreach (var m in Matchups.Where(x => x.ForesightRemovable)) Add(m.Attacker, m.Defender, m.Tenths);
+            foreach (Matchup m in Matchups.Where(x => x.ForesightRemovable)) Add(m.Attacker, m.Defender, m.Tenths);
             while (data.Count < Capacity * RecordSize) Add(End, End, 0);
             return data.ToArray();
         }
@@ -197,7 +198,7 @@ namespace DSPRE.ROMFiles
             if (Problem() is string p) throw new InvalidOperationException(p);
             if (FromSource)
             {
-                var rows = Matchups.Select(m => new HgEngine.HgEngineTypeChart.Row(m.Attacker, m.Defender, m.Tenths,
+                List<HgEngineTypeChart.Row> rows = Matchups.Select(m => new HgEngine.HgEngineTypeChart.Row(m.Attacker, m.Defender, m.Tenths,
                     m.ForesightRemovable ? HgEngine.HgEngineTypeChart.Section.Foresight
                     : m.RingTargetRemovable ? HgEngine.HgEngineTypeChart.Section.RingTarget
                     : HgEngine.HgEngineTypeChart.Section.Main)).ToList();
@@ -216,7 +217,7 @@ namespace DSPRE.ROMFiles
             if (InExpansion) return;
             if (!SyntheticOverlaySpace.Available())
                 throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
-            var sites = TypeChartPointerSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
+            (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) sites = TypeChartPointerSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
             if (!_countIsCompare || !_modulusIsMovs) throw new InvalidOperationException("Conversion 2's count check doesn't look like the game's, so DSPRE won't move the chart.");
             int oldCapacity = Capacity;
             Capacity = ExpandedCapacity;
@@ -268,7 +269,7 @@ namespace DSPRE.ROMFiles
             try
             {
                 if (WhyNot() != null) return null;
-                var chart = Load();
+                TypeChart chart = Load();
                 if (chart._path != Filesystem.expArmPath || chart.InExpansion) return null;
                 return (chart._offset, chart._offset + (long)chart.Capacity * RecordSize);
             }
@@ -280,7 +281,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Sets a pair's multiplier; neutral removes it. New pairs join the end of their part of the chart.</summary>
         public void Set(int attacker, int defender, int tenths, bool foresightRemovable)
         {
-            var m = Find(attacker, defender);
+            Matchup m = Find(attacker, defender);
             if (tenths == Neutral) { if (m != null) Matchups.Remove(m); return; }
             // hg-engine lists every immunity after its Ring Target row.
             if (m == null) { m = new Matchup { Attacker = (byte)attacker, Defender = (byte)defender, RingTargetRemovable = FromSource }; Matchups.Add(m); }

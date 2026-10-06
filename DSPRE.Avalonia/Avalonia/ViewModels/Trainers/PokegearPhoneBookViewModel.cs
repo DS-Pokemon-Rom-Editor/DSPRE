@@ -79,12 +79,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // Shows the contact the step changed.
         private void ApplyState(byte[] state)
         {
-            var back = PokegearPhoneBook.Book.Parse(state, out _);
+            PokegearPhoneBook.Book back = PokegearPhoneBook.Book.Parse(state, out _);
             if (back == null || back.Entries.Count != _book.Entries.Count) return;
             int changed = -1;
             for (int i = 0; i < back.Entries.Count; i++)
             {
-                var was = new byte[PokegearPhoneBook.EntrySize]; var now = new byte[PokegearPhoneBook.EntrySize];
+                byte[] was = new byte[PokegearPhoneBook.EntrySize]; byte[] now = new byte[PokegearPhoneBook.EntrySize];
                 _book.Entries[i].Write(was); back.Entries[i].Write(now);
                 if (was.AsSpan().SequenceEqual(now)) continue;
                 _book.Entries[i] = back.Entries[i];
@@ -136,7 +136,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             string[] trainers = SafeNames(() => DSPRE.TrainerNames.GetAll());
             for (int i = 0; i < trainers.Length; i++) TrainerChoices.Add(i == 0 ? "0: (not a trainer)" : trainers[i]);
 
-            var headers = HeaderLabels.Friendly();
+            IReadOnlyList<string> headers = HeaderLabels.Friendly();
             foreach (string h in headers) MapChoices.Add(h);
 
             string[] items = SafeNames(() => GetItemNames());
@@ -144,7 +144,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             if (PokegearRematchTable.IsSupported)
             {
-                var rows = PokegearRematchTable.ReadAll();
+                List<RematchTable.Row> rows = PokegearRematchTable.ReadAll();
                 for (int r = 0; r < rows.Count; r++)
                     if (!rows[r].IsEmpty) _rematchRowByTrainer.TryAdd(rows[r].BaseTrainerId, r);
             }
@@ -300,7 +300,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void MoveSortRow(int from, int to)
         {
             if (_book == null || from == to || from < 0 || to < 0 || from >= _sorted.Count || to >= _sorted.Count) return;
-            var order = new List<int>(_sorted);
+            List<int> order = new List<int>(_sorted);
             int contact = order[from];
             order.RemoveAt(from);
             order.Insert(to, contact);
@@ -431,7 +431,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 Entry e = Current;
                 if (e == null) return "";
-                var lines = new List<string>();
+                List<string> lines = new List<string>();
 
                 if (e.Id != _current)
                     lines.Add($"The stored ID is {e.Id} but this is contact {_current}. The game reads both, so they must match.");

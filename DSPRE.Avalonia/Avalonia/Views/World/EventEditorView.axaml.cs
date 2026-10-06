@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.Gl;
 using DSPRE.Avalonia.ViewModels;
@@ -50,7 +51,7 @@ namespace DSPRE.Avalonia.Views.World
             // measured in that same space (Gl3DPointerNavigation picks events the same way).
             GlHost.PointerMoved += (s, e) =>
             {
-                var pos = e.GetPosition(GlHost);
+                Point pos = e.GetPosition(GlHost);
                 VM?.UpdateHoverCoords(pos.X, pos.Y,
                     (x, y, z) => { bool k = GlView.WorldToScreen(x, y, z, out float sx, out float sy); return (k, sx, sy); });
             };
@@ -106,9 +107,9 @@ namespace DSPRE.Avalonia.Views.World
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
-            var vm = VM;
+            EventEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
+            Window owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
 
             if (!_setupDone)
@@ -148,7 +149,7 @@ namespace DSPRE.Avalonia.Views.World
         {
             if (VM == null) return;
             int bestType = -1, bestIdx = -1; float bestD = 18f;
-            foreach (var (type, index, nx, ny, nz) in VM.EventAnchorsNorm())
+            foreach ((int type, int index, float nx, float ny, float nz) in VM.EventAnchorsNorm())
             {
                 if (!GlView.WorldToScreen(nx, ny, nz, out float sx, out float sy)) continue;
                 float d = (float)Math.Sqrt((p.X - sx) * (p.X - sx) + (p.Y - sy) * (p.Y - sy));
@@ -198,8 +199,8 @@ namespace DSPRE.Avalonia.Views.World
         /// <summary>Opens the animated preview on what the editor is showing, with the ROM's script lookups.</summary>
         private AnimatedPreviewWindow OpenPreview()
         {
-            var owner = TopLevel.GetTopLevel(this) as Window;
-            var win = new AnimatedPreviewWindow();
+            Window owner = TopLevel.GetTopLevel(this) as Window;
+            AnimatedPreviewWindow win = new AnimatedPreviewWindow();
             VM.ConfigureScriptPreview(win.ViewModel);
             win.ShowFor(owner, VM.Model3D, VM.Area, VM.Events, ow => VM.EventFoot(ow), VM.Collision,
                         (x, z) => VM.TileFoot(x, z), n => VM.WalkerFor(n),
@@ -214,7 +215,7 @@ namespace DSPRE.Avalonia.Views.World
             if (id < 0) return null;
             try
             {
-                var file = new LevelScriptFile(id);
+                LevelScriptFile file = new LevelScriptFile(id);
                 return file.bufferSet != null && file.bufferSet.Count > 0 ? file : null;
             }
             catch { return null; }
@@ -235,9 +236,9 @@ namespace DSPRE.Avalonia.Views.World
         {
             try
             {
-                var pix = OverworldSprites.Get(AnimatedPreviewViewModel.PlayerSpriteEntry, 1);
+                OverworldSprites.SpritePixels pix = OverworldSprites.Get(AnimatedPreviewViewModel.PlayerSpriteEntry, 1);
                 if (pix == null || pix.Width <= 0 || pix.Height <= 0) return;
-                var bmp = ToBitmap(pix);
+                Bitmap bmp = ToBitmap(pix);
                 PegmanIcon.Source = bmp;
                 DragGhost.Source = bmp;
             }
@@ -246,10 +247,10 @@ namespace DSPRE.Avalonia.Views.World
 
         private static Bitmap ToBitmap(OverworldSprites.SpritePixels pix)
         {
-            var wb = new WriteableBitmap(new PixelSize(pix.Width, pix.Height), new Vector(96, 96),
+            WriteableBitmap wb = new WriteableBitmap(new PixelSize(pix.Width, pix.Height), new Vector(96, 96),
                                          global::Avalonia.Platform.PixelFormat.Rgba8888,
                                          global::Avalonia.Platform.AlphaFormat.Unpremul);
-            using (var fb = wb.Lock())
+            using (ILockedFramebuffer fb = wb.Lock())
             {
                 for (int y = 0; y < pix.Height; y++)
                     System.Runtime.InteropServices.Marshal.Copy(
@@ -276,8 +277,8 @@ namespace DSPRE.Avalonia.Views.World
             if (!_pegDragging) return;
 
             // Where the pointer is over the map itself, which is what the projection is measured in.
-            var overMap = e.GetPosition(GlView);
-            var overOverlay = e.GetPosition(DragOverlay);
+            Point overMap = e.GetPosition(GlView);
+            Point overOverlay = e.GetPosition(DragOverlay);
 
             DragGhost.IsVisible = true;
             Canvas.SetLeft(DragGhost, overOverlay.X - DragGhost.Width / 2);
@@ -294,7 +295,7 @@ namespace DSPRE.Avalonia.Views.World
                 return;
             }
 
-            var under = _pegTiles?.Nearest(overMap.X, overMap.Y);
+            (int x, int z)? under = _pegTiles?.Nearest(overMap.X, overMap.Y);
             _pegTile = under == null ? null
                      : FieldTilePicker.NearestFree(_pegMap, under.Value.x, under.Value.z);
 
@@ -321,7 +322,7 @@ namespace DSPRE.Avalonia.Views.World
             _pegTiles = null;
             if (VM != null) VM.WalkTile = null;
 
-            var tile = _pegTile;
+            (int x, int z)? tile = _pegTile;
             _pegTile = null;
             if (tile == null) return;          // let go somewhere off the map, so nothing happens
 
@@ -342,7 +343,7 @@ namespace DSPRE.Avalonia.Views.World
                 await DialogHelper.ShowError("Load an event file with a map first, so there is something to animate.", "Step in here");
                 return;
             }
-            var tile = VM.SelectedEventTile;
+            (int x, int z)? tile = VM.SelectedEventTile;
             if (tile == null)
             {
                 await DialogHelper.ShowInfo("Select an event first, and the walk will start next to it.", "Step in here");
@@ -391,9 +392,9 @@ namespace DSPRE.Avalonia.Views.World
                 if (VM.HasUnsavedChanges) return;
             }
 
-            var dlgVm = new GroundItemScriptsViewModel();
-            var dlg = new GroundItemScriptsView(dlgVm);
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            GroundItemScriptsViewModel dlgVm = new GroundItemScriptsViewModel();
+            GroundItemScriptsView dlg = new GroundItemScriptsView(dlgVm);
+            Window owner = TopLevel.GetTopLevel(this) as Window;
             if (owner != null) await dlg.ShowDialog(owner);
             else dlg.Show();
 
@@ -434,11 +435,11 @@ namespace DSPRE.Avalonia.Views.World
         // Builds a PNG from a raw RGBA framebuffer (origin bottom-left → flipped to top-left for the image).
         private static void SaveRgbaToPng(byte[] rgba, int w, int h, string path)
         {
-            var bmp = new global::Avalonia.Media.Imaging.WriteableBitmap(
+            WriteableBitmap bmp = new global::Avalonia.Media.Imaging.WriteableBitmap(
                 new PixelSize(w, h), new Vector(96, 96),
                 global::Avalonia.Platform.PixelFormats.Rgba8888,
                 global::Avalonia.Platform.AlphaFormat.Unpremul);
-            using (var fb = bmp.Lock())
+            using (ILockedFramebuffer fb = bmp.Lock())
             {
                 int rowBytes = w * 4;
                 for (int y = 0; y < h; y++)

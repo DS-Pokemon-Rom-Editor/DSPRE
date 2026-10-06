@@ -412,11 +412,11 @@ namespace DSPRE
                     for (int part = 0; part < SpriteFilesPerClass; part++)
                         File.Copy(SpriteFile(spriteFromClass, part), SpriteFile(newClassId, part), overwrite: true);
 
-                var nameArchive = new TextArchive(RomInfo.trainerClassMessageNumber);
+                TextArchive nameArchive = new TextArchive(RomInfo.trainerClassMessageNumber);
                 nameArchive.messages.Add(name);
                 nameArchive.SaveToExpandedDir(RomInfo.trainerClassMessageNumber, showSuccessMessage: false);
 
-                var articleArchive = new TextArchive(RomInfo.trainerClassWithArticleMessageNumber);
+                TextArchive articleArchive = new TextArchive(RomInfo.trainerClassWithArticleMessageNumber);
                 articleArchive.messages.Add(string.IsNullOrWhiteSpace(nameWithArticle) ? WithArticle(name) : nameWithArticle);
                 articleArchive.SaveToExpandedDir(RomInfo.trainerClassWithArticleMessageNumber, showSuccessMessage: false);
 
@@ -563,7 +563,7 @@ namespace DSPRE
             {
                 string expPath = Filesystem.expArmPath;
                 byte[] expData = File.ReadAllBytes(expPath);
-                var reserved = DSPRE.ROMFiles.SyntheticOverlaySpace.Reserved(expData);
+                List<(long Start, long End)> reserved = DSPRE.ROMFiles.SyntheticOverlaySpace.Reserved(expData);
                 if (_writtenThisOperation != null) reserved.AddRange(_writtenThisOperation);
                 long freeOffset = DSPRE.ROMFiles.SyntheticOverlaySpace.FindFree(expData, newFullTableBytes.Length, 4, reserved);
                 if (freeOffset < 0)
@@ -592,7 +592,7 @@ namespace DSPRE
         /// Their entries can be zero, so a free-space scan would otherwise take them for empty space.</summary>
         public static List<(long Start, long End)> MovedTableRanges()
         {
-            var ranges = new List<(long, long)>();
+            List<(long, long)> ranges = new List<(long, long)>();
             if (RomInfo.isHGE) return ranges;
             uint load = RomInfo.synthOverlayLoadAddress;
             if (IsSupportedForCurrentRom)

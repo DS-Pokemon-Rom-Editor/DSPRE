@@ -313,7 +313,7 @@ namespace DSPRE.ROMFiles
             else
             {
                 detectionState = TrainerClassMetadataDetectionState.Inconsistent;
-                var failedMarkers = new List<string>();
+                List<string> failedMarkers = new List<string>();
                 if (!archiveMarker) failedMarkers.Add("a155 structure (" + archiveDetail + ")");
                 if (!genderHookMarker) failedMarkers.Add("gender hook");
                 if (!eyeContactHookMarker) failedMarkers.Add("eye-contact hook");
@@ -432,7 +432,7 @@ namespace DSPRE.ROMFiles
         public static TrainerClassMetadataValidationResult ValidatePresentation(
             TrainerClassMetadataRecord record, int staticNameCount)
         {
-            var result = new TrainerClassMetadataValidationResult();
+            TrainerClassMetadataValidationResult result = new TrainerClassMetadataValidationResult();
             if (record == null)
             {
                 result.Errors.Add("No trainer-class metadata record was supplied.");
@@ -616,7 +616,7 @@ namespace DSPRE.ROMFiles
             Narc archive = null;
             try
             {
-                using (var reader = new BinaryReader(File.OpenRead(paths.packedDir)))
+                using (BinaryReader reader = new BinaryReader(File.OpenRead(paths.packedDir)))
                 {
                     if (reader.BaseStream.Length < 0x10)
                     {
@@ -679,7 +679,7 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            var actual = new HashSet<string>(files.Select(Path.GetFullPath), StringComparer.OrdinalIgnoreCase);
+            HashSet<string> actual = new HashSet<string>(files.Select(Path.GetFullPath), StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < memberCount; i++)
             {
                 string expected = Path.GetFullPath(Path.Combine(directory, i.ToString("D4")));

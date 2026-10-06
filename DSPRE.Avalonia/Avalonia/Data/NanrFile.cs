@@ -101,7 +101,7 @@ namespace DSPRE.Avalonia.Data
             if (d == null || d.Length < 0x30) return null;
             if (d[0] != 'R' || d[1] != 'N' || d[2] != 'A' || d[3] != 'N') return null;
 
-            var f = new NanrFile();
+            NanrFile f = new NanrFile();
             f._bom = U16(d, 0x04);
             f._version = U16(d, 0x06);
             f._headerSize = U16(d, 0x0C);
@@ -119,14 +119,14 @@ namespace DSPRE.Avalonia.Data
             uint extended = U32(d, bank + 0x14);
 
             // Sequences, then their frames, then the results the frames point at.
-            var seen = new Dictionary<int, Result>();
+            Dictionary<int, Result> seen = new Dictionary<int, Result>();
             for (int i = 0; i < sequences; i++)
             {
                 int at = bank + (int)sequenceHead + i * 0x10;
                 if (at + 0x10 > d.Length) return null;
 
                 uint animType = U32(d, at + 0x04);
-                var s = new Sequence
+                Sequence s = new Sequence
                 {
                     LoopStartFrame = U16(d, at + 0x02),
                     AnimationType = (ushort)(animType >> 16),
@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.Data
 
                     // Several frames often share one result. Keeping them as one thing is what stops an
                     // edit to a frame quietly changing another.
-                    if (!seen.TryGetValue(resultAt, out var r))
+                    if (!seen.TryGetValue(resultAt, out Result r))
                     {
                         int ra = bank + (int)f._animContents + resultAt;
                         r = new Result
@@ -187,7 +187,7 @@ namespace DSPRE.Avalonia.Data
             // The result area, kept whole so gaps and ordering survive untouched.
             int resultsStart = bank + (int)f._animContents;
             int resultsEnd = resultsStart;
-            foreach (var r in f._resultList)
+            foreach (Result r in f._resultList)
                 resultsEnd = Math.Max(resultsEnd, resultsStart + r.Offset + ResultSize(r.Element));
 
             int blockEnd = 0x10 + (int)blockSize;
@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia.Data
             int sequences = Sequences.Count;
             int totalFrames = Sequences.Sum(s => s.Frames.Count);
             int size = 0x10 + 0x10 * sequences + 0x08 * totalFrames;
-            var b = new byte[size];
+            byte[] b = new byte[size];
 
             Encoding.ASCII.GetBytes("TAAU").CopyTo(b, 0);
             PutU32(b, 0x04, (uint)size);
@@ -309,7 +309,7 @@ namespace DSPRE.Avalonia.Data
             if (_framesMoved)
             {
                 uint running = 0;
-                foreach (var s in Sequences)
+                foreach (Sequence s in Sequences)
                 {
                     s.FrameArrayAt = running;
                     running += (uint)(s.Frames.Count * 8);
@@ -330,7 +330,7 @@ namespace DSPRE.Avalonia.Data
             int txeuSize = _txeu == null ? 0 : 8 + _txeu.Length;
             int fileSize = 0x10 + blockSize + lablSize + txeuSize;
 
-            var d = new byte[fileSize];
+            byte[] d = new byte[fileSize];
             Encoding.ASCII.GetBytes("RNAN").CopyTo(d, 0);
             PutU16(d, 0x04, _bom);
             PutU16(d, 0x06, _version);
@@ -350,7 +350,7 @@ namespace DSPRE.Avalonia.Data
             int frameAt = bank + (int)frameArrayHead;
             for (int i = 0; i < sequences; i++)
             {
-                var s = Sequences[i];
+                Sequence s = Sequences[i];
                 int at = bank + (int)sequenceHead + i * 0x10;
                 PutU16(d, at + 0x00, (ushort)s.Frames.Count);
                 PutU16(d, at + 0x02, s.LoopStartFrame);
@@ -360,7 +360,7 @@ namespace DSPRE.Avalonia.Data
 
                 for (int j = 0; j < s.Frames.Count; j++)
                 {
-                    var fr = s.Frames[j];
+                    Frame fr = s.Frames[j];
                     int fa = frameAt + (int)s.FrameArrayAt + j * 8;
                     PutU32(d, fa + 0x00, (uint)fr.ResultAt);
                     PutU16(d, fa + 0x04, fr.Delay);
@@ -404,7 +404,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public void SetDelay(int sequence, int frame, int delay)
         {
-            var s = At(sequence);
+            Sequence s = At(sequence);
             if (s == null || frame < 0 || frame >= s.Frames.Count) return;
             s.Frames[frame].Delay = (ushort)Math.Clamp(delay, 0, ushort.MaxValue);
         }
@@ -412,7 +412,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>How many frames, besides this one, draw from the same result.</summary>
         public int SharedWith(int sequence, int frame)
         {
-            var r = ResultFor(sequence, frame);
+            Result r = ResultFor(sequence, frame);
             return r == null ? 0 : Math.Max(0, r.Referrers - 1);
         }
 
@@ -422,7 +422,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public void SetCell(int sequence, int frame, int cell, bool everywhere = false)
         {
-            var r = Own(sequence, frame, everywhere);
+            Result r = Own(sequence, frame, everywhere);
             if (r == null) return;
             PutU16(_results, r.Offset, (ushort)cell);
             r.Cell = (ushort)cell;
@@ -434,10 +434,10 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         private Result Own(int sequence, int frame, bool everywhere)
         {
-            var s = At(sequence);
+            Sequence s = At(sequence);
             if (s == null || frame < 0 || frame >= s.Frames.Count) return null;
-            var fr = s.Frames[frame];
-            var r = _resultList.FirstOrDefault(x => x.Offset == fr.ResultAt);
+            Frame fr = s.Frames[frame];
+            Result r = _resultList.FirstOrDefault(x => x.Offset == fr.ResultAt);
             if (r == null || everywhere || r.Referrers <= 1) return r;
 
             // The copy goes on the end, so every offset already recorded stays where it is. A two-byte
@@ -447,12 +447,12 @@ namespace DSPRE.Avalonia.Data
             int end = _results.Length + size;
             int pad = (4 - end % 4) % 4;
 
-            var grown = new byte[end + pad];
+            byte[] grown = new byte[end + pad];
             _results.CopyTo(grown, 0);
             Array.Copy(_results, r.Offset, grown, _results.Length, size);
             for (int i = 0; i < pad; i++) grown[end + i] = PadByte;
 
-            var fresh = new Result
+            Result fresh = new Result
             {
                 Offset = _results.Length,
                 Element = r.Element,
@@ -474,7 +474,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public void SetPlayMode(int sequence, int mode)
         {
-            var s = At(sequence);
+            Sequence s = At(sequence);
             if (s != null && mode >= 1 && mode <= 4) s.PlayMode = (uint)mode;
         }
 
@@ -484,7 +484,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public void SetLoopStart(int sequence, int frame)
         {
-            var s = At(sequence);
+            Sequence s = At(sequence);
             if (s == null || s.Frames.Count == 0) return;
             s.LoopStartFrame = (ushort)Math.Clamp(frame, 0, s.Frames.Count - 1);
         }
@@ -496,12 +496,12 @@ namespace DSPRE.Avalonia.Data
         public string SetTurn(int sequence, int frame, double degrees, double scaleX, double scaleY,
                               bool everywhere = false)
         {
-            var probe = ResultFor(sequence, frame);
+            Result probe = ResultFor(sequence, frame);
             if (probe == null) return "There is no such frame.";
             if (probe.Element != 1) return "This frame does not carry a turn or a stretch.";
             if (scaleX == 0 || scaleY == 0) return "A stretch of zero would make the drawing vanish.";
 
-            var r = Own(sequence, frame, everywhere);
+            Result r = Own(sequence, frame, everywhere);
             if (r == null) return "There is no such frame.";
 
             // A full turn is 65536 steps; a stretch is in 4096ths.
@@ -519,13 +519,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Where a frame puts the drawing, for the two kinds that carry a position.</summary>
         public string SetShift(int sequence, int frame, int x, int y, bool everywhere = false)
         {
-            var probe = ResultFor(sequence, frame);
+            Result probe = ResultFor(sequence, frame);
             if (probe == null) return "There is no such frame.";
             if (probe.Element == 0) return "This frame only names a drawing, so it has nowhere to put it.";
             if (x < short.MinValue || x > short.MaxValue || y < short.MinValue || y > short.MaxValue)
                 return "That is further than the file can record.";
 
-            var r = Own(sequence, frame, everywhere);
+            Result r = Own(sequence, frame, everywhere);
             if (r == null) return "There is no such frame.";
 
             r.ShiftX = (short)x;
@@ -539,13 +539,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Copies a frame and puts the copy after it, same drawing and same hold.</summary>
         public string AddFrame(int sequence, int after)
         {
-            var s = At(sequence);
+            Sequence s = At(sequence);
             if (s == null) return "There is no such sequence.";
             if (s.Frames.Count == 0) return "There is no frame here to copy.";
             if (s.Frames.Count >= ushort.MaxValue) return "This sequence is already as long as it can be.";
 
             int at = Math.Clamp(after, 0, s.Frames.Count - 1);
-            var source = s.Frames[at];
+            Frame source = s.Frames[at];
             s.Frames.Insert(at + 1, new Frame
             {
                 ResultAt = source.ResultAt,
@@ -553,7 +553,7 @@ namespace DSPRE.Avalonia.Data
                 Pad = source.Pad,
             });
 
-            var r = _resultList.FirstOrDefault(x => x.Offset == source.ResultAt);
+            Result r = _resultList.FirstOrDefault(x => x.Offset == source.ResultAt);
             if (r != null) r.Referrers++;
             InsertExtendedFrame(sequence, at + 1);
             _framesMoved = true;
@@ -563,11 +563,11 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Takes a frame out. A sequence is never left with none, since the game reads it anyway.</summary>
         public string RemoveFrame(int sequence, int frame)
         {
-            var s = At(sequence);
+            Sequence s = At(sequence);
             if (s == null || frame < 0 || frame >= s.Frames.Count) return "There is no such frame.";
             if (s.Frames.Count <= 1) return "A sequence has to keep at least one frame.";
 
-            var r = _resultList.FirstOrDefault(x => x.Offset == s.Frames[frame].ResultAt);
+            Result r = _resultList.FirstOrDefault(x => x.Offset == s.Frames[frame].ResultAt);
             if (r != null) r.Referrers--;
             s.Frames.RemoveAt(frame);
             if (s.LoopStartFrame >= s.Frames.Count) s.LoopStartFrame = (ushort)(s.Frames.Count - 1);
@@ -589,7 +589,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (_uaat == null) return;
             int at = Math.Clamp(FlatFrame(sequence, frame), 0, _uaatFrameAttrs.Length);
-            var grown = new List<uint>(_uaatFrameAttrs);
+            List<uint> grown = new List<uint>(_uaatFrameAttrs);
             grown.Insert(at, at > 0 && at <= grown.Count ? grown[at - 1] : 0);
             _uaatFrameAttrs = grown.ToArray();
         }
@@ -599,7 +599,7 @@ namespace DSPRE.Avalonia.Data
             if (_uaat == null) return;
             int at = FlatFrame(sequence, frame);
             if (at < 0 || at >= _uaatFrameAttrs.Length) return;
-            var left = new List<uint>(_uaatFrameAttrs);
+            List<uint> left = new List<uint>(_uaatFrameAttrs);
             left.RemoveAt(at);
             _uaatFrameAttrs = left.ToArray();
         }
@@ -611,7 +611,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public string SetAnimationType(int sequence, int type)
         {
-            var s = At(sequence);
+            Sequence s = At(sequence);
             if (s == null) return "There is no such sequence.";
             if (type != 1 && type != 2) return "The hardware only knows cell banks and multi-cell banks.";
             s.AnimationType = (ushort)type;
@@ -628,8 +628,8 @@ namespace DSPRE.Avalonia.Data
             if (Sequences.Count == 0) return "There is no sequence here to copy.";
             if (Sequences.Count >= ushort.MaxValue) return "This file holds as many sequences as it can.";
 
-            var last = Sequences[^1];
-            var fresh = new Sequence
+            Sequence last = Sequences[^1];
+            Sequence fresh = new Sequence
             {
                 LoopStartFrame = last.LoopStartFrame,
                 AnimationType = last.AnimationType,
@@ -641,10 +641,10 @@ namespace DSPRE.Avalonia.Data
             string root = (last.Name ?? "").TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
             fresh.Name = root.Length > 0 ? root + Sequences.Count : "";
 
-            foreach (var fr in last.Frames)
+            foreach (Frame fr in last.Frames)
             {
                 fresh.Frames.Add(new Frame { ResultAt = fr.ResultAt, Delay = fr.Delay, Pad = fr.Pad });
-                var r = _resultList.FirstOrDefault(x => x.Offset == fr.ResultAt);
+                Result r = _resultList.FirstOrDefault(x => x.Offset == fr.ResultAt);
                 if (r != null) r.Referrers++;
             }
 
@@ -658,10 +658,10 @@ namespace DSPRE.Avalonia.Data
         {
             if (Sequences.Count <= 1) return "A file has to keep at least one sequence.";
 
-            var last = Sequences[^1];
-            foreach (var fr in last.Frames)
+            Sequence last = Sequences[^1];
+            foreach (Frame fr in last.Frames)
             {
-                var r = _resultList.FirstOrDefault(x => x.Offset == fr.ResultAt);
+                Result r = _resultList.FirstOrDefault(x => x.Offset == fr.ResultAt);
                 if (r != null) r.Referrers--;
             }
             Sequences.RemoveAt(Sequences.Count - 1);
@@ -685,16 +685,16 @@ namespace DSPRE.Avalonia.Data
         private void RebuildNames()
         {
             int table = Sequences.Count * 4;
-            var text = new List<byte>();
-            var offsets = new List<uint>();
-            foreach (var s in Sequences)
+            List<byte> text = new List<byte>();
+            List<uint> offsets = new List<uint>();
+            foreach (Sequence s in Sequences)
             {
                 offsets.Add((uint)text.Count);
                 text.AddRange(Encoding.ASCII.GetBytes(s.Name ?? ""));
                 text.Add(0);
             }
 
-            var payload = new byte[table + text.Count];
+            byte[] payload = new byte[table + text.Count];
             for (int i = 0; i < offsets.Count; i++) PutU32(payload, i * 4, offsets[i]);
             text.CopyTo(payload, table);
             _labl = payload;
@@ -735,14 +735,14 @@ namespace DSPRE.Avalonia.Data
         /// <summary>How far this frame shifts the sprite, in pixels.</summary>
         public (int X, int Y) ShiftOf(int sequence, int frame)
         {
-            var r = ResultFor(sequence, frame);
+            Result r = ResultFor(sequence, frame);
             return r == null ? (0, 0) : (r.ShiftX, r.ShiftY);
         }
 
         /// <summary>This frame's turn in degrees and its stretch, for the kind that carries them.</summary>
         public (double Degrees, double ScaleX, double ScaleY) TurnOf(int sequence, int frame)
         {
-            var r = ResultFor(sequence, frame);
+            Result r = ResultFor(sequence, frame);
             if (r == null || r.Element != 1) return (0, 1, 1);
             return (r.Rotation * 360.0 / 65536.0, r.ScaleX / 4096.0, r.ScaleY / 4096.0);
         }
@@ -751,7 +751,7 @@ namespace DSPRE.Avalonia.Data
 
         private Result ResultFor(int sequence, int frame)
         {
-            var s = At(sequence);
+            Sequence s = At(sequence);
             if (s == null || frame < 0 || frame >= s.Frames.Count) return null;
             int at = s.Frames[frame].ResultAt;
             return _resultList.FirstOrDefault(x => x.Offset == at);
@@ -763,7 +763,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (len <= 0 || at < 0 || at >= d.Length) return Array.Empty<byte>();
             len = Math.Min(len, d.Length - at);
-            var s = new byte[len];
+            byte[] s = new byte[len];
             Array.Copy(d, at, s, 0, len);
             return s;
         }

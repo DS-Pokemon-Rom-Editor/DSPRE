@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.Data
             _paletteFor = forRom;
             _palette = null;
 
-            var narc = new ScriptNarc(RomInfo.DirNames.battleObj);
+            ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.battleObj);
             if (!narc.Available) return null;
 
             int colours = BattleObjects.Find("HpBar.Shared", "Colours");
@@ -54,8 +54,8 @@ namespace DSPRE.Avalonia.Data
                 if (raw == null) return null;
                 temp = Path.Combine(Path.GetTempPath(), "dspre_gage_pal_" + Guid.NewGuid().ToString("N") + ".nclr");
                 File.WriteAllBytes(temp, raw);
-                var nclr = new NCLR(temp, colours, Path.GetFileName(temp));
-                var banks = nclr.Palette;
+                NCLR nclr = new NCLR(temp, colours, Path.GetFileName(temp));
+                System.Drawing.Color[][] banks = nclr.Palette;
                 if (banks != null && banks.Length > 0 && banks[0] != null && banks[0].Length >= 16)
                     _palette = banks[0];
             }
@@ -77,11 +77,11 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static Drawn LevelWithGender(int level, BattleGaugeText.Gender gender)
         {
-            var block = BattleGaugeText.GenderAndLv(gender);
+            BattleGaugeText.Tile[] block = BattleGaugeText.GenderAndLv(gender);
             if (block == null) return null;
 
             string digits = Math.Clamp(level, 0, 999).ToString();
-            var made = Blank(16 + digits.Length * 8, 16);
+            Drawn made = Blank(16 + digits.Length * 8, 16);
             if (made == null) return null;
 
             Put(made, block[0], 0, 0);
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Data
 
             for (int i = 0; i < digits.Length; i++)
             {
-                var tile = BattleGaugeText.Digit(digits[i] - '0');
+                BattleGaugeText.Tile tile = BattleGaugeText.Digit(digits[i] - '0');
                 if (tile != null) PutNumber(made, tile, 16 + i * 8, 4);
             }
             return made;
@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia.Data
         {
             string left = Math.Clamp(now, 0, 999).ToString();
             string right = Math.Clamp(most, 0, 999).ToString();
-            var made = Blank((left.Length + 1 + right.Length) * 8, 8);
+            Drawn made = Blank((left.Length + 1 + right.Length) * 8, 8);
             if (made == null) return null;
 
             int at = 0;
@@ -126,7 +126,7 @@ namespace DSPRE.Avalonia.Data
             catch { return null; }
             if (font == null) return null;
 
-            var made = Blank(widthInTiles * 8, 16);
+            Drawn made = Blank(widthInTiles * 8, 16);
             if (made == null) return null;
 
             // Only the letters. The games do fill this block with the panel colour first, but they
@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.Data
                         // things the numbers use: nothing, the letter, then its shadow.
                         byte v = font.PixelAt(glyph, x, y);
                         if (v == 0) continue;
-                        var colour = Palette()[NumberColour(v, NameShadow) % Palette().Length];
+                        System.Drawing.Color colour = Palette()[NumberColour(v, NameShadow) % Palette().Length];
                         int put = (y * made.Width + at + x) * 4;
                         made.Rgba[put] = colour.R;
                         made.Rgba[put + 1] = colour.G;
@@ -166,10 +166,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The word for what is wrong with the Pokemon, or the blank when nothing is.</summary>
         public static Drawn StatusWord(BattleGaugeText.Status status)
         {
-            var tiles = BattleGaugeText.StatusWord(status);
+            BattleGaugeText.Tile[] tiles = BattleGaugeText.StatusWord(status);
             if (tiles == null) return null;
 
-            var made = Blank(BattleGaugeText.StatusTiles * 8, 8);
+            Drawn made = Blank(BattleGaugeText.StatusTiles * 8, 8);
             if (made == null) return null;
             for (int i = 0; i < tiles.Length; i++) Put(made, tiles[i], i * 8, 0);
             return made;
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.Data
         private static void PutNumber(Drawn into, BattleGaugeText.Tile tile, int atX, int atY)
         {
             if (into == null || tile == null) return;
-            var palette = Palette();
+            System.Drawing.Color[] palette = Palette();
             if (palette == null) return;
 
             for (int y = 0; y < 8; y++)
@@ -205,7 +205,7 @@ namespace DSPRE.Avalonia.Data
                     int px = atX + x;
                     if (px < 0 || px >= into.Width) continue;
 
-                    var colour = palette[NumberColour(tile.At(x, y), BattleGaugeText.DigitShadow) % palette.Length];
+                    System.Drawing.Color colour = palette[NumberColour(tile.At(x, y), BattleGaugeText.DigitShadow) % palette.Length];
                     int at = (py * into.Width + px) * 4;
                     into.Rgba[at] = colour.R;
                     into.Rgba[at + 1] = colour.G;
@@ -233,7 +233,7 @@ namespace DSPRE.Avalonia.Data
         private static void Put(Drawn into, BattleGaugeText.Tile tile, int atX, int atY)
         {
             if (into == null || tile == null) return;
-            var palette = Palette();
+            System.Drawing.Color[] palette = Palette();
             if (palette == null) return;
 
             for (int y = 0; y < 8; y++)
@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia.Data
                     byte index = tile.At(x, y);
                     if (index == 0) continue;
 
-                    var colour = palette[index % palette.Length];
+                    System.Drawing.Color colour = palette[index % palette.Length];
                     int at = (py * into.Width + px) * 4;
                     into.Rgba[at] = colour.R;
                     into.Rgba[at + 1] = colour.G;

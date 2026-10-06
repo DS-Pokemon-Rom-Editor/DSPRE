@@ -37,7 +37,7 @@ namespace DSPRE.ROMFiles
             _ready = true;
             DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { _dir });
             _path = gameDirs[_dir].unpackedDir;
-            var files = System.IO.Directory.Exists(_path) ? System.IO.Directory.GetFiles(_path) : System.Array.Empty<string>();
+            string[] files = System.IO.Directory.Exists(_path) ? System.IO.Directory.GetFiles(_path) : System.Array.Empty<string>();
             _multi = files.Length > 1;
             _blob = (!_multi && files.Length == 1) ? System.IO.File.ReadAllBytes(files[0]) : null;
         }
@@ -55,7 +55,7 @@ namespace DSPRE.ROMFiles
             if (_blob == null) return null;
             int off = id * _recLen;
             if (off < 0 || off + _recLen > _blob.Length) return null;
-            var r = new byte[_recLen];
+            byte[] r = new byte[_recLen];
             System.Array.Copy(_blob, off, r, 0, _recLen);
             return r;
         }
@@ -83,8 +83,8 @@ namespace DSPRE.ROMFiles
         // Single-gender species leave the unused slots empty; don't fail the whole load over that.
         public bool TryLoad(int id, out int backF, out int backM, out int frontF, out int frontM)
         {
-            var a = _n.GetRecord(id * 4 + FB); var b = _n.GetRecord(id * 4 + MB);
-            var c = _n.GetRecord(id * 4 + FF); var d = _n.GetRecord(id * 4 + MF);
+            byte[] a = _n.GetRecord(id * 4 + FB); byte[] b = _n.GetRecord(id * 4 + MB);
+            byte[] c = _n.GetRecord(id * 4 + FF); byte[] d = _n.GetRecord(id * 4 + MF);
             if (a == null && b == null && c == null && d == null) { backF = backM = frontF = frontM = 0; return false; }
             backF = (a != null && a.Length >= 1) ? a[0] : 0;
             backM = (b != null && b.Length >= 1) ? b[0] : 0;
@@ -113,7 +113,7 @@ namespace DSPRE.ROMFiles
         public bool TryLoad(int id, out BattleOffsetRecord rec)
         {
             rec = default;
-            var r = _narc.GetRecord(id);
+            byte[] r = _narc.GetRecord(id);
             if (r == null || r.Length < 3) return false;
             int n = r.Length;
             rec.FrontY = (sbyte)r[n - 3]; rec.ShadowX = (sbyte)r[n - 2]; rec.ShadowSize = r[n - 1];
@@ -124,7 +124,7 @@ namespace DSPRE.ROMFiles
 
         public void Save(int id, in BattleOffsetRecord rec)
         {
-            var r = _narc.GetRecord(id);
+            byte[] r = _narc.GetRecord(id);
             if (r == null || r.Length < 3) return;
             int n = r.Length;
             r[n - 3] = (byte)(sbyte)rec.FrontY; r[n - 2] = (byte)(sbyte)rec.ShadowX; r[n - 1] = (byte)rec.ShadowSize;
@@ -147,7 +147,7 @@ namespace DSPRE.ROMFiles
         public bool TryLoad(int id, out BattleOffsetRecord rec)
         {
             rec = default;
-            var ry = _y.GetRecord(id); var rx = _sx.GetRecord(id); var rz = _sz.GetRecord(id);
+            byte[] ry = _y.GetRecord(id); byte[] rx = _sx.GetRecord(id); byte[] rz = _sz.GetRecord(id);
             if (ry == null || rx == null || rz == null || ry.Length < 1 || rx.Length < 1 || rz.Length < 1) return false;
             rec.FrontY = (sbyte)ry[0]; rec.ShadowX = (sbyte)rx[0]; rec.ShadowSize = rz[0];
             if (_heights.TryLoad(id, out int bf, out int bm, out int ff, out int fm))
@@ -173,7 +173,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static void Put(OffsetNarc narc, int idx, byte v)
         {
-            var r = narc.GetRecord(idx);
+            byte[] r = narc.GetRecord(idx);
             if (r == null) return;
             if (r.Length < 1)
             {

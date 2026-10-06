@@ -183,9 +183,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             StringVars.Clear();
             _stringVarByKey.Clear();
             if (vars != null)
-                foreach (var v in vars)
+                foreach (FieldStringVar v in vars)
                 {
-                    var e = new StringVarEntry(v, StringVarsChanged);
+                    StringVarEntry e = new StringVarEntry(v, StringVarsChanged);
                     StringVars.Add(e);
                     _stringVarByKey[v.Key] = e;
                 }
@@ -206,7 +206,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// </summary>
         public string ExpandVars(string line) =>
             FieldStringVars.Expand(line, (family, kind, buffer) =>
-                _stringVarByKey.TryGetValue(FieldStringVars.KeyOf(family, kind, buffer), out var e)
+                _stringVarByKey.TryGetValue(FieldStringVars.KeyOf(family, kind, buffer), out StringVarEntry e)
                     ? e.Value
                     : FieldStringVars.SuggestFor(kind, buffer, null));
 
@@ -263,9 +263,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             LevelScriptArrivals.Clear();
             LevelScriptWatchers.Clear();
-            foreach (var t in FieldLevelScripts.OnArrival(_levelScripts))
+            foreach (LevelScriptTrigger t in FieldLevelScripts.OnArrival(_levelScripts))
                 LevelScriptArrivals.Add($"{FieldLevelScripts.WhenItRuns(t)}: script {t.scriptTriggered}");
-            foreach (var t in FieldLevelScripts.Watchers(_levelScripts))
+            foreach (VariableValueTrigger t in FieldLevelScripts.Watchers(_levelScripts))
                 LevelScriptWatchers.Add(new LevelScriptWatcher(t, SetVariable));
             OnPropertyChanged(nameof(HasLevelScripts));
             OnPropertyChanged(nameof(LevelScriptSummary));
@@ -288,12 +288,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void RunArrivalLevelScripts()
         {
             _firedWatchers.Clear();
-            foreach (var t in FieldLevelScripts.OnArrival(_levelScripts))
+            foreach (LevelScriptTrigger t in FieldLevelScripts.OnArrival(_levelScripts))
                 RunWhileLoading(t.scriptTriggered,
                     $"{FieldLevelScripts.WhenItRuns(t)}, so the map runs script {t.scriptTriggered}.");
 
             // These run before anybody is put on the map, so a flag they set decides who is there.
-            foreach (var npc in _npcs)
+            foreach (Npc npc in _npcs)
                 if (npc.OnMap == null && npc.Event.flag != 0 && GameState.TryGetFlag(npc.Event.flag, out bool set))
                     npc.OnMap = !set;
             Rebuild();
@@ -308,7 +308,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // Only while you are walking about: the engine checks these as part of the step you take.
             if (_levelScripts == null || !_stepInto || ScriptRunning) return;
 
-            foreach (var t in FieldLevelScripts.Watchers(_levelScripts))
+            foreach (VariableValueTrigger t in FieldLevelScripts.Watchers(_levelScripts))
             {
                 if (_firedWatchers.Contains(t)) continue;
                 if (!FieldLevelScripts.IsSatisfied(t, VariableValue)) continue;
@@ -346,7 +346,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     ScriptLines.Clear(); Question = null; _walker = null; _pendingTrigger = null;
                     ClearMessage();
                     _runner?.Stop(); _shake = null; _cameraMove = null; _cameraObject = null; _talkTarget = null;
-                    foreach (var npc in _npcs) { npc.Motion?.StopScript(); if (npc.Motion != null) npc.Motion.Paused = false; npc.OnMap = null; }
+                    foreach (Npc npc in _npcs) { npc.Motion?.StopScript(); if (npc.Motion != null) npc.Motion.Paused = false; npc.OnMap = null; }
                     _firedWatchers.Clear();
                     ResetTouchScreen();
                 }
@@ -425,7 +425,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (!Set(ref _startBesideIndex, value)) return;
                 if (value <= 0 || value >= _startPlaces.Count) { ClearStartTile(); return; }
 
-                var place = _startPlaces[value];
+                (int x, int z)? place = _startPlaces[value];
                 if (place == null) { ClearStartTile(); return; }
                 StandBeside(place.Value.x, place.Value.z);
             }
@@ -441,7 +441,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void StandBeside(int ox, int oz)
         {
             // Standing one tile away in each direction, looking back the other way.
-            var tries = new List<(int dx, int dz, MoveFacing look)>
+            List<(int dx, int dz, MoveFacing look)> tries = new List<(int dx, int dz, MoveFacing look)>
             {
                 (0, 1, MoveFacing.Up),        // below it, looking up
                 (0, -1, MoveFacing.Down),
@@ -450,15 +450,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             };
 
             // Somebody standing there is usually spoken to from the side they face, so that side goes first.
-            var there = _npcs.FirstOrDefault(n => FieldInteraction.TileX(n.Event) == ox && FieldInteraction.TileZ(n.Event) == oz);
+            Npc there = _npcs.FirstOrDefault(n => FieldInteraction.TileX(n.Event) == ox && FieldInteraction.TileZ(n.Event) == oz);
             if (there != null)
             {
-                var (fx, fz) = FieldPlayer.Step(there.Motion.Facing);
+                (int fx, int fz) = FieldPlayer.Step(there.Motion.Facing);
                 int front = tries.FindIndex(t => t.dx == fx && t.dz == fz);
-                if (front > 0) { var pick = tries[front]; tries.RemoveAt(front); tries.Insert(0, pick); }
+                if (front > 0) { (int dx, int dz, MoveFacing look) pick = tries[front]; tries.RemoveAt(front); tries.Insert(0, pick); }
             }
 
-            foreach (var (dx, dz, look) in tries)
+            foreach ((int dx, int dz, MoveFacing look) in tries)
             {
                 int x = ox + dx, z = oz + dz;
                 if (!CanStand(x, z)) continue;
@@ -475,7 +475,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Stands the player on a tile outright, rather than next to something. </summary>
         public void StandOn(int x, int z, MoveFacing facing = MoveFacing.Down)
         {
-            var free = NearestFreeTile(x, z);
+            (int x, int z)? free = NearestFreeTile(x, z);
             if (free == null) return;                  // nowhere near it will do; leave the marker be
 
             _startFacing = facing;
@@ -512,7 +512,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             StartBesideNames.Add("Wherever the marker is");
             _startPlaces.Add(null);
 
-            foreach (var npc in _npcs)
+            foreach (Npc npc in _npcs)
             {
                 StartBesideNames.Add($"Beside overworld {npc.Event.owID}");
                 _startPlaces.Add((FieldInteraction.TileX(npc.Event), FieldInteraction.TileZ(npc.Event)));
@@ -524,7 +524,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 for (int i = 0; i < _events.triggers.Count; i++)
                 {
-                    var t = _events.triggers[i];
+                    Trigger t = _events.triggers[i];
                     StartBesideNames.Add(t.scriptNumber == EventFile.NoScript
                         ? $"Beside trigger {i}, no script"
                         : $"Beside trigger {i}, script {t.scriptNumber}");
@@ -532,13 +532,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 }
                 for (int i = 0; i < _events.warps.Count; i++)
                 {
-                    var w = _events.warps[i];
+                    Warp w = _events.warps[i];
                     StartBesideNames.Add($"Beside warp {i}");
                     _startPlaces.Add((FieldInteraction.TileX(w), FieldInteraction.TileZ(w)));
                 }
                 for (int i = 0; i < _events.spawnables.Count; i++)
                 {
-                    var sp = _events.spawnables[i];
+                    Spawnable sp = _events.spawnables[i];
                     StartBesideNames.Add($"Beside spawnable {i}");
                     _startPlaces.Add((FieldInteraction.TileX(sp), FieldInteraction.TileZ(sp)));
                 }
@@ -559,10 +559,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             (int x, int z)? best = null;
             double bestD = withinPixels * withinPixels;
-            foreach (var (x, z) in _collision.Tiles)
+            foreach ((int x, int z) in _collision.Tiles)
             {
-                var foot = _tileToWorld(x, z);
-                var at = project(foot.x, foot.y, foot.z);
+                (float x, float y, float z) foot = _tileToWorld(x, z);
+                (float sx, float sy)? at = project(foot.x, foot.y, foot.z);
                 if (at == null) continue;
                 double dx = px - at.Value.sx, dy = py - at.Value.sy;
                 double d = dx * dx + dy * dy;
@@ -617,7 +617,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Whether somebody is standing on a tile, or on their way onto it. </summary>
         private bool SomebodyOn(int x, int z, Npc except, bool countPlayer)
         {
-            foreach (var npc in _npcs)
+            foreach (Npc npc in _npcs)
             {
                 if (npc == except) continue;
                 if (!IsOnMap(npc) || !npc.Motion.Visible) continue;
@@ -638,7 +638,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void FlagsChanged()
         {
             _flagsSet.Clear();
-            foreach (var f in EventFlags)
+            foreach (EventFlagSwitch f in EventFlags)
             {
                 if (f.IsSet) _flagsSet.Add(f.Number);
                 // A flag ticked here is one a script checking it should find set.
@@ -843,8 +843,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// </summary>
         private int StartMovement(int overworldId, int movementNumber)
         {
-            var actions = _walker?.ActionsFor(movementNumber) ?? _actionsFor?.Invoke(movementNumber);
-            var steps = FieldMovementScript.Parse(actions);
+            IReadOnlyList<ScriptAction> actions = _walker?.ActionsFor(movementNumber) ?? _actionsFor?.Invoke(movementNumber);
+            List<FieldMovementStep> steps = FieldMovementScript.Parse(actions);
             if (steps.Count == 0) return 0;
 
             int who = ResolveObject(overworldId);
@@ -860,7 +860,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
             else
             {
-                var npc = NpcById(who);
+                Npc npc = NpcById(who);
                 if (npc == null) return 0;
                 npc.Motion.PlayScript(steps);
             }
@@ -889,7 +889,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 case ScriptEffectKind.Release:
                 {
                     bool paused = e.Kind == ScriptEffectKind.Lock;
-                    if (e.A < 0) foreach (var n in _npcs) n.Motion.Paused = paused;
+                    if (e.A < 0) foreach (Npc n in _npcs) n.Motion.Paused = paused;
                     else if (NpcById(ResolveObject(e.A)) is Npc one) one.Motion.Paused = paused;
                     break;
                 }
@@ -897,7 +897,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 case ScriptEffectKind.ShowObject:
                 {
                     int id = ResolveObject(e.A);
-                    var npc = _npcs.FirstOrDefault(n => n.Event.owID == id);
+                        Npc npc = _npcs.FirstOrDefault(n => n.Event.owID == id);
                     if (npc == null) break;
                     if (e.B == 1)
                     {
@@ -946,7 +946,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (events?.overworlds == null) return;
 
             // Flag 0 is the one nothing ever sets, so an overworld carrying it is simply always there.
-            foreach (var g in events.overworlds.Where(o => o.flag != 0)
+            foreach (IGrouping<ushort, Overworld> g in events.overworlds.Where(o => o.flag != 0)
                                                .GroupBy(o => o.flag)
                                                .OrderBy(g => g.Key))
                 EventFlags.Add(new EventFlagSwitch(g.Key, g.Count(), FlagsChanged));
@@ -1022,7 +1022,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 if (MessageVisible) return global::DSPRE.Avalonia.Data.HgssTouchScreen.NextMessage;
                 if (Player == null) return global::DSPRE.Avalonia.Data.HgssTouchScreen.CheckMessage;
-                var (x, z) = FieldInteraction.TalkTile(Player, _collision);
+                (int x, int z) = FieldInteraction.TalkTile(Player, _collision);
                 return NpcAt(x, z) != null ? global::DSPRE.Avalonia.Data.HgssTouchScreen.TalkMessage : global::DSPRE.Avalonia.Data.HgssTouchScreen.CheckMessage;
             }
         }
@@ -1052,7 +1052,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_question == null || !_question.OnTouchScreen || _touchBlink >= 0) return;
             if (index < 0 || index >= _question.Options.Count) return;
             _choiceCursor = index;
-            foreach (var entry in ChoiceEntries) entry.IsSelected = entry.Index == index;
+            foreach (ChoiceEntry entry in ChoiceEntries) entry.IsSelected = entry.Index == index;
             OnPropertyChanged(nameof(ChoiceCursor));
             OnPropertyChanged(nameof(ChoiceCursorRow));
             ConfirmChoice();
@@ -1075,7 +1075,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             get
             {
-                var c = CameraEntry;
+                FieldCameraEntry c = CameraEntry;
                 string kind = c.Orthographic ? "flat" : $"{c.FieldOfViewDegrees:0.#} degrees";
                 string name = DSPRE.Avalonia.Data.LabelStore.GetLabel(DSPRE.Avalonia.Data.LabelStore.CameraKeyFor(_family), c.Id);
                 return $"Camera {c.Id}, {name}: {c.DistanceInTiles:0.#} tiles back, "
@@ -1093,7 +1093,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 Set(ref _question, value);
                 AnswerOptions.Clear();
-                if (value != null) foreach (var o in value.Options) AnswerOptions.Add(o.Label);
+                if (value != null) foreach ((string Label, long Value) o in value.Options) AnswerOptions.Add(o.Label);
                 _choiceCursor = value == null ? 0 : Math.Min(Math.Max(0, value.InitialCursor), Math.Max(0, value.Options.Count - 1));
                 _choiceScroll = 0;
                 KeepCursorOnShow();
@@ -1182,7 +1182,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _pendingTrigger = null;
             Question = null;
             ClearMessage();
-            foreach (var npc in _npcs) { npc.Motion?.StopScript(); if (npc.Motion != null) npc.Motion.Paused = false; }
+            foreach (Npc npc in _npcs) { npc.Motion?.StopScript(); if (npc.Motion != null) npc.Motion.Paused = false; }
             _cameraObject = null;
             ResetTouchScreen();
             ScriptLines.Add("Stopped.");
@@ -1251,7 +1251,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 int clamped = Math.Min(Math.Max(0, value), n - 1);
                 if (!Set(ref _choiceCursor, clamped)) return;
                 PlaySound?.Invoke(ScriptEffectKind.SoundEffect, MenuSound);
-                foreach (var e in ChoiceEntries) e.IsSelected = e.Index == clamped;
+                foreach (ChoiceEntry e in ChoiceEntries) e.IsSelected = e.Index == clamped;
                 int scroll = _choiceScroll;
                 KeepCursorOnShow();
                 if (scroll != _choiceScroll) OnPropertyChanged(nameof(ChoiceItems));
@@ -1398,7 +1398,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void GameStateChanged()
         {
             OnPropertyChanged(nameof(PlayerIsFemale));
-            var wanted = GameState.Facts.Keys.OrderBy(k => k).Select(k => (false, -1, k))
+            List<(bool, int, string)> wanted = GameState.Facts.Keys.OrderBy(k => k).Select(k => (false, -1, k))
                 .Concat(GameState.Flags.Keys.OrderBy(k => k).Select(k => (true, k, (string)null)))
                 .Concat(GameState.Vars.Keys.OrderBy(k => k).Select(k => (false, k, (string)null)))
                 .ToList();
@@ -1408,12 +1408,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                                                    && GameStateEntries[i].Fact == w.Item3).All(x => x);
             if (same)
             {
-                foreach (var e in GameStateEntries) e.Refresh();
+                foreach (GameStateEntry e in GameStateEntries) e.Refresh();
                 return;
             }
 
             GameStateEntries.Clear();
-            foreach (var (isFlag, number, fact) in wanted) GameStateEntries.Add(new GameStateEntry(GameState, isFlag, number, fact));
+            foreach ((bool isFlag, int number, string fact) in wanted) GameStateEntries.Add(new GameStateEntry(GameState, isFlag, number, fact));
             OnPropertyChanged(nameof(HasGameState));
         }
 
@@ -1445,7 +1445,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// </summary>
         public (float x, float y, float z) CameraTarget()
         {
-            var now = FollowedPosition();
+            (float x, float y, float z) now = FollowedPosition();
             if (_cameraTrail.Count == 0) return now;
             return (now.x, _cameraTrail.Peek(), now.z);
         }
@@ -1477,7 +1477,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
 
             CloseLeftoverBox();
-            var result = Player.Go(dir);
+            StepResult result = Player.Go(dir);
             Rebuild();
 
             // Every step you take is also a chance for one of the map's own scripts to start
@@ -1529,7 +1529,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             PlayerArrivedOn?.Invoke(Player.TileX, Player.TileZ, _frame);
 
-            var warp = FieldInteraction.WarpAt(_events, Player.TileX, Player.TileZ);
+            Warp warp = FieldInteraction.WarpAt(_events, Player.TileX, Player.TileZ);
             if (warp != null)
             {
                 ScriptLines.Add($"A way through to header {warp.header}, warp {warp.anchor}. "
@@ -1537,7 +1537,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 OpenDoorAt(Player.TileX, Player.TileZ);
             }
 
-            var waiting = FieldInteraction.TriggerAt(_events, Player.TileX, Player.TileZ, null);
+            Trigger waiting = FieldInteraction.TriggerAt(_events, Player.TileX, Player.TileZ, null);
             if (waiting == null) return;
 
             // A trigger only goes off when its variable holds the value it waits for.
@@ -1579,8 +1579,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             ScriptLines.Clear();
 
-            var (x, z) = FieldInteraction.TalkTile(Player, _collision);
-            var npc = NpcAt(x, z);
+            (int x, int z) = FieldInteraction.TalkTile(Player, _collision);
+            Npc npc = NpcAt(x, z);
             if (npc != null)
             {
                 _talkTarget = npc;
@@ -1588,7 +1588,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 return;
             }
 
-            var sign = FieldInteraction.SpawnableAt(_events, x, z, Player.Facing);
+            Spawnable sign = FieldInteraction.SpawnableAt(_events, x, z, Player.Facing);
             if (sign != null)
             {
                 _talkTarget = null;
@@ -1663,7 +1663,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void RunWhileLoading(int scriptNumber, string opening)
         {
             ScriptLines.Add(opening);
-            var w = _walkerFor?.Invoke(scriptNumber);
+            ScriptWalker w = _walkerFor?.Invoke(scriptNumber);
             if (w == null) return;
 
             ConfigureWalker(w);
@@ -1673,7 +1673,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // Anything that still stopped to ask is a yes/no or a menu, which cannot come up while loading.
             while (w.Pending != null && !w.Finished) { w.Answer(0); while (w.Next()) { } }
 
-            foreach (var s in w.Steps)
+            foreach (ScriptStep s in w.Steps)
             {
                 ScriptLines.Add(s.Text);
                 if (s.Effect?.Kind == ScriptEffectKind.ShowObject) ApplyEffect(s.Effect);
@@ -1686,15 +1686,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (_scene == null) return;
 
-            foreach (var b in _scene.Buildings)
+            foreach (NsbmdRenderModel.BuildingMaterials b in _scene.Buildings)
             {
                 if (Math.Abs(b.TileX - tileX) > 1 || Math.Abs(b.TileZ - tileZ) > 1) continue;
 
-                var (joints, patterns) = BuildingAnimationSet.DoorAnimations(b.ModelId, _indoor);
+                (IReadOnlyList<JointAnimation> joints, IReadOnlyList<TexturePatternAnimation> patterns) = BuildingAnimationSet.DoorAnimations(b.ModelId, _indoor);
                 if (joints.Count == 0 && patterns.Count == 0) continue;
 
-                foreach (var j in joints) _playingOnce.Add(new OneShot { Building = b, Joint = j, Frame = 0 });
-                foreach (var t in patterns)
+                foreach (JointAnimation j in joints) _playingOnce.Add(new OneShot { Building = b, Joint = j, Frame = 0 });
+                foreach (TexturePatternAnimation t in patterns)
                     for (int k = b.FirstKey; k < b.FirstKey + b.Count; k++)
                     {
                         if (!_scene.MaterialNameByKey.TryGetValue(k, out string name)) continue;
@@ -1730,7 +1730,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // A trigger asked this, not a running script.
             if (_pendingTrigger != null)
             {
-                var trigger = _pendingTrigger;
+                Trigger trigger = _pendingTrigger;
                 _pendingTrigger = null;
                 Question = null;
 
@@ -1889,7 +1889,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void LayOutMessage()
         {
             if (_spoken == null || _printer != null) return;
-            var frames = FieldMessageScript.Frames(ExpandVars(_spoken), MeasureText);
+            List<FieldMessageFrame> frames = FieldMessageScript.Frames(ExpandVars(_spoken), MeasureText);
             if (frames.Count == 0) return;
             _frames = frames;
             _boxText = frames[frames.Count - 1].Text;
@@ -1902,7 +1902,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public static string Spoken(string stepText)
         {
             if (string.IsNullOrEmpty(stepText)) return "";
-            foreach (var (open, close) in new[] { ('“', '”'), ('"', '"') })
+            foreach ((char open, char close) in new[] { ('“', '”'), ('"', '"') })
             {
                 int a = stepText.IndexOf(open);
                 int b = stepText.LastIndexOf(close);
@@ -2029,7 +2029,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // The animation drives materials by name (river, sea_on and so on), the same way the game
             // does. Match those names to the parts of the scene built from them.
             if (_terrain != null)
-                foreach (var kv in scene.MaterialNameByKey)
+                foreach (KeyValuePair<int, string> kv in scene.MaterialNameByKey)
                 {
                     int m = _terrain.IndexOf(kv.Value);
                     if (m >= 0 && !_terrain.IsStatic(m)) _animatedMaterials[kv.Key] = (_terrain, m);
@@ -2047,10 +2047,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (events?.overworlds != null)
             {
                 int n = 0;
-                foreach (var ow in events.overworlds)
+                foreach (Overworld ow in events.overworlds)
                 {
-                    var move = OverworldMovements.Find(RomInfo.gameFamily, ow.movement);
-                    var facing = (MoveFacing)Math.Min(Math.Max((int)ow.orientation, 0), 3);
+                    OverworldMovement move = OverworldMovements.Find(RomInfo.gameFamily, ow.movement);
+                    MoveFacing facing = (MoveFacing)Math.Min(Math.Max((int)ow.orientation, 0), 3);
                     // param1 on the looking trainer types counts steps walked, not frames, so it
                     // doesn't change the idle pace.
                     const int interval = 0;
@@ -2058,7 +2058,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     // question, in whole-matrix tiles measured from where the event stands.
                     int homeX = ow.xMatrixPosition * MapFile.mapSize + ow.xMapPosition;
                     int homeZ = ow.yMatrixPosition * MapFile.mapSize + ow.yMapPosition;
-                    var npc = new Npc { Event = ow };
+                    Npc npc = new Npc { Event = ow };
                     Func<int, int, bool> blocked = (dx, dz) =>
                         (collision != null && !collision.IsEmpty && collision.IsBlocked(homeX + dx, homeZ + dz))
                         || SomebodyOn(homeX + dx, homeZ + dz, npc, true);
@@ -2113,9 +2113,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (footFinder == null) return;
             _footFinder = footFinder;
-            foreach (var npc in _npcs)
+            foreach (Npc npc in _npcs)
             {
-                var (x, y, z) = footFinder(npc.Event);
+                (float x, float y, float z) = footFinder(npc.Event);
                 npc.FootX = x; npc.FootY = y; npc.FootZ = z;
             }
             Rebuild();
@@ -2154,7 +2154,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (!_runner.Running) ScriptFinished();
             }
 
-            foreach (var npc in _npcs) npc.Motion?.Advance(1);
+            foreach (Npc npc in _npcs) npc.Motion?.Advance(1);
             _cameraObject?.Motion.Advance(1);
 
             if (_touchSwapFrames > 0)
@@ -2203,7 +2203,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (_printer.Finished) _boxText = _printer.Text;
             }
 
-            foreach (var shot in _playingOnce)
+            foreach (OneShot shot in _playingOnce)
             {
                 shot.Frame++;
                 int length = shot.Joint?.FrameCount ?? shot.Pattern?.FrameCount ?? 1;
@@ -2269,7 +2269,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// </summary>
         private void AddEmote(List<NsbmdGlControl.SpriteInstance> sprites, float x, float y, float z, int frame, string name)
         {
-            var pix = FieldEmoteMarks.For(name);
+            OverworldSprites.SpritePixels pix = FieldEmoteMarks.For(name);
             if (pix == null) return;
             int bounce = frame >= 1 && frame - 1 < FieldMovementScript.EmoteBounce.Length ? FieldMovementScript.EmoteBounce[frame - 1] : 0;
             if (frame < 1) return;          // the mark appears on the frame after the action starts
@@ -2300,7 +2300,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_animateTerrain && (_animatedMaterials.Count > 0 || built?.TextureMatrices != null))
             {
                 Dictionary<int, float[]> mats = built?.TextureMatrices != null ? new Dictionary<int, float[]>(built.TextureMatrices) : new Dictionary<int, float[]>();
-                foreach (var kv in _animatedMaterials)
+                foreach (KeyValuePair<int, (TextureSrtAnimation anim, int material)> kv in _animatedMaterials)
                     mats[kv.Key] = kv.Value.anim.Evaluate(kv.Value.material, _frame).ToMatrix3();
                 TextureMatrices = mats;
             }
@@ -2310,7 +2310,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (BuildingOpacity != null)
             {
                 Dictionary<int, float> fades = null;
-                foreach (var b in _scene.Buildings)
+                foreach (NsbmdRenderModel.BuildingMaterials b in _scene.Buildings)
                 {
                     float? opacity = BuildingOpacity(b.ModelId);
                     if (opacity == null) continue;
@@ -2325,19 +2325,19 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // A door that is part-way through opening overrides whatever else drives its parts.
             if (_playingOnce.Count > 0)
             {
-                var moved = MovedParts != null ? new Dictionary<int, float[]>(MovedParts) : new Dictionary<int, float[]>();
-                var swaps = TextureSwaps != null ? new Dictionary<int, string>(TextureSwaps) : new Dictionary<int, string>();
+                Dictionary<int, float[]> moved = MovedParts != null ? new Dictionary<int, float[]>(MovedParts) : new Dictionary<int, float[]>();
+                Dictionary<int, string> swaps = TextureSwaps != null ? new Dictionary<int, string>(TextureSwaps) : new Dictionary<int, string>();
 
-                foreach (var shot in _playingOnce)
+                foreach (OneShot shot in _playingOnce)
                 {
                     if (shot.Joint != null)
-                        foreach (var kv in NsbmdGeometry.RebuildBuilding(_scene, shot.Building,
+                        foreach (KeyValuePair<int, float[]> kv in NsbmdGeometry.RebuildBuilding(_scene, shot.Building,
                                      (id, part) => shot.Joint.MatrixFor(id, shot.Frame, part, shot.Building.Model?.modelScale ?? 1f)))
                             moved[kv.Key] = kv.Value;
 
                     if (shot.Pattern != null)
                     {
-                        var swap = shot.Pattern.Evaluate(shot.Material, shot.Frame);
+                        TexturePatternAnimation.Swap swap = shot.Pattern.Evaluate(shot.Material, shot.Frame);
                         if (swap.IsSet) swaps[shot.MaterialKey] = swap.TextureName;
                     }
                 }
@@ -2345,12 +2345,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (swaps.Count > 0) TextureSwaps = swaps;
             }
 
-            var sprites = new List<NsbmdGlControl.SpriteInstance>();
+            List<NsbmdGlControl.SpriteInstance> sprites = new List<NsbmdGlControl.SpriteInstance>();
             if (_showPeople)
-                foreach (var npc in _npcs)
+                foreach (Npc npc in _npcs)
                 {
                     if (!IsOnMap(npc) || !npc.Motion.Visible) continue;
-                    var pix = OverworldSprites.Get(npc.Event.overlayTableEntry, (ushort)npc.Motion.Facing,
+                    OverworldSprites.SpritePixels pix = OverworldSprites.Get(npc.Event.overlayTableEntry, (ushort)npc.Motion.Facing,
                                                    PictureFor(npc.Event.overlayTableEntry, npc.Motion.Facing, npc.Motion.Cycle));
                     if (pix == null || pix.Width <= 0 || pix.Height <= 0) continue;
                     float halfW = HalfWidthOf(pix), halfH = HalfHeightOf(pix);
@@ -2371,13 +2371,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // off the list or dragging the marker about says plainly where the walk would begin.
             if (!_stepInto && _startTile != null && _tileToWorld != null)
             {
-                var pix = OverworldSprites.Get(PlayerSpriteEntry, (ushort)_startFacing,
+                OverworldSprites.SpritePixels pix = OverworldSprites.Get(PlayerSpriteEntry, (ushort)_startFacing,
                                                FieldSpriteAnimation.PictureFor(
                                                    OverworldSprites.FrameCount(PlayerSpriteEntry),
                                                    (int)_startFacing, null));
                 if (pix != null && pix.Width > 0 && pix.Height > 0)
                 {
-                    var foot = _tileToWorld(_startTile.Value.x, _startTile.Value.z);
+                    (float x, float y, float z) foot = _tileToWorld(_startTile.Value.x, _startTile.Value.z);
                     float halfH = HalfHeightOf(pix);
                     sprites.Add(new NsbmdGlControl.SpriteInstance
                     {
@@ -2395,14 +2395,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (_stepInto && Player != null && _tileToWorld != null && Player.Visible)
             {
-                var pix = OverworldSprites.Get(PlayerSpriteEntry, (ushort)Player.Facing,
+                OverworldSprites.SpritePixels pix = OverworldSprites.Get(PlayerSpriteEntry, (ushort)Player.Facing,
                                                PictureFor(PlayerSpriteEntry, Player.Facing, Player.Cycle));
                 if (pix != null && pix.Width > 0 && pix.Height > 0)
                 {
-                    var foot = _tileToWorld(Player.DrawX, Player.DrawZ);
+                    (float x, float y, float z) foot = _tileToWorld(Player.DrawX, Player.DrawZ);
                     float halfH = HalfHeightOf(pix);
                     float roll = PlayerRollAt?.Invoke(Player.TileX, Player.TileZ) ?? 0f;
-                    var (shiftX, shiftY, shiftZ) = PlayerSpriteShift?.Invoke() ?? (0f, 0f, 0f);
+                    (float shiftX, float shiftY, float shiftZ) = PlayerSpriteShift?.Invoke() ?? (0f, 0f, 0f);
                     sprites.Add(new NsbmdGlControl.SpriteInstance
                     {
                         Cx = foot.x + shiftX * _tileX,
@@ -2420,14 +2420,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (_showPeople)
             {
-                foreach (var npc in _npcs)
+                foreach (Npc npc in _npcs)
                     if (IsOnMap(npc) && npc.Motion.EmoteFrame >= 0)
                         AddEmote(sprites, npc.FootX + npc.Motion.DrawOffsetX * _tileX, npc.FootY,
                                  npc.FootZ + npc.Motion.DrawOffsetZ * _tileZ, npc.Motion.EmoteFrame, npc.Motion.EmoteName);
             }
             if (_stepInto && Player != null && _tileToWorld != null && Player.EmoteFrame >= 0)
             {
-                var foot = _tileToWorld(Player.DrawX, Player.DrawZ);
+                (float x, float y, float z) foot = _tileToWorld(Player.DrawX, Player.DrawZ);
                 AddEmote(sprites, foot.x, foot.y, foot.z, Player.EmoteFrame, Player.EmoteName);
             }
 

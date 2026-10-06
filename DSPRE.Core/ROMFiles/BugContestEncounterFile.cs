@@ -93,9 +93,9 @@ namespace DSPRE.ROMFiles {
         /// </summary>
         public BindingList<BugContestEncounter> Encounters {
             get {
-                var all = new BindingList<BugContestEncounter>();
-                foreach (var set in Sets) {
-                    foreach (var enc in set.Encounters) {
+                BindingList<BugContestEncounter> all = new BindingList<BugContestEncounter>();
+                foreach (BugContestEncounterSet set in Sets) {
+                    foreach (BugContestEncounter enc in set.Encounters) {
                         all.Add(enc);
                     }
                 }
@@ -138,7 +138,7 @@ namespace DSPRE.ROMFiles {
             using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
             using (BinaryReader br = new BinaryReader(fs)) {
                 // Clear existing encounters in each set
-                foreach (var set in Sets) {
+                foreach (BugContestEncounterSet set in Sets) {
                     set.Encounters.Clear();
                 }
 
@@ -155,7 +155,7 @@ namespace DSPRE.ROMFiles {
                 }
 
                 // Ensure each set has exactly 10 entries (fill with empty if needed)
-                foreach (var set in Sets) {
+                foreach (BugContestEncounterSet set in Sets) {
                     while (set.Encounters.Count < ENCOUNTERS_PER_SET) {
                         set.Encounters.Add(new BugContestEncounter());
                     }
@@ -165,10 +165,10 @@ namespace DSPRE.ROMFiles {
 
         /// <summary>What would crash or misread in game, or null.</summary>
         public string Problem() {
-            foreach (var set in Sets) {
-                var list = set.Encounters;
+            foreach (BugContestEncounterSet set in Sets) {
+                BindingList<BugContestEncounter> list = set.Encounters;
                 for (int i = 0; i < list.Count; i++) {
-                    var e = list[i];
+                    BugContestEncounter e = list[i];
                     if (e.MaxLevel == 0) return $"{set.Name}, entry {i + 1}: the maximum level can't be 0; the score divides by it.";
                     if (e.MaxLevel < e.MinLevel) return $"{set.Name}, entry {i + 1}: the maximum level is below the minimum.";
                 }
@@ -182,8 +182,8 @@ namespace DSPRE.ROMFiles {
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
                 // Write all sets in order
-                foreach (var set in Sets) {
-                    foreach (var encounter in set.Encounters) {
+                foreach (BugContestEncounterSet set in Sets) {
+                    foreach (BugContestEncounter encounter in set.Encounters) {
                         encounter.Write(bw);
                     }
                 }

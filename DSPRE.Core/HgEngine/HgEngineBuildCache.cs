@@ -21,22 +21,22 @@ namespace DSPRE.HgEngine
 
         public static List<PartialArchive> PartialArchives(string checkout)
         {
-            var result = new List<PartialArchive>();
+            List<PartialArchive> result = new List<PartialArchive>();
             string narcsMk = Path.Combine(checkout, HgEngineOwnedFiles.MakeFragmentRelPath);
             if (!File.Exists(narcsMk)) return result;
             string text = File.ReadAllText(narcsMk);
             string buildDir = Path.GetFullPath(Path.Combine(checkout, "build"));
 
-            var caches = new Dictionary<string, string>(StringComparer.Ordinal);
+            Dictionary<string, string> caches = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (Match m in Narc.Matches(text)) caches[m.Groups[1].Value] = m.Groups[2].Value;
-            var dirs = new Dictionary<string, string>(StringComparer.Ordinal);
+            Dictionary<string, string> dirs = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (Match m in Dir.Matches(text)) dirs[m.Groups[1].Value] = m.Groups[2].Value;
 
             foreach (Match m in Target.Matches(text))
             {
                 string variable = m.Groups[1].Value;
                 if (!caches.TryGetValue(variable, out string cache)) continue;
-                var rule = Regex.Match(text, @"extract\s+\$\(" + Regex.Escape(variable) + @"_TARGET\)\s+-o\s+\$\(([A-Z0-9_]+)_DIR\)");
+                Match rule = Regex.Match(text, @"extract\s+\$\(" + Regex.Escape(variable) + @"_TARGET\)\s+-o\s+\$\(([A-Z0-9_]+)_DIR\)");
                 if (!rule.Success) continue;
 
                 string extractDir = null;
@@ -58,7 +58,7 @@ namespace DSPRE.HgEngine
         /// </summary>
         public static void Invalidate(string checkout)
         {
-            foreach (var part in PartialArchives(checkout))
+            foreach (PartialArchive part in PartialArchives(checkout))
             {
                 try
                 {

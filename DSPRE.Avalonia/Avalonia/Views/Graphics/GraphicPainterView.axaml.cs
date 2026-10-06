@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void Save_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            GraphicPainterViewModel vm = ViewModel;
             if (vm == null) return;
             string err = vm.Save();
             if (err != null)
@@ -44,11 +44,11 @@ namespace DSPRE.Avalonia.Views.Graphics
         private bool PixelUnder(PointerEventArgs e, out int x, out int y)
         {
             x = y = 0;
-            var vm = ViewModel;
-            var host = this.FindControl<Panel>("CanvasHost");
+            GraphicPainterViewModel vm = ViewModel;
+            Panel host = this.FindControl<Panel>("CanvasHost");
             if (vm == null || host == null || vm.Zoom <= 0) return false;
 
-            var p = e.GetPosition(host);
+            Point p = e.GetPosition(host);
             x = (int)(p.X / vm.Zoom);
             y = (int)(p.Y / vm.Zoom);
             return x >= 0 && y >= 0 && x < vm.ViewWidth && y < vm.ViewHeight;
@@ -61,7 +61,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         /// left alone so the view still scrolls when the drawing is bigger than the window.</summary>
         private void Canvas_PointerWheelChanged(object sender, PointerWheelEventArgs e)
         {
-            var vm = ViewModel;
+            GraphicPainterViewModel vm = ViewModel;
             if (vm == null || !e.KeyModifiers.HasFlag(KeyModifiers.Control)) return;
             if (e.Delta.Y > 0) vm.ZoomIn(); else if (e.Delta.Y < 0) vm.ZoomOut();
             e.Handled = true;
@@ -82,7 +82,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void ChangeColour_Click(object sender, RoutedEventArgs e)
         {
-            var vm = ViewModel;
+            GraphicPainterViewModel vm = ViewModel;
             if (vm?.SelectedSwatch == null)
             {
                 await DialogHelper.ShowInfo(vm?.ChangeColourHelp ?? "Pick a colour below first.",
@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia.Views.Graphics
                 return;
             }
             int number = vm.SelectedSwatch.Number;
-            var picked = await DialogHelper.PickColour(this, "Change colour " + number);
+            (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, "Change colour " + number);
             if (picked == null) return;
             vm.SetColour(number, picked.Value.R, picked.Value.G, picked.Value.B);
         }

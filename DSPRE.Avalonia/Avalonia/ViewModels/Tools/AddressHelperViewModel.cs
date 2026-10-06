@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private List<int> GetOverlayNumbersFromAddress(int address)
         {
-            var list = new List<int>();
+            List<int> list = new List<int>();
             for (int i = 0; i < _overlaysSize; i++)
             {
                 long ramAddr = OverlayUtils.OverlayTable.GetRAMAddress(i);

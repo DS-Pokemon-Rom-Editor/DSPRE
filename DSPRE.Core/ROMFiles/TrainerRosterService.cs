@@ -88,7 +88,7 @@ namespace DSPRE.ROMFiles
             {
                 return Refuse(narcError, trainerCount);
             }
-            var names = new TextArchive(trainerNamesMessageNumber);
+            TextArchive names = new TextArchive(trainerNamesMessageNumber);
             int nameCount = names.messages?.Count ?? 0;
             if (trainerCount <= 0 || trainerCount != partyCount || trainerCount != nameCount)
             {
@@ -97,7 +97,7 @@ namespace DSPRE.ROMFiles
                     trainerCount, partyCount, nameCount);
             }
 
-            var sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
+            ScriptFile sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
                 readFunctions: true, readActions: true);
             if (sharedScripts.parseFailedDueToInvalidCommand)
             {
@@ -177,7 +177,7 @@ namespace DSPRE.ROMFiles
             TrainerScriptExecutableDescriptor.TryFor(gameVersion, gameLanguage,
                 out TrainerScriptExecutableDescriptor executableDescriptor, out _);
 
-            var sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
+            ScriptFile sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
                 readFunctions: true, readActions: true);
             if (sharedScripts.plaintextParseFailed)
             {
@@ -202,7 +202,7 @@ namespace DSPRE.ROMFiles
 
             ushort oldSpecialNumber = checked((ushort)(3000 + analysis.SpecialScriptIndex));
             ushort newSpecialNumber = checked((ushort)(3000 + expandedLayout.SpecialIndex));
-            var mutations = new List<TrainerRosterFileMutation>();
+            List<TrainerRosterFileMutation> mutations = new List<TrainerRosterFileMutation>();
             foreach (TrainerScriptPatchTarget target in executableDescriptor.Targets)
             {
                 string path = target.File == TrainerScriptExecutableFile.Arm9
@@ -227,7 +227,7 @@ namespace DSPRE.ROMFiles
             mutations.Add(new TrainerRosterFileMutation(Path.Combine(partyDir, index),
                 new PartyPokemon { pokeID = 1, level = 5 }.ToByteArray()));
 
-            var trainerNames = new TextArchive(trainerNamesMessageNumber);
+            TextArchive trainerNames = new TextArchive(trainerNamesMessageNumber);
             if (trainerNames.messages.Count != trainerId ||
                 !trainerNames.SetSimpleTrainerName(trainerId, trainerName))
             {
@@ -235,11 +235,11 @@ namespace DSPRE.ROMFiles
                 trainerId = -1;
                 return false;
             }
-            var namePaths = TextArchive.GetFilePaths(trainerNamesMessageNumber);
+            (string binPath, string jsonPath) namePaths = TextArchive.GetFilePaths(trainerNamesMessageNumber);
             mutations.Add(new TrainerRosterFileMutation(namePaths.jsonPath,
                 trainerNames.ToExpandedJsonBytes(trainerNamesMessageNumber)));
 
-            var scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
+            (string binPath, string txtPath) scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
             mutations.Add(new TrainerRosterFileMutation(scriptPaths.binPath, expandedScript));
             if (!TryAddPlaintextMutation(mutations, sharedScripts, scriptPaths.txtPath, "expanded", out error))
             {
@@ -328,7 +328,7 @@ namespace DSPRE.ROMFiles
             TrainerScriptDescriptor.TryFor(gameFamily, out TrainerScriptDescriptor scriptDescriptor);
             TrainerScriptExecutableDescriptor.TryFor(gameVersion, gameLanguage,
                 out TrainerScriptExecutableDescriptor executableDescriptor, out _);
-            var sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
+            ScriptFile sharedScripts = new ScriptFile(scriptDescriptor.SharedScriptArchiveId,
                 readFunctions: true, readActions: true);
             if (sharedScripts.plaintextParseFailed)
             {
@@ -356,7 +356,7 @@ namespace DSPRE.ROMFiles
 
             ushort oldSpecialNumber = checked((ushort)(3000 + analysis.SpecialScriptIndex));
             ushort newSpecialNumber = checked((ushort)(3000 + contractedLayout.SpecialIndex));
-            var mutations = new List<TrainerRosterFileMutation>();
+            List<TrainerRosterFileMutation> mutations = new List<TrainerRosterFileMutation>();
             foreach (TrainerScriptPatchTarget target in executableDescriptor.Targets)
             {
                 string path = target.File == TrainerScriptExecutableFile.Arm9
@@ -379,7 +379,7 @@ namespace DSPRE.ROMFiles
             mutations.Add(TrainerRosterFileMutation.Delete(
                 Path.Combine(gameDirs[DirNames.trainerParty].unpackedDir, index)));
 
-            var trainerNames = new TextArchive(trainerNamesMessageNumber);
+            TextArchive trainerNames = new TextArchive(trainerNamesMessageNumber);
             if (trainerNames.messages.Count != analysis.TrainerNameCount)
             {
                 error = "The trainer-name archive changed during removal analysis.";
@@ -387,11 +387,11 @@ namespace DSPRE.ROMFiles
                 return false;
             }
             trainerNames.messages.RemoveAt(trainerId);
-            var namePaths = TextArchive.GetFilePaths(trainerNamesMessageNumber);
+            (string binPath, string jsonPath) namePaths = TextArchive.GetFilePaths(trainerNamesMessageNumber);
             mutations.Add(new TrainerRosterFileMutation(namePaths.jsonPath,
                 trainerNames.ToExpandedJsonBytes(trainerNamesMessageNumber)));
 
-            var scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
+            (string binPath, string txtPath) scriptPaths = ScriptFile.GetFilePaths(scriptDescriptor.SharedScriptArchiveId);
             mutations.Add(new TrainerRosterFileMutation(scriptPaths.binPath, contractedScript));
             if (!TryAddPlaintextMutation(mutations, sharedScripts, scriptPaths.txtPath, "contracted", out error))
             {
@@ -492,9 +492,9 @@ namespace DSPRE.ROMFiles
             }
 
             string token = Guid.NewGuid().ToString("N");
-            var staged = new List<(TrainerRosterFileMutation mutation, string stage,
+            List<(TrainerRosterFileMutation mutation, string stage, bool existed, byte[] original, DateTime timestamp)> staged = new List<(TrainerRosterFileMutation mutation, string stage,
                 bool existed, byte[] original, DateTime timestamp)>();
-            var createdDirectories = new List<string>();
+            List<string> createdDirectories = new List<string>();
             try
             {
                 foreach (TrainerRosterFileMutation mutation in mutations)
@@ -519,7 +519,7 @@ namespace DSPRE.ROMFiles
                     if (!mutation.IsDeletion) File.WriteAllBytes(stage, mutation.Bytes);
                 }
 
-                foreach (var item in staged)
+                foreach ((TrainerRosterFileMutation mutation, string stage, bool existed, byte[] original, DateTime timestamp) item in staged)
                 {
                     string target = System.IO.Path.GetFullPath(item.mutation.Path);
                     if (item.mutation.IsDeletion) File.Delete(target);
@@ -530,7 +530,7 @@ namespace DSPRE.ROMFiles
             catch (Exception ex)
             {
                 error = $"Trainer roster transaction failed and was rolled back: {ex.Message}";
-                foreach (var item in staged)
+                foreach ((TrainerRosterFileMutation mutation, string stage, bool existed, byte[] original, DateTime timestamp) item in staged)
                 {
                     string target = System.IO.Path.GetFullPath(item.mutation.Path);
                     try
@@ -555,7 +555,7 @@ namespace DSPRE.ROMFiles
             }
             finally
             {
-                foreach (var item in staged)
+                foreach ((TrainerRosterFileMutation mutation, string stage, bool existed, byte[] original, DateTime timestamp) item in staged)
                 {
                     if (!string.IsNullOrEmpty(item.stage) && File.Exists(item.stage)) File.Delete(item.stage);
                 }

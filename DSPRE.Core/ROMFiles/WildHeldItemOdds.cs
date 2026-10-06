@@ -34,7 +34,7 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToBytes()
         {
-            var data = new byte[Size];
+            byte[] data = new byte[Size];
             BitConverter.GetBytes((ushort)Normal.NoneBelow).CopyTo(data, 0);
             BitConverter.GetBytes((ushort)Normal.RareFrom).CopyTo(data, 2);
             BitConverter.GetBytes((ushort)CompoundEyes.NoneBelow).CopyTo(data, 4);
@@ -45,7 +45,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the odds can't be saved, or null.</summary>
         public string Problem()
         {
-            foreach (var (name, row) in new[] { ("Normal", Normal), ("Compound Eyes", CompoundEyes) })
+            foreach ((string name, Row row) in new[] { ("Normal", Normal), ("Compound Eyes", CompoundEyes) })
                 if (row.NoneBelow < 0 || row.NoneBelow > row.RareFrom || row.RareFrom > 100)
                     return $"{name}: the three chances must be 0 or more and add up to 100.";
             return null;

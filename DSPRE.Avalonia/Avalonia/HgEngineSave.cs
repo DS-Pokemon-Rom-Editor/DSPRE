@@ -18,7 +18,7 @@ namespace DSPRE.Avalonia
         /// <summary>Saved is false with a null error when the user cancelled.</summary>
         public static async Task<(bool saved, string error)> RunAsync(Func<string> write)
         {
-            var session = HgEngineWriteSession.Begin();
+            HgEngineWriteSession session = HgEngineWriteSession.Begin();
             try
             {
                 string error;
@@ -32,11 +32,11 @@ namespace DSPRE.Avalonia
                 session.StopRecording();
                 if (error != null) return (false, error);
 
-                var lost = session.LostComments();
+                IReadOnlyList<HgEngineLostComment> lost = session.LostComments();
                 bool keep = false;
                 if (lost.Count > 0)
                 {
-                    var answer = await DialogHelper.AskThreeWay(Describe(lost), "Comments in source", "Keep comments", "Delete comments");
+                    DialogHelper.MsgResult answer = await DialogHelper.AskThreeWay(Describe(lost), "Comments in source", "Keep comments", "Delete comments");
                     if (answer == DialogHelper.MsgResult.Cancel) return (false, null);
                     keep = answer == DialogHelper.MsgResult.Yes;
                 }
@@ -47,10 +47,10 @@ namespace DSPRE.Avalonia
 
         private static string Describe(IReadOnlyList<HgEngineLostComment> lost)
         {
-            var files = lost.Select(c => Path.GetFileName(c.FilePath)).Distinct().ToList();
-            var sb = new StringBuilder();
+            List<string> files = lost.Select(c => Path.GetFileName(c.FilePath)).Distinct().ToList();
+            StringBuilder sb = new StringBuilder();
             sb.Append($"Saving removes {lost.Count} comment{(lost.Count == 1 ? "" : "s")} from {string.Join(", ", files)}:\n\n");
-            foreach (var c in lost.Take(6))
+            foreach (HgEngineLostComment c in lost.Take(6))
             {
                 string where = c.Place.Length > 0 ? $"{c.Entry} {c.Place}" : c.Entry;
                 string text = c.Text.Length > 80 ? c.Text.Substring(0, 77) + "..." : c.Text;

@@ -51,12 +51,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             try { Views.Controls.FieldMessageBoxView.Font ??= ROMFiles.FieldFont.LoadTalkFont(); }
             catch (Exception ex) { AppLogger.Error("Battle screen font: " + ex.Message); }
 
-            foreach (var t in BattleGroundRenderer.TerrainNames) TerrainNames.Add(t);
-            foreach (var t in new[] { "Day", "Evening", "Night" }) TimeNames.Add(t);
+            foreach (string t in BattleGroundRenderer.TerrainNames) TerrainNames.Add(t);
+            foreach (string t in new[] { "Day", "Evening", "Night" }) TimeNames.Add(t);
             for (int i = 0; i < ROMFiles.FieldWindowFrame.FrameCount; i++)
                 WindowStyleNames.Add("Text box style " + (i + 1));
             _menus = BattleScreenRenderer.MenusForGame();
-            foreach (var m in _menus) MenuNames.Add(BattleScreenRenderer.MenuName(m));
+            foreach (TouchMenu m in _menus) MenuNames.Add(BattleScreenRenderer.MenuName(m));
             _menuIndex = Math.Max(0, _menus.ToList().IndexOf(TouchMenu.Command));
             BackdropNames.Add("Same as the ground");
             for (int i = 0; i < BattleBgRenderer.BackdropCount; i++) BackdropNames.Add("Backdrop " + i);
@@ -192,7 +192,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
                 string keep = Selected?.Name;
                 Pieces.Clear();
-                foreach (var p in _pieces) Pieces.Add(new BattlePieceRow { Piece = p });
+                foreach (BattleScreenRenderer.Piece p in _pieces) Pieces.Add(new BattlePieceRow { Piece = p });
 
                 TopScreen = ToBitmap(BattleScreenRenderer.Flatten(_pieces, touch: false));
                 TouchScreen = ToBitmap(BattleScreenRenderer.Flatten(_pieces, touch: true));
@@ -217,14 +217,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Picks whatever was clicked on one of the screens.</summary>
         public void PickAt(bool touch, int x, int y)
         {
-            var hit = BattleScreenRenderer.At(_pieces, touch, x, y);
+            BattleScreenRenderer.Piece hit = BattleScreenRenderer.At(_pieces, touch, x, y);
             if (hit == null) return;
             SelectedIndex = Pieces.ToList().FindIndex(r => ReferenceEquals(r.Piece, hit));
         }
 
         private void RaiseSelection()
         {
-            foreach (var n in new[]
+            foreach (string n in new[]
             {
                 nameof(Selected), nameof(HasSelection), nameof(SelectedName), nameof(SelectedWhat),
                 nameof(SelectedShared), nameof(SelectedIsShared), nameof(CanPaint), nameof(CannotPaintBecause),
@@ -263,7 +263,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             get => (int)_gender;
             set
             {
-                var picked = (BattleGaugeText.Gender)Math.Clamp(value, 0, 2);
+                BattleGaugeText.Gender picked = (BattleGaugeText.Gender)Math.Clamp(value, 0, 2);
                 if (_gender == picked) return;
                 _gender = picked;
                 OnPropertyChanged(nameof(GenderChoice));
@@ -277,7 +277,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             get => (int)_status;
             set
             {
-                var picked = (BattleGaugeText.Status)Math.Clamp(value, 0, 5);
+                BattleGaugeText.Status picked = (BattleGaugeText.Status)Math.Clamp(value, 0, 5);
                 if (_status == picked) return;
                 _status = picked;
                 OnPropertyChanged(nameof(StatusChoice));

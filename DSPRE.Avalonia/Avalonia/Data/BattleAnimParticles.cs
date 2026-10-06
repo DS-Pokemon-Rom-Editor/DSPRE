@@ -18,12 +18,12 @@ namespace DSPRE.Avalonia.Data
         public static List<BattleAnimParticleRef> Extract(IReadOnlyList<WazaSeqCommand> cmds, WazaSeqVersion version,
                                                     bool attackerIsEnemy = false)
         {
-            var slot = new Dictionary<int, int>();
-            var refs = new List<BattleAnimParticleRef>();
+            Dictionary<int, int> slot = new Dictionary<int, int>();
+            List<BattleAnimParticleRef> refs = new List<BattleAnimParticleRef>();
             if (cmds == null || cmds.Count == 0) return refs;
 
-            var wordToIndex = new Dictionary<int, int>();
-            var wordPos = new int[cmds.Count];
+            Dictionary<int, int> wordToIndex = new Dictionary<int, int>();
+            int[] wordPos = new int[cmds.Count];
             int wp = 0;
             for (int i = 0; i < cmds.Count; i++)
             {
@@ -37,12 +37,12 @@ namespace DSPRE.Avalonia.Data
                 return false;
             }
 
-            var callStack = new List<int>();
-            var visited = new HashSet<int>();
+            List<int> callStack = new List<int>();
+            HashSet<int> visited = new HashSet<int>();
             int pc = 0, guard = 0;
             while (pc >= 0 && pc < cmds.Count && guard++ < 100000)
             {
-                var c = cmds[pc];
+                WazaSeqCommand c = cmds[pc];
                 if (!visited.Add(pc) && callStack.Count == 0) break;
                 int cur = pc;
                 pc++;

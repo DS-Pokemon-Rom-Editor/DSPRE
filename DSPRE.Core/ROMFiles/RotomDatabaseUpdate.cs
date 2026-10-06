@@ -47,7 +47,7 @@ namespace DSPRE.ROMFiles
                 string hash = Convert.ToHexString(XxHash3.Hash(theirs));
                 if (DeclinedHash() == hash) return null;
 
-                var (changed, other) = Compare(mine, theirs);
+                (List<string> changed, bool other) = Compare(mine, theirs);
                 if (changed.Count == 0 && !other) return null;
                 return new Offer { ProjectFile = project, LatestFile = latest, LatestHash = hash, ChangedCommands = changed, OtherChanges = other };
             }
@@ -78,14 +78,14 @@ namespace DSPRE.ROMFiles
             File.WriteAllBytes(offer.ProjectFile, Latest(offer.LatestFile));
             if (File.Exists(DecisionPath)) File.Delete(DecisionPath);
 
-            var unedited = UneditedScripts();
+            List<int> unedited = UneditedScripts();
             if (unedited.Count > 0)
             {
                 await ScriptSourceSync.RefreshAsync(unedited).ConfigureAwait(false);
                 await ScriptSourceSync.WhenIdleAsync().ConfigureAwait(false);
             }
 
-            var compiled = await RotomTool.CompileProjectAsync().ConfigureAwait(false);
+            RotomTool.Result compiled = await RotomTool.CompileProjectAsync().ConfigureAwait(false);
             return (compiled.Success ? null
                         : "The project did not compile with the newer database. The old one is in " + backup + ".\n" + RotomTool.FormatResult(compiled),
                     compiled.KeptBinaries);
@@ -148,34 +148,34 @@ namespace DSPRE.ROMFiles
             if (!File.Exists(DecisionPath)) return null;
             try
             {
-                using var doc = JsonDocument.Parse(File.ReadAllText(DecisionPath));
-                return doc.RootElement.TryGetProperty("declined", out var v) ? v.GetString() : null;
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(DecisionPath));
+                return doc.RootElement.TryGetProperty("declined", out JsonElement v) ? v.GetString() : null;
             }
             catch { return null; }
         }
 
         private static (List<string> Commands, bool Other) Compare(byte[] mine, byte[] theirs)
         {
-            using var a = JsonDocument.Parse(mine);
-            using var b = JsonDocument.Parse(theirs);
-            var changed = new SortedSet<string>(StringComparer.Ordinal);
-            var oldCommands = Section(a.RootElement, "commands");
-            var newCommands = Section(b.RootElement, "commands");
+            using JsonDocument a = JsonDocument.Parse(mine);
+            using JsonDocument b = JsonDocument.Parse(theirs);
+            SortedSet<string> changed = new SortedSet<string>(StringComparer.Ordinal);
+            Dictionary<string, string> oldCommands = Section(a.RootElement, "commands");
+            Dictionary<string, string> newCommands = Section(b.RootElement, "commands");
             foreach (string name in oldCommands.Keys.Union(newCommands.Keys))
-                if (!oldCommands.TryGetValue(name, out var o) || !newCommands.TryGetValue(name, out var n) || o != n)
+                if (!oldCommands.TryGetValue(name, out string o) || !newCommands.TryGetValue(name, out string n) || o != n)
                     changed.Add(name);
 
             bool other = false;
             // The meta block only says when and how the file was built.
-            var oldRest = a.RootElement.EnumerateObject().Where(p => p.Name is not ("commands" or "meta")).ToDictionary(p => p.Name, p => Canonical(p.Value));
-            var newRest = b.RootElement.EnumerateObject().Where(p => p.Name is not ("commands" or "meta")).ToDictionary(p => p.Name, p => Canonical(p.Value));
+            Dictionary<string, string> oldRest = a.RootElement.EnumerateObject().Where(p => p.Name is not ("commands" or "meta")).ToDictionary(p => p.Name, p => Canonical(p.Value));
+            Dictionary<string, string> newRest = b.RootElement.EnumerateObject().Where(p => p.Name is not ("commands" or "meta")).ToDictionary(p => p.Name, p => Canonical(p.Value));
             foreach (string key in oldRest.Keys.Union(newRest.Keys))
-                if (!oldRest.TryGetValue(key, out var o) || !newRest.TryGetValue(key, out var n) || o != n) { other = true; break; }
+                if (!oldRest.TryGetValue(key, out string o) || !newRest.TryGetValue(key, out string n) || o != n) { other = true; break; }
             return (changed.ToList(), other);
         }
 
         private static Dictionary<string, string> Section(JsonElement root, string name) =>
-            root.TryGetProperty(name, out var section) && section.ValueKind == JsonValueKind.Object
+            root.TryGetProperty(name, out JsonElement section) && section.ValueKind == JsonValueKind.Object
                 ? section.EnumerateObject().ToDictionary(p => p.Name, p => Canonical(p.Value))
                 : new Dictionary<string, string>();
 

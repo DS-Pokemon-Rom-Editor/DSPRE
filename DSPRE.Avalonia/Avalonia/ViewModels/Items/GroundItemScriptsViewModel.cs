@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             OnPropertyChanged(nameof(HasUnsavedChanges));
             Entries.Clear();
-            foreach (var e in _session.Entries())
+            foreach (GroundItemScriptsLogic.Entry e in _session.Entries())
             {
                 string name = e.ItemId >= 0 && e.ItemId < ItemNames.Count ? ItemNames[e.ItemId] : ("Item " + e.ItemId);
                 Entries.Add(new GroundItemRow { ScriptIndex = e.ScriptIndex, ItemId = e.ItemId, ItemName = name, Quantity = e.Quantity, InUse = e.InUse });

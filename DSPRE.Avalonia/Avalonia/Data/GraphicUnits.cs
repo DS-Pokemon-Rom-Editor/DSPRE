@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DSPRE;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -29,7 +30,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < fileCount; i++)
             {
                 if (spokenFor.Contains(i)) continue;
-                var u = new GraphicAssets.Unit { Archive = a, Name = a.Title };
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = a.Title };
                 u.Parts.Add(Part(a, i, "File " + i));
                 units.Add(u);
             }
@@ -42,15 +43,15 @@ namespace DSPRE.Avalonia.Data
         /// sets of colours. From BattleBgRenderer, which has the games' own mapping.</summary>
         public static List<GraphicAssets.Unit> BattleBackdrops(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
             for (int bg = 0; bg < BattleBgRenderer.BackdropCount; bg++)
             {
-                var (drawing, tilemap, palDay) = BattleBgRenderer.BackdropFiles(bg);
+                (int drawing, int tilemap, int palDay) = BattleBgRenderer.BackdropFiles(bg);
                 if (drawing >= fileCount || palDay + 2 >= fileCount) continue;
 
-                var u = new GraphicAssets.Unit { Archive = a, Name = $"Backdrop {bg}" };
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = $"Backdrop {bg}" };
                 u.Parts.Add(Part(a, drawing, "Drawing"));
                 u.Parts.Add(Part(a, palDay, "Colours, day"));
                 u.Parts.Add(Part(a, palDay + 1, "Colours, evening"));
@@ -96,7 +97,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The tiles a touch screen panel layer is arranged from.</summary>
         public static int PanelDrawing(int fileIndex)
         {
-            var names = BattleBgNames.Names();
+            string[] names = BattleBgNames.Names();
             if (fileIndex < 0 || fileIndex >= names.Length) return -1;
             string n = names[fileIndex];
             return n != null && n.StartsWith("TouchScreen.Layer.", StringComparison.Ordinal) && n.EndsWith(":Screen", StringComparison.Ordinal)
@@ -105,7 +106,7 @@ namespace DSPRE.Avalonia.Data
 
         private static bool IsPanelFile(int fileIndex)
         {
-            var names = BattleBgNames.Names();
+            string[] names = BattleBgNames.Names();
             if (fileIndex < 0 || fileIndex >= names.Length) return false;
             string n = names[fileIndex];
             return n != null
@@ -131,19 +132,19 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One row per terrain: the two sides' drawings and its three sets of colours. </summary>
         public static List<GraphicAssets.Unit> BattleGrounds(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
             for (int t = 0; t < BattleGroundRenderer.TerrainCount; t++)
             {
-                var files = BattleGroundRenderer.TerrainFiles(t);
+                (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? files = BattleGroundRenderer.TerrainFiles(t);
                 if (files == null) continue;
-                var (mine, enemy, mineCell, enemyCell, palDay) = files.Value;
+                (int mine, int enemy, int mineCell, int enemyCell, int palDay) = files.Value;
                 if (mine >= fileCount || enemy >= fileCount || palDay + 2 >= fileCount) continue;
                 // The bridge borrows both sides from other terrains, so it has no files of its own to show.
                 if (spokenFor.Contains(mine) && spokenFor.Contains(enemy)) continue;
 
-                var u = new GraphicAssets.Unit
+                GraphicAssets.Unit u = new GraphicAssets.Unit
                 {
                     Archive = a,
                     Name = BattleGroundRenderer.TerrainNames[t] + " ground",
@@ -173,7 +174,7 @@ namespace DSPRE.Avalonia.Data
         {
             for (int t = 0; t < BattleGroundRenderer.TerrainCount; t++)
             {
-                var f = BattleGroundRenderer.TerrainFiles(t);
+                (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? f = BattleGroundRenderer.TerrainFiles(t);
                 if (f == null) continue;
                 if (fileIndex == f.Value.MineDrawing || fileIndex == f.Value.EnemyDrawing)
                     return f.Value.PaletteDay;
@@ -185,7 +186,7 @@ namespace DSPRE.Avalonia.Data
         {
             for (int t = 0; t < BattleGroundRenderer.TerrainCount; t++)
             {
-                var f = BattleGroundRenderer.TerrainFiles(t);
+                (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? f = BattleGroundRenderer.TerrainFiles(t);
                 if (f == null) continue;
                 if (fileIndex == f.Value.MineDrawing) return BattleGroundRenderer.TerrainNames[t] + " ground";
                 if (fileIndex == f.Value.EnemyDrawing) return BattleGroundRenderer.TerrainNames[t] + " ground";
@@ -199,10 +200,10 @@ namespace DSPRE.Avalonia.Data
         /// same position in four different archives. See effectclact, where the four NARCs are parallel.</summary>
         public static List<GraphicAssets.Unit> MoveEffects(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var pltt = Find(DirNames.wazaEffectPltt);
-            var cell = Find(DirNames.wazaEffectCell);
-            var anim = Find(DirNames.wazaEffectCellAnm);
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            GraphicAssets.Archive pltt = Find(DirNames.wazaEffectPltt);
+            GraphicAssets.Archive cell = Find(DirNames.wazaEffectCell);
+            GraphicAssets.Archive anim = Find(DirNames.wazaEffectCellAnm);
 
             int Count(GraphicAssets.Archive other)
             {
@@ -213,7 +214,7 @@ namespace DSPRE.Avalonia.Data
 
             for (int i = 0; i < fileCount; i++)
             {
-                var u = new GraphicAssets.Unit { Archive = a, Name = $"Move effect {i}" };
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = $"Move effect {i}" };
                 u.Parts.Add(Part(a, i, "Drawing"));
                 if (i < nPltt) u.Parts.Add(Part(pltt, i, "Colours"));
                 if (i < nCell) u.Parts.Add(Part(cell, i, "Layout"));
@@ -228,8 +229,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One row per drawing, with the colours the game's own table pairs it with. </summary>
         public static List<GraphicAssets.Unit> ItemIcons(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
             if (fileCount > GraphicAssets.ItemIcons.LayoutFile)
             {
@@ -241,12 +242,12 @@ namespace DSPRE.Avalonia.Data
                 spokenFor.Add(GraphicAssets.ItemIcons.LayoutFile);
             }
 
-            foreach (var icon in GraphicAssets.ItemIcons.Icons())
+            foreach (GraphicAssets.ItemIcons.Icon icon in GraphicAssets.ItemIcons.Icons())
             {
                 if (icon.Drawing >= fileCount || icon.Colours >= fileCount) continue;
 
                 int shared = GraphicAssets.ItemIcons.Sharing(icon.Drawing);
-                var u = new GraphicAssets.Unit { Archive = a, Name = icon.Name ?? a.Title };
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = icon.Name ?? a.Title };
                 u.Parts.Add(Part(a, icon.Drawing, shared > 1
                     ? $"Drawing, shared with {shared - 1} other" + (shared > 2 ? " icons" : " icon")
                     : "Drawing"));
@@ -261,7 +262,7 @@ namespace DSPRE.Avalonia.Data
             // game, so it is the last two files that are named, not a fixed pair of numbers.
             if (fileCount >= 2 && !spokenFor.Contains(fileCount - 1) && !spokenFor.Contains(fileCount - 2))
             {
-                var back = new GraphicAssets.Unit { Archive = a, Name = "Back arrow" };
+                GraphicAssets.Unit back = new GraphicAssets.Unit { Archive = a, Name = "Back arrow" };
                 back.Parts.Add(Part(a, fileCount - 2, "Drawing"));
                 back.Parts.Add(Part(a, fileCount - 1, "Colours"));
                 units.Add(back);
@@ -274,7 +275,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < fileCount; i++)
             {
                 if (spokenFor.Contains(i)) continue;
-                var u = new GraphicAssets.Unit { Archive = a, Name = "No item uses this" };
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = "No item uses this" };
                 u.Parts.Add(Part(a, i, KindIn(a, i) == GraphicAssets.Kind.Palette ? "Colours" : "Drawing"));
                 units.Add(u);
             }
@@ -293,7 +294,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>A row that is one file on its own.</summary>
         private static GraphicAssets.Unit Single(GraphicAssets.Archive a, int index, string name, string part)
         {
-            var u = new GraphicAssets.Unit { Archive = a, Name = name };
+            GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = name };
             u.Parts.Add(Part(a, index, part));
             return u;
         }
@@ -319,12 +320,12 @@ namespace DSPRE.Avalonia.Data
 
         public static List<GraphicAssets.Unit> SealGraphics(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
             void Row(string name, bool claim, params (int Index, string Part)[] parts)
             {
-                var u = new GraphicAssets.Unit { Archive = a, Name = name };
-                foreach (var (index, part) in parts)
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = name };
+                foreach ((int index, string part) in parts)
                 {
                     if (index < 0 || index >= fileCount) continue;
                     u.Parts.Add(Part(a, index, part));
@@ -337,18 +338,18 @@ namespace DSPRE.Avalonia.Data
             int layout = johto ? 38 : 93, animation = johto ? 36 : 1, colours = johto ? 6 : 293;
             IReadOnlyList<DSPRE.ROMFiles.BallSeal> seals;
             try { seals = DSPRE.ROMFiles.BallSeals.Read(); } catch { seals = Array.Empty<DSPRE.ROMFiles.BallSeal>(); }
-            foreach (var seal in seals)
+            foreach (BallSeal seal in seals)
             {
                 if (seal == null || seal.Sprite >= fileCount) continue;
                 // Every sticker shares one layout, so each row's view of it names that seal's own drawing and colours.
                 int sprite = seal.Sprite;
-                var own = new GraphicAssets.Archive
+                GraphicAssets.Archive own = new GraphicAssets.Archive
                 {
                     Dir = a.Dir, Title = a.Title, In = a.In, What = a.What, DeepEditor = a.DeepEditor,
                     DrawingEntry = i => i == layout ? sprite : -1,
                     ColourEntry = i => i == layout || i == sprite ? colours : (a.ColourEntry?.Invoke(i) ?? -1),
                 };
-                var u = new GraphicAssets.Unit { Archive = a, Name = $"{seal.Name} sticker" };
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = $"{seal.Name} sticker" };
                 if (layout < fileCount)
                     u.Parts.Add(new GraphicAssets.UnitPart { Archive = own, Index = layout, Name = "As it appears", Kind = GraphicAssets.Kind.CellLayout });
                 u.Parts.Add(Part(a, sprite, "Drawing"));
@@ -421,8 +422,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One row per window frame, named the way the games name them.</summary>
         public static List<GraphicAssets.Unit> WindowFrames(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
             // Where the drawings stop and the colours start. Everything else follows from it.
             int firstColour = GraphicAssets.FirstPaletteIndex(a);
@@ -438,8 +439,8 @@ namespace DSPRE.Avalonia.Data
 
             void Row(string name, params (int Index, string Part)[] parts)
             {
-                var u = new GraphicAssets.Unit { Archive = a, Name = name };
-                foreach (var (index, part) in parts)
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = name };
+                foreach ((int index, string part) in parts)
                 {
                     if (index < 0 || index >= fileCount) continue;
                     u.Parts.Add(Part(a, index, part));
@@ -479,7 +480,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static int WindowFrameColours(int fileIndex)
         {
-            var a = Find(DirNames.windowFrames);
+            GraphicAssets.Archive a = Find(DirNames.windowFrames);
             if (a == null) return -1;
             int firstColour = GraphicAssets.FirstPaletteIndex(a);
             const int Styles = 20;
@@ -506,17 +507,17 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static List<GraphicAssets.Unit> ByDrawing(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
-            var narc = new ScriptNarc(a.Dir);
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
+            ScriptNarc narc = new ScriptNarc(a.Dir);
 
             GraphicAssets.Unit open = null;
             int number = 0;
 
             for (int i = 0; i < fileCount; i++)
             {
-                var raw = narc.Get(i);
-                var kind = GraphicAssets.Identify(GraphicAssets.Unsqueeze(raw));
+                byte[] raw = narc.Get(i);
+                GraphicAssets.Kind kind = GraphicAssets.Identify(GraphicAssets.Unsqueeze(raw));
 
                 if (kind == GraphicAssets.Kind.TileGraphic)
                 {
@@ -558,8 +559,8 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static List<GraphicAssets.Unit> TrainerCard(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
             void Claim(GraphicAssets.Unit u, int index, string what)
             {
@@ -571,8 +572,8 @@ namespace DSPRE.Avalonia.Data
 
             try
             {
-                var card = RomInfo.TrainerCardMembers;
-                var u = new GraphicAssets.Unit { Archive = a, Name = "Card" };
+                (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) card = RomInfo.TrainerCardMembers;
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = "Card" };
                 Claim(u, card.ncgr, "Drawing");
                 Claim(u, card.facaNscr, "Front, arrangement");
                 Claim(u, card.backNscr, "Back, arrangement");
@@ -584,8 +585,8 @@ namespace DSPRE.Avalonia.Data
                 }
                 if (u.Parts.Count > 0) units.Add(u);
 
-                var t = RomInfo.TrainerCardTrainerMembers;
-                var p2 = new GraphicAssets.Unit { Archive = a, Name = "Trainer on the card" };
+                (int ncgr, int maleNscr, int femaleNscr) t = RomInfo.TrainerCardTrainerMembers;
+                GraphicAssets.Unit p2 = new GraphicAssets.Unit { Archive = a, Name = "Trainer on the card" };
                 Claim(p2, t.ncgr, "Drawing");
                 Claim(p2, t.maleNscr, "Boy, arrangement");
                 Claim(p2, t.femaleNscr, "Girl, arrangement");
@@ -608,9 +609,9 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                var card = RomInfo.TrainerCardMembers;
+                (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) card = RomInfo.TrainerCardMembers;
                 if (index == card.facaNscr || index == card.backNscr) return card.ncgr;
-                var pose = RomInfo.TrainerCardTrainerMembers;
+                (int ncgr, int maleNscr, int femaleNscr) pose = RomInfo.TrainerCardTrainerMembers;
                 if (index == pose.maleNscr || index == pose.femaleNscr) return pose.ncgr;
             }
             catch { }
@@ -622,8 +623,8 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                var card = RomInfo.TrainerCardMembers;
-                var pose = RomInfo.TrainerCardTrainerMembers;
+                (int ncgr, int facaNscr, int backNscr, int[] rankPalettes) card = RomInfo.TrainerCardMembers;
+                (int ncgr, int maleNscr, int femaleNscr) pose = RomInfo.TrainerCardTrainerMembers;
                 if (index == card.ncgr || index == card.facaNscr || index == card.backNscr
                     || index == pose.ncgr || index == pose.maleNscr || index == pose.femaleNscr)
                     return card.rankPalettes[0];
@@ -637,11 +638,11 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One row per banner style, a drawing and its colours, named as the Header Editor names it.</summary>
         public static List<GraphicAssets.Unit> AreaWindows(GraphicAssets.Archive a, int fileCount)
         {
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
             for (int style = 0; style * 2 + 1 < fileCount; style++)
             {
-                var u = new GraphicAssets.Unit { Archive = a, Name = AreaWindowName(style) };
+                GraphicAssets.Unit u = new GraphicAssets.Unit { Archive = a, Name = AreaWindowName(style) };
                 u.Parts.Add(Part(a, style * 2, "Drawing"));
                 u.Parts.Add(Part(a, style * 2 + 1, "Colours"));
                 spokenFor.Add(style * 2);
@@ -674,10 +675,10 @@ namespace DSPRE.Avalonia.Data
         public static List<GraphicAssets.Unit> PartyIcons(GraphicAssets.Archive a, int fileCount)
         {
             const int LeadIn = DSPRE.ROMFiles.PokemonIconFiles.SharedFiles;
-            var units = new List<GraphicAssets.Unit>();
-            var spokenFor = new HashSet<int>();
+            List<GraphicAssets.Unit> units = new List<GraphicAssets.Unit>();
+            HashSet<int> spokenFor = new HashSet<int>();
 
-            var lead = new GraphicAssets.Unit
+            GraphicAssets.Unit lead = new GraphicAssets.Unit
             {
                 Archive = a,
                 Name = "Shared colours and layout",
@@ -693,11 +694,11 @@ namespace DSPRE.Avalonia.Data
             try { names = RomInfo.GetPokemonNames(); } catch { names = Array.Empty<string>(); }
 
             // Files run species by species, then eggs and forms, so every species has its row before its forms.
-            var rowOf = new Dictionary<int, GraphicAssets.Unit>();
+            Dictionary<int, GraphicAssets.Unit> rowOf = new Dictionary<int, GraphicAssets.Unit>();
             GraphicAssets.Unit eggs = null;
             for (int file = LeadIn; file < fileCount; file++)
             {
-                var icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(file);
+                PokemonIconFiles.Icon icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(file);
                 if (icon == null) continue;
 
                 if (icon.IsEgg)
@@ -708,7 +709,7 @@ namespace DSPRE.Avalonia.Data
                     continue;
                 }
 
-                if (!rowOf.TryGetValue(icon.Species, out var u))
+                if (!rowOf.TryGetValue(icon.Species, out GraphicAssets.Unit u))
                 {
                     string who = DSPRE.ROMFiles.PokemonIconFiles.Label(new DSPRE.ROMFiles.PokemonIconFiles.Icon { Species = icon.Species }, names);
                     units.Add(u = new GraphicAssets.Unit { Archive = a, Name = who });

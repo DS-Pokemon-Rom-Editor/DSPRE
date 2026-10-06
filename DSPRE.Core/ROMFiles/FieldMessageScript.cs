@@ -52,13 +52,13 @@ namespace DSPRE.ROMFiles
                                                      int linesPerBox = FieldMessageWindow.LinesPerPage,
                                                      bool wrapWhenUnmarked = true)
         {
-            var frames = new List<FieldMessageFrame>();
+            List<FieldMessageFrame> frames = new List<FieldMessageFrame>();
             if (string.IsNullOrEmpty(text)) return frames;
 
             // A compressed trainer name is stored as {TRAINER_NAME:...}; the game shows just the name.
             text = DSPRE.TextConverter.GetSimpleTrainerName(text);
 
-            var parts = Tokenise(text);
+            List<(Token token, string value)> parts = Tokenise(text);
 
             // Script text that carries none of the games' own breaks has nothing to say about how it
             // should sit in the box, so it is fitted to the box instead of running off the edge.
@@ -66,8 +66,8 @@ namespace DSPRE.ROMFiles
             if (!marked && wrapWhenUnmarked)
                 return Wrapped(text, measure, width, linesPerBox);
 
-            var onScreen = new List<string>();
-            var current = new StringBuilder();
+            List<string> onScreen = new List<string>();
+            StringBuilder current = new StringBuilder();
             bool tooWide = false, tooMany = false;
 
             void EndLine()
@@ -86,7 +86,7 @@ namespace DSPRE.ROMFiles
                 tooWide = false; tooMany = false;
             }
 
-            foreach (var (token, value) in parts)
+            foreach ((Token token, string value) in parts)
             {
                 switch (token)
                 {
@@ -123,13 +123,13 @@ namespace DSPRE.ROMFiles
         // Text with none of the games' breaks in it, fitted to the box a boxful at a time.
         private static List<FieldMessageFrame> Wrapped(string text, Func<string, int> measure, int width, int linesPerBox)
         {
-            var frames = new List<FieldMessageFrame>();
-            var layout = new FieldTextLayout(measure ?? (t => (t ?? "").Length * 6), width, linesPerBox);
-            var lines = layout.Lines(text);
+            List<FieldMessageFrame> frames = new List<FieldMessageFrame>();
+            FieldTextLayout layout = new FieldTextLayout(measure ?? (t => (t ?? "").Length * 6), width, linesPerBox);
+            List<string> lines = layout.Lines(text);
 
             for (int i = 0; i < lines.Count; i += linesPerBox)
             {
-                var box = lines.GetRange(i, Math.Min(linesPerBox, lines.Count - i));
+                List<string> box = lines.GetRange(i, Math.Min(linesPerBox, lines.Count - i));
                 bool last = i + linesPerBox >= lines.Count;
                 frames.Add(new FieldMessageFrame(box, last ? MessageWait.None : MessageWait.Clear, false, false));
             }
@@ -141,8 +141,8 @@ namespace DSPRE.ROMFiles
         // text editor shows, so both are read here.
         private static List<(Token token, string value)> Tokenise(string text)
         {
-            var parts = new List<(Token, string)>();
-            var run = new StringBuilder();
+            List<(Token, string)> parts = new List<(Token, string)>();
+            StringBuilder run = new StringBuilder();
 
             void Flush() { if (run.Length > 0) { parts.Add((Token.Text, run.ToString())); run.Clear(); } }
 

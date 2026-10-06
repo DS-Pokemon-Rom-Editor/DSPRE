@@ -12,6 +12,8 @@ using global::Avalonia.Media.Imaging;
 using global::Avalonia.Threading;
 using DSPRE.Avalonia.Data;
 using static DSPRE.RomInfo;
+using Avalonia.Platform;
+using System.Runtime.InteropServices;
 
 namespace DSPRE.Avalonia.ViewModels.Battle
 {
@@ -136,7 +138,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         /// <summary>The sound's real name from the ROM's own sound archive (e.g. "SEQ_SE_PL_KEZURI"), or null
         /// if it can't be resolved. Shown next to a "Sound" argument so the ID isn't just a bare number.</summary>
-        private string SoundNameOf(int soundId) => LoadSdat()?.SeqNames.TryGetValue(soundId, out var n) == true ? n : null;
+        private string SoundNameOf(int soundId) => LoadSdat()?.SeqNames.TryGetValue(soundId, out string n) == true ? n : null;
 
         /// <summary>Renders and plays the given sound ID through the active <see cref="AudioOutput"/> backend.
         /// Best-effort: an out-of-range ID or an unresolved instrument just stays silent rather than erroring.
@@ -158,7 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 try
                 {
-                    var pcm = SoundArchive.RenderCry(species);
+                    short[] pcm = SoundArchive.RenderCry(species);
                     if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
                 }
                 catch { /* a preview should not put a dialog up because a sound would not play */ }
@@ -174,13 +176,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void PreviewSound(int soundId)
         {
-            var sdat = LoadSdat();
+            SdatArchive sdat = LoadSdat();
             if (sdat == null) return;
             System.Threading.Tasks.Task.Run(() =>
             {
                 try
                 {
-                    var pcm = SseqPlayer.Render(sdat, soundId);
+                    short[] pcm = SseqPlayer.Render(sdat, soundId);
                     if (pcm != null && pcm.Length > 0) AudioOutput.Current.Play(pcm, 32000);
                 }
                 catch { /* best-effort preview; animation playback must never surface an error dialog */ }
@@ -191,13 +193,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// success), for the card's "Preview sound" button to surface via a dialog instead of failing silently.</summary>
         internal string TryPreviewSound(int soundId)
         {
-            var sdat = LoadSdat();
+            SdatArchive sdat = LoadSdat();
             if (sdat == null) return _sdatLoadError ?? "Sound archive could not be loaded.";
             try
             {
                 if (!sdat.SeqNames.ContainsKey(soundId) && (soundId < 0 || soundId >= sdat.Sequences.Count || sdat.Sequences[soundId] == null))
                     return $"Sound ID {soundId} doesn't resolve to a sequence in this ROM's sound archive.";
-                var pcm = SseqPlayer.Render(sdat, soundId);
+                short[] pcm = SseqPlayer.Render(sdat, soundId);
                 if (pcm == null || pcm.Length == 0) return $"Sound {soundId} rendered to no audio (an unsupported instrument type, most likely).";
                 AudioOutput.Current.Play(pcm, 32000);
                 if (AudioOutput.Current is NullAudioOutput) return "This build has no sound output yet.";
@@ -265,11 +267,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             ViewLines.Clear();
             if (!IsAnimation) { OnPropertyChanged(nameof(HasViewLines)); return; }
 
-            var cmds = Rows.Select(r => new WazaSeqCommand(r.OpId, r.Args.ToArray())).ToList();
+            List<WazaSeqCommand> cmds = Rows.Select(r => new WazaSeqCommand(r.OpId, r.Args.ToArray())).ToList();
             int pos = 0;
-            foreach (var c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
+            foreach (WazaSeqCommand c in cmds) { c.WordPos = pos; pos += 1 + c.Args.Length; }
 
-            foreach (var l in BattleAnimScriptDisplay.Build(cmds, _version, (BattleAnimViewMode)ViewMode, SoundNameOf))
+            foreach (BattleAnimLine l in BattleAnimScriptDisplay.Build(cmds, _version, (BattleAnimViewMode)ViewMode, SoundNameOf))
                 ViewLines.Add(l);
             OnPropertyChanged(nameof(HasViewLines));
             OnPropertyChanged(nameof(ViewSummary));
@@ -309,11 +311,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             OpcodeNames.Clear();
             if (IsAnimation)
-                foreach (var o in BattleAnimCommands.Table(_version)) OpcodeNames.Add(o.Name);
+                foreach (BattleAnimCommand o in BattleAnimCommands.Table(_version)) OpcodeNames.Add(o.Name);
             else
-                foreach (var o in WazaSeqOpcodes.Table(_version)) OpcodeNames.Add(o.Name);
+                foreach (WazaSeqOp o in WazaSeqOpcodes.Table(_version)) OpcodeNames.Add(o.Name);
             OpcodeDisplayNames.Clear();
-            foreach (var n in OpcodeNames) OpcodeDisplayNames.Add(DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDisplay(n, !IsAnimation));
+            foreach (string n in OpcodeNames) OpcodeDisplayNames.Add(DSPRE.Avalonia.Data.BattleAnimSchema.OpcodeDisplay(n, !IsAnimation));
             _nameToOp = null;   // opcode table changed → rebuild the text-parser's name→id map lazily
 
             BuildFileList();
@@ -341,7 +343,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _sourceById = null;
             if (!IsAvailable) return;
 
-            var owned = HgEngineOwnedFiles.FilesIn(HgEngineOwnedFiles.ArchiveOf(_dirs[_archiveIndex]));
+            IReadOnlyDictionary<int, HgEngineOwnedFile> owned = HgEngineOwnedFiles.FilesIn(HgEngineOwnedFiles.ArchiveOf(_dirs[_archiveIndex]));
             if (owned.Count > 0)
             {
                 _sourceById = owned.Values
@@ -365,7 +367,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool IsHgEngineSource => _sourceById != null;
 
         private HgEngineOwnedFile CurrentSource =>
-            _sourceById != null && _sourceById.TryGetValue(EntryIdAt(_fileIndex), out var f) ? f : null;
+            _sourceById != null && _sourceById.TryGetValue(EntryIdAt(_fileIndex), out HgEngineOwnedFile f) ? f : null;
 
         public string SourceNote => CurrentSource == null
             ? ""
@@ -461,12 +463,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (IsAvailable && _fileIndex >= 0 && CurrentNarc.Available)
             {
-                var bytes = CurrentNarc.Get(_fileIndex);
-                var cmds = bytes == null ? null
+                byte[] bytes = CurrentNarc.Get(_fileIndex);
+                List<WazaSeqCommand> cmds = bytes == null ? null
                          : IsAnimation ? BattleAnimScript.Parse(bytes, _version)
                                   : WazaSeqScript.Parse(bytes, _version);
                 _tail = cmds?.LastOrDefault(c => c.Tail != null)?.Tail;
-                if (cmds != null) foreach (var c in cmds.Where(c => !c.OnlyTail)) AddRow(c.OpId, c.Args, c.Raw);
+                if (cmds != null) foreach (WazaSeqCommand c in cmds.Where(c => !c.OnlyTail)) AddRow(c.OpId, c.Args, c.Raw);
             }
             _loadedBytes = _fileIndex >= 0 ? CurrentBytes() : null;
             Dirty = false;
@@ -496,7 +498,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void AddRow(int opId, int[] args, bool raw = false)
         {
-            var row = new ScriptCmdRow { Script = !IsAnimation, Raw = raw, OpNameOf = OpNameOf, ArgCountOf = ArgCountOf, OnEdited = OnRowEdited, PreviewSound = TryPreviewSound, SoundNameOf = SoundNameOf };
+            ScriptCmdRow row = new ScriptCmdRow { Script = !IsAnimation, Raw = raw, OpNameOf = OpNameOf, ArgCountOf = ArgCountOf, OnEdited = OnRowEdited, PreviewSound = TryPreviewSound, SoundNameOf = SoundNameOf };
             row.Args.AddRange(args ?? System.Array.Empty<int>());
             row._opIdSilent(opId);   // set without firing OnEdited during load
             row.Rebuild();
@@ -510,7 +512,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // message command's count follows its tag).
         private int ArgCountOf(int opId, IReadOnlyList<int> args)
         {
-            if (IsAnimation) return BattleAnimCommands.TryGet(_version, opId, out var op) ? op.ArgCount : 0;
+            if (IsAnimation) return BattleAnimCommands.TryGet(_version, opId, out BattleAnimCommand op) ? op.ArgCount : 0;
             return Math.Max(0, WazaSeqOpcodes.ArgCount(_version, opId, i => i < args.Count ? args[i] : 0));
         }
 
@@ -562,7 +564,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 _ = DSPRE.Avalonia.DialogHelper.ShowInfo("The command text has errors. Fix the red-underlined line(s) before saving.", "Fix errors first");
                 return;
             }
-            var cmds = BuildCommands();
+            List<WazaSeqCommand> cmds = BuildCommands();
             byte[] bytes = IsAnimation ? BattleAnimScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
             CurrentNarc.Put(_fileIndex, bytes);
             LoadEntry();   // reflect the canonical form
@@ -592,10 +594,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>The particle files this script loads, in load order, each with whether its slot draws orthographic.</summary>
         public IReadOnlyList<(int File, bool Orthographic)> ParticleFilesOfMove()
         {
-            var found = new List<(int File, bool Orthographic)>();
+            List<(int File, bool Orthographic)> found = new List<(int File, bool Orthographic)>();
             if (!IsAnimation) return found;
-            var projection = new Dictionary<int, int>();
-            foreach (var c in BuildCommands())
+            Dictionary<int, int> projection = new Dictionary<int, int>();
+            foreach (WazaSeqCommand c in BuildCommands())
             {
                 string op = BattleAnimCommands.Name(_version, c.OpId);
                 if (op == "SetCameraProjection" && c.Args.Length >= 2) projection[c.Args[0]] = c.Args[1];
@@ -611,8 +613,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private List<WazaSeqCommand> BuildCommands()
         {
-            var list = new List<WazaSeqCommand>();
-            foreach (var row in Rows)
+            List<WazaSeqCommand> list = new List<WazaSeqCommand>();
+            foreach (ScriptCmdRow row in Rows)
             {
                 int[] args;
                 if (IsAnimation || row.Raw)
@@ -640,9 +642,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private static List<int> ParseIntList(string s)
         {
-            var list = new List<int>();
+            List<int> list = new List<int>();
             if (string.IsNullOrWhiteSpace(s)) return list;
-            foreach (var p in s.Split(new[] { ',', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string p in s.Split(new[] { ',', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string t = p.Trim();
                 bool ok = t.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
@@ -695,8 +697,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // by a named arg, left to right). Raw internal opcode names and plain numbers still parse too.
         private string RowsToText()
         {
-            var sb = new StringBuilder();
-            foreach (var row in Rows)
+            StringBuilder sb = new StringBuilder();
+            foreach (ScriptCmdRow row in Rows)
             {
                 string raw = OpNameOf(row.OpId);
                 sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.CommandName(raw, !IsAnimation));
@@ -707,10 +709,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     string label = DSPRE.Avalonia.Data.BattleAnimSchema.ParamName(raw, i, !IsAnimation);
                     // An enum parameter shows its friendly value token; a generic "Param N" label is dropped
                     // (bare number) since a made-up name would add no meaning.
-                    var opts = DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(raw, i);
+                    BattleAnimSchema.EnumOption[] opts = DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(raw, i);
                     string valText = v.ToString(CultureInfo.InvariantCulture);
                     if (opts != null)
-                        foreach (var o in opts) if (o.Value == v) { valText = DSPRE.Avalonia.Data.BattleAnimSchema.Token(o.Label, true); break; }
+                        foreach (BattleAnimSchema.EnumOption o in opts) if (o.Value == v) { valText = DSPRE.Avalonia.Data.BattleAnimSchema.Token(o.Label, true); break; }
                     if (label.StartsWith("Param ", StringComparison.Ordinal)) sb.Append(valText);
                     else sb.Append(DSPRE.Avalonia.Data.BattleAnimSchema.ArgToken(raw, i, !IsAnimation)).Append('=').Append(valText);
                 }
@@ -724,7 +726,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // text line can start with either. Built once per version.
         private Dictionary<string, int> NameToOp()
         {
-            var d = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, int> d = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < OpcodeNames.Count; i++)
             {
                 d[OpcodeNames[i]] = i;   // index == opId
@@ -747,9 +749,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static bool TryResolveEnum(string rawOpName, int argIndex, string token, out int value)
         {
             value = 0;
-            var opts = DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(rawOpName, argIndex);
+            BattleAnimSchema.EnumOption[] opts = DSPRE.Avalonia.Data.BattleAnimSchema.EnumFor(rawOpName, argIndex);
             if (opts == null) return false;
-            foreach (var o in opts)
+            foreach (BattleAnimSchema.EnumOption o in opts)
             {
                 if (string.Equals(o.Label, token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
                 if (string.Equals(DSPRE.Avalonia.Data.BattleAnimSchema.Token(o.Label, true), token, StringComparison.OrdinalIgnoreCase)) { value = o.Value; return true; }
@@ -781,12 +783,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // Text → Rows. Collects per-token errors (offset/length for squiggles). Rebuilds the cards ONLY when clean.
         private void ParseTextIntoRows()
         {
-            var errors = new List<TextError>();
-            var parsed = new List<(int opId, int[] args)>();
+            List<TextError> errors = new List<TextError>();
+            List<(int opId, int[] args)> parsed = new List<(int opId, int[] args)>();
             _nameToOp ??= NameToOp();
 
             int offset = 0;
-            foreach (var rawLine in _commandsText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+            foreach (string rawLine in _commandsText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
             {
                 int lineStart = offset;
                 offset += rawLine.Length + 1;   // + the newline we split on
@@ -795,7 +797,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (line.StartsWith("//") || line.StartsWith("#")) continue;      // allow comment lines
 
                 // Command = the first whitespace/comma-separated token; the rest are its arguments.
-                var toks = line.Split(new[] { ' ', '\t', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                string[] toks = line.Split(new[] { ' ', '\t', ',' }, StringSplitOptions.RemoveEmptyEntries);
                 string cmdName = toks[0];
 
                 if (!_nameToOp.TryGetValue(cmdName, out int opId))
@@ -808,8 +810,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
                 bool argOk = true;
                 int searchFrom = Math.Max(0, rawLine.IndexOf(cmdName, StringComparison.Ordinal) + cmdName.Length);
-                var slotValue = new Dictionary<int, int>();
-                var bareToks = new List<(string tok, int col)>();
+                Dictionary<int, int> slotValue = new Dictionary<int, int>();
+                List<(string tok, int col)> bareToks = new List<(string tok, int col)>();
 
                 // Pass 1: named "label=value" tokens claim their specific slot, wherever they appear on the line.
                 for (int i = 1; i < toks.Length; i++)
@@ -839,7 +841,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
                 // Pass 2: bare tokens fill whichever slots are left, in order.
                 int cursor = 0;
-                foreach (var (tok, col) in bareToks)
+                foreach ((string tok, int col) in bareToks)
                 {
                     while (slotValue.ContainsKey(cursor)) cursor++;
                     if (!TryParseArgValue(raw, cursor, tok, out int v))
@@ -854,9 +856,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (argOk)
                 {
                     int maxIdx = -1;
-                    foreach (var k in slotValue.Keys) if (k > maxIdx) maxIdx = k;
-                    var args = new int[maxIdx + 1];
-                    foreach (var kv in slotValue) args[kv.Key] = kv.Value;
+                    foreach (int k in slotValue.Keys) if (k > maxIdx) maxIdx = k;
+                    int[] args = new int[maxIdx + 1];
+                    foreach (KeyValuePair<int, int> kv in slotValue) args[kv.Key] = kv.Value;
                     parsed.Add((opId, args));
                 }
             }
@@ -866,7 +868,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             _rebuildingRows = true;
             Rows.Clear();
-            foreach (var (opId, args) in parsed) AddRow(opId, args);
+            foreach ((int opId, int[] args) in parsed) AddRow(opId, args);
             _rebuildingRows = false;
             Dirty = DiffersFromLoaded();
             RefreshStoryboard();
@@ -892,10 +894,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(StoryboardTitle));
             OnPropertyChanged(nameof(StoryboardWrap));
             if (!HasRows) { Storyboard = ""; StoryboardLines = Array.Empty<BattleAnimStoryboard.Line>(); return; }
-            var cmds = BuildCommands();
+            List<WazaSeqCommand> cmds = BuildCommands();
             if (IsAnimation)
             {
-                var lines = BattleAnimStoryboard.Build(cmds, _version);
+                List<BattleAnimStoryboard.Line> lines = BattleAnimStoryboard.Build(cmds, _version);
                 StoryboardLines = lines;
                 Storyboard = lines.Count == 0 ? "(empty script)" : "";
             }
@@ -1018,9 +1020,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             get
             {
-                var cmds = BuildCommands();
+                List<WazaSeqCommand> cmds = BuildCommands();
                 if (cmds == null) return false;
-                foreach (var c in cmds)
+                foreach (WazaSeqCommand c in cmds)
                     if (BattleAnimCommands.Name(_version, c.OpId) == "JumpByTurn") return true;
                 return false;
             }
@@ -1042,9 +1044,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             try
             {
-                var sv = new PokemonSpriteEditorViewModel(true);
+                PokemonSpriteEditorViewModel sv = new PokemonSpriteEditorViewModel(true);
                 sv.LoadMon(id);
-                var bd = new BattleDisplayEditorViewModel(sv);
+                BattleDisplayEditorViewModel bd = new BattleDisplayEditorViewModel(sv);
                 bd.LoadMon(id);
                 bd.Detach();       // we only want its computed positions, stop its preview timer
 
@@ -1059,8 +1061,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 OnPropertyChanged(nameof(EnemyLeft)); OnPropertyChanged(nameof(EnemyTop));
                 OnPropertyChanged(nameof(PlayerLeft)); OnPropertyChanged(nameof(PlayerTop));
 
-                if (PlayerSprite != null) { var (px, pw, ph) = ToRgba(PlayerSprite); _compositor.SetPlayer(px, pw, ph, (int)PlayerLeft, (int)PlayerTop); }
-                if (EnemySprite != null) { var (ex, ew, eh) = ToRgba(EnemySprite); _compositor.SetEnemy(ex, ew, eh, (int)EnemyLeft, (int)EnemyTop); }
+                if (PlayerSprite != null) { (byte[] px, int pw, int ph) = ToRgba(PlayerSprite); _compositor.SetPlayer(px, pw, ph, (int)PlayerLeft, (int)PlayerTop); }
+                if (EnemySprite != null) { (byte[] ex, int ew, int eh) = ToRgba(EnemySprite); _compositor.SetEnemy(ex, ew, eh, (int)EnemyLeft, (int)EnemyTop); }
                 if (IsAnimation && _sceneLoaded && !IsCellPlaying) SceneComposite = _compositor.Render(null);
             }
             catch { /* no ROM / sprite, backdrop just shows the scene without the mons */ }
@@ -1070,9 +1072,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void AddStatic(string asset, int left, int top)
         {
-            var bmp = LoadAsset(asset);
+            Bitmap bmp = LoadAsset(asset);
             if (bmp == null) return;
-            var (rgba, w, h) = ToRgba(bmp);
+            (byte[] rgba, int w, int h) = ToRgba(bmp);
             _compositor.AddStatic(rgba, w, h, left, top);
         }
 
@@ -1082,7 +1084,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public System.Collections.Generic.List<string> BackgroundOptions => _backgroundOptions ??= BuildBackgroundOptions();
         private static System.Collections.Generic.List<string> BuildBackgroundOptions()
         {
-            var l = new System.Collections.Generic.List<string> { "No background" };
+            List<string> l = new System.Collections.Generic.List<string> { "No background" };
             for (int i = 0; i < DSPRE.Avalonia.Data.BattleBgRenderer.BackdropCount; i++) l.Add($"Backdrop #{i}");
             return l;
         }
@@ -1109,7 +1111,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public System.Collections.Generic.List<string> TerrainOptions => _terrainOptions ??= BuildTerrainOptions();
         private static System.Collections.Generic.List<string> BuildTerrainOptions()
         {
-            var l = new System.Collections.Generic.List<string> { "Placeholder platforms" };
+            List<string> l = new System.Collections.Generic.List<string> { "Placeholder platforms" };
             l.AddRange(DSPRE.Avalonia.Data.BattleGroundRenderer.TerrainNames);
             return l;
         }
@@ -1144,7 +1146,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 try
                 {
-                    var (mine, enemy) = (_groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer()).Build(_terrainIndex - 1);
+                    (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) = (_groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer()).Build(_terrainIndex - 1);
                     if (enemy?.Rgba != null) { _compositor.AddStatic(enemy.Rgba, enemy.Width, enemy.Height, enemy.Left, enemy.Top); placed = true; }
                     if (mine?.Rgba != null) { _compositor.AddStatic(mine.Rgba, mine.Width, mine.Height, mine.Left, mine.Top); placed = true; }
                 }
@@ -1208,7 +1210,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             get
             {
-                var n = SpeciesNames;
+                string[] n = SpeciesNames;
                 string s = (_gaugeSpeciesId >= 0 && _gaugeSpeciesId < n.Length) ? n[_gaugeSpeciesId] : "SHUCKLE";
                 return (s ?? "").ToUpperInvariant();
             }
@@ -1242,7 +1244,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 // The name and level go into each bar's own picture, the way a battle writes them.
                 // Games whose letters cannot be read fall back to the plain bar.
-                var r = _groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer();
+                BattleGroundRenderer r = _groundRenderer ??= new DSPRE.Avalonia.Data.BattleGroundRenderer();
                 GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, _gaugeLevel)
                                 ?? GaugeToBitmap(r.BuildGauge(true));
                 GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, _gaugeLevel)
@@ -1262,11 +1264,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (g?.Rgba == null) return null;
             int w = g.Width, h = g.Height;
-            var wb = new WriteableBitmap(new global::Avalonia.PixelSize(w, h), new global::Avalonia.Vector(96, 96),
+            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(w, h), new global::Avalonia.Vector(96, 96),
                                          global::Avalonia.Platform.PixelFormat.Bgra8888, global::Avalonia.Platform.AlphaFormat.Unpremul);
-            var bgra = new byte[w * h * 4];
+            byte[] bgra = new byte[w * h * 4];
             for (int i = 0; i < w * h * 4; i += 4) { bgra[i] = g.Rgba[i + 2]; bgra[i + 1] = g.Rgba[i + 1]; bgra[i + 2] = g.Rgba[i]; bgra[i + 3] = g.Rgba[i + 3]; }
-            using (var fb = wb.Lock())
+            using (ILockedFramebuffer fb = wb.Lock())
             {
                 int rb = fb.RowBytes;
                 if (rb == w * 4) System.Runtime.InteropServices.Marshal.Copy(bgra, 0, fb.Address, bgra.Length);
@@ -1285,7 +1287,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 try
                 {
-                    var img = (_bgRenderer ??= new DSPRE.Avalonia.Data.BattleBgRenderer()).BuildBackdrop(_backgroundIndex - 1);
+                    BattleBgRenderer.BgImage img = (_bgRenderer ??= new DSPRE.Avalonia.Data.BattleBgRenderer()).BuildBackdrop(_backgroundIndex - 1);
                     if (img?.Rgba != null) rgb = BgToBackdrop(img.Rgba, img.Width, img.Height);
                 }
                 catch { rgb = null; }
@@ -1298,7 +1300,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // RGBA w×h (battle BG, usually 256×256) → opaque RGB 256×192 backdrop (top-left crop, black-padded).
         private static byte[] BgToBackdrop(byte[] rgba, int w, int h)
         {
-            var outp = new byte[256 * 192 * 3];
+            byte[] outp = new byte[256 * 192 * 3];
             for (int y = 0; y < 192; y++)
                 for (int x = 0; x < 256; x++)
                 {
@@ -1322,11 +1324,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static (byte[] rgba, int w, int h) ToRgba(Bitmap bmp)
         {
             int w = bmp.PixelSize.Width, h = bmp.PixelSize.Height;
-            var buf = new byte[w * h * 4];
-            var handle = System.Runtime.InteropServices.GCHandle.Alloc(buf, System.Runtime.InteropServices.GCHandleType.Pinned);
+            byte[] buf = new byte[w * h * 4];
+            GCHandle handle = System.Runtime.InteropServices.GCHandle.Alloc(buf, System.Runtime.InteropServices.GCHandleType.Pinned);
             try { bmp.CopyPixels(new global::Avalonia.PixelRect(0, 0, w, h), handle.AddrOfPinnedObject(), buf.Length, w * 4); }
             finally { handle.Free(); }
-            var rgba = new byte[w * h * 4];
+            byte[] rgba = new byte[w * h * 4];
             for (int i = 0; i < w * h; i++)
             {
                 byte b = buf[i * 4], g = buf[i * 4 + 1], r = buf[i * 4 + 2], a = buf[i * 4 + 3];
@@ -1338,10 +1340,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private static byte[] LoadRgb(string name, int w, int h)
         {
-            var bmp = LoadAsset(name);
+            Bitmap bmp = LoadAsset(name);
             if (bmp == null) return null;
-            var (rgba, bw, bh) = ToRgba(bmp);
-            var rgb = new byte[w * h * 3];
+            (byte[] rgba, int bw, int bh) = ToRgba(bmp);
+            byte[] rgb = new byte[w * h * 3];
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
@@ -1361,7 +1363,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _animPlayer = null; ShakeX = ShakeY = 0; BackgroundDarken = 0;
             if (IsAnimation && _fileIndex >= 0)
             {
-                var cmds = BuildCommands();
+                List<WazaSeqCommand> cmds = BuildCommands();
                 LoadCellResourcesForCommands(cmds, _fileIndex);
 
                 int emitters = BattleAnimParticles.Extract(cmds, _version, _attackerIsEnemy).Count;
@@ -1379,7 +1381,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void LoadCellResourcesForCommands(List<WazaSeqCommand> cmds, int moveIdForLogging)
         {
             HasCellAnimation = false;
-            var res = BattleAnimSprites.Extract(cmds, _version);
+            BattleAnimSpriteResources res = BattleAnimSprites.Extract(cmds, _version);
             if (res.HasCellAnimation)
             {
                 bool loaded = _cellRenderer.Load(res.Char, res.Pltt, res.Cell, res.CellAnm);
@@ -1427,7 +1429,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 int id = _metronomeRandom.Next(1, count);
                 if (id == MetronomeMoveId) continue;
-                var bytes = CurrentNarc.Get(id);
+                byte[] bytes = CurrentNarc.Get(id);
                 if (bytes != null && bytes.Length >= 4) return id;
             }
             return -1;
@@ -1439,7 +1441,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (IsCellPlaying) { StopCell(); return; }
             _cellFrameIdx = 0; _cellTick = 0; _cellLoops = 0; _previewFrames = 0;
             // A previous play may have chained into Metronome's move and left its sprites loaded.
-            var cmds = BuildCommands();
+            List<WazaSeqCommand> cmds = BuildCommands();
             LoadCellResourcesForCommands(cmds, _fileIndex);
             if (HasCellAnimation && _cellFrames.Count > 0) CellPreview = _cellFrames[0].Bitmap;
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
@@ -1467,8 +1469,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void StartChainedAnimation(int moveId)
         {
-            var bytes = CurrentNarc.Get(moveId);
-            var cmds = bytes != null ? BattleAnimScript.Parse(bytes, _version) : new List<WazaSeqCommand>();
+            byte[] bytes = CurrentNarc.Get(moveId);
+            List<WazaSeqCommand> cmds = bytes != null ? BattleAnimScript.Parse(bytes, _version) : new List<WazaSeqCommand>();
             LoadCellResourcesForCommands(cmds, moveId);
 
             double aX = _attackerIsEnemy ? _dfX : _atX, aY = _attackerIsEnemy ? _dfY : _atY;
@@ -1655,7 +1657,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             get
             {
                 if (Args.Count == 0) return OpDisplay;
-                var sb = new System.Text.StringBuilder(OpDisplay).Append("  ");
+                StringBuilder sb = new System.Text.StringBuilder(OpDisplay).Append("  ");
                 for (int i = 0; i < Args.Count; i++)
                 {
                     if (i > 0) sb.Append("  ");
@@ -1672,7 +1674,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             set
             {
                 Args.Clear();
-                foreach (var t in (value ?? "").Split(new[] { ',', ' ', '\t' }, System.StringSplitOptions.RemoveEmptyEntries))
+                foreach (string t in (value ?? "").Split(new[] { ',', ' ', '\t' }, System.StringSplitOptions.RemoveEmptyEntries))
                 {
                     string s = t.Trim();
                     int v = s.StartsWith("0x", System.StringComparison.OrdinalIgnoreCase)
@@ -1759,7 +1761,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (options != null)
             {
                 IsEnum = true;
-                foreach (var o in options) { EnumItems.Add($"{o.Label}  ({o.Value})"); _enumValues.Add(o.Value); }
+                foreach (BattleAnimSchema.EnumOption o in options) { EnumItems.Add($"{o.Label}  ({o.Value})"); _enumValues.Add(o.Value); }
                 if (!_enumValues.Contains(value)) { EnumItems.Add($"(raw {value})"); _enumValues.Add(value); }   // keep an out-of-table value selectable
             }
         }

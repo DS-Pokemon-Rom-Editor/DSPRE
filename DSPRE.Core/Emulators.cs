@@ -33,7 +33,7 @@ namespace DSPRE
         /// <summary>The preferred emulator and its path, or null when none is set or its file has gone.</summary>
         public static (EmulatorKind Kind, string Path)? Preferred()
         {
-            var settings = SettingsManager.Settings;
+            DspreSettings settings = SettingsManager.Settings;
             if (settings == null || !Enum.TryParse(settings.preferredEmulator, out EmulatorKind kind)) return null;
             string path = PathFor(kind);
             return Exists(path) ? (kind, path) : null;
@@ -41,14 +41,14 @@ namespace DSPRE
 
         public static string PathFor(EmulatorKind kind)
         {
-            var paths = SettingsManager.Settings?.emulatorPaths;
+            Dictionary<string, string> paths = SettingsManager.Settings?.emulatorPaths;
             return paths != null && paths.TryGetValue(kind.ToString(), out string path) ? path : null;
         }
 
         /// <summary>Remembers where an emulator is, and optionally makes it the one Build and Run uses without asking.</summary>
         public static void Remember(EmulatorKind kind, string path, bool preferred)
         {
-            var settings = SettingsManager.Settings;
+            DspreSettings settings = SettingsManager.Settings;
             if (settings == null) return;
             settings.emulatorPaths ??= new Dictionary<string, string>();
             settings.emulatorPaths[kind.ToString()] = path;

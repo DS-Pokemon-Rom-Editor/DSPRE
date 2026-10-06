@@ -6,6 +6,7 @@ using DSPRE.Editors;
 using DSPRE.Avalonia.ViewModels;
 using DSPRE.Resources;
 using static DSPRE.RomInfo;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.World
 {
@@ -98,7 +99,7 @@ namespace DSPRE.Avalonia.Views.World
 
         public IEnumerable<(string EditorName, IEditorWithUnsavedChanges Editor)> GetEmbeddedEditors()
         {
-            var editors = new List<(string, IEditorWithUnsavedChanges)>();
+            List<(string, IEditorWithUnsavedChanges)> editors = new List<(string, IEditorWithUnsavedChanges)>();
             void Add(string name, IEditorWithUnsavedChanges editor)
             {
                 if (editor != null) editors.Add((name, editor));
@@ -128,9 +129,9 @@ namespace DSPRE.Avalonia.Views.World
         public async System.Threading.Tasks.Task EnsureSetupAsync()
         {
             if (Design.IsDesignMode) return;
-            var vm = VM;
+            HeaderEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            Window owner = TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
             // Tabs must unpack this ROM's archives before loading a new header, so header changes wait for setup.
             _settingUp = true;
@@ -152,7 +153,7 @@ namespace DSPRE.Avalonia.Views.World
                 vm.LinkedEditsWouldMove = id => TabsLeavingEdits(id).GetEnumerator().MoveNext();
                 vm.ConfirmLinkedTabsAsync = async id =>
                 {
-                    foreach (var (editor, what) in TabsLeavingEdits(id))
+                    foreach ((IEditorWithUnsavedChanges editor, string what) in TabsLeavingEdits(id))
                         if (!await RecordSwitchGuard.ConfirmLeaveAsync(editor, owner, what)) return false;
                     return true;
                 };
@@ -286,7 +287,7 @@ namespace DSPRE.Avalonia.Views.World
         /// <summary>Tabs holding unsaved edits to a file other than the one header <paramref name="id"/> links.</summary>
         private IEnumerable<(IEditorWithUnsavedChanges editor, string what)> TabsLeavingEdits(ushort id)
         {
-            var h = DSPRE.ROMFiles.MapHeader.GetMapHeader(id);
+            MapHeader h = DSPRE.ROMFiles.MapHeader.GetMapHeader(id);
             if (h == null) yield break;
             if (EventVM.HasUnsavedChanges && EventVM.SelectedEventIndex != h.eventFileID) yield return (EventVM, "event file");
             if (MatrixVM.HasUnsavedChanges && MatrixVM.SelectedMatrixIndex != h.matrixID) yield return (MatrixVM, "matrix");
@@ -308,7 +309,7 @@ namespace DSPRE.Avalonia.Views.World
         /// <summary>Point the embedded Event editor at the current header's event file (live if it's already loaded).</summary>
         private void RetargetEvents()
         {
-            var vm = VM; if (vm == null) return;
+            HeaderEditorViewModel vm = VM; if (vm == null) return;
             int id = (int)vm.EventFileId;
             EventVM.InitialIndex = id;                 // used when the Events tab first sets up
             if (EventVM.EventNames.Count > 0)          // already set up → retarget in place
@@ -317,7 +318,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private void RetargetMatrix()
         {
-            var vm = VM; if (vm == null) return;
+            HeaderEditorViewModel vm = VM; if (vm == null) return;
             int id = (int)vm.MatrixId;
             MatrixVM.InitialIndex = id;
             if (MatrixVM.MatrixNames.Count > 0) MatrixVM.SelectedMatrixIndex = id;
@@ -325,7 +326,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private void RetargetAreaData()
         {
-            var vm = VM; if (vm == null) return;
+            HeaderEditorViewModel vm = VM; if (vm == null) return;
             int id = (int)vm.AreaDataId;
             AreaDataVM.InitialIndex = id;
             if (AreaDataVM.AreaNames.Count > 0) AreaDataVM.SelectedIndex = id;
@@ -333,7 +334,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private void RetargetScripts()
         {
-            var vm = VM; if (vm == null) return;
+            HeaderEditorViewModel vm = VM; if (vm == null) return;
             int id = (int)vm.ScriptFileId;
             ScriptsVM.InitialIndex = id;
             if (ScriptsVM.ScriptNames.Count > 0) ScriptsVM.SelectScriptFile(id);
@@ -341,7 +342,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private void RetargetLevelScripts()
         {
-            var vm = VM; if (vm == null) return;
+            HeaderEditorViewModel vm = VM; if (vm == null) return;
             int id = (int)vm.LevelScriptId;
             LevelScriptsVM.InitialIndex = id;
             if (LevelScriptsVM.ScriptNames.Count > 0) LevelScriptsVM.SelectedScriptIndex = id;
@@ -350,7 +351,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private void RetargetText()
         {
-            var vm = VM; if (vm == null) return;
+            HeaderEditorViewModel vm = VM; if (vm == null) return;
             int id = (int)vm.TextArchiveId;
             TextVM.InitialIndex = id;
             if (TextVM.ArchiveNames.Count > 0) TextVM.SelectedArchiveIndex = id;
@@ -389,7 +390,7 @@ namespace DSPRE.Avalonia.Views.World
 
                 if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
                 {
-                    var evm = new WildEditorDPPtViewModel(path, names, initial, headerCount);
+                    WildEditorDPPtViewModel evm = new WildEditorDPPtViewModel(path, names, initial, headerCount);
                     _encountersVm = evm;
                     _encountersView = new WildEditorDPPtView(evm);
                     EncountersTab.Content = _encountersView;
@@ -397,7 +398,7 @@ namespace DSPRE.Avalonia.Views.World
                 }
                 else
                 {
-                    var evm = new WildEditorHGSSViewModel(path, names, initial, headerCount);
+                    WildEditorHGSSViewModel evm = new WildEditorHGSSViewModel(path, names, initial, headerCount);
                     _encountersVm = evm;
                     _encountersView = new WildEditorHGSSView(evm);
                     EncountersTab.Content = _encountersView;
@@ -431,7 +432,7 @@ namespace DSPRE.Avalonia.Views.World
         private void RetargetEncounters()
         {
             if (!_encountersEmbedded) { EnsureEncountersEmbedded(); return; }
-            var vm = VM;
+            HeaderEditorViewModel vm = VM;
             ShowEncountersFor(vm != null && vm.CanOpenEncounters);
             if (vm == null || !vm.CanOpenEncounters) return;
             int id = (int)vm.WildPokemon;
@@ -445,7 +446,7 @@ namespace DSPRE.Avalonia.Views.World
         /// <summary>Opens the current tab's full editor, offering to save tab edits first since it reads from disk.</summary>
         private async void PopOut_Click(object sender, RoutedEventArgs e)
         {
-            var vm = VM;
+            HeaderEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
             string tab = (MapTabs.SelectedItem as TabItem) is TabItem t ? global::Avalonia.Automation.AutomationProperties.GetName(t) : null;
 

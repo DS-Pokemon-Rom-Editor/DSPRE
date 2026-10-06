@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -23,7 +24,7 @@ namespace DSPRE.Avalonia.Data
     {
         public static List<WazaSeqCommand> Parse(byte[] data, WazaSeqVersion version)
         {
-            var cmds = new List<WazaSeqCommand>();
+            List<WazaSeqCommand> cmds = new List<WazaSeqCommand>();
             if (data == null) return cmds;
             int words = data.Length / 4;
             int pos = 0;
@@ -34,7 +35,7 @@ namespace DSPRE.Avalonia.Data
                 int n = WazaSeqOpcodes.ArgCount(version, op, i => at + 1 + i < words ? BitConverter.ToInt32(data, (at + 1 + i) * 4) : 0);
                 if (n < 0) break;
                 if (pos + 1 + n > words) break;
-                var args = new int[n];
+                int[] args = new int[n];
                 for (int i = 0; i < n; i++) args[i] = BitConverter.ToInt32(data, (pos + 1 + i) * 4);
                 cmds.Add(new WazaSeqCommand(op, args) { WordPos = pos });
                 pos += 1 + n;
@@ -53,7 +54,7 @@ namespace DSPRE.Avalonia.Data
             byte[] tail = data.Length % 4 == 0 ? null : data[(words * 4)..];
             if (pos < words)
             {
-                var rest = new int[words - pos - 1];
+                int[] rest = new int[words - pos - 1];
                 for (int i = 0; i < rest.Length; i++) rest[i] = BitConverter.ToInt32(data, (pos + 1 + i) * 4);
                 cmds.Add(new WazaSeqCommand(BitConverter.ToInt32(data, pos * 4), rest) { WordPos = pos, Raw = true, Tail = tail });
             }
@@ -66,13 +67,13 @@ namespace DSPRE.Avalonia.Data
 
         public static byte[] Serialize(IReadOnlyList<WazaSeqCommand> cmds)
         {
-            using var ms = new System.IO.MemoryStream();
-            foreach (var c in cmds)
+            using MemoryStream ms = new System.IO.MemoryStream();
+            foreach (WazaSeqCommand c in cmds)
             {
                 if (!c.OnlyTail)
                 {
                     ms.Write(BitConverter.GetBytes(c.OpId));
-                    foreach (var a in c.Args) ms.Write(BitConverter.GetBytes(a));
+                    foreach (int a in c.Args) ms.Write(BitConverter.GetBytes(a));
                 }
                 if (c.Tail != null) ms.Write(c.Tail);
             }

@@ -85,13 +85,13 @@ namespace DSPRE.Avalonia.Data
         };
 
         /// <summary>Friendly argument names for an opcode (empty array if it takes no args / has no labels).</summary>
-        public static string[] ArgNames(PokemonAnimOp op) => ArgNamesTable.TryGetValue(op, out var n) ? n : Array.Empty<string>();
+        public static string[] ArgNames(PokemonAnimOp op) => ArgNamesTable.TryGetValue(op, out string[] n) ? n : Array.Empty<string>();
 
         /// <summary>Parses a script blob into commands. Tolerant: stops at End, or when a word isn't a known
         /// opcode / the args would run past the end (returns what parsed so far).</summary>
         public static List<PokemonAnimCommand> Parse(byte[] data)
         {
-            var cmds = new List<PokemonAnimCommand>();
+            List<PokemonAnimCommand> cmds = new List<PokemonAnimCommand>();
             if (data == null) return cmds;
             int pos = 0;
             int Words() => data.Length / 4;
@@ -100,10 +100,10 @@ namespace DSPRE.Avalonia.Data
             {
                 int opVal = ReadWord(pos);
                 if (opVal < 0 || opVal >= ArgCount.Length) break;   // not a valid opcode → stop
-                var op = (PokemonAnimOp)opVal;
+                PokemonAnimOp op = (PokemonAnimOp)opVal;
                 int n = ArgCount[opVal];
                 if (pos + 1 + n > Words()) break;                   // args would overrun → stop
-                var args = new int[n];
+                int[] args = new int[n];
                 for (int i = 0; i < n; i++) args[i] = ReadWord(pos + 1 + i);
                 cmds.Add(new PokemonAnimCommand(op, args));
                 pos += 1 + n;
@@ -116,14 +116,14 @@ namespace DSPRE.Avalonia.Data
         public static byte[] Serialize(IReadOnlyList<PokemonAnimCommand> cmds)
         {
             int words = 0;
-            foreach (var c in cmds) words += 1 + c.Args.Length;
-            var data = new byte[words * 4];
+            foreach (PokemonAnimCommand c in cmds) words += 1 + c.Args.Length;
+            byte[] data = new byte[words * 4];
             int pos = 0;
             void Write(int v) { BitConverter.GetBytes(v).CopyTo(data, pos * 4); pos++; }
-            foreach (var c in cmds)
+            foreach (PokemonAnimCommand c in cmds)
             {
                 Write((int)c.Op);
-                foreach (var a in c.Args) Write(a);
+                foreach (int a in c.Args) Write(a);
             }
             return data;
         }

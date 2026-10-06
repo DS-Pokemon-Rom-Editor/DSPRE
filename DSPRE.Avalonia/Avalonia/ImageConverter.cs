@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Platform;
 using Avalonia.Media.Imaging;
 using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;
+using System.IO;
 
 namespace DSPRE.Avalonia
 {
@@ -21,7 +22,7 @@ namespace DSPRE.Avalonia
         {
             if (rgba == null || width <= 0 || height <= 0) return null;
             int n = width * height;
-            var bgra = new byte[n * 4];
+            byte[] bgra = new byte[n * 4];
             for (int i = 0; i < n && i * 4 + 3 < rgba.Length; i++)
             {
                 bgra[i * 4] = rgba[i * 4 + 2];
@@ -36,13 +37,13 @@ namespace DSPRE.Avalonia
         {
             if (img == null || img.IsEmpty) return null;
 
-            var wb = new WriteableBitmap(
+            WriteableBitmap wb = new WriteableBitmap(
                 new PixelSize(img.Width, img.Height),
                 new Vector(96, 96),
                 PixelFormat.Bgra8888,
                 AlphaFormat.Unpremul);
 
-            using (var fb = wb.Lock())
+            using (ILockedFramebuffer fb = wb.Lock())
             {
                 int srcStride = img.Stride;
                 if (fb.RowBytes == srcStride)
@@ -67,8 +68,8 @@ namespace DSPRE.Avalonia
         /// </summary>
         public static AvaloniaBitmap LoadHgeIconFirstFrame(string pngPath)
         {
-            using var fs = System.IO.File.OpenRead(pngPath);
-            var raw = DecodeRawImage(fs);
+            using FileStream fs = System.IO.File.OpenRead(pngPath);
+            RawImage raw = DecodeRawImage(fs);
             if (raw == null) return null;
 
             int frameHeight = raw.Width;
@@ -91,8 +92,8 @@ namespace DSPRE.Avalonia
         /// Width×Width, color-keyed, no real alpha) and returns every frame instead of just the first.</summary>
         public static AvaloniaBitmap[] LoadHgeOverworldFrames(string pngPath)
         {
-            using var fs = System.IO.File.OpenRead(pngPath);
-            var raw = DecodeRawImage(fs);
+            using FileStream fs = System.IO.File.OpenRead(pngPath);
+            RawImage raw = DecodeRawImage(fs);
             if (raw == null || raw.Width <= 0) return Array.Empty<AvaloniaBitmap>();
 
             int frameSize = raw.Width;
@@ -104,10 +105,10 @@ namespace DSPRE.Avalonia
 
             int count = raw.Height / frameSize;
             int frameBytes = raw.Stride * frameSize;
-            var frames = new AvaloniaBitmap[count];
+            AvaloniaBitmap[] frames = new AvaloniaBitmap[count];
             for (int i = 0; i < count; i++)
             {
-                var frame = new DSPRE.RawImage(frameSize, frameSize);
+                RawImage frame = new DSPRE.RawImage(frameSize, frameSize);
                 Array.Copy(raw.Bgra, i * frameBytes, frame.Bgra, 0, frameBytes);
                 ApplyCornerColorKeyTransparency(frame);
                 frames[i] = ToAvaloniaBitmap(frame);
@@ -133,10 +134,10 @@ namespace DSPRE.Avalonia
         /// </summary>
         public static DSPRE.RawImage DecodeRawImage(System.IO.Stream stream)
         {
-            using var wb = WriteableBitmap.Decode(stream);
+            using WriteableBitmap wb = WriteableBitmap.Decode(stream);
             using ILockedFramebuffer fb = wb.Lock();
             int w = fb.Size.Width, h = fb.Size.Height;
-            var raw = new DSPRE.RawImage(w, h);
+            RawImage raw = new DSPRE.RawImage(w, h);
             int stride = raw.Stride;
             for (int y = 0; y < h; y++)
                 Marshal.Copy(fb.Address + y * fb.RowBytes, raw.Bgra, y * stride, stride);

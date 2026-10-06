@@ -668,17 +668,17 @@ namespace NSMBe4.NSBMD
         /// (BGRA), keeping the <see cref="Color"/>-based palette math (System.Drawing.Primitives is cross-platform).
         /// </summary>
         public (DSPRE.RawImage bmp, int ctrlCode) GetRawImage(int imageIndex, int palIndex) {
-            var tinfo = this.texInfo.infoBlock.tInfoArr[imageIndex];
+            TexInfo_Master.Info.TexInfo tinfo = this.texInfo.infoBlock.tInfoArr[imageIndex];
 
             if (tinfo.format == TextureFormat.TEXEL_4X4) {
-                var raw4 = new DSPRE.RawImage(tinfo.width, tinfo.height);
+                RawImage raw4 = new DSPRE.RawImage(tinfo.width, tinfo.height);
                 Convert4x4TexelRaw(tinfo.Image, tinfo.width, tinfo.height, tinfo.spData, this.palInfo.infoBlock.pInfoArr[palIndex].pal, raw4);
                 return (raw4, 0);
             }
 
             int ctrlCode = 0;
             int W = tinfo.width, H = tinfo.height;
-            var raw = new DSPRE.RawImage(W, H);
+            RawImage raw = new DSPRE.RawImage(W, H);
             int pixelnum = W * H;
             PalInfo[] pinfoArr = this.palInfo.infoBlock.pInfoArr;
 
@@ -1025,12 +1025,12 @@ namespace NSMBe4.NSBMD
         }
         public void convert_4x4texel_b(byte[] tex, int width, int height, byte[] data, Color[] pal, ImageTexeler.LockBitmap rgbaOut)
         {
-            var list1 = new List<uint>();
+            List<uint> list1 = new List<uint>();
             for (int i = 0; i < (tex.Length + 1) / 4; ++i) {
                 list1.Add(LibNDSFormats.Utils.Read4BytesAsUInt32(tex, i * 4));
             }
 
-            var list2 = new List<ushort>();
+            List<ushort> list2 = new List<ushort>();
             for (int i = 0; i < (data.Length + 1) / 2; ++i) {
                 list2.Add(LibNDSFormats.Utils.Read2BytesAsushort(data, i * 2));
             }
@@ -1066,7 +1066,7 @@ namespace NSMBe4.NSBMD
 
             public int GetHashCode(HashSet<(byte f1, byte f2)> obj) {
                 int ret = 0;
-                foreach(var key in obj) {
+                foreach((byte f1, byte f2) key in obj) {
                     ret += key.GetHashCode();
                 }
                 return ret;

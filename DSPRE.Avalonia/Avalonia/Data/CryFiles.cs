@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.Data
             int frames = dataLen / (bytesPerSample * channels);
             if (frames <= 0) { problem = "That WAV has no sound in it."; return null; }
 
-            var pcm = new short[frames];
+            short[] pcm = new short[frames];
             for (int i = 0; i < frames; i++)
             {
                 int sum = 0;
@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia.Data
             pcm = pcm ?? Array.Empty<short>();
             if (sampleRate <= 0) sampleRate = 8000;
             int dataLen = pcm.Length * 2;
-            var o = new byte[44 + dataLen];
+            byte[] o = new byte[44 + dataLen];
 
             void Ascii(int at, string s) { for (int i = 0; i < 4; i++) o[at + i] = (byte)s[i]; }
             void U32(int at, int v) { o[at] = (byte)v; o[at + 1] = (byte)(v >> 8); o[at + 2] = (byte)(v >> 16); o[at + 3] = (byte)(v >> 24); }
@@ -106,13 +106,13 @@ namespace DSPRE.Avalonia.Data
             int tableAt = header + blockHeader + reserved + 4;
             int firstWaveAt = tableAt + count * 4;
 
-            var waves = new List<byte[]>(count);
+            List<byte[]> waves = new List<byte[]>(count);
             for (int i = 0; i < count; i++) waves.Add(BuildWave(samples[i], squeeze));
 
             int total = firstWaveAt;
-            foreach (var w in waves) total += w.Length;
+            foreach (byte[] w in waves) total += w.Length;
 
-            var o = new byte[total];
+            byte[] o = new byte[total];
             void Ascii(int at, string s) { for (int i = 0; i < s.Length; i++) o[at + i] = (byte)s[i]; }
             void U32(int at, int v) { o[at] = (byte)v; o[at + 1] = (byte)(v >> 8); o[at + 2] = (byte)(v >> 16); o[at + 3] = (byte)(v >> 24); }
             void U16(int at, int v) { o[at] = (byte)v; o[at + 1] = (byte)(v >> 8); }
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.Data
             // A sample that came out of the ROM and was not replaced goes back exactly as it was.
             if (s?.Raw != null && s.Raw.Length >= 12) return s.Raw;
 
-            var pcm = s?.Pcm ?? Array.Empty<short>();
+            short[] pcm = s?.Pcm ?? Array.Empty<short>();
             int rate = s == null || s.SampleRate <= 0 ? 8000 : Math.Min(s.SampleRate, 65535);
             bool loop = s != null && s.Loop;
 
@@ -179,7 +179,7 @@ namespace DSPRE.Avalonia.Data
                 loopWords = loop ? Math.Clamp(s.LoopStartSample / 4, 0, words) : 0;
             }
 
-            var o = new byte[12 + body.Length];
+            byte[] o = new byte[12 + body.Length];
             void U32(int at, int v) { o[at] = (byte)v; o[at + 1] = (byte)(v >> 8); o[at + 2] = (byte)(v >> 16); o[at + 3] = (byte)(v >> 24); }
             void U16(int at, int v) { o[at] = (byte)v; o[at + 1] = (byte)(v >> 8); }
 
@@ -228,7 +228,7 @@ namespace DSPRE.Avalonia.Data
             // Everything is counted in four-byte words, so round the whole thing up to one.
             int total = 4 + bodyBytes;
             total = (total + 3) & ~3;
-            var o = new byte[total];
+            byte[] o = new byte[total];
 
             o[0] = (byte)predictor; o[1] = (byte)(predictor >> 8);
             o[2] = (byte)stepIndex; o[3] = 0;

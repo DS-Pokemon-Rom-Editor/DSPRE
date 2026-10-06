@@ -20,10 +20,10 @@ namespace DSPRE.ROMFiles
 
             (int x, int z)? best = null;
             double bestD = withinPixels * withinPixels;
-            foreach (var (x, z) in map.Tiles)
+            foreach ((int x, int z) in map.Tiles)
             {
-                var foot = tileToWorld(x, z);
-                var at = project(foot.x, foot.y, foot.z);
+                (float x, float y, float z) foot = tileToWorld(x, z);
+                (float sx, float sy)? at = project(foot.x, foot.y, foot.z);
                 if (at == null) continue;
                 double dx = px - at.Value.sx, dy = py - at.Value.sy;
                 double d = dx * dx + dy * dy;
@@ -55,16 +55,16 @@ namespace DSPRE.ROMFiles
                                          Func<float, float, float, (float sx, float sy)?> project,
                                          double bucketPixels = 48)
             {
-                var p = new Prepared(bucketPixels);
+                Prepared p = new Prepared(bucketPixels);
                 if (map == null || map.IsEmpty || tileToWorld == null || project == null) return p;
 
-                foreach (var (x, z) in map.Tiles)
+                foreach ((int x, int z) in map.Tiles)
                 {
-                    var foot = tileToWorld(x, z);
-                    var at = project(foot.x, foot.y, foot.z);
+                    (float x, float y, float z) foot = tileToWorld(x, z);
+                    (float sx, float sy)? at = project(foot.x, foot.y, foot.z);
                     if (at == null) continue;                      // behind the camera
-                    var key = ((int)Math.Floor(at.Value.sx / p._bucket), (int)Math.Floor(at.Value.sy / p._bucket));
-                    if (!p._buckets.TryGetValue(key, out var list))
+                    (int, int) key = ((int)Math.Floor(at.Value.sx / p._bucket), (int)Math.Floor(at.Value.sy / p._bucket));
+                    if (!p._buckets.TryGetValue(key, out List<(int x, int z, float sx, float sy)> list))
                         p._buckets[key] = list = new List<(int, int, float, float)>();
                     list.Add((x, z, at.Value.sx, at.Value.sy));
                     p.TileCount++;
@@ -87,8 +87,8 @@ namespace DSPRE.ROMFiles
                 for (int dy = -reach; dy <= reach; dy++)
                     for (int dx = -reach; dx <= reach; dx++)
                     {
-                        if (!_buckets.TryGetValue((cx + dx, cy + dy), out var list)) continue;
-                        foreach (var (x, z, sx, sy) in list)
+                        if (!_buckets.TryGetValue((cx + dx, cy + dy), out List<(int x, int z, float sx, float sy)> list)) continue;
+                        foreach ((int x, int z, float sx, float sy) in list)
                         {
                             double ddx = px - sx, ddy = py - sy;
                             double d = ddx * ddx + ddy * ddy;
@@ -135,10 +135,10 @@ namespace DSPRE.ROMFiles
             cellX = cellY = col = row = -1;
             if (cells == null || cells.Count == 0 || project == null || tilesPerCell <= 0) return false;
 
-            var ranked = new List<(double d, CellQuad cell)>(cells.Count);
+            List<(double d, CellQuad cell)> ranked = new List<(double d, CellQuad cell)>(cells.Count);
             foreach (CellQuad cell in cells)
             {
-                var (ok, sx, sy) = project(cell.OriginX + cell.Width / 2f, cell.OriginZ + cell.Height / 2f);
+                (bool ok, float sx, float sy) = project(cell.OriginX + cell.Width / 2f, cell.OriginZ + cell.Height / 2f);
                 if (!ok) continue;
                 ranked.Add(((sx - px) * (sx - px) + (sy - py) * (sy - py), cell));
             }
@@ -154,13 +154,13 @@ namespace DSPRE.ROMFiles
 
                 // What "close enough" is measured against: one of this cell's tiles as drawn right now.
                 double pitch = 0;
-                var (okA, ax, ay) = project(cell.OriginX + 0.5f * tw, cell.OriginZ + 0.5f * th);
-                var (okB, bx, by) = project(cell.OriginX + 1.5f * tw, cell.OriginZ + 0.5f * th);
+                (bool okA, float ax, float ay) = project(cell.OriginX + 0.5f * tw, cell.OriginZ + 0.5f * th);
+                (bool okB, float bx, float by) = project(cell.OriginX + 1.5f * tw, cell.OriginZ + 0.5f * th);
                 if (okA && okB) pitch = Math.Sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay));
                 for (int r = 0; r < tilesPerCell; r++)
                     for (int c = 0; c < tilesPerCell; c++)
                     {
-                        var (ok, sx, sy) = project(cell.OriginX + (c + 0.5f) * tw, cell.OriginZ + (r + 0.5f) * th);
+                        (bool ok, float sx, float sy) = project(cell.OriginX + (c + 0.5f) * tw, cell.OriginZ + (r + 0.5f) * th);
                         if (!ok) continue;
                         double d = (sx - px) * (sx - px) + (sy - py) * (sy - py);
                         if (d >= best) continue;

@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public StarterCommandDialogViewModel(StarterRotomSource.Match current)
         {
-            foreach (var m in StarterRotomSource.FindAll()) Candidates.Add(new Row { Command = m });
+            foreach (StarterRotomSource.Match m in StarterRotomSource.FindAll()) Candidates.Add(new Row { Command = m });
             if (current != null)
             {
                 SelectedIndex = Candidates.ToList().FindIndex(r => r.Command.Key == current.Key);
@@ -72,7 +72,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Checks the file and script the user typed, and says what is there.</summary>
         public void Verify()
         {
-            var check = StarterRotomSource.Verify(FileId, ContainerName);
+            StarterRotomSource.Check check = StarterRotomSource.Verify(FileId, ContainerName);
             VerdictText = check.Message;
             _verified = check;
         }

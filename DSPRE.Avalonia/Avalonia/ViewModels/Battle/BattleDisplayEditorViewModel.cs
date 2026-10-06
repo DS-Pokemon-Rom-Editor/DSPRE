@@ -1,5 +1,6 @@
 ﻿using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using DSPRE.Avalonia.Data;
 using DSPRE.Avalonia.Gl;
 using DSPRE.HgEngine;
@@ -12,6 +13,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using static DSPRE.RomInfo;
 using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
@@ -97,9 +99,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 FormOptions.Add(new FormOption { Label = "(base form)", SpeciesId = baseId });
                 if (_hgeSpecies != null && _hgeFormTable != null
                     && _hgeSpecies.TryGetNameWithPrefix(baseId, "SPECIES_", out string baseDesignator)
-                    && _hgeFormTable.TryGetValue(baseDesignator, out var slots))
+                    && _hgeFormTable.TryGetValue(baseDesignator, out List<HgEngineFormRegistry.FormSlot> slots))
                 {
-                    foreach (var slot in slots)
+                    foreach (HgEngineFormRegistry.FormSlot slot in slots)
                         if (_hgeSpecies.TryGetValue(slot.SpeciesSymbol, out int formId))
                             FormOptions.Add(new FormOption { Label = FormDisplayName(slot.SpeciesSymbol), SpeciesId = formId });
                 }
@@ -169,10 +171,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             try
             {
-                var ground = _groundRenderer ??= new BattleGroundRenderer();
-                var (mine, enemy) = ground.Build(_arenaTypeIndex);
+                BattleGroundRenderer ground = _groundRenderer ??= new BattleGroundRenderer();
+                (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) = ground.Build(_arenaTypeIndex);
                 int bg = BattleGroundRenderer.BackdropForTerrain(_arenaTypeIndex);
-                var backdropImg = bg >= 0 ? (_bgRenderer ??= new BattleBgRenderer()).BuildBackdrop(bg) : null;
+                BattleBgRenderer.BgImage backdropImg = bg >= 0 ? (_bgRenderer ??= new BattleBgRenderer()).BuildBackdrop(bg) : null;
 
                 bool ok = mine?.Rgba != null && enemy?.Rgba != null && backdropImg?.Rgba != null;
                 if (ok)
@@ -217,7 +219,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             get
             {
-                var names = SafeSpeciesNames();
+                string[] names = SafeSpeciesNames();
                 return (_currentId >= 0 && _currentId < names.Length) ? names[_currentId] : string.Empty;
             }
         }
@@ -236,7 +238,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 // The name and level go into each bar's own picture, the way a battle writes them.
                 // Games whose letters cannot be read fall back to the plain bar.
-                var r = _groundRenderer ??= new BattleGroundRenderer();
+                BattleGroundRenderer r = _groundRenderer ??= new BattleGroundRenderer();
                 GaugePlayerImage = Data.GaugeTextImages.Bar(true, GaugeNameText, 5)
                                 ?? GaugeToBitmap(r.BuildGauge(true));
                 GaugeEnemyImage = Data.GaugeTextImages.Bar(false, GaugeNameText, 5)
@@ -248,7 +250,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(PlayerGaugeImageLeft));
             OnPropertyChanged(nameof(PlayerHealthFillLeft));
             OnPropertyChanged(nameof(GaugeTextBrush));
-            foreach (var n in new[] { nameof(GaugeTextIsReal), nameof(GaugeNameImage), nameof(GaugeLevelImage) })
+            foreach (string n in new[] { nameof(GaugeTextIsReal), nameof(GaugeNameImage), nameof(GaugeLevelImage) })
                 OnPropertyChanged(n);
             RenderMessageBox();
         }
@@ -305,7 +307,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 try
                 {
                     Views.Controls.FieldMessageBoxView.Font ??= FieldFont.LoadTalkFont();
-                    var box = BattleScreenRenderer.BuildMessageBox(0);
+                    BattleScreenRenderer.Piece box = BattleScreenRenderer.BuildMessageBox(0);
                     MessageBoxImage = box.Rgba != null ? DSPRE.Avalonia.ImageConverter.FromRgba(box.Rgba, box.Width, box.Height) : null;
                 }
                 catch { MessageBoxImage = null; }
@@ -326,7 +328,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static byte[] TileBackdropRgba(byte[] rgba, int w, int h, int width)
         {
             int outW = width * 2;
-            var outp = new byte[outW * 192 * 4];
+            byte[] outp = new byte[outW * 192 * 4];
             for (int y = 0; y < 192 && y < h; y++)
                 for (int x = 0; x < outW; x++)
                 {
@@ -343,11 +345,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static Bitmap RgbaToBitmap(byte[] rgba, int w, int h)
         {
             if (rgba == null || w <= 0 || h <= 0) return null;
-            var wb = new WriteableBitmap(new global::Avalonia.PixelSize(w, h), new global::Avalonia.Vector(96, 96),
+            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(w, h), new global::Avalonia.Vector(96, 96),
                                          global::Avalonia.Platform.PixelFormat.Bgra8888, global::Avalonia.Platform.AlphaFormat.Unpremul);
-            var bgra = new byte[w * h * 4];
+            byte[] bgra = new byte[w * h * 4];
             for (int i = 0; i < w * h * 4; i += 4) { bgra[i] = rgba[i + 2]; bgra[i + 1] = rgba[i + 1]; bgra[i + 2] = rgba[i]; bgra[i + 3] = rgba[i + 3]; }
-            using (var fb = wb.Lock())
+            using (ILockedFramebuffer fb = wb.Lock())
             {
                 int rb = fb.RowBytes;
                 if (rb == w * 4) System.Runtime.InteropServices.Marshal.Copy(bgra, 0, fb.Address, bgra.Length);
@@ -382,7 +384,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             bool hasMale = _sprites?.HasSpriteSlot(1) ?? true;
             bool hasFemale = _sprites?.HasSpriteSlot(0) ?? true;
-            var wanted = new System.Collections.Generic.List<string>();
+            List<string> wanted = new System.Collections.Generic.List<string>();
             if (hasMale) wanted.Add("Male");
             if (hasFemale) wanted.Add("Female");
             if (wanted.Count == 0) wanted.Add("Male");
@@ -408,20 +410,20 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static Bitmap Pick(System.Collections.Generic.IReadOnlyList<Bitmap> primary,
                                    System.Collections.Generic.IReadOnlyList<Bitmap> fallback, int frame)
         {
-            var list = (primary != null && primary.Count > 0) ? primary : fallback;
+            IReadOnlyList<Bitmap> list = (primary != null && primary.Count > 0) ? primary : fallback;
             if (list == null || list.Count == 0) return null;
             int i = frame < 0 ? 0 : (frame >= list.Count ? list.Count - 1 : frame);
             return list[i];
         }
         private Bitmap Front(bool female)
         {
-            var s = _sprites; if (s == null) return null;
+            PokemonSpriteEditorViewModel s = _sprites; if (s == null) return null;
             if (_isShiny) return female ? Pick(s.BattleFrontFShiny, s.BattleFrontMShiny, _frontFrame) : Pick(s.BattleFrontMShiny, s.BattleFrontFShiny, _frontFrame);
             return female ? Pick(s.BattleFrontF, s.BattleFrontM, _frontFrame) : Pick(s.BattleFrontM, s.BattleFrontF, _frontFrame);
         }
         private Bitmap Back(bool female)
         {
-            var s = _sprites; if (s == null) return null;
+            PokemonSpriteEditorViewModel s = _sprites; if (s == null) return null;
             if (_isShiny) return female ? Pick(s.BattleBackFShiny, s.BattleBackMShiny, _backFrame) : Pick(s.BattleBackMShiny, s.BattleBackFShiny, _backFrame);
             return female ? Pick(s.BattleBackF, s.BattleBackM, _backFrame) : Pick(s.BattleBackM, s.BattleBackF, _backFrame);
         }
@@ -473,21 +475,21 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // True only when the animation never shows the real frame, so the sprite would be invisible the whole run.
         private bool FrameWarningSevere(bool front, bool female)
         {
-            var cell = PoseCell(front, female);
+            PokemonSpriteEditorViewModel.FrameCellState cell = PoseCell(front, female);
             int blank = BlankFrameIndex(cell);
             if (blank < 0) return false;
             int real = RealFrameIndex(cell);
-            var visited = ActivePatternFrames(front);
+            List<int> visited = ActivePatternFrames(front);
             return visited.Contains(blank) && (real < 0 || !visited.Contains(real));
         }
 
         private string FrameWarningText(bool front, bool female)
         {
-            var cell = PoseCell(front, female);
+            PokemonSpriteEditorViewModel.FrameCellState cell = PoseCell(front, female);
             int blank = BlankFrameIndex(cell);
             if (blank < 0) return null;
             int real = RealFrameIndex(cell);
-            var visited = ActivePatternFrames(front);
+            List<int> visited = ActivePatternFrames(front);
             if (!visited.Contains(blank)) return "only has one real frame";
             if (real >= 0 && visited.Contains(real))
                 return "animation flickers to a blank frame, may be intentional";
@@ -632,7 +634,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     return;
                 }
                 // Single-frame icon: fall back to the game's own OAM-composed render.
-                var gdi = DSPRE.DSUtils.GetPokePicRaw(IconIdFor(_currentId), 64, 64, paletteIdOverride: _partyPaletteIndex);
+                RawImage gdi = DSPRE.DSUtils.GetPokePicRaw(IconIdFor(_currentId), 64, 64, paletteIdOverride: _partyPaletteIndex);
                 IconPreview = gdi != null ? DSPRE.Avalonia.ImageConverter.ToAvaloniaBitmap(gdi) : null;
             }
             catch { IconPreview = null; IconFrameCount = 1; }
@@ -642,7 +644,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             int top = frame * IconFrameSize;
             if (top + IconFrameSize > full.Height) top = 0;
-            var outImg = new RawImage(full.Width, IconFrameSize);
+            RawImage outImg = new RawImage(full.Width, IconFrameSize);
             int rowBytes = full.Width * 4;
             for (int y = 0; y < IconFrameSize; y++)
                 System.Array.Copy(full.Bgra, (top + y) * rowBytes, outImg.Bgra, y * rowBytes, rowBytes);
@@ -674,7 +676,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (!IsAvailable || _currentId < 0 || _pendingIconGraphic != null) return null;
             try
             {
-                if (!DSPRE.DSUtils.TryGetMonIconIndexedPixels(IconIdFor(_currentId), _partyPaletteIndex, out byte[] indices, out int w, out int h, out var palette))
+                if (!DSPRE.DSUtils.TryGetMonIconIndexedPixels(IconIdFor(_currentId), _partyPaletteIndex, out byte[] indices, out int w, out int h, out System.Drawing.Color[] palette))
                     return null;
                 return DSPRE.Avalonia.IndexedPngWriter.Encode4Bpp(indices, w, h, palette);
             }
@@ -731,7 +733,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void EditRecord(Action<SpeciesSpriteData> edit)
         {
-            var rec = ReadRecord();
+            SpeciesSpriteData rec = ReadRecord();
             if (rec == null) return;
             edit(rec);
             _recordNarc.PutRecord(BaseSpeciesIdFor(_currentId), rec.ToBytes());
@@ -820,8 +822,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_sprites == null || !_sprites.TryGetCurrentFormHeightIndices(out int backIdx, out int frontIdx)) return;
             try
             {
-                var b = _formHeightNarc.GetRecord(backIdx);
-                var f = _formHeightNarc.GetRecord(frontIdx);
+                byte[] b = _formHeightNarc.GetRecord(backIdx);
+                byte[] f = _formHeightNarc.GetRecord(frontIdx);
                 if (b == null || f == null || b.Length < 1 || f.Length < 1) return;
                 _formBackH = b[0]; _formFrontH = f[0];
                 OnPropertyChanged(nameof(FormFrontHeight)); OnPropertyChanged(nameof(FormBackHeight));
@@ -881,8 +883,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void LoadAnim(int id)
         {
             HasAnimData = false;
-            foreach (var s in AnimSteps) s.PropertyChanged -= OnAnimStepChanged;
-            foreach (var s in AnimBack) s.PropertyChanged -= OnAnimStepChanged;
+            foreach (AnimPatternStep s in AnimSteps) s.PropertyChanged -= OnAnimStepChanged;
+            foreach (AnimProgStep s in AnimBack) s.PropertyChanged -= OnAnimStepChanged;
             AnimSteps.Clear(); AnimBack.Clear();
             _animFrontCryDelay = _animBackCryDelay = 0;
             OnPropertyChanged(nameof(AnimBackLabel));
@@ -892,7 +894,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (RecordFamily) { LoadAnimFromRecord(); return; }
 
             EnsureAnimNarc();
-            var r = _animNarc?.GetRecord(BaseSpeciesIdFor(id));
+            byte[] r = _animNarc?.GetRecord(BaseSpeciesIdFor(id));
             if (r == null || r.Length < ANIM_REC_LEN) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
             _animFrontProg = r[0]; _animFrontWait = r[1];
             for (int i = 0; i < 3; i++) AddBackStep(r[2 + i * 2], r[3 + i * 2]);
@@ -910,7 +912,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void LoadAnimFromRecord()
         {
-            var rec = ReadRecord();
+            SpeciesSpriteData rec = ReadRecord();
             if (rec == null) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
             _animFrontProg = rec.Front.Animation; _animFrontWait = rec.Front.StartDelay; _animFrontCryDelay = rec.Front.CryDelay;
             AddBackStep(rec.Back.Animation, rec.Back.StartDelay);
@@ -921,14 +923,14 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // AnimSteps stays empty: the frame runs are loaded with the sprite data in LoadSpriteDataFromHgeSource.
         private void LoadAnimFromHgeSource(int id)
         {
-            if (!HgEngineSpriteOffsets.TryLoad(id, out var block, out _)) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
+            if (!HgEngineSpriteOffsets.TryLoad(id, out HgEngineSourceBlock block, out _)) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, out _animFrontProg)) { OnPropertyChanged(nameof(CanAddAnimStep)); return; }
             block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animationDelay") }, out _animFrontWait);
             block.TryGetInt(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("cryDelay") }, out _animFrontCryDelay);
             block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animation") }, out int backProg);
             block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("animationDelay") }, out int backWait);
             block.TryGetInt(new[] { FieldPathSegment.Field("backHeader"), FieldPathSegment.Field("cryDelay") }, out _animBackCryDelay);
-            foreach (var s in AnimBack) s.PropertyChanged -= OnAnimStepChanged;
+            foreach (AnimProgStep s in AnimBack) s.PropertyChanged -= OnAnimStepChanged;
             AnimBack.Clear();
             AddBackStep(backProg, backWait);
             RaiseAnimFields();
@@ -951,7 +953,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (HgEngineProject.IsActive)
             {
-                var fields = new[]
+                HgEngineFieldWrite[] fields = new[]
                 {
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animation") }, _animFrontProg.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("frontHeader"), FieldPathSegment.Field("animationDelay") }, _animFrontWait.ToString()),
@@ -976,7 +978,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (_animNarc == null) return;
             int animId = BaseSpeciesIdFor(_currentId);
-            var r = _animNarc.GetRecord(animId);
+            byte[] r = _animNarc.GetRecord(animId);
             if (r == null || r.Length < ANIM_REC_LEN) return;
             r[0] = (byte)_animFrontProg; r[1] = (byte)_animFrontWait;
             for (int i = 0; i < 3 && i < AnimBack.Count; i++) { r[2 + i * 2] = (byte)AnimBack[i].Number; r[3 + i * 2] = (byte)AnimBack[i].Wait; }
@@ -993,8 +995,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _animNarc.PutRecord(animId, r);
         }
 
-        private void AddBackStep(int num, int wait) { var s = new AnimProgStep { Number = num, Wait = wait }; s.PropertyChanged += OnAnimStepChanged; AnimBack.Add(s); }
-        private void AddPatternStep(int frame, int wait) { var s = new AnimPatternStep { Frame = frame, Wait = wait }; s.PropertyChanged += OnAnimStepChanged; AnimSteps.Add(s); }
+        private void AddBackStep(int num, int wait) { AnimProgStep s = new AnimProgStep { Number = num, Wait = wait }; s.PropertyChanged += OnAnimStepChanged; AnimBack.Add(s); }
+        private void AddPatternStep(int frame, int wait) { AnimPatternStep s = new AnimPatternStep { Frame = frame, Wait = wait }; s.PropertyChanged += OnAnimStepChanged; AnimSteps.Add(s); }
         private void OnAnimStepChanged(object _, PropertyChangedEventArgs __) { if (!_loading) { SetDirty(); RecomputePatternSlots(); } }
 
         public void AddAnimStep()
@@ -1017,7 +1019,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void RecomputePatternSlots()
         {
             if (RecordFamily) return;
-            var slots = AnimSteps.Select(s => new SpriteFrameSlot(s.Frame, s.Wait, 0, 0)).ToList();
+            List<SpriteFrameSlot> slots = AnimSteps.Select(s => new SpriteFrameSlot(s.Frame, s.Wait, 0, 0)).ToList();
             SetFrameSlots(slots, slots);
         }
 
@@ -1029,12 +1031,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void LoadFrameEntries(IEnumerable<SpriteFrameSlot> front, IEnumerable<SpriteFrameSlot> back)
         {
-            foreach (var e in FrontFrameEntries) e.PropertyChanged -= OnFrameEntryChanged;
-            foreach (var e in BackFrameEntries) e.PropertyChanged -= OnFrameEntryChanged;
+            foreach (SpriteFrameEntry e in FrontFrameEntries) e.PropertyChanged -= OnFrameEntryChanged;
+            foreach (SpriteFrameEntry e in BackFrameEntries) e.PropertyChanged -= OnFrameEntryChanged;
             FrontFrameEntries.Clear(); BackFrameEntries.Clear();
 
-            foreach (var slot in front) AddFrameEntry(FrontFrameEntries, slot);
-            foreach (var slot in back) AddFrameEntry(BackFrameEntries, slot);
+            foreach (SpriteFrameSlot slot in front) AddFrameEntry(FrontFrameEntries, slot);
+            foreach (SpriteFrameSlot slot in back) AddFrameEntry(BackFrameEntries, slot);
 
             SetFrameSlots(ToSlotData(FrontFrameEntries), ToSlotData(BackFrameEntries));
             OnPropertyChanged(nameof(HasFrameRuns));
@@ -1042,7 +1044,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void AddFrameEntry(ObservableCollection<SpriteFrameEntry> list, SpriteFrameSlot slot)
         {
-            var e = new SpriteFrameEntry
+            SpriteFrameEntry e = new SpriteFrameEntry
             {
                 FrameNo = slot.FrameNo, Duration = slot.Duration,
                 HorizontalShift = slot.HorizontalShift, VerticalShift = slot.VerticalShift,
@@ -1071,12 +1073,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void SaveFrames()
         {
             if (!RecordFamily || !_hasSpriteData) return;
-            var front = ToSlotData(FrontFrameEntries);
-            var back = ToSlotData(BackFrameEntries);
+            List<SpriteFrameSlot> front = ToSlotData(FrontFrameEntries);
+            List<SpriteFrameSlot> back = ToSlotData(BackFrameEntries);
 
             if (HgEngineProject.IsActive)
             {
-                var fields = new List<HgEngineFieldWrite>();
+                List<HgEngineFieldWrite> fields = new List<HgEngineFieldWrite>();
                 fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("frontFrames", front));
                 fields.AddRange(HgEngineSpriteOffsets.BuildFrameWrites("backFrames", back));
                 WriteSpriteOffsets(fields);
@@ -1095,8 +1097,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private static List<SpriteFrameSlot> ToSlotData(ObservableCollection<SpriteFrameEntry> entries)
         {
-            var slots = new List<SpriteFrameSlot>(entries.Count);
-            foreach (var e in entries)
+            List<SpriteFrameSlot> slots = new List<SpriteFrameSlot>(entries.Count);
+            foreach (SpriteFrameEntry e in entries)
                 slots.Add(new SpriteFrameSlot(e.FrameNo, e.Duration, e.HorizontalShift, e.VerticalShift));
             return slots;
         }
@@ -1159,8 +1161,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private void LoadBallOptions()
         {
             _ballIds.Clear();
-            var names = new List<string>();
-            foreach (var (ball, name) in SendOutGraphics.Balls()) { _ballIds.Add(ball); names.Add(name); }
+            List<string> names = new List<string>();
+            foreach ((int ball, string name) in SendOutGraphics.Balls()) { _ballIds.Add(ball); names.Add(name); }
             ListSync.Apply(BallOptions, names);
             _ballIndex = Math.Max(0, _ballIds.IndexOf(4));   // Poké Ball
             OnPropertyChanged(nameof(BallIndex));
@@ -1261,7 +1263,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void RaiseAdvanced()
         {
-            foreach (var n in new[] { nameof(IsTrainerBattle), nameof(BallMatters), nameof(CanChooseTrainer), nameof(CanChooseIntro),
+            foreach (string n in new[] { nameof(IsTrainerBattle), nameof(BallMatters), nameof(CanChooseTrainer), nameof(CanChooseIntro),
                                       nameof(CanSlideIn), nameof(CanShowPartyBalls), nameof(CanCountPartyBalls) })
                 OnPropertyChanged(n);
         }
@@ -1386,7 +1388,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 }
                 if (_sound && _playMusic)
                 {
-                    var music = await ChooseMusicAsync();
+                    Task<short[]> music = await ChooseMusicAsync();
                     if (music != null && !music.IsCompleted) { SetSendOutLoading(true); await music; }
                 }
             }
@@ -1410,7 +1412,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private async System.Threading.Tasks.Task<System.Threading.Tasks.Task<short[]>> ChooseMusicAsync()
         {
             _gfx ??= new SendOutGraphics();
-            var gfx = _gfx;
+            SendOutGraphics gfx = _gfx;
             int version = ++_musicVersion;
             bool trainer = IsTrainerBattle, kanto = _kantoMusic;
             int trainerClass = Math.Max(0, _trainer.Class), species = _currentId;
@@ -1441,7 +1443,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (!_sound || !_playMusic || _gfx == null) return;
             int seq = _gfx.BattleMusic(IsTrainerBattle, Math.Max(0, _trainer.Class), _currentId, _kantoMusic);
-            var music = seq >= 0 ? _gfx.Music(seq) : null;
+            Task<short[]> music = seq >= 0 ? _gfx.Music(seq) : null;
             if (music != null && music.IsCompletedSuccessfully) _musicHandle = SendOutGraphics.StartMusic(music.Result);
         }
 
@@ -1496,7 +1498,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_trainer.Class < 0) _trainer = SendOutGraphics.TrainerInfo(_trainerIndex >= 0 ? _trainerIndex : SendOutGraphics.DefaultTrainer());
             bool trainer = IsTrainerBattle;
             int trainerClass = Math.Max(0, _trainer.Class);
-            var options = new SendOutOptions
+            SendOutOptions options = new SendOutOptions
             {
                 Kind = (SendOutKind)_sendOutKindIndex,
                 Sides = Sides,
@@ -1519,11 +1521,11 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _enemyBurst = new SpaParticlePreview(256, 192);
             _playerBurst = new SpaParticlePreview(256, 192);
             _enemySparkle = _playerSparkle = null;
-            var balls = _gfx.BallSequences(_sendOutBall);
+            CellSequence[] balls = _gfx.BallSequences(_sendOutBall);
             _enemyBallActor = new CellActor(balls, 1);
             _playerBallActor = new CellActor(balls, 0);
             _enemyBallRolling = _playerBallRolling = false;
-            var rowSeqs = _gfx.PartyRowSequences();
+            CellSequence[] rowSeqs = _gfx.PartyRowSequences();
             for (int i = 0; i < 6; i++) { _enemyRowActors[i] = new CellActor(rowSeqs, 0); _playerRowActors[i] = new CellActor(rowSeqs, 3); }
             if (_sound)
             {
@@ -1552,10 +1554,10 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (Capsule == null || Capsule.IsEmpty) return false;
             _seals ??= BallSeals.Read();
-            foreach (var placed in Capsule.Seals)
+            foreach (BallCapsule.Placed placed in Capsule.Seals)
             {
                 if (placed.Seal <= 0 || placed.Seal >= _seals.Count || _seals[placed.Seal] == null) continue;
-                var seal = _seals[placed.Seal];
+                BallSeal seal = _seals[placed.Seal];
                 _waitingSeals.Add(new WaitingSeal
                 {
                     Ticks = SealEffect.DelayTicks(seal, placed.X, placed.Y), Seal = seal, X = placed.X, Y = placed.Y, Enemy = enemySide,
@@ -1568,7 +1570,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             for (int i = _waitingSeals.Count - 1; i >= 0; i--)
             {
-                var w = _waitingSeals[i];
+                WaitingSeal w = _waitingSeals[i];
                 if (w.Ticks-- > 0) continue;
                 _gfx.AddSeal(w.Enemy ? _enemyBurst : _playerBurst, w.Seal, w.X, w.Y, w.Enemy);
                 _waitingSeals.RemoveAt(i);
@@ -1590,7 +1592,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             StepSparkle(ref _enemySparkle, img => EnemySparkleImage = img);
             StepSparkle(ref _playerSparkle, img => PlayerSparkleImage = img);
 
-            var s = _sendOut;
+            SendOutSequence s = _sendOut;
             s.EnemyBusy = FrontBusy;
             s.PlayerBusy = BackBusy;
             s.EnemyBurstBusy = enemyBursting;
@@ -1626,7 +1628,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private static Bitmap StepBurst(SpaParticlePreview burst)
         {
             if (!burst.HasEmitters || burst.AllFinished) return null;
-            var image = burst.RenderFrame();
+            WriteableBitmap image = burst.RenderFrame();
             burst.Step();
             return image;
         }
@@ -1636,7 +1638,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // On the battler's centre, the way the effect's own emitters are placed.
             double x = enemySide ? EnemyLeft + 40 : PlayerLeft + 40;
             double y = enemySide ? EnemyTop + 40 : PlayerTop + 40;
-            var player = _gfx.Sparkle(enemySide, x, y);
+            BattleAnimPlayer player = _gfx.Sparkle(enemySide, x, y);
             if (player != null) player.PlaySound = id => PlaySound(_gfx.Sound(id));
             return player;
         }
@@ -1656,7 +1658,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void ApplySendOut()
         {
-            var s = _sendOut;
+            SendOutSequence s = _sendOut;
             EnemyShown = s.Enemy.Visible;
             PlayerShown = s.Player.Visible;
             _enemySlideX = s.Enemy.OffsetX;
@@ -1666,7 +1668,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             SetSceneOffsets(s.EnemyPlatformOffsetX, s.PlayerPlatformOffsetX, s.BackdropScrollX,
                 s.EnemyGaugeOffsetX, s.PlayerGaugeOffsetX, s.EnemyGaugeVisible, s.PlayerGaugeVisible);
 
-            var et = s.EnemyTrainer;
+            SendOutSequence.TrainerState et = s.EnemyTrainer;
             ApplyTrainer(EnemyTrainerSprite, et, et.Visible ? _gfx.EnemyTrainer(Math.Max(0, _trainer.Class), et.Sequence, et.SequenceTicks) : null);
             ApplyTrainer(PlayerTrainerSprite, s.PlayerTrainer, s.PlayerTrainer.Visible ? _gfx.PlayerTrainer(s.PlayerTrainer.AnimTicks) : null);
             ApplyBall(EnemyBallSprite, s.EnemyBall, _enemyBallActor, ref _enemyBallRolling);
@@ -1687,7 +1689,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             for (int i = 0; i < 6; i++)
             {
-                var ball = row.Balls[i];
+                SendOutSequence.RowBall ball = row.Balls[i];
                 if (actors[i].Seq != ball.Sequence) actors[i].SetSeq(ball.Sequence);
                 else if (ball.Animating) { actors[i].Tick(); actors[i].Tick(); }
                 else if (actors[i].FrameIndex != 0) actors[i].SetSeq(ball.Sequence);
@@ -1766,8 +1768,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private PokeAnimPlayer LoadProgram(int fileIndex, int startDelay)
         {
-            var bytes = _animDefsNarc?.GetRecord(fileIndex);
-            var script = bytes != null ? PokeAnimScript.Parse(bytes) : null;
+            byte[] bytes = _animDefsNarc?.GetRecord(fileIndex);
+            List<PokemonAnimCommand> script = bytes != null ? PokeAnimScript.Parse(bytes) : null;
             return (script != null && script.Count > 0) ? new PokeAnimPlayer(script, startDelay) : null;
         }
 
@@ -1780,7 +1782,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _prog = null; _progBack = null;
             _frontFrames.Stop();
             _backFrames.Stop();
-            var was = _mode;
+            PreviewMode was = _mode;
             _mode = PreviewMode.None;
             ResetScene();
             PushFrames();
@@ -1845,7 +1847,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void PushTransforms()
         {
-            var f = _prog;
+            PokeAnimPlayer f = _prog;
             AnimOffsetX = f?.OffsetX ?? 0; AnimOffsetY = f?.OffsetY ?? 0;
             AnimScaleX = f?.ScaleX ?? 1; AnimScaleY = f?.ScaleY ?? 1;
             AnimRotation = f?.RotationDegrees ?? 0;
@@ -1859,7 +1861,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (f != null && f.FadeStrength > 0) AnimFadeBrush = new SolidColorBrush(Color.FromRgb(f.FadeR, f.FadeG, f.FadeB));
             }
 
-            var b = _progBack;
+            PokeAnimPlayer b = _progBack;
             AnimBackOffsetX = b?.OffsetX ?? 0; AnimBackOffsetY = b?.OffsetY ?? 0;
             AnimBackScaleX = b?.ScaleX ?? 1; AnimBackScaleY = b?.ScaleY ?? 1;
             AnimBackRotation = b?.RotationDegrees ?? 0;
@@ -1956,15 +1958,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void RefreshProgramScript()
         {
-            foreach (var r in ProgramRows) r.PropertyChanged -= OnProgramRowChanged;
+            foreach (ProgramCmdRow r in ProgramRows) r.PropertyChanged -= OnProgramRowChanged;
             ProgramRows.Clear();
             int file = CurrentScriptFile();
             if (IsAvailable && file >= 0)
             {
                 EnsureAnimDefsNarc();
-                var bytes = _animDefsNarc?.GetRecord(file);
-                var cmds = bytes != null ? PokeAnimScript.Parse(bytes) : null;
-                if (cmds != null) foreach (var c in cmds) AddProgramRow(c.Op, c.Args);
+                byte[] bytes = _animDefsNarc?.GetRecord(file);
+                List<PokemonAnimCommand> cmds = bytes != null ? PokeAnimScript.Parse(bytes) : null;
+                if (cmds != null) foreach (PokemonAnimCommand c in cmds) AddProgramRow(c.Op, c.Args);
             }
             ScriptDirty = false;
             OnPropertyChanged(nameof(HasProgramScript)); OnPropertyChanged(nameof(ProgramScriptHeader));
@@ -1972,7 +1974,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void AddProgramRow(PokemonAnimOp op, int[] args)
         {
-            var row = new ProgramCmdRow { Op = op, ArgsText = string.Join(", ", args) };
+            ProgramCmdRow row = new ProgramCmdRow { Op = op, ArgsText = string.Join(", ", args) };
             row.PropertyChanged += OnProgramRowChanged;
             ProgramRows.Add(row);
         }
@@ -2008,12 +2010,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (_animDefsNarc == null)
                 return new List<PokemonAnimCommand>();   // return empty list
 
-            var cmds = new List<PokemonAnimCommand>();
-            foreach (var row in ProgramRows)
+            List<PokemonAnimCommand> cmds = new List<PokemonAnimCommand>();
+            foreach (ProgramCmdRow row in ProgramRows)
             {
                 int n = PokeAnimScript.ArgsFor(row.Op);
-                var parsed = ParseIntList(row.ArgsText);
-                var args = new int[n];
+                List<int> parsed = ParseIntList(row.ArgsText);
+                int[] args = new int[n];
                 for (int i = 0; i < n; i++)
                     args[i] = i < parsed.Count ? parsed[i] : 0;
 
@@ -2033,9 +2035,9 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private static List<int> ParseIntList(string s)
         {
-            var list = new List<int>();
+            List<int> list = new List<int>();
             if (string.IsNullOrWhiteSpace(s)) return list;
-            foreach (var p in s.Split(new[] { ',', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            foreach (string p in s.Split(new[] { ',', ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string t = p.Trim();
                 bool ok = t.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
@@ -2060,7 +2062,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 if (!_src.TryLoad(BaseSpeciesIdFor(id), out BattleOffsetRecord rec)) return;
                 if (RecordFamily)
                 {
-                    var record = ReadRecord();
+                    SpeciesSpriteData record = ReadRecord();
                     if (record == null) return;
                     LoadFrameEntries(record.Front.Frames, record.Back.Frames);
                 }
@@ -2078,7 +2080,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         // Heights come from data/HeightTable.c, a separate file from the sprite-offset block above.
         private void LoadSpriteDataFromHgeSource(int id)
         {
-            if (!HgEngineSpriteOffsets.TryLoad(id, out var block, out _)) return;
+            if (!HgEngineSpriteOffsets.TryLoad(id, out HgEngineSourceBlock block, out _)) return;
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("spriteYOffset") }, out int spriteY)) return;
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("shadowXOffset") }, out int shadowX)) return;
             if (!block.TryGetInt(new[] { FieldPathSegment.Field("shadowSize") }, out int shadowSize)) return;
@@ -2113,7 +2115,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 // frontHeader.animation is NOT written here: SaveAnim() is its sole writer (see AnimFrontProgNum).
                 // Writing it from both places raced, whichever ran second clobbered the other.
-                var fields = new[]
+                HgEngineFieldWrite[] fields = new[]
                 {
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("spriteYOffset") }, _spriteY.ToString()),
                     new HgEngineFieldWrite(new[] { FieldPathSegment.Field("shadowXOffset") }, _shadowX.ToString()),
@@ -2126,7 +2128,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             }
 
             if (_src == null) return;
-            var rec = new BattleOffsetRecord
+            BattleOffsetRecord rec = new BattleOffsetRecord
             {
                 FrontY = _spriteY,
                 ShadowX = _shadowX,
@@ -2176,8 +2178,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<DisplayState>(state);
-            var v = s.Values;
+            DisplayState s = DSPRE.Avalonia.UndoJson.Read<DisplayState>(state);
+            int[] v = s.Values;
             _loading = true;
             try
             {
@@ -2186,12 +2188,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 FrontHeightM = v[4]; FrontHeightF = v[5]; BackHeightM = v[6]; BackHeightF = v[7];
                 FormFrontHeight = v[8]; FormBackHeight = v[9];
                 AnimFrontProgNum = v[10]; AnimFrontWait = v[11]; AnimFrontCryDelay = v[12]; AnimBackCryDelay = v[13];
-                foreach (var st in AnimBack) st.PropertyChanged -= OnAnimStepChanged;
+                foreach (AnimProgStep st in AnimBack) st.PropertyChanged -= OnAnimStepChanged;
                 AnimBack.Clear();
-                foreach (var b in s.Back) AddBackStep(b[0], b[1]);
-                foreach (var st in AnimSteps) st.PropertyChanged -= OnAnimStepChanged;
+                foreach (int[] b in s.Back) AddBackStep(b[0], b[1]);
+                foreach (AnimPatternStep st in AnimSteps) st.PropertyChanged -= OnAnimStepChanged;
                 AnimSteps.Clear();
-                foreach (var p in s.Pattern) AddPatternStep(p[0], p[1]);
+                foreach (int[] p in s.Pattern) AddPatternStep(p[0], p[1]);
                 OnPropertyChanged(nameof(CanAddAnimStep));
                 if (RecordFamily)
                     LoadFrameEntries(s.Front.Select(f => new SpriteFrameSlot(f[0], f[1], f[2], f[3])), s.BackRuns.Select(f => new SpriteFrameSlot(f[0], f[1], f[2], f[3])));
@@ -2304,7 +2306,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             if (!IsAvailable || _currentId < 0) return;
             int species = _currentId;
-            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(WriteAll);
+            (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(WriteAll);
             if (species != _currentId || (!saved && error == null)) return;
             AfterWrite(saved ? null : error);
         }
@@ -2414,7 +2416,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         {
             get
             {
-                var names = DSPRE.Avalonia.Data.PokeAnimScript.ArgNames(Op);
+                string[] names = DSPRE.Avalonia.Data.PokeAnimScript.ArgNames(Op);
                 if (names.Length > 0) return string.Join(", ", names);
                 int n = DSPRE.Avalonia.Data.PokeAnimScript.ArgsFor(Op);
                 return n == 0 ? "(no args)" : $"{n} arg(s)";

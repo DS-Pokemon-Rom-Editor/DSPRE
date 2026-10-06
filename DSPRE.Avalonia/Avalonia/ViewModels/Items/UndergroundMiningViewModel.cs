@@ -40,8 +40,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _saved = _table.ToBytes();
             StartUndo();
             string[] items = GetItemNames();
-            var seen = new Dictionary<string, int>();
-            foreach (var row in _table.Treasures)
+            Dictionary<string, int> seen = new Dictionary<string, int>();
+            foreach (MiningTable.Row row in _table.Treasures)
             {
                 string name = _table.NameOf(row, items);
                 seen[name] = seen.TryGetValue(name, out int n) ? n + 1 : 1;
@@ -79,9 +79,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
             /// <param name="column">Only that column's share; -1 for every value.</param>
             internal void Refresh(int column = -1)
             {
-                var names = column >= 0 ? new[] { $"P{column}" }
+                string[] names = column >= 0 ? new[] { $"P{column}" }
                     : new[] { nameof(W0), nameof(W1), nameof(W2), nameof(W3), nameof(P0), nameof(P1), nameof(P2), nameof(P3) };
-                foreach (var n in names) PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+                foreach (string n in names) PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }
 
@@ -100,8 +100,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // One edited weight only moves the shares in its column.
         private void Changed(bool weights = true, int column = -1)
         {
-            foreach (var r in Rows) r.Refresh(weights ? -1 : column);
-            foreach (var n in new[] { nameof(Totals), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
+            foreach (TreasureRow r in Rows) r.Refresh(weights ? -1 : column);
+            foreach (string n in new[] { nameof(Totals), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
             _undo?.Record();
         }
 

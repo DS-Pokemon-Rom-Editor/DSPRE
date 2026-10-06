@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -104,7 +105,7 @@ namespace DSPRE.HgEngine
             token = token.Trim();
             if (TryParseLiteral(token, out value)) return true;
             if (headerRelPath == null) return false;
-            var table = HgEngineSymbolTable.Load(headerRelPath);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(headerRelPath);
             return table != null && table.TryGetValue(token, out value);
         }
 
@@ -127,7 +128,7 @@ namespace DSPRE.HgEngine
         {
             raw = raw.Trim();
             if (raw.Length < 2 || raw[0] != '"' || raw[^1] != '"') return null;
-            var sb = new StringBuilder(raw.Length - 2);
+            StringBuilder sb = new StringBuilder(raw.Length - 2);
             for (int i = 1; i < raw.Length - 1; i++)
             {
                 if (raw[i] == '\\' && i + 1 < raw.Length - 1 && (raw[i + 1] == '\\' || raw[i + 1] == '"'))
@@ -188,11 +189,11 @@ namespace DSPRE.HgEngine
         /// trainer's message numbers where they were.</summary>
         public static bool TryAddToTextOrder(int trainerId, out string error)
         {
-            if (!TryReadTextOrder(out var listed, out error)) return false;
+            if (!TryReadTextOrder(out HashSet<int> listed, out error)) return false;
             if (listed.Contains(trainerId)) return true;
             TryFindTextOrder(out string path, out string text, out int open, out int close, out _);
 
-            var spans = ElementScanner.ElementSpans(text, open, close);
+            List<(int Start, int End)> spans = ElementScanner.ElementSpans(text, open, close);
             if (spans.Count > 0)
             {
                 string line = "\n" + HgEngineSourcePatcher.IndentOfLine(text, spans[0].Start) + trainerId + ",";
@@ -216,7 +217,7 @@ namespace DSPRE.HgEngine
             if (!File.Exists(path)) { error = $"Source file not found: {path}"; return false; }
 
             text = HgEngineFileCache.GetText(path);
-            var m = TextOrderStart.Match(text);
+            Match m = TextOrderStart.Match(text);
             if (!m.Success || !BraceScanner.TryFindMatchingBrace(text, m.Index + m.Length - 1, out close))
             { error = "sTrainerTextOrder was not found in Trainers.c."; return false; }
             open = m.Index + m.Length - 1;
@@ -226,7 +227,7 @@ namespace DSPRE.HgEngine
         /// <summary>Every trainer entry from 0 up to the first missing id, in one pass over the file.</summary>
         public static List<HgEngineSourceBlock> LoadAll()
         {
-            var blocks = new List<HgEngineSourceBlock>();
+            List<HgEngineSourceBlock> blocks = new List<HgEngineSourceBlock>();
             if (!HgEngineProject.IsActive) return blocks;
             string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return blocks;
@@ -235,7 +236,7 @@ namespace DSPRE.HgEngine
             int pos = 0;
             for (int id = 0; ; id++)
             {
-                var m = new System.Text.RegularExpressions.Regex(@"\[\s*" + id + @"\s*\]\s*=\s*\{").Match(text, pos);
+                Match m = new System.Text.RegularExpressions.Regex(@"\[\s*" + id + @"\s*\]\s*=\s*\{").Match(text, pos);
                 if (!m.Success) break;
                 int open = m.Index + m.Length - 1;
                 if (!BraceScanner.TryFindMatchingBrace(text, open, out int close)) break;
@@ -270,8 +271,8 @@ namespace DSPRE.HgEngine
             raw = raw.Trim();
             string speciesToken = raw, formToken = null;
 
-            var macro = System.Text.RegularExpressions.Regex.Match(raw, @"^MON_WITH_FORM\s*\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)$");
-            var shifted = System.Text.RegularExpressions.Regex.Match(raw, @"^\(?\s*([^|()]+?)\s*\|\s*\(\s*([^<()]+?)\s*<<\s*11\s*\)\s*\)?$");
+            Match macro = System.Text.RegularExpressions.Regex.Match(raw, @"^MON_WITH_FORM\s*\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)$");
+            Match shifted = System.Text.RegularExpressions.Regex.Match(raw, @"^\(?\s*([^|()]+?)\s*\|\s*\(\s*([^<()]+?)\s*<<\s*11\s*\)\s*\)?$");
             if (macro.Success) { speciesToken = macro.Groups[1].Value; formToken = macro.Groups[2].Value; }
             else if (shifted.Success) { speciesToken = shifted.Groups[1].Value; formToken = shifted.Groups[2].Value; }
 
@@ -290,7 +291,7 @@ namespace DSPRE.HgEngine
         public static string ToEncodableNickname(string value)
         {
             if (string.IsNullOrEmpty(value)) return "";
-            var sb = new StringBuilder(10);
+            StringBuilder sb = new StringBuilder(10);
             foreach (char c in value)
             {
                 if (sb.Length == 10) break;
@@ -315,7 +316,7 @@ namespace DSPRE.HgEngine
         /// <summary>Formats a plain string as a quoted C string literal, escaping `\` and `"` only.</summary>
         public static string ToCStringLiteral(string value)
         {
-            var sb = new StringBuilder(value.Length + 2);
+            StringBuilder sb = new StringBuilder(value.Length + 2);
             sb.Append('"');
             foreach (char c in value)
             {

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using Avalonia;
@@ -34,21 +35,21 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void DrawChart()
         {
             Chart.Children.Clear();
-            var curve = VM?.CurveForChart;
+            IReadOnlyList<uint> curve = VM?.CurveForChart;
             double w = Chart.Bounds.Width, h = Chart.Bounds.Height;
             if (curve == null || curve.Count < 2 || w < 60 || h < 60) return;
             double max = System.Math.Max(1, curve.Max());
             const double left = 70, right = 14, top = 12, bottom = 26;
             double pw = w - left - right, ph = h - top - bottom;
-            IBrush subtle = this.TryFindResource("Editor.Subtle", ActualThemeVariant, out var sb) && sb is IBrush s1 ? s1 : Brushes.Gray;
+            IBrush subtle = this.TryFindResource("Editor.Subtle", ActualThemeVariant, out object sb) && sb is IBrush s1 ? s1 : Brushes.Gray;
             IBrush grid = new SolidColorBrush(Color.FromArgb(40, 128, 128, 128));
-            IBrush stroke = this.TryFindResource("Editor.Good", ActualThemeVariant, out var good) && good is IBrush b ? b : Brushes.SteelBlue;
+            IBrush stroke = this.TryFindResource("Editor.Good", ActualThemeVariant, out object good) && good is IBrush b ? b : Brushes.SteelBlue;
             double X(int i) => left + i * pw / (curve.Count - 1);
             double Y(double v) => top + ph - v / max * ph;
 
             void Label(string text, double x, double y, bool right_ = false)
             {
-                var t = new TextBlock { Text = text, FontSize = 10, Foreground = subtle };
+                TextBlock t = new TextBlock { Text = text, FontSize = 10, Foreground = subtle };
                 t.Measure(Size.Infinity);
                 Canvas.SetLeft(t, right_ ? x - t.DesiredSize.Width : x - t.DesiredSize.Width / 2);
                 Canvas.SetTop(t, y);
@@ -78,12 +79,12 @@ namespace DSPRE.Avalonia.Views.Pokemon
             {
                 double x = X(_hoverLevel), y = Y(curve[_hoverLevel]);
                 Chart.Children.Add(new Line { StartPoint = new Point(x, top), EndPoint = new Point(x, top + ph), Stroke = subtle, StrokeDashArray = new AvaloniaList<double> { 3, 3 } });
-                var dot = new Ellipse { Width = 8, Height = 8, Fill = stroke };
+                Ellipse dot = new Ellipse { Width = 8, Height = 8, Fill = stroke };
                 Canvas.SetLeft(dot, x - 4); Canvas.SetTop(dot, y - 4);
                 Chart.Children.Add(dot);
-                var tip = new Border
+                Border tip = new Border
                 {
-                    Background = this.TryFindResource("Editor.ToolbarBg", ActualThemeVariant, out var bg) && bg is IBrush bb ? bb : Brushes.Black,
+                    Background = this.TryFindResource("Editor.ToolbarBg", ActualThemeVariant, out object bg) && bg is IBrush bb ? bb : Brushes.Black,
                     BorderBrush = grid, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(3), Padding = new Thickness(6, 2),
                     Child = new TextBlock { Text = $"Lv {_hoverLevel + 1}: {curve[_hoverLevel]:N0} EXP", FontSize = 11 },
                 };
@@ -96,7 +97,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private void Chart_PointerMoved(object sender, global::Avalonia.Input.PointerEventArgs e)
         {
-            var curve = VM?.CurveForChart;
+            IReadOnlyList<uint> curve = VM?.CurveForChart;
             if (curve == null || curve.Count < 2) return;
             double pw = Chart.Bounds.Width - 70 - 14;
             int level = (int)System.Math.Round((e.GetPosition(Chart).X - 70) / pw * (curve.Count - 1));

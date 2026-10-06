@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.Data
                                  BattleGaugeText.Gender gender = BattleGaugeText.Gender.Genderless,
                                  BattleGaugeText.Status status = BattleGaugeText.Status.None)
         {
-            var drawn = BattleGaugeComposer.Build(
+            BattleGaugeComposer.Drawn drawn = BattleGaugeComposer.Build(
                 player ? BattleGaugeComposer.Kind.PlayerSingle : BattleGaugeComposer.Kind.OpponentSingle,
                 new BattleGaugeComposer.Showing
                 {

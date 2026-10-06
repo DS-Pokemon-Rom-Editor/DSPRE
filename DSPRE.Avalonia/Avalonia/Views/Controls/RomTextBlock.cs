@@ -58,7 +58,7 @@ namespace DSPRE.Avalonia.Views.Controls
                 DrawWithRomFont(ctx, text);
                 return;
             }
-            var face = new Typeface(new FontFamily("Verdana, Segoe UI, DejaVu Sans, sans-serif"));
+            Typeface face = new Typeface(new FontFamily("Verdana, Segoe UI, DejaVu Sans, sans-serif"));
             ctx.DrawText(new FormattedText(text, System.Globalization.CultureInfo.CurrentCulture,
                                            FlowDirection.LeftToRight, face, LineHeight, Ink), new Point(0, 0));
         }
@@ -67,10 +67,10 @@ namespace DSPRE.Avalonia.Views.Controls
         // not on a fixed grid.
         private void DrawWithRomFont(DrawingContext ctx, string text)
         {
-            var font = Font;
+            FieldFont font = Font;
             double x = 0;
-            var ink = Ink ?? Brushes.Black;
-            var shadow = Shadow ?? ink;
+            IBrush ink = Ink ?? Brushes.Black;
+            IBrush shadow = Shadow ?? ink;
             foreach (char c in text)
             {
                 int glyph = FieldFontCharacters.GlyphFor(c);

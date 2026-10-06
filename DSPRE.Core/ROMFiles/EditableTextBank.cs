@@ -19,14 +19,14 @@ namespace DSPRE.ROMFiles
         public EditableTextBank(int id, string readOnlyReason = null)
         {
             Id = id;
-            var archive = new TextArchive(id);
+            TextArchive archive = new TextArchive(id);
             Messages = archive.messages;
             HgEngineOwnedFile owned = HgEngineOwnedFiles.Get(HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.textArchives), id);
             if (owned?.Ownership == HgEngineOwnership.Generated)
                 readOnlyReason ??= "hg-engine builds this text from its own data.";
             else if (owned?.Ownership == HgEngineOwnership.EditableSource)
             {
-                if (HgEngineOwnedFiles.TryReadLines(owned, out var lines, out string error)) { Messages = lines; _source = owned; }
+                if (HgEngineOwnedFiles.TryReadLines(owned, out List<string> lines, out string error)) { Messages = lines; _source = owned; }
                 else readOnlyReason ??= error;
             }
             ReadOnlyReason = readOnlyReason;
@@ -41,7 +41,7 @@ namespace DSPRE.ROMFiles
             if (ReadOnlyReason != null) return ReadOnlyReason;
             if (_source != null)
                 return HgEngineOwnedFiles.TryWriteLines(_source, Messages, out string error) ? null : error;
-            var archive = new TextArchive(Id);
+            TextArchive archive = new TextArchive(Id);
             archive.messages.Clear();
             archive.messages.AddRange(Messages);
             archive.SaveToExpandedDir(Id, showSuccessMessage: false, sender: sender);

@@ -167,9 +167,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             // Buildings keep their animations in an archive of their own, so look there as well as
             // beside the model. In Platinum every sliding and swapping picture is in that one archive
             // and none of them sits next to a model at all.
-            foreach (var (dir, sameArchive) in Sources(a))
+            foreach ((RomInfo.DirNames dir, bool sameArchive) in Sources(a))
             {
-                var narc = new ScriptNarc(dir);
+                ScriptNarc narc = new ScriptNarc(dir);
                 if (!narc.Available) continue;
 
                 for (int i = 0; i < narc.Count; i++)
@@ -178,8 +178,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     try { b = narc.Get(i); } catch { continue; }
                     if (b == null) continue;
 
-                    var kind = ModelAssets.Identify(b);
-                    var into = kind switch
+                    ModelAssets.Kind kind = ModelAssets.Identify(b);
+                    List<Companion> into = kind switch
                     {
                         ModelAssets.Kind.TextureAnimation => _slides,
                         ModelAssets.Kind.TextureSwap => _swaps,
@@ -189,8 +189,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     };
                     if (into == null) continue;
 
-                    var names = NamesOf(kind, b);
-                    var sure = ModelAssets.MatchFor(names, modelName);
+                    IReadOnlyList<string> names = NamesOf(kind, b);
+                    ModelAssets.Match sure = ModelAssets.MatchFor(names, modelName);
                     // Filing order only means something inside the model's own archive.
                     if (sure == ModelAssets.Match.None && (!sameArchive || Math.Abs(i - modelIndex) > 3))
                         continue;
@@ -214,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _slideChoice = _swapChoice = _colourChoice = _showingChoice = 0;
             _slide = null; _swap = null; _colour = null; _showing = null;
 
-            foreach (var n in new[] { nameof(SlideChoices), nameof(SwapChoices), nameof(ColourChoices),
+            foreach (string n in new[] { nameof(SlideChoices), nameof(SwapChoices), nameof(ColourChoices),
                                       nameof(ShowingChoices), nameof(HasSlideChoice), nameof(HasSwapChoice),
                                       nameof(HasColourChoice), nameof(HasShowingChoice),
                                       nameof(SlideChoice), nameof(SwapChoice), nameof(ColourChoice),
@@ -233,7 +233,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             TextureMatrices = null; TextureSwaps = null; MaterialFades = null;
             HiddenNodes = null; MaterialColours = null;
             CompanionNote = "";
-            foreach (var name in new[] { nameof(HasSlideChoice), nameof(HasSwapChoice),
+            foreach (string name in new[] { nameof(HasSlideChoice), nameof(HasSwapChoice),
                          nameof(HasColourChoice), nameof(HasShowingChoice), nameof(HasCompanionSummary),
                          nameof(CompanionSummary), nameof(HasCompanionNote) })
                 OnPropertyChanged(name);
@@ -283,7 +283,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             into.Clear();
             into.Add("None");
-            foreach (var c in from.OrderByDescending(c => c.Sureness).ThenBy(c => c.Index))
+            foreach (Companion c in from.OrderByDescending(c => c.Sureness).ThenBy(c => c.Index))
                 into.Add(c.Label);
             _ = what;
         }
@@ -298,7 +298,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get
             {
                 if (!HasCompanionSummary) return "";
-                var bits = new List<string>();
+                List<string> bits = new List<string>();
                 if (_slides.Count > 0) bits.Add($"{_slides.Count} that slide a picture across it");
                 if (_swaps.Count > 0) bits.Add($"{_swaps.Count} that swap its pictures");
                 if (_colours.Count > 0) bits.Add($"{_colours.Count} that change its colour");
@@ -320,13 +320,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private T At<T>(List<Companion> from, int choice, Func<byte[], T> read) where T : class
         {
             if (choice <= 0 || _selected == null) return null;
-            var ordered = from.OrderByDescending(c => c.Sureness).ThenBy(c => c.Index).ToList();
+            List<Companion> ordered = from.OrderByDescending(c => c.Sureness).ThenBy(c => c.Index).ToList();
             if (choice - 1 >= ordered.Count) return null;
             try
             {
-                var narc = new ScriptNarc(ordered[choice - 1].Where);
+                ScriptNarc narc = new ScriptNarc(ordered[choice - 1].Where);
                 if (!narc.Available) return null;
-                var b = narc.Get(ordered[choice - 1].Index);
+                byte[] b = narc.Get(ordered[choice - 1].Index);
                 return b == null ? null : read(b);
             }
             catch (Exception ex) { AppLogger.Error("ModelBrowser companion failed: " + ex.Message); return null; }
@@ -347,8 +347,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             if (_slide != null)
             {
-                var mats = new Dictionary<int, float[]>();
-                foreach (var kv in Model3D.MaterialNameByKey)
+                Dictionary<int, float[]> mats = new Dictionary<int, float[]>();
+                foreach (KeyValuePair<int, string> kv in Model3D.MaterialNameByKey)
                 {
                     int m = _slide.IndexOf(kv.Value);
                     if (m >= 0)
@@ -359,28 +359,28 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
             if (_swap != null)
             {
-                var swaps = new Dictionary<int, string>();
-                foreach (var kv in Model3D.MaterialNameByKey)
+                Dictionary<int, string> swaps = new Dictionary<int, string>();
+                foreach (KeyValuePair<int, string> kv in Model3D.MaterialNameByKey)
                 {
                     int m = _swap.IndexOf(kv.Value);
                     if (m < 0) continue;
-                    var s = _swap.Evaluate(m, frame % Math.Max(1, _swap.FrameCount));
+                    TexturePatternAnimation.Swap s = _swap.Evaluate(m, frame % Math.Max(1, _swap.FrameCount));
                     if (s.IsSet) swaps[kv.Key] = s.TextureName;
                 }
                 if (swaps.Count > 0) TextureSwaps = swaps;
             }
 
-            var fades = new Dictionary<int, float>();
-            var colours = new Dictionary<int, (float r, float g, float b)>();
+            Dictionary<int, float> fades = new Dictionary<int, float>();
+            Dictionary<int, (float r, float g, float b)> colours = new Dictionary<int, (float r, float g, float b)>();
             if (_colour != null)
-                foreach (var kv in Model3D.MaterialNameByKey)
+                foreach (KeyValuePair<int, string> kv in Model3D.MaterialNameByKey)
                 {
                     int m = _colour.IndexOf(kv.Value);
                     if (m < 0) continue;
                     int at = frame % Math.Max(1, _colour.FrameCount);
                     float? v = _colour.Evaluate(m, at);
                     if (v.HasValue) fades[kv.Key] = v.Value;
-                    var c = _colour.ColourAt(m, at);
+                    (float r, float g, float b)? c = _colour.ColourAt(m, at);
                     if (c.HasValue) colours[kv.Key] = c.Value;
                 }
             MaterialColours = colours.Count > 0 ? colours : null;
@@ -391,7 +391,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (_showing != null && _showing.AnimationNames.Count > 0)
             {
                 int at = frame % Math.Max(1, _showing.FrameCount);
-                var gone = new HashSet<int>();
+                HashSet<int> gone = new HashSet<int>();
                 for (int node = 0; node < _showing.PartCount(0); node++)
                     if (!_showing.Visible(0, node, at)) gone.Add(node);
                 if (gone.Count > 0) HiddenNodes = gone;
@@ -405,7 +405,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Names the chosen animations that touch nothing on this model, and what they wanted.</summary>
         private void SayWhatDrivesNothing()
         {
-            var idle = new List<string>();
+            List<string> idle = new List<string>();
             if (_slide != null && (TextureMatrices == null || TextureMatrices.Count == 0))
                 idle.Add(Wanted("Sliding picture", _slide.MaterialNames));
             if (_swap != null && (TextureSwaps == null || TextureSwaps.Count == 0))
@@ -419,7 +419,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static string Wanted(string what, IReadOnlyList<string> names)
         {
-            var real = names.Where(n => !string.IsNullOrWhiteSpace(n)).Take(3).ToList();
+            List<string> real = names.Where(n => !string.IsNullOrWhiteSpace(n)).Take(3).ToList();
             return real.Count == 0
                 ? $"{what}: no surface named."
                 : $"{what}: no {string.Join(", ", real)} on this model.";
@@ -435,20 +435,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             byte[] b;
             try
             {
-                var narc = new ScriptNarc(a.Dir);
+                ScriptNarc narc = new ScriptNarc(a.Dir);
                 if (!narc.Available) return "";
                 b = narc.Get(index);
             }
             catch { return ""; }
             if (b == null) return "";
 
-            var bits = new List<string>();
+            List<string> bits = new List<string>();
             int frames = 0;
             switch (kind)
             {
                 case ModelAssets.Kind.TextureAnimation:
                 {
-                    var t = TextureSrtAnimation.Load(b);
+                        TextureSrtAnimation t = TextureSrtAnimation.Load(b);
                     if (t == null) return "This one would not open.";
                     frames = t.FrameCount;
                     int moving = Enumerable.Range(0, t.MaterialNames.Count).Count(i => !t.IsStatic(i));
@@ -459,7 +459,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 case ModelAssets.Kind.TextureSwap:
                 {
-                    var t = TexturePatternAnimation.Load(b);
+                        TexturePatternAnimation t = TexturePatternAnimation.Load(b);
                     if (t == null) return "This one would not open.";
                     frames = t.FrameCount;
                     bits.Add(Count(t.MaterialNames.Count, "surface", "surfaces") + " it swaps the picture on");
@@ -468,7 +468,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 case ModelAssets.Kind.MaterialAnimation:
                 {
-                    var m = MaterialColourAnimation.Load(b);
+                        MaterialColourAnimation m = MaterialColourAnimation.Load(b);
                     if (m == null) return "This one would not open.";
                     frames = m.FrameCount;
                     bits.Add(Count(m.MaterialNames.Count, "surface", "surfaces") + " it colours");
@@ -478,7 +478,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 case ModelAssets.Kind.VisibilityAnimation:
                 {
-                    var v = VisibilityAnimation.Load(b);
+                        VisibilityAnimation v = VisibilityAnimation.Load(b);
                     if (v == null) return "This one would not open.";
                     frames = v.FrameCount;
                     int parts = v.PartCount(0);
@@ -489,7 +489,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 }
                 case ModelAssets.Kind.JointAnimation:
                 {
-                    var j = JointAnimation.Load(b);
+                        JointAnimation j = JointAnimation.Load(b);
                     if (j == null) return "This one would not open.";
                     frames = j.FrameCount;
                     bits.Add(Count(j.AnimatedObjects.Count, "part", "parts") + " it moves");
@@ -507,7 +507,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static string Join(IReadOnlyList<string> names)
         {
-            var real = names.Where(n => !string.IsNullOrWhiteSpace(n)).Take(4).ToList();
+            List<string> real = names.Where(n => !string.IsNullOrWhiteSpace(n)).Take(4).ToList();
             if (real.Count == 0) return "surfaces it does not name";
             return string.Join(", ", real) + (names.Count > real.Count ? " and more" : "");
         }
@@ -528,25 +528,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             byte[] b;
             try
             {
-                var narc = new ScriptNarc(a.Dir);
+                ScriptNarc narc = new ScriptNarc(a.Dir);
                 if (!narc.Available) return "";
                 b = narc.Get(index);
             }
             catch { return ""; }
             if (b == null) return "";
 
-            var names = NamesOf(kind, b);
+            IReadOnlyList<string> names = NamesOf(kind, b);
             if (names.Count == 0) return "It carries no name, so there is no telling which model it is for.";
 
-            var hits = new List<(string name, ModelAssets.Match sure)>();
-            foreach (var other in ModelAssets.All)
+            List<(string name, ModelAssets.Match sure)> hits = new List<(string name, ModelAssets.Match sure)>();
+            foreach (ModelAssets.Archive other in ModelAssets.All)
             {
                 int n;
                 try { n = ModelAssets.Count(other); } catch { continue; }
-                foreach (var u in ModelAssets.Units(other, n))
+                foreach (ModelAssets.Unit u in ModelAssets.Units(other, n))
                 {
                     if (string.IsNullOrWhiteSpace(u.Name)) continue;
-                    var sure = ModelAssets.MatchFor(names, u.Name);
+                    ModelAssets.Match sure = ModelAssets.MatchFor(names, u.Name);
                     if (sure != ModelAssets.Match.None) hits.Add((u.Name, sure));
                 }
             }
@@ -554,7 +554,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (hits.Count == 0)
                 return "No model in this game is named for it, so nothing here claims it.";
 
-            var best = hits.OrderByDescending(h => h.sure).Take(3).ToList();
+            List<(string name, ModelAssets.Match sure)> best = hits.OrderByDescending(h => h.sure).Take(3).ToList();
             string how = best[0].sure switch
             {
                 ModelAssets.Match.Exact => "Written for",

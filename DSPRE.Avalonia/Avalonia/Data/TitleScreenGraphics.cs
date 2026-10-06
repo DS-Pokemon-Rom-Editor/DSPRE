@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.Data
         {
             get
             {
-                foreach (var kv in _backup)
+                foreach (KeyValuePair<int, byte[]> kv in _backup)
                     if (!(_narc.Get(kv.Key) ?? Array.Empty<byte>()).AsSpan().SequenceEqual(kv.Value)) return true;
                 return false;
             }
@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.Data
         /// before the first edit, then forgets the backup (so importing again starts a fresh checkpoint).</summary>
         public void RevertAll()
         {
-            foreach (var kv in _backup) _narc.Put(kv.Key, kv.Value);
+            foreach (KeyValuePair<int, byte[]> kv in _backup) _narc.Put(kv.Key, kv.Value);
             _backup.Clear();
             History.Clear();
         }
@@ -96,20 +96,20 @@ namespace DSPRE.Avalonia.Data
         // ── Decode ───────────────────────────────────────────────────────────
         public RawImage ComposeLogo()
         {
-            var members = TitleScreenMembersFor(Version);
-            var full = ComposeVia(members.logo, members.palette, members.logoNscr, transparentZero: true);
+            (int logo, int palette, int background, int logoNscr, int backgroundNscr) members = TitleScreenMembersFor(Version);
+            RawImage full = ComposeVia(members.logo, members.palette, members.logoNscr, transparentZero: true);
             return full == null ? null : Crop(full, LogoHeight);
         }
 
         public RawImage ComposeBackground()
         {
-            var members = TitleScreenMembersFor(Version);
+            (int logo, int palette, int background, int logoNscr, int backgroundNscr) members = TitleScreenMembersFor(Version);
             return ComposeVia(members.background, members.palette, members.backgroundNscr, transparentZero: false);
         }
 
         public RawImage ComposeCopyright()
         {
-            var m = TitleScreenCopyrightMembers;
+            (int ncgr, int nclr, int nscr) m = TitleScreenCopyrightMembers;
             return ComposeVia(m.ncgr, m.nclr, m.nscr, transparentZero: true);
         }
 
@@ -130,7 +130,7 @@ namespace DSPRE.Avalonia.Data
 
         private static RawImage ToRawImage(NitroBgCodec.BgImage bg)
         {
-            var raw = new RawImage(bg.Width, bg.Height);
+            RawImage raw = new RawImage(bg.Width, bg.Height);
             byte[] src = bg.Rgba, dst = raw.Bgra;
             for (int i = 0; i + 3 < src.Length; i += 4)
             { dst[i] = src[i + 2]; dst[i + 1] = src[i + 1]; dst[i + 2] = src[i]; dst[i + 3] = src[i + 3]; }
@@ -140,7 +140,7 @@ namespace DSPRE.Avalonia.Data
         private static RawImage Crop(RawImage img, int height)
         {
             if (img.Height <= height) return img;
-            var cropped = new RawImage(img.Width, height);
+            RawImage cropped = new RawImage(img.Width, height);
             Array.Copy(img.Bgra, 0, cropped.Bgra, 0, img.Width * height * 4);
             return cropped;
         }
@@ -156,7 +156,7 @@ namespace DSPRE.Avalonia.Data
             if (png.Width != LogoWidth || png.Height != LogoHeight)
                 return $"Image must be exactly {LogoWidth}x{LogoHeight} (got {png.Width}x{png.Height}).";
 
-            var members = TitleScreenMembersFor(Version);
+            (int logo, int palette, int background, int logoNscr, int backgroundNscr) members = TitleScreenMembersFor(Version);
             byte[] palRaw = NitroBgCodec.Inflate(GetAndSnapshot(members.palette));
             byte[] logoChrRaw = NitroBgCodec.Inflate(GetAndSnapshot(members.logo));
             byte[] logoScrRaw = NitroBgCodec.Inflate(GetAndSnapshot(members.logoNscr));
@@ -184,7 +184,7 @@ namespace DSPRE.Avalonia.Data
                 return $"Combined logo + background palette needs {total} colours, only 256 are available.";
 
             int bgBase = 1 + logo.Colors.Count;
-            var palette = new (byte r, byte g, byte b)[256];
+            (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < logo.Colors.Count; i++) palette[1 + i] = logo.Colors[i];
             for (int i = 0; i < background.Colors.Count; i++) palette[bgBase + i] = background.Colors[i];
 
@@ -193,7 +193,7 @@ namespace DSPRE.Avalonia.Data
             byte[] shiftedBgTileData = ShiftIndices(background.TileData, bgBase);
 
             // Logo's real NSCR is 32x32; only the top 24 rows are visible, pad the rest with blank (index 0).
-            var logoMapEntries = new ushort[LogoRealMapCols * LogoRealMapRows];
+            ushort[] logoMapEntries = new ushort[LogoRealMapCols * LogoRealMapRows];
             Array.Copy(logo.MapEntries, logoMapEntries, logo.MapEntries.Length);
 
             WritePalette(palRaw, palette);
@@ -218,7 +218,7 @@ namespace DSPRE.Avalonia.Data
             if (png.Width != CopyrightWidth || png.Height != CopyrightHeight)
                 return $"Image must be exactly {CopyrightWidth}x{CopyrightHeight} (got {png.Width}x{png.Height}).";
 
-            var m = TitleScreenCopyrightMembers;
+            (int ncgr, int nclr, int nscr) m = TitleScreenCopyrightMembers;
             byte[] palRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.nclr));
             byte[] chrRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.ncgr));
             byte[] scrRaw = NitroBgCodec.Inflate(GetAndSnapshot(m.nscr));
@@ -234,7 +234,7 @@ namespace DSPRE.Avalonia.Data
             }
             catch (Exception ex) { return ex.Message; }
 
-            var palette = new (byte r, byte g, byte b)[16];
+            (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[16];
             for (int i = 0; i < encoded.Colors.Count; i++) palette[1 + i] = encoded.Colors[i];
 
             WritePalette(palRaw, palette); // only the first 16-colour bank; the rest of the file is untouched
@@ -276,9 +276,9 @@ namespace DSPRE.Avalonia.Data
             int tileCapacity, int bytesPerTile, int maxColors)
         {
             int w = tileCols * 8, h = tileRows * 8;
-            var colorToIndex = new Dictionary<int, byte>();
-            var colors = new List<(byte, byte, byte)>();
-            var raster = new byte[w * h];
+            Dictionary<int, byte> colorToIndex = new Dictionary<int, byte>();
+            List<(byte, byte, byte)> colors = new List<(byte, byte, byte)>();
+            byte[] raster = new byte[w * h];
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
@@ -305,9 +305,9 @@ namespace DSPRE.Avalonia.Data
                 }
 
             bool is8 = bytesPerTile == 64;
-            var tileList = new List<byte[]>();
-            var tileLookup = new Dictionary<string, int>();
-            var mapEntries = new ushort[tileCols * tileRows];
+            List<byte[]> tileList = new List<byte[]>();
+            Dictionary<string, int> tileLookup = new Dictionary<string, int>();
+            ushort[] mapEntries = new ushort[tileCols * tileRows];
             for (int ty = 0; ty < tileRows; ty++)
                 for (int tx = 0; tx < tileCols; tx++)
                 {
@@ -325,7 +325,7 @@ namespace DSPRE.Avalonia.Data
                     mapEntries[ty * tileCols + tx] = (ushort)tileIndex;
                 }
 
-            var tileData = new byte[tileCapacity * bytesPerTile];
+            byte[] tileData = new byte[tileCapacity * bytesPerTile];
             for (int i = 0; i < tileList.Count; i++)
                 Array.Copy(tileList[i], 0, tileData, i * bytesPerTile, bytesPerTile);
 
@@ -334,7 +334,7 @@ namespace DSPRE.Avalonia.Data
 
         private static byte[] PackTile(byte[] raster, int w, int tx, int ty, bool is8)
         {
-            var block = new byte[is8 ? 64 : 32];
+            byte[] block = new byte[is8 ? 64 : 32];
             for (int py = 0; py < 8; py++)
                 for (int px = 0; px < 8; px++)
                 {
@@ -358,7 +358,7 @@ namespace DSPRE.Avalonia.Data
         /// palette. Safe from overflow because the caller already checked logo+background colours fit in 256.</summary>
         private static byte[] ShiftIndices(byte[] tileData, int shift)
         {
-            var shifted = new byte[tileData.Length];
+            byte[] shifted = new byte[tileData.Length];
             for (int i = 0; i < tileData.Length; i++)
                 shifted[i] = (byte)(tileData[i] + shift);
             return shifted;
@@ -370,7 +370,7 @@ namespace DSPRE.Avalonia.Data
             int dataOffset = pltt + 0x18;
             for (int i = 0; i < palette.Length && dataOffset + i * 2 + 1 < palRaw.Length; i++)
             {
-                var (r, g, b) = palette[i];
+                (byte r, byte g, byte b) = palette[i];
                 ushort c = (ushort)(((r >> 3) & 0x1F) | (((g >> 3) & 0x1F) << 5) | (((b >> 3) & 0x1F) << 10));
                 palRaw[dataOffset + i * 2] = (byte)(c & 0xFF);
                 palRaw[dataOffset + i * 2 + 1] = (byte)(c >> 8);

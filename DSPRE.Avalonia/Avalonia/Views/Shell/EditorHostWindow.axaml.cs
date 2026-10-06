@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Views.Shell
             Title = title;
             // An editor listed here needs that much room to show its content, so it opens at least that big;
             // anything else gets a general floor that never exceeds its own opening size.
-            if (MinimumFor.TryGetValue(title ?? "", out var m))
+            if (MinimumFor.TryGetValue(title ?? "", out (double, double) m))
             {
                 width = System.Math.Max(width, m.Item1);
                 height = System.Math.Max(height, m.Item2);

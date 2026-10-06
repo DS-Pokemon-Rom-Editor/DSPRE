@@ -104,7 +104,7 @@ namespace DSPRE.ROMFiles
         /// <summary>One digit of the level or the HP, as the gauge draws it.</summary>
         public static Tile Digit(int value)
         {
-            var read = Read();
+            Pieces read = Read();
             if (read == null || value < 0 || value >= DigitCount) return null;
             return TileAt(read.NumberFont, NumberFontHeader + value * 32);
         }
@@ -112,7 +112,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The slash the gauge puts between current and maximum HP.</summary>
         public static Tile Slash()
         {
-            var read = Read();
+            Pieces read = Read();
             return read == null ? null : TileAt(read.Overlay, read.TilesAt + SlashTile * 32);
         }
 
@@ -122,16 +122,16 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static Tile[] GenderAndLv(Gender gender)
         {
-            var read = Read();
-            var layout = Current;
+            Pieces read = Read();
+            Layout layout = Current;
             if (read == null || !layout.Genders.TryGetValue(gender, out int[] tiles)) return null;
-            var stored = tiles.Select(t => TileAt(read.Overlay, read.TilesAt + t * 32)).ToArray();
+            Tile[] stored = tiles.Select(t => TileAt(read.Overlay, read.TilesAt + t * 32)).ToArray();
             if (!layout.GenderIsOneRow) return stored;
 
             // Uncovered rows take the strip's background, or the bar would show through.
             byte ground = stored[1].Pixels[0];
-            var block = new[] { new Tile(), new Tile(), new Tile(), new Tile() };
-            foreach (var t in block) Array.Fill(t.Pixels, ground);
+            Tile[] block = new[] { new Tile(), new Tile(), new Tile(), new Tile() };
+            foreach (Tile t in block) Array.Fill(t.Pixels, ground);
             for (int side = 0; side < 2; side++)
                 for (int y = 0; y < 8; y++)
                     Array.Copy(stored[side].Pixels, y * 8, block[y < 4 ? side : side + 2].Pixels, ((y + 4) % 8) * 8, 8);
@@ -144,7 +144,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static Tile[] StatusWord(Status status)
         {
-            var read = Read();
+            Pieces read = Read();
             int first = status == Status.None ? Current.NoStatusTile : StatusWords.TryGetValue(status, out int at) ? at : -1;
             if (read == null || first < 0) return null;
             return Enumerable.Range(0, StatusTiles)
@@ -158,7 +158,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static Tile NumberFontLv()
         {
-            var read = Read();
+            Pieces read = Read();
             return read == null ? null : TileAt(read.NumberFont, BattleLvRightHalf * 32);
         }
 
@@ -228,7 +228,7 @@ namespace DSPRE.ROMFiles
                 if (at < 0) continue;
 
                 // That half tile belongs to the female "Lv", whose place in the table differs by family.
-                var layout = Current;
+                Layout layout = Current;
                 int tilesAt = at - layout.AnchorAt;
                 if (tilesAt < 0 || tilesAt + layout.TableTiles * 32 > bytes.Length) continue;
 
@@ -259,7 +259,7 @@ namespace DSPRE.ROMFiles
             string dir = RomInfo.gameDirs[RomInfo.DirNames.fonts].unpackedDir;
             if (!Directory.Exists(dir)) { _why = "The font archive is not unpacked."; return null; }
 
-            var files = Directory.GetFiles(dir).OrderBy(f => f, StringComparer.Ordinal).ToArray();
+            string[] files = Directory.GetFiles(dir).OrderBy(f => f, StringComparer.Ordinal).ToArray();
             if (entry >= files.Length) { _why = $"The font archive has no entry {entry}."; return null; }
 
             try
@@ -296,7 +296,7 @@ namespace DSPRE.ROMFiles
         /// <summary>One tile, by its byte offset: the blob does not start on a tile boundary.</summary>
         private static Tile TileAt(byte[] data, int at)
         {
-            var made = new Tile();
+            Tile made = new Tile();
             if (data == null || at < 0 || at + 32 > data.Length) return made;
             for (int i = 0; i < 32; i++)
             {
@@ -323,7 +323,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Where the gauge's pictures were found, for a status line or a test.</summary>
         public static string Where()
         {
-            var read = Read();
+            Pieces read = Read();
             return read == null ? null
                  : $"overlay {read.OverlayNumber}, pictures at 0x{read.TilesAt:X}";
         }

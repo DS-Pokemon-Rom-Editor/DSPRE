@@ -18,8 +18,8 @@ namespace DSPRE.ROMFiles
             uint pointer = RomInfo.conditionalMusicTableOffsetToRAMAddress;
             uint start = BitConverter.ToUInt32(ARM9.ReadBytes(pointer, 4), 0) - ARM9.address;
             byte count = ARM9.ReadByte(pointer - 8);
-            var rows = new List<Row>(count);
-            using (var r = new ARM9.Reader(start))
+            List<Row> rows = new List<Row>(count);
+            using (ARM9.Reader r = new ARM9.Reader(start))
                 for (int i = 0; i < count; i++)
                     rows.Add(new Row { Header = r.ReadUInt16(), Flag = r.ReadUInt16(), Music = r.ReadUInt16() });
             return (start, rows);

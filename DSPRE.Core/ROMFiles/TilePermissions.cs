@@ -320,10 +320,10 @@ namespace DSPRE.ROMFiles
 
         /// <summary>Every tile behaviour the game defines, in value order.</summary>
         public static IReadOnlyList<TileBehaviour> BehavioursFor(GameFamilies family)
-            => Behaviours.TryGetValue(Family(family), out var list) ? list : Array.Empty<TileBehaviour>();
+            => Behaviours.TryGetValue(Family(family), out IReadOnlyList<TileBehaviour> list) ? list : Array.Empty<TileBehaviour>();
 
         public static TileBehaviour FindBehaviour(byte value, GameFamilies family)
-            => BehaviourByValue.TryGetValue(Family(family), out var map) && map.TryGetValue(value, out var b) ? b : null;
+            => BehaviourByValue.TryGetValue(Family(family), out Dictionary<byte, TileBehaviour> map) && map.TryGetValue(value, out TileBehaviour b) ? b : null;
 
         public static string BehaviourName(byte value, GameFamilies family) => FindBehaviour(value, family)?.Name ?? Unknown(value);
 
@@ -392,9 +392,9 @@ namespace DSPRE.ROMFiles
 
         private static Dictionary<string, int> BuildSeeds()
         {
-            var seeds = new Dictionary<string, int>();
-            foreach (var b in Behaviours[GameFamilies.Plat]) seeds[b.Key] = b.Value;
-            foreach (var b in Behaviours[GameFamilies.HGSS])
+            Dictionary<string, int> seeds = new Dictionary<string, int>();
+            foreach (TileBehaviour b in Behaviours[GameFamilies.Plat]) seeds[b.Key] = b.Value;
+            foreach (TileBehaviour b in Behaviours[GameFamilies.HGSS])
                 if (!seeds.ContainsKey(b.Key)) seeds[b.Key] = SeedOverrides.TryGetValue(b.Key, out int s) ? s : b.Value;
             return seeds;
         }
@@ -414,7 +414,7 @@ namespace DSPRE.ROMFiles
                     return IsBlocked(value) ? Hsv((sound * 7) % 30, 0.6, 0.72) : Hsv(95 + (sound * 11) % 60, 0.6, 0.66);
                 return Hsv((value * 47) % 360, 0.55, 0.85);
             }
-            var behaviour = FindBehaviour(value, family);
+            TileBehaviour behaviour = FindBehaviour(value, family);
             int seed = behaviour != null && Seeds.TryGetValue(behaviour.Key, out int s) ? s : value;
             return Hsv((seed * 47) % 360, 0.55, 0.85);
         }

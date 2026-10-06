@@ -289,7 +289,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 for (int i = 0; i < 10; i++) PokemonNames.Add($"Pokémon {i}");
                 for (int i = 0; i < 5;  i++) AbilityNames.Add($"Ability {i}");
                 for (int i = 0; i < 10; i++) ItemNames.Add($"Item {i}");
-                foreach (var n in System.Enum.GetNames(typeof(TradeOriginLang))) LanguageNames.Add(n);
+                foreach (string n in System.Enum.GetNames(typeof(TradeOriginLang))) LanguageNames.Add(n);
                 SelectedSpecies   = 1;
                 SelectedRequested = 2;
                 SelectedAbility   = 0;
@@ -302,9 +302,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
-            foreach (var n in RomInfo.GetPokemonNames())  PokemonNames.Add(n);
-            foreach (var n in RomInfo.GetAbilityNames())  AbilityNames.Add(n);
-            foreach (var n in RomInfo.GetItemNames())     ItemNames.Add(n);
+            foreach (string n in RomInfo.GetPokemonNames())  PokemonNames.Add(n);
+            foreach (string n in RomInfo.GetAbilityNames())  AbilityNames.Add(n);
+            foreach (string n in RomInfo.GetItemNames())     ItemNames.Add(n);
             ReloadLanguages();
 
             _tradeArchive = new TextArchive(GetTextBankIndex());
@@ -359,7 +359,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_loading) return;
             if (_tradeDirty || _textDirty)
             {
-                var result = await DialogHelper.AskYesNoCancel(
+                DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancel(
                     "You have unsaved changes. Do you want to save before changing the Trade ID?",
                     "Unsaved Changes");
 

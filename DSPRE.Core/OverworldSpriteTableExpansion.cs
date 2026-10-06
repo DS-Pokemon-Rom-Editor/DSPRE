@@ -109,7 +109,7 @@ namespace DSPRE
                 }
 
                 byte[] data = File.ReadAllBytes(_path);
-                var hits = DSUtils.SearchBytes(data, Encoding.ASCII.GetBytes(Marker));
+                List<int> hits = DSUtils.SearchBytes(data, Encoding.ASCII.GetBytes(Marker));
                 if (hits.Count == 0)
                 {
                     PushFlags();
@@ -121,7 +121,7 @@ namespace DSPRE
                 _usedCount = ReadU32(data, _markerOffset + 0x18);
 
                 long cursor = _markerOffset + HeaderSize;
-                var tables = new TableLayout[4];
+                TableLayout[] tables = new TableLayout[4];
                 for (int i = 0; i < 4; i++)
                 {
                     int entrySize = EntrySizes[i];
@@ -169,7 +169,7 @@ namespace DSPRE
         /// (properties dummy 0). Only valid after a successful <see cref="Detect"/>.</summary>
         public static SortedDictionary<uint, (uint spriteID, ushort properties)> ReadTextureTable()
         {
-            var result = new SortedDictionary<uint, (uint spriteID, ushort properties)>();
+            SortedDictionary<uint, (uint spriteID, ushort properties)> result = new SortedDictionary<uint, (uint spriteID, ushort properties)>();
             if (!_detected) return result;
 
             byte[] data = File.ReadAllBytes(_path);
@@ -203,7 +203,7 @@ namespace DSPRE
             TableLayout layout = _tables[tableIndex];
             int idx = FindRowIndex(data, layout, appearanceId);
             if (idx < 0) return null;
-            var row = new byte[layout.EntrySize];
+            byte[] row = new byte[layout.EntrySize];
             Array.Copy(data, layout.Start + (long)idx * layout.EntrySize, row, 0, layout.EntrySize);
             return row;
         }
@@ -316,7 +316,7 @@ namespace DSPRE
         /// <summary>Every row of the render-properties table, in table order.</summary>
         public static IReadOnlyList<(uint Id, OwRenderState State)> ReadRenderStates()
         {
-            var rows = new List<(uint, OwRenderState)>();
+            List<(uint, OwRenderState)> rows = new List<(uint, OwRenderState)>();
             SimpleTable t = GetRenderStateTable();
             if (t.Path == null || !File.Exists(t.Path)) return rows;
             byte[] data = File.ReadAllBytes(t.Path);
@@ -377,7 +377,7 @@ namespace DSPRE
             }
 
             // Tables 0/1/3 need an existing row to clone; table 2 (texture) always gets a fresh row.
-            var cloneRowIndex = new int[4];
+            int[] cloneRowIndex = new int[4];
             foreach (int t in new[] { 0, 1, 3 })
             {
                 int idx = FindRowIndex(data, _tables[t], cloneFrom);
@@ -409,7 +409,7 @@ namespace DSPRE
                     WriteU32(row, 0, appearanceId);
                 }
 
-                var sentinelRow = new byte[layout.EntrySize];
+                byte[] sentinelRow = new byte[layout.EntrySize];
                 WriteU32(sentinelRow, 0, 0xFFFF);
 
                 DSUtils.WriteToFile(_path, row, (uint)insertOffset);
@@ -482,7 +482,7 @@ namespace DSPRE
         public static uint? SuggestNewAppearanceId()
         {
             if (!_detected) return null;
-            var used = new HashSet<uint>(ReadTextureTable().Keys);
+            HashSet<uint> used = new HashSet<uint>(ReadTextureTable().Keys);
             if (used.Count == 0) return null;
 
             uint start = used.Max() + 1;

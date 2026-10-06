@@ -46,7 +46,7 @@ namespace DSPRE.Models
 
         public SmartDrawing Clone()
         {
-            var copy = new SmartDrawing { Folder = Folder };
+            SmartDrawing copy = new SmartDrawing { Folder = Folder };
             Array.Copy(_slot, copy._slot, Slots);
             return copy;
         }
@@ -105,7 +105,7 @@ namespace DSPRE.Models
 
         private int PieceFor(Unit unit, bool insideOut)
         {
-            var table = insideOut ? InsideOut : Pieces;
+            Unit[] table = insideOut ? InsideOut : Pieces;
             int found = -1;
             for (int i = 0; i < table.Length && found < 0; i++)
                 if (unit.FullCross ? table[i].SameCorners(unit) : table[i].SameCross(unit)) found = i;
@@ -116,7 +116,7 @@ namespace DSPRE.Models
         private int[,] Resolve(bool[,] neighbours, bool[,] write, bool insideOut, bool offEdge)
         {
             int w = neighbours.GetLength(0), h = neighbours.GetLength(1);
-            var piece = new int[w, h];
+            int[,] piece = new int[w, h];
             for (int x = 0; x < w; x++)
                 for (int z = 0; z < h; z++)
                     piece[x, z] = write[x, z] ? PieceFor(UnitAt(neighbours, x, z, offEdge), insideOut) : -1;
@@ -131,7 +131,7 @@ namespace DSPRE.Models
             if (x < 0 || z < 0 || x >= n || z >= n) return 0;
 
             int was = grid.PutHere(x, z, layer);
-            var same = new bool[n, n];
+            bool[,] same = new bool[n, n];
             for (int gx = 0; gx < n; gx++)
                 for (int gz = 0; gz < n; gz++)
                     same[gx, gz] = grid.PutHere(gx, gz, layer) == was;
@@ -141,31 +141,31 @@ namespace DSPRE.Models
                 {
                     int there = grid.PutHere(gx, gz, layer);
                     if (there < 0 || there == was) continue;
-                    var sq = grid.At(gx, gz, layer);
+                    TileGrid.Square sq = grid.At(gx, gz, layer);
                     for (int dx = 0; dx < sq.Wide; dx++)
                         for (int dz = 0; dz < sq.Deep; dz++)
                             if (gx + dx < n && gz + dz < n) same[gx + dx, gz + dz] = false;
                 }
 
-            var joined = Joined(same, x, z);
+            bool[,] joined = Joined(same, x, z);
 
-            var piece = Resolve(same, joined, insideOut, true);
+            int[,] piece = Resolve(same, joined, insideOut, true);
             return Write(grid, set, piece, joined, layer, writeEmpty: true);
         }
 
         public static bool[,] Joined(bool[,] mask, int x, int z)
         {
             int w = mask.GetLength(0), h = mask.GetLength(1);
-            var joined = new bool[w, h];
+            bool[,] joined = new bool[w, h];
             if (x < 0 || z < 0 || x >= w || z >= h || !mask[x, z]) return joined;
 
-            var waiting = new Queue<(int x, int z)>();
+            Queue<(int x, int z)> waiting = new Queue<(int x, int z)>();
             waiting.Enqueue((x, z));
             joined[x, z] = true;
             while (waiting.Count > 0)
             {
-                var (px, pz) = waiting.Dequeue();
-                foreach (var (dx, dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                (int px, int pz) = waiting.Dequeue();
+                foreach ((int dx, int dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
                 {
                     int nx = px + dx, nz = pz + dz;
                     if (nx < 0 || nz < 0 || nx >= w || nz >= h || !mask[nx, nz] || joined[nx, nz]) continue;
@@ -186,7 +186,7 @@ namespace DSPRE.Models
                     int tile = piece[x, z];
                     if (tile < 0 && !writeEmpty) continue;
 
-                    var (wide, deep) = SizeOf(set, tile);
+                    (int wide, int deep) = SizeOf(set, tile);
                     if (grid.Stamp(x, z, tile, wide, deep, layer)) written++;
                 }
             return written;
@@ -200,15 +200,15 @@ namespace DSPRE.Models
         public bool[,] ShapeMask(TileGrid grid, int layer, IEnumerable<(int x, int z)> cells)
         {
             int n = TileGrid.Across;
-            var candidate = new bool[n, n];
-            var affected = new bool[n, n];
-            var tiles = Tiles;
+            bool[,] candidate = new bool[n, n];
+            bool[,] affected = new bool[n, n];
+            ISet<int> tiles = Tiles;
             for (int x = 0; x < n; x++)
                 for (int z = 0; z < n; z++)
                     candidate[x, z] = tiles.Contains(grid.PutHere(x, z, layer));
 
-            var waiting = new Queue<(int x, int z)>();
-            foreach (var (x, z) in cells)
+            Queue<(int x, int z)> waiting = new Queue<(int x, int z)>();
+            foreach ((int x, int z) in cells)
             {
                 if (x < 0 || z < 0 || x >= n || z >= n) continue;
                 candidate[x, z] = true;
@@ -219,8 +219,8 @@ namespace DSPRE.Models
 
             while (waiting.Count > 0)
             {
-                var (px, pz) = waiting.Dequeue();
-                foreach (var (dx, dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                (int px, int pz) = waiting.Dequeue();
+                foreach ((int dx, int dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
                 {
                     int nx = px + dx, nz = pz + dz;
                     if (nx < 0 || nz < 0 || nx >= n || nz >= n || !candidate[nx, nz] || affected[nx, nz]) continue;
@@ -233,44 +233,44 @@ namespace DSPRE.Models
 
         public int DrawShape(TileGrid grid, MapTileset set, IEnumerable<(int x, int z)> cells, int layer, bool insideOut)
         {
-            var mask = ShapeMask(grid, layer, cells);
+            bool[,] mask = ShapeMask(grid, layer, cells);
             return Write(grid, set, ResolveMask(mask, insideOut), mask, layer, writeEmpty: false);
         }
 
         public int[,] ResolvePath(IList<(int x, int z)> cells, int startTile, bool insideOut)
         {
             int n = TileGrid.Across;
-            var piece = new int[n, n];
+            int[,] piece = new int[n, n];
             for (int x = 0; x < n; x++) for (int z = 0; z < n; z++) piece[x, z] = -1;
             if (cells == null) return piece;
 
-            var path = new List<(int x, int z)>();
-            var seen = new HashSet<(int, int)>();
-            foreach (var c in cells)
+            List<(int x, int z)> path = new List<(int x, int z)>();
+            HashSet<(int, int)> seen = new HashSet<(int, int)>();
+            foreach ((int x, int z) c in cells)
                 if (c.x >= 0 && c.z >= 0 && c.x < n && c.z < n && seen.Add(c)) path.Add(c);
             if (path.Count == 0) return piece;
 
             int startSlot = SlotOf(startTile);
-            var inward = Inward(startSlot);
+            (int x, int y)? inward = Inward(startSlot);
             int first = insideOut ? TileAt(TurnedInsideOut(startSlot), startTile) : startTile;
 
             if (path.Count == 1 || inward == null)
             {
-                foreach (var (x, z) in path) piece[x, z] = first;
+                foreach ((int x, int z) in path) piece[x, z] = first;
                 return piece;
             }
 
             (int x, int y) Dir((int x, int z) a, (int x, int z) b)
                 => (Math.Sign(b.x - a.x), -Math.Sign(b.z - a.z));
 
-            var d0 = Dir(path[0], path[1]);
+            (int x, int y) d0 = Dir(path[0], path[1]);
             int leftX = -d0.y, leftY = d0.x;
             bool insideOnLeft = leftX * inward.Value.x + leftY * inward.Value.y >= 0;
             if (insideOut) insideOnLeft = !insideOnLeft;
 
             for (int i = 0; i < path.Count; i++)
             {
-                var (cx, cz) = path[i];
+                (int cx, int cz) = path[i];
                 if (i == 0) { piece[cx, cz] = first; continue; }
 
                 int slot;
@@ -278,8 +278,8 @@ namespace DSPRE.Models
                     slot = EdgeSlot(Dir(path[i - 1], path[i]), insideOnLeft);
                 else
                 {
-                    var into = Dir(path[i - 1], path[i]);
-                    var outOf = Dir(path[i], path[i + 1]);
+                    (int x, int y) into = Dir(path[i - 1], path[i]);
+                    (int x, int y) outOf = Dir(path[i], path[i + 1]);
                     int cross = into.x * outOf.y - into.y * outOf.x;
                     if (cross == 0) slot = EdgeSlot(outOf, insideOnLeft);
                     else
@@ -296,10 +296,10 @@ namespace DSPRE.Models
 
         public int DrawPath(TileGrid grid, MapTileset set, IList<(int x, int z)> cells, int startTile, int layer, bool insideOut)
         {
-            var piece = ResolvePath(cells, startTile, insideOut);
+            int[,] piece = ResolvePath(cells, startTile, insideOut);
             int n = TileGrid.Across;
-            var where = new bool[n, n];
-            foreach (var (x, z) in cells)
+            bool[,] where = new bool[n, n];
+            foreach ((int x, int z) in cells)
                 if (x >= 0 && z >= 0 && x < n && z < n) where[x, z] = true;
             return Write(grid, set, piece, where, layer, writeEmpty: false);
         }

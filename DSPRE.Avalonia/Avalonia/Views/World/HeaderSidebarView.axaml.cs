@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using DSPRE.Avalonia.Models;
 using DSPRE.Avalonia.ViewModels;
 
 namespace DSPRE.Avalonia.Views.World
@@ -17,8 +18,8 @@ namespace DSPRE.Avalonia.Views.World
         // ── Leaf context menu: select the right-clicked header, then open the editor ──
         private void CtxOpen(object sender, System.Action<HeaderEditorViewModel> open)
         {
-            var vm = VM;
-            var leaf = (sender as MenuItem)?.DataContext as Models.HeaderTreeLeaf;
+            HeaderEditorViewModel vm = VM;
+            HeaderTreeLeaf leaf = (sender as MenuItem)?.DataContext as Models.HeaderTreeLeaf;
             if (vm == null || leaf == null) return;
             vm.SelectedTreeNode = leaf;   // loads the header; the workspace follows
             open(vm);

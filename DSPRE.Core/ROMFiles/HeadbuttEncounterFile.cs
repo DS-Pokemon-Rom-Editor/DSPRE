@@ -117,15 +117,15 @@ namespace DSPRE.ROMFiles {
                     writer.Write((byte)encounter.maxLevel);
                 }
 
-                foreach (var treeGroup in normalTreeGroups) {
-                    foreach (var tree in treeGroup.trees) {
+                foreach (HeadbuttTreeGroup treeGroup in normalTreeGroups) {
+                    foreach (HeadbuttTree tree in treeGroup.trees) {
                         writer.Write((UInt16)tree.globalX);
                         writer.Write((UInt16)tree.globalY);
                     }
                 }
 
-                foreach (var treeGroup in specialTreeGroups) {
-                    foreach (var tree in treeGroup.trees) {
+                foreach (HeadbuttTreeGroup treeGroup in specialTreeGroups) {
+                    foreach (HeadbuttTree tree in treeGroup.trees) {
                         writer.Write((UInt16)tree.globalX);
                         writer.Write((UInt16)tree.globalY);
                     }

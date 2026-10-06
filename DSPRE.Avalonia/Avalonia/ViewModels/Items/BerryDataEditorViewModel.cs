@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void RaiseFields()
         {
-            foreach (var n in new[] { nameof(SelectedBerry), nameof(SizeMm), nameof(FirmnessIndex), nameof(Yield), nameof(HoursPerStage),
+            foreach (string n in new[] { nameof(SelectedBerry), nameof(SizeMm), nameof(FirmnessIndex), nameof(Yield), nameof(HoursPerStage),
                                       nameof(Drain), nameof(Spicy), nameof(Dry), nameof(Sweet), nameof(Bitter), nameof(Sour),
                                       nameof(Smoothness), nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges),
                                       nameof(SelectedItem), nameof(SelectedName), nameof(FlavourParts) })
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public async Task<bool> SaveChangesAsync()
         {
-            var changed = Enumerable.Range(0, _berries.Count).Where(BerryChanged).ToList();
+            List<int> changed = Enumerable.Range(0, _berries.Count).Where(BerryChanged).ToList();
             foreach (int b in changed)
                 if (_berries[b].Problem() is string p) { await DialogHelper.ShowError($"{BerryNames[b]}: {p}", "Berry Data"); return false; }
             try

@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void Launch()
         {
-            var cmd = VM?.Selected;
+            CommandItem cmd = VM?.Selected;
             Close();
             cmd?.Run?.Invoke();
         }

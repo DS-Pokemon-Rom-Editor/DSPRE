@@ -275,7 +275,7 @@ namespace DSPRE.ROMFiles {
         public static void RemoveLastDynamicHeader() {
             int last = GetHeaderCount() - 1;
             File.Delete(Filesystem.GetDynamicHeaderPath(last));
-            using (var writer = new DSUtils.EasyWriter(RomInfo.internalNamesPath)) writer.EditSize(-RomInfo.internalNameLength);
+            using (DSUtils.EasyWriter writer = new DSUtils.EasyWriter(RomInfo.internalNamesPath)) writer.EditSize(-RomInfo.internalNameLength);
         }
 
         public static int GetHeaderCount() {

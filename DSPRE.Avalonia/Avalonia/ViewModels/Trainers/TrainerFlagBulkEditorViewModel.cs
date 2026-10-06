@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using DSPRE.Avalonia.Models;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
@@ -120,7 +121,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private byte[] TakeState()
         {
-            var state = new byte[_trainerCount * 2];
+            byte[] state = new byte[_trainerCount * 2];
             for (int i = 0; i < _trainerCount; i++)
             {
                 int bits = 0;
@@ -169,7 +170,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             LoadAllTrainerData();
 
-            foreach (var name in FlagNames)
+            foreach (string name in FlagNames)
                 FlagChecklist.Add(new FlagChecklistItem { Index = FlagChecklist.Count, Name = name });
 
             RebuildTree();
@@ -181,12 +182,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadAllTrainerData()
         {
             string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
-            var source = FromSource ? HgEngine.HgEngineTrainerSource.LoadAll() : null;
+            List<HgEngineSourceBlock> source = FromSource ? HgEngine.HgEngineTrainerSource.LoadAll() : null;
             _sourceAi.Clear();
             _sourceBattle.Clear();
             for (int i = 0; i < _trainerCount; i++)
             {
-                using var fs = new FileStream(Path.Combine(dir, i.ToString("D4")), FileMode.Open);
+                using FileStream fs = new FileStream(Path.Combine(dir, i.ToString("D4")), FileMode.Open);
                 _trainerData[i] = new TrainerProperties((ushort)i, fs);
                 if (source != null) ReadSource(i, i < source.Count ? source[i] : (HgEngine.HgEngineSourceBlock?)null);
                 _loadedFlags[i] = SnapshotFlags(_trainerData[i]);
@@ -209,16 +210,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (battle < 0) return;
             _sourceAi[id] = ai;
             _sourceBattle[id] = battle;
-            var tp = _trainerData[id];
+            TrainerProperties tp = _trainerData[id];
             for (int f = 0; f < AI_FLAG_COUNT; f++) tp.AI[f] = (ai & (1 << f)) != 0;
             tp.doubleBattle = battle != 0;
         }
 
         private async System.Threading.Tasks.Task SaveSourceAsync()
         {
-            var writes = new List<(int Id, List<HgEngine.HgEngineFieldWrite> Fields, bool[] Now)>();
-            var symbols = HgEngine.HgEngineSymbolTable.Load(TrainerDataHeader);
-            foreach (var (id, tp) in _trainerData)
+            List<(int Id, List<HgEngineFieldWrite> Fields, bool[] Now)> writes = new List<(int Id, List<HgEngine.HgEngineFieldWrite> Fields, bool[] Now)>();
+            HgEngineSymbolTable symbols = HgEngine.HgEngineSymbolTable.Load(TrainerDataHeader);
+            foreach ((int id, TrainerProperties tp) in _trainerData)
             {
                 bool[] loaded = _loadedFlags[id], now = SnapshotFlags(tp);
                 if (loaded.SequenceEqual(now)) continue;
@@ -229,7 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
                 for (int f = 0; f < AI_FLAG_COUNT; f++)
                     if (now[f] != loaded[f]) ai = now[f] ? ai | (1 << f) : ai & ~(1 << f);
-                var fields = new List<HgEngine.HgEngineFieldWrite>
+                List<HgEngineFieldWrite> fields = new List<HgEngine.HgEngineFieldWrite>
                 {
                     new(AiPath, symbols?.TryGetFlagsExpression(ai, "F_", out string expr) == true ? expr : ai.ToString()),
                 };
@@ -238,11 +239,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 writes.Add((id, fields, now));
             }
 
-            var (saved, error) = await HgEngineSave.RunAsync(() =>
+            (bool saved, string error) = await HgEngineSave.RunAsync(() =>
             {
-                foreach (var (id, fields, _) in writes)
+                foreach ((int id, List<HgEngineFieldWrite> fields, bool[] _) in writes)
                 {
-                    if (!HgEngine.HgEngineWriter.TryWriteFields(HgEngine.HgEngineDomain.Trainers, id, fields, out var unresolved, out string e, allOrNothing: true))
+                    if (!HgEngine.HgEngineWriter.TryWriteFields(HgEngine.HgEngineDomain.Trainers, id, fields, out List<string> unresolved, out string e, allOrNothing: true))
                         return $"Trainer {id}: {e}";
                     if (unresolved.Count > 0) return $"Trainer {id}: Trainers.c has no {string.Join(", ", unresolved)}.";
                 }
@@ -250,8 +251,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             });
             if (!saved) { if (error != null) await DialogHelper.ShowError("Not everything was saved:\n" + error, "Trainer Flag Bulk Editor"); return; }
 
-            var source = HgEngine.HgEngineTrainerSource.LoadAll();
-            foreach (var (id, _, now) in writes)
+            List<HgEngineSourceBlock> source = HgEngine.HgEngineTrainerSource.LoadAll();
+            foreach ((int id, List<HgEngineFieldWrite> _, bool[] now) in writes)
             {
                 if (id < source.Count) ReadSource(id, source[id]);
                 _loadedFlags[id] = SnapshotFlags(_trainerData[id]);
@@ -268,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private bool[] SnapshotFlags(TrainerProperties tp)
         {
-            var flags = new bool[FlagNames.Length];
+            bool[] flags = new bool[FlagNames.Length];
             for (int f = 0; f < flags.Length; f++) flags[f] = GetFlag(tp, f);
             return flags;
         }
@@ -297,25 +298,25 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             string filter = FilterText?.Trim();
             bool hasFilter = !string.IsNullOrEmpty(filter);
 
-            var byClass = new SortedDictionary<byte, List<int>>();
+            SortedDictionary<byte, List<int>> byClass = new SortedDictionary<byte, List<int>>();
             for (int i = 0; i < _trainerCount; i++)
             {
                 byte classId = _trainerData[i].trainerClass;
-                if (!byClass.TryGetValue(classId, out var list)) byClass[classId] = list = new List<int>();
+                if (!byClass.TryGetValue(classId, out List<int> list)) byClass[classId] = list = new List<int>();
                 list.Add(i);
             }
 
-            foreach (var (classId, memberIds) in byClass)
+            foreach ((byte classId, List<int> memberIds) in byClass)
             {
-                var matching = hasFilter
+                List<int> matching = hasFilter
                     ? memberIds.Where(id => SearchMatch.Contains(TrainerLabel(id), filter)).ToList()
                     : memberIds;
                 if (matching.Count == 0) continue;
 
-                var group = new TrainerFlagGroupNode { ClassId = classId, OnCheckedChanged = OnGroupChecked };
-                foreach (var id in matching)
+                TrainerFlagGroupNode group = new TrainerFlagGroupNode { ClassId = classId, OnCheckedChanged = OnGroupChecked };
+                foreach (int id in matching)
                 {
-                    var leaf = new TrainerFlagLeafNode
+                    TrainerFlagLeafNode leaf = new TrainerFlagLeafNode
                     {
                         TrainerId = id,
                         DisplayName = TrainerLabel(id),
@@ -345,7 +346,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             ApplyLeafCheckSideEffect(leaf.TrainerId, leaf.IsChecked);
 
-            var group = Tree.FirstOrDefault(g => g.Children.Contains(leaf));
+            TrainerFlagGroupNode group = Tree.FirstOrDefault(g => g.Children.Contains(leaf));
             if (group != null) UpdateGroupDisplay(group);
 
             if (IsByTrainerMode) RefreshFlagChecklistFromSelection();
@@ -357,7 +358,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_suppressTreeEvents) return;
 
             _suppressTreeEvents = true;
-            foreach (var child in group.Children)
+            foreach (TrainerFlagLeafNode child in group.Children)
             {
                 child.SetCheckedSilent(group.IsChecked);
                 ApplyLeafCheckSideEffect(child.TrainerId, group.IsChecked);
@@ -384,7 +385,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void SetFlagForTrainer(int trainerId, int flagIndex, bool enabled)
         {
-            var tp = _trainerData[trainerId];
+            TrainerProperties tp = _trainerData[trainerId];
             if (GetFlag(tp, flagIndex) == enabled) return;
             SetFlag(tp, flagIndex, enabled);
             _isDirty = true;
@@ -394,9 +395,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void SetAllVisibleLeavesChecked(bool value)
         {
             _suppressTreeEvents = true;
-            foreach (var group in Tree)
+            foreach (TrainerFlagGroupNode group in Tree)
             {
-                foreach (var leaf in group.Children)
+                foreach (TrainerFlagLeafNode leaf in group.Children)
                 {
                     leaf.SetCheckedSilent(value);
                     ApplyLeafCheckSideEffect(leaf.TrainerId, value);
@@ -437,7 +438,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
 
             bool enable = FlagChecklist[flagIndex].IsChecked != true;
-            foreach (var id in _selectedTrainerIds)
+            foreach (int id in _selectedTrainerIds)
                 SetFlagForTrainer(id, flagIndex, enable);
 
             RefreshFlagChecklistFromSelection();
@@ -449,7 +450,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (FromSource) { _ = SaveSourceAsync(); return; }
             string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
-            foreach (var (id, tp) in _trainerData.ToList())
+            foreach ((int id, TrainerProperties tp) in _trainerData.ToList())
             {
                 bool[] loaded = _loadedFlags[id];
                 bool[] current = SnapshotFlags(tp);
@@ -458,7 +459,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 // Other editors may have saved this trainer since it was read here.
                 string path = Path.Combine(dir, id.ToString("D4"));
                 TrainerProperties onDisk;
-                using (var fs = new FileStream(path, FileMode.Open))
+                using (FileStream fs = new FileStream(path, FileMode.Open))
                     onDisk = new TrainerProperties((ushort)id, fs);
                 for (int f = 0; f < current.Length; f++)
                     if (current[f] != loaded[f]) SetFlag(onDisk, f, current[f]);

@@ -28,14 +28,14 @@ namespace DSPRE.Models
             for (int f = 0; f < mesh.Faces.Count; f++)
             {
                 if (allowed != null && !allowed(f)) continue;
-                var face = mesh.Faces[f];
+                MapMesh.Face face = mesh.Faces[f];
                 if (face.Corners == null || face.Corners.Length < 3) continue;
 
                 for (int i = 1; i + 1 < face.Corners.Length; i++)
                 {
-                    var a = Place(mesh, toScene, face.Corners[0]);
-                    var b = Place(mesh, toScene, face.Corners[i]);
-                    var c = Place(mesh, toScene, face.Corners[i + 1]);
+                    (float x, float y, float z) a = Place(mesh, toScene, face.Corners[0]);
+                    (float x, float y, float z) b = Place(mesh, toScene, face.Corners[i]);
+                    (float x, float y, float z) c = Place(mesh, toScene, face.Corners[i + 1]);
 
                     if (!Through(ox, oy, oz, dx, dy, dz, a, b, c, out float t)) continue;
                     if (best != null && t >= best.Value.Distance) continue;
@@ -61,7 +61,7 @@ namespace DSPRE.Models
             float closest = float.MaxValue;
             foreach (int corner in face.Corners)
             {
-                var (px, py, pz) = Place(mesh, toScene, corner);
+                (float px, float py, float pz) = Place(mesh, toScene, corner);
                 float d = (px - x) * (px - x) + (py - y) * (py - y) + (pz - z) * (pz - z);
                 if (d < closest) { closest = d; best = corner; }
             }
@@ -70,7 +70,7 @@ namespace DSPRE.Models
 
         public static (float x, float y, float z) Place(MapMesh mesh, float[] m, int vertex)
         {
-            var v = mesh.Vertices[vertex];
+            MapMesh.Vertex v = mesh.Vertices[vertex];
             return Place(m, v.X, v.Y, v.Z);
         }
 

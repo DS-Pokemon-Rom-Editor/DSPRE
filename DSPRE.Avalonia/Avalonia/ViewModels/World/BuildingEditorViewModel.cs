@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         public void DiscardChanges()
         {
-            foreach (var (path, bytes) in _originals)
+            foreach ((string path, byte[] bytes) in _originals)
             {
                 try { File.WriteAllBytes(path, bytes); }
                 catch (Exception ex) { AppLogger.Error("Building discard: " + ex.Message); }
@@ -104,8 +104,8 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void ApplyState(byte[] state)
         {
-            var s = DSPRE.Avalonia.UndoJson.Read<Dictionary<string, byte[]>>(state);
-            foreach (var path in _historyOriginals.Keys)
+            Dictionary<string, byte[]> s = DSPRE.Avalonia.UndoJson.Read<Dictionary<string, byte[]>>(state);
+            foreach (string path in _historyOriginals.Keys)
             {
                 byte[] want = s.TryGetValue(path, out byte[] b) ? b : _historyOriginals[path];
                 try { if (want != null) File.WriteAllBytes(path, want); }
@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Unsaved while any imported file differs from what it held when last saved.
         private void RecountDirty()
         {
-            _dirty = _originals.Any(kv => { var now = ReadFile(kv.Key); return now == null || !now.AsSpan().SequenceEqual(kv.Value); });
+            _dirty = _originals.Any(kv => { byte[] now = ReadFile(kv.Key); return now == null || !now.AsSpan().SequenceEqual(kv.Value); });
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _owner = owner;
             try
             {
-                var dirs = new List<DirNames> { DirNames.exteriorBuildingModels, DirNames.buildingTextures };
+                List<DirNames> dirs = new List<DirNames> { DirNames.exteriorBuildingModels, DirNames.buildingTextures };
                 if (IsHGSS) dirs.Add(DirNames.interiorBuildingModels);
                 DSUtils.TryUnpackNarcs(dirs);
 
@@ -198,7 +198,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 string path = Path.Combine(BuildingDir(), index.ToString("D4"));
                 if (!File.Exists(path)) { ModelLoaded?.Invoke(this, EventArgs.Empty); return; }
                 _currentData = File.ReadAllBytes(path);
-                var nsbmd = NSBMDLoader.LoadNSBMD(new MemoryStream(_currentData));
+                NSBMD nsbmd = NSBMDLoader.LoadNSBMD(new MemoryStream(_currentData));
                 BindTextures(nsbmd, _currentData, _texIndex, out bool painted);
                 if (nsbmd.models != null && nsbmd.models.Length > 0)
                     Model3D = NsbmdGeometry.BuildModel(nsbmd.models[0]);
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportAsync()
         {
             if (_selBuilding < 0) return;
-            var filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd", "*.bin", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import building model", new[] { filter });
             if (path == null) return;
             try
@@ -259,7 +259,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportAsync()
         {
             if (_selBuilding < 0) return;
-            var filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
+            FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
             string path = await DialogHelper.SaveFile(_owner, "Export building model", new[] { filter }, $"building_{_selBuilding:D4}.nsbmd");
             if (path == null) return;
             try { File.Copy(Path.Combine(BuildingDir(), _selBuilding.ToString("D4")), path, true); StatusText = "Exported."; }

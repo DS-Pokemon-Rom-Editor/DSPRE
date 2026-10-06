@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public HeaderSearchViewModel(bool _)
         {
             _internalNames = HeaderLists.GetInternalNames() ?? new List<string>();
-            foreach (var f in HeaderSearchEngine.SearchableFields.Values) Fields.Add(f);
+            foreach (string f in HeaderSearchEngine.SearchableFields.Values) Fields.Add(f);
             _fieldIndex = 0;
             RebuildOperators();
         }
@@ -104,10 +104,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void RebuildOperators()
         {
             Operators.Clear();
-            var names = HeaderSearchEngine.IsNumericField(FieldKey(_fieldIndex))
+            IEnumerable<string> names = HeaderSearchEngine.IsNumericField(FieldKey(_fieldIndex))
                 ? HeaderSearchEngine.NumOperatorNames.Values
                 : HeaderSearchEngine.TextOperatorNames.Values.AsEnumerable();
-            foreach (var o in names) Operators.Add(o);
+            foreach (string o in names) Operators.Add(o);
             _operatorIndex = 0;
             OnPropertyChanged(nameof(OperatorIndex));
         }
@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             List<string> internalNames = _internalNames.ToList();
             ushort finalID = (ushort)Math.Min(internalNames.Count, ushort.MaxValue);
 
-            var cancellation = new CancellationTokenSource();
+            CancellationTokenSource cancellation = new CancellationTokenSource();
             _searchCancellation = cancellation;
             StatusText = debounce ? "Waiting for more input..." : "Searching...";
             _ = RunSearchAsync(cancellation, generation, debounce, internalNames, finalID,
@@ -241,7 +241,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void CancelPendingSearch()
         {
-            var cancellation = _searchCancellation;
+            CancellationTokenSource cancellation = _searchCancellation;
             _searchCancellation = null;
             try { cancellation?.Cancel(); }
             catch (ObjectDisposedException) { }

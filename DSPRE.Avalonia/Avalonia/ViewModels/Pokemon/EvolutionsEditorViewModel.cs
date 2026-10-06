@@ -1,7 +1,9 @@
 ﻿using Avalonia.Controls;
 using DSPRE.Editors;
+using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -121,7 +123,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (_methodIndex < 0) return string.Empty;
-                var meaning = Meaning;
+                EvolutionParamMeaning meaning = Meaning;
                 switch (meaning)
                 {
                     case EvolutionParamMeaning.FromLevel:
@@ -153,7 +155,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (_methodIndex < 0) return 65535;
-                var meaning = Meaning;
+                EvolutionParamMeaning meaning = Meaning;
                 switch (meaning)
                 {
                     case EvolutionParamMeaning.FromLevel:
@@ -218,14 +220,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 for (int i = 0; i < _hgMethodOptions.Count; i++) _hgMethodNamesArray[i] = _hgMethodOptions[i].Name;
 
                 MethodNames.Clear();
-                foreach (var opt in _hgMethodOptions) MethodNames.Add(opt.Name);
+                foreach ((string Name, int Value) opt in _hgMethodOptions) MethodNames.Add(opt.Name);
             }
             else
             {
                 DSPRE.Avalonia.Data.LabelStore.Sync(MethodNames, "evolution_methods");
             }
 
-            foreach (var row in EvoRows)
+            foreach (EvolutionRowViewModel row in EvoRows)
             {
                 row.UseHgEngineNames = UseHgEngineSource;
                 row.HgMethodNames = _hgMethodNamesArray;
@@ -235,7 +237,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void OnLabelsChanged(object sender, EventArgs e)
         {
             ReloadMethodNames();
-            foreach (var row in EvoRows) { row.RefreshMethodDisplay(); row.RefreshParam(); }   // un-blank + re-read param meaning
+            foreach (EvolutionRowViewModel row in EvoRows) { row.RefreshMethodDisplay(); row.RefreshParam(); }   // un-blank + re-read param meaning
         }
 
         /// <summary>Unsubscribes from app-wide events; call when the host window closes.</summary>
@@ -276,7 +278,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private (int, int, int)[] SnapshotRows()
         {
-            var s = new (int, int, int)[EvoRows.Count];
+            (int, int, int)[] s = new (int, int, int)[EvoRows.Count];
             for (int i = 0; i < EvoRows.Count; i++)
                 s[i] = (EvoRows[i].MethodIndex, EvoRows[i].Param, EvoRows[i].TargetIndex);
             return s;
@@ -311,7 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (!Design.IsDesignMode) return;
 
-            foreach (var n in Enum.GetNames<EvolutionMethod>()) MethodNames.Add(n);
+            foreach (string n in Enum.GetNames<EvolutionMethod>()) MethodNames.Add(n);
             for (int i = 0; i < 10; i++) PokemonNames.Add($"Pokémon {i}");
 
             for (int i = 0; i < EvolutionFile.numEvolutions; i++)
@@ -338,7 +340,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int slots = UseHgEngineSource && DSPRE.HgEngine.HgEngineEvolutions.MaxSlots() is int max and > 0 ? max : EvolutionFile.numEvolutions;
             for (int i = 0; i < slots; i++)
             {
-                var row = new EvolutionRowViewModel
+                EvolutionRowViewModel row = new EvolutionRowViewModel
                 {
                     ItemNames    = itemNames,
                     MoveNames    = moveNames,
@@ -371,14 +373,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     // Evolutions isn't synced from a packed NARC, so the vanilla read path below would
                     // show stale ROM data instead of the checkout's real data/Evolutions.c.
                     _hgLoadError = null;
-                    if (!DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvoRows.Count, out var hgEntries, out string loadError))
+                    if (!DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvoRows.Count, out List<HgEngineEvolutions.EvoEntry> hgEntries, out string loadError))
                         _hgLoadError = loadError;
                     for (int i = 0; i < EvoRows.Count; i++)
                     {
-                        var row = EvoRows[i];
+                        EvolutionRowViewModel row = EvoRows[i];
                         if (i < hgEntries.Count)
                         {
-                            var e = hgEntries[i];
+                            HgEngineEvolutions.EvoEntry e = hgEntries[i];
                             int idx = _hgMethodOptions.FindIndex(o => o.Value == e.MethodValue);
                             bool targetListed = e.TargetSpeciesId >= 0 && e.TargetSpeciesId < PokemonNames.Count;
                             if (e.Unresolved) _hgLoadError ??= $"Evolution {i + 1} could not be read: {e.RawText}";
@@ -403,8 +405,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
                     for (int i = 0; i < EvolutionFile.numEvolutions; i++)
                     {
-                        var row = EvoRows[i];
-                        var d = i < _current.data.Length ? _current.data[i] : default;
+                        EvolutionRowViewModel row = EvoRows[i];
+                        EvolutionData d = i < _current.data.Length ? _current.data[i] : default;
                         row.MethodIndex = (int)d.method;
                         row.Param       = d.param;
                         row.TargetIndex = d.target >= 0 ? d.target : 0;
@@ -428,13 +430,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (UseHgEngineSource) { _ = SaveHgEngineAsync(); return; }
             if (_current == null) return;
 
-            var newFile = new EvolutionFile();
-            var data = new System.Collections.Generic.List<EvolutionData>();
+            EvolutionFile newFile = new EvolutionFile();
+            List<EvolutionData> data = new System.Collections.Generic.List<EvolutionData>();
 
             for (int i = 0; i < EvoRows.Count; i++)
             {
-                var row = EvoRows[i];
-                var ed = new EvolutionData
+                EvolutionRowViewModel row = EvoRows[i];
+                EvolutionData ed = new EvolutionData
                 {
                     method = (EvolutionMethod)row.MethodIndex,
                     param  = (short)row.Param,
@@ -476,15 +478,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved:\n{_hgLoadError}", "Evolutions");
                 return;
             }
-            var uiEntries = new System.Collections.Generic.List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)>(EvoRows.Count);
-            foreach (var row in EvoRows)
+            List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> uiEntries = new System.Collections.Generic.List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)>(EvoRows.Count);
+            foreach (EvolutionRowViewModel row in EvoRows)
             {
                 string methodName = row.MethodIndex >= 0 && row.MethodIndex < _hgMethodOptions.Count
                     ? _hgMethodOptions[row.MethodIndex].Name : "EVO_NONE";
                 uiEntries.Add((methodName, row.Param, row.TargetIndex, row.HgTargetFormId));
             }
 
-            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
+            (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
                 DSPRE.HgEngine.HgEngineEvolutions.TrySetEntries(species, uiEntries, out string writeError) ? null : writeError);
             if (!saved)
             {

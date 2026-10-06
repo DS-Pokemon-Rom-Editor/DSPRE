@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -29,11 +30,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void CopyValues(byte[] bytes)
         {
-            var back = new FriendshipTable(bytes);
+            FriendshipTable back = new FriendshipTable(bytes);
             for (int e = 0; e < FriendshipTable.Events; e++)
                 for (int b = 0; b < FriendshipTable.Bands; b++)
                     _table.Values[e, b] = back.Values[e, b];
-            foreach (var r in Rows) r.Refresh();
+            foreach (RowViewModel r in Rows) r.Refresh();
         }
 
         public string[] BandNames => FriendshipTable.BandNames;
@@ -67,7 +68,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             internal void Refresh()
             {
-                foreach (var n in new[] { nameof(Low), nameof(Mid), nameof(High) })
+                foreach (string n in new[] { nameof(Low), nameof(Mid), nameof(High) })
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }
@@ -88,7 +89,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 if (_table == null) return "";
-                var risky = _table.Risky().ToList();
+                List<(int Event, int Band)> risky = _table.Risky().ToList();
                 if (risky.Count == 0) return "";
                 string where = string.Join(", ", risky.Take(4).Select(r => $"{FriendshipTable.EventNames[r.Event]} ({FriendshipTable.BandNames[r.Band]})"));
                 return $"Above +{FriendshipTable.SafeMax}, ball, met-location and Soothe Bell bonuses can overflow into a loss: {where}{(risky.Count > 4 ? "…" : "")}";
@@ -98,7 +99,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Changed()
         {
-            foreach (var n in new[] { nameof(Warning), nameof(HasWarning), nameof(HasUnsavedChanges) }) Raise(n);
+            foreach (string n in new[] { nameof(Warning), nameof(HasWarning), nameof(HasUnsavedChanges) }) Raise(n);
             _undo?.Record();
         }
 

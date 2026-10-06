@@ -4,6 +4,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using DSPRE.Avalonia.ViewModels;
 using System.Collections.Generic;
+using System.IO;
 
 namespace DSPRE.Avalonia.Views.Battle
 {
@@ -16,10 +17,10 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private async void ImportIcon_Click(object sender, RoutedEventArgs e)
         {
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null || VM == null) return;
 
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import Icon PNG",
                 AllowMultiple = false,
@@ -32,7 +33,7 @@ namespace DSPRE.Avalonia.Views.Battle
             DSPRE.RawImage imported;
             try
             {
-                using var fs = System.IO.File.OpenRead(path);
+                using FileStream fs = System.IO.File.OpenRead(path);
                 imported = DSPRE.Avalonia.ImageConverter.DecodeRawImage(fs);
             }
             catch (System.Exception ex) { await DialogHelper.ShowError($"Could not read the image: {ex.Message}"); return; }
@@ -44,11 +45,11 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private async void ExportIcon_Click(object sender, RoutedEventArgs e)
         {
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null || VM == null) return;
 
             byte[] indexedPng = VM.FullPaletteExport ? VM.ExportIconGraphicIndexedPng() : null;
-            var raw = VM.FullPaletteExport ? null : VM.ExportIconGraphic();
+            RawImage raw = VM.FullPaletteExport ? null : VM.ExportIconGraphic();
             if (indexedPng == null && raw == null)
             {
                 string reason = VM.FullPaletteExport ? "save the icon graphic first (full-palette export needs it on disk)" : "nothing to export";
@@ -56,7 +57,7 @@ namespace DSPRE.Avalonia.Views.Battle
                 return;
             }
 
-            var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export Icon PNG",
                 DefaultExtension = "png",
@@ -83,9 +84,9 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private void AddProgramCmd_Click(object sender, RoutedEventArgs e) => VM?.AddProgramCmd();
         private void SaveProgramScript_Click(object sender, RoutedEventArgs e) => VM?.SaveProgramScript();
-        private void ProgramCmdUp_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveProgramCmd(r, -1); }
-        private void ProgramCmdDown_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveProgramCmd(r, 1); }
-        private void ProgramCmdRemove_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.RemoveProgramCmd(r); }
+        private void ProgramCmdUp_Click(object sender, RoutedEventArgs e) { ProgramCmdRow r = Row(sender); if (r != null) VM?.MoveProgramCmd(r, -1); }
+        private void ProgramCmdDown_Click(object sender, RoutedEventArgs e) { ProgramCmdRow r = Row(sender); if (r != null) VM?.MoveProgramCmd(r, 1); }
+        private void ProgramCmdRemove_Click(object sender, RoutedEventArgs e) { ProgramCmdRow r = Row(sender); if (r != null) VM?.RemoveProgramCmd(r); }
 
         private void AddAnimStep_Click(object sender, RoutedEventArgs e)
             => (DataContext as BattleDisplayEditorViewModel)?.AddAnimStep();

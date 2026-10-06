@@ -29,16 +29,16 @@ namespace DSPRE.Avalonia.Data
         public static Result PutBack(byte[] chr, byte[] pal, byte[] scr, byte[] painted,
                                      int width, int height)
         {
-            var it = new Result();
+            Result it = new Result();
             if (chr == null || pal == null || scr == null || painted == null)
             { it.Whynot = "This background is missing one of its three pieces."; return it; }
 
-            var colours = NitroBgCodec.ReadPalette(pal, out int palCount);
+            (byte r, byte g, byte b)[] colours = NitroBgCodec.ReadPalette(pal, out int palCount);
             if (colours == null || colours.Length == 0)
             { it.Whynot = "This background's colours could not be read."; return it; }
 
-            var (is8, tileBytes) = NitroBgCodec.ReadTileHeader(chr);
-            var (w, h, mapData) = NitroBgCodec.ReadScreenHeader(scr);
+            (bool is8, int tileBytes) = NitroBgCodec.ReadTileHeader(chr);
+            (int w, int h, int mapData) = NitroBgCodec.ReadScreenHeader(scr);
 
             if (width != w || height != h)
             {
@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Data
             // How many squares of the screen use each tile, so sharing can be reported rather than
             // discovered afterwards.
             int cols = w / 8, rows = h / 8, entryBytes = NitroBgCodec.EntryBytes(scr);
-            var usedBy = new Dictionary<int, int>();
+            Dictionary<int, int> usedBy = new Dictionary<int, int>();
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)
                 {
@@ -63,9 +63,9 @@ namespace DSPRE.Avalonia.Data
                 }
 
             // Read from the sheet as it was and write into a copy.
-            var outp = (byte[])chr.Clone();
-            var was = chr;
-            var writtenTo = new Dictionary<int, int>();   // pixel in the sheet -> what was put there
+            byte[] outp = (byte[])chr.Clone();
+            byte[] was = chr;
+            Dictionary<int, int> writtenTo = new Dictionary<int, int>();   // pixel in the sheet -> what was put there
             int fought = 0;
 
             for (int ty = 0; ty < rows; ty++)
@@ -149,7 +149,7 @@ namespace DSPRE.Avalonia.Data
             {
                 int ci = ColourOf(colours, palCount, is8, palNo, index);
                 if (ci < 0) continue;
-                var c = colours[ci];
+                (byte r, byte g, byte b) c = colours[ci];
                 int dr = c.r - r, dg = c.g - g, db = c.b - b;
                 int off = dr * dr + dg * dg + db * db;
                 if (off >= bestOff) continue;

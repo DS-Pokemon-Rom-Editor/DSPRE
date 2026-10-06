@@ -96,7 +96,7 @@ namespace DSPRE.Avalonia.Data
         public static string OpcodeDoc(string opName, bool script = false)
         {
             if (script) return WazaSeqSchema.Doc(opName);
-            return opName != null && Docs.TryGetValue(opName, out var d) ? d : "";
+            return opName != null && Docs.TryGetValue(opName, out string d) ? d : "";
         }
 
         private static readonly Dictionary<string, string> Docs = new()
@@ -195,9 +195,9 @@ namespace DSPRE.Avalonia.Data
         {
             if (opName == null) return "";
             if (script && WazaSeqSchema.Display(opName) is string ws) return ws;
-            if (Opcodes.TryGetValue(opName, out var s)) return s;
+            if (Opcodes.TryGetValue(opName, out string s)) return s;
             string t = opName;
-            var parts = t.Split('_');
+            string[] parts = t.Split('_');
             for (int i = 0; i < parts.Length; i++)
                 if (parts[i].Length > 0) parts[i] = char.ToUpperInvariant(parts[i][0]) + parts[i].Substring(1).ToLowerInvariant();
             return string.Join(" ", parts);
@@ -281,13 +281,13 @@ namespace DSPRE.Avalonia.Data
         public static string ParamName(string opName, int index, bool script = false)
         {
             if (script && WazaSeqSchema.Params(opName) is string[] wp && index >= 0 && index < wp.Length) return wp[index];
-            return opName != null && Names.TryGetValue(opName, out var a) && index >= 0 && index < a.Length ? a[index] : "Param " + (index + 1);
+            return opName != null && Names.TryGetValue(opName, out string[] a) && index >= 0 && index < a.Length ? a[index] : "Param " + (index + 1);
         }
 
         public static string Token(string text, bool pascalCase)
         {
             if (string.IsNullOrEmpty(text)) return "";
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             bool capNext = pascalCase, sawFirst = false;
             foreach (char c in text)
             {

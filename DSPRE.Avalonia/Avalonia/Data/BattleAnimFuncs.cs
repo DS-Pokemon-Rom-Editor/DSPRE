@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Data
 
         private static string[] WithBlank(string[] words, int at)
         {
-            var copy = (string[])words.Clone();
+            string[] copy = (string[])words.Clone();
             copy[at] = "";
             return copy;
         }
@@ -282,8 +282,8 @@ namespace DSPRE.Avalonia.Data
 
         private static Dictionary<int, BattleAnimFunc> Build()
         {
-            var d = new Dictionary<int, BattleAnimFunc>(All.Length);
-            foreach (var r in All) d[r.Id] = r;
+            Dictionary<int, BattleAnimFunc> d = new Dictionary<int, BattleAnimFunc>(All.Length);
+            foreach (BattleAnimFunc r in All) d[r.Id] = r;
             return d;
         }
 
@@ -293,11 +293,11 @@ namespace DSPRE.Avalonia.Data
 
         public static IReadOnlyCollection<BattleAnimFunc> Known => ById.Values;
 
-        public static BattleAnimFunc Get(int id) => ById.TryGetValue(id, out var r) ? r : null;
+        public static BattleAnimFunc Get(int id) => ById.TryGetValue(id, out BattleAnimFunc r) ? r : null;
 
         public static string WordMeaning(int id, int word)
         {
-            var r = Get(id);
+            BattleAnimFunc r = Get(id);
             if (r == null || word < 0 || word >= r.Words.Length) return null;
             return string.IsNullOrEmpty(r.Words[word]) ? null : r.Words[word];
         }

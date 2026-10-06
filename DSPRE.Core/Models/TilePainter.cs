@@ -84,7 +84,7 @@ namespace DSPRE.Models
 
         private (int across, int down) Footprint(int tile)
         {
-            var t = Set != null && tile >= 0 && tile < Set.Tiles.Count ? Set.Tiles[tile] : null;
+            MapTileset.Tile t = Set != null && tile >= 0 && tile < Set.Tiles.Count ? Set.Tiles[tile] : null;
             return t == null ? (1, 1) : TileGrid.Footprint(t.Wide, t.Deep, Turn);
         }
 
@@ -92,7 +92,7 @@ namespace DSPRE.Models
 
         private (int x, int z) Snapped(int x, int z)
         {
-            var (across, down) = Footprint(Brush);
+            (int across, int down) = Footprint(Brush);
             int n = TileGrid.Across;
             int py = n - 1 - z, sy = n - 1 - _start.z;
             int ax = ((x - _start.x % across) / across) * across + _start.x % across;
@@ -102,24 +102,24 @@ namespace DSPRE.Models
 
         private bool PutBrush((int x, int z) at)
         {
-            var tile = BrushTile;
+            MapTileset.Tile tile = BrushTile;
             if (tile == null) { Warning = "Select a tile."; return false; }
             if (!Grid.Fits(at.x, at.z, tile.Wide, tile.Deep, Turn))
             {
                 Warning = $"{tile.Name} doesn't fit there.";
                 return false;
             }
-            var was = Grid.At(at.x, at.z, Layer);
+            TileGrid.Square was = Grid.At(at.x, at.z, Layer);
             if (was.WhereItWasPut && was.Tile == Brush && was.Turn == (Turn & 3)) return false;
             Warning = null;
 
             // A tile laid on an empty square of an unraised layer sits on the ground already there.
-            var (_, down) = TileGrid.Footprint(tile.Wide, tile.Deep, Turn);
+            (int _, int down) = TileGrid.Footprint(tile.Wide, tile.Deep, Turn);
             int southZ = at.z + down - 1;
             if (was.Tile < 0 && Grid.HeightAt(at.x, southZ, Layer) == 0f)
                 for (int layer = 0; layer < TileGrid.Layers; layer++)
                 {
-                    var under = Grid.At(at.x, southZ, layer);
+                    TileGrid.Square under = Grid.At(at.x, southZ, layer);
                     if (layer == Layer || under.Tile < 0) continue;
                     // The new tile stands on the ground's surface, which can sit above that tile's lowest face.
                     float surface = GroundSurface?.Invoke(at.x, southZ, layer)
@@ -240,7 +240,7 @@ namespace DSPRE.Models
         public bool Drag(int x, int z)
         {
             if (!_pressed) return false;
-            var was = Grid.Clone();
+            TileGrid was = Grid.Clone();
 
             switch (_doing)
             {
@@ -264,18 +264,18 @@ namespace DSPRE.Models
             if (_doing == Doing.Shape) CommitShape(_start, (x, z));
             if (_doing == Doing.Selecting)
             {
-                var mask = _adding && Selection != null ? (bool[,])Selection.Clone() : new bool[TileGrid.Across, TileGrid.Across];
-                foreach (var (cx, cz) in TileShapes.RectangleFilled(_start, (x, z))) mask[cx, cz] = true;
+                bool[,] mask = _adding && Selection != null ? (bool[,])Selection.Clone() : new bool[TileGrid.Across, TileGrid.Across];
+                foreach ((int cx, int cz) in TileShapes.RectangleFilled(_start, (x, z))) mask[cx, cz] = true;
                 Selection = mask;
             }
             if (_doing == Doing.Lassoing)
             {
-                var mask = _adding && Selection != null ? (bool[,])Selection.Clone() : new bool[TileGrid.Across, TileGrid.Across];
-                var outline = new bool[TileGrid.Across, TileGrid.Across];
-                var closed = new List<(int x, int z)>(_stroke);
+                bool[,] mask = _adding && Selection != null ? (bool[,])Selection.Clone() : new bool[TileGrid.Across, TileGrid.Across];
+                bool[,] outline = new bool[TileGrid.Across, TileGrid.Across];
+                List<(int x, int z)> closed = new List<(int x, int z)>(_stroke);
                 TileShapes.Extend(closed, _stroke[0]);
-                foreach (var (cx, cz) in closed) outline[cx, cz] = true;
-                var inside = TileShapes.Enclosed(outline);
+                foreach ((int cx, int cz) in closed) outline[cx, cz] = true;
+                bool[,] inside = TileShapes.Enclosed(outline);
                 for (int cx = 0; cx < TileGrid.Across; cx++)
                     for (int cz = 0; cz < TileGrid.Across; cz++)
                         if (inside[cx, cz]) mask[cx, cz] = true;
@@ -320,7 +320,7 @@ namespace DSPRE.Models
             float lowest = TileGrid.LowestStep * TileGrid.Step, highest = TileGrid.HighestStep * TileGrid.Step;
             foreach (int layer in HeightsAllLayers ? Enumerable.Range(0, TileGrid.Layers) : new[] { Layer })
             {
-                var (hx, hz) = Grid.HeightSquare(x, z, layer);
+                (int hx, int hz) = Grid.HeightSquare(x, z, layer);
                 float to;
                 // Heights name the top you walk on, so a tile whose base sits under its surface is set by its surface.
                 if (HeightChange == HeightWay.Set) to = HeightBrush * TileGrid.Step - SurfaceAbove(x, z, layer);
@@ -333,20 +333,20 @@ namespace DSPRE.Models
 
         private float SurfaceAbove(int x, int z, int layer)
         {
-            var sq = Grid.At(x, z, layer);
+            TileGrid.Square sq = Grid.At(x, z, layer);
             return sq.Tile < 0 || GroundSurface == null ? 0f : GroundSurface(x, z, layer) - sq.Lift;
         }
 
         private void PickHeight(int x, int z)
         {
-            var (hx, hz) = Grid.HeightSquare(x, z, Layer);
+            (int hx, int hz) = Grid.HeightSquare(x, z, Layer);
             float top = Grid.HeightAt(hx, hz, Layer) + SurfaceAbove(x, z, Layer);
             HeightBrush = Math.Clamp((int)Math.Round(top / TileGrid.Step), TileGrid.LowestStep, TileGrid.HighestStep);
         }
 
         private void PickTile(int x, int z)
         {
-            var square = Grid.At(x, z, Layer);
+            TileGrid.Square square = Grid.At(x, z, Layer);
             if (square.Tile < 0) return;
             Brush = square.Tile;
             Turn = square.Turn;
@@ -355,7 +355,7 @@ namespace DSPRE.Models
         private void Bucket(int x, int z)
         {
             if (Heights) { Grid.FloodFillHeight(x, z, HeightBrush * TileGrid.Step, Layer); return; }
-            var tile = BrushTile;
+            MapTileset.Tile tile = BrushTile;
             if (tile == null) { Warning = "Select a tile."; return; }
             Grid.FloodFillTile(x, z, Brush, Turn, tile.Wide, tile.Deep, Layer, Selection);
         }
@@ -386,7 +386,7 @@ namespace DSPRE.Models
         private List<(int x, int z)> ShapeCells((int x, int z) a, (int x, int z) b)
         {
             bool smart = SmartShapes;
-            var cells = Current switch
+            List<(int x, int z)> cells = Current switch
             {
                 Tool.Line => smart ? TileShapes.EdgeToEdgeLine(a, b) : TileShapes.Line(a, b),
                 Tool.Rectangle => smart ? TileShapes.RectangleFilled(a, b) : TileShapes.RectangleOutline(a, b),
@@ -399,13 +399,13 @@ namespace DSPRE.Models
 
         private void CommitShape((int x, int z) a, (int x, int z) b)
         {
-            var cells = ShapeCells(a, b);
+            List<(int x, int z)> cells = ShapeCells(a, b);
             if (cells.Count == 0) return;
 
             if (Heights)
             {
                 _stepped.Clear();
-                foreach (var (x, z) in cells) SetHeight(x, z);
+                foreach ((int x, int z) in cells) SetHeight(x, z);
                 return;
             }
 
@@ -417,7 +417,7 @@ namespace DSPRE.Models
             }
 
             if (BrushTile == null) { Warning = "Select a tile."; return; }
-            foreach (var (x, z) in cells) PutBrush(AnchorFor(x, z, Brush));
+            foreach ((int x, int z) in cells) PutBrush(AnchorFor(x, z, Brush));
         }
 
         public bool[,] Selection { get; private set; }
@@ -442,7 +442,7 @@ namespace DSPRE.Models
 
         public void SelectAll()
         {
-            var all = new bool[TileGrid.Across, TileGrid.Across];
+            bool[,] all = new bool[TileGrid.Across, TileGrid.Across];
             for (int x = 0; x < TileGrid.Across; x++) for (int z = 0; z < TileGrid.Across; z++) all[x, z] = true;
             Selection = all;
         }
@@ -453,17 +453,17 @@ namespace DSPRE.Models
         {
             int n = TileGrid.Across;
             int here = Grid.At(x, z, Layer).Tile;
-            var alike = SmartTools && Drawing != null && Drawing.Holds(here) ? Drawing.Tiles : new HashSet<int> { here };
+            ISet<int> alike = SmartTools && Drawing != null && Drawing.Holds(here) ? Drawing.Tiles : new HashSet<int> { here };
 
-            var same = new bool[n, n];
+            bool[,] same = new bool[n, n];
             for (int cx = 0; cx < n; cx++)
                 for (int cz = 0; cz < n; cz++)
                     same[cx, cz] = alike.Contains(Grid.At(cx, cz, Layer).Tile);
-            var region = everywhere ? same : SmartDrawing.Joined(same, x, z);
+            bool[,] region = everywhere ? same : SmartDrawing.Joined(same, x, z);
 
             bool keep = (everywhere || combine) && Selection != null;
             bool remove = combine && Selection != null && Selection[x, z];
-            var mask = keep ? (bool[,])Selection.Clone() : new bool[n, n];
+            bool[,] mask = keep ? (bool[,])Selection.Clone() : new bool[n, n];
             for (int cx = 0; cx < n; cx++)
                 for (int cz = 0; cz < n; cz++)
                     if (region[cx, cz]) mask[cx, cz] = !remove;
@@ -479,7 +479,7 @@ namespace DSPRE.Models
                     if (mask[x, z]) { lowX = Math.Min(lowX, x); lowZ = Math.Min(lowZ, z); highX = Math.Max(highX, x); highZ = Math.Max(highZ, z); }
             if (highX < 0) return null;
 
-            var piece = new Piece { X = lowX, Z = lowZ, Wide = highX - lowX + 1, Deep = highZ - lowZ + 1 };
+            Piece piece = new Piece { X = lowX, Z = lowZ, Wide = highX - lowX + 1, Deep = highZ - lowZ + 1 };
             piece.Heights = new float?[piece.Wide, piece.Deep];
             for (int x = lowX; x <= highX; x++)
                 for (int z = lowZ; z <= highZ; z++)
@@ -488,7 +488,7 @@ namespace DSPRE.Models
                     piece.Heights[x - lowX, z - lowZ] = Grid.HeightAt(x, z, Layer);
                     int tile = Grid.PutHere(x, z, Layer);
                     if (tile < 0) continue;
-                    var sq = Grid.At(x, z, Layer);
+                    TileGrid.Square sq = Grid.At(x, z, Layer);
                     piece.Tiles.Add((x - lowX, z - sq.PastNorth - lowZ, tile, sq.Turn, sq.FullWide, sq.FullDeep));
                 }
             return piece;
@@ -511,13 +511,13 @@ namespace DSPRE.Models
             for (int dx = 0; dx < piece.Wide; dx++)
                 for (int dz = 0; dz < piece.Deep; dz++)
                     if (piece.Heights[dx, dz] is float h) Grid.SetHeight(x + dx, z + dz, h, Layer);
-            foreach (var t in piece.Tiles)
+            foreach ((int dx, int dz, int tile, int turn, int wide, int deep) t in piece.Tiles)
                 Grid.Stamp(x + t.dx, z + t.dz, t.tile, t.wide, t.deep, Layer, (byte)t.turn);
         }
 
         private static List<(int x, int z)> Cells(Piece piece, int dx, int dz)
         {
-            var cells = new List<(int x, int z)>();
+            List<(int x, int z)> cells = new List<(int x, int z)>();
             if (piece == null) return cells;
             for (int x = 0; x < piece.Wide; x++)
                 for (int z = 0; z < piece.Deep; z++)
@@ -533,7 +533,7 @@ namespace DSPRE.Models
         {
             if (mask == null) return null;
             int n = TileGrid.Across;
-            var moved = new bool[n, n];
+            bool[,] moved = new bool[n, n];
             for (int x = 0; x < n; x++)
                 for (int z = 0; z < n; z++)
                     if (mask[x, z] && x + dx >= 0 && z + dz >= 0 && x + dx < n && z + dz < n) moved[x + dx, z + dz] = true;
@@ -544,7 +544,7 @@ namespace DSPRE.Models
         {
             if (Heights && Selection != null)
             {
-                var area = Bounds(Selection);
+                (int x, int z, int w, int h) area = Bounds(Selection);
                 return Whole(() =>
                 {
                     _stepped.Clear();
@@ -553,10 +553,10 @@ namespace DSPRE.Models
                             if (Selection[x, z]) SetHeight(x, z);
                 });
             }
-            var tile = BrushTile;
+            MapTileset.Tile tile = BrushTile;
             if (Selection == null || tile == null) return false;
-            var (across, down) = Footprint(Brush);
-            var box = Bounds(Selection);
+            (int across, int down) = Footprint(Brush);
+            (int x, int z, int w, int h) box = Bounds(Selection);
             return Whole(() =>
             {
                 for (int x = box.x; x + across <= box.x + box.w; x += across)
@@ -570,7 +570,7 @@ namespace DSPRE.Models
         public bool TransformSelection(Transform how)
         {
             if (Selection == null) return false;
-            var piece = Take(Selection);
+            Piece piece = Take(Selection);
             if (piece == null) return false;
             int w = piece.Wide, h = piece.Deep;
             bool turn = how == Transform.Rotate;
@@ -582,24 +582,24 @@ namespace DSPRE.Models
                 _ => (x, h - 1 - z),
             };
 
-            var moved = new Piece { X = piece.X, Z = piece.Z, Wide = turn ? h : w, Deep = turn ? w : h };
+            Piece moved = new Piece { X = piece.X, Z = piece.Z, Wide = turn ? h : w, Deep = turn ? w : h };
             moved.Heights = new float?[moved.Wide, moved.Deep];
             for (int x = 0; x < w; x++)
                 for (int z = 0; z < h; z++)
                 {
-                    var (nx, nz) = Cell(x, z);
+                    (int nx, int nz) = Cell(x, z);
                     moved.Heights[nx, nz] = piece.Heights[x, z];
                 }
-            foreach (var t in piece.Tiles)
+            foreach ((int dx, int dz, int tile, int turn, int wide, int deep) t in piece.Tiles)
             {
-                var (ax, az) = Cell(t.dx, t.dz);
-                var (bx, bz) = Cell(t.dx + t.wide - 1, t.dz + t.deep - 1);
+                (int ax, int az) = Cell(t.dx, t.dz);
+                (int bx, int bz) = Cell(t.dx + t.wide - 1, t.dz + t.deep - 1);
                 int across = turn ? t.deep : t.wide, down = turn ? t.wide : t.deep;
                 moved.Tiles.Add((Math.Min(ax, bx), Math.Min(az, bz), t.tile, turn ? (t.turn + 1) & 3 : t.turn, across, down));
             }
 
             int n = TileGrid.Across;
-            var mask = new bool[n, n];
+            bool[,] mask = new bool[n, n];
             for (int x = 0; x < moved.Wide; x++)
                 for (int z = 0; z < moved.Deep; z++)
                     if (moved.Heights[x, z] != null && piece.X + x < n && piece.Z + z < n) mask[piece.X + x, piece.Z + z] = true;
@@ -612,7 +612,7 @@ namespace DSPRE.Models
 
                 if (SmartTools && Drawing != null && !Drawing.IsEmpty)
                 {
-                    var smart = new bool[n, n];
+                    bool[,] smart = new bool[n, n];
                     for (int x = 0; x < n; x++)
                         for (int z = 0; z < n; z++)
                             smart[x, z] = mask[x, z] && Drawing.Holds(Grid.PutHere(x, z, Layer));
@@ -649,7 +649,7 @@ namespace DSPRE.Models
 
         private bool Whole(Action change)
         {
-            var before = Grid.Clone();
+            TileGrid before = Grid.Clone();
             change();
             if (Grid.SameAs(before)) return false;
             Remember(before);

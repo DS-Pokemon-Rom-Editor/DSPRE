@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void ImportFile_Click(object sender, RoutedEventArgs e)
         {
-            var filter = new FilePickerFileType("Wild encounters") { Patterns = new[] { "*.wld", "*.bin", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("Wild encounters") { Patterns = new[] { "*.wld", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(TopLevel.GetTopLevel(this) as Window, "Import encounter file", new[] { filter });
             if (path == null) return;
             try { ViewModel.ImportEncounterFile(path); } catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
@@ -58,7 +58,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void ExportFile_Click(object sender, RoutedEventArgs e)
         {
-            var filter = new FilePickerFileType("Wild encounters") { Patterns = new[] { "*.wld" } };
+            FilePickerFileType filter = new FilePickerFileType("Wild encounters") { Patterns = new[] { "*.wld" } };
             string path = await DialogHelper.SaveFile(TopLevel.GetTopLevel(this) as Window, "Export encounter file", new[] { filter }, $"encounters_{ViewModel.SelectedEncounterIndex:D4}.wld");
             if (path == null) return;
             try { ViewModel.ExportEncounterFile(path); } catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }

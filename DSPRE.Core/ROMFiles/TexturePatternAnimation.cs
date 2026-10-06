@@ -33,7 +33,7 @@ namespace DSPRE.ROMFiles
 
             int last = 1;
             for (int i = 0; i < MaterialNames.Count && i < Frames.Length; i++)
-                foreach (var k in Frames[i])
+                foreach (NSBTP.NSBTP_File.animData.keyFrame k in Frames[i])
                     if (k.Start + 1 > last) last = k.Start + 1;
             FrameCount = last;
         }
@@ -47,7 +47,7 @@ namespace DSPRE.ROMFiles
         {
             if (data == null || data.Length < 4) return null;
             if (Encoding.ASCII.GetString(data, 0, 4) != "BTP0") return null;
-            var file = NSBTP.Read(data);
+            NSBTP.NSBTP_File file = NSBTP.Read(data);
             return file.Header.ID == "BTP0" && file.AnimData != null ? new TexturePatternAnimation(file) : null;
         }
 
@@ -58,17 +58,17 @@ namespace DSPRE.ROMFiles
         /// <summary>Which texture a material shows on a frame. Frames wrap, as the games loop forever.</summary>
         public Swap Evaluate(int material, int frame)
         {
-            var frames = Frames;
+            NSBTP.NSBTP_File.animData.keyFrame[][] frames = Frames;
             if (material < 0 || material >= frames.Length) return default;
-            var keys = frames[material];
+            NSBTP.NSBTP_File.animData.keyFrame[] keys = frames[material];
             if (keys.Length == 0) return default;
 
             if (frame < 0) frame = 0;
             frame %= Math.Max(1, FrameCount);
 
             // Show the texture named by the last key frame at or before now.
-            var chosen = keys[0];
-            foreach (var k in keys)
+            NSBTP.NSBTP_File.animData.keyFrame chosen = keys[0];
+            foreach (NSBTP.NSBTP_File.animData.keyFrame k in keys)
             {
                 if (k.Start > frame) break;
                 chosen = k;
@@ -81,16 +81,16 @@ namespace DSPRE.ROMFiles
         /// <summary>Every texture a material can end up showing, so they can all be made ready up front.</summary>
         public IEnumerable<Swap> AllSwaps(int material)
         {
-            var frames = Frames;
+            NSBTP.NSBTP_File.animData.keyFrame[][] frames = Frames;
             if (material < 0 || material >= frames.Length) yield break;
-            foreach (var k in frames[material])
+            foreach (NSBTP.NSBTP_File.animData.keyFrame k in frames[material])
                 yield return new Swap { TextureName = k.texName, PaletteName = k.palName };
         }
 
         /// <summary>True when a material never actually changes texture, so it can be skipped.</summary>
         public bool IsStatic(int material)
         {
-            var swaps = AllSwaps(material).Select(s => s.TextureName + "/" + s.PaletteName).Distinct().Take(2).ToArray();
+            string[] swaps = AllSwaps(material).Select(s => s.TextureName + "/" + s.PaletteName).Distinct().Take(2).ToArray();
             return swaps.Length < 2;
         }
     }

@@ -5,6 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using DSPRE.CharMaps;
 
 namespace DSPRE
@@ -66,16 +69,16 @@ namespace DSPRE
             ChatotResult result = ChatotWrapperDirectory(inputFolderPath, outputFolderPath, charMapPath, "encode", true, extraArgs: "--newer");
             if (result == null) { error = "chatot could not be run."; return false; }
 
-            var unknown = UnknownCodeWarnings(result.Stderr);
+            List<string> unknown = UnknownCodeWarnings(result.Stderr);
             if (unknown.Count == 0 && result.ExitCode == 0) return true;
 
-            var problems = new List<string>();
-            var offending = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            List<string> problems = new List<string>();
+            HashSet<string> offending = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string token in unknown)
             {
-                var where = FindToken(candidates, token);
+                List<(string path, int line)> where = FindToken(candidates, token);
                 if (where.Count == 0) problems.Add($"unknown control code {token}");
-                foreach (var (path, line) in where)
+                foreach ((string path, int line) in where)
                 {
                     offending.Add(path);
                     problems.Add($"archive {Path.GetFileNameWithoutExtension(path)}, line {line} (0x{line:X}): unknown control code {token}");
@@ -103,7 +106,7 @@ namespace DSPRE
 
         private static List<string> NewerJsonFiles(string jsonFolder, string binFolder)
         {
-            var found = new List<string>();
+            List<string> found = new List<string>();
             if (!Directory.Exists(jsonFolder)) return found;
             foreach (string json in Directory.GetFiles(jsonFolder, "*.json"))
             {
@@ -121,11 +124,11 @@ namespace DSPRE
 
         private static List<string> UnknownCodeWarnings(string stderr)
         {
-            var tokens = new List<string>();
+            List<string> tokens = new List<string>();
             if (string.IsNullOrEmpty(stderr)) return tokens;
             foreach (string line in stderr.Split('\n'))
             {
-                var m = UnknownCodeWarning.Match(line.TrimEnd('\r'));
+                Match m = UnknownCodeWarning.Match(line.TrimEnd('\r'));
                 if (m.Success && !tokens.Contains(m.Groups["token"].Value)) tokens.Add(m.Groups["token"].Value);
             }
             return tokens;
@@ -134,7 +137,7 @@ namespace DSPRE
         /// <summary>Which message of which archive holds <paramref name="token"/>, as 0-based lines.</summary>
         private static List<(string path, int line)> FindToken(List<string> jsonFiles, string token)
         {
-            var hits = new List<(string, int)>();
+            List<(string, int)> hits = new List<(string, int)>();
             // The code sits in braces, so a word that happens to share its name in plain text is not it.
             string code = "{" + token;
             string lang = langCodes.TryGetValue(RomInfo.gameLanguage, out string l) ? l : "en_US";
@@ -142,12 +145,12 @@ namespace DSPRE
             {
                 try
                 {
-                    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
-                    if (!doc.RootElement.TryGetProperty("messages", out var messages)) continue;
+                    using JsonDocument doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path, Encoding.UTF8));
+                    if (!doc.RootElement.TryGetProperty("messages", out JsonElement messages)) continue;
                     int index = 0;
-                    foreach (var message in messages.EnumerateArray())
+                    foreach (JsonElement message in messages.EnumerateArray())
                     {
-                        if (message.TryGetProperty(lang, out var text) || message.TryGetProperty("en_US", out text))
+                        if (message.TryGetProperty(lang, out JsonElement text) || message.TryGetProperty("en_US", out text))
                         {
                             string value = text.ValueKind == System.Text.Json.JsonValueKind.Array
                                 ? string.Concat(text.EnumerateArray().Select(e => e.GetString()))
@@ -247,7 +250,7 @@ namespace DSPRE
                 chatot.Start();
 
                 // Both streams at once: reading one to the end first can deadlock on a full other pipe.
-                var stderrTask = chatot.StandardError.ReadToEndAsync();
+                Task<string> stderrTask = chatot.StandardError.ReadToEndAsync();
                 standardOutput = chatot.StandardOutput.ReadToEnd();
                 errorOutput = stderrTask.Result;
 

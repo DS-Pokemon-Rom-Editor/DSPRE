@@ -229,7 +229,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 try
                 {
-                    var gdiImg = DSPRE.DSUtils.GetPokePicRaw(DSPRE.DSUtils.ResolveIconId(id), 40, 40);
+                    RawImage gdiImg = DSPRE.DSUtils.GetPokePicRaw(DSPRE.DSUtils.ResolveIconId(id), 40, 40);
                     MonIconBitmap = gdiImg != null ? ImageConverter.ToAvaloniaBitmap(gdiImg) : null;
                 }
                 catch { MonIconBitmap = null; }
@@ -326,7 +326,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (name == null || _pendingSpecies != null) return;
 
             // Checked now so a name the checkout can't take is refused before it looks added.
-            if (!HgEngineSpeciesExpansion.TryPlanFakemon(name, out var plan, out string error))
+            if (!HgEngineSpeciesExpansion.TryPlanFakemon(name, out HgEngineSpeciesExpansion.FakemonPlan plan, out string error))
             {
                 await DialogHelper.ShowError($"Could not add the species:\n{error}", "Add New Pokémon", owner);
                 return;
@@ -363,7 +363,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             string name = _pendingSpecies.DisplayName;
             HgEngineSpeciesExpansion.FakemonPlan written = null;
-            var (saved, error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
+            (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
                 HgEngineSpeciesExpansion.TryWriteFakemon(name, out written, out string writeError) ? null : writeError);
             if (!saved)
             {
@@ -379,7 +379,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // In-place update (ListSync), not Clear+Add: Clear briefly empties the collection, which
             // resets the FusionAutoCompleteBox's bound SelectedIndex out from under the selection.
             string[] refreshed = RomInfo.GetPokemonNames();
-            var decorated = new string[refreshed.Length];
+            string[] decorated = new string[refreshed.Length];
             for (int i = 0; i < refreshed.Length; i++) decorated[i] = $"{i:D3} {refreshed[i]}";
             DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, decorated);
             OnPropertyChanged(nameof(MaxMonIndex));

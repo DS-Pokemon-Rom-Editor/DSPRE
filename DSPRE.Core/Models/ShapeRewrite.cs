@@ -18,27 +18,27 @@ namespace DSPRE.Models
             if (dl == null) { whynot = "Empty display list."; return null; }
             if (moved == null || moved.Count == 0) return (byte[])dl.Clone();
 
-            var walk = DisplayListWalk.Read(dl, out whynot);
+            DisplayListWalk walk = DisplayListWalk.Read(dl, out whynot);
             if (walk == null) return null;
 
-            var want = new Dictionary<int, (int x, int y, int z)>();
-            foreach (var run in walk.Runs)
-                foreach (var corner in run.Corners)
-                    want[corner.Index] = moved.TryGetValue(corner.Index, out var to)
+            Dictionary<int, (int x, int y, int z)> want = new Dictionary<int, (int x, int y, int z)>();
+            foreach (DisplayListWalk.Run run in walk.Runs)
+                foreach (DisplayListWalk.Corner corner in run.Corners)
+                    want[corner.Index] = moved.TryGetValue(corner.Index, out (float x, float y, float z) to)
                         ? (Round(to.x), Round(to.y), Round(to.z))
                         : (corner.RawX, corner.RawY, corner.RawZ);
 
-            foreach (var kv in moved)
+            foreach (KeyValuePair<int, (float x, float y, float z)> kv in moved)
                 if (!want.ContainsKey(kv.Key)) { whynot = $"No vertex {kv.Key} in this shape."; return null; }
 
-            var built = new GxDisplayList();
+            GxDisplayList built = new GxDisplayList();
             int cx = 0, cy = 0, cz = 0;
             int index = 0;
             int at2 = 0;
 
             while (at2 < dl.Length)
             {
-                var ops = new byte[4];
+                byte[] ops = new byte[4];
                 for (int k = 0; k < 4; k++) ops[k] = at2 + k < dl.Length ? dl[at2 + k] : (byte)0;
                 at2 += 4;
 
@@ -51,14 +51,14 @@ namespace DSPRE.Models
 
                     if (op >= 0x23 && op <= 0x28)
                     {
-                        if (!want.TryGetValue(index, out var to))
+                        if (!want.TryGetValue(index, out (int x, int y, int z) to))
                         {
                             Copy(built, dl, op, at2, words);
                             at2 += words * 4;
                             continue;
                         }
 
-                        var asWas = WouldPut(dl, op, at2, cx, cy, cz);
+                        (int x, int y, int z) asWas = WouldPut(dl, op, at2, cx, cy, cz);
                         if (asWas == to)
                         {
                             Copy(built, dl, op, at2, words);
@@ -133,7 +133,7 @@ namespace DSPRE.Models
 
         private static void Copy(GxDisplayList to, byte[] dl, byte op, int at, int words)
         {
-            var ps = new uint[words];
+            uint[] ps = new uint[words];
             for (int i = 0; i < words; i++) ps[i] = (uint)Word(dl, at + i * 4);
             to.Command(op, ps);
         }

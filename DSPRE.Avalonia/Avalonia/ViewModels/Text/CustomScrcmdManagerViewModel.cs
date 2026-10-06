@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             Folders.Clear();
             if (Directory.Exists(CustomDBsPath))
             {
-                foreach (var dir in Directory.GetDirectories(CustomDBsPath))
+                foreach (string dir in Directory.GetDirectories(CustomDBsPath))
                     Folders.Add(Path.GetFileName(dir));
             }
             StatusText = Folders.Count == 0
@@ -97,7 +97,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             Refresh();
 
-            var reload = await DialogHelper.AskYesNo(
+            bool reload = await DialogHelper.AskYesNo(
                 "Database replaced successfully.\n\n" +
                 "Do you want to reload and reparse all scripts now?\n\n" +
                 "Yes: Reload database and reparse all scripts immediately\n" +
@@ -139,9 +139,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
                 if (invalidCommands != null && invalidCommands.Count > 0)
                 {
-                    var affectedFiles = invalidCommands.Select(c => c.fileID).Distinct().OrderBy(x => x).ToList();
+                    List<int> affectedFiles = invalidCommands.Select(c => c.fileID).Distinct().OrderBy(x => x).ToList();
                     string fileList = string.Join(", ", affectedFiles.Select(f => f.ToString("D4")));
-                    var uniqueCommands = invalidCommands.Select(c => c.commandID).Distinct().OrderBy(x => x).ToList();
+                    List<ushort> uniqueCommands = invalidCommands.Select(c => c.commandID).Distinct().OrderBy(x => x).ToList();
                     string commandList = string.Join(", ", uniqueCommands.Select(c => $"0x{c:X4}"));
 
                     await DialogHelper.ShowError(

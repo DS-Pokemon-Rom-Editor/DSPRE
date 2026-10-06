@@ -24,10 +24,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Export_Click(object sender, RoutedEventArgs e)
         {
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null || VM == null) return;
 
-            var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export Trophy Garden Encounters",
                 DefaultExtension = "bin",
@@ -42,10 +42,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private async void Import_Click(object sender, RoutedEventArgs e)
         {
-            var top = TopLevel.GetTopLevel(this);
+            TopLevel top = TopLevel.GetTopLevel(this);
             if (top == null || VM == null) return;
 
-            var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import Trophy Garden Encounters",
                 AllowMultiple = false,

@@ -147,10 +147,10 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public static FieldCameraEntry Entry(int cameraId, RomInfo.GameFamilies family)
         {
-            var table = EntriesFor(family);
+            IReadOnlyList<FieldCameraEntry> table = EntriesFor(family);
             if (family == RomInfo.gameFamily)
             {
-                var rom = RomRows();
+                List<GameCamera> rom = RomRows();
                 if (rom != null && rom.Count > 0)
                 {
                     int id = cameraId >= 0 && cameraId < rom.Count ? cameraId : 0;
@@ -170,7 +170,7 @@ namespace DSPRE.ROMFiles
         public static string NameFor(int id, RomInfo.GameFamilies family)
         {
             if (family == RomInfo.GameFamilies.DP) return "Camera " + id;
-            var table = EntriesFor(family);
+            IReadOnlyList<FieldCameraEntry> table = EntriesFor(family);
             return id >= 0 && id < table.Count ? table[id].Name : "Camera " + id;
         }
 

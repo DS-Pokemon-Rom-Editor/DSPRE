@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.Views.Items
             base.OnClosing(e);
             if (_closeConfirmed || VM?.HasUnsavedChanges != true) return;
             e.Cancel = true;
-            var answer = await DialogHelper.AskYesNoCancel("Save the ground item list before closing?", "Ground Item List");
+            DialogHelper.MsgResult answer = await DialogHelper.AskYesNoCancel("Save the ground item list before closing?", "Ground Item List");
             if (answer == DialogHelper.MsgResult.Cancel) return;
             if (answer == DialogHelper.MsgResult.Yes) VM.Save();
             _closeConfirmed = true;

@@ -39,7 +39,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         protected override Size MeasureOverride(Size available)
         {
-            var font = Font;
+            FieldFont font = Font;
             if (font == null) return new Size(240, 40);
             int w = Math.Max(1, Width(font, Text));
             return new Size(w * Big, font.Height * (1 + Big) + 8);
@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         public override void Render(DrawingContext ctx)
         {
-            var font = Font;
+            FieldFont font = Font;
             if (font == null)
             {
                 ctx.DrawText(new FormattedText("No font is loaded.", System.Globalization.CultureInfo.CurrentCulture,
@@ -57,8 +57,8 @@ namespace DSPRE.Avalonia.Views.Controls
             }
             if (!FieldFontCharacters.Ready) return;
 
-            var ink = new SolidColorBrush(Color.FromRgb(0x28, 0x28, 0x28));
-            var pale = new SolidColorBrush(Color.FromRgb(0x98, 0x98, 0x98));
+            SolidColorBrush ink = new SolidColorBrush(Color.FromRgb(0x28, 0x28, 0x28));
+            SolidColorBrush pale = new SolidColorBrush(Color.FromRgb(0x98, 0x98, 0x98));
 
             Draw(ctx, font, Text, 0, 0, 1, ink, pale);
             Draw(ctx, font, Text, 0, font.Height + 8, Big, ink, pale);

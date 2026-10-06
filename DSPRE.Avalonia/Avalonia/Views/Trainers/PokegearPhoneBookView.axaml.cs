@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -123,14 +124,14 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void ShowDropLine()
         {
             Point inList = this.TranslatePoint(_lastPointer, SortList) ?? default;
-            var rows = SortList.GetRealizedContainers()
+            List<(int Index, double Top, double Height)> rows = SortList.GetRealizedContainers()
                 .Select(c => (Index: SortList.IndexFromContainer(c), Top: c.TranslatePoint(default, SortList)?.Y ?? 0, c.Bounds.Height))
                 .Where(r => r.Index >= 0)
                 .OrderBy(r => r.Index)
                 .ToList();
             if (rows.Count == 0) { DropLine.IsVisible = false; _dropAt = -1; return; }
 
-            var target = rows.FirstOrDefault(r => inList.Y < r.Top + r.Height);
+            (int Index, double Top, double Height) target = rows.FirstOrDefault(r => inList.Y < r.Top + r.Height);
             bool pastLast = target.Height == 0;
             if (pastLast) target = rows[^1];
 
@@ -149,7 +150,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void AutoScroll()
         {
             if (!_dragging) return;
-            var scroller = SortList.FindDescendantOfType<ScrollViewer>();
+            ScrollViewer scroller = SortList.FindDescendantOfType<ScrollViewer>();
             if (scroller == null) return;
 
             double y = (this.TranslatePoint(_lastPointer, SortList) ?? default).Y;

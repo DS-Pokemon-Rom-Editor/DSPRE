@@ -72,7 +72,7 @@ namespace DSPRE.ROMFiles
         public static async Task RefreshAsync(IEnumerable<int> fileIds)
         {
             if (!RomInfo.hasRotomProject || !RotomTool.IsAvailable || fileIds == null) return;
-            var ids = fileIds.Distinct().ToList();
+            List<int> ids = fileIds.Distinct().ToList();
             if (ids.Count == 0) return;
 
             IReadOnlyList<int> refreshed = Array.Empty<int>();
@@ -107,7 +107,7 @@ namespace DSPRE.ROMFiles
         internal static async Task<IReadOnlyList<int>> RegenerateAsync(IReadOnlyCollection<int> ids, string root, string sourceDir,
             Func<int, string> binaryOf = null)
         {
-            var targets = new List<(int id, string source)>();
+            List<(int id, string source)> targets = new List<(int id, string source)>();
             foreach (int id in ids)
             {
                 string name = id.ToString("D4");
@@ -119,7 +119,7 @@ namespace DSPRE.ROMFiles
 
             string backup = Path.Combine(root, ".rotom", "backups", "dspre-" + DateTime.Now.ToString("yyyyMMddHHmmssfff"));
             Directory.CreateDirectory(backup);
-            foreach (var (_, source) in targets)
+            foreach ((int _, string source) in targets)
                 File.Copy(source, Path.Combine(backup, Path.GetFileName(source)), overwrite: true);
 
             binaryOf ??= Filesystem.GetScriptPath;
@@ -127,9 +127,9 @@ namespace DSPRE.ROMFiles
             const int MaxArgumentLength = 24000;
             // "--file", the separating spaces and a pair of quotes around the path.
             const int PerFileOverhead = 12;
-            var args = new List<string> { "decompile" };
+            List<string> args = new List<string> { "decompile" };
             int length = 0;
-            foreach (var (id, _) in targets)
+            foreach ((int id, string _) in targets)
             {
                 string binary = binaryOf(id);
                 if (args.Count > 1 && length + binary.Length + PerFileOverhead > MaxArgumentLength)
@@ -147,7 +147,7 @@ namespace DSPRE.ROMFiles
 
         private static async Task DecompileAsync(string root, List<string> args)
         {
-            var result = await RotomTool.RunInAsync(root, args.ToArray()).ConfigureAwait(false);
+            RotomTool.Result result = await RotomTool.RunInAsync(root, args.ToArray()).ConfigureAwait(false);
             if (!result.Success) throw new InvalidOperationException("rotom decompile failed: " + RotomTool.FormatResult(result));
         }
     }

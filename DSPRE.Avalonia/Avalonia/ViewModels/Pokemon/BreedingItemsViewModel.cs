@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void CopyRows(byte[] bytes)
         {
-            var back = new IncenseBreedingTable(bytes);
+            IncenseBreedingTable back = new IncenseBreedingTable(bytes);
             for (int r = 0; r < IncenseBreedingTable.RowCount; r++)
             {
                 _table.Rows[r].Baby = back.Rows[r].Baby; _table.Rows[r].Item = back.Rows[r].Item; _table.Rows[r].Fallback = back.Rows[r].Fallback;
@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             ItemNames = GetItemNames();
             _table = IncenseBreedingTable.Load();
             _saved = _table.ToBytes();
-            foreach (var row in _table.Rows) Rows.Add(new RowViewModel(row, Changed) { Number = Rows.Count + 1 });
+            foreach (IncenseBreedingTable.Row row in _table.Rows) Rows.Add(new RowViewModel(row, Changed) { Number = Rows.Count + 1 });
             StartUndo();
         }
 
@@ -78,7 +78,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             internal void Refresh()
             {
-                foreach (var n in new[] { nameof(Baby), nameof(Item), nameof(Fallback) })
+                foreach (string n in new[] { nameof(Baby), nameof(Item), nameof(Fallback) })
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }

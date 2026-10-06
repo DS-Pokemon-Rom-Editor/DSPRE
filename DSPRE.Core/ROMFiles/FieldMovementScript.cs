@@ -130,7 +130,7 @@ namespace DSPRE.ROMFiles
             }
             if (id == 69 || id == 70)
             {
-                var s = Make(FieldActionKind.Appear, MoveFacing.Down, 0, 1, name);
+                FieldMovementStep s = Make(FieldActionKind.Appear, MoveFacing.Down, 0, 1, name);
                 s.Visible = id == 70;
                 return s;
             }
@@ -138,7 +138,7 @@ namespace DSPRE.ROMFiles
             if (id >= 76 && id <= 79) return Make(FieldActionKind.Walk, D(76), 1, 6, name);
             if (id >= 80 && id <= 83) return Make(FieldActionKind.Walk, D(80), 1, 3, name);
             if (id >= 84 && id <= 87) return Make(FieldActionKind.Walk, D(84), 1, 1, name);
-            if (id >= 88 && id <= 91) { var dash = Make(FieldActionKind.Walk, D(88), 1, RunFrames, name); dash.Run = true; return dash; }
+            if (id >= 88 && id <= 91) { FieldMovementStep dash = Make(FieldActionKind.Walk, D(88), 1, RunFrames, name); dash.Run = true; return dash; }
             if (id == 92 || id == 93) return Make(FieldActionKind.Jump, id == 92 ? MoveFacing.Left : MoveFacing.Right, 1, 16, name);
             if (id == 94 || id == 95) return Make(FieldActionKind.Jump, id == 94 ? MoveFacing.Left : MoveFacing.Right, 3, 12, name);
             if (id >= 96 && id <= 99) return Make(FieldActionKind.Walk, D(96), 1, 7, name);
@@ -152,7 +152,7 @@ namespace DSPRE.ROMFiles
             name = name.Trim();
             if (IsEnd(name)) return null;
 
-            var m = OldWalk.Match(name);
+            Match m = OldWalk.Match(name);
             if (m.Success)
             {
                 bool onSpot = m.Groups[2].Success;
@@ -186,7 +186,7 @@ namespace DSPRE.ROMFiles
             }
 
             m = Run.Match(name);
-            if (m.Success) { var dash = Make(FieldActionKind.Walk, Dir(m.Groups[1].Value), 1, RunFrames, name); dash.Run = true; return dash; }
+            if (m.Success) { FieldMovementStep dash = Make(FieldActionKind.Walk, Dir(m.Groups[1].Value), 1, RunFrames, name); dash.Run = true; return dash; }
 
             m = Face.Match(name);
             if (m.Success) return Make(FieldActionKind.Face, Dir(m.Groups[1].Value), 0, 1, name);
@@ -198,7 +198,7 @@ namespace DSPRE.ROMFiles
 
             if (name == "SetVisible" || name == "SetInvisible")
             {
-                var s = Make(FieldActionKind.Appear, MoveFacing.Down, 0, 1, name);
+                FieldMovementStep s = Make(FieldActionKind.Appear, MoveFacing.Down, 0, 1, name);
                 s.Visible = name == "SetVisible";
                 return s;
             }
@@ -213,17 +213,17 @@ namespace DSPRE.ROMFiles
         /// <summary>Reads a whole movement, repeating the actions that ask to be repeated.</summary>
         public static List<FieldMovementStep> Parse(IEnumerable<ScriptAction> actions)
         {
-            var steps = new List<FieldMovementStep>();
+            List<FieldMovementStep> steps = new List<FieldMovementStep>();
             if (actions == null) return steps;
 
-            foreach (var action in actions)
+            foreach (ScriptAction action in actions)
             {
                 if (action == null) continue;
                 string name = StripCount(action.name);
                 if (action.id == 0xFE || (action.id == null && IsEnd(name))) break;
 
                 // The number means the same thing whichever names the database gives the actions.
-                var step = action.id != null ? FromId(action.id.Value, name) : ParseOne(name);
+                FieldMovementStep step = action.id != null ? FromId(action.id.Value, name) : ParseOne(name);
                 if (step == null) break;
 
                 int times = Math.Max(1, (int)(action.repetitionCount ?? 1));
@@ -241,7 +241,7 @@ namespace DSPRE.ROMFiles
         public static int TotalFrames(IEnumerable<FieldMovementStep> steps)
         {
             int total = 0;
-            if (steps != null) foreach (var s in steps) total += Math.Max(1, s.Frames);
+            if (steps != null) foreach (FieldMovementStep s in steps) total += Math.Max(1, s.Frames);
             return total;
         }
 

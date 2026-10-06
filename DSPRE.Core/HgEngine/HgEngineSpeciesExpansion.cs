@@ -1,4 +1,5 @@
 using System.IO;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.HgEngine
 {
@@ -16,7 +17,7 @@ namespace DSPRE.HgEngine
         public static bool TryGetVanillaBoundary(out int lastVanillaSpeciesId)
         {
             lastVanillaSpeciesId = -1;
-            var species = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(HeaderRelPath);
             return species != null && species.TryGetValue("MAX_CANONICAL_MON_NUM", out lastVanillaSpeciesId);
         }
 
@@ -25,7 +26,7 @@ namespace DSPRE.HgEngine
         {
             firstCustomId = -1;
             count = 0;
-            var species = HgEngineSymbolTable.Load(HeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(HeaderRelPath);
             if (species == null) return false;
             if (!species.TryGetValue("MAX_CANONICAL_MON_NUM", out int canonicalMax)) return false;
             if (!species.TryGetValue("NUM_OF_FAKEMONS", out int fakemonCount)) return false;
@@ -113,7 +114,7 @@ namespace DSPRE.HgEngine
 
             // Shows the name now instead of only after a full "compile ROM" rebuild. Forms are numbered after
             // the new species and move up one, as they will in the rebuilt archive, so the name is inserted.
-            var names = new ROMFiles.TextArchive(RomInfo.pokemonNamesTextNumbers[0]);
+            TextArchive names = new ROMFiles.TextArchive(RomInfo.pokemonNamesTextNumbers[0]);
             while (names.messages.Count < written.SpeciesId) names.messages.Add("");
             names.messages.Insert(written.SpeciesId, written.DisplayName);
             names.SaveToExpandedDir(RomInfo.pokemonNamesTextNumbers[0], showSuccessMessage: false);

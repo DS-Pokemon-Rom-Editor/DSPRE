@@ -32,8 +32,8 @@ namespace DSPRE
                 string suffix = Path.DirectorySeparatorChar + i.ToString("D4");
 
                 TrainerFile f;
-                using (var propStream = new FileStream(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
-                using (var partyStream = new FileStream(RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
+                using (FileStream propStream = new FileStream(RomInfo.gameDirs[DirNames.trainerProperties].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
+                using (FileStream partyStream = new FileStream(RomInfo.gameDirs[DirNames.trainerParty].unpackedDir + suffix, FileMode.Open, FileAccess.Read))
                 {
                     f = new TrainerFile(
                         new TrainerProperties((ushort)i, propStream),
@@ -83,7 +83,7 @@ namespace DSPRE
         public static void WriteCsv(Dictionary<string, Dictionary<string, int>> trainerUsage, string csvFilePath)
         {
             // Create the StreamWriter to write data to the CSV file
-            var sortedTrainerClasses = trainerUsage.Keys.OrderBy(className => className);
+            IOrderedEnumerable<string> sortedTrainerClasses = trainerUsage.Keys.OrderBy(className => className);
 
             using (StreamWriter sw = new StreamWriter(csvFilePath))
             {
@@ -96,7 +96,7 @@ namespace DSPRE
                     Dictionary<string, int> innerDict = trainerUsage[className];
 
                     // Sort the Pokemon names alphabetically
-                    var sortedPokemonNames = innerDict.Keys.OrderByDescending(pokeName => innerDict[pokeName]);
+                    IOrderedEnumerable<string> sortedPokemonNames = innerDict.Keys.OrderByDescending(pokeName => innerDict[pokeName]);
 
                     // Iterate over the sorted mon names
                     foreach (string pokeName in sortedPokemonNames)

@@ -1,4 +1,5 @@
-﻿using DSPRE.Resources;
+﻿using DSPRE.HgEngine;
+using DSPRE.Resources;
 using DSPRE.ROMFiles;
 using LibGit2Sharp;
 using System;
@@ -349,7 +350,7 @@ namespace DSPRE
         };
 
         public static (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus)? TypeChartPointerSites =>
-            romID != null && TypeChartSites.TryGetValue((romID, romRevision), out var s) ? s : null;
+            romID != null && TypeChartSites.TryGetValue((romID, romRevision), out (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) s) ? s : null;
 
         /// <summary>
         /// Battle Point exchange code sites: Platinum's corner list pointers, overlay 7 price literal (the next one is +2)
@@ -412,7 +413,7 @@ namespace DSPRE
         };
 
         public static SlotOddsMethod[] SlotOddsMethods =>
-            romID != null && SlotOddsTable.TryGetValue((romID, romRevision), out var m) ? m : null;
+            romID != null && SlotOddsTable.TryGetValue((romID, romRevision), out SlotOddsMethod[] m) ? m : null;
 
         /// <summary>
         /// The swarm destination table. HGSS rows are u16 header + u16 method; DP/Pt rows are a u32 header. The
@@ -441,10 +442,10 @@ namespace DSPRE
         };
 
         public static SwarmSites SwarmCodeSites =>
-            romID != null && SwarmSiteTable.TryGetValue((romID, romRevision), out var s) ? s : null;
+            romID != null && SwarmSiteTable.TryGetValue((romID, romRevision), out SwarmSites s) ? s : null;
 
         public static BpShopSites BpShopCodeSites =>
-            romID != null && BpShopSiteTable.TryGetValue((romID, romRevision), out var s) ? s : null;
+            romID != null && BpShopSiteTable.TryGetValue((romID, romRevision), out BpShopSites s) ? s : null;
 
         /// <summary>
         /// Special trainer battle intros, as file offsets in the named binary, -1 where the game has none.
@@ -477,7 +478,7 @@ namespace DSPRE
         private static readonly Dictionary<string, string> VsIntroSameAs = new() { ["IPGE"] = "IPKE", ["APAE"] = "ADAE" };
 
         public static VsIntroSites VsIntroCodeSites =>
-            romID != null && VsIntroSiteTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out var same) ? same : romID, out var s) ? s : null;
+            romID != null && VsIntroSiteTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out string same) ? same : romID, out VsIntroSites s) ? s : null;
 
         /// <summary>
         /// Data tables in the intro code: the six emblems the Team Rocket or Galactic grunt intro flies in (eight s32
@@ -500,11 +501,11 @@ namespace DSPRE
         public static int MatrixMaxCells(bool expansionPatched) => gameFamily == GameFamilies.HGSS ? (expansionPatched ? 799 * 2 : 799) : 900;
 
         public static VsIntroMotionSites VsIntroMotionCodeSites =>
-            romID != null && VsIntroMotionTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out var same) ? same : romID, out var s) ? s : null;
+            romID != null && VsIntroMotionTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out string same) ? same : romID, out VsIntroMotionSites s) ? s : null;
 
         /// <summary>Where this ROM keeps <paramref name="table"/>, or null for an unsupported version.</summary>
         public static TableSpot? SpotOf(GameTable table) =>
-            romID != null && TableSpots.TryGetValue((romID, romRevision, table), out var spot) ? spot : null;
+            romID != null && TableSpots.TryGetValue((romID, romRevision, table), out TableSpot spot) ? spot : null;
 
         private static int ReadRomRevision(string dir)
         {
@@ -516,7 +517,7 @@ namespace DSPRE
                 string bin = Path.Combine(dir, "header.bin");
                 if (File.Exists(bin))
                 {
-                    using var f = File.OpenRead(bin);
+                    using FileStream f = File.OpenRead(bin);
                     if (f.Length > 0x1E) { f.Position = 0x1E; return f.ReadByte(); }
                 }
             }
@@ -986,20 +987,20 @@ namespace DSPRE
         /// <summary>Builds the command names dictionary from ScriptCommandInfo objects.</summary>
         public static Dictionary<ushort, string> BuildCommandNamesDatabase(GameFamilies gameFam)
         {
-            var cmdInfoDict = GetScriptCommandInfoDict();
+            Dictionary<ushort, ScriptCommandInfo> cmdInfoDict = GetScriptCommandInfoDict();
             return cmdInfoDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name);
         }
 
         /// <summary>Command name back to its number. </summary>
         public static Dictionary<string, ushort> BuildCommandNamesReverse()
         {
-            var info = GetScriptCommandInfoDict();
-            var map = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<ushort, ScriptCommandInfo> info = GetScriptCommandInfoDict();
+            Dictionary<string, ushort> map = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
             if (info == null) return map;
 
-            foreach (var kv in info)
+            foreach (KeyValuePair<ushort, ScriptCommandInfo> kv in info)
                 if (!string.IsNullOrEmpty(kv.Value?.Name)) map[kv.Value.Name] = kv.Key;
-            foreach (var kv in info)
+            foreach (KeyValuePair<ushort, ScriptCommandInfo> kv in info)
                 if (!string.IsNullOrEmpty(kv.Value?.LegacyName) && !map.ContainsKey(kv.Value.LegacyName))
                     map[kv.Value.LegacyName] = kv.Key;
             return map;
@@ -1008,7 +1009,7 @@ namespace DSPRE
         /// <summary>Builds the command parameters dictionary from ScriptCommandInfo objects.</summary>
         public static Dictionary<ushort, byte[]> BuildCommandParametersDatabase(GameFamilies gameFam)
         {
-            var cmdInfoDict = GetScriptCommandInfoDict();
+            Dictionary<ushort, ScriptCommandInfo> cmdInfoDict = GetScriptCommandInfoDict();
             return cmdInfoDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ParameterSizes);
         }
 
@@ -1027,8 +1028,8 @@ namespace DSPRE
                     return ScriptDatabase.comparisonOperatorsDict;
 
                 default:
-                    var commonDict = ScriptDatabase.comparisonOperatorsDict;
-                    var appendixDict = ScriptDatabase.comparisonOperatorsGenVappendix;
+                    Dictionary<ushort, string> commonDict = ScriptDatabase.comparisonOperatorsDict;
+                    Dictionary<ushort, string> appendixDict = ScriptDatabase.comparisonOperatorsGenVappendix;
                     return commonDict.Concat(appendixDict).ToLookup(x => x.Key, x => x.Value).ToDictionary(x => x.Key, g => g.First());
             }
         }
@@ -1051,7 +1052,7 @@ namespace DSPRE
             try
             {
                 if (string.IsNullOrEmpty(OWtablePath)) SetOWtable();
-                foreach (var (id, state) in OverworldSpriteTableExpansion.ReadRenderStates())
+                foreach ((uint id, OverworldSpriteTableExpansion.OwRenderState state) in OverworldSpriteTableExpansion.ReadRenderStates())
                     if (state.DrawType == 2)
                         ow3DSpriteDict[id] = SignpostImages.TryGetValue(id, out string sign) ? sign : "overworld";
             }
@@ -2845,7 +2846,7 @@ namespace DSPRE
             // hg-engine rebuilds this archive from its text source, which is newer than the ROM copy.
             HgEngine.HgEngineOwnedFile owned = HgEngine.HgEngineProject.IsActive
                 ? HgEngine.HgEngineOwnedFiles.Get(HgEngine.HgEngineOwnedFiles.ArchiveOf(DirNames.textArchives), trainerClassMessageNumber) : null;
-            if (owned?.Ownership == HgEngine.HgEngineOwnership.EditableSource && HgEngine.HgEngineOwnedFiles.TryReadLines(owned, out var lines, out _))
+            if (owned?.Ownership == HgEngine.HgEngineOwnership.EditableSource && HgEngine.HgEngineOwnedFiles.TryReadLines(owned, out List<string> lines, out _))
                 return lines.ToArray();
             return new TextArchive(trainerClassMessageNumber).messages.ToArray();
         }
@@ -2892,13 +2893,13 @@ namespace DSPRE
         /// <summary>Species names padded with alt-form labels up to targetCount, dropping any that don't fit this ROM's real file count.</summary>
         public static string[] GetPokemonNamesWithForms(int targetCount)
         {
-            var names = new List<string>(targetCount);
+            List<string> names = new List<string>(targetCount);
             names.AddRange(GetPokemonNames());
 
             // Under hg-engine this range is real species (Mega/Gigantamax/etc), not personalExtraFiles pseudo-forms.
             if (HgEngine.HgEngineProject.IsActive)
             {
-                var species = HgEngine.HgEngineSymbolTable.Load("include/constants/species.h");
+                HgEngineSymbolTable species = HgEngine.HgEngineSymbolTable.Load("include/constants/species.h");
                 while (names.Count < targetCount)
                 {
                     int id = names.Count;
@@ -2908,7 +2909,7 @@ namespace DSPRE
                 return names.ToArray();
             }
 
-            foreach (var extra in PokeDatabase.PersonalData.personalExtraFiles)
+            foreach (PokeDatabase.PersonalData.PersonalExtraFiles extra in PokeDatabase.PersonalData.personalExtraFiles)
             {
                 if (names.Count >= targetCount) break;
                 names.Add($"{names[extra.monId]} - {extra.description}");
@@ -3437,7 +3438,7 @@ namespace DSPRE
                 && HgEngine.HgEngineOverworlds.TryReadTable(out sourceRows, out sourceError);
             if (sourceError != null) AppLogger.Error("ReadOWTable: " + sourceError);
             if (fromSource)
-                foreach (var row in sourceRows) OverworldTable[(uint)row.Tag] = ((uint)row.Gfx, (ushort)row.Properties);
+                foreach (HgEngineOverworlds.Entry row in sourceRows) OverworldTable[(uint)row.Tag] = ((uint)row.Gfx, (ushort)row.Properties);
             else
             switch (gameFamily)
             {

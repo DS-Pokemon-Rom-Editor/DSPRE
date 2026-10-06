@@ -54,11 +54,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             Items.Clear();
             // Query-specific "go to #N" entries first, they're the most precise thing the user can mean.
             if (_dynamic != null)
-                foreach (var c in _dynamic(q)) Items.Add(c);
+                foreach (CommandItem c in _dynamic(q)) Items.Add(c);
             IEnumerable<CommandItem> matches = string.IsNullOrEmpty(q)
                 ? _all
                 : _all.Where(c => Match(c, q)).OrderByDescending(c => Score(c, q));
-            foreach (var c in matches) Items.Add(c);
+            foreach (CommandItem c in matches) Items.Add(c);
             SelectedIndex = Items.Count > 0 ? 0 : -1;
         }
 

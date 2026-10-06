@@ -25,8 +25,8 @@ namespace DSPRE
         {
             RomInfo.PrepareCameraData();
             string path = OverlayUtils.GetPath(RomInfo.cameraTblOverlayNumber);
-            var pointers = new uint[RomInfo.cameraTblOffsetsToRAMaddress.Length];
-            using (var br = new DSUtils.EasyReader(path))
+            uint[] pointers = new uint[RomInfo.cameraTblOffsetsToRAMaddress.Length];
+            using (DSUtils.EasyReader br = new DSUtils.EasyReader(path))
             {
                 for (int i = 0; i < pointers.Length; i++)
                 {
@@ -46,8 +46,8 @@ namespace DSPRE
         public static List<GameCamera> Read(Location at)
         {
             bool hgss = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
-            var cameras = new List<GameCamera>(RomInfo.cameraCount);
-            using (var br = new DSUtils.EasyReader(at.OverlayPath, at.Offset))
+            List<GameCamera> cameras = new List<GameCamera>(RomInfo.cameraCount);
+            using (DSUtils.EasyReader br = new DSUtils.EasyReader(at.OverlayPath, at.Offset))
             {
                 for (int i = 0; i < RomInfo.cameraCount; i++)
                 {

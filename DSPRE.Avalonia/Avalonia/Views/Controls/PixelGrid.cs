@@ -30,10 +30,10 @@ namespace DSPRE.Avalonia.Views.Controls
 
             // One mid grey line per edge. Grey shows up on light art and dark art alike, and a single
             // line keeps the drawing readable where two would close the pixel up.
-            var thin = new Pen(new SolidColorBrush(Color.FromArgb(70, 128, 128, 128)), 1);
+            Pen thin = new Pen(new SolidColorBrush(Color.FromArgb(70, 128, 128, 128)), 1);
             // Every eighth line is stronger. These drawings are stored in eight by eight blocks and the
             // shapes in them line up to that, so it is the ruler people count by.
-            var block = new Pen(new SolidColorBrush(Color.FromArgb(150, 128, 128, 128)), 1);
+            Pen block = new Pen(new SolidColorBrush(Color.FromArgb(150, 128, 128, 128)), 1);
 
             for (int i = 0, n = 0; i <= w + 0.5; i += cell, n++)
                 ctx.DrawLine(n % 8 == 0 ? block : thin, new Point(i + 0.5, 0), new Point(i + 0.5, h));

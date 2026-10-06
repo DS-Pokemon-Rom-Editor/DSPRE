@@ -192,7 +192,7 @@ namespace DSPRE.ROMFiles
         {
             for (int budget = CommandsPerFrame; budget > 0 && Waiting == WaitKind.None && Running; budget--)
             {
-                var step = NextStep();
+                ScriptStep step = NextStep();
                 if (step == null) return;
                 DoOne(step);
             }
@@ -224,7 +224,7 @@ namespace DSPRE.ROMFiles
         private void DoOne(ScriptStep step)
         {
             _hooks.Report?.Invoke(step);
-            var effect = step.Effect;
+            ScriptEffect effect = step.Effect;
             if (effect == null) return;
 
             switch (effect.Kind)
@@ -345,7 +345,7 @@ namespace DSPRE.ROMFiles
 
         public FieldCameraMove(int row, float fromPitchDegrees)
         {
-            var set = Settings[Math.Min(Math.Max(row, 1), Settings.Length) - 1];
+            (int RawPitch, int ShiftX, int ShiftY, int ShiftZ, int Frames) set = Settings[Math.Min(Math.Max(row, 1), Settings.Length) - 1];
             _fromPitch = fromPitchDegrees;
             _toPitch = -set.RawPitch * TurnDegrees;
             _shiftX = set.ShiftX / FixedPointOne / FieldCameraEntry.GameUnitsPerTile;

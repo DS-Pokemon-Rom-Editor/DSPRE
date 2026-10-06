@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using DSPRE.HgEngine;
 
 namespace DSPRE.ROMFiles
 {
@@ -136,7 +137,7 @@ namespace DSPRE.ROMFiles
                     checked((uint)(pointerTable.Offset + i * 4)), 2, $"specialty mart {i}");
                 _specialtyDataOffsets[i] = list.IsArm9 ? list.Offset : -1;
 
-                var items = new List<ushort>();
+                List<ushort> items = new List<ushort>();
                 for (int offset = list.Offset; ; offset += 2)
                 {
                     EnsureRange(list.Data, (uint)offset, 2, $"specialty mart {i}");
@@ -162,10 +163,10 @@ namespace DSPRE.ROMFiles
 
         private static MartData LoadSource()
         {
-            if (!HgEngine.HgEngineMarts.TryRead(out var badgeMart, out var specialty, out string error)) throw new InvalidOperationException(error);
-            var names = MartShopNames.ForFamily(RomInfo.gameFamily);
-            var common = badgeMart.Select(r => new CommonEntry { ItemId = (ushort)r.Item, RequiredTier = (ushort)r.Badges }).ToList();
-            var shops = specialty.Select((s, i) => new SpecialtyShop(i, names != null && names.Count == specialty.Count ? names[i] : s.Array,
+            if (!HgEngine.HgEngineMarts.TryRead(out List<(int Item, int Badges)> badgeMart, out List<HgEngineMarts.Specialty> specialty, out string error)) throw new InvalidOperationException(error);
+            IReadOnlyList<string> names = MartShopNames.ForFamily(RomInfo.gameFamily);
+            List<CommonEntry> common = badgeMart.Select(r => new CommonEntry { ItemId = (ushort)r.Item, RequiredTier = (ushort)r.Badges }).ToList();
+            List<SpecialtyShop> shops = specialty.Select((s, i) => new SpecialtyShop(i, names != null && names.Count == specialty.Count ? names[i] : s.Array,
                 s.Items.Select(x => (ushort)x).ToList())).ToList();
             return new MartData(common, shops);
         }
@@ -177,7 +178,7 @@ namespace DSPRE.ROMFiles
             if (!ExpansionAvailable)
                 throw new InvalidOperationException("Apply the ARM9 expansion patch before adding a mart.");
             int id = SpecialtyShops.Count;
-            var shop = new SpecialtyShop(id, $"Custom Mart {id}", new List<ushort> { 1 }, true);
+            SpecialtyShop shop = new SpecialtyShop(id, $"Custom Mart {id}", new List<ushort> { 1 }, true);
             SpecialtyShops.Add(shop);
             return shop;
         }
@@ -257,7 +258,7 @@ namespace DSPRE.ROMFiles
                 WriteUInt16(block, commonOffset + i * 4 + 2, CommonItems[i].RequiredTier);
             }
 
-            var excluded = new List<(long Start, long End)>(reservedRanges ?? Array.Empty<(long, long)>());
+            List<(long Start, long End)> excluded = new List<(long Start, long End)>(reservedRanges ?? Array.Empty<(long, long)>());
             AddExistingExpansionRanges(syntheticOverlay, excluded);
             int blockOffset = _existingExpansionStart >= 0 && block.Length <= _existingExpansionLength
                 ? _existingExpansionStart
@@ -393,9 +394,9 @@ namespace DSPRE.ROMFiles
 
         private static IReadOnlyList<(long Start, long End)> GetRuntimeReservedRanges()
         {
-            var ranges = new List<(long, long)>();
+            List<(long, long)> ranges = new List<(long, long)>();
             OverworldSpriteTableExpansion.Detect();
-            var ow = OverworldSpriteTableExpansion.GetReservedByteRange();
+            (long Start, long End)? ow = OverworldSpriteTableExpansion.GetReservedByteRange();
             if (ow.HasValue) ranges.Add(ow.Value);
             return ranges;
         }
@@ -499,7 +500,7 @@ namespace DSPRE.ROMFiles
             if (family == RomInfo.GameFamilies.DP) return Dp;
             if (family == RomInfo.GameFamilies.Plat)
             {
-                var names = new string[Dp.Length + 1];
+                string[] names = new string[Dp.Length + 1];
                 Array.Copy(Dp, names, Dp.Length);
                 names[^1] = "Veilstone Department Store B1F Berries";
                 return names;

@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.Data
             bool hgss = family == GameFamilies.HGSS;
             int balls = hgss ? 25 : 17;              // the last id is the Park Ball
             int parkOpening = hgss ? 25 : 17, catchDefault = hgss ? 26 : 18, recall = hgss ? 52 : 36;
-            string Ball(int id) => id == balls ? "Park Ball" : ballNames != null && ballNames.TryGetValue(id, out var n) ? n : "Ball " + id;
+            string Ball(int id) => id == balls ? "Park Ball" : ballNames != null && ballNames.TryGetValue(id, out string n) ? n : "Ball " + id;
 
             if (file == 0) return (Unused, "Default ball opening (never loaded)");
             if (file == parkOpening) return (Balls, "Park Ball opening");

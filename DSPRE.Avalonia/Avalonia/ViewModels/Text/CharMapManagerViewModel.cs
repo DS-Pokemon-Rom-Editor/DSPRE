@@ -97,7 +97,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             // Warn about un-bracketed single-character aliases
             if (alias.Length == 1)
             {
-                var result = await DialogHelper.AskYesNoCancel(
+                DialogHelper.MsgResult result = await DialogHelper.AskYesNoCancel(
                     "Unbracketed single character aliases may cause encoding issues.\nEnclose in brackets?",
                     "Single Character Alias");
                 if (result == DialogHelper.MsgResult.Yes)
@@ -237,7 +237,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_dirty)
             {
-                var r = await DialogHelper.AskYesNoCancel(
+                DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(
                     "You have unsaved changes. Discard and reload?", "Unsaved Changes");
                 if (r == DialogHelper.MsgResult.Cancel || r == DialogHelper.MsgResult.No) return;
             }
@@ -337,7 +337,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task<bool> ConfirmCloseAsync()
         {
             if (!_dirty) return true;
-            var r = await DialogHelper.AskYesNoCancel(
+            DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(
                 "You have unsaved changes. Do you want to save them before closing?", "Unsaved Changes");
             if (r == DialogHelper.MsgResult.Yes) { await SaveCommand(); return true; }
             return r == DialogHelper.MsgResult.No;
@@ -410,7 +410,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 "Reply Yes for option 1 (Prefer Custom), No for option 2 (Prefer Base).\n" +
                 "(Cancel to use Replace Base)";
 
-            var r = await DialogHelper.AskYesNoCancel(message, "Merge Strategy");
+            DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(message, "Merge Strategy");
             return r == DialogHelper.MsgResult.Yes   ? MergeStrategy.PreferCustom
                  : r == DialogHelper.MsgResult.No    ? MergeStrategy.PreferBase
                  : MergeStrategy.ReplaceBase;

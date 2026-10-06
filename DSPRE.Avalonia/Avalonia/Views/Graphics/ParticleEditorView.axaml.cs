@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private async void Colour_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.DataContext is not ParticleFieldRow row) return;
-            var picked = await DialogHelper.PickColour(this, row.Label);
+            (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, row.Label);
             if (picked is { } c) row.SetColour(c.R, c.G, c.B);
         }
 
@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.Views.Graphics
         private async void ExportTexture_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.DataContext is not ParticleTextureRow row || VM == null) return;
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = $"Save texture {row.Index + 1}",
                 SuggestedFileName = $"texture{row.Index + 1}.png",

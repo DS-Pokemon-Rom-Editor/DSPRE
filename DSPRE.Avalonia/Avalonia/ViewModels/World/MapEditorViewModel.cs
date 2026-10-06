@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 if (_headerId < 0) return 0;
-                var h = MapHeader.GetMapHeader((ushort)_headerId);
+                MapHeader h = MapHeader.GetMapHeader((ushort)_headerId);
                 return day ? h.musicDayID : h.musicNightID;
             }
             catch { return 0; }
@@ -284,7 +284,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void RaiseArea()
         {
-            foreach (var n in new[] { nameof(HasArea), nameof(AreaLabel), nameof(AreaGroundAnimation), nameof(AreaLightType), nameof(AreaIndoor), nameof(AreaLightNames), nameof(AreaLightNote) })
+            foreach (string n in new[] { nameof(HasArea), nameof(AreaLabel), nameof(AreaGroundAnimation), nameof(AreaLightType), nameof(AreaIndoor), nameof(AreaLightNames), nameof(AreaLightNote) })
                 OnPropertyChanged(n);
         }
 
@@ -500,12 +500,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // Several maps at once can't share the single mesh-tint texture (it's keyed to one
                 // map's tile grid), so header view always renders the PLANE overlay, one flat 32×32
                 // tile grid per cell, each raised off the WHOLE scene's tallest point.
-                var m = Model3D;
+                NsbmdRenderModel m = Model3D;
                 float planeY = (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + (float)_overlayHeight * NsbmdGeometry.TileSize;
-                var v = new List<float>();
-                foreach (var cellData in _headerCells)
+                List<float> v = new List<float>();
+                foreach (HeaderMapCell cellData in _headerCells)
                 {
-                    if (!Model3D.TryCellPlacement(cellData.CellX, cellData.CellY, out var cp)) continue;
+                    if (!Model3D.TryCellPlacement(cellData.CellX, cellData.CellY, out NsbmdRenderModel.CellPlacement cp)) continue;
                     byte[,] grid = collision ? cellData.Map.collisions : cellData.Map.types;
                     AppendPlaneOverlay(v, cp, grid, collision, m, planeY + cp.Width * 0.0006f);
                     AppendCellOutline(v, m, cp, planeY + cp.Width * 0.0012f);
@@ -519,11 +519,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             // The single map is built as a 1×1 cell, so it carries a real tile grid (CellPlacement 0,0): a FIXED
             // 32 tiles regardless of how much geometry the map has, which is what makes the tiles the right size on
             // smaller maps.
-            if (_map != null && Model3D != null && _overlayModeIndex > 0 && Model3D.TryCellPlacement(0, 0, out var cell))
+            if (_map != null && Model3D != null && _overlayModeIndex > 0 && Model3D.TryCellPlacement(0, 0, out NsbmdRenderModel.CellPlacement cell))
             {
                 byte[,] grid = collision ? _map.collisions : _map.types;
                 int n = grid.GetLength(0);     // 32
-                var m = Model3D;
+                NsbmdRenderModel m = Model3D;
                 float tsx = cell.Width / n, tsz = cell.Height / n;   // real tile size
                 float ox = cell.OriginX, oz = cell.OriginZ;          // real tile-(0,0) corner
 
@@ -531,11 +531,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 {
                     // MESH: hand the shader a 32×32 collision-colour texture + the tile grid (in normalized space).
                     // It mixes the colour into each opaque map texel, so decorations tint on their own shape.
-                    var rgba = new byte[32 * 32 * 4];
+                    byte[] rgba = new byte[32 * 32 * 4];
                     for (int row = 0; row < n && row < 32; row++)
                         for (int col = 0; col < n && col < 32; col++)
                         {
-                            var (cr, cg, cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
+                            (float cr, float cg, float cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
                             int i = (row * 32 + col) * 4;
                             rgba[i] = (byte)(cr * 255f); rgba[i + 1] = (byte)(cg * 255f);
                             rgba[i + 2] = (byte)(cb * 255f); rgba[i + 3] = 255;
@@ -544,7 +544,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     TintSx = tsx * m.Scale;         TintSz = tsz * m.Scale;
                     TintRgba = rgba; TintOn = true;
 
-                    var outline = new List<float>(48);
+                    List<float> outline = new List<float>(48);
                     AppendCellOutline(outline, m, cell,
                         (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + cell.Width * 0.0012f);
                     OverlayMesh = outline.ToArray();
@@ -555,11 +555,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                     // PLANE: a flat 32×32 tile grid, raised off the surface by the Height slider (top-down editing).
                     float eps = cell.Width * 0.0006f;
                     float planeY = (m.HasMapBounds ? m.MapMaxY : m.RawMaxY) + eps + (float)_overlayHeight * tsx;
-                    var v = new List<float>(n * n * 48);
+                    List<float> v = new List<float>(n * n * 48);
                     for (int row = 0; row < n; row++)
                         for (int col = 0; col < n; col++)
                         {
-                            var (cr, cg, cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
+                            (float cr, float cg, float cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
                             float x0 = ox + col * tsx, x1 = x0 + tsx, z0 = oz + row * tsz, z1 = z0 + tsz;
                             AddQuad(v, m.ToNormalized(x0, planeY, z0), m.ToNormalized(x1, planeY, z0),
                                        m.ToNormalized(x1, planeY, z1), m.ToNormalized(x0, planeY, z1), cr, cg, cb);
@@ -583,7 +583,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             for (int row = 0; row < n; row++)
                 for (int col = 0; col < n; col++)
                 {
-                    var (cr, cg, cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
+                    (float cr, float cg, float cb) = DSPRE.Avalonia.Gl.PermissionColors.Rgb(grid[row, col], collision);
                     float x0 = ox + col * tsx, x1 = x0 + tsx, z0 = oz + row * tsz, z1 = z0 + tsz;
                     AddQuad(v, m.ToNormalized(x0, planeY, z0), m.ToNormalized(x1, planeY, z0),
                                m.ToNormalized(x1, planeY, z1), m.ToNormalized(x0, planeY, z1), cr, cg, cb);
@@ -630,9 +630,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (IsHeaderView)
             {
                 if (flatIndex < 0 || flatIndex >= _headerBuildingIndex.Count) return null;
-                var (ci, bi) = _headerBuildingIndex[flatIndex];
+                (int ci, int bi) = _headerBuildingIndex[flatIndex];
                 if (ci < 0 || ci >= _headerCells.Count) return null;
-                var cell = _headerCells[ci];
+                HeaderMapCell cell = _headerCells[ci];
                 if (cell.Map?.buildings == null || bi < 0 || bi >= cell.Map.buildings.Count) return null;
                 return (cell.Map, cell.CellX, cell.CellY, cell.Map.buildings[bi]);
             }
@@ -648,7 +648,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (IsHeaderView && _selectedBuildingIndex >= 0 && _selectedBuildingIndex < _headerBuildingIndex.Count)
             {
-                var (ci, _) = _headerBuildingIndex[_selectedBuildingIndex];
+                (int ci, int _) = _headerBuildingIndex[_selectedBuildingIndex];
                 if (ci >= 0 && ci < _headerCells.Count) _headerCells[ci].Dirty = true;
             }
             MarkDirty();
@@ -695,7 +695,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (IsSingleMap) return _map != null;
             if (!CanEditModel) return false;
             // The single-map fields follow the header map until EndModelEdit, so import checks and warp moves read it.
-            var cell = _headerCells[_selectedHeaderMap];
+            HeaderMapCell cell = _headerCells[_selectedHeaderMap];
             _borrowed = (_map, _selectedMapIndex);
             _map = cell.Map;
             _selectedMapIndex = cell.MapIndex;
@@ -708,7 +708,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Gives the single-map view back its own map after a header map's model edit.</summary>
         public void EndModelEdit()
         {
-            if (_borrowed is not var (map, index)) return;
+            if (_borrowed is not (MapFile map, int index)) return;
             _borrowed = null;
             _map = map;
             _selectedMapIndex = index;
@@ -781,9 +781,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void LoadBuildingDetail()
         {
             OnPropertyChanged(nameof(HasBuildingSelected));
-            var resolved = ResolveSelectedBuilding();
+            (MapFile map, int cellX, int cellY, Building building)? resolved = ResolveSelectedBuilding();
             if (resolved == null) { GizmoTargetChanged?.Invoke(this, EventArgs.Empty); return; }
-            var b = resolved.Value.building;
+            Building b = resolved.Value.building;
             _suppress = true;
             // Positions are shown as the FULL fractional tile coordinate (whole tile + fraction/65536), so
             // the input boxes can fine-tune sub-tile placement after a coarse snap-drag.
@@ -808,11 +808,11 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void ApplyBuilding(bool reloadModel = false)
         {
-            var resolved = ResolveSelectedBuilding();
+            (MapFile map, int cellX, int cellY, Building building)? resolved = ResolveSelectedBuilding();
             if (resolved == null) return;
-            var b = resolved.Value.building;
+            Building b = resolved.Value.building;
             b.modelID = (uint)_bModelId;
-            var (px, fx) = SplitCoord(_bx); var (py, fy) = SplitCoord(_by); var (pz, fz) = SplitCoord(_bz);
+            (short px, ushort fx) = SplitCoord(_bx); (short py, ushort fy) = SplitCoord(_by); (short pz, ushort fz) = SplitCoord(_bz);
             b.xPosition = px; b.xFraction = fx; b.yPosition = py; b.yFraction = fy; b.zPosition = pz; b.zFraction = fz;
             b.xRotation = DegToU16(_bRotX); b.yRotation = DegToU16(_bRotY); b.zRotation = DegToU16(_bRotZ);
             if (reloadModel) b.NSBMDFile = null;   // force reload of the (new) model in BuildPreview
@@ -849,11 +849,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void MaybeTransferBuildingAcrossCells()
         {
             if (!IsHeaderView || _selectedBuildingIndex < 0 || _selectedBuildingIndex >= _headerBuildingIndex.Count) return;
-            var (ci, bi) = _headerBuildingIndex[_selectedBuildingIndex];
+            (int ci, int bi) = _headerBuildingIndex[_selectedBuildingIndex];
             if (ci < 0 || ci >= _headerCells.Count) return;
-            var srcCell = _headerCells[ci];
+            HeaderMapCell srcCell = _headerCells[ci];
             if (srcCell.Map?.buildings == null || bi < 0 || bi >= srcCell.Map.buildings.Count) return;
-            var b = srcCell.Map.buildings[bi];
+            Building b = srcCell.Map.buildings[bi];
 
             int dCellX = CellsCrossed(b.xPosition, b.xFraction);
             int dCellZ = CellsCrossed(b.zPosition, b.zFraction);
@@ -872,7 +872,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             else if (dCellX != 0 && dCellZ != 0 && Find(srcCell.CellX + dCellX, srcCell.CellY + dCellZ) is int di) { targetIndex = di; usedDCellX = dCellX; usedDCellZ = dCellZ; }
             else return;   // no map exists in a direction that actually matches how this building moved
 
-            var targetCell = _headerCells[targetIndex];
+            HeaderMapCell targetCell = _headerCells[targetIndex];
             srcCell.Map.buildings.RemoveAt(bi);
             b.xPosition = (short)(b.xPosition - usedDCellX * MapFile.mapSize);
             b.zPosition = (short)(b.zPosition - usedDCellZ * MapFile.mapSize);
@@ -899,7 +899,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (IsHeaderView)
             {
                 if (_headerCells.Count == 0) return;
-                var cell = _headerCells[TargetHeaderCellIndex()];
+                HeaderMapCell cell = _headerCells[TargetHeaderCellIndex()];
                 if (cell.Map.buildings == null) return;
                 cell.Map.buildings.Add(new Building());
                 cell.Dirty = true;
@@ -922,8 +922,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (!HasBuildingSelected) return;
             if (IsHeaderView)
             {
-                var (ci, bi) = _headerBuildingIndex[_selectedBuildingIndex];
-                var cell = _headerCells[ci];
+                (int ci, int bi) = _headerBuildingIndex[_selectedBuildingIndex];
+                HeaderMapCell cell = _headerCells[ci];
                 cell.Map.buildings.RemoveAt(bi);
                 cell.Dirty = true;
                 RefreshBuildings();
@@ -994,16 +994,16 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (Model3D == null) return false;
             const int n = 32;
             float best = float.MaxValue;
-            foreach (var (ci, cx, cy) in PaintableCells())
+            foreach ((int ci, int cx, int cy) in PaintableCells())
             {
-                if (!Model3D.TryCellPlacement(cx, cy, out var cp)) continue;
+                if (!Model3D.TryCellPlacement(cx, cy, out NsbmdRenderModel.CellPlacement cp)) continue;
                 float tsx = cp.Width / n, tsz = cp.Height / n;
                 for (int r = 0; r < n; r++)
                     for (int c = 0; c < n; c++)
                     {
                         float rx = cp.OriginX + (c + 0.5f) * tsx, rz = cp.OriginZ + (r + 0.5f) * tsz;
-                        var (nx, ny, nz) = Model3D.ToNormalized(rx, Model3D.SurfaceY(rx, rz), rz);
-                        var (ok, sx, sy) = project(nx, ny, nz);
+                        (float nx, float ny, float nz) = Model3D.ToNormalized(rx, Model3D.SurfaceY(rx, rz), rz);
+                        (bool ok, float sx, float sy) = project(nx, ny, nz);
                         if (!ok) continue;
                         float d = (sx - px) * (sx - px) + (sy - py) * (sy - py);
                         if (d < best) { best = d; cellIndex = ci; col = c; row = r; }
@@ -1025,7 +1025,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (IsHeaderView)
             {
                 if (cellIndex < 0 || cellIndex >= _headerCells.Count) return;
-                var cell = _headerCells[cellIndex];
+                HeaderMapCell cell = _headerCells[cellIndex];
                 SelectedHeaderMapIndex = cellIndex;
                 grid = collision ? cell.Map.collisions : cell.Map.types;
                 markDirty = () => { cell.Dirty = true; MarkDirty(); };
@@ -1053,13 +1053,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool TryBuildingAnchorNorm(int index, out float nx, out float ny, out float nz)
         {
             nx = ny = nz = 0f;
-            var resolved = ResolveBuildingAt(index);
+            (MapFile map, int cellX, int cellY, Building building)? resolved = ResolveBuildingAt(index);
             if (Model3D == null || resolved == null) return false;
-            var (_, cellX, cellY, b) = resolved.Value;
+            (MapFile _, int cellX, int cellY, Building b) = resolved.Value;
             // Each cell's origin (and its buildings) sit at OriginX + MapStride/2 in scene space. The
             // gizmo anchor must include that same offset, or it lands NW of the actual building.
             float offX = 0f, offZ = 0f;
-            if (Model3D.TryCellPlacement(cellX, cellY, out var cp))
+            if (Model3D.TryCellPlacement(cellX, cellY, out NsbmdRenderModel.CellPlacement cp))
             {
                 offX = cp.OriginX + NsbmdGeometry.MapStride * 0.5f;
                 offZ = cp.OriginZ + NsbmdGeometry.MapStride * 0.5f;
@@ -1067,7 +1067,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             float rx = 0.25f * (b.xPosition + b.xFraction / 65536f) + offX;
             float ry = 0.25f * (b.yPosition + b.yFraction / 65536f);
             float rz = 0.25f * (b.zPosition + b.zFraction / 65536f) + offZ;
-            var (a, c, d) = Model3D.ToNormalized(rx, ry, rz);
+            (float a, float c, float d) = Model3D.ToNormalized(rx, ry, rz);
             nx = a; ny = c; nz = d;
             return true;
         }
@@ -1083,15 +1083,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// (0=X,1=Y,2=Z), with sub-tile (fraction) precision, and refreshes the live preview.</summary>
         public void NudgeSelectedBuildingRaw(int axis, float rawDelta)
         {
-            var resolved = ResolveSelectedBuilding();
+            (MapFile map, int cellX, int cellY, Building building)? resolved = ResolveSelectedBuilding();
             if (resolved == null || rawDelta == 0f) return;
-            var b = resolved.Value.building;
+            Building b = resolved.Value.building;
             double tileDelta = rawDelta / 0.25;   // 1 position unit = 0.25 raw units
             switch (axis)
             {
-                case 0: { var (p, f) = AddTiles(b.xPosition, b.xFraction, tileDelta); b.xPosition = p; b.xFraction = f; } break;
-                case 1: { var (p, f) = AddTiles(b.yPosition, b.yFraction, tileDelta); b.yPosition = p; b.yFraction = f; } break;
-                case 2: { var (p, f) = AddTiles(b.zPosition, b.zFraction, tileDelta); b.zPosition = p; b.zFraction = f; } break;
+                case 0: { (short p, ushort f) = AddTiles(b.xPosition, b.xFraction, tileDelta); b.xPosition = p; b.xFraction = f; } break;
+                case 1: { (short p, ushort f) = AddTiles(b.yPosition, b.yFraction, tileDelta); b.yPosition = p; b.yFraction = f; } break;
+                case 2: { (short p, ushort f) = AddTiles(b.zPosition, b.zFraction, tileDelta); b.zPosition = p; b.zFraction = f; } break;
             }
             if (_snapToTile) SnapAxis(b, axis);
             AfterBuildingMoved(b);
@@ -1105,9 +1105,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// tile-aligned: clears the sub-tile fraction so it snaps onto the grid.</summary>
         public void NudgeSelectedBuildingTiles(int dx, int dz)
         {
-            var resolved = ResolveSelectedBuilding();
+            (MapFile map, int cellX, int cellY, Building building)? resolved = ResolveSelectedBuilding();
             if (resolved == null) return;
-            var b = resolved.Value.building;
+            Building b = resolved.Value.building;
             if (dx != 0) { b.xPosition = (short)(b.xPosition + dx); b.xFraction = 0; }
             if (dz != 0) { b.zPosition = (short)(b.zPosition + dz); b.zFraction = 0; }
             AfterBuildingMoved(b);
@@ -1167,19 +1167,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Every header shown over a matrix cell that holds the map, with that cell.</summary>
         public List<(ushort header, int x, int y)> HeadersUsingMap(int mapIndex)
         {
-            var found = new List<(ushort, int, int)>();
+            List<(ushort, int, int)> found = new List<(ushort, int, int)>();
             if (mapIndex < 0) return found;
             try
             {
                 int headerCount = GetHeaderCount();
-                var byMatrix = new Dictionary<int, List<ushort>>();
+                Dictionary<int, List<ushort>> byMatrix = new Dictionary<int, List<ushort>>();
                 for (ushort h = 0; h < headerCount; h++)
                 {
                     try
                     {
-                        var header = MapHeader.GetMapHeader(h);
+                        MapHeader header = MapHeader.GetMapHeader(h);
                         if (header == null) continue;
-                        if (!byMatrix.TryGetValue(header.matrixID, out var list)) byMatrix[header.matrixID] = list = new List<ushort>();
+                        if (!byMatrix.TryGetValue(header.matrixID, out List<ushort> list)) byMatrix[header.matrixID] = list = new List<ushort>();
                         list.Add(h);
                     }
                     catch { }
@@ -1193,7 +1193,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                         {
                             if (mtx.maps[y, x] != mapIndex) continue;
                             if (mtx.hasHeadersSection) found.Add((mtx.headers[y, x], x, y));
-                            else if (byMatrix.TryGetValue(mid, out var l)) found.AddRange(l.Select(h => (h, x, y)));
+                            else if (byMatrix.TryGetValue(mid, out List<ushort> l)) found.AddRange(l.Select(h => (h, x, y)));
                         }
                 }
             }
@@ -1204,15 +1204,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Area data ids of every header that shows the map, the map's own area first.</summary>
         public List<byte> AreasUsingMap(int mapIndex, out int headers)
         {
-            var areas = new List<byte>();
+            List<byte> areas = new List<byte>();
             if (AreaForMap(mapIndex) is byte own) areas.Add(own);
-            var ids = HeadersUsingMap(mapIndex).Select(h => h.header).Distinct().ToList();
+            List<ushort> ids = HeadersUsingMap(mapIndex).Select(h => h.header).Distinct().ToList();
             headers = ids.Count;
             foreach (ushort h in ids)
             {
                 try
                 {
-                    var header = MapHeader.GetMapHeader(h);
+                    MapHeader header = MapHeader.GetMapHeader(h);
                     if (header != null && !areas.Contains(header.areaDataID)) areas.Add(header.areaDataID);
                 }
                 catch { }
@@ -1256,7 +1256,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void MoveEvent(int file, EventFile events, string kind, int index, Event e, short x, short y)
         {
-            if (!_eventMoves.TryGetValue(file, out var moves)) _eventMoves[file] = moves = new List<EventMove>();
+            if (!_eventMoves.TryGetValue(file, out List<EventMove> moves)) _eventMoves[file] = moves = new List<EventMove>();
             moves.Add(new EventMove(kind, index, e.xMapPosition, e.yMapPosition, x, y));
             e.xMapPosition = x;
             e.yMapPosition = y;
@@ -1271,7 +1271,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void SavePendingEvents()
         {
-            foreach (var (file, events) in _eventsToSave.ToList())
+            foreach ((int file, EventFile events) in _eventsToSave.ToList())
             {
                 events.SaveToFileDefaultDir(file, showSuccessMessage: false);
                 AppEvents.RaiseEventFileSaved(this, file);
@@ -1299,10 +1299,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { fresh = new EventFile(file); }
             catch (Exception ex) { AppLogger.Error("Reloading event file after another save failed: " + ex.Message); return; }
             int dropped = 0;
-            if (_eventMoves.TryGetValue(file, out var moves))
-                foreach (var m in moves)
+            if (_eventMoves.TryGetValue(file, out List<EventMove> moves))
+                foreach (EventMove m in moves)
                 {
-                    var e = EventAt(fresh, m.Kind, m.Index);
+                    Event e = EventAt(fresh, m.Kind, m.Index);
                     if (e == null || e.xMapPosition != m.FromX || e.yMapPosition != m.FromY) { dropped++; continue; }
                     e.xMapPosition = m.ToX;
                     e.yMapPosition = m.ToY;
@@ -1316,7 +1316,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private HashSet<byte> WaterTypes()
             => new HashSet<byte>(TilePermissions.BehavioursFor(gameFamily).Where(t => t.Surf).Select(t => t.Value));
 
-        private EventFile EventsOf(int file) => _eventsToSave.TryGetValue(file, out var had) ? had : new EventFile(file);
+        private EventFile EventsOf(int file) => _eventsToSave.TryGetValue(file, out EventFile had) ? had : new EventFile(file);
 
         private static IEnumerable<(string kind, int index, Event e)> AllEvents(EventFile events)
         {
@@ -1330,10 +1330,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         private int MoveWarpsWith(int mapIndex, (double x0, double z0, double x1, double z1) was, int dx, int dz)
         {
             int moved = 0, n = MapFile.mapSize;
-            var seen = new HashSet<(int file, int x, int y)>();
+            HashSet<(int file, int x, int y)> seen = new HashSet<(int file, int x, int y)>();
             try
             {
-                foreach (var (h, mx, my) in HeadersUsingMap(mapIndex))
+                foreach ((ushort h, int mx, int my) in HeadersUsingMap(mapIndex))
                 {
                     MapHeader header;
                     try { header = MapHeader.GetMapHeader(h); } catch { continue; }
@@ -1342,7 +1342,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     try { events = EventsOf(header.eventFileID); } catch { continue; }
                     for (int i = 0; i < events.warps.Count; i++)
                     {
-                        var w = events.warps[i];
+                        Warp w = events.warps[i];
                         if (w.xMatrixPosition != mx || w.yMatrixPosition != my) continue;
                         double cx = w.xMapPosition + 0.5, cz = w.yMapPosition + 0.5;
                         if (cx < was.x0 || cx > was.x1 || cz < was.z0 || cz > was.z1 + 1) continue;
@@ -1364,15 +1364,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Events on this map whose square became blocked or water since <paramref name="was"/>; doors and signs already sit on blocked squares.</summary>
         public List<EventClash> EventsOnUnwalkableSquares((byte[,] collisions, byte[,] types) was)
         {
-            var found = new List<EventClash>();
+            List<EventClash> found = new List<EventClash>();
             if (_map == null || _selectedMapIndex < 0) return found;
             _beforeImport = was;
             _beforeImportWarps = null;
-            var waterTypes = WaterTypes();
+            HashSet<byte> waterTypes = WaterTypes();
             try
             {
-                var seen = new HashSet<(int file, int x, int y)>();
-                foreach (var (h, x, y) in HeadersUsingMap(_selectedMapIndex))
+                HashSet<(int file, int x, int y)> seen = new HashSet<(int file, int x, int y)>();
+                foreach ((ushort h, int x, int y) in HeadersUsingMap(_selectedMapIndex))
                 {
                     MapHeader header;
                     try { header = MapHeader.GetMapHeader(h); } catch { continue; }
@@ -1380,7 +1380,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     EventFile events;
                     try { events = EventsOf(header.eventFileID); } catch { continue; }
                     ArrivalsOf(h, header, x, y, events, was, waterTypes, found);
-                    foreach (var (kind, index, e) in AllEvents(events))
+                    foreach ((string kind, int index, Event e) in AllEvents(events))
                     {
                         if (e.xMatrixPosition != x || e.yMatrixPosition != y) continue;
                         int ex = e.xMapPosition, ey = e.yMapPosition;
@@ -1425,10 +1425,10 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             int n = MapFile.mapSize;
             bool Open(byte[,] c, byte[,] t, int a, int b) => (c[b, a] & 0x80) == 0 && !waterTypes.Contains(t[b, a]);
-            var warps = WarpSquares(events, mx, my);
+            HashSet<(int x, int y)> warps = WarpSquares(events, mx, my);
             try
             {
-                foreach (var point in RomInfo.FlyTableUnverified ? Enumerable.Empty<SpawnPoints.Point>() : SpawnPoints.Read().Where(pt => pt.Header == h))
+                foreach (SpawnPoints.Point point in RomInfo.FlyTableUnverified ? Enumerable.Empty<SpawnPoints.Point>() : SpawnPoints.Read().Where(pt => pt.Header == h))
                 {
                     int px = point.Global ? point.X - mx * n : point.X, pz = point.Global ? point.Z - my * n : point.Z;
                     if (px < 0 || pz < 0 || px >= n || pz >= n) continue;
@@ -1444,8 +1444,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (was.collisions == null) return;
             try
             {
-                var matrix = new GameMatrix(header.matrixID);
-                foreach (var (dx, dy, side) in new[] { (0, -1, "North"), (0, 1, "South"), (-1, 0, "West"), (1, 0, "East") })
+                GameMatrix matrix = new GameMatrix(header.matrixID);
+                foreach ((int dx, int dy, string side) in new[] { (0, -1, "North"), (0, 1, "South"), (-1, 0, "West"), (1, 0, "East") })
                 {
                     int nx = mx + dx, ny = my + dy;
                     if (nx < 0 || ny < 0 || nx >= matrix.width || ny >= matrix.height) continue;
@@ -1453,11 +1453,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                     if (other == 0xFFFF || other == _selectedMapIndex) continue;
                     MapFile beside;
                     try { beside = new MapFile(other, gameFamily, false, false); } catch { continue; }
-                    var closed = new List<(int x, int y)>();
-                    var crossing = new List<(int x, int y)>();
+                    List<(int x, int y)> closed = new List<(int x, int y)>();
+                    List<(int x, int y)> crossing = new List<(int x, int y)>();
                     for (int i = 0; i < n; i++)
                     {
-                        var (ax, ay, bx, by) = side switch
+                        (int ax, int ay, int bx, int by) = side switch
                         {
                             "North" => (i, 0, i, n - 1),
                             "South" => (i, n - 1, i, 0),
@@ -1511,15 +1511,15 @@ namespace DSPRE.Avalonia.ViewModels.World
                 "West" => a == n - 1 || b == 0 || b == n - 1,
                 _ => a == 0 || b == 0 || b == n - 1,
             };
-            var seen = new HashSet<(int, int)>(edge);
-            var queue = new Queue<(int x, int y)>(edge);
+            HashSet<(int, int)> seen = new HashSet<(int, int)>(edge);
+            Queue<(int x, int y)> queue = new Queue<(int x, int y)>(edge);
             int reached = 0;
             while (queue.Count > 0)
             {
-                var (a, b) = queue.Dequeue();
+                (int a, int b) = queue.Dequeue();
                 reached++;
                 if (reached >= Enough + edge.Count || warps.Contains((a, b)) || (OtherEdge(a, b) && !edge.Contains((a, b)))) return null;
-                foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+                foreach ((int dx, int dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
                 {
                     int c = a + dx, d = b + dy;
                     if (warps.Contains((c, d))) return null;
@@ -1549,17 +1549,17 @@ namespace DSPRE.Avalonia.ViewModels.World
             int n = MapFile.mapSize;
             bool Open(int a, int b) => a >= 0 && b >= 0 && a < n && b < n
                                      && (collisions[b, a] & 0x80) == 0 && !waterTypes.Contains(types[b, a]);
-            var seen = new HashSet<(int, int)> { (x, y) };
-            var queue = new Queue<(int x, int y)>();
-            foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+            HashSet<(int, int)> seen = new HashSet<(int, int)> { (x, y) };
+            Queue<(int x, int y)> queue = new Queue<(int x, int y)>();
+            foreach ((int dx, int dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
                 if (Open(x + dx, y + dy) && seen.Add((x + dx, y + dy))) queue.Enqueue((x + dx, y + dy));
             int reached = 0;
             while (queue.Count > 0)
             {
-                var (a, b) = queue.Dequeue();
+                (int a, int b) = queue.Dequeue();
                 reached++;
                 if (reached >= Enough || a == 0 || b == 0 || a == n - 1 || b == n - 1 || warps.Contains((a, b))) return null;
-                foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+                foreach ((int dx, int dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
                 {
                     int c = a + dx, d = b + dy;
                     if (warps.Contains((c, d)) && (c, d) != (x, y)) return null;
@@ -1573,7 +1573,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private string KeepWarpSquares(int x, int y, HashSet<byte> waterTypes, out bool leadsOn)
         {
             leadsOn = false;
-            var (collisions, types) = _beforeImport;
+            (byte[,] collisions, byte[,] types) = _beforeImport;
             if (collisions == null || types == null) return "not kept: the map before the import is not known";
             int n = MapFile.mapSize, restored = 0;
             void Restore(int a, int b)
@@ -1586,7 +1586,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             Restore(x, y);
             // Reopen the square the player stepped off the warp onto, if the import closed it.
-            foreach (var (dx, dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
+            foreach ((int dx, int dy) in new[] { (0, 1), (0, -1), (1, 0), (-1, 0) })
             {
                 int a = x + dx, b = y + dy;
                 if (a < 0 || b < 0 || a >= n || b >= n) continue;
@@ -1596,7 +1596,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
             MarkDirty();
             string kept = restored == 0 ? "already as it was" : $"kept: {restored} square{(restored > 1 ? "s" : "")} put back";
-            var others = new HashSet<(int x, int y)>(_beforeImportWarps ?? new HashSet<(int x, int y)>());
+            HashSet<(int x, int y)> others = new HashSet<(int x, int y)>(_beforeImportWarps ?? new HashSet<(int x, int y)>());
             if (DeadEnd(x, y, waterTypes, others) is string stuck) return $"{kept}, but {stuck}; move the building or paint a way out";
             leadsOn = true;
             return kept;
@@ -1608,25 +1608,25 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int MoveEvents(IEnumerable<EventClash> clashes)
         {
             if (_map == null) return 0;
-            var waterTypes = WaterTypes();
+            HashSet<byte> waterTypes = WaterTypes();
             int n = MapFile.mapSize, moved = 0;
-            foreach (var c in clashes.Where(c => c.Move && c.File < 0))
+            foreach (EventClash c in clashes.Where(c => c.Move && c.File < 0))
             {
                 if (c.Squares == null) continue;
-                var (collisions, types) = _beforeImport;
+                (byte[,] collisions, byte[,] types) = _beforeImport;
                 if (collisions == null) { c.Result = "not kept: the map before the import is not known"; continue; }
-                foreach (var (x, y) in c.Squares) { _map.collisions[y, x] = collisions[y, x]; _map.types[y, x] = types[y, x]; }
+                foreach ((int x, int y) in c.Squares) { _map.collisions[y, x] = collisions[y, x]; _map.types[y, x] = types[y, x]; }
                 MarkDirty();
                 c.Result = $"{c.Squares.Count} put back";
                 moved++;
             }
-            foreach (var group in clashes.Where(c => c.Move && c.File >= 0).GroupBy(c => c.File))
+            foreach (IGrouping<int, EventClash> group in clashes.Where(c => c.Move && c.File >= 0).GroupBy(c => c.File))
             {
                 EventFile events;
-                try { events = EventsOf(group.Key); } catch (Exception ex) { foreach (var c in group) c.Result = "not moved: " + ex.Message; continue; }
-                foreach (var c in group)
+                try { events = EventsOf(group.Key); } catch (Exception ex) { foreach (EventClash c in group) c.Result = "not moved: " + ex.Message; continue; }
+                foreach (EventClash c in group)
                 {
-                    var list = c.Kind switch
+                    List<Event> list = c.Kind switch
                     {
                         "Overworld" => events.overworlds.Cast<Event>().ToList(),
                         "Warp" => events.warps.Cast<Event>().ToList(),
@@ -1642,21 +1642,21 @@ namespace DSPRE.Avalonia.ViewModels.World
                         if (leadsOn) moved++;
                         continue;
                     }
-                    var e = list[c.Index];
-                    var taken = new HashSet<(int, int)>(AllEvents(events)
+                    Event e = list[c.Index];
+                    HashSet<(int, int)> taken = new HashSet<(int, int)>(AllEvents(events)
                         .Where(o => o.e != e && o.e.xMatrixPosition == e.xMatrixPosition && o.e.yMatrixPosition == e.yMatrixPosition)
                         .Select(o => ((int)o.e.xMapPosition, (int)o.e.yMapPosition)));
                     bool Open(int x, int y) => (_map.collisions[y, x] & 0x80) == 0 && !waterTypes.Contains(_map.types[y, x]) && !taken.Contains((x, y));
 
                     (int x, int y)? to = null;
-                    var queue = new Queue<(int x, int y)>();
-                    var visited = new bool[n, n];
+                    Queue<(int x, int y)> queue = new Queue<(int x, int y)>();
+                    bool[,] visited = new bool[n, n];
                     queue.Enqueue((c.X, c.Y)); visited[c.Y, c.X] = true;
                     while (queue.Count > 0 && to == null)
                     {
-                        var (qx, qy) = queue.Dequeue();
+                        (int qx, int qy) = queue.Dequeue();
                         if ((qx, qy) != (c.X, c.Y) && Open(qx, qy)) { to = (qx, qy); break; }
-                        foreach (var (dx, dy) in new[] { (0, 1), (1, 0), (0, -1), (-1, 0) })
+                        foreach ((int dx, int dy) in new[] { (0, 1), (1, 0), (0, -1), (-1, 0) })
                         {
                             int nx = qx + dx, ny = qy + dy;
                             if (nx < 0 || ny < 0 || nx >= n || ny >= n || visited[ny, nx]) continue;
@@ -1747,7 +1747,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private MapStep TakeStep()
         {
-            var parts = IsHeaderView
+            List<(MapFile Map, bool Dirty)> parts = IsHeaderView
                 ? _headerCells.Select(c => (c.Map, c.Dirty)).ToList()
                 : new List<(MapFile Map, bool Dirty)> { (_map, false) };
             return new MapStep
@@ -1775,7 +1775,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void RecordUndo()
         {
             if (_applyingStep || _lastStep == null) return;
-            var now = TakeStep();
+            MapStep now = TakeStep();
             if (now.SameAs(_lastStep)) return;
             // A different set of loaded maps is a new history, not a step.
             if (now.Maps.Length != _lastStep.Maps.Length || now.Maps.Zip(_lastStep.Maps).Any(p => !ReferenceEquals(p.First.Map, p.Second.Map)))
@@ -1795,17 +1795,17 @@ namespace DSPRE.Avalonia.ViewModels.World
             _applyingStep = true;
             try
             {
-                foreach (var part in step.Maps)
+                foreach (MapPart part in step.Maps)
                 {
-                    var map = part.Map;
+                    MapFile map = part.Map;
                     map.ImportPermissions(part.Permissions);
                     map.ImportBuildings(part.Buildings);
                     // The model and terrain windows edit these too; only what this history recorded goes back.
-                    var known = _lastStep?.Maps.FirstOrDefault(p => ReferenceEquals(p.Map, map));
+                    MapPart known = _lastStep?.Maps.FirstOrDefault(p => ReferenceEquals(p.Map, map));
                     if (known == null || ReferenceEquals(map.mapModelData, known.Model)) { map.mapModelData = part.Model; map.mapModel = part.Parsed; }
                     if (known == null || ReferenceEquals(map.bdhc, known.Terrain)) map.bdhc = part.Terrain;
                     if (known == null || ReferenceEquals(map.bgs, known.Sound)) map.bgs = part.Sound;
-                    var cell = _headerCells.FirstOrDefault(c => ReferenceEquals(c.Map, map));
+                    HeaderMapCell cell = _headerCells.FirstOrDefault(c => ReferenceEquals(c.Map, map));
                     // A map this step changes must be written again, even when undo goes back past a save.
                     bool changed = known == null
                         || !known.Permissions.AsSpan().SequenceEqual(part.Permissions) || !known.Buildings.AsSpan().SequenceEqual(part.Buildings)
@@ -1814,7 +1814,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 if (_area != null && step.Area != null)
                 {
-                    using var ms = new MemoryStream(step.Area);
+                    using MemoryStream ms = new MemoryStream(step.Area);
                     _area = new AreaData(ms);
                     SyncTilesetsToArea();
                 }
@@ -1822,16 +1822,16 @@ namespace DSPRE.Avalonia.ViewModels.World
                     || (_lastStep?.Area != null && step.Area != null && !_lastStep.Area.AsSpan().SequenceEqual(step.Area));
 
                 // Put every waiting event back where it was, then make this step's moves again.
-                foreach (var (file, moves) in _eventMoves)
-                    if (_eventsToSave.TryGetValue(file, out var events))
+                foreach ((int file, List<EventMove> moves) in _eventMoves)
+                    if (_eventsToSave.TryGetValue(file, out EventFile events))
                         for (int i = moves.Count - 1; i >= 0; i--)
                             if (EventAt(events, moves[i].Kind, moves[i].Index) is Event e) { e.xMapPosition = moves[i].FromX; e.yMapPosition = moves[i].FromY; }
                 _eventMoves.Clear();
-                foreach (var (file, moves) in step.Moves)
+                foreach ((int file, EventMove[] moves) in step.Moves)
                 {
-                    if (!_eventsToSave.TryGetValue(file, out var events)) continue;
+                    if (!_eventsToSave.TryGetValue(file, out EventFile events)) continue;
                     _eventMoves[file] = moves.ToList();
-                    foreach (var m in moves)
+                    foreach (EventMove m in moves)
                         if (EventAt(events, m.Kind, m.Index) is Event e) { e.xMapPosition = m.ToX; e.yMapPosition = m.ToY; }
                 }
 
@@ -1921,8 +1921,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // the previous ROM's entries.
                 CollisionPainters.Clear();
                 TypePainters.Clear();
-                foreach (var c in TilePermissions.CollisionsFor(gameFamily)) CollisionPainters.Add(new PainterOption(c.Value, c.Label));
-                foreach (var b in TilePermissions.BehavioursFor(gameFamily)) TypePainters.Add(new PainterOption(b.Value, b.Label));
+                foreach (TileCollision c in TilePermissions.CollisionsFor(gameFamily)) CollisionPainters.Add(new PainterOption(c.Value, c.Label));
+                foreach (TileBehaviour b in TilePermissions.BehavioursFor(gameFamily)) TypePainters.Add(new PainterOption(b.Value, b.Label));
                 CollisionNames.Clear(); CollisionKeys.Clear(); TypeNames.Clear(); TypeKeys.Clear();
                 foreach (PainterOption o in CollisionPainters) { CollisionNames.Add(o.Name); CollisionKeys.Add(o.Value); }
                 foreach (PainterOption o in TypePainters) { TypeNames.Add(o.Name); TypeKeys.Add(o.Value); }
@@ -1955,8 +1955,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _suppress = true; if (matrixCount > 0) { _selectedMatrix = 0; OnPropertyChanged(nameof(SelectedMatrixIndex)); } _suppress = false;
 
                 HeaderNames.Clear();
-                var headerNames = HeaderLists.GetHeaderListBoxNames();
-                if (headerNames != null) foreach (var n in headerNames) HeaderNames.Add(n);
+                List<string> headerNames = HeaderLists.GetHeaderListBoxNames();
+                if (headerNames != null) foreach (string n in headerNames) HeaderNames.Add(n);
                 // Only defaults when nobody has set HeaderId yet (a standalone popup has no sidebar to
                 // follow); the embedded Maps-workspace instance already has it set by this point.
                 if (_headerId < 0 && HeaderNames.Count > 0) HeaderId = 0;
@@ -2035,7 +2035,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             int keep = _headerMapsOf == _headerId ? _selectedHeaderMap : 0;
             _headerMapsOf = _headerId;
             HeaderMapNames.Clear();
-            foreach (var c in _headerCells) HeaderMapNames.Add($"Map {c.MapIndex}");
+            foreach (HeaderMapCell c in _headerCells) HeaderMapNames.Add($"Map {c.MapIndex}");
             _selectedHeaderMap = -1;
             SelectedHeaderMapIndex = _headerCells.Count == 0 ? -1 : Math.Clamp(keep, 0, _headerCells.Count - 1);
             ResetUndo();
@@ -2059,7 +2059,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
 
                 LoadArea(hdr.areaDataID);
-                var matrix = new GameMatrix(hdr.matrixID);
+                GameMatrix matrix = new GameMatrix(hdr.matrixID);
                 for (int y = 0; y < matrix.height; y++)
                     for (int x = 0; x < matrix.width; x++)
                     {
@@ -2070,12 +2070,12 @@ namespace DSPRE.Avalonia.ViewModels.World
                         byte areaId = hdr.areaDataID;
                         if (matrix.hasHeadersSection)
                         {
-                            try { var hh = MapHeader.GetMapHeader(matrix.headers[y, x]); if (hh != null) areaId = hh.areaDataID; } catch { /* keep hdr's area */ }
+                            try { MapHeader hh = MapHeader.GetMapHeader(matrix.headers[y, x]); if (hh != null) areaId = hh.areaDataID; } catch { /* keep hdr's area */ }
                         }
                         else if (AreaForMap(mapIndex) is byte a) areaId = a;
 
                         float altitudeY = matrix.hasHeightsSection ? matrix.altitudes[y, x] * (NsbmdGeometry.TileSize / 2f) : 0f;
-                        var map = new MapFile(mapIndex, gameFamily, discardMoveperms: false);
+                        MapFile map = new MapFile(mapIndex, gameFamily, discardMoveperms: false);
                         _headerCells.Add(new HeaderMapCell { CellX = x, CellY = y, MapIndex = mapIndex, AreaId = areaId, AltitudeY = altitudeY, Map = map });
                     }
 
@@ -2122,7 +2122,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             get
             {
-                var grid = new MapCollisionGrid();
+                MapCollisionGrid grid = new MapCollisionGrid();
                 if (_map?.collisions != null) grid.Add(0, 0, _map.collisions);
                 if (_map?.types != null) grid.AddTypes(0, 0, _map.types);
                 return grid;
@@ -2149,7 +2149,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 if (_selectedMatrix < 0) { MapLoaded?.Invoke(this, EventArgs.Empty); return; }
-                var matrix = new GameMatrix(_selectedMatrix);
+                GameMatrix matrix = new GameMatrix(_selectedMatrix);
                 int used = 0;
                 for (int y = 0; y < matrix.height; y++)
                     for (int x = 0; x < matrix.width; x++)
@@ -2217,19 +2217,19 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// </summary>
         private static Dictionary<int, byte> BuildMapAreaLookup()
         {
-            var lookup = new Dictionary<int, byte>();
+            Dictionary<int, byte> lookup = new Dictionary<int, byte>();
             try
             {
                 int headerCount = GetHeaderCount();
                 int matrixCount = Filesystem.GetMatrixCount();
 
                 // matrix id → area, from the first header that references it (for plain matrices).
-                var matrixArea = new Dictionary<int, byte>();
+                Dictionary<int, byte> matrixArea = new Dictionary<int, byte>();
                 for (ushort h = 0; h < headerCount; h++)
                 {
                     try
                     {
-                        var header = MapHeader.GetMapHeader(h);
+                        MapHeader header = MapHeader.GetMapHeader(h);
                         if (header != null && !matrixArea.ContainsKey(header.matrixID))
                             matrixArea[header.matrixID] = header.areaDataID;
                     }
@@ -2243,7 +2243,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                     {
                         try
                         {
-                            var mtx = new GameMatrix(mid);
+                            GameMatrix mtx = new GameMatrix(mid);
                             bool section = mtx.hasHeadersSection;
                             if (section != (pass == 1)) continue;
                             if (!section && !matrixArea.TryGetValue(mid, out byte plainArea)) continue;
@@ -2256,7 +2256,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                                     byte area;
                                     if (section)
                                     {
-                                        try { var hh = MapHeader.GetMapHeader(mtx.headers[y, x]); if (hh == null) continue; area = hh.areaDataID; }
+                                        try { MapHeader hh = MapHeader.GetMapHeader(mtx.headers[y, x]); if (hh == null) continue; area = hh.areaDataID; }
                                         catch { continue; }
                                     }
                                     else area = matrixArea[mid];
@@ -2286,7 +2286,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // Load building models + bind building tileset, then collect transforms. Interior vs.
                 // exterior building set is a fact of the map's own area data (same rule as the stitched
                 // matrix/header views in MatrixSceneBuilder), not a user preference.
-                var buildings = new List<PlacedBuilding>();
+                List<PlacedBuilding> buildings = new List<PlacedBuilding>();
                 bool interior = false;
                 if (gameFamily == GameFamilies.HGSS && gameDirs.ContainsKey(DirNames.interiorBuildingModels))
                 {
@@ -2302,13 +2302,13 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
 
                 if (_map.buildings != null)
-                    foreach (var b in _map.buildings)
+                    foreach (Building b in _map.buildings)
                     {
                         if (b.NSBMDFile == null)
                         {
                             string mp = Path.Combine(bdir, b.modelID.ToString("D4"));
                             if (!File.Exists(mp)) continue;
-                            using var fs = new FileStream(mp, FileMode.Open, FileAccess.Read);
+                            using FileStream fs = new FileStream(mp, FileMode.Open, FileAccess.Read);
                             b.NSBMDFile = NSBMDLoader.LoadNSBMD(fs);
                         }
                         if (b.NSBMDFile?.models == null || b.NSBMDFile.models.Length == 0) continue;
@@ -2361,7 +2361,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 for (int ci = 0; ci < _headerCells.Count; ci++)
                 {
-                    var cell = _headerCells[ci];
+                    HeaderMapCell cell = _headerCells[ci];
                     if (cell.Map?.buildings == null) continue;
                     for (int bi = 0; bi < cell.Map.buildings.Count; bi++)
                     {
@@ -2384,7 +2384,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             get
             {
-                var over = IsHeaderView
+                IEnumerable<string> over = IsHeaderView
                     ? _headerCells.Where(c => (c.Map?.buildings?.Count ?? 0) > MaxLoadedBuildings)
                                   .Select(c => $"Map {c.MapIndex}: {c.Map.buildings.Count}")
                     : (_map?.buildings?.Count ?? 0) > MaxLoadedBuildings ? new[] { $"{_map.buildings.Count} buildings" } : Array.Empty<string>();
@@ -2406,7 +2406,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 int saved = 0;
                 bool refused = false;
-                foreach (var cell in _headerCells)
+                foreach (HeaderMapCell cell in _headerCells)
                 {
                     if (!cell.Dirty) continue;
                     if (MapFile.TooBigForTheGame(cell.Map.mapModelData?.Length ?? 0, cell.Map.bdhc?.Length ?? 0) is string cellTooBig)
@@ -2452,7 +2452,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ImportAsync()
         {
             if (_selectedMapIndex < 0) return;
-            var filter = new FilePickerFileType("Map file") { Patterns = new[] { "*.bin", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("Map file") { Patterns = new[] { "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import map .bin", new[] { filter });
             if (path == null) return;
             try
@@ -2475,7 +2475,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportAsync()
         {
             if (_map == null) return;
-            var filter = new FilePickerFileType("Map file") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Map file") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.SaveFile(_owner, "Export map .bin", new[] { filter }, $"map_{_selectedMapIndex:D4}.bin");
             if (path == null) return;
             try
@@ -2532,7 +2532,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public async Task ExportNsbmdAsync()
         {
             if (_map == null) return;
-            var filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
+            FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
             string path = await DialogHelper.SaveFile(_owner, "Export map model", new[] { filter }, ModelName() + ".nsbmd");
             if (path == null) return;
             try { File.WriteAllBytes(path, _map.mapModelData); StatusText = "Exported map model."; }
@@ -2629,13 +2629,13 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         public void DuplicateBuilding()
         {
-            var resolved = ResolveSelectedBuilding();
+            (MapFile map, int cellX, int cellY, Building building)? resolved = ResolveSelectedBuilding();
             if (resolved == null) return;
-            var (map, _, _, building) = resolved.Value;
+            (MapFile map, int _, int _, Building building) = resolved.Value;
             map.buildings.Add(new Building(building));
             if (IsHeaderView)
             {
-                var (ci, _) = _headerBuildingIndex[_selectedBuildingIndex];
+                (int ci, int _) = _headerBuildingIndex[_selectedBuildingIndex];
                 _headerCells[ci].Dirty = true;
                 RefreshBuildings(); MarkDirty();
                 SelectedBuildingIndex = _headerBuildingIndex.FindLastIndex(t => t.CellIndex == ci);
@@ -2650,15 +2650,15 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Scans every map .bin and returns the tile behaviours actually used, named, as one list.</summary>
         public string ScanUsedTypes()
         {
-            var used = new SortedSet<byte>();
+            SortedSet<byte> used = new SortedSet<byte>();
             int count = Filesystem.GetMapCount();
             for (int i = 0; i < count; i++)
             {
                 try { used.UnionWith(new MapFile(i, gameFamily, discardMoveperms: false).GetUsedTypes()); }
                 catch { /* skip unreadable map */ }
             }
-            var parts = new List<string>();
-            foreach (var b in used) parts.Add(TilePermissions.BehaviourLabel(b, gameFamily));
+            List<string> parts = new List<string>();
+            foreach (byte b in used) parts.Add(TilePermissions.BehaviourLabel(b, gameFamily));
             StatusText = $"{used.Count} distinct type(s) used across all maps.";
             return string.Join(", ", parts);
         }

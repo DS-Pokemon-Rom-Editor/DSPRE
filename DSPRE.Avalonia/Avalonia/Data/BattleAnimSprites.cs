@@ -16,7 +16,7 @@ namespace DSPRE.Avalonia.Data
             int ch = -1, pl = -1, ce = -1, ca = -1;
             if (cmds != null)
             {
-                foreach (var c in cmds)
+                foreach (WazaSeqCommand c in cmds)
                 {
                     string name = BattleAnimCommands.Name(version, c.OpId);
                     if (name == null || c.Args.Length < 2) continue;

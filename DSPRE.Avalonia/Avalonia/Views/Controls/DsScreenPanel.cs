@@ -41,14 +41,14 @@ namespace DSPRE.Avalonia.Views.Controls
             double w = 256 * scale, h = 192 * scale;
             double left = (size.Width - w) / 2;
             double top = (size.Height - unitsHigh * scale) / 2;
-            var topRect = new Rect(left, top, w, h);
-            var bottomRect = bottom ? new Rect(left, top + h + HingePixels * scale, w, h) : default;
+            Rect topRect = new Rect(left, top, w, h);
+            Rect bottomRect = bottom ? new Rect(left, top + h + HingePixels * scale, w, h) : default;
             return (topRect, bottomRect);
         }
 
         protected override Size MeasureOverride(Size availableSize)
         {
-            var (top, bottom) = Layout(availableSize);
+            (Rect top, Rect bottom) = Layout(availableSize);
             for (int i = 0; i < Children.Count; i++)
                 Children[i].Measure(i == 0 ? top.Size : i == 1 ? bottom.Size : default);
             return availableSize;
@@ -56,7 +56,7 @@ namespace DSPRE.Avalonia.Views.Controls
 
         protected override Size ArrangeOverride(Size finalSize)
         {
-            var (top, bottom) = Layout(finalSize);
+            (Rect top, Rect bottom) = Layout(finalSize);
             for (int i = 0; i < Children.Count; i++)
                 Children[i].Arrange(i == 0 ? top : i == 1 ? bottom : default);
             return finalSize;

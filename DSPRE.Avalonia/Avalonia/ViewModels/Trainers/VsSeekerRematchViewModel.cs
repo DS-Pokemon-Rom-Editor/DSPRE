@@ -110,7 +110,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_dirtyRows.Count > 0 && IsSupported)
             {
-                var saved = VsSeekerRematchTable.ReadAll();
+                List<RematchTable.Row> saved = VsSeekerRematchTable.ReadAll();
                 foreach (int r in _dirtyRows)
                     if (r < saved.Count) _rows[r] = saved[r];
 
@@ -147,7 +147,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void ApplyState(byte[] state)
         {
-            var ids = DSPRE.Avalonia.UndoJson.Read<List<ushort[]>>(state);
+            List<ushort[]> ids = DSPRE.Avalonia.UndoJson.Read<List<ushort[]>>(state);
             for (int r = 0; r < ids.Count && r < _rows.Count; r++) _rows[r].Ids = ids[r];
             RecountDirtyRows();
             RefreshRowLabels();
@@ -190,11 +190,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
 
-            foreach (var n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
+            foreach (string n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
 
             RematchChoices.Add("(skip this level - 0xFFFF)");
             RematchChoices.Add("(end of chain - 0x0000)");
-            foreach (var n in TrainerNames) RematchChoices.Add(n);
+            foreach (string n in TrainerNames) RematchChoices.Add(n);
 
             _rows = VsSeekerRematchTable.ReadAll(out _location, out string loadError);
             TableNote = _location != null
@@ -213,7 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private string RowLabel(int rowIndex)
         {
-            var row = _rows[rowIndex];
+            RematchTable.Row row = _rows[rowIndex];
             return row.IsEmpty ? $"Row {rowIndex}: (empty)" : $"Row {rowIndex}: {TrainerLabel(row.BaseTrainerId)}";
         }
 
@@ -242,7 +242,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadRowIntoDetail(int rowIndex)
         {
             _suppress = true;
-            var row = _rows[rowIndex];
+            RematchTable.Row row = _rows[rowIndex];
 
             EncounterIndex = row.BaseTrainerId < TrainerNames.Count ? row.BaseTrainerId : -1;
 
@@ -264,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_suppress || _currentRowIndex < 0) return;
 
-            var row = _rows[_currentRowIndex];
+            RematchTable.Row row = _rows[_currentRowIndex];
             if (EncounterIndex >= 0) row.BaseTrainerId = (ushort)EncounterIndex;
 
             int[] slots = { RematchA, RematchB, RematchC, RematchD, RematchE };

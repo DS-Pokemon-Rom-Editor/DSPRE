@@ -95,7 +95,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Every piece of both screens, back to front, ready to draw.</summary>
         public List<Piece> Build(Options o)
         {
-            var pieces = new List<Piece>();
+            List<Piece> pieces = new List<Piece>();
             o ??= new Options();
 
             AddBackdrop(pieces, o);
@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia.Data
             AddGauges(pieces, o);
             AddMessageBox(pieces, o);
             AddTouchPanel(pieces, o);
-            foreach (var p in pieces) p.MeasurePaint();
+            foreach (Piece p in pieces) p.MeasurePaint();
             return pieces;
         }
 
@@ -121,8 +121,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>One screen's pieces drawn over each other, as straight RGBA.</summary>
         public static byte[] Flatten(IReadOnlyList<Piece> pieces, bool touch)
         {
-            var canvas = new byte[ScreenWidth * ScreenHeight * 4];
-            foreach (var p in pieces)
+            byte[] canvas = new byte[ScreenWidth * ScreenHeight * 4];
+            foreach (Piece p in pieces)
             {
                 if (p.Touch != touch || p.Rgba == null) continue;
                 for (int y = 0; y < p.Height; y++)
@@ -158,7 +158,7 @@ namespace DSPRE.Avalonia.Data
         private void AddBackdrop(List<Piece> pieces, Options o)
         {
             int bg = ResolveBackdrop(o);
-            var piece = new Piece
+            Piece piece = new Piece
             {
                 Name = "Backdrop",
                 What = "The sky and ground behind the battle.",
@@ -169,7 +169,7 @@ namespace DSPRE.Avalonia.Data
             // the piece was the only one with no way at all to reach what it is drawn from.
             if (bg >= 0)
             {
-                var files = BattleBgRenderer.BackdropFiles(bg);
+                (int Drawing, int Tilemap, int PaletteDay) files = BattleBgRenderer.BackdropFiles(bg);
                 piece.Drawing = files.Drawing;
                 piece.Arrangement = files.Tilemap;
                 piece.Colours = files.PaletteDay + Math.Clamp(o.TimeOfDay, 0, 2);
@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.Data
             }
             try
             {
-                var img = bg >= 0 ? (_backdrop ??= new BattleBgRenderer()).BuildBackdrop(bg, o.TimeOfDay) : null;
+                BattleBgRenderer.BgImage img = bg >= 0 ? (_backdrop ??= new BattleBgRenderer()).BuildBackdrop(bg, o.TimeOfDay) : null;
                 if (img?.Rgba == null) piece.Whynot = "This backdrop could not be drawn.";
                 else { piece.Rgba = img.Rgba; piece.Width = img.Width; piece.Height = img.Height; }
             }
@@ -192,14 +192,14 @@ namespace DSPRE.Avalonia.Data
 
         private void AddGround(List<Piece> pieces, Options o)
         {
-            var r = _ground ??= new BattleGroundRenderer();
-            var files = BattleGroundRenderer.TerrainFiles(o.TerrainId);
+            BattleGroundRenderer r = _ground ??= new BattleGroundRenderer();
+            (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? files = BattleGroundRenderer.TerrainFiles(o.TerrainId);
             (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) both;
             try { both = r.Build(o.TerrainId, o.TimeOfDay); }
             catch { both = (null, null); }
             foreach (bool player in new[] { false, true })
             {
-                var piece = new Piece
+                Piece piece = new Piece
                 {
                     Name = player ? "Ground, your side" : "Ground, their side",
                     What = "The tray the Pokemon stands on.",
@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.Data
                     Colours = files.HasValue ? files.Value.PaletteDay + o.TimeOfDay : -1,
                     SharedNote = "Every place that fights on this terrain uses it.",
                 };
-                var g = player ? both.mine : both.enemy;
+                BattleGroundRenderer.GroundImage g = player ? both.mine : both.enemy;
                 if (g?.Rgba == null) piece.Whynot = "This ground could not be drawn.";
                 else { piece.Rgba = g.Rgba; piece.Width = g.Width; piece.Height = g.Height; piece.Left = g.Left; piece.Top = g.Top; }
                 pieces.Add(piece);
@@ -218,13 +218,13 @@ namespace DSPRE.Avalonia.Data
 
         private void AddGauges(List<Piece> pieces, Options o)
         {
-            foreach (var kind in BattleGaugeComposer.ForDoubleBattle(o.Doubles))
+            foreach (BattleGaugeComposer.Kind kind in BattleGaugeComposer.ForDoubleBattle(o.Doubles))
             {
                 bool player = kind == BattleGaugeComposer.Kind.PlayerSingle
                            || kind == BattleGaugeComposer.Kind.PlayerNear
                            || kind == BattleGaugeComposer.Kind.PlayerFar;
                 string thing = BattleGaugeComposer.GraphicOf(kind);
-                var piece = new Piece
+                Piece piece = new Piece
                 {
                     Name = BattleGaugeComposer.NameOf(kind),
                     What = "The name, level and health of one Pokemon.",
@@ -238,7 +238,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     // The writing goes into the bar's own picture, the way a battle does it, so it sits
                     // where the game puts it and nothing paints over the bar's slanted edge.
-                    var g = BattleGaugeComposer.Build(kind, new BattleGaugeComposer.Showing
+                    BattleGaugeComposer.Drawn g = BattleGaugeComposer.Build(kind, new BattleGaugeComposer.Showing
                     {
                         Name = o.PokemonName,
                         Level = o.Level,
@@ -251,7 +251,7 @@ namespace DSPRE.Avalonia.Data
                     if (g == null && !o.Doubles)
                     {
                         // Games we cannot read the letters of still get the bar itself.
-                        var plain = (_ground ??= new BattleGroundRenderer()).BuildGauge(player);
+                        BattleGroundRenderer.GroundImage plain = (_ground ??= new BattleGroundRenderer()).BuildGauge(player);
                         if (plain?.Rgba != null)
                             g = new BattleGaugeComposer.Drawn
                             {
@@ -298,7 +298,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The message box alone, at <see cref="MessageTop"/> across the screen.</summary>
         public static Piece BuildMessageBox(int windowStyle)
         {
-            var piece = new Piece
+            Piece piece = new Piece
             {
                 Name = "Message box",
                 What = "The box battle text is written in. Which of the twenty frames it uses is the "
@@ -309,7 +309,7 @@ namespace DSPRE.Avalonia.Data
             };
             try
             {
-                var frame = FieldWindowFrame.Load(windowStyle);
+                FieldWindowFrame frame = FieldWindowFrame.Load(windowStyle);
                 if (frame == null) piece.Whynot = "The window frames could not be read from this ROM.";
                 else
                 {
@@ -412,13 +412,13 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         private void AddTouchPanel(List<Piece> pieces, Options o)
         {
-            var colours = PanelColours(ResolveBackdrop(o), o.Menu);
+            (byte r, byte g, byte b)[] colours = PanelColours(ResolveBackdrop(o), o.Menu);
             // Layer 1 is blended over every layer under it. Platinum and HeartGold weigh it 8/16 over 12/16;
             // Diamond and Pearl ask for 27 and 4, and the hardware caps a weight at 16.
             (int own, int below) blend = RomInfo.gameFamily == GameFamilies.DP ? (16, 4) : (8, 12);
-            foreach (var layer in LayersOf(o.Menu).OrderByDescending(l => l.Priority).ThenByDescending(l => l.BgNumber))
+            foreach (PanelLayer layer in LayersOf(o.Menu).OrderByDescending(l => l.Priority).ThenByDescending(l => l.BgNumber))
             {
-                var piece = AddPanelLayer(pieces, layer.Name, layer.Screen, layer.What, colours, opaque: layer == Background);
+                Piece piece = AddPanelLayer(pieces, layer.Name, layer.Screen, layer.What, colours, opaque: layer == Background);
                 if (layer.Blended) { piece.BlendOwn = blend.own; piece.BlendBelow = blend.below; }
             }
         }
@@ -434,9 +434,9 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         private (byte r, byte g, byte b)[] PanelColours(int backdrop, TouchMenu menu)
         {
-            var wide = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(BattleBgNames.Find("TouchScreen.Panel:Colours"))),
+            (byte r, byte g, byte b)[] wide = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(BattleBgNames.Find("TouchScreen.Panel:Colours"))),
                                                out int count);
-            var all = new (byte r, byte g, byte b)[256];
+            (byte r, byte g, byte b)[] all = new (byte r, byte g, byte b)[256];
             for (int i = 0; i < all.Length && i < count; i++) all[i] = wide[i];
 
             if (RomInfo.gameFamily != GameFamilies.DP)
@@ -445,7 +445,7 @@ namespace DSPRE.Avalonia.Data
                 int sceneAt = tint == null ? -1 : BattleBgNames.Find(tint);
                 if (sceneAt >= 0)
                 {
-                    var scene = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(sceneAt)), out int sceneCount);
+                    (byte r, byte g, byte b)[] scene = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(_bg.Get(sceneAt)), out int sceneCount);
                     for (int i = 0; i < 16 && i < sceneCount; i++) all[i] = scene[i];
                 }
             }
@@ -454,7 +454,7 @@ namespace DSPRE.Avalonia.Data
             {
                 for (int slot = 0; slot < SampleMoveTypes.Length; slot++)
                 {
-                    var row = BattleUiTables.MoveButtonPalette(SampleMoveTypes[slot]);
+                    ushort[] row = BattleUiTables.MoveButtonPalette(SampleMoveTypes[slot]);
                     if (row == null) continue;
                     for (int i = 0; i < 16; i++)
                     {
@@ -470,7 +470,7 @@ namespace DSPRE.Avalonia.Data
         private Piece AddPanelLayer(List<Piece> pieces, string name, string screenEntry, string what,
                                     (byte r, byte g, byte b)[] colours, bool opaque)
         {
-            var piece = new Piece
+            Piece piece = new Piece
             {
                 Name = name, What = what, Touch = true, Archive = DirNames.battleBg,
                 // Every layer of the panel is drawn from the one sheet of tiles, so there is no
@@ -493,7 +493,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     // Colour zero is a real colour on the bottom layer, not a hole: the panel's own green
                     // is index 0. On the layers above it, colour zero is what lets the one below show.
-                    var bg = NitroBgCodec.Composite(GraphicAssets.Unsqueeze(_bg.Get(chr)),
+                    NitroBgCodec.BgImage bg = NitroBgCodec.Composite(GraphicAssets.Unsqueeze(_bg.Get(chr)),
                                                     colours, 256,
                                                     GraphicAssets.Unsqueeze(_bg.Get(scr)),
                                                     transparentZero: !opaque);

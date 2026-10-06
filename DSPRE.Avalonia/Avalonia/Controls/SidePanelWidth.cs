@@ -10,11 +10,11 @@ namespace DSPRE.Avalonia.Controls
         /// <param name="grid">Columns: the preview (star), the splitter, the side panel.</param>
         public static void Remember(Grid grid, Func<double> load, Action<double> store)
         {
-            var preview = grid.ColumnDefinitions[0];
-            var side = grid.ColumnDefinitions[2];
+            ColumnDefinition preview = grid.ColumnDefinitions[0];
+            ColumnDefinition side = grid.ColumnDefinitions[2];
             double saved = load();
             if (saved > 0) side.Width = new GridLength(Math.Max(saved, side.MinWidth));
-            var splitter = grid.Children.OfType<GridSplitter>().FirstOrDefault();
+            GridSplitter splitter = grid.Children.OfType<GridSplitter>().FirstOrDefault();
             if (splitter == null) return;
             splitter.DragCompleted += (_, _) =>
             {

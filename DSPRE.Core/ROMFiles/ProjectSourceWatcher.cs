@@ -44,7 +44,7 @@ namespace DSPRE.ROMFiles
                 _subscribed = true;
             }
 
-            var watcher = new FileSystemWatcher(expanded)
+            FileSystemWatcher watcher = new FileSystemWatcher(expanded)
             {
                 IncludeSubdirectories = true,
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
@@ -126,12 +126,12 @@ namespace DSPRE.ROMFiles
             lock (Gate)
             {
                 // Saved events can arrive after the file change, so the window counts both ways.
-                var now = DateTime.UtcNow;
+                DateTime now = DateTime.UtcNow;
                 bool quiet = _holds > 0 || now < _quietUntil;
                 changed = quiet ? new List<string>()
-                    : Pending.Where(p => !(OwnWrites.TryGetValue(p, out var at) && now - at < OwnWriteWindow)).ToList();
+                    : Pending.Where(p => !(OwnWrites.TryGetValue(p, out DateTime at) && now - at < OwnWriteWindow)).ToList();
                 Pending.Clear();
-                foreach (var old in OwnWrites.Where(kv => now - kv.Value > OwnWriteWindow).Select(kv => kv.Key).ToList())
+                foreach (string old in OwnWrites.Where(kv => now - kv.Value > OwnWriteWindow).Select(kv => kv.Key).ToList())
                     OwnWrites.Remove(old);
             }
 
@@ -139,12 +139,12 @@ namespace DSPRE.ROMFiles
                 if (int.TryParse(Path.GetFileNameWithoutExtension(path), out int id))
                     TextArchive.RaiseSaved(null, id);
 
-            var scripts = changed.Where(p => IsUnder(p, _scriptsDir)).ToList();
+            List<string> scripts = changed.Where(p => IsUnder(p, _scriptsDir)).ToList();
             if (scripts.Count == 0 || !RomInfo.hasRotomProject || !RotomTool.IsAvailable) return;
             try
             {
                 AppLogger.Info("Compiling script sources edited outside DSPRE: " + string.Join(", ", scripts.Select(Path.GetFileName)));
-                var result = await RotomTool.CompileProjectAsync().ConfigureAwait(false);
+                RotomTool.Result result = await RotomTool.CompileProjectAsync().ConfigureAwait(false);
                 ScriptsCompiled?.Invoke(result, scripts);
             }
             catch (Exception ex)

@@ -46,10 +46,10 @@ namespace DSPRE.HgEngine
         /// must never be used as a stand-in once hg-engine is linked).</summary>
         public static List<(string Name, int Value)> GetMethodOptions()
         {
-            var result = new List<(string Name, int Value)>();
-            var table = HgEngineSymbolTable.Load(MethodHeaderRelPath);
+            List<(string Name, int Value)> result = new List<(string Name, int Value)>();
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(MethodHeaderRelPath);
             if (table == null) return result;
-            foreach (var kv in table.ByName)
+            foreach (KeyValuePair<string, int> kv in table.ByName)
                 if (kv.Key.StartsWith(MethodPrefix, StringComparison.Ordinal)) result.Add((kv.Key, kv.Value));
             result.Sort((a, b) => a.Value.CompareTo(b.Value));
             return result;
@@ -66,7 +66,7 @@ namespace DSPRE.HgEngine
             entries = new List<EvoEntry>();
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
@@ -76,17 +76,17 @@ namespace DSPRE.HgEngine
             if (!HgEngineSourcePatcher.TryGetFieldValue(text, designator, EntriesPath, out string rawEntriesBlock))
                 return true;   // no entry: caller treats an empty list as all-EVO_NONE
 
-            var methodTable = HgEngineSymbolTable.Load(MethodHeaderRelPath);
-            var itemTable = HgEngineSymbolTable.Load(ItemHeaderRelPath);
-            var moveTable = HgEngineSymbolTable.Load(MoveHeaderRelPath);
-            var typeTable = HgEngineSymbolTable.Load(TypeHeaderRelPath);
+            HgEngineSymbolTable methodTable = HgEngineSymbolTable.Load(MethodHeaderRelPath);
+            HgEngineSymbolTable itemTable = HgEngineSymbolTable.Load(ItemHeaderRelPath);
+            HgEngineSymbolTable moveTable = HgEngineSymbolTable.Load(MoveHeaderRelPath);
+            HgEngineSymbolTable typeTable = HgEngineSymbolTable.Load(TypeHeaderRelPath);
 
-            var raw = HgEngineSourcePatcher.SplitArrayValue(rawEntriesBlock);
+            List<string> raw = HgEngineSourcePatcher.SplitArrayValue(rawEntriesBlock);
             for (int i = 0; i < slotCount && i < raw.Count; i++)
             {
                 string rawEntry = raw[i].Trim();
                 if (rawEntry.Length == 0) { entries.Add(default); continue; }
-                var parts = HgEngineSourcePatcher.SplitArrayValue(rawEntry);
+                List<string> parts = HgEngineSourcePatcher.SplitArrayValue(rawEntry);
                 if (parts.Count < 3) { entries.Add(new EvoEntry { Unresolved = true, RawText = rawEntry }); continue; }
 
                 bool methodOk = TryResolveToken(parts[0], out int method, methodTable);
@@ -111,7 +111,7 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
@@ -122,17 +122,17 @@ namespace DSPRE.HgEngine
             if (HgEngineSourcePatcher.TryGetFieldValue(text, designator, EntriesPath, out string rawEntriesBlock))
                 existingRaw = HgEngineSourcePatcher.SplitArrayValue(rawEntriesBlock);
 
-            var paramTables = new[]
+            HgEngineSymbolTable[] paramTables = new[]
             {
                 HgEngineSymbolTable.Load(ItemHeaderRelPath), HgEngineSymbolTable.Load(MoveHeaderRelPath), species, HgEngineSymbolTable.Load(TypeHeaderRelPath),
             };
             int totalSlots = existingRaw != null && existingRaw.Count > uiEntries.Count ? existingRaw.Count : uiEntries.Count;
-            var built = new List<string>(totalSlots);
+            List<string> built = new List<string>(totalSlots);
             for (int i = 0; i < totalSlots; i++)
             {
                 if (i < uiEntries.Count)
                 {
-                    var e = uiEntries[i];
+                    (string MethodName, int Param, int TargetSpeciesId, int TargetFormId) e = uiEntries[i];
                     string existing = existingRaw != null && i < existingRaw.Count ? existingRaw[i] : null;
                     built.Add(BuildEntryLiteral(e.MethodName, e.Param, e.TargetSpeciesId, e.TargetFormId, existing, species, paramTables));
                 }
@@ -169,7 +169,7 @@ namespace DSPRE.HgEngine
             string paramLiteral = param.ToString();
             if (existingRaw != null)
             {
-                var parts = HgEngineSourcePatcher.SplitArrayValue(existingRaw.Trim());
+                List<string> parts = HgEngineSourcePatcher.SplitArrayValue(existingRaw.Trim());
                 if (parts.Count >= 3)
                 {
                     // ITEM_, MOVE_, TYPE_ or a name DSPRE can't read.
@@ -189,7 +189,7 @@ namespace DSPRE.HgEngine
         {
             token = token.Trim();
             if (int.TryParse(token, out value)) return true;
-            foreach (var t in tables)
+            foreach (HgEngineSymbolTable t in tables)
                 if (t != null && t.TryGetValue(token, out value)) return true;
             value = 0;
             return false;

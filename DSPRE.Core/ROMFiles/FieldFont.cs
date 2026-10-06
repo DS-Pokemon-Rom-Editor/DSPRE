@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DSPRE.CharMaps;
 
 namespace DSPRE.ROMFiles
 {
@@ -61,7 +62,7 @@ namespace DSPRE.ROMFiles
             if (tableStart != headerSize + count * BytesPerGlyph) return null;
             if (data.Length < tableStart + count) return null;
 
-            var pixels = new byte[count * CellSize * CellSize];
+            byte[] pixels = new byte[count * CellSize * CellSize];
             for (int g = 0; g < count; g++)
             {
                 int read = headerSize + g * BytesPerGlyph;
@@ -77,13 +78,13 @@ namespace DSPRE.ROMFiles
                         }
             }
 
-            var widths = new byte[count];
+            byte[] widths = new byte[count];
             Array.Copy(data, tableStart, widths, 0, count);
 
-            var header = new byte[HeaderSize];
+            byte[] header = new byte[HeaderSize];
             Array.Copy(data, 0, header, 0, HeaderSize);
             int after = tableStart + count;
-            var tail = new byte[data.Length - after];
+            byte[] tail = new byte[data.Length - after];
             Array.Copy(data, after, tail, 0, tail.Length);
 
             return new FieldFont(pixels, widths, count, maxWidth, height, bpp, header, tail);
@@ -96,7 +97,7 @@ namespace DSPRE.ROMFiles
         public byte[] Write()
         {
             int tableStart = HeaderSize + GlyphCount * BytesPerGlyph;
-            var data = new byte[tableStart + GlyphCount + (_tail?.Length ?? 0)];
+            byte[] data = new byte[tableStart + GlyphCount + (_tail?.Length ?? 0)];
             Array.Copy(_header, 0, data, 0, HeaderSize);
 
             // The same walk Read does, the other way round: four eight by eight blocks, two bytes a
@@ -156,7 +157,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out var dirs)) return null;
+                if (!RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out (string packedDir, string unpackedDir) dirs)) return null;
                 // hg-engine copies some fonts in from its own files on every build, so those files are the font.
                 if (HgEngine.HgEngineSourceAssets.ReadVerbatim(HgEngine.HgEngineOwnedFiles.ArchiveOf(RomInfo.DirNames.fonts), entry) is byte[] source)
                     return Read(source);
@@ -173,7 +174,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The unpacked font archive's members in entry order, or none when it is not unpacked.</summary>
         public static string[] UnpackedEntries()
         {
-            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out var dirs)) return Array.Empty<string>();
+            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(RomInfo.DirNames.fonts, out (string packedDir, string unpackedDir) dirs)) return Array.Empty<string>();
             string dir = dirs.unpackedDir;
             if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return Array.Empty<string>();
             return Directory.GetFiles(dir).OrderBy(x => x).ToArray();
@@ -181,7 +182,7 @@ namespace DSPRE.ROMFiles
 
         private static string EntryPath(int entry)
         {
-            var files = UnpackedEntries();
+            string[] files = UnpackedEntries();
             return entry >= 0 && entry < files.Length ? files[entry] : null;
         }
 
@@ -234,7 +235,7 @@ namespace DSPRE.ROMFiles
             int to = BitConverter.ToInt32(narc, entry + 4);
             if (to < from || images + to > narc.Length) return null;
 
-            var blob = new byte[to - from];
+            byte[] blob = new byte[to - from];
             Array.Copy(narc, images + from, blob, 0, blob.Length);
             return blob;
         }
@@ -250,7 +251,7 @@ namespace DSPRE.ROMFiles
         /// <summary>The picture number for a letter, or -1 when the font has nothing for it.</summary>
         public static int GlyphFor(char c)
         {
-            var map = Map();
+            Dictionary<char, int> map = Map();
             return map != null && map.TryGetValue(c, out int g) ? g : -1;
         }
 
@@ -262,12 +263,12 @@ namespace DSPRE.ROMFiles
         private static Dictionary<char, int> Map()
         {
             if (_glyphByChar != null) return _glyphByChar;
-            var map = new Dictionary<char, int>();
+            Dictionary<char, int> map = new Dictionary<char, int>();
             try
             {
-                var charMap = CharMaps.CharMapManager.LoadCharMap();
+                CharMap charMap = CharMaps.CharMapManager.LoadCharMap();
                 if (charMap?.CharacterMap != null)
-                    foreach (var pair in charMap.CharacterMap)
+                    foreach (KeyValuePair<string, CharMapEntry> pair in charMap.CharacterMap)
                     {
                         if (!int.TryParse(pair.Key, System.Globalization.NumberStyles.HexNumber,
                                           System.Globalization.CultureInfo.InvariantCulture, out int code))

@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async System.Threading.Tasks.Task ImportPng(System.Func<string, string> import)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import Image",
                 AllowMultiple = false,
@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async System.Threading.Tasks.Task ExportPng(System.Func<string, string> export, string suggestedName)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export Image",
                 DefaultExtension = "png",
@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void ImportRankPalette_Click(object sender, RoutedEventArgs e)
         {
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
                 Title = "Import colours",
                 AllowMultiple = false,
@@ -86,7 +86,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private async void ExportRankPalette_Click(object sender, RoutedEventArgs e)
         {
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            IStorageFile file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
                 Title = "Export colours",
                 DefaultExtension = "nclr",

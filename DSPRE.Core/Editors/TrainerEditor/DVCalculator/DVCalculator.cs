@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 
 namespace DSPRE
@@ -50,8 +51,8 @@ namespace DSPRE
 
         public static void filterHighestDV(ref List<DVIVNatureTriplet> natures)
         {
-            var result = new Dictionary<string, DVIVNatureTriplet>();
-            foreach (var triplet in natures)
+            Dictionary<string, DVIVNatureTriplet> result = new Dictionary<string, DVIVNatureTriplet>();
+            foreach (DVIVNatureTriplet triplet in natures)
             {
                 if (!result.ContainsKey(triplet.Nature) || triplet.DV > result[triplet.Nature].DV)
                 {
@@ -227,9 +228,9 @@ namespace DSPRE
             public static bool GetTrainerClassGender(int trainerClassID)
             {
                 // The trainer class metadata patch (PR #272) reads the gender from its own record instead.
-                var metadata = ROMFiles.TrainerClassMetadataStore.DetectCurrentRom(out string metadataDetail);
+                TrainerClassMetadataDetectionState metadata = ROMFiles.TrainerClassMetadataStore.DetectCurrentRom(out string metadataDetail);
                 if (metadata == ROMFiles.TrainerClassMetadataDetectionState.SchemaV1
-                    && ROMFiles.TrainerClassMetadataStore.TryReadCommonFields(trainerClassID, out var fields, out metadataDetail))
+                    && ROMFiles.TrainerClassMetadataStore.TryReadCommonFields(trainerClassID, out TrainerClassMetadataCommonFields fields, out metadataDetail))
                     return fields.Gender != 1;
                 if (metadata != ROMFiles.TrainerClassMetadataDetectionState.Stock)
                 {

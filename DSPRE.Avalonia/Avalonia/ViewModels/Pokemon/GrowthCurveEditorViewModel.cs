@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int k = 0;
             for (int c = 0; c < GrowthTable.Curves; c++)
                 for (int l = 0; l < _table.Totals[c].Length; l++, k += 4) _table.Totals[c][l] = BitConverter.ToUInt32(b, k);
-            foreach (var row in Levels) row.Refresh();
+            foreach (LevelRow row in Levels) row.Refresh();
             Changed();
         }
 
@@ -111,7 +111,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Changed()
         {
-            foreach (var n in new[] { nameof(CurveForChart), nameof(Problem), nameof(HasProblem), nameof(Level100), nameof(HasUnsavedChanges) })
+            foreach (string n in new[] { nameof(CurveForChart), nameof(Problem), nameof(HasProblem), nameof(Level100), nameof(HasUnsavedChanges) })
                 Raise(n);
         }
 
@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_table == null) return true;
-            var changed = Enumerable.Range(0, GrowthTable.Curves).Where(CurveChanged).ToList();
+            List<int> changed = Enumerable.Range(0, GrowthTable.Curves).Where(CurveChanged).ToList();
             foreach (int c in changed)
                 if (_table.Problem(c) is string p) { await DialogHelper.ShowError(p, "Growth Curves"); return false; }
             try
@@ -146,7 +146,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_table == null) return;
             for (int c = 0; c < GrowthTable.Curves; c++) _table.Totals[c] = (uint[])_saved[c].Clone();
-            foreach (var row in Levels) row.Refresh();
+            foreach (LevelRow row in Levels) row.Refresh();
             StartUndo();
             Changed();
         }

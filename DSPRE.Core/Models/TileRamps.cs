@@ -36,13 +36,13 @@ namespace DSPRE.Models
         public static Report Lay(TileBake.Result r, TileGrid grid, IReadOnlyList<Run> runs,
                                  Func<int, int, (float height, MapTileset.Face skin)> groundOf)
         {
-            var report = new Report();
+            Report report = new Report();
             if (r == null || grid == null || runs == null) return report;
             int n = TileGrid.Across;
             float tw = MapTileset.TileWidth, half = MapTileset.HalfMap;
-            var anyRamp = new HashSet<(int, int)>(runs.SelectMany(run => run.Squares));
+            HashSet<(int, int)> anyRamp = new HashSet<(int, int)>(runs.SelectMany(run => run.Squares));
 
-            foreach (var run in runs)
+            foreach (Run run in runs)
             {
                 if (run.Squares.Count == 0) continue;
                 int bx0 = run.Squares.Min(s => s.x), bx1 = run.Squares.Max(s => s.x) + 1;
@@ -53,13 +53,13 @@ namespace DSPRE.Models
                 float step = TileGrid.Step / 2f;
 
                 // The highest ground just outside the run on each side.
-                var high = new Dictionary<(int dx, int dz), float>();
-                foreach (var (x, z) in run.Squares)
-                    foreach (var d in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                Dictionary<(int dx, int dz), float> high = new Dictionary<(int dx, int dz), float>();
+                foreach ((int x, int z) in run.Squares)
+                    foreach ((int, int) d in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
                     {
                         int nx = x + d.Item1, nz = z + d.Item2;
                         if (nx < 0 || nz < 0 || nx >= n || nz >= n || anyRamp.Contains((nx, nz))) continue;
-                        var (h, skin) = groundOf(nx, nz);
+                        (float h, MapTileset.Face skin) = groundOf(nx, nz);
                         if (skin == null || h < lo + step) continue;
                         high[d] = high.TryGetValue(d, out float had) ? Math.Max(had, h) : h;
                     }
@@ -71,10 +71,10 @@ namespace DSPRE.Models
                     // Only a diagonal rises: the outer corner of a block.
                     (int, int)? diagonal = null;
                     float best = lo + step;
-                    foreach (var (cx, cz, dx, dz) in new[] { (bx1, bz0 - 1, 1, -1), (bx0 - 1, bz0 - 1, -1, -1), (bx1, bz1, 1, 1), (bx0 - 1, bz1, -1, 1) })
+                    foreach ((int cx, int cz, int dx, int dz) in new[] { (bx1, bz0 - 1, 1, -1), (bx0 - 1, bz0 - 1, -1, -1), (bx1, bz1, 1, 1), (bx0 - 1, bz1, -1, 1) })
                     {
                         if (cx < 0 || cz < 0 || cx >= n || cz >= n || anyRamp.Contains((cx, cz))) continue;
-                        var (h, skin) = groundOf(cx, cz);
+                        (float h, MapTileset.Face skin) = groundOf(cx, cz);
                         if (skin != null && h >= best) { best = h; diagonal = (dx, dz); }
                     }
                     if (diagonal is not (int ddx, int ddz)) { report.Skipped.Add($"{where}: no higher ground beside it"); continue; }
@@ -84,9 +84,9 @@ namespace DSPRE.Models
                 }
                 else
                 {
-                    var sides = high.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
+                    List<(int dx, int dz)> sides = high.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
                     a = sides[0];
-                    var across = sides.Skip(1).Cast<(int, int)?>().FirstOrDefault(s => s.Value.Item1 != 0 && a.dx == 0 || s.Value.Item2 != 0 && a.dz == 0);
+                    (int, int)? across = sides.Skip(1).Cast<(int, int)?>().FirstOrDefault(s => s.Value.Item1 != 0 && a.dx == 0 || s.Value.Item2 != 0 && a.dz == 0);
                     if (across is (int, int) other) { shape = Shape.Inner; b = other; }
                     else shape = Shape.Straight;
                 }
@@ -131,9 +131,9 @@ namespace DSPRE.Models
                         (vx, vz) => (Along(a, vx, vz), Along(b, vx, vz)),
                         (x, z) => run.Fill ?? groundOf(x, z).skin,
                         (x, z) => x < 0 || z < 0 || x >= n || z >= n || groundOf(x, z).skin == null ? lo : groundOf(x, z).height);
-                foreach (var (x, z) in terraces ? Enumerable.Empty<(int, int)>() : run.Squares)
+                foreach ((int x, int z) in terraces ? Enumerable.Empty<(int, int)>() : run.Squares)
                 {
-                    var skin = run.Fill ?? run.Template?.MainFace ?? groundOf(x, z).skin;
+                    MapTileset.Face skin = run.Fill ?? run.Template?.MainFace ?? groundOf(x, z).skin;
                     if (skin == null) continue;
                     if (fromTile) { }
                     else if (stairs) Stairs(r, grid, skin, x, z, a, bx0, bx1, bz0, bz1, lo, hi, steps);
@@ -144,7 +144,7 @@ namespace DSPRE.Models
                                 Quad(r, grid, skin, x, z, x + qx * 0.5f, z + qz * 0.5f, x + (qx + 1) * 0.5f, z + (qz + 1) * 0.5f, Height);
 
                     // Where the ramp stands above the ground beside it, a side face closes the gap down to that ground.
-                    foreach (var (dx, dz) in ownSides ? Array.Empty<(int, int)>() : new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                    foreach ((int dx, int dz) in ownSides ? Array.Empty<(int, int)>() : new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
                     {
                         int nx = x + dx, nz = z + dz;
                         if (anyRamp.Contains((nx, nz))) continue;
@@ -166,8 +166,8 @@ namespace DSPRE.Models
                                 float e0 = Math.Max(c0, from), e1 = Math.Min(c1, to);
                                 float top = lo + (hi - lo) * (i + 1) / steps;
                                 if (e1 <= e0 + 1e-4f || top <= beside + 1e-4f) continue;
-                                var q0 = alongX ? (e0, p0.z) : (p0.x, e0);
-                                var q1 = alongX ? (e1, p0.z) : (p0.x, e1);
+                                (float, float) q0 = alongX ? (e0, p0.z) : (p0.x, e0);
+                                (float, float) q1 = alongX ? (e1, p0.z) : (p0.x, e1);
                                 Skirt(r, grid, skin, q0, q1, beside, top, top);
                             }
                         }
@@ -191,7 +191,7 @@ namespace DSPRE.Models
                 // The ground the game walks: one plate over a straight run, quarters over a corner.
                 BdhcBuild.Piece Plate(float x0, float z0, float x1, float z1)
                 {
-                    var p = new BdhcBuild.Piece
+                    BdhcBuild.Piece p = new BdhcBuild.Piece
                     {
                         MinX = (-half + x0 * tw) * ToTerrain, MaxX = (-half + x1 * tw) * ToTerrain,
                         MinZ = (-half + z0 * tw) * ToTerrain, MaxZ = (-half + z1 * tw) * ToTerrain,
@@ -205,7 +205,7 @@ namespace DSPRE.Models
                 }
                 if (shape == Shape.Straight) report.Plates.Add(Plate(bx0, bz0, bx1, bz1));
                 else
-                    foreach (var (x, z) in run.Squares)
+                    foreach ((int x, int z) in run.Squares)
                         for (int qz = 0; qz < 2; qz++)
                             for (int qx = 0; qx < 2; qx++)
                                 report.Plates.Add(Plate(x + qx * 0.5f, z + qz * 0.5f, x + (qx + 1) * 0.5f, z + (qz + 1) * 0.5f));
@@ -232,20 +232,20 @@ namespace DSPRE.Models
 
             // Uphill comes from the leaning faces' normals; corner heights mislead since stair side walls stand above the top step.
             float downX = 0, downZ = 0, slopeLow = float.MaxValue, slopeHigh = float.MinValue;
-            foreach (var face in t.Faces)
+            foreach (MapTileset.Face face in t.Faces)
             {
                 if (face.Corners == null || face.Corners.Length < 3) continue;
-                var p = face.Corners.Select(i => (t.Corners[i].X, t.Corners[i].Y, t.Corners[i].Z)).ToArray();
-                var (nx, ny, nz) = NormalOf(p);
+                (float X, float Y, float Z)[] p = face.Corners.Select(i => (t.Corners[i].X, t.Corners[i].Y, t.Corners[i].Z)).ToArray();
+                (float nx, float ny, float nz) = NormalOf(p);
                 if (ny < 0) { nx = -nx; ny = -ny; nz = -nz; }
                 if (ny < 0.3f || ny > 0.97f) continue;
                 float area = 0;
-                for (int i = 0; i < p.Length; i++) { var q = p[(i + 1) % p.Length]; area += p[i].Item1 * q.Item3 - q.Item1 * p[i].Item3; }
+                for (int i = 0; i < p.Length; i++) { (float X, float Y, float Z) q = p[(i + 1) % p.Length]; area += p[i].Item1 * q.Item3 - q.Item1 * p[i].Item3; }
                 area = Math.Abs(area) / 2f;
                 downX += area * nx; downZ += area * nz;
                 slopeLow = Math.Min(slopeLow, p.Min(c => c.Item2)); slopeHigh = Math.Max(slopeHigh, p.Max(c => c.Item2));
             }
-            var tu = Math.Abs(downX) >= Math.Abs(downZ) ? (dx: downX > 0 ? -1 : 1, dz: 0) : (dx: 0, dz: downZ > 0 ? -1 : 1);
+            (int dx, int dz) tu = Math.Abs(downX) >= Math.Abs(downZ) ? (dx: downX > 0 ? -1 : 1, dz: 0) : (dx: 0, dz: downZ > 0 ? -1 : 1);
             (int x, int z) U = (tu.dx, tu.dz), A = (-U.z, U.x);
             float tLength = U.x != 0 ? W : D, tWidth = U.x != 0 ? D : W;
             float Up(float px, float pz) => U.x > 0 ? px : U.x < 0 ? W - px : U.z > 0 ? pz : D - pz;
@@ -273,23 +273,23 @@ namespace DSPRE.Models
             float yHigh = slopeLow < slopeHigh ? slopeHigh : t.Corners.Max(c => c.Y);
             float Rise(float y) => yHigh - yLow < 1e-5f ? lo : lo + (y - yLow) / (yHigh - yLow) * (hi - lo);
 
-            foreach (var face in t.Faces)
+            foreach (MapTileset.Face face in t.Faces)
             {
                 if (face.Corners == null || face.Corners.Length < 3) continue;
-                var at = face.Corners.Select(i => t.Corners[i]).ToArray();
-                var along = at.Select(c => Up(c.X / tw, c.Z / tw)).ToArray();
-                var across = at.Select(c => Across(c.X / tw, c.Z / tw)).ToArray();
-                var fitted = across.Select(Fit).ToArray();
+                MapTileset.Corner[] at = face.Corners.Select(i => t.Corners[i]).ToArray();
+                float[] along = at.Select(c => Up(c.X / tw, c.Z / tw)).ToArray();
+                float[] across = at.Select(c => Across(c.X / tw, c.Z / tw)).ToArray();
+                float[] fitted = across.Select(Fit).ToArray();
 
                 // Picture units per square across the face, kept when the picture repeats across.
                 int param = face.Look?.ImageParam ?? 0;
                 bool repeatS = (param & (1 << 16)) != 0, repeatT = (param & (1 << 17)) != 0;
-                var (gs, gt) = AcrossGradient(across, along, at.Select(c => (c.S, c.T)).ToArray());
-                var uv = at.Select((c, i) => (repeatS ? c.S + gs * (fitted[i] - across[i]) : c.S,
+                (float gs, float gt) = AcrossGradient(across, along, at.Select(c => (c.S, c.T)).ToArray());
+                (float, float)[] uv = at.Select((c, i) => (repeatS ? c.S + gs * (fitted[i] - across[i]) : c.S,
                                                repeatT ? c.T + gt * (fitted[i] - across[i]) : c.T)).ToArray();
-                var points = at.Select((c, i) =>
+                (float x, float y, float z)[] points = at.Select((c, i) =>
                 {
-                    var (x, z) = Place(along[i] * rLength / tLength, fitted[i]);
+                    (float x, float z) = Place(along[i] * rLength / tLength, fitted[i]);
                     return Point(grid, x, Rise(c.Y), z);
                 }).ToArray();
                 Add(r, face, points, uv, bothSides: false);
@@ -308,7 +308,7 @@ namespace DSPRE.Models
             {
                 double sv = 0, sav = 0, sbv = 0;
                 for (int i = 0; i < n; i++) { sv += v(i); sav += across[i] * v(i); sbv += along[i] * v(i); }
-                var m = new double[3, 4] { { n, sa, sb, sv }, { sa, saa, sab, sav }, { sb, sab, sbb, sbv } };
+                double[,] m = new double[3, 4] { { n, sa, sb, sv }, { sa, saa, sab, sav }, { sb, sab, sbb, sbv } };
                 for (int c = 0; c < 3; c++)
                 {
                     int p = c;
@@ -334,7 +334,7 @@ namespace DSPRE.Models
         private static void Quad(TileBake.Result r, TileGrid grid, MapTileset.Face skin, int sx, int sz,
                                  float x0, float z0, float x1, float z1, Func<float, float, float> height)
         {
-            var pts = new[] { (x0, z0), (x0, z1), (x1, z1), (x1, z0) };
+            (float, float)[] pts = new[] { (x0, z0), (x0, z1), (x1, z1), (x1, z0) };
             Add(r, skin, pts.Select(p => Point(grid, p.Item1, height(p.Item1, p.Item2), p.Item2)).ToArray(),
                 pts.Select(p => Uv(skin, p.Item1 - sx, p.Item2 - sz)).ToArray());
         }
@@ -359,7 +359,7 @@ namespace DSPRE.Models
                 float h = lo + (hi - lo) * (i + 1) / steps, below = lo + (hi - lo) * i / steps;
                 if (a1 > a0 + 1e-4f)
                 {
-                    var tread = new[] { At(a0, acrossFrom), At(a0, acrossTo), At(a1, acrossTo), At(a1, acrossFrom) };
+                    (float x, float z)[] tread = new[] { At(a0, acrossFrom), At(a0, acrossTo), At(a1, acrossTo), At(a1, acrossFrom) };
                     Add(r, skin, tread.Select(p => Point(grid, p.x, h, p.z)).ToArray(),
                         tread.Select(p => Uv(skin, p.x - sx, p.z - sz)).ToArray());
                 }
@@ -369,13 +369,13 @@ namespace DSPRE.Models
                 bool mine = rising ? edge >= from - 1e-4f && edge < to - 1e-4f : edge > from + 1e-4f && edge <= to + 1e-4f;
                 if (mine)
                 {
-                    var foot = new[] { At(edge, acrossFrom), At(edge, acrossTo) };
-                    var riser = new[]
+                    (float x, float z)[] foot = new[] { At(edge, acrossFrom), At(edge, acrossTo) };
+                    (float x, float y, float z)[] riser = new[]
                     {
                         Point(grid, foot[0].x, below, foot[0].z), Point(grid, foot[1].x, below, foot[1].z),
                         Point(grid, foot[1].x, h, foot[1].z), Point(grid, foot[0].x, h, foot[0].z),
                     };
-                    var (pw, ph) = PictureSize(skin);
+                    (int pw, int ph) = PictureSize(skin);
                     float tall = (h - below) / MapTileset.TileWidth;
                     Add(r, skin, riser, new[] { (0f, ph * tall), ((float)pw, ph * tall), ((float)pw, 0f), (0f, 0f) });
                 }
@@ -396,7 +396,7 @@ namespace DSPRE.Models
             bool Inside(int i, int j) => i >= 0 && j >= 0 && i < steps && j < steps && squares.Contains(SquareOf(i, j));
             float Top(int i, int j)
             {
-                var (fa, fb) = along(X(i) + cw / 2, Z(j) + cd / 2);
+                (float fa, float fb) = along(X(i) + cw / 2, Z(j) + cd / 2);
                 int la = Math.Min(steps - 1, (int)Math.Floor(Math.Clamp(fa, 0f, 1f) * steps));
                 int lb = Math.Min(steps - 1, (int)Math.Floor(Math.Clamp(fb, 0f, 1f) * steps));
                 return lo + (hi - lo) * (level(la, lb) + 1) / steps;
@@ -406,21 +406,21 @@ namespace DSPRE.Models
                 for (int j = 0; j < steps; j++)
                 {
                     if (!Inside(i, j)) continue;
-                    var (sx, sz) = SquareOf(i, j);
-                    var skin = skinOf(sx, sz);
+                    (int sx, int sz) = SquareOf(i, j);
+                    MapTileset.Face skin = skinOf(sx, sz);
                     if (skin == null) continue;
                     float h = Top(i, j);
-                    var tread = new[] { (X(i), Z(j)), (X(i), Z(j + 1)), (X(i + 1), Z(j + 1)), (X(i + 1), Z(j)) };
+                    (float, float)[] tread = new[] { (X(i), Z(j)), (X(i), Z(j + 1)), (X(i + 1), Z(j + 1)), (X(i + 1), Z(j)) };
                     Add(r, skin, tread.Select(p => Point(grid, p.Item1, h, p.Item2)).ToArray(),
                         tread.Select(p => Uv(skin, p.Item1 - sx, p.Item2 - sz)).ToArray());
 
-                    foreach (var (di, dj) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                    foreach ((int di, int dj) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
                     {
                         float below;
                         if (Inside(i + di, j + dj)) below = Top(i + di, j + dj);
                         else
                         {
-                            var (ox, oz) = SquareOf(i + di, j + dj);
+                            (int ox, int oz) = SquareOf(i + di, j + dj);
                             if (squares.Contains((ox, oz))) continue;
                             below = groundOf(ox, oz);
                         }
@@ -436,7 +436,7 @@ namespace DSPRE.Models
         private static void Skirt(TileBake.Result r, TileGrid grid, MapTileset.Face skin, (float x, float z) p0, (float x, float z) p1,
                                   float ground, float top0, float top1)
         {
-            var (pw, ph) = PictureSize(skin);
+            (int pw, int ph) = PictureSize(skin);
             float along = MathF.Sqrt((p1.x - p0.x) * (p1.x - p0.x) + (p1.z - p0.z) * (p1.z - p0.z));
             float t0 = (top0 - ground) / MapTileset.TileWidth, t1 = (top1 - ground) / MapTileset.TileWidth;
             Add(r, skin,
@@ -450,7 +450,7 @@ namespace DSPRE.Models
         // A square's picture spans the square: u across, v from the south edge up.
         private static (float s, float t) Uv(MapTileset.Face skin, float inX, float inZ)
         {
-            var (pw, ph) = PictureSize(skin);
+            (int pw, int ph) = PictureSize(skin);
             return (pw * inX, ph * (1f - inZ));
         }
 
@@ -458,20 +458,20 @@ namespace DSPRE.Models
                                 bool bothSides = true)
         {
             int first = r.Corners.Count;
-            foreach (var p in points) r.Corners.Add(p);
+            foreach ((float x, float y, float z) p in points) r.Corners.Add(p);
             r.Faces.Add(Enumerable.Range(first, points.Length).ToArray());
             r.OnPicture.Add(uv);
             r.Picture.Add(skin.Picture);
             r.Palette.Add(skin.Palette);
             r.Look.Add(bothSides ? skin.Look?.With(bothSides: true) : skin.Look);
 
-            var (ax, ay, az) = points[0]; var (bx, by, bz) = points[1]; var (cx, cy, cz) = points[2];
+            (float ax, float ay, float az) = points[0]; (float bx, float by, float bz) = points[1]; (float cx, float cy, float cz) = points[2];
             float ux = bx - ax, uy = by - ay, uz = bz - az, vx = cx - ax, vy = cy - ay, vz = cz - az;
             float nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
             float len = MathF.Sqrt(nx * nx + ny * ny + nz * nz);
             if (len < 1e-6f) { nx = 0; ny = 1; nz = 0; len = 1; }
             if (ny < 0 || (Math.Abs(ny) < 1e-6f && nz < 0)) { nx = -nx; ny = -ny; nz = -nz; }
-            var normal = new MapTileset.Corner { Faces = true, NX = nx / len, NY = ny / len, NZ = nz / len };
+            MapTileset.Corner normal = new MapTileset.Corner { Faces = true, NX = nx / len, NY = ny / len, NZ = nz / len };
             r.Light.Add(Enumerable.Range(0, points.Length).Select(_ => normal.Copy()).ToArray());
         }
     }

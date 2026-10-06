@@ -9,6 +9,7 @@ using DSPRE.ROMFiles;
 using LibNDSFormats.NSBMD;
 using LibNDSFormats.NSBTX;
 using static DSPRE.RomInfo;
+using DSPRE.LibNDSFormats;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -139,14 +140,14 @@ namespace DSPRE.Avalonia.Data
 
         public static Options WhatCanBeDone(Archive a, int index)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available)
                 return new Options { Kind = Kind.Empty, ShowNote = "This game does not have this archive.",
                                      SaveNote = "This game does not have this archive." };
 
-            var b = narc.Get(index);
-            var kind = Identify(b);
-            var o = new Options { Kind = kind };
+            byte[] b = narc.Get(index);
+            Kind kind = Identify(b);
+            Options o = new Options { Kind = kind };
 
             switch (kind)
             {
@@ -196,24 +197,24 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Reads a model so it can be drawn. Null when the entry is not one, or will not read.</summary>
         public static NSBMD LoadModel(Archive a, int index)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return null;
-            var b = narc.Get(index);
+            byte[] b = narc.Get(index);
             if (Identify(b) != Kind.Model) return null;
-            try { using var ms = new MemoryStream(b); return NSBMDLoader.LoadNSBMD(ms); }
+            try { using MemoryStream ms = new MemoryStream(b); return NSBMDLoader.LoadNSBMD(ms); }
             catch (Exception ex) { AppLogger.Error("ModelAssets.LoadModel failed: " + ex.Message); return null; }
         }
 
         /// <summary>The pictures a model carries inside itself, when it carries any.</summary>
         public static byte[] EmbeddedTextures(Archive a, int index)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return null;
-            var model = narc.Get(index);
+            byte[] model = narc.Get(index);
             if (Identify(model) != Kind.Model) return null;
             try
             {
-                var tex = NSBUtils.GetTexturesFromTexturedNSBMD(model);
+                byte[] tex = NSBUtils.GetTexturesFromTexturedNSBMD(model);
                 return tex != null && tex.Length > 4 ? tex : null;
             }
             catch { return null; }
@@ -223,11 +224,11 @@ namespace DSPRE.Avalonia.Data
         /// their model and their pictures next to each other this way.</summary>
         public static byte[] NeighbouringTextures(Archive a, int index)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return null;
             for (int i = index + 1; i < index + 4; i++)
             {
-                var b = narc.Get(i);
+                byte[] b = narc.Get(i);
                 if (b == null) break;
                 if (Identify(b) == Kind.TextureBundle) return b;
             }
@@ -238,7 +239,7 @@ namespace DSPRE.Avalonia.Data
         public static int TextureSetCount(Archive a)
         {
             if (a.TextureArchive == null) return 0;
-            var narc = new ScriptNarc(a.TextureArchive.Value);
+            ScriptNarc narc = new ScriptNarc(a.TextureArchive.Value);
             return narc.Available ? narc.Count : 0;
         }
 
@@ -246,9 +247,9 @@ namespace DSPRE.Avalonia.Data
         public static byte[] TextureSet(Archive a, int setIndex)
         {
             if (a.TextureArchive == null) return null;
-            var narc = new ScriptNarc(a.TextureArchive.Value);
+            ScriptNarc narc = new ScriptNarc(a.TextureArchive.Value);
             if (!narc.Available) return null;
-            var b = narc.Get(setIndex);
+            byte[] b = narc.Get(setIndex);
             return Identify(b) == Kind.TextureBundle ? b : null;
         }
 
@@ -269,13 +270,13 @@ namespace DSPRE.Avalonia.Data
             if (model?.models == null || bundle == null) return new TextureCoverage();
             try
             {
-                using var input = new MemoryStream(bundle);
-                NSBTXLoader.LoadNsbtx(input, out var textures, out var palettes);
-                var haveTextures = new HashSet<string>(textures.Select(t => t.texname), StringComparer.Ordinal);
-                var havePalettes = new HashSet<string>(palettes.Select(p => p.palname), StringComparer.Ordinal);
-                var wantTextures = new HashSet<string>(model.models.SelectMany(m => m.Textures)
+                using MemoryStream input = new MemoryStream(bundle);
+                NSBTXLoader.LoadNsbtx(input, out List<NSBMDTexture> textures, out List<NSBMDPalette> palettes);
+                HashSet<string> haveTextures = new HashSet<string>(textures.Select(t => t.texname), StringComparer.Ordinal);
+                HashSet<string> havePalettes = new HashSet<string>(palettes.Select(p => p.palname), StringComparer.Ordinal);
+                HashSet<string> wantTextures = new HashSet<string>(model.models.SelectMany(m => m.Textures)
                     .Select(t => t.texname).Where(n => !string.IsNullOrEmpty(n)), StringComparer.Ordinal);
-                var wantPalettes = new HashSet<string>(model.models.SelectMany(m => m.Palettes)
+                HashSet<string> wantPalettes = new HashSet<string>(model.models.SelectMany(m => m.Palettes)
                     .Select(p => p.palname).Where(n => !string.IsNullOrEmpty(n)), StringComparer.Ordinal);
                 return new TextureCoverage
                 {
@@ -294,13 +295,13 @@ namespace DSPRE.Avalonia.Data
         {
             textures = new List<NSBMDTexture>();
             palettes = new List<NSBMDPalette>();
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return false;
-            var bytes = narc.Get(index);
+            byte[] bytes = narc.Get(index);
             if (Identify(bytes) != Kind.TextureBundle) return false;
             try
             {
-                using var input = new MemoryStream(bytes);
+                using MemoryStream input = new MemoryStream(bytes);
                 NSBTXLoader.LoadNsbtx(input, out textures, out palettes);
                 return textures.Count > 0;
             }
@@ -340,7 +341,7 @@ namespace DSPRE.Avalonia.Data
             int names = at + 24 + num * 8;
             if (names + 16 > file.Length) return null;
 
-            var raw = System.Text.Encoding.ASCII.GetString(file, names, 16);
+            string raw = System.Text.Encoding.ASCII.GetString(file, names, 16);
             int end = raw.IndexOf('\0');
             string name = (end >= 0 ? raw.Substring(0, end) : raw).Trim();
             foreach (char c in name) if (c < 32 || c > 126) return null;
@@ -391,8 +392,8 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static List<Unit> Units(Archive a, int fileCount)
         {
-            var units = new List<Unit>();
-            var narc = new ScriptNarc(a.Dir);
+            List<Unit> units = new List<Unit>();
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available || fileCount <= 0) return units;
 
             Unit open = null;
@@ -400,7 +401,7 @@ namespace DSPRE.Avalonia.Data
             {
                 byte[] b;
                 try { b = narc.Get(i); } catch { b = null; }
-                var kind = Identify(b);
+                Kind kind = Identify(b);
 
                 if (kind == Kind.Model)
                 {
@@ -428,7 +429,7 @@ namespace DSPRE.Avalonia.Data
                 if (a.OnlyThreeD && kind is Kind.NotThreeD or Kind.Empty) continue;
                 // A set of pictures is named after the first picture in it, which is who it actually is.
                 string lonely = kind == Kind.TextureBundle ? FirstTextureName(b) : null;
-                var lone = new Unit { Archive = a, Name = lonely ?? a.Title };
+                Unit lone = new Unit { Archive = a, Name = lonely ?? a.Title };
                 lone.Parts.Add(new UnitPart { Index = i, Name = PartName(kind), Kind = kind });
                 units.Add(lone);
             }
@@ -440,12 +441,12 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static string NameOf(Archive a, int index)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return null;
-            var b = narc.Get(index);
+            byte[] b = narc.Get(index);
             if (b == null) return null;
 
-            var kind = Identify(b);
+            Kind kind = Identify(b);
             if (kind == Kind.Model) return NameInFile(b);
             if (kind == Kind.TextureBundle) return FirstTextureName(b);
             return null;
@@ -457,9 +458,9 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                using var ms = new MemoryStream(file);
-                NSBTXLoader.LoadNsbtx(ms, out var textures, out _);
-                var first = textures?.FirstOrDefault();
+                using MemoryStream ms = new MemoryStream(file);
+                NSBTXLoader.LoadNsbtx(ms, out List<NSBMDTexture> textures, out _);
+                NSBMDTexture first = textures?.FirstOrDefault();
                 string name = first?.texname?.Trim();
                 if (string.IsNullOrEmpty(name)) return null;
                 foreach (char c in name) if (c < 32 || c > 126) return null;
@@ -516,10 +517,10 @@ namespace DSPRE.Avalonia.Data
         public static Match MatchFor(IEnumerable<string> clipNames, string modelName)
         {
             if (string.IsNullOrWhiteSpace(modelName) || clipNames == null) return Match.None;
-            var clips = clipNames.Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
+            List<string> clips = clipNames.Where(c => !string.IsNullOrWhiteSpace(c)).ToList();
             if (clips.Count == 0) return Match.None;
 
-            var best = Match.None;
+            Match best = Match.None;
             foreach (string clip in clips)
             {
                 int shared = NameMatch(modelName, clip);
@@ -566,7 +567,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (!BuildingAnimationSet.Available) return Array.Empty<int>();
-                var info = BuildingAnimationSet.InfoFor(index, a.Indoor);
+                BuildingAnimationInfo info = BuildingAnimationSet.InfoFor(index, a.Indoor);
                 if (info == null || !info.Animates) return Array.Empty<int>();
                 return info.UsedCodes.Where(c => c >= 0).Distinct().ToList();
             }
@@ -581,7 +582,7 @@ namespace DSPRE.Avalonia.Data
         public static int AnimationCount(Archive a)
         {
             if (a.AnimationArchive == null) return 0;
-            var narc = new ScriptNarc(a.AnimationArchive.Value);
+            ScriptNarc narc = new ScriptNarc(a.AnimationArchive.Value);
             return narc.Available ? narc.Count : 0;
         }
 
@@ -592,17 +593,17 @@ namespace DSPRE.Avalonia.Data
             byte[] raw = null;
             if (chosen >= 0 && a.AnimationArchive != null)
             {
-                var other = new ScriptNarc(a.AnimationArchive.Value);
+                ScriptNarc other = new ScriptNarc(a.AnimationArchive.Value);
                 if (other.Available) raw = other.Get(chosen);
             }
             else if (chosen < 0)
             {
                 // Overworld people keep their model, pictures and movement together, so look just after.
-                var narc = new ScriptNarc(a.Dir);
+                ScriptNarc narc = new ScriptNarc(a.Dir);
                 if (!narc.Available) return null;
                 for (int i = index + 1; i < index + 4; i++)
                 {
-                    var b = narc.Get(i);
+                    byte[] b = narc.Get(i);
                     if (b == null) break;
                     if (Identify(b) == Kind.JointAnimation) { raw = b; break; }
                 }
@@ -611,7 +612,7 @@ namespace DSPRE.Avalonia.Data
             if (raw == null || Identify(raw) != Kind.JointAnimation) return null;
             try
             {
-                var anim = JointAnimation.Load(raw);
+                JointAnimation anim = JointAnimation.Load(raw);
                 return anim != null && anim.Moves ? anim : null;
             }
             catch (Exception ex) { AppLogger.Error("ModelAssets.AnimationFor failed: " + ex.Message); return null; }
@@ -635,20 +636,20 @@ namespace DSPRE.Avalonia.Data
         public static string ImportMesh(Archive a, int index, string path, out string note)
         {
             note = null;
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
-            var there = narc.Get(index);
+            byte[] there = narc.Get(index);
             if (there == null) return "There is no entry here to put a model in place of.";
             if (Identify(there) != Kind.Model)
                 return $"This entry holds {ShortName(Identify(there))}, not a model, so a mesh does not "
                      + "belong here. Pick an entry that holds a model.";
 
-            var mesh = ObjMesh.Read(path, out string whynot);
+            ObjMesh mesh = ObjMesh.Read(path, out string whynot);
             if (mesh == null) return whynot;
 
-            var textures = new List<DsTexture>();
-            var unread = new List<string>();
-            foreach (var m in mesh.Materials)
+            List<DsTexture> textures = new List<DsTexture>();
+            List<string> unread = new List<string>();
+            foreach (ObjMesh.Material m in mesh.Materials)
             {
                 if (m.TexturePath == null) continue;
                 byte[] png;
@@ -658,14 +659,14 @@ namespace DSPRE.Avalonia.Data
                     unread.Add($"{Path.GetFileName(m.TexturePath)} ({ex.Message})");
                     continue;
                 }
-                if (!AnyPng.TryReadRgba(png, out var rgba, out int w, out int h, out string pngWhy))
+                if (!AnyPng.TryReadRgba(png, out byte[] rgba, out int w, out int h, out string pngWhy))
                     return $"{Path.GetFileName(m.TexturePath)} could not be read: {pngWhy}";
-                var t = DsTexture.From(rgba, w, h, m.Name);
+                DsTexture t = DsTexture.From(rgba, w, h, m.Name);
                 if (t.Whynot != null) return t.Whynot;
                 textures.Add(t);
             }
 
-            var made = NsbmdWriter.Build(mesh, textures);
+            NsbmdWriter.Result made = NsbmdWriter.Build(mesh, textures);
             if (made.Whynot != null) return made.Whynot;
 
             narc.Put(index, made.Bytes);
@@ -676,10 +677,10 @@ namespace DSPRE.Avalonia.Data
 
         public static string ImportRaw(Archive a, int index, string path)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
 
-            var there = narc.Get(index);
+            byte[] there = narc.Get(index);
             if (there == null) return "There is no entry here to put a file in place of.";
 
             // A mesh is not 3D data the DS can read until it has been turned into some, so it takes
@@ -692,8 +693,8 @@ namespace DSPRE.Avalonia.Data
             catch (Exception ex) { return "That file could not be read: " + ex.Message; }
             if (file.Length < 4) return "That file is too short to be 3D data.";
 
-            var was = Identify(there);
-            var now = Identify(file);
+            Kind was = Identify(there);
+            Kind now = Identify(file);
 
             if (now == Kind.NotThreeD || now == Kind.Empty)
                 return "That file is not 3D data. " + CanConvertAMesh;
@@ -708,9 +709,9 @@ namespace DSPRE.Avalonia.Data
             // The game draws an overworld through the entry's own frame and palette layout, the same check the Overworld editor makes.
             if (a.Dir == DirNames.OWSprites)
             {
-                if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(there, out var target, out string targetWhy))
+                if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(there, out Btx0Structure target, out string targetWhy))
                     return "This entry could not be read as an overworld texture: " + targetWhy;
-                if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(file, out var source, out string sourceWhy))
+                if (!DSPRE.LibNDSFormats.Btx0Structure.TryInspect(file, out Btx0Structure source, out string sourceWhy))
                     return "That file could not be read as an overworld texture: " + sourceWhy;
                 if (!target.HasSameProfileAs(source))
                     return "That texture uses a different dictionary, frame-reuse, texture, or palette layout than this entry.";
@@ -740,14 +741,14 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Whether an entry can have a file put in over it, and why not when it cannot.</summary>
         public static string CannotImportBecause(Archive a, int index)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
-            var there = narc.Get(index);
+            byte[] there = narc.Get(index);
             // A texture archive says what belongs in it, so an empty or stand-in entry can still be filled.
             if (HoldsTextureSets(a) && Identify(there) == Kind.Empty) return null;
             if (there == null || there.Length == 0)
                 return "This entry is empty, so there is nothing to say what belongs here.";
-            var kind = Identify(there);
+            Kind kind = Identify(there);
             if (kind == Kind.NotThreeD)
                 return "This entry is not 3D data, so this window does not know what could go in it.";
             return null;
@@ -755,9 +756,9 @@ namespace DSPRE.Avalonia.Data
 
         public static string SaveRaw(Archive a, int index, string path)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
-            var b = narc.Get(index);
+            byte[] b = narc.Get(index);
             if (b == null || b.Length == 0) return "This entry is empty.";
             File.WriteAllBytes(path, b);
             return null;
@@ -765,7 +766,7 @@ namespace DSPRE.Avalonia.Data
 
         public static int Count(Archive a)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             return narc.Available ? narc.Count : 0;
         }
     }

@@ -80,7 +80,7 @@ namespace DSPRE.Avalonia
         {
             if (_undo.Count <= _limit) return;
             // Drop the oldest entry (bottom of the stack). Rare for editor sessions; keeps memory bounded.
-            var newest = _undo.ToArray();   // index 0 = newest
+            T[] newest = _undo.ToArray();   // index 0 = newest
             _undo.Clear();
             for (int i = _limit - 1; i >= 0; i--) _undo.Push(newest[i]);
         }

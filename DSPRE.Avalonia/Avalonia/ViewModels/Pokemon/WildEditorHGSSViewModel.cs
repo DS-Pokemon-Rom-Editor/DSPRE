@@ -101,20 +101,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _linkingLevels;
         private void LinkWalkingLevels()
         {
-            var sets = new[] { MorningRows, DayRows, NightRows };
-            foreach (var rows in sets)
-                foreach (var row in rows)
+            ObservableCollection<WildEncounterRow>[] sets = new[] { MorningRows, DayRows, NightRows };
+            foreach (ObservableCollection<WildEncounterRow> rows in sets)
+                foreach (WildEncounterRow row in rows)
                 {
                     if (!_levelLinked.Add(row)) continue;
                     row.PropertyChanged += (sender, e) =>
                     {
                         if (e.PropertyName != nameof(WildEncounterRow.Level) || _linkingLevels) return;
-                        var changed = (WildEncounterRow)sender;
+                        WildEncounterRow changed = (WildEncounterRow)sender;
                         int slot = -1;
-                        foreach (var set in sets) { slot = set.IndexOf(changed); if (slot >= 0) break; }
+                        foreach (ObservableCollection<WildEncounterRow> set in sets) { slot = set.IndexOf(changed); if (slot >= 0) break; }
                         if (slot < 0) return;
                         _linkingLevels = true;
-                        try { foreach (var set in sets) if (slot < set.Count && !ReferenceEquals(set[slot], changed)) set[slot].Level = changed.Level; }
+                        try { foreach (ObservableCollection<WildEncounterRow> set in sets) if (slot < set.Count && !ReferenceEquals(set[slot], changed)) set[slot].Level = changed.Level; }
                         finally { _linkingLevels = false; }
                     };
                 }
@@ -190,9 +190,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_rowsHooked) return;
             _rowsHooked = true;
-            foreach (var coll in new[] { MorningRows, DayRows, NightRows, SwarmRows, RockSmashRows,
+            foreach (ObservableCollection<WildEncounterRow> coll in new[] { MorningRows, DayRows, NightRows, SwarmRows, RockSmashRows,
                                          HoennRadioRows, SinnohRadioRows, SurfRows, OldRodRows, GoodRodRows, SuperRodRows })
-                foreach (var row in coll)
+                foreach (WildEncounterRow row in coll)
                     row.PropertyChanged += (_, e) => { if (!_loading && e.PropertyName != nameof(WildEncounterRow.PokemonIcon) && e.PropertyName != nameof(WildEncounterRow.Label)) SetDirty(); };
         }
 
@@ -202,7 +202,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _dirPath = dirPath;
             _totalHeaders = totalHeaders;
             SetMonIconsPalTableAddress();
-            foreach (var n in pokemonNames) PokemonNames.Add(n);
+            foreach (string n in pokemonNames) PokemonNames.Add(n);
             BuildEncounterNameList(totalHeaders);
             // Live-refresh the species list when names are edited in the Text editor (grid cells re-render
             // in place, so no per-combo re-poke is needed here).
@@ -267,8 +267,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (HgEngineProject.IsActive)
             {
                 int table = _selectedEncounterIndex;
-                var encounters = _current;
-                var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineEncounterSource.TryWrite(table, encounters, out string writeError) ? null : writeError);
+                EncounterFileHGSS encounters = _current;
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineEncounterSource.TryWrite(table, encounters, out string writeError) ? null : writeError);
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError($"Encounter table {table} was not saved.\n{error}", "Wild Pokémon Editor");
@@ -289,12 +289,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             error = null;
             if (HgEngineProject.IsActive && !File.Exists(path))
             {
-                var fresh = new EncounterFileHGSS();
+                EncounterFileHGSS fresh = new EncounterFileHGSS();
                 HgEngineEncounterSource.TryLoad(id, fresh, out error);
                 return fresh;
             }
             EncounterFileHGSS file;
-            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read))
+            using (FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read))
                 file = new EncounterFileHGSS(stream);
             if (HgEngineProject.IsActive) HgEngineEncounterSource.TryLoad(id, file, out error);
             return file;
@@ -327,8 +327,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             EncounterNames.Clear();
             string[] files = Directory.GetFiles(_dirPath);
-            var locationMap = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<string>>();
-            var locationNames = GetLocationNames();
+            Dictionary<int, List<string>> locationMap = new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<string>>();
+            List<string> locationNames = GetLocationNames();
             for (ushort i = 0; i < totalHeaders; i++)
             {
                 MapHeader h = ReadHeader(i);
@@ -352,7 +352,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Headers whose wild Pokémon come from this encounter file, read fresh.</summary>
         private List<ushort> HeadersUsing(int file)
         {
-            var users = new List<ushort>();
+            List<ushort> users = new List<ushort>();
             for (ushort i = 0; i < _totalHeaders; i++)
             {
                 MapHeader h = ReadHeader(i);
@@ -376,7 +376,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Re-reads the slot chances into the row labels, for after the Slot Odds editor saved. Keeps unsaved edits.</summary>
         public void RefreshSlotLabels()
         {
-            foreach (var rows in new[] { MorningRows, DayRows, NightRows })
+            foreach (ObservableCollection<WildEncounterRow> rows in new[] { MorningRows, DayRows, NightRows })
                 for (int i = 0; i < rows.Count; i++) rows[i].Label = EncounterSlotOdds.SlotLabel("Walking", i);
             for (int i = 0; i < RockSmashRows.Count; i++) RockSmashRows[i].Label = EncounterSlotOdds.SlotLabel("Rock Smash", i, $"Rock Smash {i+1}");
             for (int i = 0; i < SurfRows.Count; i++) SurfRows[i].Label = EncounterSlotOdds.SlotLabel("Surfing", i, $"Surf {i+1}");
@@ -433,7 +433,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int count = EncounterNames.Count;
             if (count <= 1) return;
             int last = count - 1;
-            var users = HeadersUsing(last);
+            List<ushort> users = HeadersUsing(last);
             if (users.Count > 0)
             {
                 await DialogHelper.ShowError(
@@ -456,7 +456,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public void ImportEncounterFile(string path)
         {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read);
+            using FileStream stream = new FileStream(path, FileMode.Open, FileAccess.Read);
             _current = new EncounterFileHGSS(stream);
             PopulateRows();
             SetDirty();
@@ -470,7 +470,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int n = Directory.GetFiles(_dirPath).Length;
             for (int i = 0; i < n; i++)
             {
-                using var s = new FileStream(Path.Combine(_dirPath, i.ToString("D4")), FileMode.Open, FileAccess.Read);
+                using FileStream s = new FileStream(Path.Combine(_dirPath, i.ToString("D4")), FileMode.Open, FileAccess.Read);
                 new EncounterFileHGSS(s).SaveToFileDefaultDir(i, showSuccessMessage: false);
             }
             LoadFile(_selectedEncounterIndex);

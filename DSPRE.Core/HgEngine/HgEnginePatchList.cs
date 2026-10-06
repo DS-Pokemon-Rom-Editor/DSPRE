@@ -135,7 +135,7 @@ namespace DSPRE.HgEngine
 
         internal static List<HgEnginePatchList> ReadAllAt(string root)
         {
-            var lists = new List<HgEnginePatchList>();
+            List<HgEnginePatchList> lists = new List<HgEnginePatchList>();
             if (root == null) return lists;
 
             foreach ((HgEnginePatchKind kind, string name) in Known)
@@ -148,7 +148,7 @@ namespace DSPRE.HgEngine
 
         internal static HgEnginePatchList Read(HgEnginePatchKind kind, string fileName, string path)
         {
-            var list = new HgEnginePatchList(kind, fileName, path);
+            HgEnginePatchList list = new HgEnginePatchList(kind, fileName, path);
             try
             {
                 foreach (string raw in File.ReadAllLines(path))
@@ -160,7 +160,7 @@ namespace DSPRE.HgEngine
 
         internal static HgEnginePatchEntry Parse(HgEnginePatchKind kind, string raw)
         {
-            var entry = new HgEnginePatchEntry { Kind = kind, RawLine = raw };
+            HgEnginePatchEntry entry = new HgEnginePatchEntry { Kind = kind, RawLine = raw };
 
             string line = raw.Trim();
             if (line.Length == 0 || line[0] == '#') return entry;
@@ -175,7 +175,7 @@ namespace DSPRE.HgEngine
             {
                 if (f.Length < 3 || !TryHex(f[1], out long at)) return entry;
 
-                var bytes = new List<byte>();
+                List<byte> bytes = new List<byte>();
                 foreach (string token in f.Skip(2))
                 {
                     if (!byte.TryParse(token, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out byte b))
@@ -264,7 +264,7 @@ namespace DSPRE.HgEngine
         public HgEnginePatchEntry Add(int overlayNumber, string symbol, long address, int register,
             IReadOnlyList<byte> bytes)
         {
-            var entry = new HgEnginePatchEntry
+            HgEnginePatchEntry entry = new HgEnginePatchEntry
             {
                 Kind = Kind,
                 Parsed = true,
@@ -301,7 +301,7 @@ namespace DSPRE.HgEngine
             try
             {
                 // Written back line for line as they came; added and changed entries carry their new line.
-                var lines = Entries.Select(e => e.RawLine);
+                IEnumerable<string> lines = Entries.Select(e => e.RawLine);
                 HgEngineFileCache.WriteText(FullPath, string.Join("\n", lines) + "\n");
                 HgEngineClaimedRanges.ClearCache();
                 return true;

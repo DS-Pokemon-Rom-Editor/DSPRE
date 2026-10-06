@@ -51,7 +51,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
 
-            var domainInfo = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
+            HgEngineDomainInfo domainInfo = HgEngineDomains.All.FirstOrDefault(d => d.Domain == domain);
             if (domainInfo == null) { error = $"Unknown hg-engine domain: {domain}"; return false; }
 
             string sourcePath = Path.Combine(HgEngineProject.RepoPathUnc, domainInfo.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
@@ -65,7 +65,7 @@ namespace DSPRE.HgEngine
 
             string text = HgEngineFileCache.GetText(sourcePath);
             bool anyWritten = false;
-            foreach (var resize in arrayCounts ?? Enumerable.Empty<HgEngineArrayCount>())
+            foreach (HgEngineArrayCount resize in arrayCounts ?? Enumerable.Empty<HgEngineArrayCount>())
             {
                 string before = text;
                 if (!HgEngineSourcePatcher.TrySetArrayCount(ref text, designator, resize.Path, resize.Count, resize.NewElement))
@@ -73,7 +73,7 @@ namespace DSPRE.HgEngine
                 else if (!ReferenceEquals(before, text))
                     anyWritten = true;
             }
-            foreach (var field in fields)
+            foreach (HgEngineFieldWrite field in fields)
             {
                 if (field.ValueLiteral == null)
                 {

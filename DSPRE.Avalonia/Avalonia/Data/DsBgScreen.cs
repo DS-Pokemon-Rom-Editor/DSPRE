@@ -45,12 +45,12 @@ namespace DSPRE.Avalonia.Data
         public static byte[] ReadCharacters(byte[] ncgr)
         {
             if (ncgr == null) return Array.Empty<byte>();
-            var (eightBit, at) = NitroBgCodec.ReadTileHeader(ncgr);
+            (bool eightBit, int at) = NitroBgCodec.ReadTileHeader(ncgr);
             if (eightBit) return Array.Empty<byte>();
             int rahc = NitroBgCodec.Find(ncgr, "RAHC", 0);
             int size = rahc >= 0 ? NitroBgCodec.U32(ncgr, rahc + 0x18) : ncgr.Length - at;
             size = Math.Max(0, Math.Min(size, ncgr.Length - at));
-            var pixels = new byte[size];
+            byte[] pixels = new byte[size];
             Array.Copy(ncgr, at, pixels, 0, size);
             return pixels;
         }
@@ -68,7 +68,7 @@ namespace DSPRE.Avalonia.Data
             int section = pltt + 8 <= nclr.Length ? NitroBgCodec.U32(nclr, pltt + 4) : 0;
             if (section >= 0x18) size = Math.Min(size, section - 0x18);
             int count = Math.Max(0, Math.Min(size, nclr.Length - at)) / 2;
-            var colours = new ushort[count];
+            ushort[] colours = new ushort[count];
             for (int i = 0; i < count; i++) colours[i] = (ushort)NitroBgCodec.U16(nclr, at + i * 2);
             return colours;
         }
@@ -76,7 +76,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Sixteen colours out of a palette file, row <paramref name="row"/>.</summary>
         public static ushort[] Row(ushort[] colours, int row)
         {
-            var result = new ushort[16];
+            ushort[] result = new ushort[16];
             if (colours != null)
                 for (int i = 0; i < 16; i++)
                     if (row * 16 + i < colours.Length) result[i] = colours[row * 16 + i];
@@ -94,7 +94,7 @@ namespace DSPRE.Avalonia.Data
             int at = nrcs + 0x14;
             int entryBytes = NitroBgCodec.EntryBytes(nscr);
             int count = Math.Max(0, Math.Min(size, nscr.Length - at)) / entryBytes;
-            var entries = new ushort[count];
+            ushort[] entries = new ushort[count];
             for (int i = 0; i < count; i++) entries[i] = (ushort)NitroBgCodec.EntryAt(nscr, at, i, entryBytes);
             return (w / TileSize, entries);
         }
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.Data
 
         public void LoadMap(int bg, ushort[] entries, int widthTiles)
         {
-            var map = _layers[bg]?.Map;
+            ushort[] map = _layers[bg]?.Map;
             if (map == null || entries == null || widthTiles <= 0) return;
             for (int i = 0; i < entries.Length; i++)
             {
@@ -119,7 +119,7 @@ namespace DSPRE.Avalonia.Data
 
         public void Fill(int bg, int tile, int x, int y, int w, int h, int palette)
         {
-            var map = _layers[bg]?.Map;
+            ushort[] map = _layers[bg]?.Map;
             if (map == null) return;
             for (int yy = y; yy < y + h; yy++)
                 for (int xx = x; xx < x + w; xx++)
@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Copies a w by h block out of a wider arrangement to tile dx, dy.</summary>
         public void Copy(int bg, int dx, int dy, int w, int h, ushort[] source, int sx, int sy, int sourceWidth)
         {
-            var map = _layers[bg]?.Map;
+            ushort[] map = _layers[bg]?.Map;
             if (map == null || source == null) return;
             for (int yy = 0; yy < h; yy++)
                 for (int xx = 0; xx < w; xx++)
@@ -158,18 +158,18 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The screen as 256 by 192 straight RGBA.</summary>
         public byte[] Render()
         {
-            var rgba = new byte[Width * Height * 4];
-            var order = new List<Layer>();
+            byte[] rgba = new byte[Width * Height * 4];
+            List<Layer> order = new List<Layer>();
             for (int bg = 0; bg < 4; bg++) if (_layers[bg] != null && _layers[bg].Visible) order.Add(_layers[bg]);
             // Equal priorities go by layer number, which is the order they were added in.
-            var sorted = new List<Layer>();
-            for (int p = 0; p < 4; p++) foreach (var l in order) if (l.Priority == p) sorted.Add(l);
+            List<Layer> sorted = new List<Layer>();
+            for (int p = 0; p < 4; p++) foreach (Layer l in order) if (l.Priority == p) sorted.Add(l);
 
             for (int y = 0; y < Height; y++)
                 for (int x = 0; x < Width; x++)
                 {
                     ushort c = _colours[0];
-                    foreach (var layer in sorted)
+                    foreach (Layer layer in sorted)
                     {
                         ushort e = layer.Map[(y / TileSize) * MapSide + x / TileSize];
                         int tile = e & 0x3FF, palette = e >> 12;
@@ -212,7 +212,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static List<Oam[]> ReadCells(byte[] ncer)
         {
-            var cells = new List<Oam[]>();
+            List<Oam[]> cells = new List<Oam[]>();
             if (ncer == null) return cells;
             int kbec = NitroBgCodec.Find(ncer, "KBEC", 0);
             if (kbec < 0) return cells;
@@ -230,7 +230,7 @@ namespace DSPRE.Avalonia.Data
 
             // Where each bank's slice of the sheet begins, in tiles. Zero when the file keeps no partitions,
             // which is how the Pokétch and the battle objects are stored.
-            var firstTile = new int[count];
+            int[] firstTile = new int[count];
             int partitions = (int)NitroBgCodec.U32(ncer, kbec + 20);
             if (partitions != 0)
             {
@@ -253,7 +253,7 @@ namespace DSPRE.Avalonia.Data
                 if (at + 8 > ncer.Length) break;
                 int n = NitroBgCodec.U16(ncer, at);
                 int from = oams + NitroBgCodec.U32(ncer, at + 4);
-                var list = new Oam[Math.Max(0, n)];
+                Oam[] list = new Oam[Math.Max(0, n)];
                 for (int k = 0; k < n; k++)
                 {
                     int o = from + k * 6;
@@ -261,7 +261,7 @@ namespace DSPRE.Avalonia.Data
                     int a0 = NitroBgCodec.U16(ncer, o), a1 = NitroBgCodec.U16(ncer, o + 2), a2 = NitroBgCodec.U16(ncer, o + 4);
                     int y = a0 & 0xFF; if (y > 127) y -= 256;
                     int x = a1 & 0x1FF; if (x > 255) x -= 512;
-                    var (w, h) = OamSizes[(a0 >> 14) & 3, (a1 >> 14) & 3];
+                    (int w, int h) = OamSizes[(a0 >> 14) & 3, (a1 >> 14) & 3];
                     list[k] = new Oam
                     {
                         X = x, Y = y, Width = w, Height = h,
@@ -289,7 +289,7 @@ namespace DSPRE.Avalonia.Data
             if (rgba == null || cell == null || characters == null) return;
             for (int k = cell.Length - 1; k >= 0; k--)
             {
-                var s = cell[k];
+                Oam s = cell[k];
                 if (s == null) continue;
                 ushort[] palette = paletteFor(s.Palette);
                 int tilesWide = Math.Max(1, s.Width / 8);
@@ -363,7 +363,7 @@ namespace DSPRE.Avalonia.Data
 
             for (int k = cell.Length - 1; k >= 0; k--)
             {
-                var s = cell[k];
+                Oam s = cell[k];
                 if (s == null) continue;
                 ushort[] palette = paletteFor(s.Palette);
                 if (palette == null) continue;

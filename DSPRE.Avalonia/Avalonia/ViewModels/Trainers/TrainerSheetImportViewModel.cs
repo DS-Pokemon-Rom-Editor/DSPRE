@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             Job = job; _targets = targets; _palettes = palettes; _sheet = sheet; SheetName = sheetName; _stepsFile = steps;
 
-            foreach (var p in palettes) foreach (uint c in p.Take(16)) SpriteSwatches.Add(Brush(c));
+            foreach (uint[] p in palettes) foreach (uint c in p.Take(16)) SpriteSwatches.Add(Brush(c));
             int used = UsedColours();
             for (int i = 0; i < Math.Min(sheet.Colours.Count, Math.Max(used, 1)); i++) SheetSwatches.Add(Brush(sheet.Colours[i]));
 
@@ -151,10 +151,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             if (IsAnimation)
             {
-                if (targets.Count > 1) foreach (var t in targets) Sets.Add(t.Label);
+                if (targets.Count > 1) foreach (Target t in targets) Sets.Add(t.Label);
                 int named = steps?.Set == null ? -1 : targets.ToList().FindIndex(t => t.Label == steps.Set);
                 _set = Math.Clamp(named >= 0 ? named : set, 0, targets.Count - 1);
-                foreach (var a in animations) Animations.Add(a);
+                foreach (AnimationChoice a in animations) Animations.Add(a);
                 _animation = Animations.FirstOrDefault(a => a.Index == steps?.Animation) ?? Animations.FirstOrDefault(a => a.Index == 1) ?? Animations.FirstOrDefault();
                 FillStepsFromSprite();
             }
@@ -175,11 +175,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             for (int p = 0; p < _targets.Count && p < _sheet.Rows; p++)
             {
-                var frames = _targets[p].Open();
+                ISheetFrames frames = _targets[p].Open();
                 if (!frames.CanChangeFrameCount) continue;
                 for (int f = SheetFrames(p, frames.FrameCount); f < frames.FrameCount; f++)
                 {
-                    var uses = (frames as TrainerSpriteFrames)?.UsesOf(f).ToList() ?? new();
+                    List<(int Sequence, int Step)> uses = (frames as TrainerSpriteFrames)?.UsesOf(f).ToList() ?? new();
                     Leftovers.Add(new Leftover
                     {
                         Part = p, Frame = f,
@@ -200,22 +200,22 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 return _targets.Count == 2 ? $"This sprite has two sets, {_targets[0].Label.ToLowerInvariant()} and {_targets[1].Label.ToLowerInvariant()}; the sheet needs a row for each." : "The sheet has no rows.";
             if (_sheet.Rows > _targets.Count) return $"The sheet has {_sheet.Rows} rows; this sprite takes {_targets.Count}.";
 
-            var lines = new List<string>();
+            List<string> lines = new List<string>();
             for (int p = 0; p < _targets.Count; p++)
             {
-                var frames = _targets[p].Open();
+                ISheetFrames frames = _targets[p].Open();
                 int count = SheetFrames(p, frames.FrameCount), before = frames.FrameCount;
                 if (count > before && !frames.CanChangeFrameCount) return $"The sheet has {count} frames; this sprite always has {before}.";
 
                 for (int f = 0; f < count; f++)
                 {
                     if (f >= frames.FrameCount) ((TrainerSpriteFrames)frames).AddFrame();
-                    var canvas = Convert(_sheet.CellAt(p, f), frames.PalettesOf(f), $"Frame {f}", out string why);
+                    int[] canvas = Convert(_sheet.CellAt(p, f), frames.PalettesOf(f), $"Frame {f}", out string why);
                     if (canvas == null) return why;
                     why = frames.SetDrawing(f, canvas);
                     if (why != null) return why;
                 }
-                var remove = Leftovers.Where(l => l.Part == p && !l.Keep).Select(l => l.Frame).ToList();
+                List<int> remove = Leftovers.Where(l => l.Part == p && !l.Keep).Select(l => l.Frame).ToList();
                 if (remove.Count > 0) ((TrainerSpriteFrames)frames).RemoveFrames(remove);
 
                 string who = _targets.Count > 1 ? _targets[p].Label + ": " : "";
@@ -234,15 +234,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             _filling = true;
             Steps.Clear();
-            var frames = _targets[_set].Open() as TrainerSpriteFrames;
-            var current = frames?.StepsOf(_animation?.Index ?? 1) ?? Array.Empty<TrainerSpriteFrames.Step>();
+            TrainerSpriteFrames frames = _targets[_set].Open() as TrainerSpriteFrames;
+            IReadOnlyList<TrainerSpriteFrames.Step> current = frames?.StepsOf(_animation?.Index ?? 1) ?? Array.Empty<TrainerSpriteFrames.Step>();
             ShowsPosition = frames != null && _animation != null && frames.SequenceShifts(_animation.Index);
 
             int count = _stepsFile?.Steps.Count > 0 ? Math.Min(_stepsFile.Steps.Count, _sheet.Cells.Count) : LastDrawnCell() + 1;
             for (int i = 0; i < count; i++)
             {
-                var fromFile = _stepsFile != null && i < _stepsFile.Steps.Count ? _stepsFile.Steps[i] : null;
-                var fromSprite = i < current.Count ? current[i] : null;
+                TrainerSpriteSheet.StepJson fromFile = _stepsFile != null && i < _stepsFile.Steps.Count ? _stepsFile.Steps[i] : null;
+                TrainerSpriteFrames.Step fromSprite = i < current.Count ? current[i] : null;
                 Steps.Add(new StepRow
                 {
                     Number = i,
@@ -266,19 +266,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (Steps.Count == 0) return "The sheet has no steps.";
             if (_animation == null) return "Pick an animation.";
-            var shows = new string[Steps.Count];
+            string[] shows = new string[Steps.Count];
             int added = 0;
             for (int p = 0; p < _targets.Count; p++)
             {
                 if (p != _set) { result.Frames.Add(null); continue; }
-                var frames = (TrainerSpriteFrames)_targets[p].Open();
+                TrainerSpriteFrames frames = (TrainerSpriteFrames)_targets[p].Open();
 
-                var known = new List<(int Frame, int[] Canvas)>();
+                List<(int Frame, int[] Canvas)> known = new List<(int Frame, int[] Canvas)>();
                 for (int f = 0; f < frames.FrameCount; f++) known.Add((f, frames.Draw(f)));
-                var steps = new List<TrainerSpriteFrames.Step>();
+                List<TrainerSpriteFrames.Step> steps = new List<TrainerSpriteFrames.Step>();
                 for (int i = 0; i < Steps.Count; i++)
                 {
-                    var canvas = Convert(_sheet.Cells[i], frames.PalettesOf(0), $"Step {i}", out string why);
+                    int[] canvas = Convert(_sheet.Cells[i], frames.PalettesOf(0), $"Step {i}", out string why);
                     if (canvas == null) return why;
                     int frame = known.FirstOrDefault(k => k.Canvas.AsSpan().SequenceEqual(canvas), (-1, null)).Frame;
                     if (frame < 0)
@@ -291,7 +291,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         shows[i] = $"New frame {frame}";
                     }
                     else shows[i] = $"Frame {frame}";
-                    var row = Steps[i];
+                    StepRow row = Steps[i];
                     steps.Add(new TrainerSpriteFrames.Step(frame, (int)row.Hold, (int)row.X, (int)row.Y));
                 }
                 string error = frames.SetSequence(_animation.Index, steps);
@@ -308,7 +308,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void Retry()
         {
             if (_filling) return;
-            var result = new Result();
+            Result result = new Result();
             _approximated = 0;
             string why;
             try
@@ -336,7 +336,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private int UsedColours()
         {
             int max = 0;
-            foreach (var cell in _sheet.Cells) foreach (int v in cell) if (v > max) max = v;
+            foreach (int[] cell in _sheet.Cells) foreach (int v in cell) if (v > max) max = v;
             return max + 1;
         }
 
@@ -345,7 +345,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private Bitmap Render(int[] canvas)
         {
             int n = TrainerSpriteSheet.CellSize;
-            var raw = new DSPRE.RawImage(n, n);
+            RawImage raw = new DSPRE.RawImage(n, n);
             for (int i = 0; i < canvas.Length; i++)
             {
                 int v = canvas[i];
@@ -359,7 +359,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private Bitmap RenderSheetCell(int[] cell)
         {
             int n = TrainerSpriteSheet.CellSize;
-            var raw = new DSPRE.RawImage(n, n);
+            RawImage raw = new DSPRE.RawImage(n, n);
             for (int i = 0; i < cell.Length; i++)
             {
                 if (cell[i] == 0) continue;

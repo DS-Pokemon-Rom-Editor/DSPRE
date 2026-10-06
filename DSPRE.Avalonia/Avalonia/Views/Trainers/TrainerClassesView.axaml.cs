@@ -37,7 +37,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void EditSprite_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null || VM.SelectedClassIndex < 0 || !VM.CanEditSprite) return;
-            var classesVm = VM;
+            TrainerClassesViewModel classesVm = VM;
             AvaloniaEditorLauncher.OpenTrainerSpriteEditor(VM.SelectedClassIndex, () => classesVm.RefreshSpritePreview());
         }
 
@@ -106,10 +106,10 @@ namespace DSPRE.Avalonia.Views.Trainers
             string refusal = hgEngine ? DSPRE.HgEngine.HgEngineTrainerClassExpansion.AddRefusal() : null;
             if (refusal != null) { await DialogHelper.ShowError(refusal, "Add Trainer Class"); return; }
 
-            var dlgVm = new AddTrainerClassViewModel { ForHgEngine = hgEngine };
+            AddTrainerClassViewModel dlgVm = new AddTrainerClassViewModel { ForHgEngine = hgEngine };
             dlgVm.SetSpriteChoices(VM.ClassNames, VM.SelectedClassIndex, newClassId, VM.NextClassHasSprite(newClassId));
-            var dlg = new AddTrainerClassView(dlgVm);
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            AddTrainerClassView dlg = new AddTrainerClassView(dlgVm);
+            Window owner = TopLevel.GetTopLevel(this) as Window;
             if (owner != null) await dlg.ShowDialog(owner);
             else dlg.Show();
 

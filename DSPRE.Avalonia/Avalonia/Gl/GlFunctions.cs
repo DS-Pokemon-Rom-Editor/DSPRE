@@ -170,7 +170,7 @@ namespace DSPRE.Avalonia.Gl
 
         private T Bind<T>(GlInterface gl, string name) where T : Delegate
         {
-            var ptr = gl.GetProcAddress(name);
+            nint ptr = gl.GetProcAddress(name);
             if (ptr == IntPtr.Zero) throw new InvalidOperationException($"GL function not available: {name}");
             return Marshal.GetDelegateForFunctionPointer<T>(ptr);
         }
@@ -238,7 +238,7 @@ namespace DSPRE.Avalonia.Gl
             GetShaderiv(shader, GL_COMPILE_STATUS, out int ok);
             if (ok == 0)
             {
-                var sb = new StringBuilder(4096);
+                StringBuilder sb = new StringBuilder(4096);
                 GetShaderInfoLog(shader, sb.Capacity, out _, sb);
                 throw new InvalidOperationException($"Shader compile failed: {sb}");
             }

@@ -56,16 +56,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public IBrush Swatch
         {
-            get { var (r, g, b) = SpaFields.ToRgb888(Raw); return new SolidColorBrush(Color.FromRgb(r, g, b)); }
+            get { (byte r, byte g, byte b) = SpaFields.ToRgb888(Raw); return new SolidColorBrush(Color.FromRgb(r, g, b)); }
         }
 
-        public string ColorText { get { var (r, g, b) = SpaFields.ToRgb888(Raw); return $"{r}, {g}, {b}"; } }
+        public string ColorText { get { (byte r, byte g, byte b) = SpaFields.ToRgb888(Raw); return $"{r}, {g}, {b}"; } }
 
         public void SetColour(byte r, byte g, byte b) => _owner.Write(this, SpaFields.FromRgb888(r, g, b));
 
         internal void Refresh()
         {
-            foreach (var n in new[] { nameof(Value), nameof(IsOn), nameof(Swatch), nameof(ColorText) })
+            foreach (string n in new[] { nameof(Value), nameof(IsOn), nameof(Swatch), nameof(ColorText) })
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
         }
     }
@@ -169,7 +169,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void ApplyState(byte[] state)
         {
             _doc = SpaDocument.Load(state);
-            foreach (var row in Fields) row.Refresh();
+            foreach (ParticleFieldRow row in Fields) row.Refresh();
             RebuildTextures();
             Replay();
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -182,9 +182,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
         public string UnsavedChangesDescription => Title;
 
-        internal static string Words(string pascal) =>
-            Regex.Replace(pascal ?? "", "(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ") is var s && s.Length > 1
-                ? s[0] + s.Substring(1).ToLowerInvariant() : s;
+        internal static string Words(string pascal)
+        {
+            string s = Regex.Replace(pascal ?? "", "(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ");
+            return s.Length > 1 ? s[0] + s.Substring(1).ToLowerInvariant() : s;
+        }
 
         internal long Raw(SpaField field) => _emitterIndex >= 0 && _doc.Has(_emitterIndex, field) ? _doc.GetRaw(_emitterIndex, field) : 0;
 
@@ -208,10 +210,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             Fields.Clear();
             if (_emitterIndex < 0) return;
-            foreach (var field in SpaFields.All)
+            foreach (SpaField field in SpaFields.All)
             {
                 if (!_doc.Has(_emitterIndex, field)) continue;
-                var row = new ParticleFieldRow(this, field);
+                ParticleFieldRow row = new ParticleFieldRow(this, field);
                 if (_filter.Length > 0 && !SearchMatch.Contains(row.Label, _filter) && !SearchMatch.Contains(row.Group, _filter)) continue;
                 Fields.Add(row);
             }
@@ -220,11 +222,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void RebuildTextures()
         {
             Textures.Clear();
-            var arc = _doc.Parse();
+            SpaArchive arc = _doc.Parse();
             for (int i = 0; i < _doc.TextureCount; i++)
             {
-                var info = _doc.GetTextureInfo(i);
-                var tex = i < arc.Textures.Count ? arc.Textures[i] : null;
+                SpaTextureInfo info = _doc.GetTextureInfo(i);
+                SpaTexture tex = i < arc.Textures.Count ? arc.Textures[i] : null;
                 Textures.Add(new ParticleTextureRow
                 {
                     Index = i,
@@ -249,14 +251,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             SpaArchive arc;
             try { arc = _doc.Parse(); }
             catch (Exception ex) { StatusText = "This file cannot be played: " + ex.Message; return; }
-            var rng = new SplRandom(0x5EED);
+            SplRandom rng = new SplRandom(0x5EED);
             for (int i = 0; i < arc.Emitters.Count; i++)
             {
                 if (_onlySelected && i != _emitterIndex) continue;
-                var em = arc.Emitters[i];
-                var tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
+                SpaEmitter em = arc.Emitters[i];
+                SpaTexture tex = em.TexNo >= 0 && em.TexNo < arc.Textures.Count ? arc.Textures[em.TexNo] : null;
                 double cx = AnchorX + em.PosX, cy = AnchorY - em.PosY;
-                var sim = new SpaSimulator(em, em.AxisX, em.AxisY, rng: rng) { AnchorX = cx, AnchorY = cy };
+                SpaSimulator sim = new SpaSimulator(em, em.AxisX, em.AxisY, rng: rng) { AnchorX = cx, AnchorY = cy };
                 _preview.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
                     em.RepeatS, em.RepeatT, em.Aspect, em.DbbScale, em.OffsetX, em.OffsetY,
                     baseZ: em.PosZ, viewReversed: false, flipS: em.FlipS, flipT: em.FlipT, em: em, orthographic: _orthographic));
@@ -288,7 +290,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (!AnyPng.TryReadRgba(file, out byte[] rgba, out int w, out int h, out string whynot))
                 return StatusText = whynot ?? "That file is not a readable PNG.";
 
-            var result = _doc.ReplaceTexture(index, w, h, rgba);
+            SpaTextureImport result = _doc.ReplaceTexture(index, w, h, rgba);
             if (!result.Succeeded) return StatusText = result.Error;
 
             Edited();
@@ -301,11 +303,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string ExportTexture(int index, string path)
         {
-            var row = Textures.FirstOrDefault(t => t.Index == index);
+            ParticleTextureRow row = Textures.FirstOrDefault(t => t.Index == index);
             if (row?.Rgba == null) return StatusText = "This texture cannot be exported.";
             try
             {
-                using var bmp = ImageConverter.FromRgba(row.Rgba, row.Width, row.Height);
+                using Bitmap bmp = ImageConverter.FromRgba(row.Rgba, row.Width, row.Height);
                 bmp.Save(path);
                 return StatusText = $"Texture {index + 1} saved.";
             }

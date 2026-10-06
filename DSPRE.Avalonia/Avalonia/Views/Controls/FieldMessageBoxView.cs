@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia.Views.Controls
             if (string.IsNullOrEmpty(text)) return 0;
             if (RomFontReady) return Font.Measure(text, FieldFontCharacters.GlyphFor);
 
-            var f = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+            FormattedText f = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
                                       Fallback, FontPixels, Brushes.Black);
             return (int)Math.Ceiling(f.Width);
         }
@@ -129,11 +129,11 @@ namespace DSPRE.Avalonia.Views.Controls
             string text = Text;
             if (!IsOpen || text == null) return;
 
-            var (ox, oy, s) = Screen();
-            var frame = new Rect(ox + FieldMessageWindow.FrameLeft * s, oy + FieldMessageWindow.FrameTop * s,
+            (double ox, double oy, double s) = Screen();
+            Rect frame = new Rect(ox + FieldMessageWindow.FrameLeft * s, oy + FieldMessageWindow.FrameTop * s,
                                  FieldMessageWindow.FrameWidth * s, FieldMessageWindow.FrameHeight * s);
 
-            var textArea = new Rect(ox + FieldMessageWindow.TextLeft * s, oy + FieldMessageWindow.TextTop * s,
+            Rect textArea = new Rect(ox + FieldMessageWindow.TextLeft * s, oy + FieldMessageWindow.TextTop * s,
                                     FieldMessageWindow.TextWidth * s, FieldMessageWindow.TextHeight * s);
 
             if (!DrawRomFrame(ctx, frame, textArea)) DrawPlainFrame(ctx, frame, s);
@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.Views.Controls
         // The games' own border, which also paints the paper the writing sits on.
         private static bool DrawRomFrame(DrawingContext ctx, Rect frame, Rect textArea)
         {
-            var f = _frame;
+            FieldWindowFrame f = _frame;
             if (f == null) return false;
 
             // The border never covers the middle, so the paper the writing sits on goes down first.
@@ -175,9 +175,9 @@ namespace DSPRE.Avalonia.Views.Controls
         // A plain stand-in, for when the ROM's own border cannot be read.
         private static void DrawPlainFrame(DrawingContext ctx, Rect frame, double s)
         {
-            var paper = new SolidColorBrush(Color.FromRgb(0xF8, 0xF8, 0xF8));
-            var edge = new SolidColorBrush(Color.FromRgb(0x28, 0x30, 0x48));
-            var inner = new SolidColorBrush(Color.FromRgb(0x88, 0x98, 0xC0));
+            SolidColorBrush paper = new SolidColorBrush(Color.FromRgb(0xF8, 0xF8, 0xF8));
+            SolidColorBrush edge = new SolidColorBrush(Color.FromRgb(0x28, 0x30, 0x48));
+            SolidColorBrush inner = new SolidColorBrush(Color.FromRgb(0x88, 0x98, 0xC0));
 
             double round = 3 * s;
             ctx.DrawRectangle(paper, new Pen(edge, Math.Max(1, 2 * s)), frame, round, round);
@@ -187,14 +187,14 @@ namespace DSPRE.Avalonia.Views.Controls
         private static WriteableBitmap FromRgba(byte[] rgba, int w, int h)
         {
             if (rgba == null || w <= 0 || h <= 0) return null;
-            var bmp = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96),
+            WriteableBitmap bmp = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96),
                                           PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-            using var buf = bmp.Lock();
+            using ILockedFramebuffer buf = bmp.Lock();
             unsafe
             {
                 for (int y = 0; y < h; y++)
                 {
-                    var row = (byte*)buf.Address + y * buf.RowBytes;
+                    byte* row = (byte*)buf.Address + y * buf.RowBytes;
                     for (int x = 0; x < w; x++)
                     {
                         int at = (y * w + x) * 4;
@@ -231,16 +231,16 @@ namespace DSPRE.Avalonia.Views.Controls
         private static WriteableBitmap RenderPage(string text)
         {
             int w = FieldMessageWindow.TextWidth, h = FieldMessageWindow.TextHeight + FieldMessageWindow.LineHeight;
-            var bmp = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96),
+            WriteableBitmap bmp = new WriteableBitmap(new PixelSize(w, h), new Vector(96, 96),
                                           PixelFormat.Bgra8888, AlphaFormat.Premul);
 
-            using var buf = bmp.Lock();
+            using ILockedFramebuffer buf = bmp.Lock();
             unsafe
             {
-                var row = (byte*)buf.Address;
+                byte* row = (byte*)buf.Address;
                 for (int y = 0; y < h; y++)
                 {
-                    var p = (uint*)(row + y * buf.RowBytes);
+                    uint* p = (uint*)(row + y * buf.RowBytes);
                     for (int x = 0; x < w; x++) p[x] = 0;
                 }
 
@@ -259,7 +259,7 @@ namespace DSPRE.Avalonia.Views.Controls
                         {
                             int py = top + y;
                             if (py < 0 || py >= h) continue;
-                            var p = (uint*)((byte*)buf.Address + py * buf.RowBytes);
+                            uint* p = (uint*)((byte*)buf.Address + py * buf.RowBytes);
                             for (int x = 0; x < advance; x++)
                             {
                                 int px = penX + x;
@@ -281,12 +281,12 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private static void DrawWithOrdinaryType(DrawingContext ctx, string text, double ox, double oy, double s)
         {
-            var ink = new SolidColorBrush(Color.FromRgb(0x28, 0x28, 0x28));
+            SolidColorBrush ink = new SolidColorBrush(Color.FromRgb(0x28, 0x28, 0x28));
             string[] lines = text.Replace("\r\n", "\n").Split('\n');
             for (int i = 0; i < lines.Length && i < FieldMessageWindow.LinesPerPage; i++)
             {
                 if (lines[i].Length == 0) continue;
-                var f = new FormattedText(lines[i], CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                FormattedText f = new FormattedText(lines[i], CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
                                           Fallback, FontPixels * s, ink);
                 double y = FieldMessageWindow.TextTop + i * FieldMessageWindow.LineHeight + 2;
                 ctx.DrawText(f, new Point(ox + FieldMessageWindow.TextLeft * s, oy + y * s));
@@ -300,8 +300,8 @@ namespace DSPRE.Avalonia.Views.Controls
             double left = ox + 244 * s, top = oy + (173 + bob) * s;
             double width = 8 * s, depth = 5 * s;
 
-            var g = new StreamGeometry();
-            using (var c = g.Open())
+            StreamGeometry g = new StreamGeometry();
+            using (StreamGeometryContext c = g.Open())
             {
                 c.BeginFigure(new Point(left, top), true);
                 c.LineTo(new Point(left + width, top));

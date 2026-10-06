@@ -4,6 +4,7 @@ using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
 using AvaloniaEdit.Rendering;
@@ -69,7 +70,7 @@ namespace DSPRE.Avalonia.Views.Text
             for (int i = 0; i < RotomEditor.TextArea.LeftMargins.Count; i++)
             {
                 if (RotomEditor.TextArea.LeftMargins[i] is not LineNumberMargin) continue;
-                var lineNumbers = new CachedLineNumberMargin();
+                CachedLineNumberMargin lineNumbers = new CachedLineNumberMargin();
                 lineNumbers.SetValue(TextBlock.FontFamilyProperty, RotomEditor.FontFamily);
                 lineNumbers.SetValue(TextBlock.FontSizeProperty, RotomEditor.FontSize);
                 lineNumbers.SetValue(TextBlock.ForegroundProperty, RotomEditor.LineNumbersForeground);
@@ -139,9 +140,9 @@ namespace DSPRE.Avalonia.Views.Text
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
-            var vm = VM;
+            ScriptEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
+            Window owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
 
             if (!_setupDone)
@@ -208,7 +209,7 @@ namespace DSPRE.Avalonia.Views.Text
 
         private void UpdateReadOnly()
         {
-            var vm = VM;
+            ScriptEditorViewModel vm = VM;
             RotomEditor.IsReadOnly = vm == null || !vm.IsEditable;
         }
 
@@ -257,7 +258,7 @@ namespace DSPRE.Avalonia.Views.Text
                 if (string.IsNullOrEmpty(selected) || !Enum.TryParse(selected, out theme))
                     theme = ThemeName.OneDark;
 
-                var textMateTheme = _registryOptions.LoadTheme(theme);
+                TextMateSharp.Themes.IRawTheme textMateTheme = _registryOptions.LoadTheme(theme);
                 if (textMateTheme != null)
                     _textMate.SetTheme(textMateTheme);
             }
@@ -392,14 +393,14 @@ namespace DSPRE.Avalonia.Views.Text
 
         private Control BuildHoverContent(string markdown)
         {
-            var panel = new StackPanel
+            StackPanel panel = new StackPanel
             {
                 MaxWidth = 520,
                 Spacing = 4
             };
 
             bool inCode = false;
-            var code = new StringBuilder();
+            StringBuilder code = new StringBuilder();
 
             foreach (string rawLine in (markdown ?? "").Replace("\r\n", "\n").Split('\n'))
             {
@@ -440,7 +441,7 @@ namespace DSPRE.Avalonia.Views.Text
                     continue;
                 }
 
-                var textBlock = new TextBlock
+                TextBlock textBlock = new TextBlock
                 {
                     TextWrapping = TextWrapping.Wrap,
                     MaxWidth = 500
@@ -502,7 +503,7 @@ namespace DSPRE.Avalonia.Views.Text
                     int end = text.IndexOf("**", i + 2, StringComparison.Ordinal);
                     if (end > i)
                     {
-                        var bold = new Bold();
+                        Bold bold = new Bold();
                         bold.Inlines.Add(new Run(text.Substring(i + 2, end - i - 2)));
                         textBlock.Inlines.Add(bold);
                         i = end + 2;
@@ -535,16 +536,16 @@ namespace DSPRE.Avalonia.Views.Text
 
         private async Task GoToDefinitionAtCaret()
         {
-            var document = RotomEditor.Document;
+            TextDocument document = RotomEditor.Document;
             if (document == null) return;
 
-            var location = document.GetLocation(RotomEditor.CaretOffset);
+            TextLocation location = document.GetLocation(RotomEditor.CaretOffset);
             await GoToDefinitionAt(location.Line, location.Column);
         }
 
         private async Task GoToDefinitionAt(int line, int column)
         {
-            var vm = VM;
+            ScriptEditorViewModel vm = VM;
             if (vm == null) return;
 
             ScriptNavigationTarget target = await vm.GoToDefinitionAsync(line, column);
@@ -558,18 +559,18 @@ namespace DSPRE.Avalonia.Views.Text
             line = 0;
             column = 0;
 
-            var document = RotomEditor.Document;
-            var textView = RotomEditor.TextArea?.TextView;
+            TextDocument document = RotomEditor.Document;
+            TextView textView = RotomEditor.TextArea?.TextView;
             if (document == null || textView == null) return false;
 
             try
             {
-                var point = e.GetPosition(textView) + new Vector(RotomEditor.HorizontalOffset, RotomEditor.VerticalOffset);
-                var position = textView.GetPositionFloor(point);
+                Point point = e.GetPosition(textView) + new Vector(RotomEditor.HorizontalOffset, RotomEditor.VerticalOffset);
+                TextViewPosition? position = textView.GetPositionFloor(point);
                 if (position == null) return false;
 
                 line = Math.Max(1, Math.Min(position.Value.Line, document.LineCount));
-                var documentLine = document.GetLineByNumber(line);
+                DocumentLine documentLine = document.GetLineByNumber(line);
                 column = Math.Max(1, Math.Min(position.Value.Column, documentLine.Length + 1));
                 return true;
             }
@@ -629,10 +630,10 @@ namespace DSPRE.Avalonia.Views.Text
             startOffset = 0;
             endOffset = 0;
 
-            var document = RotomEditor.Document;
+            TextDocument document = RotomEditor.Document;
             if (document == null || line < 1 || line > document.LineCount) return false;
 
-            var documentLine = document.GetLineByNumber(line);
+            DocumentLine documentLine = document.GetLineByNumber(line);
             int offset = document.GetOffset(line, Math.Max(1, Math.Min(column, documentLine.Length + 1)));
             int lineStart = documentLine.Offset;
             int lineEnd = documentLine.EndOffset;
@@ -696,7 +697,7 @@ namespace DSPRE.Avalonia.Views.Text
         private async void OpenSelectedSearchResult()
         {
             if (ProjectSearchResultsList.SelectedItem is not ScriptSearchResult result) return;
-            var vm = VM;
+            ScriptEditorViewModel vm = VM;
             if (vm == null || !await vm.OpenSearchResultAsync(result)) return;
 
             SelectEditorRange(result.Line, result.Column, result.SelectionLength);
@@ -705,7 +706,7 @@ namespace DSPRE.Avalonia.Views.Text
         private async void OpenSelectedDiagnostic()
         {
             if (DiagnosticsList.SelectedItem is not ScriptDiagnostic diagnostic) return;
-            var vm = VM;
+            ScriptEditorViewModel vm = VM;
             if (vm == null || !await vm.OpenDiagnosticAsync(diagnostic)) return;
 
             SelectEditorRange(diagnostic.Line, diagnostic.Column, diagnostic.SelectionLength);
@@ -713,13 +714,13 @@ namespace DSPRE.Avalonia.Views.Text
 
         private void SelectEditorRange(int line, int column, int length)
         {
-            var document = RotomEditor.Document;
+            TextDocument document = RotomEditor.Document;
             if (document == null) return;
 
             line = Math.Max(1, line);
             line = Math.Min(line, Math.Max(1, document.LineCount));
 
-            var documentLine = document.GetLineByNumber(line);
+            DocumentLine documentLine = document.GetLineByNumber(line);
             column = Math.Max(1, column);
             column = Math.Min(column, documentLine.Length + 1);
 

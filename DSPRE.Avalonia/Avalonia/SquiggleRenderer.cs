@@ -29,12 +29,12 @@ namespace DSPRE.Avalonia
         {
             if (_errors.Count == 0 || textView?.Document == null || !textView.VisualLinesValid) return;
             int docLen = textView.Document.TextLength;
-            foreach (var (off, len) in _errors)
+            foreach ((int off, int len) in _errors)
             {
                 if (len <= 0 || off < 0 || off >= docLen) continue;
                 int length = Math.Min(len, docLen - off);
-                var seg = new TextSegment { StartOffset = off, Length = length };
-                foreach (var r in BackgroundGeometryBuilder.GetRectsForSegment(textView, seg))
+                TextSegment seg = new TextSegment { StartOffset = off, Length = length };
+                foreach (Rect r in BackgroundGeometryBuilder.GetRectsForSegment(textView, seg))
                     DrawWave(drawingContext, r.BottomLeft, r.BottomRight);
             }
         }
@@ -44,8 +44,8 @@ namespace DSPRE.Avalonia
         {
             const double step = 3.0, amp = 2.0;
             if (end.X - start.X < 1) return;
-            var geo = new StreamGeometry();
-            using (var ctx = geo.Open())
+            StreamGeometry geo = new StreamGeometry();
+            using (StreamGeometryContext ctx = geo.Open())
             {
                 ctx.BeginFigure(start, false);
                 bool up = true;

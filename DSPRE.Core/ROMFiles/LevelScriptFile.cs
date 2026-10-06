@@ -41,10 +41,10 @@ namespace DSPRE.ROMFiles
         /// <summary>The triggers in order, for undo; <see cref="RestoreTriggers"/> takes it back.</summary>
         public byte[] TriggerState()
         {
-            var bytes = new List<byte>();
+            List<byte> bytes = new List<byte>();
             foreach (LevelScriptTrigger t in bufferSet)
             {
-                var v = t as VariableValueTrigger;
+                VariableValueTrigger v = t as VariableValueTrigger;
                 foreach (int n in new[] { t.triggerType, t.scriptTriggered, v?.variableToWatch ?? 0, v?.expectedValue ?? 0 })
                     bytes.AddRange(BitConverter.GetBytes(n));
             }
@@ -65,7 +65,7 @@ namespace DSPRE.ROMFiles
 
         private List<string> TriggerKeys()
         {
-            var keys = new List<string>();
+            List<string> keys = new List<string>();
             foreach (LevelScriptTrigger t in bufferSet)
                 keys.Add(t is VariableValueTrigger v
                     ? $"v{v.scriptTriggered}:{v.variableToWatch}:{v.expectedValue}"
@@ -247,16 +247,16 @@ namespace DSPRE.ROMFiles
         {
             if (_read != null && _readTriggers != null && TriggerKeys().SequenceEqual(_readTriggers)) return (byte[])_read.Clone();
 
-            var screen = new List<MapScreenLoadTrigger>();
-            var table = new List<VariableValueTrigger>();
+            List<MapScreenLoadTrigger> screen = new List<MapScreenLoadTrigger>();
+            List<VariableValueTrigger> table = new List<VariableValueTrigger>();
             foreach (LevelScriptTrigger item in bufferSet)
             {
                 if (item is VariableValueTrigger v) table.Add(v);
                 else if (item is MapScreenLoadTrigger m) screen.Add(m);
             }
 
-            using var ms = new MemoryStream();
-            using (var bw = new BinaryWriter(ms))
+            using MemoryStream ms = new MemoryStream();
+            using (BinaryWriter bw = new BinaryWriter(ms))
             {
                 int tableAt = Math.Clamp(_tableEntryAt, 0, screen.Count);
                 for (int i = 0; i <= screen.Count; i++)

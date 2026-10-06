@@ -19,13 +19,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Reads every name. Does file work, so call it off the UI thread.</summary>
         public static VsIntroNames Read()
         {
-            var n = new VsIntroNames();
+            VsIntroNames n = new VsIntroNames();
             try { n.Trainers = GetSimpleTrainerNames(); } catch { }
             try { n.Classes = GetTrainerClassNames(); } catch { }
             try { n.Species = GetPokemonNames(); } catch { }
             try
             {
-                var sdat = SoundArchive.Load();
+                SdatArchive sdat = SoundArchive.Load();
                 if (sdat?.SeqNames != null) n._sequences = new Dictionary<int, string>(sdat.SeqNames);
             }
             catch { }
@@ -108,8 +108,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The battle themes to offer, plus whatever the tables already use.</summary>
         public List<int> SequenceChoices(IEnumerable<int> used)
         {
-            var set = new SortedSet<int>(used);
-            foreach (var kv in _sequences)
+            SortedSet<int> set = new SortedSet<int>(used);
+            foreach (KeyValuePair<int, string> kv in _sequences)
             {
                 string s = kv.Value ?? "";
                 if (s.Contains("_VS_") || s.Contains("BATTLE") || s.Contains("_BA_")) set.Add(kv.Key);
@@ -130,7 +130,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>What a combo is for: its record's trainer, what the battle setup uses it for, or who picks it.</summary>
         public string Combo(VsIntroTables t, int combo)
         {
-            var record = t.RecordFor(t.EffectOf(combo));
+            Record record = t.RecordFor(t.EffectOf(combo));
             if (record != null) return Record(t, record);
             bool dp = t.Family == GameFamilies.DP;
             switch (t.RoleOf(combo))
@@ -145,9 +145,9 @@ namespace DSPRE.Avalonia.Data
                 case ComboRole.WildDouble: return "Wild double battles";
                 case ComboRole.OrdinaryWild: return "Wild Pokémon";
             }
-            var classes = t.ClassesUsing(combo).Select(Class).Distinct().ToList();
+            List<string> classes = t.ClassesUsing(combo).Select(Class).Distinct().ToList();
             if (classes.Count > 0) return string.Join(", ", classes.Take(3)) + (classes.Count > 3 ? "…" : "");
-            var species = t.SpeciesUsing(combo).Select(SpeciesName).ToList();
+            List<string> species = t.SpeciesUsing(combo).Select(SpeciesName).ToList();
             if (species.Count > 0) return string.Join(", ", species.Take(3)) + (species.Count > 3 ? "…" : "");
             return "Not used";
         }

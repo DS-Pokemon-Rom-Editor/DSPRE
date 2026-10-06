@@ -83,12 +83,12 @@ namespace DSPRE.Avalonia.Data
         public (GroundImage mine, GroundImage enemy) Build(int terrainId, int timeZone = 0)
         {
             if (!_narc.Available) return (null, null);
-            var files = TerrainFiles(terrainId);
+            (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay)? files = TerrainFiles(terrainId);
             if (files == null) return (null, null);
             int tz = Math.Clamp(timeZone, 0, 2);
-            var f = files.Value;
-            var mine = Render(f.MineDrawing, f.PaletteDay + tz, f.MineLayout, MineX, MineY);
-            var enemy = Render(f.EnemyDrawing, f.PaletteDay + tz, f.EnemyLayout, EnemyX, EnemyY);
+            (int MineDrawing, int EnemyDrawing, int MineLayout, int EnemyLayout, int PaletteDay) f = files.Value;
+            GroundImage mine = Render(f.MineDrawing, f.PaletteDay + tz, f.MineLayout, MineX, MineY);
+            GroundImage enemy = Render(f.EnemyDrawing, f.PaletteDay + tz, f.EnemyLayout, EnemyX, EnemyY);
             return (mine, enemy);
         }
 
@@ -102,28 +102,28 @@ namespace DSPRE.Avalonia.Data
             int layout = BattleObjects.Find(thing, "As it appears");
             int colours = BattleObjects.Find("HpBar.Shared", "Colours");
             if (drawing < 0 || layout < 0 || colours < 0) return null;
-            var at = BattleGaugeComposer.CentreOf(player ? BattleGaugeComposer.Kind.PlayerSingle : BattleGaugeComposer.Kind.OpponentSingle);
+            (int X, int Y) at = BattleGaugeComposer.CentreOf(player ? BattleGaugeComposer.Kind.PlayerSingle : BattleGaugeComposer.Kind.OpponentSingle);
             return Render(drawing, colours, layout, at.X, at.Y);
         }
 
         private GroundImage Render(int ncgrIdx, int nclrIdx, int ncerIdx, int posX, int posY)
         {
-            var temps = new List<string>();
+            List<string> temps = new List<string>();
             try
             {
                 string chr = WriteTemp(_narc.Get(ncgrIdx), temps);
                 string pal = WriteTemp(_narc.Get(nclrIdx), temps);
                 string cel = WriteTemp(_narc.Get(ncerIdx), temps);
                 if (chr == null || pal == null || cel == null) return null;
-                var nclr = new NCLR(pal, nclrIdx, Path.GetFileName(pal));
-                var ncgr = new NCGR(chr, ncgrIdx, Path.GetFileName(chr));
-                var ncer = new NCER(cel, ncerIdx, Path.GetFileName(cel));
-                var raw = ncer.Get_RawImage(ncgr, nclr, 0, Canvas, Canvas, trans: true, currOAM: -1, draw_index: null);
+                NCLR nclr = new NCLR(pal, nclrIdx, Path.GetFileName(pal));
+                NCGR ncgr = new NCGR(chr, ncgrIdx, Path.GetFileName(chr));
+                NCER ncer = new NCER(cel, ncerIdx, Path.GetFileName(cel));
+                RawImage raw = ncer.Get_RawImage(ncgr, nclr, 0, Canvas, Canvas, trans: true, currOAM: -1, draw_index: null);
                 if (raw == null || raw.IsEmpty) return null;
                 return new GroundImage { Rgba = ToRgba(raw, Canvas), Width = Canvas, Height = Canvas, Left = posX - Canvas / 2, Top = posY - Canvas / 2 };
             }
             catch (Exception ex) { AppLogger.Error("BattleGroundRenderer.Render failed: " + ex.Message); return null; }
-            finally { foreach (var t in temps) { try { File.Delete(t); } catch { } } }
+            finally { foreach (string t in temps) { try { File.Delete(t); } catch { } } }
         }
 
         // The clact readers take a file path; materialise the NARC bytes (LZ10-decompressed if 0x10) to a temp file.

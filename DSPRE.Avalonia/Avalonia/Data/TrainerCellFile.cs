@@ -22,9 +22,9 @@ namespace DSPRE.Avalonia.Data
 
             public Cell Clone()
             {
-                var c = (Cell)MemberwiseClone();
+                Cell c = (Cell)MemberwiseClone();
                 c.Pieces = new List<ushort[]>();
-                foreach (var p in Pieces) c.Pieces.Add((ushort[])p.Clone());
+                foreach (ushort[] p in Pieces) c.Pieces.Add((ushort[])p.Clone());
                 return c;
             }
         }
@@ -60,7 +60,7 @@ namespace DSPRE.Avalonia.Data
             int count = U16(d, body);
             if (U16(d, body + 2) != 1) return null;
             int cellTable = body + (int)U32(d, body + 4);
-            var f = new TrainerCellFile
+            TrainerCellFile f = new TrainerCellFile
             {
                 _version = U16(d, 6),
                 Mapping = U32(d, body + 8),
@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < count; i++)
             {
                 int at = cellTable + i * 16;
-                var c = new Cell
+                Cell c = new Cell
                 {
                     Attr = U16(d, at + 2),
                     MaxX = (short)U16(d, at + 8), MaxY = (short)U16(d, at + 10),
@@ -119,14 +119,14 @@ namespace DSPRE.Avalonia.Data
             f._tailSections = sections - 1;
             f._tail = d.AsSpan(k + kbecSize).ToArray();
 
-            var check = f.Write();
+            byte[] check = f.Write();
             return check.AsSpan().SequenceEqual(d) ? f : null;
         }
 
         public byte[] Write()
         {
-            var ms = new MemoryStream();
-            var w = new BinaryWriter(ms);
+            MemoryStream ms = new MemoryStream();
+            BinaryWriter w = new BinaryWriter(ms);
             w.Write("RECN"u8); w.Write((ushort)0xFEFF); w.Write(_version); w.Write(0u);
             w.Write((ushort)0x10); w.Write((ushort)(_tailSections + 1));
 
@@ -137,32 +137,32 @@ namespace DSPRE.Avalonia.Data
             w.Write(0u); w.Write(_stringBank); w.Write(0u);
 
             int pieceAt = 0;
-            foreach (var c in Cells)
+            foreach (Cell c in Cells)
             {
                 w.Write((ushort)c.Pieces.Count); w.Write(c.Attr); w.Write((uint)pieceAt);
                 w.Write(c.MaxX); w.Write(c.MaxY); w.Write(c.MinX); w.Write(c.MinY);
                 pieceAt += c.Pieces.Count * 6;
             }
-            foreach (var c in Cells)
-                foreach (var p in c.Pieces) { w.Write(p[0]); w.Write(p[1]); w.Write(p[2]); }
+            foreach (Cell c in Cells)
+                foreach (ushort[] p in c.Pieces) { w.Write(p[0]); w.Write(p[1]); w.Write(p[2]); }
             while (ms.Position % 4 != 0) w.Write((byte)0);
 
             long vram = ms.Position;
             w.Write(MaxTransferSize); w.Write(8u);
-            foreach (var c in Cells) { w.Write(c.TransferOffset); w.Write(c.TransferSize); }
+            foreach (Cell c in Cells) { w.Write(c.TransferOffset); w.Write(c.TransferSize); }
 
             long ext = ms.Position;
             int userSize = 16 + Cells.Count * 8;
             w.Write("TACU"u8); w.Write((uint)userSize);
             w.Write((ushort)Cells.Count); w.Write(_userAttr); w.Write(8u);
             for (int i = 0; i < Cells.Count; i++) w.Write((uint)(8 + Cells.Count * 4 + i * 4));
-            foreach (var c in Cells) w.Write(c.UserValue);
+            foreach (Cell c in Cells) w.Write(c.UserValue);
 
             long end = ms.Position;
             w.Write(_tail);
             w.Flush();
 
-            var d = ms.ToArray();
+            byte[] d = ms.ToArray();
             Put32(d, 8, (uint)d.Length);
             Put32(d, (int)kbec + 4, (uint)(end - kbec));
             Put32(d, (int)body + 12, (uint)(vram - body));
@@ -186,22 +186,22 @@ namespace DSPRE.Avalonia.Data
         {
             int y = p[0] & 0xFF; if (y > 127) y -= 256;
             int x = p[1] & 0x1FF; if (x > 255) x -= 512;
-            var (w, h) = Sizes[(p[0] >> 14) & 3, (p[1] >> 14) & 3];
+            (int w, int h) = Sizes[(p[0] >> 14) & 3, (p[1] >> 14) & 3];
             return new Piece(x, y, w, h, ((p[1] >> 12) & 1) != 0, ((p[1] >> 13) & 1) != 0, p[2] & 0x3FF, p[2] >> 12, ((p[0] >> 13) & 1) != 0);
         }
 
         public string Shift(int cell, int dx, int dy)
         {
-            var c = Cells[cell];
-            foreach (var p in c.Pieces)
+            Cell c = Cells[cell];
+            foreach (ushort[] p in c.Pieces)
             {
-                var d = Describe(p);
+                Piece d = Describe(p);
                 int x = d.X + dx, y = d.Y + dy;
                 if (x < -256 || x > 255 || y < -128 || y > 127) return $"Frame {cell} cannot move that far.";
             }
-            foreach (var p in c.Pieces)
+            foreach (ushort[] p in c.Pieces)
             {
-                var d = Describe(p);
+                Piece d = Describe(p);
                 p[0] = (ushort)((p[0] & ~0xFF) | ((d.Y + dy) & 0xFF));
                 p[1] = (ushort)((p[1] & ~0x1FF) | ((d.X + dx) & 0x1FF));
             }
@@ -212,12 +212,12 @@ namespace DSPRE.Avalonia.Data
         // The bounding radius is in four-pixel units, rounded up, as retail cells store it.
         public void FitBounds(int cell)
         {
-            var c = Cells[cell];
+            Cell c = Cells[cell];
             if (c.Pieces.Count == 0) { c.MinX = c.MinY = c.MaxX = c.MaxY = 0; c.Attr = 0x800; return; }
             int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
-            foreach (var p in c.Pieces)
+            foreach (ushort[] p in c.Pieces)
             {
-                var d = Describe(p);
+                Piece d = Describe(p);
                 minX = Math.Min(minX, d.X); minY = Math.Min(minY, d.Y);
                 maxX = Math.Max(maxX, d.X + d.Width - 1); maxY = Math.Max(maxY, d.Y + d.Height - 1);
             }

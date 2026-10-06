@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.Data
 
         public static SdatArchive Parse(byte[] d)
         {
-            var a = new SdatArchive();
+            SdatArchive a = new SdatArchive();
             const int HdrSize = 48;
             if (d == null || d.Length < HdrSize) return a;
             a._d = d;
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Data
 
             List<int> ReadOffsetTable(int relOff)
             {
-                var list = new List<int>();
+                List<int> list = new List<int>();
                 if (relOff == 0) return list;
                 int tableAt = infoOffset + relOff;
                 if (tableAt + 4 > d.Length) return list;
@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.Data
                 return list;
             }
 
-            var seqOffs = ReadOffsetTable(seqTableOff);
+            List<int> seqOffs = ReadOffsetTable(seqTableOff);
             for (int i = 0; i < seqOffs.Count; i++)
             {
                 if (seqOffs[i] == 0) { a.Sequences.Add(null); continue; }
@@ -122,18 +122,18 @@ namespace DSPRE.Avalonia.Data
                 });
             }
 
-            var bankOffs = ReadOffsetTable(bankTableOff);
+            List<int> bankOffs = ReadOffsetTable(bankTableOff);
             for (int i = 0; i < bankOffs.Count; i++)
             {
                 if (bankOffs[i] == 0) { a.Banks.Add(null); continue; }
                 int at = infoOffset + bankOffs[i];
                 if (at + 12 > d.Length) { a.Banks.Add(null); continue; }
-                var b = new SdatBankInfo { FileId = (int)U32(at) };
+                SdatBankInfo b = new SdatBankInfo { FileId = (int)U32(at) };
                 for (int w = 0; w < 4; w++) b.WaveArcNo[w] = U16(at + 4 + w * 2);
                 a.Banks.Add(b);
             }
 
-            var waveArcOffs = ReadOffsetTable(waveArcTableOff);
+            List<int> waveArcOffs = ReadOffsetTable(waveArcTableOff);
             for (int i = 0; i < waveArcOffs.Count; i++)
             {
                 if (waveArcOffs[i] == 0) { a.WaveArcs.Add(null); continue; }
@@ -144,7 +144,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             // Each record: sequence count u8, pad u8, allocatable channel mask u16, heap size u32.
-            var playerOffs = ReadOffsetTable(playerTableOff);
+            List<int> playerOffs = ReadOffsetTable(playerTableOff);
             for (int i = 0; i < playerOffs.Count; i++)
             {
                 int at = infoOffset + playerOffs[i];
@@ -260,7 +260,7 @@ namespace DSPRE.Avalonia.Data
             int size = _d[entryAt + 4] | (_d[entryAt + 5] << 8) | (_d[entryAt + 6] << 16) | (_d[entryAt + 7] << 24);
             if (off < 0 || size < 0 || off + size > _d.Length) return null;
 
-            var bytes = new byte[size];
+            byte[] bytes = new byte[size];
             System.Array.Copy(_d, off, bytes, 0, size);
             return bytes;
         }
@@ -283,7 +283,7 @@ namespace DSPRE.Avalonia.Data
             if (bankNo < 0 || bankNo >= Banks.Count || Banks[bankNo] == null) return null;
             return _bankCache.GetOrAdd(bankNo, no =>
             {
-                var bytes = GetFileBytes(Banks[no].FileId);
+                byte[] bytes = GetFileBytes(Banks[no].FileId);
                 return bytes != null ? SbnkBank.ParseBank(bytes) : new List<SbnkInstrument>();
             });
         }
@@ -295,7 +295,7 @@ namespace DSPRE.Avalonia.Data
             if (waveArcNo == 0xFFFF || waveArcNo < 0 || waveArcNo >= WaveArcs.Count || WaveArcs[waveArcNo] == null) return null;
             return _waveArcCache.GetOrAdd(waveArcNo, no =>
             {
-                var bytes = GetFileBytes(WaveArcs[no].FileId);
+                byte[] bytes = GetFileBytes(WaveArcs[no].FileId);
                 return bytes != null ? SwavSample.ParseArchive(bytes) : new List<SwavSample>();
             });
         }

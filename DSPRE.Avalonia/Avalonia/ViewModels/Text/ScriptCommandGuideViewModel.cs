@@ -79,7 +79,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             Entries.Clear();
             string q = _searchText?.Trim();
-            foreach (var e in _all)
+            foreach (GuideEntry e in _all)
             {
                 if (!string.IsNullOrEmpty(q)
                     && !SearchMatch.Contains(e.Command, q)

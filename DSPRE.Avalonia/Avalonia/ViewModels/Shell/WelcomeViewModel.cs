@@ -104,11 +104,11 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// </summary>
         private static TutorialPage BetaPage()
         {
-            var areas = new List<string>();
-            foreach (var a in BetaEditors.CountByArea()) areas.Add($"{a.Value} in {a.Key}");
+            List<string> areas = new List<string>();
+            foreach (KeyValuePair<string, int> a in BetaEditors.CountByArea()) areas.Add($"{a.Value} in {a.Key}");
 
-            var features = new List<string>();
-            foreach (var f in BetaEditors.Features) features.Add($"• {f.Name} ({f.Where}).");
+            List<string> features = new List<string>();
+            foreach (BetaEditors.BetaFeature f in BetaEditors.Features) features.Add($"• {f.Name} ({f.Where}).");
 
             return new TutorialPage
             {
@@ -130,7 +130,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private static TutorialPage[] BuildPages()
         {
             if (!BetaEditors.Enabled) return StandardPages;
-            var pages = new List<TutorialPage>(StandardPages);
+            List<TutorialPage> pages = new List<TutorialPage>(StandardPages);
             pages.Insert(1, BetaPage());
             return pages.ToArray();
         }
@@ -191,10 +191,10 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 RecentProjects.Add(@"C:\hacks\HeartGold (USA)_DSPRE_contents");
                 return;
             }
-            var recents = SettingsManager.Settings?.recentProjects;
+            List<string> recents = SettingsManager.Settings?.recentProjects;
             if (recents != null)
             {
-                foreach (var r in recents) RecentProjects.Add(r);
+                foreach (string r in recents) RecentProjects.Add(r);
             }
         }
     }

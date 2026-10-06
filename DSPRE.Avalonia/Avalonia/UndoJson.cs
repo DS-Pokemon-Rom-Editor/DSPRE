@@ -20,13 +20,13 @@ namespace DSPRE.Avalonia
         /// <summary>Copies a snapshot back into rows of the same count.</summary>
         public static void ApplyInto<T>(byte[] state, IList<T> rows)
         {
-            var saved = JsonSerializer.Deserialize<List<T>>(state);
+            List<T> saved = JsonSerializer.Deserialize<List<T>>(state);
             for (int i = 0; i < saved.Count && i < rows.Count; i++) CopyInto(saved[i], rows[i]);
         }
 
         public static void CopyInto<T>(T from, T to)
         {
-            foreach (var p in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            foreach (PropertyInfo p in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 if (p.CanRead && p.CanWrite && p.GetIndexParameters().Length == 0 && p.GetSetMethod() != null)
                     p.SetValue(to, p.GetValue(from));
         }

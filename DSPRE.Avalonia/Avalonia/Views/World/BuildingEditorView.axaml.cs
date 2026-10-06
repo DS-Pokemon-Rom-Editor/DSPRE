@@ -32,7 +32,7 @@ namespace DSPRE.Avalonia.Views.World
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
             if (_setupDone || Design.IsDesignMode) return;
-            var vm = VM;
+            BuildingEditorViewModel vm = VM;
             if (vm == null) return;
             _setupDone = true;
             vm.ModelLoaded += (_, _) => GlView.SetModel(VM.Model3D);

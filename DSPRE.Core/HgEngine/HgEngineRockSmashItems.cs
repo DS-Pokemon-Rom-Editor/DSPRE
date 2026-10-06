@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
@@ -25,7 +26,7 @@ namespace DSPRE.HgEngine
         public static bool TryRead(int table, out ushort[] items, out string error)
         {
             items = null;
-            if (!TryParse(out var tables, out _, out error)) return false;
+            if (!TryParse(out List<List<Slot>> tables, out _, out error)) return false;
             if (table < 0 || table >= tables.Count) { error = $"{SourceRelPath} has no Rock Smash table {table}."; return false; }
             items = tables[table].ConvertAll(s => (ushort)s.Item).ToArray();
             return true;
@@ -34,14 +35,14 @@ namespace DSPRE.HgEngine
         /// <summary>Writes one table's items by name, leaving the comments and layout as they were.</summary>
         public static bool TryWrite(int table, IReadOnlyList<ushort> items, out string error)
         {
-            if (!TryParse(out var tables, out string text, out error)) return false;
+            if (!TryParse(out List<List<Slot>> tables, out string text, out error)) return false;
             if (table < 0 || table >= tables.Count) { error = $"{SourceRelPath} has no Rock Smash table {table}."; return false; }
-            var slots = tables[table];
+            List<Slot> slots = tables[table];
             if (slots.Count != items.Count)
             { error = $"Rock Smash table {table} in {SourceRelPath} holds {slots.Count} items, not {items.Count}."; return false; }
 
-            var names = HgEngineSymbolTable.Load(ItemHeaderRelPath);
-            var sb = new System.Text.StringBuilder(text);
+            HgEngineSymbolTable names = HgEngineSymbolTable.Load(ItemHeaderRelPath);
+            StringBuilder sb = new System.Text.StringBuilder(text);
             for (int i = slots.Count - 1; i >= 0; i--)
             {
                 if (slots[i].Item == items[i]) continue;
@@ -60,7 +61,7 @@ namespace DSPRE.HgEngine
             text = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine folder is open."; return false; }
 
-            var names = HgEngineSymbolTable.Load(ItemHeaderRelPath);
+            HgEngineSymbolTable names = HgEngineSymbolTable.Load(ItemHeaderRelPath);
             if (names == null) { error = $"Could not read {ItemHeaderRelPath} from the checkout."; return false; }
             string path = SourcePath();
             text = File.Exists(path) ? HgEngineFileCache.GetText(path) : null;
@@ -74,7 +75,7 @@ namespace DSPRE.HgEngine
             int bodyStart = table.Groups["body"].Index;
             foreach (Match group in Group.Matches(body))
             {
-                var slots = new List<Slot>();
+                List<Slot> slots = new List<Slot>();
                 foreach (Match token in Token.Matches(group.Groups["items"].Value))
                 {
                     if (!names.TryGetValue(token.Value, out int item) && !int.TryParse(token.Value, out item))

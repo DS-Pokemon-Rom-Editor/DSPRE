@@ -19,10 +19,10 @@ namespace DSPRE
                     writer.WriteLine("SpeciesID,SpeciesName,MoveID,MoveName");
 
                     // Write egg move data
-                    foreach (var entry in eggMoveData)
+                    foreach (EggMoveEntry entry in eggMoveData)
                     {
                         string speciesName = (entry.speciesID >= 0 && entry.speciesID < pokeNames.Length) ? pokeNames[entry.speciesID] : $"SPECIES_{entry.speciesID}";
-                        foreach (var moveID in entry.moveIDs)
+                        foreach (ushort moveID in entry.moveIDs)
                         {
                             string moveName = (moveID >= 0 && moveID < moveNames.Length) ? moveNames[moveID] : $"MOVE_{moveID}";
                             writer.WriteLine($"{entry.speciesID},{speciesName},{moveID},{moveName}");
@@ -43,12 +43,12 @@ namespace DSPRE
         {
             try
             {
-                var lines = File.ReadAllLines(filePath);
-                var speciesDict = new Dictionary<int, EggMoveEntry>();
+                string[] lines = File.ReadAllLines(filePath);
+                Dictionary<int, EggMoveEntry> speciesDict = new Dictionary<int, EggMoveEntry>();
 
-                foreach (var line in lines.Skip(1))
+                foreach (string line in lines.Skip(1))
                 {
-                    var values = line.Split(',');
+                    string[] values = line.Split(',');
                     if (values.Length < 4) continue;
 
                     int speciesID = int.Parse(values[0].Trim());

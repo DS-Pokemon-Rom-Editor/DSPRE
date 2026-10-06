@@ -20,8 +20,8 @@ namespace DSPRE.HgEngine
         {
             if (!HgEngineProject.IsActive || names == null) return;
 
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
-            var formToBase = HgEngineFormMapping.Load();
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
+            Dictionary<int, int> formToBase = HgEngineFormMapping.Load();
             if (species == null && formToBase == null) return;
 
             for (int i = 0; i < names.Length; i++)
@@ -51,7 +51,7 @@ namespace DSPRE.HgEngine
             string[] words = body.Split('_', System.StringSplitOptions.RemoveEmptyEntries);
             if (words.Length == 0) return false;
 
-            var sb = new StringBuilder();
+            StringBuilder sb = new StringBuilder();
             foreach (string w in words)
             {
                 if (sb.Length > 0) sb.Append(' ');
@@ -69,13 +69,13 @@ namespace DSPRE.HgEngine
     {
         public static Dictionary<int, int> Load()
         {
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (species == null) return null;
 
             string mappingPath = Path.Combine(HgEngineProject.RepoPathUnc, "data", "FormToSpeciesMapping.c");
             if (!File.Exists(mappingPath)) return null;
 
-            var result = new Dictionary<int, int>();
+            Dictionary<int, int> result = new Dictionary<int, int>();
             foreach (Match m in Regex.Matches(HgEngineFileCache.GetText(mappingPath), @"\[\s*(SPECIES_\w+)\s*-\s*SPECIES_MEGA_START\s*\]\s*=\s*(SPECIES_\w+)\s*,"))
             {
                 if (species.TryGetValue(m.Groups[1].Value, out int formId) &&

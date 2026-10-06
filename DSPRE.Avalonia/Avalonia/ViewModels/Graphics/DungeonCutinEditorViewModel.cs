@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 using static DSPRE.RomInfo;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
+using DSPRE.Avalonia.Data;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
@@ -134,7 +135,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
-            foreach (var row in Rows) foreach (int v in Values(row)) w.Write(v);
+            foreach (DungeonCutinRow row in Rows) foreach (int v in Values(row)) w.Write(v);
         });
 
         // Shows the row the step changed.
@@ -143,9 +144,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             DungeonCutinRow changed = null;
             ByteStateUndo.Unpack(state, r =>
             {
-                foreach (var row in Rows)
+                foreach (DungeonCutinRow row in Rows)
                 {
-                    var v = new int[FieldsPerRow];
+                    int[] v = new int[FieldsPerRow];
                     for (int i = 0; i < v.Length; i++) v[i] = r.ReadInt32();
                     if (Values(row).SequenceEqual(v)) continue;
                     SetValues(row, v);
@@ -234,8 +235,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string ExportTimezoneImage(DungeonCutinTimezone tz, string pngPath)
         {
             if (SelectedRow == null) return "No row selected.";
-            var (pal, tiles, scr) = GetIds(SelectedRow, tz);
-            var raw = _graphics.Composite(pal, tiles, scr);
+            (int pal, int tiles, int scr) = GetIds(SelectedRow, tz);
+            RawImage raw = _graphics.Composite(pal, tiles, scr);
             if (raw == null) return "Could not decode this slot's graphics.";
             try { ImageConverter.ToAvaloniaBitmap(raw).Save(pngPath); return null; }
             catch (Exception ex) { return ex.Message; }
@@ -252,7 +253,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             DSPRE.RawImage raw;
             try
             {
-                using var stream = File.OpenRead(pngPath);
+                using FileStream stream = File.OpenRead(pngPath);
                 raw = ImageConverter.DecodeRawImage(stream);
             }
             catch (Exception ex) { return ex.Message; }
@@ -269,7 +270,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // ── Constructor ───────────────────────────────────────────────────────
         public DungeonCutinEditorViewModel(List<string> headerNames)
         {
-            foreach (var h in headerNames)
+            foreach (string h in headerNames)
                 Headers.Add(h.TrimEnd('\0'));
             LoadRows();
         }
@@ -282,7 +283,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 for (int i = 0; i < 10; i++) Headers.Add($"Header {i}");
                 for (int i = 0; i < 3; i++)
                 {
-                    var row = new DungeonCutinRow(Headers) { RowNumber = i + 1, HeaderIndex = i, NameMessageId = 100 + i };
+                    DungeonCutinRow row = new DungeonCutinRow(Headers) { RowNumber = i + 1, HeaderIndex = i, NameMessageId = 100 + i };
                     Rows.Add(row);
                 }
                 SelectedRow = Rows.Count > 0 ? Rows[0] : null;
@@ -324,8 +325,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             try
             {
-                var lines = new List<string> { string.Join(",", CsvHeader) };
-                foreach (var row in Rows)
+                List<string> lines = new List<string> { string.Join(",", CsvHeader) };
+                foreach (DungeonCutinRow row in Rows)
                 {
                     lines.Add(string.Join(",", new[]
                     {
@@ -351,21 +352,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 string[] lines = await File.ReadAllLinesAsync(path);
-                var dataLines = lines.Skip(1).Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
+                List<string> dataLines = lines.Skip(1).Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
 
                 if (dataLines.Count != RowCount)
                     return $"Expected exactly {RowCount} rows, found {dataLines.Count}. " +
                         "This is a fixed-size ARM9-embedded table with no room to grow or shrink; " +
                         "import was rejected to avoid corrupting adjacent ARM9 data.";
 
-                var parsedRows = new List<int[]>(RowCount);
+                List<int[]> parsedRows = new List<int[]>(RowCount);
                 for (int i = 0; i < dataLines.Count; i++)
                 {
                     string[] parts = dataLines[i].Split(',');
                     if (parts.Length != FieldsPerRow)
                         return $"Row {i + 1}: expected {FieldsPerRow} columns, found {parts.Length}.";
 
-                    var values = new int[FieldsPerRow];
+                    int[] values = new int[FieldsPerRow];
                     for (int c = 0; c < FieldsPerRow; c++)
                     {
                         if (!int.TryParse(parts[c], NumberStyles.Integer, CultureInfo.InvariantCulture, out values[c]))
@@ -376,10 +377,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
                 Rows.Clear();
                 int rowNum = 0;
-                foreach (var v in parsedRows)
+                foreach (int[] v in parsedRows)
                 {
                     rowNum++;
-                    var row = new DungeonCutinRow(Headers)
+                    DungeonCutinRow row = new DungeonCutinRow(Headers)
                     {
                         RowNumber = rowNum,
                         HeaderIndex = v[0],
@@ -428,9 +429,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 // One read of the table, shared with the Graphics window, so the field order is not
                 // written out twice and cannot drift.
-                foreach (var t in Data.DungeonCutinTable.Read())
+                foreach (DungeonCutinTable.Row t in Data.DungeonCutinTable.Read())
                 {
-                    var row = new DungeonCutinRow(Headers)
+                    DungeonCutinRow row = new DungeonCutinRow(Headers)
                     {
                         RowNumber = t.Number,
                         HeaderIndex = t.HeaderIndex,
@@ -464,8 +465,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void WriteRows()
         {
-            using var writer = new ARM9.Writer(ResolveTableOffset());
-            foreach (var row in Rows)
+            using ARM9.Writer writer = new ARM9.Writer(ResolveTableOffset());
+            foreach (DungeonCutinRow row in Rows)
             {
                 writer.Write(row.HeaderIndex);
                 writer.Write(row.WipeType);

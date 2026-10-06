@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -34,8 +35,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             try
             {
                 // The scan reads many ROM files; run it off the UI thread so the window stays responsive.
-                var found = await Task.Run(() => ProjectIndex.Validate());
-                foreach (var i in found) Issues.Add(i);
+                List<ValidationIssue> found = await Task.Run(() => ProjectIndex.Validate());
+                foreach (ValidationIssue i in found) Issues.Add(i);
                 ValidationStatus = found.Count == 0
                     ? "No problems found. Every reference points at something that exists."
                     : $"{found.Count} issue(s) found.";
@@ -59,7 +60,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public ProjectChecksViewModel()
         {
-            foreach (var n in Enum.GetNames<RefKind>()) RefKinds.Add(n);
+            foreach (string n in Enum.GetNames<RefKind>()) RefKinds.Add(n);
         }
 
         public void Find()
@@ -67,9 +68,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             FindResults.Clear();
             try
             {
-                var kind = (RefKind)_refKindIndex;
-                var headers = ProjectIndex.HeadersUsing(kind, (int)_lookupId);
-                foreach (var h in headers) FindResults.Add($"Header {h}");
+                RefKind kind = (RefKind)_refKindIndex;
+                List<ushort> headers = ProjectIndex.HeadersUsing(kind, (int)_lookupId);
+                foreach (ushort h in headers) FindResults.Add($"Header {h}");
                 FindStatus = headers.Count == 0
                     ? $"No header references {kind} {(int)_lookupId}."
                     : $"{headers.Count} header(s) reference {kind} {(int)_lookupId}.";

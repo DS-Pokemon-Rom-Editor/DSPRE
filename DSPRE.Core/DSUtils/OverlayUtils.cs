@@ -47,7 +47,7 @@ namespace DSPRE
             try
             {
                 string yamlContent = File.ReadAllText(RomInfo.overlayTablePath);
-                var deserializer = new DeserializerBuilder()
+                IDeserializer deserializer = new DeserializerBuilder()
                     .IgnoreUnmatchedProperties()
                     .Build();
                 _cachedOverlayYaml = deserializer.Deserialize<OverlayYaml>(yamlContent);
@@ -71,7 +71,7 @@ namespace DSPRE
             {
                 if (RomInfo.IsDsRomProject)
                 {
-                    var yaml = LoadOverlayYaml();
+                    OverlayYaml yaml = LoadOverlayYaml();
                     if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
                         return false;
                     return yaml.overlays[ovNumber].compressed;
@@ -98,7 +98,7 @@ namespace DSPRE
             {
                 if (RomInfo.IsDsRomProject)
                 {
-                    var yaml = LoadOverlayYaml();
+                    OverlayYaml yaml = LoadOverlayYaml();
                     if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
                         return 0;
                     return yaml.overlays[ovNumber].base_address;
@@ -114,7 +114,7 @@ namespace DSPRE
             {
                 if (RomInfo.IsDsRomProject)
                 {
-                    var yaml = LoadOverlayYaml();
+                    OverlayYaml yaml = LoadOverlayYaml();
                     if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
                         return 0;
                     return yaml.overlays[ovNumber].code_size + yaml.overlays[ovNumber].bss_size;
@@ -131,7 +131,7 @@ namespace DSPRE
             {
                 if (RomInfo.IsDsRomProject)
                 {
-                    var yaml = LoadOverlayYaml();
+                    OverlayYaml yaml = LoadOverlayYaml();
                     if (yaml?.overlays == null || ovNumber >= yaml.overlays.Count)
                         return 0;
                     return yaml.overlays[ovNumber].ctor_start;
@@ -147,7 +147,7 @@ namespace DSPRE
             {
                 if (RomInfo.IsDsRomProject)
                 {
-                    var yaml = LoadOverlayYaml();
+                    OverlayYaml yaml = LoadOverlayYaml();
                     return yaml?.overlays?.Count ?? 0;
                 }
 

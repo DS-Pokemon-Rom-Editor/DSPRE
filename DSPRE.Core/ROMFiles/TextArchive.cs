@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using static DSPRE.RomInfo;
 
@@ -443,7 +444,7 @@ namespace DSPRE.ROMFiles
         // serde_json's escaping, which chatot uses.
         private static string JsonQuote(string text)
         {
-            var sb = new System.Text.StringBuilder(text.Length + 2).Append('"');
+            StringBuilder sb = new System.Text.StringBuilder(text.Length + 2).Append('"');
             foreach (char c in text)
             {
                 switch (c)
@@ -510,11 +511,11 @@ namespace DSPRE.ROMFiles
             }
 
             // Create JSON structure using System.Text.Json's native types with Unicode support
-            using (var stream = new MemoryStream())
+            using (MemoryStream stream = new MemoryStream())
             {
                 // Keep the file's own line ending; chatot writes LF.
                 bool crlf = File.Exists(jsonPath) && File.ReadAllText(jsonPath).Contains("\r\n");
-                var options = new JsonWriterOptions
+                JsonWriterOptions options = new JsonWriterOptions
                 {
                     Indented = true,
                     NewLine = crlf ? "\r\n" : "\n",
@@ -522,7 +523,7 @@ namespace DSPRE.ROMFiles
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping 
                 };
                 
-                using (var writer = new Utf8JsonWriter(stream, options))
+                using (Utf8JsonWriter writer = new Utf8JsonWriter(stream, options))
                 {
                     writer.WriteStartObject();
                     writer.WriteNumber("key", existingKey);

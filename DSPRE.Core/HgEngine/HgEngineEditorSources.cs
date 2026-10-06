@@ -18,7 +18,7 @@ namespace DSPRE.HgEngine
         /// <summary>An unmatched brace is kept as (-1, -1) so a later spelling can't stand in for it.</summary>
         internal static Dictionary<string, (int Open, int Close)> Build(string text)
         {
-            var spans = new Dictionary<string, (int Open, int Close)>(StringComparer.Ordinal);
+            Dictionary<string, (int Open, int Close)> spans = new Dictionary<string, (int Open, int Close)>(StringComparer.Ordinal);
             foreach (Match m in EntryStart.Matches(text))
             {
                 string name = m.Groups[1].Value;
@@ -32,7 +32,7 @@ namespace DSPRE.HgEngine
         internal static bool TryGetBlock(string text, IReadOnlyDictionary<string, (int Open, int Close)> index, string designator, out HgEngineSourceBlock block)
         {
             block = default;
-            if (!index.TryGetValue(designator, out var span) || span.Open < 0) return false;
+            if (!index.TryGetValue(designator, out (int Open, int Close) span) || span.Open < 0) return false;
             block = new HgEngineSourceBlock(text.Substring(span.Open, span.Close - span.Open + 1));
             return true;
         }
@@ -45,8 +45,8 @@ namespace DSPRE.HgEngine
             const string key = "[X] = ";
             string text = key + block;
             unresolved = new List<string>();
-            var writes = HgEngineValueSpelling.Preserve(new HgEngineSourceBlock(block), HgEngineSourceFields.Writes(fields, model, headers), lookupFor);
-            foreach (var write in writes)
+            List<HgEngineFieldWrite> writes = HgEngineValueSpelling.Preserve(new HgEngineSourceBlock(block), HgEngineSourceFields.Writes(fields, model, headers), lookupFor);
+            foreach (HgEngineFieldWrite write in writes)
             {
                 if (write.ValueLiteral == null || !HgEngineSourcePatcher.TryReplaceField(ref text, "X", write.Path, write.ValueLiteral))
                     unresolved.Add(string.Concat(write.Path.Select(p => p.ToString())));
@@ -92,13 +92,13 @@ namespace DSPRE.HgEngine
 
         /// <summary>Fills <paramref name="move"/> from the move's Moves.c entry.</summary>
         public static bool TryLoad(int id, MoveData move, out string error) =>
-            HgEngineEntrySource.TryLoad(HgEngineDomain.Moves, id, out var entry, out error)
+            HgEngineEntrySource.TryLoad(HgEngineDomain.Moves, id, out HgEngineSourceBlock entry, out error)
             && HgEngineSourceFields.TryRead(entry, Fields, move, HgEngineSourceFields.NameLookup(Headers), out error);
 
         public static bool TryWrite(int id, MoveData move, out string error)
         {
-            var fields = HgEngineValueSpelling.Preserve(HgEngineDomain.Moves, id, HgEngineSourceFields.Writes(Fields, move, Headers));
-            if (HgEngineWriter.TryWriteFields(HgEngineDomain.Moves, id, fields, out var unresolved, out error, allOrNothing: true))
+            List<HgEngineFieldWrite> fields = HgEngineValueSpelling.Preserve(HgEngineDomain.Moves, id, HgEngineSourceFields.Writes(Fields, move, Headers));
+            if (HgEngineWriter.TryWriteFields(HgEngineDomain.Moves, id, fields, out List<string> unresolved, out error, allOrNothing: true))
                 return true;
             if (error == null && unresolved.Count > 0)
                 error = $"Moves.c has no {string.Join(", ", unresolved)} for this move, so nothing was written.";
@@ -111,7 +111,7 @@ namespace DSPRE.HgEngine
             path = null;
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var info = HgEngineDomains.All.First(d => d.Domain == HgEngineDomain.Moves);
+            HgEngineDomainInfo info = HgEngineDomains.All.First(d => d.Domain == HgEngineDomain.Moves);
             path = Path.Combine(HgEngineProject.RepoPathUnc, info.SourceFileRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (File.Exists(path)) return true;
             error = $"Source file not found: {path}";
@@ -123,8 +123,8 @@ namespace DSPRE.HgEngine
         public static bool TryWriteMany(IReadOnlyDictionary<int, MoveData> moves, out string error)
         {
             if (!TryGetSourcePath(out string path, out error)) return false;
-            var targets = new List<(string Designator, MoveData Move)>();
-            foreach (var (id, move) in moves.OrderBy(kv => kv.Key))
+            List<(string Designator, MoveData Move)> targets = new List<(string Designator, MoveData Move)>();
+            foreach ((int id, MoveData move) in moves.OrderBy(kv => kv.Key))
             {
                 if (!HgEngineDesignators.TryResolve(HgEngineDomain.Moves, id, out string designator))
                 { error = $"No source name was found for move {id}, so nothing was written."; return false; }
@@ -150,21 +150,21 @@ namespace DSPRE.HgEngine
             Func<HgEngineValueSpelling.Write, Func<string, int?>> lookupFor, out string error)
         {
             error = null;
-            var index = HgEngineEntryIndex.Build(text);
-            var patched = new List<(int Open, int Close, string Block)>();
-            foreach (var (designator, move) in moves)
+            Dictionary<string, (int Open, int Close)> index = HgEngineEntryIndex.Build(text);
+            List<(int Open, int Close, string Block)> patched = new List<(int Open, int Close, string Block)>();
+            foreach ((string designator, MoveData move) in moves)
             {
-                if (!index.TryGetValue(designator, out var span) || span.Open < 0)
+                if (!index.TryGetValue(designator, out (int Open, int Close) span) || span.Open < 0)
                 { error = $"{designator} is not in Moves.c, so nothing was written."; return false; }
-                if (!HgEngineEntryIndex.TryPatch(text.Substring(span.Open, span.Close - span.Open + 1), Fields, move, Headers, lookupFor, out string block, out var unresolved))
+                if (!HgEngineEntryIndex.TryPatch(text.Substring(span.Open, span.Close - span.Open + 1), Fields, move, Headers, lookupFor, out string block, out List<string> unresolved))
                 { error = $"Moves.c has no {string.Join(", ", unresolved)} for {designator}, so nothing was written."; return false; }
                 patched.Add((span.Open, span.Close, block));
             }
 
             patched.Sort((a, b) => a.Open.CompareTo(b.Open));
-            var sb = new StringBuilder(text.Length);
+            StringBuilder sb = new StringBuilder(text.Length);
             int at = 0;
-            foreach (var (open, close, block) in patched)
+            foreach ((int open, int close, string block) in patched)
             {
                 if (open < at) { error = "Two moves name the same Moves.c entry, so nothing was written."; return false; }
                 sb.Append(text, at, open - at).Append(block);
@@ -185,8 +185,8 @@ namespace DSPRE.HgEngine
             if (!TryGetSourcePath(out string path, out error)) return false;
 
             string text = HgEngineFileCache.GetText(path);
-            var index = HgEngineEntryIndex.Build(text);
-            var lookup = HgEngineSourceFields.NameLookup(Headers);
+            Dictionary<string, (int Open, int Close)> index = HgEngineEntryIndex.Build(text);
+            Func<string, int?> lookup = HgEngineSourceFields.NameLookup(Headers);
             foreach (int id in ids)
             {
                 if (!HgEngineDesignators.TryResolve(HgEngineDomain.Moves, id, out string designator))
@@ -194,7 +194,7 @@ namespace DSPRE.HgEngine
                     skipped.Add($"Move {id}: no source name");
                     continue;
                 }
-                var move = baseRecord(id);
+                MoveData move = baseRecord(id);
                 if (TryReadEntry(text, index, designator, move, lookup, out string readError)) moves[id] = move;
                 else skipped.Add($"Move {id}: {readError}");
             }
@@ -204,7 +204,7 @@ namespace DSPRE.HgEngine
         internal static bool TryReadEntry(string text, IReadOnlyDictionary<string, (int Open, int Close)> index, string designator,
             MoveData move, Func<string, int?> lookup, out string error)
         {
-            if (HgEngineEntryIndex.TryGetBlock(text, index, designator, out var entry))
+            if (HgEngineEntryIndex.TryGetBlock(text, index, designator, out HgEngineSourceBlock entry))
                 return HgEngineSourceFields.TryRead(entry, Fields, move, lookup, out error);
             error = $"{designator} is not in Moves.c.";
             return false;
@@ -309,7 +309,7 @@ namespace DSPRE.HgEngine
         /// <summary>Fills <paramref name="item"/> from the item's itemdata.c entry, the full 20-bit price included.</summary>
         public static bool TryLoad(int id, ItemData item, out string error)
         {
-            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Items, id, out var entry, out error)) return false;
+            if (!HgEngineEntrySource.TryLoad(HgEngineDomain.Items, id, out HgEngineSourceBlock entry, out error)) return false;
             return TryRead(entry, item, HgEngineSourceFields.NameLookup(Headers), out error);
         }
 
@@ -357,7 +357,7 @@ namespace DSPRE.HgEngine
 
         private static List<HgEngineSourceField<EncounterFileHGSS>> Build()
         {
-            var fields = new List<HgEngineSourceField<EncounterFileHGSS>>
+            List<HgEngineSourceField<EncounterFileHGSS>> fields = new List<HgEngineSourceField<EncounterFileHGSS>>
             {
                 Rate("rateWalk", e => e.walkingRate, (e, v) => e.walkingRate = v),
                 Rate("rateSurf", e => e.surfRate, (e, v) => e.surfRate = v),
@@ -401,13 +401,13 @@ namespace DSPRE.HgEngine
         }
 
         public static bool TryLoad(int id, EncounterFileHGSS encounters, out string error) =>
-            HgEngineEntrySource.TryLoad(HgEngineDomain.Encounters, id, out var entry, out error)
+            HgEngineEntrySource.TryLoad(HgEngineDomain.Encounters, id, out HgEngineSourceBlock entry, out error)
             && HgEngineSourceFields.TryRead(entry, Fields, encounters, HgEngineSourceFields.NameLookup(Headers), out error);
 
         public static bool TryWrite(int id, EncounterFileHGSS encounters, out string error)
         {
-            var fields = HgEngineValueSpelling.Preserve(HgEngineDomain.Encounters, id, HgEngineSourceFields.Writes(Fields, encounters, Headers));
-            if (HgEngineWriter.TryWriteFields(HgEngineDomain.Encounters, id, fields, out var unresolved, out error, allOrNothing: true))
+            List<HgEngineFieldWrite> fields = HgEngineValueSpelling.Preserve(HgEngineDomain.Encounters, id, HgEngineSourceFields.Writes(Fields, encounters, Headers));
+            if (HgEngineWriter.TryWriteFields(HgEngineDomain.Encounters, id, fields, out List<string> unresolved, out error, allOrNothing: true))
                 return true;
             if (error == null && unresolved.Count > 0)
                 error = $"Encounters.c has no {string.Join(", ", unresolved)} for this table, so nothing was written.";

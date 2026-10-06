@@ -23,7 +23,7 @@ namespace DSPRE.HgEngine
         /// <summary>Flag names the checkout defines, by number: config.h first, then asm/include/flags.inc.</summary>
         public static Dictionary<int, string> CheckoutFlags()
         {
-            var flags = new Dictionary<int, string>();
+            Dictionary<int, string> flags = new Dictionary<int, string>();
             if (!HgEngineProject.IsActive) return flags;
             void Read(string rel, Regex pattern)
             {
@@ -45,19 +45,19 @@ namespace DSPRE.HgEngine
         /// <summary>The v2 database with the checkout's names for flags it leaves unnamed, or the text unchanged.</summary>
         public static byte[] Overlay(byte[] v2)
         {
-            var flags = CheckoutFlags();
+            Dictionary<int, string> flags = CheckoutFlags();
             if (flags.Count == 0) return v2;
             JsonNode root;
             try { root = JsonNode.Parse(v2); }
             catch (JsonException) { return v2; }
             if (root?["flags"] is not JsonObject table) return v2;
 
-            var byId = new Dictionary<int, string>();
-            foreach (var (name, node) in table)
+            Dictionary<int, string> byId = new Dictionary<int, string>();
+            foreach ((string name, JsonNode node) in table)
                 if (node?["id"] is JsonValue v && v.TryGetValue(out int id)) byId.TryAdd(id, name);
 
             bool changed = false;
-            foreach (var (id, name) in flags.OrderBy(f => f.Key))
+            foreach ((int id, string name) in flags.OrderBy(f => f.Key))
             {
                 if (table.ContainsKey(name)) continue;
                 byId.TryGetValue(id, out string current);

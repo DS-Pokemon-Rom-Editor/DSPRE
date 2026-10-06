@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.Data
         private static string _loadedProjectDir;
 
         public static IReadOnlyCollection<LabelCategory> Categories { get { Ensure(); return _cats.Values; } }
-        public static LabelCategory GetCategory(string key) { Ensure(); return _cats.TryGetValue(key, out var c) ? c : null; }
+        public static LabelCategory GetCategory(string key) { Ensure(); return _cats.TryGetValue(key, out LabelCategory c) ? c : null; }
 
         private static string GlobalPath => Path.Combine(AppPaths.DatabasePath, "labels.global.json");
         private static string ProjectPath => string.IsNullOrEmpty(dspreDir) ? null : Path.Combine(dspreDir, "dspre_labels.json");
@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The routine names as the games' own source has them, before anybody renames one.</summary>
         private static string[] BuildRoutineDefaults()
         {
-            var names = new string[BattleAnimFuncs.TableSize];
+            string[] names = new string[BattleAnimFuncs.TableSize];
             for (int i = 0; i < names.Length; i++) names[i] = BattleAnimFuncs.Get(i)?.Name ?? ("Routine " + i);
             return names;
         }
@@ -152,9 +152,9 @@ namespace DSPRE.Avalonia.Data
         private static string[] Dense(Dictionary<int, string> byValue)
         {
             int n = 0;
-            foreach (var k in byValue.Keys) n = Math.Max(n, k + 1);
-            var arr = new string[n];
-            foreach (var kv in byValue) arr[kv.Key] = kv.Value;
+            foreach (int k in byValue.Keys) n = Math.Max(n, k + 1);
+            string[] arr = new string[n];
+            foreach (KeyValuePair<int, string> kv in byValue) arr[kv.Key] = kv.Value;
             return arr;
         }
 
@@ -176,10 +176,10 @@ namespace DSPRE.Avalonia.Data
         /// from EvolutionFile.evoDescriptions, the attribute defaults for the evolution_methods category.</summary>
         private static int[] EvoParamDefaults()
         {
-            var names = Enum.GetNames<EvolutionMethod>();
-            var arr = new int[names.Length];
+            string[] names = Enum.GetNames<EvolutionMethod>();
+            int[] arr = new int[names.Length];
             for (int i = 0; i < names.Length; i++)
-                arr[i] = EvolutionFile.evoDescriptions.TryGetValue((EvolutionMethod)i, out var meaning) ? (int)meaning : 0;
+                arr[i] = EvolutionFile.evoDescriptions.TryGetValue((EvolutionMethod)i, out EvolutionParamMeaning meaning) ? (int)meaning : 0;
             return arr;
         }
 
@@ -188,11 +188,11 @@ namespace DSPRE.Avalonia.Data
         /// raw byte value rather than the declaration position.</summary>
         private static string[] ByValue<TEnum>() where TEnum : struct, Enum
         {
-            var vals = Enum.GetValues<TEnum>();
+            TEnum[] vals = Enum.GetValues<TEnum>();
             int max = 0;
-            foreach (var v in vals) max = Math.Max(max, Convert.ToInt32(v));
-            var arr = new string[max + 1];
-            foreach (var v in vals)
+            foreach (TEnum v in vals) max = Math.Max(max, Convert.ToInt32(v));
+            string[] arr = new string[max + 1];
+            foreach (TEnum v in vals)
             {
                 int i = Convert.ToInt32(v);
                 if (i >= 0 && i < arr.Length) arr[i] = v.ToString();
@@ -205,12 +205,12 @@ namespace DSPRE.Avalonia.Data
         public static IReadOnlyList<string> Get(string key)
         {
             Ensure();
-            if (!_cats.TryGetValue(key, out var cat)) return Array.Empty<string>();
+            if (!_cats.TryGetValue(key, out LabelCategory cat)) return Array.Empty<string>();
             int count = cat.Defaults.Count;
-            if (_global.TryGetValue(key, out var gl)) count = Math.Max(count, MaxIndex(gl) + 1);
-            if (_project.TryGetValue(key, out var pj)) count = Math.Max(count, MaxIndex(pj) + 1);
+            if (_global.TryGetValue(key, out Dictionary<int, string> gl)) count = Math.Max(count, MaxIndex(gl) + 1);
+            if (_project.TryGetValue(key, out Dictionary<int, string> pj)) count = Math.Max(count, MaxIndex(pj) + 1);
             count = Math.Min(Math.Max(count, 0), cat.Cap);
-            var list = new List<string>(count);
+            List<string> list = new List<string>(count);
             for (int i = 0; i < count; i++) list.Add(Resolve(cat, key, i));
             return list;
         }
@@ -219,21 +219,21 @@ namespace DSPRE.Avalonia.Data
         public static string GetLabel(string key, int index)
         {
             Ensure();
-            return _cats.TryGetValue(key, out var cat) ? Resolve(cat, key, index) : index.ToString();
+            return _cats.TryGetValue(key, out LabelCategory cat) ? Resolve(cat, key, index) : index.ToString();
         }
 
         /// <summary>The built-in default at an index (ignores overrides), shown as a hint in the editor.</summary>
         public static string GetDefault(string key, int index)
         {
-            var cat = GetCategory(key);
+            LabelCategory cat = GetCategory(key);
             if (cat == null) return "";
             return index < cat.Defaults.Count ? cat.Defaults[index] : $"{cat.Singular} {index}";
         }
 
         private static string Resolve(LabelCategory cat, string key, int i)
         {
-            if (_project.TryGetValue(key, out var pj) && pj.TryGetValue(i, out var pv) && !string.IsNullOrEmpty(pv)) return pv;
-            if (_global.TryGetValue(key, out var gl) && gl.TryGetValue(i, out var gv) && !string.IsNullOrEmpty(gv)) return gv;
+            if (_project.TryGetValue(key, out Dictionary<int, string> pj) && pj.TryGetValue(i, out string pv) && !string.IsNullOrEmpty(pv)) return pv;
+            if (_global.TryGetValue(key, out Dictionary<int, string> gl) && gl.TryGetValue(i, out string gv) && !string.IsNullOrEmpty(gv)) return gv;
             string d = i < cat.Defaults.Count ? cat.Defaults[i] : null;   // null = value-gap or beyond defaults
             return string.IsNullOrEmpty(d) ? $"{cat.Singular} {i}" : d;
         }
@@ -248,8 +248,8 @@ namespace DSPRE.Avalonia.Data
         public static void SetLabel(string key, int index, string value, bool global)
         {
             Ensure();
-            var map = global ? _global : _project;
-            if (!map.TryGetValue(key, out var d)) { d = new Dictionary<int, string>(); map[key] = d; }
+            Dictionary<string, Dictionary<int, string>> map = global ? _global : _project;
+            if (!map.TryGetValue(key, out Dictionary<int, string> d)) { d = new Dictionary<int, string>(); map[key] = d; }
             // Blank, or the same as what this layer falls back to, keeps no entry. Added entries past the defaults
             // stay even when unrenamed, because they are what extends the list.
             bool withinDefaults = index < (GetCategory(key)?.Defaults.Count ?? 0);
@@ -261,7 +261,7 @@ namespace DSPRE.Avalonia.Data
 
         private static string FallbackLabel(string key, int index, bool global)
         {
-            if (!global && _global.TryGetValue(key, out var gl) && gl.TryGetValue(index, out var gv) && !string.IsNullOrEmpty(gv))
+            if (!global && _global.TryGetValue(key, out Dictionary<int, string> gl) && gl.TryGetValue(index, out string gv) && !string.IsNullOrEmpty(gv))
                 return gv;
             return GetDefault(key, index);
         }
@@ -278,9 +278,9 @@ namespace DSPRE.Avalonia.Data
         public static int GetAttr(string key, int index)
         {
             Ensure();
-            if (_projectAttr.TryGetValue(key, out var pj) && pj.TryGetValue(index, out var pv)) return pv;
-            if (_globalAttr.TryGetValue(key, out var gl) && gl.TryGetValue(index, out var gv)) return gv;
-            var cat = GetCategory(key);
+            if (_projectAttr.TryGetValue(key, out Dictionary<int, int> pj) && pj.TryGetValue(index, out int pv)) return pv;
+            if (_globalAttr.TryGetValue(key, out Dictionary<int, int> gl) && gl.TryGetValue(index, out int gv)) return gv;
+            LabelCategory cat = GetCategory(key);
             if (cat?.AttrDefaults != null && index >= 0 && index < cat.AttrDefaults.Count) return cat.AttrDefaults[index];
             return 0;
         }
@@ -288,13 +288,13 @@ namespace DSPRE.Avalonia.Data
         public static void SetAttr(string key, int index, int value, bool global)
         {
             Ensure();
-            var map = global ? _globalAttr : _projectAttr;
-            if (!map.TryGetValue(key, out var d)) { d = new Dictionary<int, int>(); map[key] = d; }
+            Dictionary<string, Dictionary<int, int>> map = global ? _globalAttr : _projectAttr;
+            if (!map.TryGetValue(key, out Dictionary<int, int> d)) { d = new Dictionary<int, int>(); map[key] = d; }
             int fallback;
-            if (!global && _globalAttr.TryGetValue(key, out var gl) && gl.TryGetValue(index, out var gv)) fallback = gv;
+            if (!global && _globalAttr.TryGetValue(key, out Dictionary<int, int> gl) && gl.TryGetValue(index, out int gv)) fallback = gv;
             else
             {
-                var cat = GetCategory(key);
+                LabelCategory cat = GetCategory(key);
                 fallback = cat?.AttrDefaults != null && index >= 0 && index < cat.AttrDefaults.Count ? cat.AttrDefaults[index] : -1;
             }
             if (value == fallback) d.Remove(index);
@@ -318,24 +318,24 @@ namespace DSPRE.Avalonia.Data
         {
             Ensure();
             _draftResets.Add((global, key));
-            foreach (var k in _draftLabels.Keys.Where(k => k.g == global && k.k == key).ToList()) _draftLabels.Remove(k);
-            foreach (var k in _draftAttrs.Keys.Where(k => k.g == global && k.k == key).ToList()) _draftAttrs.Remove(k);
+            foreach ((bool g, string k, int i) k in _draftLabels.Keys.Where(k => k.g == global && k.k == key).ToList()) _draftLabels.Remove(k);
+            foreach ((bool g, string k, int i) k in _draftAttrs.Keys.Where(k => k.g == global && k.k == key).ToList()) _draftAttrs.Remove(k);
         }
 
         /// <summary>A label as the Label editor should DISPLAY it (committed value overlaid with the draft).</summary>
         public static string GetDraftLabel(string key, int idx, bool global)
         {
-            if (_draftLabels.TryGetValue((global, key, idx), out var v)) return string.IsNullOrEmpty(v) ? GetDefault(key, idx) : v;
+            if (_draftLabels.TryGetValue((global, key, idx), out string v)) return string.IsNullOrEmpty(v) ? GetDefault(key, idx) : v;
             if (_draftResets.Contains((global, key))) return GetDefault(key, idx);
             return GetLabel(key, idx);
         }
 
         public static int GetDraftAttr(string key, int idx, bool global)
         {
-            if (_draftAttrs.TryGetValue((global, key, idx), out var v)) return v;
+            if (_draftAttrs.TryGetValue((global, key, idx), out int v)) return v;
             if (_draftResets.Contains((global, key)))
             {
-                var c = GetCategory(key);
+                LabelCategory c = GetCategory(key);
                 return c?.AttrDefaults != null && idx >= 0 && idx < c.AttrDefaults.Count ? c.AttrDefaults[idx] : 0;
             }
             return GetAttr(key, idx);
@@ -345,7 +345,7 @@ namespace DSPRE.Avalonia.Data
         public static int DraftCount(string key, bool global)
         {
             int n = _draftResets.Contains((global, key)) ? (GetCategory(key)?.Defaults.Count ?? 0) : Count(key);
-            foreach (var k in _draftLabels.Keys) if (k.g == global && k.k == key) n = Math.Max(n, k.i + 1);
+            foreach ((bool g, string k, int i) k in _draftLabels.Keys) if (k.g == global && k.k == key) n = Math.Max(n, k.i + 1);
             return Math.Min(n, GetCategory(key)?.Cap ?? 256);
         }
 
@@ -353,14 +353,14 @@ namespace DSPRE.Avalonia.Data
         public static void CommitDraft()
         {
             Ensure();
-            foreach (var r in _draftResets) ResetCategory(r.k, r.g);
-            foreach (var kv in _draftLabels) SetLabel(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
-            foreach (var kv in _draftAttrs) SetAttr(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
+            foreach ((bool g, string k) r in _draftResets) ResetCategory(r.k, r.g);
+            foreach (KeyValuePair<(bool g, string k, int i), string> kv in _draftLabels) SetLabel(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
+            foreach (KeyValuePair<(bool g, string k, int i), int> kv in _draftAttrs) SetAttr(kv.Key.k, kv.Key.i, kv.Value, kv.Key.g);
             bool g = false, p = false;
             void Note(bool global) { if (global) g = true; else p = true; }
-            foreach (var k in _draftLabels.Keys) Note(k.g);
-            foreach (var k in _draftAttrs.Keys) Note(k.g);
-            foreach (var k in _draftResets) Note(k.g);
+            foreach ((bool g, string k, int i) k in _draftLabels.Keys) Note(k.g);
+            foreach ((bool g, string k, int i) k in _draftAttrs.Keys) Note(k.g);
+            foreach ((bool g, string k) k in _draftResets) Note(k.g);
             DiscardDraft();
             if (p) Save(false);
             if (g) Save(true);
@@ -378,13 +378,13 @@ namespace DSPRE.Avalonia.Data
 
         public static void RestoreDraft(byte[] snapshot)
         {
-            using var doc = JsonDocument.Parse(snapshot);
+            using JsonDocument doc = JsonDocument.Parse(snapshot);
             DiscardDraft();
-            foreach (var e in doc.RootElement.GetProperty("Labels").EnumerateArray())
+            foreach (JsonElement e in doc.RootElement.GetProperty("Labels").EnumerateArray())
                 _draftLabels[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetString();
-            foreach (var e in doc.RootElement.GetProperty("Attrs").EnumerateArray())
+            foreach (JsonElement e in doc.RootElement.GetProperty("Attrs").EnumerateArray())
                 _draftAttrs[(e[0].GetBoolean(), e[1].GetString(), e[2].GetInt32())] = e[3].GetInt32();
-            foreach (var e in doc.RootElement.GetProperty("Resets").EnumerateArray())
+            foreach (JsonElement e in doc.RootElement.GetProperty("Resets").EnumerateArray())
                 _draftResets.Add((e[0].GetBoolean(), e[1].GetString()));
         }
 
@@ -395,7 +395,7 @@ namespace DSPRE.Avalonia.Data
             if (path == null) return;
             try
             {
-                var file = new LabelFile
+                LabelFile file = new LabelFile
                 {
                     labels = StringKeyed(global ? _global : _project),
                     attrs  = StringKeyed(global ? _globalAttr : _projectAttr),
@@ -414,8 +414,8 @@ namespace DSPRE.Avalonia.Data
 
         private static Dictionary<string, Dictionary<string, T>> StringKeyed<T>(Dictionary<string, Dictionary<int, T>> src)
         {
-            var outObj = new Dictionary<string, Dictionary<string, T>>();
-            foreach (var kv in src)
+            Dictionary<string, Dictionary<string, T>> outObj = new Dictionary<string, Dictionary<string, T>>();
+            foreach (KeyValuePair<string, Dictionary<int, T>> kv in src)
                 if (kv.Value.Count > 0)
                     outObj[kv.Key] = kv.Value.OrderBy(e => e.Key).ToDictionary(e => e.Key.ToString(), e => e.Value);
             return outObj;
@@ -438,16 +438,16 @@ namespace DSPRE.Avalonia.Data
             {
                 if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
                 string json = File.ReadAllText(path);
-                var file = JsonSerializer.Deserialize<LabelFile>(json);
+                LabelFile file = JsonSerializer.Deserialize<LabelFile>(json);
                 if (file?.labels != null)
                 {
-                    foreach (var kv in file.labels) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
-                    if (file.attrs != null) foreach (var kv in file.attrs) attrs[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                    foreach (KeyValuePair<string, Dictionary<string, string>> kv in file.labels) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                    if (file.attrs != null) foreach (KeyValuePair<string, Dictionary<string, int>> kv in file.attrs) attrs[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
                 }
                 else   // old flat format (root = cat → idx → label)
                 {
-                    var flat = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json);
-                    if (flat != null) foreach (var kv in flat) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
+                    Dictionary<string, Dictionary<string, string>> flat = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json);
+                    if (flat != null) foreach (KeyValuePair<string, Dictionary<string, string>> kv in flat) labels[CurrentKey(kv.Key)] = IntKeyed(kv.Value);
                 }
             }
             catch (Exception ex) { AppLogger.Error("LabelStore.Load: " + ex.Message); }
@@ -458,8 +458,8 @@ namespace DSPRE.Avalonia.Data
 
         private static Dictionary<int, T> IntKeyed<T>(Dictionary<string, T> src)
         {
-            var d = new Dictionary<int, T>();
-            foreach (var e in src) if (int.TryParse(e.Key, out int idx)) d[idx] = e.Value;
+            Dictionary<int, T> d = new Dictionary<int, T>();
+            foreach (KeyValuePair<string, T> e in src) if (int.TryParse(e.Key, out int idx)) d[idx] = e.Value;
             return d;
         }
     }

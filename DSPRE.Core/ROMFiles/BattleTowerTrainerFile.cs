@@ -17,7 +17,7 @@ namespace DSPRE.ROMFiles {
         public BattleTowerTrainer() { }
 
         public static BattleTowerTrainer Read(BinaryReader br) {
-            var t = new BattleTowerTrainer();
+            BattleTowerTrainer t = new BattleTowerTrainer();
             t.TrainerType = br.ReadUInt16();
             ushort numSets = br.ReadUInt16();
             for (int i = 0; i < numSets; i++) {
@@ -107,7 +107,7 @@ namespace DSPRE.ROMFiles {
         public override byte[] ToByteArray() {
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (var trainer in Trainers) {
+                foreach (BattleTowerTrainer trainer in Trainers) {
                     trainer.Write(bw, keepUnread: false);
                 }
                 return ms.ToArray();
@@ -177,7 +177,7 @@ namespace DSPRE.ROMFiles {
             try {
                 using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
                 using (BinaryReader br = new BinaryReader(fs)) {
-                    var oldTrainers = Trainers;
+                    BindingList<BattleTowerTrainer> oldTrainers = Trainers;
                     Trainers = new BindingList<BattleTowerTrainer>();
                     while (fs.Position + 4 <= fs.Length) {
                         BattleTowerTrainer trainer = BattleTowerTrainer.Read(br);

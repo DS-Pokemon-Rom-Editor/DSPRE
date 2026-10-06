@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
@@ -82,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             string[] names = Array.Empty<string>();
             try { names = RomInfo.GetAbilityNames(); } catch (Exception e) when (e is System.IO.IOException || e is ArgumentException) { }
-            var table = HgEngineSymbolTable.Load("include/constants/ability.h");
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load("include/constants/ability.h");
             for (int id = 0; table != null && table.TryGetNameWithPrefix(id, "ABILITY_", out string symbol); id++)
                 _all.Add(new AbilityRow { Id = id, Name = id < names.Length && names[id].Trim().Length > 0 ? names[id] : Humanize(symbol.Substring(8).ToLowerInvariant()) });
             Load();
@@ -90,7 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Load()
         {
-            if (!HgEngineAbilityFlags.TryRead(out var flags, out string error)) { StatusText = error; return; }
+            if (!HgEngineAbilityFlags.TryRead(out Dictionary<int, HashSet<string>> flags, out string error)) { StatusText = error; return; }
             _saved = flags.ToDictionary(kv => kv.Key, kv => new HashSet<string>(kv.Value));
             _current = flags.ToDictionary(kv => kv.Key, kv => new HashSet<string>(kv.Value));
             StatusText = $"{_all.Count} abilities, {_saved.Count(kv => kv.Value.Count > 0)} with flags · {HgEngineAbilityFlags.RelPath}";
@@ -109,12 +110,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
-            var ids = _current.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key).OrderBy(i => i).ToList();
+            List<int> ids = _current.Where(kv => kv.Value.Count > 0).Select(kv => kv.Key).OrderBy(i => i).ToList();
             w.Write(ids.Count);
             foreach (int id in ids)
             {
                 w.Write(id);
-                var flags = _current[id].OrderBy(f => f, StringComparer.Ordinal).ToList();
+                List<string> flags = _current[id].OrderBy(f => f, StringComparer.Ordinal).ToList();
                 w.Write(flags.Count);
                 foreach (string f in flags) w.Write(f);
             }
@@ -123,44 +124,44 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Selects the ability the step changed, so the undone flag is in view.
         private void ApplyState(byte[] state)
         {
-            var next = new Dictionary<int, HashSet<string>>();
+            Dictionary<int, HashSet<string>> next = new Dictionary<int, HashSet<string>>();
             ByteStateUndo.Unpack(state, r =>
             {
                 for (int n = r.ReadInt32(), i = 0; i < n; i++)
                 {
                     int id = r.ReadInt32();
-                    var set = new HashSet<string>();
+                    HashSet<string> set = new HashSet<string>();
                     for (int m = r.ReadInt32(), j = 0; j < m; j++) set.Add(r.ReadString());
                     next[id] = set;
                 }
             });
             int changed = next.Keys.Concat(_current.Keys).Distinct()
-                .Where(id => !Same(next.TryGetValue(id, out var a) ? a : null, _current.TryGetValue(id, out var b) ? b : null))
+                .Where(id => !Same(next.TryGetValue(id, out HashSet<string> a) ? a : null, _current.TryGetValue(id, out HashSet<string> b) ? b : null))
                 .DefaultIfEmpty(-1).First();
             _current = next;
-            var row = Abilities.FirstOrDefault(a => a.Id == changed);
+            AbilityRow row = Abilities.FirstOrDefault(a => a.Id == changed);
             if (row != null && row != _selected) Selected = row; else ShowFlags();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         private void ApplyFilter()
         {
-            var keep = _selected;
+            AbilityRow keep = _selected;
             Abilities.Clear();
-            foreach (var a in _all.Where(a => _filter.Length == 0 || a.Display.Contains(_filter, StringComparison.OrdinalIgnoreCase))) Abilities.Add(a);
+            foreach (AbilityRow a in _all.Where(a => _filter.Length == 0 || a.Display.Contains(_filter, StringComparison.OrdinalIgnoreCase))) Abilities.Add(a);
             Selected = keep != null && Abilities.Contains(keep) ? keep : Abilities.FirstOrDefault();
         }
 
         private void ShowFlags()
         {
-            var set = _selected != null && _current.TryGetValue(_selected.Id, out var s) ? s : null;
-            foreach (var f in Flags) f.Show(set?.Contains(f.Key) == true);
+            HashSet<string> set = _selected != null && _current.TryGetValue(_selected.Id, out HashSet<string> s) ? s : null;
+            foreach (FlagItem f in Flags) f.Show(set?.Contains(f.Key) == true);
         }
 
         private void OnFlagChanged(FlagItem item)
         {
             if (_selected == null) return;
-            if (!_current.TryGetValue(_selected.Id, out var set)) _current[_selected.Id] = set = new HashSet<string>();
+            if (!_current.TryGetValue(_selected.Id, out HashSet<string> set)) _current[_selected.Id] = set = new HashSet<string>();
             if (item.IsSet) set.Add(item.Key); else set.Remove(item.Key);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             _undo?.Record();
@@ -169,7 +170,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private static bool Same(HashSet<string> a, HashSet<string> b) => (a?.Count ?? 0) == 0 ? (b?.Count ?? 0) == 0 : b != null && a.SetEquals(b);
 
         private Dictionary<int, HashSet<string>> Changes() =>
-            _current.Where(kv => !Same(kv.Value, _saved.TryGetValue(kv.Key, out var s) ? s : null)).ToDictionary(kv => kv.Key, kv => new HashSet<string>(kv.Value));
+            _current.Where(kv => !Same(kv.Value, _saved.TryGetValue(kv.Key, out HashSet<string> s) ? s : null)).ToDictionary(kv => kv.Key, kv => new HashSet<string>(kv.Value));
 
         public bool HasUnsavedChanges => Changes().Count > 0;
         public string UnsavedChangesDescription => "Ability Flags";
@@ -178,15 +179,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task<bool> SaveChangesAsync()
         {
-            var changes = Changes();
+            Dictionary<int, HashSet<string>> changes = Changes();
             if (changes.Count == 0) return true;
-            var (saved, error) = await HgEngineSave.RunAsync(() => HgEngineAbilityFlags.TryWrite(changes, out string writeError) ? null : writeError);
+            (bool saved, string error) = await HgEngineSave.RunAsync(() => HgEngineAbilityFlags.TryWrite(changes, out string writeError) ? null : writeError);
             if (!saved)
             {
                 if (error != null) await DialogHelper.ShowError($"The ability flags were not saved:\n{error}", "Ability Flags");
                 return false;
             }
-            foreach (var (id, set) in changes) _saved[id] = new HashSet<string>(set);
+            foreach ((int id, HashSet<string> set) in changes) _saved[id] = new HashSet<string>(set);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
             return true;
@@ -196,7 +197,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private static string Humanize(string key)
         {
-            var sb = new System.Text.StringBuilder();
+            StringBuilder sb = new System.Text.StringBuilder();
             foreach (char c in key.Replace('_', ' '))
             {
                 if (char.IsUpper(c) && sb.Length > 0 && sb[^1] != ' ') sb.Append(' ');

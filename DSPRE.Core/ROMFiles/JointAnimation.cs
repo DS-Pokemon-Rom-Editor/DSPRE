@@ -35,7 +35,7 @@ namespace DSPRE.ROMFiles
         {
             _file = file;
             _animation = animation;
-            var jac = file.JAC[animation];
+            NSBCA.NSBCA_File.J_AC jac = file.JAC[animation];
             FrameCount = Math.Max(1, (int)jac.NrFrames);
             Count = file.JAC.Length;
             Name = file.JNT0.names != null && animation < file.JNT0.names.Length
@@ -51,7 +51,7 @@ namespace DSPRE.ROMFiles
             if (Encoding.ASCII.GetString(data, 0, 4) != "BCA0") return Array.Empty<string>();
             try
             {
-                var file = NSBCA.Read(data);
+                NSBCA.NSBCA_File file = NSBCA.Read(data);
                 return file.JNT0.names?.Select(n => (n ?? "").Trim()).ToArray() ?? Array.Empty<string>();
             }
             catch { return Array.Empty<string>(); }
@@ -99,16 +99,16 @@ namespace DSPRE.ROMFiles
         /// </param>
         public float[] MatrixFor(int objectId, int frame, NSBMDObject modelObject = null, float modelScale = 1f)
         {
-            var jac = _file.JAC[_animation];
-            var obj = jac.ObjInfo.FirstOrDefault(o => o.ID == objectId);
+            NSBCA.NSBCA_File.J_AC jac = _file.JAC[_animation];
+            NSBCA.NSBCA_File.J_AC.objInfo obj = jac.ObjInfo.FirstOrDefault(o => o.ID == objectId);
             if (obj.ID != objectId || !Drives(obj)) return null;
 
             if (frame < 0) frame = 0;
             frame %= FrameCount;
 
-            var t = Translation(obj, frame);
-            var r = Rotation(jac, obj, frame);
-            var s = Scale(obj, frame);
+            float[] t = Translation(obj, frame);
+            float[] r = Rotation(jac, obj, frame);
+            float[] s = Scale(obj, frame);
 
             // Fall back to the model's own value for anything this animation does not drive.
             if (t == null && modelObject?.TransVect != null && modelObject.Trans)
@@ -133,7 +133,7 @@ namespace DSPRE.ROMFiles
 
         private static float[] Translate(float x, float y, float z)
         {
-            var m = NSBMDGlRenderer.loadIdentity();
+            float[] m = NSBMDGlRenderer.loadIdentity();
             m[12] = x; m[13] = y; m[14] = z;
             return m;
         }
@@ -141,7 +141,7 @@ namespace DSPRE.ROMFiles
         private static float[] Translation(NSBCA.NSBCA_File.J_AC.objInfo o, int frame)
         {
             if (!HasTranslation(o)) return null;
-            var v = new float[3];
+            float[] v = new float[3];
             for (int k = 0; k < 3; k++) v[k] = Track(o.translate?[k], o.translate_keyframes?[k], frame, 0f);
             return v;
         }
@@ -149,7 +149,7 @@ namespace DSPRE.ROMFiles
         private static float[] Scale(NSBCA.NSBCA_File.J_AC.objInfo o, int frame)
         {
             if (!HasScale(o)) return null;
-            var v = new float[3];
+            float[] v = new float[3];
             for (int k = 0; k < 3; k++)
                 v[k] = Track(o.scale?[k]?[0], o.scale_keyframes?[k]?[0], frame, 1f);
 
@@ -170,8 +170,8 @@ namespace DSPRE.ROMFiles
         /// <summary>The turn for one frame, read out of the animation's pivot pool. </summary>
         private static float[] Rotation(NSBCA.NSBCA_File.J_AC jac, NSBCA.NSBCA_File.J_AC.objInfo o, int frame)
         {
-            var indices = o.rotate_keyframes?[0];
-            var modes = o.rotate_keyframes?[1];
+            List<float> indices = o.rotate_keyframes?[0];
+            List<float> modes = o.rotate_keyframes?[1];
             if (indices == null || indices.Count == 0) return null;
 
             int at = frame % indices.Count;

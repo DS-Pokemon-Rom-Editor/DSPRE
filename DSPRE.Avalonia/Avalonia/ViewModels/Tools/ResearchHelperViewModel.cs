@@ -262,18 +262,18 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             try
             {
-                var (scripts, levelScripts, events) = await Task.Run(() =>
+                (List<ScriptFile> scripts, List<LevelScriptFile> levelScripts, List<EventFile> events) = await Task.Run(() =>
                 {
-                    var sc = new List<ScriptFile>();
-                    var ls = new List<LevelScriptFile>();
-                    var ev = new List<EventFile>();
+                    List<ScriptFile> sc = new List<ScriptFile>();
+                    List<LevelScriptFile> ls = new List<LevelScriptFile>();
+                    List<EventFile> ev = new List<EventFile>();
 
                     int scriptCount = Filesystem.GetScriptCount();
                     for (int i = 0; i < scriptCount; i++)
                     {
                         try
                         {
-                            var sf = new ScriptFile(i, readFunctions: true, readActions: true);
+                            ScriptFile sf = new ScriptFile(i, readFunctions: true, readActions: true);
                             if (sf.isLevelScript)
                             {
                                 try { ls.Add(new LevelScriptFile(i)); } catch { }
@@ -300,7 +300,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 _cachedEventFiles = events;
 
                 // Build stats
-                foreach (var sf in _cachedScriptFiles)
+                foreach (ScriptFile sf in _cachedScriptFiles)
                 {
                     int total = (sf.allScripts?.Count ?? 0) + (sf.allFunctions?.Count ?? 0) + (sf.allActions?.Count ?? 0);
                     ScriptStats.Add(new ScriptFileStats
@@ -316,12 +316,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     _scriptFileById[sf.fileID] = sf;
                 }
 
-                foreach (var ls in _cachedLevelScriptFiles)
+                foreach (LevelScriptFile ls in _cachedLevelScriptFiles)
                 {
                     int mapChange = 0, screenReset = 0, loadGame = 0, varValue = 0;
                     if (ls.bufferSet != null)
                     {
-                        foreach (var t in ls.bufferSet)
+                        foreach (LevelScriptTrigger t in ls.bufferSet)
                         {
                             switch (t.triggerType)
                             {
@@ -345,14 +345,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
                 // Populate script file dropdown for ID watcher
                 ScriptFileEntries.Clear();
-                foreach (var sf in _cachedScriptFiles)
+                foreach (ScriptFile sf in _cachedScriptFiles)
                     ScriptFileEntries.Add($"{sf.fileID}: Script File");
 
                 if (ScriptFileEntries.Count > 0)
                     SelectedScriptFileIndex = 0;
 
                 TrainerNamesList.Clear();
-                foreach (var name in DSPRE.TrainerNames.GetAll()) TrainerNamesList.Add(name);
+                foreach (string name in DSPRE.TrainerNames.GetAll()) TrainerNamesList.Add(name);
                 if (TrainerNamesList.Count > 0) SelectedTrainerIndex = 0;
 
                 ClassNamesList.Clear();
@@ -390,21 +390,21 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             VariableResults.Clear();
             StatusText = $"Searching for variable 0x{varNum:X}...";
 
-            var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
+            Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
 
-            foreach (var sf in _cachedScriptFiles)
+            foreach (ScriptFile sf in _cachedScriptFiles)
             {
                 int count = CountVariableInScriptFile(sf, varNum, commandInfoDict);
                 if (count > 0) VariableResults.Add(new VariableUsageResult { FileType = "Script", FileID = sf.fileID, UsageCount = count });
             }
 
-            foreach (var ls in _cachedLevelScriptFiles)
+            foreach (LevelScriptFile ls in _cachedLevelScriptFiles)
             {
                 int count = CountVariableInLevelScript(ls, varNum);
                 if (count > 0) VariableResults.Add(new VariableUsageResult { FileType = "Level Script", FileID = ls.ID, UsageCount = count });
             }
 
-            foreach (var ev in _cachedEventFiles)
+            foreach (EventFile ev in _cachedEventFiles)
             {
                 int count = CountVariableInEventFile(ev, varNum);
                 if (count > 0) VariableResults.Add(new VariableUsageResult { FileType = "Event", FileID = ev.ID, UsageCount = count });
@@ -432,12 +432,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             FlagResults.Clear();
             StatusText = $"Searching for flag 0x{flagNum:X}...";
 
-            foreach (var ev in _cachedEventFiles)
+            foreach (EventFile ev in _cachedEventFiles)
             {
                 if (ev.overworlds == null) continue;
                 for (int i = 0; i < ev.overworlds.Count; i++)
                 {
-                    var ow = ev.overworlds[i];
+                    Overworld ow = ev.overworlds[i];
                     if (ow.flag == flagNum)
                         FlagResults.Add(new FlagUsageResult
                         {
@@ -450,7 +450,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 }
             }
 
-            foreach (var sf in _cachedScriptFiles)
+            foreach (ScriptFile sf in _cachedScriptFiles)
             {
                 int count = CountFlagInScriptFile(sf, flagNum);
                 if (count > 0)
@@ -481,7 +481,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 try
                 {
-                    var header = MapHeader.GetMapHeader(i);
+                    MapHeader header = MapHeader.GetMapHeader(i);
                     if (header == null) continue;
                     if (header.scriptFileID == id)
                         FileWatcherResults.Add(new ScriptFileReferenceResult { ReferenceType = "Header", ReferenceID = i, Field = "scriptFileID" });
@@ -503,7 +503,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             int idx = SelectedScriptFileIndex;
             if (idx < 0 || idx >= _cachedScriptFiles.Count) return;
 
-            var sf = _cachedScriptFiles[idx];
+            ScriptFile sf = _cachedScriptFiles[idx];
             int count = sf.allScripts?.Count ?? 0;
             // Position is the script number, so 0 lists the events that run nothing.
             ScriptIdEntries.Add("No script");
@@ -518,7 +518,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (SelectedScriptFileIndex < 0 || SelectedScriptIdIndex < 0)
             { StatusText = "Select a script file and script ID."; return; }
 
-            var sf = _cachedScriptFiles[SelectedScriptFileIndex];
+            ScriptFile sf = _cachedScriptFiles[SelectedScriptFileIndex];
             int scriptId = SelectedScriptIdIndex;
             string label = ScriptIdEntries[scriptId];
 
@@ -526,27 +526,27 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             StatusText = $"Searching for {label} in files associated with script file {sf.fileID}...";
 
             // Find event files linked to headers that use this script file
-            var assocEventIds = new HashSet<int>();
+            HashSet<int> assocEventIds = new HashSet<int>();
             int headerCount = RomInfo.GetHeaderCount();
             for (ushort i = 0; i < headerCount; i++)
             {
                 try
                 {
-                    var h = MapHeader.GetMapHeader(i);
+                    MapHeader h = MapHeader.GetMapHeader(i);
                     if (h != null && h.scriptFileID == sf.fileID)
                         assocEventIds.Add(h.eventFileID);
                 }
                 catch { }
             }
 
-            foreach (var ev in _cachedEventFiles)
+            foreach (EventFile ev in _cachedEventFiles)
             {
                 if (!assocEventIds.Contains(ev.ID)) continue;
 
                 if (ev.overworlds != null)
                     for (int i = 0; i < ev.overworlds.Count; i++)
                     {
-                        var ow = ev.overworlds[i];
+                        Overworld ow = ev.overworlds[i];
                         if (ow.scriptNumber == scriptId)
                             ScriptIdResults.Add(new ScriptIdUsageResult { EventFileID = ev.ID, EventType = "Overworld", EventIndex = i, Details = ow.ToString() });
                     }
@@ -554,7 +554,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 if (ev.spawnables != null)
                     for (int i = 0; i < ev.spawnables.Count; i++)
                     {
-                        var sp = ev.spawnables[i];
+                        Spawnable sp = ev.spawnables[i];
                         if (sp.scriptNumber == scriptId)
                             ScriptIdResults.Add(new ScriptIdUsageResult { EventFileID = ev.ID, EventType = "Spawnable", EventIndex = i, Details = sp.ToString() });
                     }
@@ -562,7 +562,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 if (ev.triggers != null)
                     for (int i = 0; i < ev.triggers.Count; i++)
                     {
-                        var tr = ev.triggers[i];
+                        Trigger tr = ev.triggers[i];
                         if (tr.scriptNumber == scriptId)
                             ScriptIdResults.Add(new ScriptIdUsageResult { EventFileID = ev.ID, EventType = "Trigger", EventIndex = i, Details = tr.ToString() });
                     }
@@ -580,13 +580,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             OwWatcherResults.Clear();
             StatusText = $"Searching for OW Entry ID {owEntryId}...";
 
-            foreach (var eventFile in _cachedEventFiles)
+            foreach (EventFile eventFile in _cachedEventFiles)
             {
                 if (eventFile.overworlds == null) continue;
 
                 for (int i = 0; i < eventFile.overworlds.Count; i++)
                 {
-                    var ow = eventFile.overworlds[i];
+                    Overworld ow = eventFile.overworlds[i];
                     if (ow.overlayTableEntry != owEntryId) continue;
 
                     OwWatcherResults.Add(new OwEntryUsageResult
@@ -623,21 +623,21 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             TrainerWatcherResults.Clear();
             StatusText = $"Searching for Trainer {trainerId} usage...";
 
-            var commandInfoDict = RomInfo.GetScriptCommandInfoDict();
-            foreach (var scriptFile in _cachedScriptFiles)
+            Dictionary<ushort, ScriptCommandInfo> commandInfoDict = RomInfo.GetScriptCommandInfoDict();
+            foreach (ScriptFile scriptFile in _cachedScriptFiles)
             {
                 ScanContainersForTrainerParameter(scriptFile.allScripts, commandInfoDict, trainerId, scriptFile.fileID, "Script Command");
                 ScanContainersForTrainerParameter(scriptFile.allFunctions, commandInfoDict, trainerId, scriptFile.fileID, "Function Command");
             }
 
             // Mirrors EventEditor.NavigateToOverworldTarget's decode formula.
-            foreach (var eventFile in _cachedEventFiles)
+            foreach (EventFile eventFile in _cachedEventFiles)
             {
                 if (eventFile.overworlds == null) continue;
 
                 for (int i = 0; i < eventFile.overworlds.Count; i++)
                 {
-                    var ow = eventFile.overworlds[i];
+                    Overworld ow = eventFile.overworlds[i];
                     if (ow.type != (ushort)Overworld.OwType.TRAINER) continue;
 
                     bool isPartner = ow.scriptNumber >= 4999;
@@ -657,10 +657,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             if (VsSeekerRematchTable.IsSupported)
             {
-                var rows = VsSeekerRematchTable.ReadAll();
+                List<RematchTable.Row> rows = VsSeekerRematchTable.ReadAll();
                 for (int r = 0; r < rows.Count; r++)
                 {
-                    var row = rows[r];
+                    RematchTable.Row row = rows[r];
                     if (row.BaseTrainerId == trainerId)
                     {
                         TrainerWatcherResults.Add(new TrainerUsageResult
@@ -688,10 +688,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             if (PokegearRematchTable.IsSupported)
             {
-                var rows = PokegearRematchTable.ReadAll();
+                List<RematchTable.Row> rows = PokegearRematchTable.ReadAll();
                 for (int r = 0; r < rows.Count; r++)
                 {
-                    var row = rows[r];
+                    RematchTable.Row row = rows[r];
                     if (row.BaseTrainerId == trainerId)
                     {
                         TrainerWatcherResults.Add(new TrainerUsageResult
@@ -751,11 +751,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             if (containers == null) return;
 
-            foreach (var container in containers)
+            foreach (ScriptCommandContainer container in containers)
             {
                 if (container.commands == null) continue;
 
-                foreach (var cmd in container.commands)
+                foreach (ScriptCommand cmd in container.commands)
                 {
                     if (cmd.id == null || cmd.cmdParams == null) continue;
                     if (!commandInfoDict.TryGetValue(cmd.id.Value, out ScriptCommandInfo cmdInfo) || cmdInfo.ParameterTypes == null) continue;
@@ -856,7 +856,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             try
             {
-                var header = MapHeader.GetMapHeader((ushort)id);
+                MapHeader header = MapHeader.GetMapHeader((ushort)id);
                 if (header == null) { StatusText = $"Could not load header {id}."; return; }
 
                 HeaderProperties.Clear();
@@ -877,12 +877,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
                 // Incoming warps
                 IncomingWarps.Clear();
-                foreach (var ev in _cachedEventFiles)
+                foreach (EventFile ev in _cachedEventFiles)
                 {
                     if (ev.warps == null) continue;
                     for (int i = 0; i < ev.warps.Count; i++)
                     {
-                        var w = ev.warps[i];
+                        Warp w = ev.warps[i];
                         if (w.header == id)
                             IncomingWarps.Add(new HeaderWarpResult
                             {
@@ -896,12 +896,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
                 // Outgoing warps
                 OutgoingWarps.Clear();
-                var selfEv = _cachedEventFiles.FirstOrDefault(e => e.ID == header.eventFileID);
+                EventFile selfEv = _cachedEventFiles.FirstOrDefault(e => e.ID == header.eventFileID);
                 if (selfEv?.warps != null)
                 {
                     for (int i = 0; i < selfEv.warps.Count; i++)
                     {
-                        var w = selfEv.warps[i];
+                        Warp w = selfEv.warps[i];
                         OutgoingWarps.Add(new HeaderOutgoingWarpResult
                         {
                             WarpIndex = i,
@@ -951,9 +951,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             int count = 0;
             if (sf.allScripts != null)
-                foreach (var s in sf.allScripts) count += CountVariableInCommands(s.commands, varNum, dict);
+                foreach (ScriptCommandContainer s in sf.allScripts) count += CountVariableInCommands(s.commands, varNum, dict);
             if (sf.allFunctions != null)
-                foreach (var f in sf.allFunctions) count += CountVariableInCommands(f.commands, varNum, dict);
+                foreach (ScriptCommandContainer f in sf.allFunctions) count += CountVariableInCommands(f.commands, varNum, dict);
             return count;
         }
 
@@ -961,16 +961,16 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             int count = 0;
             if (commands == null) return 0;
-            foreach (var cmd in commands)
+            foreach (ScriptCommand cmd in commands)
             {
                 if (cmd.id == null || cmd.cmdParams == null) continue;
                 ScriptCommandInfo info = null;
                 dict?.TryGetValue(cmd.id.Value, out info);
-                var paramTypes = info?.ParameterTypes;
+                List<ScriptParameter.ParameterType> paramTypes = info?.ParameterTypes;
                 for (int i = 0; i < cmd.cmdParams.Count; i++)
                 {
                     byte[] p = cmd.cmdParams[i];
-                    var pt = (paramTypes != null && i < paramTypes.Count)
+                    ScriptParameter.ParameterType pt = (paramTypes != null && i < paramTypes.Count)
                         ? paramTypes[i]
                         : ScriptParameter.ParameterType.Integer;
                     int val = GetParamValue(p);
@@ -987,7 +987,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             int count = 0;
             if (ls.bufferSet == null) return 0;
-            foreach (var t in ls.bufferSet)
+            foreach (LevelScriptTrigger t in ls.bufferSet)
                 if (t is VariableValueTrigger vt && vt.variableToWatch == varNum) count++;
             return count;
         }
@@ -996,7 +996,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             int count = 0;
             if (ev.triggers != null)
-                foreach (var tr in ev.triggers)
+                foreach (Trigger tr in ev.triggers)
                     if (tr.variableWatched == varNum) count++;
             return count;
         }
@@ -1005,9 +1005,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             int count = 0;
             if (sf.allScripts != null)
-                foreach (var s in sf.allScripts) count += CountFlagInCommands(s.commands, flagNum);
+                foreach (ScriptCommandContainer s in sf.allScripts) count += CountFlagInCommands(s.commands, flagNum);
             if (sf.allFunctions != null)
-                foreach (var f in sf.allFunctions) count += CountFlagInCommands(f.commands, flagNum);
+                foreach (ScriptCommandContainer f in sf.allFunctions) count += CountFlagInCommands(f.commands, flagNum);
             return count;
         }
 
@@ -1015,10 +1015,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             int count = 0;
             if (commands == null) return 0;
-            foreach (var cmd in commands)
+            foreach (ScriptCommand cmd in commands)
             {
                 if (cmd.cmdParams == null) continue;
-                foreach (var p in cmd.cmdParams)
+                foreach (byte[] p in cmd.cmdParams)
                     if (p.Length >= 2 && GetParamValue(p) == flagNum && flagNum < 0x4000)
                         count++;
             }

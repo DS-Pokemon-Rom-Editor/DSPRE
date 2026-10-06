@@ -55,8 +55,8 @@ namespace DSPRE.Avalonia.Controls
         public static Bitmap Get(string key)
         {
             if (string.IsNullOrEmpty(key)) return null;
-            if (Resolved.TryGetValue(key, out var cached)) return cached;
-            var bmp = Drawn(key) ?? ResourceImages.GetBitmap(key);
+            if (Resolved.TryGetValue(key, out Bitmap cached)) return cached;
+            Bitmap bmp = Drawn(key) ?? ResourceImages.GetBitmap(key);
             if (bmp == null) AppLogger.Warn($"No icon named '{key}'.");
             Resolved[key] = bmp;
             return bmp;
@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Controls
         /// <summary>A 16px image of the icon, for places that build controls in code.</summary>
         public static Image Image(string key)
         {
-            var img = new Image { Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center };
+            Image img = new Image { Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center };
             img.Classes.Add("icon");
             Show(img, key);
             img.AttachedToVisualTree += (_, _) => Show(img, key);
@@ -93,11 +93,11 @@ namespace DSPRE.Avalonia.Controls
         // An icon from Assets/Icons only, without falling back to the shell's own.
         private static Bitmap Drawn(string key)
         {
-            if (Cache.TryGetValue(key, out var cached)) return cached;
+            if (Cache.TryGetValue(key, out Bitmap cached)) return cached;
             Bitmap bmp = null;
             try
             {
-                var uri = new Uri($"avares://DSPRE.Avalonia/Avalonia/Assets/Icons/{key}.png");
+                Uri uri = new Uri($"avares://DSPRE.Avalonia/Avalonia/Assets/Icons/{key}.png");
                 if (AssetLoader.Exists(uri)) bmp = new Bitmap(AssetLoader.Open(uri));
             }
             catch (Exception ex) { AppLogger.Warn($"Icon '{key}' failed to load: {ex.Message}"); }
@@ -109,8 +109,8 @@ namespace DSPRE.Avalonia.Controls
         public static Control Content(string key, string text, bool after = false)
         {
             if (string.IsNullOrEmpty(text)) return Image(key);
-            var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
-            var label = new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center };
+            StackPanel panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5 };
+            TextBlock label = new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center };
             panel.Children.Add(after ? label : Image(key));
             panel.Children.Add(after ? Image(key) : label);
             return panel;

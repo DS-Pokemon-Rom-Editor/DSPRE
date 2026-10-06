@@ -58,7 +58,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Undo() { if (_history.CanUndo) Apply(_history.Undo()); }
         public void Redo() { if (_history.CanRedo) Apply(_history.Redo()); }
 
-        public bool HasUnsavedChanges => _state.Any(kv => !_loaded.TryGetValue(kv.Key, out var was) || !kv.Value.AsSpan().SequenceEqual(was));
+        public bool HasUnsavedChanges => _state.Any(kv => !_loaded.TryGetValue(kv.Key, out byte[] was) || !kv.Value.AsSpan().SequenceEqual(was));
         public string UnsavedChangesDescription => $"Pokéwalker (Mon {_currentId})";
 
         public void LoadMon(int id)
@@ -74,10 +74,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private string Load(int species)
         {
             if (!GameHasPokewalker) return "The Pokéwalker is in HeartGold and SoulSilver.";
-            var index = GraphicAssets.PokewalkerIndex();
+            PokewalkerSprites index = GraphicAssets.PokewalkerIndex();
             if (index == null) return "This ROM's Pokéwalker pictures couldn't be matched to Pokémon.";
-            var art = GraphicAssets.All.First(x => x.Dir == DirNames.pokewalkerSprites);
-            var icons = GraphicAssets.All.First(x => x.Dir == DirNames.pokewalkerIcons);
+            GraphicAssets.Archive art = GraphicAssets.All.First(x => x.Dir == DirNames.pokewalkerSprites);
+            GraphicAssets.Archive icons = GraphicAssets.All.First(x => x.Dir == DirNames.pokewalkerIcons);
 
             int forms = index.FormCount(species);
             if (forms > 0)
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             // Pokéwalker icons follow the party icons, whose own entry for a species is that species plus the lead-in.
             int partyIcon = species + PokemonIconFiles.SharedFiles;
-            var icon = PokemonIconFiles.Describe(partyIcon);
+            PokemonIconFiles.Icon icon = PokemonIconFiles.Describe(partyIcon);
             if (icon != null && icon.Species == species && icon.Form == null && PokewalkerIconLeadIn >= 0)
                 Add(icons, partyIcon - PokewalkerIconLeadIn, "Icon");
 
@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (bytes == null) return;
             _loaded[(archive.Dir, member)] = bytes;
             _state[(archive.Dir, member)] = bytes;
-            var p = new Picture { Title = title, Archive = archive, Member = member, Width = size.Width * 2, Height = size.Height * 2 };
+            Picture p = new Picture { Title = title, Archive = archive, Member = member, Width = size.Width * 2, Height = size.Height * 2 };
             Pictures.Add(p);
             Show(p);
         }
@@ -113,7 +113,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Reads of the tab's members see its in-memory bytes; writes go to write instead of the project.
         private ScriptNarc.Staging Staging(Action<DirNames, int, byte[]> write = null) => new()
         {
-            Read = (dir, id) => _state.TryGetValue((dir, id), out var b) ? b : null,
+            Read = (dir, id) => _state.TryGetValue((dir, id), out byte[] b) ? b : null,
             Write = write ?? ((_, _, _) => { }),
         };
 
@@ -122,7 +122,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Bitmap image = null;
             using (ScriptNarc.Use(Staging()))
             {
-                var shown = GraphicAssets.Render(p.Archive, p.Member);
+                GraphicAssets.Preview shown = GraphicAssets.Render(p.Archive, p.Member);
                 if (shown.Rgba != null) image = ImageConverter.FromRgba(shown.Rgba, shown.Width, shown.Height);
             }
             p.Image = image;
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 error = GraphicAssets.ImportPng(p.Archive, p.Member, path, out _);
             if (error != null) return error;
             if (drawn == null || drawn.AsSpan().SequenceEqual(_state[(p.Archive.Dir, p.Member)])) return null;
-            var next = new Dictionary<(DirNames, int), byte[]>(_state) { [(p.Archive.Dir, p.Member)] = drawn };
+            Dictionary<(DirNames, int), byte[]> next = new Dictionary<(DirNames, int), byte[]>(_state) { [(p.Archive.Dir, p.Member)] = drawn };
             _state = next;
             _history.Capture(next);
             Show(p);
@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (state == null) return;
             _state = state;
-            foreach (var p in Pictures) Show(p);
+            foreach (Picture p in Pictures) Show(p);
             RaiseState();
         }
 
@@ -171,8 +171,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private string WriteChanged()
         {
-            foreach (var (key, bytes) in _state)
-                if (!_loaded.TryGetValue(key, out var was) || !bytes.AsSpan().SequenceEqual(was))
+            foreach (((DirNames, int) key, byte[] bytes) in _state)
+                if (!_loaded.TryGetValue(key, out byte[] was) || !bytes.AsSpan().SequenceEqual(was))
                     new ScriptNarc(key.Item1).Put(key.Item2, bytes);
             return null;
         }
@@ -182,7 +182,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!HasUnsavedChanges) return;
             if (HgEngineProject.IsActive)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(WriteChanged);
+                (bool saved, string error) = await HgEngineSave.RunAsync(WriteChanged);
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError($"The Pokéwalker pictures were not saved:\n{error}", "Pokéwalker");

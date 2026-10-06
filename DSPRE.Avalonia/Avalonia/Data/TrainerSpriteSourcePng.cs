@@ -17,11 +17,11 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (tile == null || pal == null || !File.Exists(pngPath)) return false;
-                if (!IndexedPng.TryRead(File.ReadAllBytes(pngPath), out var raster, out var colours, out int w, out int h)) return false;
+                if (!IndexedPng.TryRead(File.ReadAllBytes(pngPath), out byte[] raster, out uint[] colours, out int w, out int h)) return false;
                 if (w % 8 != 0 || h % 8 != 0 || w * h != tile.Tiles.Length * 2) return false;
 
                 tile.Set_Tiles(HgEngineTrainerGraphicsSource.Pack4(HgEngineTrainerGraphicsSource.RasterToTiles(raster, w, h)));
-                var bank = pal.Palette[0];
+                System.Drawing.Color[] bank = pal.Palette[0];
                 for (int i = 0; i < bank.Length && i < colours.Length; i++)
                     bank[i] = System.Drawing.Color.FromArgb((int)(colours[i] >> 16) & 0xF8, (int)(colours[i] >> 8) & 0xF8, (int)colours[i] & 0xF8);
                 return true;
@@ -38,15 +38,15 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                if (!IndexedPng.TryRead(File.ReadAllBytes(pngPath), out _, out var colours, out int w, out int h))
+                if (!IndexedPng.TryRead(File.ReadAllBytes(pngPath), out _, out uint[] colours, out int w, out int h))
                     return $"{Path.GetFileName(pngPath)} is not an indexed PNG.";
                 if (w * h != tile.Tiles.Length * 2)
                     return $"{Path.GetFileName(pngPath)} is {w}×{h}, which doesn't match the sprite's drawing.";
 
-                var raster = HgEngineTrainerGraphicsSource.TilesToRaster(HgEngineTrainerGraphicsSource.Unpack4(tile.Tiles), w, h);
-                var bank = pal.Palette[0];
+                byte[] raster = HgEngineTrainerGraphicsSource.TilesToRaster(HgEngineTrainerGraphicsSource.Unpack4(tile.Tiles), w, h);
+                System.Drawing.Color[] bank = pal.Palette[0];
                 // A colour the DS would store the same keeps the PNG's own 8-bit value, so an untouched save changes nothing.
-                var palette = colours.Select((c, i) =>
+                uint[] palette = colours.Select((c, i) =>
                 {
                     if (i >= bank.Length) return c;
                     uint edited = 0xFF000000u | ((uint)bank[i].R << 16) | ((uint)bank[i].G << 8) | bank[i].B;

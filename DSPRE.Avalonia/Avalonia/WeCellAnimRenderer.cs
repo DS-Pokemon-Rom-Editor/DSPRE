@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia
                     return false;
                 }
 
-                var temps = new List<string>();
+                List<string> temps = new List<string>();
                 try
                 {
                     plttPath = Inflate(plttPath, temps);
@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia
                 }
                 finally
                 {
-                    foreach (var t in temps) { try { File.Delete(t); } catch { } }
+                    foreach (string t in temps) { try { File.Delete(t); } catch { } }
                 }
                 return Loaded;
             }
@@ -85,7 +85,7 @@ namespace DSPRE.Avalonia
             if (!Loaded || cellIdx < 0) return null;
             try
             {
-                var raw = _cell.Get_RawImage(_char, _pltt, cellIdx, width, height, trans: true, currOAM: -1, draw_index: null);
+                RawImage raw = _cell.Get_RawImage(_char, _pltt, cellIdx, width, height, trans: true, currOAM: -1, draw_index: null);
                 return ImageConverter.ToAvaloniaBitmap(raw);
             }
             catch (Exception ex) { AppLogger.Error("WeCellAnimRenderer.RenderCell failed: " + ex.Message); return null; }
@@ -101,19 +101,19 @@ namespace DSPRE.Avalonia
 
         public CellPixels RenderCellRgba(int cellIdx)
         {
-            if (_cellRgbaCache.TryGetValue(cellIdx, out var c)) return c;
+            if (_cellRgbaCache.TryGetValue(cellIdx, out CellPixels c)) return c;
             const int S = 256;
             byte[] rgba = null;
             if (Loaded && cellIdx >= 0)
             {
                 try
                 {
-                    var raw = _cell.Get_RawImage(_char, _pltt, cellIdx, S, S, trans: true, currOAM: -1, draw_index: null);
+                    RawImage raw = _cell.Get_RawImage(_char, _pltt, cellIdx, S, S, trans: true, currOAM: -1, draw_index: null);
                     if (raw != null) rgba = ToRgba(raw, S);
                 }
                 catch (Exception ex) { AppLogger.Error("WeCellAnimRenderer.RenderCellRgba failed: " + ex.Message); }
             }
-            var res = new CellPixels(rgba, S);
+            CellPixels res = new CellPixels(rgba, S);
             _cellRgbaCache[cellIdx] = res;
             return res;
         }
@@ -137,17 +137,17 @@ namespace DSPRE.Avalonia
 
         public IReadOnlyList<Frame> RenderAnimation(int animId, int width = 256, int height = 192)
         {
-            var frames = new List<Frame>();
+            List<Frame> frames = new List<Frame>();
             if (!Loaded || animId < 0 || animId >= AnimationCount) return frames;
             try
             {
-                var anis = _anm.Struct.abnk.anis[animId];
+                NANR.sNANR.Animation anis = _anm.Struct.abnk.anis[animId];
                 for (int i = 0; i < anis.nFrames; i++)
                 {
                     int nCell = anis.frames[i].data.nCell;
                     int duration = anis.frames[i].unknown1;
                     if (duration <= 0) duration = 1;
-                    var raw = _cell.Get_RawImage(_char, _pltt, nCell, width, height, trans: true, currOAM: -1, draw_index: null);
+                    RawImage raw = _cell.Get_RawImage(_char, _pltt, nCell, width, height, trans: true, currOAM: -1, draw_index: null);
                     if (i == 0) ComputeContentCenter(raw, width, height);
                     frames.Add(new Frame(ImageConverter.ToAvaloniaBitmap(raw), duration));
                 }

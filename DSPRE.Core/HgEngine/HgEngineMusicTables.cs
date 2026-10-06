@@ -59,11 +59,11 @@ namespace DSPRE.HgEngine
         internal static BattleMusicTables ParseBattle(string source, HgEngineSymbolTable sounds, HgEngineSymbolTable classes, HgEngineSymbolTable species)
         {
             string masked = MaskComments(source);
-            var combos = Rows(masked, ComboTable, ComboRow);
+            IReadOnlyList<Match> combos = Rows(masked, ComboTable, ComboRow);
             if (combos == null) return null;
-            var t = new BattleMusicTables(fromHgEngineSource: true);
+            BattleMusicTables t = new BattleMusicTables(fromHgEngineSource: true);
 
-            var byIndex = new SortedDictionary<int, (ushort, ushort)>();
+            SortedDictionary<int, (ushort, ushort)> byIndex = new SortedDictionary<int, (ushort, ushort)>();
             int next = 0;
             foreach (Match m in combos)
             {
@@ -72,7 +72,7 @@ namespace DSPRE.HgEngine
                 byIndex[index] = ((ushort)Value(m.Groups[2].Value, sounds), (ushort)Value(m.Groups[3].Value, sounds));
                 next = index + 1;
             }
-            foreach (var kv in byIndex)
+            foreach (KeyValuePair<int, (ushort, ushort)> kv in byIndex)
             {
                 while (t.Combos.Rows.Count < kv.Key) t.Combos.Rows.Add((0xFFFF, 0));
                 t.Combos.Rows.Add(kv.Value);
@@ -88,7 +88,7 @@ namespace DSPRE.HgEngine
 
         internal static Dictionary<int, (int, int)> ParseEncounterMusic(string source, HgEngineSymbolTable sounds, HgEngineSymbolTable classes)
         {
-            var music = new Dictionary<int, (int, int)>();
+            Dictionary<int, (int, int)> music = new Dictionary<int, (int, int)>();
             foreach (Match m in Rows(MaskComments(source), EncounterTable, EncounterRow) ?? (IEnumerable<Match>)Array.Empty<Match>())
             {
                 int cls = Value(m.Groups[1].Value, classes);
@@ -171,9 +171,9 @@ namespace DSPRE.HgEngine
         internal static (string Text, string Error) SetSpeciesCombo(string text, int row, int species, int combo,
             HgEngineSymbolTable sounds, HgEngineSymbolTable speciesTable)
         {
-            var rows = Rows(MaskComments(text), SpeciesTable, SpeciesRow);
+            IReadOnlyList<Match> rows = Rows(MaskComments(text), SpeciesTable, SpeciesRow);
             if (rows == null || row < 0 || row >= rows.Count) return (null, $"{SpeciesTable} has no row {row}.");
-            var m = rows[row];
+            Match m = rows[row];
             return (Replace(text, (m.Groups[2], Token(combo, m.Groups[2].Value, sounds, ComboPrefix)),
                                   (m.Groups[1], Token(species, m.Groups[1].Value, speciesTable, "SPECIES_"))), null);
         }
@@ -182,7 +182,7 @@ namespace DSPRE.HgEngine
             HgEngineSymbolTable sounds, HgEngineSymbolTable speciesTable)
         {
             string masked = MaskComments(text);
-            var rows = Rows(masked, SpeciesTable, SpeciesRow);
+            IReadOnlyList<Match> rows = Rows(masked, SpeciesTable, SpeciesRow);
             int end = BlockEnd(masked, SpeciesTable);
             if (rows == null || end < 0) return (null, $"{SourceRelPath} has no {SpeciesTable}.");
             string newline = text.Contains("\r\n") ? "\r\n" : "\n";
@@ -199,7 +199,7 @@ namespace DSPRE.HgEngine
 
         internal static (string Text, string Error) RemoveSpeciesRow(string text, int row)
         {
-            var rows = Rows(MaskComments(text), SpeciesTable, SpeciesRow);
+            IReadOnlyList<Match> rows = Rows(MaskComments(text), SpeciesTable, SpeciesRow);
             if (rows == null || row < 0 || row >= rows.Count) return (null, $"{SpeciesTable} has no row {row}.");
             int start = text.LastIndexOf('\n', rows[row].Index) + 1;
             int end = text.IndexOf('\n', rows[row].Index + rows[row].Length);
@@ -245,9 +245,9 @@ namespace DSPRE.HgEngine
         internal static (string Text, string Error) SetClassCombo(string text, int row, int trainerClass, int combo,
             HgEngineSymbolTable sounds, HgEngineSymbolTable classes)
         {
-            var rows = Rows(MaskComments(text), ClassTable, ClassRow);
+            IReadOnlyList<Match> rows = Rows(MaskComments(text), ClassTable, ClassRow);
             if (rows == null || row < 0 || row >= rows.Count) return (null, $"{ClassTable} has no row {row}.");
-            var m = rows[row];
+            Match m = rows[row];
             string cls = Token(trainerClass, m.Groups[1].Value, classes, ClassPrefix);
             string comboText = m.Groups[3].Success
                 ? (Value(m.Groups[2].Value, sounds) == combo ? m.Groups[2].Value : Token(combo, null, sounds, ComboPrefix)) + " * 4"
@@ -258,8 +258,8 @@ namespace DSPRE.HgEngine
         internal static (string Text, string Error) SetEncounterMusic(string text, int trainerClass, ushort johto, ushort kanto,
             HgEngineSymbolTable sounds, HgEngineSymbolTable classes)
         {
-            var masked = MaskComments(text);
-            var rows = Rows(masked, EncounterTable, EncounterRow);
+            string masked = MaskComments(text);
+            IReadOnlyList<Match> rows = Rows(masked, EncounterTable, EncounterRow);
             if (rows == null) return (null, $"{SourceRelPath} has no {EncounterTable}.");
             foreach (Match m in rows)
                 if (Value(m.Groups[1].Value, classes) == trainerClass)
@@ -300,7 +300,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (!TablesInSource) { error = $"This hg-engine checkout does not build its music tables from {SourceRelPath}."; return false; }
             string text = Read(SourceRelPath, out string path);
-            var (edited, err) = change(text);
+            (string edited, string err) = change(text);
             if (edited == null) { error = err; return false; }
             if (edited != text) HgEngineFileCache.WriteText(path, edited);
             return true;
@@ -309,7 +309,7 @@ namespace DSPRE.HgEngine
         // Comments blanked to spaces, so matches in the masked text sit at the same offsets as in the source.
         internal static string MaskComments(string text)
         {
-            var sb = new StringBuilder(text);
+            StringBuilder sb = new StringBuilder(text);
             foreach (Match m in Regex.Matches(text, @"//[^\n]*|/\*.*?\*/", RegexOptions.Singleline))
                 for (int i = m.Index; i < m.Index + m.Length; i++)
                     if (sb[i] != '\n') sb[i] = ' ';
@@ -320,11 +320,11 @@ namespace DSPRE.HgEngine
         // missing, a row sits under #if, or a row isn't the shape the pattern describes.
         private static IReadOnlyList<Match> Rows(string masked, string table, string rowPattern)
         {
-            var decl = CSourceFile.For(masked).Find(table);
+            CDeclaration decl = CSourceFile.For(masked).Find(table);
             if (decl == null) return null;
-            var pattern = new Regex(rowPattern);
-            var rows = new List<Match>();
-            foreach (var item in decl.Init.Items)
+            Regex pattern = new Regex(rowPattern);
+            List<Match> rows = new List<Match>();
+            foreach (CInitItem item in decl.Init.Items)
             {
                 if (item.IsConditional) return null;
                 Match m = pattern.Match(masked, item.Start, item.End - item.Start);
@@ -341,7 +341,7 @@ namespace DSPRE.HgEngine
         private static string Replace(string text, params (Capture At, string With)[] edits)
         {
             Array.Sort(edits, (a, b) => b.At.Index.CompareTo(a.At.Index));
-            foreach (var (at, with) in edits) text = text.Remove(at.Index, at.Length).Insert(at.Index, with);
+            foreach ((Capture at, string with) in edits) text = text.Remove(at.Index, at.Length).Insert(at.Index, with);
             return text;
         }
 

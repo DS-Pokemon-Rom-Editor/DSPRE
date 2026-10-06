@@ -28,7 +28,7 @@ namespace DSPRE.ROMFiles
             if (data == null || data.Length < sizeof(int))
                 throw new ArgumentException("The Distortion World map table is shorter than four bytes.");
 
-            using (var reader = new BinaryReader(new MemoryStream(data)))
+            using (BinaryReader reader = new BinaryReader(new MemoryStream(data)))
             {
                 int count = reader.ReadInt32();
                 if (sizeof(int) + count * EntrySize > data.Length)
@@ -54,11 +54,11 @@ namespace DSPRE.ROMFiles
 
         public override byte[] ToByteArray()
         {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
+            using (MemoryStream stream = new MemoryStream())
+            using (BinaryWriter writer = new BinaryWriter(stream))
             {
                 writer.Write(Floors.Count);
-                foreach (var floor in Floors)
+                foreach (Floor floor in Floors)
                 {
                     writer.Write((uint)floor.HeaderId);
                     writer.Write((ushort)floor.FileIndex);

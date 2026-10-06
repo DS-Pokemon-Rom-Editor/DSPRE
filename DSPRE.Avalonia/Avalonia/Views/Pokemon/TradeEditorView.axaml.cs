@@ -11,7 +11,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public TradeEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            var vm = new TradeEditorViewModel();
+            TradeEditorViewModel vm = new TradeEditorViewModel();
             DataContext = vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
             EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);

@@ -129,7 +129,7 @@ namespace DSPRE.ROMFiles
         {
             get
             {
-                var step = CurrentScriptStep;
+                FieldMovementStep step = CurrentScriptStep;
                 if (step == null || step.Kind != FieldActionKind.Emote) return -1;
                 return Math.Max(1, step.Frames) - _scriptFramesLeft;
             }
@@ -180,7 +180,7 @@ namespace DSPRE.ROMFiles
                 _scriptStep++;
                 if (_scripted == null || _scriptStep >= _scripted.Count) { StopScript(); return; }
 
-                var step = _scripted[_scriptStep];
+                FieldMovementStep step = _scripted[_scriptStep];
                 _scriptFramesLeft = Math.Max(1, step.Frames);
                 _scriptFromX = OffsetX; _scriptFromZ = OffsetZ;
                 _scriptToX = OffsetX; _scriptToZ = OffsetZ;
@@ -191,7 +191,7 @@ namespace DSPRE.ROMFiles
 
                 if (step.Tiles > 0)
                 {
-                    var (dx, dz) = Step(step.Facing);
+                    (int dx, int dz) = Step(step.Facing);
                     _scriptToX = OffsetX + dx * step.Tiles;
                     _scriptToZ = OffsetZ + dz * step.Tiles;
                 }
@@ -201,7 +201,7 @@ namespace DSPRE.ROMFiles
 
         private void AdvanceScript()
         {
-            var step = CurrentScriptStep;
+            FieldMovementStep step = CurrentScriptStep;
             if (step == null) { StopScript(); return; }
 
             int total = Math.Max(1, step.Frames);
@@ -235,7 +235,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Where a scripted step has got to, between the tile it left and the one it is heading for.</summary>
         private float ScriptBlend(int from, int to)
         {
-            var step = CurrentScriptStep;
+            FieldMovementStep step = CurrentScriptStep;
             if (step == null) return to;
             int total = Math.Max(1, step.Frames);
             float gone = (total - _scriptFramesLeft) / (float)total;
@@ -347,7 +347,7 @@ namespace DSPRE.ROMFiles
         {
             if (_move.Facings.Count > 0)
             {
-                var want = _move.Facings[_routeStep % _move.Facings.Count];
+                MoveFacing want = _move.Facings[_routeStep % _move.Facings.Count];
                 Facing = _routeReversed ? Flip(want) : want;
             }
 
@@ -366,7 +366,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Starts walking one tile if the engine would allow it. </summary>
         private bool BeginStep(MoveFacing dir)
         {
-            var (dx, dz) = Step(dir);
+            (int dx, int dz) = Step(dir);
             int nx = OffsetX + dx, nz = OffsetZ + dz;
             if (!WithinRange(nx, nz)) return false;
             if (_blocked != null && _blocked(nx, nz)) return false;

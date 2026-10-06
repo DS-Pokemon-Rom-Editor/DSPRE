@@ -31,7 +31,7 @@ namespace DSPRE.ROMFiles
             get
             {
                 int size = MapFile.mapSize;
-                foreach (var kv in _cells)
+                foreach (KeyValuePair<(int cellX, int cellY), byte[,]> kv in _cells)
                 {
                     int baseX = kv.Key.cellX * size, baseZ = kv.Key.cellY * size;
                     int rows = kv.Value.GetLength(0), cols = kv.Value.GetLength(1);
@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles
         {
             int size = MapFile.mapSize;
             int cellX = FloorDiv(tileX, size), cellZ = FloorDiv(tileZ, size);
-            if (!_types.TryGetValue((cellX, cellZ), out var grid)) return 0;
+            if (!_types.TryGetValue((cellX, cellZ), out byte[,] grid)) return 0;
 
             int x = tileX - cellX * size, z = tileZ - cellZ * size;
             if (x < 0 || z < 0 || z >= grid.GetLength(0) || x >= grid.GetLength(1)) return 0;
@@ -73,7 +73,7 @@ namespace DSPRE.ROMFiles
         {
             int size = MapFile.mapSize;
             int cellX = FloorDiv(tileX, size), cellZ = FloorDiv(tileZ, size);
-            if (!_cells.TryGetValue((cellX, cellZ), out var grid)) return true;
+            if (!_cells.TryGetValue((cellX, cellZ), out byte[,] grid)) return true;
 
             int x = tileX - cellX * size, z = tileZ - cellZ * size;
             if (x < 0 || z < 0 || z >= grid.GetLength(0) || x >= grid.GetLength(1)) return true;

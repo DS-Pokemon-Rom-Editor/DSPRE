@@ -52,7 +52,7 @@ namespace DSPRE.Avalonia.Data
         /// shows through where the picture is see-through.</param>
         public static Result Build(byte[] rgba, int width, int height, bool eightBit, bool keepClearSlot)
         {
-            var r = new Result { Width = width, Height = height, EightBit = eightBit };
+            Result r = new Result { Width = width, Height = height, EightBit = eightBit };
 
             if (rgba == null || width <= 0 || height <= 0 || rgba.Length < width * height * 4)
                 return Fail(r, "That picture has no pixels in it.");
@@ -69,9 +69,9 @@ namespace DSPRE.Avalonia.Data
 
             // The screen keeps five bits of each channel, so colours that differ only below that come out
             // as one. Counting both tells the caller what the screen ran together.
-            var fullColours = new HashSet<int>();
-            var shortColour = new ushort[width * height];
-            var clear = new bool[width * height];
+            HashSet<int> fullColours = new HashSet<int>();
+            ushort[] shortColour = new ushort[width * height];
+            bool[] clear = new bool[width * height];
             bool anyClear = false;
             for (int i = 0; i < width * height; i++)
             {
@@ -94,7 +94,7 @@ namespace DSPRE.Avalonia.Data
                 r.Notes.Add("See-through pixels were written as black, taking a colour of their own.");
             }
 
-            var distinct = new HashSet<ushort>();
+            HashSet<ushort> distinct = new HashSet<ushort>();
             for (int i = 0; i < shortColour.Length; i++) if (!clear[i]) distinct.Add(shortColour[i]);
             r.ColoursKept = distinct.Count;
             r.ColoursMergedByScreen = Math.Max(0, fullColours.Count - distinct.Count);
@@ -103,11 +103,11 @@ namespace DSPRE.Avalonia.Data
                           + $"came out as {distinct.Count}.");
 
             // What each square asks for.
-            var wants = new List<HashSet<ushort>>(r.Squares);
+            List<HashSet<ushort>> wants = new List<HashSet<ushort>>(r.Squares);
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)
                 {
-                    var set = new HashSet<ushort>();
+                    HashSet<ushort> set = new HashSet<ushort>();
                     for (int py = 0; py < 8; py++)
                         for (int px = 0; px < 8; px++)
                         {
@@ -132,7 +132,7 @@ namespace DSPRE.Avalonia.Data
             }
             else
             {
-                var tooRich = new List<(int x, int y, int count)>();
+                List<(int x, int y, int count)> tooRich = new List<(int x, int y, int count)>();
                 for (int s = 0; s < wants.Count; s++)
                     if (wants[s].Count > budget) tooRich.Add(((s % cols) * 8, (s / cols) * 8, wants[s].Count));
                 if (tooRich.Count > 0)
@@ -153,29 +153,29 @@ namespace DSPRE.Avalonia.Data
             r.Banks = banks.Count;
 
             // Colour numbers within each bank, settled once so the tiles and the colour list agree.
-            var numberIn = new List<Dictionary<ushort, int>>();
-            var bankColours = new List<List<ushort>>();
-            foreach (var bank in banks)
+            List<Dictionary<ushort, int>> numberIn = new List<Dictionary<ushort, int>>();
+            List<List<ushort>> bankColours = new List<List<ushort>>();
+            foreach (HashSet<ushort> bank in banks)
             {
-                var order = bank.OrderBy(c => c).ToList();
-                var map = new Dictionary<ushort, int>();
+                List<ushort> order = bank.OrderBy(c => c).ToList();
+                Dictionary<ushort, int> map = new Dictionary<ushort, int>();
                 for (int i = 0; i < order.Count; i++) map[order[i]] = i + (r.ClearSlotKept ? 1 : 0);
                 numberIn.Add(map);
                 bankColours.Add(order);
             }
 
             // The tiles, sharing whatever repeats, including what only repeats turned over.
-            var seen = new Dictionary<string, int>();
-            var tilePixels = new List<byte[]>();
-            var squares = new ushort[r.Squares];
+            Dictionary<string, int> seen = new Dictionary<string, int>();
+            List<byte[]> tilePixels = new List<byte[]>();
+            ushort[] squares = new ushort[r.Squares];
 
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)
                 {
                     int s = ty * cols + tx;
                     int bank = bankOf[s];
-                    var map = numberIn[bank];
-                    var cell = new byte[64];
+                    Dictionary<ushort, int> map = numberIn[bank];
+                    byte[] cell = new byte[64];
                     for (int py = 0; py < 8; py++)
                         for (int px = 0; px < 8; px++)
                         {
@@ -186,7 +186,7 @@ namespace DSPRE.Avalonia.Data
 
                     int tile = -1;
                     bool flipH = false, flipV = false;
-                    foreach (var (variant, h, v) in Turns(cell))
+                    foreach ((byte[] variant, bool h, bool v) in Turns(cell))
                         if (seen.TryGetValue(Key(variant, bank), out int found))
                         { tile = found; flipH = h; flipV = v; break; }
 
@@ -208,12 +208,12 @@ namespace DSPRE.Avalonia.Data
                 return Fail(r, $"An arrangement can only point at {MostTiles} tiles, and that picture needs "
                              + $"{r.TilesKept}. A smaller picture, or one that repeats itself more, would fit.");
 
-            var palette = new ushort[eightBit ? 256 : r.Banks * 16];
+            ushort[] palette = new ushort[eightBit ? 256 : r.Banks * 16];
             for (int b = 0; b < r.Banks; b++)
                 for (int i = 0; i < bankColours[b].Count; i++)
                     palette[b * perBank + i + (r.ClearSlotKept ? 1 : 0)] = bankColours[b][i];
 
-            var pixels = new byte[tilePixels.Count * 64];
+            byte[] pixels = new byte[tilePixels.Count * 64];
             for (int t = 0; t < tilePixels.Count; t++) Array.Copy(tilePixels[t], 0, pixels, t * 64, 64);
 
             r.Colours = NitroBgWrite.Palette(palette, eightBit);
@@ -229,7 +229,7 @@ namespace DSPRE.Avalonia.Data
         private static bool PackBanks(List<HashSet<ushort>> wants, int budget,
                                       out List<HashSet<ushort>> banks, out int[] bankOf)
         {
-            var made = new List<HashSet<ushort>>();
+            List<HashSet<ushort>> made = new List<HashSet<ushort>>();
             banks = made;
             bankOf = new int[wants.Count];
 
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia.Data
                 int best = -1, bestCost = int.MaxValue;
                 for (int b = 0; b < made.Count; b++)
                 {
-                    var bank = made[b];
+                    HashSet<ushort> bank = made[b];
                     int added = wants[s].Count(c => !bank.Contains(c));
                     if (bank.Count + added > budget) continue;
                     if (added < bestCost) { bestCost = added; best = b; }
@@ -270,7 +270,7 @@ namespace DSPRE.Avalonia.Data
 
         private static byte[] Turn(byte[] cell, bool h, bool v)
         {
-            var o = new byte[64];
+            byte[] o = new byte[64];
             for (int y = 0; y < 8; y++)
                 for (int x = 0; x < 8; x++)
                     o[y * 8 + x] = cell[(v ? 7 - y : y) * 8 + (h ? 7 - x : x)];
@@ -281,7 +281,7 @@ namespace DSPRE.Avalonia.Data
         // what makes a tile the same tile.
         private static string Key(byte[] cell, int bank)
         {
-            var chars = new char[65];
+            char[] chars = new char[65];
             chars[0] = (char)('A' + bank);
             for (int i = 0; i < 64; i++) chars[i + 1] = (char)('0' + cell[i]);
             return new string(chars);
@@ -290,7 +290,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Lays the squares out the way the games store them, which NitroBgCodec explains.</summary>
         private static ushort[] ToBlocks(ushort[] squares, int cols, int rows)
         {
-            var o = new ushort[NitroBgCodec.SquareCount(cols, rows)];
+            ushort[] o = new ushort[NitroBgCodec.SquareCount(cols, rows)];
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)
                     o[NitroBgCodec.SquareIndex(cols, tx, ty)] = squares[ty * cols + tx];

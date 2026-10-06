@@ -30,16 +30,16 @@ namespace DSPRE.ROMFiles
 
             try
             {
-                using (var reader = new BinaryReader(new MemoryStream(data)))
+                using (BinaryReader reader = new BinaryReader(new MemoryStream(data)))
                 {
-                    var magic = reader.ReadBytes(4);
+                    byte[] magic = reader.ReadBytes(4);
                     if (magic.Length != 4 || magic[0] != 'B' || magic[1] != 'D' || magic[2] != 'H' || magic[3] != 'C')
                         return false;
 
                     // Diamond and Pearl terrain is triangles; convert it to plates.
                     if (Models.BdhcBuild.IsTriangles(data))
                     {
-                        var plates = Models.BdhcBuild.Plates(Models.BdhcBuild.FromTriangles(data), out _);
+                        byte[] plates = Models.BdhcBuild.Plates(Models.BdhcBuild.FromTriangles(data), out _);
                         return plates != null && !Models.BdhcBuild.IsTriangles(plates) && TryParse(plates, out bdhc);
                     }
 
@@ -59,7 +59,7 @@ namespace DSPRE.ROMFiles
                                   2L * accessListCount;
                     if (needed > data.Length) return false;
 
-                    var parsed = new BdhcFile
+                    BdhcFile parsed = new BdhcFile
                     {
                         _points = new Point[pointsCount],
                         _normals = new Normal[normalsCount],
@@ -122,11 +122,11 @@ namespace DSPRE.ROMFiles
         /// <summary>Plates in terrain units: the map spans -256 to 256, 16 per square.</summary>
         public IEnumerable<PlateShape> Plates()
         {
-            foreach (var plate in _plates)
+            foreach (Plate plate in _plates)
             {
                 if (plate.FirstPoint >= _points.Length || plate.SecondPoint >= _points.Length
                     || plate.Normal >= _normals.Length || plate.Constant >= _constants.Length) continue;
-                var a = _points[plate.FirstPoint]; var b = _points[plate.SecondPoint]; var n = _normals[plate.Normal];
+                Point a = _points[plate.FirstPoint]; Point b = _points[plate.SecondPoint]; Normal n = _normals[plate.Normal];
                 yield return new PlateShape(Math.Min(a.X, b.X), Math.Min(a.Z, b.Z), Math.Max(a.X, b.X), Math.Max(a.Z, b.Z),
                                             n.X, n.Y, n.Z, _constants[plate.Constant]);
             }
@@ -149,27 +149,27 @@ namespace DSPRE.ROMFiles
                 else low = mid + 1;
             }
 
-            var strip = _strips[low];
+            Strip strip = _strips[low];
             if (strip.Start >= _accessList.Length) return false;
 
-            var candidates = new List<float>(MaxCandidates);
+            List<float> candidates = new List<float>(MaxCandidates);
             int accessEnd = Math.Min(_accessList.Length, strip.Start + strip.Count);
             for (int i = strip.Start; i < accessEnd && candidates.Count < MaxCandidates; i++)
             {
                 int plateIndex = _accessList[i];
                 if (plateIndex >= _plates.Length) continue;
-                var plate = _plates[plateIndex];
+                Plate plate = _plates[plateIndex];
                 if (plate.FirstPoint >= _points.Length || plate.SecondPoint >= _points.Length ||
                     plate.Normal >= _normals.Length || plate.Constant >= _constants.Length)
                     continue;
 
-                var a = _points[plate.FirstPoint];
-                var b = _points[plate.SecondPoint];
+                Point a = _points[plate.FirstPoint];
+                Point b = _points[plate.SecondPoint];
                 float minX = Math.Min(a.X, b.X), maxX = Math.Max(a.X, b.X);
                 float minZ = Math.Min(a.Z, b.Z), maxZ = Math.Max(a.Z, b.Z);
                 if (x < minX || x > maxX || z < minZ || z > maxZ) continue;
 
-                var n = _normals[plate.Normal];
+                Normal n = _normals[plate.Normal];
                 if (Math.Abs(n.Y) < 0.0001f) continue;
                 float y = -((n.X * x) + (n.Z * z) + _constants[plate.Constant]) / n.Y;
                 candidates.Add(y);

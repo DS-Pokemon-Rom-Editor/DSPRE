@@ -41,14 +41,14 @@ namespace DSPRE.ROMFiles
         /// <summary>A name for each back sprite; entries past the retail list are numbered.</summary>
         public static List<string> Names(int count)
         {
-            var known = gameFamily switch
+            string[] known = gameFamily switch
             {
                 GameFamilies.HGSS => HeartGold,
                 GameFamilies.Plat => Platinum,
                 GameFamilies.DP => Diamond,
                 _ => System.Array.Empty<string>(),
             };
-            var names = new List<string>(count);
+            List<string> names = new List<string>(count);
             for (int i = 0; i < count; i++) names.Add(i < known.Length ? known[i] : $"Back sprite {i}");
             return names;
         }

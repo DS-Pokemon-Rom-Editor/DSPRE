@@ -27,7 +27,7 @@ namespace DSPRE.ROMFiles
         public static int FormsOf(int species)
         {
             if (species < 1 || species > LastSpecies) return 0;
-            var table = RomTable();
+            ushort[] table = RomTable();
             if (table != null) return (species < LastSpecies ? table[species + 1] : RecordCount) - table[species];
             return FormRecords.TryGetValue(species, out int n) ? n : 1;
         }
@@ -49,7 +49,7 @@ namespace DSPRE.ROMFiles
             if (ARM9.CheckCompressionMark()) return null;
             byte[] bytes = DSUtils.ReadFromFile(arm9Path, offset, (LastSpecies + 1) * 2);
             if (bytes == null || bytes.Length < (LastSpecies + 1) * 2) return null;
-            var table = new ushort[LastSpecies + 1];
+            ushort[] table = new ushort[LastSpecies + 1];
             for (int i = 0; i <= LastSpecies; i++) table[i] = BitConverter.ToUInt16(bytes, i * 2);
             if (table[1] != 0) return null;
             for (int s = 1; s < LastSpecies; s++)
@@ -78,7 +78,7 @@ namespace DSPRE.ROMFiles
         public static string[] FormNamesOf(int species)
         {
             int forms = FormsOf(species);
-            if (FormLabels.TryGetValue(species, out var names) && names.Length == forms) return names;
+            if (FormLabels.TryGetValue(species, out string[] names) && names.Length == forms) return names;
             return forms == 1 ? new[] { "Normal" } : Enumerable.Range(0, forms).Select(f => f == 0 ? "Normal" : $"Form {f}").ToArray();
         }
 
@@ -86,10 +86,10 @@ namespace DSPRE.ROMFiles
         public static int MemberOf(int species, int form)
         {
             if (form < 0 || form >= FormsOf(species)) return -1;
-            var table = RomTable();
+            ushort[] table = RomTable();
             if (table != null) return table[species] + form;
             int member = species - 1;
-            foreach (var kv in FormRecords)
+            foreach (KeyValuePair<int, int> kv in FormRecords)
                 if (kv.Key < species) member += kv.Value - 1;
             return member + form;
         }

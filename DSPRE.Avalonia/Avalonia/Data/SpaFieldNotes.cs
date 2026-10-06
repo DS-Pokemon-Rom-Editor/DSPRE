@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -41,7 +42,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The document, so it cannot drift from this table.</summary>
         public static string BuildDocument(IReadOnlyList<string> allFields)
         {
-            var sb = new System.Text.StringBuilder();
+            StringBuilder sb = new System.Text.StringBuilder();
             sb.Append("[Research](../../ResearchNotes.md) / [Move Research](../MoveResearch.md) / Move Animation Particle Fields\n\n");
             sb.Append("# Particle emitter fields\n\n");
             sb.Append("Generated from `SpaFieldNotes.cs`. Do not edit by hand; `SpaFieldDocTests` rewrites it.\n\n");
@@ -51,23 +52,23 @@ namespace DSPRE.Avalonia.Data
 
             sb.Append("## Read but not acted on\n\n");
             sb.Append("| field | what acting on it would change | read from |\n|---|---|---|\n");
-            foreach (var n in NotSimulated)
+            foreach (Note n in NotSimulated)
                 sb.Append("| `").Append(n.Field).Append("` | ").Append(n.WouldChange)
                   .Append(" | ").Append(n.Source).Append(" |\n");
 
             sb.Append("\n## Used when drawing, not when moving\n\n");
             sb.Append("Where a particle goes and how it is drawn are separate jobs. These decide how it looks ")
               .Append("on screen and nothing about its path, so the movement code never reads them.\n\n");
-            foreach (var f in DrawnNotMoved) sb.Append("- `").Append(f).Append("`\n");
+            foreach (string f in DrawnNotMoved) sb.Append("- `").Append(f).Append("`\n");
 
-            var handled = new HashSet<string>(DrawnNotMoved, StringComparer.Ordinal);
-            foreach (var n in NotSimulated) handled.Add(n.Field);
+            HashSet<string> handled = new HashSet<string>(DrawnNotMoved, StringComparer.Ordinal);
+            foreach (Note n in NotSimulated) handled.Add(n.Field);
 
             sb.Append("\n## Acted on\n\n");
             sb.Append("The remaining fields drive the preview: how many particles there are, where they start, ")
               .Append("how fast and in what direction they leave, how long they and the emitter live, and how ")
               .Append("their size, colour, transparency, texture and spin change over that life.\n\n");
-            foreach (var f in allFields)
+            foreach (string f in allFields)
                 if (!handled.Contains(f)) sb.Append("- `").Append(f).Append("`\n");
 
             return sb.ToString();

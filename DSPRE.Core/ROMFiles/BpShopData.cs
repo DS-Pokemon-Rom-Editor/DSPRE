@@ -46,7 +46,7 @@ namespace DSPRE.ROMFiles
         {
             if (gameFamily == GameFamilies.HGSS)
                 return "HeartGold and SoulSilver build their Battle Point exchange menus in scripts. Use the Script and Text editors.";
-            var sites = BpShopCodeSites;
+            BpShopSites sites = BpShopCodeSites;
             if (sites == null) return "Only US Platinum (Rev 1) and Diamond are supported.";
             if (!IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             if (!File.Exists(arm9Path)) return "arm9 is missing from this project.";
@@ -57,7 +57,7 @@ namespace DSPRE.ROMFiles
         public static BpShopData Load()
         {
             if (WhyNot() is string why) throw new InvalidOperationException(why);
-            var shop = new BpShopData(BpShopCodeSites);
+            BpShopData shop = new BpShopData(BpShopCodeSites);
             if (shop.IsPlatinum) shop.LoadPlatinum(); else shop.LoadDiamond();
             return shop;
         }
@@ -86,7 +86,7 @@ namespace DSPRE.ROMFiles
 
         private static List<ushort> ReadList((byte[] data, int offset, int where) at, string what)
         {
-            var items = new List<ushort>();
+            List<ushort> items = new List<ushort>();
             for (int o = at.offset; ; o += 2)
             {
                 if (o + 2 > at.data.Length) throw new InvalidDataException($"The {what} has no end marker.");
@@ -102,17 +102,17 @@ namespace DSPRE.ROMFiles
             byte[] arm9 = File.ReadAllBytes(arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
             uint ov7Base = OverlayUtils.OverlayTable.GetRAMAddress(7);
 
-            var right = Resolve(BitConverter.ToUInt32(arm9, _sites.ListPointers), 2, arm9, null, 0, synth, "TM counter list");
-            var left = Resolve(BitConverter.ToUInt32(arm9, _sites.ListPointers + 4), 2, arm9, null, 0, synth, "item counter list");
+            (byte[] data, int offset, int where) right = Resolve(BitConverter.ToUInt32(arm9, _sites.ListPointers), 2, arm9, null, 0, synth, "TM counter list");
+            (byte[] data, int offset, int where) left = Resolve(BitConverter.ToUInt32(arm9, _sites.ListPointers + 4), 2, arm9, null, 0, synth, "item counter list");
             uint priceRam = BitConverter.ToUInt32(ov7, _sites.PriceLiteral);
             if (BitConverter.ToUInt32(ov7, _sites.PriceLiteral + 4) != priceRam + 2)
                 throw new InvalidDataException("The Battle Point price code doesn't look like Platinum's; it may have been patched.");
             if (ov7[_sites.PriceCountCompare + 1] != 0x2A)
                 throw new InvalidDataException("The Battle Point price lookup doesn't look like Platinum's; it may have been patched.");
             int rows = ov7[_sites.PriceCountCompare];
-            var prices = Resolve(priceRam, rows * 4, arm9, ov7, ov7Base, synth, "price table");
+            (byte[] data, int offset, int where) prices = Resolve(priceRam, rows * 4, arm9, ov7, ov7Base, synth, "price table");
 
-            var priceOf = new Dictionary<ushort, ushort>();
+            Dictionary<ushort, ushort> priceOf = new Dictionary<ushort, ushort>();
             for (int r = 0; r < rows; r++)
             {
                 ushort item = BitConverter.ToUInt16(prices.data, prices.offset + r * 4);
@@ -126,7 +126,7 @@ namespace DSPRE.ROMFiles
                 && prices.where == 1 && prices.offset == SpotOf(GameTable.BpShopPrices)?.Offset;
             if (synth != null && left.where == 2)
             {
-                var block = SyntheticOverlaySpace.Blocks(synth, Marker).FirstOrDefault(b => left.offset >= b.Start && left.offset < b.End);
+                (long Start, long End) block = SyntheticOverlaySpace.Blocks(synth, Marker).FirstOrDefault(b => left.offset >= b.Start && left.offset < b.End);
                 if (block.End > 0) { _blockStart = (int)block.Start; _blockLength = (int)(block.End - block.Start); }
             }
             Where = _inPlace ? "where the game keeps them" : _blockStart >= 0 ? "moved to the expanded ARM9 area" : "moved by a patch";
@@ -135,8 +135,8 @@ namespace DSPRE.ROMFiles
         /// <summary>One row per distinct item, left counter first; the game prices an item by its first row.</summary>
         private List<Entry> PriceRows()
         {
-            var rows = new List<Entry>();
-            foreach (var e in Left.Concat(Right))
+            List<Entry> rows = new List<Entry>();
+            foreach (Entry e in Left.Concat(Right))
                 if (!rows.Any(r => r.Item == e.Item)) rows.Add(e);
             return rows;
         }
@@ -190,7 +190,7 @@ namespace DSPRE.ROMFiles
         {
             byte[] arm9 = File.ReadAllBytes(arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
             byte[] arm9Before = (byte[])arm9.Clone(), ov7Before = (byte[])ov7.Clone(), synthBefore = (byte[])synth?.Clone();
-            var rows = PriceRows();
+            List<Entry> rows = PriceRows();
             bool synthChanged = false;
 
             if (_inPlace && FitsInPlace)
@@ -210,7 +210,7 @@ namespace DSPRE.ROMFiles
                 int at = _blockStart >= 0 && block.Length <= _blockLength ? _blockStart : -1;
                 if (at < 0)
                 {
-                    var reserved = SyntheticOverlaySpace.Reserved(synth);
+                    List<(long Start, long End)> reserved = SyntheticOverlaySpace.Reserved(synth);
                     at = SyntheticOverlaySpace.FindFree(synth, block.Length, 4, reserved);
                     if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the Battle Point lists.");
                 }
@@ -292,7 +292,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the lists can't be saved, or null.</summary>
         public string Problem(int itemCount)
         {
-            foreach (var (list, name) in new[] { (Left, "item counter"), (Right, "TM counter") })
+            foreach ((List<Entry> list, string name) in new[] { (Left, "item counter"), (Right, "TM counter") })
             {
                 if (list.Count == 0) return $"The {name} needs at least one item.";
                 if (list.Any(e => e.Item == 0 || e.Item >= itemCount || e.Item == ListEnd)) return $"The {name} lists an item that doesn't exist.";
@@ -306,7 +306,7 @@ namespace DSPRE.ROMFiles
                 if (Left.Count > MaxListItems || Right.Count > MaxListItems) return $"Each counter can show up to {MaxListItems} items.";
                 // The price lookup's row count is a byte immediate.
                 if (PriceRows().Count > 255) return "The game can price up to 255 different items across both counters.";
-                var twice = Left.Concat(Right).GroupBy(e => e.Item).FirstOrDefault(g => g.Select(e => e.Price).Distinct().Count() > 1);
+                IGrouping<ushort, Entry> twice = Left.Concat(Right).GroupBy(e => e.Item).FirstOrDefault(g => g.Select(e => e.Price).Distinct().Count() > 1);
                 if (twice != null) return "The game keeps one price per item, but an item is listed twice with different prices.";
             }
             else
@@ -329,11 +329,11 @@ namespace DSPRE.ROMFiles
         /// <summary>The lists as bytes, for change tracking.</summary>
         public byte[] Snapshot()
         {
-            var b = new List<byte>();
-            foreach (var list in new[] { Left, Right })
+            List<byte> b = new List<byte>();
+            foreach (List<Entry> list in new[] { Left, Right })
             {
                 b.AddRange(BitConverter.GetBytes(list.Count));
-                foreach (var e in list) { b.AddRange(BitConverter.GetBytes(e.Item)); b.AddRange(BitConverter.GetBytes(e.Price)); }
+                foreach (Entry e in list) { b.AddRange(BitConverter.GetBytes(e.Item)); b.AddRange(BitConverter.GetBytes(e.Price)); }
             }
             return b.ToArray();
         }
@@ -341,7 +341,7 @@ namespace DSPRE.ROMFiles
         public void Restore(byte[] snapshot)
         {
             int o = 0;
-            foreach (var list in new[] { Left, Right })
+            foreach (List<Entry> list in new[] { Left, Right })
             {
                 list.Clear();
                 int n = BitConverter.ToInt32(snapshot, o); o += 4;

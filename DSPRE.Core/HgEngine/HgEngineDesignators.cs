@@ -39,7 +39,7 @@ namespace DSPRE.HgEngine
             }
 
             if (!HeaderByDomain.TryGetValue(domain, out string header)) return false;
-            var table = HgEngineSymbolTable.Load(header);
+            HgEngineSymbolTable table = HgEngineSymbolTable.Load(header);
             if (table == null) return false;
             return table.TryGetNameWithPrefix(id, DesignatorPrefixByDomain[domain], out designator);
         }

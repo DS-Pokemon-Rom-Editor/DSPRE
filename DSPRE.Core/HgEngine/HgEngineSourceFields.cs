@@ -65,8 +65,8 @@ namespace DSPRE.HgEngine
             Func<HgEngineSourceField<T>, Func<string, int?>> lookupFor, out string error)
         {
             error = null;
-            var values = new List<(HgEngineSourceField<T> Field, int Value)>();
-            foreach (var field in fields)
+            List<(HgEngineSourceField<T> Field, int Value)> values = new List<(HgEngineSourceField<T> Field, int Value)>();
+            foreach (HgEngineSourceField<T> field in fields)
             {
                 if (!entry.TryGetRaw(field.Path, out string raw)) continue;
                 if (!HgEngineSourceExpression.TryEvaluate(raw, lookupFor(field), out int value))
@@ -81,7 +81,7 @@ namespace DSPRE.HgEngine
                 }
                 values.Add((field, value));
             }
-            foreach (var (field, value) in values) field.Set(target, value);
+            foreach ((HgEngineSourceField<T> field, int value) in values) field.Set(target, value);
             return true;
         }
 

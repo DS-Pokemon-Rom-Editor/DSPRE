@@ -46,7 +46,7 @@ namespace DSPRE.ROMFiles
         {
             get
             {
-                var key = (workDir, HgEngine.HgEngineProject.IsActive);
+                (string workDir, bool IsActive) key = (workDir, HgEngine.HgEngineProject.IsActive);
                 if (_cache == null || _cacheFor != key)
                 {
                     // An unreadable table is empty rather than read again on every use.
@@ -64,13 +64,13 @@ namespace DSPRE.ROMFiles
             table = null;
             if (HgEngine.HgEngineProject.IsActive)
             {
-                if (!HgEngine.HgEngineMoveBackgrounds.TryRead(out var rows, out error)) return false;
+                if (!HgEngine.HgEngineMoveBackgrounds.TryRead(out List<int[]> rows, out error)) return false;
                 table = new MoveBackgroundTable { FromSource = true };
                 table.Rows.AddRange(rows);
                 return true;
             }
 
-            var (overlay, count) = MoveBackgroundTableSite;
+            (int overlay, int count) = MoveBackgroundTableSite;
             if (overlay < 0) { error = "This game has no move background table DSPRE knows."; return false; }
             try
             {

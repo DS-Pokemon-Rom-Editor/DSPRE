@@ -33,7 +33,7 @@ namespace DSPRE.ROMFiles
 
         public SpeciesFile(FileStream pokeData)
         {
-            var pokeDataReader = new BinaryReader(pokeData);
+            BinaryReader pokeDataReader = new BinaryReader(pokeData);
             pokeDataReader.BaseStream.Position = GENDER_RATIO_BYTE_OFFSET;
             GenderRatioMaleToFemale = pokeDataReader.ReadByte();
 

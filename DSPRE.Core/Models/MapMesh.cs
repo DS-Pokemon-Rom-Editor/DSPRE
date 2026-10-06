@@ -57,7 +57,7 @@ namespace DSPRE.Models
 
         public MaterialLook LookOf(int material)
         {
-            if (!_looks.TryGetValue(material, out var look))
+            if (!_looks.TryGetValue(material, out MaterialLook look))
                 _looks[material] = look = MaterialLook.FromRecord(_file.MaterialRecord(material));
             return look;
         }
@@ -96,22 +96,22 @@ namespace DSPRE.Models
 
         public static MapMesh Read(byte[] model, out string whynot)
         {
-            var file = NsbmdFile.Read(model, out whynot);
+            NsbmdFile file = NsbmdFile.Read(model, out whynot);
             if (file == null) return null;
 
-            var mesh = new MapMesh { _file = file, ModelScale = file.ModelScale };
+            MapMesh mesh = new MapMesh { _file = file, ModelScale = file.ModelScale };
 
-            var material = new int[file.Shapes.Count];
-            var stack = new int[file.Shapes.Count];
+            int[] material = new int[file.Shapes.Count];
+            int[] stack = new int[file.Shapes.Count];
             for (int i = 0; i < material.Length; i++) { material[i] = -1; stack[i] = 0; }
             try
             {
-                using var stream = new MemoryStream(model);
-                var known = NSBMDLoader.LoadNSBMD(stream);
-                var polygons = known?.models?.FirstOrDefault()?.Polygons;
+                using MemoryStream stream = new MemoryStream(model);
+                NSBMD known = NSBMDLoader.LoadNSBMD(stream);
+                List<NSBMDPolygon> polygons = known?.models?.FirstOrDefault()?.Polygons;
                 if (polygons != null)
                 {
-                    var withData = polygons.Where(p => p.PolyData != null).ToList();
+                    List<NSBMDPolygon> withData = polygons.Where(p => p.PolyData != null).ToList();
                     for (int i = 0; i < material.Length && i < withData.Count; i++)
                     {
                         material[i] = withData[i].MatId;
@@ -121,26 +121,26 @@ namespace DSPRE.Models
             }
             catch { }
 
-            var joined = new Dictionary<(int stack, int x, int y, int z), int>();
+            Dictionary<(int stack, int x, int y, int z), int> joined = new Dictionary<(int stack, int x, int y, int z), int>();
 
             for (int shape = 0; shape < file.Shapes.Count; shape++)
             {
                 byte[] dl = file.DisplayList(shape);
                 mesh._lists.Add(dl);
 
-                var walk = DisplayListWalk.Read(dl, out string why);
+                DisplayListWalk walk = DisplayListWalk.Read(dl, out string why);
                 if (walk == null) { whynot = $"Shape {shape}: {why}"; return null; }
 
                 for (int r = 0; r < walk.Runs.Count; r++)
                 {
-                    var run = walk.Runs[r];
-                    var here = new int[run.Corners.Count];
+                    DisplayListWalk.Run run = walk.Runs[r];
+                    int[] here = new int[run.Corners.Count];
 
                     for (int c = 0; c < run.Corners.Count; c++)
                     {
-                        var corner = run.Corners[c];
+                        DisplayListWalk.Corner corner = run.Corners[c];
                         // Weld only corners on the same spot and matrix.
-                        var key = (stack[shape], corner.RawX, corner.RawY, corner.RawZ);
+                        (int, int RawX, int RawY, int RawZ) key = (stack[shape], corner.RawX, corner.RawY, corner.RawZ);
                         if (!joined.TryGetValue(key, out int at))
                         {
                             at = mesh.Vertices.Count;
@@ -174,7 +174,7 @@ namespace DSPRE.Models
         public void Move(int vertex, float x, float y, float z)
         {
             if (vertex < 0 || vertex >= Vertices.Count) return;
-            var v = Vertices[vertex];
+            Vertex v = Vertices[vertex];
             if (v.X == x && v.Y == y && v.Z == z) return;
             v.X = x; v.Y = y; v.Z = z; v.Moved = true;
         }
@@ -207,9 +207,9 @@ namespace DSPRE.Models
             if (corners == null || corners.Length < 3 || corners.Length > 4) return -1;
             if (corners.Any(c => c < 0 || c >= Vertices.Count) || corners.Distinct().Count() != corners.Length) return -1;
             if (like < 0 || like >= Faces.Count) return -1;
-            var model = Faces[like];
+            Face model = Faces[like];
 
-            var p = corners.Select(c => Vertices[c]).ToArray();
+            Vertex[] p = corners.Select(c => Vertices[c]).ToArray();
             float ux = p[1].X - p[0].X, uy = p[1].Y - p[0].Y, uz = p[1].Z - p[0].Z;
             float vx = p[2].X - p[0].X, vy = p[2].Y - p[0].Y, vz = p[2].Z - p[0].Z;
             float nx = Math.Abs(uy * vz - uz * vy), ny = Math.Abs(uz * vx - ux * vz), nz = Math.Abs(ux * vy - uy * vx);
@@ -240,10 +240,10 @@ namespace DSPRE.Models
 
         private byte[] Emit(int shape)
         {
-            var dl = new GxDisplayList();
+            GxDisplayList dl = new GxDisplayList();
             foreach (int restore in Restores(_lists[shape])) dl.RestoreMatrix(restore);
 
-            var look = Faces.Where(f => f.Shape == shape).Select(f => f.Material).FirstOrDefault(m => m >= 0) is int mat && mat >= 0
+            MaterialLook look = Faces.Where(f => f.Shape == shape).Select(f => f.Material).FirstOrDefault(m => m >= 0) is int mat && mat >= 0
                 ? LookOf(mat) : null;
             int colourNow = look?.CornerColour ?? -1, normalNow = -1;
             bool colourWasLast = true;
@@ -251,10 +251,10 @@ namespace DSPRE.Models
 
             foreach (int count in new[] { 3, 4 })
             {
-                var faces = Faces.Where(f => f.Shape == shape && f.Corners.Length == count).ToList();
+                List<Face> faces = Faces.Where(f => f.Shape == shape && f.Corners.Length == count).ToList();
                 if (faces.Count == 0) continue;
                 dl.Begin(count == 3 ? GxDisplayList.Shape.Triangles : GxDisplayList.Shape.Quads);
-                foreach (var f in faces)
+                foreach (Face f in faces)
                     for (int i = 0; i < count; i++)
                     {
                         int colour = f.Colour != null && f.Colour[i] >= 0 ? f.Colour[i] : look?.CornerColour ?? -1;
@@ -271,12 +271,12 @@ namespace DSPRE.Models
                             if (normal >= 0 && (normal != normalNow || colourWasLast)) { dl.Command(GxDisplayList.Normal, (uint)normal); normalNow = normal; colourWasLast = false; }
                         }
 
-                        var (ps, pt) = f.OnPicture != null && i < f.OnPicture.Length ? f.OnPicture[i] : (0f, 0f);
+                        (float ps, float pt) = f.OnPicture != null && i < f.OnPicture.Length ? f.OnPicture[i] : (0f, 0f);
                         int s16 = (int)Math.Round(ps * 16f), t16 = (int)Math.Round(pt * 16f);
                         uint place = (uint)((s16 & 0xffff) | ((t16 & 0xffff) << 16));
                         if (place != placeNow) { dl.Command(GxDisplayList.TexCoord, place); placeNow = place; }
 
-                        var v = Vertices[f.Corners[i]];
+                        Vertex v = Vertices[f.Corners[i]];
                         dl.AddVertexRaw(Raw(v.X), Raw(v.Y), Raw(v.Z));
                     }
                 dl.End();
@@ -288,11 +288,11 @@ namespace DSPRE.Models
 
         private static List<int> Restores(byte[] dl)
         {
-            var found = new List<int>();
+            List<int> found = new List<int>();
             int at = 0;
             while (at + 4 <= dl.Length)
             {
-                var ops = new[] { dl[at], dl[at + 1], dl[at + 2], dl[at + 3] };
+                byte[] ops = new[] { dl[at], dl[at + 1], dl[at + 2], dl[at + 3] };
                 at += 4;
                 foreach (byte op in ops)
                 {
@@ -312,7 +312,7 @@ namespace DSPRE.Models
         {
             if (scale <= 0f || ModelScale <= 0f || ModelScale == scale) return;
             float k = ModelScale / scale;
-            foreach (var v in Vertices) { v.X *= k; v.Y *= k; v.Z *= k; }
+            foreach (Vertex v in Vertices) { v.X *= k; v.Y *= k; v.Z *= k; }
             ModelScale = scale;
             _rescaled = true;
         }
@@ -321,14 +321,14 @@ namespace DSPRE.Models
         {
             whynot = null;
             if (_rescaled) { whynot = "This model was rescaled and cannot be saved."; return null; }
-            var replaced = new Dictionary<int, byte[]>();
+            Dictionary<int, byte[]> replaced = new Dictionary<int, byte[]>();
 
             foreach (int shape in TouchedShapes)
             {
                 if (_rebuilt.Contains(shape)) { replaced[shape] = Emit(shape); continue; }
-                var moved = new Dictionary<int, (float x, float y, float z)>();
-                foreach (var v in Vertices)
-                    foreach (var (s, corner) in v.Corners)
+                Dictionary<int, (float x, float y, float z)> moved = new Dictionary<int, (float x, float y, float z)>();
+                foreach (Vertex v in Vertices)
+                    foreach ((int s, int corner) in v.Corners)
                         if (s == shape) moved[corner] = (v.X, v.Y, v.Z);
 
                 byte[] written = ShapeRewrite.WithCornersAt(_lists[shape], moved, out string why);

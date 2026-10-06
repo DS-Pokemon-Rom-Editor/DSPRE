@@ -10,7 +10,7 @@ namespace DSPRE.Avalonia.Gl
 
         public static float[] Multiply(float[] a, float[] b)
         {
-            var r = new float[16];
+            float[] r = new float[16];
             for (int col = 0; col < 4; col++)
                 for (int row = 0; row < 4; row++)
                 {
@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.Gl
         public static float[] Perspective(float fovYRadians, float aspect, float near, float far)
         {
             float f = 1f / (float)Math.Tan(fovYRadians / 2.0);
-            var m = new float[16];
+            float[] m = new float[16];
             m[0] = f / aspect;
             m[5] = f;
             m[10] = (far + near) / (near - far);
@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.Gl
         public static float[] Ortho(float halfHeight, float aspect, float near, float far)
         {
             float halfWidth = halfHeight * aspect;
-            var m = Identity();
+            float[] m = Identity();
             m[0] = 1f / halfWidth;
             m[5] = 1f / halfHeight;
             m[10] = -2f / (far - near);
@@ -48,14 +48,14 @@ namespace DSPRE.Avalonia.Gl
 
         public static float[] Translate(float x, float y, float z)
         {
-            var m = Identity();
+            float[] m = Identity();
             m[12] = x; m[13] = y; m[14] = z;
             return m;
         }
 
         public static float[] Scale(float x, float y, float z)
         {
-            var m = Identity();
+            float[] m = Identity();
             m[0] = x; m[5] = y; m[10] = z;
             return m;
         }
@@ -63,7 +63,7 @@ namespace DSPRE.Avalonia.Gl
         public static float[] RotateX(float a)
         {
             float c = (float)Math.Cos(a), s = (float)Math.Sin(a);
-            var m = Identity();
+            float[] m = Identity();
             m[5] = c; m[6] = s; m[9] = -s; m[10] = c;
             return m;
         }
@@ -71,7 +71,7 @@ namespace DSPRE.Avalonia.Gl
         public static float[] RotateY(float a)
         {
             float c = (float)Math.Cos(a), s = (float)Math.Sin(a);
-            var m = Identity();
+            float[] m = Identity();
             m[0] = c; m[2] = -s; m[8] = s; m[10] = c;
             return m;
         }
@@ -79,7 +79,7 @@ namespace DSPRE.Avalonia.Gl
         public static float[] RotateZ(float a)
         {
             float c = (float)Math.Cos(a), s = (float)Math.Sin(a);
-            var m = Identity();
+            float[] m = Identity();
             m[0] = c; m[1] = s; m[4] = -s; m[5] = c;
             return m;
         }
@@ -98,16 +98,16 @@ namespace DSPRE.Avalonia.Gl
         {
             float yaw = yawDeg * (float)Math.PI / 180f;
             float pitch = pitchDeg * (float)Math.PI / 180f;
-            var t = Translate(0, 0, -distance);
-            var rx = RotateX(pitch);
-            var ry = RotateY(yaw);
+            float[] t = Translate(0, 0, -distance);
+            float[] rx = RotateX(pitch);
+            float[] ry = RotateY(yaw);
             // view = T * Rx * Ry  (rotate model into view space, then push back)
             return Multiply(t, Multiply(rx, ry));
         }
         public static float[] Invert(float[] m)
         {
             if (m == null || m.Length != 16) return null;
-            var inv = new float[16];
+            float[] inv = new float[16];
 
             inv[0]  =  m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] + m[9]*m[7]*m[14] + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
             inv[4]  = -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15] - m[8]*m[7]*m[14] - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];

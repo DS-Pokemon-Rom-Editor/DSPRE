@@ -70,12 +70,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Shows the opponent the step changed.
         private void ApplyState(byte[] state)
         {
-            var back = new BugContestTrainerFile(state);
+            BugContestTrainerFile back = new BugContestTrainerFile(state);
             int changed = -1;
             for (int o = 0; o < BugContestTrainerFile.Opponents; o++)
                 for (int r = 0; r < BugContestTrainerFile.RowsPerOpponent; r++)
                 {
-                    var to = _file.Rows[o, r]; var from = back.Rows[o, r];
+                    BugContestTrainerFile.Row to = _file.Rows[o, r]; BugContestTrainerFile.Row from = back.Rows[o, r];
                     if (to.NationalDex == from.NationalDex && to.Day == from.Day && to.Species == from.Species && to.Score == from.Score && to.Variation == from.Variation) continue;
                     to.NationalDex = from.NationalDex; to.Day = from.Day; to.Species = from.Species; to.Score = from.Score; to.Variation = from.Variation;
                     if (changed < 0) changed = o;
@@ -89,10 +89,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Setup()
         {
             SpeciesNames.Clear();
-            foreach (var n in GetPokemonNames()) SpeciesNames.Add(n);
+            foreach (string n in GetPokemonNames()) SpeciesNames.Add(n);
             _names = BugContestTrainerFile.OpponentNames();
             OpponentNames.Clear();
-            foreach (var n in _names) OpponentNames.Add(n);
+            foreach (string n in _names) OpponentNames.Add(n);
             Load();
         }
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia.Data;
+using Avalonia.Platform;
 
 namespace DSPRE.Avalonia
 {
@@ -249,7 +250,7 @@ namespace DSPRE.Avalonia
         {
             for (int i = _pendingSounds.Count - 1; i >= 0; i--)
             {
-                var (framesLeft, soundId) = _pendingSounds[i];
+                (int framesLeft, int soundId) = _pendingSounds[i];
                 if (framesLeft <= 0) { PlaySound?.Invoke(soundId); _pendingSounds.RemoveAt(i); }
                 else _pendingSounds[i] = (framesLeft - 1, soundId);
             }
@@ -276,7 +277,7 @@ namespace DSPRE.Avalonia
             UpdateCellFx();
             for (int i = 0; i < _spriteActors.Count; i++)
             {
-                var a = _spriteActors[i];
+                CellActor a = _spriteActors[i];
                 if (a == _surfActor) continue;
                 a.Tick(); RunSpriteFunc(a); a.Age++;
             }
@@ -295,7 +296,7 @@ namespace DSPRE.Avalonia
             while (_pc < _cmds.Count)
             {
                 if (++_guard > 100000) { _scriptDone = true; return; }
-                var c = _cmds[_pc];
+                WazaSeqCommand c = _cmds[_pc];
                 string name = BattleAnimCommands.Name(_version, c.OpId);
                 _commandsRun.Add(_pc);
                 _pc++;
@@ -358,7 +359,7 @@ namespace DSPRE.Avalonia
                     case "EndLoop":
                         if (_loops.Count > 0)
                         {
-                            var f = _loops[_loops.Count - 1];
+                            LoopFrame f = _loops[_loops.Count - 1];
                             if (++f.Count >= f.Total) _loops.RemoveAt(_loops.Count - 1);
                             else _pc = f.Body;
                         }
@@ -389,9 +390,9 @@ namespace DSPRE.Avalonia
                         if (c.Args.Length >= 2) _cameraMode[c.Args[0]] = c.Args[1];
                         break;
                     case "UnloadParticleSystem":
-                        if (c.Args.Length >= 1 && _ptcSims.TryGetValue(c.Args[0], out var exitSims))
+                        if (c.Args.Length >= 1 && _ptcSims.TryGetValue(c.Args[0], out List<SpaSimulator> exitSims))
                         {
-                            foreach (var s in exitSims) s.Stop();
+                            foreach (SpaSimulator s in exitSims) s.Stop();
                             exitSims.Clear();
                         }
                         break;
@@ -407,7 +408,7 @@ namespace DSPRE.Avalonia
                     case "CreateEmitterEx":
                         if (c.Args.Length >= 4)
                         {
-                            var sim = Spawn(c.Args[0], c.Args[2], c.Args[3], 0, 1);
+                            SpaSimulator sim = Spawn(c.Args[0], c.Args[2], c.Args[3], 0, 1);
                             if (sim != null) _emitSlots[c.Args[1]] = sim;
                         }
                         break;
@@ -509,7 +510,7 @@ namespace DSPRE.Avalonia
                         return;
 
                     case "SetPokemonSpriteVisible":
-                        if (c.Args.Length >= 2 && _caps.TryGetValue(c.Args[0], out var oamCap))
+                        if (c.Args.Length >= 2 && _caps.TryGetValue(c.Args[0], out DroppedCap oamCap))
                             oamCap.Visible = c.Args[1] != 0;
                         break;
 
@@ -555,9 +556,9 @@ namespace DSPRE.Avalonia
 
         private SpaArchive LoadArc(int data)
         {
-            if (!_archives.TryGetValue(data, out var arc))
+            if (!_archives.TryGetValue(data, out SpaArchive arc))
             {
-                var bytes = _particleNarc?.Get(data);
+                byte[] bytes = _particleNarc?.Get(data);
                 arc = bytes != null ? SpaArchive.Parse(bytes) : new SpaArchive();
                 _archives[data] = arc;
             }
@@ -567,22 +568,22 @@ namespace DSPRE.Avalonia
         private SpaSimulator Spawn(int ptc, int emitterNo, int callback, int sepIndex, int sepCount)
         {
             if (!_slot.TryGetValue(ptc, out int data)) return null;
-            var arc = LoadArc(data);
+            SpaArchive arc = LoadArc(data);
             if (emitterNo < 0 || emitterNo >= arc.Emitters.Count) return null;
-            var em = arc.Emitters[emitterNo];
-            var tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
+            SpaEmitter em = arc.Emitters[emitterNo];
+            SpaTexture tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
             if (tex == null)
                 Note($"Particle {emitterNo} asks for picture {em.TexNo}, which is not in its file, so it "
                      + "is drawn as a plain dot.");
             else if (tex.Rgba == null)
                 Note($"Particle {emitterNo}'s picture is stored in a way DSPRE cannot read (format "
                      + $"{tex.Format}), so it is drawn as a plain dot.");
-            var (cx, cy, ax, ay, z) = Place(callback, sepIndex, sepCount);
+            (double cx, double cy, double ax, double ay, double z) = Place(callback, sepIndex, sepCount);
             cx += em.PosX; cy -= em.PosY;
             double axX, axY;
             if (ax != 0 || ay != 0) { axX = ax; axY = -ay; }
             else { axX = em.AxisX; axY = em.AxisY; }
-            var sim = new SpaSimulator(em, axX, axY, rng: _splRandom) { AnchorX = cx, AnchorY = cy };
+            SpaSimulator sim = new SpaSimulator(em, axX, axY, rng: _splRandom) { AnchorX = cx, AnchorY = cy };
             bool reversed = ((callback == 1 || callback == 2) && _attackerIsEnemy)
                             || (_cameraMode.TryGetValue(ptc, out int camMode) && camMode != 0);
             _renderer.AddLayer(new SpaParticlePreview.Layer(sim, arc.Textures, tex, cx, cy, em.DrawType,
@@ -601,11 +602,11 @@ namespace DSPRE.Avalonia
 
         private void TrackSim(int ptc, SpaSimulator sim)
         {
-            if (!_ptcSims.TryGetValue(ptc, out var list)) _ptcSims[ptc] = list = new List<SpaSimulator>();
+            if (!_ptcSims.TryGetValue(ptc, out List<SpaSimulator> list)) _ptcSims[ptc] = list = new List<SpaSimulator>();
             list.Add(sim);
         }
 
-        private SpaSimulator FindEmitter(int idx) => _emitSlots.TryGetValue(idx, out var s) ? s : _lastSim;
+        private SpaSimulator FindEmitter(int idx) => _emitSlots.TryGetValue(idx, out SpaSimulator s) ? s : _lastSim;
 
         private static readonly HashSet<int> _startPos = new HashSet<int> { 1, 4, 6, 8, 10, 14, 16, 18, 20, 22, 24, 26, 34 };
         private static bool IsStartPos(int pos) => _startPos.Contains(pos);
@@ -617,14 +618,14 @@ namespace DSPRE.Avalonia
             double posOfsX = 0, posOfsY = 0;
             if (_pc < _cmds.Count && BattleAnimCommands.Name(_version, _cmds[_pc].OpId) == "SetExtraParams")
             {
-                var ex = _cmds[_pc].Args;
+                int[] ex = _cmds[_pc].Args;
                 target = ex.Length > 2 ? ex[2] : 2;
                 pos = ex.Length > 3 ? ex[3] : 0;
                 axis = ex.Length > 4 ? ex[4] : 0;
                 fldMode = ex.Length > 5 ? ex[5] : 0;
                 if (_pc + 1 < _cmds.Count && BattleAnimCommands.Name(_version, _cmds[_pc + 1].OpId) == "SetExtraParams")
                 {
-                    var ex2 = _cmds[_pc + 1].Args;
+                    int[] ex2 = _cmds[_pc + 1].Args;
                     if (pos == 4 || pos == 5 || pos == 12 || pos == 13)
                     {
                         if (ex2.Length > 3) { posOfsX = ex2[2] / 172.0; posOfsY = ex2[3] / 172.0; }
@@ -644,16 +645,16 @@ namespace DSPRE.Avalonia
             bool axisOverride = axis >= 1 && axis <= 21 && axis != 3;
 
             if (!_slot.TryGetValue(ptc, out int data)) return;
-            var arc = LoadArc(data);
+            SpaArchive arc = LoadArc(data);
             if (emitterNo < 0 || emitterNo >= arc.Emitters.Count) return;
-            var em = arc.Emitters[emitterNo];
-            var tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
+            SpaEmitter em = arc.Emitters[emitterNo];
+            SpaTexture tex = (em.TexNo >= 0 && em.TexNo < arc.Textures.Count) ? arc.Textures[em.TexNo] : null;
 
             double anchorX = src == 0 ? _atX : _dfX, anchorY = src == 0 ? _atY : _dfY;
             if (pos == 30 || pos == 31 || pos == 32)
             {
                 int t = sClient == 0 ? 0 : 1;
-                var p = pos == 30 ? Pos226[t] : pos == 32 ? Pos225[t] : Pos145[t];
+                (int x, int y) p = pos == 30 ? Pos226[t] : pos == 32 ? Pos225[t] : Pos145[t];
                 anchorX = PARTICLE_ORIGIN_X + p.x / 172.0;
                 anchorY = PARTICLE_ORIGIN_Y - p.y / 172.0;
             }
@@ -699,7 +700,7 @@ namespace DSPRE.Avalonia
                 opAxX = ax / l; opAxY = ay / l;
             }
             else { opAxX = em.AxisX; opAxY = em.AxisY; }
-            var sim = new SpaSimulator(em, opAxX, opAxY, driftX, driftY, magOX, magOY, convOX, convOY,
+            SpaSimulator sim = new SpaSimulator(em, opAxX, opAxY, driftX, driftY, magOX, magOY, convOX, convOY,
                                        magOverrideZ: magOZ, convOverrideZ: convOZ, rng: _splRandom);
             double opZ = ZOfVis(src == 0 ? _atVis : _dfVis) + em.PosZ;
             bool opReversed = _cameraMode.TryGetValue(ptc, out int opCam) && opCam != 0;
@@ -725,7 +726,7 @@ namespace DSPRE.Avalonia
 
             if (a.Length < 2 + WorkSlots)
             {
-                var padded = new int[2 + WorkSlots];
+                int[] padded = new int[2 + WorkSlots];
                 Array.Copy(a, padded, a.Length);
                 a = padded;
             }
@@ -737,12 +738,12 @@ namespace DSPRE.Avalonia
             {
                 int castCap = _attackerIsEnemy ? 1 : 0;
                 _surfActor = null;
-                foreach (var act in _spriteActors)
+                foreach (CellActor act in _spriteActors)
                 {
                     if (act.CapId == castCap) { _surfActor = act; }
                     else if (act.CapId == 0 || act.CapId == 1) { act.Visible = false; act.Alive = false; }
                 }
-                var def = _attackerIsEnemy ? SurfHomeEnemy : SurfHomePlayer;
+                (int x, int y) def = _attackerIsEnemy ? SurfHomeEnemy : SurfHomePlayer;
                 _cellDefX = def.x; _cellDefY = def.y;
                 _cellPhase = 0; _cellFrame = 0;
                 if (_surfActor != null)
@@ -841,7 +842,7 @@ namespace DSPRE.Avalonia
                     int num = Math.Max(1, a[7]);
                     int upF = Math.Max(1, (a[8] >> 16) & 0xffff), downF = Math.Max(1, a[8] & 0xffff);
                     int capId = a.Length > 9 ? a[9] : -1;
-                    DroppedCap cap = (capId >= 0 && _caps.TryGetValue(capId, out var dc)) ? dc : null;
+                    DroppedCap cap = (capId >= 0 && _caps.TryGetValue(capId, out DroppedCap dc)) ? dc : null;
                     _monFx.Add(new MonFx
                     {
                         Mon = a[2] == 0 ? _atVis : _dfVis, Cap = cap, Kind = 1, Frames = num * (upF + downF),
@@ -1070,11 +1071,11 @@ namespace DSPRE.Avalonia
                     _monFx.Add(new MonFx { Mon = _dfVis, Kind = 16, Frames = 156, Keys = new double[] { 8, 8 } });
                     break;
                 case 56:
-                    if (_caps.TryGetValue(0, out var t08cap))
+                    if (_caps.TryGetValue(0, out DroppedCap t08cap))
                     { t08cap.ScaleX = t08cap.ScaleY = 1.2; t08cap.TintR = t08cap.TintG = t08cap.TintB = 255; t08cap.TintA = 0.4; }
                     break;
                 case 75:
-                    if (a.Length > 2 && _caps.TryGetValue(a[2], out var pvCap))
+                    if (a.Length > 2 && _caps.TryGetValue(a[2], out DroppedCap pvCap))
                     {
                         int para75 = a.Length > 6 ? a[6] : -1;
                         if (para75 == 2 || para75 == 3) { pvCap.Visible = false; break; }
@@ -1111,14 +1112,14 @@ namespace DSPRE.Avalonia
                     int mode = a.Length > 2 ? a[2] : 0, wait = Math.Max(1, a.Length > 3 ? a[3] : 1);
                     int start = a.Length > 5 ? a[5] : 0, end = a.Length > 6 ? a[6] : 16, col = a.Length > 7 ? a[7] : 0;
                     int capId = CapIdFromToolFlag(mode);
-                    DroppedCap cap = (capId >= 0 && _caps.TryGetValue(capId, out var dc)) ? dc : null;
+                    DroppedCap cap = (capId >= 0 && _caps.TryGetValue(capId, out DroppedCap dc)) ? dc : null;
                     _monFx.Add(new MonFx { Mon = capId >= 0 ? 0 : Math.Max(0, MonFromFlag(a, 2)), Cap = cap, Kind = 12, Frames = wait,
                         Keys = new double[] { start, end }, R = R5(col), G = G5(col), B = B5(col) });
                     break;
                 }
                 case 73:
                 {
-                    var sim = FindEmitter(a.Length > 2 ? a[2] : 0);
+                        SpaSimulator sim = FindEmitter(a.Length > 2 ? a[2] : 0);
                     double monY73 = (a.Length > 3 && a[3] == 0) ? _atY : _dfY;
                     int mode73 = a.Length > 4 ? a[4] : 0;
                     int time73 = Math.Max(1, a.Length > 5 ? a[5] : 16);
@@ -1136,7 +1137,7 @@ namespace DSPRE.Avalonia
                     int capId = a.Length > 2 ? a[2] : 0, add = a.Length > 3 ? a[3] : 1, hs = a.Length > 4 ? a[4] : 0;
                     double end = add < 0 ? 0 : 15;
                     int frames = Math.Max(1, (int)Math.Ceiling(Math.Abs(end - hs) / Math.Max(1, Math.Abs(add))));
-                    DroppedCap cap = _caps.TryGetValue(capId, out var dc) ? dc : null;
+                    DroppedCap cap = _caps.TryGetValue(capId, out DroppedCap dc) ? dc : null;
                     _monFx.Add(new MonFx { Mon = cap != null ? cap.SrcMon : (capId & 1), Cap = cap, Kind = 11, Frames = frames + 1, Keys = new double[] { hs, end, add } });
                     break;
                 }
@@ -1170,7 +1171,7 @@ namespace DSPRE.Avalonia
 
                 case FnRevolveEmitter when a.Length >= 10:
                 {
-                    var sim = FindEmitter(a[2]);
+                        SpaSimulator sim = FindEmitter(a[2]);
                     if (sim == null) break;
                     double radSx = a[3], radEx = a[4], radSy = a[5], radEy = a[6];
                     double rx = a[7], ry = a[8];
@@ -1193,7 +1194,7 @@ namespace DSPRE.Avalonia
                 case FnMoveEmitterA2BLinear when a.Length >= 7:
                 case FnMoveEmitterA2BParabolic when a.Length >= 7:
                 {
-                    var sim = FindEmitter(a[2]);
+                        SpaSimulator sim = FindEmitter(a[2]);
                     if (sim == null) break;
                     int time = Math.Max(1, a[6]);
                     double height = a[7];
@@ -1235,9 +1236,9 @@ namespace DSPRE.Avalonia
         {
             if (mon < 0 || phases == null || phases.Length == 0) return;
             if (repeat < 1) repeat = 1;
-            var seq = new double[phases.Length * repeat][];
+            double[][] seq = new double[phases.Length * repeat][];
             for (int r = 0; r < repeat; r++) for (int i = 0; i < phases.Length; i++) seq[r * phases.Length + i] = phases[i];
-            int total = 0; foreach (var p in seq) total += Math.Max(1, (int)p[4]);
+            int total = 0; foreach (double[] p in seq) total += Math.Max(1, (int)p[4]);
             _monFx.Add(new MonFx { Mon = mon, Kind = 8, Phases = seq, Frames = total });
         }
 
@@ -1250,17 +1251,17 @@ namespace DSPRE.Avalonia
         private int MonFromFlag(int[] a, int idx)
         {
             int flag = idx < a.Length ? a[idx] : AnimDefender;
-            var t = TargetsFromFlags(flag);
+            List<int> t = TargetsFromFlags(flag);
             return t.Count > 0 ? t[0] : -1;
         }
 
         private void AddSpriteActor(int idOrCap, bool withCallback, int[] gp)
         {
-            var seqs = CellSeqs;
+            CellSequence[] seqs = CellSeqs;
             if (seqs.Length == 0) return;
             if (withCallback)
             {
-                var actor = new CellActor(seqs, 0) { FuncId = idOrCap, Gp = gp ?? Array.Empty<int>(),
+                CellActor actor = new CellActor(seqs, 0) { FuncId = idOrCap, Gp = gp ?? Array.Empty<int>(),
                     X = _dfX, Y = _dfY, BaseX = _dfX, BaseY = _dfY, CapId = 0 };
                 SetupSpriteActors(actor);
                 _spriteActors.Add(actor);
@@ -1300,7 +1301,7 @@ namespace DSPRE.Avalonia
                     double[] xs = { -32, 32, -32, 32, -32, 32 }, ys = { -24, -24, 24, 24, 0, 0 };
                     for (int i = 0; i < 6; i++)
                     {
-                        var c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = SpriteFuncHelpingHand };
+                            CellActor c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = SpriteFuncHelpingHand };
                         c.CapId = i; c.X = 128 + xs[i]; c.Y = 80 + ys[i]; c.BaseX = c.X; c.BaseY = c.Y;
                         c.FlipH = (i == 0 || i == 3); if (c.SeqCount > seqs[i]) c.SetSeq(seqs[i]);
                         if (i != 0) _spriteActors.Add(c);
@@ -1313,7 +1314,7 @@ namespace DSPRE.Avalonia
                     double[] xo = { -24, -8, 8, 24 }; bool[] fl = { false, true, true, false };
                     for (int i = 0; i < 4; i++)
                     {
-                        var c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = SpriteFuncIngrain };
+                            CellActor c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = SpriteFuncIngrain };
                         c.CapId = i; c.X = _atX + xo[i]; c.Y = py; c.BaseX = c.X; c.BaseY = py; c.FlipH = fl[i]; c.Visible = false;
                         if (i != 0) _spriteActors.Add(c);
                     }
@@ -1323,7 +1324,7 @@ namespace DSPRE.Avalonia
                 {
                     for (int i = 0; i < 12; i++)
                     {
-                        var c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = SpriteFuncAssist };
+                            CellActor c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = SpriteFuncAssist };
                         c.CapId = i; c.X = 40 + (i * 53 % 180); c.Y = 30 + (i * 37 % 120); c.BaseX = c.X; c.BaseY = c.Y; c.Visible = false;
                         if (i != 0) _spriteActors.Add(c);
                     }
@@ -1334,7 +1335,7 @@ namespace DSPRE.Avalonia
                     for (int i = 0; i < 8; i++)
                     {
                         double f = i / 7.0, x = _atX + (_dfX - _atX) * f, y = _atY + (_dfY - _atY) * f;
-                        var c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = SpriteFuncFrenzyPlant };
+                            CellActor c = i == 0 ? leader : new CellActor(CellSeqs, 0) { FuncId = SpriteFuncFrenzyPlant };
                         c.CapId = i; c.X = x; c.Y = y; c.BaseX = x; c.BaseY = y; c.FlipH = (i & 1) != 0; c.Visible = false;
                         if (i != 0) _spriteActors.Add(c);
                     }
@@ -1345,7 +1346,7 @@ namespace DSPRE.Avalonia
                     leader.BaseX = _atX; leader.BaseY = _atY; leader.X = _atX; leader.Y = _atY; leader.Visible = false;
                     for (int i = 1; i < 15; i++)
                     {
-                        var c = new CellActor(CellSeqs, 0) { FuncId = SpriteFuncGrassWhistle, CapId = i, X = _atX, Y = _atY, BaseX = _atX, BaseY = _atY, Visible = false };
+                            CellActor c = new CellActor(CellSeqs, 0) { FuncId = SpriteFuncGrassWhistle, CapId = i, X = _atX, Y = _atY, BaseX = _atX, BaseY = _atY, Visible = false };
                         if (c.SeqCount > 0) c.SetSeq(i % 3);
                         _spriteActors.Add(c);
                     }
@@ -1733,7 +1734,7 @@ namespace DSPRE.Avalonia
 
             for (int i = _monFx.Count - 1; i >= 0; i--)
             {
-                var fx = _monFx[i];
+                MonFx fx = _monFx[i];
                 if (fx.Delay > 0) { fx.Delay--; continue; }
                 if (fx.Kind == 5)
                 {
@@ -1781,7 +1782,7 @@ namespace DSPRE.Avalonia
                     case 4: MonDX[fx.Mon] += fx.Dx / fx.Frames; MonDY[fx.Mon] += fx.Dy / fx.Frames; break;
                     case 26:
                     {
-                        var cap = fx.Cap;
+                            DroppedCap cap = fx.Cap;
                         if (cap == null) break;
                         int f = fx.Frame;
                         if (f == 6 || f == 11 || f == 16 || f == 21) cap.Dy += 4;
@@ -1910,8 +1911,8 @@ namespace DSPRE.Avalonia
                             double a3 = 2 * Math.PI * turns * (f / (double)Math.Max(1, fx.Frames));
                             return (Math.Sin(a3) * 32 * dir, 8 * (1 - Math.Cos(a3)));
                         }
-                        var nowP = fx.Frame >= fx.Frames - 1 ? (0.0, 0.0) : Orbit(fx.Frame);
-                        var prevP = Orbit(fx.Frame - 1);
+                            (double, double) nowP = fx.Frame >= fx.Frames - 1 ? (0.0, 0.0) : Orbit(fx.Frame);
+                            (double x, double y) prevP = Orbit(fx.Frame - 1);
                         MonDX[fx.Mon] += nowP.Item1 - prevP.Item1;
                         MonDY[fx.Mon] += nowP.Item2 - prevP.Item2;
                         double ang = 2 * Math.PI * turns * ((double)fx.Frame / Math.Max(1, fx.Frames));
@@ -1962,7 +1963,7 @@ namespace DSPRE.Avalonia
                             int acc = 0, pi = 0;
                             for (; pi < fx.Phases.Length; pi++) { int fr = Math.Max(1, (int)fx.Phases[pi][4]); if (fx.Frame < acc + fr) break; acc += fr; }
                             if (pi >= fx.Phases.Length) pi = fx.Phases.Length - 1;
-                            var ph = fx.Phases[pi]; int dur = Math.Max(1, (int)ph[4]);
+                            double[] ph = fx.Phases[pi]; int dur = Math.Max(1, (int)ph[4]);
                             double k = Math.Clamp((double)(fx.Frame - acc) / dur, 0, 1);
                             double scy = (ph[2] + (ph[3] - ph[2]) * k) / 100.0;
                             MonScaleX[fx.Mon] = (ph[0] + (ph[1] - ph[0]) * k) / 100.0;
@@ -2000,7 +2001,7 @@ namespace DSPRE.Avalonia
         private void StartBackground(int bgId, bool overlay, double posX, double posY, double spdX, double spdY,
                                      double peak, int fadeFrames, double stopY, bool useStop)
         {
-            var img = _bgRenderer.Build(bgId, reverse: _attackerIsEnemy);
+            BattleBgRenderer.BgImage img = _bgRenderer.Build(bgId, reverse: _attackerIsEnemy);
             if (img == null) return;
             _bgRgba = img.Rgba; _bgW = img.Width; _bgH = img.Height;
             _bgWrapW = overlay ? FX_BG_WRAP : _bgW;
@@ -2051,9 +2052,9 @@ namespace DSPRE.Avalonia
                     _bgBuf[di + 3] = (byte)(a * 255);
                 }
             }
-            var wb = new WriteableBitmap(new global::Avalonia.PixelSize(W, H), new global::Avalonia.Vector(96, 96),
+            WriteableBitmap wb = new WriteableBitmap(new global::Avalonia.PixelSize(W, H), new global::Avalonia.Vector(96, 96),
                 global::Avalonia.Platform.PixelFormat.Bgra8888, global::Avalonia.Platform.AlphaFormat.Premul);
-            using (var fb = wb.Lock())
+            using (ILockedFramebuffer fb = wb.Lock())
             {
                 int rb = fb.RowBytes;
                 if (rb == W * 4) System.Runtime.InteropServices.Marshal.Copy(_bgBuf, 0, fb.Address, _bgBuf.Length);

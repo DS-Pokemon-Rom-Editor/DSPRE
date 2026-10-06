@@ -21,7 +21,7 @@ namespace DSPRE.ROMFiles
         public static byte[] Decode(byte[] data, int width, int height)
         {
             if (data == null || Size(width, height) < 0 || data.Length < Size(width, height)) return null;
-            var pixels = new byte[width * height];
+            byte[] pixels = new byte[width * height];
             int word = 0;
             for (int r = 0; r < height; r += 8)
                 for (int c = 0; c < width; c++, word++)
@@ -38,7 +38,7 @@ namespace DSPRE.ROMFiles
         {
             int size = Size(width, height);
             if (pixels == null || size < 0 || pixels.Length != width * height) return null;
-            var data = new byte[size];
+            byte[] data = new byte[size];
             int word = 0;
             for (int r = 0; r < height; r += 8)
                 for (int c = 0; c < width; c++, word++)

@@ -61,13 +61,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private void RaiseRow()
         {
-            foreach (var n in new[] { nameof(HasSelection), nameof(Drawing), nameof(Palette), nameof(Screen), nameof(ReversedScreen), nameof(ContestScreen) }) OnPropertyChanged(n);
+            foreach (string n in new[] { nameof(HasSelection), nameof(Drawing), nameof(Palette), nameof(Screen), nameof(ReversedScreen), nameof(ContestScreen) }) OnPropertyChanged(n);
             RenderPreview();
         }
 
         private void RenderPreview()
         {
-            var img = HasSelection ? _renderer.Build(_table.Rows[_selected], _screen) : null;
+            BattleBgRenderer.BgImage img = HasSelection ? _renderer.Build(_table.Rows[_selected], _screen) : null;
             Preview = img == null ? null : ImageConverter.FromRgba(img.Rgba, img.Width, img.Height);
         }
 
@@ -83,7 +83,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             int keep = _selected;
             if (!MoveBackgroundTable.TryLoad(out _table, out string error)) { _table = null; StatusText = error; return; }
             _saved = _table.Rows.Select(r => r.ToArray()).ToArray();
-            var narc = new ScriptNarc(DirNames.battleBg);
+            ScriptNarc narc = new ScriptNarc(DirNames.battleBg);
             ArchiveMax = narc.Available ? Math.Max(0, narc.Count - 1) : 65535;
             OnPropertyChanged(nameof(ArchiveMax));
             RebuildList();
@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
             w.Write(_table.Rows.Count);
-            foreach (var row in _table.Rows) { w.Write(row.Length); foreach (int v in row) w.Write(v); }
+            foreach (int[] row in _table.Rows) { w.Write(row.Length); foreach (int v in row) w.Write(v); }
         });
 
         private void ApplyState(byte[] state)
@@ -116,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 for (int n = r.ReadInt32(), i = 0; i < n; i++)
                 {
-                    var row = new int[r.ReadInt32()];
+                    int[] row = new int[r.ReadInt32()];
                     for (int c = 0; c < row.Length; c++) row[c] = r.ReadInt32();
                     _table.Rows.Add(row);
                 }

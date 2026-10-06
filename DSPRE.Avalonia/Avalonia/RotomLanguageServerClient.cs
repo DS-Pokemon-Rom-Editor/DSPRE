@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia
         {
             RotomLanguageServerClient[] all;
             lock (Running) all = Running.ToArray();
-            foreach (var client in all) client.Dispose();
+            foreach (RotomLanguageServerClient client in all) client.Dispose();
         }
 
         public async Task StartAsync()
@@ -166,7 +166,7 @@ namespace DSPRE.Avalonia
         public async Task<RotomLspLocation> DefinitionAsync(string path, int line, int column)
         {
             JsonElement response = await SendRequestAsync("textDocument/definition", PositionParams(path, line, column));
-            if (!response.TryGetProperty("result", out var result) || result.ValueKind == JsonValueKind.Null)
+            if (!response.TryGetProperty("result", out JsonElement result) || result.ValueKind == JsonValueKind.Null)
                 return null;
 
             if (result.ValueKind == JsonValueKind.Array)
@@ -185,9 +185,9 @@ namespace DSPRE.Avalonia
         public async Task<string> HoverAsync(string path, int line, int column)
         {
             JsonElement response = await SendRequestAsync("textDocument/hover", PositionParams(path, line, column));
-            if (!response.TryGetProperty("result", out var result) || result.ValueKind == JsonValueKind.Null)
+            if (!response.TryGetProperty("result", out JsonElement result) || result.ValueKind == JsonValueKind.Null)
                 return null;
-            if (!result.TryGetProperty("contents", out var contents))
+            if (!result.TryGetProperty("contents", out JsonElement contents))
                 return null;
 
             return ReadHoverText(contents)?.Trim();
@@ -195,16 +195,16 @@ namespace DSPRE.Avalonia
 
         public async Task<List<RotomLspCompletion>> CompletionAsync(string path, int line, int column)
         {
-            var items = new List<RotomLspCompletion>();
+            List<RotomLspCompletion> items = new List<RotomLspCompletion>();
             JsonElement response = await SendRequestAsync("textDocument/completion", PositionParams(path, line, column));
-            if (!response.TryGetProperty("result", out var result) || result.ValueKind == JsonValueKind.Null) return items;
-            if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("items", out var list)) result = list;
+            if (!response.TryGetProperty("result", out JsonElement result) || result.ValueKind == JsonValueKind.Null) return items;
+            if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("items", out JsonElement list)) result = list;
             if (result.ValueKind != JsonValueKind.Array) return items;
-            foreach (var item in result.EnumerateArray())
+            foreach (JsonElement item in result.EnumerateArray())
             {
                 string label = item.ReadString("label");
                 if (string.IsNullOrEmpty(label)) continue;
-                string insert = item.TryGetProperty("textEdit", out var edit) ? edit.ReadString("newText") : null;
+                string insert = item.TryGetProperty("textEdit", out JsonElement edit) ? edit.ReadString("newText") : null;
                 items.Add(new RotomLspCompletion(label, insert ?? item.ReadString("insertText") ?? label,
                     item.ReadString("detail"), ReadMarkup(item, "documentation")));
             }
@@ -214,15 +214,15 @@ namespace DSPRE.Avalonia
         public async Task<RotomLspSignature> SignatureHelpAsync(string path, int line, int column)
         {
             JsonElement response = await SendRequestAsync("textDocument/signatureHelp", PositionParams(path, line, column));
-            if (!response.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Object) return null;
-            if (!result.TryGetProperty("signatures", out var signatures) || signatures.GetArrayLength() == 0) return null;
+            if (!response.TryGetProperty("result", out JsonElement result) || result.ValueKind != JsonValueKind.Object) return null;
+            if (!result.TryGetProperty("signatures", out JsonElement signatures) || signatures.GetArrayLength() == 0) return null;
             int active = Math.Clamp(result.ReadInt("activeSignature"), 0, signatures.GetArrayLength() - 1);
-            var signature = signatures[active];
+            JsonElement signature = signatures[active];
             string label = signature.ReadString("label") ?? "";
             int parameter = signature.TryGetProperty("activeParameter", out _) ? signature.ReadInt("activeParameter") : result.ReadInt("activeParameter");
             int start = -1, end = -1;
-            if (signature.TryGetProperty("parameters", out var parameters) && parameter >= 0 && parameter < parameters.GetArrayLength()
-                && parameters[parameter].TryGetProperty("label", out var p))
+            if (signature.TryGetProperty("parameters", out JsonElement parameters) && parameter >= 0 && parameter < parameters.GetArrayLength()
+                && parameters[parameter].TryGetProperty("label", out JsonElement p))
             {
                 if (p.ValueKind == JsonValueKind.Array && p.GetArrayLength() == 2) { start = p[0].GetInt32(); end = p[1].GetInt32(); }
                 else if (p.ValueKind == JsonValueKind.String)
@@ -236,20 +236,20 @@ namespace DSPRE.Avalonia
 
         public async Task<List<RotomLspSymbol>> DocumentSymbolsAsync(string path)
         {
-            var symbols = new List<RotomLspSymbol>();
+            List<RotomLspSymbol> symbols = new List<RotomLspSymbol>();
             JsonElement response = await SendRequestAsync("textDocument/documentSymbol", new { textDocument = new { uri = FileUri(path) } });
-            if (!response.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array) return symbols;
+            if (!response.TryGetProperty("result", out JsonElement result) || result.ValueKind != JsonValueKind.Array) return symbols;
             void Walk(JsonElement list, int depth)
             {
-                foreach (var symbol in list.EnumerateArray())
+                foreach (JsonElement symbol in list.EnumerateArray())
                 {
                     JsonElement range = default;
-                    if (symbol.TryGetProperty("selectionRange", out var sel)) range = sel;
-                    else if (symbol.TryGetProperty("range", out var r)) range = r;
-                    else if (symbol.TryGetProperty("location", out var loc) && loc.TryGetProperty("range", out var lr)) range = lr;
-                    int line = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("start", out var st) ? st.ReadInt("line") + 1 : 1;
+                    if (symbol.TryGetProperty("selectionRange", out JsonElement sel)) range = sel;
+                    else if (symbol.TryGetProperty("range", out JsonElement r)) range = r;
+                    else if (symbol.TryGetProperty("location", out JsonElement loc) && loc.TryGetProperty("range", out JsonElement lr)) range = lr;
+                    int line = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("start", out JsonElement st) ? st.ReadInt("line") + 1 : 1;
                     symbols.Add(new RotomLspSymbol(symbol.ReadString("name") ?? "", symbol.ReadInt("kind"), symbol.ReadString("detail"), line, depth));
-                    if (symbol.TryGetProperty("children", out var children) && children.ValueKind == JsonValueKind.Array) Walk(children, depth + 1);
+                    if (symbol.TryGetProperty("children", out JsonElement children) && children.ValueKind == JsonValueKind.Array) Walk(children, depth + 1);
                 }
             }
             Walk(result, 0);
@@ -258,14 +258,14 @@ namespace DSPRE.Avalonia
 
         public async Task<List<RotomLspInlineText>> CodeLensAsync(string path)
         {
-            var lenses = new List<RotomLspInlineText>();
+            List<RotomLspInlineText> lenses = new List<RotomLspInlineText>();
             JsonElement response = await SendRequestAsync("textDocument/codeLens", new { textDocument = new { uri = FileUri(path) } });
-            if (!response.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array) return lenses;
-            foreach (var lens in result.EnumerateArray())
+            if (!response.TryGetProperty("result", out JsonElement result) || result.ValueKind != JsonValueKind.Array) return lenses;
+            foreach (JsonElement lens in result.EnumerateArray())
             {
-                if (!lens.TryGetProperty("command", out var command) || !lens.TryGetProperty("range", out var range)) continue;
+                if (!lens.TryGetProperty("command", out JsonElement command) || !lens.TryGetProperty("range", out JsonElement range)) continue;
                 string title = command.ReadString("title");
-                if (string.IsNullOrWhiteSpace(title) || !range.TryGetProperty("start", out var start)) continue;
+                if (string.IsNullOrWhiteSpace(title) || !range.TryGetProperty("start", out JsonElement start)) continue;
                 lenses.Add(new RotomLspInlineText(start.ReadInt("line") + 1, -1, title));
             }
             return lenses;
@@ -273,22 +273,22 @@ namespace DSPRE.Avalonia
 
         public async Task<List<RotomLspInlineText>> InlayHintsAsync(string path, int lastLine)
         {
-            var hints = new List<RotomLspInlineText>();
+            List<RotomLspInlineText> hints = new List<RotomLspInlineText>();
             JsonElement response = await SendRequestAsync("textDocument/inlayHint", new
             {
                 textDocument = new { uri = FileUri(path) },
                 range = new { start = new { line = 0, character = 0 }, end = new { line = Math.Max(0, lastLine), character = 0 } }
             });
-            if (!response.TryGetProperty("result", out var result) || result.ValueKind != JsonValueKind.Array) return hints;
-            foreach (var hint in result.EnumerateArray())
+            if (!response.TryGetProperty("result", out JsonElement result) || result.ValueKind != JsonValueKind.Array) return hints;
+            foreach (JsonElement hint in result.EnumerateArray())
             {
-                if (!hint.TryGetProperty("position", out var position) || !hint.TryGetProperty("label", out var label)) continue;
+                if (!hint.TryGetProperty("position", out JsonElement position) || !hint.TryGetProperty("label", out JsonElement label)) continue;
                 string text = label.ValueKind == JsonValueKind.String ? label.GetString()
                             : label.ValueKind == JsonValueKind.Array ? string.Concat(label.EnumerateArray().Select(part => part.ReadString("value")))
                             : null;
                 if (string.IsNullOrEmpty(text)) continue;
-                if (hint.TryGetProperty("paddingLeft", out var pl) && pl.ValueKind == JsonValueKind.True) text = " " + text;
-                if (hint.TryGetProperty("paddingRight", out var pr) && pr.ValueKind == JsonValueKind.True) text += " ";
+                if (hint.TryGetProperty("paddingLeft", out JsonElement pl) && pl.ValueKind == JsonValueKind.True) text = " " + text;
+                if (hint.TryGetProperty("paddingRight", out JsonElement pr) && pr.ValueKind == JsonValueKind.True) text += " ";
                 hints.Add(new RotomLspInlineText(position.ReadInt("line") + 1, position.ReadInt("character") + 1, text));
             }
             return hints;
@@ -296,7 +296,7 @@ namespace DSPRE.Avalonia
 
         private static string ReadMarkup(JsonElement element, string property)
         {
-            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value)) return null;
+            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out JsonElement value)) return null;
             return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ReadString("value");
         }
 
@@ -314,7 +314,7 @@ namespace DSPRE.Avalonia
         private async Task<JsonElement> SendRequestAsync(string method, object parameters)
         {
             int id = Interlocked.Increment(ref _nextRequestId);
-            var completion = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
+            TaskCompletionSource<JsonElement> completion = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
             lock (_pendingLock) _pendingRequests[id] = completion;
 
             await SendPayloadAsync(new { jsonrpc = "2.0", id, method, @params = parameters });
@@ -385,8 +385,8 @@ namespace DSPRE.Avalonia
 
         private async Task<JsonDocument> ReadMessageAsync(Stream stream, CancellationToken token)
         {
-            var headerBytes = new List<byte>();
-            var single = new byte[1];
+            List<byte> headerBytes = new List<byte>();
+            byte[] single = new byte[1];
 
             while (true)
             {
@@ -431,21 +431,21 @@ namespace DSPRE.Avalonia
 
         private async Task HandleMessageAsync(JsonElement root)
         {
-            if (root.TryGetProperty("method", out var methodElement))
+            if (root.TryGetProperty("method", out JsonElement methodElement))
             {
                 string method = methodElement.GetString();
-                if (method == "textDocument/publishDiagnostics" && root.TryGetProperty("params", out var diagnosticsParams))
+                if (method == "textDocument/publishDiagnostics" && root.TryGetProperty("params", out JsonElement diagnosticsParams))
                 {
                     PublishDiagnostics(diagnosticsParams);
                     return;
                 }
 
-                if (root.TryGetProperty("id", out var requestId))
+                if (root.TryGetProperty("id", out JsonElement requestId))
                     await SendEmptyResponseAsync(requestId);
                 return;
             }
 
-            if (!root.TryGetProperty("id", out var idElement) || !idElement.TryGetInt32(out int id))
+            if (!root.TryGetProperty("id", out JsonElement idElement) || !idElement.TryGetInt32(out int id))
                 return;
 
             TaskCompletionSource<JsonElement> completion;
@@ -472,15 +472,15 @@ namespace DSPRE.Avalonia
         {
             string uri = parameters.ReadString("uri");
             string path = LocalPath(uri);
-            var diagnostics = new List<RotomLspDiagnostic>();
+            List<RotomLspDiagnostic> diagnostics = new List<RotomLspDiagnostic>();
 
-            if (parameters.TryGetProperty("diagnostics", out var items) && items.ValueKind == JsonValueKind.Array)
+            if (parameters.TryGetProperty("diagnostics", out JsonElement items) && items.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement item in items.EnumerateArray())
                 {
-                    JsonElement range = item.TryGetProperty("range", out var rangeValue) ? rangeValue : default;
-                    JsonElement start = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("start", out var startValue) ? startValue : default;
-                    JsonElement end = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("end", out var endValue) ? endValue : default;
+                    JsonElement range = item.TryGetProperty("range", out JsonElement rangeValue) ? rangeValue : default;
+                    JsonElement start = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("start", out JsonElement startValue) ? startValue : default;
+                    JsonElement end = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("end", out JsonElement endValue) ? endValue : default;
 
                     int startLine = start.ReadInt("line");
                     int startColumn = start.ReadInt("character");
@@ -513,13 +513,13 @@ namespace DSPRE.Avalonia
             if (string.IsNullOrWhiteSpace(uri)) return null;
 
             JsonElement range = default;
-            if (element.TryGetProperty("targetSelectionRange", out var targetSelectionRange))
+            if (element.TryGetProperty("targetSelectionRange", out JsonElement targetSelectionRange))
                 range = targetSelectionRange;
-            else if (element.TryGetProperty("range", out var locationRange))
+            else if (element.TryGetProperty("range", out JsonElement locationRange))
                 range = locationRange;
 
-            JsonElement start = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("start", out var startValue) ? startValue : default;
-            JsonElement end = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("end", out var endValue) ? endValue : default;
+            JsonElement start = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("start", out JsonElement startValue) ? startValue : default;
+            JsonElement end = range.ValueKind == JsonValueKind.Object && range.TryGetProperty("end", out JsonElement endValue) ? endValue : default;
 
             int startLine = start.ReadInt("line");
             int startColumn = start.ReadInt("character");
@@ -540,7 +540,7 @@ namespace DSPRE.Avalonia
 
             if (contents.ValueKind == JsonValueKind.Array)
             {
-                var parts = new List<string>();
+                List<string> parts = new List<string>();
                 foreach (JsonElement item in contents.EnumerateArray())
                 {
                     string text = ReadHoverText(item);
@@ -587,7 +587,7 @@ namespace DSPRE.Avalonia
 
             lock (_pendingLock)
             {
-                foreach (var pending in _pendingRequests.Values)
+                foreach (TaskCompletionSource<JsonElement> pending in _pendingRequests.Values)
                     pending.TrySetCanceled();
                 _pendingRequests.Clear();
             }
@@ -672,14 +672,14 @@ namespace DSPRE.Avalonia
     {
         public static string ReadString(this JsonElement element, string property)
         {
-            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value))
+            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out JsonElement value))
                 return null;
             return value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString();
         }
 
         public static int ReadInt(this JsonElement element, string property)
         {
-            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out var value))
+            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(property, out JsonElement value))
                 return 0;
             if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out int number))
                 return number;

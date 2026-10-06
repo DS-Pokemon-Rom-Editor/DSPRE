@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             Shown.Clear();
             string want = _search.Trim();
-            foreach (var row in _all)
+            foreach (ParticleFileRow row in _all)
             {
                 if (_category != Everything && row.Category != _category) continue;
                 if (want.Length > 0 && row.Name.IndexOf(want, StringComparison.OrdinalIgnoreCase) < 0
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void Add(string category, string name, ArchiveFiles source, string archiveName, int index, byte[] file, bool orthographic = false)
         {
-            var (emitters, textures) = Counts(file);
+            (int emitters, int textures) = Counts(file);
             if (emitters < 0) return;
             _all.Add(new ParticleFileRow
             {
@@ -121,29 +121,29 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void GatherScripted()
         {
             if (!gameDirs.ContainsKey(DirNames.wazaParticle)) return;
-            var version = gameFamily switch
+            WazaSeqVersion version = gameFamily switch
             {
                 GameFamilies.DP => WazaSeqVersion.DP,
                 GameFamilies.Plat => WazaSeqVersion.Plat,
                 _ => WazaSeqVersion.HGSS,
             };
-            var usedByMove = new Dictionary<int, List<int>>();
-            var usedByEffect = new Dictionary<int, List<int>>();
+            Dictionary<int, List<int>> usedByMove = new Dictionary<int, List<int>>();
+            Dictionary<int, List<int>> usedByEffect = new Dictionary<int, List<int>>();
             void Scan(DirNames dir, Dictionary<int, List<int>> into)
             {
                 if (!gameDirs.ContainsKey(dir)) return;
-                var narc = new ScriptNarc(dir);
+                ScriptNarc narc = new ScriptNarc(dir);
                 for (int i = 0; i < narc.Count; i++)
                 {
                     List<WazaSeqCommand> cmds;
                     try { cmds = BattleAnimScript.Parse(narc.Get(i), version); } catch { continue; }
-                    foreach (var c in cmds)
+                    foreach (WazaSeqCommand c in cmds)
                     {
                         string op = BattleAnimCommands.Name(version, c.OpId);
                         // The extended load names the archive before the file.
                         int at = op == "LoadDebugParticleSystem" ? 2 : op == "LoadParticleSystem" ? 1 : -1;
                         if (at < 0 || c.Args.Length <= at) continue;
-                        if (!into.TryGetValue(c.Args[at], out var list)) into[c.Args[at]] = list = new List<int>();
+                        if (!into.TryGetValue(c.Args[at], out List<int> list)) into[c.Args[at]] = list = new List<int>();
                         if (!list.Contains(i)) list.Add(i);
                     }
                 }
@@ -155,21 +155,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try { moves = GetAttackNames(); } catch { moves = Array.Empty<string>(); }
             string MoveName(int i) => i > 0 && i < moves.Length && !string.IsNullOrWhiteSpace(moves[i]) ? moves[i].Trim() : $"Move {i}";
 
-            var source = ArchiveFiles.Mapped(DirNames.wazaParticle);
-            var particles = new ScriptNarc(DirNames.wazaParticle);
+            ArchiveFiles source = ArchiveFiles.Mapped(DirNames.wazaParticle);
+            ScriptNarc particles = new ScriptNarc(DirNames.wazaParticle);
             for (int f = 0; f < particles.Count; f++)
             {
                 byte[] file = particles.Get(f);
                 // The leading files belong to battle code and effect scripts, whatever move happens to reuse one.
                 if (ParticleFileNames.MoveArchive(gameFamily, f) is { } fixedName)
                     Add(fixedName.Category, fixedName.Name, source, "Move particles", f, file);
-                else if (usedByMove.TryGetValue(f, out var byMoves))
+                else if (usedByMove.TryGetValue(f, out List<int> byMoves))
                 {
-                    var names = byMoves.Select(MoveName).ToList();
+                    List<string> names = byMoves.Select(MoveName).ToList();
                     string name = names.Count <= 3 ? string.Join(", ", names) : $"{string.Join(", ", names.Take(3))} and {names.Count - 3} more";
                     Add(ParticleFileNames.Moves, name, source, "Move particles", f, file);
                 }
-                else if (usedByEffect.TryGetValue(f, out var byEffects))
+                else if (usedByEffect.TryGetValue(f, out List<int> byEffects))
                     Add(ParticleFileNames.BattleEffects, "Battle effect " + string.Join(", ", byEffects), source, "Move particles", f, file);
                 else
                     Add(ParticleFileNames.Unused, $"Move particle file {f} (no move loads it)", source, "Move particles", f, file);
@@ -180,13 +180,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void GatherBall()
         {
             if (!gameDirs.ContainsKey(DirNames.ballParticles)) return;
-            var source = ArchiveFiles.Mapped(DirNames.ballParticles);
-            var narc = new ScriptNarc(DirNames.ballParticles);
-            var named = new Dictionary<int, (string Category, string Name, bool Ortho)>();
-            foreach (var seal in BallSeals.Read())
+            ArchiveFiles source = ArchiveFiles.Mapped(DirNames.ballParticles);
+            ScriptNarc narc = new ScriptNarc(DirNames.ballParticles);
+            Dictionary<int, (string Category, string Name, bool Ortho)> named = new Dictionary<int, (string Category, string Name, bool Ortho)>();
+            foreach (BallSeal seal in BallSeals.Read())
                 if (seal != null) named[seal.Particle] = (ParticleFileNames.Seals, "Seal: " + seal.Name, true);
-            var ballNames = new Dictionary<int, string>();
-            foreach (var (ball, name) in SendOutGraphics.Balls())
+            Dictionary<int, string> ballNames = new Dictionary<int, string>();
+            foreach ((int ball, string name) in SendOutGraphics.Balls())
             {
                 ballNames[ball] = name;
                 int entry = SendOutGraphics.BurstEntry(ball);
@@ -194,7 +194,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             for (int f = 0; f < narc.Count; f++)
             {
-                (string category, string name, bool ortho) = named.TryGetValue(f, out var n) ? n
+                (string category, string name, bool ortho) = named.TryGetValue(f, out (string Category, string Name, bool Ortho) n) ? n
                     : ParticleFileNames.BallArchive(gameFamily, f, ballNames) is { } b ? (b.Category, b.Name, false)
                     : (ParticleFileNames.Other, $"Ball particle file {f}", false);
                 Add(category, name, source, "Ball particles", f, narc.Get(f), ortho);
@@ -207,13 +207,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// </summary>
         private void GatherEncounter()
         {
-            if (!gameDirs.TryGetValue(DirNames.encounterEffectGraphics, out var dirs)) return;
-            var source = ArchiveFiles.Mapped(DirNames.encounterEffectGraphics);
-            var narc = new ScriptNarc(DirNames.encounterEffectGraphics);
+            if (!gameDirs.TryGetValue(DirNames.encounterEffectGraphics, out (string packedDir, string unpackedDir) dirs)) return;
+            ArchiveFiles source = ArchiveFiles.Mapped(DirNames.encounterEffectGraphics);
+            ScriptNarc narc = new ScriptNarc(DirNames.encounterEffectGraphics);
             string relative = string.IsNullOrEmpty(dataPath) ? dirs.packedDir : Path.GetRelativePath(dataPath, dirs.packedDir).Replace('\\', '/');
             for (int f = 0; f < narc.Count; f++)
             {
-                var (category, name) = ParticleFileNames.Loose(gameFamily, relative, f);
+                (string category, string name) = ParticleFileNames.Loose(gameFamily, relative, f);
                 Add(category, name, source, relative, f, narc.Get(f));
             }
         }
@@ -222,8 +222,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private void GatherLoose()
         {
             if (string.IsNullOrEmpty(dataPath) || !Directory.Exists(dataPath)) return;
-            var mapped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var kv in gameDirs)
+            HashSet<string> mapped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (KeyValuePair<DirNames, (string packedDir, string unpackedDir)> kv in gameDirs)
             {
                 try { mapped.Add(Path.GetFullPath(kv.Value.packedDir)); } catch { }
             }
@@ -233,18 +233,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 try { full = Path.GetFullPath(path); } catch { continue; }
                 if (mapped.Contains(full)) continue;
                 byte[] head = new byte[4];
-                try { using var fs = File.OpenRead(full); if (fs.Read(head, 0, 4) < 4) continue; } catch { continue; }
+                try { using FileStream fs = File.OpenRead(full); if (fs.Read(head, 0, 4) < 4) continue; } catch { continue; }
                 if (head[0] != 'N' || head[1] != 'A' || head[2] != 'R' || head[3] != 'C') continue;
 
                 string relative = Path.GetRelativePath(dataPath, full).Replace('\\', '/');
-                var source = ArchiveFiles.Loose(full, relative);
+                ArchiveFiles source = ArchiveFiles.Loose(full, relative);
                 int count;
                 try { count = source.Count; } catch { continue; }
                 for (int f = 0; f < count; f++)
                 {
                     byte[] file;
                     try { file = source.Get(f); } catch { continue; }
-                    var (category, name) = ParticleFileNames.Loose(gameFamily, relative, f);
+                    (string category, string name) = ParticleFileNames.Loose(gameFamily, relative, f);
                     Add(category, name, source, relative, f, file);
                 }
             }

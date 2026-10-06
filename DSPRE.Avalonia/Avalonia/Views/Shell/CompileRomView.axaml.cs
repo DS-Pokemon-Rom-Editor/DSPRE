@@ -1,4 +1,5 @@
 using System.Collections.Specialized;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -20,7 +21,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void LogLines_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
-            var listBox = this.FindControl<ListBox>("LogList");
+            ListBox listBox = this.FindControl<ListBox>("LogList");
             if (listBox != null && VM.LogLines.Count > 0)
                 listBox.ScrollIntoView(VM.LogLines[VM.LogLines.Count - 1]);
         }
@@ -31,7 +32,7 @@ namespace DSPRE.Avalonia.Views.Shell
         /// finishes, so the build and any exception are observed when this returns.</summary>
         public async System.Threading.Tasks.Task ShowAndRunAsync(Window owner)
         {
-            var runTask = VM.RunAsync();
+            Task runTask = VM.RunAsync();
             await ShowDialog(owner);
             await runTask;
         }
@@ -40,8 +41,8 @@ namespace DSPRE.Avalonia.Views.Shell
         public async System.Threading.Tasks.Task<bool> BuildAsync(Window owner, string buildRom = null)
         {
             VM.BuildRom = buildRom;
-            var runTask = VM.RunAsync();
-            var shown = ShowDialog(owner);
+            Task runTask = VM.RunAsync();
+            Task shown = ShowDialog(owner);
             await runTask;
             if (VM.Succeeded) Close();
             await shown;

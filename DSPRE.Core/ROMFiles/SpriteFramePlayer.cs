@@ -58,7 +58,7 @@ namespace DSPRE.ROMFiles
             {
                 if (_index < 0 || _index >= MaxFrames || SlotAt(_index).FrameNo >= -1) break;
 
-                var jump = SlotAt(_index);
+                SpriteFrameSlot jump = SlotAt(_index);
                 _loopTimers[_index]++;
                 if (jump.Duration == _loopTimers[_index] || jump.Duration == 0)
                 {
@@ -79,7 +79,7 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
-            var slot = SlotAt(_index);
+            SpriteFrameSlot slot = SlotAt(_index);
             SpriteFrame = slot.FrameNo;
             _delay = slot.Duration;
             HorizontalShift = slot.HorizontalShift;
@@ -92,8 +92,8 @@ namespace DSPRE.ROMFiles
         /// <summary>Every frame the run can show, always including frame 0, which it ends on.</summary>
         public static IReadOnlyList<int> ReachableFrames(IReadOnlyList<SpriteFrameSlot> slots)
         {
-            var seen = new List<int> { 0 };
-            var player = new SpriteFramePlayer();
+            List<int> seen = new List<int> { 0 };
+            SpriteFramePlayer player = new SpriteFramePlayer();
             player.Start(slots);
             if (player.Active && !seen.Contains(player.SpriteFrame)) seen.Add(player.SpriteFrame);
 

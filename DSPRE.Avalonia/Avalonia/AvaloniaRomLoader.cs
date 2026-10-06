@@ -108,8 +108,8 @@ namespace DSPRE.Avalonia
             {
                 if (File.Exists(path))
                 {
-                    using var fs = File.OpenRead(path);
-                    var b = new byte[4];
+                    using FileStream fs = File.OpenRead(path);
+                    byte[] b = new byte[4];
                     fs.Position = 0x0C;
                     if (fs.Read(b, 0, 4) == 4) gameCode = Encoding.ASCII.GetString(b);
                 }
@@ -138,7 +138,7 @@ namespace DSPRE.Avalonia
                 return YamlUtils.ReadGameCodeFromHeaderYaml(Path.Combine(meta, "header.yaml"))?.gamecode;
             try   // ndstool → header.bin: the 4-char game code is at offset 0x0C
             {
-                var b = File.ReadAllBytes(Path.Combine(folder, "header.bin"));
+                byte[] b = File.ReadAllBytes(Path.Combine(folder, "header.bin"));
                 return b.Length >= 16 ? Encoding.ASCII.GetString(b, 12, 4) : null;
             }
             catch { return null; }

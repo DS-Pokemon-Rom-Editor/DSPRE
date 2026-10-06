@@ -165,7 +165,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             _allHeaderNames.AddRange(headerNames);
             _locationNames = RomInfo.GetLocationNames();
-            foreach (var n in headerNames) HeaderNames.Add(n);
+            foreach (string n in headerNames) HeaderNames.Add(n);
             LoadFromRom();
         }
 
@@ -176,11 +176,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             _allHeaderNames.AddRange(allNames);
             _locationNames = RomInfo.GetLocationNames();
 
-            var display = (filteredHeaders == null || filteredHeaders.Count <= 1)
+            IEnumerable<string> display = (filteredHeaders == null || filteredHeaders.Count <= 1)
                 ? (System.Collections.Generic.IEnumerable<string>)allNames
                 : filteredHeaders;
 
-            foreach (var n in display) HeaderNames.Add(n);
+            foreach (string n in display) HeaderNames.Add(n);
 
             _isLoading = true;
             // When filter is active, SelectedIndex=0; when showing all, jump to header
@@ -215,7 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             _isLoading = true;
             try
             {
-                var spawn = SpawnPoint.Read();
+                SpawnPoint spawn = SpawnPoint.Read();
                 ushort headerNumber = spawn.Header, globalX = spawn.GlobalX, globalY = spawn.GlobalY, playerDir = spawn.Direction;
 
                 // First update header index (triggers UpdateHeaderDependents to set MaxX/MaxY)
@@ -256,7 +256,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 ushort headerNumber = (ushort)headerIndex;
                 MapHeader currentHeader = MapHeader.GetMapHeader(headerNumber);
 
-                var matrix = new GameMatrix(currentHeader.matrixID);
+                GameMatrix matrix = new GameMatrix(currentHeader.matrixID);
                 MatrixXMax = matrix.maps.GetLength(1) - 1;
                 MatrixYMax = matrix.maps.GetLength(0) - 1;
 
@@ -290,7 +290,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             if (HeaderNames.Count >= _allHeaderNames.Count) return;
             HeaderNames.Clear();
-            foreach (var n in _allHeaderNames) HeaderNames.Add(n);
+            foreach (string n in _allHeaderNames) HeaderNames.Add(n);
             SelectedHeaderIndex = 0;
         }
 

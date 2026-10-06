@@ -29,16 +29,16 @@ namespace DSPRE.ROMFiles
             RomInfo.SetEncounterMusicTableOffsetToRAMAddress();
             bool hgss = RomInfo.gameFamily == RomInfo.GameFamilies.HGSS;
             uint ram = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0);
-            var where = new Location { Repointed = ram >= RomInfo.synthOverlayLoadAddress };
+            Location where = new Location { Repointed = ram >= RomInfo.synthOverlayLoadAddress };
             where.Start = ram - (where.Repointed ? RomInfo.synthOverlayLoadAddress : ARM9.address);
             where.Path = where.Repointed ? Filesystem.expArmPath : RomInfo.arm9Path;
 
             byte count = ARM9.ReadByte(RomInfo.encounterMusicTableOffsetToRAMAddress - (hgss ? 12u : 10u));
-            var rows = new List<Row>(count);
-            using var reader = new DSUtils.EasyReader(where.Path, where.Start);
+            List<Row> rows = new List<Row>(count);
+            using DSUtils.EasyReader reader = new DSUtils.EasyReader(where.Path, where.Start);
             for (int i = 0; i < count; i++)
             {
-                var row = new Row { Offset = (uint)reader.BaseStream.Position, Class = reader.ReadUInt16(), Music = reader.ReadUInt16() };
+                Row row = new Row { Offset = (uint)reader.BaseStream.Position, Class = reader.ReadUInt16(), Music = reader.ReadUInt16() };
                 if (hgss) row.NightMusic = reader.ReadUInt16();
                 rows.Add(row);
             }

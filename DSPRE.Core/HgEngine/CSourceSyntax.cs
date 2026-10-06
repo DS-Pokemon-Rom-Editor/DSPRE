@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace DSPRE.HgEngine
 {
@@ -37,7 +38,7 @@ namespace DSPRE.HgEngine
         /// <summary>Tokens of <paramref name="text"/> from <paramref name="start"/> up to <paramref name="end"/>.</summary>
         public static List<CToken> Tokenize(string text, int start, int end, bool keepComments = false)
         {
-            var tokens = new List<CToken>();
+            List<CToken> tokens = new List<CToken>();
             int i = Math.Max(0, start), n = Math.Min(text.Length, end);
             bool lineStart = true;
             for (int k = i - 1; k >= 0 && text[k] != '\n'; k--)
@@ -180,11 +181,11 @@ namespace DSPRE.HgEngine
             if (!System.IO.File.Exists(path)) return new HashSet<string>();
             string text = HgEngineFileCache.GetText(path);
             if (ReferenceEquals(_cache.Text, text)) return _cache.Names;
-            var names = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var t in CLexer.Tokenize(text))
+            HashSet<string> names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (CToken t in CLexer.Tokenize(text))
             {
                 if (t.Kind != CTokenKind.Directive) continue;
-                var m = System.Text.RegularExpressions.Regex.Match(t.Text(text), @"^#\s*define\s+([A-Za-z_]\w*)");
+                Match m = System.Text.RegularExpressions.Regex.Match(t.Text(text), @"^#\s*define\s+([A-Za-z_]\w*)");
                 if (m.Success) names.Add(m.Groups[1].Value);
             }
             _cache = (text, names);
@@ -195,8 +196,8 @@ namespace DSPRE.HgEngine
         /// null when a condition can't be evaluated.</summary>
         public static bool? Compiles(IEnumerable<string> conditions)
         {
-            var names = DefinedNames();
-            var values = HgEngineSymbolTable.Load(ConfigRelPath);
+            HashSet<string> names = DefinedNames();
+            HgEngineSymbolTable values = HgEngineSymbolTable.Load(ConfigRelPath);
             return CConditions.Evaluate(conditions, names.Contains, n => values != null && values.TryGetValue(n, out int v) ? v : (names.Contains(n) ? 1 : null));
         }
     }
@@ -305,12 +306,12 @@ namespace DSPRE.HgEngine
 
         private List<CDeclaration> FindDeclarations()
         {
-            var result = new List<CDeclaration>();
-            var conditions = new List<string>();
+            List<CDeclaration> result = new List<CDeclaration>();
+            List<string> conditions = new List<string>();
             int depth = 0, statementStart = 0;
             for (int t = 0; t < Tokens.Count; t++)
             {
-                var tok = Tokens[t];
+                CToken tok = Tokens[t];
                 if (tok.Kind == CTokenKind.Directive) { if (depth == 0) Condition(conditions, tok.Text(Text)); statementStart = t + 1; continue; }
                 if (tok.Kind != CTokenKind.Punct) continue;
                 if (Is(t, "{")) { depth++; continue; }
@@ -321,7 +322,7 @@ namespace DSPRE.HgEngine
 
                 // name [dims] = { ... };
                 int nameTok = t - 1;
-                var dims = new List<string>();
+                List<string> dims = new List<string>();
                 while (nameTok >= statementStart && Is(nameTok, "]"))
                 {
                     int open = nameTok;
@@ -339,10 +340,10 @@ namespace DSPRE.HgEngine
 
                 int close = Match(t + 1);
                 if (close < 0) break;
-                var init = ParseList(t + 1, close);
+                CInitList init = ParseList(t + 1, close);
                 int end = close + 1;
                 if (Is(end, ";")) end++;
-                var decl = new CDeclaration
+                CDeclaration decl = new CDeclaration
                 {
                     Name = Tokens[nameTok].Text(Text),
                     Start = Tokens[statementStart].Start,
@@ -368,8 +369,8 @@ namespace DSPRE.HgEngine
 
         private CInitList ParseList(int open, int close)
         {
-            var list = new CInitList { Open = Tokens[open].Start, Close = Tokens[close].Start };
-            var conditions = new List<string>();
+            CInitList list = new CInitList { Open = Tokens[open].Start, Close = Tokens[close].Start };
+            List<string> conditions = new List<string>();
             int position = 0;
             int t = open + 1;
             while (t < close)
@@ -389,7 +390,7 @@ namespace DSPRE.HgEngine
                     else if (p is "}" or ")" or "]") depth--;
                     else if (p == "," && depth == 0) break;
                 }
-                var item = ParseItem(t, end, ref position);
+                CInitItem item = ParseItem(t, end, ref position);
                 item.Conditions.AddRange(conditions);
                 list.Items.Add(item);
                 t = end;
@@ -399,7 +400,7 @@ namespace DSPRE.HgEngine
 
         private CInitItem ParseItem(int first, int end, ref int position)
         {
-            var item = new CInitItem { Start = Tokens[first].Start, End = Tokens[end - 1].End };
+            CInitItem item = new CInitItem { Start = Tokens[first].Start, End = Tokens[end - 1].End };
             int t = first;
             while (t < end)
             {
@@ -457,8 +458,8 @@ namespace DSPRE.HgEngine
         /// <summary>The text of a value with comments removed and whitespace collapsed, for comparing spellings.</summary>
         public static string Normalize(string value)
         {
-            var sb = new StringBuilder();
-            var tokens = CLexer.Tokenize(value);
+            StringBuilder sb = new StringBuilder();
+            List<CToken> tokens = CLexer.Tokenize(value);
             for (int i = 0; i < tokens.Count; i++)
             {
                 if (i > 0) sb.Append(' ');

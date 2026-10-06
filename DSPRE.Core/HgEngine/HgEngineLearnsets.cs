@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using NarcAPI;
 
@@ -30,8 +31,8 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
 
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
-            var moveTable = HgEngineSymbolTable.Load(MovesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable moveTable = HgEngineSymbolTable.Load(MovesHeaderRelPath);
             if (species == null || moveTable == null) { error = "Could not read species.h or moves.h from the checkout."; return false; }
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
@@ -41,7 +42,7 @@ namespace DSPRE.HgEngine
 
             try
             {
-                var formToBase = ParseFormToBase(HgEngineFileCache.GetText(formPath));
+                Dictionary<string, string> formToBase = ParseFormToBase(HgEngineFileCache.GetText(formPath));
                 return TryReadLevelMoves(HgEngineFileCache.GetText(path), speciesId, species, moveTable, formToBase, out moves, out error);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
@@ -56,7 +57,7 @@ namespace DSPRE.HgEngine
 
         internal static Dictionary<string, string> ParseFormToBase(string text)
         {
-            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            Dictionary<string, string> map = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (string line in text.Split('\n'))
             {
                 Match m = FormMapLine.Match(line);
@@ -72,11 +73,11 @@ namespace DSPRE.HgEngine
             list = new List<(int level, int move)>();
             error = null;
 
-            var root = JsonSpan.Members(json, 0);
+            List<JsonSpan.Member> root = JsonSpan.Members(json, 0);
             if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
 
             // Same key choice as the save: the file's own alias wins.
-            var names = species.ByName
+            List<string> names = species.ByName
                 .Where(kv => kv.Value == speciesId && kv.Key.StartsWith("SPECIES_", StringComparison.Ordinal))
                 .Select(kv => kv.Key).ToList();
             string key = names.FirstOrDefault(n => root.Any(m => m.Key == n));
@@ -97,28 +98,28 @@ namespace DSPRE.HgEngine
             List<(int level, int move)> list, out string error)
         {
             error = null;
-            var entry = root.FirstOrDefault(m => m.Key == key);
+            JsonSpan.Member entry = root.FirstOrDefault(m => m.Key == key);
             if (entry == null) return true;
             if (json[entry.ValueStart] != '{') { error = $"{key} is not an object in learnsets.json."; return false; }
-            var fields = JsonSpan.Members(json, entry.ValueStart);
+            List<JsonSpan.Member> fields = JsonSpan.Members(json, entry.ValueStart);
             if (fields == null) { error = $"Could not read {key} in learnsets.json."; return false; }
-            var levelMoves = fields.FirstOrDefault(m => m.Key == "LevelMoves");
+            JsonSpan.Member levelMoves = fields.FirstOrDefault(m => m.Key == "LevelMoves");
             if (levelMoves == null) return true;
             if (json[levelMoves.ValueStart] != '[') { error = $"{key} LevelMoves is not a list."; return false; }
 
             try
             {
-                using var doc = System.Text.Json.JsonDocument.Parse(json.AsMemory(levelMoves.ValueStart, levelMoves.ValueEnd - levelMoves.ValueStart));
+                using JsonDocument doc = System.Text.Json.JsonDocument.Parse(json.AsMemory(levelMoves.ValueStart, levelMoves.ValueEnd - levelMoves.ValueStart));
                 int index = 0;
-                foreach (var row in doc.RootElement.EnumerateArray())
+                foreach (JsonElement row in doc.RootElement.EnumerateArray())
                 {
                     index++;
-                    if (row.ValueKind != System.Text.Json.JsonValueKind.Object || !row.TryGetProperty("Level", out var levelValue) || !TryReadLevel(levelValue, out int level))
+                    if (row.ValueKind != System.Text.Json.JsonValueKind.Object || !row.TryGetProperty("Level", out JsonElement levelValue) || !TryReadLevel(levelValue, out int level))
                     {
                         error = $"{key} level-up move {index} has no readable Level.";
                         return false;
                     }
-                    string move = row.TryGetProperty("Move", out var moveValue) && moveValue.ValueKind == System.Text.Json.JsonValueKind.String
+                    string move = row.TryGetProperty("Move", out JsonElement moveValue) && moveValue.ValueKind == System.Text.Json.JsonValueKind.String
                         ? moveValue.GetString().Trim() : "";
                     if (move.Length == 0 || !moves.TryGetValue(move, out int moveId))
                     {
@@ -161,10 +162,10 @@ namespace DSPRE.HgEngine
         {
             moves = new List<int>();
             inherited = false;
-            if (!TryLoad(out string json, out var species, out var moveTable, out var formToBase, out error)) return false;
-            var root = JsonSpan.Members(json, 0);
+            if (!TryLoad(out string json, out HgEngineSymbolTable species, out HgEngineSymbolTable moveTable, out Dictionary<string, string> formToBase, out error)) return false;
+            List<JsonSpan.Member> root = JsonSpan.Members(json, 0);
             if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
-            if (!TryKeyFor(speciesId, species, root, out string key, out var names, out error)) return false;
+            if (!TryKeyFor(speciesId, species, root, out string key, out List<string> names, out error)) return false;
 
             if (!TryReadNames(json, root, key, field, moveTable, moves, out error)) return false;
             if (moves.Count > 0) return true;
@@ -178,9 +179,9 @@ namespace DSPRE.HgEngine
         /// <summary>Each form's base species, from FormToSpeciesMapping.c: the build gives a form with no list of its own the base's.</summary>
         public static Dictionary<int, int> FormBases()
         {
-            var bases = new Dictionary<int, int>();
-            if (!TryLoad(out _, out var species, out _, out var formToBase, out _)) return bases;
-            foreach (var (form, baseName) in formToBase)
+            Dictionary<int, int> bases = new Dictionary<int, int>();
+            if (!TryLoad(out _, out HgEngineSymbolTable species, out _, out Dictionary<string, string> formToBase, out _)) return bases;
+            foreach ((string form, string baseName) in formToBase)
                 if (species.TryGetValue(form, out int formId) && species.TryGetValue(baseName, out int baseId)) bases[formId] = baseId;
             return bases;
         }
@@ -192,13 +193,13 @@ namespace DSPRE.HgEngine
         public static bool TryGetAllMoveNames(string field, out Dictionary<int, List<int>> lists, out string error)
         {
             lists = new Dictionary<int, List<int>>();
-            if (!TryLoad(out string json, out var species, out var moveTable, out _, out error)) return false;
-            var root = JsonSpan.Members(json, 0);
+            if (!TryLoad(out string json, out HgEngineSymbolTable species, out HgEngineSymbolTable moveTable, out _, out error)) return false;
+            List<JsonSpan.Member> root = JsonSpan.Members(json, 0);
             if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
-            foreach (var member in root)
+            foreach (JsonSpan.Member member in root)
             {
                 if (!species.TryGetValue(member.Key, out int id) || lists.ContainsKey(id)) continue;
-                var moves = new List<int>();
+                List<int> moves = new List<int>();
                 if (!TryReadNames(json, root, member.Key, field, moveTable, moves, out error)) return false;
                 if (moves.Count > 0) lists[id] = moves;
             }
@@ -212,9 +213,9 @@ namespace DSPRE.HgEngine
         /// <summary>Writes several species' lists in one go, so the file is written once.</summary>
         public static bool TrySaveMoveNames(string field, IReadOnlyDictionary<int, IReadOnlyList<int>> lists, out string error)
         {
-            if (!TryLoad(out string json, out var species, out var moveTable, out _, out error)) return false;
+            if (!TryLoad(out string json, out HgEngineSymbolTable species, out HgEngineSymbolTable moveTable, out _, out error)) return false;
             string original = json;
-            foreach (var (speciesId, moves) in lists)
+            foreach ((int speciesId, IReadOnlyList<int> moves) in lists)
                 if (!TryApplyMoveNames(ref json, speciesId, field, moves, species, moveTable, out error)) return false;
             if (json == original) return true;
 
@@ -237,19 +238,19 @@ namespace DSPRE.HgEngine
             HgEngineSymbolTable species, HgEngineSymbolTable moveTable, out string error)
         {
             error = null;
-            var root = JsonSpan.Members(json, 0);
+            List<JsonSpan.Member> root = JsonSpan.Members(json, 0);
             if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
             if (!TryKeyFor(speciesId, species, root, out string key, out _, out error)) return false;
 
-            var kept = new Dictionary<int, string>();
-            var existing = root.FirstOrDefault(m => m.Key == key);
-            var fields = existing != null && json[existing.ValueStart] == '{' ? JsonSpan.Members(json, existing.ValueStart) : null;
-            var current = fields?.FirstOrDefault(m => m.Key == field);
+            Dictionary<int, string> kept = new Dictionary<int, string>();
+            JsonSpan.Member existing = root.FirstOrDefault(m => m.Key == key);
+            List<JsonSpan.Member> fields = existing != null && json[existing.ValueStart] == '{' ? JsonSpan.Members(json, existing.ValueStart) : null;
+            JsonSpan.Member current = fields?.FirstOrDefault(m => m.Key == field);
             if (current != null)
                 foreach (Match m in Regex.Matches(json.Substring(current.ValueStart, current.ValueEnd - current.ValueStart), "\"([^\"]+)\""))
                     if (moveTable.TryGetValue(m.Groups[1].Value.Trim(), out int id)) kept.TryAdd(id, m.Groups[1].Value);
 
-            var names = new List<string>(moves.Count);
+            List<string> names = new List<string>(moves.Count);
             foreach (int move in moves)
             {
                 if (!kept.TryGetValue(move, out string name) && !moveTable.TryGetNameWithPrefix(move, "MOVE_", out name))
@@ -327,16 +328,16 @@ namespace DSPRE.HgEngine
             HgEngineSymbolTable moves, List<int> list, out string error)
         {
             error = null;
-            var entry = root.FirstOrDefault(m => m.Key == key);
+            JsonSpan.Member entry = root.FirstOrDefault(m => m.Key == key);
             if (entry == null) return true;
             if (json[entry.ValueStart] != '{') { error = $"{key} is not an object in learnsets.json."; return false; }
-            var value = JsonSpan.Members(json, entry.ValueStart)?.FirstOrDefault(m => m.Key == field);
+            JsonSpan.Member value = JsonSpan.Members(json, entry.ValueStart)?.FirstOrDefault(m => m.Key == field);
             if (value == null) return true;
             try
             {
-                using var doc = System.Text.Json.JsonDocument.Parse(json.AsMemory(value.ValueStart, value.ValueEnd - value.ValueStart));
+                using JsonDocument doc = System.Text.Json.JsonDocument.Parse(json.AsMemory(value.ValueStart, value.ValueEnd - value.ValueStart));
                 if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) { error = $"{key} {field} is not a list."; return false; }
-                foreach (var row in doc.RootElement.EnumerateArray())
+                foreach (JsonElement row in doc.RootElement.EnumerateArray())
                 {
                     string name = row.ValueKind == System.Text.Json.JsonValueKind.String ? row.GetString().Trim() : "";
                     if (!moves.TryGetValue(name, out int id)) { error = $"{key} {field} names unknown move \"{name}\"."; return false; }
@@ -356,7 +357,7 @@ namespace DSPRE.HgEngine
         private static string RenderNames(IReadOnlyList<string> names, string indent, string unit, string newline)
         {
             if (names.Count == 0) return "[]";
-            var sb = new StringBuilder("[");
+            StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < names.Count; i++)
             {
                 sb.Append(newline).Append(indent).Append(unit).Append('"').Append(names[i]).Append('"');
@@ -401,8 +402,8 @@ namespace DSPRE.HgEngine
         /// <summary>One species' row, trimmed after hg-engine's terminator, entries kept as u32.</summary>
         internal static byte[] ConvertRow(byte[] table, int rowStart, int maxLevelupMoves)
         {
-            using var mem = new MemoryStream();
-            using var writer = new BinaryWriter(mem);
+            using MemoryStream mem = new MemoryStream();
+            using BinaryWriter writer = new BinaryWriter(mem);
 
             for (int i = 0; i < maxLevelupMoves && rowStart + i * 4 + 4 <= table.Length; i++)
             {
@@ -418,7 +419,7 @@ namespace DSPRE.HgEngine
         {
             string path = Path.Combine(repoUnc, "include", "constants", "generated", "learnsets.h");
             if (!File.Exists(path)) return -1;
-            var m = Regex.Match(File.ReadAllText(path), @"#define\s+MAX_LEVELUP_MOVES\s+(\d+)");
+            Match m = Regex.Match(File.ReadAllText(path), @"#define\s+MAX_LEVELUP_MOVES\s+(\d+)");
             return m.Success ? int.Parse(m.Groups[1].Value) : -1;
         }
 
@@ -426,13 +427,13 @@ namespace DSPRE.HgEngine
         public static bool TryGetAllLevelMoves(out Dictionary<int, List<(int level, int move)>> lists, out string error)
         {
             lists = new Dictionary<int, List<(int level, int move)>>();
-            if (!TryLoad(out string json, out var species, out var moveTable, out _, out error)) return false;
-            var root = JsonSpan.Members(json, 0);
+            if (!TryLoad(out string json, out HgEngineSymbolTable species, out HgEngineSymbolTable moveTable, out _, out error)) return false;
+            List<JsonSpan.Member> root = JsonSpan.Members(json, 0);
             if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
-            foreach (var member in root)
+            foreach (JsonSpan.Member member in root)
             {
                 if (!species.TryGetValue(member.Key, out int id) || lists.ContainsKey(id)) continue;
-                var list = new List<(int level, int move)>();
+                List<(int level, int move)> list = new List<(int level, int move)>();
                 if (!TryReadList(json, root, member.Key, moveTable, list, out error)) return false;
                 if (list.Count > 0) lists[id] = list;
             }
@@ -449,8 +450,8 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
 
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
-            var moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable moves = HgEngineSymbolTable.Load(MovesHeaderRelPath);
             if (species == null || moves == null) { error = "Could not read species.h or moves.h from the checkout."; return false; }
 
             string path = Path.Combine(HgEngineProject.RepoPathUnc, SourceRelPath.Replace('/', Path.DirectorySeparatorChar));
@@ -463,7 +464,7 @@ namespace DSPRE.HgEngine
                 string text = new UTF8Encoding(false).GetString(bytes, bom ? 3 : 0, bytes.Length - (bom ? 3 : 0));
 
                 string updated = text;
-                foreach (var (speciesId, entries) in lists)
+                foreach ((int speciesId, IReadOnlyList<(int level, int move)> entries) in lists)
                     if (!TryApplyLevelMoves(updated, speciesId, entries, species, moves, out updated, out error))
                     {
                         error = lists.Count > 1 ? $"Species {speciesId}: {error}" : error;
@@ -494,7 +495,7 @@ namespace DSPRE.HgEngine
                 return false;
             }
 
-            var root = JsonSpan.Members(json, 0);
+            List<JsonSpan.Member> root = JsonSpan.Members(json, 0);
             if (root == null) { error = "learnsets.json is not a JSON object."; return false; }
 
             // A species can have alias names; the file's own key wins, and a missing key means a form that
@@ -512,14 +513,14 @@ namespace DSPRE.HgEngine
             string newline = json.Contains("\r\n") ? "\r\n" : "\n";
             string unit = DetectIndentUnit(json);
 
-            var existing = root.FirstOrDefault(m => m.Key == key);
+            JsonSpan.Member existing = root.FirstOrDefault(m => m.Key == key);
             Dictionary<int, string> keptNames = new();
             if (existing != null)
                 foreach (string name in ExistingMoveNames(json, existing))
                     if (moves.TryGetValue(name, out int id)) keptNames.TryAdd(id, name);
 
-            var names = new List<(int level, string move)>(entries.Count);
-            foreach (var (level, move) in entries)
+            List<(int level, string move)> names = new List<(int level, string move)>(entries.Count);
+            foreach ((int level, int move) in entries)
             {
                 if (level < 0 || level > 0xFFFF) { error = $"Level {level} is out of range."; return false; }
                 if (!keptNames.TryGetValue(move, out string moveName) && !moves.TryGetNameWithPrefix(move, "MOVE_", out moveName))
@@ -533,9 +534,9 @@ namespace DSPRE.HgEngine
             if (existing != null)
             {
                 if (json[existing.ValueStart] != '{') { error = $"{key} is not an object in learnsets.json."; return false; }
-                var fields = JsonSpan.Members(json, existing.ValueStart);
+                List<JsonSpan.Member> fields = JsonSpan.Members(json, existing.ValueStart);
                 if (fields == null) { error = $"Could not read {key} in learnsets.json."; return false; }
-                var levelMoves = fields.FirstOrDefault(m => m.Key == "LevelMoves");
+                JsonSpan.Member levelMoves = fields.FirstOrDefault(m => m.Key == "LevelMoves");
                 string outer = LineIndent(json, existing.KeyStart);
 
                 if (levelMoves != null)
@@ -561,8 +562,8 @@ namespace DSPRE.HgEngine
 
         private static IEnumerable<string> ExistingMoveNames(string json, JsonSpan.Member species)
         {
-            var fields = JsonSpan.Members(json, species.ValueStart);
-            var levelMoves = fields?.FirstOrDefault(m => m.Key == "LevelMoves");
+            List<JsonSpan.Member> fields = JsonSpan.Members(json, species.ValueStart);
+            JsonSpan.Member levelMoves = fields?.FirstOrDefault(m => m.Key == "LevelMoves");
             if (levelMoves == null) yield break;
             foreach (Match m in Regex.Matches(json.Substring(levelMoves.ValueStart, levelMoves.ValueEnd - levelMoves.ValueStart),
                          "\"Move\"\\s*:\\s*\"([^\"]+)\""))
@@ -574,7 +575,7 @@ namespace DSPRE.HgEngine
         {
             if (entries.Count == 0) return "[]";
             string item = indent + unit, field = item + unit;
-            var sb = new StringBuilder("[");
+            StringBuilder sb = new StringBuilder("[");
             for (int i = 0; i < entries.Count; i++)
             {
                 sb.Append(newline).Append(item).Append('{')
@@ -605,7 +606,7 @@ namespace DSPRE.HgEngine
 
         private static string DetectIndentUnit(string json)
         {
-            var m = Regex.Match(json, "\\{\\r?\\n([ \\t]+)\"");
+            Match m = Regex.Match(json, "\\{\\r?\\n([ \\t]+)\"");
             return m.Success ? m.Groups[1].Value : "  ";
         }
 
@@ -625,7 +626,7 @@ namespace DSPRE.HgEngine
             {
                 int i = SkipWs(s, objStart);
                 if (i >= s.Length || s[i] != '{') return null;
-                var result = new List<Member>();
+                List<Member> result = new List<Member>();
                 i = SkipWs(s, i + 1);
                 if (i < s.Length && s[i] == '}') return result;
                 while (i < s.Length)

@@ -118,7 +118,7 @@ namespace DSPRE.CharMaps
         public ushort? FindCode(string characterOrAlias)
         {
             // First check if it's a direct character match
-            foreach (var kvp in CharacterMap)
+            foreach (KeyValuePair<string, CharMapEntry> kvp in CharacterMap)
             {
                 if (kvp.Value.Character == characterOrAlias)
                 {
@@ -130,7 +130,7 @@ namespace DSPRE.CharMaps
             }
             
             // Then check aliases
-            foreach (var kvp in CharacterMap)
+            foreach (KeyValuePair<string, CharMapEntry> kvp in CharacterMap)
             {
                 if (kvp.Value.Aliases != null && kvp.Value.Aliases.Contains(characterOrAlias))
                 {
@@ -159,7 +159,7 @@ namespace DSPRE.CharMaps
             };
             
             // Clone character map
-            foreach (var kvp in this.CharacterMap)
+            foreach (KeyValuePair<string, CharMapEntry> kvp in this.CharacterMap)
             {
                 CharMapEntry clonedEntry = new CharMapEntry(
                     kvp.Value.Character,
@@ -169,7 +169,7 @@ namespace DSPRE.CharMaps
             }
             
             // Clone command map
-            foreach (var kvp in this.CommandMap)
+            foreach (KeyValuePair<string, string> kvp in this.CommandMap)
             {
                 cloned.CommandMap[kvp.Key] = kvp.Value;
             }
@@ -342,8 +342,8 @@ namespace DSPRE.CharMaps
             try
             {
                 string jsonContent = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
-                
-                var options = new JsonSerializerOptions
+
+                JsonSerializerOptions options = new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = false,
                     ReadCommentHandling = JsonCommentHandling.Skip,
@@ -379,7 +379,7 @@ namespace DSPRE.CharMaps
         {
             try
             {
-                var options = new JsonSerializerOptions
+                JsonSerializerOptions options = new JsonSerializerOptions
                 {
                     WriteIndented = true,
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
@@ -495,7 +495,7 @@ namespace DSPRE.CharMaps
             result.MergedMap.Metadata.Version = baseMap.Metadata.Version; // Keep base version
             
             // Merge character maps
-            foreach (var customEntry in customMap.CharacterMap)
+            foreach (KeyValuePair<string, CharMapEntry> customEntry in customMap.CharacterMap)
             {
                 string hexCode = customEntry.Key;
                 CharMapEntry customValue = customEntry.Value;
@@ -565,7 +565,7 @@ namespace DSPRE.CharMaps
             }
             
             // Merge command maps 
-            foreach (var customCommand in customMap.CommandMap)
+            foreach (KeyValuePair<string, string> customCommand in customMap.CommandMap)
             {
                 if (!result.MergedMap.CommandMap.ContainsKey(customCommand.Key))
                 {
@@ -722,8 +722,8 @@ namespace DSPRE.CharMaps
                 // Both files exist, compare versions
                 try
                 {
-                    var defaultVersion = GetCharMapVersion(charmapFilePath);
-                    var customVersion = GetCharMapVersion(customCharmapFilePath);
+                    Version defaultVersion = GetCharMapVersion(charmapFilePath);
+                    Version customVersion = GetCharMapVersion(customCharmapFilePath);
 
                     return customVersion < defaultVersion;
                 }

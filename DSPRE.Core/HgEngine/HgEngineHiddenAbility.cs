@@ -15,13 +15,13 @@ namespace DSPRE.HgEngine
         {
             abilityId = 0;
             if (!HgEngineProject.IsActive) return false;
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator)) return false;
 
             string text = TryReadSource(out _);
             if (text == null || !HgEngineFlatArrayField.TryGetRawValue(text, designator, out string raw)) return false;
 
-            var abilities = HgEngineSymbolTable.Load(AbilityHeaderRelPath);
+            HgEngineSymbolTable abilities = HgEngineSymbolTable.Load(AbilityHeaderRelPath);
             if (abilities != null && abilities.TryGetValue(raw, out int v)) { abilityId = v; return true; }
             return int.TryParse(raw, out abilityId);
         }
@@ -30,11 +30,11 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
-            var abilities = HgEngineSymbolTable.Load(AbilityHeaderRelPath);
+            HgEngineSymbolTable abilities = HgEngineSymbolTable.Load(AbilityHeaderRelPath);
             string valueLiteral = abilities != null && abilities.TryGetNameWithPrefix(abilityId, "ABILITY_", out string abilityName)
                 ? abilityName : abilityId.ToString();
 

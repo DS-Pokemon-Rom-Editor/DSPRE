@@ -96,7 +96,7 @@ namespace DSPRE
         {
             string encountersDir = RomInfo.gameDirs[RomInfo.DirNames.encounters].unpackedDir;
 
-            var files = Directory.GetFiles(encountersDir)
+            List<string> files = Directory.GetFiles(encountersDir)
                 .Where(p => int.TryParse(Path.GetFileName(p), out _))
                 .OrderBy(p => int.Parse(Path.GetFileName(p)))
                 .ToList();
@@ -115,7 +115,7 @@ namespace DSPRE
                 encounters = new List<object>()
             };
 
-            foreach (var path in files)
+            foreach (string path in files)
             {
                 int fileId = int.Parse(Path.GetFileName(path));
 
@@ -138,7 +138,7 @@ namespace DSPRE
                 root.encounters.Add(encObj);
             }
 
-            var opts = new System.Text.Json.JsonSerializerOptions
+            JsonSerializerOptions opts = new System.Text.Json.JsonSerializerOptions
             {
                 WriteIndented = true,
                 DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
@@ -151,7 +151,7 @@ namespace DSPRE
         private static object ExportDPPt(int fileId, string path, string[] pokeNames)
         {
             EncounterFileDPPt enc;
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 enc = new EncounterFileDPPt(fs);
 
             return new
@@ -209,7 +209,7 @@ namespace DSPRE
         {
             if (arr == null || arr.Length == 0) return null;
 
-            var list = new List<object>(arr.Length);
+            List<object> list = new List<object>(arr.Length);
             for (int i = 0; i < arr.Length; i++)
             {
                 int speciesId = unchecked((int)arr[i]);
@@ -220,7 +220,7 @@ namespace DSPRE
 
         private static object ExportWalkingDPPtNamed(EncounterFileDPPt enc, string[] pokeNames)
         {
-            var slots = new List<object>(12);
+            List<object> slots = new List<object>(12);
             for (int i = 0; i < 12; i++)
             {
                 int speciesId = unchecked((int)enc.walkingPokemon[i]);
@@ -237,7 +237,7 @@ namespace DSPRE
 
         private static object ExportWalkingDPPt(EncounterFileDPPt enc)
         {
-            var slots = new List<object>();
+            List<object> slots = new List<object>();
 
             for (int i = 0; i < 12; i++)
             {
@@ -265,7 +265,7 @@ namespace DSPRE
         private static object ExportHGSS(int fileId, string path, string[] pokeNames)
         {
             EncounterFileHGSS enc;
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 enc = new EncounterFileHGSS(fs);
 
             return new
@@ -331,7 +331,7 @@ namespace DSPRE
             if (mons == null || minLv == null || maxLv == null) return null;
 
             int n = Math.Min(mons.Length, Math.Min(minLv.Length, maxLv.Length));
-            var list = new List<object>(n);
+            List<object> list = new List<object>(n);
 
             for (int i = 0; i < n; i++)
             {
@@ -351,7 +351,7 @@ namespace DSPRE
         private static List<object> ExportU16Named(ushort[] arr, string[] pokeNames)
         {
             if (arr == null || arr.Length == 0) return null;
-            var list = new List<object>(arr.Length);
+            List<object> list = new List<object>(arr.Length);
             for (int i = 0; i < arr.Length; i++)
                 list.Add(SpeciesObj(i, arr[i], pokeNames));
             return list;
@@ -363,7 +363,7 @@ namespace DSPRE
             if (mons == null || minLv == null || maxLv == null) return null;
 
             int n = Math.Min(mons.Length, Math.Min(minLv.Length, maxLv.Length));
-            var list = new List<object>(n);
+            List<object> list = new List<object>(n);
 
             for (int i = 0; i < n; i++)
             {
@@ -405,7 +405,7 @@ namespace DSPRE
                 try
                 {
                     // Read scripts + functions only (no actions)
-                    var sf = new ScriptFile(i, readFunctions: true, readActions: false);
+                    ScriptFile sf = new ScriptFile(i, readFunctions: true, readActions: false);
 
                     // Skip “level scripts” / empty script files
                     if (sf.isLevelScript || sf.hasNoScripts)
@@ -429,7 +429,7 @@ namespace DSPRE
         {
             int headerCount = MapHeader.GetHeaderCount(); // handles dynamic headers patch vs ARM9 table :contentReference[oaicite:3]{index=3}
 
-            using (var sw = new StreamWriter(mapHeadersPath))
+            using (StreamWriter sw = new StreamWriter(mapHeadersPath))
             {
                 sw.WriteLine("HeaderID,ScriptFileID,EventFileID,MapNameIndexInTextArchive,WildPokemonFileID,WeatherID");
 
@@ -469,15 +469,15 @@ namespace DSPRE
             if (!Directory.Exists(eventsDir))
                 throw new DirectoryNotFoundException($"Event files directory not found: {eventsDir}");
 
-            var files = Directory.GetFiles(eventsDir)
+            List<string> files = Directory.GetFiles(eventsDir)
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            using (var sw = new StreamWriter(eventSpawnablesPath))
+            using (StreamWriter sw = new StreamWriter(eventSpawnablesPath))
             {
                 sw.WriteLine("EventFileID,SpawnableIndex,ScriptNumber");
 
-                foreach (var filePath in files)
+                foreach (string filePath in files)
                 {
                     string name = Path.GetFileName(filePath);
 
@@ -486,14 +486,14 @@ namespace DSPRE
                         continue;
 
                     EventFile ev;
-                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         ev = new EventFile(fs);
                     }
 
                     for (int i = 0; i < ev.spawnables.Count; i++)
                     {
-                        var sp = ev.spawnables[i];
+                        Spawnable sp = ev.spawnables[i];
                         sw.WriteLine($"{eventFileId},{i},{sp.scriptNumber}");
                     }
                 }
@@ -508,11 +508,11 @@ namespace DSPRE
             if (!Directory.Exists(eventsDir))
                 throw new DirectoryNotFoundException($"Event files directory not found: {eventsDir}");
 
-            var files = Directory.GetFiles(eventsDir)
+            List<string> files = Directory.GetFiles(eventsDir)
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
-            using (var sw = new StreamWriter(eventOverworldsPath))
+            using (StreamWriter sw = new StreamWriter(eventOverworldsPath))
             {
                 sw.WriteLine(
                     "EventFileID,OverworldIndex," +
@@ -520,7 +520,7 @@ namespace DSPRE
                     "XMatrix,YMatrix,XMap,YMap,XCoord,YCoord,ZPosition,IsAlias"
                 );
 
-                foreach (var filePath in files)
+                foreach (string filePath in files)
                 {
                     string name = Path.GetFileName(filePath);
 
@@ -529,14 +529,14 @@ namespace DSPRE
                         continue;
 
                     EventFile ev;
-                    using (var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
                         ev = new EventFile(fs);
                     }
 
                     for (int i = 0; i < ev.overworlds.Count; i++)
                     {
-                        var ow = ev.overworlds[i];
+                        Overworld ow = ev.overworlds[i];
 
                         // Combined coordinates (same scheme used in serialization)
                         int xCoord = ow.xMapPosition + (MapFile.mapSize * ow.xMatrixPosition);
@@ -553,7 +553,7 @@ namespace DSPRE
                             // 3D overworld (image comes from Resources). No OWSprites sprite ID.
                             owSpriteIdStr = "";
                         }
-                        else if (RomInfo.OverworldTable.TryGetValue(ow.overlayTableEntry, out var result))
+                        else if (RomInfo.OverworldTable.TryGetValue(ow.overlayTableEntry, out (uint spriteID, ushort properties) result))
                         {
                             owSpriteIdStr = result.spriteID.ToString();
                         }
@@ -626,7 +626,7 @@ namespace DSPRE
 
                     int entryIndex = 0;
                     // Write up to 20 entries
-                    foreach (var entry in curLearnsetData.list)
+                    foreach ((byte level, ushort move) entry in curLearnsetData.list)
                     {
                         if (entryIndex >= 20)
                             break;
@@ -686,7 +686,7 @@ namespace DSPRE
                 else
                 {
                     // Write one row for each move/level combination
-                    foreach (var entry in curLearnsetData.list)
+                    foreach ((byte level, ushort move) entry in curLearnsetData.list)
                     {
                         string moveName = moveNames[entry.move];
                         sw.WriteLine($"{i},{pokemonName},{entry.level},{moveName}");
@@ -718,11 +718,11 @@ namespace DSPRE
             }
 
             // Create JSON structure
-            var learnsetJson = new Dictionary<string, object>();
+            Dictionary<string, object> learnsetJson = new Dictionary<string, object>();
 
             for (int i = 0; i < RomInfo.GetLearnsetFilesCount(); i++)
             {
-                var curLearnsetData = new LearnsetData(i);
+                LearnsetData curLearnsetData = new LearnsetData(i);
                 string speciesName = "SPECIES_UNKNOWN";
 
                 if (ScriptDatabase.pokemonNames.ContainsKey((ushort)i))
@@ -736,9 +736,9 @@ namespace DSPRE
                 }
 
 
-                var levelMoves = new List<Dictionary<string, object>>();
+                List<Dictionary<string, object>> levelMoves = new List<Dictionary<string, object>>();
 
-                foreach (var entry in curLearnsetData.list)
+                foreach ((byte level, ushort move) entry in curLearnsetData.list)
                 {
                     if (entry.move == 0) continue; // Skip empty moves
 
@@ -783,7 +783,7 @@ namespace DSPRE
 
                 sw.Write($"{i},{pokeNames[i]}");
 
-                foreach (var entry in curEvolutionFile.data)
+                foreach (EvolutionData entry in curEvolutionFile.data)
                 {
                     EvolutionParamMeaning meaning = EvolutionFile.evoDescriptions[entry.method];
 

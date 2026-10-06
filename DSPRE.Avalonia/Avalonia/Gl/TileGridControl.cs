@@ -64,9 +64,9 @@ namespace DSPRE.Avalonia.Gl
             double cs = CellSize;
             int? best = null;
             double smallest = double.MaxValue;
-            foreach (var (index, x0, z0, x1, z1) in _buildings)
+            foreach ((int index, double x0, double z0, double x1, double z1) in _buildings)
             {
-                var r = new Rect(x0 * cs, z0 * cs, Math.Max(2, (x1 - x0) * cs), Math.Max(2, (z1 - z0) * cs));
+                Rect r = new Rect(x0 * cs, z0 * cs, Math.Max(2, (x1 - x0) * cs), Math.Max(2, (z1 - z0) * cs));
                 bool near = r.Inflate(Band).Contains(p) && !r.Deflate(Band).Contains(p);
                 if (near && r.Width * r.Height < smallest) { smallest = r.Width * r.Height; best = index; }
             }
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.Gl
             base.OnPointerWheelChanged(e);
             double was = CellSize;
             _zoom = Math.Clamp(_zoom * Math.Pow(1.25, e.Delta.Y), 1, MostZoom);
-            var at = e.GetPosition(this);
+            Point at = e.GetPosition(this);
             _pan = (Vector)at - ((Vector)at - _pan) * (CellSize / was);
             KeepInView();
             InvalidateVisual();
@@ -209,7 +209,7 @@ namespace DSPRE.Avalonia.Gl
         protected override void OnPointerPressed(PointerPressedEventArgs e)
         {
             base.OnPointerPressed(e);
-            var point = e.GetCurrentPoint(this);
+            PointerPoint point = e.GetCurrentPoint(this);
             if (_spaceHeld && point.Properties.IsLeftButtonPressed)
             {
                 _panFrom = point.Position;
@@ -217,7 +217,7 @@ namespace DSPRE.Avalonia.Gl
                 e.Handled = true;
                 return;
             }
-            var local = Local(point.Position);
+            Point local = Local(point.Position);
             if (point.Properties.IsLeftButtonPressed && BuildingEdgeAt(local) is int building)
             {
                 _dragging = (building, local, 0, 0);
@@ -229,7 +229,7 @@ namespace DSPRE.Avalonia.Gl
             }
             if (At(local) is not (int x, int z)) return;
 
-            var button = point.Properties.IsRightButtonPressed ? MouseButton.Right
+            MouseButton button = point.Properties.IsRightButtonPressed ? MouseButton.Right
                        : point.Properties.IsMiddleButtonPressed ? MouseButton.Middle
                        : MouseButton.Left;
             _pressed = true;
@@ -243,7 +243,7 @@ namespace DSPRE.Avalonia.Gl
         protected override void OnPointerMoved(PointerEventArgs e)
         {
             base.OnPointerMoved(e);
-            var screen = e.GetPosition(this);
+            Point screen = e.GetPosition(this);
             if (_panFrom is Point from0)
             {
                 _pan += screen - from0;
@@ -252,7 +252,7 @@ namespace DSPRE.Avalonia.Gl
                 InvalidateVisual();
                 return;
             }
-            var position = Local(screen);
+            Point position = Local(screen);
             if (_dragging is (int index, Point from, int wasX, int wasZ))
             {
                 int dx = (int)Math.Round((position.X - from.X) / CellSize), dz = (int)Math.Round((position.Y - from.Y) / CellSize);
@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia.Gl
             }
             int? edge = _pressed ? null : BuildingEdgeAt(position);
             if (!_pressed) Cursor = _spaceHeld ? new Cursor(StandardCursorType.Hand) : edge != null ? new Cursor(StandardCursorType.SizeAll) : Cursor.Default;
-            var at = At(position);
+            (int x, int z)? at = At(position);
             if (_pressed && at is (int x, int z) && at != _last)
             {
                 _last = at;
@@ -301,7 +301,7 @@ namespace DSPRE.Avalonia.Gl
             if (!_pressed) return;
             _pressed = false;
             e.Pointer.Capture(null);
-            var at = At(Local(e.GetPosition(this))) ?? _last;
+            (int x, int z)? at = At(Local(e.GetPosition(this))) ?? _last;
             if (at is (int x, int z)) Released?.Invoke(this, (x, z));
         }
 
@@ -332,16 +332,16 @@ namespace DSPRE.Avalonia.Gl
             double full = cs * Size;
             ctx.FillRectangle(new SolidColorBrush(Color.FromRgb(20, 20, 24)), new Rect(0, 0, full, full));
 
-            var dim = new SolidColorBrush(Color.FromArgb(110, 12, 12, 16));
+            SolidColorBrush dim = new SolidColorBrush(Color.FromArgb(110, 12, 12, 16));
             {
-                foreach (var p in _placed)
+                foreach (Placed p in _placed)
                 {
                     if (p.Layer < 0 || p.Layer >= _visible.Length || !_visible[p.Layer]) continue;
                     bool other = p.Layer != _active;
-                    var rect = new Rect(p.X * cs, p.Z * cs, p.Across * cs, p.Down * cs);
+                    Rect rect = new Rect(p.X * cs, p.Z * cs, p.Across * cs, p.Down * cs);
                     if (_picture?.Invoke(p.Tile, p.Turn) is Look look && look.Image != null)
                     {
-                        var whole = new Rect((p.X + look.FromX) * cs, (p.Z + look.FromZ) * cs, look.Across * cs, look.Down * cs);
+                        Rect whole = new Rect((p.X + look.FromX) * cs, (p.Z + look.FromZ) * cs, look.Across * cs, look.Down * cs);
                         using (ctx.PushClip(new Rect(0, 0, cs * Size, cs * Size)))
                         using (ctx.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = global::Avalonia.Media.Imaging.BitmapInterpolationMode.None }))
                             ctx.DrawImage(look.Image, whole);
@@ -355,26 +355,26 @@ namespace DSPRE.Avalonia.Gl
                 }
             }
 
-            var faint = new Pen(new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)));
+            Pen faint = new Pen(new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)));
             for (int i = 0; i <= Size; i++)
             {
                 ctx.DrawLine(faint, new Point(i * cs, 0), new Point(i * cs, full));
                 ctx.DrawLine(faint, new Point(0, i * cs), new Point(full, i * cs));
             }
 
-            var edge = new Pen(new SolidColorBrush(Color.FromArgb(170, 255, 255, 255)), 1);
-            foreach (var p in _placed)
+            Pen edge = new Pen(new SolidColorBrush(Color.FromArgb(170, 255, 255, 255)), 1);
+            foreach (Placed p in _placed)
                 if (p.Layer == _active && (p.Across > 1 || p.Down > 1))
                     ctx.DrawRectangle(null, edge, new Rect(p.X * cs + 0.5, p.Z * cs + 0.5, p.Across * cs - 1, p.Down * cs - 1));
 
             if (_buildings != null)
             {
-                var line = new Pen(new SolidColorBrush(Color.FromArgb(230, 255, 214, 90)), 2) { DashStyle = new DashStyle(new double[] { 3, 2 }, 0) };
-                var wash = new SolidColorBrush(Color.FromArgb(40, 255, 214, 90));
-                var chosen = new Pen(Brushes.White, 2.5);
-                foreach (var (index, x0, z0, x1, z1) in _buildings)
+                Pen line = new Pen(new SolidColorBrush(Color.FromArgb(230, 255, 214, 90)), 2) { DashStyle = new DashStyle(new double[] { 3, 2 }, 0) };
+                SolidColorBrush wash = new SolidColorBrush(Color.FromArgb(40, 255, 214, 90));
+                Pen chosen = new Pen(Brushes.White, 2.5);
+                foreach ((int index, double x0, double z0, double x1, double z1) in _buildings)
                 {
-                    var r = new Rect(x0 * cs, z0 * cs, Math.Max(2, (x1 - x0) * cs), Math.Max(2, (z1 - z0) * cs));
+                    Rect r = new Rect(x0 * cs, z0 * cs, Math.Max(2, (x1 - x0) * cs), Math.Max(2, (z1 - z0) * cs));
                     ctx.FillRectangle(wash, r);
                     ctx.DrawRectangle(null, index == SelectedBuilding ? chosen : line, r);
                 }
@@ -382,7 +382,7 @@ namespace DSPRE.Avalonia.Gl
 
             if (_showHeights && _heights != null) DrawHeights(ctx, cs);
 
-            var every = new Pen(new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)));
+            Pen every = new Pen(new SolidColorBrush(Color.FromArgb(90, 255, 255, 255)));
             for (int i = 0; i <= Size; i += 4)
             {
                 ctx.DrawLine(every, new Point(i * cs, 0), new Point(i * cs, full));
@@ -391,8 +391,8 @@ namespace DSPRE.Avalonia.Gl
 
             if (_selection != null)
             {
-                var tint = new SolidColorBrush(Color.FromArgb(60, 0x40, 0xA0, 0xFF));
-                var line = new Pen(new SolidColorBrush(Color.FromArgb(230, 0x60, 0xB8, 0xFF)), 1.5);
+                SolidColorBrush tint = new SolidColorBrush(Color.FromArgb(60, 0x40, 0xA0, 0xFF));
+                Pen line = new Pen(new SolidColorBrush(Color.FromArgb(230, 0x60, 0xB8, 0xFF)), 1.5);
                 for (int x = 0; x < Size; x++)
                     for (int z = 0; z < Size; z++)
                     {
@@ -408,27 +408,27 @@ namespace DSPRE.Avalonia.Gl
 
             if (_pending.Count > 0)
             {
-                var fill = new SolidColorBrush(Color.FromArgb(90, 0xFF, 0xD8, 0x40));
-                foreach (var (x, z) in _pending) ctx.FillRectangle(fill, new Rect(x * cs, z * cs, cs, cs));
+                SolidColorBrush fill = new SolidColorBrush(Color.FromArgb(90, 0xFF, 0xD8, 0x40));
+                foreach ((int x, int z) in _pending) ctx.FillRectangle(fill, new Rect(x * cs, z * cs, cs, cs));
             }
 
             if (_ghost is (int gx, int gz, int ga, int gd))
             {
-                var ring = new Pen(new SolidColorBrush(Color.FromArgb(230, 255, 255, 255)), 1.5,
+                Pen ring = new Pen(new SolidColorBrush(Color.FromArgb(230, 255, 255, 255)), 1.5,
                                    new DashStyle(new double[] { 3, 2 }, 0));
                 ctx.DrawRectangle(null, ring, new Rect(gx * cs + 1, gz * cs + 1, ga * cs - 2, gd * cs - 2));
             }
 
             if (_marked is (int mx, int mz) && mx >= 0 && mz >= 0 && mx < Size && mz < Size)
             {
-                var ring = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xD8, 0x40)), 2);
+                Pen ring = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xD8, 0x40)), 2);
                 ctx.DrawRectangle(null, ring, new Rect(mx * cs, mz * cs, cs, cs));
             }
         }
 
         private void DrawHeights(DrawingContext ctx, double cs)
         {
-            var typeface = new Typeface("Consolas");
+            Typeface typeface = new Typeface("Consolas");
             for (int z = 0; z < Size; z++)
                 for (int x = 0; x < Size; x++)
                 {
@@ -439,7 +439,7 @@ namespace DSPRE.Avalonia.Gl
                     if (cs < 11) continue;
 
                     // Painting only sets whole steps, so a fractional height shows rounded.
-                    var text = new FormattedText(whole.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture,
+                    FormattedText text = new FormattedText(whole.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture,
                                                  FlowDirection.LeftToRight, typeface, Math.Max(7, cs * 0.42),
                                                  new SolidColorBrush(Color.FromRgb(26, 26, 30)));
                     ctx.DrawText(text, new Point(x * cs + (cs - text.Width) / 2, z * cs + (cs - text.Height) / 2));
@@ -453,7 +453,7 @@ namespace DSPRE.Avalonia.Gl
         public static Color HeightColour(int steps, byte alpha = 255)
         {
             if (steps == 0) return FromHsv(210, 0.12, 0.92, alpha);
-            var hues = steps > 0 ? UpHues : DownHues;
+            double[] hues = steps > 0 ? UpHues : DownHues;
             int k = Math.Abs(steps) - 1;
             double v = k < hues.Length ? 0.95 : 0.7;
             return FromHsv(hues[k % hues.Length], 0.75, v, alpha);

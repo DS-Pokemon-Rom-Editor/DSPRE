@@ -7,6 +7,7 @@ using Ekona.Images;
 using Images;
 using AvaBitmap = global::Avalonia.Media.Imaging.Bitmap;
 using static DSPRE.RomInfo;
+using System.Collections.Generic;
 
 namespace DSPRE.Avalonia
 {
@@ -114,7 +115,7 @@ namespace DSPRE.Avalonia
 
                 if (TrainerGraphicsLayout.PixelsAreScrambled && _tile.Tiles != null)
                 {
-                    var pixels = (byte[])_tile.Tiles.Clone();
+                    byte[] pixels = (byte[])_tile.Tiles.Clone();
                     SpriteScrambling.Unscramble(pixels, 0, pixels.Length);
                     _tile.Set_Tiles(pixels);
                 }
@@ -135,7 +136,7 @@ namespace DSPRE.Avalonia
                 _sprite = new NCER(Path.Combine(dir, spriteFilename), spriteFileID, spriteFilename);
 
                 _sequences = TryReadNanrSequences(dir, trClassID);
-                var nanrSequence = TryReadNanrFrameSequence(dir, trClassID);
+                (int[] cells, int[] durations)? nanrSequence = TryReadNanrFrameSequence(dir, trClassID);
                 _frameBankIndices = nanrSequence?.cells ?? Enumerable.Range(0, _sprite.Banks.Length).ToArray();
                 _frameDurations = nanrSequence?.durations ?? Array.Empty<int>();
 
@@ -163,7 +164,7 @@ namespace DSPRE.Avalonia
             if (!File.Exists(cellPath)) return false;
             TrainerSpriteSourcePng.TryApply(stem + ".png", _tile, _pal);
 
-            if (!HgEngineTrainerGraphicsSource.TryReadCellBanks(cellPath, out var banks, out var blockSize, out string cellError))
+            if (!HgEngineTrainerGraphicsSource.TryReadCellBanks(cellPath, out Bank[] banks, out uint blockSize, out string cellError))
             {
                 AppLogger.Error($"TrainerClassSpriteRenderer: {cellError}");
                 return false;
@@ -174,7 +175,7 @@ namespace DSPRE.Avalonia
 
             (int[] cells, int[] durations)? anim = null;
             if (File.Exists(animPath) &&
-                HgEngineTrainerGraphicsSource.TryReadAnimSequence(animPath, out var cells, out var durations, out string animError))
+                HgEngineTrainerGraphicsSource.TryReadAnimSequence(animPath, out int[] cells, out int[] durations, out string animError))
             {
                 anim = (cells, durations);
             }
@@ -200,11 +201,11 @@ namespace DSPRE.Avalonia
                 string path = Path.Combine(dir, nanrFileID.ToString("D4"));
                 if (!File.Exists(path)) return null;
 
-                var nanr = new NANR(null, path, nanrFileID);
-                var anis = nanr.Struct.abnk.anis;
+                NANR nanr = new NANR(null, path, nanrFileID);
+                NANR.sNANR.Animation[] anis = nanr.Struct.abnk.anis;
                 if (anis == null || anis.Length == 0) return null;
 
-                var longest = anis.OrderByDescending(a => a.nFrames).First();
+                NANR.sNANR.Animation longest = anis.OrderByDescending(a => a.nFrames).First();
                 return (longest.frames.Select(f => (int)f.data.nCell).ToArray(),
                         longest.frames.Select(f => (int)f.unknown1).ToArray());
             }
@@ -218,7 +219,7 @@ namespace DSPRE.Avalonia
                 int nanrFileID = TrainerGraphicsLayout.AnimationEntry(trClassID);
                 string path = Path.Combine(dir, nanrFileID.ToString("D4"));
                 if (!File.Exists(path)) return Array.Empty<(int, int)[]>();
-                var anis = new NANR(null, path, nanrFileID).Struct.abnk.anis;
+                NANR.sNANR.Animation[] anis = new NANR(null, path, nanrFileID).Struct.abnk.anis;
                 if (anis == null) return Array.Empty<(int, int)[]>();
                 return anis.Select(a => a.frames == null ? Array.Empty<(int, int)>()
                     : a.frames.Select(f => ((int)f.data.nCell, (int)f.unknown1)).ToArray()).ToArray();
@@ -232,7 +233,7 @@ namespace DSPRE.Avalonia
             int size = whole.Height;
             if (size <= 0 || (slot + 1) * size > whole.Width) return whole;
 
-            var frame = new DSPRE.RawImage(size, size);
+            RawImage frame = new DSPRE.RawImage(size, size);
             for (int y = 0; y < size; y++)
                 Array.Copy(whole.Bgra, y * whole.Stride + slot * size * 4, frame.Bgra, y * frame.Stride, size * 4);
             return frame;
@@ -246,7 +247,7 @@ namespace DSPRE.Avalonia
             if (px == null || size <= 0 || _tile.BPP != 4) return new[] { 0 };
 
             int w = _tile.Width, slots = Math.Max(1, w / size);
-            var drawn = new System.Collections.Generic.List<int>();
+            List<int> drawn = new System.Collections.Generic.List<int>();
             for (int s = 0; s < slots; s++)
             {
                 bool any = false;
@@ -287,7 +288,7 @@ namespace DSPRE.Avalonia
             {
                 try
                 {
-                    var flat = _tile.Get_RawImage(_pal);
+                    RawImage flat = _tile.Get_RawImage(_pal);
                     ClearColourZero(flat);
                     int slot = _flatSlots.Length == 0 ? 0 : _flatSlots[Math.Clamp(frame, 0, _flatSlots.Length - 1)];
                     return ImageConverter.ToAvaloniaBitmap(Slot(flat, slot));
@@ -307,16 +308,16 @@ namespace DSPRE.Avalonia
                 if (_jsonBanks != null)
                 {
                     if (bankIndex < 0 || bankIndex >= _jsonBanks.Length) return null;
-                    var bank = _jsonBanks[bankIndex];
+                    Bank bank = _jsonBanks[bankIndex];
                     int[] oamEnabled = Enumerable.Range(0, bank.oams.Length).ToArray();
-                    var raw = Actions.Get_RawImage(bank, _jsonBlockSize, _tile, _pal, width, height, true, -1, 1, oamEnabled);
+                    RawImage raw = Actions.Get_RawImage(bank, _jsonBlockSize, _tile, _pal, width, height, true, -1, 1, oamEnabled);
                     return ImageConverter.ToAvaloniaBitmap(raw);
                 }
 
                 if (_sprite == null) return null;
                 int oamCount = _sprite.Banks[bankIndex].oams.Length;
                 int[] oamEnabledVanilla = Enumerable.Range(0, oamCount).ToArray();
-                var rawVanilla = _sprite.Get_RawImage(_tile, _pal, bankIndex, width, height, trans: true, currOAM: -1, draw_index: oamEnabledVanilla);
+                RawImage rawVanilla = _sprite.Get_RawImage(_tile, _pal, bankIndex, width, height, trans: true, currOAM: -1, draw_index: oamEnabledVanilla);
                 return ImageConverter.ToAvaloniaBitmap(rawVanilla);
             }
             catch (Exception ex)

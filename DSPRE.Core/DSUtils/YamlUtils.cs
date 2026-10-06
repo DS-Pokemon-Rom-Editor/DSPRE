@@ -90,11 +90,11 @@ namespace DSPRE {
                 AppLogger.Debug($"Reading header.yaml from: {yamlPath}");
                 string yamlContent = File.ReadAllText(yamlPath);
                 AppLogger.Debug($"YAML content length: {yamlContent.Length} bytes");
-                
-                var deserializer = new DeserializerBuilder()
+
+                IDeserializer deserializer = new DeserializerBuilder()
                     .IgnoreUnmatchedProperties()
                     .Build();
-                var header = deserializer.Deserialize<HeaderYaml>(yamlContent);
+                HeaderYaml header = deserializer.Deserialize<HeaderYaml>(yamlContent);
 
                 if (header == null) {
                     AppLogger.Warn("Deserialized header object is null");

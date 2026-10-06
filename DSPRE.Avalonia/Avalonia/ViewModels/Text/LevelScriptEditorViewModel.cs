@@ -64,7 +64,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             get
             {
-                var result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_newScriptId);
+                CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_newScriptId);
                 switch (result.Kind)
                 {
                     case CommonScriptId.Kind.Resolved:
@@ -222,7 +222,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _suppress = true;
             Triggers.Clear();
             if (_file != null)
-                foreach (var t in _file.bufferSet) Triggers.Add(t.ToString());
+                foreach (LevelScriptTrigger t in _file.bufferSet) Triggers.Add(t.ToString());
             _suppress = false;
             SelectedTriggerIndex = Triggers.Count > 0 ? 0 : -1;
         }
@@ -269,7 +269,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_file == null || _selScript < 0) return;
             if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Level Script Editor"); return; }
             // A file that failed to load as a level script may be an ordinary script; saving would replace it.
-            var onDisk = new ScriptFile(_selScript, readFunctions: false, readActions: false);
+            ScriptFile onDisk = new ScriptFile(_selScript, readFunctions: false, readActions: false);
             if (!onDisk.isLevelScript && !onDisk.hasNoScripts)
             {
                 _ = DialogHelper.ShowError($"File {_selScript} holds ordinary scripts, so it was not saved as a level script.", "Level Script Editor");
@@ -289,15 +289,15 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task ImportAsync()
         {
             if (_file == null) return;
-            var filter = new FilePickerFileType("Level script") { Patterns = new[] { "*.lscr", "*.bin", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("Level script") { Patterns = new[] { "*.lscr", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import level script", new[] { filter });
             if (path == null) return;
             try
             {
-                var imported = new LevelScriptFile();
+                LevelScriptFile imported = new LevelScriptFile();
                 imported.parse_file(path);
                 _file.bufferSet.Clear();
-                foreach (var t in imported.bufferSet) _file.bufferSet.Add(t);
+                foreach (LevelScriptTrigger t in imported.bufferSet) _file.bufferSet.Add(t);
                 RefreshTriggers();
                 Dirty();
                 StatusText = "Imported (unsaved).";
@@ -308,7 +308,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task ExportAsync()
         {
             if (_file == null) return;
-            var filter = new FilePickerFileType("Level script") { Patterns = new[] { "*.lscr" } };
+            FilePickerFileType filter = new FilePickerFileType("Level script") { Patterns = new[] { "*.lscr" } };
             string path = await DialogHelper.SaveFile(_owner, "Export level script", new[] { filter }, $"levelscript_{_selScript:D4}.lscr");
             if (path == null) return;
             try { _file.write_file(path, _padding); StatusText = "Exported."; }

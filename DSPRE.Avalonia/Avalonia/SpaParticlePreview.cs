@@ -81,20 +81,20 @@ namespace DSPRE.Avalonia
         public bool HasEmitters => _layers.Count > 0;
         public bool AllFinished => _layers.TrueForAll(l => l.Sim.Finished);
 
-        public void Step() { foreach (var l in _layers) l.Sim.Step(); }
+        public void Step() { foreach (Layer l in _layers) l.Sim.Step(); }
 
         /// <summary>Where every live particle is, for anything that needs to look at them rather than draw them.</summary>
         public IEnumerable<SpaParticleState> LiveParticles()
         {
-            foreach (var l in _layers)
-                foreach (var p in l.Sim.Particles())
+            foreach (Layer l in _layers)
+                foreach (SpaParticleState p in l.Sim.Particles())
                     yield return p;
         }
 
         public WriteableBitmap RenderFrame()
         {
             Array.Clear(_buf, 0, _buf.Length);
-            foreach (var layer in _layers)
+            foreach (Layer layer in _layers)
             {
                 // The real battle particle camera: eye at
                 // (0,0,+4.0) world units looking at the origin, Y up. px-per-world-unit at the z=0 plane is
@@ -104,7 +104,7 @@ namespace DSPRE.Avalonia
                 double fBase = layer.Orthographic ? 1.0 : EyeDist / (EyeDist - layer.BaseZ / PxPerUnit);
                 if (fBase <= 0) continue;   // anchor behind the camera, nothing sane to draw
                 double mirror = layer.ViewReversed ? -1.0 : 1.0;
-                foreach (var p in layer.Sim.Particles())
+                foreach (SpaParticleState p in layer.Sim.Particles())
                 {
                     // Children draw with their OWN child-resource draw configuration; draw-type 4 uses the same
                     // path as draw-type 3.
@@ -112,7 +112,7 @@ namespace DSPRE.Avalonia
                     bool directional = drawType == 1;             // the directional-billboard draw type
                     bool polygonType = drawType >= 2 && layer.Em != null;   // polygon draw types
                     // The quad spans tileS by tileT texture widths; the texture's repeat and flip bits decide what lies past the first.
-                    var tex = layer.TexFor(p.TexNo);
+                    SpaTexture tex = layer.TexFor(p.TexNo);
                     bool textured = tex != null && tex.Rgba != null && tex.Width > 0 && tex.Height > 0;
                     int tileS = layer.Em?.TileS ?? (layer.RepeatS ? 2 : 1);
                     int tileT = layer.Em?.TileT ?? (layer.RepeatT ? 2 : 1);
@@ -153,7 +153,7 @@ namespace DSPRE.Avalonia
                         // [· Orient(velocity | −position when dpolFaceEmitter)]; the quad spans local X and
                         // local Y (reference plane 0 = XY) or local X and local Z (plane 1 = XZ). Rendered with
                         // EXACT per-pixel ray-plane perspective (the DS projects the quad per-vertex).
-                        var em2 = layer.Em;
+                        SpaEmitter em2 = layer.Em;
                         int rotAxis = p.IsChild ? em2.ChildPolyRotAxis : em2.PolyRotAxis;
                         int refPlane = p.IsChild ? em2.ChildPolyRefPlane : em2.PolyRefPlane;
                         double[,] rm = rotAxis == 1 ? RotXYZ(p.Rotation) : RotY(p.Rotation);
@@ -230,9 +230,9 @@ namespace DSPRE.Avalonia
                 }
             }
 
-            var wb = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96),
+            WriteableBitmap wb = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96),
                 PixelFormat.Bgra8888, AlphaFormat.Premul);
-            using (var fb = wb.Lock())
+            using (ILockedFramebuffer fb = wb.Lock())
             {
                 int rowBytes = fb.RowBytes;
                 if (rowBytes == Width * 4)
@@ -342,7 +342,7 @@ namespace DSPRE.Avalonia
 
         private static double[,] Mul3(double[,] a, double[,] b)
         {
-            var r = new double[3, 3];
+            double[,] r = new double[3, 3];
             for (int i = 0; i < 3; i++)
                 for (int j = 0; j < 3; j++)
                     r[i, j] = a[i, 0] * b[0, j] + a[i, 1] * b[1, j] + a[i, 2] * b[2, j];

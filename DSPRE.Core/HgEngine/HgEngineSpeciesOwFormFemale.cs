@@ -19,7 +19,7 @@ namespace DSPRE.HgEngine
         {
             expression = null;
             if (!HgEngineProject.IsActive) return false;
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator)) return false;
 
             string text = TryReadSource(out _);
@@ -34,7 +34,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
             if (!TryValidateRawExpression(expression, out error)) return false;
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
@@ -50,7 +50,7 @@ namespace DSPRE.HgEngine
         /// <summary>Checks a value against the names the checkout defines, without writing it.</summary>
         public static bool TryValidateRawExpression(string expression, out string error)
         {
-            var nameTables = new List<HgEngineSymbolTable>();
+            List<HgEngineSymbolTable> nameTables = new List<HgEngineSymbolTable>();
             foreach (string header in NameHeaders)
                 if (HgEngineSymbolTable.Load(header) is { } table) nameTables.Add(table);
             bool IsKnownName(string name) => nameTables.Exists(t => t.TryGetValue(name, out _));
@@ -66,7 +66,7 @@ namespace DSPRE.HgEngine
             error = null;
             if (string.IsNullOrWhiteSpace(expression)) { error = "Enter a value."; return false; }
 
-            var tokens = new List<string>();
+            List<string> tokens = new List<string>();
             string s = expression.Trim();
             for (int i = 0; i < s.Length;)
             {

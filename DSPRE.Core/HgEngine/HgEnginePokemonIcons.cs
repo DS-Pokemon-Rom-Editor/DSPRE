@@ -23,7 +23,7 @@ namespace DSPRE.HgEngine
             absolutePngPath = null;
             if (!HgEngineProject.IsLinked) return false;
 
-            var map = LoadMap();
+            Dictionary<int, string> map = LoadMap();
             if (map == null) return false;
 
             int lookupId = HgEngineSpeciesExpansion.AdjustForPokegraMkLookup(speciesId);
@@ -44,7 +44,7 @@ namespace DSPRE.HgEngine
             string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
 
-            var map = ParseMap(File.ReadAllText(path));
+            Dictionary<int, string> map = ParseMap(File.ReadAllText(path));
             _cache = map;
             _cachedForRepo = repo;
             return map;
@@ -54,7 +54,7 @@ namespace DSPRE.HgEngine
         /// distinguishes the icon NCGR from the "0_"-prefixed shared palette banks.</summary>
         internal static Dictionary<int, string> ParseMap(string pokegraMkText)
         {
-            var map = new Dictionary<int, string>();
+            Dictionary<int, string> map = new Dictionary<int, string>();
             foreach (Match m in Regex.Matches(pokegraMkText,
                 @"build/pokemonicon/1_(\d+)\.NCGR:\s*(data/graphics/sprites/[^\s/]+/icon\.png)"))
             {

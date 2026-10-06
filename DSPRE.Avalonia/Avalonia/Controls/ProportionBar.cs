@@ -28,26 +28,26 @@ namespace DSPRE.Avalonia.Controls
 
         public override void Render(DrawingContext context)
         {
-            var parts = Parts;
-            var r = new Rect(Bounds.Size);
+            IReadOnlyList<BarPart> parts = Parts;
+            Rect r = new Rect(Bounds.Size);
             context.DrawRectangle(new SolidColorBrush(Color.FromArgb(40, 128, 128, 128)), null, r, 4, 4);
             if (parts == null || parts.Count == 0) return;
             double total = 0;
-            foreach (var p in parts) total += System.Math.Max(0, p.Value);
+            foreach (BarPart p in parts) total += System.Math.Max(0, p.Value);
             if (total <= 0) return;
 
             using (context.PushClip(new RoundedRect(r, 4)))
             {
                 double x = 0;
-                foreach (var p in parts)
+                foreach (BarPart p in parts)
                 {
                     double w = r.Width * System.Math.Max(0, p.Value) / total;
                     if (w <= 0) continue;
-                    var piece = new Rect(x, 0, w, r.Height);
+                    Rect piece = new Rect(x, 0, w, r.Height);
                     context.FillRectangle(new SolidColorBrush(p.Colour), piece);
                     if (!string.IsNullOrEmpty(p.Label))
                     {
-                        var text = new FormattedText(p.Label, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
+                        FormattedText text = new FormattedText(p.Label, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
                             Typeface.Default, 11, Brushes.White);
                         if (text.Width + 6 <= w)
                             context.DrawText(text, new Point(x + (w - text.Width) / 2, (r.Height - text.Height) / 2));

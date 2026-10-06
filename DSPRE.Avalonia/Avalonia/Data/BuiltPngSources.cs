@@ -16,10 +16,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Why a picture can't be saved into this member's PNG, or null when it can or the member has none.</summary>
         public static string CannotWrite(DirNames dir, string archive, int member, int memberCount)
         {
-            var source = HgEngineBuiltPngs.For(archive, member, memberCount);
+            HgEngineBuiltPngs.Source source = HgEngineBuiltPngs.For(archive, member, memberCount);
             if (source?.Part != HgEngineBuiltPngs.Part.Pixels) return null;
-            var a = GraphicAssets.All.FirstOrDefault(x => x.Dir == dir);
-            var ix = a == null ? null : GraphicAssets.ReadIndexed(a, member, out _);
+            GraphicAssets.Archive a = GraphicAssets.All.FirstOrDefault(x => x.Dir == dir);
+            GraphicAssets.Indexed ix = a == null ? null : GraphicAssets.ReadIndexed(a, member, out _);
             if (ix == null) return null;
             if (!File.Exists(source.Path) || !IndexedPng.TryRead(File.ReadAllBytes(source.Path), out _, out _, out int w, out int h))
                 return $"hg-engine builds this from {Rel(source.Path)}, which is missing or isn't an indexed PNG.";
@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Called once <paramref name="data"/> is on disk as member <paramref name="member"/>, which held <paramref name="before"/>.</summary>
         public static void Write(DirNames dir, string archive, int member, int memberCount, byte[] before, byte[] data)
         {
-            var source = HgEngineBuiltPngs.For(archive, member, memberCount);
+            HgEngineBuiltPngs.Source source = HgEngineBuiltPngs.For(archive, member, memberCount);
             if (source == null) return;
             switch (source.Part)
             {
@@ -52,8 +52,8 @@ namespace DSPRE.Avalonia.Data
 
         private static void WritePixels(DirNames dir, int member, string png)
         {
-            var a = GraphicAssets.All.FirstOrDefault(x => x.Dir == dir);
-            var ix = a == null ? null : GraphicAssets.ReadIndexed(a, member, out _);
+            GraphicAssets.Archive a = GraphicAssets.All.FirstOrDefault(x => x.Dir == dir);
+            GraphicAssets.Indexed ix = a == null ? null : GraphicAssets.ReadIndexed(a, member, out _);
             if (ix == null) return;
             byte[] file = File.Exists(png) ? File.ReadAllBytes(png) : null;
             if (file == null || !IndexedPng.TryRead(file, out byte[] oldIndices, out uint[] colours, out int w, out int h)) return;
@@ -76,20 +76,20 @@ namespace DSPRE.Avalonia.Data
         {
             byte[] file = File.Exists(png) ? File.ReadAllBytes(png) : null;
             if (file == null || file.Length == 0 || !IndexedPng.TryRead(file, out byte[] indices, out uint[] old, out int w, out int h)) return;
-            var stored = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(nclr), out int count);
+            (byte r, byte g, byte b)[] stored = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(nclr), out int count);
             // Only colours this save changed go in: the build leaves values past the drawing's own that the PNG doesn't hold.
-            var was = previous == null ? null : NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(previous), out _);
+            (byte r, byte g, byte b)[] was = previous == null ? null : NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(previous), out _);
             int depth = file.Length > 24 ? file[24] : 8;
             int length = Math.Max(old.Length, Math.Min(count, 1 << Math.Min(depth, 8)));
 
-            var colours = new uint[length];
+            uint[] colours = new uint[length];
             int used = old.Length;
             for (int i = 0; i < length; i++)
             {
                 uint before = i < old.Length ? old[i] : 0xFF000000u;
                 colours[i] = before;
                 if (i >= count || (was != null && was[i] == stored[i])) continue;
-                var (r, g, b) = stored[i];
+                (byte r, byte g, byte b) = stored[i];
                 uint now = ((uint)r << 16) | ((uint)g << 8) | b;
                 // A colour the game would show the same keeps the PNG's own value.
                 if ((before & 0xF8F8F8) == now) continue;
@@ -104,14 +104,14 @@ namespace DSPRE.Avalonia.Data
         // A JASC palette the build converts into this member keeps its own length.
         private static void WriteJasc(byte[] nclr, string path)
         {
-            var stored = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(nclr), out int count);
+            (byte r, byte g, byte b)[] stored = NitroBgCodec.ReadPalette(GraphicAssets.Unsqueeze(nclr), out int count);
             int[] old = File.Exists(path) ? HgEngineOverworlds.ReadJasc(path) : null;
             int length = old?.Length ?? count;
-            var colours = new int[length];
+            int[] colours = new int[length];
             for (int i = 0; i < length; i++)
             {
                 if (i >= count) { colours[i] = old?[i] ?? 0; continue; }
-                var (r, g, b) = stored[i];
+                (byte r, byte g, byte b) = stored[i];
                 colours[i] = (r << 16) | (g << 8) | b;
             }
             HgEngineOverworlds.WriteJasc(path, colours);

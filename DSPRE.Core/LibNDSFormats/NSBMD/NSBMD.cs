@@ -107,8 +107,8 @@ namespace LibNDSFormats.NSBMD {
         /// Match up model / NSBMD textures.
         /// </summary>
         public void MatchTextures_org() {
-            for (var i = 0; i < models.Length; i++) {
-                for (var j = 0; j < models[i].Materials.Count; j++) {
+            for (int i = 0; i < models.Length; i++) {
+                for (int j = 0; j < models[i].Materials.Count; j++) {
                     /*bool gottex = false;
                     bool gotpal = false;
                     foreach (var mat1 in materials)
@@ -226,7 +226,7 @@ namespace LibNDSFormats.NSBMD {
         /// Decode objects.
         /// </summary>
         public static bool DecodeCode(Stream stream, uint codeoffset, uint codelimit, NSBMDModel mod, int maxstack) {
-            var reader = new BinaryReader(stream);
+            BinaryReader reader = new BinaryReader(stream);
             //Console.WriteLine("DecodeCode");
             UInt32 codeptr = codeoffset;
             bool begin = false; // whether there is a 0x0b begin code
@@ -406,7 +406,7 @@ namespace LibNDSFormats.NSBMD {
         /// ReadMld0.
         /// </summary>
         private static NSBMDModel[] ReadMdl0(Stream stream, int blockoffset) {
-            var reader = new EndianBinaryReader(stream, Endianness.LittleEndian);
+            EndianBinaryReader reader = new EndianBinaryReader(stream, Endianness.LittleEndian);
 
             int blocksize;
             int blockptr;
@@ -427,23 +427,23 @@ namespace LibNDSFormats.NSBMD {
                 throw new Exception();
             }
 
-            for (var i = 0; i < num; ++i) {
+            for (int i = 0; i < num; ++i) {
                 model.Add(new NSBMDModel());
             }
 
-            var modelOffset = new UInt32[num];
+            uint[] modelOffset = new UInt32[num];
 
             stream.Skip(10 + 4 + (num * 4)); // skip [char xyz], useless, go straight to model data offset
 
             ////////////////////////////////////////////////
             // copy model dataoffset
-            for (var i = 0; i < num; i++) {
+            for (int i = 0; i < num; i++) {
                 modelOffset[i] = (uint)(reader.ReadUInt32() + blockoffset);
             }
 
             ////////////////////////////////////////////////
             // copy model names
-            for (var i = 0; i < num; i++) {
+            for (int i = 0; i < num; i++) {
                 model[i].Name = Utils.ReadNSBMDString(reader);
             }
 
@@ -481,11 +481,11 @@ namespace LibNDSFormats.NSBMD {
             model[0].boundYmax = (float)NSBMDGlRenderer.Sign(reader.ReadInt16(), 16) / 4096f;
             model[0].boundZmax = (float)NSBMDGlRenderer.Sign(reader.ReadInt16(), 16) / 4096f;
 
-            var polyOffsets = new UInt32[polynum];
-            var polyDataSize = new UInt32[polynum];
+            uint[] polyOffsets = new UInt32[polynum];
+            uint[] polyDataSize = new UInt32[polynum];
 
             for (int i = 0; i < 1; i++) {
-                var mod = model[i];
+                NSBMDModel mod = model[i];
 
                 stream.Seek(modelOffset[i], SeekOrigin.Begin);
                 uint codeoffset;
@@ -525,11 +525,11 @@ namespace LibNDSFormats.NSBMD {
                 objdatasize = new uint[objnum];
 
 
-                for (var j = 0; j < objnum; j++) {
+                for (int j = 0; j < objnum; j++) {
                     objdataoffset[j] = (uint)(reader.ReadUInt32() + objdatabase);
                 }
 
-                for (var j = 0; j < objnum - 1; j++) {
+                for (int j = 0; j < objnum - 1; j++) {
                     objdatasize[j] = objdataoffset[j + 1] - objdataoffset[j];
                 }
 
@@ -538,13 +538,13 @@ namespace LibNDSFormats.NSBMD {
 
                 ////////////////////////////////////////////////
                 // copy NsbmdObject names
-                for (var j = 0; j < objnum; j++) {
+                for (int j = 0; j < objnum; j++) {
                     mod.Objects[j].Name = Utils.ReadNSBMDString(reader);
                 }
 
                 ////////////////////////////////////////////////
                 // parse NsbmdObject information
-                for (var j = 0; j < objnum; j++) {
+                for (int j = 0; j < objnum; j++) {
                     if (objdatasize[j] <= 4) {
                         continue;
                     }
@@ -568,7 +568,7 @@ namespace LibNDSFormats.NSBMD {
                 // parse material definition
                 // defines RotA material by pairing texture and palette
                 stream.Seek(16 + (matnum * 4), SeekOrigin.Current); // go straight to material data offset
-                for (var j = 0; j < matnum; j++) // TODO: BAD!
+                for (int j = 0; j < matnum; j++) // TODO: BAD!
                 {
                     mod.Materials[j] = new NSBMDMaterial();
                     blockptr = (int)stream.Position;
@@ -674,7 +674,7 @@ namespace LibNDSFormats.NSBMD {
                     mod.Materials[j].shine = (unknown2 >> 15 & 1) == 1;
                     stream.Seek(blockptr + 4, SeekOrigin.Begin);
                 }
-                for (var j = 0; j < matnum; j++) {
+                for (int j = 0; j < matnum; j++) {
                     mod.Materials[j].MaterialName = Utils.ReadNSBMDString(reader);
                 }
 
@@ -687,7 +687,7 @@ namespace LibNDSFormats.NSBMD {
 
                 if (texnum > 0) {
                     stream.Seek(14 + (texnum * 4), SeekOrigin.Current); // go straight to data offsets
-                    for (var j = 0; j < texnum; j++) {
+                    for (int j = 0; j < texnum; j++) {
                         Int32 flags = reader.ReadInt32();
                         int numPairs = flags >> 16 & 0xf;
                         int dummy = flags >> 24 & 0xf;
@@ -704,7 +704,7 @@ namespace LibNDSFormats.NSBMD {
                         stream.Seek(blockptr, SeekOrigin.Begin);
                     }
 
-                    for (var j = 0; j < texnum; j++) // copy texture names
+                    for (int j = 0; j < texnum; j++) // copy texture names
                     {
                         NSBMDMaterial mat = mod.Materials[j];
 
@@ -724,7 +724,7 @@ namespace LibNDSFormats.NSBMD {
 
                 if (palnum > 0) {
                     stream.Seek(14 + (palnum * 4), SeekOrigin.Current); // go straight to data offsets
-                    for (var j = 0; j < palnum; j++) // matching palette with material
+                    for (int j = 0; j < palnum; j++) // matching palette with material
                     {
                         Int32 flags = reader.ReadInt32();
                         int numPairs = flags >> 16 & 0xf;
@@ -741,7 +741,7 @@ namespace LibNDSFormats.NSBMD {
                         mod.Palettes.Add(t);
                         stream.Seek(blockptr, SeekOrigin.Begin);
                     }
-                    for (var j = 0; j < palnum; j++) // copy palette names
+                    for (int j = 0; j < palnum; j++) // copy palette names
                     {
                         int palmatid = (int)mod.Materials[j].palmatid;
                         mod.Materials[palmatid].palname = Utils.ReadNSBMDString(reader);
@@ -757,7 +757,7 @@ namespace LibNDSFormats.NSBMD {
                 stream.Skip(1); // skip dummy '0'
                 r = reader.ReadByte(); // no of polygon
 
-                for (var j = 0; j <= polynum; j++) {
+                for (int j = 0; j <= polynum; j++) {
                     mod.Polygons.Add(new NSBMDPolygon());
                 }
 
@@ -765,10 +765,10 @@ namespace LibNDSFormats.NSBMD {
                 stream.Skip(14 + (polynum * 4)); // skip bytes, go straight to data offset
 
 
-                for (var j = 0; j < polynum; j++)
+                for (int j = 0; j < polynum; j++)
                     polyOffsets[j] = reader.ReadUInt32() + polyoffset;
                 try {
-                    for (var j = 0; j < polynum; j++) // copy polygon names
+                    for (int j = 0; j < polynum; j++) // copy polygon names
                     {
                         mod.Polygons[j].Name = Utils.ReadNSBMDString(reader);
                         //Console.WriteLine(mod.Polygons[j].Name);
@@ -776,8 +776,8 @@ namespace LibNDSFormats.NSBMD {
                 } catch { }
                 ////////////////////////////////////////////////
                 // now go to the polygon data, there is RotA 16-byte-header before geometry commands
-                for (var j = 0; j < polynum; j++) {
-                    var poly = mod.Polygons[j];
+                for (int j = 0; j < polynum; j++) {
+                    NSBMDPolygon poly = mod.Polygons[j];
                     //////////////////////////////////////////////////////////
                     poly.MatId = -1; // DEFAULT: indicate no associated material
                     //////////////////////////////////////////////////////////
@@ -793,8 +793,8 @@ namespace LibNDSFormats.NSBMD {
 
                 ////////////////////////////////////////////////
                 // read the polygon data into memory
-                for (var j = 0; j < polynum; j++) {
-                    var poly = mod.Polygons[j];
+                for (int j = 0; j < polynum; j++) {
+                    NSBMDPolygon poly = mod.Polygons[j];
                     stream.Seek(polyOffsets[j], SeekOrigin.Begin);
                     poly.PolyData = reader.ReadBytes((int)polyDataSize[j]);
                 }
@@ -1076,9 +1076,9 @@ namespace LibNDSFormats.NSBMD {
         /// Generate NSBMD from stream.
         /// </summary>
         internal static NSBMD FromStream(Stream stream) {
-            var result = new NSBMD();
+            NSBMD result = new NSBMD();
 
-            var reader = new BinaryReader(stream);
+            BinaryReader reader = new BinaryReader(stream);
 
             int tmp;
             tmp = reader.ReadInt32();

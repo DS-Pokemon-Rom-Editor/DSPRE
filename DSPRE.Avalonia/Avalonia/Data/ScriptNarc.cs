@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using NarcAPI;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.Data
@@ -40,7 +41,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Routes this thread's reads and writes through <paramref name="staging"/> until disposed.</summary>
         public static IDisposable Use(Staging staging)
         {
-            var before = _staging;
+            Staging before = _staging;
             _staging = staging;
             return new Restore(before);
         }
@@ -60,7 +61,7 @@ namespace DSPRE.Avalonia.Data
         {
             lock (typeof(ScriptNarc))
             {
-                var next = new List<Func<DirNames, int, byte[]>>(_overlays) { read };
+                List<Func<DirNames, int, byte[]>> next = new List<Func<DirNames, int, byte[]>>(_overlays) { read };
                 _overlays = next.ToArray();
             }
             return new RemoveOverlay(read);
@@ -74,7 +75,7 @@ namespace DSPRE.Avalonia.Data
             {
                 lock (typeof(ScriptNarc))
                 {
-                    var next = new List<Func<DirNames, int, byte[]>>(_overlays);
+                    List<Func<DirNames, int, byte[]>> next = new List<Func<DirNames, int, byte[]>>(_overlays);
                     next.Remove(_read);
                     _overlays = next.ToArray();
                 }
@@ -118,7 +119,7 @@ namespace DSPRE.Avalonia.Data
                 _path = gameDirs[_dir].packedDir;
                 _count = 0;
                 if (_path == null || !File.Exists(_path)) { _path = null; return; }
-                var narc = NarcAPI.Narc.Open(_path);
+                Narc narc = NarcAPI.Narc.Open(_path);
                 if (narc == null) { _path = null; return; }
                 try { _count = narc.ElementCount; } finally { narc.Free(); }
                 return;
@@ -147,7 +148,7 @@ namespace DSPRE.Avalonia.Data
             if (_path == null) return null;
             if (_fromPacked) return FromPacked(id);
             if (_staging?.Read(_dir, id) is byte[] staged) return (byte[])staged.Clone();
-            foreach (var overlay in _overlays)
+            foreach (Func<DirNames, int, byte[]> overlay in _overlays)
                 if (overlay(_dir, id) is byte[] pending) return (byte[])pending.Clone();
             return FromUnpacked(id);
         }
@@ -163,7 +164,7 @@ namespace DSPRE.Avalonia.Data
             if (id < 0 || id >= _count) return null;
             if (_packedCache.TryGetValue(id, out byte[] cached)) return (byte[])cached?.Clone();
 
-            var narc = NarcAPI.Narc.Open(_path);
+            Narc narc = NarcAPI.Narc.Open(_path);
             if (narc == null) return null;
             byte[] bytes;
             try { bytes = narc.GetElementBytes(id); } finally { narc.Free(); }

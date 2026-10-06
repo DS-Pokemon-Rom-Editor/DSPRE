@@ -85,8 +85,8 @@ namespace DSPRE.Avalonia.Data
 
         private static BgImage Composite(byte[] chr, byte[] pal, byte[] scr)
         {
-            var c = NitroBgCodec.Composite(chr, pal, scr);
-            var rgba = c.Rgba; int w = c.Width, h = c.Height;
+            NitroBgCodec.BgImage c = NitroBgCodec.Composite(chr, pal, scr);
+            byte[] rgba = c.Rgba; int w = c.Width, h = c.Height;
 
             // Detect the vertical repeat period: a seamless-scroll BG stores N identical bands stacked (Surf = 2),
             // so an effect SWEEP should move only ONE band, else it visibly runs N times. period = h/2 if the top

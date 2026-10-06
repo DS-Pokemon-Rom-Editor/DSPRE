@@ -252,12 +252,12 @@ namespace DSPRE.LibNDSFormats
 
             int slots = Math.Min(colorCount, 16);
             int pixels = width * height;
-            var palette = new ushort[slots];
+            ushort[] palette = new ushort[slots];
             for (int i = 0; i < slots; i++)
                 palette[i] = (ushort)(BitConverter.ToUInt16(BTXFile, paletteBase + i * 2) & 0x7FFF);
 
-            var oldIdx = new int[pixels];
-            var usedByOld = new bool[16];
+            int[] oldIdx = new int[pixels];
+            bool[] usedByOld = new bool[16];
             for (int p = 0; p < pixels; p++)
             {
                 int b = BTXFile[imageOffset + p / 2];
@@ -266,10 +266,10 @@ namespace DSPRE.LibNDSFormats
             }
 
             const int Transparent = -1;
-            var colour = new int[pixels];
-            var newIdx = new int[pixels];
-            var claimed = new bool[16];
-            var existing = new Dictionary<int, int>();
+            int[] colour = new int[pixels];
+            int[] newIdx = new int[pixels];
+            bool[] claimed = new bool[16];
+            Dictionary<int, int> existing = new Dictionary<int, int>();
             for (int p = 0; p < pixels; p++)
             {
                 uint c = BitConverter.ToUInt32(bm.Bgra, p * 4);
@@ -297,7 +297,7 @@ namespace DSPRE.LibNDSFormats
             }
 
             // Slot 0 is the see-through colour, so a new opaque colour never goes there.
-            var added = new Dictionary<int, int>();
+            Dictionary<int, int> added = new Dictionary<int, int>();
             for (int p = 0; p < pixels; p++)
             {
                 if (newIdx[p] >= 0) continue;
@@ -310,7 +310,7 @@ namespace DSPRE.LibNDSFormats
                     if (slot < 0)
                     {
                         // Colours already given a slot can still sit on unassigned pixels, so count each once.
-                        var needed = new HashSet<int>(added.Keys);
+                        HashSet<int> needed = new HashSet<int>(added.Keys);
                         for (int q = 0; q < pixels; q++) if (newIdx[q] < 0) needed.Add(colour[q]);
                         string colours = needed.Count == 1 ? "1 colour that isn't" : $"{needed.Count} colours that aren't";
                         string free = added.Count == 0 ? "no slots are" : added.Count == 1 ? "only 1 slot is" : $"only {added.Count} slots are";
@@ -358,9 +358,9 @@ namespace DSPRE.LibNDSFormats
 
             int slots = Math.Min(colorCount, 16);
             int pixels = width * height;
-            var index = new Dictionary<uint, int>();
-            var colours = new List<uint>();
-            var newIdx = new int[pixels];
+            Dictionary<uint, int> index = new Dictionary<uint, int>();
+            List<uint> colours = new List<uint>();
+            int[] newIdx = new int[pixels];
             for (int p = 0; p < pixels; p++)
             {
                 uint c = BitConverter.ToUInt32(bm.Bgra, p * 4);
@@ -394,7 +394,7 @@ namespace DSPRE.LibNDSFormats
         /// <summary>Distinct colours, with every fully transparent pixel counted as one.</summary>
         public static int CountColors(RawImage img)
         {
-            var seen = new HashSet<uint>();
+            HashSet<uint> seen = new HashSet<uint>();
             for (int i = 0; i + 3 < img.Bgra.Length; i += 4)
             {
                 uint c = BitConverter.ToUInt32(img.Bgra, i);

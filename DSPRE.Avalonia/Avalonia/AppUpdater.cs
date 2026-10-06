@@ -1,5 +1,8 @@
 using System;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Velopack;
 using Velopack.Sources;
 
@@ -22,7 +25,7 @@ namespace DSPRE.Avalonia
             AppLogger.Info("Checking for updates...");
             try
             {
-                var mgr = new UpdateManager(new GithubSource(RepoUrl, "", prerelease: false));
+                UpdateManager mgr = new UpdateManager(new GithubSource(RepoUrl, "", prerelease: false));
 
                 if (!mgr.IsInstalled)
                 {
@@ -32,7 +35,7 @@ namespace DSPRE.Avalonia
                     return;
                 }
 
-                var newVersion = await Task.Run(() => mgr.CheckForUpdates());
+                UpdateInfo newVersion = await Task.Run(() => mgr.CheckForUpdates());
                 if (newVersion == null)
                 {
                     AppLogger.Info("No updates available.");
@@ -73,9 +76,9 @@ namespace DSPRE.Avalonia
         /// <summary>Shows the prompt with the release notes. Public so the dev preview can reuse it.</summary>
         public static async Task<bool> ShowUpdatePrompt(string currentVersion, string availableVersion, string notes, bool preview = false)
         {
-            var owner = (global::Avalonia.Application.Current?.ApplicationLifetime
+            Window owner = (global::Avalonia.Application.Current?.ApplicationLifetime
                 as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow;
-            var dlg = new Views.Shell.UpdateAvailableWindow(currentVersion, availableVersion, notes, preview);
+            UpdateAvailableWindow dlg = new Views.Shell.UpdateAvailableWindow(currentVersion, availableVersion, notes, preview);
             if (owner != null) await dlg.ShowDialog(owner);
             else dlg.Show();
             return dlg.Install;
@@ -106,11 +109,11 @@ namespace DSPRE.Avalonia
         {
             try
             {
-                using var client = new System.Net.Http.HttpClient();
+                using HttpClient client = new System.Net.Http.HttpClient();
                 client.DefaultRequestHeaders.Add("User-Agent", "DSPRE");
                 client.DefaultRequestHeaders.Add("Accept", "application/vnd.github.v3+json");
 
-                var response = client.GetAsync(
+                HttpResponseMessage response = client.GetAsync(
                     $"https://api.github.com/repos/DS-Pokemon-Rom-Editor/DSPRE/releases/tags/{tag}").Result;
                 if (!response.IsSuccessStatusCode)
                 {
@@ -118,8 +121,8 @@ namespace DSPRE.Avalonia
                     return null;
                 }
 
-                using var doc = System.Text.Json.JsonDocument.Parse(response.Content.ReadAsStringAsync().Result);
-                if (doc.RootElement.TryGetProperty("body", out var body) &&
+                using JsonDocument doc = System.Text.Json.JsonDocument.Parse(response.Content.ReadAsStringAsync().Result);
+                if (doc.RootElement.TryGetProperty("body", out JsonElement body) &&
                     body.ValueKind == System.Text.Json.JsonValueKind.String)
                 {
                     string text = body.GetString();

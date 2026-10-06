@@ -137,7 +137,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             get
             {
-                var f = CurrentPreview;
+                FieldMessageFrame f = CurrentPreview;
                 if (f == null) return "";
                 switch (f.Wait)
                 {
@@ -154,7 +154,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             get
             {
-                var f = CurrentPreview;
+                FieldMessageFrame f = CurrentPreview;
                 if (f == null) return null;
                 if (f.TooWide && f.TooManyLines) return "This runs past the right edge and past the bottom of the box.";
                 if (f.TooWide) return "A line here runs past the right edge of the box.";
@@ -388,7 +388,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_dirty && _current != null)
             {
-                var r = await DialogHelper.AskYesNoCancel(
+                DialogHelper.MsgResult r = await DialogHelper.AskYesNoCancel(
                     "There are unsaved changes to the currently loaded Text Archive.\nDo you want to save them?",
                     "Text Editor - Unsaved changes");
 
@@ -420,16 +420,16 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private byte[] MessagesState()
         {
-            using var ms = new MemoryStream();
-            using (var w = new BinaryWriter(ms, System.Text.Encoding.UTF8, leaveOpen: true))
+            using MemoryStream ms = new MemoryStream();
+            using (BinaryWriter w = new BinaryWriter(ms, System.Text.Encoding.UTF8, leaveOpen: true))
                 foreach (string m in _current.messages) w.Write(m ?? "");
             return ms.ToArray();
         }
 
         private void RestoreMessages(byte[] state)
         {
-            var messages = new List<string>();
-            using (var r = new BinaryReader(new MemoryStream(state), System.Text.Encoding.UTF8))
+            List<string> messages = new List<string>();
+            using (BinaryReader r = new BinaryReader(new MemoryStream(state), System.Text.Encoding.UTF8))
                 while (r.BaseStream.Position < r.BaseStream.Length) messages.Add(r.ReadString());
             _current.messages.Clear();
             _current.messages.AddRange(messages);
@@ -444,11 +444,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
             _isLoading = true;
             try
             {
-                foreach (var l in Lines) l.PropertyChanged -= OnLineChanged;
+                foreach (TextLineVM l in Lines) l.PropertyChanged -= OnLineChanged;
                 Lines.Clear();
                 for (int i = 0; i < _current.messages.Count; i++)
                 {
-                    var line = new TextLineVM(i, _current.messages[i]);
+                    TextLineVM line = new TextLineVM(i, _current.messages[i]);
                     line.PropertyChanged += OnLineChanged;
                     Lines.Add(line);
                 }
@@ -468,7 +468,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _managedSource = owned?.Ownership == HgEngineOwnership.EditableSource ? owned : null;
                 if (_managedSource != null)
                 {
-                    if (HgEngineOwnedFiles.TryReadLines(_managedSource, out var sourceLines, out string readError))
+                    if (HgEngineOwnedFiles.TryReadLines(_managedSource, out List<string> sourceLines, out string readError))
                     {
                         _current.messages.Clear();
                         _current.messages.AddRange(sourceLines);
@@ -483,7 +483,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 _fieldBefore = null;
                 if (_fieldSource?.IsMain == true)
                 {
-                    if (HgEngineGeneratedText.TryReadLines(_fieldSource, _current.messages.Count, out var fieldLines, out string fieldError))
+                    if (HgEngineGeneratedText.TryReadLines(_fieldSource, _current.messages.Count, out string[] fieldLines, out string fieldError))
                     {
                         for (int i = 0; i < fieldLines.Length; i++)
                             if (fieldLines[i] != null) _current.messages[i] = fieldLines[i];
@@ -544,7 +544,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             // A field-backed archive has exactly one line per entry.
             if (_current == null || _fieldSource != null) return;
             _current.messages.Add("");
-            var line = new TextLineVM(Lines.Count, "");
+            TextLineVM line = new TextLineVM(Lines.Count, "");
             line.PropertyChanged += OnLineChanged;
             Lines.Add(line);
             RenumberLines();
@@ -555,7 +555,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_current == null || _current.messages.Count == 0 || _fieldSource != null) return;
             _current.messages.RemoveAt(_current.messages.Count - 1);
-            var last = Lines[Lines.Count - 1];
+            TextLineVM last = Lines[Lines.Count - 1];
             last.PropertyChanged -= OnLineChanged;
             Lines.RemoveAt(Lines.Count - 1);
             RenumberLines();
@@ -582,7 +582,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public void AddArchive()
         {
             int newId = ArchiveNames.Count;
-            var archive = new TextArchive(newId, new List<string> { "Your text here." });
+            TextArchive archive = new TextArchive(newId, new List<string> { "Your text here." });
             archive.SaveToExpandedDir(newId, showSuccessMessage: false, sender: this);
 
             (string binPath, string jsonPath) = TextArchive.GetFilePaths(newId);
@@ -724,10 +724,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private async Task SaveToGeneratedFieldAsync()
         {
-            var source = _fieldSource;
-            var lines = new List<string>(_current.messages);
-            var before = _fieldBefore ?? lines;
-            var (saved, error) = await HgEngineSave.RunAsync(() =>
+            HgEngineGeneratedText.Source source = _fieldSource;
+            List<string> lines = new List<string>(_current.messages);
+            List<string> before = _fieldBefore ?? lines;
+            (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 HgEngineGeneratedText.TryWriteLines(source, lines, before, out string writeError) ? null : writeError);
             if (!saved)
             {
@@ -751,7 +751,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (_current == null) return;
             if (await RefusedForManagedArchive("Importing")) return;
-            var filters = new[]
+            FilePickerFileType[] filters = new[]
             {
                 new FilePickerFileType("JSON Text Archive") { Patterns = new[] { "*.json" } },
                 new FilePickerFileType("Binary Text Archive") { Patterns = new[] { "*.msg", "*.bin" } },
@@ -791,7 +791,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_current == null) return;
             if (await RefusedForManagedArchive("Exporting")) return;
             int id = _current.ID;
-            var filters = new[]
+            FilePickerFileType[] filters = new[]
             {
                 new FilePickerFileType("JSON Text Archive") { Patterns = new[] { "*.json" } },
                 new FilePickerFileType("Binary Text Archive") { Patterns = new[] { "*.msg" } },
@@ -836,7 +836,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             for (int i = first; i < last; i++)
             {
-                var file = new TextArchive(i);
+                TextArchive file = new TextArchive(i);
                 for (int j = 0; j < file.messages.Count; j++)
                 {
                     if (match(file.messages[j]))

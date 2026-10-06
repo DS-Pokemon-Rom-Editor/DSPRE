@@ -222,7 +222,7 @@ namespace DSPRE.ROMFiles {
         }
 
         public SortedSet<byte> BitFieldToSet(uint[] bitfield) {
-            var result = new SortedSet<byte>();
+            SortedSet<byte> result = new SortedSet<byte>();
 
             for (uint i = 0; i < bitfield.Length; i++) {
                 uint currentBitfield = bitfield[i];

@@ -17,7 +17,7 @@ namespace DSPRE.Avalonia
 
             int pos = 8, w = 0, h = 0, bitDepth = 0, colorType = -1;
             byte[] plte = null, trns = null;
-            using var idatStream = new MemoryStream();
+            using MemoryStream idatStream = new MemoryStream();
 
             while (pos + 8 <= fileBytes.Length)
             {
@@ -56,8 +56,8 @@ namespace DSPRE.Avalonia
 
             idatStream.Position = 0;
             byte[] raw;
-            using (var zlib = new ZLibStream(idatStream, CompressionMode.Decompress))
-            using (var outMs = new MemoryStream())
+            using (ZLibStream zlib = new ZLibStream(idatStream, CompressionMode.Decompress))
+            using (MemoryStream outMs = new MemoryStream())
             {
                 zlib.CopyTo(outMs);
                 raw = outMs.ToArray();
@@ -65,13 +65,13 @@ namespace DSPRE.Avalonia
 
             const int bpp = 1; // PNG spec: filtering byte-width is 1 for any sub-8-bit-depth single-channel image
             int stride = (w * bitDepth + 7) / 8;
-            var prevLine = new byte[stride];
-            var unfiltered = new byte[h * stride];
+            byte[] prevLine = new byte[stride];
+            byte[] unfiltered = new byte[h * stride];
             int rawPos = 0;
             for (int y = 0; y < h; y++)
             {
                 byte filterType = raw[rawPos++];
-                var curLine = new byte[stride];
+                byte[] curLine = new byte[stride];
                 Array.Copy(raw, rawPos, curLine, 0, stride);
                 rawPos += stride;
                 Unfilter(filterType, curLine, prevLine, bpp);
@@ -114,18 +114,18 @@ namespace DSPRE.Avalonia
         public static byte[] Write(byte[] indices, uint[] palette, int width, int height, int bitDepth = 8)
         {
             if (bitDepth != 4) bitDepth = 8;
-            using var ms = new MemoryStream();
+            using MemoryStream ms = new MemoryStream();
             ms.Write(Signature);
 
-            var ihdr = new byte[13];
+            byte[] ihdr = new byte[13];
             WriteUInt32BEInto(ihdr, 0, width);
             WriteUInt32BEInto(ihdr, 4, height);
             ihdr[8] = (byte)bitDepth; ihdr[9] = 3;
             WriteChunk(ms, "IHDR", ihdr);
 
             int n = palette.Length;
-            var plte = new byte[n * 3];
-            var trns = new byte[n];
+            byte[] plte = new byte[n * 3];
+            byte[] trns = new byte[n];
             bool anyAlpha = false;
             for (int i = 0; i < n; i++)
             {
@@ -141,7 +141,7 @@ namespace DSPRE.Avalonia
             if (anyAlpha) WriteChunk(ms, "tRNS", trns);
 
             int stride = bitDepth == 4 ? (width + 1) / 2 : width;
-            var raw = new byte[height * (stride + 1)];
+            byte[] raw = new byte[height * (stride + 1)];
             for (int y = 0; y < height; y++)
             {
                 int row = y * (stride + 1) + 1;
@@ -150,9 +150,9 @@ namespace DSPRE.Avalonia
             }
 
             byte[] compressed;
-            using (var cms = new MemoryStream())
+            using (MemoryStream cms = new MemoryStream())
             {
-                using (var zlib = new ZLibStream(cms, CompressionLevel.Optimal, leaveOpen: true))
+                using (ZLibStream zlib = new ZLibStream(cms, CompressionLevel.Optimal, leaveOpen: true))
                     zlib.Write(raw, 0, raw.Length);
                 compressed = cms.ToArray();
             }
@@ -198,7 +198,7 @@ namespace DSPRE.Avalonia
             WriteUInt32BE(s, data.Length);
             s.Write(typeBytes);
             s.Write(data);
-            var crcBuf = new byte[typeBytes.Length + data.Length];
+            byte[] crcBuf = new byte[typeBytes.Length + data.Length];
             Array.Copy(typeBytes, crcBuf, typeBytes.Length);
             Array.Copy(data, 0, crcBuf, typeBytes.Length, data.Length);
             WriteUInt32BE(s, unchecked((int)Crc32.Compute(crcBuf)));
@@ -221,7 +221,7 @@ namespace DSPRE.Avalonia
             private static readonly uint[] Table = BuildTable();
             private static uint[] BuildTable()
             {
-                var table = new uint[256];
+                uint[] table = new uint[256];
                 for (uint n = 0; n < 256; n++)
                 {
                     uint c = n;

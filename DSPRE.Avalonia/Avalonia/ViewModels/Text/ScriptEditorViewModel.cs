@@ -21,6 +21,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using static DSPRE.RomInfo;
 using static MKDS_Course_Editor.NSBTP.NSBTP.NSBTP_File;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.ViewModels.Text
 {
@@ -361,7 +362,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (current) await ReloadSavedElsewhereAsync(_currentPath);
                 if (!current || result.Success) return;
                 UpdateCompileDiagnostics(result);
-                var failures = RotomTool.FailureLines(result);
+                List<string> failures = RotomTool.FailureLines(result);
                 StatusText = "Edited outside DSPRE and did not compile: " + failures[0] + (failures.Count > 1 ? $" (and {failures.Count - 1} more)" : "");
             });
         }
@@ -378,7 +379,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private void OnSourcesRefreshed(IReadOnlyCollection<int> fileIds)
         {
             string dir = System.IO.Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts");
-            var paths = fileIds.SelectMany(id => new[] { System.IO.Path.Combine(dir, id.ToString("D4") + ".rotom"), System.IO.Path.Combine(dir, id.ToString("D4") + ".json") })
+            List<string> paths = fileIds.SelectMany(id => new[] { System.IO.Path.Combine(dir, id.ToString("D4") + ".rotom"), System.IO.Path.Combine(dir, id.ToString("D4") + ".json") })
                                .Where(System.IO.File.Exists).ToList();
             Dispatcher.UIThread.Post(() =>
             {
@@ -449,7 +450,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     EnsureDspreSourceRoot();
 
                     StatusText = "Initializing Rotom project...";
-                    var init = await RotomTool.InitProjectAsync();
+                    RotomTool.Result init = await RotomTool.InitProjectAsync();
                     if (!init.Success) throw new InvalidOperationException("rotom init --non-interactive failed:\n" + RotomTool.FormatDetails(init));
                     RefreshRotomProjectState();
                 }
@@ -473,7 +474,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 if (_rotomFileCount == 0)
                 {
                     StatusText = "Decompiling binary scripts to Rotom...";
-                    var decompiled = await RotomTool.RunAsync("decompile");
+                    RotomTool.Result decompiled = await RotomTool.RunAsync("decompile");
                     RotomTool.SetAsideHgEngineOwnedSources();
                     RefreshScriptList();
                     // One file rotom can't read must not cost every other script; its binary stays as it is.
@@ -791,7 +792,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 IsBusy = true;
                 StatusText = "Compiling Rotom project...";
 
-                var result = await RotomTool.CompileProjectAsync();
+                RotomTool.Result result = await RotomTool.CompileProjectAsync();
                 string summary = RotomTool.FormatResult(result);
                 int diagnostics = UpdateCompileDiagnostics(result);
 
@@ -840,35 +841,35 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             try
             {
-                using var doc = JsonDocument.Parse(result.Stdout);
+                using JsonDocument doc = JsonDocument.Parse(result.Stdout);
                 JsonElement root = doc.RootElement;
 
-                if (root.TryGetProperty("failures", out var failures) && failures.ValueKind == JsonValueKind.Array)
+                if (root.TryGetProperty("failures", out JsonElement failures) && failures.ValueKind == JsonValueKind.Array)
                 {
                     foreach (JsonElement failure in failures.EnumerateArray())
                     {
                         string path = ResolveProjectPath(failure.ReadString("path"));
-                        JsonElement error = failure.TryGetProperty("error", out var err) ? err : default;
+                        JsonElement error = failure.TryGetProperty("error", out JsonElement err) ? err : default;
                         string kind = error.ReadString("type") ?? "Error";
-                        JsonElement details = error.ValueKind == JsonValueKind.Object && error.TryGetProperty("details", out var d) ? d : default;
+                        JsonElement details = error.ValueKind == JsonValueKind.Object && error.TryGetProperty("details", out JsonElement d) ? d : default;
                         string message = details.ReadString("message") ?? kind;
                         TryReadSpan(details, out int start, out int end);
                         AddDiagnostic("Error", kind, path, start, end, message);
                     }
                 }
 
-                if (root.TryGetProperty("successes", out var successes) && successes.ValueKind == JsonValueKind.Array)
+                if (root.TryGetProperty("successes", out JsonElement successes) && successes.ValueKind == JsonValueKind.Array)
                 {
                     foreach (JsonElement success in successes.EnumerateArray())
                     {
                         string path = ResolveProjectPath(success.ReadString("input"));
-                        if (!success.TryGetProperty("warnings", out var warnings) || warnings.ValueKind != JsonValueKind.Array)
+                        if (!success.TryGetProperty("warnings", out JsonElement warnings) || warnings.ValueKind != JsonValueKind.Array)
                             continue;
 
                         foreach (JsonElement warning in warnings.EnumerateArray())
                         {
                             string kind = warning.ReadString("type") ?? "Warning";
-                            JsonElement details = warning.ValueKind == JsonValueKind.Object && warning.TryGetProperty("details", out var d) ? d : default;
+                            JsonElement details = warning.ValueKind == JsonValueKind.Object && warning.TryGetProperty("details", out JsonElement d) ? d : default;
                             TryReadSpan(details, out int start, out int end);
                             AddDiagnostic("Warning", kind, path, start, end, WarningMessage(kind, details));
                         }
@@ -989,7 +990,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             try
             {
-                var roots = SourceRoots().ToList();
+                List<string> roots = SourceRoots().ToList();
                 string root = roots.FirstOrDefault() ?? Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts");
                 System.IO.Directory.CreateDirectory(root);
 
@@ -1017,7 +1018,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             if (!IsEditable) return;
 
-            var filter = new FilePickerFileType("Rotom source") { Patterns = new[] { "*.rotom", "*.json", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("Rotom source") { Patterns = new[] { "*.rotom", "*.json", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import Rotom source", new[] { filter });
             if (path == null) return;
 
@@ -1038,7 +1039,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_currentPath == null) return;
 
             string extension = Path.GetExtension(_currentPath);
-            var filter = new FilePickerFileType("Rotom source") { Patterns = new[] { "*.rotom", "*.json", "*.*" } };
+            FilePickerFileType filter = new FilePickerFileType("Rotom source") { Patterns = new[] { "*.rotom", "*.json", "*.*" } };
             string path = await DialogHelper.SaveFile(_owner, "Export Rotom source", new[] { filter },
                 Path.GetFileNameWithoutExtension(_currentPath) + extension);
             if (path == null) return;
@@ -1074,7 +1075,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         // regenerated from their binaries first so nothing written outside rotom is lost.
         private async Task UpgradeRotomProjectAsync()
         {
-            var assessment = await DSPRE.ROMFiles.RotomProjectUpgrade.AssessAsync();
+            RotomProjectUpgrade.Assessment assessment = await DSPRE.ROMFiles.RotomProjectUpgrade.AssessAsync();
             if (assessment == null) return;
 
             bool keepBinaries = true;
@@ -1093,7 +1094,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 "Update Rotom project", "Regenerate all", "Keep sources");
 
             StatusText = "Updating the Rotom project...";
-            var (problem, kept) = await DSPRE.ROMFiles.RotomProjectUpgrade.ApplyAsync(assessment, keepBinaries, regenerateAll);
+            (string problem, List<int> kept) = await DSPRE.ROMFiles.RotomProjectUpgrade.ApplyAsync(assessment, keepBinaries, regenerateAll);
             if (problem != null) await DialogHelper.ShowError(problem, "Update Rotom project");
             else if (kept.Count > 0) AddNote(KeptBinariesNote(kept), KeptBinariesMessage(kept));
             RefreshScriptList();
@@ -1102,10 +1103,10 @@ namespace DSPRE.Avalonia.ViewModels.Text
         // The project's own database copy can fall behind DSPRE's; whether to take the newer one is the user's call.
         private async Task OfferDatabaseUpdateAsync()
         {
-            var offer = await Task.Run(DSPRE.ROMFiles.RotomDatabaseUpdate.Check);
+            RotomDatabaseUpdate.Offer offer = await Task.Run(DSPRE.ROMFiles.RotomDatabaseUpdate.Check);
             if (offer == null) return;
 
-            var names = offer.ChangedCommands;
+            List<string> names = offer.ChangedCommands;
             string what = names.Count == 0 ? "variable and movement names"
                 : string.Join(", ", names.Take(6)) + (names.Count > 6 ? $" and {names.Count - 6} more" : "")
                   + (offer.OtherChanges ? ", plus variable and movement names" : "");
@@ -1121,7 +1122,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
 
             StatusText = "Updating the script command database...";
-            var (problem, kept) = await DSPRE.ROMFiles.RotomDatabaseUpdate.ApplyAsync(offer);
+            (string problem, List<int> kept) = await DSPRE.ROMFiles.RotomDatabaseUpdate.ApplyAsync(offer);
             if (problem != null) await DialogHelper.ShowError(problem, "Script command database");
             else if (kept.Count > 0) AddNote(KeptBinariesNote(kept), KeptBinariesMessage(kept));
             RefreshScriptList();
@@ -1144,8 +1145,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
         // holds no script (retail Diamond ships one), so it has nothing to decompile.
         private string UndecompiledScripts()
         {
-            var sourced = new HashSet<int>(_scriptIdByPath.Values);
-            var left = new List<int>();
+            HashSet<int> sourced = new HashSet<int>(_scriptIdByPath.Values);
+            List<int> left = new List<int>();
             foreach (string path in System.IO.Directory.EnumerateFiles(Filesystem.scripts))
                 if (int.TryParse(Path.GetFileName(path), out int id) && !sourced.Contains(id) && new FileInfo(path).Length > 0)
                     left.Add(id);
@@ -1158,7 +1159,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private async Task RunRequiredRotomCommand(params string[] args)
         {
-            var result = await RotomTool.RunAsync(args);
+            RotomTool.Result result = await RotomTool.RunAsync(args);
             if (!result.Success)
                 throw new InvalidOperationException("rotom " + string.Join(" ", args) + " failed:\n" + RotomTool.FormatDetails(result));
         }
@@ -1180,7 +1181,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (System.IO.File.Exists(configPath))
             {
                 string config = System.IO.File.ReadAllText(configPath);
-                var match = Regex.Match(config, @"source_roots\s*=\s*\[(.*?)\]", RegexOptions.Singleline);
+                Match match = Regex.Match(config, @"source_roots\s*=\s*\[(.*?)\]", RegexOptions.Singleline);
                 if (match.Success)
                 {
                     bool found = false;
@@ -1213,7 +1214,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             foreach (string root in SourceRoots().Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 if (!System.IO.Directory.Exists(root)) continue;
-                var files = System.IO.Directory
+                IEnumerable<string> files = System.IO.Directory
                     .EnumerateFiles(root, "*", SearchOption.AllDirectories)
                     .Where(path =>
                     {
@@ -1235,7 +1236,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     _scriptIdByPath[file] = rotomId;
             }
 
-            var ownedScripts = HgEngineOwnedFiles
+            IOrderedEnumerable<HgEngineOwnedFile> ownedScripts = HgEngineOwnedFiles
                 .FilesIn(HgEngineOwnedFiles.ArchiveOf(DirNames.scripts)).Values
                 .Where(f => f.Ownership == HgEngineOwnership.EditableSource)
                 .OrderBy(f => f.Id);
@@ -1374,7 +1375,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private async Task OpenCurrentDocumentInLsp()
         {
-            var lsp = _lsp;
+            RotomLanguageServerClient lsp = _lsp;
             if (lsp == null || !lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
 
             try
@@ -1443,7 +1444,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private void ScheduleDocumentExtras()
         {
             _extrasCts?.Cancel();
-            var cts = _extrasCts = new CancellationTokenSource();
+            CancellationTokenSource cts = _extrasCts = new CancellationTokenSource();
             _ = Task.Delay(500, cts.Token).ContinueWith(t =>
             {
                 if (!t.IsCanceled) Dispatcher.UIThread.Post(() => _ = RefreshDocumentExtrasAsync(cts.Token));
@@ -1457,13 +1458,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             try
             {
                 int lastLine = (ScriptText ?? "").Count(c => c == '\n') + 1;
-                var symbols = await _lsp.DocumentSymbolsAsync(path);
-                var lenses = await _lsp.CodeLensAsync(path);
-                var hints = await _lsp.InlayHintsAsync(path, lastLine);
+                List<RotomLspSymbol> symbols = await _lsp.DocumentSymbolsAsync(path);
+                List<RotomLspInlineText> lenses = await _lsp.CodeLensAsync(path);
+                List<RotomLspInlineText> hints = await _lsp.InlayHintsAsync(path, lastLine);
                 if (token.IsCancellationRequested || !SamePath(path, _currentPath)) return;
 
                 Outline.Clear();
-                foreach (var symbol in symbols) Outline.Add(new OutlineEntry(symbol.Name, symbol.Line, symbol.Depth));
+                foreach (RotomLspSymbol symbol in symbols) Outline.Add(new OutlineEntry(symbol.Name, symbol.Line, symbol.Depth));
                 InlineTexts = lenses.Concat(hints).ToList();
                 InlineTextsChanged?.Invoke(this, EventArgs.Empty);
             }
@@ -1512,7 +1513,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             CancelPendingDocumentChange();
             if (_lsp == null || !_lsp.IsRunning || string.IsNullOrWhiteSpace(_currentPath)) return;
 
-            var delay = new CancellationTokenSource();
+            CancellationTokenSource delay = new CancellationTokenSource();
             _lspChangeDelay = delay;
             _ = SendCurrentDocumentChangedToLspAfterDelay(delay);
         }
@@ -1540,7 +1541,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         private void CancelPendingDocumentChange()
         {
-            var delay = _lspChangeDelay;
+            CancellationTokenSource delay = _lspChangeDelay;
             _lspChangeDelay = null;
             delay?.Cancel();
         }
@@ -1601,13 +1602,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             end = 0;
 
             if (details.ValueKind == JsonValueKind.Object
-                && details.TryGetProperty("span", out var span)
+                && details.TryGetProperty("span", out JsonElement span)
                 && span.ValueKind == JsonValueKind.Object
-                && span.TryGetProperty("start", out var startElement)
+                && span.TryGetProperty("start", out JsonElement startElement)
                 && startElement.TryGetInt32(out int startValue))
             {
                 start = startValue;
-                if (span.TryGetProperty("end", out var endElement) && endElement.TryGetInt32(out int endValue))
+                if (span.TryGetProperty("end", out JsonElement endElement) && endElement.TryGetInt32(out int endValue))
                     end = endValue;
             }
         }

@@ -25,7 +25,7 @@ namespace DSPRE.Models
 
         public static DsTexture From(byte[] rgba, int width, int height, string name)
         {
-            var t = new DsTexture { Name = Clean(name), Width = width, Height = height };
+            DsTexture t = new DsTexture { Name = Clean(name), Width = width, Height = height };
             if (rgba == null || width <= 0 || height <= 0 || rgba.Length < width * height * 4)
                 return Fail(t, "Empty image.");
             if (!IsPowerOfTwo(width) || !IsPowerOfTwo(height) || width < 8 || height < 8
@@ -33,11 +33,11 @@ namespace DSPRE.Models
                 return Fail(t, $"Texture size must be a power of two from 8 to 1024, got {width}x{height}, nearest {NearestPowerOfTwo(width)}x{NearestPowerOfTwo(height)}.");
 
             int n = width * height;
-            var clear = new bool[n];
-            var colour = new ushort[n];
+            bool[] clear = new bool[n];
+            ushort[] colour = new ushort[n];
             bool anyClear = false;
-            var distinct = new HashSet<ushort>();
-            var full = new HashSet<int>();
+            HashSet<ushort> distinct = new HashSet<ushort>();
+            HashSet<int> full = new HashSet<int>();
             for (int i = 0; i < n; i++)
             {
                 if (rgba[i * 4 + 3] < 128) { clear[i] = true; anyClear = true; continue; }
@@ -92,7 +92,7 @@ namespace DSPRE.Models
                 return best;
             }
 
-            var texels = new byte[n * bits / 8];
+            byte[] texels = new byte[n * bits / 8];
             for (int i = 0; i < n; i++)
             {
                 int r = rgba[i * 4], g = rgba[i * 4 + 1], b = rgba[i * 4 + 2];
@@ -113,8 +113,8 @@ namespace DSPRE.Models
         private DsTexture AsPalette(Kind kind, ushort[] colour, bool[] clear, HashSet<ushort> distinct)
         {
             int room = FirstColourIsClear ? 1 : 0;
-            var order = distinct.OrderBy(c => c).ToList();
-            var number = new Dictionary<ushort, int>();
+            List<ushort> order = distinct.OrderBy(c => c).ToList();
+            Dictionary<ushort, int> number = new Dictionary<ushort, int>();
             for (int i = 0; i < order.Count; i++) number[order[i]] = i + room;
 
             int slots = kind == Kind.SixteenColours ? 16 : 256;
@@ -171,7 +171,7 @@ namespace DSPRE.Models
         private static string Clean(string name)
         {
             name = (name ?? "").Trim();
-            var kept = new string(name.Where(c => c > 32 && c < 127).ToArray());
+            string kept = new string(name.Where(c => c > 32 && c < 127).ToArray());
             if (kept.Length == 0) kept = "texture";
             // Same 16-character rule as NsbmdWriter, or material and texture names stop matching.
             return NitroDictionary.Fit(kept);

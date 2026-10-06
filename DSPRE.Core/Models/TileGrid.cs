@@ -83,7 +83,7 @@ namespace DSPRE.Models
             if (!On(x, z) || !OnLayer(layer))
                 return new Square { Tile = -1, FromX = -1, FromZ = -1, Layer = layer };
 
-            var anchor = Anchor(x, z, layer);
+            (int x, int z)? anchor = Anchor(x, z, layer);
             if (anchor is not (int ax, int az))
                 return new Square
                 {
@@ -165,7 +165,7 @@ namespace DSPRE.Models
 
         public bool Fits(int x, int z, int wide, int deep, byte turn)
         {
-            var (_, down) = Footprint(wide, deep, turn);
+            (int _, int down) = Footprint(wide, deep, turn);
             return On(x, z + down - 1);
         }
 
@@ -180,7 +180,7 @@ namespace DSPRE.Models
             if (!OnLayer(layer)) return false;
             if (tile < 0) { if (On(x, z)) Clear(x, z, layer); return On(x, z); }
 
-            var (across, down) = Footprint(wide, deep, turn);
+            (int across, int down) = Footprint(wide, deep, turn);
             if (!On(x, z + down - 1)) return false;
 
             for (int dz = Math.Max(0, z); dz < Math.Min(Across, z + down); dz++)
@@ -247,7 +247,7 @@ namespace DSPRE.Models
 
         private List<(int x, int z, int tile, byte turn, int across, int down)> Whole(int layer)
         {
-            var all = new List<(int, int, int, byte, int, int)>();
+            List<(int, int, int, byte, int, int)> all = new List<(int, int, int, byte, int, int)>();
             for (int z = 0; z < Across; z++)
                 for (int x = 0; x < Across; x++)
                     if (_tile[layer, z, x] >= 0)
@@ -261,8 +261,8 @@ namespace DSPRE.Models
         {
             if (!OnLayer(layer) || (dx == 0 && dz == 0)) return;
 
-            var tiles = Whole(layer);
-            var height = new float[Across, Across];
+            List<(int x, int z, int tile, byte turn, int across, int down)> tiles = Whole(layer);
+            float[,] height = new float[Across, Across];
             for (int z = 0; z < Across; z++)
                 for (int x = 0; x < Across; x++)
                 {
@@ -277,7 +277,7 @@ namespace DSPRE.Models
                     _height[layer, z, x] = height[z, x];
                 }
 
-            foreach (var t in tiles)
+            foreach ((int x, int z, int tile, byte turn, int across, int down) t in tiles)
                 if (On(t.x + dx, t.z + t.down - 1 + dz))
                     Keep(layer, t.x + dx, t.z + dz, t.tile, t.turn, t.across, t.down);
         }
@@ -308,9 +308,9 @@ namespace DSPRE.Models
             int was = _tile[layer, z, x];
             if (was == tile) return 0;
 
-            var (across, down) = Footprint(wide, deep, turn);
+            (int across, int down) = Footprint(wide, deep, turn);
 
-            var free = new bool[Across, Across];
+            bool[,] free = new bool[Across, Across];
             for (int gz = 0; gz < Across; gz++)
                 for (int gx = 0; gx < Across; gx++)
                     free[gz, gx] = true;
@@ -335,11 +335,11 @@ namespace DSPRE.Models
             }
 
             int filled = 0;
-            var waiting = new Stack<(int x, int z)>();
+            Stack<(int x, int z)> waiting = new Stack<(int x, int z)>();
             waiting.Push((x, z));
             while (waiting.Count > 0)
             {
-                var (px, pz) = waiting.Pop();
+                (int px, int pz) = waiting.Pop();
                 if (!Room(px, pz)) continue;
 
                 PutTile(px, pz, tile, turn, wide, deep, layer);
@@ -361,11 +361,11 @@ namespace DSPRE.Models
             if (Math.Abs(was - height) < 1e-6f) return 0;
 
             int filled = 0;
-            var waiting = new Stack<(int x, int z)>();
+            Stack<(int x, int z)> waiting = new Stack<(int x, int z)>();
             waiting.Push((x, z));
             while (waiting.Count > 0)
             {
-                var (px, pz) = waiting.Pop();
+                (int px, int pz) = waiting.Pop();
                 if (!On(px, pz) || Math.Abs(_height[layer, pz, px] - was) > 1e-6f) continue;
 
                 _height[layer, pz, px] = height;
@@ -393,7 +393,7 @@ namespace DSPRE.Models
 
         public LayerCopy CopyLayer(int layer)
         {
-            var copy = new LayerCopy();
+            LayerCopy copy = new LayerCopy();
             if (!OnLayer(layer)) return copy;
             for (int z = 0; z < Across; z++)
                 for (int x = 0; x < Across; x++)
@@ -459,10 +459,10 @@ namespace DSPRE.Models
         {
             int changed = 0;
             for (int l = 0; l < Layers; l++)
-                foreach (var t in Whole(l))
+                foreach ((int x, int z, int tile, byte turn, int across, int down) t in Whole(l))
                 {
                     if (t.tile != tile) continue;
-                    var (across, down) = Footprint(wide, deep, t.turn);
+                    (int across, int down) = Footprint(wide, deep, t.turn);
                     int sw = t.z + t.down - 1;
                     Forget(l, t.x, Math.Max(0, t.z));
                     Keep(l, t.x, sw - down + 1, t.tile, t.turn, across, down);
@@ -476,7 +476,7 @@ namespace DSPRE.Models
 
         public TileGrid Clone()
         {
-            var grid = new TileGrid { BaseLift = BaseLift };
+            TileGrid grid = new TileGrid { BaseLift = BaseLift };
             for (int l = 0; l < Layers; l++) grid.PasteLayer(l, CopyLayer(l));
             return grid;
         }
@@ -486,29 +486,29 @@ namespace DSPRE.Models
                                   out int unmatched, Func<int, string> paletteOf = null, List<MapMesh.Face> left = null)
         {
             unmatched = 0;
-            var grid = new TileGrid();
+            TileGrid grid = new TileGrid();
             if (mesh == null || set == null) return grid;
 
-            var known = new Dictionary<string, int>();
+            Dictionary<string, int> known = new Dictionary<string, int>();
             for (int i = 0; i < set.Tiles.Count; i++) known[MapTileset.Print(set.Tiles[i])] = i;
 
-            var pieces = MapTileset.PiecesOf(mesh);
+            List<MapTileset.Piece> pieces = MapTileset.PiecesOf(mesh);
             // Heights count from the ground most of the map stands on, weighed by how much of it there is.
-            var grounds = pieces.Select(p => { var t = p.TileOf(mesh, pictureOf, paletteOf, out float y); return (t, y, area: p.Wide * p.Deep); })
+            List<(MapTileset.Tile t, float y, int area)> grounds = pieces.Select(p => { MapTileset.Tile t = p.TileOf(mesh, pictureOf, paletteOf, out float y); return (t, y, area: p.Wide * p.Deep); })
                                 .Where(g => g.t.IsGround).ToList();
             if (grounds.Count == 0)
-                grounds = pieces.Where(p => !p.Spans).Select(p => { var t = p.TileOf(mesh, pictureOf, paletteOf, out float y); return (t, y, area: 1); }).ToList();
+                grounds = pieces.Where(p => !p.Spans).Select(p => { MapTileset.Tile t = p.TileOf(mesh, pictureOf, paletteOf, out float y); return (t, y, area: 1); }).ToList();
             grid.BaseLift = grounds.Count == 0 ? 0f
                 : grounds.GroupBy(g => MathF.Round(g.y * 64f) / 64f).OrderByDescending(g => g.Sum(e => e.area)).First().Key;
 
             // Layer 0 takes ground nearest the base height first, so buried sheets lose to the real ground.
             // Everything else goes on the first layer free under its whole footprint.
-            var laid = pieces.Select(piece =>
+            List<(MapTileset.Piece piece, MapTileset.Tile tile, float baseY)> laid = pieces.Select(piece =>
             {
-                var tile = piece.TileOf(mesh, pictureOf, paletteOf, out float baseY);
+                MapTileset.Tile tile = piece.TileOf(mesh, pictureOf, paletteOf, out float baseY);
                 return (piece, tile, baseY);
             }).ToList();
-            foreach (var (piece, tile, y) in laid.OrderByDescending(e => e.tile.IsGround)
+            foreach ((MapTileset.Piece piece, MapTileset.Tile tile, float y) in laid.OrderByDescending(e => e.tile.IsGround)
                                                 .ThenBy(e => MathF.Round(MathF.Abs(e.baseY - grid.BaseLift) * 64f))
                                                 .ThenBy(e => e.baseY + e.tile.SurfaceY))
             {

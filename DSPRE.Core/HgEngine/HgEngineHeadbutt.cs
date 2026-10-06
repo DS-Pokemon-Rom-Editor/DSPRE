@@ -58,7 +58,7 @@ namespace DSPRE.HgEngine
             string mapBlock = text.Substring(vs, ve - vs);
 
             file = new HeadbuttEncounterFile { ID = (ushort)headbuttFileIndex };
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
 
             int normalTreeCount = 0, specialTreeCount = 0;
             if (HgEngineSourcePatcher.TryGetFieldValueInBlock(mapBlock, new[] { FieldPathSegment.Field("normalTreeCount") }, out string ntc))
@@ -85,8 +85,8 @@ namespace DSPRE.HgEngine
             string text = TryReadSource(out string path);
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
-            var failed = new List<string>();
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            List<string> failed = new List<string>();
 
             // As the game's own files: a map with no trees and no Pokemon set is only the counts.
             int totalGroups = file.normalTreeGroups.Count + file.specialTreeGroups.Count;
@@ -95,10 +95,10 @@ namespace DSPRE.HgEngine
 
             string SlotsLiteral(IReadOnlyList<HeadbuttEncounter> list, int count)
             {
-                var items = new List<string>(count);
+                List<string> items = new List<string>(count);
                 for (int i = 0; i < count; i++)
                 {
-                    var e = i < list.Count ? list[i] : new HeadbuttEncounter();
+                    HeadbuttEncounter e = i < list.Count ? list[i] : new HeadbuttEncounter();
                     string sp = species != null && species.TryGetNameWithPrefix(e.pokemonID, "SPECIES_", out string sn) ? sn : e.pokemonID.ToString();
                     items.Add($"{{ {sp}, {e.minLevel}, {e.maxLevel} }}");
                 }
@@ -114,17 +114,17 @@ namespace DSPRE.HgEngine
             {
                 string GroupLiteral(HeadbuttTreeGroup g)
                 {
-                    var coords = new List<string>(6);
-                    foreach (var t in g.trees)
+                    List<string> coords = new List<string>(6);
+                    foreach (HeadbuttTree t in g.trees)
                     {
                         int x = t.IsUnused ? -1 : t.globalX, y = t.IsUnused ? -1 : t.globalY;
                         coords.Add($"{{ {x}, {y} }}");
                     }
                     return "{ " + string.Join(", ", coords) + " }";
                 }
-                var groups = new List<string>(totalGroups);
-                foreach (var g in file.normalTreeGroups) groups.Add(GroupLiteral(g));
-                foreach (var g in file.specialTreeGroups) groups.Add(GroupLiteral(g));
+                List<string> groups = new List<string>(totalGroups);
+                foreach (HeadbuttTreeGroup g in file.normalTreeGroups) groups.Add(GroupLiteral(g));
+                foreach (HeadbuttTreeGroup g in file.specialTreeGroups) groups.Add(GroupLiteral(g));
                 string treeCoordsLiteral = "{\n            " + string.Join(",\n            ", groups) + ",\n        }";
                 if (!TryReplaceMapField(ref text, fieldName, "treeCoords", treeCoordsLiteral)) failed.Add("treeCoords");
             }
@@ -148,7 +148,7 @@ namespace DSPRE.HgEngine
             error = null;
             string type = MemberTypeRegex.Matches(text).Cast<Match>().FirstOrDefault(m => m.Groups[2].Value == fieldName)?.Groups[1].Value;
             if (type == null) { error = $"Headbutt.c declares no type for .{fieldName}."; return false; }
-            var decl = new Regex(@"(typedef\s+struct\s+PACKED\s+" + Regex.Escape(type) + @"\s*\{)(.*?)(\}\s*" + Regex.Escape(type) + @"\s*;)", RegexOptions.Singleline).Match(text);
+            Match decl = new Regex(@"(typedef\s+struct\s+PACKED\s+" + Regex.Escape(type) + @"\s*\{)(.*?)(\}\s*" + Regex.Escape(type) + @"\s*;)", RegexOptions.Singleline).Match(text);
             if (!decl.Success) { error = $"Headbutt.c has no typedef for {type}."; return false; }
 
             string body = "\n    u16 normalTreeCount;\n    u16 specialTreeCount;\n"
@@ -157,7 +157,7 @@ namespace DSPRE.HgEngine
             if (Regex.Replace(decl.Groups[2].Value, @"\s+", " ").Trim() != Regex.Replace(body, @"\s+", " ").Trim())
                 text = text.Substring(0, decl.Groups[2].Index) + body + text.Substring(decl.Groups[2].Index + decl.Groups[2].Length);
 
-            foreach (var (name, wanted, placeholder) in new[]
+            foreach ((string name, bool wanted, string placeholder) in new[]
             {
                 ("treeCoords", groups > 0, "{\n        }"),
                 ("specialSlots", slots, "{ }"),
@@ -198,9 +198,9 @@ namespace DSPRE.HgEngine
         {
             if (HgEngineSourcePatcher.TryGetFieldValueInBlock(mapBlock, new[] { FieldPathSegment.Field(fieldName) }, out string raw))
             {
-                foreach (var el in HgEngineSourcePatcher.SplitArrayValue(raw))
+                foreach (string el in HgEngineSourcePatcher.SplitArrayValue(raw))
                 {
-                    var parts = HgEngineSourcePatcher.SplitArrayValue(el.Trim());
+                    List<string> parts = HgEngineSourcePatcher.SplitArrayValue(el.Trim());
                     if (parts.Count < 3) continue;
                     dest.Add(new HeadbuttEncounter
                     {
@@ -217,14 +217,14 @@ namespace DSPRE.HgEngine
             System.ComponentModel.BindingList<HeadbuttTreeGroup> normalDest, System.ComponentModel.BindingList<HeadbuttTreeGroup> specialDest)
         {
             if (!HgEngineSourcePatcher.TryGetFieldValueInBlock(mapBlock, new[] { FieldPathSegment.Field("treeCoords") }, out string raw)) return;
-            var groups = HgEngineSourcePatcher.SplitArrayValue(raw);
+            List<string> groups = HgEngineSourcePatcher.SplitArrayValue(raw);
             for (int i = 0; i < groups.Count; i++)
             {
-                var group = new HeadbuttTreeGroup();
-                var coords = HgEngineSourcePatcher.SplitArrayValue(groups[i].Trim());
+                HeadbuttTreeGroup group = new HeadbuttTreeGroup();
+                List<string> coords = HgEngineSourcePatcher.SplitArrayValue(groups[i].Trim());
                 for (int j = 0; j < coords.Count && j < group.trees.Count; j++)
                 {
-                    var xy = HgEngineSourcePatcher.SplitArrayValue(coords[j].Trim());
+                    List<string> xy = HgEngineSourcePatcher.SplitArrayValue(coords[j].Trim());
                     if (xy.Count < 2) continue;
                     group.trees[j].globalX = unchecked((ushort)ResolveToken(xy[0], null));
                     group.trees[j].globalY = unchecked((ushort)ResolveToken(xy[1], null));
@@ -237,7 +237,7 @@ namespace DSPRE.HgEngine
         private static bool TryReplaceMapField(ref string text, string mapFieldName, string subFieldName, string newLiteral)
         {
             if (!TryFindDataBlock(text, out int open, out int close)) return false;
-            var path = new[] { FieldPathSegment.Field(mapFieldName), FieldPathSegment.Field(subFieldName) };
+            FieldPathSegment[] path = new[] { FieldPathSegment.Field(mapFieldName), FieldPathSegment.Field(subFieldName) };
             if (!ElementScanner.TryLocateValueSpan(text, open, close, path, out int vs, out int ve)) return false;
             if (HgEngineSourcePatcher.SameTokens(text.Substring(vs, ve - vs), newLiteral)) return true;
             text = text.Substring(0, vs) + newLiteral + text.Substring(ve);
@@ -247,7 +247,7 @@ namespace DSPRE.HgEngine
         private static bool TryFindDataBlock(string text, out int open, out int close)
         {
             open = close = -1;
-            var m = DataAnchor.Match(text);
+            Match m = DataAnchor.Match(text);
             if (!m.Success) return false;
             open = m.Index + m.Length - 1;
             return BraceScanner.TryFindMatchingBrace(text, open, out close);

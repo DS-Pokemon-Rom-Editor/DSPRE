@@ -31,9 +31,9 @@ namespace DSPRE.Avalonia.Views.World
             if (_setupDone) return;
             if (Design.IsDesignMode) return;
 
-            var vm = VM;
+            CameraEditorViewModel vm = VM;
             if (vm == null) return;
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            Window owner = TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
 
             _setupDone = true;
@@ -66,7 +66,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private void ShowPreview()
         {
-            var vm = VM;
+            CameraEditorViewModel vm = VM;
             if (vm?.SelectedEntry == null || vm.PreviewSpot is not DSPRE.FlyTable.Spot spot) return;
             CameraPreviewBox.Show(spot.HeaderId, vm.SelectedEntry, (spot.X, spot.Z));
         }

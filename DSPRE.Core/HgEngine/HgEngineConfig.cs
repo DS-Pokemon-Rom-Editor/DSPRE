@@ -50,8 +50,8 @@ namespace DSPRE.HgEngine
             string asm = Read(AsmRelPath);
             if (asm != null)
             {
-                var names = settings.Select(x => x.Name).ToHashSet();
-                foreach (var a in ReadAsm(asm)) { a.FollowsHeader = names.Contains(a.Name); settings.Add(a); }
+                HashSet<string> names = settings.Select(x => x.Name).ToHashSet();
+                foreach (Setting a in ReadAsm(asm)) { a.FollowsHeader = names.Contains(a.Name); settings.Add(a); }
             }
             return true;
         }
@@ -59,7 +59,7 @@ namespace DSPRE.HgEngine
         private static IEnumerable<Setting> ReadHeader(string text)
         {
             string[] lines = text.Replace("\r\n", "\n").Split('\n');
-            var comments = new List<string>();
+            List<string> comments = new List<string>();
             int depth = 0;
             for (int i = 0; i < lines.Length; i++)
             {
@@ -96,7 +96,7 @@ namespace DSPRE.HgEngine
         private static IEnumerable<Setting> ReadAsm(string text)
         {
             string[] lines = text.Replace("\r\n", "\n").Split('\n');
-            var comments = new List<string>();
+            List<string> comments = new List<string>();
             for (int i = 0; i < lines.Length; i++)
             {
                 string t = lines[i].Trim();
@@ -127,21 +127,21 @@ namespace DSPRE.HgEngine
         public static bool TryWrite(IReadOnlyList<Setting> settings, out string error)
         {
             error = null;
-            var changed = settings.Where(s => s.Enabled != s.WasEnabled || s.Value != s.WasValue).ToList();
+            List<Setting> changed = settings.Where(s => s.Enabled != s.WasEnabled || s.Value != s.WasValue).ToList();
             if (changed.Count == 0) return true;
             if (changed.Any(s => s.Value != null && s.Value.Trim().Length == 0)) { error = "A setting's value can't be empty."; return false; }
 
-            var files = new Dictionary<string, string[]>();
-            string[] LinesOf(string rel) => files.TryGetValue(rel, out var l) ? l : files[rel] = (Read(rel) ?? "").Replace("\r\n", "\n").Split('\n');
+            Dictionary<string, string[]> files = new Dictionary<string, string[]>();
+            string[] LinesOf(string rel) => files.TryGetValue(rel, out string[] l) ? l : files[rel] = (Read(rel) ?? "").Replace("\r\n", "\n").Split('\n');
 
-            foreach (var s in changed)
+            foreach (Setting s in changed)
             {
-                var lines = LinesOf(s.File);
+                string[] lines = LinesOf(s.File);
                 if (s.Line >= lines.Length) { error = $"{s.File} changed since it was read. Reopen the settings."; return false; }
                 lines[s.Line] = Rewrite(lines[s.Line], s.File, s.Enabled, s.Value);
                 if (s.File != HeaderRelPath) continue;
                 // The assembler's copy of the same setting.
-                var asm = LinesOf(AsmRelPath);
+                string[] asm = LinesOf(AsmRelPath);
                 for (int i = 0; i < asm.Length; i++)
                 {
                     Match equ = AsmEqu.Match(asm[i]), label = AsmLabel.Match(asm[i]);
@@ -152,7 +152,7 @@ namespace DSPRE.HgEngine
             try
             {
                 // Commenting a setting out is the edit, so a define turning into a comment is not a lost comment.
-                foreach (var (rel, lines) in files)
+                foreach ((string rel, string[] lines) in files)
                     HgEngineFileCache.WriteText(Path.Combine(HgEngineProject.RepoPathUnc, rel.Replace('/', Path.DirectorySeparatorChar)), string.Join("\n", lines), keepLostComments: false);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { error = ex.Message; return false; }

@@ -45,7 +45,7 @@ namespace DSPRE.ROMFiles
         {
             if (HgEngine.HgEngineProject.IsActive)
                 return HgEngine.HgEngineSwarms.WhyNot() ?? (HgEngine.HgEngineSwarms.TryRead(out _, out string error) ? null : error);
-            var sites = SwarmCodeSites;
+            SwarmSites sites = SwarmCodeSites;
             if (sites == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
             if (sites.Overlay < 0 && !IsDsRomProject && ARM9.CheckCompressionMark()) return "arm9 is still compressed. Convert this project to ds-rom format first.";
             try { Load(); }
@@ -63,21 +63,21 @@ namespace DSPRE.ROMFiles
         {
             if (HgEngine.HgEngineProject.IsActive)
             {
-                if (!HgEngine.HgEngineSwarms.TryRead(out var rows, out string error)) throw new InvalidDataException(error);
-                var source = new SwarmTable(null) { FromSource = true, Capacity = 255, Where = "in " + HgEngine.HgEngineSwarms.RelPath };
+                if (!HgEngine.HgEngineSwarms.TryRead(out List<(ushort Header, ushort Method)> rows, out string error)) throw new InvalidDataException(error);
+                SwarmTable source = new SwarmTable(null) { FromSource = true, Capacity = 255, Where = "in " + HgEngine.HgEngineSwarms.RelPath };
                 source.Rows.AddRange(rows.Select(r => new Row { Header = r.Header, Method = r.Method }));
                 return source;
             }
-            var sites = SwarmCodeSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
-            var table = new SwarmTable(sites);
+            SwarmSites sites = SwarmCodeSites ?? throw new InvalidOperationException("This game version isn't supported yet.");
+            SwarmTable table = new SwarmTable(sites);
             byte[] code = table.ReadCode();
 
-            var targets = sites.Literals.Select(o => BitConverter.ToUInt32(code, o)).Distinct().ToList();
+            List<uint> targets = sites.Literals.Select(o => BitConverter.ToUInt32(code, o)).Distinct().ToList();
             if (targets.Count != 1) throw new InvalidDataException("The swarm code points at more than one table; DSPRE can't tell which is used.");
             uint ram = targets[0];
             if (sites.LiteralsPlus2.Any(o => BitConverter.ToUInt32(code, o) != ram + 2))
                 throw new InvalidDataException("The swarm code's table pointers don't agree with each other.");
-            var counts = sites.CountSites.Select(o => (code[o], code[o + 1])).Distinct().ToList();
+            List<(byte, byte)> counts = sites.CountSites.Select(o => (code[o], code[o + 1])).Distinct().ToList();
             if (counts.Count != 1 || counts[0].Item2 != 0x21) throw new InvalidDataException("The swarm code's row count doesn't look like the game's; it may have been patched.");
             int count = counts[0].Item1;
 
@@ -94,7 +94,7 @@ namespace DSPRE.ROMFiles
             {
                 byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
                 table._path = Filesystem.expArmPath; table._offset = (int)(ram - synthOverlayLoadAddress);
-                var block = SyntheticOverlaySpace.Blocks(synth, Marker).FirstOrDefault(b => table._offset == b.Start + SyntheticOverlaySpace.HeaderSize);
+                (long Start, long End) block = SyntheticOverlaySpace.Blocks(synth, Marker).FirstOrDefault(b => table._offset == b.Start + SyntheticOverlaySpace.HeaderSize);
                 if (block.End > 0)
                 {
                     table._blockStart = (int)block.Start; table._blockLength = (int)(block.End - block.Start);
@@ -119,7 +119,7 @@ namespace DSPRE.ROMFiles
 
         private byte[] RowBytes()
         {
-            var bytes = new byte[Rows.Count * (_sites?.RowSize ?? 4)];
+            byte[] bytes = new byte[Rows.Count * (_sites?.RowSize ?? 4)];
             for (int i = 0; i < Rows.Count; i++)
             {
                 if (HasMethod)

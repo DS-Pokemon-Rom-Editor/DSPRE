@@ -14,17 +14,17 @@ namespace DSPRE.Avalonia.Data
                                        int canvasW, int canvasH, int cropLeft, int cropTop,
                                        int width, int height)
         {
-            var owner = new int[width * height];
+            int[] owner = new int[width * height];
             for (int i = 0; i < owner.Length; i++) owner[i] = -1;
 
             for (int i = 0; i < bank.oams.Length; i++)
             {
-                var oam = bank.oams[i];
+                OAM oam = bank.oams[i];
                 if (oam.width == 0 || oam.height == 0) continue;
 
                 // One piece on its own, drawn the same way the composer draws it.
-                var only = new int[1] { i };
-                var one = Actions.Get_RawImage(bank, blockSize, img, pal, canvasW, canvasH, true, -1, 1, only);
+                int[] only = new int[1] { i };
+                RawImage one = Actions.Get_RawImage(bank, blockSize, img, pal, canvasW, canvasH, true, -1, 1, only);
                 if (one?.Bgra == null) continue;
 
                 // Read it back in the picture's own coordinates, which is the canvas with the blank
@@ -61,20 +61,20 @@ namespace DSPRE.Avalonia.Data
                 return "That picture is not the size this sprite is drawn at.";
             if (canvas <= 0) canvas = Math.Max(width, height);
 
-            var owner = Ownership(bank, blockSize, img, pal, canvas, canvas, cropLeft, cropTop,
+            int[] owner = Ownership(bank, blockSize, img, pal, canvas, canvas, cropLeft, cropTop,
                                   width, height);
-            var outp = (byte[])tiles.Clone();
+            byte[] outp = (byte[])tiles.Clone();
             bool fourBit = img.FormatColor == ColorFormat.colors16;
             int wrote = 0;   // kept for the log below
 
             for (int i = 0; i < bank.oams.Length; i++)
             {
-                var oam = bank.oams[i];
+                OAM oam = bank.oams[i];
                 if (oam.width == 0 || oam.height == 0) continue;
 
                 int num_pal = oam.obj2.index_palette;
                 if (num_pal >= pal.NumberOfPalettes) num_pal = 0;
-                var colours = pal.Palette[num_pal];
+                System.Drawing.Color[] colours = pal.Palette[num_pal];
 
                 uint tileOffset = (uint)(oam.obj2.tileOffset << (byte)blockSize);
                 int startByte = (int)(tileOffset * 0x20 + bank.data_offset);

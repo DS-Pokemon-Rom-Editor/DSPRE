@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DSPRE.Editors;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
@@ -94,8 +95,8 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (RomInfo.gameFamily != RomInfo.GameFamilies.HGSS) return null;
-                var menu = Members(RomInfo.DirNames.fieldTouchMenu);
-                var choices = Members(RomInfo.DirNames.fieldTouchChoices);
+                Func<int, byte[]> menu = Members(RomInfo.DirNames.fieldTouchMenu);
+                Func<int, byte[]> choices = Members(RomInfo.DirNames.fieldTouchChoices);
                 return menu == null || choices == null ? null : new HgssTouchScreen(menu, choices);
             }
             catch { return null; }
@@ -103,9 +104,9 @@ namespace DSPRE.Avalonia.Data
 
         private static Func<int, byte[]> Members(RomInfo.DirNames dir)
         {
-            var narc = new ScriptNarc(dir);
+            ScriptNarc narc = new ScriptNarc(dir);
             if (!narc.Available) return null;
-            var cache = new byte[narc.Count][];
+            byte[][] cache = new byte[narc.Count][];
             return i => i < 0 || i >= cache.Length ? null : cache[i] ??= NitroBgCodec.Inflate(narc.Get(i));
         }
 
@@ -132,11 +133,11 @@ namespace DSPRE.Avalonia.Data
         public byte[] RenderMenu(FieldFont font, FieldFont iconFont, Func<int, string> text, MenuLook look)
         {
             look ??= new MenuLook();
-            var palettes = DsBgScreen.ReadColours(_menu(MenuPalettes));
-            var s = new DsBgScreen();
+            ushort[] palettes = DsBgScreen.ReadColours(_menu(MenuPalettes));
+            DsBgScreen s = new DsBgScreen();
             s.InitLayer(0, 2, 0);
             s.LoadTiles(0, _menu(MenuTiles));
-            var (w, map) = DsBgScreen.ReadMap(_menu(MenuMap));
+            (int w, ushort[] map) = DsBgScreen.ReadMap(_menu(MenuMap));
             s.LoadMap(0, map, w);
             for (int slot = 0; slot < 16; slot++) s.SetPalette(slot, palettes, slot * 16);
             byte[] rgba = s.Render();
@@ -168,7 +169,7 @@ namespace DSPRE.Avalonia.Data
             Words(under);
 
             // BG1, where the words are, sits over the side buttons and under the icons.
-            var buttons = DsBgScreen.ReadCells(_menu(ButtonCells));
+            List<DsBgScreen.Oam[]> buttons = DsBgScreen.ReadCells(_menu(ButtonCells));
             byte[] chars = DsBgScreen.ReadCharacters(_menu(ButtonCharacters));
             Func<int, ushort[]> buttonColours = p => DsBgScreen.Row(palettes, p);
             void Button(int cell, int x, int y, bool translucent)
@@ -191,14 +192,14 @@ namespace DSPRE.Avalonia.Data
 
             Words(rgba);
 
-            var iconCells = DsBgScreen.ReadCells(_menu(IconCells));
-            var iconColours = DsBgScreen.ReadColours(_menu(IconPalettes));
+            List<DsBgScreen.Oam[]> iconCells = DsBgScreen.ReadCells(_menu(IconCells));
+            ushort[] iconColours = DsBgScreen.ReadColours(_menu(IconPalettes));
             if (iconCells.Count > 0)
                 for (int i = 0; i < IconSlots.Length; i++)
                 {
                     int drawing = IconKinds[kinds[i]].Characters;
                     if (kinds[i] == NoIcon || drawing < 0) continue;
-                    var colours = DsBgScreen.Row(iconColours, i == look.Highlighted ? 1 : 0);
+                    ushort[] colours = DsBgScreen.Row(iconColours, i == look.Highlighted ? 1 : 0);
                     DsBgScreen.DrawCell(rgba, iconCells[0], DsBgScreen.ReadCharacters(_menu(drawing)),
                                         _ => colours, IconSlots[i].X, IconSlots[i].Y,
                                         look.Busy && i != look.Cursor, under);
@@ -206,10 +207,10 @@ namespace DSPRE.Avalonia.Data
 
             if (look.RegisteredItems)
             {
-                var itemCells = DsBgScreen.ReadCells(_menu(ItemIconCells));
+                List<DsBgScreen.Oam[]> itemCells = DsBgScreen.ReadCells(_menu(ItemIconCells));
                 int[] items = { ShownItemOne, ShownItemTwo };
                 for (int i = 0; i < items.Length; i++)
-                    if (itemCells.Count > 0 && ItemIcon(items[i]) is var (c, p) && c != null)
+                    if (itemCells.Count > 0 && ItemIcon(items[i]) is (byte[] c, ushort[] p) && c != null)
                         DsBgScreen.DrawCell(rgba, itemCells[0], c, _ => p, ItemIconSlots[i].X, ItemIconSlots[i].Y,
                                             look.Busy && 7 + i != look.Cursor, under);
             }
@@ -217,7 +218,7 @@ namespace DSPRE.Avalonia.Data
             if (look.BugContest)
             {
                 int cell = CellOf(_menu(IconAnimations), BallSequence);
-                if (cell >= 0 && cell < iconCells.Count && ItemIcon(SportBall) is var (c, p) && c != null)
+                if (cell >= 0 && cell < iconCells.Count && ItemIcon(SportBall) is (byte[] c, ushort[] p) && c != null)
                     DsBgScreen.DrawCell(rgba, iconCells[cell], c, _ => p, BallSlot.X, BallSlot.Y);
                 DsBgScreen.DrawImage(rgba, CaughtIcon(), CaughtSlot.X, CaughtSlot.Y);
             }
@@ -242,7 +243,7 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (!DSPRE.ROMFiles.ItemTable.Exists(item)) return (null, null);
-                var row = DSPRE.ROMFiles.ItemTable.Read(item);
+                ItemNarcTableEntry row = DSPRE.ROMFiles.ItemTable.Read(item);
                 _itemIcons ??= Members(RomInfo.DirNames.itemIcons);
                 if (_itemIcons == null) return (null, null);
                 byte[] chars = DsBgScreen.ReadCharacters(_itemIcons((int)row.itemIcon));
@@ -303,20 +304,20 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public byte[] RenderChoices(FieldFont font, IReadOnlyList<string> labels, bool yesNo, int cursor, bool cursorShown)
         {
-            var palettes = DsBgScreen.ReadColours(_choices(ChoicePalettes));
-            var s = new DsBgScreen();
+            ushort[] palettes = DsBgScreen.ReadColours(_choices(ChoicePalettes));
+            DsBgScreen s = new DsBgScreen();
             int count = labels?.Count ?? 0;
             bool bars = count >= 2 && count <= 8;
 
             s.InitLayer(2, 2, 0x4000);
             s.LoadTiles(0x4000, _choices(ChoiceTiles));
-            var (bw, background) = DsBgScreen.ReadMap(_choices(PokeBallMap));
+            (int bw, ushort[] background) = DsBgScreen.ReadMap(_choices(PokeBallMap));
             s.LoadMap(2, background, bw);
             if (bars)
             {
                 s.InitLayer(0, 1, 0);
                 s.LoadTiles(0, _choices(ChoiceTiles));
-                var (fw, front) = DsBgScreen.ReadMap(_choices(yesNo ? YesNoMap : count));
+                (int fw, ushort[] front) = DsBgScreen.ReadMap(_choices(yesNo ? YesNoMap : count));
                 s.LoadMap(0, front, fw);
             }
             for (int slot = 0; slot < 5; slot++) s.SetPalette(slot, palettes, slot * 16);
@@ -327,7 +328,7 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < count; i++)
             {
                 string line = labels[i]?.Trim() ?? "";
-                var (wx, wy, ww, wh) = WindowFor(count, yesNo, i);
+                (int wx, int wy, int ww, int wh) = WindowFor(count, yesNo, i);
                 int x = yesNo ? wx + (ww - DsBgScreen.MeasureText(font, line)) / 2 : wx;
                 int y = wy + (wh - 16) / 2;
                 DsBgScreen.DrawText(rgba, font, line, x, y, words[2], words[1]);
@@ -335,11 +336,11 @@ namespace DSPRE.Avalonia.Data
 
             if (cursorShown && cursor >= 0 && cursor < count)
             {
-                var cells = DsBgScreen.ReadCells(_choices(CursorCells));
+                List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(_choices(CursorCells));
                 bool big = yesNo || count <= 4;
                 int cell = big ? BigFrameCell : SmallFrameCell;
-                var (cx, cy) = CursorAt(count, yesNo, cursor);
-                var colours = DsBgScreen.Row(DsBgScreen.ReadColours(_choices(CursorPalette)), 0);
+                (int cx, int cy) = CursorAt(count, yesNo, cursor);
+                ushort[] colours = DsBgScreen.Row(DsBgScreen.ReadColours(_choices(CursorPalette)), 0);
                 if (cell < cells.Count)
                     DsBgScreen.DrawCell(rgba, cells[cell], DsBgScreen.ReadCharacters(_choices(CursorCharacters)), _ => colours, cx, cy);
             }
@@ -371,7 +372,7 @@ namespace DSPRE.Avalonia.Data
         private static (int X, int Y, int W, int H) WindowFor(int count, bool yesNo, int index)
         {
             if (yesNo) return (96, index == 0 ? 64 : 112, 64, 16);
-            var (x, y) = ListWindows[count][index];
+            (int x, int y) = ListWindows[count][index];
             return count <= 4 ? (x, y, 224, 16) : (x, y, 104, 32);
         }
 
@@ -418,7 +419,7 @@ namespace DSPRE.Avalonia.Data
         {
             if (yesNo) count = 2;
             if (count < 2 || count > 8) return -1;
-            var rects = ChoiceRects[count];
+            (int Top, int Bottom, int Left, int Right)[] rects = ChoiceRects[count];
             for (int i = 0; i < rects.Length; i++)
                 if (In(rects[i], x, y)) return i;
             return -1;
@@ -432,12 +433,12 @@ namespace DSPRE.Avalonia.Data
         {
             if (yesNo) count = 2;
             if (count < 2 || count > 8 || index < 0 || index >= count) return -1;
-            var (x, y) = CursorAt(count, yesNo, index);
+            (int x, int y) = CursorAt(count, yesNo, index);
             int best = -1, bestDistance = int.MaxValue;
             for (int i = 0; i < count; i++)
             {
                 if (i == index) continue;
-                var (ix, iy) = CursorAt(count, yesNo, i);
+                (int ix, int iy) = CursorAt(count, yesNo, i);
                 bool ok = dy != 0 ? ix == x && Math.Sign(iy - y) == dy : iy == y && Math.Sign(ix - x) == dx;
                 int distance = Math.Abs(ix - x) + Math.Abs(iy - y);
                 if (ok && distance < bestDistance) { best = i; bestDistance = distance; }

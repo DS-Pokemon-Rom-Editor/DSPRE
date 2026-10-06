@@ -68,7 +68,7 @@ namespace DSPRE.ROMFiles
             public int TargetFor(int combo)
             {
                 int best = -1;
-                foreach (var kv in ComboAt)
+                foreach (KeyValuePair<int, int> kv in ComboAt)
                     if (kv.Value == combo && (best < 0 || kv.Key < best)) best = kv.Key;
                 return best;
             }
@@ -84,7 +84,7 @@ namespace DSPRE.ROMFiles
                 if ((subs & 0xFF00) != 0x3800 || (movs & 0xFF00) != 0x2100 || cmp != (0x2800 | (count - 1))
                     || At(table - 2) != AddPcR0) return null;
 
-                var t = new ClassJumpTable { FirstClass = subs & 0xFF, DefaultCombo = movs & 0xFF, Start = table };
+                ClassJumpTable t = new ClassJumpTable { FirstClass = subs & 0xFF, DefaultCombo = movs & 0xFF, Start = table };
                 t.Entries = new short[count];
                 for (int i = 0; i < count; i++) t.Entries[i] = (short)At(table + 2 * i);
 
@@ -168,7 +168,7 @@ namespace DSPRE.ROMFiles
                 return ComboSequence(PtClassCombo.TryGetValue(trainerClass, out int c) ? c : PtNormalTrainer);
 
             int combo = HgssTrainerCombo;
-            foreach (var row in Classes.Rows)
+            foreach ((int Class, int Combo) row in Classes.Rows)
                 if (row.Class == trainerClass) { combo = row.Combo; break; }
             return Kanto(ComboSequence(combo), kanto);
         }
@@ -182,7 +182,7 @@ namespace DSPRE.ROMFiles
                 return ComboSequence(PtSpeciesCombo.TryGetValue(species, out int c) ? c : PtNormalWild);
 
             int combo = HgssWildCombo;
-            foreach (var row in Species.Rows)
+            foreach ((int Species, int Combo) row in Species.Rows)
                 if (row.Species == species) { combo = row.Combo; break; }
             // Only a combo before the standard wild one overrides it.
             if (combo >= HgssWildCombo) combo = HgssWildCombo;
@@ -211,14 +211,14 @@ namespace DSPRE.ROMFiles
             if (!IsSupported) return null;
             SetBattleEffectsData();
             if (isHGE && BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) >= synthOverlayLoadAddress) return null;
-            var t = new BattleMusicTables();
+            BattleMusicTables t = new BattleMusicTables();
 
             bool hgss = gameFamily == GameFamilies.HGSS;
             if (gameFamily == GameFamilies.DP && !DpPointersAgree()) return null;
             int comboCount = hgss ? ARM9.ReadByte(effectsComboTableOffsetToSizeLimiter)
                 : gameFamily == GameFamilies.DP ? DpComboCount : PtNormalWild + 1;
             Locate(t.Combos, effectsComboTableOffsetToRAMAddress);
-            using (var r = new DSUtils.EasyReader(t.Combos.Path, t.Combos.Start))
+            using (DSUtils.EasyReader r = new DSUtils.EasyReader(t.Combos.Path, t.Combos.Start))
                 for (int i = 0; i < comboCount; i++) t.Combos.Rows.Add((r.ReadUInt16(), r.ReadUInt16()));
 
             if (hgss)
@@ -227,7 +227,7 @@ namespace DSPRE.ROMFiles
                 ReadPacked(t.Species, vsPokemonEntryTableOffsetToRAMAddress, ARM9.ReadByte(vsPokemonEntryTableOffsetToSizeLimiter));
             }
 
-            var sites = VsIntroCodeSites;
+            VsIntroSites sites = VsIntroCodeSites;
             uint musicLiteral = effectsComboTableSecondPointerOffset != 0 ? effectsComboTableSecondPointerOffset
                 : sites != null && sites.ComboMusicLiteral >= 0 ? (uint)sites.ComboMusicLiteral : 0;
             if (musicLiteral != 0)
@@ -241,8 +241,8 @@ namespace DSPRE.ROMFiles
         /// <summary>Writes combo row <paramref name="index"/> back where the table was read from.</summary>
         public void WriteCombo(int index)
         {
-            var (transition, sequence) = Combos.Rows[index];
-            using var w = new DSUtils.EasyWriter(Combos.Path, Combos.Start + 4 * (uint)index);
+            (ushort transition, ushort sequence) = Combos.Rows[index];
+            using DSUtils.EasyWriter w = new DSUtils.EasyWriter(Combos.Path, Combos.Start + 4 * (uint)index);
             w.Write(transition);
             w.Write(sequence);
         }
@@ -250,16 +250,16 @@ namespace DSPRE.ROMFiles
         /// <summary>Writes class row <paramref name="index"/> back, the class in the low 10 bits and the combo above.</summary>
         public void WriteClass(int index)
         {
-            var (trainerClass, combo) = Classes.Rows[index];
-            using var w = new DSUtils.EasyWriter(Classes.Path, Classes.Start + 2 * (uint)index);
+            (int trainerClass, int combo) = Classes.Rows[index];
+            using DSUtils.EasyWriter w = new DSUtils.EasyWriter(Classes.Path, Classes.Start + 2 * (uint)index);
             w.Write((ushort)((trainerClass & 0x3FF) | (combo << 10)));
         }
 
         /// <summary>Writes species row <paramref name="index"/> back, the species in the low 10 bits and the combo above.</summary>
         public void WriteSpecies(int index)
         {
-            var (species, combo) = Species.Rows[index];
-            using var w = new DSUtils.EasyWriter(Species.Path, Species.Start + 2 * (uint)index);
+            (int species, int combo) = Species.Rows[index];
+            using DSUtils.EasyWriter w = new DSUtils.EasyWriter(Species.Path, Species.Start + 2 * (uint)index);
             w.Write((ushort)((species & 0x3FF) | (combo << 10)));
         }
 
@@ -274,7 +274,7 @@ namespace DSPRE.ROMFiles
             // An emptied table may keep a null pointer, as the trainer class metadata patch (PR #272) leaves the class table.
             if (count == 0) return;
             Locate(table, pointerOffset);
-            using var r = new DSUtils.EasyReader(table.Path, table.Start);
+            using DSUtils.EasyReader r = new DSUtils.EasyReader(table.Path, table.Start);
             for (int i = 0; i < count; i++)
             {
                 ushort v = r.ReadUInt16();

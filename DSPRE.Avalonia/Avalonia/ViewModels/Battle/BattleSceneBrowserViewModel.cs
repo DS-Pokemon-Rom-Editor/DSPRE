@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public void Reload()
         {
             Scenes.Clear();
-            try { foreach (var s in BattleScenes.Read()) Scenes.Add(s); }
+            try { foreach (BattleScenes.Scene s in BattleScenes.Read()) Scenes.Add(s); }
             catch (Exception ex) { AppLogger.Error("BattleSceneBrowser.Reload: " + ex.Message); }
 
             Terrains.Clear();
@@ -106,7 +106,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 return;
             }
 
-            var s = _selected;
+            BattleScenes.Scene s = _selected;
             Details = $"Battle scenery {s.BackgroundId}. Drawn from file {s.Drawing}, arranged by file "
                     + $"{s.Arrangement}, painted from file {s.PaletteDay + _timeOfDay}. "
                     + (s.Headers.Count == 0
@@ -127,7 +127,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             try
             {
-                var bg = _backdrops.BuildBackdrop(s.BackgroundId, _timeOfDay);
+                BattleBgRenderer.BgImage bg = _backdrops.BuildBackdrop(s.BackgroundId, _timeOfDay);
                 if (bg?.Rgba == null)
                 {
                     Whynot = "This scenery could not be drawn. The colours it names may not be a palette "
@@ -136,7 +136,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     return;
                 }
 
-                var scene = Compose(bg);
+                (byte[] Rgba, int Width, int Height) scene = Compose(bg);
                 Picture = ImageConverter.FromRgba(scene.Rgba, scene.Width, scene.Height);
             }
             catch (Exception ex)
@@ -155,12 +155,12 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private (byte[] Rgba, int Width, int Height) Compose(BattleBgRenderer.BgImage bg)
         {
             int w = Math.Min(ScreenWidth, bg.Width), h = Math.Min(ScreenHeight, bg.Height);
-            var outp = new byte[w * h * 4];
+            byte[] outp = new byte[w * h * 4];
             for (int y = 0; y < h; y++)
                 Array.Copy(bg.Rgba, y * bg.Width * 4, outp, y * w * 4, w * 4);
 
-            var (mine, enemy) = _grounds.Build(_terrainIndex, _timeOfDay);
-            foreach (var piece in new[] { enemy, mine })
+            (BattleGroundRenderer.GroundImage mine, BattleGroundRenderer.GroundImage enemy) = _grounds.Build(_terrainIndex, _timeOfDay);
+            foreach (BattleGroundRenderer.GroundImage piece in new[] { enemy, mine })
             {
                 if (piece?.Rgba == null) continue;
                 for (int y = 0; y < piece.Height; y++)

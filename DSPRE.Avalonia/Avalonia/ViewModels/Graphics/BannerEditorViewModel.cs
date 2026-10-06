@@ -71,14 +71,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private byte[] TakeState() => ByteStateUndo.Pack(w =>
         {
             w.Write(_pendingIcon == null ? -1 : _picked.IndexOf(_pendingIcon));
-            foreach (var t in Titles) w.Write(t.Text ?? "");
+            foreach (TitleEntry t in Titles) w.Write(t.Text ?? "");
         });
 
         private void ApplyState(byte[] state) => ByteStateUndo.Unpack(state, r =>
         {
             int icon = r.ReadInt32();
             _pendingIcon = icon >= 0 ? _picked[icon] : null;
-            foreach (var t in Titles) t.Text = r.ReadString();
+            foreach (TitleEntry t in Titles) t.Text = r.ReadString();
             if (_pendingIcon != null) IconPreview = ImageConverter.ToAvaloniaBitmap(_pendingIcon); else RefreshIconPreview();
             RaiseUnsaved();
         });
@@ -108,7 +108,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             if (TitlesEdited && _yaml?.title != null)
             {
-                foreach (var entry in Titles) _yaml.title[entry.Key] = entry.Text ?? "";
+                foreach (TitleEntry entry in Titles) _yaml.title[entry.Key] = entry.Text ?? "";
                 GameBanner.WriteDsRomYaml(_yaml);
                 _savedTitles = TitleText();
             }
@@ -134,7 +134,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             _yaml = GameBanner.ReadDsRomYaml();
             if (_yaml?.title != null)
             {
-                foreach (var kv in _yaml.title)
+                foreach (KeyValuePair<string, string> kv in _yaml.title)
                     Titles.Add(new TitleEntry
                     {
                         Key = kv.Key,
@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (string.IsNullOrEmpty(src)) return;
 
             RawImage raw;
-            using (var fs = File.OpenRead(src))
+            using (FileStream fs = File.OpenRead(src))
                 raw = ImageConverter.DecodeRawImage(fs);
 
             string error = GameBanner.IconProblem(raw);
@@ -214,13 +214,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         ? new AvaloniaBitmap(GameBanner.DsRomBitmapPath)
                         : null;
                     string title = null;
-                    var yaml = GameBanner.ReadDsRomYaml();
+                    GameBanner.BannerYaml yaml = GameBanner.ReadDsRomYaml();
                     yaml?.title?.TryGetValue("english", out title);
                     return (icon, title);
                 }
                 else
                 {
-                    var raw = GameBanner.ReadNdstoolIcon(RomInfo.bannerPath);
+                    RawImage raw = GameBanner.ReadNdstoolIcon(RomInfo.bannerPath);
                     return (raw == null ? null : ImageConverter.ToAvaloniaBitmap(raw),
                             GameBanner.ReadNdstoolTitle(RomInfo.bannerPath));
                 }

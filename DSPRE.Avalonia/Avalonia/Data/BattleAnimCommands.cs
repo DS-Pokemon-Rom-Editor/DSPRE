@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using DSPRE.HgEngine;
+
 namespace DSPRE.Avalonia.Data
 {
     public readonly struct BattleAnimCommand
@@ -197,7 +200,7 @@ namespace DSPRE.Avalonia.Data
         public static int Count(WazaSeqVersion v) => Table(v).Length;
         public static bool TryGet(WazaSeqVersion v, int id, out BattleAnimCommand op)
         {
-            var t = Table(v);
+            BattleAnimCommand[] t = Table(v);
             if (id >= 0 && id < t.Length && t[id].ArgCount >= 0) { op = t[id]; return true; }
             op = default; return false;
         }
@@ -208,22 +211,22 @@ namespace DSPRE.Avalonia.Data
         // hg-engine adds commands after the game's own (changepermanentbg is 0x58); a number it skips stays unknown.
         private static BattleAnimCommand[] WithHgEngine(BattleAnimCommand[] retail)
         {
-            var added = HgEngine.HgEngineScriptCommands.Animation();
+            IReadOnlyDictionary<int, HgEngineScriptCommands.Command> added = HgEngine.HgEngineScriptCommands.Animation();
             if (added.Count == 0) return retail;
             if (ReferenceEquals(added, _extendedFrom)) return _extended;
             int last = System.Math.Max(retail.Length - 1, System.Linq.Enumerable.Max(added.Keys));
-            var table = new BattleAnimCommand[last + 1];
+            BattleAnimCommand[] table = new BattleAnimCommand[last + 1];
             for (int i = 0; i <= last; i++)
                 table[i] = i < retail.Length ? retail[i]
-                    : added.TryGetValue(i, out var c) ? new BattleAnimCommand(c.Name, c.ArgCount, false, -1)
+                    : added.TryGetValue(i, out HgEngineScriptCommands.Command c) ? new BattleAnimCommand(c.Name, c.ArgCount, false, -1)
                     : new BattleAnimCommand("op" + i, -1, false, -1);
             _extendedFrom = added;
             return _extended = table;
         }
-        public static string Name(WazaSeqVersion v, int id) => TryGet(v, id, out var op) ? op.Name : null;
+        public static string Name(WazaSeqVersion v, int id) => TryGet(v, id, out BattleAnimCommand op) ? op.Name : null;
         public static int Id(WazaSeqVersion v, string name)
         {
-            var t = Table(v);
+            BattleAnimCommand[] t = Table(v);
             for (int i = 0; i < t.Length; i++) if (t[i].Name == name) return i;
             return -1;
         }

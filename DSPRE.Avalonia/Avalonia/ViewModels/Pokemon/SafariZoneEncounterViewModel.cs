@@ -10,6 +10,7 @@ using DSPRE.Avalonia;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
+using DSPRE.HgEngine;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -90,7 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private byte[] TakeState()
         {
-            var f = new SafariZoneEncounterFile(_selectedFileIndex, System.Array.Empty<byte>())
+            SafariZoneEncounterFile f = new SafariZoneEncounterFile(_selectedFileIndex, System.Array.Empty<byte>())
             {
                 grassEncounterGroup = GrassVM.CurrentGroup, surfEncounterGroup = SurfVM.CurrentGroup,
                 oldRodEncounterGroup = OldRodVM.CurrentGroup, goodRodEncounterGroup = GoodRodVM.CurrentGroup,
@@ -101,7 +102,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ApplyState(byte[] state)
         {
-            var f = new SafariZoneEncounterFile(_selectedFileIndex, state);
+            SafariZoneEncounterFile f = new SafariZoneEncounterFile(_selectedFileIndex, state);
             if (_file != null) _file = f;
             GrassVM.SetData(f.grassEncounterGroup, keepSelection: true);
             SurfVM.SetData(f.surfEncounterGroup, keepSelection: true);
@@ -132,7 +133,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public SafariZoneEncounterViewModel(bool _) : this()
         {
-            foreach (var g in Groups) g.Changed += (s, e) => Edited();
+            foreach (SafariZoneGroupViewModel g in Groups) g.Changed += (s, e) => Edited();
         }
 
         // ── Setup ────────────────────────────────────────────────────────────────
@@ -144,12 +145,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.safariZone, DirNames.textArchives });
 
                 SpeciesNames.Clear();
-                foreach (var n in GetPokemonNames()) SpeciesNames.Add(n);
+                foreach (string n in GetPokemonNames()) SpeciesNames.Add(n);
 
                 FileNames.Clear();
                 int count = Filesystem.GetSafariZoneCount();
                 for (int i = 0; i < count; i++)
-                    FileNames.Add(SafariZoneEncounterFile.Names.TryGetValue(i, out var nm) ? nm : $"Safari Zone {i}");
+                    FileNames.Add(SafariZoneEncounterFile.Names.TryGetValue(i, out string nm) ? nm : $"Safari Zone {i}");
 
                 if (FileNames.Count > 0) SelectedFileIndex = 0;
             }
@@ -206,7 +207,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             void BindOne(SafariZoneGroupViewModel vm, DSPRE.HgEngine.HgEngineSafariEncounters.RodType type)
             {
                 vm.CanEditObjectSlotCount = false;
-                if (DSPRE.HgEngine.HgEngineSafariEncounters.TryLoadGroup(areaId, type, out var group, out string error))
+                if (DSPRE.HgEngine.HgEngineSafariEncounters.TryLoadGroup(areaId, type, out SafariZoneEncounterGroup group, out string error))
                     vm.SetData(group);
                 else
                 {
@@ -233,7 +234,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private async Task SaveHgEngineAsync()
         {
-            var groups = new List<(DSPRE.HgEngine.HgEngineSafariEncounters.RodType, SafariZoneEncounterGroup)>
+            List<(HgEngineSafariEncounters.RodType, SafariZoneEncounterGroup)> groups = new List<(DSPRE.HgEngine.HgEngineSafariEncounters.RodType, SafariZoneEncounterGroup)>
             {
                 (DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Land, GrassVM.CurrentGroup),
                 (DSPRE.HgEngine.HgEngineSafariEncounters.RodType.Surf, SurfVM.CurrentGroup),
@@ -243,7 +244,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             };
             int area = _selectedFileIndex;
             // One pass for the whole area, so a failure can't leave some rods written and others not.
-            var (saved, error) = await HgEngineSave.RunAsync(() =>
+            (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 DSPRE.HgEngine.HgEngineSafariEncounters.TrySaveGroups(area, groups, out string sourceError) ? null : sourceError);
             if (saved)
             {
@@ -285,7 +286,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task SaveAsAsync()
         {
             if (_file == null) return;
-            var filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.SaveFile(_owner, "Save Safari Zone As", new[] { filter }, "safari_zone.bin");
             if (path == null) return;
             try
@@ -303,7 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task ImportAsync()
         {
             if (_file == null) return;
-            var filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType filter = new FilePickerFileType("Binary files") { Patterns = new[] { "*.bin" } };
             string path = await DialogHelper.OpenFile(_owner, "Import Safari Zone File", new[] { filter });
             if (path == null) return;
 

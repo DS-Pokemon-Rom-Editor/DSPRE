@@ -7,6 +7,8 @@ using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
 using DSPRE.HgEngine;
 using static DSPRE.RomInfo;
+using DSPRE.Avalonia.Data;
+using Avalonia.Threading;
 
 namespace DSPRE.Avalonia.ViewModels.Trainers
 {
@@ -162,7 +164,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             Slot = slot;
             PokemonNames = pokeNames; MoveNames = moveNames; ItemNames = itemNames;
             _abilityNames = abilityNames; _abilities = abilities; _abilityEditable = abilityEditable;
-            foreach (var n in abilityNames) AllAbilityNames.Add(n);
+            foreach (string n in abilityNames) AllAbilityNames.Add(n);
             GenderVisible = genderVisible; FormVisible = formVisible; BallEnabled = ballEnabled;
             AbilityEnabled = abilityEditable;
             HgeExtras.Changed += (s, e) => Touch();
@@ -276,7 +278,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void ShowCapsule()
         {
             CapsuleStickers.Clear();
-            foreach (var s in Data.TrainerCapsuleCatalog.Stickers((int)_ballSeals)) CapsuleStickers.Add(s);
+            foreach (CapsuleSticker s in Data.TrainerCapsuleCatalog.Stickers((int)_ballSeals)) CapsuleStickers.Add(s);
         }
 
         private Bitmap _pokemonIcon;
@@ -321,7 +323,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 AbilityItems.Clear();
                 int species = DataSpeciesId;
                 if (species < 0 || species >= _abilities.Length) return;
-                var ab = _abilities[species];
+                (int abi1, int abi2) ab = _abilities[species];
                 string a1 = AbilityName(ab.abi1);
                 string a2 = AbilityName(ab.abi2);
 
@@ -357,7 +359,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (_abilityRepushPending) return;
             _abilityRepushPending = true;
-            var dispatcher = global::Avalonia.Threading.Dispatcher.UIThread;
+            Dispatcher dispatcher = global::Avalonia.Threading.Dispatcher.UIThread;
             dispatcher.Post(() =>
             {
                 int keep = _abilityIndex;
@@ -377,7 +379,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             int species = DataSpeciesId;
             if (species < 0 || species >= _abilities.Length) return 0;
-            var ab = _abilities[species];
+            (int abi1, int abi2) ab = _abilities[species];
             if (_abilityIndex == 1 && ab.abi2 > 0) return ab.abi2;
             if (_abilityIndex == 2 && HgEngineHiddenAbility.TryGetAbilityId(species, out int hidden) && hidden > 0) return hidden;
             return ab.abi1;
@@ -397,7 +399,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public State Capture()
         {
-            var x = HgeExtras;
+            TrainerPartyMonHgeExtras x = HgeExtras;
             static int[] Stats(StatBlockViewModel s) => new[] { (int)s.Hp, (int)s.Attack, (int)s.Defense, (int)s.Speed, (int)s.SpAttack, (int)s.SpDefense };
             return new State
             {
@@ -417,7 +419,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             Load(s.Species, s.Form, s.Level, s.Moves, s.Item, s.Gender, s.Ability, s.Difficulty, s.BallSeals, s.ForceShiny);
             _suppress = true;
-            var x = HgeExtras;
+            TrainerPartyMonHgeExtras x = HgeExtras;
             x.AbilityId = s.AbilityId; x.BallId = s.BallId; x.NatureIndex = s.Nature; x.ShinyLocked = s.Shiny;
             x.SetIvs.Load(s.Ivs[0], s.Ivs[1], s.Ivs[2], s.Ivs[3], s.Ivs[4], s.Ivs[5]);
             x.SetEvs.Load(s.Evs[0], s.Evs[1], s.Evs[2], s.Evs[3], s.Evs[4], s.Evs[5]);
@@ -451,7 +453,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     return;
                 }
 
-                var gdi = DSUtils.GetPokePicRaw(_speciesIndex, 56, 56);
+                RawImage gdi = DSUtils.GetPokePicRaw(_speciesIndex, 56, 56);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
             catch { PokemonIcon = null; }

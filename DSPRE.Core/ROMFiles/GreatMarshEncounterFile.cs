@@ -166,8 +166,8 @@ namespace DSPRE.ROMFiles {
             // we need to save each group to its respective file.
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (var group in Groups) {
-                    foreach (var encounter in group.Encounters) {
+                foreach (GreatMarshEncounterGroup group in Groups) {
+                    foreach (GreatMarshEncounter encounter in group.Encounters) {
                         encounter.Write(bw);
                     }
                 }
@@ -185,7 +185,7 @@ namespace DSPRE.ROMFiles {
 
             using (MemoryStream ms = new MemoryStream())
             using (BinaryWriter bw = new BinaryWriter(ms)) {
-                foreach (var encounter in Groups[groupIndex].Encounters) {
+                foreach (GreatMarshEncounter encounter in Groups[groupIndex].Encounters) {
                     encounter.Write(bw);
                 }
                 return ms.ToArray();
@@ -246,7 +246,7 @@ namespace DSPRE.ROMFiles {
             try {
                 using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read))
                 using (BinaryReader br = new BinaryReader(fs)) {
-                    foreach (var group in Groups) {
+                    foreach (GreatMarshEncounterGroup group in Groups) {
                         group.Encounters.Clear();
                         for (int slot = 0; slot < SLOTS_PER_GROUP && fs.Position + ENTRY_SIZE <= fs.Length; slot++) {
                             group.Encounters.Add(new GreatMarshEncounter(br));

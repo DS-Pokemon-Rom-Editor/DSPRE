@@ -21,8 +21,8 @@ namespace DSPRE.Models
 
         public static byte[] Padded(string name)
         {
-            var raw = Encoding.ASCII.GetBytes(name ?? "");
-            var o = new byte[NameSize];
+            byte[] raw = Encoding.ASCII.GetBytes(name ?? "");
+            byte[] o = new byte[NameSize];
             Array.Copy(raw, o, Math.Min(raw.Length, NameSize));
             return o;
         }
@@ -31,9 +31,9 @@ namespace DSPRE.Models
 
         public static int Find(IReadOnlyList<Node> nodes, string name)
         {
-            var key = Padded(name);
-            var from = nodes[0];
-            var at = nodes[from.Left];
+            byte[] key = Padded(name);
+            Node from = nodes[0];
+            Node at = nodes[from.Left];
             while (at.RefBit < from.RefBit)
             {
                 from = at;
@@ -44,14 +44,14 @@ namespace DSPRE.Models
 
         public static List<Node> BuildTree(IReadOnlyList<string> names)
         {
-            var keys = names.Select(Padded).ToList();
-            var nodes = new List<Node> { new Node { RefBit = 127, Left = 0, Right = 0, Entry = 0 } };
+            List<byte[]> keys = names.Select(Padded).ToList();
+            List<Node> nodes = new List<Node> { new Node { RefBit = 127, Left = 0, Right = 0, Entry = 0 } };
 
-            var owner = new Dictionary<int, byte[]> { [0] = new byte[NameSize] };
+            Dictionary<int, byte[]> owner = new Dictionary<int, byte[]> { [0] = new byte[NameSize] };
 
             for (int entry = 0; entry < keys.Count; entry++)
             {
-                var key = keys[entry];
+                byte[] key = keys[entry];
                 int landed = WalkTo(nodes, key);
                 int b = FirstDifferingBit(key, owner[landed]);
                 if (b < 0) throw new InvalidOperationException($"two things are both called {names[entry]}");
@@ -75,7 +75,7 @@ namespace DSPRE.Models
                 });
                 owner[made] = key;
 
-                var p = nodes[parent];
+                Node p = nodes[parent];
                 if (parent == 0) p.Left = made;
                 else if (Bit(key, p.RefBit) != 0) p.Right = made;
                 else p.Left = made;
@@ -106,15 +106,15 @@ namespace DSPRE.Models
             if (names.Count != entries.Count)
                 throw new ArgumentException("there must be one entry for every name");
             int unit = entries.Count == 0 ? 4 : entries[0].Length;
-            foreach (var e in entries)
+            foreach (byte[] e in entries)
                 if (e.Length != unit) throw new ArgumentException("every entry must be the same size");
 
-            var nodes = BuildTree(names);
+            List<Node> nodes = BuildTree(names);
             int treeBytes = nodes.Count * 4;
             int ofsEntry = 8 + treeBytes;
             int total = ofsEntry + 4 + names.Count * unit + names.Count * NameSize;
 
-            var d = new byte[total];
+            byte[] d = new byte[total];
             d[0] = 0;
             d[1] = (byte)names.Count;
             Put16(d, 2, total);
@@ -148,11 +148,11 @@ namespace DSPRE.Models
             int ofsEntry = d[at + 6] | (d[at + 7] << 8);
             int eh = at + ofsEntry;
             int unit = d[eh] | (d[eh + 1] << 8);
-            var read = new List<(string, byte[])>();
+            List<(string, byte[])> read = new List<(string, byte[])>();
             int names = eh + 4 + count * unit;
             for (int i = 0; i < count; i++)
             {
-                var entry = new byte[unit];
+                byte[] entry = new byte[unit];
                 Array.Copy(d, eh + 4 + i * unit, entry, 0, unit);
                 int n = 0;
                 while (n < NameSize && d[names + i * NameSize + n] != 0) n++;

@@ -32,7 +32,7 @@ namespace DSPRE.ROMFiles
         public static GrowthTable Load()
         {
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.growthTable });
-            var table = new GrowthTable();
+            GrowthTable table = new GrowthTable();
             for (int c = 0; c < Curves; c++)
             {
                 byte[] data = File.ReadAllBytes(PathOf(c));
@@ -46,7 +46,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why a curve can't be saved, or null.</summary>
         public string Problem(int curve)
         {
-            var t = Totals[curve];
+            uint[] t = Totals[curve];
             if (t[1] != 0) return $"{CurveNames[curve]}: level 1 must need 0 EXP.";
             for (int l = 2; l < Levels; l++)
                 if (t[l] <= t[l - 1]) return $"{CurveNames[curve]}: level {l} needs more EXP than level {l - 1}.";

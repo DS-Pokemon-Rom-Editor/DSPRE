@@ -258,7 +258,7 @@ namespace DSPRE.Avalonia.Data
             if (drawing == 14) return 15;
             if (drawing == 10) return 11;
             if (drawing == 23) return 24;
-            var app = All.FirstOrDefault(a => a.Tiles == drawing && a.Arrangement >= 0);
+            App app = All.FirstOrDefault(a => a.Tiles == drawing && a.Arrangement >= 0);
             return app?.Arrangement ?? -1;
         }
 
@@ -266,7 +266,7 @@ namespace DSPRE.Avalonia.Data
         public static IReadOnlyList<string> SharedBy(int member)
         {
             if (member < 0) return System.Array.Empty<string>();
-            var names = All.Where(a => a.Tiles == member || a.Arrangement == member || a.Sprites == member
+            List<string> names = All.Where(a => a.Tiles == member || a.Arrangement == member || a.Sprites == member
                                     || a.Cells == member || a.Animation == member)
                            .Select(a => a.Name).ToList();
             if (member is 2 or 3 or 4)
@@ -288,7 +288,7 @@ namespace DSPRE.Avalonia.Data
         // Spin Trade (overlay 109) screens. The naming screen takes only the colours.
         private static IReadOnlyList<string> OutsideThePoketch(int member)
         {
-            var names = new List<string>
+            List<string> names = new List<string>
             {
                 "the screen before you have a Pokétch", "egg hatching", "evolution", "Frontier records",
                 "dress-up photos", "record mixing", "the Spear Pillar scene", "Spin Trade",

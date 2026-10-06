@@ -26,7 +26,7 @@ namespace DSPRE
         /// <summary>Row layouts the game handles badly, as short sentences. Empty when the row is fine.</summary>
         public static List<string> Problems(IReadOnlyList<RematchTable.Row> rows, int rowIndex)
         {
-            var problems = new List<string>();
+            List<string> problems = new List<string>();
             if (rows == null || rowIndex < 0 || rowIndex >= rows.Count) return problems;
 
             RematchTable.Row row = rows[rowIndex];

@@ -30,7 +30,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Every seal, indexed by id; index 0 is null. Empty when the table is not found.</summary>
         public static IReadOnlyList<BallSeal> Read()
         {
-            var seals = new BallSeal[Count + 1];
+            BallSeal[] seals = new BallSeal[Count + 1];
             byte[] arm9;
             try { arm9 = File.ReadAllBytes(arm9Path); }
             catch { return Array.Empty<BallSeal>(); }
@@ -73,8 +73,8 @@ namespace DSPRE.ROMFiles
         {
             int rowSize = johto ? 4 : 10;
             int firstSprite = johto ? 40 : 185, firstParticle = johto ? 53 : 37;
-            var stickerTaken = new bool[Count];
-            var particleTaken = new bool[Count];
+            bool[] stickerTaken = new bool[Count];
+            bool[] particleTaken = new bool[Count];
             for (int at = 0; at + rowSize * (Count + 1) <= arm9.Length; at += johto ? 1 : 2)
             {
                 if (SpriteAt(arm9, at, johto) != firstSprite - 1) continue;

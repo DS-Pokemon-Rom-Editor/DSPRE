@@ -29,11 +29,11 @@ namespace DSPRE.HgEngine
             SequenceCount = Sequences.Count;
             AnimationResults.Clear();
             int totalFrames = 0;
-            foreach (var seq in Sequences)
+            foreach (AnimSequenceJson seq in Sequences)
             {
                 seq.FrameCount = seq.FrameData.Count;
                 totalFrames += seq.FrameCount;
-                foreach (var frame in seq.FrameData)
+                foreach (AnimFrameDataJson frame in seq.FrameData)
                 {
                     frame.ResultId = AnimationResults.Count;
                     AnimationResults.Add(new AnimResultJson { ResultType = 0, Index = frame.CellIndex });
@@ -51,16 +51,16 @@ namespace DSPRE.HgEngine
         /// editor-facing CellIndex (see <see cref="AnimFrameDataJson.CellIndex"/>).</summary>
         public static AnimJsonRoot Parse(string text)
         {
-            var root = JsonSerializer.Deserialize<AnimJsonRoot>(text, new JsonSerializerOptions { AllowTrailingCommas = true });
+            AnimJsonRoot root = JsonSerializer.Deserialize<AnimJsonRoot>(text, new JsonSerializerOptions { AllowTrailingCommas = true });
             if (root == null) return null;
 
             root.Sequences ??= new List<AnimSequenceJson>();
             root.AnimationResults ??= new List<AnimResultJson>();
             root.Labels ??= new List<string>();
-            foreach (var seq in root.Sequences)
+            foreach (AnimSequenceJson seq in root.Sequences)
             {
                 seq.FrameData ??= new List<AnimFrameDataJson>();
-                foreach (var frame in seq.FrameData)
+                foreach (AnimFrameDataJson frame in seq.FrameData)
                 {
                     frame.CellIndex = frame.ResultId >= 0 && frame.ResultId < root.AnimationResults.Count
                         ? root.AnimationResults[frame.ResultId].Index

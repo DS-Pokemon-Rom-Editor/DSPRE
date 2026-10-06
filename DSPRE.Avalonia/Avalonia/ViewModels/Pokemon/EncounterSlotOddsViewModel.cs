@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private byte[] _saved;
 
         private ByteStateUndo _undo;
-        private void StartUndo() => _undo = new ByteStateUndo(() => _odds.Snapshot(), b => { _odds.Restore(b); foreach (var m in Methods) m.Refresh(); Changed(); }, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
+        private void StartUndo() => _undo = new ByteStateUndo(() => _odds.Snapshot(), b => { _odds.Restore(b); foreach (MethodViewModel m in Methods) m.Refresh(); Changed(); }, () => { Raise(nameof(CanUndo)); Raise(nameof(CanRedo)); });
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
         public void Undo() => _undo?.Undo();
@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!load) return;
             _odds = EncounterSlotOdds.Load();
             _saved = _odds.Snapshot();
-            foreach (var m in _odds.Methods) Methods.Add(new MethodViewModel(this, m));
+            foreach (EncounterSlotOdds.Method m in _odds.Methods) Methods.Add(new MethodViewModel(this, m));
             StartUndo();
         }
 
@@ -75,13 +75,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Total)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsOff)));
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Parts)));
-                foreach (var slot in Slots) slot.Refresh();
+                foreach (SlotViewModel slot in Slots) slot.Refresh();
                 _o.Changed();
             }
 
             internal void Refresh()
             {
-                foreach (var s in Slots) s.Refresh();
+                foreach (SlotViewModel s in Slots) s.Refresh();
                 Changed();
             }
         }
@@ -121,7 +121,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         internal void Changed()
         {
-            foreach (var n in new[] { nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
+            foreach (string n in new[] { nameof(Problem), nameof(HasProblem), nameof(HasUnsavedChanges) }) Raise(n);
             _undo?.Record();
         }
 
@@ -137,7 +137,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (DSPRE.HgEngine.HgEngineProject.IsActive)
             {
                 // The rolls are rewritten in encounter_check.c, which may drop comments inside them.
-                var (saved, error) = await HgEngineSave.RunAsync(() => { _odds.Save(); return null; });
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => { _odds.Save(); return null; });
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError("The slot odds were not saved:\n" + error, "Encounter Slot Odds");
@@ -163,7 +163,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_odds == null) return;
             _odds.Restore(_saved);
-            foreach (var m in Methods) m.Refresh();
+            foreach (MethodViewModel m in Methods) m.Refresh();
             StartUndo();
             Changed();
         }

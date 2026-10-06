@@ -15,8 +15,8 @@ namespace DSPRE.HgEngine
             if (string.IsNullOrWhiteSpace(text)) return false;
             // The one function-like macro data files put in values; the evaluator itself only knows operators.
             text = MonWithForm.Replace(text, "(($1) | (($2) << " + HgEngineTrainerSource.FormShift + "))");
-            if (!TryTokenize(text, out var tokens)) return false;
-            var parser = new Parser(tokens, lookup);
+            if (!TryTokenize(text, out List<string> tokens)) return false;
+            Parser parser = new Parser(tokens, lookup);
             if (!parser.TryTernary(out long result) || parser.Position != tokens.Count) return false;
             if (result < int.MinValue || result > uint.MaxValue) return false;
             value = unchecked((int)result);

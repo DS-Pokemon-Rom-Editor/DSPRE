@@ -7,6 +7,7 @@ using global::Avalonia.Layout;
 using global::Avalonia.Media;
 using DSPRE.Avalonia.ViewModels.Shell;
 using DSPRE.Avalonia.Views.Shell;
+using Avalonia.Threading;
 
 namespace DSPRE.Avalonia
 {
@@ -23,7 +24,7 @@ namespace DSPRE.Avalonia
         /// <summary>Whether the window holding <paramref name="c"/> is behind a busy card right now.</summary>
         public static bool IsBusy(Control c)
         {
-            var top = TopLevel.GetTopLevel(c);
+            TopLevel top = TopLevel.GetTopLevel(c);
             if (top is MainWindowView { DataContext: MainWindowViewModel vm } && vm.IsBusy) return true;
             return top is Window w && Busy.Contains(w);
         }
@@ -60,12 +61,12 @@ namespace DSPRE.Avalonia
                 return;
             }
 
-            var layer = owner == null ? null : OverlayLayer.GetOverlayLayer(owner);
+            OverlayLayer layer = owner == null ? null : OverlayLayer.GetOverlayLayer(owner);
             if (layer == null) { await Task.Run(work); return; }
 
-            var content = owner.Content as Control;
+            Control content = owner.Content as Control;
             bool wasEnabled = content?.IsEnabled ?? true;
-            var cover = new Border
+            Border cover = new Border
             {
                 Background = new SolidColorBrush(Color.FromArgb(0xA0, 0, 0, 0)),
                 Width = layer.Bounds.Width, Height = layer.Bounds.Height,
@@ -90,18 +91,18 @@ namespace DSPRE.Avalonia
         public static Border Card(Control resources, string text, string hint)
         {
             IBrush Res(string key, IBrush fallback) =>
-                resources.TryFindResource(key, resources.ActualThemeVariant, out var v) && v is IBrush b ? b : fallback;
-            var stack = new StackPanel { Spacing = 12, Width = 320 };
+                resources.TryFindResource(key, resources.ActualThemeVariant, out object v) && v is IBrush b ? b : fallback;
+            StackPanel stack = new StackPanel { Spacing = 12, Width = 320 };
             stack.Children.Add(new TextBlock { Text = text, FontSize = 18, HorizontalAlignment = HorizontalAlignment.Center, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center });
             stack.Children.Add(new Panel { ClipToBounds = true, Children = { new DSPRE.Avalonia.Controls.LoadingWalker() } });
             stack.Children.Add(new ProgressBar { IsIndeterminate = true });
             if (!string.IsNullOrEmpty(hint))
                 stack.Children.Add(new TextBlock { Text = hint, FontSize = 12, Opacity = 0.8, TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center });
-            var fact = new TextBlock { Text = PokeFacts.Next(), FontSize = 12, FontStyle = FontStyle.Italic, Opacity = 0.7,
+            TextBlock fact = new TextBlock { Text = PokeFacts.Next(), FontSize = 12, FontStyle = FontStyle.Italic, Opacity = 0.7,
                                        TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 4, 0, 0) };
             fact.IsVisible = fact.Text.Length > 0;
             stack.Children.Add(fact);
-            var timer = new global::Avalonia.Threading.DispatcherTimer { Interval = PokeFacts.Interval };
+            DispatcherTimer timer = new global::Avalonia.Threading.DispatcherTimer { Interval = PokeFacts.Interval };
             timer.Tick += (_, _) => fact.Text = PokeFacts.Next();
             fact.AttachedToVisualTree += (_, _) => timer.Start();
             fact.DetachedFromVisualTree += (_, _) => timer.Stop();

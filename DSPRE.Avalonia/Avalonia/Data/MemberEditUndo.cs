@@ -41,8 +41,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Ends an import: the members it really changed become one step.</summary>
         public void Commit()
         {
-            var step = new Step();
-            foreach (var (id, before) in _pending)
+            Step step = new Step();
+            foreach ((int id, byte[] before) in _pending)
             {
                 byte[] after = Copy(_get(id));
                 if (before.AsSpan().SequenceEqual(after)) continue;
@@ -54,9 +54,9 @@ namespace DSPRE.Avalonia.Data
             _undo.Push(step);
             if (_undo.Count > Limit)
             {
-                var keep = _undo.Take(Limit).Reverse().ToList();
+                List<Step> keep = _undo.Take(Limit).Reverse().ToList();
                 _undo.Clear();
-                foreach (var s in keep) _undo.Push(s);
+                foreach (Step s in keep) _undo.Push(s);
             }
             _redo.Clear();
             Changed?.Invoke();
@@ -72,8 +72,8 @@ namespace DSPRE.Avalonia.Data
         public void Undo()
         {
             if (_undo.Count == 0) return;
-            var step = _undo.Pop();
-            foreach (var (id, bytes) in step.Before) _put(id, Copy(bytes));
+            Step step = _undo.Pop();
+            foreach ((int id, byte[] bytes) in step.Before) _put(id, Copy(bytes));
             _redo.Push(step);
             Changed?.Invoke();
         }
@@ -81,8 +81,8 @@ namespace DSPRE.Avalonia.Data
         public void Redo()
         {
             if (_redo.Count == 0) return;
-            var step = _redo.Pop();
-            foreach (var (id, bytes) in step.After) _put(id, Copy(bytes));
+            Step step = _redo.Pop();
+            foreach ((int id, byte[] bytes) in step.After) _put(id, Copy(bytes));
             _undo.Push(step);
             Changed?.Invoke();
         }

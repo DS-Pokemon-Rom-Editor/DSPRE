@@ -196,7 +196,7 @@ namespace DSPRE.ROMFiles
         /// </summary>
         public void ForgetScriptSlots()
         {
-            var slots = _vars.Keys.Where(k => k >= FieldScriptValues.ScriptFirst).ToList();
+            List<int> slots = _vars.Keys.Where(k => k >= FieldScriptValues.ScriptFirst).ToList();
             foreach (int k in slots) _vars.Remove(k);
             if (slots.Count > 0) Changed?.Invoke(this, EventArgs.Empty);
         }
@@ -392,7 +392,7 @@ namespace DSPRE.ROMFiles
         {
             if (Pending == null) return;
 
-            var q = Pending;
+            ScriptQuestion q = Pending;
             Pending = null;
 
             switch (q.Kind)
@@ -476,7 +476,7 @@ namespace DSPRE.ROMFiles
                 case "JumpIf":
                 case "CallIf":
                 {
-                    var op = Operator(cmd, 0);
+                        int op = Operator(cmd, 0);
                     if (!_relation.HasValue)
                     {
                         Add(ScriptStepKind.Command,
@@ -639,7 +639,7 @@ namespace DSPRE.ROMFiles
 
                 case "GetPlayerPosition":
                 {
-                    var at = PlayerPosition?.Invoke();
+                        (int x, int z)? at = PlayerPosition?.Invoke();
                     int xVar = (int)Value(cmd, 0), zVar = (int)Value(cmd, 1);
                     if (at != null)
                     {
@@ -866,7 +866,7 @@ namespace DSPRE.ROMFiles
 
                 string text = _source.Messages?.Invoke(id);
                 string where = name == "BoardMessage" ? "on the board" : null;
-                var effect = MessageEffect(text);
+                ScriptEffect effect = MessageEffect(text);
                 // MessageAll prints the whole thing at once; MessageNoSkip cannot be hurried.
                 if (effect != null && name == "MessageAll") effect.A = 1;
                 if (effect != null && name == "MessageNoSkip") effect.B = 1;
@@ -917,7 +917,7 @@ namespace DSPRE.ROMFiles
                     _index++; return;
             }
 
-            var effectFor = EffectFor(name, cmd);
+            ScriptEffect effectFor = EffectFor(name, cmd);
             if (effectFor != null)
             {
                 Add(ScriptStepKind.Command, DescribeEffect(name, cmd, effectFor), name, effectFor);
@@ -987,7 +987,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                var names = ScriptDatabase.soundNames;
+                Dictionary<ushort, string> names = ScriptDatabase.soundNames;
                 if (names != null && names.TryGetValue((ushort)id, out string n) && !string.IsNullOrWhiteSpace(n))
                     return $"{id} ({n})";
                 return id.ToString();
@@ -1000,7 +1000,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                var names = RomInfo.GetPokemonNames();
+                string[] names = RomInfo.GetPokemonNames();
                 return names != null && species >= 0 && species < names.Length && !string.IsNullOrWhiteSpace(names[species])
                     ? names[species] : $"Pokémon {species}";
             }
@@ -1043,11 +1043,11 @@ namespace DSPRE.ROMFiles
         /// </summary>
         private string DescribeMovement(int movementNumber)
         {
-            var actions = _source.Actions?.Invoke(movementNumber);
+            IReadOnlyList<ScriptAction> actions = _source.Actions?.Invoke(movementNumber);
             if (actions == null || actions.Count == 0) return null;
 
-            var parts = new List<string>();
-            foreach (var action in actions)
+            List<string> parts = new List<string>();
+            foreach (ScriptAction action in actions)
             {
                 if (action == null) continue;
                 string step = action.name;
@@ -1105,7 +1105,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                var names = ScriptDatabase.itemNames;
+                Dictionary<ushort, string> names = ScriptDatabase.itemNames;
                 return names != null && names.TryGetValue((ushort)item, out string n) && !string.IsNullOrWhiteSpace(n)
                     ? n : $"item {item}";
             }
@@ -1129,7 +1129,7 @@ namespace DSPRE.ROMFiles
         private void GoTo(ScriptCommand cmd, string name, bool call, string why, int targetParam = 0)
         {
             int target = (int)Value(cmd, targetParam);
-            var container = FindFunction(_source, target);
+            ScriptCommandContainer container = FindFunction(_source, target);
             string where = container != null ? $"function {target}" : $"function {target}, which isn't in this file";
 
             Add(ScriptStepKind.Branch,
@@ -1145,8 +1145,8 @@ namespace DSPRE.ROMFiles
         private void CallCommon(ScriptCommand cmd, string name)
         {
             int id = (int)Value(cmd, 0);
-            var source = CommonScripts?.Invoke(id);
-            var container = source == null ? null : FindScript(source, source.StartId >= 0 ? source.StartId : id);
+            ScriptSource source = CommonScripts?.Invoke(id);
+            ScriptCommandContainer container = source == null ? null : FindScript(source, source.StartId >= 0 ? source.StartId : id);
             if (container == null)
             {
                 Add(ScriptStepKind.Command, $"Runs shared script {id}.", name);
@@ -1164,7 +1164,7 @@ namespace DSPRE.ROMFiles
         private bool PopReturn()
         {
             if (_returns.Count == 0) return false;
-            var (source, container, index) = _returns.Pop();
+            (ScriptSource source, ScriptCommandContainer container, int index) = _returns.Pop();
             _source = source;
             _current = container;
             _index = index;
@@ -1196,15 +1196,15 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                var info = RomInfo.GetScriptCommandInfoDict();
-                return info != null && info.TryGetValue(id, out var c) ? c?.LegacyName : null;
+                Dictionary<ushort, ScriptCommandInfo> info = RomInfo.GetScriptCommandInfoDict();
+                return info != null && info.TryGetValue(id, out ScriptCommandInfo c) ? c?.LegacyName : null;
             }
             catch { return null; }
         }
 
         private static long Value(ScriptCommand cmd, int param)
         {
-            var data = cmd?.cmdParams;
+            List<byte[]> data = cmd?.cmdParams;
             if (data == null || param < 0 || param >= data.Count) return 0;
             byte[] b = data[param];
             if (b == null) return 0;
@@ -1246,7 +1246,7 @@ namespace DSPRE.ROMFiles
         private static string Display(ScriptCommand cmd, int param)
         {
             string full = cmd?.name ?? "";
-            var parts = full.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] parts = full.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             return param + 1 < parts.Length ? parts[param + 1].TrimEnd(',') : Value(cmd, param).ToString();
         }
 

@@ -21,11 +21,11 @@ namespace DSPRE.HgEngine
             rows = new List<int[]>();
             table = new CSourceFile(text).Find(Table);
             if (table == null) return $"{RelPath} has no {Table} DSPRE can read.";
-            foreach (var item in table.Init.Items)
+            foreach (CInitItem item in table.Init.Items)
             {
                 if (item.IsConditional) return $"{RelPath}: background {rows.Count} sits under #if, which DSPRE doesn't edit.";
                 if (item.List == null || item.List.Items.Count != 5) return $"{RelPath}: background {rows.Count} doesn't have 5 values.";
-                var values = new int[5];
+                int[] values = new int[5];
                 for (int i = 0; i < 5; i++)
                 {
                     string v = item.List.Items[i].ValueText(text);
@@ -52,14 +52,14 @@ namespace DSPRE.HgEngine
         /// <summary>Changes rows in place and adds or removes them at the end, so each row keeps its comment.</summary>
         public static bool TryWrite(IReadOnlyList<int[]> rows, out string error)
         {
-            if (!TryLoad(out string text, out var table, out var current, out error)) return false;
+            if (!TryLoad(out string text, out CDeclaration table, out List<int[]> current, out error)) return false;
             if (rows.Count == current.Count && rows.Zip(current).All(z => z.First.SequenceEqual(z.Second))) return true;
             if (rows.Count == 0 || rows.Any(r => r.Length != 5 || r.Any(v => v < 0 || v > ushort.MaxValue))) { error = "Each background needs five values from 0 to 65535."; return false; }
 
-            var items = table.Init.Items;
+            List<CInitItem> items = table.Init.Items;
             string indent = items.Count > 0 ? HgEngineSwarms.Indent(text, items[0].Start) : "    ";
             static string Literal(int[] r) => "{ " + string.Join(", ", r.Select(v => v.ToString().PadLeft(3))) + " }";
-            var edits = new List<(int Start, int End, string Text)>();
+            List<(int Start, int End, string Text)> edits = new List<(int Start, int End, string Text)>();
             for (int i = 0; i < Math.Min(rows.Count, items.Count); i++)
                 if (!current[i].SequenceEqual(rows[i])) edits.Add((items[i].Start, items[i].End, Literal(rows[i])));
             if (rows.Count > items.Count)
@@ -69,11 +69,11 @@ namespace DSPRE.HgEngine
             }
             for (int i = rows.Count; i < items.Count; i++)
                 edits.Add((HgEngineSwarms.LineStart(text, items[i].Start) - 1, HgEngineSwarms.LineEnd(text, items[i].End), ""));
-            foreach (var e in edits.OrderByDescending(e => e.Start)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
+            foreach ((int Start, int End, string Text) e in edits.OrderByDescending(e => e.Start)) text = text.Substring(0, e.Start) + e.Text + text.Substring(e.End);
 
             // A removed background's comment goes with it.
             return HgEngineVerifiedWrite.TryWrite(FilePath, RelPath, text, written =>
-                Parse(written, out _, out var back) ?? (back.Count == rows.Count && back.Zip(rows).All(z => z.First.SequenceEqual(z.Second)) ? null : "the rows differ"),
+                Parse(written, out _, out List<int[]> back) ?? (back.Count == rows.Count && back.Zip(rows).All(z => z.First.SequenceEqual(z.Second)) ? null : "the rows differ"),
                 out error, keepLostComments: false);
         }
     }

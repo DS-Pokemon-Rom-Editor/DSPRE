@@ -55,7 +55,7 @@ namespace DSPRE.ROMFiles
         private static uint Bits(params PlatformFlag[] flags)
         {
             uint bits = 0;
-            foreach (var flag in flags) bits |= 1u << (int)flag;
+            foreach (PlatformFlag flag in flags) bits |= 1u << (int)flag;
             return bits;
         }
 
@@ -83,7 +83,7 @@ namespace DSPRE.ROMFiles
         {
             if (file == null) return false;
             uint before = VisibleGroups;
-            foreach (var trigger in file.GhostTriggers)
+            foreach (TornWorldFile.GhostTrigger trigger in file.GhostTriggers)
             {
                 if (trigger.PlayerDirection != facing || !trigger.Bounds.Contains(x, y, z)) continue;
                 if (trigger.GroupId < 0 || trigger.GroupId >= GhostGroupCount) continue;
@@ -99,7 +99,7 @@ namespace DSPRE.ROMFiles
         public static TornWorldFile.JumpPoint JumpPointAt(TornWorldFile file, int x, int y, int z, int facing)
         {
             if (file == null) return null;
-            foreach (var point in file.JumpPoints)
+            foreach (TornWorldFile.JumpPoint point in file.JumpPoints)
                 if (point.PlayerDirection == facing && point.Bounds.Contains(x, y, z)) return point;
             return null;
         }
@@ -203,7 +203,7 @@ namespace DSPRE.ROMFiles
                 if (_state == State.Done) return RideEvent.None;
                 if (++_frames > FrameLimit) { Finish(); return RideEvent.Arrived; }
 
-                var result = RideEvent.None;
+                RideEvent result = RideEvent.None;
                 switch (_state)
                 {
                     case State.Begin:
@@ -329,7 +329,7 @@ namespace DSPRE.ROMFiles
 
                     if (destination != null && _tables != null)
                     {
-                        var list = _tables.PlatformsOn(destination.Value);
+                        IReadOnlyList<TornWorldCodeTables.MovingPlatform> list = _tables.PlatformsOn(destination.Value);
                         if (Platform.DestinationIndex >= 0 && Platform.DestinationIndex < list.Count)
                         {
                             Platform = list[Platform.DestinationIndex];

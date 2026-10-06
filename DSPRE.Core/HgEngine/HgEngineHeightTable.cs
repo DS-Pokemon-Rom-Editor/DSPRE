@@ -14,7 +14,7 @@ namespace DSPRE.HgEngine
 
         private static CInitItem Entry(string text, int speciesId, out CDeclaration table)
         {
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             table = CSourceFile.For(text).Declarations.OrderByDescending(d => d.Init.Items.Count(i => i.IndexText != null)).FirstOrDefault();
             return table?.Init.Items.FirstOrDefault(i => i.IndexText != null && i.List != null
                 && HgEngineSourceExpression.TryEvaluate(i.IndexText, n => species != null && species.TryGetValue(n, out int v) ? v : null, out int id) && id == speciesId);
@@ -23,7 +23,7 @@ namespace DSPRE.HgEngine
         private static int[] Values(string text, CInitItem entry)
         {
             if (entry?.List == null || entry.List.Items.Count < 4) return null;
-            var v = new int[4];
+            int[] v = new int[4];
             for (int k = 0; k < 4; k++)
                 if (!HgEngineSourceExpression.TryEvaluate(entry.List.Items[k].ValueText(text), _ => null, out v[k])) return null;
             return v;
@@ -35,7 +35,7 @@ namespace DSPRE.HgEngine
             if (!HgEngineProject.IsActive) return false;
             string text = TryReadSource(out _);
             if (text == null) return false;
-            var v = Values(text, Entry(text, speciesId, out _));
+            int[] v = Values(text, Entry(text, speciesId, out _));
             if (v == null) return false;
             (femaleBack, maleBack, femaleFront, maleFront) = (v[0], v[1], v[2], v[3]);
             return true;
@@ -45,7 +45,7 @@ namespace DSPRE.HgEngine
         {
             error = null;
             if (!HgEngineProject.IsActive) { error = "No hg-engine checkout linked."; return false; }
-            var species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             if (species == null || !species.TryGetNameWithPrefix(speciesId, "SPECIES_", out string designator))
             { error = $"Could not resolve a species designator for id {speciesId}."; return false; }
 
@@ -53,7 +53,7 @@ namespace DSPRE.HgEngine
             if (text == null) { error = $"Source file not found: {path}"; return false; }
 
             string valueLiteral = $"{{ {femaleBack}, {maleBack}, {femaleFront}, {maleFront} }}";
-            var entry = Entry(text, speciesId, out var table);
+            CInitItem entry = Entry(text, speciesId, out CDeclaration table);
             if (table == null) { error = $"{SourceRelPath} has no height table."; return false; }
             if (entry != null) text = text.Substring(0, entry.List.Open) + valueLiteral + text.Substring(entry.List.Close + 1);
             else text = text.Insert(HgEngineSwarms.LineStart(text, table.Init.Close), $"    [{designator}] = {valueLiteral},\n");

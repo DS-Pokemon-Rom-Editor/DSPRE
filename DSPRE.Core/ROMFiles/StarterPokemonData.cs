@@ -55,7 +55,7 @@ namespace DSPRE.ROMFiles
             {
                 ARM9.DecompressIfMarked();
                 byte[] arm9 = ARM9.ReadBytes(0);
-                var matches = DSUtils.SearchBytes(arm9, RomInfo.starterArm9SearchSuffix);
+                List<int> matches = DSUtils.SearchBytes(arm9, RomInfo.starterArm9SearchSuffix);
                 if (matches.Count != 1)
                 {
                     AppLogger.Warn("StarterPokemonData: HGSS starter ARM9 signature not found (or matched more " +
@@ -89,7 +89,7 @@ namespace DSPRE.ROMFiles
             try { d = File.ReadAllBytes(path); } catch { return -1; }
 
             // The header is a run of relative offsets, one per script, ended by the 0xFD13 marker.
-            var starts = new List<int>();
+            List<int> starts = new List<int>();
             int pos = 0;
             while (pos + 4 <= d.Length)
             {
@@ -102,7 +102,7 @@ namespace DSPRE.ROMFiles
 
             // The script whose range covers the byte the held item sits at.
             int target = (int)RomInfo.starterHeldItemOffset;
-            var byStart = starts.Select((start, i) => (start, i)).OrderBy(x => x.start).ToList();
+            List<(int start, int i)> byStart = starts.Select((start, i) => (start, i)).OrderBy(x => x.start).ToList();
             for (int n = 0; n < byStart.Count; n++)
             {
                 int from = byStart[n].start;
@@ -131,7 +131,7 @@ namespace DSPRE.ROMFiles
             if (RomInfo.starterHeldItemScriptFileID < 0) return;
             string path = Filesystem.GetScriptPath(RomInfo.starterHeldItemScriptFileID);
             if (!File.Exists(path)) return;
-            var bytes = new byte[2];
+            byte[] bytes = new byte[2];
             WriteWord(bytes, 0, itemId);
             DSUtils.WriteToFile(path, bytes, RomInfo.starterHeldItemOffset);
         }
@@ -171,7 +171,7 @@ namespace DSPRE.ROMFiles
             {
                 if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS && !HgEngine.HgEngineStarters.Available) PatchStarterCries(newSpecies);
             });
-            var touched = scriptFilesTouched;
+            List<int> touched = scriptFilesTouched;
             RunBestEffort("rival/tag-battle scripts", () => touched.AddRange(PatchRivalAndTagBattleScripts(oldSpecies, newSpecies)));
             RunBestEffort("starter dialogue text", () => PatchStarterText(oldSpecies, newSpecies));
             return true;
@@ -198,7 +198,7 @@ namespace DSPRE.ROMFiles
             {
                 ARM9.DecompressIfMarked();
                 byte[] arm9 = ARM9.ReadBytes(0);
-                var matches = DSUtils.SearchBytes(arm9, RomInfo.starterArm9SearchSuffix);
+                List<int> matches = DSUtils.SearchBytes(arm9, RomInfo.starterArm9SearchSuffix);
                 if (matches.Count != 1)
                 {
                     AppLogger.Warn("StarterPokemonData: HGSS starter ARM9 signature not found (or matched more " +
@@ -241,7 +241,7 @@ namespace DSPRE.ROMFiles
         {
             if (string.IsNullOrEmpty(RomInfo.starterGraphicsPrefix)) return;
             byte[] prefix = DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefix);
-            var matches = DSUtils.SearchBytes(starterData, prefix);
+            List<int> matches = DSUtils.SearchBytes(starterData, prefix);
             if (matches.Count == 0 || matches[0] <= 0) return;
             int offset = matches[0] + prefix.Length;
 
@@ -308,7 +308,7 @@ namespace DSPRE.ROMFiles
             if (!string.IsNullOrEmpty(RomInfo.starterGraphicsPrefixInner))
             {
                 byte[] innerPrefix = DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefixInner);
-                var innerMatches = DSUtils.SearchBytes(starterData, innerPrefix);
+                List<int> innerMatches = DSUtils.SearchBytes(starterData, innerPrefix);
                 if (innerMatches.Count > 0 && innerMatches[0] > 0)
                 {
                     int innerOffset = innerMatches[0] + innerPrefix.Length;
@@ -332,7 +332,7 @@ namespace DSPRE.ROMFiles
             byte[] data = File.ReadAllBytes(path);
 
             byte[] prefix = DSUtils.StringToByteArray(RomInfo.starterCriesPrefix);
-            var matches = DSUtils.SearchBytes(data, prefix);
+            List<int> matches = DSUtils.SearchBytes(data, prefix);
             if (matches.Count == 0 || matches[0] <= 0) return;
 
             int offset = matches[0] + prefix.Length;
@@ -352,7 +352,7 @@ namespace DSPRE.ROMFiles
         /// <see cref="RefreshRotomSourcesAsync"/>) without spawning a process per file inline here.</summary>
         private static List<int> PatchRivalAndTagBattleScripts(int[] oldSpecies, int[] newSpecies)
         {
-            var touched = new List<int>();
+            List<int> touched = new List<int>();
 
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {
@@ -363,7 +363,7 @@ namespace DSPRE.ROMFiles
                     if (!File.Exists(path)) continue;
                     byte[] data = File.ReadAllBytes(path);
 
-                    var offsets = DSUtils.SearchBytes(data, magic);
+                    List<int> offsets = DSUtils.SearchBytes(data, magic);
                     if (offsets.Count != 1) continue; // ambiguous/not found, skip this file, like UPR does
 
                     int baseOffset = offsets[0];
@@ -505,7 +505,7 @@ namespace DSPRE.ROMFiles
             string OldType(int i) => TypeNameOf(oldSpecies[i], typeNames);
             string NewType(int i) => TypeNameOf(newSpecies[i], typeNames);
 
-            var archive = new TextArchive(RomInfo.starterScreenTextNumber);
+            TextArchive archive = new TextArchive(RomInfo.starterScreenTextNumber);
 
             if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS)
             {
@@ -540,7 +540,7 @@ namespace DSPRE.ROMFiles
         {
             try
             {
-                var personal = new PokemonPersonalData(species);
+                PokemonPersonalData personal = new PokemonPersonalData(species);
                 int typeIndex = (int)personal.type1;
                 return typeIndex >= 0 && typeIndex < typeNames.Length ? typeNames[typeIndex] : null;
             }
@@ -570,7 +570,7 @@ namespace DSPRE.ROMFiles
 
         private static void WriteWordToArm9(int offset, int value)
         {
-            var bytes = new byte[2];
+            byte[] bytes = new byte[2];
             WriteWord(bytes, 0, value);
             ARM9.WriteBytes(bytes, (uint)offset);
         }

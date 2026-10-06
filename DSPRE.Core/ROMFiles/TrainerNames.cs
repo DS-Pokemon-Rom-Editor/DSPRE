@@ -16,8 +16,8 @@ namespace DSPRE
             if (HgEngineProject.IsActive)
             {
                 string[] classNames = RomInfo.GetTrainerClassNames();
-                var blocks = HgEngineTrainerSource.LoadAll();
-                var entries = new string[blocks.Count];
+                List<HgEngineSourceBlock> blocks = HgEngineTrainerSource.LoadAll();
+                string[] entries = new string[blocks.Count];
                 for (int i = 0; i < blocks.Count; i++) entries[i] = HgEngineEntry(i, blocks[i], classNames);
                 return entries;
             }
@@ -56,8 +56,8 @@ namespace DSPRE
         /// <summary>Just the names from Trainers.c, by trainer id.</summary>
         public static string[] HgEngineSimpleNames()
         {
-            var blocks = HgEngineTrainerSource.LoadAll();
-            var names = new string[blocks.Count];
+            List<HgEngineSourceBlock> blocks = HgEngineTrainerSource.LoadAll();
+            string[] names = new string[blocks.Count];
             for (int i = 0; i < blocks.Count; i++)
                 names[i] = blocks[i].TryGetString(new[] { FieldPathSegment.Field("name") }, out string n) ? n : "";
             return names;

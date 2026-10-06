@@ -120,16 +120,16 @@ namespace DSPRE.HgEngine
         /// <summary>The rule that builds a ROM archive, by the path the checkout names it, or null.</summary>
         public static HgEngineRule RuleForArchive(string archive)
         {
-            var maps = Load();
+            (Dictionary<string, HgEngineRule> rules, Dictionary<string, Dictionary<int, HgEngineOwnedFile>> files) maps = Load();
             return archive != null && maps.rules.TryGetValue(Normalise(archive), out HgEngineRule rule)
                 ? rule : null;
         }
 
         public static HgEngineOwnedFile Get(string archive, int id)
         {
-            var maps = Load();
+            (Dictionary<string, HgEngineRule> rules, Dictionary<string, Dictionary<int, HgEngineOwnedFile>> files) maps = Load();
             return archive != null
-                && maps.files.TryGetValue(Normalise(archive), out var byId)
+                && maps.files.TryGetValue(Normalise(archive), out Dictionary<int, HgEngineOwnedFile> byId)
                 && byId.TryGetValue(id, out HgEngineOwnedFile file) ? file : null;
         }
 
@@ -141,7 +141,7 @@ namespace DSPRE.HgEngine
         /// </summary>
         public static string ArchiveOf(RomInfo.DirNames dir)
         {
-            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out var paths)) return null;
+            if (RomInfo.gameDirs == null || !RomInfo.gameDirs.TryGetValue(dir, out (string packedDir, string unpackedDir) paths)) return null;
             return ArchiveOfPath(paths.packedDir);
         }
 
@@ -186,8 +186,8 @@ namespace DSPRE.HgEngine
         /// <summary>Every file of one archive, empty when hg-engine does not build it.</summary>
         public static IReadOnlyDictionary<int, HgEngineOwnedFile> FilesIn(string archive)
         {
-            var maps = Load();
-            return archive != null && maps.files.TryGetValue(Normalise(archive), out var byId)
+            (Dictionary<string, HgEngineRule> rules, Dictionary<string, Dictionary<int, HgEngineOwnedFile>> files) maps = Load();
+            return archive != null && maps.files.TryGetValue(Normalise(archive), out Dictionary<int, HgEngineOwnedFile> byId)
                 ? byId : new Dictionary<int, HgEngineOwnedFile>();
         }
 
@@ -266,8 +266,8 @@ namespace DSPRE.HgEngine
         internal static (Dictionary<string, HgEngineRule> rules,
                          Dictionary<string, Dictionary<int, HgEngineOwnedFile>> files) ScanRoot(string root)
         {
-            var rules = new Dictionary<string, HgEngineRule>(StringComparer.OrdinalIgnoreCase);
-            var files = new Dictionary<string, Dictionary<int, HgEngineOwnedFile>>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, HgEngineRule> rules = new Dictionary<string, HgEngineRule>(StringComparer.OrdinalIgnoreCase);
+            Dictionary<string, Dictionary<int, HgEngineOwnedFile>> files = new Dictionary<string, Dictionary<int, HgEngineOwnedFile>>(StringComparer.OrdinalIgnoreCase);
             string fragment = root == null ? null : ReadMakeFragment(root);
             if (fragment == null) return (rules, files);
 
@@ -277,7 +277,7 @@ namespace DSPRE.HgEngine
                 string archive = Normalise(MakeVariableRaw(fragment, variable + "_TARGET") ?? "");
                 if (archive.Length == 0 || archive.Contains("$(", StringComparison.Ordinal)) continue;
 
-                var rule = new HgEngineRule
+                HgEngineRule rule = new HgEngineRule
                 {
                     Variable = variable,
                     Label = label,
@@ -317,7 +317,7 @@ namespace DSPRE.HgEngine
 
         private static Dictionary<int, HgEngineOwnedFile> ScanRule(string root, HgEngineRule rule, string fragment)
         {
-            var into = new Dictionary<int, HgEngineOwnedFile>();
+            Dictionary<int, HgEngineOwnedFile> into = new Dictionary<int, HgEngineOwnedFile>();
 
             if (rule.SourceDirRelPath != null)
             {
@@ -351,7 +351,7 @@ namespace DSPRE.HgEngine
             // ones onto the same file, so they win and are nobody's to edit here.
             if (rule.Variable == "MSGDATA")
             {
-                var generated = new HgEngineRule
+                HgEngineRule generated = new HgEngineRule
                 {
                     Variable = rule.Variable,
                     Label = rule.Label,

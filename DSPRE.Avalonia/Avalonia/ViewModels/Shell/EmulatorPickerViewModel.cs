@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public EmulatorPickerViewModel()
         {
-            var known = Emulators.All.FirstOrDefault(k => Emulators.Exists(Emulators.PathFor(k)));
+            EmulatorKind known = Emulators.All.FirstOrDefault(k => Emulators.Exists(Emulators.PathFor(k)));
             _kindIndex = System.Array.IndexOf(Emulators.All, known);
             _path = Emulators.PathFor(known) ?? "";
         }

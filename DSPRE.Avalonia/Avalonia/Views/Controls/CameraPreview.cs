@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using DSPRE.Avalonia.Gl;
 using DSPRE.ROMFiles;
+using LibNDSFormats.NSBMD;
 
 namespace DSPRE.Avalonia.Views.Controls
 {
@@ -110,18 +111,18 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             if (headerId < 0) return (null, null, null);
             MatrixSceneBuilder.EnsureUnpacked();
-            var header = MapHeader.GetMapHeader((ushort)headerId);
+            MapHeader header = MapHeader.GetMapHeader((ushort)headerId);
             if (header == null) return (null, "No preview for this header.", null);
-            var matrix = new GameMatrix(header.matrixID);
+            GameMatrix matrix = new GameMatrix(header.matrixID);
 
-            var cells = matrix.CellsOfHeader(headerId);
+            HashSet<(int x, int y)> cells = matrix.CellsOfHeader(headerId);
             if (cells != null && FieldCatchAllHeader.IsCatchAll(cells.Count))
                 return (null, "This header has no place of its own to show.", null);
             // Without a headers section the whole matrix is the place, unless it is world-sized.
             if (cells == null && matrix.width * matrix.height > 256)
                 return (null, "No preview for this header.", null);
 
-            var scene = MatrixSceneBuilder.Build(matrix, header.areaDataID, RomInfo.gameFamily, areaForMap: null, includeCells: cells);
+            NsbmdRenderModel scene = MatrixSceneBuilder.Build(matrix, header.areaDataID, RomInfo.gameFamily, areaForMap: null, includeCells: cells);
             if (scene == null) return (null, "No maps to show.", null);
             // HGSS interior areas take their buildings from the interior set, and so their animations too.
             bool indoor = false;
@@ -144,7 +145,7 @@ namespace DSPRE.Avalonia.Views.Controls
             int cellX = gx / MapFile.mapSize, cellZ = gz / MapFile.mapSize;
             float inX = gx % MapFile.mapSize + 0.5f, inZ = gz % MapFile.mapSize + 0.5f;
             float rawX, rawZ;
-            if (scene.TryCellPlacement(cellX, cellZ, out var p))
+            if (scene.TryCellPlacement(cellX, cellZ, out NsbmdRenderModel.CellPlacement p))
             {
                 rawX = p.OriginX + inX / MapFile.mapSize * p.Width;
                 rawZ = p.OriginZ + inZ / MapFile.mapSize * p.Height;
@@ -166,14 +167,14 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private void ShowSpot(NsbmdRenderModel scene, (float x, float y, float z)? foot)
         {
-            var spec = FieldWeather.For(RomInfo.gameFamily, Math.Max(0, _weatherShown));
+            FieldWeather.Spec spec = FieldWeather.For(RomInfo.gameFamily, Math.Max(0, _weatherShown));
             bool dark = spec.Kind == FieldWeather.Kind.HgFlash && _weatherShown >= 0;
             _gl.ClearColour = dark ? (0f, 0f, 0f) : (0.12f, 0.12f, 0.14f);
-            var shape = dark ? SpotShape() : null;
-            if (shape == null || foot is not var (fx, fy, fz)) { _gl.SetLightSpot(null); return; }
+            NsbmdGlControl.LightSpot shape = dark ? SpotShape() : null;
+            if (shape == null || foot is not (float fx, float fy, float fz)) { _gl.SetLightSpot(null); return; }
 
             // A third of the way from the player to the camera, scaled up four times once Flash is used.
-            var (ex, ey, ez) = _gl.EyePosition();
+            (float ex, float ey, float ez) = _gl.EyePosition();
             float scale = spec.SpotScale * scene.Scale;
             _gl.SetLightSpot(new NsbmdGlControl.LightSpot
             {
@@ -192,15 +193,15 @@ namespace DSPRE.Avalonia.Views.Controls
             {
                 DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.fieldEffectModels });
                 string path = Path.Combine(RomInfo.gameDirs[RomInfo.DirNames.fieldEffectModels].unpackedDir, FieldWeather.HgFlashSpotModel.ToString("D4"));
-                using var file = File.OpenRead(path);
-                var nsbmd = global::LibNDSFormats.NSBMD.NSBMDLoader.LoadNSBMD(file);
+                using FileStream file = File.OpenRead(path);
+                NSBMD nsbmd = global::LibNDSFormats.NSBMD.NSBMDLoader.LoadNSBMD(file);
                 nsbmd.MatchTextures();
-                var model = nsbmd.models[0];
-                var tex = NsbmdTextureDecoder.Decode(model.Materials[0]);
-                var built = NsbmdGeometry.BuildModel(model);
+                NSBMDModel model = nsbmd.models[0];
+                NsbmdTextureData tex = NsbmdTextureDecoder.Decode(model.Materials[0]);
+                NsbmdRenderModel built = NsbmdGeometry.BuildModel(model);
                 // Every quad of the grid carries its own texture coordinates, so the triangles go as they are.
-                var corners = new List<float>();
-                foreach (var part in built.Parts)
+                List<float> corners = new List<float>();
+                foreach (NsbmdMeshPart part in built.Parts)
                     for (int i = 0; i + 7 < part.Vertices.Length; i += 8)
                         corners.AddRange(new[] { part.Vertices[i], part.Vertices[i + 1], part.Vertices[i + 3], part.Vertices[i + 4] });
                 if (tex == null || corners.Count < 12) return null;
@@ -224,7 +225,7 @@ namespace DSPRE.Avalonia.Views.Controls
                     (int)DSPRE.ROMFiles.MoveFacing.Down, default);
                 pix = OverworldSprites.Get(hero, (ushort)DSPRE.ROMFiles.MoveFacing.Down, picture);
             }
-            if (pix == null || pix.Width <= 0 || foot is not var (fx, fy, fz)) { _gl.SetSprites(null); return; }
+            if (pix == null || pix.Width <= 0 || foot is not (float fx, float fy, float fz)) { _gl.SetSprites(null); return; }
 
             float halfW = unit * pix.Width / (OverworldSprites.PixelsPerTile * 2f);
             float halfH = unit * pix.Height / (OverworldSprites.PixelsPerTile * 2f);
@@ -240,14 +241,14 @@ namespace DSPRE.Avalonia.Views.Controls
 
         private void Frame()
         {
-            var scene = _scene;
-            var cam = _camera;
+            NsbmdRenderModel scene = _scene;
+            FieldCameraEntry cam = _camera;
             if (scene == null || cam == null) return;
 
             // One tile in the scene's own units, the same conversion the animated preview uses.
             float tile = scene.CellStrideX / MapFile.mapSize;
             float unit = tile * scene.Scale;
-            var (x, y, z) = Target(scene, _focus);
+            (float x, float y, float z) = Target(scene, _focus);
 
             _gl.LookAt(x + cam.ShiftXInTiles * unit, y + cam.ShiftYInTiles * unit, z + cam.ShiftZInTiles * unit);
             ShowPlayer(_focus != null ? (x, y, z) : null, unit);

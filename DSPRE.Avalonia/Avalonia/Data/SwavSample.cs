@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace DSPRE.Avalonia.Data
 {
     /// <summary>One decoded wave sample from a wave archive (SWAR): 16-bit PCM at <see cref="SampleRate"/>,
@@ -33,7 +35,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public static System.Collections.Generic.List<SwavSample> ParseArchive(byte[] d)
         {
-            var list = new System.Collections.Generic.List<SwavSample>();
+            List<SwavSample> list = new System.Collections.Generic.List<SwavSample>();
             if (d == null || d.Length < 16 + 8 + 4) return list;
 
             uint U32(int o) => (uint)(d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24));
@@ -58,7 +60,7 @@ namespace DSPRE.Avalonia.Data
                 // Relative to this SWAR sub-file's own byte 0, not the DATA block's start (same convention as
                 // SBNK's instrument offset table).
                 int at = relOff;
-                var wav = ParseOne(d, at);
+                SwavSample wav = ParseOne(d, at);
                 if (wav != null)
                 {
                     // Up to where the next wave starts, or the end of the archive for the last one.
@@ -110,7 +112,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     int sampleCount = totalWords * 4;
                     if (dataAt + sampleCount > d.Length) sampleCount = System.Math.Max(0, d.Length - dataAt);
-                    var pcm = new short[sampleCount];
+                        short[] pcm = new short[sampleCount];
                     for (int i = 0; i < sampleCount; i++) pcm[i] = (short)((sbyte)d[dataAt + i] * 256);
                     return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Timer = timer, Loop = loop, LoopStartSample = loopOffsetWords * 4, Pcm = pcm };
                 }
@@ -118,7 +120,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     int sampleCount = totalWords * 2;
                     if (dataAt + sampleCount * 2 > d.Length) sampleCount = System.Math.Max(0, (d.Length - dataAt) / 2);
-                    var pcm = new short[sampleCount];
+                        short[] pcm = new short[sampleCount];
                     for (int i = 0; i < sampleCount; i++) pcm[i] = (short)(d[dataAt + i * 2] | (d[dataAt + i * 2 + 1] << 8));
                     return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Timer = timer, Loop = loop, LoopStartSample = loopOffsetWords * 2, Pcm = pcm };
                 }
@@ -128,7 +130,7 @@ namespace DSPRE.Avalonia.Data
                 {
                     int byteLen = totalWords * 4;
                     if (dataAt + byteLen > d.Length) byteLen = System.Math.Max(0, d.Length - dataAt);
-                    var pcm = DecodeImaAdpcm(d, dataAt, byteLen);
+                        short[] pcm = DecodeImaAdpcm(d, dataAt, byteLen);
                     int adpcmLoopStart = System.Math.Max(0, loopOffsetWords - 1) * 8;
                     return new SwavSample { Encoding = waveType, SampleRate = sampleRate, Timer = timer, Loop = loop, LoopStartSample = adpcmLoopStart, Pcm = pcm };
                 }
@@ -156,7 +158,7 @@ namespace DSPRE.Avalonia.Data
             int predictor = (short)(d[at] | (d[at + 1] << 8));
             int stepIndex = System.Math.Clamp((int)d[at + 2], 0, StepTable.Length - 1);
             int nibbleCount = (byteLen - 4) * 2;
-            var pcm = new short[nibbleCount];
+            short[] pcm = new short[nibbleCount];
 
             for (int i = 0; i < nibbleCount; i++)
             {

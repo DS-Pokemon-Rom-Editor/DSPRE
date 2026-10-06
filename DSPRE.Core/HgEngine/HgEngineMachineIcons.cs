@@ -26,7 +26,7 @@ namespace DSPRE.HgEngine
         /// <summary>The item a machine is, from the label its sMachineMoves line carries (TM001 is ITEM_TM001); -1 when none.</summary>
         public static int ItemIdFor(string label)
         {
-            var items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
+            HgEngineSymbolTable items = HgEngineSymbolTable.Load(ItemHeaderRelPath);
             return items != null && items.TryGetValue("ITEM_" + label, out int id) ? id : -1;
         }
 
@@ -39,7 +39,7 @@ namespace DSPRE.HgEngine
             if (text == null) return null;
             if (!string.Equals(text, _rulesText, StringComparison.Ordinal))
             {
-                var map = new Dictionary<int, string>();
+                Dictionary<int, string> map = new Dictionary<int, string>();
                 string dir = MakeVariable(text, "ITEMGFX_DEPENDENCIES_DIR") ?? "data/graphics/item";
                 foreach (Match m in IconRule.Matches(text))
                     map[int.Parse(m.Groups[1].Value) - 2] = Path.Combine(HgEngineProject.RepoPathUnc,

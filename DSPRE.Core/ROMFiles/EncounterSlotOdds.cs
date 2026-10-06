@@ -28,7 +28,7 @@ namespace DSPRE.ROMFiles
         public static string WhyNot()
         {
             if (HgEngine.HgEngineProject.IsActive) return HgEngine.HgEngineSlotOdds.WhyNot();
-            var methods = SlotOddsMethods;
+            SlotOddsMethod[] methods = SlotOddsMethods;
             if (methods == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
             foreach (int ov in methods.Select(m => m.Overlay).Distinct())
                 if (!File.Exists(OverlayUtils.GetPath(ov))) return $"Overlay {ov} is missing from this project.";
@@ -52,26 +52,26 @@ namespace DSPRE.ROMFiles
 
         public static EncounterSlotOdds Load()
         {
-            var odds = new EncounterSlotOdds();
+            EncounterSlotOdds odds = new EncounterSlotOdds();
             // hg-engine rolls the slots in its own C, so the odds are read from there.
             if (HgEngine.HgEngineProject.IsActive)
             {
-                if (!HgEngine.HgEngineSlotOdds.TryLoad(out var fromSource, out string error)) throw new InvalidDataException(error);
+                if (!HgEngine.HgEngineSlotOdds.TryLoad(out List<int[]> fromSource, out string error)) throw new InvalidDataException(error);
                 for (int r = 0; r < HgEngine.HgEngineSlotOdds.Rolls.Length; r++)
                 {
-                    var roll = HgEngine.HgEngineSlotOdds.Rolls[r];
+                    (string Function, string Name, int Slots) roll = HgEngine.HgEngineSlotOdds.Rolls[r];
                     odds.Methods.Add(new Method(new SlotOddsMethod(roll.Name, -1, roll.Slots, Array.Empty<int[]>()), fromSource[r]));
                 }
                 return odds;
             }
-            var files = new Dictionary<int, byte[]>();
-            foreach (var m in SlotOddsMethods ?? throw new InvalidOperationException("This game version isn't supported yet."))
+            Dictionary<int, byte[]> files = new Dictionary<int, byte[]>();
+            foreach (SlotOddsMethod m in SlotOddsMethods ?? throw new InvalidOperationException("This game version isn't supported yet."))
             {
-                if (!files.TryGetValue(m.Overlay, out var d)) files[m.Overlay] = d = ReadOverlay(m.Overlay);
-                var bounds = new List<int>();
+                if (!files.TryGetValue(m.Overlay, out byte[] d)) files[m.Overlay] = d = ReadOverlay(m.Overlay);
+                List<int> bounds = new List<int>();
                 foreach (int[] sites in m.Boundaries)
                 {
-                    var values = sites.Select(s => Imm(d, s, m.Name)).Distinct().ToList();
+                    List<int> values = sites.Select(s => Imm(d, s, m.Name)).Distinct().ToList();
                     if (values.Count != 1) throw new InvalidDataException($"The {m.Name} slot code compares one boundary against different values.");
                     bounds.Add(values[0]);
                 }
@@ -85,7 +85,7 @@ namespace DSPRE.ROMFiles
                     else if (branch == Bcs) bounds.Add(imm);
                     else throw new InvalidDataException($"The {m.Name} slot code's last test doesn't look like the game's; it may have been patched.");
                 }
-                var percents = new int[m.Slots];
+                int[] percents = new int[m.Slots];
                 int previous = 0;
                 for (int i = 0; i < bounds.Count; i++) { percents[i] = bounds[i] - previous; previous = bounds[i]; }
                 percents[^1] = 100 - previous;
@@ -97,7 +97,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the odds can't be saved, or null.</summary>
         public string Problem()
         {
-            foreach (var m in Methods)
+            foreach (Method m in Methods)
             {
                 if (m.Percents.Any(p => p < 0)) return $"{m.Name}: a slot has a negative chance.";
                 int sum = m.Percents.Sum();
@@ -111,7 +111,7 @@ namespace DSPRE.ROMFiles
         public void Restore(byte[] snapshot)
         {
             int k = 0;
-            foreach (var m in Methods) for (int i = 0; i < m.Percents.Length; i++) m.Percents[i] = snapshot[k++];
+            foreach (Method m in Methods) for (int i = 0; i < m.Percents.Length; i++) m.Percents[i] = snapshot[k++];
         }
 
         public void Save()
@@ -123,12 +123,12 @@ namespace DSPRE.ROMFiles
                 if (error != null) throw new InvalidOperationException(error);
                 return;
             }
-            var files = new Dictionary<int, byte[]>();
-            foreach (var m in Methods)
+            Dictionary<int, byte[]> files = new Dictionary<int, byte[]>();
+            foreach (Method m in Methods)
             {
-                if (!files.TryGetValue(m.Sites.Overlay, out var d)) files[m.Sites.Overlay] = d = ReadOverlay(m.Sites.Overlay);
+                if (!files.TryGetValue(m.Sites.Overlay, out byte[] d)) files[m.Sites.Overlay] = d = ReadOverlay(m.Sites.Overlay);
                 int running = 0;
-                var bounds = new List<int>();
+                List<int> bounds = new List<int>();
                 for (int i = 0; i < m.Percents.Length - 1; i++) { running += m.Percents[i]; bounds.Add(running); }
                 for (int b = 0; b < m.Sites.Boundaries.Length; b++)
                     foreach (int site in m.Sites.Boundaries[b]) d[site] = (byte)bounds[b];
@@ -140,7 +140,7 @@ namespace DSPRE.ROMFiles
                     d[tail + 3] = oneRoll ? Bne : Bcs;
                 }
             }
-            foreach (var (ov, d) in files) File.WriteAllBytes(OverlayUtils.GetPath(ov), d);
+            foreach ((int ov, byte[] d) in files) File.WriteAllBytes(OverlayUtils.GetPath(ov), d);
         }
 
         private static (string key, EncounterSlotOdds odds) _cache;
@@ -152,11 +152,11 @@ namespace DSPRE.ROMFiles
             {
                 if (HgEngine.HgEngineProject.IsActive)
                 {
-                    if (!HgEngine.HgEngineSlotOdds.TryLoad(out var fromSource, out _)) return null;
+                    if (!HgEngine.HgEngineSlotOdds.TryLoad(out List<int[]> fromSource, out _)) return null;
                     int at = Array.FindIndex(HgEngine.HgEngineSlotOdds.Rolls, r => r.Name == methodName);
                     return at >= 0 ? fromSource[at] : null;
                 }
-                var methods = SlotOddsMethods;
+                SlotOddsMethod[] methods = SlotOddsMethods;
                 if (methods == null) return null;
                 // Only a legacy project can still hold a compressed overlay; a label lookup won't decompress it.
                 if (methods.Any(m => OverlayUtils.IsStillCompressed(m.Overlay))) return null;

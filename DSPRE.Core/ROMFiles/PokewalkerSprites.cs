@@ -45,20 +45,20 @@ namespace DSPRE.ROMFiles
         /// <summary>The picture the game sends for this species, sex and form, or -1.</summary>
         public int PictureFor(int species, bool female, int form)
         {
-            if (_forms.TryGetValue(species, out var f)) return form >= 0 && form < f.Count ? f.First + form : -1;
+            if (_forms.TryGetValue(species, out (int First, int Count) f)) return form >= 0 && form < f.Count ? f.First + form : -1;
             if (female && _bySex.TryGetValue((species, true), out int pf)) return pf;
             return _bySex.TryGetValue((species, false), out int pm) ? pm : -1;
         }
 
         /// <summary>How many form pictures a species has, or 0 when its pictures go by sex.</summary>
-        public int FormCount(int species) => _forms.TryGetValue(species, out var f) ? f.Count : 0;
+        public int FormCount(int species) => _forms.TryGetValue(species, out (int First, int Count) f) ? f.Count : 0;
 
         private static PokewalkerSprites FromRom(int pictureCount, out string error)
         {
             error = GameTableFile.WhyNot(RomInfo.GameTable.PokewalkerSprites, VanillaSpeciesCount * 4);
             if (error != null) return null;
             byte[] table = GameTableFile.Read(RomInfo.GameTable.PokewalkerSprites, VanillaSpeciesCount * 4);
-            var index = new PokewalkerSprites();
+            PokewalkerSprites index = new PokewalkerSprites();
             for (int s = 1; s < VanillaSpeciesCount; s++)
             {
                 int male = BitConverter.ToUInt16(table, s * 4), female = BitConverter.ToUInt16(table, s * 4 + 2);
@@ -81,10 +81,10 @@ namespace DSPRE.ROMFiles
             string path = Path.Combine(HgEngineProject.RepoRootWindows, "src", "field", "pokewalker.c");
             if (!File.Exists(path)) { error = "src/field/pokewalker.c isn't in the checkout."; return null; }
             string text = File.ReadAllText(path);
-            var species = HgEngineSymbolTable.Load("include/constants/species.h");
+            HgEngineSymbolTable species = HgEngineSymbolTable.Load("include/constants/species.h");
             if (species == null) { error = "include/constants/species.h couldn't be read."; return null; }
 
-            var bases = Define.Matches(text).Cast<Match>().ToDictionary(m => m.Groups[1].Value, m => int.Parse(m.Groups[2].Value));
+            Dictionary<string, int> bases = Define.Matches(text).Cast<Match>().ToDictionary(m => m.Groups[1].Value, m => int.Parse(m.Groups[2].Value));
             int Value(string token) => int.TryParse(token, out int n) ? n
                 : bases.TryGetValue(token, out n) ? n
                 : species.ByName.TryGetValue(token, out n) ? n : throw new InvalidOperationException($"pokewalker.c uses {token}, which isn't defined.");
@@ -97,14 +97,14 @@ namespace DSPRE.ROMFiles
                 return null;
             }
 
-            var females = ArrayBody(text, "sSpeciesWithGenderDifferences").Select(Value).ToList();
-            var formRows = ArrayBody(text, "sMapOldSpeciesToBaseFormIndex", rows: true)
+            List<int> females = ArrayBody(text, "sSpeciesWithGenderDifferences").Select(Value).ToList();
+            List<(int, int)> formRows = ArrayBody(text, "sMapOldSpeciesToBaseFormIndex", rows: true)
                 .Select(row => row.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
                 .Where(cells => cells.Length == 2)
                 .Select(cells => (Value(cells[0]), Value(cells[1])))
                 .ToList();
 
-            var index = new PokewalkerSprites();
+            PokewalkerSprites index = new PokewalkerSprites();
             for (int s = 1; s < firstNew; s++)
             {
                 int female = females.IndexOf(s);
@@ -145,11 +145,11 @@ namespace DSPRE.ROMFiles
         // Each species' forms run up to the next one's first picture; the last runs up to end.
         private void AddForms(IEnumerable<(int Species, int First)> rows, int end)
         {
-            var sorted = rows.OrderBy(r => r.First).ToList();
+            List<(int Species, int First)> sorted = rows.OrderBy(r => r.First).ToList();
             for (int i = 0; i < sorted.Count; i++)
             {
                 int next = i + 1 < sorted.Count ? sorted[i + 1].First : end;
-                var (species, first) = sorted[i];
+                (int species, int first) = sorted[i];
                 _forms[species] = (first, next - first);
                 for (int form = 0; form < next - first; form++) _pictures[first + form] = new Picture(species, false, form);
             }

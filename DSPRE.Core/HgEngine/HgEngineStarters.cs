@@ -22,7 +22,7 @@ namespace DSPRE.HgEngine
         private static string Parse(string text, out List<CInitItem> entries, out int[] species, out int[] forms)
         {
             entries = null; species = forms = null;
-            var decl = CSourceFile.For(text).Find(Table);
+            CDeclaration decl = CSourceFile.For(text).Find(Table);
             if (decl == null) return $"{SourceRelPath} has no {Table}.";
             if (decl.Init.Items.Any(i => i.IsConditional)) return $"{Table} has a starter under #if, which DSPRE doesn't edit.";
             if (decl.Init.Items.Count != 3) return $"{Table} lists {decl.Init.Items.Count} starters, not 3.";
@@ -49,8 +49,8 @@ namespace DSPRE.HgEngine
         /// <summary>Writes the three choices. A choice whose species is unchanged keeps its form and spelling.</summary>
         public static bool TryWrite(int[] species, out string error)
         {
-            if (!TryLoad(out string text, out var entries, out var oldSpecies, out var oldForms, out error)) return false;
-            var names = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
+            if (!TryLoad(out string text, out List<CInitItem> entries, out int[] oldSpecies, out int[] oldForms, out error)) return false;
+            HgEngineSymbolTable names = HgEngineSymbolTable.Load(SpeciesHeaderRelPath);
             string updated = text;
             for (int i = 2; i >= 0; i--)
             {
@@ -62,7 +62,7 @@ namespace DSPRE.HgEngine
             try
             {
                 return HgEngineVerifiedWrite.TryWrite(FilePath, SourceRelPath, updated, written =>
-                    Parse(written, out _, out var back, out _) ?? (back.SequenceEqual(species) ? null : "the starters differ"), out error);
+                    Parse(written, out _, out int[] back, out _) ?? (back.SequenceEqual(species) ? null : "the starters differ"), out error);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { error = ex.Message; return false; }
         }

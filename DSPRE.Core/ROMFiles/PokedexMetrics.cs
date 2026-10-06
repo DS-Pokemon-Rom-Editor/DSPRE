@@ -77,15 +77,15 @@ namespace DSPRE.ROMFiles
             int memberCount = gameFamily == GameFamilies.HGSS ? 102 : 58;
             int shapeLists = gameFamily == GameFamilies.HGSS ? 79 : 44;
 
-            var dirs = new List<DirNames> { DirNames.pokedexData };
+            List<DirNames> dirs = new List<DirNames> { DirNames.pokedexData };
             if (gameDirs.ContainsKey(DirNames.pokedexDataAltered)) dirs.Add(DirNames.pokedexDataAltered);
             DSUtils.TryUnpackNarcs(dirs);
 
-            var copies = new List<Copy>();
-            foreach (var dir in dirs)
+            List<Copy> copies = new List<Copy>();
+            foreach (DirNames dir in dirs)
             {
                 string folder = gameDirs[dir].unpackedDir;
-                var members = new byte[memberCount][];
+                byte[][] members = new byte[memberCount][];
                 for (int i = 0; i < memberCount; i++)
                 {
                     string f = Path.Combine(folder, i.ToString("D4"));
@@ -98,9 +98,9 @@ namespace DSPRE.ROMFiles
             }
 
             int species = copies[0].Members[0].Length / 4;
-            foreach (var c in copies)
+            foreach (Copy c in copies)
             {
-                var m = c.Members;
+                byte[][] m = c.Members;
                 if (species < 2 || m[0].Length != species * 4 || m[1].Length != species * 4 || m[2].Length < species
                     || Enumerable.Range(3, 8).Any(i => m[i].Length < species * 2))
                 { error = "The Pokédex data's per-species tables don't agree on how many species there are."; return false; }
@@ -119,7 +119,7 @@ namespace DSPRE.ROMFiles
         public PokedexMetrics Get(int species, bool originGiratina = false)
         {
             if (species < 0 || species >= SpeciesCount) return null;
-            var m = CopyFor(species, originGiratina).Members;
+            byte[][] m = CopyFor(species, originGiratina).Members;
             int U(int member) => BitConverter.ToUInt16(m[member], species * 2);
             int S(int member) => BitConverter.ToInt16(m[member], species * 2);
             return new PokedexMetrics
@@ -152,8 +152,8 @@ namespace DSPRE.ROMFiles
             string why = WhyNot(v);
             if (why != null) throw new ArgumentException(why);
 
-            var targets = HasOriginGiratina && species == SpeciesFile.GIRATINA_ID_NUM ? new[] { CopyFor(species, originGiratina) } : _copies.ToArray();
-            foreach (var c in targets)
+            Copy[] targets = HasOriginGiratina && species == SpeciesFile.GIRATINA_ID_NUM ? new[] { CopyFor(species, originGiratina) } : _copies.ToArray();
+            foreach (Copy c in targets)
             {
                 Put(c, 0, species * 4, BitConverter.GetBytes((uint)v.Height));
                 Put(c, 1, species * 4, BitConverter.GetBytes((uint)v.Weight));
@@ -167,7 +167,7 @@ namespace DSPRE.ROMFiles
 
         private static void Put(Copy c, int member, int offset, byte[] bytes)
         {
-            var m = c.Members[member];
+            byte[] m = c.Members[member];
             for (int i = 0; i < bytes.Length; i++)
             {
                 if (m[offset + i] == bytes[i]) continue;
@@ -178,8 +178,8 @@ namespace DSPRE.ROMFiles
 
         private void RebuildLists(Copy c)
         {
-            var m = c.Members;
-            var species = Enumerable.Range(1, SpeciesCount - 1).ToArray();
+            byte[][] m = c.Members;
+            int[] species = Enumerable.Range(1, SpeciesCount - 1).ToArray();
             uint H(int s) => BitConverter.ToUInt32(m[0], s * 4);
             uint W(int s) => BitConverter.ToUInt32(m[1], s * 4);
             Replace(c, SortHeaviest, species.OrderByDescending(W).ThenBy(s => s));
@@ -210,10 +210,10 @@ namespace DSPRE.ROMFiles
             const int Mystery = 9, Dark = 17;
             static bool Has((int, int) t, int type) => t.Item1 == type || t.Item2 == type;
 
-            var dirs = new List<DirNames> { DirNames.pokedexData };
+            List<DirNames> dirs = new List<DirNames> { DirNames.pokedexData };
             if (gameDirs.ContainsKey(DirNames.pokedexDataAltered)) dirs.Add(DirNames.pokedexDataAltered);
             DSUtils.TryUnpackNarcs(dirs);
-            foreach (var dir in dirs)
+            foreach (DirNames dir in dirs)
             {
                 string folder = gameDirs[dir].unpackedDir;
                 string heights = Path.Combine(folder, "0000");
@@ -224,7 +224,7 @@ namespace DSPRE.ROMFiles
                     string file = Path.Combine(folder, (firstList + (type < Mystery ? type : type - 1)).ToString("D4"));
                     if (!File.Exists(file)) continue;
                     byte[] b = File.ReadAllBytes(file);
-                    var list = Enumerable.Range(0, b.Length / 2).Select(i => (int)BitConverter.ToUInt16(b, i * 2)).ToList();
+                    List<int> list = Enumerable.Range(0, b.Length / 2).Select(i => (int)BitConverter.ToUInt16(b, i * 2)).ToList();
                     list.Remove(species);
                     if (Has(after, type)) { int at = list.FindIndex(s => s > species); list.Insert(at < 0 ? list.Count : at, species); }
                     File.WriteAllBytes(file, list.SelectMany(s => BitConverter.GetBytes((ushort)s)).ToArray());
@@ -235,7 +235,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Writes the members that changed into the unpacked archives.</summary>
         public void Save()
         {
-            foreach (var c in _copies)
+            foreach (Copy c in _copies)
                 for (int i = 0; i < c.Members.Length; i++)
                 {
                     if (!c.Dirty[i]) continue;

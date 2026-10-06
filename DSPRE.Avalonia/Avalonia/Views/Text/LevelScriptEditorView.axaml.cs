@@ -38,9 +38,9 @@ namespace DSPRE.Avalonia.Views.Text
         public async Task EnsureSetupAsync(Window ownerOverride = null)
         {
             if (Design.IsDesignMode) return;
-            var vm = VM;
+            LevelScriptEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            var owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
+            Window owner = ownerOverride ?? TopLevel.GetTopLevel(this) as Window;
             if (owner == null) return;
             if (!_setupDone) owner.Closed += (_, _) => vm.Detach();
             _setupDone = true;

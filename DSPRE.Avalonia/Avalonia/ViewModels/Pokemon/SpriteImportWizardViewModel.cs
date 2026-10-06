@@ -103,12 +103,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public List<string> ComputePoseList()
         {
-            var genders = GenderGapActive ? new[] { ExistingGender } : (GenderMode == "Both" ? new[] { "Female", "Male" } : new[] { GenderMode });
-            var faces = FaceMode == "Both" ? new[] { "Back", "Front" } : new[] { FaceMode };
-            var result = new List<string>();
-            foreach (var pose in AllPoses)
+            string[] genders = GenderGapActive ? new[] { ExistingGender } : (GenderMode == "Both" ? new[] { "Female", "Male" } : new[] { GenderMode });
+            string[] faces = FaceMode == "Both" ? new[] { "Back", "Front" } : new[] { FaceMode };
+            List<string> result = new List<string>();
+            foreach (string pose in AllPoses)
             {
-                var parts = pose.Split(' ');
+                string[] parts = pose.Split(' ');
                 if (genders.Contains(parts[0]) && faces.Contains(parts[1])) result.Add(pose);
             }
             return result;
@@ -132,8 +132,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     else await _sprite.ImportFullSheet(_owner);
                     return;
                 }
-                var genders = GenderGapActive ? new[] { ExistingGender } : (SheetGenderMode == "Both" ? new[] { "Female", "Male" } : new[] { SheetGenderMode });
-                foreach (var gender in genders)
+                string[] genders = GenderGapActive ? new[] { ExistingGender } : (SheetGenderMode == "Both" ? new[] { "Female", "Male" } : new[] { SheetGenderMode });
+                foreach (string gender in genders)
                 {
                     bool female = gender == "Female";
                     if (SheetColorMode == "shiny") await _sprite.ImportShinySpriteSheet(_owner, female);
@@ -142,7 +142,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             else
             {
-                foreach (var pose in ComputePoseList())
+                foreach (string pose in ComputePoseList())
                     await _sprite.ImportSprite(SlotFor(pose), _owner);
             }
         }

@@ -33,17 +33,17 @@ namespace DSPRE.Models
         public static Result Build(ObjMesh mesh, IReadOnlyList<DsTexture> textures,
                                    bool picturesAreElsewhere = false, float drawnAtScale = 0f)
         {
-            var r = new Result();
+            Result r = new Result();
             if (mesh == null) return Fail(r, "No mesh.");
             if (mesh.Faces.Count == 0) return Fail(r, "Mesh has no faces.");
             if (mesh.Triangles > MostTriangles)
                 return Fail(r, $"{mesh.Triangles} triangles; the limit is {MostTriangles}.");
 
             r.Notes.AddRange(mesh.Notes);
-            foreach (var t in textures ?? Array.Empty<DsTexture>()) r.Notes.AddRange(t.Notes);
+            foreach (DsTexture t in textures ?? Array.Empty<DsTexture>()) r.Notes.AddRange(t.Notes);
 
             float lo = 0, hi = 0;
-            foreach (var p in mesh.Positions)
+            foreach (ObjMesh.Vec3 p in mesh.Positions)
             {
                 lo = Math.Min(lo, Math.Min(p.X, Math.Min(p.Y, p.Z)));
                 hi = Math.Max(hi, Math.Max(p.X, Math.Max(p.Y, p.Z)));
@@ -60,15 +60,15 @@ namespace DSPRE.Models
             if (!lit)
                 r.Notes.Add("No normals, so the model is unlit.");
 
-            var used = mesh.Faces.Select(f => f.Material).Distinct().OrderBy(x => x).ToList();
+            List<int> used = mesh.Faces.Select(f => f.Material).Distinct().OrderBy(x => x).ToList();
             if (used.Count > 60)
                 return Fail(r, $"{used.Count} materials; the limit is 60.");
 
-            var shapes = new List<(string Name, byte[] Dl, int Flags, int Triangles)>();
-            var matNames = new List<string>();
+            List<(string Name, byte[] Dl, int Flags, int Triangles)> shapes = new List<(string Name, byte[] Dl, int Flags, int Triangles)>();
+            List<string> matNames = new List<string>();
             foreach (int m in used)
             {
-                var dl = new GxDisplayList();
+                GxDisplayList dl = new GxDisplayList();
                 int tris = WriteFaces(dl, mesh, m, posScale, textures, lit, picturesAreElsewhere);
                 shapes.Add(($"polygon{shapes.Count}", dl.ToBytes(), dl.Flags(), tris));
                 matNames.Add(UniqueName(matNames, mesh.Materials[m].Name, "material" + m));
@@ -110,12 +110,12 @@ namespace DSPRE.Models
         private static int WriteFaces(GxDisplayList dl, ObjMesh mesh, int material, float posScale,
                                       IReadOnlyList<DsTexture> textures, bool lit, bool picturesAreElsewhere)
         {
-            var tex = textures?.FirstOrDefault(t => t.Name != null);
+            DsTexture tex = textures?.FirstOrDefault(t => t.Name != null);
             int texW = tex?.Width ?? 0, texH = tex?.Height ?? 0;
-            var m = mesh.Materials[material];
+            ObjMesh.Material m = mesh.Materials[material];
             if (textures != null)
             {
-                var mine = textures.FirstOrDefault(t => string.Equals(t.Name, Short(m.Name),
+                DsTexture mine = textures.FirstOrDefault(t => string.Equals(t.Name, Short(m.Name),
                                                                       StringComparison.OrdinalIgnoreCase));
                 if (mine != null) { texW = mine.Width; texH = mine.Height; }
             }
@@ -123,34 +123,34 @@ namespace DSPRE.Models
             if (picturesAreElsewhere) { texW = 1; texH = 1; }
 
             int tris = 0;
-            var look = m.Look;
+            MaterialLook look = m.Look;
             if (look != null) return WriteLookedFaces(dl, mesh, material, posScale, texW, texH, look);
             if (!lit)
             {
-                var c = mesh.Materials[material];
+                ObjMesh.Material c = mesh.Materials[material];
                 dl.SetColour((int)Math.Round(Math.Clamp(c.Red, 0, 1) * 31),
                              (int)Math.Round(Math.Clamp(c.Green, 0, 1) * 31),
                              (int)Math.Round(Math.Clamp(c.Blue, 0, 1) * 31));
             }
             dl.Begin(GxDisplayList.Shape.Triangles);
-            foreach (var f in mesh.Faces)
+            foreach (ObjMesh.Face f in mesh.Faces)
             {
                 if (f.Material != material) continue;
                 for (int i = 2; i < f.Corners.Count; i++)
                 {
-                    foreach (var c in new[] { f.Corners[0], f.Corners[i - 1], f.Corners[i] })
+                    foreach (ObjMesh.Corner c in new[] { f.Corners[0], f.Corners[i - 1], f.Corners[i] })
                     {
                         if (c.Normal >= 0 && c.Normal < mesh.Normals.Count)
                         {
-                            var n = mesh.Normals[c.Normal];
+                            ObjMesh.Vec3 n = mesh.Normals[c.Normal];
                             dl.SetNormal(n.X, n.Y, n.Z);
                         }
                         if (texW > 0 && c.TexCoord >= 0 && c.TexCoord < mesh.TexCoords.Count)
                         {
-                            var t = mesh.TexCoords[c.TexCoord];
+                            ObjMesh.Vec2 t = mesh.TexCoords[c.TexCoord];
                             dl.SetTexCoord(t.U, t.V, texW, texH);
                         }
-                        var p = mesh.Positions[c.Position];
+                        ObjMesh.Vec3 p = mesh.Positions[c.Position];
                         dl.AddVertex(p.X / posScale, p.Y / posScale, p.Z / posScale);
                     }
                     tris++;
@@ -175,7 +175,7 @@ namespace DSPRE.Models
                 int normal = -1;
                 if (c.Normal >= 0 && c.Normal < mesh.Normals.Count)
                 {
-                    var n = mesh.Normals[c.Normal];
+                    ObjMesh.Vec3 n = mesh.Normals[c.Normal];
                     normal = NormalWord(n.X, n.Y, n.Z);
                 }
 
@@ -196,23 +196,23 @@ namespace DSPRE.Models
 
                 if (texW > 0 && c.TexCoord >= 0 && c.TexCoord < mesh.TexCoords.Count)
                 {
-                    var t = mesh.TexCoords[c.TexCoord];
+                    ObjMesh.Vec2 t = mesh.TexCoords[c.TexCoord];
                     uint place = (uint)((GxDisplayList.Sixteenths(t.U * texW) & 0xFFFF)
                                       | ((GxDisplayList.Sixteenths(t.V * texH) & 0xFFFF) << 16));
                     if (place != placeNow) { dl.Command(GxDisplayList.TexCoord, place); placeNow = place; }
                 }
-                var p = mesh.Positions[c.Position];
+                ObjMesh.Vec3 p = mesh.Positions[c.Position];
                 dl.AddVertexRaw(GxDisplayList.Fixed(p.X / posScale), GxDisplayList.Fixed(p.Y / posScale),
                                 GxDisplayList.Fixed(p.Z / posScale));
             }
 
-            var mine = mesh.Faces.Where(f => f.Material == material).ToList();
-            var quads = mine.Where(f => f.Corners.Count == 4).ToList();
-            var others = mine.Where(f => f.Corners.Count != 4).ToList();
+            List<ObjMesh.Face> mine = mesh.Faces.Where(f => f.Material == material).ToList();
+            List<ObjMesh.Face> quads = mine.Where(f => f.Corners.Count == 4).ToList();
+            List<ObjMesh.Face> others = mine.Where(f => f.Corners.Count != 4).ToList();
             if (others.Count > 0)
             {
                 dl.Begin(GxDisplayList.Shape.Triangles);
-                foreach (var f in others)
+                foreach (ObjMesh.Face f in others)
                     for (int i = 2; i < f.Corners.Count; i++)
                     {
                         Corner(f.Corners[0]); Corner(f.Corners[i - 1]); Corner(f.Corners[i]);
@@ -223,9 +223,9 @@ namespace DSPRE.Models
             if (quads.Count > 0)
             {
                 dl.Begin(GxDisplayList.Shape.Quads);
-                foreach (var f in quads)
+                foreach (ObjMesh.Face f in quads)
                 {
-                    foreach (var c in f.Corners) Corner(c);
+                    foreach (ObjMesh.Corner c in f.Corners) Corner(c);
                     tris += 2;
                 }
                 dl.End();
@@ -250,7 +250,7 @@ namespace DSPRE.Models
             string modelName = Short(mesh.Name);
             if (modelName.Length == 0) modelName = "model";
 
-            var nodeNames = new List<string> { "world_root" };
+            List<string> nodeNames = new List<string> { "world_root" };
             byte[] nodeDict = NitroDictionary.Write(nodeNames,
                 new List<byte[]> { Word(NitroDictionary.SizeFor(1, 4)) });
             byte[] nodeData = NodeData();
@@ -266,7 +266,7 @@ namespace DSPRE.Models
             int shpAt = Align4(matAt + mat.Length);
             int modelSize = Align4(shpAt + shp.Length);
 
-            var m = new byte[modelSize];
+            byte[] m = new byte[modelSize];
             Put32(m, 0, modelSize);
             Put32(m, 4, sbcAt);
             Put32(m, 8, matAt);
@@ -288,7 +288,7 @@ namespace DSPRE.Models
             Put16(m, infoAt + 22, 0);
 
             float lo = 0, hi = 0;
-            foreach (var p in mesh.Positions)
+            foreach (ObjMesh.Vec3 p in mesh.Positions)
             {
                 lo = Math.Min(lo, Math.Min(p.X, Math.Min(p.Y, p.Z)));
                 hi = Math.Max(hi, Math.Max(p.X, Math.Max(p.Y, p.Z)));
@@ -312,7 +312,7 @@ namespace DSPRE.Models
             int modelAt = 8 + NitroDictionary.SizeFor(1, 4);
             byte[] setDict = NitroDictionary.Write(new List<string> { modelName },
                 new List<byte[]> { Word(modelAt) });
-            var block = new byte[modelAt + m.Length];
+            byte[] block = new byte[modelAt + m.Length];
             block[0] = (byte)'M'; block[1] = (byte)'D'; block[2] = (byte)'L'; block[3] = (byte)'0';
             Put32(block, 4, block.Length);
             Array.Copy(setDict, 0, block, 8, setDict.Length);
@@ -322,7 +322,7 @@ namespace DSPRE.Models
 
         private static byte[] NodeData()
         {
-            var d = new byte[8];
+            byte[] d = new byte[8];
             Put16(d, 0, 0x0007);
             Put16(d, 2, 0);
             return d;
@@ -330,7 +330,7 @@ namespace DSPRE.Models
 
         private static byte[] Sbc(int materials, int shapes)
         {
-            var o = new List<byte>
+            List<byte> o = new List<byte>
             {
                 0x26, 0x00, 0x00, 0x00, 0x00,
                 0x02, 0x00, 0x01,
@@ -355,23 +355,23 @@ namespace DSPRE.Models
             int count = names.Count;
             int dictSize = NitroDictionary.SizeFor(count, 4);
 
-            var texNames = picturesAreElsewhere
+            List<string> texNames = picturesAreElsewhere
                 ? used.Select(u => Short(mesh.Materials[u].Name)).Distinct().ToList()
                 : textures?.Select(t => t.Name).ToList() ?? new List<string>();
 
-            var textureOf = new int[count];
+            int[] textureOf = new int[count];
             for (int i = 0; i < count; i++)
                 textureOf[i] = texNames.FindIndex(n =>
                     string.Equals(n, Short(mesh.Materials[used[i]].Name), StringComparison.OrdinalIgnoreCase));
 
-            var usersOf = new List<List<byte>>();
-            foreach (var _ in texNames) usersOf.Add(new List<byte>());
+            List<List<byte>> usersOf = new List<List<byte>>();
+            foreach (string _ in texNames) usersOf.Add(new List<byte>());
             for (int i = 0; i < count; i++)
                 if (textureOf[i] >= 0) usersOf[textureOf[i]].Add((byte)i);
 
-            var palNames = new List<string>();
-            var palUsers = new List<List<byte>>();
-            var paletteOf = new int[count];
+            List<string> palNames = new List<string>();
+            List<List<byte>> palUsers = new List<List<byte>>();
+            int[] paletteOf = new int[count];
             for (int i = 0; i < count; i++)
             {
                 string asked = mesh.Materials[used[i]].PaletteName;
@@ -394,45 +394,45 @@ namespace DSPRE.Models
             int plttToMatSize = NitroDictionary.SizeFor(palNames.Count, 4);
             int listsAt = plttToMat + plttToMatSize;
 
-            var listAt = new int[texNames.Count];
+            int[] listAt = new int[texNames.Count];
             int listBytes = 0;
             for (int i = 0; i < texNames.Count; i++)
             { listAt[i] = listsAt + listBytes; listBytes += Math.Max(1, usersOf[i].Count); }
 
-            var palListAt = new int[palNames.Count];
+            int[] palListAt = new int[palNames.Count];
             for (int i = 0; i < palNames.Count; i++)
             { palListAt[i] = listsAt + listBytes; listBytes += Math.Max(1, palUsers[i].Count); }
 
             int dataAt = Align4(listsAt + listBytes);
-            var recordAt = new int[count];
+            int[] recordAt = new int[count];
             int recordBytes = 0;
             for (int i = 0; i < count; i++)
             {
                 recordAt[i] = dataAt + recordBytes;
                 recordBytes += Align4(mesh.Materials[used[i]].Look?.Record.Length ?? MatDataSize);
             }
-            var o = new byte[dataAt + recordBytes];
+            byte[] o = new byte[dataAt + recordBytes];
             Put16(o, 0, texToMat);
             Put16(o, 2, plttToMat);
 
-            var entries = new List<byte[]>();
+            List<byte[]> entries = new List<byte[]>();
             for (int i = 0; i < count; i++) entries.Add(Word(recordAt[i]));
             byte[] dict = NitroDictionary.Write(names, entries);
             Array.Copy(dict, 0, o, 4, dict.Length);
 
-            var toMat = new List<byte[]>();
+            List<byte[]> toMat = new List<byte[]>();
             for (int i = 0; i < texNames.Count; i++)
             {
-                var e = new byte[4];
+                byte[] e = new byte[4];
                 Put16(e, 0, listAt[i]);
                 e[2] = (byte)usersOf[i].Count;
                 e[3] = 0;
                 toMat.Add(e);
             }
-            var toPal = new List<byte[]>();
+            List<byte[]> toPal = new List<byte[]>();
             for (int i = 0; i < palNames.Count; i++)
             {
-                var e = new byte[4];
+                byte[] e = new byte[4];
                 Put16(e, 0, palListAt[i]);
                 e[2] = (byte)palUsers[i].Count;
                 e[3] = 0;
@@ -451,13 +451,13 @@ namespace DSPRE.Models
             for (int i = 0; i < count; i++)
             {
                 int a = recordAt[i];
-                var src = mesh.Materials[used[i]];
+                ObjMesh.Material src = mesh.Materials[used[i]];
                 if (src.Look != null)
                 {
                     Array.Copy(src.Look.Record, 0, o, a, src.Look.Record.Length);
                     continue;
                 }
-                var tex = textures != null && textureOf[i] >= 0 && textureOf[i] < textures.Count
+                DsTexture tex = textures != null && textureOf[i] >= 0 && textureOf[i] < textures.Count
                     ? textures[textureOf[i]] : null;
                 bool named = textureOf[i] >= 0;
 
@@ -503,15 +503,15 @@ namespace DSPRE.Models
             int dataAt = dictSize;
             int dlAt = Align4(dataAt + count * ShpDataSize);
 
-            var entries = new List<byte[]>();
+            List<byte[]> entries = new List<byte[]>();
             for (int i = 0; i < count; i++) entries.Add(Word(dataAt + i * ShpDataSize));
             byte[] dict = NitroDictionary.Write(shapes.Select(s => s.Name).ToList(), entries);
 
             int total = dlAt;
-            var dlAts = new int[count];
+            int[] dlAts = new int[count];
             for (int i = 0; i < count; i++) { dlAts[i] = total; total = Align4(total + shapes[i].Dl.Length); }
 
-            var o = new byte[total];
+            byte[] o = new byte[total];
             Array.Copy(dict, o, dict.Length);
             for (int i = 0; i < count; i++)
             {
@@ -528,11 +528,11 @@ namespace DSPRE.Models
 
         internal static byte[] BuildTex0(IReadOnlyList<DsTexture> textures)
         {
-            var names = textures.Select(t => t.Name).ToList();
+            List<string> names = textures.Select(t => t.Name).ToList();
             int header = 8 + 16 + 20 + 16;
 
-            var texAt = new int[textures.Count];
-            var palAt = new int[textures.Count];
+            int[] texAt = new int[textures.Count];
+            int[] palAt = new int[textures.Count];
             int texTotal = 0, palTotal = 0;
             for (int i = 0; i < textures.Count; i++)
             {
@@ -540,26 +540,26 @@ namespace DSPRE.Models
                 palAt[i] = palTotal; palTotal = Align8(palTotal + textures[i].PaletteBytes);
             }
 
-            var texEntries = new List<byte[]>();
+            List<byte[]> texEntries = new List<byte[]>();
             for (int i = 0; i < textures.Count; i++)
             {
-                var e = new byte[8];
+                byte[] e = new byte[8];
                 Put32(e, 0, (int)textures[i].ImageParam(texAt[i]));
                 Put32(e, 4, (textures[i].Width & 0x7FF) | ((textures[i].Height & 0x7FF) << 11));
                 texEntries.Add(e);
             }
             byte[] texDict = NitroDictionary.Write(names, texEntries);
 
-            var palNames = new List<string>();
-            var palEntries = new List<byte[]>();
+            List<string> palNames = new List<string>();
+            List<byte[]> palEntries = new List<byte[]>();
             for (int i = 0; i < textures.Count; i++)
             {
-                var called = textures[i].PaletteNames != null && textures[i].PaletteNames.Count > 0
+                List<string> called = textures[i].PaletteNames != null && textures[i].PaletteNames.Count > 0
                     ? textures[i].PaletteNames : new List<string> { textures[i].Name };
                 foreach (string name in called)
                 {
                     if (string.IsNullOrEmpty(name) || palNames.Contains(name)) continue;
-                    var e = new byte[4];
+                    byte[] e = new byte[4];
                     Put16(e, 0, palAt[i] >> 3);
                     // The flag marks four-colour palettes, which the hardware addresses in 8-byte steps.
                     Put16(e, 2, 0);
@@ -573,7 +573,7 @@ namespace DSPRE.Models
             int palDataAt = Align8(texDataAt + texTotal);
             int size = Align4(palDataAt + palTotal);
 
-            var o = new byte[size];
+            byte[] o = new byte[size];
             o[0] = (byte)'T'; o[1] = (byte)'E'; o[2] = (byte)'X'; o[3] = (byte)'0';
             Put32(o, 4, size);
 
@@ -600,7 +600,7 @@ namespace DSPRE.Models
         {
             int header = Align4(16 + blocks.Count * 4);
             int total = header + blocks.Sum(b => b.Length);
-            var o = new byte[total];
+            byte[] o = new byte[total];
             for (int i = 0; i < 4; i++) o[i] = (byte)(i < magic.Length ? magic[i] : ' ');
             o[4] = 0xFF; o[5] = 0xFE;
             Put16(o, 6, version);
@@ -617,7 +617,7 @@ namespace DSPRE.Models
             return o;
         }
 
-        private static byte[] Word(int v) { var b = new byte[4]; Put32(b, 0, v); return b; }
+        private static byte[] Word(int v) { byte[] b = new byte[4]; Put32(b, 0, v); return b; }
         private static int Align4(int v) => (v + 3) & ~3;
         private static int Align8(int v) => (v + 7) & ~7;
         private static short Clamp16(float v) => (short)Math.Clamp(v, short.MinValue, short.MaxValue);

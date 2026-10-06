@@ -53,7 +53,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
             HeaderNote = "Back up your project first. Some patches cannot be undone.";
             _statuses = DSPRE.PatchToolboxLogic.GetPatchStatuses();
-            foreach (var p in _statuses)
+            foreach (PatchToolboxLogic.PatchInfo p in _statuses)
                 Patches.Add(new PatchRowViewModel(p));
         }
 
@@ -105,7 +105,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             AuthorText = string.IsNullOrEmpty(p.Author) ? null : "by " + p.Author;
             Link = p.Link;
             if (p.Parts != null)
-                foreach (var part in p.Parts)
+                foreach (PatchToolboxLogic.PatchPart part in p.Parts)
                     Parts.Add(new PatchPartViewModel(part));
 
             switch (p.State)

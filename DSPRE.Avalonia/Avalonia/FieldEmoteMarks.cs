@@ -80,10 +80,10 @@ namespace DSPRE.Avalonia
                          : actionName != null && actionName.Contains("Double", StringComparison.Ordinal) ? Double
                          : Exclamation;
             string key = art == Question ? "?" : art == Double ? "!!" : "!";
-            if (_cache.TryGetValue(key, out var hit)) return hit;
+            if (_cache.TryGetValue(key, out OverworldSprites.SpritePixels hit)) return hit;
 
             int h = art.Length, w = art[0].Length;
-            var rgba = new byte[w * h * 4];
+            byte[] rgba = new byte[w * h * 4];
             for (int y = 0; y < h; y++)
                 for (int x = 0; x < w; x++)
                 {
@@ -98,7 +98,7 @@ namespace DSPRE.Avalonia
                     rgba[at] = c.r; rgba[at + 1] = c.g; rgba[at + 2] = c.b; rgba[at + 3] = c.a;
                 }
 
-            var pix = new OverworldSprites.SpritePixels { Rgba = rgba, Width = w, Height = h };
+            OverworldSprites.SpritePixels pix = new OverworldSprites.SpritePixels { Rgba = rgba, Width = w, Height = h };
             _cache[key] = pix;
             return pix;
         }

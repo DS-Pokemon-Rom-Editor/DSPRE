@@ -28,12 +28,12 @@ namespace DSPRE.Avalonia.Data
                                           ScriptNarc source = null)
         {
             whynot = null;
-            var narc = source ?? new ScriptNarc(a.Dir);
+            ScriptNarc narc = source ?? new ScriptNarc(a.Dir);
             if (!narc.Available) { whynot = "This game does not have this archive."; return null; }
 
             if (a.Pokewalker is { } pw)
             {
-                var pwPixels = DSPRE.ROMFiles.PokewalkerImage.Decode(Unsqueeze(narc.Get(index)), pw.Width, pw.Height);
+                byte[] pwPixels = DSPRE.ROMFiles.PokewalkerImage.Decode(Unsqueeze(narc.Get(index)), pw.Width, pw.Height);
                 if (pwPixels == null) { whynot = $"This entry isn't a {pw.Width} by {pw.Height} Pokéwalker picture."; return null; }
                 return new Indexed
                 {
@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.Data
             }
 
             byte[] rawStored = narc.Get(index);
-            var kind = Identify(rawStored);
+            Kind kind = Identify(rawStored);
             if (kind != Kind.TileGraphic)
             {
                 whynot = kind == Kind.Palette
@@ -57,21 +57,21 @@ namespace DSPRE.Avalonia.Data
             if (pal == null) { whynot = "No colours could be found for this drawing."; return null; }
 
             byte[] raw = Unsqueeze(rawStored);
-            var colours = NitroBgCodec.ReadPalette(Unsqueeze(pal), out int count);
+            (byte r, byte g, byte b)[] colours = NitroBgCodec.ReadPalette(Unsqueeze(pal), out int count);
             if (colours == null || count == 0) { whynot = "The colours could not be read."; return null; }
 
-            var shape = ReadShape(raw, WidthFor(a, index));
+            (int dataOff, int dataSize, int bpp, int width, int height, bool tiled)? shape = ReadShape(raw, WidthFor(a, index));
             if (shape == null)
             {
                 whynot = "This drawing is stored in a way DSPRE cannot take apart yet.";
                 return null;
             }
 
-            var (dataOff, dataSize, bpp, width, height, tiled) = shape.Value;
+            (int dataOff, int dataSize, int bpp, int width, int height, bool tiled) = shape.Value;
             if (Scrambled(a, index)) SpriteScrambling.Unscramble(raw, dataOff, dataSize, FromEnd(a));
 
             int pixels = width * height;
-            var idx = new byte[pixels];
+            byte[] idx = new byte[pixels];
 
             if (bpp == 8)
             {
@@ -91,7 +91,7 @@ namespace DSPRE.Avalonia.Data
             // plainly, row after row, and the drawing says which it is. Straighten out only the blocked ones.
             // A drawing a cell places is laid out the way that cell puts its tiles.
             byte[] straight;
-            var pieces = tiled ? PiecesFor(a, narc, index, bpp) : null;
+            List<CellPlacement.Piece> pieces = tiled ? PiecesFor(a, narc, index, bpp) : null;
             if (pieces != null && CellPlacement.Place(idx, pieces, out byte[] placed, out int pw2, out int ph2))
             {
                 straight = placed;
@@ -108,10 +108,10 @@ namespace DSPRE.Avalonia.Data
             if (from < 0 || from >= count) from = 0;
             int have = Math.Min(bankSize, count - from);
 
-            var palette = new uint[have];
+            uint[] palette = new uint[have];
             for (int i = 0; i < have; i++)
             {
-                var c = colours[from + i];
+                (byte r, byte g, byte b) c = colours[from + i];
                 palette[i] = (uint)((i == 0 ? 0x00000000 : 0xFF000000) | (c.r << 16) | (c.g << 8) | c.b);
             }
 
@@ -155,12 +155,12 @@ namespace DSPRE.Avalonia.Data
         private static int SourcePngWidth(Archive a, int index)
         {
             if (!HgEngineProject.IsActive) return 0;
-            var source = HgEngineBuiltPngs.For(HgEngineOwnedFiles.ArchiveOf(a.Dir), index, new ScriptNarc(a.Dir).Count);
+            HgEngineBuiltPngs.Source source = HgEngineBuiltPngs.For(HgEngineOwnedFiles.ArchiveOf(a.Dir), index, new ScriptNarc(a.Dir).Count);
             if (source?.Part != HgEngineBuiltPngs.Part.Pixels || !File.Exists(source.Path)) return 0;
             try
             {
-                using var f = File.OpenRead(source.Path);
-                var head = new byte[24];
+                using FileStream f = File.OpenRead(source.Path);
+                byte[] head = new byte[24];
                 if (f.Read(head, 0, 24) < 24 || head[12] != 'I' || head[13] != 'H' || head[14] != 'D' || head[15] != 'R') return 0;
                 return (head[16] << 24) | (head[17] << 16) | (head[18] << 8) | head[19];
             }
@@ -225,7 +225,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Eight by eight blocks in a row, into a plain left to right picture.</summary>
         private static byte[] Untile(byte[] tiled, int width, int height)
         {
-            var outp = new byte[width * height];
+            byte[] outp = new byte[width * height];
             int across = Math.Max(1, width / 8);
             for (int i = 0; i < tiled.Length && i < outp.Length; i++)
             {
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>A plain picture back into eight by eight blocks.</summary>
         private static byte[] Retile(byte[] straight, int width, int height)
         {
-            var outp = new byte[width * height];
+            byte[] outp = new byte[width * height];
             int across = Math.Max(1, width / 8);
             for (int i = 0; i < outp.Length; i++)
             {
@@ -260,11 +260,11 @@ namespace DSPRE.Avalonia.Data
         {
             // A picture Replace takes as a whole is saved whole too, so the two sizes always agree.
             string whynot = null;
-            var ix = SavedAsWholePicture(a, index) ? null : ReadIndexed(a, index, out whynot);
+            Indexed ix = SavedAsWholePicture(a, index) ? null : ReadIndexed(a, index, out whynot);
             if (ix != null)
             {
                 // Only the colours this drawing is allowed.
-                var allowed = ix.Palette.Length > ix.ColourCount
+                uint[] allowed = ix.Palette.Length > ix.ColourCount
                     ? ix.Palette.Take(ix.ColourCount).ToArray()
                     : ix.Palette;
                 File.WriteAllBytes(path, IndexedPng.Write(ix.Indices, allowed, ix.Width, ix.Height));
@@ -273,26 +273,26 @@ namespace DSPRE.Avalonia.Data
 
             // Not a drawing on its own, but it may still have a picture: a background, a sprite made of
             // pieces, or a set of colours. Save what can be shown.
-            var p = Render(a, index);
+            Preview p = Render(a, index);
             if (p.Rgba == null) return whynot ?? p.Whynot ?? "There is no picture in this entry to save.";
 
             // Replace reads colour 0 as see-through, so clear pixels take it and nothing else does. The
             // rest follow the game's own colour order, keeping the exact colours that were drawn.
-            var gameOrder = new Dictionary<int, int>();
+            Dictionary<int, int> gameOrder = new Dictionary<int, int>();
             try
             {
-                var narc = new ScriptNarc(a.Dir);
+                ScriptNarc narc = new ScriptNarc(a.Dir);
                 byte[] palFile = narc.Available ? FindColours(a, narc, index) : null;
                 int count = 0;
-                var colours = palFile != null ? NitroBgCodec.ReadPalette(Unsqueeze(palFile), out count) : null;
+                (byte r, byte g, byte b)[] colours = palFile != null ? NitroBgCodec.ReadPalette(Unsqueeze(palFile), out count) : null;
                 for (int i = 0; colours != null && i < count && i < colours.Length; i++)
                     gameOrder.TryAdd(Key555(colours[i].r, colours[i].g, colours[i].b), i);
             }
             catch { }
 
             int pixels = p.Width * p.Height;
-            var drawn = new List<uint>();
-            var seen = new HashSet<uint>();
+            List<uint> drawn = new List<uint>();
+            HashSet<uint> seen = new HashSet<uint>();
             for (int i = 0; i < pixels; i++)
             {
                 if (p.Rgba[i * 4 + 3] == 0) continue;
@@ -302,16 +302,16 @@ namespace DSPRE.Avalonia.Data
             if (drawn.Count == 0) return "There is no picture in this entry to save.";
             if (drawn.Count > 255) return $"This picture has {drawn.Count} colours, more than a PNG can number.";
 
-            var ordered = drawn
+            List<uint> ordered = drawn
                 .Select((c, first) => (c, first, at: gameOrder.TryGetValue(Key555((byte)(c >> 16), (byte)(c >> 8), (byte)c), out int g) ? g : int.MaxValue))
                 .OrderBy(t => t.at).ThenBy(t => t.first)
                 .Select(t => t.c)
                 .ToList();
-            var pal = new uint[ordered.Count + 1];
-            var number = new Dictionary<uint, byte>();
+            uint[] pal = new uint[ordered.Count + 1];
+            Dictionary<uint, byte> number = new Dictionary<uint, byte>();
             for (int i = 0; i < ordered.Count; i++) { pal[i + 1] = ordered[i]; number[ordered[i]] = (byte)(i + 1); }
 
-            var idx = new byte[pixels];
+            byte[] idx = new byte[pixels];
             for (int i = 0; i < pixels; i++)
             {
                 if (p.Rgba[i * 4 + 3] == 0) continue;
@@ -329,9 +329,9 @@ namespace DSPRE.Avalonia.Data
         {
             try
             {
-                var narc = new ScriptNarc(a.Dir);
+                ScriptNarc narc = new ScriptNarc(a.Dir);
                 if (!narc.Available) return false;
-                var kind = Identify(narc.Get(index));
+                Kind kind = Identify(narc.Get(index));
                 if (kind == Kind.CellLayout) return true;
                 return kind == Kind.TileGraphic && (a.ArrangementEntry?.Invoke(index) ?? -1) >= 0;
             }
@@ -342,9 +342,9 @@ namespace DSPRE.Avalonia.Data
         /// keep everything about an entry that is not a picture.</summary>
         public static string ExportRaw(Archive a, int index, string path)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
-            var b = narc.Get(index);
+            byte[] b = narc.Get(index);
             if (b == null || b.Length == 0) return "This entry is empty.";
             File.WriteAllBytes(path, b);
             return null;
@@ -373,7 +373,7 @@ namespace DSPRE.Avalonia.Data
             string whole = PutWholePictureBack(a, index, path, out note);
             if (whole != Skipped) return whole;
 
-            var ix = ReadIndexed(a, index, out string whynot);
+            Indexed ix = ReadIndexed(a, index, out string whynot);
             if (ix == null) return whynot ?? "This entry is not a drawing, so a PNG cannot take its place.";
 
             byte[] file;
@@ -407,11 +407,11 @@ namespace DSPRE.Avalonia.Data
         private static string PutWholePictureBack(Archive a, int index, string path, out string note)
         {
             note = null;
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return Skipped;
 
             byte[] raw = narc.Get(index);
-            var kind = Identify(raw);
+            Kind kind = Identify(raw);
 
             bool assembledSprite = kind == Kind.CellLayout;
             bool wholeBackground = false;
@@ -423,7 +423,7 @@ namespace DSPRE.Avalonia.Data
             }
             if (!assembledSprite && !wholeBackground) return Skipped;
 
-            var shown = Render(a, index);
+            Preview shown = Render(a, index);
             if (shown.Rgba == null || shown.Width <= 0)
                 return shown.Whynot ?? "This entry could not be drawn, so nothing can be put back into it.";
 
@@ -440,7 +440,7 @@ namespace DSPRE.Avalonia.Data
 
             // The painter and the browser both work in plain pixels, so turn the PNG's numbers back into
             // colours and let the piece readers work out which numbers those are in each piece's own bank.
-            var painted = Flatten(indices, pal, w, h);
+            byte[] painted = Flatten(indices, pal, w, h);
 
             if (assembledSprite) return PutAssembledBack(a, index, painted, w, h);
 
@@ -463,7 +463,7 @@ namespace DSPRE.Avalonia.Data
         /// by putting a PNG back and by painting.</summary>
         public static string WriteIndices(Archive a, int index, byte[] straightIndices, Indexed ix)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             byte[] storedRaw = narc.Get(index);
             if (storedRaw == null) return "This entry could not be read.";
 
@@ -486,16 +486,16 @@ namespace DSPRE.Avalonia.Data
                 return "This drawing is squeezed down in a way DSPRE cannot put back yet, so nothing was "
                      + "changed.";
 
-            var shape = ReadShape(stored, WidthFor(a, index));
+            (int dataOff, int dataSize, int bpp, int width, int height, bool tiled)? shape = ReadShape(stored, WidthFor(a, index));
             if (shape == null) return "This drawing could not be taken apart, so nothing was changed.";
-            var (dataOff, dataSize, bpp, width, height, isTiled) = shape.Value;
+            (int dataOff, int dataSize, int bpp, int width, int height, bool isTiled) = shape.Value;
 
             byte[] tiled;
-            var pieces = isTiled ? PiecesFor(a, narc, index, bpp) : null;
+            List<CellPlacement.Piece> pieces = isTiled ? PiecesFor(a, narc, index, bpp) : null;
             if (pieces != null)
             {
                 // Start from the tiles as they are, so tiles no piece shows keep their pixels.
-                var current = (byte[])stored.Clone();
+                byte[] current = (byte[])stored.Clone();
                 if (Scrambled(a, index)) SpriteScrambling.Unscramble(current, dataOff, dataSize, FromEnd(a));
                 tiled = new byte[width * height];
                 for (int i = 0; i < tiled.Length; i++)
@@ -510,7 +510,7 @@ namespace DSPRE.Avalonia.Data
                     return "That picture doesn't match the cell this drawing is placed by, so nothing was changed.";
             }
             else tiled = isTiled ? Retile(straightIndices, width, height) : straightIndices;
-            var outp = (byte[])stored.Clone();
+            byte[] outp = (byte[])stored.Clone();
             ushort seed = Scrambled(a, index) ? SpriteScrambling.Seed(stored, dataOff, dataSize, FromEnd(a)) : (ushort)0;
 
             if (bpp == 8)
@@ -529,7 +529,7 @@ namespace DSPRE.Avalonia.Data
 
             if (marker != 0)
             {
-                var packed = Squeeze(outp, marker);
+                byte[] packed = Squeeze(outp, marker);
                 if (packed == null)
                     return "This drawing could not be squeezed back down, so nothing was changed.";
                 outp = packed;
@@ -544,7 +544,7 @@ namespace DSPRE.Avalonia.Data
         /// in these games, so it is left clear.</summary>
         public static byte[] Flatten(byte[] indices, uint[] palette, int width, int height)
         {
-            var rgba = new byte[width * height * 4];
+            byte[] rgba = new byte[width * height * 4];
             for (int i = 0; i < indices.Length && i * 4 + 3 < rgba.Length; i++)
             {
                 byte n = indices[i];
@@ -561,13 +561,13 @@ namespace DSPRE.Avalonia.Data
 
         public static string WritePalette(Archive a, int index, uint[] palette)
         {
-            var narc = new ScriptNarc(a.Dir);
+            ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
 
             // Where in the file this entry's colours start, matching what ReadIndexed took out: a bank is
             // 256 colours for an 8bpp drawing.
             byte[] drawing = narc.Get(index);
-            var shape = drawing != null ? ReadShape(Unsqueeze(drawing), WidthFor(a, index)) : null;
+            (int dataOff, int dataSize, int bpp, int width, int height, bool tiled)? shape = drawing != null ? ReadShape(Unsqueeze(drawing), WidthFor(a, index)) : null;
             int bankSize = shape?.bpp == 8 ? 256 : 16;
             int startAt = (a.ColourBank?.Invoke(index) ?? 0) * bankSize;
 
@@ -576,7 +576,7 @@ namespace DSPRE.Avalonia.Data
             int palIndex = -1;
             if (a.Colours == Pairing.SameIndexInOtherArchive && a.ColourArchive != null)
             {
-                var other = new ScriptNarc(a.ColourArchive.Value);
+                ScriptNarc other = new ScriptNarc(a.ColourArchive.Value);
                 if (!other.Available) return "The colours for this drawing are in an archive this game does not have.";
                 palStored = other.Get(index); palIndex = index;
                 if (palStored == null) return "The colours for this drawing could not be found.";
@@ -619,7 +619,7 @@ namespace DSPRE.Avalonia.Data
             if (palette.Length > room)
                 return $"This entry holds {room} colours here and {palette.Length} were given.";
 
-            var outp = (byte[])nclr.Clone();
+            byte[] outp = (byte[])nclr.Clone();
             for (int i = 0; i < palette.Length; i++)
             {
                 uint c = palette[i];
@@ -630,7 +630,7 @@ namespace DSPRE.Avalonia.Data
             }
             if (marker != 0)
             {
-                var packed = Squeeze(outp, marker);
+                byte[] packed = Squeeze(outp, marker);
                 if (packed == null) return "These colours could not be squeezed back down.";
                 outp = packed;
             }
@@ -647,10 +647,10 @@ namespace DSPRE.Avalonia.Data
 
             if (a.Colours == Pairing.OnePaletteForAll)
             {
-                var first = narc.Get(0);
+                byte[] first = narc.Get(0);
                 return first != null && Identify(first) == Kind.Palette ? 0 : -1;
             }
-            var palettes = PaletteIndexes(a.Dir, narc);
+            List<int> palettes = PaletteIndexes(a.Dir, narc);
             int best = -1, bestGap = int.MaxValue;
             foreach (int i in palettes)
             {

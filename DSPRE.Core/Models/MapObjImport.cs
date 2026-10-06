@@ -30,7 +30,7 @@ namespace DSPRE.Models
                                    out string whynot, out List<string> notes, float drawnAtScale = 64f)
         {
             notes = new List<string>();
-            var obj = ObjMesh.Read(path, out whynot);
+            ObjMesh obj = ObjMesh.Read(path, out whynot);
             if (obj == null) return null;
             notes.AddRange(obj.Notes);
 
@@ -38,25 +38,25 @@ namespace DSPRE.Models
                 ? (p.X, p.Y, p.Z)
                 : (p.X * MapTileset.TileWidth, p.Z * MapTileset.TileWidth, -p.Y * MapTileset.TileWidth);
 
-            var r = new TileBake.Result();
-            foreach (var p in obj.Positions) r.Corners.Add(Place(p));
+            TileBake.Result r = new TileBake.Result();
+            foreach (ObjMesh.Vec3 p in obj.Positions) r.Corners.Add(Place(p));
 
             float reach = r.Corners.Count == 0 ? 0 : r.Corners.Max(c => Math.Max(Math.Abs(c.x), Math.Abs(c.z)));
             if (reach > MapTileset.HalfMap * 1.5f)
                 notes.Add($"Model extends {reach / MapTileset.TileWidth:0} tiles from the centre; check the scale.");
 
-            var unsized = new HashSet<string>();
-            foreach (var face in obj.Faces)
+            HashSet<string> unsized = new HashSet<string>();
+            foreach (ObjMesh.Face face in obj.Faces)
             {
-                var m = face.Material >= 0 && face.Material < obj.Materials.Count ? obj.Materials[face.Material] : null;
+                ObjMesh.Material m = face.Material >= 0 && face.Material < obj.Materials.Count ? obj.Materials[face.Material] : null;
                 string picture = m == null ? "" : m.PictureName ?? m.Name;
-                var (w, h) = sizeOf?.Invoke(picture) ?? (0, 0);
+                (int w, int h) = sizeOf?.Invoke(picture) ?? (0, 0);
                 if (w <= 0 || h <= 0) { unsized.Add(picture); w = h = 1; }
 
                 r.Faces.Add(face.Corners.Select(c => c.Position).ToArray());
                 r.OnPicture.Add(face.Corners.Select(c =>
                 {
-                    var uv = c.TexCoord >= 0 && c.TexCoord < obj.TexCoords.Count ? obj.TexCoords[c.TexCoord] : new ObjMesh.Vec2();
+                    ObjMesh.Vec2 uv = c.TexCoord >= 0 && c.TexCoord < obj.TexCoords.Count ? obj.TexCoords[c.TexCoord] : new ObjMesh.Vec2();
                     return (uv.U * w, uv.V * h);
                 }).ToArray());
                 r.Picture.Add(picture);
@@ -64,13 +64,13 @@ namespace DSPRE.Models
                 r.Look.Add(m?.Look ?? MaterialLook.Plain.WithPictureSize(w, h));
                 r.Light.Add(face.Corners.Select((c, i) =>
                 {
-                    var corner = new MapTileset.Corner();
+                    MapTileset.Corner corner = new MapTileset.Corner();
                     if (face.Colours != null && i < face.Colours.Length) corner.Colour = face.Colours[i];
                     if (face.ColoursLast != null && i < face.ColoursLast.Length) corner.ColourLast = face.ColoursLast[i];
                     if (c.Normal >= 0 && c.Normal < obj.Normals.Count)
                     {
-                        var n = obj.Normals[c.Normal];
-                        var (nx, ny, nz) = measure == Measure.Dspre ? (n.X, n.Y, n.Z) : (n.X, n.Z, -n.Y);
+                        ObjMesh.Vec3 n = obj.Normals[c.Normal];
+                        (float nx, float ny, float nz) = measure == Measure.Dspre ? (n.X, n.Y, n.Z) : (n.X, n.Z, -n.Y);
                         corner.Faces = true; corner.NX = nx; corner.NY = ny; corner.NZ = nz;
                     }
                     return corner;

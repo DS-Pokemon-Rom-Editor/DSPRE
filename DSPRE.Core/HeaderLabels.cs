@@ -19,20 +19,20 @@ namespace DSPRE
             string rom = RomInfo.workDir ?? "";
             if (_friendly != null && _forRom == rom) return _friendly;
 
-            var built = new List<string>();
+            List<string> built = new List<string>();
             bool trusted = false;
             try
             {
-                var internalNames = HeaderLists.GetHeaderListBoxNames();
+                List<string> internalNames = HeaderLists.GetHeaderListBoxNames();
                 if (internalNames == null) return _friendly = built;
 
-                var places = RomInfo.GetLocationNames();
+                List<string> places = RomInfo.GetLocationNames();
                 bool dynamic = DynamicHeaders;
 
                 // The place lookup only answers properly in some games, so it is used only when nearly
                 // every header gives an answer. Half a list of names reads worse than none.
                 int answered = 0;
-                var at = new int[internalNames.Count];
+                int[] at = new int[internalNames.Count];
                 for (int i = 0; i < internalNames.Count; i++)
                 {
                     at[i] = -1;
@@ -68,7 +68,7 @@ namespace DSPRE
             if (header == null) return "";
             try
             {
-                var places = RomInfo.GetLocationNames();
+                List<string> places = RomInfo.GetLocationNames();
                 int at = header switch
                 {
                     HeaderDP dp => dp.locationName,

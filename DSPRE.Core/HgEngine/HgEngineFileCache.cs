@@ -27,7 +27,7 @@ namespace DSPRE.HgEngine
         /// session commits.</summary>
         internal static void WriteText(string path, string text, System.Text.Encoding encoding = null, bool crlf = false, bool keepLostComments = true)
         {
-            var session = HgEngineWriteSession.Current;
+            HgEngineWriteSession session = HgEngineWriteSession.Current;
             bool exists = session?.Holds(path) == true || File.Exists(path);
             bool keepCrlf = crlf || (exists && GetText(path).Contains("\r\n"));
             string lf = text.Replace("\r\n", "\n");
@@ -42,7 +42,7 @@ namespace DSPRE.HgEngine
             // A write no editor asked about keeps what it would delete rather than lose it unseen.
             if (keepLostComments && File.Exists(path))
             {
-                var lost = HgEngineSourceComments.Lost(path, DiskText(path), output);
+                List<HgEngineLostComment> lost = HgEngineSourceComments.Lost(path, DiskText(path), output);
                 if (lost.Count > 0)
                 {
                     AppLogger.Info($"Kept {lost.Count} comment(s) a write would have deleted from {path}.");
@@ -73,8 +73,8 @@ namespace DSPRE.HgEngine
 
         private static string DiskText(string path)
         {
-            var writeTime = File.GetLastWriteTimeUtc(path);
-            if (_cache.TryGetValue(path, out var cached) && cached.WriteTimeUtc == writeTime)
+            DateTime writeTime = File.GetLastWriteTimeUtc(path);
+            if (_cache.TryGetValue(path, out Entry cached) && cached.WriteTimeUtc == writeTime)
                 return cached.Text;
 
             string text = File.ReadAllText(path);

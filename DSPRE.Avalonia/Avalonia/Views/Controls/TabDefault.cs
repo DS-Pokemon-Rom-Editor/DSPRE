@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Views.Controls
         {
             if (tabs == null) return;
             if (tabs.SelectedItem is TabItem shown && shown.IsVisible) return;
-            foreach (var item in tabs.Items)
+            foreach (object item in tabs.Items)
                 if (item is TabItem tab && tab.IsVisible) { tabs.SelectedItem = tab; return; }
         }
     }

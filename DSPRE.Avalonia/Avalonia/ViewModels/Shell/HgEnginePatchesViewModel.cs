@@ -61,7 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public void Undo()
         {
             if (_done.Count == 0) return;
-            var step = _done.Pop();
+            Step step = _done.Pop();
             step.Undo();
             _undone.Push(step);
             Stepped();
@@ -70,7 +70,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         public void Redo()
         {
             if (_undone.Count == 0) return;
-            var step = _undone.Pop();
+            Step step = _undone.Pop();
             step.Redo();
             _done.Push(step);
             Stepped();
@@ -145,7 +145,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             }
 
             _lists = _readAll();
-            foreach (var l in _lists) { ListNames.Add(l.FileName); NewListChoices.Add(l.FileName); }
+            foreach (HgEnginePatchList l in _lists) { ListNames.Add(l.FileName); NewListChoices.Add(l.FileName); }
             if (_lists.Count > 0) _newList = 0;
 
             Rebuild();
@@ -155,13 +155,13 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         {
             Rows.Clear();
 
-            var all = _lists.SelectMany(l => l.Entries.Where(e => e.Parsed).Select(e => (List: l, Entry: e))).ToList();
+            List<(HgEnginePatchList List, HgEnginePatchEntry Entry)> all = _lists.SelectMany(l => l.Entries.Where(e => e.Parsed).Select(e => (List: l, Entry: e))).ToList();
 
             RebuildBinaryChoices(all.Select(x => x.Entry.OverlayNumber).Distinct().OrderBy(n => n).ToList());
 
             int? wanted = BinaryFilter <= 0 ? null : OverlayForChoice(BinaryFilter);
 
-            foreach (var (list, entry) in all
+            foreach ((HgEnginePatchList list, HgEnginePatchEntry entry) in all
                 .Where(x => wanted == null || x.Entry.OverlayNumber == wanted)
                 .OrderBy(x => x.Entry.OverlayNumber).ThenBy(x => x.Entry.Address))
             {
@@ -208,9 +208,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// </summary>
         private void MarkClashes()
         {
-            foreach (var group in Rows.Where(r => r.Offset.Length > 0).GroupBy(r => r.Entry.OverlayNumber))
+            foreach (IGrouping<int, PatchRow> group in Rows.Where(r => r.Offset.Length > 0).GroupBy(r => r.Entry.OverlayNumber))
             {
-                var ordered = group
+                List<(PatchRow Row, long Start, int Len)> ordered = group
                     .Select(r => (Row: r,
                         Start: Convert.ToInt64(r.Offset.Substring(2), 16),
                         Len: int.TryParse(r.Size, out int l) ? l : 0))
@@ -218,8 +218,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
                 for (int i = 1; i < ordered.Count; i++)
                 {
-                    var prev = ordered[i - 1];
-                    var here = ordered[i];
+                    (PatchRow Row, long Start, int Len) prev = ordered[i - 1];
+                    (PatchRow Row, long Start, int Len) here = ordered[i];
                     if (here.Start == prev.Start) continue;
                     if (here.Start >= prev.Start + prev.Len) continue;
 
@@ -240,7 +240,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
                 if (!Set(ref _selectedRow, value)) return;
                 OnPropertyChanged(nameof(HasSelection));
                 if (value == null) return;
-                var e = value.Entry;
+                HgEnginePatchEntry e = value.Entry;
                 int listIndex = _lists.FindIndex(l => l.Entries.Contains(e));
                 if (listIndex >= 0) NewList = listIndex;
                 NewBinary = e.OverlayNumber < 0 ? "arm9" : e.OverlayNumber.ToString("D4");
@@ -281,15 +281,15 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Changes the selected patch to the values in the fields.</summary>
         public string ChangeSelected()
         {
-            var entry = _selectedRow?.Entry;
+            HgEnginePatchEntry entry = _selectedRow?.Entry;
             if (entry == null) return "Pick a patch in the table first.";
-            var list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
+            HgEnginePatchList list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
             if (list == null) return "That patch is no longer in its list.";
-            string why = ReadFields(list.Kind, out int overlay, out long at, out int register, out var bytes);
+            string why = ReadFields(list.Kind, out int overlay, out long at, out int register, out List<byte> bytes);
             if (why != null) return why;
 
-            var before = (entry.Parsed, entry.OverlayNumber, entry.Symbol, entry.Address, entry.Register, entry.Bytes, entry.RawLine, Pending: _pending.Contains(entry));
-            var trial = new HgEnginePatchEntry { Kind = list.Kind, RawLine = entry.RawLine };
+            (bool Parsed, int OverlayNumber, string Symbol, long Address, int Register, IReadOnlyList<byte> Bytes, string RawLine, bool Pending) before = (entry.Parsed, entry.OverlayNumber, entry.Symbol, entry.Address, entry.Register, entry.Bytes, entry.RawLine, Pending: _pending.Contains(entry));
+            HgEnginePatchEntry trial = new HgEnginePatchEntry { Kind = list.Kind, RawLine = entry.RawLine };
             string symbol = NewSymbol?.Trim();
             HgEnginePatchList.Change(trial, overlay, symbol, at, register, bytes);
             string problem = HgEnginePatchList.Problem(trial);
@@ -315,9 +315,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>Takes the selected patch out of its list.</summary>
         public string DeleteSelected()
         {
-            var entry = _selectedRow?.Entry;
+            HgEnginePatchEntry entry = _selectedRow?.Entry;
             if (entry == null) return "Pick a patch in the table first.";
-            var list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
+            HgEnginePatchList list = _lists.FirstOrDefault(l => l.Entries.Contains(entry));
             if (list == null) return "That patch is no longer in its list.";
             int at = list.Entries.IndexOf(entry);
             bool wasPending = _pending.Contains(entry);
@@ -341,7 +341,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (!long.TryParse(address, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long at))
                 return "The address has to be hex, like 02078384.";
 
-            var bytes = new List<byte>();
+            List<byte> bytes = new List<byte>();
             if (list.Kind == HgEnginePatchKind.ByteReplacement)
             {
                 foreach (string token in (NewBytes ?? "").Split((char[])null, StringSplitOptions.RemoveEmptyEntries))
@@ -360,7 +360,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (!HgEnginePatchList.TryParseRegister(list.Kind, NewRegister, out int register, out string registerError))
                 return registerError;
 
-            var added = list.Add(overlay, NewSymbol?.Trim(), at, register, bytes);
+            HgEnginePatchEntry added = list.Add(overlay, NewSymbol?.Trim(), at, register, bytes);
             string problem = HgEnginePatchList.Problem(added);
             list.Entries.Remove(added);
             if (problem != null) return problem;
@@ -378,7 +378,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             if (!IsAvailable) return "No hg-engine checkout is linked.";
             if (_done.Count == 0) return null;
 
-            foreach (var list in _done.Select(s => s.List).Distinct().ToList())
+            foreach (HgEnginePatchList list in _done.Select(s => s.List).Distinct().ToList())
             {
                 if (!list.Save(out string error))
                 {

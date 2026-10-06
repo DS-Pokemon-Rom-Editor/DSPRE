@@ -81,7 +81,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (HgEngineProject.HostIsPosix) return HgEngineShell.Native;
             if (HgEngineProject.IsWslPath(path)) return HgEngineShell.Wsl;
 
-            var choice = await DialogHelper.AskThreeWay(
+            DialogHelper.MsgResult choice = await DialogHelper.AskThreeWay(
                 path + "\n\nThis checkout is on a Windows drive. Which toolchain builds it?\n\n"
                 + "MSYS2 is the setup hg-engine's README describes for Windows, and builds natively.\n\n"
                 + "WSL also works, reaching the folder through /mnt, but make will be noticeably slower.",

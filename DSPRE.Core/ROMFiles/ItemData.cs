@@ -324,11 +324,11 @@ namespace DSPRE.ROMFiles
         /// <summary>Pt and HGSS hold effects, value-indexed. DP has no GiratinaBoost, so its values from 2 on are one lower.</summary>
         public static string[] HoldEffects(GameFamilies family)
         {
-            var names = new string[(int)HoldEffect.EvolveDusclops + 1];
+            string[] names = new string[(int)HoldEffect.EvolveDusclops + 1];
             foreach (HoldEffect e in Enum.GetValues(typeof(HoldEffect))) names[(int)e] = e.ToString();
             if (family != GameFamilies.DP) return names;
             // pokediamond items.h: DIALGA_BOOST 2 through EVOLVE_DUSCLOPS 145.
-            var dp = new string[names.Length - 1];
+            string[] dp = new string[names.Length - 1];
             for (int i = 0; i < dp.Length; i++) dp[i] = names[i < (int)HoldEffect.GiratinaBoost ? i : i + 1];
             return dp;
         }
@@ -353,7 +353,7 @@ namespace DSPRE.ROMFiles
                     return (string[])PtFieldUse.Clone();
                 default:
                     // pokeheartgold sItemFieldUseFuncs.
-                    var names = new string[(int)FieldUseFunc.VSRecorder + 1];
+                    string[] names = new string[(int)FieldUseFunc.VSRecorder + 1];
                     foreach (FieldUseFunc f in Enum.GetValues(typeof(FieldUseFunc))) names[(int)f] = f.ToString();
                     return names;
             }

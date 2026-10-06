@@ -15,7 +15,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Why the table can't be read here, or null.</summary>
         public static string WhyNot(RomInfo.GameTable table, int length)
         {
-            var spot = RomInfo.SpotOf(table);
+            RomInfo.TableSpot? spot = RomInfo.SpotOf(table);
             if (spot == null) return "Only US HeartGold, Platinum (Rev 1) and Diamond are supported.";
             string path = PathOf(spot.Value);
             if (!File.Exists(path)) return $"{Path.GetFileName(path)} is missing from this project.";
@@ -32,7 +32,7 @@ namespace DSPRE.ROMFiles
         {
             string why = WhyNot(table, length);
             if (why != null) throw new InvalidOperationException(why);
-            var spot = RomInfo.SpotOf(table).Value;
+            RomInfo.TableSpot spot = RomInfo.SpotOf(table).Value;
             if (spot.Overlay >= 0 && OverlayUtils.IsCompressed(spot.Overlay)) OverlayUtils.Decompress(spot.Overlay);
             return DSUtils.ReadFromFile(PathOf(spot), spot.Offset, length);
         }
@@ -41,7 +41,7 @@ namespace DSPRE.ROMFiles
         {
             string why = WhyNot(table, data.Length);
             if (why != null) throw new InvalidOperationException(why);
-            var spot = RomInfo.SpotOf(table).Value;
+            RomInfo.TableSpot spot = RomInfo.SpotOf(table).Value;
             if (spot.Overlay >= 0 && OverlayUtils.IsCompressed(spot.Overlay)) OverlayUtils.Decompress(spot.Overlay);
             DSUtils.WriteToFile(PathOf(spot), data, (uint)spot.Offset);
         }

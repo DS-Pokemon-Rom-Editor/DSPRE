@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using static DSPRE.RomInfo;
 
@@ -267,17 +268,17 @@ namespace DSPRE.ROMFiles
                 return;
             }
 
-            using (var file = getFileStream(fileID))
-            using (var copy = new MemoryStream())
+            using (FileStream file = getFileStream(fileID))
+            using (MemoryStream copy = new MemoryStream())
             {
                 file.CopyTo(copy);
                 _read = copy.ToArray();
             }
             _readFull = readFunctions && readActions;
-            using (var fs = new MemoryStream(_read))
+            using (MemoryStream fs = new MemoryStream(_read))
             {
                 // Copy the logic from the Stream constructor
-                var tempScript = new ScriptFile(fs, readFunctions, readActions, fileID);
+                ScriptFile tempScript = new ScriptFile(fs, readFunctions, readActions, fileID);
                 this.allScripts = tempScript.allScripts;
                 this.allFunctions = tempScript.allFunctions;
                 this.allActions = tempScript.allActions;
@@ -317,7 +318,7 @@ namespace DSPRE.ROMFiles
                 return string.Empty;
             }
 
-            var content = new StringBuilder();
+            StringBuilder content = new StringBuilder();
 
             // Header (same style as WritePlainTextFile())
             content.AppendLine("/*");
@@ -360,7 +361,7 @@ namespace DSPRE.ROMFiles
         {
             if (string.IsNullOrWhiteSpace(outputPath)) return;
 
-            var txt = ToPlainText(includeActions);
+            string txt = ToPlainText(includeActions);
             if (string.IsNullOrEmpty(txt)) return;
 
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath));
@@ -394,7 +395,7 @@ namespace DSPRE.ROMFiles
                 return false;
             }
 
-            if (plaintextCache.TryGetValue(txtPath, out var cached))
+            if (plaintextCache.TryGetValue(txtPath, out (DateTime timestamp, ScriptFile cached) cached))
             {
                 if (cached.timestamp == txtTimestamp && cached.cached != null)
                 {
@@ -411,7 +412,7 @@ namespace DSPRE.ROMFiles
 
             if (success)
             {
-                var cacheEntry = new ScriptFile(CloneContainers(this.allScripts), CloneContainers(this.allFunctions),
+                ScriptFile cacheEntry = new ScriptFile(CloneContainers(this.allScripts), CloneContainers(this.allFunctions),
                     CloneActions(this.allActions), fileID);
                 cacheEntry.isLevelScript = this.isLevelScript;
                 plaintextCache[txtPath] = (txtTimestamp, cacheEntry);
@@ -431,7 +432,7 @@ namespace DSPRE.ROMFiles
         private static ScriptCommand CloneCommand(ScriptCommand c)
         {
             if (c == null) return null;
-            var copy = new ScriptCommand(c.name, null, c.id);
+            ScriptCommand copy = new ScriptCommand(c.name, null, c.id);
             copy.cmdParams = c.cmdParams?.Select(p => (byte[])p?.Clone()).ToList();
             return copy;
         }
@@ -484,12 +485,12 @@ namespace DSPRE.ROMFiles
                 ).Trim();
 
                 // Parse each section using existing logic
-                var scriptLines = scriptsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-                var functionLines = functionsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
-                var actionLines = actionsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                string[] scriptLines = scriptsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                string[] functionLines = functionsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+                string[] actionLines = actionsSection.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
 
                 // Use the existing string-based constructor
-                var tempScript = new ScriptFile(scriptLines, functionLines, actionLines, fileID);
+                ScriptFile tempScript = new ScriptFile(scriptLines, functionLines, actionLines, fileID);
 
                 // Check if parsing failed (constructor returns with null lists)
                 if (tempScript.allScripts == null)
@@ -569,7 +570,7 @@ namespace DSPRE.ROMFiles
             if (allScripts != null) containersToUpdate.AddRange(allScripts);
             if (allFunctions != null) containersToUpdate.AddRange(allFunctions);
 
-            foreach (var container in containersToUpdate)
+            foreach (ScriptCommandContainer container in containersToUpdate)
             {
                 // Update UseScript reference
                 if (container.usedScriptID > 0)
@@ -590,12 +591,12 @@ namespace DSPRE.ROMFiles
 
                         if (cmd.cmdParams != null && cmd.id.HasValue)
                     {
-                        var dict = RomInfo.GetScriptCommandInfoDict();
-                        if (dict != null && dict.TryGetValue(cmd.id.Value, out var cmdInfo) && cmdInfo.ParameterTypes != null)
+                            Dictionary<ushort, ScriptCommandInfo> dict = RomInfo.GetScriptCommandInfoDict();
+                        if (dict != null && dict.TryGetValue(cmd.id.Value, out ScriptCommandInfo cmdInfo) && cmdInfo.ParameterTypes != null)
                         {
                             for (int p = 0; p < Math.Min(cmd.cmdParams.Count, cmdInfo.ParameterTypes.Count); p++)
                             {
-                                var paramType = cmdInfo.ParameterTypes[p];
+                                    ScriptParameter.ParameterType paramType = cmdInfo.ParameterTypes[p];
                                 uint oldVal = 0;
                                 
                                 if (cmd.cmdParams[p].Length == 1) oldVal = cmd.cmdParams[p][0];
@@ -856,7 +857,7 @@ namespace DSPRE.ROMFiles
             {
                 try
                 {
-                    var (binPath, txtPath) = GetFilePaths(i);
+                    (string binPath, string txtPath) = GetFilePaths(i);
                     if (!File.Exists(binPath))
                     {
                         progressCallback?.Invoke(i + 1, scriptCount);
@@ -864,7 +865,7 @@ namespace DSPRE.ROMFiles
                     }
 
                     ScriptFile fromBinary;
-                    using (var fs = getFileStream(i))
+                    using (FileStream fs = getFileStream(i))
                         fromBinary = new ScriptFile(fs, true, true, i);
 
                     if (writeExports)
@@ -942,9 +943,9 @@ namespace DSPRE.ROMFiles
             if (!File.Exists(databasePath))
                 return string.Empty;
 
-            using (var md5 = System.Security.Cryptography.MD5.Create())
+            using (MD5 md5 = System.Security.Cryptography.MD5.Create())
             {
-                using (var stream = File.OpenRead(databasePath))
+                using (FileStream stream = File.OpenRead(databasePath))
                 {
                     byte[] hash = md5.ComputeHash(stream);
                     return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
@@ -972,7 +973,7 @@ namespace DSPRE.ROMFiles
 
             if (Directory.Exists(expandedDir))
             {
-                var existingFiles = Directory.GetFiles(expandedDir, "*.script");
+                string[] existingFiles = Directory.GetFiles(expandedDir, "*.script");
                 int scriptCount = Filesystem.GetScriptCount();
 
                 // If we have all script files, check if database has changed
@@ -1107,10 +1108,10 @@ namespace DSPRE.ROMFiles
                 return true;
             }
 
-            var expandedScriptFiles = Directory.GetFiles(expandedDir, "*.script", SearchOption.AllDirectories);
+            string[] expandedScriptFiles = Directory.GetFiles(expandedDir, "*.script", SearchOption.AllDirectories);
             int newerBinCount = 0;
             int rebuiltCount = 0;
-            var failed = new List<string>();
+            List<string> failed = new List<string>();
 
             for (int i = 0; i < expandedScriptFiles.Length; i++)
             {
@@ -1140,7 +1141,7 @@ namespace DSPRE.ROMFiles
 
                 try
                 {
-                    var scriptFile = new ScriptFile(scriptID);
+                    ScriptFile scriptFile = new ScriptFile(scriptID);
                     // Falling back to the binary here would rebuild the old script and then regenerate
                     // the .script from it, throwing the edit away.
                     if (scriptFile.plaintextParseFailed)
@@ -2131,7 +2132,7 @@ namespace DSPRE.ROMFiles
             if (_read == null || !_readFull || id != fileID) return null;
             byte[] now = ToByteArray();
             if (now == null) return null;
-            using var ms = new MemoryStream(_read);
+            using MemoryStream ms = new MemoryStream(_read);
             byte[] asRead = new ScriptFile(ms, true, true, fileID).ToByteArray();
             return asRead != null && now.AsSpan().SequenceEqual(asRead) ? _read : null;
         }

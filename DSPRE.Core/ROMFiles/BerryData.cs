@@ -37,7 +37,7 @@ namespace DSPRE.ROMFiles
 
         public byte[] ToBytes()
         {
-            var data = new byte[Size];
+            byte[] data = new byte[Size];
             BitConverter.GetBytes(SizeMm).CopyTo(data, 0);
             data[2] = FirmnessLevel; data[3] = Yield; data[4] = HoursPerStage; data[5] = Drain;
             Array.Copy(Flavour, 0, data, 6, 5);
@@ -68,7 +68,7 @@ namespace DSPRE.ROMFiles
         public static List<BerryData> LoadAll()
         {
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.berryData });
-            var all = new List<BerryData>();
+            List<BerryData> all = new List<BerryData>();
             for (int b = 0; b < Count; b++) all.Add(new BerryData(File.ReadAllBytes(PathOf(b))));
             return all;
         }

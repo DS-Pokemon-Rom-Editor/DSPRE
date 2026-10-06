@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.Data
             int pltt = Find(pal, "TTLP", 0);
             int palData = pltt >= 0 ? pltt + 0x18 : 0x28;
             palCount = Math.Min(256, (pal.Length - palData) / 2);
-            var colors = new (byte r, byte g, byte b)[Math.Max(256, palCount)];
+            (byte r, byte g, byte b)[] colors = new (byte r, byte g, byte b)[Math.Max(256, palCount)];
             for (int i = 0; i < palCount; i++)
             {
                 int c = U16(pal, palData + i * 2);
@@ -113,13 +113,13 @@ namespace DSPRE.Avalonia.Data
         /// <summary>How many whole tiles a drawing file has room for.</summary>
         public static int TileRoom(byte[] chr)
         {
-            var (is8, at) = ReadTileHeader(chr);
+            (bool is8, int at) = ReadTileHeader(chr);
             return chr == null ? 0 : Math.Max(0, chr.Length - at) / (is8 ? 64 : 32);
         }
 
         private static void ReadNcgrHeader(byte[] chr, out bool is8, out int tileBytes)
         {
-            var head = ReadTileHeader(chr);
+            (bool EightBit, int TilesAt) head = ReadTileHeader(chr);
             is8 = head.EightBit;
             tileBytes = head.TilesAt;
         }
@@ -140,7 +140,7 @@ namespace DSPRE.Avalonia.Data
                     int ci = is8 ? idx : palNo * 16 + idx;
                     if (ci >= palCount) ci = idx;
                     if (ci >= colors.Length) continue;
-                    var (r, g, b) = colors[ci];
+                    (byte r, byte g, byte b) = colors[ci];
                     int dst = ((dstTy * 8 + py) * w + (dstTx * 8 + px)) * 4;
                     rgba[dst] = r; rgba[dst + 1] = g; rgba[dst + 2] = b; rgba[dst + 3] = 255;
                 }
@@ -148,7 +148,7 @@ namespace DSPRE.Avalonia.Data
 
         public static BgImage Composite(byte[] chr, byte[] pal, byte[] scr, bool transparentZero = true)
         {
-            var colors = ReadPalette(pal, out int palCount);
+            (byte r, byte g, byte b)[] colors = ReadPalette(pal, out int palCount);
             return Composite(chr, colors, palCount, scr, transparentZero);
         }
 
@@ -161,10 +161,10 @@ namespace DSPRE.Avalonia.Data
         {
             ReadNcgrHeader(chr, out bool is8, out int tileBytes);
 
-            var (w, h, mapData) = ReadScreenHeader(scr);
+            (int w, int h, int mapData) = ReadScreenHeader(scr);
             int entryBytes = EntryBytes(scr);
 
-            var rgba = new byte[w * h * 4];
+            byte[] rgba = new byte[w * h * 4];
             int cols = w / 8, rows = h / 8;
             for (int ty = 0; ty < rows; ty++)
                 for (int tx = 0; tx < cols; tx++)

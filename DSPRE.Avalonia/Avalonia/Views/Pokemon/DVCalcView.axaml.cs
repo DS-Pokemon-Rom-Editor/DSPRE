@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia.ViewModels;
@@ -24,9 +25,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async System.Threading.Tasks.Task OpenViewer(object sender, bool highestOnly)
         {
             if (VM == null || (sender as Control)?.DataContext is not DVCalcSlotViewModel slot) return;
-            var triplets = VM.GenerateTriplets(slot.Index, highestOnly);
-            var dlgVm = new DVCalcNatureViewerViewModel(triplets);
-            var dlg = new DVCalcNatureViewerView(dlgVm);
+            List<DVIVNatureTriplet> triplets = VM.GenerateTriplets(slot.Index, highestOnly);
+            DVCalcNatureViewerViewModel dlgVm = new DVCalcNatureViewerViewModel(triplets);
+            DVCalcNatureViewerView dlg = new DVCalcNatureViewerView(dlgVm);
             await dlg.ShowDialog(this);
             if (dlgVm.SelectedDV >= 0) slot.DV = dlgVm.SelectedDV;
         }

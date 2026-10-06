@@ -28,7 +28,7 @@ namespace DSPRE.ROMFiles
             byte[] members = TryRead(GameTable.TypeIconMembers, IconCount * 4);
             if (banks == null || kinds == null || members == null) return null;
             if (Array.Exists(banks, b => b >= PaletteBanks) || Array.Exists(kinds, b => b >= PaletteBanks)) return null;
-            var ids = new uint[IconCount];
+            uint[] ids = new uint[IconCount];
             for (int i = 0; i < IconCount; i++) ids[i] = BitConverter.ToUInt32(members, i * 4);
             return new IconTables { TypeBanks = banks, CategoryBanks = kinds, TypeMembers = ids };
         }
@@ -39,7 +39,7 @@ namespace DSPRE.ROMFiles
             if (type < 0 || type >= TypeCount) return null;
             try
             {
-                var spot = SpotOf(GameTable.MoveTypeButtonPalettes);
+                TableSpot? spot = SpotOf(GameTable.MoveTypeButtonPalettes);
                 if (spot == null || GameTableFile.WhyNot(GameTable.MoveTypeButtonPalettes, TypeCount * 4) != null) return null;
                 // A preview must not rewrite the project, so a still-compressed overlay is not unpacked here.
                 if (spot.Value.Overlay >= 0 && OverlayUtils.IsStillCompressed(spot.Value.Overlay)) return null;
@@ -50,7 +50,7 @@ namespace DSPRE.ROMFiles
                 long at = (long)pointer - ramBase;
                 if ((pointer & 1) != 0 || at < 0 || at + 32 > file.Length) return null;
 
-                var colours = new ushort[16];
+                ushort[] colours = new ushort[16];
                 for (int i = 0; i < 16; i++) colours[i] = BitConverter.ToUInt16(file, (int)at + i * 2);
                 return colours;
             }

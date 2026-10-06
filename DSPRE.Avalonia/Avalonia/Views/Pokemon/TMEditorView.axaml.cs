@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public TMEditorView()
         {
             AvaloniaXamlLoader.Load(this);
-            var vm = new TMEditorViewModel();
+            TMEditorViewModel vm = new TMEditorViewModel();
             DataContext = vm;
             // VM owns the bound Title (+ "*" marker); chrome adds Ctrl+S + the close guard.
             EditorWindowChrome.Attach(this, vm, manageTitle: false, onClosed: vm.Detach);

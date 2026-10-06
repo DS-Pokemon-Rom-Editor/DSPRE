@@ -44,23 +44,23 @@ namespace DSPRE.Editors
         /// <summary>Rewrites the descriptions of machines whose move changed.</summary>
         public static Result Update(IReadOnlyList<(int Machine, int OldMove, int NewMove)> changes)
         {
-            var result = new Result();
+            Result result = new Result();
             if (changes.Count == 0 || WhyNot() != null) return result;
 
-            var banks = new Dictionary<int, EditableTextBank>();
-            EditableTextBank BankOf(int id) => banks.TryGetValue(id, out var b) ? b : banks[id] = new EditableTextBank(id);
-            var moveDescriptions = new TextArchive(RomInfo.moveDescriptionsTextNumbers).messages;
+            Dictionary<int, EditableTextBank> banks = new Dictionary<int, EditableTextBank>();
+            EditableTextBank BankOf(int id) => banks.TryGetValue(id, out EditableTextBank b) ? b : banks[id] = new EditableTextBank(id);
+            List<string> moveDescriptions = new TextArchive(RomInfo.moveDescriptionsTextNumbers).messages;
             string[] moveNames = RomInfo.GetAttackNames();
-            var layout = Layout(BankOf);
-            var font = FieldFont.LoadSystemFont();
-            var touched = new HashSet<int>();
+            (int Width, int Lines) layout = Layout(BankOf);
+            FieldFont font = FieldFont.LoadSystemFont();
+            HashSet<int> touched = new HashSet<int>();
 
-            foreach (var (machine, oldMove, newMove) in changes)
+            foreach ((int machine, int oldMove, int newMove) in changes)
             {
                 int item = TMEditor.MachineItemId(machine);
                 string label = TMEditor.MachineLabelFromIndex(machine);
                 if (oldMove == newMove || !TryLocate(item, out int bankId, out int line)) continue;
-                var descriptions = BankOf(bankId);
+                EditableTextBank descriptions = BankOf(bankId);
                 if (descriptions.ReadOnlyReason != null || line >= descriptions.Messages.Count) { result.Kept.Add(label); continue; }
                 string now = Flat(descriptions.Messages[line]);
                 string next = null;
@@ -85,12 +85,12 @@ namespace DSPRE.Editors
         /// <summary>The widest line and most lines any vanilla TM description uses, so rewrapped text fits the same box.</summary>
         private static (int Width, int Lines) Layout(Func<int, EditableTextBank> bankOf)
         {
-            var font = FieldFont.LoadSystemFont();
+            FieldFont font = FieldFont.LoadSystemFont();
             int width = 0, lines = 0;
             for (int i = 0; i < TMEditor.VanillaMachineCount; i++)
             {
                 if (!TryLocate(TMEditor.MachineItemId(i), out int bank, out int line)) continue;
-                var descriptions = bankOf(bank).Messages;
+                List<string> descriptions = bankOf(bank).Messages;
                 if (line >= descriptions.Count) continue;
                 string[] parts = Lines(descriptions[line]);
                 lines = Math.Max(lines, parts.Length);
@@ -102,7 +102,7 @@ namespace DSPRE.Editors
         /// <summary>Greedy word wrap by the font's letter widths; null when it needs more lines than the box has.</summary>
         public static string Wrap(string text, int width, int maxLines, FieldFont font)
         {
-            var lines = new List<string>();
+            List<string> lines = new List<string>();
             string line = "";
             foreach (string word in Flat(text).Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {

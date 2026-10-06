@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 
 namespace DSPRE.Avalonia
@@ -29,14 +30,14 @@ namespace DSPRE.Avalonia
         /// <summary>State that isn't already bytes, written field by field.</summary>
         public static byte[] Pack(Action<System.IO.BinaryWriter> write)
         {
-            using var ms = new System.IO.MemoryStream();
-            using (var w = new System.IO.BinaryWriter(ms)) write(w);
+            using MemoryStream ms = new System.IO.MemoryStream();
+            using (BinaryWriter w = new System.IO.BinaryWriter(ms)) write(w);
             return ms.ToArray();
         }
 
         public static void Unpack(byte[] state, Action<System.IO.BinaryReader> read)
         {
-            using var r = new System.IO.BinaryReader(new System.IO.MemoryStream(state));
+            using BinaryReader r = new System.IO.BinaryReader(new System.IO.MemoryStream(state));
             read(r);
         }
 

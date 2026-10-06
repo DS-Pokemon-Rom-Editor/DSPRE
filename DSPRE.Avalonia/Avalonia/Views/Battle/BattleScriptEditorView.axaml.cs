@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.Views.Battle
         private void EditParticles_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null || sender is not Button button) return;
-            var files = VM.ParticleFilesOfMove();
+            IReadOnlyList<(int File, bool Orthographic)> files = VM.ParticleFilesOfMove();
             string move = $"Move {VM.FileIndex}";
             void Open((int File, bool Orthographic) f) => AvaloniaEditorLauncher.OpenParticleEditor(
                 RomInfo.DirNames.wazaParticle, f.File, $"{move}, particle file {f.File}", null, f.Orthographic);
@@ -36,10 +36,10 @@ namespace DSPRE.Avalonia.Views.Battle
                 return;
             }
             if (files.Count == 1) { Open(files[0]); return; }
-            var menu = new MenuFlyout();
-            foreach (var f in files)
+            MenuFlyout menu = new MenuFlyout();
+            foreach ((int File, bool Orthographic) f in files)
             {
-                var item = new MenuItem { Header = $"Particle file {f.File}" };
+                MenuItem item = new MenuItem { Header = $"Particle file {f.File}" };
                 item.Click += (_, _) => Open(f);
                 menu.Items.Add(item);
             }
@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Views.Battle
 
         private void HookVm()
         {
-            var vm = VM;
+            BattleScriptEditorViewModel vm = VM;
             if (ReferenceEquals(vm, _hookedVm)) return;
             if (_hookedVm != null) _hookedVm.PropertyChanged -= OnVmChanged;
             _hookedVm = vm;
@@ -95,8 +95,8 @@ namespace DSPRE.Avalonia.Views.Battle
         private void RefreshSquiggles()
         {
             if (!_editorReady || VM == null) return;
-            var errs = new List<(int, int)>();
-            foreach (var er in VM.TextErrors) errs.Add((er.Offset, er.Length));
+            List<(int, int)> errs = new List<(int, int)>();
+            foreach (BattleScriptEditorViewModel.TextError er in VM.TextErrors) errs.Add((er.Offset, er.Length));
             _squiggles.SetErrors(errs);
             CommandsTextEditor.TextArea.TextView.InvalidateVisual();
         }
@@ -131,9 +131,9 @@ namespace DSPRE.Avalonia.Views.Battle
             string error = p.PreviewSound();
             if (error != null) await DSPRE.Avalonia.DialogHelper.ShowError(error, "Couldn't play sound");
         }
-        private void Up_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveCommand(r, -1); }
-        private void Down_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.MoveCommand(r, 1); }
-        private void Remove_Click(object sender, RoutedEventArgs e) { var r = Row(sender); if (r != null) VM?.RemoveCommand(r); }
+        private void Up_Click(object sender, RoutedEventArgs e) { ScriptCmdRow r = Row(sender); if (r != null) VM?.MoveCommand(r, -1); }
+        private void Down_Click(object sender, RoutedEventArgs e) { ScriptCmdRow r = Row(sender); if (r != null) VM?.MoveCommand(r, 1); }
+        private void Remove_Click(object sender, RoutedEventArgs e) { ScriptCmdRow r = Row(sender); if (r != null) VM?.RemoveCommand(r); }
         private void PlayCell_Click(object sender, RoutedEventArgs e) => VM?.ToggleCellPlay();
     }
 }

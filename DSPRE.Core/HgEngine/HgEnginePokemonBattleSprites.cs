@@ -17,13 +17,13 @@ namespace DSPRE.HgEngine
         {
             if (!HgEngineProject.IsLinked) return null;
 
-            var map = LoadMap();
+            Dictionary<int, string[]> map = LoadMap();
             if (map == null) return null;
 
             int lookupId = HgEngineSpeciesExpansion.AdjustForPokegraMkLookup(speciesId);
             if (lookupId < 0 || !map.TryGetValue(lookupId, out string[] relPaths)) return null;
 
-            var full = new string[4];
+            string[] full = new string[4];
             for (int i = 0; i < 4; i++)
             {
                 full[i] = Path.Combine(HgEngineProject.RepoPathUnc, relPaths[i].Replace('/', Path.DirectorySeparatorChar));
@@ -40,7 +40,7 @@ namespace DSPRE.HgEngine
             string path = Path.Combine(repo, PokegraMkRelPath.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) return null;
 
-            var map = ParseMap(File.ReadAllText(path));
+            Dictionary<int, string[]> map = ParseMap(File.ReadAllText(path));
             _cache = map;
             _cachedForRepo = repo;
             return map;
@@ -49,7 +49,7 @@ namespace DSPRE.HgEngine
         /// <summary>Matches "build/pokemonpic/0001-0N.NCGR: .../female|male/back|front.png" rule lines (N = 0..3).</summary>
         internal static Dictionary<int, string[]> ParseMap(string pokegraMkText)
         {
-            var map = new Dictionary<int, string[]>();
+            Dictionary<int, string[]> map = new Dictionary<int, string[]>();
             foreach (Match m in Regex.Matches(pokegraMkText,
                 @"build/pokemonpic/(\d+)-0([0-3])\.NCGR:\s*(data/graphics/sprites/[^\s]+\.png)"))
             {

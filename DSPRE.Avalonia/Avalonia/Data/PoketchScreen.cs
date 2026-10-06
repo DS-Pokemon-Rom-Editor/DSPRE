@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace DSPRE.Avalonia.Data
 {
@@ -44,9 +45,9 @@ namespace DSPRE.Avalonia.Data
             try
             {
                 if (RomInfo.gameFamily != RomInfo.GameFamilies.Plat && RomInfo.gameFamily != RomInfo.GameFamilies.DP) return null;
-                var narc = new ScriptNarc(RomInfo.DirNames.poketch);
+                ScriptNarc narc = new ScriptNarc(RomInfo.DirNames.poketch);
                 if (!narc.Available) return null;
-                var cache = new byte[narc.Count][];
+                byte[][] cache = new byte[narc.Count][];
                 return new PoketchScreen(i =>
                 {
                     if (i < 0 || i >= cache.Length) return null;
@@ -59,10 +60,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The Poké Ball picture shown until the player is given a Pokétch.</summary>
         public byte[] RenderUnavailable()
         {
-            var s = new DsBgScreen();
+            DsBgScreen s = new DsBgScreen();
             s.InitLayer(0, 0, 0);
             s.LoadTiles(0, _member(UnavailableTiles));
-            var (w, map) = DsBgScreen.ReadMap(_member(UnavailableMap));
+            (int w, ushort[] map) = DsBgScreen.ReadMap(_member(UnavailableMap));
             s.LoadMap(0, map, w);
             s.SetPalette(0, DsBgScreen.ReadColours(_member(UnavailablePalette)));
             return s.Render();
@@ -74,30 +75,30 @@ namespace DSPRE.Avalonia.Data
         /// <param name="backlight">Lit while the watch face is held.</param>
         public byte[] RenderWatch(bool female, int theme, bool backlight, int hour, int minute, Look up, Look down)
         {
-            var s = new DsBgScreen();
+            DsBgScreen s = new DsBgScreen();
 
             // BG0 the casing, BG1 solid round a see-through window over the watch face, BG2 the watch.
             s.InitLayer(0, 0, BoardCharBase);
             s.InitLayer(1, 1, BoardCharBase);
             s.InitLayer(2, 2, 0);
             s.LoadTiles(BoardCharBase, _member(BorderTiles), BoardTileOffset);
-            var (bw, board) = DsBgScreen.ReadMap(_member(BorderMap));
+            (int bw, ushort[] board) = DsBgScreen.ReadMap(_member(BorderMap));
             s.LoadMap(0, board, bw);
             s.SetPalette(15, DsBgScreen.ReadColours(_member(BorderPalettes)), (female ? 0 : 1) * 16);
             s.Fill(1, BoardTileOffset + SolidTile, 0, 0, DsBgScreen.MapSide, 24, 15);
             s.Fill(1, BoardTileOffset, 2, 2, 24, 20, 15);
 
             s.LoadTiles(0, _member(WatchTiles));
-            var (ww, watch) = DsBgScreen.ReadMap(_member(WatchMap));
+            (int ww, ushort[] watch) = DsBgScreen.ReadMap(_member(WatchMap));
             s.LoadMap(2, watch, ww);
-            var themes = DsBgScreen.ReadColours(_member(ThemePalettes));
+            ushort[] themes = DsBgScreen.ReadColours(_member(ThemePalettes));
             int palettes = Math.Max(1, themes.Length / 32);
             s.SetPalette(0, themes, Math.Clamp(theme, 0, palettes - 1) * 32 + (backlight ? 16 : 0));
 
-            var digits = DigitStrip(DsBgScreen.ReadMap(_member(WatchDigits)).Entries);
+            ushort[] digits = DigitStrip(DsBgScreen.ReadMap(_member(WatchDigits)).Entries);
             hour = Math.Clamp(hour, 0, 23);
             minute = Math.Clamp(minute, 0, 59);
-            foreach (var (x, d) in new[] { (3, hour / 10), (8, hour % 10), (15, minute / 10), (20, minute % 10) })
+            foreach ((int x, int d) in new[] { (3, hour / 10), (8, hour % 10), (15, minute / 10), (20, minute % 10) })
                 s.Copy(2, x, 7, 4, 9, digits, 4 * d, 0, DigitStripWidth);
 
             if (RomInfo.gameFamily == RomInfo.GameFamilies.DP)
@@ -152,14 +153,14 @@ namespace DSPRE.Avalonia.Data
                                 (int X, int Y, int W, int H, int Colour)[] fills = null,
                                 Motion? motion = null, int bgLayer = 2)
         {
-            var s = new DsBgScreen();
+            DsBgScreen s = new DsBgScreen();
             int layer = bgLayer == 3 ? 3 : 2;
 
             s.InitLayer(0, 0, BoardCharBase);
             s.InitLayer(1, 1, BoardCharBase);
             s.InitLayer(layer, layer, 0);
             s.LoadTiles(BoardCharBase, _member(BorderTiles), BoardTileOffset);
-            var (bw, board) = DsBgScreen.ReadMap(_member(BorderMap));
+            (int bw, ushort[] board) = DsBgScreen.ReadMap(_member(BorderMap));
             s.LoadMap(0, board, bw);
             s.SetPalette(15, DsBgScreen.ReadColours(_member(BorderPalettes)), (female ? 0 : 1) * 16);
             s.Fill(1, BoardTileOffset + SolidTile, 0, 0, DsBgScreen.MapSide, 24, 15);
@@ -170,10 +171,10 @@ namespace DSPRE.Avalonia.Data
                 s.LoadTiles(0, _member(tiles));
                 if (arrangement >= 0)
                 {
-                    var (aw, map) = DsBgScreen.ReadMap(_member(arrangement));
+                    (int aw, ushort[] map) = DsBgScreen.ReadMap(_member(arrangement));
                     s.LoadMap(layer, map, aw);
                 }
-                var themes = DsBgScreen.ReadColours(_member(ThemePalettes));
+                ushort[] themes = DsBgScreen.ReadColours(_member(ThemePalettes));
                 int rows = Math.Max(1, themes.Length / 16);
                 int row = Math.Clamp(theme * 2 + (backlight ? 1 : 0), 0, rows - 1);
                 s.SetPalette(0, themes, row * 16);
@@ -181,7 +182,7 @@ namespace DSPRE.Avalonia.Data
 
             byte[] rgba = s.Render();
 
-            var palette = DsBgScreen.ReadColours(_member(ThemePalettes));
+            ushort[] palette = DsBgScreen.ReadColours(_member(ThemePalettes));
             int paletteRows = Math.Max(1, palette.Length / 16);
             ushort[] colours = DsBgScreen.Row(
                 palette, Math.Clamp(theme * 2 + (backlight ? 1 : 0), 0, paletteRows - 1));
@@ -189,7 +190,7 @@ namespace DSPRE.Avalonia.Data
             // The parts a running game fills in: a health bar, a blank note page. Flat rectangles in the
             // theme's own colours, drawn under the sprites the same way the game draws them.
             if (fills != null)
-                foreach (var (fx, fy, fw, fh, index) in fills)
+                foreach ((int fx, int fy, int fw, int fh, int index) in fills)
                 {
                     uint argb = Argb(colours, index);
                     for (int y = fy; y < fy + fh; y++)
@@ -209,17 +210,17 @@ namespace DSPRE.Avalonia.Data
             // in the middle of the window for the ones that are not.
             if (sprites >= 0 && cells >= 0)
             {
-                var banks = DsBgScreen.ReadCells(_member(cells));
+                List<DsBgScreen.Oam[]> banks = DsBgScreen.ReadCells(_member(cells));
                 if (banks.Count > 0)
                 {
-                    var chars = DsBgScreen.ReadCharacters(_member(sprites));
-                    var cell = banks[Math.Clamp(bank, 0, banks.Count - 1)];
+                    byte[] chars = DsBgScreen.ReadCharacters(_member(sprites));
+                    DsBgScreen.Oam[] cell = banks[Math.Clamp(bank, 0, banks.Count - 1)];
                     // Only where the game's own table says. Drawing a sprite in the middle of the window
                     // because its real place is unknown looks right and is wrong, which is worse than
                     // leaving it out.
-                    var m = motion ?? Motion.Still;
+                    Motion m = motion ?? Motion.Still;
                     if (slots != null)
-                        foreach (var (sx, sy) in slots)
+                        foreach ((int sx, int sy) in slots)
                         {
                             if (m.Moves)
                                 DsBgScreen.DrawCellTurned(rgba, cell, chars, _ => colours,
@@ -262,7 +263,7 @@ namespace DSPRE.Avalonia.Data
         // The file keeps digits 0 to 7 as nine rows of 32 entries, then 8 and 9 as nine rows of 8.
         private static ushort[] DigitStrip(ushort[] raw)
         {
-            var strip = new ushort[DigitStripWidth * 9];
+            ushort[] strip = new ushort[DigitStripWidth * 9];
             for (int row = 0; row < 9; row++)
                 for (int col = 0; col < DigitStripWidth; col++)
                 {
@@ -275,7 +276,7 @@ namespace DSPRE.Avalonia.Data
         // A button is 4 by 8 tiles built from six source rows, one of them repeated over rows start to end.
         private static ushort[] ButtonBlock(int baseTile, int stretchStart, int stretchEnd)
         {
-            var block = new ushort[4 * 8];
+            ushort[] block = new ushort[4 * 8];
             int row = 0;
             for (int y = 0; y < 8; y++)
             {
@@ -291,7 +292,7 @@ namespace DSPRE.Avalonia.Data
         {
             const int SheetWidth = 21;
             int[] sourceRow = { 0, 1, 2, 2, 2, 2, 2, 2, 2, 3, 4 };
-            var block = new ushort[4 * 11];
+            ushort[] block = new ushort[4 * 11];
             for (int y = 0; y < 11; y++)
                 for (int x = 0; x < 4; x++)
                     block[y * 4 + x] = (ushort)((15 << 12) | (BoardTileOffset + baseTile + sourceRow[y] * SheetWidth + x));

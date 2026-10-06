@@ -41,14 +41,14 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             if (VM == null) return;
 
-            var dlgVm = new CopyMachinesDialogViewModel(
+            CopyMachinesDialogViewModel dlgVm = new CopyMachinesDialogViewModel(
                 PokemonNamesFromTree(),
                 VM.FamilyGroups,
                 VM.SingleSelectedSpeciesId,
                 VM.GetSpeciesLabel);
 
-            var dlg = new CopyMachinesDialogView(dlgVm);
-            var owner = TopLevel.GetTopLevel(this) as Window;
+            CopyMachinesDialogView dlg = new CopyMachinesDialogView(dlgVm);
+            Window owner = TopLevel.GetTopLevel(this) as Window;
             if (owner != null) await dlg.ShowDialog(owner); else dlg.Show();
 
             if (!dlgVm.Confirmed || dlgVm.SelectedTargetIds.Count == 0) return;

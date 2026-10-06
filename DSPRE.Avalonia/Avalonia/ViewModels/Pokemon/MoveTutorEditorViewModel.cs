@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int pool = _data.PoolBytes().Length;
             _data.Restore(b[..pool], b[pool..]);
             _tutorNames = null;
-            foreach (var row in Pool) row.Refresh();
+            foreach (PoolRow row in Pool) row.Refresh();
             ShowSpecies(); ShowTutor();
             Changed(true);
         }
@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             internal void Refresh()
             {
-                foreach (var n in new[] { nameof(Move), nameof(Where), nameof(Cost0), nameof(Cost1), nameof(Cost2), nameof(Cost3) })
+                foreach (string n in new[] { nameof(Move), nameof(Where), nameof(Cost0), nameof(Cost1), nameof(Cost2), nameof(Cost3) })
                     PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
             }
         }
@@ -199,7 +199,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SpeciesOfMove.Clear();
             if (_data == null || _tutor < 0) return;
             int tutor = _tutor;
-            foreach (var (name, row) in Species)
+            foreach ((string name, int row) in Species)
             {
                 int r = row;
                 SpeciesOfMove.Add(new CheckRow(name, () => _data.Learns(r, tutor), v => { _data.SetLearns(r, tutor, v); Changed(false); }));
@@ -229,7 +229,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Move Tutors"); return false; }
             if (_data.FromSource)
             {
-                var (saved, error) = await HgEngineSave.RunAsync(() => { _data.Save(MoveNames.Length); return null; });
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => { _data.Save(MoveNames.Length); return null; });
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError("The move tutors were not saved:\n" + error, "Move Tutors");
@@ -265,7 +265,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _savedPool = _data.PoolBytes();
             _savedMasks = _data.MaskBytes();
             StartUndo();
-            foreach (var row in Pool) row.Refresh();
+            foreach (PoolRow row in Pool) row.Refresh();
             ShowSpecies(); ShowTutor();
             Changed(true);
         }

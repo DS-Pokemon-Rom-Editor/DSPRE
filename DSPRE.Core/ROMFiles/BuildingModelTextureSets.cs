@@ -29,7 +29,7 @@ namespace DSPRE.ROMFiles
             if (required > data.Length)
                 throw new InvalidDataException($"The building model list says it has {count} entries, but only {data.Length} bytes exist.");
 
-            var result = new int[count];
+            int[] result = new int[count];
             for (int i = 0; i < count; i++)
                 result[i] = data[2 + i * 2] | data[3 + i * 2] << 8;
             return result;
@@ -48,16 +48,16 @@ namespace DSPRE.ROMFiles
                 DirNames.areaData, DirNames.buildingConfigFiles, DirNames.buildingTextures,
             });
 
-            var areas = new Dictionary<(int set, bool indoor), List<int>>();
+            Dictionary<(int set, bool indoor), List<int>> areas = new Dictionary<(int set, bool indoor), List<int>>();
             foreach (string path in NumberedFiles(gameDirs[DirNames.areaData].unpackedDir))
             {
                 if (!TryFileId(path, out int areaId)) continue;
                 try
                 {
-                    using var input = File.OpenRead(path);
-                    var area = new AreaData(input);
-                    var key = ((int)area.buildingsTileset, area.IsIndoor);
-                    if (!areas.TryGetValue(key, out var ids)) areas[key] = ids = new List<int>();
+                    using FileStream input = File.OpenRead(path);
+                    AreaData area = new AreaData(input);
+                    (int, bool IsIndoor) key = ((int)area.buildingsTileset, area.IsIndoor);
+                    if (!areas.TryGetValue(key, out List<int> ids)) areas[key] = ids = new List<int>();
                     ids.Add(areaId);
                 }
                 catch (Exception ex)
@@ -66,7 +66,7 @@ namespace DSPRE.ROMFiles
                 }
             }
 
-            var result = new List<BuildingModelTextureSet>();
+            List<BuildingModelTextureSet> result = new List<BuildingModelTextureSet>();
             foreach (string path in NumberedFiles(gameDirs[DirNames.buildingConfigFiles].unpackedDir))
             {
                 if (!TryFileId(path, out int setId)) continue;
@@ -78,7 +78,7 @@ namespace DSPRE.ROMFiles
                     continue;
                 }
 
-                foreach (var use in areas.Where(a => a.Key.set == setId))
+                foreach (KeyValuePair<(int set, bool indoor), List<int>> use in areas.Where(a => a.Key.set == setId))
                     result.Add(new BuildingModelTextureSet
                     {
                         TextureSetId = setId,
