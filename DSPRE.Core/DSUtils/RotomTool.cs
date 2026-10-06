@@ -46,6 +46,8 @@ namespace DSPRE
                 {
                     Stage(RomInfo.arm9Path, Path.Combine(ProjectRoot, "arm9.bin"), staged);
                     Stage(Path.Combine(RomInfo.HgEngineDsRomMetaDir, "config.yaml"), Path.Combine(ProjectRoot, "config.yaml"), staged);
+                    // rotom reads the game from header.yaml, which config.yaml points at.
+                    Stage(Path.Combine(RomInfo.HgEngineDsRomMetaDir, "header.yaml"), Path.Combine(ProjectRoot, "header.yaml"), staged);
                 }
                 Result result = await RunAsync("init", "--non-interactive").ConfigureAwait(false);
                 if (result.Success) DSPRE.ROMFiles.RotomDatabaseUpdate.OverlayHgEngineFlags();
