@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Collections.Generic;
 using static DSPRE.RomInfo;
 
@@ -196,11 +197,15 @@ namespace DSPRE.Avalonia.Data
             ushort[] logoMapEntries = new ushort[LogoRealMapCols * LogoRealMapRows];
             Array.Copy(logo.MapEntries, logoMapEntries, logo.MapEntries.Length);
 
-            WritePalette(palRaw, palette);
-            WriteTileData(logoChrRaw, logo.TileData);
-            WriteMapData(logoScrRaw, logoMapEntries);
-            WriteTileData(bgChrRaw, shiftedBgTileData);
-            WriteMapData(bgScrRaw, background.MapEntries);
+            try
+            {
+                WritePalette(palRaw, palette);
+                WriteTileData(logoChrRaw, logo.TileData);
+                WriteMapData(logoScrRaw, logoMapEntries);
+                WriteTileData(bgChrRaw, shiftedBgTileData);
+                WriteMapData(bgScrRaw, background.MapEntries);
+            }
+            catch (InvalidDataException ex) { return ex.Message; }
 
             _narc.Put(members.palette, palRaw);
             _narc.Put(members.logo, logoChrRaw);
@@ -237,9 +242,13 @@ namespace DSPRE.Avalonia.Data
             (byte r, byte g, byte b)[] palette = new (byte r, byte g, byte b)[16];
             for (int i = 0; i < encoded.Colors.Count; i++) palette[1 + i] = encoded.Colors[i];
 
-            WritePalette(palRaw, palette); // only the first 16-colour bank; the rest of the file is untouched
-            WriteTileData(chrRaw, encoded.TileData);
-            WriteMapData(scrRaw, encoded.MapEntries);
+            try
+            {
+                WritePalette(palRaw, palette); // only the first 16-colour bank; the rest of the file is untouched
+                WriteTileData(chrRaw, encoded.TileData);
+                WriteMapData(scrRaw, encoded.MapEntries);
+            }
+            catch (InvalidDataException ex) { return ex.Message; }
 
             _narc.Put(m.nclr, palRaw);
             _narc.Put(m.ncgr, chrRaw);
@@ -367,6 +376,7 @@ namespace DSPRE.Avalonia.Data
         private static void WritePalette(byte[] palRaw, (byte r, byte g, byte b)[] palette)
         {
             int pltt = NitroBgCodec.Find(palRaw, "TTLP", 0);
+            if (pltt < 0) throw new InvalidDataException("The colour file has no palette block.");
             int dataOffset = pltt + 0x18;
             for (int i = 0; i < palette.Length && dataOffset + i * 2 + 1 < palRaw.Length; i++)
             {
@@ -380,6 +390,8 @@ namespace DSPRE.Avalonia.Data
         private static void WriteTileData(byte[] memberRaw, byte[] tiles)
         {
             int tileBytesOffset = NitroBgCodec.ReadTileHeader(memberRaw).TilesAt;
+            if (tileBytesOffset < 0 || tileBytesOffset + tiles.Length > memberRaw.Length)
+                throw new InvalidDataException("The picture needs more tiles than the game's file holds.");
             Array.Copy(tiles, 0, memberRaw, tileBytesOffset, tiles.Length);
         }
 
