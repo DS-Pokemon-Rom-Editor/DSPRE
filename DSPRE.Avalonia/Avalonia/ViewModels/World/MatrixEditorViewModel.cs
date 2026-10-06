@@ -38,6 +38,41 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public int Width => _matrix?.width ?? 0;
         public int Height => _matrix?.height ?? 0;
+
+        // New cells get no map; shrinking drops the cut-off cells, which undo brings back.
+        public decimal SizeWidth { get => Width; set => Resize((int)value, Height); }
+        public decimal SizeHeight { get => Height; set => Resize(Width, (int)value); }
+        public bool HasMatrix => _matrix != null;
+
+        /// <summary>Why this size would overrun the game's matrix buffer, or empty.</summary>
+        public string SizeWarning
+        {
+            get
+            {
+                if (_matrix == null) return "";
+                bool patched = false;
+                try { patched = RomPatchState.flag_MatrixExpansionApplied || (gameFamily == GameFamilies.HGSS && PatchToolboxLogic.CheckFilesMatrixExpansionApplied()); }
+                catch { }
+                int max = MatrixMaxCells(patched), cells = _matrix.width * _matrix.height;
+                if (cells <= max) return "";
+                string fix = gameFamily == GameFamilies.HGSS && !patched ? " Apply Expand Matrix 0 in the ROM Patch Toolbox to double it." : "";
+                return $"{cells} cells: the game holds at most {max}, so a bigger matrix corrupts memory.{fix}";
+            }
+        }
+        public bool HasSizeWarning => SizeWarning.Length > 0;
+
+        private void Resize(int width, int height)
+        {
+            if (_matrix == null || _suppress) return;
+            width = Math.Clamp(width, 1, 255);
+            height = Math.Clamp(height, 1, 255);
+            if (width == _matrix.width && height == _matrix.height) return;
+            _matrix.ResizeMatrix(height, width);
+            RebuildLegend();
+            MarkDirty();
+            StatusText = $"Matrix {_selectedIndex} is now {width}×{height} (unsaved).";
+            RaiseLoaded();
+        }
         public bool HasHeaders => _matrix?.hasHeadersSection ?? false;
         public bool HasHeights => _matrix?.hasHeightsSection ?? false;
         public bool CanAddHeaders => _matrix != null && !_matrix.hasHeadersSection;
@@ -236,6 +271,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _matrix = id is int keep ? new GameMatrix(restored, keep) : restored;
                 RebuildLegend();
                 MarkDirty();
+                StatusText = $"Matrix {_selectedIndex} is {_matrix.width}×{_matrix.height}.";
                 RaiseLoaded();
             }, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });
             OnPropertyChanged(nameof(CanUndo));
@@ -328,6 +364,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void RaiseLoaded()
         {
             OnPropertyChanged(nameof(Width)); OnPropertyChanged(nameof(Height));
+            OnPropertyChanged(nameof(SizeWidth)); OnPropertyChanged(nameof(SizeHeight)); OnPropertyChanged(nameof(HasMatrix));
+            OnPropertyChanged(nameof(SizeWarning)); OnPropertyChanged(nameof(HasSizeWarning));
             OnPropertyChanged(nameof(HasHeaders)); OnPropertyChanged(nameof(HasHeights));
             OnPropertyChanged(nameof(CanAddHeaders)); OnPropertyChanged(nameof(CanAddHeights));
             OnPropertyChanged(nameof(UnsavedChangesDescription));

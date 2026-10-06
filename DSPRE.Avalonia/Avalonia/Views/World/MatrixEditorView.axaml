@@ -11,22 +11,24 @@
   </Design.DataContext>
 
   <DockPanel>
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
-      <WrapPanel Classes="toolbar">
+    <controls:EditorToolbar>
         <TextBlock Text="Matrix:" VerticalAlignment="Center"/>
-        <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding MatrixNames}" SelectedIndex="{Binding SelectedMatrixIndex}"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
+        <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="200" ItemsSource="{Binding MatrixNames}" SelectedIndex="{Binding SelectedMatrixIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <ToggleButton x:Name="PaintToggle" Content="Paint" controls:Icon.Key="brush" IsChecked="{Binding PaintMode}"
                       ToolTip.Tip="On: click or drag fills cells with the paint value. Off: click selects, and a header cell opens its header."/>
+        <TextBlock Text="Size:" VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <NumericUpDown Width="110" Minimum="1" Maximum="255" Increment="1" FormatString="0" Value="{Binding SizeWidth}"
+                       IsEnabled="{Binding HasMatrix}" ToolTip.Tip="Width in maps. New cells are empty."/>
+        <TextBlock Text="×" VerticalAlignment="Center"/>
+        <NumericUpDown Width="110" Minimum="1" Maximum="255" Increment="1" FormatString="0" Value="{Binding SizeHeight}"
+                       IsEnabled="{Binding HasMatrix}" ToolTip.Tip="Height in maps. New cells are empty."/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
-        <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
         <Button x:Name="SpawnButton" Content="Set spawn to selection" controls:Icon.Key="pin" Click="SetSpawn_Click"
                 ToolTip.Tip="Set the game's start position to the selected matrix cell"/>
-      </WrapPanel>
-    </Border>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
       <StackPanel Orientation="Horizontal" Spacing="12">
@@ -34,6 +36,9 @@
         <TextBlock Text="{Binding CellInfo}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
       </StackPanel>
     </Border>
+
+    <TextBlock DockPanel.Dock="Top" Text="{Binding SizeWarning}" IsVisible="{Binding HasSizeWarning}" TextWrapping="Wrap"
+               Foreground="{DynamicResource Editor.Warning}" Margin="8,6,8,0"/>
 
     <ItemsControl x:Name="LegendBar" DockPanel.Dock="Top" ItemsSource="{Binding Legend}" Margin="8,6,8,0">
       <ItemsControl.ItemsPanel>
