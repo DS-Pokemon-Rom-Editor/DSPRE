@@ -427,7 +427,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             {
                 ScriptNarc narc = new ScriptNarc(step.Dir);
                 byte[] now = narc.Get(step.Member);
+                // With nothing kept for this file, the bytes on disk are the saved ones. A file stepped back
+                // to its saved bytes no longer counts as changed.
+                (DirNames, int) key = (step.Dir, step.Member);
+                if (now != null) _originals.TryAdd(key, (byte[])now.Clone());
                 narc.Put(step.Member, step.Bytes);
+                if (_originals.TryGetValue(key, out byte[] saved) && saved.AsSpan().SequenceEqual(step.Bytes))
+                    _originals.Remove(key);
                 if (now != null) to.Push(new Step(step.Dir, step.Member, now, step.What));
                 Reload();
                 StatusText = said + ": " + step.What;
@@ -437,8 +443,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 AppLogger.Error("Pokédex graphics step: " + ex.Message);
                 StatusText = "That change could not be moved. " + ex.Message;
             }
-            if (!_undo.Any(s => s.Dir == step.Dir && s.Member == step.Member) && from == _undo)
-                _originals.Remove((step.Dir, step.Member));
             RaiseSteps();
         }
 
