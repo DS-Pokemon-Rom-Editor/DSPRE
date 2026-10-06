@@ -279,9 +279,13 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_data == null || !HasUnsavedChanges) return;
             if (!_data.SaveCurrent()) return;
-            _saved = TakeState();
-            Notify(nameof(HasUnsavedChanges));
-            SaveNotice.Saved(UnsavedChangesDescription);
+            string saved = UnsavedChangesDescription;
+            // Offsets and the expansion block move on a resize, so the next save has to start from what was written.
+            int selected = Math.Max(0, Shops.IndexOf(SelectedShop));
+            _data = MartData.LoadCurrent();
+            PopulateShops(selected);
+            StartUndo();
+            SaveNotice.Saved(saved);
         }
 
         /// <summary>Shown while the marts can't grow yet this ROM could take the ARM9 expansion.</summary>

@@ -47,6 +47,8 @@ namespace DSPRE.ROMFiles
         private readonly int[] _specialtyDataOffsets;
         private readonly int _originalCommonCount;
         private int _existingExpansionStart = -1;
+        // The arm9 being saved over: the file as it is now, so another editor's arm9 edits since this loaded survive.
+        private byte[] _saveBase;
         private int _existingExpansionLength;
 
         public List<CommonEntry> CommonItems { get; } = new();
@@ -201,13 +203,23 @@ namespace DSPRE.ROMFiles
                 return true;
             }
             if (!HasSizeChanges && _commonDataOffset >= 0 && _specialtyDataOffsets.All(offset => offset >= 0))
-                return SaveToFile(RomInfo.arm9Path, showSuccessMessage: false);
+            {
+                _saveBase = Arm9AsItIsNow();
+                try { return SaveToFile(RomInfo.arm9Path, showSuccessMessage: false); }
+                finally { _saveBase = null; }
+            }
             if (!ExpansionAvailable)
                 throw new InvalidOperationException("Apply the ARM9 expansion patch before changing mart sizes.");
 
             byte[] originalOverlay = File.ReadAllBytes(Filesystem.expArmPath);
-            ExpandedFiles files = BuildExpandedFiles(originalOverlay,
-                RomInfo.synthOverlayLoadAddress, GetRuntimeReservedRanges());
+            ExpandedFiles files;
+            _saveBase = Arm9AsItIsNow();
+            try
+            {
+                files = BuildExpandedFiles(originalOverlay,
+                    RomInfo.synthOverlayLoadAddress, GetRuntimeReservedRanges());
+            }
+            finally { _saveBase = null; }
             WriteReplacementFile(Filesystem.expArmPath, files.SyntheticOverlay);
             try
             {
@@ -219,6 +231,22 @@ namespace DSPRE.ROMFiles
                 throw;
             }
             return true;
+        }
+
+        /// <summary>
+        /// The arm9 on disk, refused when the mart count or pointers no longer match what was loaded, since then
+        /// the tables this window shows are not the ones the game reads.
+        /// </summary>
+        private byte[] Arm9AsItIsNow()
+        {
+            byte[] now = File.ReadAllBytes(RomInfo.arm9Path);
+            bool same = now.Length == _arm9.Length
+                && now[_commonCountOffset] == _arm9[_commonCountOffset]
+                && now.AsSpan((int)_commonPointerOffset, 4).SequenceEqual(_arm9.AsSpan((int)_commonPointerOffset, 4))
+                && now.AsSpan((int)_specialtyPointerOffset, 4).SequenceEqual(_arm9.AsSpan((int)_specialtyPointerOffset, 4));
+            if (!same)
+                throw new InvalidOperationException("The marts changed in another editor since this window opened. Close it and open it again.");
+            return now;
         }
 
         internal sealed class ExpandedFiles
@@ -280,7 +308,7 @@ namespace DSPRE.ROMFiles
             if (_existingExpansionStart >= 0 && _existingExpansionLength > 0)
                 Array.Clear(newOverlay, _existingExpansionStart, _existingExpansionLength);
             block.CopyTo(newOverlay, blockOffset);
-            byte[] newArm9 = (byte[])_arm9.Clone();
+            byte[] newArm9 = (byte[])(_saveBase ?? _arm9).Clone();
             newArm9[_commonCountOffset] = (byte)CommonItems.Count;
             WriteUInt32(newArm9, checked((int)_commonPointerOffset),
                 checked(loadAddress + (uint)blockOffset + (uint)commonOffset));
@@ -295,7 +323,7 @@ namespace DSPRE.ROMFiles
             if (CommonItems.Count != _originalCommonCount)
                 throw new InvalidOperationException("Changing the common mart table size is not supported yet.");
 
-            byte[] result = (byte[])_arm9.Clone();
+            byte[] result = (byte[])(_saveBase ?? _arm9).Clone();
             for (int i = 0; i < CommonItems.Count; i++)
             {
                 CommonEntry entry = CommonItems[i];

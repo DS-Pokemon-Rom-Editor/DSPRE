@@ -225,6 +225,7 @@ namespace DSPRE.Avalonia
         public static void OpenMartEditor()
         {
             if (Refused("MartEditorView")) return;
+            if (BringForward<MartEditorView, MartEditorViewModel>(_ => { })) return;
             try
             {
                 MartEditorViewModel vm = new MartEditorViewModel(MartData.LoadCurrent(), GetItemNames());
