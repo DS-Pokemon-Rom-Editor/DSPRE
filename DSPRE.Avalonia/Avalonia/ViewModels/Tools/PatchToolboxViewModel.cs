@@ -93,9 +93,12 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public bool ShowApply => Link == null;
         public List<PatchPartViewModel> Parts { get; } = new List<PatchPartViewModel>();
         public bool HasParts => Parts.Count > 0;
+        /// <summary>The patch's notes, for the Notes button.</summary>
+        public string Notes { get; }
 
         public PatchRowViewModel(DSPRE.PatchToolboxLogic.PatchInfo p)
         {
+            Notes = DSPRE.PatchNotes.For(p);
             Key = p.Key;
             Title = p.Title;
             Description = p.Description;

@@ -4,8 +4,8 @@
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         x:Class="DSPRE.Avalonia.Views.Tools.PatchToolboxView"
         x:DataType="vm:PatchToolboxViewModel"
-        Title="ROM Patch Toolbox"
-        Width="640" Height="600" MinWidth="520" MinHeight="360"
+        Title="ROM patch toolbox"
+        Width="1280" Height="760" MinWidth="520" MinHeight="360"
         WindowStartupLocation="CenterScreen">
 
   <Design.DataContext>
@@ -30,11 +30,14 @@
 
     <!-- ── Patch list ─────────────────────────────────────────────────── -->
     <ScrollViewer>
-      <ItemsControl x:Name="PatchList" ItemsSource="{Binding Patches}" Margin="8">
+      <ItemsControl x:Name="PatchList" ItemsSource="{Binding Patches}" Margin="4">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><UniformGrid x:Name="PatchColumns" Columns="1"/></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:PatchRowViewModel">
             <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="6"
-                    Padding="12,10" Margin="0,0,0,8">
+                    Padding="12,10" Margin="4">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Spacing="3">
                   <StackPanel Orientation="Horizontal" Spacing="8">
@@ -57,12 +60,13 @@
                   <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold"
                              Foreground="{Binding StatusBrush}" Margin="0,2,0,0"/>
                 </StackPanel>
-                <Button Grid.Column="1" Content="{Binding ButtonText}" MinWidth="96" Height="32"
-                        VerticalAlignment="Center" Margin="12,0,0,0" IsVisible="{Binding ShowApply}"
-                        IsEnabled="{Binding CanApply}" Click="Apply_Click"/>
-                <Button Grid.Column="1" Content="Open page" controls:Icon.Key="OpenLink" Height="32"
-                        VerticalAlignment="Center" Margin="12,0,0,0" IsVisible="{Binding HasLink}"
-                        ToolTip.Tip="{Binding Link}" Click="OpenLink_Click"/>
+                <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center" Margin="12,0,0,0">
+                  <Button Content="{Binding ButtonText}" MinWidth="96" Height="32" HorizontalAlignment="Stretch"
+                          IsVisible="{Binding ShowApply}" IsEnabled="{Binding CanApply}" Click="Apply_Click"/>
+                  <Button Content="Open page" controls:Icon.Key="OpenLink" Height="32" HorizontalAlignment="Stretch"
+                          IsVisible="{Binding HasLink}" ToolTip.Tip="{Binding Link}" Click="OpenLink_Click"/>
+                  <Button Content="Notes" MinWidth="96" HorizontalAlignment="Stretch" Click="Notes_Click"/>
+                </StackPanel>
               </Grid>
             </Border>
           </DataTemplate>

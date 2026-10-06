@@ -22,6 +22,16 @@ namespace DSPRE.Avalonia.Views.Tools
                 PatchDialogs.Install();
                 DataContext = new PatchToolboxViewModel();
             }
+            PatchList.SizeChanged += (_, _) => FitColumns();
+            PatchList.LayoutUpdated += (_, _) => FitColumns();
+        }
+
+        // One column per 420 pixels of list, up to three, so the cards stay readable as the window widens.
+        private void FitColumns()
+        {
+            if (PatchList.ItemsPanelRoot is not global::Avalonia.Controls.Primitives.UniformGrid grid) return;
+            int columns = System.Math.Clamp((int)(PatchList.Bounds.Width / 420), 1, 3);
+            if (grid.Columns != columns) grid.Columns = columns;
         }
 
         private async void GenerateCredits_Click(object sender, RoutedEventArgs e)
@@ -34,6 +44,12 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             if (sender is Control c && c.DataContext is PatchRowViewModel { Link: { } link })
                 await Launcher.LaunchUriAsync(new System.Uri(link));
+        }
+
+        private async void Notes_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control c && c.DataContext is PatchRowViewModel row)
+                await DialogHelper.ShowInfo(row.Notes, row.Title);
         }
 
         private void Apply_Click(object sender, RoutedEventArgs e)
