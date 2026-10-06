@@ -104,6 +104,8 @@ namespace DSPRE.Avalonia.Views.Battle
             string trouble = GraphicAssets.ImportPng(archive, at, path, out string note);
             if (trouble != null) { await DialogHelper.ShowError(trouble, "Battle Screen"); return; }
             if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Battle Screen");
+            // The gauge's text colours are read once per ROM; an imported HP bar may have new ones.
+            Data.BattleGaugeTextRenderer.Reset();
             VM?.Refresh();
         }
 
