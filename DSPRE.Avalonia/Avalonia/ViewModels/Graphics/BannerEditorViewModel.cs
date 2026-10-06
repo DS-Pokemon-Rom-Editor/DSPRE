@@ -56,7 +56,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         // A picked icon and edited titles wait here until Save.
         private RawImage _pendingIcon;
         private string _savedTitles = "";
-        private string TitleText() => string.Join("", Titles.Select(t => t.Text ?? ""));
+        // Separated, so moving text from one language to the next still counts as an edit.
+        private string TitleText() => string.Join("\u0000", Titles.Select(t => t.Text ?? ""));
         private bool TitlesEdited => TitleText() != _savedTitles;
         public bool HasUnsavedChanges => _pendingIcon != null || TitlesEdited;
 
@@ -172,7 +173,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } },
                 (RomInfo.projectName ?? "icon") + "_icon.png");
             if (string.IsNullOrEmpty(dest)) return;
-            File.Copy(GameBanner.DsRomBitmapPath, dest, overwrite: true);
+            try { File.Copy(GameBanner.DsRomBitmapPath, dest, overwrite: true); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("The icon could not be exported: " + ex.Message, "Export icon");
+                return;
+            }
             StatusText = "Icon exported.";
         }
 
@@ -183,8 +189,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             if (string.IsNullOrEmpty(src)) return;
 
             RawImage raw;
-            using (FileStream fs = File.OpenRead(src))
-                raw = ImageConverter.DecodeRawImage(fs);
+            try
+            {
+                using (FileStream fs = File.OpenRead(src))
+                    raw = ImageConverter.DecodeRawImage(fs);
+            }
+            catch (Exception ex)
+            {
+                await DialogHelper.ShowError("That picture could not be read: " + ex.Message, "Cannot import icon");
+                return;
+            }
 
             string error = GameBanner.IconProblem(raw);
             if (error != null)
