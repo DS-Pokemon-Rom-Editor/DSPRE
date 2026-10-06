@@ -59,6 +59,23 @@ namespace DSPRE.Avalonia.Data
                 }
             }
             _nextFreeIndex = count;
+            _savedCount = count;
+        }
+
+        // Imports append members at once; the ones after this are not referenced by a saved table yet.
+        private int _savedCount = -1;
+
+        /// <summary>The table that points at the imported members was saved, so they stay.</summary>
+        public void KeepImported() => _savedCount = _nextFreeIndex;
+
+        /// <summary>Deletes the members imported since the last save, which nothing saved points at.</summary>
+        public void DropImported()
+        {
+            if (_savedCount < 0 || _nextFreeIndex <= _savedCount) return;
+            for (int id = _savedCount; id < _nextFreeIndex; id++)
+                if (File.Exists(MemberPath(id))) File.Delete(MemberPath(id));
+            _nextFreeIndex = _savedCount;
+            _narc.Invalidate();
         }
 
         private string MemberPath(int id) => Path.Combine(gameDirs[DirNames.dungeonCutinGraphics].unpackedDir, id.ToString("D4"));

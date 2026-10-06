@@ -171,7 +171,11 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             await SaveCommand();
             return !HasUnsavedChanges;
         }
-        public void DiscardChanges() => LoadRows();
+        public void DiscardChanges()
+        {
+            _graphics.DropImported();
+            LoadRows();
+        }
 
         // ── Observable state ─────────────────────────────────────────────────
         public ObservableCollection<DungeonCutinRow> Rows { get; } = new();
@@ -300,6 +304,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 WriteRows();
+                _graphics.KeepImported();
                 _saved = TakeState();
                 Changed();
                 SaveNotice.Saved(UnsavedChangesDescription);
