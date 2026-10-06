@@ -158,6 +158,9 @@ callers must not depend on the process working directory.
   the established busy overlay.
 - Avalonia XAML resources and compiled bindings can fail outside the immediate edit site. Validate the
   owning project after XAML changes, not just the code-behind file.
+- Declare every variable with its explicit type. Do not write `var`; the only exception is a value whose
+  type cannot be named, such as an anonymous type. Existing `var` usage is scheduled for one cleanup
+  commit and is not a precedent for new code.
 - Comments should explain constraints or intent, not narrate the code. Keep user-facing text concise
   and avoid em dashes.
 
