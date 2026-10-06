@@ -10,6 +10,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
     public sealed class GroundItemRow
     {
         public int ScriptIndex { get; set; }
+        public int ItemId { get; set; }
         public string ItemName { get; set; }
         public int Quantity { get; set; }
         public bool InUse { get; set; }
@@ -35,7 +36,15 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public GroundItemRow SelectedEntry
         {
             get => _selectedEntry;
-            set { if (Set(ref _selectedEntry, value)) OnPropertyChanged(nameof(CanRemove)); }
+            set
+            {
+                if (!Set(ref _selectedEntry, value)) return;
+                OnPropertyChanged(nameof(CanRemove));
+                // The picker and quantity show the selected entry, ready to change it.
+                if (value == null) return;
+                if (value.ItemId >= 0 && value.ItemId < ItemNames.Count) NewItemIndex = value.ItemId;
+                NewQuantity = value.Quantity;
+            }
         }
         public bool CanRemove => _selectedEntry != null;
 
@@ -70,7 +79,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             foreach (var e in _session.Entries())
             {
                 string name = e.ItemId >= 0 && e.ItemId < ItemNames.Count ? ItemNames[e.ItemId] : ("Item " + e.ItemId);
-                Entries.Add(new GroundItemRow { ScriptIndex = e.ScriptIndex, ItemName = name, Quantity = e.Quantity, InUse = e.InUse });
+                Entries.Add(new GroundItemRow { ScriptIndex = e.ScriptIndex, ItemId = e.ItemId, ItemName = name, Quantity = e.Quantity, InUse = e.InUse });
             }
         }
 
@@ -85,6 +94,23 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _session.Add(_newItemIndex, (int)_newQuantity);
             StatusText = "";
             Refresh();
+        }
+
+        public void ChangeSelectedEntry()
+        {
+            if (_selectedEntry == null) return;
+            if (_newItemIndex < 0 || _newItemIndex >= ItemNames.Count)
+            {
+                StatusText = "Pick an item first.";
+                return;
+            }
+
+            int index = _selectedEntry.ScriptIndex;
+            _session.Update(index, _newItemIndex, (int)_newQuantity);
+            StatusText = "";
+            Refresh();
+            foreach (GroundItemRow row in Entries)
+                if (row.ScriptIndex == index) { SelectedEntry = row; break; }
         }
 
         public void RemoveSelectedEntry()

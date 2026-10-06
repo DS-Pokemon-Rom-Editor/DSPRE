@@ -215,6 +215,24 @@ namespace DSPRE
                 HasChanges = true;
             }
 
+            /// <summary>Changes an entry's item and quantity in place, so events using it keep their script number.</summary>
+            public void Update(int scriptIndex, int itemId, int quantity)
+            {
+                if (scriptIndex < 0 || scriptIndex >= _script.allScripts.Count) return;
+                ScriptCommandContainer container = _script.allScripts[scriptIndex];
+                if (!DSUtils.IsGroundItemScriptEntry(container)) return;
+                container.commands[0] = SetVarLike(container.commands[0], itemId);
+                container.commands[1] = SetVarLike(container.commands[1], quantity);
+                HasChanges = true;
+            }
+
+            // Rebuilt from text rather than patching parameter bytes, so the command's text form stays in step.
+            private static ScriptCommand SetVarLike(ScriptCommand original, int value)
+            {
+                ushort variable = BitConverter.ToUInt16(original.cmdParams[0], 0);
+                return new ScriptCommand($"SetVar 0x{variable:X4} {value}");
+            }
+
             /// <returns>null on success, or why the entry can't go.</returns>
             public string Remove(int scriptIndex)
             {

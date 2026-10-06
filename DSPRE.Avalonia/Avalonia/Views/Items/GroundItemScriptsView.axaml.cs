@@ -20,6 +20,8 @@ namespace DSPRE.Avalonia.Views.Items
 
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddEntry();
 
+        private void Change_Click(object sender, RoutedEventArgs e) => VM?.ChangeSelectedEntry();
+
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveSelectedEntry();
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();

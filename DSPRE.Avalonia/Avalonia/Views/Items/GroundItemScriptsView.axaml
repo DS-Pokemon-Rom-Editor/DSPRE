@@ -4,7 +4,7 @@
         x:Class="DSPRE.Avalonia.Views.Items.GroundItemScriptsView"
         x:DataType="vm:GroundItemScriptsViewModel"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
-        Title="Ground Item List"
+        Title="Ground item list"
         Width="620" Height="560"
         MinWidth="520" MinHeight="420"
         WindowStartupLocation="CenterOwner">
@@ -14,14 +14,11 @@
   </Design.DataContext>
 
   <DockPanel Margin="12">
-    <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}"
-            BorderThickness="0,0,0,1" Padding="6,4" Margin="-12,-12,-12,8">
-      <StackPanel Orientation="Horizontal" Spacing="6">
+    <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <controls:HelpTip Text="The item and quantity pairs an item event on the map can give. An entry an event still uses can't be removed. Saving renumbers the item events to match."/>
-      </StackPanel>
-    </Border>
+        <controls:HelpTip Text="Item and quantity pairs that item events give. Entries in use can't be removed. Saving renumbers the item events."/>
+    </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
       <StackPanel Spacing="6">
@@ -34,6 +31,7 @@
           <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" MinWidth="70"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6">
+          <Button Content="Change selected" controls:Icon.Key="pencil" Click="Change_Click" IsEnabled="{Binding CanRemove}"/>
           <Button Content="Remove selected" controls:Icon.Key="deleteIcon" Click="Remove_Click" IsEnabled="{Binding CanRemove}"/>
           <Button Content="Close" Click="Close_Click" IsCancel="True"/>
         </StackPanel>
