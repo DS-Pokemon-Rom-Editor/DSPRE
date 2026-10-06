@@ -85,6 +85,7 @@ namespace DSPRE.Avalonia
             Views.Controls.HgssTouchScreenView.IconFont = null;
             Data.SoundArchive.Reset();
             ROMFiles.FieldFontCharacters.Reset();
+            ViewModels.Graphics.FontEditorViewModel.Forget();
             // Unsaved label edits were made for the project being closed.
             Data.LabelStore.DiscardDraft();
 

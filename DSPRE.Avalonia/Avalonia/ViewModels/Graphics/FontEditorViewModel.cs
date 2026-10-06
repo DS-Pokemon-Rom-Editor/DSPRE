@@ -83,7 +83,26 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int SelectedFontIndex
         {
             get => _selectedFontIndex;
-            set { if (Set(ref _selectedFontIndex, value) && !_loading) LoadFont(value); }
+            set
+            {
+                if (RecordSwitchGuard.IsSnappingBack || value == _selectedFontIndex) return;
+                if (_dirty && !_loading)
+                {
+                    int requested = value;
+                    RecordSwitchGuard.SnapBack(() => _selectedFontIndex, v => _selectedFontIndex = v, () => OnPropertyChanged(nameof(SelectedFontIndex)));
+                    _ = SwitchFontAsync(requested);
+                    return;
+                }
+                if (Set(ref _selectedFontIndex, value) && !_loading) LoadFont(value);
+            }
+        }
+
+        private async System.Threading.Tasks.Task SwitchFontAsync(int requested)
+        {
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "font")) return;
+            _selectedFontIndex = requested;
+            OnPropertyChanged(nameof(SelectedFontIndex));
+            LoadFont(requested);
         }
 
         private void LoadFontList()
@@ -513,6 +532,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         HgEngine.HgEngineOwnedFiles.ArchiveOf(DirNames.fonts), _fontEntries[which]) is HgEngine.HgEngineOwnedFile source)
                     StatusText += $" hg-engine builds this font from {source.RelPath}, so saving writes there too.";
                 RaiseGlyph();
+                // Steps hold pixels of the font that was open; undoing one here would paint them into this one.
+                RestartSteps();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
             }
             catch (Exception ex)
