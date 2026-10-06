@@ -51,7 +51,6 @@ namespace DSPRE
                 ["ParticleEditorView"] = "Particle editor",
                 ["ParticleLibraryView"] = "Particle library",
                 ["ProjectChecksView"] = "Project checks",
-                ["ScriptCommandGuideView"] = "Script command reference",
                 ["HgEngineFormEditorView"] = "Form editor",
                 ["AbilityFlagsEditorView"] = "Ability Flags editor",
                 ["MoveBackgroundEditorView"] = "Move Backgrounds editor",
@@ -144,18 +143,18 @@ namespace DSPRE
 
         /// <summary>
         /// The parts of a finished editor that are still being tried out. These cannot be gated by
-        /// window name, so their controls bind to a ShowBetaFeatures property instead. Listing them
+        /// window name, so their controls check <see cref="Enabled"/> instead. Listing them
         /// here is what lets the welcome guide and the tour say what is switched on.
         /// </summary>
         public static IReadOnlyList<BetaFeature> Features { get; } = new List<BetaFeature>
         {
             new() { Name = "Walking the map", Where = "Event Editor" },
             new() { Name = "The animated preview", Where = "Event Editor and Map Editor" },
-            new() { Name = "Dragging events with a gizmo", Where = "Event Editor" },
-            new() { Name = "The tile boundary overlay", Where = "Map Editor" },
+            new() { Name = "The tile boundary overlay", Where = "Event Editor and Map Editor" },
             new() { Name = "Bug Contest opponents", Where = "Special Encounters Editor" },
             new() { Name = "Pokéathlon stats", Where = "Pokémon Editor" },
-            new() { Name = "Swarm destinations", Where = "Special Encounters Editor" },
+            new() { Name = "Swarms", Where = "Special Encounters Editor" },
+            new() { Name = "Roamers", Where = "Special Encounters Editor" },
         };
 
         /// <summary>How the gated editors fall across the menus, for a short summary line.</summary>

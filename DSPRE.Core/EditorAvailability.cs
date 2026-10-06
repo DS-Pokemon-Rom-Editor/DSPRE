@@ -43,6 +43,9 @@ namespace DSPRE
 
         private static Func<string> Unless(Func<bool> supported, string why) => () => supported() ? null : why;
         private static bool Family(params GameFamilies[] families) => Array.IndexOf(families, gameFamily) >= 0;
+        // Fixed-offset tables are known only for the exact ROMs listed in RomInfo.TableSpots.
+        private static string NoSpot(GameTable table) =>
+            SpotOf(table) == null ? "Only US HeartGold, Platinum (Rev 1) and Diamond are supported." : null;
 
         private static readonly Dictionary<string, Rule> Rules = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -70,20 +73,20 @@ namespace DSPRE
                 Title = "The Mart Editor", Hge = HgEngine.Source,
                 Unsupported = Unless(IsMartEditorAvailable, "The Mart Editor currently supports English Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs."),
             },
-            ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open },
+            ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(GameTable.WildHeldItemOdds) },
             ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Open },
-            ["FriendshipChangesView"] = new Rule { Title = "The Friendship changes editor", Hge = HgEngine.Open },
+            ["FriendshipChangesView"] = new Rule { Title = "The Friendship changes editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(GameTable.FriendshipChanges) },
             ["EncounterSlotOddsView"] = new Rule
             {
                 Title = "The Encounter slot odds editor", Hge = HgEngine.Source,
             },
-            ["BreedingItemsView"] = new Rule { Title = "The Breeding items editor", Hge = HgEngine.Open },
+            ["BreedingItemsView"] = new Rule { Title = "The Breeding items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(GameTable.IncenseBabies) },
             ["BerryDataEditorView"] = new Rule { Title = "The Berry data editor", Hge = HgEngine.Open },
             ["TypeChartEditorView"] = new Rule { Title = "The Type chart editor", Hge = HgEngine.Source },
             ["MoveTutorEditorView"] = new Rule
             {
                 Title = "The Move tutor editor", Hge = HgEngine.Source,
-                Unsupported = Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "Diamond and Pearl have no move tutors."),
+                Unsupported = () => Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "Diamond and Pearl have no move tutors.")() ?? NoSpot(GameTable.TutorPool),
             },
             ["BpShopEditorView"] = new Rule
             {
@@ -93,7 +96,7 @@ namespace DSPRE
             ["UndergroundMiningView"] = new Rule
             {
                 Title = "The Underground mining editor", Hge = HgEngine.Closed,
-                Unsupported = Unless(() => Family(GameFamilies.DP, GameFamilies.Plat), "Only Diamond, Pearl and Platinum have the Underground."),
+                Unsupported = () => Unless(() => Family(GameFamilies.DP, GameFamilies.Plat), "Only Diamond, Pearl and Platinum have the Underground.")() ?? NoSpot(GameTable.MiningTreasures),
             },
             ["VsIntroEditorView"] = new Rule { Title = "The VS Intro Editor", Hge = HgEngine.Source },
             ["WildIntroEditorView"] = new Rule { Title = "The Wild Pokémon Intro Editor", Hge = HgEngine.Source },
