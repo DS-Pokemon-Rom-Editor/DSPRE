@@ -40,6 +40,11 @@ namespace DSPRE.Avalonia.Views.Graphics
                 string suggested = System.IO.Path.GetFileNameWithoutExtension(VM.PictureName) + ".NCLR";
                 string path = await DialogHelper.SaveFile(this, "Name the three files", ColourList, suggested);
                 if (path == null) return;
+                // The picker only asks about the .NCLR; the two files written beside it get the same question.
+                string stem = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path) ?? "", System.IO.Path.GetFileNameWithoutExtension(path));
+                List<string> there = new List<string>();
+                foreach (string ext in new[] { ".NCGR", ".NSCR" }) if (System.IO.File.Exists(stem + ext)) there.Add(System.IO.Path.GetFileName(stem + ext));
+                if (there.Count > 0 && !await DialogHelper.AskYesNo(string.Join(" and ", there) + (there.Count == 1 ? " already exists beside it. Replace it?" : " already exist beside it. Replace them?"), "Replace files", this)) return;
                 string why = VM.Save(path);
                 if (why != null) await DialogHelper.ShowError(why, "Those files could not be written", this);
                 else await DialogHelper.ShowInfo(VM.SavedAs, "Written");
