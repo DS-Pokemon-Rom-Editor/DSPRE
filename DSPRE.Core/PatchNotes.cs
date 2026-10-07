@@ -21,14 +21,15 @@ namespace DSPRE
                 "removes classes.\n" +
                 "VS intro (style, name shown and art): the VS intro editor, which lists every class's own intro.\n\n" +
                 "VS styles\n" +
-                "0 Dynamic terrain/time: the Poké Ball intros. The game picks grass, water or cave, and early or late, " +
-                "from the area and the trainer's level.\n" +
+                "0 Dynamic terrain/time: the Poké Ball intros. The game picks normal, water or cave from the tile the " +
+                "player stands on, and early or late from the time of day (late from 20:00 to 03:59; cave battle " +
+                "backgrounds always count as late).\n" +
                 "1 Gym Leader / Rival: the portrait slides in with a banner and the VS mark. The name is a fixed " +
                 "trainer name or the rival's saved name.\n" +
                 "2 Elite Four / Champion: the portrait in the League frame against the player, with a clash shake.\n" +
                 "3 Rocket Admin: the portrait over a backdrop.\n" +
                 "4 Kimono Girl: shoji doors slide shut and open.\n" +
-                "5 Red: the old Poké Ball while black blocks fill the screen.\n" +
+                "5 Red: a field of blocks sweeps across the screen.\n" +
                 "6 Team Rocket: Rocket R's fly in and shrink away.\n" +
                 "7 to 12: one fixed Poké Ball intro each (normal, water and cave, early then late).\n" +
                 "13 Frontier Brain: like style 1, with the Frontier VS mark.\n\n" +

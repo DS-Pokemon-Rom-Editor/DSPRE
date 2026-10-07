@@ -522,7 +522,7 @@ namespace DSPRE.Avalonia
         public static void OpenVsIntroEditor(int trainerClass) => _ = OpenIntroEditorAsync<VsIntroEditorView, VsIntroEditorViewModel>(
             VsIntroEditorViewModel.Title, "Reading the intro tables, their art and the trainer names.",
             () => new VsIntroEditorViewModel { StartClass = trainerClass }, vm => vm.Load(), vm => vm.Ready(), vm => new VsIntroEditorView(vm),
-            1320, 780, vm => { if (trainerClass >= 0) vm.ShowClassRecord(trainerClass); });
+            1320, 780, vm => { if (trainerClass >= 0) vm.ShowClassRecord(trainerClass); }, minWidth: 1180);
 
         /// <summary>Which wild Pokémon get their own battle intro, and the music of the wild intros.</summary>
         public static void OpenWildIntroEditor() => _ = OpenIntroEditorAsync<WildIntroEditorView, WildIntroEditorViewModel>(
@@ -532,7 +532,7 @@ namespace DSPRE.Avalonia
         // Both intro editors read the same tables, each one window at most, so neither edits a stale copy of its own bytes.
         private static async System.Threading.Tasks.Task OpenIntroEditorAsync<TView, TModel>(string title, string busyHint,
             System.Func<TModel> make, System.Action<TModel> load, System.Action<TModel> ready, System.Func<TModel, TView> view,
-            double width, double height, System.Action<TModel> goTo = null)
+            double width, double height, System.Action<TModel> goTo = null, double minWidth = 0)
             where TView : global::Avalonia.Controls.Control where TModel : class
         {
             if (Refused(typeof(TView).Name)) return;
@@ -551,7 +551,8 @@ namespace DSPRE.Avalonia
                 _ = DialogHelper.ShowError(title + " could not be opened:\n" + ex.Message, title);
                 return;
             }
-            new EditorHostWindow(title, view(vm), width, height).ShowManaged();
+            // The list and the preview keep their widths, so a narrower window would squeeze the settings away.
+            new EditorHostWindow(title, view(vm), width, height) { MinWidth = minWidth }.ShowManaged();
         }
 
         public static void OpenCameraEditor()

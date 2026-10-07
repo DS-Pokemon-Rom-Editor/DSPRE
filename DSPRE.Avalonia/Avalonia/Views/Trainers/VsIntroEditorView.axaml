@@ -213,7 +213,10 @@
 
       <!-- Class intros (trainer class metadata patch): each class's own intro record -->
       <TabItem Header="Class intros" IsVisible="{Binding IsClassRecords}">
-        <Grid ColumnDefinitions="220,*,540">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/><ColumnDefinition Width="*" MinWidth="380"/><ColumnDefinition Width="540"/>
+          </Grid.ColumnDefinitions>
           <ListBox Grid.Column="0" Margin="4" ItemsSource="{Binding ClassRecordNames}" SelectedIndex="{Binding SelectedRecordIndex}"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
           <ScrollViewer Grid.Column="1" Margin="4">
@@ -239,7 +242,7 @@
                         <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:IntroArtFile">
-                            <StackPanel Width="112" Margin="0,2,4,0" Spacing="1">
+                            <StackPanel Margin="0,2,12,0" Spacing="1">
                               <TextBlock Classes="subtle" Text="{Binding Label}"/>
                               <StackPanel Orientation="Horizontal" Spacing="2">
                                 <NumericUpDown Value="{Binding Value}" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Width="96"/>
@@ -254,8 +257,9 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <StackPanel Spacing="2" IsVisible="{Binding ShowMotion}">
-                <TextBlock Text="Stops at X"/>
-                <NumericUpDown Value="{Binding Motion}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"/>
+                <TextBlock Text="Portrait stops at X"/>
+                <NumericUpDown Value="{Binding Motion}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"
+                               ToolTip.Tip="Where the portrait's slide in ends, in pixels from the left"/>
               </StackPanel>
               <StackPanel Spacing="2" IsVisible="{Binding ShowTiming}">
                 <TextBlock Text="Clash shake"/>
