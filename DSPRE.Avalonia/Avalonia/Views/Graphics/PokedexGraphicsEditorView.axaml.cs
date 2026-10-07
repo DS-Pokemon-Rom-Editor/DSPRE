@@ -65,7 +65,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             if (path == null) return;
             VM.Remember(part, "the PNG imported into " + part.Name.ToLowerInvariant() + " " + part.Member);
             string trouble = GraphicAssets.ImportPng(archive, part.Member, path, out string note);
-            if (trouble != null) { await DialogHelper.ShowError(trouble, "Pokédex graphics"); return; }
+            if (trouble != null) { VM.DropLastStepIfUnchanged(); await DialogHelper.ShowError(trouble, "Pokédex graphics"); return; }
             if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Pokédex graphics");
             VM.Reload();
             VM.Say("Put " + System.IO.Path.GetFileName(path) + " in.");

@@ -1003,9 +1003,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             RaiseSteps();
         }
 
+        /// <summary>Drops the last remembered step when its file was never written, so nothing shows as changed.</summary>
+        public void DropLastStepIfUnchanged()
+        {
+            if (_undo.Count == 0) return;
+            Step step = _undo.Peek();
+            byte[] now;
+            try { now = new ScriptNarc(step.Dir).Get(step.Member); }
+            catch (Exception ex) { AppLogger.Error("Bottom screen drop: " + ex.Message); return; }
+            if (now == null || !now.AsSpan().SequenceEqual(step.Bytes)) return;
+            _undo.Pop();
+            if (!_undo.Any(s => s.Dir == step.Dir && s.Member == step.Member))
+                _originals.Remove((step.Dir, step.Member));
+            RaiseSteps();
+        }
+
         /// <summary>Reads everything again after a drawing has been replaced.</summary>
         public void ReloadAfterImport()
         {
+            DropLastStepIfUnchanged();
             LoadScreens();
             Refresh();
         }

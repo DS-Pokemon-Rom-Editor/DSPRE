@@ -356,6 +356,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>Reads every file again after one has been painted or replaced.</summary>
         public void Reload()
         {
+            DropLastStepIfUnchanged();
             _composer?.Forget();
             _sample.Forget();
             try { GraphicAssets.Forget(); } catch { }
@@ -409,6 +410,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 RaiseSteps();
             }
             catch (Exception ex) { AppLogger.Error("Pokédex graphics remember: " + ex.Message); }
+        }
+
+        /// <summary>Drops the last remembered step when its file was never written, so nothing shows as changed.</summary>
+        public void DropLastStepIfUnchanged()
+        {
+            if (_undo.Count == 0) return;
+            Step step = _undo.Peek();
+            byte[] now;
+            try { now = new ScriptNarc(step.Dir).Get(step.Member); }
+            catch (Exception ex) { AppLogger.Error("Pokédex graphics drop: " + ex.Message); return; }
+            if (now == null || !now.AsSpan().SequenceEqual(step.Bytes)) return;
+            _undo.Pop();
+            if (!_undo.Any(s => s.Dir == step.Dir && s.Member == step.Member))
+                _originals.Remove((step.Dir, step.Member));
+            RaiseSteps();
         }
 
         public bool CanUndo => _undo.Count > 0;

@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.Views.Graphics
 
             VM.Remember(piece.Archive, piece.Drawing, $"the PNG imported into {piece.Name}");
             string trouble = GraphicAssets.ImportPng(archive, piece.Drawing, path, out string note);
-            if (trouble != null) { await DialogHelper.ShowError(trouble, "Bottom Screen"); return; }
+            if (trouble != null) { VM?.DropLastStepIfUnchanged(); await DialogHelper.ShowError(trouble, "Bottom Screen"); return; }
             string tooBig = VM?.RefuseIfOverRoom(piece);
             if (tooBig != null) { await DialogHelper.ShowError(tooBig, "Bottom Screen"); VM?.ReloadAfterImport(); return; }
             if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Bottom Screen");
