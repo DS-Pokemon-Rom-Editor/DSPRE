@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DSPRE.Avalonia.Views.Pokemon.MoveListView"
+        Width="320" Height="440" MinWidth="240" MinHeight="200"
+        Title="Moves">
+  <DockPanel Margin="10">
+    <TextBlock DockPanel.Dock="Top" Text="Double-click a move, or press Enter, to open it." FontSize="11" Margin="0,0,0,6"
+               Foreground="{DynamicResource Editor.Subtle}"/>
+    <TextBlock DockPanel.Dock="Bottom" x:Name="CountText" FontSize="11" Margin="0,6,0,0"
+               Foreground="{DynamicResource Editor.Subtle}"/>
+    <ListBox x:Name="Moves" DoubleTapped="Moves_DoubleTapped" KeyDown="Moves_KeyDown"/>
+  </DockPanel>
+</Window>

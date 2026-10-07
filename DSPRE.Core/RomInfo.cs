@@ -282,6 +282,8 @@ namespace DSPRE
             TypeIconMembers,       // u32[23]: battle object archive member of each type or contest icon
             MoveTypeButtonPalettes, // u32[18]: RAM pointers to each type's 16-colour move button palette
             PokewalkerSprites,     // HGSS u16[494][2]: Pokéwalker picture (a/2/5/6) of each species, male then female
+            PunchingMoves,         // u16[15]: the moves Iron Fist boosts (pokeplatinum sPunchingMoves), in the battle overlay
+            SoundMoves,            // u16[12] with spare slots: the moves Soundproof blocks (pokeplatinum sSoundMoves)
         }
 
         /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
@@ -337,7 +339,32 @@ namespace DSPRE
             [("CPUE", 1, GameTable.MoveTypeButtonPalettes)] = new(11, 0x3D0),
             [("ADAE", 5, GameTable.MoveTypeButtonPalettes)] = new(8, 0x18B84),
             [("IPKE", 0, GameTable.PokewalkerSprites)] = new(112, 0xE07E),
+            [("IPKE", 0, GameTable.PunchingMoves)] = new(12, 0x352FE),
+            [("CPUE", 1, GameTable.PunchingMoves)] = new(16, 0x33AD6),
+            [("ADAE", 5, GameTable.PunchingMoves)] = new(11, 0x30CFA),
+            [("IPKE", 0, GameTable.SoundMoves)] = new(12, 0x37360),
+            [("CPUE", 1, GameTable.SoundMoves)] = new(16, 0x35A4C),
+            [("ADAE", 5, GameTable.SoundMoves)] = new(11, 0x329C4),
         };
+
+        /// <summary>
+        /// In a move list's overlay: the literal holding the list's address, the <c>cmp rN, #count</c> that bounds the
+        /// walk over it, and how many entries the vanilla list has room for (its zero padding included).
+        /// </summary>
+        public sealed record MoveListSites(int PointerSite, int CountCompare, int VanillaCapacity);
+
+        private static readonly Dictionary<(string id, int rev, GameTable table), MoveListSites> MoveListSiteTable = new()
+        {
+            [("IPKE", 0, GameTable.PunchingMoves)] = new(0x20224, 0x1FF58, 15),
+            [("CPUE", 1, GameTable.PunchingMoves)] = new(0x1FC2C, 0x1F960, 15),
+            [("ADAE", 5, GameTable.PunchingMoves)] = new(0x1E81C, 0x1E534, 15),
+            [("IPKE", 0, GameTable.SoundMoves)] = new(0x1B7A4, 0x1B718, 16),
+            [("CPUE", 1, GameTable.SoundMoves)] = new(0x1B1A4, 0x1B118, 26),
+            [("ADAE", 5, GameTable.SoundMoves)] = new(0x19FF4, 0x19F68, 14),
+        };
+
+        public static MoveListSites MoveListSitesOf(GameTable table) =>
+            romID != null && MoveListSiteTable.TryGetValue((romID, romRevision, table), out MoveListSites sites) ? sites : null;
 
         // In the type chart's overlay: the literals holding the chart's address (column 0, +1 and +2), the
         // `cmp rN, #count` Conversion 2 bounds its record walk with, and the `movs r1, #count` its random

@@ -25,6 +25,7 @@ namespace DSPRE.Avalonia
                 S("name:DescriptionBox", "Description", "The move's in-game description, shown for reference."),
                 S("name:ContestBox", "Contests", "The contest condition it shows off and its appeal."),
                 S("name:FlagsBox", "Flags", "How the move behaves: whether it makes contact, can be blocked by Protect, reflected, snatched or copied."),
+                S("name:AbilityBox", "Ability based", "Whether Iron Fist boosts the move or Soundproof blocks it. The game keeps these as lists; a full list can grow through the ROM Patch Toolbox."),
                 S("toolbar", "Spreadsheets", "Export CSV and Import CSV move every move's numbers through a spreadsheet. Imported moves wait until you save."),
                 S("toolbar", "Saving", "Save or Ctrl+S writes your changes, Ctrl+Z undoes, Discard drops them."));
 

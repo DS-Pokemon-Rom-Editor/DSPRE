@@ -25,7 +25,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         /// <summary>The patches grouped by what they change; a patch with no group lands in Other.</summary>
         public ObservableCollection<PatchTabViewModel> Tabs { get; } = new ObservableCollection<PatchTabViewModel>();
 
-        private static readonly string[] TabNames = { "Foundation", "Trainers", "Text", "Items and Pokémon", "Maps and graphics", "External", "Other" };
+        private static readonly string[] TabNames = { "Foundation", "Trainers", "Text", "Items and Pokémon", "Moves", "Maps and graphics", "External", "Other" };
 
         private static readonly Dictionary<string, string> TabOf = new Dictionary<string, string>
         {
@@ -33,6 +33,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["trainerClassMetadata"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
             ["sentenceCase"] = "Text", ["itemSentenceCase"] = "Text", ["trainerNames"] = "Text",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
+            ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves",
             ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics",
             ["platPatches"] = "External",
         };
@@ -45,6 +46,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["trainerClassTablesExpanded"] = "class tables expand", ["trainerEncounterBgmRepointed"] = "encounter music bgm table", ["trainerShiny"] = "shiny trainer party",
             ["sentenceCase"] = "names capital case pokemon", ["itemSentenceCase"] = "names capital case items", ["trainerNames"] = "trainer name length text",
             ["sameHeldItemOdds"] = "held item odds wild", ["itemStandardize"] = "item numbers scripts ground items order",
+            ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai",
             ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable",
             ["platPatches"] = "external platinum patches link",
         };
@@ -200,6 +202,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public IBrush StatusBrush { get; }
         public string Link { get; }
         public bool HasLink => Link != null;
+        /// <summary>Further reading on what the patch changes, shown as a Guide button.</summary>
+        public string Guide { get; }
+        public bool HasGuide => Guide != null;
         public bool ShowApply => Link == null;
         public List<PatchPartViewModel> Parts { get; } = new List<PatchPartViewModel>();
         public bool HasParts => Parts.Count > 0;
@@ -215,6 +220,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             Description = p.Description;
             AuthorText = string.IsNullOrEmpty(p.Author) ? null : "by " + p.Author;
             Link = p.Link;
+            Guide = p.Guide;
             if (p.Parts != null)
                 foreach (PatchToolboxLogic.PatchPart part in p.Parts)
                     Parts.Add(new PatchPartViewModel(part));

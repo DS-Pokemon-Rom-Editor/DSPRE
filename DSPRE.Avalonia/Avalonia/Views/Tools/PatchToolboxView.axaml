@@ -78,6 +78,8 @@
                   <Button Content="Open page" controls:Icon.Key="OpenLink" Height="32" HorizontalAlignment="Stretch"
                           IsVisible="{Binding HasLink}" ToolTip.Tip="{Binding Link}" Click="OpenLink_Click"/>
                   <Button Content="Notes" MinWidth="96" HorizontalAlignment="Stretch" Click="Notes_Click"/>
+                  <Button Content="Guide" controls:Icon.Key="OpenLink" MinWidth="96" HorizontalAlignment="Stretch"
+                          IsVisible="{Binding HasGuide}" ToolTip.Tip="{Binding Guide}" Click="Guide_Click"/>
                 </StackPanel>
               </Grid>
             </Border>

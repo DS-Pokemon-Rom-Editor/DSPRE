@@ -1373,6 +1373,7 @@ namespace DSPRE
             public string ActionLabel;  // button caption when Available (defaults to "Apply")
             public string Author;       // credited beside the title
             public string Link;         // where to get a patch DSPRE can't apply itself
+            public string Guide;        // further reading on what the patch changes
             public List<PatchPart> Parts;
         }
 
@@ -1407,12 +1408,18 @@ namespace DSPRE
             ["platExtraTms"] = ("hzla", "extra TMs"),
             ["trainerClassTablesExpanded"] = ("Mixone", "trainer class table expansion"),
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
+            ["punchingMovesExpanded"] = ("DSPRE", "punching move list expansion"),
+            ["soundMovesExpanded"] = ("DSPRE", "sound move list expansion"),
         };
+
+        private const string MoveListResearch = "built on MrHam88's research and the DS Pokémon Hacking wiki's move editing guide (Yako and Lhea)";
 
         // What a patch was built on and how, as its author asked to be credited.
         private static readonly Dictionary<string, string> CreditSources = new Dictionary<string, string>
         {
             ["trainerClassMetadata"] = "built on the pokeheartgold decompilation and Mixone's Ghidra symbol map, and developed with AI assistance",
+            ["punchingMovesExpanded"] = MoveListResearch,
+            ["soundMovesExpanded"] = MoveListResearch,
         };
 
         /// <summary>The credit line for a patch, as the credits list writes it, or null.</summary>
@@ -1500,6 +1507,18 @@ namespace DSPRE
                     bool applied = RomPatchState.flag_standardizedItems || CheckScriptsStandardizedItemNumbers();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
+
+            PatchInfo punching = Status("punchingMovesExpanded", "Expand the punching move list",
+                $"Moves the list of punching moves Iron Fist boosts into the expanded ARM9 area with room for {MoveCategoryTable.ExpandedCapacity}, so the Move Data editor can change which moves are punching. Requires the ARM9 expansion patch.",
+                () => MoveListProbe(MoveCategoryTable.Kind.Punching));
+            punching.Guide = MoveCategoryTable.GuideUrl(MoveCategoryTable.Kind.Punching);
+            list.Add(punching);
+
+            PatchInfo sound = Status("soundMovesExpanded", "Expand the sound move list",
+                $"Moves the list of sound moves Soundproof blocks into the expanded ARM9 area with room for {MoveCategoryTable.ExpandedCapacity}, so the Move Data editor can change which moves are sound. The trainer AI's own sound list is not changed. Requires the ARM9 expansion patch.",
+                () => MoveListProbe(MoveCategoryTable.Kind.Sound));
+            sound.Guide = MoveCategoryTable.GuideUrl(MoveCategoryTable.Kind.Sound);
+            list.Add(sound);
 
             list.Add(Status("arm9", "Expand ARM9 (synthetic overlay)",
                 "Add ~88 KB of usable ARM9 memory. Required by the BDHCam / script-command patches. Advanced, can break the game if misused.",
@@ -1675,6 +1694,42 @@ namespace DSPRE
 
         private static bool Arm9Expanded() => RomPatchState.flag_arm9Expanded || CheckFilesArm9ExpansionApplied();
 
+        private static PatchState MoveListProbe(MoveCategoryTable.Kind kind)
+        {
+            if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+            if (MoveCategoryTable.WhyNot(kind) != null) return Unsupported("Unsupported version");
+            if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
+            return MoveCategoryTable.IsExpanded(kind) ? PatchState.Applied : PatchState.Available;
+        }
+
+        /// <summary>Moves a punching or sound move list into the expanded ARM9 area, keeping its moves.</summary>
+        public static bool ApplyMoveListExpansion(MoveCategoryTable.Kind kind)
+        {
+            string key = kind == MoveCategoryTable.Kind.Punching ? "punchingMovesExpanded" : "soundMovesExpanded";
+            string name = MoveCategoryTable.NameOf(kind);
+            if (MoveCategoryTable.WhyNot(kind) is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (AlreadyApplied(MoveCategoryTable.IsExpanded(kind))) return false;
+            if (!ConfirmYesNo($"The list of {name} moves will move into the expanded ARM9 area with room for {MoveCategoryTable.ExpandedCapacity} moves, " +
+                    "and the battle code will be pointed at it. Its moves stay as they are.\n\n" +
+                    "Do you wish to continue?" + CreditNote(key), "Confirm to proceed"))
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+            try
+            {
+                MoveCategoryTable table = MoveCategoryTable.Load(kind);
+                table.MoveToExpansion();
+                ShowInfo($"The {name} move list now has room for {MoveCategoryTable.ExpandedCapacity} moves. Mark moves in the Move Data editor.", "Success");
+                return true;
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is UnauthorizedAccessException)
+            {
+                ShowError($"The {name} move list was not moved:\n" + ex.Message, "Patch not applied");
+                return false;
+            }
+        }
+
         private static bool AlreadyApplied(bool applied)
         {
             if (applied) ShowInfo("This patch has already been applied.", "Can't reapply patch");
@@ -1733,7 +1788,7 @@ namespace DSPRE
         {
             string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.ExpansionRefusal();
             if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint"
-                or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed")
+                or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -1757,6 +1812,8 @@ namespace DSPRE
                 case "sameHeldItemOdds": return ApplySameHeldItemOddsPatch();
                 case "trainerClassTablesExpanded": return ApplyMoveTrainerClassTables();
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
+                case "punchingMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Punching);
+                case "soundMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Sound);
                 default: return false;
             }
         }

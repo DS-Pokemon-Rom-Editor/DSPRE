@@ -67,6 +67,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         public void DiscardChanges()
         {
+            RevertCategories();
             if (_pendingMove == null && _pendingImports.Count == 0)
             {
                 // The edits live in _currentFile, so reading the move again is what puts them back.
@@ -328,8 +329,148 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             OnPropertyChanged(nameof(Preview));
         }
 
-        private sealed record UndoState(byte[] Move, string Description, string Bag);
-        private byte[] Snapshot() => DSPRE.Avalonia.UndoJson.Take(new UndoState(_currentFile.ToByteArray(), _description, _bagText));
+        private sealed record UndoState(byte[] Move, string Description, string Bag, bool Punching, bool Sound);
+        private byte[] Snapshot() => DSPRE.Avalonia.UndoJson.Take(new UndoState(_currentFile.ToByteArray(), _description, _bagText, IsPunching, IsSound));
+
+        // ── Ability based lists: the punching and sound moves the battle code keeps as tables ──
+        private MoveCategoryTable _punching, _sound;
+        private List<ushort> _savedPunching, _savedSound;
+        public string AbilityWhyNot { get; private set; }
+        public bool HasAbilityWhyNot => AbilityWhyNot != null;
+        public bool HasPunchingList => _punching != null;
+        public bool HasSoundList => _sound != null;
+
+        /// <summary>Raised when a list still sits in the game's overlay; the view offers the expansion patch, then applies the tick.</summary>
+        public event Action<MoveCategoryTable.Kind, bool> NeedsExpansion;
+
+        /// <summary>Raised whenever either list's membership may have changed, for windows showing a list.</summary>
+        public event Action ListsChanged;
+
+        /// <summary>The moves on a list as held here now, unsaved ticks included, lowest id first.</summary>
+        public List<(int Id, string Name)> ListedMoves(MoveCategoryTable.Kind kind)
+        {
+            MoveCategoryTable table = kind == MoveCategoryTable.Kind.Punching ? _punching : _sound;
+            List<(int Id, string Name)> rows = new List<(int Id, string Name)>();
+            if (table == null) return rows;
+            foreach (ushort id in table.Moves.OrderBy(m => m))
+                rows.Add((id, id < MoveNames.Count ? MoveNames[id] : $"Move {id}"));
+            return rows;
+        }
+
+        public bool IsPunching
+        {
+            get => _punching != null && _punching.Contains(_currentId);
+            set => SetListed(_punching, MoveCategoryTable.Kind.Punching, value, nameof(IsPunching), nameof(PunchingNote));
+        }
+
+        public bool IsSound
+        {
+            get => _sound != null && _sound.Contains(_currentId);
+            set => SetListed(_sound, MoveCategoryTable.Kind.Sound, value, nameof(IsSound), nameof(SoundNote));
+        }
+
+        private void SetListed(MoveCategoryTable table, MoveCategoryTable.Kind kind, bool listed, string flag, string note)
+        {
+            if (table == null || _loading || _currentFile == null) return;
+            if (listed == table.Contains(_currentId)) return;
+            // The game's own list has no room to speak of, so every change goes to the moved list.
+            if (!table.InExpansion) { OnPropertyChanged(flag); NeedsExpansion?.Invoke(kind, listed); return; }
+            if (!table.Set(_currentId, listed))
+            {
+                OnPropertyChanged(flag);
+                Status = $"The {MoveCategoryTable.NameOf(kind)} move list is full.";
+                return;
+            }
+            OnPropertyChanged(flag);
+            OnPropertyChanged(note);
+            SetDirty();
+            ListsChanged?.Invoke();
+        }
+
+        public string PunchingNote => _punching == null ? null : "Iron Fist boosts these. The trainer AI counts the boost itself.";
+        public string SoundNote => _sound == null ? null : "Soundproof blocks these. The trainer AI keeps its own sound list; the guide shows how to edit it.";
+
+        private void LoadCategories()
+        {
+            _punching = _sound = null;
+            _savedPunching = _savedSound = null;
+            AbilityWhyNot = null;
+            if (HgEngineProject.IsActive) { AbilityWhyNot = "hg-engine keeps these lists in its own source."; }
+            else
+            {
+                try
+                {
+                    if (MoveCategoryTable.WhyNot(MoveCategoryTable.Kind.Punching) is string why) AbilityWhyNot = why;
+                    else
+                    {
+                        _punching = MoveCategoryTable.Load(MoveCategoryTable.Kind.Punching);
+                        _sound = MoveCategoryTable.Load(MoveCategoryTable.Kind.Sound);
+                        _savedPunching = _punching.Moves.ToList();
+                        _savedSound = _sound.Moves.ToList();
+                    }
+                }
+                catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException)
+                {
+                    _punching = _sound = null;
+                    AbilityWhyNot = ex.Message;
+                }
+            }
+            RaiseCategories();
+        }
+
+        private void RaiseCategories()
+        {
+            foreach (string n in new[] { nameof(IsPunching), nameof(IsSound), nameof(PunchingNote), nameof(SoundNote),
+                                         nameof(AbilityWhyNot), nameof(HasAbilityWhyNot), nameof(HasPunchingList), nameof(HasSoundList) })
+                OnPropertyChanged(n);
+            ListsChanged?.Invoke();
+        }
+
+        private bool CategoriesChanged =>
+            (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) || (_sound != null && !_sound.Moves.SequenceEqual(_savedSound));
+
+        private void RevertCategories()
+        {
+            if (_punching != null) { _punching.Moves.Clear(); _punching.Moves.AddRange(_savedPunching); }
+            if (_sound != null) { _sound.Moves.Clear(); _sound.Moves.AddRange(_savedSound); }
+            RaiseCategories();
+        }
+
+        /// <summary>Writes both lists when they changed; the move itself is already saved by then.</summary>
+        private string SaveCategories()
+        {
+            if (!CategoriesChanged) return null;
+            try
+            {
+                if (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) { _punching.Save(); _savedPunching = _punching.Moves.ToList(); }
+                if (_sound != null && !_sound.Moves.SequenceEqual(_savedSound)) { _sound.Save(); _savedSound = _sound.Moves.ToList(); }
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is UnauthorizedAccessException)
+            {
+                return ex.Message;
+            }
+        }
+
+        /// <summary>Moves a list into the expanded ARM9 area, then applies the tick that asked for it.</summary>
+        public string ExpandList(MoveCategoryTable.Kind kind, bool listed)
+        {
+            MoveCategoryTable table = kind == MoveCategoryTable.Kind.Punching ? _punching : _sound;
+            if (table == null) return "The list is not available for this ROM.";
+            try
+            {
+                table.MoveToExpansion();
+                if (kind == MoveCategoryTable.Kind.Punching) _savedPunching = table.Moves.ToList(); else _savedSound = table.Moves.ToList();
+                AppEvents.RaiseRomPatchStateChanged();
+                if (kind == MoveCategoryTable.Kind.Punching) IsPunching = listed; else IsSound = listed;
+                RaiseCategories();
+                return null;
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is UnauthorizedAccessException)
+            {
+                return ex.Message;
+            }
+        }
 
         private string _title = "Move Data Editor";
         public string Title { get => _title; private set => Set(ref _title, value); }
@@ -370,7 +511,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             PopulateFromCurrentFile();
             Description = state.Description;
             BagText = state.Bag;
+            _punching?.Set(_currentId, state.Punching);
+            _sound?.Set(_currentId, state.Sound);
             _loading = false;
+            RaiseCategories();
 
             _dirty = _history.IsDirty;
             RefreshDirty();
@@ -420,6 +564,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             foreach (string n in moveNames) MoveNames.Add(n);
             OnPropertyChanged(nameof(MaxMoveIndex));
+            LoadCategories();
             foreach (string n in typeNames) TypeNames.Add(n);
             // Split / contest dropdowns come from the customisable LabelStore (Tools ▸ Edit Dropdown Labels).
             ReloadSplitContest();
@@ -553,6 +698,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (SaveTexts() is string textError)
                 {
                     await DialogHelper.ShowError($"The text of move {id} was not saved.\n{textError}", "Move Data Editor");
+                    return;
+                }
+                if (SaveCategories() is string listError)
+                {
+                    await DialogHelper.ShowError($"Move {id} was saved, but its punching or sound listing was not.\n{listError}", "Move Data Editor");
                     return;
                 }
                 _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
@@ -730,6 +880,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 : await RecordSwitchGuard.ConfirmLeaveAsync(this, null, "move");
             if (!discard) { RecordSwitchGuard.SnapBack(() => _selectedMoveIndex, v => _selectedMoveIndex = v, () => OnPropertyChanged(nameof(SelectedMoveIndex))); return; }
             _dirty = false;
+            RevertCategories();
             if (_pendingMove != null)
             {
                 // The list held the new move at its id, so a later pick sits one lower once it is gone.
@@ -753,6 +904,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             LoadTexts();
             SetClean();
             _loading = false;
+            RaiseCategories();
 
             // Loaded state is the clean baseline for undo on this move; switching moves starts fresh history.
             _history.Reset(Snapshot());

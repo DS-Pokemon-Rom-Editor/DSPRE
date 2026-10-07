@@ -41,6 +41,12 @@ namespace DSPRE.Avalonia.Views.Tools
                 await Launcher.LaunchUriAsync(new System.Uri(link));
         }
 
+        private async void Guide_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control c && c.DataContext is PatchRowViewModel { Guide: { } guide })
+                await Launcher.LaunchUriAsync(new System.Uri(guide));
+        }
+
         private async void Notes_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Control c && c.DataContext is PatchRowViewModel row)

@@ -46,6 +46,38 @@ namespace DSPRE
                 "The Shiny box on each party member in the Trainer editor.\n\n" +
                 "Requirements\n" +
                 "US HeartGold or SoulSilver (or Italian HeartGold), the ARM9 expansion and a ds-rom project.",
+            ["punchingMovesExpanded"] =
+                "What it does\n" +
+                "The battle code keeps the moves Iron Fist boosts as a list of 15 in its overlay. This moves the list into " +
+                "the expanded ARM9 area with room for 64 and points the code at it; the Move Data editor changes the " +
+                "list only once it is here.\n\n" +
+                "Where to edit\n" +
+                "The Move Data editor's Ability based group: tick Punching on a move.\n\n" +
+                "Trainer AI\n" +
+                "Nothing more to do: the AI scores a move's damage with Iron Fist counted, so it sees the new list.\n\n" +
+                "Guide\n" +
+                "https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/editing_moves/#punching-moves\n\n" +
+                "Requirements\n" +
+                "US HeartGold, Platinum (Rev 1) or Diamond, the ARM9 expansion and a ds-rom project. Not compatible with hg-engine.\n\n" +
+                "Research\n" +
+                "The list, its count check and its pointer were documented by MrHam88 and the DS Pokémon Hacking wiki's move editing guide.",
+            ["soundMovesExpanded"] =
+                "What it does\n" +
+                "The battle code keeps the moves Soundproof blocks as a list of 12 in its overlay. This moves the list into " +
+                "the expanded ARM9 area with room for 64 and points the code at it; the Move Data editor changes the " +
+                "list only once it is here.\n\n" +
+                "Where to edit\n" +
+                "The Move Data editor's Ability based group: tick Sound on a move.\n\n" +
+                "Trainer AI\n" +
+                "The AI keeps its own list of sound moves in its overlay, which this patch does not change, so trainers " +
+                "with the Basic flag may still use a new sound move into Soundproof. The DS Pokémon Hacking wiki's move " +
+                "editing guide shows how to edit that table.\n\n" +
+                "Guide\n" +
+                "https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/editing_moves/#sound-based-moves\n\n" +
+                "Requirements\n" +
+                "US HeartGold, Platinum (Rev 1) or Diamond, the ARM9 expansion and a ds-rom project. Not compatible with hg-engine.\n\n" +
+                "Research\n" +
+                "The list, its count check and its pointer were documented by MrHam88 and the DS Pokémon Hacking wiki's move editing guide.",
         };
 
         /// <summary>The notes for a patch, with where an installed copy sits when that can be read back.</summary>
