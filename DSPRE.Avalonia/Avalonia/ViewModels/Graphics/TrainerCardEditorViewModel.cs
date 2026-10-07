@@ -20,17 +20,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public string[] RankNames => TrainerCardGraphics.RankNames;
 
         /// <summary>One rank's box in the row that says which ranks an imported design colours.</summary>
-        public sealed class RankChoice
+        public sealed class RankChoice : INotifyPropertyChanged
         {
+            public event PropertyChangedEventHandler PropertyChanged;
             public string Name { get; init; }
             public int Index { get; init; }
-            public bool IsChecked { get; set; } = true;
+            private bool _isChecked;
+            public bool IsChecked
+            {
+                get => _isChecked;
+                set { if (_isChecked == value) return; _isChecked = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked))); }
+            }
         }
 
         private System.Collections.ObjectModel.ObservableCollection<RankChoice> _importRanks;
         public System.Collections.ObjectModel.ObservableCollection<RankChoice> ImportRanks => _importRanks ??=
             new System.Collections.ObjectModel.ObservableCollection<RankChoice>(
-                System.Linq.Enumerable.Select(RankNames, (n, i) => new RankChoice { Name = n, Index = i }));
+                System.Linq.Enumerable.Select(RankNames, (n, i) => new RankChoice { Name = n, Index = i, IsChecked = i == SelectedRankIndex }));
 
         private int[] PickedRanks => System.Linq.Enumerable.ToArray(
             System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(ImportRanks, r => r.IsChecked), r => r.Index));
@@ -39,7 +45,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public int SelectedRankIndex
         {
             get => _selectedRankIndex;
-            set { if (Set(ref _selectedRankIndex, value)) RefreshCardPreviews(); }
+            set
+            {
+                if (!Set(ref _selectedRankIndex, value)) return;
+                // An import goes to the rank being looked at unless more are ticked.
+                foreach (RankChoice r in ImportRanks) r.IsChecked = r.Index == value;
+                RefreshCardPreviews();
+            }
         }
 
         private AvaBitmap _cardFrontPreview, _cardBackPreview, _trainerMalePreview, _trainerFemalePreview;
