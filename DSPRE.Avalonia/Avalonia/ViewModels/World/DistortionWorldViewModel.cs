@@ -37,15 +37,15 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private readonly Dictionary<int, MapFile> _shapeEdited = new Dictionary<int, MapFile>();
 
+        /// <summary>The archives this editor reads; the launcher runs it behind the busy overlay first.</summary>
+        public static void Unpack() => DSUtils.TryUnpackNarcs(new List<DirNames> {
+            DirNames.maps, DirNames.exteriorBuildingModels, DirNames.buildingTextures,
+            DirNames.mapTextures, DirNames.matrices, DirNames.areaData, DirNames.eventFiles,
+            DirNames.fieldEffectModels });
+
         public DistortionWorldViewModel()
         {
-            try
-            {
-                DSUtils.TryUnpackNarcs(new List<DirNames> {
-                    DirNames.maps, DirNames.exteriorBuildingModels, DirNames.buildingTextures,
-                    DirNames.mapTextures, DirNames.matrices, DirNames.areaData, DirNames.eventFiles,
-                    DirNames.fieldEffectModels });
-            }
+            try { Unpack(); }
             catch (Exception ex) { AppLogger.Error("DistortionWorld.Unpack: " + ex.Message); }
 
             MapModel.PropertyChanged += (_, e) =>

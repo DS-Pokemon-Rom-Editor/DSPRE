@@ -679,17 +679,24 @@ namespace DSPRE.Avalonia
         {
             if (Refused("PokegearPhoneBookView")) return;
 
-            PokegearPhoneBookViewModel vm = null;
-            await RunBusyAsync("Opening Pokégear Phone Book…",
-                "Reading the phone book, contact names, trainers, maps and items.",
-                () =>
-                {
-                    DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
-                    vm = new PokegearPhoneBookViewModel(initialEntry);
-                });
-            if (vm == null) return;
+            try
+            {
+                PokegearPhoneBookViewModel vm = null;
+                await RunBusyAsync("Opening Pokégear Phone Book…",
+                    "Reading the phone book, contact names, trainers, maps and items.",
+                    () =>
+                    {
+                        DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
+                        vm = new PokegearPhoneBookViewModel(initialEntry);
+                    });
+                if (vm == null) return;
 
-            new EditorHostWindow("Pokégear phone book", new PokegearPhoneBookView(vm), 1320, 700).ShowManaged();
+                new EditorHostWindow("Pokégear phone book", new PokegearPhoneBookView(vm), 1320, 700).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("The Pokégear Phone Book could not be opened:" + System.Environment.NewLine + ex.Message, "Pokégear Phone Book");
+            }
         }
 
         public static void OpenStarterEditor() => _ = OpenStarterEditorAsync();
@@ -1113,23 +1120,44 @@ namespace DSPRE.Avalonia
         /// Deliberately not gated on a linked checkout: this is how someone with only the ROM sees what
         /// the game reads out of it, which is the case the gate leaves with nothing to look at.
         /// </summary>
-        public static void OpenHgeRomReview()
+        public static void OpenHgeRomReview() => _ = OpenHgeRomReviewAsync();
+
+        public static async System.Threading.Tasks.Task OpenHgeRomReviewAsync()
         {
             if (Refused("HgeRomReviewView")) return;
-            new HgeRomReviewView(new HgeRomReviewViewModel()).ShowManaged();
+            try
+            {
+                await RunBusyAsync("Opening hg-engine ROM review…", "Reading the icons and the a/0/2/8 tables.", HgeRomReviewViewModel.Unpack);
+                await System.Threading.Tasks.Task.Yield();
+                new HgeRomReviewView(new HgeRomReviewViewModel()).ShowManaged();
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("The hg-engine ROM review could not be opened:" + System.Environment.NewLine + ex.Message, "hg-engine ROM review");
+            }
         }
 
-        public static void OpenDistortionWorldEditor()
+        public static void OpenDistortionWorldEditor() => _ = OpenDistortionWorldEditorAsync();
+
+        public static async System.Threading.Tasks.Task OpenDistortionWorldEditorAsync()
         {
             if (Refused("DistortionWorldView")) return;
-
-            DistortionWorldViewModel vm = new ViewModels.World.DistortionWorldViewModel();
-            if (!vm.Available)
+            try
             {
-                AppMessages.Info("This ROM has no Distortion World data to edit.", "Distortion World");
-                return;
+                await RunBusyAsync("Opening Distortion World…", "Reading the floors, their maps, props and events.", DistortionWorldViewModel.Unpack);
+                await System.Threading.Tasks.Task.Yield();
+                DistortionWorldViewModel vm = new ViewModels.World.DistortionWorldViewModel();
+                if (!vm.Available)
+                {
+                    AppMessages.Info("This ROM has no Distortion World data to edit.", "Distortion World");
+                    return;
+                }
+                new Views.World.DistortionWorldView(vm).ShowManaged();
             }
-            new Views.World.DistortionWorldView(vm).ShowManaged();
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("The Distortion World editor could not be opened:" + System.Environment.NewLine + ex.Message, "Distortion World");
+            }
         }
 
         public static void OpenCharMapManager()

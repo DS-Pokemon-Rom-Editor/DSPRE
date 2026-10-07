@@ -51,10 +51,12 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         private int _loadedSpeciesId = -1;
         private bool _repairStaged;
 
+        /// <summary>hg-engine owns neither archive, so the unpacked copies are the ROM's own bytes.</summary>
+        public static void Unpack() => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons, DirNames.synthOverlay });
+
         public HgeRomReviewViewModel()
         {
-            // hg-engine owns neither archive, so the unpacked copies are the ROM's own bytes.
-            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.monIcons, DirNames.synthOverlay });
+            Unpack();
 
             LoadSpecies();
             LoadLayout();
