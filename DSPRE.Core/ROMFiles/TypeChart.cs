@@ -205,10 +205,24 @@ namespace DSPRE.ROMFiles
                 if (!HgEngine.HgEngineTypeChart.TryWrite(rows, out string error)) throw new IOException(error);
                 return;
             }
-            DSUtils.WriteToFile(_path, ToBytes(), (uint)_offset);
+            byte[] chart = ToBytes();
+            // A failed Pokétch write puts the chart and modulus back, so neither overlay changes.
+            byte[] chartBefore = DSUtils.ReadFromFile(_path, _offset, chart.Length);
+            int modulusSite = TypeChartPointerSites.Value.countModulus;
+            byte[] modulusBefore = DSUtils.ReadFromFile(_ovPath, modulusSite, 1);
+            DSUtils.WriteToFile(_path, chart, (uint)_offset);
             RepairModulus();
-            if (SpotOf(GameTable.PoketchTypeChart) != null && GameTableFile.WhyNot(GameTable.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
-                GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
+            try
+            {
+                if (SpotOf(GameTable.PoketchTypeChart) != null && GameTableFile.WhyNot(GameTable.PoketchTypeChart, VanillaTypes * VanillaTypes) == null)
+                    GameTableFile.Write(GameTable.PoketchTypeChart, PoketchGrid(Matchups));
+            }
+            catch
+            {
+                DSUtils.WriteToFile(_path, chartBefore, (uint)_offset);
+                DSUtils.WriteToFile(_ovPath, modulusBefore, (uint)modulusSite);
+                throw;
+            }
         }
 
         /// <summary>Moves the chart into its own expanded ARM9 block and repoints the battle code and Conversion 2's bound.</summary>

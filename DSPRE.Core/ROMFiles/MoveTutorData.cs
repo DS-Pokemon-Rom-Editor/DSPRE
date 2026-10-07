@@ -195,9 +195,20 @@ namespace DSPRE.ROMFiles
         {
             if (Problem(moveCount) is string p) throw new InvalidOperationException(p);
             if (FromSource) { SaveSource(); return; }
-            GameTableFile.Write(GameTable.TutorPool, PoolBytes());
-            if (Platinum) GameTableFile.Write(GameTable.TutorCompatibility, MaskBytes());
-            else File.WriteAllBytes(HgMaskPath, MaskBytes());
+            byte[] pool = PoolBytes();
+            // A failed compatibility write puts the pool back, so neither file changes.
+            byte[] before = GameTableFile.Read(GameTable.TutorPool, pool.Length);
+            GameTableFile.Write(GameTable.TutorPool, pool);
+            try
+            {
+                if (Platinum) GameTableFile.Write(GameTable.TutorCompatibility, MaskBytes());
+                else File.WriteAllBytes(HgMaskPath, MaskBytes());
+            }
+            catch
+            {
+                GameTableFile.Write(GameTable.TutorPool, before);
+                throw;
+            }
         }
     }
 }
