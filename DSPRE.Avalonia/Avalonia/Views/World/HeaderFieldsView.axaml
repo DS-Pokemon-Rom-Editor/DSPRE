@@ -64,14 +64,14 @@
             <TextBlock Classes="fieldlabel" Text="Music (day)"/>
             <Grid ColumnDefinitions="*,4,Auto">
               <controls:IdNameSelector Value="{Binding MusicDayValue}" Names="{Binding MusicDay.Names}" Keys="{Binding MusicDay.Keys}"/>
-              <Button Grid.Column="2" Classes="small" controls:Icon.Key="play" Click="PlayDayMusic_Click" ToolTip.Tip="Play or stop"/>
+              <Button Grid.Column="2" Classes="small" controls:Icon.Key="{Binding DayPlayIcon}" Click="PlayDayMusic_Click" ToolTip.Tip="Play or stop"/>
             </Grid>
           </StackPanel>
           <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
             <TextBlock Classes="fieldlabel" Text="Music (night)"/>
             <Grid ColumnDefinitions="*,4,Auto">
               <controls:IdNameSelector Value="{Binding MusicNightValue}" Names="{Binding MusicNight.Names}" Keys="{Binding MusicNight.Keys}"/>
-              <Button Grid.Column="2" Classes="small" controls:Icon.Key="play" Click="PlayNightMusic_Click" ToolTip.Tip="Play or stop"/>
+              <Button Grid.Column="2" Classes="small" controls:Icon.Key="{Binding NightPlayIcon}" Click="PlayNightMusic_Click" ToolTip.Tip="Play or stop"/>
             </Grid>
           </StackPanel>
           <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">

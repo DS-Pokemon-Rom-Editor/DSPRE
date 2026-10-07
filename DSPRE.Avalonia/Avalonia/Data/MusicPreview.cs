@@ -22,22 +22,33 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The sequence playing, or -1.</summary>
         public static int Playing { get { lock (Gate) return _playing; } }
 
+        private static object _tag;
+        /// <summary>Whoever started the playing sequence, so the button that did can show stop while its twin shows play.</summary>
+        public static bool StartedBy(object tag) { lock (Gate) return _playing >= 0 && Equals(_tag, tag); }
+
         /// <summary>Raised when playback starts or stops, on whatever thread did it.</summary>
         public static event Action Changed;
 
-        /// <summary>Plays a sequence, or stops it if it is the one playing.</summary>
-        public static void Toggle(int seqId)
+        /// <summary>Plays a sequence, or stops it if the same button already started it.</summary>
+        public static void Toggle(int seqId, object tag = null)
         {
-            if (Playing == seqId) { Stop(); return; }
-            Start(seqId);
+            if (Playing == seqId)
+            {
+                if (StartedBy(tag)) { Stop(); return; }
+                // The same sequence from the other button: keep playing, only the owner changes.
+                lock (Gate) _tag = tag;
+                Changed?.Invoke();
+                return;
+            }
+            Start(seqId, tag);
         }
 
-        public static void Start(int seqId)
+        public static void Start(int seqId, object tag = null)
         {
             Stop();
             if (seqId < 0) return;
             int ticket = Interlocked.Increment(ref _starting);
-            lock (Gate) _playing = seqId;
+            lock (Gate) { _playing = seqId; _tag = tag; }
             Changed?.Invoke();
             Task.Run(() =>
             {
@@ -73,6 +84,7 @@ namespace DSPRE.Avalonia.Data
                 was = _playing >= 0;
                 _handle = null;
                 _playing = -1;
+                _tag = null;
                 Interlocked.Increment(ref _starting);
             }
             if (handle != null)

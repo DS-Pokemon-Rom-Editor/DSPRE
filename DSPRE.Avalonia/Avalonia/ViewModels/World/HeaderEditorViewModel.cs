@@ -289,7 +289,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal MusicDayValue
         {
             get => _musicDayValue;
-            set { if (Set(ref _musicDayValue, value)) { Apply(h => h.musicDayID = (ushort)value); SyncMusicCombo(MusicDay, (int)value, i => _musicDayComboIndex = i, nameof(MusicDayComboIndex)); } }
+            set { if (Set(ref _musicDayValue, value)) { Apply(h => h.musicDayID = (ushort)value); SyncMusicCombo(MusicDay, (int)value, i => _musicDayComboIndex = i, nameof(MusicDayComboIndex)); OnPropertyChanged(nameof(DayPlayIcon)); } }
         }
         private int _musicDayComboIndex = -1;
         public int MusicDayComboIndex
@@ -302,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal MusicNightValue
         {
             get => _musicNightValue;
-            set { if (Set(ref _musicNightValue, value)) { Apply(h => h.musicNightID = (ushort)value); SyncMusicCombo(MusicNight, (int)value, i => _musicNightComboIndex = i, nameof(MusicNightComboIndex)); } }
+            set { if (Set(ref _musicNightValue, value)) { Apply(h => h.musicNightID = (ushort)value); SyncMusicCombo(MusicNight, (int)value, i => _musicNightComboIndex = i, nameof(MusicNightComboIndex)); OnPropertyChanged(nameof(NightPlayIcon)); } }
         }
         private int _musicNightComboIndex = -1;
         public int MusicNightComboIndex
@@ -416,7 +416,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             TreeFolders.Add(folder);
         }
 
-        public HeaderEditorViewModel(bool _) { AppEvents.HeaderSaved += OnSavedElsewhere; }
+        public HeaderEditorViewModel(bool _) { AppEvents.HeaderSaved += OnSavedElsewhere; MusicPreview.Changed += OnMusicChanged; }
+
+        private void OnMusicChanged() => Dispatcher.UIThread.Post(() => { OnPropertyChanged(nameof(DayPlayIcon)); OnPropertyChanged(nameof(NightPlayIcon)); });
+        public string DayPlayIcon => MusicPreview.StartedBy((this, false)) ? "stop" : "play";
+        public string NightPlayIcon => MusicPreview.StartedBy((this, true)) ? "stop" : "play";
 
         /// <summary>For a standalone window closing; the Maps workspace's instance lives for the session.</summary>
         public void Detach()
@@ -923,7 +927,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // ── Load a header into the fields ───────────────────────────────────────────
         /// <summary>Plays the day or night music, or stops it when it is already playing.</summary>
-        public void PlayMusic(bool night) => MusicPreview.Toggle((int)(night ? MusicNightValue : MusicDayValue));
+        public void PlayMusic(bool night) => MusicPreview.Toggle((int)(night ? MusicNightValue : MusicDayValue), (this, night));
 
         private void LoadHeader(ushort headerId)
         {
