@@ -755,11 +755,15 @@ namespace DSPRE.Avalonia.Gl
                     {
                         NsbmdTextureData tex = NsbmdTextureDecoder.Decode(mat);
                         if (tex != null) target.Textures[key] = tex;
-                        else if (mat.missingExternalTexture) target.Textures[key] = MissingTexture();
+                        // The game draws these untextured; the magenta check is a Model Browser debugging aid.
+                        else if (mat.missingExternalTexture && ShowMissingTextures) target.Textures[key] = MissingTexture();
                     }
                 }
             }
         }
+
+        /// <summary>Whether a material whose texture is not in the tileset is painted with a magenta check instead of flat.</summary>
+        public static bool ShowMissingTextures { get; set; }
 
         private static NsbmdTextureData MissingTexture()
         {

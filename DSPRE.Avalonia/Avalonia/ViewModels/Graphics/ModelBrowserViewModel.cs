@@ -75,6 +75,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// Reading every archive to see what is in it is real file work, so it does not happen here.
         /// The caller runs <see cref="Scan"/> off the UI thread and then <see cref="Publish"/> on it.
         /// </summary>
+        // The browser is where a texture missing from the tileset should stand out, so it draws those magenta.
+        static ModelBrowserViewModel() { NsbmdGeometry.ShowMissingTextures = true; }
+
         public ModelBrowserViewModel()
         {
             // Reads here run from the scan thread and the render as well, so they all see the pending entries.
