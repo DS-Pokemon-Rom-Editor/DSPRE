@@ -1345,6 +1345,14 @@ namespace DSPRE.Avalonia.ViewModels.World
             int count = EventNames.Count;
             if (count == 0) return;
             int last = count - 1;
+            // A header still pointing at the file would load garbage, so it stays while one does.
+            List<(ushort Header, string Name)> uses = HeaderLinks.HeadersLinking(HeaderLinks.Kind.Event, last);
+            if (uses.Count > 0)
+            {
+                await DialogHelper.ShowInfo($"Event file {last} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
+                    + Environment.NewLine + "Point them at another event file first.", "Event Editor");
+                return;
+            }
             if (!await DialogHelper.AskYesNo($"Delete the last event file ({last})?", "Confirm deletion")) return;
             try
             {

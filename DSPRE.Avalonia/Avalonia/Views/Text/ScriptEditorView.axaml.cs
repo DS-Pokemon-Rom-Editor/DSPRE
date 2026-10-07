@@ -273,6 +273,8 @@ namespace DSPRE.Avalonia.Views.Text
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddScriptFile();
 
+        private async void RemoveLast_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.RemoveLastScriptFileAsync(); }
+
         private void Find_Click(object sender, RoutedEventArgs e)
         {
             RotomEditor.Focus();

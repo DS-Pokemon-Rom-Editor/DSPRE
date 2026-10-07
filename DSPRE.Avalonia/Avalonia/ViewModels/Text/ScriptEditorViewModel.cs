@@ -228,6 +228,55 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public bool IsEditable => !IsBusy && !IsReadOnly && SelectedScriptIndex >= 0;
         public bool CanAdd => !IsBusy && RotomTool.IsAvailable;
+
+        /// <summary>The last script file can go when the project's own sources hold it.</summary>
+        public bool CanRemoveLast => !IsBusy && RotomTool.IsAvailable && !HgEngineProject.IsActive && NextScriptId() > 0;
+
+        /// <summary>
+        /// Removes the highest-numbered script file: its source and its compiled copy in the archive. Refused while
+        /// a header links it, since that header would load garbage, and while the archive holds members past it.
+        /// </summary>
+        public async Task RemoveLastScriptFileAsync()
+        {
+            int id = NextScriptId() - 1;
+            if (id < 0) return;
+            if (HasUnsavedChanges)
+            {
+                await DialogHelper.ShowInfo("Save or discard the open script first.", "Script Editor");
+                return;
+            }
+            string archiveDir = gameDirs[DirNames.scripts].unpackedDir;
+            int members = System.IO.Directory.Exists(archiveDir) ? System.IO.Directory.GetFiles(archiveDir).Count(f => int.TryParse(Path.GetFileName(f), out _)) : 0;
+            if (members - 1 > id)
+            {
+                await DialogHelper.ShowInfo($"The script archive holds {members} files but the sources stop at {id}, so the last one isn't known here. Open the project's scripts folder to see what sits past it.", "Script Editor");
+                return;
+            }
+            List<(ushort Header, string Name)> uses = HeaderLinks.HeadersLinking(HeaderLinks.Kind.Script, id);
+            if (uses.Count > 0)
+            {
+                await DialogHelper.ShowInfo($"Script file {id} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
+                    + Environment.NewLine + "Point them at another script file first.", "Script Editor");
+                return;
+            }
+            if (!await DialogHelper.AskYesNo($"Delete script file {id}, its source and its compiled copy?", "Confirm deletion")) return;
+            try
+            {
+                string source = _sourceFiles.FirstOrDefault(f => _scriptIdByPath.TryGetValue(f, out int x) && x == id);
+                if (source != null && System.IO.File.Exists(source)) System.IO.File.Delete(source);
+                string member = Path.Combine(archiveDir, id.ToString("D4"));
+                if (System.IO.File.Exists(member)) System.IO.File.Delete(member);
+                bool wasShown = SelectedScriptIndex >= 0 && SelectedScriptIndex < _sourceFiles.Count && SamePath(_sourceFiles[SelectedScriptIndex], source);
+                RefreshScriptList();
+                if (wasShown || SelectedScriptIndex >= _sourceFiles.Count) SelectedScriptIndex = _sourceFiles.Count - 1;
+                StatusText = $"Removed script file {id}.";
+                OnPropertyChanged(nameof(CanRemoveLast));
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("Couldn't remove the script file:" + Environment.NewLine + ex.Message, "Script Editor");
+            }
+        }
         public bool CanSearchProject => !IsBusy && _sourceFiles.Count > 0 && !string.IsNullOrWhiteSpace(SearchText);
         public bool HasDiagnostics => Diagnostics.Count > 0;
         public bool HasUnsavedChanges => _dirty;
@@ -1579,6 +1628,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             OnPropertyChanged(nameof(IsEditable));
             OnPropertyChanged(nameof(CanAdd));
+            OnPropertyChanged(nameof(CanRemoveLast));
             OnPropertyChanged(nameof(CanSearchProject));
         }
 
