@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Avalonia.Threading;
 
 namespace DSPRE.Avalonia
 {
@@ -25,6 +26,8 @@ namespace DSPRE.Avalonia
             _take = take; _apply = apply; _raise = raise;
             _last = _take();
             _history.Reset(_last);
+            // The owner assigns this after construction, so announce the fresh state once it has.
+            Dispatcher.UIThread.Post(_raise);
         }
 
         /// <summary>State that isn't already bytes, written field by field.</summary>
