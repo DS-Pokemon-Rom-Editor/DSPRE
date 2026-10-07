@@ -21,6 +21,7 @@
         <Button DockPanel.Dock="Right" Content="Generate credits" Click="GenerateCredits_Click"
                 IsEnabled="{Binding CanGenerateCredits}"/>
         <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBox Width="220" PlaceholderText="Find a patch" Text="{Binding Search}" VerticalAlignment="Center"/>
           <TextBlock Text="{Binding HeaderNote}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"
                      Foreground="{DynamicResource Editor.Subtle}"/>
           <controls:HelpTip Text="These patches change the game's code, overlays and data archives directly."/>
@@ -28,11 +29,19 @@
       </DockPanel>
     </Border>
 
-    <!-- ── Patch list ─────────────────────────────────────────────────── -->
+    <!-- ── Patch list, one tab per area ───────────────────────────────── -->
+    <TabControl ItemsSource="{Binding Tabs}" SelectedIndex="{Binding SelectedTab}">
+      <TabControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:PatchTabViewModel">
+          <TextBlock Text="{Binding Header}"/>
+        </DataTemplate>
+      </TabControl.ItemTemplate>
+      <TabControl.ContentTemplate>
+        <DataTemplate x:DataType="vm:PatchTabViewModel">
     <ScrollViewer>
-      <ItemsControl x:Name="PatchList" ItemsSource="{Binding Patches}" Margin="4">
+      <ItemsControl ItemsSource="{Binding Rows}" Margin="4" VerticalAlignment="Top">
         <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate><UniformGrid x:Name="PatchColumns" Columns="1"/></ItemsPanelTemplate>
+          <ItemsPanelTemplate><UniformGrid Columns="{Binding Columns}"/></ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:PatchRowViewModel">
@@ -57,8 +66,11 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold"
+                  <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold" IsVisible="{Binding ShowStatusText}"
                              Foreground="{Binding StatusBrush}" Margin="0,2,0,0"/>
+                  <Button Content="{Binding RequiresText}" IsVisible="{Binding HasRequires}" Click="Requires_Click"
+                          Background="Transparent" BorderThickness="0" Padding="0" Margin="0,2,0,0" FontSize="12" FontWeight="SemiBold"
+                          Foreground="{Binding StatusBrush}" Cursor="Hand" ToolTip.Tip="Opens the tab with the patch this one needs"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center" Margin="12,0,0,0">
                   <Button Content="{Binding ButtonText}" MinWidth="96" Height="32" HorizontalAlignment="Stretch"
@@ -73,6 +85,9 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </ScrollViewer>
+        </DataTemplate>
+      </TabControl.ContentTemplate>
+    </TabControl>
 
   </DockPanel>
 </Window>

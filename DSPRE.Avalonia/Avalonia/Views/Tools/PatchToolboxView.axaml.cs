@@ -22,17 +22,12 @@ namespace DSPRE.Avalonia.Views.Tools
                 PatchDialogs.Install();
                 DataContext = new PatchToolboxViewModel();
             }
-            PatchList.SizeChanged += (_, _) => FitColumns();
-            PatchList.LayoutUpdated += (_, _) => FitColumns();
+            SizeChanged += (_, _) => FitColumns();
+            Opened += (_, _) => FitColumns();
         }
 
-        // One column per 420 pixels of list, up to three, so the cards stay readable as the window widens.
-        private void FitColumns()
-        {
-            if (PatchList.ItemsPanelRoot is not global::Avalonia.Controls.Primitives.UniformGrid grid) return;
-            int columns = System.Math.Clamp((int)(PatchList.Bounds.Width / 420), 1, 3);
-            if (grid.Columns != columns) grid.Columns = columns;
-        }
+        // One column per 420 pixels of window, up to three, so the cards stay readable as the window widens.
+        private void FitColumns() => VM?.SetColumns(System.Math.Clamp((int)(Bounds.Width / 420), 1, 3));
 
         private async void GenerateCredits_Click(object sender, RoutedEventArgs e)
         {
@@ -50,6 +45,11 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             if (sender is Control c && c.DataContext is PatchRowViewModel row)
                 await DialogHelper.ShowInfo(row.Notes, row.Title);
+        }
+
+        private void Requires_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control c && c.DataContext is PatchRowViewModel { RequiresTab: { } tab }) VM?.GoToTab(tab);
         }
 
         private void Apply_Click(object sender, RoutedEventArgs e)

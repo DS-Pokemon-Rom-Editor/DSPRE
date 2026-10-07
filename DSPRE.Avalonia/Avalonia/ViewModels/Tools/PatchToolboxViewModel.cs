@@ -22,6 +22,60 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         public ObservableCollection<PatchRowViewModel> Patches { get; } = new ObservableCollection<PatchRowViewModel>();
 
+        /// <summary>The patches grouped by what they change; a patch with no group lands in Other.</summary>
+        public ObservableCollection<PatchTabViewModel> Tabs { get; } = new ObservableCollection<PatchTabViewModel>();
+
+        private static readonly string[] TabNames = { "Foundation", "Trainers", "Text", "Items and Pokémon", "Maps and graphics", "External", "Other" };
+
+        private static readonly Dictionary<string, string> TabOf = new Dictionary<string, string>
+        {
+            ["arm9"] = "Foundation", ["matrix"] = "Foundation", ["dynamicHeaders"] = "Foundation", ["scrcmdRepoint"] = "Foundation",
+            ["trainerClassMetadata"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
+            ["sentenceCase"] = "Text", ["itemSentenceCase"] = "Text", ["trainerNames"] = "Text",
+            ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
+            ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics",
+            ["platPatches"] = "External",
+        };
+
+        // Words a search should hit beyond the title and description.
+        private static readonly Dictionary<string, string> KeywordsOf = new Dictionary<string, string>
+        {
+            ["arm9"] = "synthetic overlay memory expansion expand required", ["matrix"] = "matrix 0 map size expand", ["dynamicHeaders"] = "header narc allocate headers",
+            ["scrcmdRepoint"] = "script command table custom commands", ["trainerClassMetadata"] = "gender prize eye contact music vs intro class",
+            ["trainerClassTablesExpanded"] = "class tables expand", ["trainerEncounterBgmRepointed"] = "encounter music bgm table", ["trainerShiny"] = "shiny trainer party",
+            ["sentenceCase"] = "names capital case pokemon", ["itemSentenceCase"] = "names capital case items", ["trainerNames"] = "trainer name length text",
+            ["sameHeldItemOdds"] = "held item odds wild", ["itemStandardize"] = "item numbers scripts ground items order",
+            ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable",
+            ["platPatches"] = "external platinum patches link",
+        };
+
+        private string _search = "";
+        /// <summary>Narrows every tab to the patches whose title, description, author or keywords contain the text.</summary>
+        public string Search
+        {
+            get => _search;
+            set { _search = value ?? ""; OnPropertyChanged(); foreach (PatchTabViewModel tab in Tabs) tab.Filter(_search); }
+        }
+
+        private int _selectedTab;
+        public int SelectedTab { get => _selectedTab; set { _selectedTab = value; OnPropertyChanged(); } }
+
+        private int _columns = 1;
+        /// <summary>Cards per row, decided by the window from its width.</summary>
+        public void SetColumns(int columns)
+        {
+            if (columns == _columns) return;
+            _columns = columns;
+            foreach (PatchTabViewModel tab in Tabs) tab.Columns = columns;
+        }
+
+        /// <summary>Switches to the tab a patch's requirement lives on.</summary>
+        public void GoToTab(string name)
+        {
+            int at = Tabs.ToList().FindIndex(t => t.Name == name);
+            if (at >= 0) SelectedTab = at;
+        }
+
         private string _headerNote;
         public string HeaderNote
         {
@@ -54,7 +108,24 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             HeaderNote = "Back up your project first. Some patches cannot be undone.";
             _statuses = DSPRE.PatchToolboxLogic.GetPatchStatuses();
             foreach (PatchToolboxLogic.PatchInfo p in _statuses)
-                Patches.Add(new PatchRowViewModel(p));
+                Patches.Add(new PatchRowViewModel(p, KeywordsOf.TryGetValue(p.Key, out string words) ? words : ""));
+            BuildTabs();
+        }
+
+        private void BuildTabs()
+        {
+            int keep = _selectedTab;
+            Tabs.Clear();
+            foreach (string name in TabNames)
+            {
+                List<PatchRowViewModel> rows = Patches.Where(r => (TabOf.TryGetValue(r.Key, out string t) ? t : "Other") == name).ToList();
+                if (rows.Count == 0) continue;
+                foreach (PatchRowViewModel row in rows) row.PlacedOn(name);
+                PatchTabViewModel tab = new PatchTabViewModel(name, rows) { Columns = _columns };
+                tab.Filter(_search);
+                Tabs.Add(tab);
+            }
+            SelectedTab = keep >= 0 && keep < Tabs.Count ? keep : 0;
         }
 
         private List<DSPRE.PatchToolboxLogic.PatchInfo> _statuses = new();
@@ -76,9 +147,48 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         }
     }
 
+    /// <summary>One tab of the toolbox: the patches of one area, narrowed by the search box.</summary>
+    public class PatchTabViewModel : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        public string Name { get; }
+        private readonly List<PatchRowViewModel> _all;
+        public ObservableCollection<PatchRowViewModel> Rows { get; } = new ObservableCollection<PatchRowViewModel>();
+        public string Header => Rows.Count == _all.Count ? Name : $"{Name} ({Rows.Count})";
+
+        public PatchTabViewModel(string name, List<PatchRowViewModel> rows) { Name = name; _all = rows; }
+
+        private int _columns = 1;
+        public int Columns
+        {
+            get => _columns;
+            set { if (_columns == value) return; _columns = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Columns))); }
+        }
+
+        public void Filter(string search)
+        {
+            Rows.Clear();
+            foreach (PatchRowViewModel row in _all)
+                if (string.IsNullOrWhiteSpace(search) || row.Matches(search)) Rows.Add(row);
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Header)));
+        }
+    }
+
     /// <summary>One row in the toolbox: a patch's title, description and current state.</summary>
     public class PatchRowViewModel
     {
+        private readonly string _keywords;
+        public bool Matches(string search) =>
+            SearchMatch.Contains(Title, search) || SearchMatch.Contains(Description, search)
+            || SearchMatch.Contains(AuthorText, search) || SearchMatch.Contains(_keywords, search) || SearchMatch.Contains(Key, search);
+
+        /// <summary>The tab holding the patch this one needs first, shown as a link in place of the status.</summary>
+        public string RequiresTab { get; private set; }
+        public bool HasRequires => RequiresTab != null;
+        public bool ShowStatusText => RequiresTab == null;
+        public string RequiresText => StatusText + ". See " + RequiresTab + ".";
+        /// <summary>A link to the tab the row already sits on says nothing, so it becomes the plain status.</summary>
+        internal void PlacedOn(string tab) { if (RequiresTab == tab) RequiresTab = null; }
         public string Key { get; }
         public string Title { get; }
         public string Description { get; }
@@ -96,8 +206,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         /// <summary>The patch's notes, for the Notes button.</summary>
         public string Notes { get; }
 
-        public PatchRowViewModel(DSPRE.PatchToolboxLogic.PatchInfo p)
+        public PatchRowViewModel(DSPRE.PatchToolboxLogic.PatchInfo p, string keywords = "")
         {
+            _keywords = keywords;
             Notes = DSPRE.PatchNotes.For(p);
             Key = p.Key;
             Title = p.Title;
@@ -137,6 +248,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     StatusBrush = new SolidColorBrush(Color.FromRgb(0x15, 0x65, 0xC0));
                     break;
             }
+            if (p.State == DSPRE.PatchToolboxLogic.PatchState.Unsupported && (p.Reason ?? "").StartsWith("Requires ARM9", System.StringComparison.Ordinal))
+                RequiresTab = "Foundation";
         }
     }
 
