@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using Avalonia.Controls;
+using Avalonia.LogicalTree;
+using DSPRE.Avalonia.Controls;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
@@ -42,11 +45,20 @@ namespace DSPRE.Avalonia.Views.World
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
-            // Each tab offers its own tour the first time it is on screen.
-            foreach (Control tab in new Control[] { HeaderEmbed, MapEmbed, EventsEmbed, MatrixEmbed, AreaDataEmbed, ScriptsEmbed, LevelScriptsEmbed, TextEmbed })
+            // Each tab offers its own tour the first time it is on screen; the Header tab shares the Header Editor's.
+            EditorTours.Attach(HeaderTabRoot, "HeaderEditorView");
+            foreach (Control tab in new Control[] { MapEmbed, EventsEmbed, MatrixEmbed, AreaDataEmbed, ScriptsEmbed, LevelScriptsEmbed, TextEmbed })
                 EditorTours.Attach(tab, tab.GetType().Name);
-            MapTabs.SelectionChanged += (_, _) => UpdatePopOut();
-            UpdatePopOut();
+            foreach ((Control root, string tab) in new (Control, string)[] { (HeaderTabRoot, "Header"), (MapEmbed, "Map"), (EventsEmbed, "Events"), (MatrixEmbed, "Matrix"),
+                                                                           (AreaDataEmbed, "Area Data"), (ScriptsEmbed, "Scripts"), (LevelScriptsEmbed, "Level Scripts"), (TextEmbed, "Text") })
+                OfferPopOut(root, tab);
+        }
+
+        /// <summary>Puts "Open in window" on the embedded editor's own toolbar, since it opens that editor alone.</summary>
+        private void OfferPopOut(Control root, string tab)
+        {
+            EditorToolbar toolbar = root.GetLogicalDescendants().OfType<EditorToolbar>().FirstOrDefault();
+            if (toolbar != null) toolbar.PopOut = () => PopOut(tab);
         }
 
         // Ctrl+Z / Ctrl+Y undo the tab on show. Listened for on the window, so it also works while nothing
@@ -395,6 +407,7 @@ namespace DSPRE.Avalonia.Views.World
                     _encountersView = new WildEditorDPPtView(evm);
                     EncountersTab.Content = _encountersView;
                     EditorTours.Attach(_encountersView, nameof(WildEditorDPPtView));
+                    OfferPopOut(_encountersView, "Encounters");
                 }
                 else
                 {
@@ -403,6 +416,7 @@ namespace DSPRE.Avalonia.Views.World
                     _encountersView = new WildEditorHGSSView(evm);
                     EncountersTab.Content = _encountersView;
                     EditorTours.Attach(_encountersView, nameof(WildEditorHGSSView));
+                    OfferPopOut(_encountersView, "Encounters");
                 }
                 _encountersEmbedded = true;
                 LockToHeader(_encountersView);
@@ -444,11 +458,10 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         /// <summary>Opens the current tab's full editor, offering to save tab edits first since it reads from disk.</summary>
-        private async void PopOut_Click(object sender, RoutedEventArgs e)
+        private async void PopOut(string tab)
         {
             HeaderEditorViewModel vm = VM;
             if (vm == null || !AvaloniaEditorLauncher.IsRomLoaded) return;
-            string tab = (MapTabs.SelectedItem as TabItem) is TabItem t ? global::Avalonia.Automation.AutomationProperties.GetName(t) : null;
 
             IEditorWithUnsavedChanges editor = tab switch
             {
@@ -484,10 +497,10 @@ namespace DSPRE.Avalonia.Views.World
                         WildEditorHGSSViewModel hgss => hgss.SelectedEncounterIndex,
                         _ => -1,
                     };
-                    if (table >= 0) AvaloniaEditorLauncher.OpenWildEditor(table); else vm.OpenEncounters();
+                    if (table >= 0) AvaloniaEditorLauncher.OpenWildEditor(table);
                     break;
                 // Script lists can be ordered by source path, so the header's own file id is the reliable one.
-                case "Scripts": vm.OpenScripts(); break;
+                case "Scripts": AvaloniaEditorLauncher.OpenScriptEditor((int)vm.ScriptFileId); break;
                 case "Level Scripts": AvaloniaEditorLauncher.OpenLevelScriptEditor(LevelScriptsVM.SelectedScriptIndex); break;
                 case "Text": AvaloniaEditorLauncher.OpenTextEditor(TextVM.SelectedArchiveIndex); break;
             }
@@ -512,14 +525,6 @@ namespace DSPRE.Avalonia.Views.World
         private void Chip_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Control c && c.Tag is string name) ShowTab(name);
-        }
-
-        /// <summary>The pop-out button names the tab it opens, because it only ever opens that one.</summary>
-        private void UpdatePopOut()
-        {
-            string tab = (MapTabs.SelectedItem as TabItem) is TabItem t ? global::Avalonia.Automation.AutomationProperties.GetName(t) : null;
-            ToolTip.SetTip(PopOutButton, tab == null ? "Open this tab in its own window" : $"Open {tab} in its own window, on the same map or file");
-            global::Avalonia.Automation.AutomationProperties.SetName(PopOutButton, "Open in window");
         }
 
         /// <summary>Builds a playable .nds, the same flow as the File menu's "Save ROM…", reachable

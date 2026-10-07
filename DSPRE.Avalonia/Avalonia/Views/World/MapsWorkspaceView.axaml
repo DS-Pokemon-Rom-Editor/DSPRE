@@ -97,7 +97,7 @@
                 <TextBlock Text="Header" VerticalAlignment="Center"/>
               </StackPanel>
             </TabItem.Header>
-            <DockPanel>
+            <DockPanel x:Name="HeaderTabRoot">
               <views:HeaderToolbarView/>
               <views:HeaderFieldsView x:Name="HeaderEmbed"/>
             </DockPanel>
@@ -183,9 +183,6 @@
             <viewstext:TextEditorView x:Name="TextEmbed" DataContext="{Binding #MapsRoot.TextVM}"/>
           </TabItem>
         </TabControl>
-        <!-- Rides at the end of the tab strip and names the tab it opens, since it acts on that tab only. -->
-        <Button x:Name="PopOutButton" Classes="small" controls:Icon.Key="popout" Click="PopOut_Click"
-                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,2,0"/>
         </Panel>
       </DockPanel>
     </Grid>

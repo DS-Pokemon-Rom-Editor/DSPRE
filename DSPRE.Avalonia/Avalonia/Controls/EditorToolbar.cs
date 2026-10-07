@@ -31,6 +31,25 @@ namespace DSPRE.Avalonia.Controls
         [Content]
         public global::Avalonia.Controls.Controls Items { get; } = new();
 
+        private Button _popOut;
+        /// <summary>Set by a host embedding this editor: a button beside the picker opens the same file in its own window.</summary>
+        public Action PopOut
+        {
+            set
+            {
+                if (_popOut != null) Items.Remove(_popOut);
+                _popOut = null;
+                if (value == null) return;
+                _popOut = new Button();
+                Icon.SetKey(_popOut, "popout");
+                SetSlot(_popOut, ToolbarSlot.Picker);
+                ToolTip.SetTip(_popOut, "Open in its own window, on the same file");
+                global::Avalonia.Automation.AutomationProperties.SetName(_popOut, "Open in window");
+                _popOut.Click += (_, _) => value();
+                Items.Add(_popOut);
+            }
+        }
+
         private readonly WrapPanel _panel = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         private readonly List<(Control Divider, int Group)> _dividers = new();
         private readonly List<(Control Item, int Group)> _placed = new();
