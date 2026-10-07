@@ -773,10 +773,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DSPRE.Avalonia.DialogHelper.ShowError($"The machine moves of species {_currentId} were not saved:\n{machineError}", "Personal Data");
                 return;
             }
-            _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
+            // Side tables can change on their own, so the personal file is only written when its bytes did.
+            if (_savedSnapshot?.Data == null || !_current.ToByteArray().AsSpan().SequenceEqual(_savedSnapshot.Data))
+                _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
             AppEvents.RaisePersonalDataSaved(this, _currentId);
             // hg-engine rebuilds pms.narc from data/BabyMons.c, which the Baby Pokémon picker edits.
-            if (!HgEngineProject.IsActive) WriteHatchResult(_currentId, HatchResultIndex);
+            if (!HgEngineProject.IsActive && (_savedSnapshot == null || _savedSnapshot.Hatch != HatchResultIndex)) WriteHatchResult(_currentId, HatchResultIndex);
             PersonalSnapshot saved = Snapshot();
             _history.Capture(saved, coalesce: true);
             _history.MarkSaved();
