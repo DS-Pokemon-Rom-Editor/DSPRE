@@ -18,7 +18,8 @@ namespace DSPRE.Avalonia.Views.Graphics
             AvaloniaXamlLoader.Load(this);
             _vm = new DungeonCutinEditorViewModel(headerNames);
             DataContext = _vm;
-            EditorWindowChrome.Attach(this, _vm, manageTitle: false);
+            // Members imported and then undone stay in the archive until a Discard, so a clean close drops them.
+            EditorWindowChrome.Attach(this, _vm, manageTitle: false, onClosed: () => _vm.DropUnsavedImports());
         }
 
         // Parameterless constructor for previewer only

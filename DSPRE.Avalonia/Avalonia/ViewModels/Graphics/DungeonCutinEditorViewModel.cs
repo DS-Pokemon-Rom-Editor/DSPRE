@@ -177,6 +177,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             LoadRows();
         }
 
+        /// <summary>Deletes the members imported since the last save, which nothing saved points at.</summary>
+        public void DropUnsavedImports() => _graphics.DropImported();
+
         // ── Observable state ─────────────────────────────────────────────────
         public ObservableCollection<DungeonCutinRow> Rows { get; } = new();
         public ObservableCollection<string> Headers { get; } = new();
