@@ -45,6 +45,7 @@ namespace DSPRE.Avalonia
             catch { /* positioning is best-effort, never block opening the window */ }
             w.Opened += FitHeightOnOpen;
             OpenEditors.TrackRomWindow(w);
+            ThemeManager.ApplyTitleBar(w);
             w.Show();
         }
 

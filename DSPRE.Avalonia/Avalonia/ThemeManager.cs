@@ -56,6 +56,12 @@ namespace DSPRE.Avalonia
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int w, int h, uint flags);
+
+        // SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED: redraw the frame, change nothing else.
+        private const uint FrameChanged = 0x0037;
+
         private const int ImmersiveDarkMode = 20, ImmersiveDarkModeBefore20H1 = 19;
         private static bool _watching;
 
@@ -73,8 +79,10 @@ namespace DSPRE.Avalonia
                 foreach (Window window in desktop.Windows) ApplyTitleBar(window);
         }
 
-        private static void ApplyTitleBar(Window window)
+        /// <summary>Darkens or lightens one window's title bar. Safe before the window is shown, once it has a handle.</summary>
+        internal static void ApplyTitleBar(Window window)
         {
+            if (!OperatingSystem.IsWindows()) return;
             IntPtr handle = window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
             if (handle == IntPtr.Zero) return;
             int dark = IsDark ? 1 : 0;
@@ -82,6 +90,8 @@ namespace DSPRE.Avalonia
             {
                 if (DwmSetWindowAttribute(handle, ImmersiveDarkMode, ref dark, sizeof(int)) != 0)
                     DwmSetWindowAttribute(handle, ImmersiveDarkModeBefore20H1, ref dark, sizeof(int));
+                // A window already on screen keeps its old caption until the frame is redrawn.
+                if (window.IsVisible) SetWindowPos(handle, IntPtr.Zero, 0, 0, 0, 0, FrameChanged);
             }
             catch (Exception ex) when (ex is DllNotFoundException || ex is EntryPointNotFoundException) { }
         }
