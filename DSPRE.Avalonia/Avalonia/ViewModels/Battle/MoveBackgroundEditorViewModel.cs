@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             OnPropertyChanged(nameof(ArchiveMax));
             RebuildList();
             _selected = -1;
-            SelectedIndex = Math.Clamp(keep, 0, Backgrounds.Count - 1);
+            SelectedIndex = Backgrounds.Count == 0 ? -1 : Math.Clamp(keep, 0, Backgrounds.Count - 1);
             StatusText = $"{_table.Rows.Count} backgrounds · " + (_table.FromSource ? DSPRE.HgEngine.HgEngineMoveBackgrounds.RelPath : $"overlay {MoveBackgroundTableSite.Overlay}");
             OnPropertyChanged(nameof(CanResize));
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -123,7 +123,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             });
             if (Backgrounds.Count != _table.Rows.Count) RebuildList();
             _selected = -1;
-            SelectedIndex = Math.Clamp(keep, 0, Backgrounds.Count - 1);
+            SelectedIndex = Backgrounds.Count == 0 ? -1 : Math.Clamp(keep, 0, Backgrounds.Count - 1);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
