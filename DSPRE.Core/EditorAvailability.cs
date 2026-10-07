@@ -103,7 +103,11 @@ namespace DSPRE
 
             ["AudioEditorView"] = new Rule { Title = "The Audio Editor", Hge = HgEngine.NeedsLink },
             ["TMEditorView"] = new Rule { Title = "The TM Editor", Hge = HgEngine.NeedsLink },
-            ["BattleScriptEditorView"] = new Rule { Title = "The Battle Script Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.wazaParticle } },
+            ["BattleScriptEditorView"] = new Rule
+            {
+                Title = "The Battle Script Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.wazaParticle },
+                Unsupported = Unless(() => Family(GameFamilies.Plat, GameFamilies.HGSS), "The Battle Script Editor supports Platinum, HeartGold and SoulSilver."),
+            },
             ["ItemTableEditorView"] = new Rule
             {
                 Title = "The Item Tables editor", Hge = HgEngine.NeedsLink,
@@ -160,7 +164,7 @@ namespace DSPRE
             ["CellAnimationEditorView"] = new Rule { Title = "The Cell Animation Editor", Hge = HgEngine.NeedsLink },
             ["PokedexGraphicsEditorView"] = new Rule { Title = "The Pokédex Graphics Editor", Hge = HgEngine.NeedsLink },
             ["NamingScreenEditor"] = new Rule { Title = "The Naming Screen Editor", Hge = HgEngine.NeedsLink, Beta = "TrainerSpriteEditorView" },
-            ["ParticleEditorView"] = new Rule { Title = "The Particle Editor", Hge = HgEngine.NeedsLink },
+            ["ParticleEditorView"] = new Rule { Title = "The Particle Editor", Hge = HgEngine.NeedsLink, BuiltArchives = new[] { DirNames.wazaParticle } },
             ["ParticleLibraryView"] = new Rule { Title = "The Particle Library", Hge = HgEngine.NeedsLink },
             ["BallCapsuleEditorView"] = new Rule { Title = "The Ball Capsule Editor", Hge = HgEngine.NeedsLink },
             ["BannerEditorView"] = new Rule { Title = "The Game Icon & Banner editor", Hge = HgEngine.NeedsLink },
