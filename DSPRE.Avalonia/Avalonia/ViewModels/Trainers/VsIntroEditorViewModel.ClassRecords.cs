@@ -380,7 +380,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 case 13:
                     return new VsIntroPreview.Scene
                     {
-                        Kind = VsIntroPreview.Layout.Gym, Face = portrait, Vs = mark, NamePalette = _sites.NamePalette, Name = name,
+                        Kind = r.VsStyle == 1 ? VsIntroPreview.Layout.Gym : VsIntroPreview.Layout.Frontier,
+                        Face = portrait, Vs = mark, NamePalette = _sites.NamePalette, Name = name,
                         Banner = Get(Field.Group1Rlcn, Field.Group1Rgcn, Field.Group1Rcsn1),
                         EndX = r.VsStyle == 1 ? (int)(r.Style1Motion >> 12) : 214,
                     };
@@ -397,7 +398,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     return new VsIntroPreview.Scene
                     {
                         Kind = VsIntroPreview.Layout.Executive, Face = portrait, NamePalette = _sites.NamePalette, Name = name,
-                        Backdrop = Get(Field.Group1Rlcn, Field.Group1Rgcn, Field.Group1Rcsn1, Field.Group1Rcsn2),
+                        Backdrop = Get(Field.Group1Rlcn, Field.Group1Rgcn, Field.Group1Rcsn1, Field.Group1Rcsn2, Field.Group1Rcsn3),
                     };
                 case 4:
                     return new VsIntroPreview.Scene

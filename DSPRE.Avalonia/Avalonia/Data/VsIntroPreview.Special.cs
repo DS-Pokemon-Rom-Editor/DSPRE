@@ -7,7 +7,7 @@ namespace DSPRE.Avalonia.Data
 {
     /// <summary>
     /// The Team Rocket, Red and Kimono Girl intros, with the frame counts of the HGSS encounter effects: six Rocket R's
-    /// that fly in and shrink away, Red's random black blocks under the old Poké Ball, and the shoji doors that slide
+    /// that fly in and shrink away, Red's random black blocks over the field, and the shoji doors that slide
     /// shut and open again.
     /// </summary>
     public sealed partial class VsIntroPreview
@@ -43,9 +43,12 @@ namespace DSPRE.Avalonia.Data
         private static int SpecialLength(Scene s) => s.Special switch
         {
             SpecialVariant.Rocket => RocketStarts(s.Flights ?? ShippedFlights)[^1] + Move(s) + RocketFlashOut,
-            SpecialVariant.Red => FlashFrames + 48 + FadeFrames,
-            _ => FlashFrames + Close(s) + Hold(s) + Open(s) + FadeFrames,
+            SpecialVariant.Red => BlackFlashesEnd(s) + 48 + 2,
+            _ => BlackFlashesEnd(s) + Close(s) + Hold(s) + 4 + Open(s) + 2,
         };
+
+        private static int BlackFlashes(Scene s) => s.Timing(VsIntroTimingAddon.Field.FlashCount);
+        private static int BlackFlashesEnd(Scene s) => FlashPeriod * BlackFlashes(s) + 1;
 
         // The encounter effects' accelerated moves: from s to e in n frames, starting at speed ss.
         private static double AddMove(double s, double e, double ss, int n, double t)
@@ -89,43 +92,36 @@ namespace DSPRE.Avalonia.Data
                 case SpecialVariant.Red:
                 {
                     // Blocks in a fixed shuffled order stand in for the game's non-repeating random one.
-                    int blocks = settled ? 24 : Math.Clamp(frame - FlashFrames + 1, 0, 48);
+                    int blocks = settled ? 24 : Math.Clamp(frame - BlackFlashesEnd(s) + 1, 0, 48);
                     int[] order = Shuffled(48);
                     for (int b = 0; b < blocks; b++) Black(rgba, order[b] % 8 * 32, order[b] / 8 * 32, order[b] % 8 * 32 + 32, order[b] / 8 * 32 + 32);
-                    Turned(Sequence(s.Emblem, 0), rgba, 128, 96, 0, 1, 1);
-                    if (!settled)
-                    {
-                        Brightness(rgba, FlashLevel(frame, false));
-                        int fadeFrom = SpecialLength(s) - FadeFrames;
-                        if (frame >= fadeFrom) Brightness(rgba, -16.0 * (frame - fadeFrom + 1) / FadeFrames);
-                    }
+                    if (!settled) Brightness(rgba, CutinFlash(frame, BlackFlashes(s), false));
                     return rgba;
                 }
                 default:
                 {
                     // Two layers of the doors' 512-wide screen scroll in from 128 and 384 to 0, stay shut while the field is
                     // hidden, then open again.
-                    int close = Close(s), hold = Hold(s), open = Open(s);
-                    int f = settled ? close : frame - FlashFrames;
+                    // Shut a few ticks longer than the hold count, as recorded.
+                    int close = Close(s), hold = Hold(s) + 4, open = Open(s);
+                    int f = settled ? close : frame - BlackFlashesEnd(s);
                     double x;
                     if (f < 0) x = 128;
-                    else if (f < close) x = AddMove(128, 0, -5, close, f + 1);
+                    // The game starts at +5: the doors drift apart, then rush shut.
+                    else if (f < close) x = AddMove(128, 0, 5, close, f + 1);
                     else if (f < close + hold) x = 0;
                     else x = AddMove(0, 128, 5, open, f - close - hold + 1);
                     bool shut = f >= close && f < close + hold;
-                    if (shut || f >= close + hold) rgba = Plain();
-                    (byte[] Rgba, int Width, int Height)? wide = WideScreen(s.Screen);
+                    // The game turns the field off behind the shut doors.
+                    if (shut || f >= close + hold) rgba = Fill(0);
+                    // The game shows the 256-wide screen on a 512-wide layer.
+                    (byte[] Rgba, int Width, int Height)? wide = Widen(WideScreen(s.Screen), 512);
                     if (wide != null && f >= 0)
                     {
                         Layer(rgba, wide.Value, (int)Math.Round(x));
                         Layer(rgba, wide.Value, 384 - (int)Math.Round(x));
                     }
-                    if (!settled)
-                    {
-                        Brightness(rgba, FlashLevel(frame, false));
-                        int fadeFrom = SpecialLength(s) - FadeFrames;
-                        if (frame >= fadeFrom) Brightness(rgba, -16.0 * (frame - fadeFrom + 1) / FadeFrames);
-                    }
+                    if (!settled) Brightness(rgba, CutinFlash(frame, BlackFlashes(s), false));
                     return rgba;
                 }
             }
@@ -146,7 +142,8 @@ namespace DSPRE.Avalonia.Data
         }
 
         // A whole background screen (palette, tiles, screen) as RGBA, transparent where colour 0 is.
-        private (byte[] Rgba, int Width, int Height)? WideScreen(int[] m)
+        /// <param name="row">Draw every square with this palette row, as a cycling palette does; -1 keeps each square's own.</param>
+        private (byte[] Rgba, int Width, int Height)? WideScreen(int[] m, int row = -1)
         {
             if (m == null || m.Length < 3) return null;
             byte[] tiles = DsBgScreen.ReadCharacters(_member(m[1]));
@@ -157,7 +154,7 @@ namespace DSPRE.Avalonia.Data
             byte[] rgba = new byte[width * height * 4];
             for (int i = 0; i < entries.Length; i++)
             {
-                int e = entries[i], tile = e & 0x3FF, row = (e >> 12) & 0xF;
+                int e = entries[i], tile = e & 0x3FF, pal = row >= 0 ? row : (e >> 12) & 0xF;
                 // Screens wider than 32 squares are stored as 32 by 32 blocks side by side.
                 int block = cols > 32 ? i / 1024 : 0, inBlock = cols > 32 ? i % 1024 : i;
                 int tx = cols > 32 ? (block * 32 + inBlock % 32) * 8 : i % cols * 8;
@@ -169,11 +166,19 @@ namespace DSPRE.Avalonia.Data
                         int at = tile * 32 + (ly * 8 + lx) / 2;
                         if (at >= tiles.Length) continue;
                         int index = (lx & 1) != 0 ? tiles[at] >> 4 : tiles[at] & 0xF;
-                        if (index == 0 || row * 16 + index >= colours.Length) continue;
-                        Put(rgba, ((ty + py) * width + tx + px) * 4, colours[row * 16 + index]);
+                        if (index == 0 || pal * 16 + index >= colours.Length) continue;
+                        Put(rgba, ((ty + py) * width + tx + px) * 4, colours[pal * 16 + index]);
                     }
             }
             return (rgba, width, height);
+        }
+
+        private static (byte[] Rgba, int Width, int Height)? Widen((byte[] Rgba, int Width, int Height)? layer, int width)
+        {
+            if (layer == null || layer.Value.Width >= width) return layer;
+            byte[] wide = new byte[width * layer.Value.Height * 4];
+            for (int y = 0; y < layer.Value.Height; y++) Array.Copy(layer.Value.Rgba, y * layer.Value.Width * 4, wide, y * width * 4, layer.Value.Width * 4);
+            return (wide, width, layer.Value.Height);
         }
 
         private static void Layer(byte[] rgba, (byte[] Rgba, int Width, int Height) layer, int scrollX)

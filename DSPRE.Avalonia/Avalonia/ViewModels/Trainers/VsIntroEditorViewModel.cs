@@ -513,7 +513,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     return new VsIntroPreview.Scene
                     {
                         Kind = VsIntroPreview.Layout.Executive, Face = Rec.FaceMembers(), NamePalette = s.NamePalette, Name = name,
-                        Backdrop = s.ExecutiveBackdrop >= 0 ? Enumerable.Range(s.ExecutiveBackdrop, 4).ToArray() : null,
+                        // The filled R screen is the fifth after the tiles.
+                        Backdrop = s.ExecutiveBackdrop >= 0 ? new[] { s.ExecutiveBackdrop, s.ExecutiveBackdrop + 1, s.ExecutiveBackdrop + 2, s.ExecutiveBackdrop + 3, s.ExecutiveBackdrop + 6 } : null,
                     };
             }
         }
