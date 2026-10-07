@@ -788,6 +788,18 @@ namespace DSPRE.Avalonia
                 _ = DialogHelper.ShowInfo("There is no animation file here to open.", "Cell Animation");
                 return;
             }
+            // A second window on the same file would go stale and save over the first.
+            IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
+                        as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
+            Views.Graphics.CellAnimationEditorView already = open?.OfType<Views.Graphics.CellAnimationEditorView>().FirstOrDefault(w =>
+                w.DataContext is CellAnimationEditorViewModel v && v.Animation == animation
+                && v.Source.Dir == source.Dir && v.Source.LoosePath == source.LoosePath);
+            if (already != null)
+            {
+                if (already.WindowState == global::Avalonia.Controls.WindowState.Minimized) already.WindowState = global::Avalonia.Controls.WindowState.Normal;
+                already.Activate();
+                return;
+            }
 
             try
             {
@@ -880,6 +892,18 @@ namespace DSPRE.Avalonia
                                               bool orthographic = false)
         {
             if (Refused("ParticleEditorView")) return;
+            // A second window on the same file would go stale and save over the first.
+            IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
+                        as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
+            Views.Graphics.ParticleEditorView already = open?.OfType<Views.Graphics.ParticleEditorView>().FirstOrDefault(w =>
+                w.DataContext is ParticleEditorViewModel v && v.Entry == entry
+                && v.Source.Dir == source.Dir && v.Source.LoosePath == source.LoosePath);
+            if (already != null)
+            {
+                if (already.WindowState == global::Avalonia.Controls.WindowState.Minimized) already.WindowState = global::Avalonia.Controls.WindowState.Normal;
+                already.Activate();
+                return;
+            }
             try
             {
                 ParticleEditorViewModel vm = new ViewModels.Graphics.ParticleEditorViewModel(source, entry, what, changed, orthographic);

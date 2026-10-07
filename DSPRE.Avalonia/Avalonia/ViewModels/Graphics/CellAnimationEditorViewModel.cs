@@ -312,15 +312,17 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public bool CanUndo => _undo.Count > 0;
         public bool CanRedo => _redo.Count > 0;
-        public bool HasUnsavedChanges => _dirty;
+        // Compared as bytes, so undoing back to the saved file counts as clean.
+        public bool HasUnsavedChanges => _file != null && (!Same(_file.Write(), _savedAnimation) || (_layout != null && !Same(_layout.Write(), _savedLayout)));
         public string UnsavedChangesDescription => Subject;
 
-        private bool _dirty;
-        private bool Dirty
-        {
-            get => _dirty;
-            set { if (Set(ref _dirty, value)) OnPropertyChanged(nameof(HasUnsavedChanges)); }
-        }
+        private byte[] _savedAnimation, _savedLayout;
+        private static bool Same(byte[] a, byte[] b) => a != null && b != null && a.AsSpan().SequenceEqual(b);
+        private void MarkSaved() { _savedAnimation = _file?.Write(); _savedLayout = _layout?.Write(); }
+        private bool Dirty { set => OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        public ArchiveFiles Source => _source;
+        public int Animation => _animation;
 
         // ── loading ──────────────────────────────────────────────────────────────────
 
@@ -349,6 +351,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     _banks = DsBgScreen.ReadCells(layout);
                 }
                 if (_sprites >= 0) _characters = Sheet(narc, _sprites, _sharedSheet);
+                MarkSaved();
 
                 // Opened from a Pokétch application, the preview is drawn inside that application's own
                 // screen, so a frame is seen where a player would see it rather than floating on nothing.
@@ -863,6 +866,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 if (positions != null) files[_cells] = positions;
                 _source.Put(files);
 
+                MarkSaved();
                 Dirty = false;
                 StatusText = "Saved.";
             }

@@ -54,7 +54,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private readonly List<int> _fontEntries = new();   // archive entry per row of FontNames
         private FieldFont _font;
         private bool _loading = true;
-        private bool _dirty;
 
         public FontEditorViewModel()
         {
@@ -86,7 +85,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             set
             {
                 if (RecordSwitchGuard.IsSnappingBack || value == _selectedFontIndex) return;
-                if (_dirty && !_loading)
+                if (HasUnsavedChanges && !_loading)
                 {
                     int requested = value;
                     RecordSwitchGuard.SnapBack(() => _selectedFontIndex, v => _selectedFontIndex = v, () => OnPropertyChanged(nameof(SelectedFontIndex)));
@@ -457,7 +456,9 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
               + "Open Text, Char Map Manager.";
 
         // ── Saving ────────────────────────────────────────────────────────────────
-        public bool HasUnsavedChanges => _dirty;
+        // Compared as bytes, so undoing back to the saved letters counts as clean.
+        public bool HasUnsavedChanges => _font != null && _savedBytes != null && !_font.Write().AsSpan().SequenceEqual(_savedBytes);
+        private byte[] _savedBytes;
         public string UnsavedChangesDescription => "Font";
         public void DiscardChanges() { if (_selectedFontIndex >= 0) LoadFont(_selectedFontIndex); }
 
@@ -467,7 +468,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 _font.Save(_fontEntries[_selectedFontIndex]);
-                _dirty = false;
+                _savedBytes = _font.Write();
                 SaveNotice.Saved(UnsavedChangesDescription);
                 OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Saved {FontNames[_selectedFontIndex]}.";
@@ -486,8 +487,6 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private void MarkDirty()
         {
-            if (_dirty) return;
-            _dirty = true;
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -497,7 +496,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 _font = FieldFont.LoadFromArchive(_fontEntries[which]);
-                _dirty = false;
+                _savedBytes = _font?.Write();
 
                 _all.Clear();
                 if (_font != null)

@@ -99,6 +99,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private readonly ArchiveFiles _source;
         private readonly int _entry;
+        public ArchiveFiles Source => _source;
+        public int Entry => _entry;
         private readonly Action<int> _changed;
         private readonly bool _orthographic;
         private byte[] _saved;
