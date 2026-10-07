@@ -131,10 +131,11 @@ namespace DSPRE.ROMFiles
                 List<int> bounds = new List<int>();
                 for (int i = 0; i < m.Percents.Length - 1; i++) { running += m.Percents[i]; bounds.Add(running); }
                 for (int b = 0; b < m.Sites.Boundaries.Length; b++)
-                    foreach (int site in m.Sites.Boundaries[b]) d[site] = (byte)bounds[b];
+                    foreach (int site in m.Sites.Boundaries[b]) { Imm(d, site, m.Name); d[site] = (byte)bounds[b]; }
                 if (m.HasEqualityTail)
                 {
                     int tail = m.Sites.Boundaries[0][0] + LandLastSlotSite;
+                    Imm(d, tail, m.Name);
                     bool oneRoll = m.Percents[m.Percents.Length - 2] == 1;
                     d[tail] = (byte)(oneRoll ? bounds[^2] : bounds[^1]);
                     d[tail + 3] = oneRoll ? Bne : Bcs;

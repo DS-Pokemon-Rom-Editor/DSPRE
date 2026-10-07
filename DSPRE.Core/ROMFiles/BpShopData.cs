@@ -281,6 +281,7 @@ namespace DSPRE.ROMFiles
         private void SaveDiamond()
         {
             byte[] arm9 = File.ReadAllBytes(arm9Path);
+            if (!SplitLooksVanilla(arm9)) throw new InvalidOperationException("The Battle Point exchange code changed since the lists were read; reopen the editor.");
             WriteExchangeRows(arm9);
             File.WriteAllBytes(arm9Path, arm9);
         }

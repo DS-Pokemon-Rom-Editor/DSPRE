@@ -147,7 +147,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             else
             {
                 try { _odds.Save(); }
-                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
                 {
                     await DialogHelper.ShowError("The slot odds were not saved:\n" + e.Message, "Encounter Slot Odds");
                     return false;
