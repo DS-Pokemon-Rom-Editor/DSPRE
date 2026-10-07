@@ -394,7 +394,27 @@ namespace DSPRE.Avalonia.Data
                 return $"This drawing is allowed {ix.ColourCount} colours and that PNG uses colour number "
                      + $"{highest}. Reduce it to {ix.ColourCount} colours and try again.";
 
-            return WriteIndices(a, index, indices, ix);
+            string trouble = WriteIndices(a, index, indices, ix);
+            if (trouble == null) note = PaletteDiffers(indices, pal, ix);
+            return trouble;
+        }
+
+        /// <summary>Only the pixel numbers go back, so a PNG recoloured in its palette alone changes nothing; this says so.</summary>
+        private static string PaletteDiffers(byte[] indices, uint[] pal, Indexed ix)
+        {
+            if (pal == null || ix.Palette == null) return null;
+            bool[] used = new bool[256];
+            foreach (byte v in indices) used[v] = true;
+            int differ = 0, counted = 0;
+            for (int i = 0; i < used.Length; i++)
+            {
+                if (!used[i] || i >= pal.Length || i >= ix.Palette.Length) continue;
+                counted++;
+                if ((pal[i] & 0xFFFFFF) != (ix.Palette[i] & 0xFFFFFF)) differ++;
+            }
+            if (differ == 0) return null;
+            return $"That PNG's colours differ from this entry's palette for {differ} of the {counted} colours it uses. "
+                 + "Only the pixel numbers were taken; the colours stay as the palette entry has them.";
         }
 
         /// <summary>Says this entry is not one of the assembled kinds, so the ordinary path should run.</summary>
