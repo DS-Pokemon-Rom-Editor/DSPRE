@@ -12,7 +12,6 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="Event file:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemFile_Click"/>

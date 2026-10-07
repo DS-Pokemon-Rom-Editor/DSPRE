@@ -9,7 +9,7 @@
   <controls:EditorToolbar x:Name="HeaderToolbar">
     <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"
             ToolTip.Tip="Save this header's own fields. Every other tab saves its own data."/>
-    <Button Content="Reset" controls:Icon.Key="resetIcon" Click="Reset_Click" ToolTip.Tip="Go back to the saved header"/>
+    <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Reset_Click" ToolTip.Tip="Go back to the saved header"/>
     <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
     <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
     <Button Content="Add" controls:Icon.Key="addIcon" Click="AddHeader_Click" IsEnabled="{Binding CanAddRemove}"/>

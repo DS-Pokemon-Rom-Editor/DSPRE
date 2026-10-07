@@ -11,7 +11,6 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="Area data:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="160" ItemsSource="{Binding AreaNames}" SelectedIndex="{Binding SelectedIndex}"/>
         <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>

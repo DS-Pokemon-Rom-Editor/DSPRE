@@ -1297,7 +1297,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── Add / remove header (dynamic-headers patch only; no associated files) ─────
 
         // Header 0 is the blank one (no encounters, 255s), so it stays the default source for a new header.
-        public static readonly string[] CopyFromOptions = { "Copy header 0", "Copy selected header" };
+        public static readonly string[] CopyFromOptions = { "Duplicate header 0", "Duplicate selected header" };
         private const string CopyFromKey = "header.addCopiesSelected";
 
         public int CopyFromIndex

@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia
                     : rows.LastOrDefault(p => IsRow(p) && p.IsVisible && p.Children.OfType<Button>().Any());
             if (row == null) return true;
             HasButton.Add(root);
-            Button help = new Button { Content = "?", Padding = new Thickness(8, 2) };
+            Button help = new Button { Content = "?", Padding = new Thickness(8, 2), VerticalAlignment = VerticalAlignment.Stretch, Margin = new Thickness(0, 2, 6, 2) };
             ToolTip.SetTip(help, "Tour (F1)");
             help.Click += (_, _) => Start(root, key);
             row.Children.Add(help);

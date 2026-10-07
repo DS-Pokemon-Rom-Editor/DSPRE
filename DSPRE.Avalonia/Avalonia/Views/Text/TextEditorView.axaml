@@ -14,11 +14,10 @@
 
     <!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
     <controls:EditorToolbar>
-        <TextBlock Text="Archive:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="160" ItemsSource="{Binding ArchiveNames}"
                                         SelectedIndex="{Binding SelectedArchiveIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon"    Click="AddArchive_Click"    ToolTip.Tip="Add a new text archive"/>
-        <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>

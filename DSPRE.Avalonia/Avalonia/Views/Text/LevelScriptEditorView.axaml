@@ -11,7 +11,6 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="Script file:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>

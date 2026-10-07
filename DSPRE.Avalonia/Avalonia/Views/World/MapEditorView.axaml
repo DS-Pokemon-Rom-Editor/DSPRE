@@ -34,7 +34,7 @@
           <controls:UndoRedoButtons/>
           <Button Content="Import…" controls:Icon.Key="import"   Click="Import_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Export…" controls:Icon.Key="export"   Click="Export_Click" IsVisible="{Binding IsSingleMap}"/>
-          <Button Content="Add map" controls:Icon.Key="addIcon"  Click="AddMap_Click" IsVisible="{Binding IsSingleMap}"/>
+          <Button Content="Add" controls:Icon.Key="addIcon"  Click="AddMap_Click" IsVisible="{Binding IsSingleMap}"/>
           <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemMap_Click" IsVisible="{Binding IsSingleMap}"/>
     </controls:EditorToolbar>
     <Border DockPanel.Dock="Top" Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="6,4">
