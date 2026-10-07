@@ -45,6 +45,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         public string Title => Label == null ? $"{ArchiveName}  #{Animation}" : $"{ArchiveName}  #{Animation}  {Label}";
 
+        /// <summary>
+        /// The synthOverlay key names a real archive (weather effects on DPPt, the map screen overlay on HGSS) that
+        /// also carries the expanded ARM9 member and, on HGSS, hg-engine's appended tables; those are named apart.
+        /// </summary>
+        public static string ArchiveLabel(ArchiveFiles narc, int member)
+        {
+            if (narc.Dir != DirNames.synthOverlay) return narc.Name;
+            bool hgss = gameFamily == GameFamilies.HGSS;
+            string archive = hgss ? "map screen overlay (a/0/2/8)" : "weather effects";
+            if (RomPatchState.flag_arm9Expanded && member == RomPatchState.expandedARMfileID) return $"expanded ARM9 area, kept in the {archive} archive";
+            if (hgss && member >= HgEngine.HgEngineCodeAddons.VanillaMembers) return $"added to the {archive} archive";
+            return archive;
+        }
+
         public string Detail
         {
             get
@@ -131,6 +145,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokemon Sprite Editor",
         };
+
+        // Editors that work on frames; the graphics list also names archive users like the Header Editor.
+        private static readonly string[] HandsOffTo =
+        {
+            "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokemon Sprite Editor", "Pokemon Editor", "Bottom Screen Editor",
+        };
+
+        private static string HandOff(string deepEditor) => Array.IndexOf(HandsOffTo, deepEditor) >= 0 ? deepEditor : null;
 
         private static bool DoneBetterElsewhere(CellAnimationFound row) =>
             !string.IsNullOrEmpty(row.DeepEditor)
@@ -318,14 +340,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         try { row = DSUtils.GetMonIconPaletteId(f - PokemonIconFiles.SharedFiles); } catch { row = 0; }
                         found.Add(new CellAnimationFound
                         {
-                            Archive = dir, Source = narc, ArchiveName = narc.Name,
+                            Archive = dir, Source = narc, ArchiveName = CellAnimationFound.ArchiveLabel(narc, IconAnimation),
                             Label = PokemonIconFiles.Label(icon, names),
                             Animation = IconAnimation, Cells = IconLayout, Sprites = f, Palette = IconPalette, PaletteRow = row,
                             Sequences = iconFile.Sequences.Count,
                             Frames = iconFile.Sequences.Sum(s => s.Frames.Count),
                             Extended = iconFile.HasExtendedData,
                             Banks = banks, SheetTiles = TilesOf(f),
-                            DeepEditor = described?.DeepEditor,
+                            DeepEditor = HandOff(described?.DeepEditor),
                         });
                     }
                 }
@@ -372,7 +394,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 {
                     Archive = dir,
                     Source = narc,
-                    ArchiveName = narc.Name,
+                    ArchiveName = CellAnimationFound.ArchiveLabel(narc, i),
                     PaletteRow = paletteRow,
                     Animation = i,
                     Cells = cells,
@@ -383,7 +405,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                     Extended = file.HasExtendedData,
                     Banks = chosen.Count,
                     SheetTiles = TilesOf(sprites),
-                    DeepEditor = described?.DeepEditor,
+                    DeepEditor = HandOff(described?.DeepEditor),
                 });
             }
             return found;
