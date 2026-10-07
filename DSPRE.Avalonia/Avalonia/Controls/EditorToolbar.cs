@@ -46,7 +46,11 @@ namespace DSPRE.Avalonia.Controls
                 ToolTip.SetTip(_popOut, "Open in its own window, on the same file");
                 global::Avalonia.Automation.AutomationProperties.SetName(_popOut, "Open in window");
                 _popOut.Click += (_, _) => value();
-                Items.Add(_popOut);
+                // Beside the file it opens: right after the file picker, not after every box in the picker group.
+                int anchor = -1;
+                for (int i = 0; i < Items.Count; i++)
+                    if (Items[i].Name is "FilePicker" or "MapPicker") { anchor = i; break; }
+                if (anchor >= 0) Items.Insert(anchor + 1, _popOut); else Items.Add(_popOut);
             }
         }
 
