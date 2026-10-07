@@ -99,6 +99,11 @@
           </Border>
 
           <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+            <controls:UndoRedoButtons/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
             <Button Content="Paint this" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanPaint}"/>
             <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanPaint}" ToolTip.Tip="PNG image"/>
           </StackPanel>

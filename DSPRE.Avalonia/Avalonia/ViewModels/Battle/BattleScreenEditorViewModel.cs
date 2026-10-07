@@ -27,7 +27,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
     /// The whole battle, both screens, drawn from the ROM's own graphics, with every piece of it
     /// selectable and editable.
     /// </summary>
-    public sealed class BattleScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public sealed class BattleScreenEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -44,6 +44,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public BattleScreenEditorViewModel()
         {
+            Edits.Changed += RaiseEdits;
             if (Design.IsDesignMode) { _loading = false; return; }
 
             // The preview writes in the ROM's own font, which is read once and kept for every window
@@ -162,12 +163,46 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         private string _statusText = "";
         public string StatusText { get => _statusText; private set => Set(ref _statusText, value); }
 
-        public bool HasUnsavedChanges => false;
+        // Imports and painting write the unpacked members at once; Save keeps them, Discard puts the opened bytes back.
+        public ArchiveEditSession Edits { get; } = new ArchiveEditSession();
+        public bool HasUnsavedChanges => Edits.HasChanges;
         public string UnsavedChangesDescription => "Battle screen";
-        // Read-only preview: terrain, time of day, window style and the sample text only change what
-        // is drawn, and nothing here writes to the ROM. Reporting clean is the honest answer.
-        public void SaveChanges() { }
-        public void DiscardChanges() { }
+        public bool CanUndo => Edits.CanUndo;
+        public bool CanRedo => Edits.CanRedo;
+        public string UndoWhat => Edits.UndoWhat;
+        public string RedoWhat => Edits.RedoWhat;
+
+        public void Undo() { if (Edits.Undo() is string what) { Reload(); StatusText = "Undid " + what + "."; } }
+        public void Redo() { if (Edits.Redo() is string what) { Reload(); StatusText = "Redid " + what + "."; } }
+
+        public void SaveChanges()
+        {
+            if (!Edits.HasChanges) return;
+            Edits.Accept();
+            SaveNotice.Saved(UnsavedChangesDescription);
+        }
+
+        public void DiscardChanges()
+        {
+            if (!Edits.HasChanges) return;
+            Edits.Revert();
+            Reload();
+            StatusText = "Battle screen put back as opened.";
+        }
+
+        /// <summary>Reads the pieces again after a member was written, including by the painter.</summary>
+        public void Reload()
+        {
+            Edits.DropLastStepIfUnchanged();
+            BattleGaugeTextRenderer.Reset();
+            Refresh();
+        }
+
+        private void RaiseEdits()
+        {
+            foreach (string n in new[] { nameof(HasUnsavedChanges), nameof(CanUndo), nameof(CanRedo), nameof(UndoWhat), nameof(RedoWhat) })
+                OnPropertyChanged(n);
+        }
 
         /// <summary>Redraws both screens from the ROM.</summary>
         public void Refresh()

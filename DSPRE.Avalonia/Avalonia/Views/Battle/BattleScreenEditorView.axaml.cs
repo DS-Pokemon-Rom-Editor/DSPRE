@@ -32,6 +32,9 @@ namespace DSPRE.Avalonia.Views.Battle
             VM?.PickAt(touch, x, y);
         }
 
+        private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveChanges();
+        private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
+
         private void TopScreen_Pressed(object sender, PointerPressedEventArgs e) => Pick(sender, e, false);
         private void TouchScreen_Pressed(object sender, PointerPressedEventArgs e) => Pick(sender, e, true);
 
@@ -51,7 +54,11 @@ namespace DSPRE.Avalonia.Views.Battle
             if (!await WarnIfShared(piece)) return;
 
             int at = BattleScreenEditorViewModel.PaintableEntry(piece);
-            new GraphicPainterView(new GraphicPainterViewModel(archive, at)).ShowManaged();
+            VM.Edits.Remember(piece.Archive, at, "the painting of " + piece.Name);
+            GraphicPainterView painter = new GraphicPainterView(new GraphicPainterViewModel(archive, at));
+            // The painter writes as it goes, so the screens are read again once it is closed.
+            painter.Closed += (_, _) => VM?.Reload();
+            painter.ShowManaged();
         }
 
         /// <summary>
@@ -101,12 +108,11 @@ namespace DSPRE.Avalonia.Views.Battle
             if (path == null) return;
 
             int at = BattleScreenEditorViewModel.PaintableEntry(piece);
+            VM.Edits.Remember(piece.Archive, at, "the PNG imported into " + piece.Name);
             string trouble = GraphicAssets.ImportPng(archive, at, path, out string note);
-            if (trouble != null) { await DialogHelper.ShowError(trouble, "Battle Screen"); return; }
+            if (trouble != null) { VM.Edits.DropLastStepIfUnchanged(); await DialogHelper.ShowError(trouble, "Battle Screen"); return; }
             if (!string.IsNullOrEmpty(note)) await DialogHelper.ShowInfo(note, "Battle Screen");
-            // The gauge's text colours are read once per ROM; an imported HP bar may have new ones.
-            Data.BattleGaugeTextRenderer.Reset();
-            VM?.Refresh();
+            VM?.Reload();
         }
 
         /// <summary>
