@@ -54,12 +54,29 @@ namespace DSPRE.Avalonia.Views.Shell
             if (main != null) await main.OpenHgEngineFolderInteractiveAsync();
         }
 
-        private async void Recent_DoubleTapped(object sender, TappedEventArgs e)
+        private async void Recent_DoubleTapped(object sender, TappedEventArgs e) => await OpenSelected(sender);
+
+        // The list handles Enter itself, so the handler has to see handled events too.
+        private void RecentList_Loaded(object sender, RoutedEventArgs e)
         {
-            if (RecentList.SelectedItem is not string path) return;
+            if (sender is not ListBox list || list.Tag is "keys") return;
+            list.Tag = "keys";
+            list.AddHandler(KeyDownEvent, Recent_KeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
+        }
+
+        private async void Recent_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter) return;
+            e.Handled = true;
+            await OpenSelected(sender);
+        }
+
+        private async System.Threading.Tasks.Task OpenSelected(object sender)
+        {
+            if ((sender as ListBox)?.SelectedItem is not WelcomeViewModel.RecentEntry entry) return;
             MainWindowView main = _main;
             Close();
-            if (main != null) await main.OpenRecentAsync(path);
+            if (main != null) await main.OpenRecentAsync(entry.Path);
         }
     }
 }
