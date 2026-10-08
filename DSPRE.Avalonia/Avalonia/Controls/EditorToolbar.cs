@@ -70,6 +70,13 @@ namespace DSPRE.Avalonia.Controls
             Items.CollectionChanged += (_, _) => Arrange();
         }
 
+        // XAML adds a child before setting its label, so the last child was slotted unlabelled until something re-arranged.
+        protected override void OnInitialized()
+        {
+            base.OnInitialized();
+            Arrange();
+        }
+
         /// <summary>The group a control belongs to, from its slot or, failing that, from what its label says.</summary>
         private static int GroupOf(ToolbarSlot slot) => slot switch
         {
