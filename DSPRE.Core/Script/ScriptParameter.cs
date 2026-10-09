@@ -23,7 +23,8 @@ public class ScriptParameter
         Move,
         Sound,
         Trainer,
-        NpcTrade
+        NpcTrade,
+        TrainerClass
     }
 
     public enum ParameterDisplayMode
@@ -164,6 +165,10 @@ public class ScriptParameter
                 if (ScriptDatabase.npcTradeNames.TryGetValue((ushort)value, out string tradeName))
                     return tradeName;
                 return value.ToString();
+            case ParameterType.TrainerClass:
+                if (ScriptDatabase.trainerClassNames.TryGetValue((ushort)value, out string className))
+                    return className;
+                break;
         }
 
         return FormatHexNumber(value);

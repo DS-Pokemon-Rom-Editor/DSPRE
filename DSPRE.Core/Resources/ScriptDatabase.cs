@@ -312,6 +312,13 @@ namespace DSPRE.Resources
         public static Dictionary<ushort, string> soundNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, string> trainerNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, string> npcTradeNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> trainerClassNames = new Dictionary<ushort, string>();
+
+        // A class added, copied, removed or renamed is saved through its text bank, so the names follow at once.
+        static ScriptDatabase()
+        {
+            TextArchive.Saved += (_, id) => { if (id == RomInfo.trainerClassMessageNumber && trainerClassNames.Count > 0) InitializeTrainerClassNames(); };
+        }
         public static Dictionary<ushort, string> varNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, MovementCommandInfo> movementsDict = new Dictionary<ushort, MovementCommandInfo>();
         public static Dictionary<ushort, string> movementsDictIDName => movementsDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name);
@@ -433,6 +440,36 @@ namespace DSPRE.Resources
             {
                 AppLogger.Warn("Script trade names: " + e.Message);
             }
+        }
+
+        /// <summary>
+        /// Trainer classes by number, named from the ROM's own class names like the decomps' TRAINER_CLASS_YOUNGSTER,
+        /// so an added or renamed class reads under its name. A name the ROM repeats carries the class number each time.
+        /// </summary>
+        public static void InitializeTrainerClassNames()
+        {
+            Dictionary<ushort, string> names = new Dictionary<ushort, string>();
+            try
+            {
+                List<string> messages = new TextArchive(RomInfo.trainerClassMessageNumber).messages;
+                string[] keys = messages.Select(ClassKey).ToArray();
+                HashSet<string> repeated = keys.GroupBy(k => k).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet();
+                for (int i = 0; i < keys.Length && i <= ushort.MaxValue; i++)
+                    if (keys[i].Length > 0)
+                        names[(ushort)i] = "TRAINER_CLASS_" + keys[i] + (repeated.Contains(keys[i]) ? $"_{i:D3}" : "");
+            }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is ArgumentException || e is UnauthorizedAccessException)
+            {
+                AppLogger.Warn("Script trainer class names: " + e.Message);
+            }
+            trainerClassNames = names;
+        }
+
+        private static string ClassKey(string name)
+        {
+            string key = FormatStringForScripting((name ?? "").Replace("[PK][MN]", "PKMN"));
+            key = System.Text.RegularExpressions.Regex.Replace(key, "[^A-Z0-9_]", "");
+            return System.Text.RegularExpressions.Regex.Replace(key, "_+", "_").Trim('_');
         }
 
         internal static void InitializePokemonNamesIfNeeded()

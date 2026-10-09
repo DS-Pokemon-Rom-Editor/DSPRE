@@ -252,9 +252,15 @@ namespace DSPRE.ROMFiles
                                                     }
                                                     else
                                                     {
+                                                        KeyValuePair<ushort, string> trainerClass = ScriptDatabase.trainerClassNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                         KeyValuePair<ushort, string> trainer = ScriptDatabase.trainerNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                         KeyValuePair<ushort, string> trade = ScriptDatabase.npcTradeNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
-                                                        if (!string.IsNullOrWhiteSpace(trainer.Value))
+                                                        // Class names also start with TRAINER_, so they are looked up first.
+                                                        if (!string.IsNullOrWhiteSpace(trainerClass.Value))
+                                                        {
+                                                            result = trainerClass.Key;
+                                                        }
+                                                        else if (!string.IsNullOrWhiteSpace(trainer.Value))
                                                         {
                                                             result = trainer.Key;
                                                         }
@@ -264,7 +270,7 @@ namespace DSPRE.ROMFiles
                                                         }
                                                         else
                                                         {
-                                                            AppMessages.Error($"Argument {paramToCheck} couldn't be parsed as a valid Condition, Overworld ID, Direction ID, Pokemon, Item, Move, Sound, Trainer, Trade, Script, Function or Action number.\n\n" +
+                                                            AppMessages.Error($"Argument {paramToCheck} couldn't be parsed as a valid Condition, Overworld ID, Direction ID, Pokemon, Item, Move, Sound, Trainer, Trainer class, Trade, Script, Function or Action number.\n\n" +
                                                                 $"Line {lineNumber}: {wholeLine}", "Invalid identifier");
                                                             id = null;
                                                             return;
@@ -422,6 +428,12 @@ namespace DSPRE.ROMFiles
             {
                 return sound.Value;
             }
+            KeyValuePair<ushort, string> trainerClass = ScriptDatabase.trainerClassNames.FirstOrDefault(x =>
+                x.Value.IgnoreCaseEquals(parameter));
+            if (!string.IsNullOrWhiteSpace(trainerClass.Value))
+            {
+                return trainerClass.Value;
+            }
             KeyValuePair<ushort, string> trainer = ScriptDatabase.trainerNames.FirstOrDefault(x =>
                 x.Value.IgnoreCaseEquals(parameter));
             if (!string.IsNullOrWhiteSpace(trainer.Value))
@@ -459,6 +471,11 @@ namespace DSPRE.ROMFiles
             if (!string.IsNullOrWhiteSpace(closestTrainer))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid Trainer.\nDid you mean {closestTrainer}?");
+            }
+            string closestClass = FindClosestMatch(parameter, ScriptDatabase.trainerClassNames.Values);
+            if (!string.IsNullOrWhiteSpace(closestClass))
+            {
+                throw new ArgumentException($"'{parameter}' is not a valid trainer class.\nDid you mean {closestClass}?");
             }
             string closestTrade = FindClosestMatch(parameter, ScriptDatabase.npcTradeNames.Values);
             if (!string.IsNullOrWhiteSpace(closestTrade))
