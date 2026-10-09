@@ -192,11 +192,14 @@ namespace DSPRE.Avalonia.Data
         /// The sample's size-page data for a page state: offsets and scales from the Pokédex data for the player's
         /// gender (states naming Dawn or the female player), and the scale's tilt from the weights.
         /// </summary>
+        /// <summary>Values to show in place of the saved ones, for a preview of edits not yet saved.</summary>
+        public Func<PokedexMetrics> MetricsOverride { get; set; }
+
         public DexSizeInfo SizeInfo(string variant)
         {
             bool female = Female(variant);
-            PokedexMetrics m = null;
-            try { if (PokedexDataArchive.TryLoad(out PokedexDataArchive archive, out _)) m = archive.Get(Species); }
+            PokedexMetrics m = MetricsOverride?.Invoke();
+            try { if (m == null && PokedexDataArchive.TryLoad(out PokedexDataArchive archive, out _)) m = archive.Get(Species); }
             catch (Exception ex) { AppLogger.Warn("Pokédex size data: " + ex.Message); }
             if (m == null) return null;
             return new DexSizeInfo

@@ -284,6 +284,9 @@ namespace DSPRE
             PokewalkerSprites,     // HGSS u16[494][2]: Pokéwalker picture (a/2/5/6) of each species, male then female
             PunchingMoves,         // u16[15]: the moves Iron Fist boosts (pokeplatinum sPunchingMoves), in the battle overlay
             SoundMoves,            // u16[12] with spare slots: the moves Soundproof blocks (pokeplatinum sSoundMoves)
+            RegionalDexCompletion, // u8, the `cmp r0, #n` immediate: regional species (less ignored mythicals) that complete the regional dex
+            RegionalDexRatingLast, // u8, the `cmp r0, #n` immediate: the professor's last rating step before "complete", one less
+            RegionalDexLookupBound, // u8, the `cmp r3, #n` immediate: the highest regional number the lookup reads (DP/Pt)
         }
 
         /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
@@ -295,6 +298,17 @@ namespace DSPRE
             [("IPKE", 0, GameTable.WildHeldItemOdds)] = new(-1, 0xFF4E4),
             [("CPUE", 1, GameTable.WildHeldItemOdds)] = new(-1, 0xF0574),
             [("ADAE", 5, GameTable.WildHeldItemOdds)] = new(-1, 0xF7ECC),
+            // pokeplatinum Pokedex_LocalDexCompleted, Pokedex_GetRatingMessageID_Local and Pokemon_NationalDexNumber;
+            // pokeheartgold Pokedex_JohtoDexIsComplete and GetOakJohtoDexRating; pokediamond Pokedex_SinnohDexIsComplete,
+            // sub_02054CC8 and SinnohDexNoToSpecies.
+            [("IPKE", 0, GameTable.RegionalDexCompletion)] = new(-1, 0x29F66),
+            [("CPUE", 1, GameTable.RegionalDexCompletion)] = new(-1, 0x26F12),
+            [("ADAE", 5, GameTable.RegionalDexCompletion)] = new(-1, 0x2450A),
+            [("IPKE", 0, GameTable.RegionalDexRatingLast)] = new(-1, 0x5BC5C),
+            [("CPUE", 1, GameTable.RegionalDexRatingLast)] = new(-1, 0x5E0D0),
+            [("ADAE", 5, GameTable.RegionalDexRatingLast)] = new(-1, 0x54D08),
+            [("CPUE", 1, GameTable.RegionalDexLookupBound)] = new(-1, 0x775D0),
+            [("ADAE", 5, GameTable.RegionalDexLookupBound)] = new(-1, 0x69B6C),
             [("IPKE", 0, GameTable.HeldItemSameItemBranch)] = new(-1, 0x721FE),
             [("CPUE", 1, GameTable.HeldItemSameItemBranch)] = new(-1, 0x77F66),
             [("ADAE", 5, GameTable.HeldItemSameItemBranch)] = new(-1, 0x6A0EE),
@@ -805,6 +819,8 @@ namespace DSPRE
             pokedexDataAltered,     // Pt zukan_data_gira.narc, HGSS a/2/1/4: the same with Altered Giratina
             pokedexAreas,           // DP zukan_enc_diamond/pearl.narc, Pt zukan_enc_platinum.narc, HGSS a/1/3/3: where the Pokédex says each species lives
             pokedexSearchSteps,     // HGSS a/0/7/5: member 0 holds the height and weight search sliders' steps (u16 height, u16 weight)
+            regionalDexNumbers,     // DP poketool/pokezukan.narc, Pt poketool/pl_pokezukan.narc, HGSS a/1/3/8: member 0 is each species' regional number (u16, 0 = not in it)
+            regionalDexSpecies,     // DP/Pt poketool/shinzukan.narc: member 0 is the species at each regional number (u16, entry 0 unused); HGSS has none
             footprintGraphics,      // DP/Pt poketool/pokefoot/pokefoot.narc, HGSS a/0/6/9: one palette and layout, then a footprint per species
             pokedexGraphics,        // DP/Pt resource/eng/zukan/zukan.narc, HGSS a/0/6/8 (graphic/zukan_gra.narc): the Pokédex screens
             openingDemoGraphics,    // HGSS a/2/6/2 (demo/opening/gs_opening.narc): the opening movie
@@ -3152,6 +3168,8 @@ namespace DSPRE
                         [DirNames.ballParticles] = $@"{dataFolderName}\wazaeffect\effectdata\ball_particle.narc",
                         [DirNames.sealGraphics] = $@"{dataFolderName}\application\custom_ball\data\cb_data.narc",
                         [DirNames.pokedexData] = $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_data.narc",
+                        [DirNames.regionalDexNumbers] = $@"{dataFolderName}\poketool\pokezukan.narc",
+                        [DirNames.regionalDexSpecies] = $@"{dataFolderName}\poketool\shinzukan.narc",
                         [DirNames.pokedexGraphics] = gameLanguage == GameLanguages.Japanese
                             ? $@"{dataFolderName}\graphic\zukan.narc"
                             : $@"{dataFolderName}\resource\eng\zukan\zukan.narc",
@@ -3219,6 +3237,8 @@ namespace DSPRE
                         [DirNames.pokedexData] = $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_data.narc",
                         [DirNames.pokedexDataAltered] = $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_data_gira.narc",
                         [DirNames.pokedexAreas] = $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_enc_platinum.narc",
+                        [DirNames.regionalDexNumbers] = $@"{dataFolderName}\poketool\pl_pokezukan.narc",
+                        [DirNames.regionalDexSpecies] = $@"{dataFolderName}\poketool\shinzukan.narc",
                         [DirNames.pokedexGraphics] = gameLanguage == GameLanguages.Japanese
                             ? $@"{dataFolderName}\graphic\zukan.narc"
                             : $@"{dataFolderName}\resource\eng\zukan\zukan.narc",
@@ -3334,6 +3354,7 @@ namespace DSPRE
                         [DirNames.pokedexData] = $@"{dataFolderName}\a\0\7\4",
                         [DirNames.pokedexDataAltered] = $@"{dataFolderName}\a\2\1\4",
                         [DirNames.pokedexAreas] = $@"{dataFolderName}\a\1\3\3",
+                        [DirNames.regionalDexNumbers] = $@"{dataFolderName}\a\1\3\8",
                         [DirNames.pokedexSearchSteps] = $@"{dataFolderName}\a\0\7\5",
 
                         [DirNames.textArchives] = $@"{dataFolderName}\a\0\2\7",

@@ -15,10 +15,12 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private static readonly FilePickerFileType Png = new("PNG image") { Patterns = new[] { "*.png" } };
 
-        public PokedexGraphicsEditorView()
+        public PokedexGraphicsEditorView() : this(new PokedexGraphicsEditorViewModel()) { }
+
+        public PokedexGraphicsEditorView(PokedexGraphicsEditorViewModel vm)
         {
             AvaloniaXamlLoader.Load(this);
-            DataContext = new PokedexGraphicsEditorViewModel();
+            DataContext = vm;
             EditorWindowChrome.Attach(this, VM);
             EditorWindowChrome.AttachUndoKeys(this, VM);
         }

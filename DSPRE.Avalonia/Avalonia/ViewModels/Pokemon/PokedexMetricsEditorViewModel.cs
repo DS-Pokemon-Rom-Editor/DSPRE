@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    /// <summary>The Pokédex tab: height, weight, body shape and the size check's scales and offsets. Vanilla edits
+    /// <summary>The Pokédex data tab: height, weight, body shape and the size check's scales and offsets. Vanilla edits
     /// the game's Pokédex data archives; hg-engine edits data/Species.c metricsData.</summary>
     public class PokedexMetricsEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
@@ -48,11 +48,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool IsAvailable => _unavailable == null;
         public bool IsUnavailable => _unavailable != null;
 
+        // hg-engine keeps its sort lists in step itself; elsewhere they wait for Rebuild sort lists.
+        public bool ShowListsNote => !DSPRE.HgEngine.HgEngineProject.IsActive;
+        public bool CanOpenLists => ShowListsNote;
+
         public bool ShowForme => !UseHgEngineSource && _archive?.HasOriginGiratina == true && _currentId == SpeciesFile.GIRATINA_ID_NUM;
         public int FormeIndex
         {
             get => _forme;
-            set { if (value is 0 or 1 && value != _forme) { _forme = value; OnPropertyChanged(); RaiseFields(); } }
+            set { if (value is 0 or 1 && value != _forme) { _forme = value; OnPropertyChanged(); RaiseFields(); RenderSizePreview(); } }
         }
 
         private PokedexMetrics V => _values[_forme] ?? new PokedexMetrics();
@@ -87,6 +91,69 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Capture();
             RaiseFields();
             OnPropertyChanged(nameof(HasUnsavedChanges));
+            RenderSizePreview();
+        }
+
+        // ─── Size comparison preview ──────────────────────────────────────────────
+        // The game's own size page for this Pokémon, drawn with the values as they are being edited.
+        private DexSample _previewSample;
+        private DexPageComposer _previewComposer;
+        private readonly Dictionary<int, FieldFont> _previewFonts = new();
+
+        private bool _previewFemale;
+        /// <summary>The trainer and Pokémon scales differ for the female player, so either can be shown.</summary>
+        public bool PreviewFemale
+        {
+            get => _previewFemale;
+            set { if (_previewFemale == value) return; _previewFemale = value; OnPropertyChanged(); RenderSizePreview(); }
+        }
+
+        private Bitmap _sizePreview;
+        public Bitmap SizePreview { get => _sizePreview; private set { _sizePreview = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasSizePreview)); } }
+        public bool HasSizePreview => _sizePreview != null;
+
+        private FieldFont PreviewFont(int entry)
+        {
+            if (_previewFonts.TryGetValue(entry, out FieldFont known)) return known;
+            FieldFont font = null;
+            try { font = FieldFont.LoadFromArchive(entry); } catch (Exception ex) { AppLogger.Warn("Pokédex preview font: " + ex.Message); }
+            _previewFonts[entry] = font;
+            return font;
+        }
+
+        private void RenderSizePreview()
+        {
+            if (_currentId <= 0 || _values == null || _values[_forme] == null) { SizePreview = null; return; }
+            try
+            {
+                DexPage page = ViewModels.Graphics.PokedexGraphicsEditorViewModel.SizePage(DexPageRecipes.For(RomInfo.gameFamily));
+                if (page == null) { SizePreview = null; return; }
+                if (_previewSample == null || _previewSample.Species != _currentId)
+                {
+                    _previewSample = new DexSample(_currentId) { MetricsOverride = () => _values?[_forme] };
+                    _previewComposer = ViewModels.Graphics.PokedexGraphicsEditorViewModel.ComposerFor(_previewSample, PreviewFont);
+                }
+                string variant = page.Variants.Length > 1 && _previewFemale ? page.Variants[1] : page.Variants.FirstOrDefault();
+                // The screen with the height comparison, which the scales and offsets draw: HGSS keeps it on the other screen.
+                static bool Heights(DexScreen screen) =>
+                    screen.Mons.Any(m => m.Size is DexSizeRole.PokemonHeight or DexSizeRole.TrainerHeight)
+                    || screen.Sprites.Any(sp => sp.Size is DexSizeRole.PokemonHeight or DexSizeRole.TrainerHeight);
+                DexSide side = Heights(page.Main) || !Heights(page.Sub) ? DexSide.Main : DexSide.Sub;
+                DexComposed composed = _previewComposer.Compose(page, variant, side);
+                SizePreview = composed?.Rgba == null ? null : ImageConverter.FromRgba(composed.Rgba, DexPageComposer.Width, DexPageComposer.Height);
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is InvalidOperationException || ex is ArgumentException || ex is IndexOutOfRangeException)
+            {
+                AppLogger.Warn("Pokédex size preview: " + ex.Message);
+                SizePreview = null;
+            }
+        }
+
+        /// <summary>Opens the Pokédex graphics editor on this Pokémon's size page.</summary>
+        public void OpenSizePage()
+        {
+            DexPage page = ViewModels.Graphics.PokedexGraphicsEditorViewModel.SizePage(DexPageRecipes.For(RomInfo.gameFamily));
+            AvaloniaEditorLauncher.OpenPokedexGraphics(_currentId, page?.Id);
         }
 
         // ─── Habitat ──────────────────────────────────────────────────────────────
@@ -354,6 +421,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RaiseUndoState();
             }
             finally { _loading = false; }
+            RenderSizePreview();
         }
 
         private bool ShowFormeFor(int id) => _archive?.HasOriginGiratina == true && id == SpeciesFile.GIRATINA_ID_NUM;

@@ -75,6 +75,7 @@ namespace DSPRE
             },
             ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(GameTable.WildHeldItemOdds) },
             ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Open },
+            ["PokedexListsView"] = new Rule { Title = "The Pokédex lists editor", Hge = HgEngine.Closed },
             ["FriendshipChangesView"] = new Rule { Title = "The Friendship changes editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(GameTable.FriendshipChanges) },
             ["EncounterSlotOddsView"] = new Rule
             {

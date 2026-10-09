@@ -59,7 +59,7 @@
             </StackPanel>
           </Border>
           <Border DockPanel.Dock="Bottom" Padding="0,6,0,0">
-            <Grid ColumnDefinitions="Auto,8,80,8,*,8,Auto,4,Auto,4,Auto,4,Auto">
+            <Grid ColumnDefinitions="Auto,8,80,8,*,8,Auto,4,Auto,4,Auto,4,Auto,4,Auto">
               <TextBlock Grid.Column="0" Text="Level:" Classes="lbl"/>
               <NumericUpDown Grid.Column="2" Value="{Binding AddLevel}" Minimum="1" Maximum="100" FormatString="0" Width="80"/>
               <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" Grid.Column="4" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding AddMoveIndex}" HorizontalAlignment="Stretch"/>
@@ -106,13 +106,18 @@
         </DockPanel>
       </TabItem>
 
-      <TabItem Header="Pokédex">
+      <TabItem Header="Pokédex data">
         <ScrollViewer Margin="8" DataContext="{Binding PokedexVM}" HorizontalScrollBarVisibility="Disabled">
           <StackPanel Spacing="10">
             <TextBlock Text="{Binding Unavailable}" IsVisible="{Binding IsUnavailable}"
                        TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel Spacing="10" IsVisible="{Binding IsAvailable}">
               <ComboBox ItemsSource="{Binding Formes}" SelectedIndex="{Binding FormeIndex}" IsVisible="{Binding ShowForme}" Width="200" HorizontalAlignment="Left"/>
+              <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ShowListsNote}">
+                <TextBlock Classes="subtle" VerticalAlignment="Center" TextWrapping="Wrap"
+                           Text="The Pokédex's sort lists take height, weight and body shape changes after Rebuild sort lists."/>
+                <Button Content="Pokédex lists" controls:Icon.Key="OpenLink" Click="PokedexLists_Click" IsVisible="{Binding CanOpenLists}"/>
+              </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="10">
               <GroupBox Header="Entry">
                 <Grid ColumnDefinitions="120,180" RowDefinitions="Auto,6,Auto,6,Auto" Margin="0,4,0,0">
@@ -139,7 +144,8 @@
               <Button Content="Rebuild sort lists" Click="RebuildDexSortLists_Click" IsVisible="{Binding CanRebuildSortLists}" HorizontalAlignment="Left"
                       ToolTip.Tip="Lists every Pokémon in the Pokédex's weight and height sorts, ordered by the saved values"/>
               <GroupBox Header="Size comparison">
-                <Grid ColumnDefinitions="120,120,8,120" RowDefinitions="Auto,4,Auto,6,Auto,6,Auto,6,Auto" Margin="0,4,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                <Grid ColumnDefinitions="120,120,8,120" RowDefinitions="Auto,4,Auto,6,Auto,6,Auto,6,Auto" Margin="0,4,0,0" VerticalAlignment="Top">
                   <TextBlock Grid.Row="0" Grid.Column="1" Text="Female" FontWeight="SemiBold" FontSize="12"/>
                   <TextBlock Grid.Row="0" Grid.Column="3" Text="Male" FontWeight="SemiBold" FontSize="12"/>
                   <TextBlock Grid.Row="2" Classes="lbl" Text="Trainer scale"/>
@@ -155,6 +161,18 @@
                   <NumericUpDown Grid.Row="8" Grid.Column="1" HorizontalAlignment="Stretch" Value="{Binding FemalePokemonYOffset}" Minimum="-32768" Maximum="32767" FormatString="0"/>
                   <NumericUpDown Grid.Row="8" Grid.Column="3" HorizontalAlignment="Stretch" Value="{Binding MalePokemonYOffset}" Minimum="-32768" Maximum="32767" FormatString="0"/>
                 </Grid>
+                <!-- The game's own size page with the values above, before they are saved. -->
+                <StackPanel Spacing="6" IsVisible="{Binding HasSizePreview}">
+                  <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" HorizontalAlignment="Left">
+                    <Image Source="{Binding SizePreview}" Width="256" Height="192" RenderOptions.BitmapInterpolationMode="None"/>
+                  </Border>
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <CheckBox Content="Female player" IsChecked="{Binding PreviewFemale}"/>
+                    <Button Content="Pokédex graphics" controls:Icon.Key="OpenLink" Click="OpenSizePage_Click"
+                            ToolTip.Tip="Opens the Pokédex graphics editor on this Pokémon's size page"/>
+                  </StackPanel>
+                </StackPanel>
+                </StackPanel>
               </GroupBox>
               <GroupBox Header="Habitat" IsVisible="{Binding ShowAreas}">
                 <GroupBox.Styles>

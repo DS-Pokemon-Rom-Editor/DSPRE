@@ -32,15 +32,12 @@ namespace DSPRE.ROMFiles
     /// The game's Pokédex data archives (<see cref="DirNames.pokedexData"/>, and in Platinum and HGSS the
     /// <see cref="DirNames.pokedexDataAltered"/> copy that differs only in Giratina's forme). Members 0-10 hold one
     /// value per species: height and weight (u32), body shape (u8), then the female trainer, female Pokémon, male
-    /// trainer and male Pokémon scales (u16) and Y offsets (s16). Members 14-17 list every species heaviest, lightest,
-    /// tallest and shortest first, ties by number, and one member per body shape lists its species by number
-    /// (pokeplatinum tools/dataproc/src/speciesproc.c pack_dexdata, pokeheartgold zukan_data.json). Saving
-    /// rebuilds those lists from the copy's own values, which reproduces every retail list exactly.
+    /// trainer and male Pokémon scales (u16) and Y offsets (s16). The sort lists built from them are left to
+    /// <see cref="PokedexLists"/>, which rebuilds them only when asked.
     /// </summary>
     public sealed class PokedexDataArchive
     {
         public const int BodyShapes = 14;
-        private const int SortHeaviest = 14, SortLightest = 15, SortTallest = 16, SortShortest = 17;
 
         private sealed class Copy
         {
@@ -51,7 +48,6 @@ namespace DSPRE.ROMFiles
         }
 
         private readonly List<Copy> _copies = new();
-        private readonly int _shapeLists;
 
         /// <summary>Species 0 to <see cref="SpeciesCount"/> - 1 have records.</summary>
         public int SpeciesCount { get; }
@@ -60,9 +56,8 @@ namespace DSPRE.ROMFiles
         /// Diamond and Pearl have only Altered.</summary>
         public bool HasOriginGiratina => _copies.Count > 1;
 
-        private PokedexDataArchive(int shapeLists, int speciesCount)
+        private PokedexDataArchive(int speciesCount)
         {
-            _shapeLists = shapeLists;
             SpeciesCount = speciesCount;
         }
 
@@ -73,9 +68,7 @@ namespace DSPRE.ROMFiles
             error = null;
             if (gameDirs == null || !gameDirs.ContainsKey(DirNames.pokedexData)) { error = "This game's Pokédex data isn't mapped."; return false; }
 
-            // The body shape lists follow the type lists: 44 on in DP and Platinum, 79 on in HGSS (26 letter lists).
             int memberCount = gameFamily == GameFamilies.HGSS ? 102 : 58;
-            int shapeLists = gameFamily == GameFamilies.HGSS ? 79 : 44;
 
             List<DirNames> dirs = new List<DirNames> { DirNames.pokedexData };
             if (gameDirs.ContainsKey(DirNames.pokedexDataAltered)) dirs.Add(DirNames.pokedexDataAltered);
@@ -106,7 +99,7 @@ namespace DSPRE.ROMFiles
                 { error = "The Pokédex data's per-species tables don't agree on how many species there are."; return false; }
             }
 
-            archive = new PokedexDataArchive(shapeLists, species);
+            archive = new PokedexDataArchive(species);
             archive._copies.AddRange(copies);
             return true;
         }
@@ -144,8 +137,7 @@ namespace DSPRE.ROMFiles
             return null;
         }
 
-        /// <summary>Sets the species' values in every copy, or for Giratina in the chosen forme's copy only, and
-        /// rebuilds the lists that depend on them.</summary>
+        /// <summary>Sets the species' values in every copy, or for Giratina in the chosen forme's copy only.</summary>
         public void Set(int species, PokedexMetrics v, bool originGiratina = false)
         {
             if (species <= 0 || species >= SpeciesCount) throw new ArgumentOutOfRangeException(nameof(species));
@@ -161,7 +153,6 @@ namespace DSPRE.ROMFiles
                 int[] halves = { v.FemaleTrainerScale, v.FemalePokemonScale, v.MaleTrainerScale, v.MalePokemonScale,
                                  v.FemaleTrainerYOffset, v.FemalePokemonYOffset, v.MaleTrainerYOffset, v.MalePokemonYOffset };
                 for (int i = 0; i < halves.Length; i++) Put(c, 3 + i, species * 2, BitConverter.GetBytes((ushort)halves[i]));
-                RebuildLists(c);
             }
         }
 
@@ -173,62 +164,6 @@ namespace DSPRE.ROMFiles
                 if (m[offset + i] == bytes[i]) continue;
                 m[offset + i] = bytes[i];
                 c.Dirty[member] = true;
-            }
-        }
-
-        private void RebuildLists(Copy c)
-        {
-            byte[][] m = c.Members;
-            int[] species = Enumerable.Range(1, SpeciesCount - 1).ToArray();
-            uint H(int s) => BitConverter.ToUInt32(m[0], s * 4);
-            uint W(int s) => BitConverter.ToUInt32(m[1], s * 4);
-            Replace(c, SortHeaviest, species.OrderByDescending(W).ThenBy(s => s));
-            Replace(c, SortLightest, species.OrderBy(W).ThenBy(s => s));
-            Replace(c, SortTallest, species.OrderByDescending(H).ThenBy(s => s));
-            Replace(c, SortShortest, species.OrderBy(H).ThenBy(s => s));
-            for (int shape = 0; shape < BodyShapes; shape++)
-                Replace(c, _shapeLists + shape, species.Where(s => m[2][s] == shape));
-        }
-
-        private static void Replace(Copy c, int member, IEnumerable<int> list)
-        {
-            byte[] bytes = list.SelectMany(s => BitConverter.GetBytes((ushort)s)).ToArray();
-            if (c.Members[member].AsSpan().SequenceEqual(bytes)) return;
-            c.Members[member] = bytes;
-            c.Dirty[member] = true;
-        }
-
-        /// <summary>
-        /// The type search lists (one per type except ???, from member 27 in DP and Platinum and 62 in HGSS) hold
-        /// every species with that type in number order, so a species whose types change leaves the lists of types it
-        /// lost and joins the others in its place. Types past Dark have no list.
-        /// </summary>
-        public static void MoveTypes(int species, (int, int) before, (int, int) after)
-        {
-            if (gameDirs == null || !gameDirs.ContainsKey(DirNames.pokedexData) || species <= 0) return;
-            int firstList = gameFamily == GameFamilies.HGSS ? 62 : 27;
-            const int Mystery = 9, Dark = 17;
-            static bool Has((int, int) t, int type) => t.Item1 == type || t.Item2 == type;
-
-            List<DirNames> dirs = new List<DirNames> { DirNames.pokedexData };
-            if (gameDirs.ContainsKey(DirNames.pokedexDataAltered)) dirs.Add(DirNames.pokedexDataAltered);
-            DSUtils.TryUnpackNarcs(dirs);
-            foreach (DirNames dir in dirs)
-            {
-                string folder = gameDirs[dir].unpackedDir;
-                string heights = Path.Combine(folder, "0000");
-                if (!File.Exists(heights) || species >= new FileInfo(heights).Length / 4) continue;
-                foreach (int type in new[] { before.Item1, before.Item2, after.Item1, after.Item2 }.Distinct())
-                {
-                    if (type < 0 || type > Dark || type == Mystery || Has(before, type) == Has(after, type)) continue;
-                    string file = Path.Combine(folder, (firstList + (type < Mystery ? type : type - 1)).ToString("D4"));
-                    if (!File.Exists(file)) continue;
-                    byte[] b = File.ReadAllBytes(file);
-                    List<int> list = Enumerable.Range(0, b.Length / 2).Select(i => (int)BitConverter.ToUInt16(b, i * 2)).ToList();
-                    list.Remove(species);
-                    if (Has(after, type)) { int at = list.FindIndex(s => s > species); list.Insert(at < 0 ? list.Count : at, species); }
-                    File.WriteAllBytes(file, list.SelectMany(s => BitConverter.GetBytes((ushort)s)).ToArray());
-                }
             }
         }
 

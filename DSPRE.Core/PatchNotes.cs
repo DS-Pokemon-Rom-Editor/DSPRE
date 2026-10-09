@@ -59,6 +59,20 @@ namespace DSPRE
                 "US HeartGold, Platinum (Rev 1) or Diamond, the ARM9 expansion and a ds-rom project. Not compatible with hg-engine.\n\n" +
                 "Research\n" +
                 "The list, its count check and its pointer were documented by MrHam88 and the DS Pokémon Hacking wiki's move editing guide.",
+            ["regionalDexCount"] =
+                "What it does\n" +
+                "The game checks the regional Pokédex against numbers built into its code: how many regional species " +
+                "complete it, the professor's last rating step before he calls it complete, and in Diamond, Pearl and " +
+                "Platinum the highest regional number it looks up. This sets them from the regional order saved in " +
+                "Pokédex Lists. Completion leaves out the mythicals the game ignores: Manaphy in Diamond and Pearl, Mew " +
+                "and Celebi in HeartGold and SoulSilver.\n\n" +
+                "Where to edit\n" +
+                "Pokémon > Pokédex lists, Regional dex tab. Saving a different size there offers this patch.\n\n" +
+                "Limits\n" +
+                "The numbers are single bytes, so the regional Pokédex can hold at most 255 counted species. The " +
+                "professor's earlier rating steps keep their numbers.\n\n" +
+                "Requirements\n" +
+                "US Diamond, Platinum (Rev 1) or HeartGold. Not for hg-engine.",
             ["soundMovesExpanded"] =
                 "What it does\n" +
                 "The battle code keeps the moves Soundproof blocks as a list of 12 in its overlay. This moves the list into " +
@@ -126,6 +140,9 @@ namespace DSPRE
             ["soundMovesExpanded"] = ("The battle overlay's pointer to the list and its count check (overlay 12 in HeartGold, 16 in Platinum, 11 in Diamond) are moved to the new list.",
                 "160 bytes in the synthetic overlay.",
                 "the battle overlay and the synthetic overlay"),
+            ["regionalDexCount"] = ("Two or three single-byte numbers in the ARM9's Pokédex code.",
+                "None.",
+                "the ARM9"),
             ["typeChartExpanded"] = ("The battle overlay's pointers to the chart and Conversion 2's count are moved to the new chart; in Diamond, Pearl and Platinum the Pokétch's copy is rewritten.",
                 "About 800 bytes in the synthetic overlay, room for 253 matchups.",
                 "the battle overlay and the synthetic overlay"),

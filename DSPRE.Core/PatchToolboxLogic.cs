@@ -1437,6 +1437,7 @@ namespace DSPRE
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
             ["punchingMovesExpanded"] = ("DSPRE", "punching move list expansion"),
             ["soundMovesExpanded"] = ("DSPRE", "sound move list expansion"),
+            ["regionalDexCount"] = ("DSPRE", "regional Pokédex size"),
             ["vsIntroTimings"] = ("DSPRE", "VS intro timing"),
             ["typeChartExpanded"] = ("DSPRE", "type chart expansion"),
             ["swarmTableExpanded"] = ("DSPRE", "swarm table expansion"),
@@ -1545,6 +1546,11 @@ namespace DSPRE
                 () => MoveListProbe(MoveCategoryTable.Kind.Punching));
             punching.Guide = MoveCategoryTable.GuideUrl(MoveCategoryTable.Kind.Punching);
             list.Add(punching);
+
+            list.Add(Status("regionalDexCount", "Match the regional Pokédex size",
+                "Sets the counts the game checks the regional Pokédex against (when it is complete, the professor's rating and the regional number lookup) to the size of the regional order saved in Pokédex Lists.",
+                RegionalDexCountProbe));
+
 
             list.Add(Status("martsExpanded", "Expand the marts",
                 $"Moves every mart into the expanded ARM9 area with room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items, so the Mart Editor can add items and custom marts. Requires the ARM9 expansion patch.",
@@ -1927,6 +1933,34 @@ namespace DSPRE
             return true;
         }
 
+        private static PatchState RegionalDexCountProbe()
+        {
+            if (RomInfo.isHGE) return Unsupported("hg-engine sets these counts in its own source");
+            if (RegionalDexCount.WhyNot() != null) return Unsupported("Unsupported version");
+            List<ushort> order = RegionalDexCount.SavedOrder();
+            if (order == null) return Unsupported("The regional order could not be read");
+            if (RegionalDexCount.Problem(order) != null) return Unsupported($"More than {RegionalDexCount.Max} species");
+            return RegionalDexCount.Matches(order) ? PatchState.Applied : PatchState.Available;
+        }
+
+        /// <summary>Sets the game's regional Pokédex counts to the saved regional order's size.</summary>
+        public static bool ApplyRegionalDexCount()
+        {
+            if (RegionalDexCount.WhyNot() is string why) { ShowError(why, "Patch not applied"); return false; }
+            List<ushort> order = RegionalDexCount.SavedOrder();
+            if (order == null) { ShowError("The regional order could not be read.", "Patch not applied"); return false; }
+            if (RegionalDexCount.Problem(order) is string problem) { ShowError(problem, "Patch not applied"); return false; }
+            if (AlreadyApplied(RegionalDexCount.Matches(order))) return false;
+            RegionalDexCount.Counts now = RegionalDexCount.Current(), next = RegionalDexCount.For(order);
+            if (!ConfirmYesNo($"The regional Pokédex holds {order.Count} species. The game will count it complete at {next.Completion} " +
+                $"(now {now.Completion}) and the professor's rating will follow." + BackupNote("the ARM9") + "\n\nApply this patch?" + CreditNote("regionalDexCount"), "Confirm to proceed"))
+                return false;
+            BackUp(RomInfo.arm9Path);
+            RegionalDexCount.Apply(order);
+            ShowInfo("The game's regional Pokédex size now matches the regional order.", "Operation successful.");
+            return true;
+        }
+
         private static PatchState MoveListProbe(MoveCategoryTable.Kind kind)
         {
             if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
@@ -2079,6 +2113,7 @@ namespace DSPRE
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
                 case "punchingMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Punching);
                 case "soundMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Sound);
+                case "regionalDexCount": return ApplyRegionalDexCount();
                 case "vsIntroTimings": return ApplyVsIntroTimings();
                 case "typeChartExpanded": return ApplyTypeChartExpansion();
                 case "swarmTableExpanded": return ApplySwarmTableExpansion();

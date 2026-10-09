@@ -103,6 +103,10 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         /// <summary>Plays the chosen Pokemon's cry. </summary>
+        private void PokedexLists_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenPokedexLists();
+
+        private void OpenSizePage_Click(object sender, RoutedEventArgs e) => ViewModel.PokedexVM?.OpenSizePage();
+
         private void PlayCry_Click(object sender, RoutedEventArgs e)
         {
             int species = ViewModel?.SelectedMonIndex ?? 0;

@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Pokemon"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             x:Class="DSPRE.Avalonia.Views.Pokemon.PokedexListsView"
+             x:DataType="vm:PokedexListsViewModel">
+  <Design.DataContext>
+    <vm:PokedexListsViewModel/>
+  </Design.DataContext>
+
+  <DockPanel>
+    <controls:EditorToolbar>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <controls:UndoRedoButtons/>
+      <Button Content="Rebuild sort lists" controls:Icon.Key="reload" Click="Rebuild_Click"
+              ToolTip.Tip="Builds every sort list again from the species' names, types, heights, weights and body shapes. The regional order is kept."/>
+    </controls:EditorToolbar>
+
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Margin="8,4"
+               Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
+    <TextBlock DockPanel.Dock="Bottom" Text="{Binding Warning}" IsVisible="{Binding HasWarning}" Margin="8,4"
+               Classes="subtle" TextWrapping="Wrap"/>
+    <DockPanel DockPanel.Dock="Bottom" Margin="8,4" IsVisible="{Binding HasCountNote}">
+      <Button DockPanel.Dock="Right" Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="CountPatch_Click" Margin="8,0,0,0"/>
+      <TextBlock Text="{Binding CountNote}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+    </DockPanel>
+    <TextBlock DockPanel.Dock="Bottom" x:Name="Status" Margin="8,4" Classes="subtle" TextWrapping="Wrap"/>
+
+    <Panel>
+      <TextBlock Text="{Binding LoadError}" IsVisible="{Binding HasLoadError}" Margin="16" TextWrapping="Wrap"/>
+      <TabControl IsVisible="{Binding !HasLoadError}" Margin="6">
+        <TabItem Header="Regional dex">
+          <DockPanel Margin="4">
+            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,6,Auto,4,Auto,4,Auto,4,Auto" Margin="0,6,0,0">
+              <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" AllowsNone="False"
+                                              ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding RegionalAdd}"/>
+              <Button Grid.Column="2" Content="Add" controls:Icon.Key="addIcon" Click="AddRegional_Click"
+                      ToolTip.Tip="Adds the species after the selected entry"/>
+              <Button Grid.Column="4" Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveRegional_Click" IsEnabled="{Binding CanRemoveRegional}"/>
+              <Button Grid.Column="6" Content="Up" controls:Icon.Key="arrowup" Click="RaiseRegional_Click" IsEnabled="{Binding CanRaiseRegional}"/>
+              <Button Grid.Column="8" Content="Down" controls:Icon.Key="arrowdown" Click="LowerRegional_Click" IsEnabled="{Binding CanLowerRegional}"/>
+            </Grid>
+            <TextBlock DockPanel.Dock="Bottom" Text="{Binding RegionalCount}" Classes="subtle" Margin="0,4,0,0"/>
+            <ListBox ItemsSource="{Binding Regional}" SelectedIndex="{Binding RegionalIndex}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:PokedexListsViewModel+Row">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Image Width="32" Height="32" Source="{Binding Species, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+                    <TextBlock Text="{Binding Text}" VerticalAlignment="Center" FontFamily="Consolas,monospace"/>
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </TabItem>
+
+        <TabItem Header="Sort lists">
+          <Grid ColumnDefinitions="220,8,*" Margin="4">
+            <ListBox ItemsSource="{Binding ListChoices}" SelectedItem="{Binding SelectedList}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:PokedexListsViewModel+ListChoice">
+                  <TextBlock Text="{Binding Text}"/>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <DockPanel Grid.Column="2">
+              <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6" IsVisible="{Binding ShowsCopyChoice}">
+                <TextBlock Text="Copy:" VerticalAlignment="Center"/>
+                <ComboBox ItemsSource="{Binding CopyNames}" SelectedIndex="{Binding CopyIndex}" Width="200"
+                          ToolTip.Tip="The game keeps a second copy of the Pokédex data for Giratina's other forme, and this list differs between them"/>
+              </StackPanel>
+              <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,6,Auto,4,Auto,4,Auto,4,Auto" Margin="0,6,0,0">
+                <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" AllowsNone="False"
+                                                ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding EntryAdd}"/>
+                <Button Grid.Column="2" Content="Add" controls:Icon.Key="addIcon" Click="AddEntry_Click"
+                        ToolTip.Tip="Adds the species after the selected entry"/>
+                <Button Grid.Column="4" Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveEntry_Click" IsEnabled="{Binding CanRemoveEntry}"/>
+                <Button Grid.Column="6" Content="Up" controls:Icon.Key="arrowup" Click="RaiseEntry_Click" IsEnabled="{Binding CanRaiseEntry}"/>
+                <Button Grid.Column="8" Content="Down" controls:Icon.Key="arrowdown" Click="LowerEntry_Click" IsEnabled="{Binding CanLowerEntry}"/>
+              </Grid>
+              <TextBlock DockPanel.Dock="Bottom" Text="{Binding EntriesCount}" Classes="subtle" Margin="0,4,0,0"/>
+              <ListBox ItemsSource="{Binding Entries}" SelectedIndex="{Binding EntryIndex}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:PokedexListsViewModel+Row">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <Image Width="32" Height="32" Source="{Binding Species, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+                      <TextBlock Text="{Binding Text}" VerticalAlignment="Center" FontFamily="Consolas,monospace"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </DockPanel>
+          </Grid>
+        </TabItem>
+      </TabControl>
+    </Panel>
+  </DockPanel>
+</UserControl>

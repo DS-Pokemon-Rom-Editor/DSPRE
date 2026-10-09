@@ -42,7 +42,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public event PropertyChangedEventHandler PropertyChanged;
 
         private readonly IReadOnlyList<DexPage> _pages;
-        private readonly DexSample _sample = new();
+        private readonly DexSample _sample;
         private readonly Dictionary<int, FieldFont> _fonts = new();
         private DexPageComposer _composer;
         private DexComposed _top, _bottom;
@@ -52,16 +52,25 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public ObservableCollection<DexLayerRow> Layers { get; } = new();
         public ObservableCollection<DexPartRow> Parts { get; } = new();
 
-        public PokedexGraphicsEditorViewModel()
+        public PokedexGraphicsEditorViewModel() : this(0, null) { }
+
+        /// <param name="species">The Pokémon the pages are shown with; 0 keeps the usual sample.</param>
+        /// <param name="pageId">The page to open on, or null for the first.</param>
+        public PokedexGraphicsEditorViewModel(int species, string pageId)
         {
+            _sample = new DexSample(species);
             _pages = DexPageRecipes.For(gameFamily);
             foreach (DexPage p in _pages) PageNames.Add(p.Name);
             BuildComposer();
-            if (_pages.Count > 0) PageIndex = 0;
+            int start = pageId == null ? 0 : Math.Max(0, _pages.ToList().FindIndex(p => p.Id == pageId));
+            if (_pages.Count > 0) PageIndex = start;
             else StatusText = "This game has no Pokédex pages to show.";
         }
 
-        private void BuildComposer()
+        private void BuildComposer() => _composer = ComposerFor(_sample, Font);
+
+        /// <summary>A composer drawing the game's Pokédex pages with <paramref name="sample"/>'s pictures and values.</summary>
+        internal static DexPageComposer ComposerFor(DexSample sample, Func<int, FieldFont> font)
         {
             ScriptNarc dex = null;
             try
@@ -73,14 +82,18 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
             catch (Exception ex) { AppLogger.Error("Pokédex graphics: " + ex.Message); }
             ScriptNarc archive = dex;
-            _composer = new DexPageComposer(i => archive?.Get(i), Font, _sample.Text, _sample.Picture, _sample.TypeSlot,
-                                            i => ScreenGraphicsLayouts.BankFor(DirNames.pokedexGraphics, i))
+            return new DexPageComposer(i => archive?.Get(i), font, sample.Text, sample.Picture, sample.TypeSlot,
+                                       i => ScreenGraphicsLayouts.BankFor(DirNames.pokedexGraphics, i))
             {
-                Habitat = _sample.Habitat,
-                Size = _sample.SizeInfo,
-                Digit = _sample.SearchDigit,
+                Habitat = sample.Habitat,
+                Size = sample.SizeInfo,
+                Digit = sample.SearchDigit,
             };
         }
+
+        /// <summary>The game's size comparison page: DP and Platinum's height page, HGSS's size page.</summary>
+        internal static DexPage SizePage(IReadOnlyList<DexPage> pages) =>
+            pages.FirstOrDefault(p => p.Id == "size_height") ?? pages.FirstOrDefault(p => p.Id == "size");
 
         private FieldFont Font(int entry)
         {

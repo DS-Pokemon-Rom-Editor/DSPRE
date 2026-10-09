@@ -385,6 +385,8 @@ namespace DSPRE.Avalonia
         public static void OpenWildHeldItems() => OpenTableEditor("Wild Held Items", WildHeldItemOdds.WhyNot,
             () => new WildHeldItemOddsView(new WildHeldItemOddsViewModel(true)), 640, 360, 460, 340);
 
+        public static void OpenPokedexLists() => OpenTableEditor("Pokédex Lists", PokedexLists.WhyNot,
+            () => new PokedexListsView(new PokedexListsViewModel(true)), 860, 640, 640, 420);
 
         public static void OpenGrowthCurves() => OpenTableEditor("Growth Curves", GrowthTable.WhyNot,
             () => new GrowthCurveEditorView(new GrowthCurveEditorViewModel(true)), 900, 680, 700, 460);
@@ -1313,7 +1315,10 @@ namespace DSPRE.Avalonia
         /// Opens the Pokédex pages put together with a sample Pokémon, or, where that editor is not on, the
         /// graphics window at the Pokédex's first screen.
         /// </summary>
-        public static void OpenPokedexGraphics()
+        public static void OpenPokedexGraphics() => OpenPokedexGraphics(0, null);
+
+        /// <summary>Opens the Pokédex graphics editor showing <paramref name="species"/> on page <paramref name="pageId"/>.</summary>
+        public static void OpenPokedexGraphics(int species, string pageId)
         {
             if (EditorAvailability.Allows("PokedexGraphicsEditorView"))
             {
@@ -1322,8 +1327,9 @@ namespace DSPRE.Avalonia
                         (global::Avalonia.Application.Current?.ApplicationLifetime
                          as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows
                         ?? new System.Collections.Generic.List<global::Avalonia.Controls.Window>()));
+                // An open editor may hold unsaved work, so it is brought forward rather than reopened.
                 if (open != null) { open.Activate(); return; }
-                new Views.Graphics.PokedexGraphicsEditorView().ShowManaged();
+                new Views.Graphics.PokedexGraphicsEditorView(new ViewModels.Graphics.PokedexGraphicsEditorViewModel(species, pageId)).ShowManaged();
                 return;
             }
             int first = -1;
@@ -1627,6 +1633,7 @@ namespace DSPRE.Avalonia
             new() { Name = "Area data editor",      Keywords = "tileset", Run = () => OpenAreaDataEditor() },
             new() { Name = "Map & building textures", Keywords = "texture nsbtx tileset", Run = OpenNsbtxEditor },
             new() { Name = "Wild Pokémon editor",   Keywords = "encounter grass surf", Run = () => OpenWildEditor() },
+            new() { Name = "Pokédex lists",         Keywords = "pokedex dex regional order sort alphabetical type search lists", Run = OpenPokedexLists },
             new() { Beta = "WildHeldItemOddsView", Name = "Wild held items",       Keywords = "held item chance odds compound eyes wild", Run = OpenWildHeldItems },
             new() { Name = "Special encounters editor", Keywords = "headbutt tree bug contest opponents great marsh honey safari trophy garden daily swarm", Run = () => OpenSpecialEncountersEditor() },
             new() { Name = "Battle Tower editor",   Keywords = "tower trainer set party rental", Run = OpenBattleTowerEditor },

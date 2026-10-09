@@ -59,6 +59,8 @@
                   ToolTip.Tip="Which abilities Mold Breaker ignores, Neutralizing Gas turns off, and Trace or Skill Swap can't take"/>
         <MenuItem Header="Growth curves" Click="GrowthCurves_Click" IsVisible="{Binding Shown[GrowthCurveEditorView]}" IsEnabled="{Binding CanUseGrowthCurves}"
                   ToolTip.Tip="{Binding BlockedNote[GrowthCurveEditorView], TargetNullValue='The EXP each growth rate needs per level'}"/>
+        <MenuItem Header="Pokédex lists" Click="PokedexLists_Click" IsEnabled="{Binding Usable[PokedexListsView]}"
+                  ToolTip.Tip="{Binding BlockedNote[PokedexListsView], TargetNullValue='The regional Pokédex order and the Pokédex sort lists'}"/>
         <MenuItem Header="Breeding items" Click="BreedingItems_Click" IsVisible="{Binding Shown[BreedingItemsView]}" IsEnabled="{Binding CanUseBreedingItems}"
                   ToolTip.Tip="{Binding BlockedNote[BreedingItemsView], TargetNullValue='Babies that only hatch while a parent holds an incense'}"/>
         <MenuItem Header="Friendship changes" Click="FriendshipChanges_Click" IsVisible="{Binding Shown[FriendshipChangesView]}" IsEnabled="{Binding CanUseFriendship}"

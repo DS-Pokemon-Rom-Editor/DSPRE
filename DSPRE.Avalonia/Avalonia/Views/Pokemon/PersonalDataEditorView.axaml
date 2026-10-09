@@ -75,6 +75,8 @@
                   <controls:FusionAutoCompleteBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability1Index}"/>
                   <TextBlock Grid.Row="6" Grid.Column="0" Text="Ability 2:" Classes="label"/>
                   <controls:FusionAutoCompleteBox  Grid.Row="6" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability2Index}"/>
+                  <TextBlock Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Classes="subtle" TextWrapping="Wrap" IsVisible="{Binding !ShowHgEngineExtras}"
+                             Text="The Pokédex's type search takes type changes after Rebuild sort lists in Pokédex lists."/>
                 </Grid>
               </GroupBox>
               <GroupBox Grid.Column="2" Header="Held items">
