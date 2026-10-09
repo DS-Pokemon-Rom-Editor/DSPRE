@@ -1,5 +1,6 @@
 using DSPRE;
 using DSPRE.Resources;
+using DSPRE.ROMFiles;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -310,6 +311,7 @@ namespace DSPRE.Resources
         public static Dictionary<ushort, string> moveNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, string> soundNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, string> trainerNames = new Dictionary<ushort, string>();
+        public static Dictionary<ushort, string> npcTradeNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, string> varNames = new Dictionary<ushort, string>();
         public static Dictionary<ushort, MovementCommandInfo> movementsDict = new Dictionary<ushort, MovementCommandInfo>();
         public static Dictionary<ushort, string> movementsDictIDName => movementsDict.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name);
@@ -403,6 +405,36 @@ namespace DSPRE.Resources
                         : $"TRAINER_{FormatStringForScripting(names[index])}_{index:D3}"
             );
         }
+        /// <summary>
+        /// In-game trades by number, named like the decomps' NPC_TRADE_KENYA_SPEAROW from the ROM's own nickname
+        /// and species, so an edited trade reads under its new name.
+        /// </summary>
+        public static void InitializeNpcTradeNames()
+        {
+            npcTradeNames = new Dictionary<ushort, string>();
+            try
+            {
+                DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.tradeData });
+                if (TradeData.TextBank < 0) return;
+                int count = TradeData.GetTradeCount();
+                TextArchive bank = new TextArchive(TradeData.TextBank);
+                string[] species = GetPokemonNames();
+                List<string> names = new List<string>();
+                for (int i = 0; i < count; i++)
+                {
+                    int mon = new TradeData(i).species;
+                    string nickname = i < bank.messages.Count ? bank.messages[i] : "";
+                    string speciesName = mon >= 0 && mon < species.Length ? species[mon] : mon.ToString();
+                    names.Add(nickname.Length > 0 ? nickname + " " + speciesName : speciesName);
+                }
+                npcTradeNames = UnambiguousNames(names, "NPC_TRADE_");
+            }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is ArgumentException || e is UnauthorizedAccessException)
+            {
+                AppLogger.Warn("Script trade names: " + e.Message);
+            }
+        }
+
         internal static void InitializePokemonNamesIfNeeded()
         {
             if(pokemonNames.Count == 0)

@@ -152,6 +152,18 @@ namespace DSPRE
                 }
                 File.Copy(databaseJsonPath, targetJsonPath);
             }
+            else if (File.Exists(databaseJsonPath))
+            {
+                try
+                {
+                    int merged = ScriptDatabaseMerge.Merge(targetJsonPath, databaseJsonPath, AppPaths.DatabasePath);
+                    if (merged > 0) AppLogger.Info($"Script database: {merged} entries brought up to date from the shared database.");
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    AppLogger.Warn("Script database could not be brought up to date: " + ex.Message);
+                }
+            }
 
             try
             {
@@ -165,6 +177,7 @@ namespace DSPRE
                 Resources.ScriptDatabase.InitializeItemNames();
                 Resources.ScriptDatabase.InitializeMoveNames();
                 Resources.ScriptDatabase.InitializeTrainerNames();
+                Resources.ScriptDatabase.InitializeNpcTradeNames();
 
                 // Export the enum JSONs for external tools (like Rotom) to use
                 // Always regenerate to ensure they match current ROM data

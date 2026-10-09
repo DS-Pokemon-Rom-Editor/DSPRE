@@ -818,6 +818,7 @@ namespace DSPRE.ROMFiles
             Resources.ScriptDatabase.InitializeItemNames();
             Resources.ScriptDatabase.InitializeMoveNames();
             Resources.ScriptDatabase.InitializeTrainerNames();
+            Resources.ScriptDatabase.InitializeNpcTradeNames();
 
             // Export the enum JSONs for external tools (like Rotom) to use
             // Always regenerate to ensure they match current ROM data
@@ -1099,6 +1100,7 @@ namespace DSPRE.ROMFiles
             Resources.ScriptDatabase.InitializeItemNames();
             Resources.ScriptDatabase.InitializeMoveNames();
             Resources.ScriptDatabase.InitializeTrainerNames();
+            Resources.ScriptDatabase.InitializeNpcTradeNames();
 
             string expandedDir = Path.Combine(RomInfo.dspreDir, "expanded", "scripts");
 
@@ -1357,16 +1359,6 @@ namespace DSPRE.ROMFiles
                                         break;
                                     default:
                                         break;
-                                }
-                            }
-                            break;
-                        case 0x2C4:
-                            {
-                                byte parameter1 = dataReader.ReadByte();
-                                parameterList.Add(new byte[] { parameter1 });
-                                if (parameter1 == 0 || parameter1 == 1)
-                                {
-                                    parameterList.Add(dataReader.ReadBytes(2));
                                 }
                             }
                             break;

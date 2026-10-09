@@ -193,7 +193,8 @@ namespace DSPRE.ROMFiles
                             && !nameParts[i + 1].StartsWith("SPECIES_")
                             && !nameParts[i + 1].StartsWith("ITEM_")
                             && !nameParts[i + 1].StartsWith("MOVE_")
-                            && !nameParts[i + 1].StartsWith("TRAINER_"))
+                            && !nameParts[i + 1].StartsWith("TRAINER_")
+                            && !nameParts[i + 1].StartsWith("NPC_TRADE_"))
                         {
                             nameParts[i + 1] = nameParts[i + 1].PurgeSpecial(ScriptFile.specialChars);
                         }
@@ -252,13 +253,18 @@ namespace DSPRE.ROMFiles
                                                     else
                                                     {
                                                         KeyValuePair<ushort, string> trainer = ScriptDatabase.trainerNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
+                                                        KeyValuePair<ushort, string> trade = ScriptDatabase.npcTradeNames.FirstOrDefault(x => x.Value.IgnoreCaseEquals(paramToCheck));
                                                         if (!string.IsNullOrWhiteSpace(trainer.Value))
                                                         {
                                                             result = trainer.Key;
                                                         }
+                                                        else if (!string.IsNullOrWhiteSpace(trade.Value))
+                                                        {
+                                                            result = trade.Key;
+                                                        }
                                                         else
                                                         {
-                                                            AppMessages.Error($"Argument {paramToCheck} couldn't be parsed as a valid Condition, Overworld ID, Direction ID, Pokemon, Item, Move, Sound, Trainer, Script, Function or Action number.\n\n" +
+                                                            AppMessages.Error($"Argument {paramToCheck} couldn't be parsed as a valid Condition, Overworld ID, Direction ID, Pokemon, Item, Move, Sound, Trainer, Trade, Script, Function or Action number.\n\n" +
                                                                 $"Line {lineNumber}: {wholeLine}", "Invalid identifier");
                                                             id = null;
                                                             return;
@@ -422,6 +428,12 @@ namespace DSPRE.ROMFiles
             {
                 return trainer.Value;
             }
+            KeyValuePair<ushort, string> trade = ScriptDatabase.npcTradeNames.FirstOrDefault(x =>
+                x.Value.IgnoreCaseEquals(parameter));
+            if (!string.IsNullOrWhiteSpace(trade.Value))
+            {
+                return trade.Value;
+            }
 
             string closestItem = FindClosestMatch(parameter, ScriptDatabase.itemNames.Values);
             if (!string.IsNullOrWhiteSpace(closestItem))
@@ -447,6 +459,11 @@ namespace DSPRE.ROMFiles
             if (!string.IsNullOrWhiteSpace(closestTrainer))
             {
                 throw new ArgumentException($"'{parameter}' is not a valid Trainer.\nDid you mean {closestTrainer}?");
+            }
+            string closestTrade = FindClosestMatch(parameter, ScriptDatabase.npcTradeNames.Values);
+            if (!string.IsNullOrWhiteSpace(closestTrade))
+            {
+                throw new ArgumentException($"'{parameter}' is not a valid trade.\nDid you mean {closestTrade}?");
             }
 
             return parameter;

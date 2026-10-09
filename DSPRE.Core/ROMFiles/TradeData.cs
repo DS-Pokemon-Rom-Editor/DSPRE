@@ -136,6 +136,15 @@ namespace DSPRE.ROMFiles
             SaveToFileExplorePath("Gen IV Trade data", "bin", suggestedFileName, showSuccessMessage);
         }
 
+        /// <summary>The text bank holding each trade's nickname, then each trade's OT name.</summary>
+        public static int TextBank => RomInfo.gameFamily switch
+        {
+            RomInfo.GameFamilies.DP => RomInfo.gameLanguage == RomInfo.GameLanguages.Japanese ? 324 : 326,
+            RomInfo.GameFamilies.Plat => RomInfo.gameLanguage == RomInfo.GameLanguages.Japanese ? 369 : 370,
+            RomInfo.GameFamilies.HGSS => RomInfo.gameLanguage == RomInfo.GameLanguages.Japanese ? 198 : 200,
+            _ => -1,
+        };
+
         public static int GetTradeCount()
         {
             return Directory.GetFiles(RomInfo.gameDirs[DirNames.tradeData].unpackedDir, "*.*").Length;

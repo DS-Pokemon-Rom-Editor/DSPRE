@@ -461,18 +461,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private int GetTextBankIndex()
         {
-            switch (RomInfo.gameFamily)
-            {
-                case RomInfo.GameFamilies.DP:
-                    return RomInfo.gameLanguage == RomInfo.GameLanguages.Japanese ? 324 : 326;
-                case RomInfo.GameFamilies.Plat:
-                    return RomInfo.gameLanguage == RomInfo.GameLanguages.Japanese ? 369 : 370;
-                case RomInfo.GameFamilies.HGSS:
-                    return RomInfo.gameLanguage == RomInfo.GameLanguages.Japanese ? 198 : 200;
-                default:
-                    AppLogger.Error("TradeEditor: Invalid game family for text bank index retrieval.");
-                    return 0;
-            }
+            if (TradeData.TextBank >= 0) return TradeData.TextBank;
+            AppLogger.Error("TradeEditor: Invalid game family for text bank index retrieval.");
+            return 0;
         }
 
         private string GetMonNickname(int tradeID)

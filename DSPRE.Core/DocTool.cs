@@ -396,6 +396,7 @@ namespace DSPRE
             Resources.ScriptDatabase.InitializeItemNames();
             Resources.ScriptDatabase.InitializeMoveNames();
             Resources.ScriptDatabase.InitializeTrainerNames();
+            Resources.ScriptDatabase.InitializeNpcTradeNames();
 
             int scriptCount = Filesystem.GetScriptCount();
             int exported = 0;

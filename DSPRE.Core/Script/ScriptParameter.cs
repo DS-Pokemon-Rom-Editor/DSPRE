@@ -22,7 +22,8 @@ public class ScriptParameter
         Item,
         Move,
         Sound,
-        Trainer
+        Trainer,
+        NpcTrade
     }
 
     public enum ParameterDisplayMode
@@ -147,17 +148,22 @@ public class ScriptParameter
             case ParameterType.OwMovementType:
                 return value < 4000 ? $"Move.{value}" : FormatHexNumber(value);
             case ParameterType.OwMovementDirection:
-                if (ScriptDatabase.overworldDirections.TryGetValue((byte)value, out string dirName))
+                // A direction can come from a variable (0x4000 and up), which must stay a number.
+                if (value <= byte.MaxValue && ScriptDatabase.overworldDirections.TryGetValue((byte)value, out string dirName))
                     return dirName;
                 break;
             case ParameterType.ComparisonOperator:
-                if (RomInfo.ScriptComparisonOperatorsDict.TryGetValue((byte)value, out string compName))
+                if (value <= byte.MaxValue && RomInfo.ScriptComparisonOperatorsDict.TryGetValue((byte)value, out string compName))
                     return compName;
                 break;
             case ParameterType.Sound:
                 if (ScriptDatabase.soundNames.TryGetValue((ushort)value, out string soundName))
                     return soundName;
                 break;
+            case ParameterType.NpcTrade:
+                if (ScriptDatabase.npcTradeNames.TryGetValue((ushort)value, out string tradeName))
+                    return tradeName;
+                return value.ToString();
         }
 
         return FormatHexNumber(value);
