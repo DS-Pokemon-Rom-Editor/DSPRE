@@ -287,6 +287,10 @@ namespace DSPRE
             RegionalDexCompletion, // u8, the `cmp r0, #n` immediate: regional species (less ignored mythicals) that complete the regional dex
             RegionalDexRatingLast, // u8, the `cmp r0, #n` immediate: the professor's last rating step before "complete", one less
             RegionalDexLookupBound, // u8, the `cmp r3, #n` immediate: the highest regional number the lookup reads (DP/Pt)
+            EvolutionSlotBuffer,   // u8, the `movs r1, #n` immediate: GetMonEvolution's buffer, 6 bytes per evolution slot
+            EvolutionSlotLoopLevel, // u8, the `cmp r0, #n` immediate: slots the level-up loop walks
+            EvolutionSlotLoopTrade, // u8, the `cmp r4, #n` immediate: slots the trade loop walks
+            EvolutionSlotLoopItem, // u8, the `cmp r0, #n` immediate: slots the item loop walks
         }
 
         /// <summary>Where a table sits: arm9 when <see cref="Overlay"/> is -1, otherwise that overlay; file offset.</summary>
@@ -309,6 +313,20 @@ namespace DSPRE
             [("ADAE", 5, GameTable.RegionalDexRatingLast)] = new(-1, 0x54D08),
             [("CPUE", 1, GameTable.RegionalDexLookupBound)] = new(-1, 0x775D0),
             [("ADAE", 5, GameTable.RegionalDexLookupBound)] = new(-1, 0x69B6C),
+            // GetMonEvolution in pokeheartgold, pokeplatinum and pokediamond pokemon.c. The `cmp r2, #7` between the trade
+            // and item loops is the method check for EVO_USE_ITEM, not a slot count.
+            [("IPKE", 0, GameTable.EvolutionSlotBuffer)] = new(-1, 0x70ECE),
+            [("CPUE", 1, GameTable.EvolutionSlotBuffer)] = new(-1, 0x76C18),
+            [("ADAE", 5, GameTable.EvolutionSlotBuffer)] = new(-1, 0x691EC),
+            [("IPKE", 0, GameTable.EvolutionSlotLoopLevel)] = new(-1, 0x71168),
+            [("CPUE", 1, GameTable.EvolutionSlotLoopLevel)] = new(-1, 0x76EAA),
+            [("ADAE", 5, GameTable.EvolutionSlotLoopLevel)] = new(-1, 0x6947E),
+            [("IPKE", 0, GameTable.EvolutionSlotLoopTrade)] = new(-1, 0x7119E),
+            [("CPUE", 1, GameTable.EvolutionSlotLoopTrade)] = new(-1, 0x76EE6),
+            [("ADAE", 5, GameTable.EvolutionSlotLoopTrade)] = new(-1, 0x694B8),
+            [("IPKE", 0, GameTable.EvolutionSlotLoopItem)] = new(-1, 0x7122C),
+            [("CPUE", 1, GameTable.EvolutionSlotLoopItem)] = new(-1, 0x76F74),
+            [("ADAE", 5, GameTable.EvolutionSlotLoopItem)] = new(-1, 0x69546),
             [("IPKE", 0, GameTable.HeldItemSameItemBranch)] = new(-1, 0x721FE),
             [("CPUE", 1, GameTable.HeldItemSameItemBranch)] = new(-1, 0x77F66),
             [("ADAE", 5, GameTable.HeldItemSameItemBranch)] = new(-1, 0x6A0EE),

@@ -241,10 +241,51 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Unsubscribes from app-wide events; call when the host window closes.</summary>
-        public void Detach() => AppEvents.LabelsChanged -= OnLabelsChanged;
+        public void Detach()
+        {
+            AppEvents.LabelsChanged -= OnLabelsChanged;
+            AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+        }
 
-        // 7 evolution slots
+        // One row per evolution slot the ROM has: 7 in the game, more with the toolbox patch or hg-engine.
         public ObservableCollection<EvolutionRowViewModel> EvoRows { get; } = new();
+
+        /// <summary>The slots are the game's 7 and the toolbox patch can raise them.</summary>
+        public bool CanOfferSlots => !UseHgEngineSource && EvolutionSlots.WhyNot() == null && !EvolutionSlots.Expanded;
+
+        public void OpenSlotsPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("evolutionSlots");
+
+        // After the toolbox raised the slots, the new rows appear and the Pokémon is read again.
+        private void OnPatchStateChanged(object sender, EventArgs e)
+        {
+            if (UseHgEngineSource) return;
+            OnPropertyChanged(nameof(CanOfferSlots));
+            if (EvolutionSlots.Current() <= EvoRows.Count) return;
+            AddRows(EvolutionSlots.Current() - EvoRows.Count);
+            if (_currentId >= 0 && !_dirty) LoadMon(_currentId);
+        }
+
+        private string[] _itemNames, _moveNames, _rowPokemonNames;
+
+        private void AddRows(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                EvolutionRowViewModel row = new EvolutionRowViewModel
+                {
+                    ItemNames    = _itemNames,
+                    MoveNames    = _moveNames,
+                    PokemonNames = _rowPokemonNames,
+                    UseHgEngineNames = UseHgEngineSource,
+                    HgMethodNames    = _hgMethodNamesArray,
+                    MethodIndex  = 0,
+                    TargetIndex  = 0,
+                    Param        = 0
+                };
+                row.Changed = () => { if (!_loading) SetDirty(); };
+                EvoRows.Add(row);
+            }
+        }
 
         // ─── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
@@ -325,8 +366,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ─── Runtime constructor ──────────────────────────────────────────────────
         public EvolutionsEditorViewModel(string[] pokemonNames)
         {
-            string[] itemNames = RomInfo.GetItemNames();
-            string[] moveNames = RomInfo.GetAttackNames();
+            _itemNames = RomInfo.GetItemNames();
+            _moveNames = RomInfo.GetAttackNames();
+            _rowPokemonNames = pokemonNames;
 
             ReloadMethodNames();
             // Only real species can be evolution targets; on hg-engine every entry is one.
@@ -335,25 +377,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
             // Live refresh: when dropdown labels are customised (Tools ▸ Edit Dropdown Labels), reload.
             AppEvents.LabelsChanged += OnLabelsChanged;
+            AppEvents.RomPatchStateChanged += OnPatchStateChanged;
 
             // hg-engine sets its own slot count; Eevee alone needs eight.
-            int slots = UseHgEngineSource && DSPRE.HgEngine.HgEngineEvolutions.MaxSlots() is int max and > 0 ? max : EvolutionFile.numEvolutions;
-            for (int i = 0; i < slots; i++)
-            {
-                EvolutionRowViewModel row = new EvolutionRowViewModel
-                {
-                    ItemNames    = itemNames,
-                    MoveNames    = moveNames,
-                    PokemonNames = pokemonNames,
-                    UseHgEngineNames = UseHgEngineSource,
-                    HgMethodNames    = _hgMethodNamesArray,
-                    MethodIndex  = 0,
-                    TargetIndex  = 0,
-                    Param        = 0
-                };
-                row.Changed = () => { if (!_loading) SetDirty(); };
-                EvoRows.Add(row);
-            }
+            AddRows(UseHgEngineSource && DSPRE.HgEngine.HgEngineEvolutions.MaxSlots() is int max and > 0 ? max : EvolutionSlots.Current());
         }
 
         private string _hgLoadError;
@@ -401,9 +428,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     _current = id > 0 ? new EvolutionFile(id) : new EvolutionFile();
                     if (_current.data == null)
-                        _current.data = new EvolutionData[EvolutionFile.numEvolutions];
+                        _current.data = new EvolutionData[EvoRows.Count];
 
-                    for (int i = 0; i < EvolutionFile.numEvolutions; i++)
+                    for (int i = 0; i < EvoRows.Count; i++)
                     {
                         EvolutionRowViewModel row = EvoRows[i];
                         EvolutionData d = i < _current.data.Length ? _current.data[i] : default;

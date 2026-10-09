@@ -107,6 +107,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private void OpenSizePage_Click(object sender, RoutedEventArgs e) => ViewModel.PokedexVM?.OpenSizePage();
 
+        private void OpenEvolutionSlots_Click(object sender, RoutedEventArgs e) => ViewModel.EvolutionsVM?.OpenSlotsPatch();
+
         private void PlayCry_Click(object sender, RoutedEventArgs e)
         {
             int species = ViewModel?.SelectedMonIndex ?? 0;

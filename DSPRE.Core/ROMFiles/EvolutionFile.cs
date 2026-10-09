@@ -74,7 +74,8 @@ namespace DSPRE {
         }
     }
     public class EvolutionFile : RomFile {
-        public const int numEvolutions = 7;
+        /// <summary>The game's slot count; <see cref="EvolutionSlots.Current"/> is this ROM's.</summary>
+        public const int numEvolutions = EvolutionSlots.Vanilla;
 
         public EvolutionData[] data;
 
@@ -118,10 +119,10 @@ namespace DSPRE {
         };
 
         public EvolutionFile(Stream stream) {
-            data = new EvolutionData[numEvolutions];
+            data = new EvolutionData[EvolutionSlots.Current()];
 
             using (BinaryReader reader = new BinaryReader(stream)) {
-                for (int i = 0; i < numEvolutions; i++) {
+                for (int i = 0; i < data.Length && stream.Length - stream.Position >= EvolutionSlots.RecordSize; i++) {
                     data[i].method = (EvolutionMethod)reader.ReadInt16();
                     data[i].param = reader.ReadInt16();
                     data[i].target = reader.ReadInt16();
@@ -145,9 +146,8 @@ namespace DSPRE {
                         }
                     }
 
-                    //If the file is smaller than the minimum size, pad it with 00
-                    int size = Marshal.SizeOf(typeof(EvolutionData));
-                    int minSize = numEvolutions * size + 2; //2B pad
+                    // The game reads the file whole into a buffer of every slot, so it must fill it.
+                    int minSize = EvolutionSlots.FileSize(EvolutionSlots.Current());
                     if (memoryStream.Length < minSize) {
                         memoryStream.SetLength(minSize);
                     }

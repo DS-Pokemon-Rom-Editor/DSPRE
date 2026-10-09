@@ -59,6 +59,18 @@ namespace DSPRE
                 "US HeartGold, Platinum (Rev 1) or Diamond, the ARM9 expansion and a ds-rom project. Not compatible with hg-engine.\n\n" +
                 "Research\n" +
                 "The list, its count check and its pointer were documented by MrHam88 and the DS Pokémon Hacking wiki's move editing guide.",
+            ["evolutionSlots"] =
+                "What it does\n" +
+                "The game reads a Pokémon's evolutions into a buffer of 7 slots and checks those 7 when a Pokémon levels up, " +
+                "is traded or has an item used on it. This raises all four numbers to 42, the most the code's one-byte " +
+                "buffer size allows, and pads every evolution file to fill the new buffer, since a shorter file would leave " +
+                "leftover memory in the slots the game checks.\n\n" +
+                "Where to edit\n" +
+                "Pokémon > Evolutions editor, which then lists 42 slots.\n\n" +
+                "Limits\n" +
+                "42 evolutions per Pokémon. The old WinForms editor still shows only the first 7.\n\n" +
+                "Requirements\n" +
+                "US Diamond, Platinum (Rev 1) or HeartGold. Not for hg-engine, which sets its slots in its own source.",
             ["regionalDexCount"] =
                 "What it does\n" +
                 "The game checks the regional Pokédex against numbers built into its code: how many regional species " +
@@ -143,6 +155,9 @@ namespace DSPRE
             ["regionalDexCount"] = ("Two or three single-byte numbers in the ARM9's Pokédex code.",
                 "None.",
                 "the ARM9"),
+            ["evolutionSlots"] = ("Four single-byte numbers in the ARM9's evolution check: its buffer size and the three slot loops. Every evolution file is padded with empty slots.",
+                "None. Each evolution file grows from 44 to 252 bytes.",
+                "the ARM9; the evolution files are copied to backups/evolutions in the project"),
             ["typeChartExpanded"] = ("The battle overlay's pointers to the chart and Conversion 2's count are moved to the new chart; in Diamond, Pearl and Platinum the Pokétch's copy is rewritten.",
                 "About 800 bytes in the synthetic overlay, room for 253 matchups.",
                 "the battle overlay and the synthetic overlay"),

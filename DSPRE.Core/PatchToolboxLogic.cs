@@ -1438,6 +1438,7 @@ namespace DSPRE
             ["punchingMovesExpanded"] = ("DSPRE", "punching move list expansion"),
             ["soundMovesExpanded"] = ("DSPRE", "sound move list expansion"),
             ["regionalDexCount"] = ("DSPRE", "regional Pokédex size"),
+            ["evolutionSlots"] = ("DSPRE", "evolution slots"),
             ["vsIntroTimings"] = ("DSPRE", "VS intro timing"),
             ["typeChartExpanded"] = ("DSPRE", "type chart expansion"),
             ["swarmTableExpanded"] = ("DSPRE", "swarm table expansion"),
@@ -1551,6 +1552,9 @@ namespace DSPRE
                 "Sets the counts the game checks the regional Pokédex against (when it is complete, the professor's rating and the regional number lookup) to the size of the regional order saved in Pokédex Lists.",
                 RegionalDexCountProbe));
 
+            list.Add(Status("evolutionSlots", "More evolution slots",
+                $"Gives every Pokémon room for {EvolutionSlots.Max} evolutions instead of {EvolutionSlots.Vanilla}, so the Evolutions editor can list more.",
+                EvolutionSlotsProbe));
 
             list.Add(Status("martsExpanded", "Expand the marts",
                 $"Moves every mart into the expanded ARM9 area with room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items, so the Mart Editor can add items and custom marts. Requires the ARM9 expansion patch.",
@@ -1943,6 +1947,35 @@ namespace DSPRE
             return RegionalDexCount.Matches(order) ? PatchState.Applied : PatchState.Available;
         }
 
+        private static PatchState EvolutionSlotsProbe()
+        {
+            if (RomInfo.isHGE) return Unsupported("hg-engine sets its evolution slots in its own source");
+            if (EvolutionSlots.WhyNot() != null) return Unsupported("Unsupported version");
+            return EvolutionSlots.Expanded ? PatchState.Applied : PatchState.Available;
+        }
+
+        /// <summary>Raises the evolution slots to the most the game's code can hold and pads every evolution file to match.</summary>
+        public static bool ApplyEvolutionSlots()
+        {
+            if (EvolutionSlots.WhyNot() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (AlreadyApplied(EvolutionSlots.Expanded)) return false;
+            string backupDir = Path.Combine(RomInfo.dspreDir, "backups", "evolutions-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
+            if (!ConfirmYesNo($"Every Pokémon gets room for {EvolutionSlots.Max} evolutions instead of {EvolutionSlots.Current()}. Four bytes in the ARM9's " +
+                $"evolution check change, and every evolution file is padded with empty slots to {EvolutionSlots.FileSize(EvolutionSlots.Max)} bytes." +
+                BackupNote("the ARM9") + " The evolution files are copied to " + backupDir + "." +
+                "\n\nApply this patch?" + CreditNote("evolutionSlots"), "Confirm to proceed"))
+                return false;
+            BackUp(RomInfo.arm9Path);
+            try { EvolutionSlots.Expand(backupDir); }
+            catch (Exception e) when (e is IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
+            {
+                ShowError("The evolution slots were not changed:\n" + e.Message, "Patch not applied");
+                return false;
+            }
+            ShowInfo($"Every Pokémon now has room for {EvolutionSlots.Max} evolutions in the Evolutions editor.", "Operation successful.");
+            return true;
+        }
+
         /// <summary>Sets the game's regional Pokédex counts to the saved regional order's size.</summary>
         public static bool ApplyRegionalDexCount()
         {
@@ -2114,6 +2147,7 @@ namespace DSPRE
                 case "punchingMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Punching);
                 case "soundMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Sound);
                 case "regionalDexCount": return ApplyRegionalDexCount();
+                case "evolutionSlots": return ApplyEvolutionSlots();
                 case "vsIntroTimings": return ApplyVsIntroTimings();
                 case "typeChartExpanded": return ApplyTypeChartExpansion();
                 case "swarmTableExpanded": return ApplySwarmTableExpansion();

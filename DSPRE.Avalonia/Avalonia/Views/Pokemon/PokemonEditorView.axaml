@@ -101,6 +101,11 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding CanOfferSlots}">
+                <TextBlock Text="More evolutions need the &quot;More evolution slots&quot; patch." VerticalAlignment="Center"
+                           FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+                <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="OpenEvolutionSlots_Click"/>
+              </StackPanel>
             </StackPanel>
           </ScrollViewer>
         </DockPanel>
