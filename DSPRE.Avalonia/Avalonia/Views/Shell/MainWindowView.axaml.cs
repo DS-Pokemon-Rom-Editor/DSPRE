@@ -502,6 +502,20 @@ namespace DSPRE.Avalonia.Views.Shell
             path != null && (path.StartsWith(@"\\wsl.localhost\", System.StringComparison.OrdinalIgnoreCase)
                            || path.StartsWith(@"\\wsl$\", System.StringComparison.OrdinalIgnoreCase));
 
+        // An archive replaced while DSPRE was closed would lose to its older unpacked folder at the next save.
+        private static async System.Threading.Tasks.Task SettleChangedArchivesAsync(MainWindowViewModel vm)
+        {
+            if (vm != null)
+            {
+                vm.BusyText = "Checking unpacked archives…";
+                vm.BusyHint = "Each unpacked folder is compared with its archive. The first check after an update reads them all.";
+                vm.IsBusy = true;
+            }
+            try { await BusyOverlay.RunLockedAsync(() => NarcSync.Settle()); }
+            catch (System.Exception ex) { AppLogger.Error("Checking unpacked archives failed: " + ex.Message); }
+            finally { if (vm != null) vm.IsBusy = false; }
+        }
+
         // Runs a ROM load off the UI thread (unpacking blocks), then refreshes the menus/title and reports errors.
         // sourcePath: the picked .nds/folder, used only to detect a WSL path for the busy hint.
         private async System.Threading.Tasks.Task LoadRom(System.Func<System.Action<string>, bool> load, string sourcePath = null)
@@ -534,6 +548,7 @@ namespace DSPRE.Avalonia.Views.Shell
             }
             if (vm != null) vm.StatusText = $"Loaded {RomInfo.projectName ?? "project"} from {RomInfo.workDir}";
             ProjectSourceWatcher.Start();
+            await SettleChangedArchivesAsync(vm);
 
             // Nothing else dismisses the welcome window, and a loaded project makes it redundant.
             if (global::Avalonia.Application.Current?.ApplicationLifetime
@@ -761,6 +776,29 @@ namespace DSPRE.Avalonia.Views.Shell
                         return false;
                     }
                     if (vm != null) vm.BusyHint = busyHint;
+                }
+
+                // Every folder is packed over its archive below, so an archive changed outside DSPRE is settled first.
+                NarcSync.Outcome archives = await BusyOverlay.RunLockedAsync(() => NarcSync.Settle(saving: true));
+                string doing = busyText.TrimEnd('…');
+                if (!archives.Settled)
+                {
+                    if (vm != null) { vm.IsBusy = false; vm.StatusText = doing + " cancelled. Nothing was written."; }
+                    return false;
+                }
+                if (archives.Unpacked.Count > 0)
+                {
+                    if (vm != null) vm.IsBusy = false;
+                    bool saveNow = await DialogHelper.AskTwoWay(
+                        "The newer archive was unpacked over its folder for:\n\n" + string.Join("\n", archives.Unpacked)
+                        + "\n\nYou can look it over in its editors first, or carry on now.",
+                        doing, "Carry on", "Review first");
+                    if (!saveNow)
+                    {
+                        if (vm != null) vm.StatusText = doing + " paused so the unpacked archives can be reviewed. Nothing was written.";
+                        return false;
+                    }
+                    if (vm != null) vm.IsBusy = true;
                 }
 
                 ok = await BusyOverlay.RunLockedAsync(() =>

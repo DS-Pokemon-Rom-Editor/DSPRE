@@ -1070,6 +1070,9 @@ namespace DSPRE {
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<DirNames, object> UnpackLocks =
             new System.Collections.Concurrent.ConcurrentDictionary<DirNames, object>();
 
+        /// <summary>The lock an archive's extraction holds, for readers that must not see a half-written folder.</summary>
+        internal static object UnpackLockFor(DirNames id) => UnpackLocks.GetOrAdd(id, _ => new object());
+
         public static void TryUnpackNarcs(List<DirNames> IDs) {
             if (gameDirs == null || gameDirs.Count == 0) {
                 return;
@@ -1077,6 +1080,8 @@ namespace DSPRE {
             // hg-engine-owned domains are always rebuilt fresh from source (cheap: 0.5-3s each), never
             // read from the packed ROM's NARC, see HgEngineSync.
             IDs = HgEngineSync.SyncOwnedAndReturnRemaining(IDs);
+            // An existing folder wins below, so an archive changed outside DSPRE is settled first.
+            NarcSync.SettleIfFree(IDs);
             Parallel.ForEach(IDs, id => {
                 lock (UnpackLocks.GetOrAdd(id, _ => new object()))
                 if (gameDirs.TryGetValue(id, out (string packedPath, string unpackedPath) paths)) {

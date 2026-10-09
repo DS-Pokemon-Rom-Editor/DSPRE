@@ -25,8 +25,11 @@ namespace NarcAPI {
             return narc;
         }
 
+        // Where this archive was read from, so packing a project's folder or unpacking its archive keeps the two in step.
+        private string sourceFile, sourceFolder;
+
         public static Narc Open(String filePath) {
-            Narc narc = new Narc(Path.GetFileNameWithoutExtension(filePath));
+            Narc narc = new Narc(Path.GetFileNameWithoutExtension(filePath)) { sourceFile = filePath };
             using (BinaryReader br = new BinaryReader(File.OpenRead(filePath))) {
                 if (br.BaseStream.Length < 4 || br.ReadUInt32() != NARC_FILE_MAGIC_NUM) {
                     return null;
@@ -42,7 +45,7 @@ namespace NarcAPI {
         }
 
         public static Narc FromFolder(String dirPath) {
-            Narc narc = new Narc(Path.GetFileNameWithoutExtension(dirPath));
+            Narc narc = new Narc(Path.GetFileNameWithoutExtension(dirPath)) { sourceFolder = dirPath };
             // Members are the folder's own files; subfolders, backups and OS clutter are not.
             String[] fileNames = Directory.GetFiles(dirPath, "*", SearchOption.TopDirectoryOnly);
             fileNames = Array.FindAll(fileNames, IsMemberFile);
@@ -157,6 +160,7 @@ namespace NarcAPI {
             AppLogger.Debug($"Saved NARC \"{Name}\" with {Elements.Length} elements and filesize {fileSize} Bytes to file: {filePath}");
 
             bw.Close();
+            DSPRE.NarcSync.NoteSaved(sourceFolder, filePath);
         }
 
         public int ElementCount => Elements.Length;
@@ -219,6 +223,7 @@ namespace NarcAPI {
             });
 
             AppLogger.Debug($"Extracted NARC \"{Name}\" with {Elements.Length} elements to folder: {dirPath}");
+            DSPRE.NarcSync.NoteExtracted(sourceFile, dirPath);
 
         }
 
