@@ -23,15 +23,17 @@ namespace DSPRE.Avalonia
         /// <summary>
         /// Asks for a colour as three numbers from 0 to 255, with a square showing what they make.
         /// </summary>
-        public static async Task<(byte R, byte G, byte B)?> PickColour(Window owner, string title)
+        /// <param name="start">The colour the boxes start at, usually the one being changed.</param>
+        public static async Task<(byte R, byte G, byte B)?> PickColour(Window owner, string title, (byte R, byte G, byte B)? start = null)
         {
             byte r = 0, g = 0, b = 0;
             (byte, byte, byte)? answer = null;
+            (byte R, byte G, byte B) from = start ?? (0, 0, 0);
 
             Border preview = new Border { Width = 64, Height = 64, BorderThickness = new global::Avalonia.Thickness(1) };
-            NumericUpDown rBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
-            NumericUpDown gBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
-            NumericUpDown bBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = 0, Width = 90, Increment = 1, FormatString = "0" };
+            NumericUpDown rBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = from.R, Width = 90, Increment = 1, FormatString = "0" };
+            NumericUpDown gBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = from.G, Width = 90, Increment = 1, FormatString = "0" };
+            NumericUpDown bBox = new NumericUpDown { Minimum = 0, Maximum = 255, Value = from.B, Width = 90, Increment = 1, FormatString = "0" };
 
             void Refresh()
             {

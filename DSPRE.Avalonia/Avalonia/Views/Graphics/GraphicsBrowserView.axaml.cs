@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -24,6 +25,17 @@ namespace DSPRE.Avalonia.Views.Graphics
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => ViewModel?.SaveChanges();
+
+        private async void PaletteColour_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Control { Tag: int number } || ViewModel == null) return;
+            (byte R, byte G, byte B)? now = ViewModel.PaletteColours.FirstOrDefault(s => s.Number == number)?.Fill is global::Avalonia.Media.ISolidColorBrush brush
+                ? (brush.Color.R, brush.Color.G, brush.Color.B) : null;
+            (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, "Change colour " + number, now);
+            if (picked == null) return;
+            string err = ViewModel.SetPaletteColour(number, picked.Value.R, picked.Value.G, picked.Value.B);
+            if (err != null) await DialogHelper.ShowError(err, "Change colour");
+        }
         private void Discard_Click(object sender, RoutedEventArgs e) => ViewModel?.DiscardChanges();
 
         /// <summary>Empties the search box, which is what the button beside it is for.</summary>

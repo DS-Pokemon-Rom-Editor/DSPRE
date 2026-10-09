@@ -1316,10 +1316,11 @@ namespace DSPRE.Avalonia
         }
 
         /// <summary>Opens the graphics window already looking at one file.</summary>
-        public static void OpenGraphicAt(RomInfo.DirNames archive, int fileIndex, bool preferAssembled = false)
-            => _ = OpenGraphicAtAsync(archive, fileIndex, preferAssembled);
+        /// <param name="palette">The colours to show it in, when the caller knows the game's pairing.</param>
+        public static void OpenGraphicAt(RomInfo.DirNames archive, int fileIndex, bool preferAssembled = false, int palette = -1)
+            => _ = OpenGraphicAtAsync(archive, fileIndex, preferAssembled, palette);
 
-        private static async System.Threading.Tasks.Task OpenGraphicAtAsync(RomInfo.DirNames archive, int fileIndex, bool preferAssembled)
+        private static async System.Threading.Tasks.Task OpenGraphicAtAsync(RomInfo.DirNames archive, int fileIndex, bool preferAssembled, int palette)
         {
             if (Refused("GraphicsBrowserView")) return;
 
@@ -1332,11 +1333,24 @@ namespace DSPRE.Avalonia
                     return;
                 }
 
-                GraphicsBrowserViewModel vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
-                await RunBusyAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan);
-                vm.Publish();
-                bool found = vm.JumpTo(a, fileIndex, preferAssembled);
-                new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
+                // An open Graphics window already holds the list, so finding every picture again is wasted time.
+                IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
+                            as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
+                Views.Graphics.GraphicsBrowserView already = open?.OfType<Views.Graphics.GraphicsBrowserView>().FirstOrDefault();
+                GraphicsBrowserViewModel vm = already?.DataContext as GraphicsBrowserViewModel;
+                if (vm == null)
+                {
+                    vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
+                    await RunBusyAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan);
+                    vm.Publish();
+                }
+                bool found = vm.JumpTo(a, fileIndex, preferAssembled, palette);
+                if (already != null && ReferenceEquals(already.DataContext, vm))
+                {
+                    if (already.WindowState == global::Avalonia.Controls.WindowState.Minimized) already.WindowState = global::Avalonia.Controls.WindowState.Normal;
+                    already.Activate();
+                }
+                else new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
                 if (!found)
                     vm.Status = "That graphic could not be found in this game, so the whole list is shown instead.";
             }

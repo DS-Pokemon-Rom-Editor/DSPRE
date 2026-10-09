@@ -139,6 +139,26 @@
                      RenderOptions.BitmapInterpolationMode="None" Margin="12"/>
             </ScrollViewer>
 
+            <ScrollViewer IsVisible="{Binding ShowsPalette}" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel Margin="16" Spacing="8">
+                <ItemsControl ItemsSource="{Binding PaletteColours}" MaxWidth="480" HorizontalAlignment="Left"
+                              ToolTip.Tip="Every picture using these colours changes too">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:GraphicPainterViewModel+Swatch">
+                      <Button Width="28" Height="28" Margin="1" Padding="0" Tag="{Binding Number}"
+                              Click="PaletteColour_Click" ToolTip.Tip="{Binding Tip}">
+                        <Border Width="24" Height="24" BorderThickness="1"
+                                BorderBrush="{DynamicResource Editor.Border}" Background="{Binding Fill}"/>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+
             <TextBlock Text="{Binding Whynot}" IsVisible="{Binding HasNoPicture}"
                        TextWrapping="Wrap" MaxWidth="420" FontSize="13"
                        HorizontalAlignment="Center" VerticalAlignment="Center"

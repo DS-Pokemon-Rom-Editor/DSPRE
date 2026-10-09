@@ -469,7 +469,12 @@ namespace DSPRE.ROMFiles
             Narc archive = null;
             try
             {
-                archive = Narc.Open(archivePath);
+                // The unpacked copy is what editors change and what Save ROM packs, so it is the one that counts.
+                if (RomInfo.gameDirs.TryGetValue(DirNames.encounterEffectGraphics, out (string packedDir, string unpackedDir) art)
+                    && Directory.Exists(art.unpackedDir) && Directory.EnumerateFiles(art.unpackedDir).Any())
+                    archive = Narc.FromFolder(art.unpackedDir);
+                else
+                    archive = Narc.Open(archivePath);
                 if (archive == null)
                 {
                     result.Errors.Add("The current ROM's /a/1/0/9 file is not a valid NARC archive.");

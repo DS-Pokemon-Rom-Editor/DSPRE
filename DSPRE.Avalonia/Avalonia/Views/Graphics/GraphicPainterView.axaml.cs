@@ -90,7 +90,9 @@ namespace DSPRE.Avalonia.Views.Graphics
                 return;
             }
             int number = vm.SelectedSwatch.Number;
-            (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, "Change colour " + number);
+            (byte R, byte G, byte B)? now = vm.SelectedSwatch.Fill is global::Avalonia.Media.ISolidColorBrush brush
+                ? (brush.Color.R, brush.Color.G, brush.Color.B) : null;
+            (byte R, byte G, byte B)? picked = await DialogHelper.PickColour(this, "Change colour " + number, now);
             if (picked == null) return;
             vm.SetColour(number, picked.Value.R, picked.Value.G, picked.Value.B);
         }

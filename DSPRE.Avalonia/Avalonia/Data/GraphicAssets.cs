@@ -1173,7 +1173,8 @@ namespace DSPRE.Avalonia.Data
         /// <summary>A picture of one entry of one archive, or why there is not one.</summary>
         /// <param name="source">Where to read the archive from, for a caller that wants the ROM's own
         /// bytes rather than the unpacked copy. Defaults to the unpacked copy every editor uses.</param>
-        public static Preview Render(Archive a, int index, bool shiny = false, ScriptNarc source = null)
+        /// <param name="paletteIndex">The colours to show it in, when the caller knows the game's pairing.</param>
+        public static Preview Render(Archive a, int index, bool shiny = false, ScriptNarc source = null, int paletteIndex = -1)
         {
             ScriptNarc narc = source ?? new ScriptNarc(a.Dir);
             if (!narc.Available)
@@ -1203,11 +1204,11 @@ namespace DSPRE.Avalonia.Data
             if (kind == Kind.NotAGraphic)
                 return new Preview { Kind = kind, Whynot = "This is not a picture. It is data of some other kind." };
 
-            if (a.Colours == Pairing.NotKnown)
+            if (a.Colours == Pairing.NotKnown && paletteIndex < 0)
                 return new Preview { Kind = kind, Whynot = "Which colours go with this drawing is not worked out "
                                                         + "yet, so showing it would show the wrong colours." };
 
-            byte[] pal = FindColours(a, narc, index, shiny);
+            byte[] pal = paletteIndex >= 0 ? narc.Get(paletteIndex) : FindColours(a, narc, index, shiny);
             if (pal == null)
                 return new Preview { Kind = kind, Whynot = "No colours could be found for this drawing, so it "
                                                         + "cannot be shown in the right ones." };
@@ -1292,7 +1293,7 @@ namespace DSPRE.Avalonia.Data
 
                 // Read it the same way the painter does, so the size shown here and the size you paint on
                 // are never different numbers.
-                Indexed art = ReadIndexed(a, index, out string cannot, shiny, narc);
+                Indexed art = ReadIndexed(a, index, out string cannot, shiny, narc, paletteIndex);
                 if (art != null)
                     return new Preview { Rgba = Flatten(art), Width = art.Width, Height = art.Height, Kind = kind };
 

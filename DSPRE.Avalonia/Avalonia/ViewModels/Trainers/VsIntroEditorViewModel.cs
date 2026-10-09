@@ -430,11 +430,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private static GraphicAssets.Archive ArtArchive => GraphicAssets.All.FirstOrDefault(a => a.Dir == Archive);
 
-        private static void Paint(int ncgr)
+        // The palette goes with it: classes share drawings and differ only in colours, as the Elite Four do.
+        private static void Paint(int ncgr, int nclr)
         {
             GraphicAssets.Archive archive = ArtArchive;
             if (archive == null || ncgr < 0) return;
-            new Views.Graphics.GraphicPainterView(new GraphicPainterViewModel(archive, ncgr)).ShowManaged();
+            new Views.Graphics.GraphicPainterView(new GraphicPainterViewModel(archive, ncgr, nclr)).ShowManaged();
         }
 
         private static void OpenCells(int[] m, int palette, string what)
@@ -443,10 +444,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             AvaloniaEditorLauncher.OpenCellAnimationEditor(Archive, m[3], m[2], m[1], palette >= 0 ? palette : m[0], 0, what);
         }
 
-        public void PaintFace() { if (Rec?.FaceMembers() is int[] m) Paint(m[1]); }
+        public void PaintFace() { if (Rec?.FaceMembers() is int[] m) Paint(m[1], m[0]); }
         public void AnimateFace() { if (Rec?.FaceMembers() is int[] m) OpenCells(m, -1, MugshotTitle + " face"); }
-        public void PaintBanner() { if (Rec?.BannerMembers() is int[] m) Paint(m[1]); }
-        public void ShowBannerInGraphics() { if (Rec?.BannerMembers() is int[] m) AvaloniaEditorLauncher.OpenGraphicAt(Archive, m[2], true); }
+        public void PaintBanner() { if (Rec?.BannerMembers() is int[] m) Paint(m[1], m[0]); }
+        public void ShowBannerInGraphics() { if (Rec?.BannerMembers() is int[] m) AvaloniaEditorLauncher.OpenGraphicAt(Archive, m[2], true, m[0]); }
         public void EditClassColours() { if (CanEditClassColours) AvaloniaEditorLauncher.OpenTrainerSpriteEditor(Rec.Get(RecordField.Class)); }
         public void OpenParticles(ParticleArt p) { if (p != null) AvaloniaEditorLauncher.OpenParticleEditor(Archive, p.File, $"{MugshotTitle}: {p.Label}", null); }
 

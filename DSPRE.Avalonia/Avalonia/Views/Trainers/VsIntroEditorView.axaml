@@ -246,7 +246,8 @@
                               <TextBlock Classes="subtle" Text="{Binding Label}"/>
                               <StackPanel Orientation="Horizontal" Spacing="2">
                                 <NumericUpDown Value="{Binding Value}" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Width="96"/>
-                                <Button controls:Icon.Key="OpenLink" Tag="{Binding}" Click="ShowPart_Click" ToolTip.Tip="Show in the graphics browser"/>
+                                <Button controls:Icon.Key="OpenLink" Tag="{Binding}" Click="ShowPart_Click" ToolTip.Tip="Show in the graphics browser"
+                                        IsVisible="{Binding CanShow}"/>
                               </StackPanel>
                             </StackPanel>
                           </DataTemplate>

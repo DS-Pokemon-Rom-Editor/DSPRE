@@ -94,7 +94,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <summary>
         /// Opens the window already looking at one file, for an editor handing a graphic over.
         /// </summary>
-        public bool JumpTo(GraphicAssets.Archive archive, int fileIndex, bool preferAssembled = false)
+        // Colours a caller asked for, kept only while its row is showing: a class that shares drawings with
+        // others differs from them only in its palette, which the archive's own pairing cannot know.
+        private int _coloursFrom = -1;
+        private Item _coloursFor;
+
+        public bool JumpTo(GraphicAssets.Archive archive, int fileIndex, bool preferAssembled = false, int palette = -1)
         {
             if (archive == null) return false;
 
@@ -114,6 +119,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                    ?? _everything.FirstOrDefault(i => i.Archive.Dir == archive.Dir && i.Index == fileIndex);
             if (row == null) return false;
 
+            _coloursFrom = palette;
+            _coloursFor = palette >= 0 ? row : null;
             if (!Shown.Contains(row)) Shown.Insert(0, row);
             Selected = row;
 
@@ -419,8 +426,36 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _whynot = "";
         /// <summary>Why there is no picture, when there is not one. Empty when there is.</summary>
         public string Whynot { get => _whynot; private set => Set(ref _whynot, value); }
-        public bool HasPicture => _picture != null;
+        public bool HasPicture => _picture != null && !ShowsPalette;
         public bool HasNoPicture => _picture == null && !string.IsNullOrEmpty(_whynot);
+
+        /// <summary>A palette entry's colours, each one changed by clicking it.</summary>
+        public ObservableCollection<GraphicPainterViewModel.Swatch> PaletteColours { get; } = new();
+        public bool ShowsPalette => PaletteColours.Count > 0;
+
+        private void ShowPaletteColours(GraphicAssets.Archive archive, int index, GraphicAssets.Kind kind)
+        {
+            PaletteColours.Clear();
+            (byte r, byte g, byte b)[] colours = kind == GraphicAssets.Kind.Palette ? GraphicAssets.ReadPaletteEntry(archive, index) : null;
+            for (int i = 0; colours != null && i < colours.Length; i++)
+                PaletteColours.Add(new GraphicPainterViewModel.Swatch
+                {
+                    Number = i,
+                    Fill = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.FromRgb(colours[i].r, colours[i].g, colours[i].b)),
+                    // Banks of 16 are how sprites pick their colours, so the bank is worth naming.
+                    Tip = colours.Length > 16 ? $"Colour {i % 16} of bank {i / 16}. Click to change it." : $"Colour {i}. Click to change it.",
+                });
+            OnPropertyChanged(nameof(ShowsPalette));
+        }
+
+        /// <summary>Changes one colour of the palette being shown; it waits for Save like an import.</summary>
+        public string SetPaletteColour(int number, byte r, byte g, byte b)
+        {
+            if (_selected == null || !ShowsPalette) return "Pick a set of colours first.";
+            GraphicAssets.Archive archive = ShowingArchive ?? _selected.Archive;
+            int index = ShowingIndex;
+            return _pending.Import(() => GraphicAssets.WritePaletteColour(archive, index, number, r, g, b));
+        }
 
         private string _details = "Pick something on the left to see it.";
         public string Details { get => _details; private set => Set(ref _details, value); }
@@ -429,6 +464,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             Picture = null;
             Whynot = "";
+            PaletteColours.Clear();
+            OnPropertyChanged(nameof(ShowsPalette));
             if (_selected == null)
             {
                 Details = "Pick something on the left to see it.";
@@ -440,12 +477,16 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             try
             {
                 using IDisposable pending = _pending.Reading();
-                GraphicAssets.Preview p = GraphicAssets.Render(ShowingArchive ?? a, ShowingIndex, _showShiny);
+                int colours = ReferenceEquals(_selected, _coloursFor) && ShowingArchive?.Dir == a.Dir ? _coloursFrom : -1;
+                GraphicAssets.Preview p = GraphicAssets.Render(ShowingArchive ?? a, ShowingIndex, _showShiny, paletteIndex: colours);
+                ShowPaletteColours(ShowingArchive ?? a, ShowingIndex, p.Kind);
                 if (p.Rgba != null && p.Width > 0)
                 {
                     Picture = ImageConverter.FromRgba(p.Rgba, p.Width, p.Height);
                     SizeToShow(p.Width, p.Height);
-                    Details = $"{Showing(a)}, number {ShowingIndex}. {p.Width} by {p.Height}.";
+                    Details = ShowsPalette
+                        ? $"{Showing(a)}, number {ShowingIndex}. {PaletteColours.Count} colours."
+                        : $"{Showing(a)}, number {ShowingIndex}. {p.Width} by {p.Height}.";
                 }
                 else
                 {

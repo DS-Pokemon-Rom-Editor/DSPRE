@@ -50,7 +50,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     {
         public event PropertyChangedEventHandler PropertyChanged;
         public string Label { get; init; }
+        public bool CanShow { get; init; } = true;
         internal Field Field { get; init; }
+        internal Field? PaletteField { get; init; }
         internal Action<IntroArtFile, int> Changed;
         private int _value;
         public int Value
@@ -149,7 +151,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 slot.Picked = OnSlotPicked;
                 for (int i = 0; i < fields.Length; i++)
                 {
-                    IntroArtFile part = new() { Label = PartName(roles[i], roles.Take(i).Count(k => k == roles[i]), roles.Count(k => k == roles[i])), Field = fields[i] };
+                    int pal = Array.IndexOf(roles, Kind.Palette);
+                    IntroArtFile part = new()
+                    {
+                        Label = PartName(roles[i], roles.Take(i).Count(k => k == roles[i]), roles.Count(k => k == roles[i])), Field = fields[i],
+                        // Timing has no picture to show; the Animation button opens it where it is edited.
+                        CanShow = roles[i] != Kind.CellAnimation,
+                        PaletteField = pal >= 0 ? fields[pal] : null,
+                    };
                     part.Changed = OnPartChanged;
                     slot.Parts.Add(part);
                 }
@@ -441,7 +450,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (Record == null || slot == null) return;
             int at = Array.IndexOf(slot.Roles, Kind.TileGraphic);
-            if (at >= 0) Paint(Record.GetAsset(slot.Fields[at]));
+            int pal = Array.IndexOf(slot.Roles, Kind.Palette);
+            if (at >= 0) Paint(Record.GetAsset(slot.Fields[at]), pal >= 0 ? Record.GetAsset(slot.Fields[pal]) : -1);
         }
 
         public void AnimateSlot(IntroArtSlot slot)
@@ -454,8 +464,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Shows one file in the graphics browser, which edits every kind.</summary>
         public void ShowPart(IntroArtFile part)
         {
-            if (Record == null || part == null) return;
-            AvaloniaEditorLauncher.OpenGraphicAt(Archive, Record.GetAsset(part.Field), true);
+            if (Record == null || part == null || !part.CanShow) return;
+            int palette = part.PaletteField is Field f ? Record.GetAsset(f) : -1;
+            AvaloniaEditorLauncher.OpenGraphicAt(Archive, Record.GetAsset(part.Field), true, palette);
         }
 
         // ── Undo and saving ──────────────────────────────────────────────────────────────────────

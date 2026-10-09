@@ -24,8 +24,10 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Pulls one entry apart into its numbers and its colours, or says why it cannot be.</summary>
         /// <param name="source">Where to read the archive from, for a caller holding the ROM's own bytes
         /// rather than the unpacked copy.</param>
+        /// <param name="paletteIndex">The colours to use, for a caller that knows which file the game pairs with
+        /// this drawing; otherwise they are found from the archive's layout.</param>
         public static Indexed ReadIndexed(Archive a, int index, out string whynot, bool shiny = false,
-                                          ScriptNarc source = null)
+                                          ScriptNarc source = null, int paletteIndex = -1)
         {
             whynot = null;
             ScriptNarc narc = source ?? new ScriptNarc(a.Dir);
@@ -53,7 +55,7 @@ namespace DSPRE.Avalonia.Data
                 return null;
             }
 
-            byte[] pal = FindColours(a, narc, index, shiny);
+            byte[] pal = paletteIndex >= 0 ? narc.Get(paletteIndex) : FindColours(a, narc, index, shiny);
             if (pal == null) { whynot = "No colours could be found for this drawing."; return null; }
 
             byte[] raw = Unsqueeze(rawStored);
@@ -579,7 +581,7 @@ namespace DSPRE.Avalonia.Data
 
         public static byte[] Flatten(Indexed art) => Flatten(art.Indices, art.Palette, art.Width, art.Height);
 
-        public static string WritePalette(Archive a, int index, uint[] palette)
+        public static string WritePalette(Archive a, int index, uint[] palette, int paletteIndex = -1)
         {
             ScriptNarc narc = new ScriptNarc(a.Dir);
             if (!narc.Available) return "This game does not have this archive.";
@@ -606,12 +608,35 @@ namespace DSPRE.Avalonia.Data
                 return null;
             }
 
-            palIndex = FindColourIndex(a, narc, index);
+            palIndex = paletteIndex >= 0 ? paletteIndex : FindColourIndex(a, narc, index);
             if (palIndex < 0) return "The colours for this drawing could not be found.";
             palStored = narc.Get(palIndex);
             string e = PatchPalette(ref palStored, palette, startAt);
             if (e != null) return e;
             narc.Put(palIndex, palStored);
+            return null;
+        }
+
+        /// <summary>The colours a palette entry holds, in file order, or null when it is not a palette.</summary>
+        public static (byte r, byte g, byte b)[] ReadPaletteEntry(Archive a, int index)
+        {
+            ScriptNarc narc = new ScriptNarc(a.Dir);
+            byte[] raw = narc.Available ? narc.Get(index) : null;
+            if (raw == null || Identify(raw) != Kind.Palette) return null;
+            (byte r, byte g, byte b)[] colours = NitroBgCodec.ReadPalette(Unsqueeze(raw), out int count);
+            return colours == null ? null : colours.Take(Math.Min(count, colours.Length)).ToArray();
+        }
+
+        /// <summary>Changes one colour of a palette entry in place, keeping every other colour and bank.</summary>
+        public static string WritePaletteColour(Archive a, int index, int number, byte r, byte g, byte b)
+        {
+            ScriptNarc narc = new ScriptNarc(a.Dir);
+            if (!narc.Available) return "This game does not have this archive.";
+            byte[] raw = narc.Get(index);
+            if (raw == null || Identify(raw) != Kind.Palette) return "This entry is not a set of colours.";
+            string err = PatchPalette(ref raw, new[] { (uint)(r << 16 | g << 8 | b) }, number);
+            if (err != null) return err;
+            narc.Put(index, raw);
             return null;
         }
 
