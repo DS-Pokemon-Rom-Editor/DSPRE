@@ -148,6 +148,8 @@ namespace DSPRE.Tests
             }
             if (IsRockSmashEditorAvailable())
             {
+                // The editor unpacks the archive before reading it; without this the folder exists only if an earlier test made it.
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.rockSmash });
                 string dir = Path.GetDirectoryName(Filesystem.GetRockSmashPath(0));
                 SavesUnchanged($"{game} Rock Smash", new[] { dir }, () =>
                 {
