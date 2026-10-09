@@ -73,7 +73,14 @@ namespace DSPRE.Avalonia.Data
 
         // A default only: backdrop and ground are set independently per zone, and platform numbering parallels backdrop numbering.
         public static int BackdropForTerrain(int terrainId)
-            => terrainId >= 0 && terrainId < MineGfx.Length ? Math.Min(MineGfx[terrainId], BattleBgRenderer.BackdropCount - 1) : -1;
+        {
+            if (terrainId < 0 || terrainId >= MineGfx.Length) return -1;
+            // Ice platforms are drawn as set 3, the forest's number, but ice floors are indoors: Snowpoint Gym uses Indoors 1.
+            if (terrainId == TerrainIce) return Math.Min(BackdropIndoors1, BattleBgRenderer.BackdropCount - 1);
+            return Math.Min(MineGfx[terrainId], BattleBgRenderer.BackdropCount - 1);
+        }
+
+        private const int TerrainIce = 8, BackdropIndoors1 = 6;
 
         private readonly ScriptNarc _narc = new ScriptNarc(DirNames.battleObj);
         public bool Available => _narc.Available;

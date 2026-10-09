@@ -36,6 +36,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void AddMachine_Click(object sender, RoutedEventArgs e)
             => ViewModel.AddMachineCommand();
 
+        private void WildHeldItems_Click(object sender, RoutedEventArgs e)
+            => AvaloniaEditorLauncher.OpenWildHeldItems();
+
         private void RemoveMachine_Click(object sender, RoutedEventArgs e)
             => ViewModel.RemoveMachineCommand();
 

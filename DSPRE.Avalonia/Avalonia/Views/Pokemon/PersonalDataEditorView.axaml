@@ -66,7 +66,7 @@
             </GroupBox>
             <Grid ColumnDefinitions="*,8,*">
               <GroupBox Grid.Column="0" Header="Types and abilities">
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto" Margin="4">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto" Margin="4">
                   <TextBlock Grid.Row="0" Grid.Column="0" Text="Type 1:"    Classes="label"/>
                   <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding TypeNames}"    SelectedIndex="{Binding Type1Index}"/>
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Type 2:"    Classes="label"/>
@@ -78,11 +78,16 @@
                 </Grid>
               </GroupBox>
               <GroupBox Grid.Column="2" Header="Held items">
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto" Margin="4">
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,2,Auto,8,Auto,2,Auto,8,Auto" Margin="4">
                   <TextBlock Grid.Row="0" Grid.Column="0" Text="Item 1:" Classes="label"/>
                   <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1Index}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Item 2:" Classes="label"/>
-                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2Index}"/>
+                  <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Item1Odds}" Classes="subtle" IsVisible="{Binding HasHeldItemOdds}"/>
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Item 2:" Classes="label"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2Index}"/>
+                  <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Item2Odds}" Classes="subtle" IsVisible="{Binding HasHeldItemOdds}"/>
+                  <Button Grid.Row="8" Grid.Column="1" Content="Wild held items" controls:Icon.Key="OpenLink" HorizontalAlignment="Left"
+                          Click="WildHeldItems_Click" IsVisible="{Binding CanOpenWildHeldItems}"
+                          ToolTip.Tip="The chances every wild Pokémon holds its items with"/>
                 </Grid>
               </GroupBox>
             </Grid>
@@ -100,13 +105,19 @@
                 <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding BaseExp}"        Minimum="0" Maximum="255" IsVisible="{Binding !ShowHgEngineExtras}"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Base friendship:" Classes="label"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding BaseFriendship}" Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Escape rate:"     Classes="label" Margin="12,0,6,0"/>
-                <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EscapeRate}"     Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="Egg steps:"       Classes="label"/>
-                <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding EggSteps}"       Minimum="0" Maximum="255"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Escape rate:"     Classes="label" Margin="12,0,6,0"
+                           ToolTip.Tip="How likely it is to run away each turn in the Great Marsh or Safari Zone, out of 255"/>
+                <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EscapeRate}"     Minimum="0" Maximum="255"
+                               ToolTip.Tip="How likely it is to run away each turn in the Great Marsh or Safari Zone, out of 255"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Flip:"            Classes="label"
+                           ToolTip.Tip="Some screens, such as Platinum's summary screen, show the sprite mirrored unless this is ticked"/>
+                <CheckBox  Grid.Row="4" Grid.Column="1" IsChecked="{Binding FlipFlag}"
+                           ToolTip.Tip="Some screens, such as Platinum's summary screen, show the sprite mirrored unless this is ticked"/>
                 <TextBlock Grid.Row="6" Grid.Column="0" Text="Gender ratio:"    Classes="label"/>
-                <NumericUpDown Grid.Row="6" Grid.Column="1" Value="{Binding GenderVec}"      Minimum="0" Maximum="254"/>
-                <TextBlock Grid.Row="6" Grid.Column="2" Text="{Binding GenderLabel}" Margin="12,0,6,0" VerticalAlignment="Center" FontStyle="Italic"/>
+                <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="10">
+                  <NumericUpDown Value="{Binding GenderVec}" Minimum="0" Maximum="254" MinWidth="120"/>
+                  <TextBlock Text="{Binding GenderLabel}" VerticalAlignment="Center" FontStyle="Italic"/>
+                </StackPanel>
                 <TextBlock Grid.Row="8" Grid.Column="0" Text="Growth curve:"    Classes="label"/>
                 <ComboBox  Grid.Row="8" Grid.Column="1" ItemsSource="{Binding GrowthCurveNames}" SelectedIndex="{Binding GrowthCurveIndex}"/>
                 <TextBlock Grid.Row="10" Grid.Column="0" Text="Dex color:"      Classes="label"/>
@@ -114,16 +125,16 @@
               </Grid>
             </GroupBox>
             <GroupBox Header="Egg groups and hatch">
-              <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto" Margin="4">
+              <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto" Margin="4">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="Egg group 1:" Classes="label"/>
                 <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding EggGroupNames}" SelectedIndex="{Binding EggGroup1Index}"/>
                 <TextBlock Grid.Row="0" Grid.Column="2" Text="Egg group 2:" Classes="label" Margin="12,0,6,0"/>
                 <ComboBox  Grid.Row="0" Grid.Column="3" ItemsSource="{Binding EggGroupNames}" SelectedIndex="{Binding EggGroup2Index}"/>
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="Hatch result:" Classes="label" IsVisible="{Binding !ShowHgEngineExtras}"
                            ToolTip.Tip="Babies that need an incense are set in Pokémon > Breeding Items"/>
-                <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding HatchResultIndex}" Minimum="0" Maximum="{Binding HatchResultMaximum}" FormatString="0" IsVisible="{Binding !ShowHgEngineExtras}"/>
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="Flip:"         Classes="label"/>
-                <CheckBox  Grid.Row="4" Grid.Column="1" IsChecked="{Binding FlipFlag}"/>
+                <controls:FusionAutoCompleteBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HatchResultIndex}" IsVisible="{Binding !ShowHgEngineExtras}"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Egg steps:"    Classes="label" Margin="12,0,6,0"/>
+                <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EggSteps}" Minimum="0" Maximum="255"/>
               </Grid>
             </GroupBox>
             <GroupBox Header="Follower" IsVisible="{Binding ShowRetailFollower}">

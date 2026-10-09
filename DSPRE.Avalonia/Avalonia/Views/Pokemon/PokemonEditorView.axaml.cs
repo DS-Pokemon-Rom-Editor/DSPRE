@@ -134,6 +134,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void Learnset_Add_Click(object sender, RoutedEventArgs e)
             => ViewModel.LearnsetVM.AddEntry();
 
+        private void Learnset_Replace_Click(object sender, RoutedEventArgs e)
+            => ViewModel.LearnsetVM.ReplaceEntry();
+
         private void Learnset_Delete_Click(object sender, RoutedEventArgs e)
             => ViewModel.LearnsetVM.DeleteEntry();
 

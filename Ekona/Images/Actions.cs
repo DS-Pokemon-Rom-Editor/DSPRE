@@ -1250,18 +1250,28 @@ namespace Ekona.Images
                 for (int j = 0; j < cell_img.TilesPalette.Length; j++)
                     cell_img.TilesPalette[j] = num_pal;
 
-                DSPRE.RawImage cell = cell_img.Get_RawImage(pal);
+                // Only colour 0 is see-through on the DS, but palettes often repeat its colour further on (HeartGold's
+                // ice platform has white at 0 and 12). Keying on a colour no 5-bit palette can hold clears index 0 alone.
+                bool keyed = trans && pal.Palette != null && pal.Palette.Length > num_pal && pal.Palette[num_pal].Length > 0;
+                Color first = keyed ? pal.Palette[num_pal][0] : Color.Empty;
+                DSPRE.RawImage cell;
+                try
+                {
+                    if (keyed) pal.Palette[num_pal][0] = ClearKey;
+                    cell = cell_img.Get_RawImage(pal);
+                }
+                finally
+                {
+                    if (keyed) pal.Palette[num_pal][0] = first;
+                }
 
                 bool flipX = bank.oams[i].obj1.flipX == 1;
                 bool flipY = bank.oams[i].obj1.flipY == 1;
                 if (flipX || flipY)
                     cell = FlipRaw(cell, flipX, flipY);
 
-                if (trans && pal.Palette != null && pal.Palette.Length > num_pal && pal.Palette[num_pal].Length > 0)
-                {
-                    Color key = pal.Palette[num_pal][0];
-                    ApplyColorKey(cell, key.R, key.G, key.B);
-                }
+                if (keyed)
+                    ApplyColorKey(cell, ClearKey.R, ClearKey.G, ClearKey.B);
 
                 int dstX = W / 2 + bank.oams[i].obj1.xOffset * zoom;
                 int dstY = H / 2 + bank.oams[i].obj0.yOffset * zoom;
@@ -1291,6 +1301,9 @@ namespace Ekona.Images
             }
             return dst;
         }
+
+        // 5-bit channels widen to multiples of 8 (or 255/31 steps), so 1,2,3 never comes out of a DS palette.
+        private static readonly Color ClearKey = Color.FromArgb(255, 1, 2, 3);
 
         // Mirrors Bitmap.MakeTransparent(color): matching-RGB pixels become fully transparent.
         private static void ApplyColorKey(DSPRE.RawImage img, byte kr, byte kg, byte kb)

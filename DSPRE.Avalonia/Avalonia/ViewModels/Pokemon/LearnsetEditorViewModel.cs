@@ -75,7 +75,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int SelectedEntryIndex
         {
             get => _selectedEntryIndex;
-            set { Set(ref _selectedEntryIndex, value); OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanMoveUp)); OnPropertyChanged(nameof(CanMoveDown)); }
+            set
+            {
+                if (!Set(ref _selectedEntryIndex, value)) return;
+                OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanMoveUp)); OnPropertyChanged(nameof(CanMoveDown));
+                // The picked row fills the boxes below, so Replace changes it in place.
+                if (CanEdit) { AddLevel = Entries[value].Level; AddMoveIndex = Entries[value].MoveIndex; }
+            }
         }
 
         public bool CanAdd  { get; private set; }
@@ -239,6 +245,25 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             else              _current.list.Insert(insertAt, entry);
 
             RefreshEntries();
+            SetDirty();
+            StatusText = _loadError ?? "";
+        }
+
+        /// <summary>Puts the boxes' level and move in place of the selected row.</summary>
+        public void ReplaceEntry()
+        {
+            if (_current == null || !CanEdit || _addLevel < 1 || _addLevel > 100 || _addMoveIndex <= 0) return;
+            (byte, ushort) entry = ((byte)_addLevel, (ushort)_addMoveIndex);
+            if (_current.list[_selectedEntryIndex] == entry) return;
+            if (_current.list.Contains(entry)) { StatusText = "Entry already exists!"; return; }
+
+            _current.list.RemoveAt(_selectedEntryIndex);
+            int insertAt = _current.list.FindIndex(x => x.level > entry.Item1 || (x.level == entry.Item1 && x.move > entry.Item2));
+            if (insertAt < 0) { _current.list.Add(entry); insertAt = _current.list.Count - 1; }
+            else              _current.list.Insert(insertAt, entry);
+
+            RefreshEntries();
+            Reselect(insertAt);
             SetDirty();
             StatusText = _loadError ?? "";
         }

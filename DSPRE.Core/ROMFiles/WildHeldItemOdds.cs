@@ -55,10 +55,14 @@ namespace DSPRE.ROMFiles
 
         public static WildHeldItemOdds Load() => new WildHeldItemOdds(GameTableFile.Read(RomInfo.GameTable.WildHeldItemOdds, Size));
 
+        /// <summary>Raised after the odds were written, for editors that show them.</summary>
+        public static event Action Saved;
+
         public void Save()
         {
             if (Problem() is string p) throw new InvalidOperationException(p);
             GameTableFile.Write(RomInfo.GameTable.WildHeldItemOdds, ToBytes());
+            Saved?.Invoke();
         }
     }
 }

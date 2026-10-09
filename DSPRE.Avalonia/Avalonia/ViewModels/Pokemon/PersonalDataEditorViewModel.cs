@@ -99,8 +99,38 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int _ability2Index; public int Ability2Index { get => _ability2Index; set { if (Set(ref _ability2Index, value) && !_loading && _current != null && value >= 0) { _current.secondAbility = (ushort)value; SetDirty(); } } }
 
         // ── Held items ────────────────────────────────────────────────────────
-        private int _item1Index; public int Item1Index { get => _item1Index; set { if (Set(ref _item1Index, value) && !_loading && _current != null) { _current.item1 = (ushort)value; SetDirty(); } } }
-        private int _item2Index; public int Item2Index { get => _item2Index; set { if (Set(ref _item2Index, value) && !_loading && _current != null) { _current.item2 = (ushort)value; SetDirty(); } } }
+        private int _item1Index; public int Item1Index { get => _item1Index; set { if (!Set(ref _item1Index, value)) return; RaiseHeldItemOdds(); if (!_loading && _current != null) { _current.item1 = (ushort)value; SetDirty(); } } }
+        private int _item2Index; public int Item2Index { get => _item2Index; set { if (!Set(ref _item2Index, value)) return; RaiseHeldItemOdds(); if (!_loading && _current != null) { _current.item2 = (ushort)value; SetDirty(); } } }
+
+        // The game's own odds table, so the chances follow any edit made in the Wild Held Items editor.
+        private DSPRE.ROMFiles.WildHeldItemOdds _heldItemOdds;
+        public bool HasHeldItemOdds => _heldItemOdds != null;
+        public bool CanOpenWildHeldItems => _heldItemOdds != null && BetaEditors.Allows("WildHeldItemOddsView");
+        public string Item1Odds => HeldItemOdds(common: true);
+        public string Item2Odds => HeldItemOdds(common: false);
+
+        private string HeldItemOdds(bool common)
+        {
+            if (_heldItemOdds == null) return null;
+            // The same item in both slots is always held.
+            if (_item1Index == _item2Index && _item1Index != 0) return common ? "Always held" : "";
+            if ((common ? _item1Index : _item2Index) == 0) return "";
+            int plain = common ? _heldItemOdds.Normal.CommonPercent : _heldItemOdds.Normal.RarePercent;
+            int eyes = common ? _heldItemOdds.CompoundEyes.CommonPercent : _heldItemOdds.CompoundEyes.RarePercent;
+            return $"{plain}%, {eyes}% with Compound Eyes";
+        }
+
+        private void RaiseHeldItemOdds()
+        {
+            OnPropertyChanged(nameof(Item1Odds));
+            OnPropertyChanged(nameof(Item2Odds));
+        }
+
+        private void LoadHeldItemOdds()
+        {
+            try { _heldItemOdds = DSPRE.ROMFiles.WildHeldItemOdds.WhyNot() == null ? DSPRE.ROMFiles.WildHeldItemOdds.Load() : null; }
+            catch (Exception ex) when (ex is IOException || ex is InvalidOperationException || ex is ArgumentException) { _heldItemOdds = null; }
+        }
 
         // ── Misc numeric ──────────────────────────────────────────────────────
         private int _catchRate;       public int CatchRate       { get => _catchRate;       set { if (Set(ref _catchRate,       value) && !_loading) { _current.catchRate       = (byte)value; SetDirty(); } } }
@@ -599,6 +629,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (string n in _abilityNamesArr) AbilityNames.Add(n);
             foreach (string n in _itemNamesArr)    ItemNames.Add(n);
             LoadEnumLabels();
+            LoadHeldItemOdds();
 
             // LoadMon is called by parent PokemonEditorViewModel
         }
@@ -621,6 +652,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (string n in _abilityNamesArr) AbilityNames.Add(n);
             foreach (string n in _itemNamesArr)    ItemNames.Add(n);
             LoadEnumLabels();
+            LoadHeldItemOdds();
             // LoadMon is called by parent PokemonEditorViewModel after all child VMs are ready
         }
 
@@ -635,6 +667,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.PersonalDataSaved -= OnPersonalDataSaved;
             AppEvents.PersonalDataSaved += OnPersonalDataSaved;
+            DSPRE.ROMFiles.WildHeldItemOdds.Saved -= OnHeldItemOddsSaved;
+            DSPRE.ROMFiles.WildHeldItemOdds.Saved += OnHeldItemOddsSaved;
         }
 
         /// <summary>Another editor wrote this species: reload it when clean, otherwise take only its machine
@@ -704,7 +738,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Unsubscribes from app-wide events; called when the host window closes.</summary>
-        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.PersonalDataSaved -= OnPersonalDataSaved; _owFrameTimer.Stop(); }
+        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.PersonalDataSaved -= OnPersonalDataSaved; DSPRE.ROMFiles.WildHeldItemOdds.Saved -= OnHeldItemOddsSaved; _owFrameTimer.Stop(); }
+
+        // The Wild Held Items editor saves on the UI thread, so the chances can be shown again straight away.
+        private void OnHeldItemOddsSaved()
+        {
+            LoadHeldItemOdds();
+            OnPropertyChanged(nameof(HasHeldItemOdds));
+            OnPropertyChanged(nameof(CanOpenWildHeldItems));
+            RaiseHeldItemOdds();
+        }
 
         // ── Commands ──────────────────────────────────────────────────────────
 
@@ -1548,6 +1591,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _ability2Index = _current.secondAbility; OnPropertyChanged(nameof(Ability2Index));
             _item1Index = _current.item1; OnPropertyChanged(nameof(Item1Index));
             _item2Index = _current.item2; OnPropertyChanged(nameof(Item2Index));
+            RaiseHeldItemOdds();
 
             CatchRate = _current.catchRate; BaseExp = _current.givenExp;
             GenderVec = _current.genderVec; EggSteps = _current.eggSteps;
