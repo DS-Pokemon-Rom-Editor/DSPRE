@@ -19,6 +19,12 @@ namespace DSPRE.ROMFiles
         /// <summary>Room a list gets in the expanded ARM9 area; the count is a byte immediate, so 255 is the ceiling.</summary>
         public const int ExpandedCapacity = 64;
 
+        /// <summary>The size of the block the toolbox patch places.</summary>
+        public const int ExpansionBlockLength = SyntheticOverlaySpace.HeaderSize + ExpandedCapacity * 2;
+
+        /// <summary>The battle overlay file whose code points at the list.</summary>
+        public string CodePath => _ovPath;
+
         public static string MarkerOf(Kind kind) => kind == Kind.Punching ? "PUNCHMOVESX1" : "SOUNDMOVESX1";
         public static string NameOf(Kind kind) => kind == Kind.Punching ? "punching" : "sound";
         public static GameTable TableOf(Kind kind) => kind == Kind.Punching ? GameTable.PunchingMoves : GameTable.SoundMoves;
@@ -155,7 +161,7 @@ namespace DSPRE.ROMFiles
             if (Moves.Count > ExpandedCapacity)
                 throw new InvalidOperationException($"The {NameOf(Which)} move list already has more than {ExpandedCapacity} moves.");
 
-            byte[] block = new byte[SyntheticOverlaySpace.HeaderSize + ExpandedCapacity * 2];
+            byte[] block = new byte[ExpansionBlockLength];
             System.Text.Encoding.ASCII.GetBytes(MarkerOf(Which)).CopyTo(block, 0);
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
             BitConverter.GetBytes((uint)block.Length).CopyTo(block, 0x10);
@@ -163,7 +169,7 @@ namespace DSPRE.ROMFiles
             for (int i = 0; i < Moves.Count; i++) BitConverter.GetBytes(Moves[i]).CopyTo(block, SyntheticOverlaySpace.HeaderSize + 2 * i);
 
             byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
-            int at = SyntheticOverlaySpace.FindFree(synth, block.Length, 4, SyntheticOverlaySpace.Reserved(synth));
+            int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) throw new InvalidOperationException($"No free space was found in the expanded ARM9 area for the {NameOf(Which)} move list.");
             byte[] ov = File.ReadAllBytes(_ovPath);
             byte[] ovBefore = (byte[])ov.Clone(), synthBefore = (byte[])synth.Clone();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -115,7 +116,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public bool HasUnsavedChanges => _data != null && _saved != null && !TakeState().AsSpan().SequenceEqual(_saved);
         public string UnsavedChangesDescription => "Mart inventories";
-        public bool CanResize => _data?.ExpansionAvailable == true;
+        public bool CanResize => _data != null && (_data.HasRoom || _data.FromSource);
         public bool CanAddItem => CanResize && SelectedShop != null
             && (!SelectedShop.IsCommon || SelectedShop.Items.Count < _data.CommonItemLimit);
         public bool CanAddShop => _data?.CanAddShops == true;
@@ -125,8 +126,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string ResizeStatus => _data?.FromSource == true
             ? $"Edited in hg-engine's {DSPRE.HgEngine.HgEngineMarts.SourceRelPath}. Lists can be any length; the marts themselves are the game's slots."
             : CanResize
-            ? "ARM9 expansion detected. Inventory resizing and custom marts are available."
-            : "Apply the ARM9 expansion patch to add or remove inventory slots or custom marts.";
+            ? $"The marts have room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items each."
+            : "Adding or removing items or marts needs the \"Expand the marts\" patch from the ROM Patch Toolbox.";
         public string NewShopDisplayGuide => _data?.FromSource == true ? ""
             : SelectedShop?.SpecialtySource?.IsCustom == true
             ? $"To display this mart, call SpMartScreen {SelectedShop.SpecialtySource.Id} from your script. DSPRE does not modify scripts automatically."
@@ -288,19 +289,18 @@ namespace DSPRE.Avalonia.ViewModels.Items
             SaveNotice.Saved(saved);
         }
 
-        /// <summary>Shown while the marts can't grow yet this ROM could take the ARM9 expansion.</summary>
-        public bool CanOfferExpansion => !CanResize && PatchToolboxLogic.Arm9ExpansionWhyNot() == null;
+        /// <summary>Shown while the marts can't grow.</summary>
+        public bool CanOfferExpansion => _data != null && !CanResize;
 
-        /// <summary>Applies the ARM9 expansion and reloads the marts so they can grow.</summary>
-        public async System.Threading.Tasks.Task OfferExpansionAsync()
+        /// <summary>Making room changes the game's code, so the toolbox does it.</summary>
+        public void OfferExpansion() => AvaloniaEditorLauncher.OpenPatchToolboxAt("martsExpanded");
+
+        /// <summary>Rereads the marts after the toolbox gave them room, unless edits here are still unsaved.</summary>
+        public void OnPatchStateChanged()
         {
-            if (HasUnsavedChanges)
-            {
-                await DialogHelper.ShowInfo("Save or discard the mart changes first; the marts reload after the expansion.", "Mart Editor");
-                return;
-            }
-            if (!await Arm9ExpansionOffer.EnsureAsync("Adding mart slots or custom marts", "Mart Editor")) return;
-            _data = MartData.LoadCurrent();
+            if (_data == null || CanResize || HasUnsavedChanges) return;
+            try { _data = MartData.LoadCurrent(); }
+            catch (Exception e) when (e is IOException || e is InvalidOperationException) { return; }
             PopulateShops();
             StartUndo();
             foreach (string n in new[] { nameof(CanResize), nameof(CanAddShop), nameof(CanAddItem), nameof(CanRemoveItem), nameof(CanRemoveCustomShop),

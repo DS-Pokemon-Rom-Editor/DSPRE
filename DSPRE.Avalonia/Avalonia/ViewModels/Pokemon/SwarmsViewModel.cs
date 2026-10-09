@@ -196,7 +196,22 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_expansionOffered || _table?.NeedsExpansion != true) return;
             _expansionOffered = true;
-            if (await Arm9ExpansionOffer.EnsureAsync("More swarm rows", "Swarms")) Changed();
+            await PatchHandover.OfferAsync("swarmTableExpanded", "Expand the swarm table", "More swarm rows", "Swarms");
+        }
+
+        /// <summary>After the toolbox moved the table, follows it to its new place and keeps the rows being edited.</summary>
+        public void OnPatchStateChanged()
+        {
+            if (_table == null || _table.FromSource) return;
+            SwarmTable moved;
+            try { moved = SwarmTable.Load(); }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return; }
+            if (moved.Capacity == _table.Capacity && moved.InExpansion == _table.InExpansion) return;
+            List<SwarmTable.Row> rows = _table.Rows.ToList();
+            moved.Rows.Clear();
+            moved.Rows.AddRange(rows);
+            _table = moved;
+            Changed();
         }
 
         /// <summary>Re-reads each destination's Pokémon, which the Wild editor may have changed.</summary>
@@ -218,8 +233,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public string Status => _table == null ? "" :
-            !_table.FitsWhereItIs && !HasProblem ? $"{Rows.Count} destinations · saving moves the table to the expanded ARM9 area"
-            : _table.InExpansion ? $"{Rows.Count} destinations · in the expanded ARM9 area"
+            _table.InExpansion ? $"{Rows.Count} destinations · in the expanded ARM9 area"
             : $"{Rows.Count} destinations";
 
         public string Problem => _table?.Problem(HeaderNames.Length, h => EncounterFileOf(h) != ushort.MaxValue, HasSwarmSpecies) ?? "";
@@ -239,7 +253,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task<bool> SaveChangesAsync()
         {
             if (_table == null) return true;
-            if (_table.NeedsExpansion && await Arm9ExpansionOffer.EnsureAsync("More swarm rows", "Swarms")) Changed();
+            if (_table.NeedsExpansion)
+            {
+                await PatchHandover.OfferAsync("swarmTableExpanded", "Expand the swarm table", "More swarm rows", "Swarms");
+                return false;
+            }
             // The Wild editor may have changed a swarm species since the rows were read.
             _speciesCache.Clear();
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Swarms"); return false; }

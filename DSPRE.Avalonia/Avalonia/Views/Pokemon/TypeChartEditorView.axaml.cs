@@ -22,6 +22,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             DataContext = vm;
             BuildGrid();
+            System.EventHandler patched = (_, _) => vm.OnPatchStateChanged();
+            AppEvents.RomPatchStateChanged += patched;
+            DetachedFromVisualTree += (_, _) => AppEvents.RomPatchStateChanged -= patched;
             vm.CellsChanged += (_, _) => Paint();
             vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(TypeChartEditorViewModel.SelectedAttacker)) Paint(); };
             ActualThemeVariantChanged += (_, _) => Paint();

@@ -16,7 +16,8 @@ namespace DSPRE.ROMFiles
 
         /// <summary>Markers of every block DSPRE places here. Add a new block's marker before allocating it.</summary>
         public static readonly string[] BlockMarkers = { "MARTEXPANDV1", "BPSHOPEXPV1\0", "TYPECHARTXP1", "SWARMTABLEX1", VsIntroTables.ClassTableMarker, VsIntroTimingAddon.Marker,
-                                                         MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Punching), MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Sound) };
+                                                         MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Punching), MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Sound),
+                                                         TrainerClassTableExpansion.GenderMarker, TrainerClassTableExpansion.PrizeMarker, TrainerClassTableExpansion.MusicMarker };
 
         /// <summary>Whether the ARM9 expansion is applied and its overlay is large enough to hold tables.</summary>
         public static bool Available()
@@ -85,6 +86,47 @@ namespace DSPRE.ROMFiles
                         length = 0x298 + 8L * Math.Max((ushort)128, hit + 0x296 <= data.Length ? BitConverter.ToUInt16(data, hit + 0x294) : (ushort)128);
                     yield return (hit, Math.Min(hit + length, data.Length));
                 }
+        }
+
+        // Offsets the toolbox showed before a patch ran; while set, each placement takes the next one.
+        private static Queue<int> _planned;
+
+        /// <summary>Where blocks of these lengths would go, in order, as <see cref="Place"/> would choose; null when one doesn't fit.</summary>
+        public static int[] Plan(params int[] lengths)
+        {
+            byte[] data = File.ReadAllBytes(Filesystem.expArmPath);
+            List<(long Start, long End)> reserved = Reserved(data);
+            int[] offsets = new int[lengths.Length];
+            for (int i = 0; i < lengths.Length; i++)
+            {
+                offsets[i] = FindFree(data, lengths[i], 4, reserved);
+                if (offsets[i] < 0) return null;
+                reserved.Add((offsets[i], offsets[i] + lengths[i]));
+            }
+            return offsets;
+        }
+
+        /// <summary>Runs <paramref name="move"/> with its blocks placed at <paramref name="offsets"/>, in order.</summary>
+        public static void PlaceAt(int[] offsets, Action move)
+        {
+            _planned = new Queue<int>(offsets);
+            try { move(); }
+            finally { _planned = null; }
+        }
+
+        /// <summary>
+        /// Where a block of <paramref name="length"/> bytes goes: the planned offset while <see cref="PlaceAt"/> runs, which
+        /// must still be free, otherwise the first free run.
+        /// </summary>
+        public static int Place(byte[] data, int length, IReadOnlyList<(long Start, long End)> reserved)
+        {
+            if (_planned == null) return FindFree(data, length, 4, reserved);
+            if (_planned.Count == 0) throw new InvalidOperationException("The patch needed more room than it showed, so it stopped.");
+            int at = _planned.Dequeue();
+            bool free = at >= 0 && at + length <= data.Length && !reserved.Any(r => at + length > r.Start && at < r.End)
+                        && data.AsSpan(at, length).IndexOfAnyExcept((byte)0) < 0;
+            if (!free) throw new InvalidOperationException($"0x{at:X} in the synthetic overlay is no longer free.");
+            return at;
         }
 
         /// <summary>The first all-zero, aligned run of <paramref name="length"/> bytes outside the reserved ranges, or -1.</summary>

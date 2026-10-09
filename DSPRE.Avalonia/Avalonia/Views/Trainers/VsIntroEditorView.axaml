@@ -274,7 +274,7 @@
                   <controls:HelpTip Text="This class's intro speeds in frames. 0 keeps the game's value."/>
                 </StackPanel>
                 <TextBlock Text="{Binding TimingNote}" IsVisible="{Binding !HasTimings}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
-                <Button Content="Add timing table" controls:Icon.Key="addIcon" Click="InstallTimings_Click" IsVisible="{Binding CanInstallTimings}" HorizontalAlignment="Left"/>
+                <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="InstallTimings_Click" IsVisible="{Binding CanInstallTimings}" HorizontalAlignment="Left"/>
                 <ItemsControl ItemsSource="{Binding TimingRows}" IsVisible="{Binding ShowTimingRows}">
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:TimingRow">

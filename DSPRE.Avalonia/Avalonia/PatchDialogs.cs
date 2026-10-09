@@ -131,6 +131,20 @@ namespace DSPRE.Avalonia
             uint? result = null;
             bool closed = false;
             bool rangeOccupied = false;
+
+            // DSPRE's own tables keep zero-filled room for growth, which a check for empty bytes alone would offer.
+            System.Collections.Generic.List<(long Start, long End)> reserved = new System.Collections.Generic.List<(long Start, long End)>();
+            try
+            {
+                byte[] overlay = File.ReadAllBytes(filePath);
+                reserved = DSPRE.ROMFiles.SyntheticOverlaySpace.Reserved(overlay);
+                bool defaultFree = (long)defaultOffset + expectedBytes.Length <= overlay.Length
+                    && !reserved.Any(r => defaultOffset + expectedBytes.Length > r.Start && defaultOffset < r.End)
+                    && overlay.AsSpan((int)defaultOffset, expectedBytes.Length).IndexOfAnyExcept((byte)0) < 0;
+                int free = defaultFree ? -1 : DSPRE.ROMFiles.SyntheticOverlaySpace.FindFree(overlay, expectedBytes.Length, 4, reserved);
+                if (free >= 0) defaultOffset = (uint)free;
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException) { }
             uint parsedOffset = defaultOffset;
 
             Window win = new Window
@@ -211,6 +225,14 @@ namespace DSPRE.Avalonia
                 if (offset % 4 != 0)
                 {
                     statusText.Text = "Offset must be 4-byte aligned.";
+                    statusText.Foreground = errorBrush;
+                    return;
+                }
+
+                (long Start, long End) used = reserved.FirstOrDefault(r => endOffset + 1 > r.Start && offset < r.End);
+                if (used != default)
+                {
+                    statusText.Text = $"0x{used.Start:X} to 0x{used.End - 1:X} is already used by a DSPRE table or patch.";
                     statusText.Foreground = errorBrush;
                     return;
                 }

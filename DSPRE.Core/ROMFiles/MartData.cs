@@ -13,6 +13,10 @@ namespace DSPRE.ROMFiles
         private const string ExpansionMarker = "MARTEXPANDV1";
         private const int ExpansionHeaderSize = 0x20;
         private const int MaxCommonItems = 63;
+        /// <summary>The "Expand the marts" toolbox patch lays the marts out with room for this many marts of this many
+        /// items each, so growing them writes in place and never moves a table or rewrites a pointer.</summary>
+        public const int RoomyShops = 64, RoomyItems = 64;
+        private const uint RoomyVersion = 2;
 
         public sealed class CommonEntry
         {
@@ -50,6 +54,10 @@ namespace DSPRE.ROMFiles
         // The arm9 being saved over: the file as it is now, so another editor's arm9 edits since this loaded survive.
         private byte[] _saveBase;
         private int _existingExpansionLength;
+        private bool _roomy;
+
+        /// <summary>Whether the marts sit in the layout the toolbox patch makes, with room to grow.</summary>
+        public bool HasRoom => _roomy && !FromSource;
 
         public List<CommonEntry> CommonItems { get; } = new();
         public List<SpecialtyShop> SpecialtyShops { get; } = new();
@@ -59,7 +67,7 @@ namespace DSPRE.ROMFiles
         public int CommonItemLimit => FromSource ? HgEngine.HgEngineMarts.BadgeMartLimit : MaxCommonItems;
         /// <summary>Vanilla stock tiers run 0-6; hg-engine's badge mart counts badges, Kanto's too.</summary>
         public int MaxTier => FromSource ? 16 : 6;
-        public bool CanAddShops => ExpansionAvailable && !FromSource;
+        public bool CanAddShops => HasRoom && SpecialtyShops.Count < RoomyShops;
         public bool HasSizeChanges => CommonItems.Count != _originalCommonCount
             || SpecialtyShops.Count != _specialtyDataOffsets.Length
             || SpecialtyShops.Where((shop, i) => i < _specialtyDataOffsets.Length)
@@ -177,8 +185,10 @@ namespace DSPRE.ROMFiles
         {
             if (FromSource)
                 throw new InvalidOperationException("hg-engine puts its marts in the game's own slots, so no mart can be added.");
-            if (!ExpansionAvailable)
-                throw new InvalidOperationException("Apply the ARM9 expansion patch before adding a mart.");
+            if (!HasRoom)
+                throw new InvalidOperationException("Adding a mart needs the \"Expand the marts\" patch from the ROM Patch Toolbox.");
+            if (SpecialtyShops.Count >= RoomyShops)
+                throw new InvalidOperationException($"The marts have room for {RoomyShops} marts.");
             int id = SpecialtyShops.Count;
             SpecialtyShop shop = new SpecialtyShop(id, $"Custom Mart {id}", new List<ushort> { 1 }, true);
             SpecialtyShops.Add(shop);
@@ -208,29 +218,101 @@ namespace DSPRE.ROMFiles
                 try { return SaveToFile(RomInfo.arm9Path, showSuccessMessage: false); }
                 finally { _saveBase = null; }
             }
-            if (!ExpansionAvailable)
-                throw new InvalidOperationException("Apply the ARM9 expansion patch before changing mart sizes.");
+            if (HasRoom)
+            {
+                // The layout already has room: the marts go back where they are and only the common count changes.
+                byte[] overlay = File.ReadAllBytes(Filesystem.expArmPath), overlayBefore = (byte[])overlay.Clone();
+                _saveBase = Arm9AsItIsNow();
+                byte[] arm9Now;
+                try
+                {
+                    byte[] block = BuildRoomyBlock(RomInfo.synthOverlayLoadAddress, _existingExpansionStart, out int commonAt, out int pointersAt);
+                    Array.Clear(overlay, _existingExpansionStart, _existingExpansionLength);
+                    block.CopyTo(overlay, _existingExpansionStart);
+                    arm9Now = (byte[])_saveBase.Clone();
+                    arm9Now[_commonCountOffset] = (byte)CommonItems.Count;
+                }
+                finally { _saveBase = null; }
+                WriteReplacementFile(Filesystem.expArmPath, overlay);
+                try { WriteReplacementFile(RomInfo.arm9Path, arm9Now); }
+                catch { WriteReplacementFile(Filesystem.expArmPath, overlayBefore); throw; }
+                return true;
+            }
+            throw new InvalidOperationException("Changing mart sizes needs the \"Expand the marts\" patch from the ROM Patch Toolbox.");
+        }
 
-            byte[] originalOverlay = File.ReadAllBytes(Filesystem.expArmPath);
-            ExpandedFiles files;
+        public static int RoomyLength => RoomyPointersAt + RoomyShops * 4 + RoomyShops * (RoomyItems + 1) * 2;
+        private static int RoomyPointersAt => Align(ExpansionHeaderSize + MaxCommonItems * 4, 4);
+
+        /// <summary>The marts laid out with room for <see cref="RoomyShops"/> marts of <see cref="RoomyItems"/> items,
+        /// every mart's pointer already in place, for a block at <paramref name="blockOffset"/>.</summary>
+        private byte[] BuildRoomyBlock(uint loadAddress, int blockOffset, out int commonAt, out int pointersAt)
+        {
+            ValidateInventories();
+            if (SpecialtyShops.Count > RoomyShops) throw new InvalidOperationException($"The marts have room for {RoomyShops} marts.");
+            if (SpecialtyShops.FirstOrDefault(shop => shop.Items.Count > RoomyItems) is SpecialtyShop full)
+                throw new InvalidOperationException($"{full.Name} has room for {RoomyItems} items.");
+            commonAt = ExpansionHeaderSize;
+            pointersAt = RoomyPointersAt;
+            int slotsAt = pointersAt + RoomyShops * 4;
+            byte[] block = new byte[RoomyLength];
+            Encoding.ASCII.GetBytes(ExpansionMarker).CopyTo(block, 0);
+            WriteUInt32(block, 0x0C, RoomyVersion);
+            WriteUInt32(block, 0x10, (uint)block.Length);
+            WriteUInt32(block, 0x14, (uint)SpecialtyShops.Count);
+            WriteUInt32(block, 0x18, (uint)CommonItems.Count);
+            for (int i = 0; i < CommonItems.Count; i++)
+            {
+                WriteUInt16(block, commonAt + i * 4, CommonItems[i].ItemId);
+                WriteUInt16(block, commonAt + i * 4 + 2, CommonItems[i].RequiredTier);
+            }
+            for (int i = 0; i < RoomyShops; i++)
+            {
+                int slot = slotsAt + i * (RoomyItems + 1) * 2;
+                WriteUInt32(block, pointersAt + i * 4, checked(loadAddress + (uint)blockOffset + (uint)slot));
+                List<ushort> items = i < SpecialtyShops.Count ? SpecialtyShops[i].Items : new List<ushort>();
+                for (int j = 0; j < items.Count; j++) WriteUInt16(block, slot + j * 2, items[j]);
+                WriteUInt16(block, slot + items.Count * 2, ushort.MaxValue);
+            }
+            return block;
+        }
+
+        /// <summary>
+        /// Moves the marts, as saved, into the layout with room for <see cref="RoomyShops"/> marts of <see cref="RoomyItems"/>
+        /// items and points the ARM9 at it. The toolbox patch calls this; the editor never moves the marts itself.
+        /// </summary>
+        public void MoveToRoomyLayout()
+        {
+            if (FromSource || HasRoom) return;
+            if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
+            byte[] overlay = File.ReadAllBytes(Filesystem.expArmPath), overlayBefore = (byte[])overlay.Clone();
+            List<(long Start, long End)> excluded = SyntheticOverlaySpace.Reserved(overlay);
+            // An older, tightly packed mart block is freed for the new one.
+            if (_existingExpansionStart >= 0)
+            {
+                excluded.RemoveAll(r => r.Start == _existingExpansionStart);
+                Array.Clear(overlay, _existingExpansionStart, _existingExpansionLength);
+            }
+            int at = SyntheticOverlaySpace.Place(overlay, RoomyLength, excluded);
+            if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the marts.");
             _saveBase = Arm9AsItIsNow();
+            byte[] arm9Now;
             try
             {
-                files = BuildExpandedFiles(originalOverlay,
-                    RomInfo.synthOverlayLoadAddress, GetRuntimeReservedRanges());
+                byte[] block = BuildRoomyBlock(RomInfo.synthOverlayLoadAddress, at, out int commonAt, out int pointersAt);
+                block.CopyTo(overlay, at);
+                arm9Now = (byte[])_saveBase.Clone();
+                arm9Now[_commonCountOffset] = (byte)CommonItems.Count;
+                WriteUInt32(arm9Now, checked((int)_commonPointerOffset), checked(RomInfo.synthOverlayLoadAddress + (uint)at + (uint)commonAt));
+                WriteUInt32(arm9Now, checked((int)_specialtyPointerOffset), checked(RomInfo.synthOverlayLoadAddress + (uint)at + (uint)pointersAt));
             }
             finally { _saveBase = null; }
-            WriteReplacementFile(Filesystem.expArmPath, files.SyntheticOverlay);
-            try
-            {
-                WriteReplacementFile(RomInfo.arm9Path, files.Arm9);
-            }
-            catch
-            {
-                WriteReplacementFile(Filesystem.expArmPath, originalOverlay);
-                throw;
-            }
-            return true;
+            WriteReplacementFile(Filesystem.expArmPath, overlay);
+            try { WriteReplacementFile(RomInfo.arm9Path, arm9Now); }
+            catch { WriteReplacementFile(Filesystem.expArmPath, overlayBefore); throw; }
+            _existingExpansionStart = at;
+            _existingExpansionLength = RoomyLength;
+            _roomy = true;
         }
 
         /// <summary>
@@ -247,74 +329,6 @@ namespace DSPRE.ROMFiles
             if (!same)
                 throw new InvalidOperationException("The marts changed in another editor since this window opened. Close it and open it again.");
             return now;
-        }
-
-        internal sealed class ExpandedFiles
-        {
-            public byte[] Arm9 { get; init; }
-            public byte[] SyntheticOverlay { get; init; }
-            public int BlockOffset { get; init; }
-        }
-
-        internal ExpandedFiles BuildExpandedFiles(byte[] syntheticOverlay, uint loadAddress,
-            IReadOnlyList<(long Start, long End)> reservedRanges = null)
-        {
-            ValidateInventories();
-            if (syntheticOverlay == null) throw new ArgumentNullException(nameof(syntheticOverlay));
-
-            int commonOffset = ExpansionHeaderSize;
-            int pointerTableOffset = Align(commonOffset + CommonItems.Count * 4, 4);
-            int cursor = pointerTableOffset + SpecialtyShops.Count * 4;
-            int[] listOffsets = new int[SpecialtyShops.Count];
-            for (int i = 0; i < SpecialtyShops.Count; i++)
-            {
-                cursor = Align(cursor, 2);
-                listOffsets[i] = cursor;
-                cursor += (SpecialtyShops[i].Items.Count + 1) * 2;
-            }
-
-            byte[] block = new byte[cursor];
-            Encoding.ASCII.GetBytes(ExpansionMarker).CopyTo(block, 0);
-            WriteUInt32(block, 0x0C, 1);
-            WriteUInt32(block, 0x10, (uint)block.Length);
-            WriteUInt32(block, 0x14, (uint)SpecialtyShops.Count);
-            WriteUInt32(block, 0x18, (uint)CommonItems.Count);
-
-            for (int i = 0; i < CommonItems.Count; i++)
-            {
-                WriteUInt16(block, commonOffset + i * 4, CommonItems[i].ItemId);
-                WriteUInt16(block, commonOffset + i * 4 + 2, CommonItems[i].RequiredTier);
-            }
-
-            List<(long Start, long End)> excluded = new List<(long Start, long End)>(reservedRanges ?? Array.Empty<(long, long)>());
-            AddExistingExpansionRanges(syntheticOverlay, excluded);
-            int blockOffset = _existingExpansionStart >= 0 && block.Length <= _existingExpansionLength
-                ? _existingExpansionStart
-                : FindFreeRegion(syntheticOverlay, block.Length, 4, excluded);
-            if (blockOffset < 0)
-                throw new InvalidOperationException("No safe free space was found in the synthetic overlay for the mart tables.");
-
-            for (int i = 0; i < SpecialtyShops.Count; i++)
-            {
-                WriteUInt32(block, pointerTableOffset + i * 4,
-                    checked(loadAddress + (uint)blockOffset + (uint)listOffsets[i]));
-                for (int j = 0; j < SpecialtyShops[i].Items.Count; j++)
-                    WriteUInt16(block, listOffsets[i] + j * 2, SpecialtyShops[i].Items[j]);
-                WriteUInt16(block, listOffsets[i] + SpecialtyShops[i].Items.Count * 2, ushort.MaxValue);
-            }
-
-            byte[] newOverlay = (byte[])syntheticOverlay.Clone();
-            // A block that moved leaves its old copy behind otherwise, which every allocator then treats as taken.
-            if (_existingExpansionStart >= 0 && _existingExpansionLength > 0)
-                Array.Clear(newOverlay, _existingExpansionStart, _existingExpansionLength);
-            block.CopyTo(newOverlay, blockOffset);
-            byte[] newArm9 = (byte[])(_saveBase ?? _arm9).Clone();
-            newArm9[_commonCountOffset] = (byte)CommonItems.Count;
-            WriteUInt32(newArm9, checked((int)_commonPointerOffset),
-                checked(loadAddress + (uint)blockOffset + (uint)commonOffset));
-            WriteUInt32(newArm9, checked((int)_specialtyPointerOffset),
-                checked(loadAddress + (uint)blockOffset + (uint)pointerTableOffset));
-            return new ExpandedFiles { Arm9 = newArm9, SyntheticOverlay = newOverlay, BlockOffset = blockOffset };
         }
 
         public override byte[] ToByteArray()
@@ -382,13 +396,14 @@ namespace DSPRE.ROMFiles
             uint storedLength = BitConverter.ToUInt32(commonLocation.Data, header + 0x10);
             uint storedCommonCount = BitConverter.ToUInt32(commonLocation.Data, header + 0x18);
             uint storedSpecialtyCount = BitConverter.ToUInt32(commonLocation.Data, header + 0x14);
-            if (version != 1 || storedLength < ExpansionHeaderSize
+            if ((version != 1 && version != RoomyVersion) || storedLength < ExpansionHeaderSize
                 || (long)header + storedLength > commonLocation.Data.Length
                 || storedCommonCount != _originalCommonCount
                 || storedSpecialtyCount < fallback || storedSpecialtyCount > int.MaxValue)
                 throw new InvalidOperationException("The expanded mart metadata is invalid.");
             _existingExpansionStart = header;
             _existingExpansionLength = (int)storedLength;
+            _roomy = version == RoomyVersion && storedLength >= RoomyLength;
             return (int)storedSpecialtyCount;
         }
 
@@ -418,35 +433,6 @@ namespace DSPRE.ROMFiles
             public byte[] Data { get; }
             public int Offset { get; }
             public bool IsArm9 { get; }
-        }
-
-        private static IReadOnlyList<(long Start, long End)> GetRuntimeReservedRanges()
-        {
-            List<(long, long)> ranges = new List<(long, long)>();
-            OverworldSpriteTableExpansion.Detect();
-            (long Start, long End)? ow = OverworldSpriteTableExpansion.GetReservedByteRange();
-            if (ow.HasValue) ranges.Add(ow.Value);
-            return ranges;
-        }
-
-        // Every block other features own, marked or not.
-        private static void AddExistingExpansionRanges(byte[] data, List<(long Start, long End)> ranges)
-            => ranges.AddRange(SyntheticOverlaySpace.Reserved(data));
-
-        private static int FindFreeRegion(byte[] data, int length, int alignment,
-            IReadOnlyList<(long Start, long End)> excluded)
-        {
-            for (int offset = 0; offset + length <= data.Length; offset += alignment)
-            {
-                if (excluded.Any(range => offset + length > range.Start && offset < range.End)) continue;
-                bool clear = true;
-                for (int i = 0; i < length; i++)
-                {
-                    if (data[offset + i] != 0) { clear = false; break; }
-                }
-                if (clear) return offset;
-            }
-            return -1;
         }
 
         private static bool HasMarker(byte[] data, int offset)

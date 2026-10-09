@@ -77,6 +77,101 @@ namespace DSPRE
         // RomInfo.SetEncounterMusicTableOffsetToRAMAddress()/encounterMusicTableOffsetToRAMAddress,
         // and its repoint-aware read/write already exists; only "append a new entry" is new here.
 
+        // The toolbox patches place each table in a marked block with room for every class a byte can name, so adding
+        // a class or its music writes in place and never moves a table or rewrites a pointer.
+        public const string GenderMarker = "TRCLSGENDER1", PrizeMarker = "TRCLSPRIZE01", MusicMarker = "TRCLSMUSIC01";
+        public const int MaxClasses = 256;
+        private static int MusicEntrySize => RomInfo.gameFamily == GameFamilies.HGSS ? 6 : 4;
+
+        /// <summary>The data offset of a table in the synthetic overlay when its pointer leads into a marked block with
+        /// room for <paramref name="capacity"/> bytes, else -1.</summary>
+        private static long RoomyTable(uint pointer, string marker, int capacity)
+        {
+            if (pointer < RomInfo.synthOverlayLoadAddress || !File.Exists(Filesystem.expArmPath)) return -1;
+            long at = pointer - RomInfo.synthOverlayLoadAddress;
+            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+            foreach ((long Start, long End) b in SyntheticOverlaySpace.Blocks(synth, marker))
+                if (at == b.Start + SyntheticOverlaySpace.HeaderSize && b.End - at >= capacity) return at;
+            return -1;
+        }
+
+        private static uint GenderPointer => BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, GenderTablePointerOffset, 4), 0);
+        private static uint PrizePointer => BitConverter.ToUInt32(DSUtils.ReadFromFile(OverlayUtils.GetPath(PrizeMulOverlayNumber), PrizeMulTablePointerOverlayOffset, 4), 0);
+
+        /// <summary>Whether the gender and prize tables have room for every class, as the toolbox patch leaves them.</summary>
+        public static bool ClassTablesHaveRoom
+        {
+            get
+            {
+                try
+                {
+                    EnsureOverlayDecompressed(PrizeMulOverlayNumber);
+                    return RoomyTable(GenderPointer, GenderMarker, MaxClasses) >= 0 && RoomyTable(PrizePointer, PrizeMarker, MaxClasses) >= 0;
+                }
+                catch (Exception e) when (e is IOException || e is ArgumentException) { return false; }
+            }
+        }
+
+        /// <summary>Whether the eye-contact music table has room for an entry per class, as the toolbox patch leaves it.</summary>
+        public static bool MusicTableHasRoom
+        {
+            get
+            {
+                try
+                {
+                    RomInfo.SetEncounterMusicTableOffsetToRAMAddress();
+                    uint ptr = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0);
+                    return RoomyTable(ptr, MusicMarker, MaxClasses * MusicEntrySize) >= 0;
+                }
+                catch (Exception e) when (e is IOException || e is ArgumentException) { return false; }
+            }
+        }
+
+        private static int RoomyBlockLength(int capacity) => (SyntheticOverlaySpace.HeaderSize + capacity + 3) & ~3;
+
+        /// <summary>The sizes of the blocks the class tables patch places, in the order it places them.</summary>
+        public static int[] ClassTableBlockLengths()
+        {
+            EnsureOverlayDecompressed(PrizeMulOverlayNumber);
+            List<int> lengths = new List<int>();
+            if (RoomyTable(GenderPointer, GenderMarker, MaxClasses) < 0) lengths.Add(RoomyBlockLength(MaxClasses));
+            if (RoomyTable(PrizePointer, PrizeMarker, MaxClasses) < 0) lengths.Add(RoomyBlockLength(MaxClasses));
+            return lengths.ToArray();
+        }
+
+        /// <summary>The size of the block the eye-contact music patch places.</summary>
+        public static int MusicBlockLength => RoomyBlockLength(MaxClasses * MusicEntrySize);
+
+        /// <summary>Writes <paramref name="table"/> into a new marked block with room for <paramref name="capacity"/>
+        /// bytes, clears the table's old copy if it sat in the synthetic overlay, and returns the data's offset.</summary>
+        private static long PlaceRoomyTable(string marker, byte[] table, int capacity, uint oldPointer, int oldLength, out string error)
+        {
+            error = null;
+            byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
+            byte[] block = new byte[RoomyBlockLength(capacity)];
+            System.Text.Encoding.ASCII.GetBytes(marker).CopyTo(block, 0);
+            BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
+            BitConverter.GetBytes((uint)block.Length).CopyTo(block, 0x10);
+            table.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
+            List<(long Start, long End)> reserved = SyntheticOverlaySpace.Reserved(synth);
+            if (_writtenThisOperation != null) reserved.AddRange(_writtenThisOperation);
+            // The old copy is about to be left behind, so its bytes may be reused.
+            if (oldPointer >= RomInfo.synthOverlayLoadAddress)
+            {
+                long old = oldPointer - RomInfo.synthOverlayLoadAddress;
+                reserved.RemoveAll(r => r.Start == old);
+                if (old + oldLength <= synth.Length) Array.Clear(synth, (int)old, oldLength);
+            }
+            int at;
+            try { at = SyntheticOverlaySpace.Place(synth, block.Length, reserved); }
+            catch (InvalidOperationException e) { error = e.Message; return -1; }
+            if (at < 0) { error = "No free space was found in the expanded ARM9 area for this table."; return -1; }
+            block.CopyTo(synth, at);
+            File.WriteAllBytes(Filesystem.expArmPath, synth);
+            _writtenThisOperation?.Add((at, at + block.Length));
+            return at + SyntheticOverlaySpace.HeaderSize;
+        }
+
         public static bool IsGenderTableRepointed { get; private set; }
         public static bool IsPrizeMulTableRepointed { get; private set; }
 
@@ -397,13 +492,27 @@ namespace DSPRE
                 return false;
             }
 
+            if (!ClassTablesHaveRoom)
+            {
+                error = "Adding a class needs the \"Trainer class tables\" patch from the ROM Patch Toolbox.";
+                return false;
+            }
+            if (newClassId >= MaxClasses)
+            {
+                error = $"The game names a trainer class with one byte, so there can be at most {MaxClasses}.";
+                return false;
+            }
+            if (addEncounterMusic && !MusicTableHasRoom)
+            {
+                error = "Eye-contact music for a new class needs the \"Trainer encounter music table\" patch from the ROM Patch Toolbox.";
+                return false;
+            }
+
             try
             {
-                byte[] newGenderTable = genderTable.Concat(new[] { gender }).ToArray();
-                if (RepointByteArrayTable(RomInfo.arm9Path, GenderTablePointerOffset, newGenderTable, out error) < 0) return false;
-
-                byte[] newPrizeMulTable = prizeMulTable.Concat(new[] { prizeMultiplier }).ToArray();
-                if (RepointByteArrayTable(ov16Path, PrizeMulTablePointerOverlayOffset, newPrizeMulTable, out error) < 0) return false;
+                // The tables already have room, so the new entry goes straight in.
+                DSUtils.WriteToFile(Filesystem.expArmPath, new[] { gender }, (uint)(GenderPointer - RomInfo.synthOverlayLoadAddress + newClassId));
+                DSUtils.WriteToFile(Filesystem.expArmPath, new[] { prizeMultiplier }, (uint)(PrizePointer - RomInfo.synthOverlayLoadAddress + newClassId));
 
                 if (addEncounterMusic && !AddEncounterMusicEntry((byte)newClassId, musicMain, musicNight, out error))
                     return false;
@@ -462,8 +571,20 @@ namespace DSPRE
                 return false;
             }
 
-            if (!IsGenderTableRepointed && RepointByteArrayTable(RomInfo.arm9Path, GenderTablePointerOffset, genderTable, out error) < 0) return false;
-            if (!IsPrizeMulTableRepointed && RepointByteArrayTable(ov16Path, PrizeMulTablePointerOverlayOffset, prizeMulTable, out error) < 0) return false;
+            if (RoomyTable(GenderPointer, GenderMarker, MaxClasses) < 0)
+            {
+                uint old = GenderPointer;
+                long at = PlaceRoomyTable(GenderMarker, genderTable, MaxClasses, old, genderTable.Length, out error);
+                if (at < 0) return false;
+                DSUtils.WriteToFile(RomInfo.arm9Path, BitConverter.GetBytes(RomInfo.synthOverlayLoadAddress + (uint)at), GenderTablePointerOffset);
+            }
+            if (RoomyTable(PrizePointer, PrizeMarker, MaxClasses) < 0)
+            {
+                uint old = PrizePointer;
+                long at = PlaceRoomyTable(PrizeMarker, prizeMulTable, MaxClasses, old, prizeMulTable.Length, out error);
+                if (at < 0) return false;
+                DSUtils.WriteToFile(ov16Path, BitConverter.GetBytes(RomInfo.synthOverlayLoadAddress + (uint)at), PrizeMulTablePointerOverlayOffset);
+            }
             Detect();
             return true;
         }
@@ -474,7 +595,10 @@ namespace DSPRE
             error = !IsSupportedForCurrentRom ? "Only Platinum (English) is supported."
                 : !SyntheticOverlaySpace.Available() ? NeedsExpansion : null;
             if (error != null) return false;
-            return DetectMusicTableRepointed() || RepointEncounterMusic(null, null, out error);
+            if (MusicTableHasRoom) return true;
+            _writtenThisOperation = new List<(long, long)>();
+            try { return RepointEncounterMusic(null, null, out error); }
+            finally { _writtenThisOperation = null; }
         }
 
         /// <summary>Appends a new eye-contact-music entry for a trainer class that doesn't already
@@ -519,17 +643,29 @@ namespace DSPRE
                     }
                 }
 
-                byte[] combined = newEntry == null ? existing : existing.Concat(newEntry).ToArray();
-                long newStart = RepointByteArrayTable(RomInfo.arm9Path, RomInfo.encounterMusicTableOffsetToRAMAddress, combined, out error);
-                if (newStart < 0) return false;
+                long roomy = RoomyTable(ptr, MusicMarker, MaxClasses * entrySize);
+                if (newEntry != null)
+                {
+                    // Adding writes into the room the toolbox patch made; only the entry count changes in the code.
+                    if (roomy < 0)
+                    {
+                        error = "More eye-contact music needs the \"Trainer encounter music table\" patch from the ROM Patch Toolbox.";
+                        return false;
+                    }
+                    if (entryCount >= MaxClasses) { error = "Every trainer class already has eye-contact music."; return false; }
+                    DSUtils.WriteToFile(Filesystem.expArmPath, newEntry, (uint)(roomy + entryCount * entrySize));
+                    DSUtils.WriteToFile(RomInfo.arm9Path, new[] { (byte)(entryCount + 1) }, lengthFieldOffset);
+                    RomPatchState.flag_TrainerEncounterBGMTableRepointed = true;
+                    return true;
+                }
 
+                long newStart = PlaceRoomyTable(MusicMarker, existing, MaxClasses * entrySize, ptr, existing.Length, out error);
+                if (newStart < 0) return false;
+                uint newBase = RomInfo.synthOverlayLoadAddress + (uint)newStart;
                 // This table is referenced by *two* pointers: base, and base+2 (used to read the
                 // first entry's seqId half directly). Both need to point at the new location.
-                uint newBase = RomInfo.synthOverlayLoadAddress + (uint)newStart;
+                DSUtils.WriteToFile(RomInfo.arm9Path, BitConverter.GetBytes(newBase), RomInfo.encounterMusicTableOffsetToRAMAddress);
                 DSUtils.WriteToFile(RomInfo.arm9Path, BitConverter.GetBytes(newBase + 2), RomInfo.encounterMusicTableOffsetToRAMAddress + 4);
-
-                if (newEntry != null)
-                    DSUtils.WriteToFile(RomInfo.arm9Path, new[] { (byte)(entryCount + 1) }, lengthFieldOffset);
                 RomPatchState.flag_TrainerEncounterBGMTableRepointed = true;
                 return true;
             }

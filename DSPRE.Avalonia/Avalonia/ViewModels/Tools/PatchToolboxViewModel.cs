@@ -30,10 +30,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private static readonly Dictionary<string, string> TabOf = new Dictionary<string, string>
         {
             ["arm9"] = "Foundation", ["matrix"] = "Foundation", ["dynamicHeaders"] = "Foundation", ["scrcmdRepoint"] = "Foundation",
-            ["trainerClassMetadata"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
+            ["trainerClassMetadata"] = "Trainers", ["vsIntroTimings"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
             ["sentenceCase"] = "Text", ["itemSentenceCase"] = "Text", ["trainerNames"] = "Text",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
-            ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves",
+            ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon",
             ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics",
             ["platPatches"] = "External",
         };
@@ -42,11 +42,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private static readonly Dictionary<string, string> KeywordsOf = new Dictionary<string, string>
         {
             ["arm9"] = "synthetic overlay memory expansion expand required", ["matrix"] = "matrix 0 map size expand", ["dynamicHeaders"] = "header narc allocate headers",
-            ["scrcmdRepoint"] = "script command table custom commands", ["trainerClassMetadata"] = "gender prize eye contact music vs intro class",
+            ["scrcmdRepoint"] = "script command table custom commands", ["trainerClassMetadata"] = "gender prize eye contact music vs intro class", ["vsIntroTimings"] = "vs intro timing flash slide hold class encounter effect",
             ["trainerClassTablesExpanded"] = "class tables expand", ["trainerEncounterBgmRepointed"] = "encounter music bgm table", ["trainerShiny"] = "shiny trainer party",
             ["sentenceCase"] = "names capital case pokemon", ["itemSentenceCase"] = "names capital case items", ["trainerNames"] = "trainer name length text",
             ["sameHeldItemOdds"] = "held item odds wild", ["itemStandardize"] = "item numbers scripts ground items order",
-            ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai",
+            ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai", ["typeChartExpanded"] = "type chart matchups effectiveness expand", ["swarmTableExpanded"] = "swarm swarms outbreak table expand rows", ["bpShopExpanded"] = "battle point bp shop counter tm exchange expand", ["martsExpanded"] = "mart marts shop poke mart items custom expand",
             ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable",
             ["platPatches"] = "external platinum patches link",
         };
@@ -69,6 +69,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (columns == _columns) return;
             _columns = columns;
             foreach (PatchTabViewModel tab in Tabs) tab.Columns = columns;
+        }
+
+        /// <summary>Shows one patch: its tab, narrowed to it by its key. Clearing the search shows the rest.</summary>
+        public void ShowOnly(string key)
+        {
+            // The patch's title reads better in the search box than its key, and still finds only it.
+            Search = Patches.FirstOrDefault(p => p.Key == key)?.Title ?? key;
+            GoToTab(TabOf.TryGetValue(key, out string tab) ? tab : "Other");
         }
 
         /// <summary>Switches to the tab a patch's requirement lives on.</summary>
@@ -186,6 +194,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         /// <summary>The tab holding the patch this one needs first, shown as a link in place of the status.</summary>
         public string RequiresTab { get; private set; }
+        /// <summary>The key of the patch this one needs first.</summary>
+        public string RequiresKey { get; private set; }
         public bool HasRequires => RequiresTab != null;
         public bool ShowStatusText => RequiresTab == null;
         public string RequiresText => StatusText + ". See " + RequiresTab + ".";
@@ -255,7 +265,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     break;
             }
             if (p.State == DSPRE.PatchToolboxLogic.PatchState.Unsupported && (p.Reason ?? "").StartsWith("Requires ARM9", System.StringComparison.Ordinal))
-                RequiresTab = "Foundation";
+                (RequiresTab, RequiresKey) = ("Foundation", "arm9");
+            else if (p.State == DSPRE.PatchToolboxLogic.PatchState.Unsupported && (p.Reason ?? "").StartsWith("Requires trainer class metadata", System.StringComparison.Ordinal))
+                (RequiresTab, RequiresKey) = ("Trainers", "trainerClassMetadata");
         }
     }
 

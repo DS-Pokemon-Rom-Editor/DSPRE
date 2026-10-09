@@ -23,7 +23,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public string Note => ForHgEngine
             ? "Adds the class to the hg-engine source: its constant, names, sprite files, gender and prize money. Compile the ROM to use it."
-            : "Requires Platinum (English). Repoints/extends the gender, prize-money, and (optionally) eye-contact-music tables into the synthetic overlay.";
+            : "Writes the class into the room the \"Trainer class tables\" patch made for its gender and prize money.";
+
+        /// <summary>Whether the eye-contact music table has room for the class; without its patch the option is off.</summary>
+        public bool CanAddMusic { get; init; } = true;
+        public bool MusicNeedsPatch => !CanAddMusic;
 
         private string _className = "";
         public string ClassName { get => _className; set => Set(ref _className, value); }

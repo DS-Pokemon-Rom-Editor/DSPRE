@@ -47,8 +47,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public ObservableCollection<TimingRow> TimingRows { get; } = new();
         public bool HasTimings => _timing != null;
-        public bool CanInstallTimings => _timing == null && _timingWhy == null && IsClassRecords;
-        public string TimingNote => _timing != null ? "" : _timingWhy ?? "Add the timing table to give classes their own intro speeds.";
+        // The table is a code patch, so it comes from the ROM Patch Toolbox, which says what it changes first.
+        public bool CanInstallTimings => _timing == null && IsClassRecords && !DSPRE.HgEngine.HgEngineProject.IsActive;
+        public string TimingNote => _timing != null ? ""
+            : "Classes get their own intro speeds with the \"VS intro timings per class\" patch from the ROM Patch Toolbox."
+              + (_timingWhy != null ? " " + _timingWhy : "");
         public bool ShowTimingSection => IsClassRecords && Record != null;
         public bool ShowTimingRows => HasTimings && TimingRows.Any(r => r.Visible);
 
@@ -118,18 +121,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             return v > 0 ? v : VsIntroTimingAddon.GameValue(field, Record?.VsStyle ?? 0);
         }
 
-        public async Task InstallTimingsAsync()
+        public void OpenTimingPatch() => AvaloniaEditorLauncher.OpenPatchToolboxAt("vsIntroTimings");
+
+        /// <summary>Picks the table up once its toolbox patch is applied.</summary>
+        internal void OnPatchStateChanged()
         {
-            try
-            {
-                _timing = VsIntroTimingAddon.Install();
-                StatusText = "Timing table added. Save the ROM to keep it.";
-            }
-            catch (Exception e) when (e is InvalidOperationException || e is System.IO.IOException || e is UnauthorizedAccessException)
-            {
-                await DialogHelper.ShowError("The timing table couldn't be added:\n" + e.Message, Title);
-                return;
-            }
+            if (_timing != null || !IsClassRecords) return;
+            LoadTimings();
+            if (_timing == null) { Raise(nameof(TimingNote), nameof(CanInstallTimings)); return; }
             ShowTimings();
             StartUndo();
         }

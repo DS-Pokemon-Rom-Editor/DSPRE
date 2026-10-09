@@ -19,8 +19,8 @@
         <Separator Width="8"/>
         <Button Content="Add custom mart" controls:Icon.Key="addIcon" Click="AddShop_Click" IsEnabled="{Binding CanAddShop}" MinWidth="125"/>
         <Button Content="Remove last custom mart" controls:Icon.Key="deleteIcon" Click="RemoveShop_Click" IsEnabled="{Binding CanRemoveCustomShop}" MinWidth="165"/>
-        <Button Content="Apply ARM9 expansion" Click="Expand_Click" IsVisible="{Binding CanOfferExpansion}"
-                ToolTip.Tip="Lets marts grow and custom marts be added"/>
+        <Button Content="Open in Patch Toolbox" controls:Icon.Key="OpenLink" Click="Expand_Click" IsVisible="{Binding CanOfferExpansion}"
+                ToolTip.Tip="The &quot;Expand the marts&quot; patch lets marts grow and custom marts be added"/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"

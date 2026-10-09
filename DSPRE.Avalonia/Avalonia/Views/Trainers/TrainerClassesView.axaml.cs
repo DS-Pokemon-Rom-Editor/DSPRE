@@ -30,7 +30,11 @@ namespace DSPRE.Avalonia.Views.Trainers
         private async void EnableMusic_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            if (VM.MusicNeedsExpansion && !await Arm9ExpansionOffer.EnsureAsync("Eye-contact music for this class", "Trainer Classes")) return;
+            if (VM.MusicNeedsExpansion && !DSPRE.TrainerClassTableExpansion.MusicTableHasRoom)
+            {
+                await PatchHandover.OfferAsync("trainerEncounterBgmRepointed", "Trainer encounter music table", "Eye-contact music for this class", "Trainer Classes");
+                return;
+            }
             VM.EnableMusic(0, 0);
         }
 
@@ -100,13 +104,21 @@ namespace DSPRE.Avalonia.Views.Trainers
             // The new class is selected once it is added, so the loaded class is settled first.
             if (!await VM.ConfirmLeaveAsync()) return;
             bool hgEngine = DSPRE.HgEngine.HgEngineProject.IsActive;
-            if (!hgEngine && !await Arm9ExpansionOffer.EnsureAsync("A new trainer class", "Add Trainer Class")) return;
+            if (!hgEngine && !DSPRE.TrainerClassTableExpansion.ClassTablesHaveRoom)
+            {
+                await PatchHandover.OfferAsync("trainerClassTablesExpanded", "Trainer class tables", "A new trainer class", "Add Trainer Class");
+                return;
+            }
 
             int newClassId = VM.NextClassId;
             string refusal = hgEngine ? DSPRE.HgEngine.HgEngineTrainerClassExpansion.AddRefusal() : null;
             if (refusal != null) { await DialogHelper.ShowError(refusal, "Add Trainer Class"); return; }
 
-            AddTrainerClassViewModel dlgVm = new AddTrainerClassViewModel { ForHgEngine = hgEngine };
+            AddTrainerClassViewModel dlgVm = new AddTrainerClassViewModel
+            {
+                ForHgEngine = hgEngine,
+                CanAddMusic = hgEngine || DSPRE.TrainerClassTableExpansion.MusicTableHasRoom,
+            };
             dlgVm.SetSpriteChoices(VM.ClassNames, VM.SelectedClassIndex, newClassId, VM.NextClassHasSprite(newClassId));
             AddTrainerClassView dlg = new AddTrainerClassView(dlgVm);
             Window owner = TopLevel.GetTopLevel(this) as Window;

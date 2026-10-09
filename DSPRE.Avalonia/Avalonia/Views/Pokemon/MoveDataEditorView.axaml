@@ -180,7 +180,7 @@
 		  <DockPanel>
 			<Button DockPanel.Dock="Right" Classes="manage" Content="Manage" Tag="Punching" Click="ManageList_Click" IsEnabled="{Binding HasPunchingList}"
 					ToolTip.Tip="Every move on the punching list"/>
-			<CheckBox Content="Punching (Iron Fist)" IsChecked="{Binding IsPunching}" IsEnabled="{Binding HasPunchingList}" Margin="2,0"/>
+			<CheckBox x:Name="PunchingBox" Content="Punching (Iron Fist)" IsChecked="{Binding IsPunching}" IsEnabled="{Binding HasPunchingList}" Margin="2,0"/>
 		  </DockPanel>
 		  <TextBlock Text="{Binding PunchingNote}" IsVisible="{Binding HasPunchingList}" FontSize="11" TextWrapping="Wrap" Margin="26,0,0,0"
 					 Foreground="{DynamicResource Editor.Subtle}"/>
@@ -188,7 +188,7 @@
 		  <DockPanel>
 			<Button DockPanel.Dock="Right" Classes="manage" Content="Manage" Tag="Sound" Click="ManageList_Click" IsEnabled="{Binding HasSoundList}"
 					ToolTip.Tip="Every move on the sound list"/>
-			<CheckBox Content="Sound (Soundproof)" IsChecked="{Binding IsSound}" IsEnabled="{Binding HasSoundList}" Margin="2,0"/>
+			<CheckBox x:Name="SoundBox" Content="Sound (Soundproof)" IsChecked="{Binding IsSound}" IsEnabled="{Binding HasSoundList}" Margin="2,0"/>
 		  </DockPanel>
 		  <TextBlock Text="{Binding SoundNote}" IsVisible="{Binding HasSoundList}" FontSize="11" TextWrapping="Wrap" Margin="26,0,0,0"
 					 Foreground="{DynamicResource Editor.Subtle}"/>

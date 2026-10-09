@@ -267,37 +267,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return true;
         }
 
-        public bool CanMakeRoom => _chart != null && !_chart.InExpansion;
-        private bool? _expansionReady;
-        public bool ExpansionReady => _expansionReady ??= SyntheticOverlaySpace.Available();
-        public string MakeRoomTip => $"Move the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups"
-            + (ExpansionReady ? "" : " (offers to apply the ARM9 expansion first)");
+        public bool CanMakeRoom => _chart != null && !_chart.InExpansion && !_chart.FromSource;
+        public string MakeRoomTip => $"The \"Expand the type chart\" patch in the ROM Patch Toolbox moves the chart to the expanded ARM9 area, where it holds up to {TypeChart.ExpandedCapacity - 2} matchups";
 
-        /// <summary>Moves the chart, edits included, to the expanded ARM9 area so it can hold more matchups.</summary>
-        public async Task MakeRoomAsync()
+        /// <summary>Moving the chart changes the game's code, so the toolbox does it.</summary>
+        public Task MakeRoomAsync() => PatchHandover.OfferAsync("typeChartExpanded", "Expand the type chart", "Room for more matchups", "Type Chart");
+
+        /// <summary>Rereads the chart after a toolbox patch moved it, unless edits here are still unsaved.</summary>
+        public void OnPatchStateChanged()
         {
-            if (!CanMakeRoom) return;
-            if (!ExpansionReady)
-            {
-                if (!await Arm9ExpansionOffer.EnsureAsync("Making room for more matchups", "Type Chart")) return;
-                _expansionReady = null;
-                Raise(nameof(ExpansionReady)); Raise(nameof(MakeRoomTip));
-            }
-            if (!await DialogHelper.AskYesNo($"Move the type chart to the expanded ARM9 area? It will hold up to {TypeChart.ExpandedCapacity - 2} matchups instead of {_chart.MaxMatchups}. " +
-                "This saves the chart, including any unsaved edits.", "Type Chart")) return;
-            try { _chart.MoveToExpansion(); }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
-            {
-                // The Pokétch copy is written last, so the chart itself may already have moved.
-                await DialogHelper.ShowError(_chart.InExpansion
-                    ? "The type chart moved, but the Pokétch copy wasn't updated:\n" + e.Message
-                    : "The type chart was not moved:\n" + e.Message, "Type Chart");
-                if (!_chart.InExpansion) return;
-            }
-            _savedKey = Key();
+            if (_chart == null || HasUnsavedChanges) return;
+            DiscardChanges();
             Raise(nameof(CanMakeRoom));
-            Changed();
-            SaveNotice.Saved(UnsavedChangesDescription);
         }
 
         public void DiscardChanges()

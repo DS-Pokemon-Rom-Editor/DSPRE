@@ -144,8 +144,18 @@ namespace DSPRE.ROMFiles
         /// <summary>Whether entries can be added, removed or moved between counters.</summary>
         public bool CanResize => IsPlatinum;
 
-        /// <summary>The lists outgrew their room in the game and the ARM9 expansion isn't there to take them.</summary>
-        public bool NeedsExpansion => IsPlatinum && _inPlace && !FitsInPlace && !SyntheticOverlaySpace.Available();
+        /// <summary>The most price rows the game looks through: the count is a byte immediate.</summary>
+        public const int MaxPriceRows = 255;
+
+        /// <summary>Whether the lists sit in a block with room for the game's limits, as the toolbox patch leaves them.</summary>
+        public bool Expanded => InExpansion && _blockLength >= FixedBlockLength;
+
+        /// <summary>The lists outgrew their room; the "Expand the Battle Point lists" toolbox patch makes more.</summary>
+        public bool NeedsExpansion => IsPlatinum && !Expanded && !FitsCurrentRoom;
+
+        // A block an older DSPRE sized to its lists still takes them while they fit.
+        private bool FitsCurrentRoom => _inPlace ? FitsInPlace
+            : _blockStart >= 0 && BuildBlock(Left, Right, PriceRows(), out _, out _, out _).Length <= _blockLength;
 
         public bool FitsInPlace => IsPlatinum
             ? Left.Count <= VanillaLeft && Right.Count <= VanillaRight && PriceRows().Count <= ExchangeRows
@@ -168,12 +178,15 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>Builds the synthetic-overlay block: header, left list, right list, then the price rows.</summary>
-        internal static byte[] BuildBlock(List<Entry> left, List<Entry> right, List<Entry> rows, out int leftAt, out int rightAt, out int pricesAt)
+        private static int FixedBlockLength => BuildBlock(new List<Entry>(), new List<Entry>(), new List<Entry>(), out _, out _, out _, fixedRoom: true).Length;
+
+        /// <param name="fixedRoom">Lays the lists out at the game's limits, so they never move as they grow.</param>
+        internal static byte[] BuildBlock(List<Entry> left, List<Entry> right, List<Entry> rows, out int leftAt, out int rightAt, out int pricesAt, bool fixedRoom = false)
         {
             leftAt = SyntheticOverlaySpace.HeaderSize;
-            rightAt = leftAt + (left.Count + 1) * 2;
-            pricesAt = (rightAt + (right.Count + 1) * 2 + 3) & ~3;
-            byte[] block = new byte[pricesAt + rows.Count * 4];
+            rightAt = leftAt + ((fixedRoom ? MaxListItems : left.Count) + 1) * 2;
+            pricesAt = (rightAt + ((fixedRoom ? MaxListItems : right.Count) + 1) * 2 + 3) & ~3;
+            byte[] block = new byte[pricesAt + (fixedRoom ? MaxPriceRows : rows.Count) * 4];
             Encoding.ASCII.GetBytes(Marker).CopyTo(block, 0);
             Put32(block, 0x0C, 1);
             Put32(block, 0x10, (uint)block.Length);
@@ -184,6 +197,51 @@ namespace DSPRE.ROMFiles
             WriteList(block, rightAt, right, right.Count + 1);
             WriteRows(block, pricesAt, rows, rows.Count);
             return block;
+        }
+
+        /// <summary>
+        /// Moves the lists, as saved, into their own expanded ARM9 block laid out at the game's limits, and points the
+        /// exchange and price code at it. The toolbox patch calls this; the editor never moves the lists itself.
+        /// </summary>
+        /// <summary>The size of the block the toolbox patch places.</summary>
+        public int ExpansionBlockLength => BuildBlock(Left, Right, PriceRows(), out _, out _, out _, fixedRoom: true).Length;
+
+        public void MoveToExpansion()
+        {
+            if (!IsPlatinum || Expanded) return;
+            if (MovedByPatch) throw new InvalidOperationException("The Battle Point lists were moved by a patch DSPRE doesn't know, so it won't move them.");
+            if (!SyntheticOverlaySpace.Available()) throw new InvalidOperationException("Apply the ARM9 expansion in the ROM Patch Toolbox first.");
+            byte[] arm9 = File.ReadAllBytes(arm9Path), ov7 = ReadOverlay7(), synth = ReadSynth();
+            byte[] arm9Before = (byte[])arm9.Clone(), ov7Before = (byte[])ov7.Clone(), synthBefore = (byte[])synth.Clone();
+            List<Entry> rows = PriceRows();
+            byte[] block = BuildBlock(Left, Right, rows, out int leftAt, out int rightAt, out int pricesAt, fixedRoom: true);
+            // A block an older DSPRE sized to its lists is freed for the new one.
+            if (_blockStart >= 0) Array.Clear(synth, _blockStart, _blockLength);
+            int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
+            if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the Battle Point lists.");
+            block.CopyTo(synth, at);
+            uint ram = synthOverlayLoadAddress + (uint)at;
+            Put32(arm9, _sites.ListPointers, ram + (uint)rightAt);
+            Put32(arm9, _sites.ListPointers + 4, ram + (uint)leftAt);
+            Put32(ov7, _sites.PriceLiteral, ram + (uint)pricesAt);
+            Put32(ov7, _sites.PriceLiteral + 4, ram + (uint)pricesAt + 2);
+            ov7[_sites.PriceCountCompare] = (byte)rows.Count;
+            try
+            {
+                File.WriteAllBytes(Filesystem.expArmPath, synth);
+                File.WriteAllBytes(OverlayUtils.GetPath(7), ov7);
+                File.WriteAllBytes(arm9Path, arm9);
+            }
+            catch
+            {
+                File.WriteAllBytes(Filesystem.expArmPath, synthBefore);
+                File.WriteAllBytes(OverlayUtils.GetPath(7), ov7Before);
+                File.WriteAllBytes(arm9Path, arm9Before);
+                throw;
+            }
+            _inPlace = false;
+            _blockStart = at; _blockLength = block.Length;
+            Where = "moved to the expanded ARM9 area";
         }
 
         private void SavePlatinum()
@@ -199,22 +257,12 @@ namespace DSPRE.ROMFiles
                 WriteList(arm9, SpotOf(GameTable.BpShopTms).Value.Offset, Right, VanillaRight + 1);
                 WriteRows(ov7, SpotOf(GameTable.BpShopPrices).Value.Offset, rows, ExchangeRows);
             }
-            else if (_inPlace || _blockStart >= 0)
+            else if (_blockStart >= 0 && (Expanded || FitsCurrentRoom))
             {
-                if (!SyntheticOverlaySpace.Available())
-                    throw new InvalidOperationException($"The item counter holds {VanillaLeft}, the TM counter {VanillaRight} and the price table {ExchangeRows} rows. " +
-                        "Apply the ARM9 expansion in the ROM Patch Toolbox to go past that.");
-                synth ??= ReadSynth();
-                synthBefore ??= (byte[])synth.Clone();
-                byte[] block = BuildBlock(Left, Right, rows, out int leftAt, out int rightAt, out int pricesAt);
-                int at = _blockStart >= 0 && block.Length <= _blockLength ? _blockStart : -1;
-                if (at < 0)
-                {
-                    List<(long Start, long End)> reserved = SyntheticOverlaySpace.Reserved(synth);
-                    at = SyntheticOverlaySpace.FindFree(synth, block.Length, 4, reserved);
-                    if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the Battle Point lists.");
-                }
-                if (_blockStart >= 0) Array.Clear(synth, _blockStart, _blockLength);
+                // Writes into the block the lists already have; moving them is the toolbox patch's job.
+                byte[] block = BuildBlock(Left, Right, rows, out int leftAt, out int rightAt, out int pricesAt, fixedRoom: Expanded);
+                int at = _blockStart;
+                Array.Clear(synth, _blockStart, _blockLength);
                 block.CopyTo(synth, at);
                 synthChanged = true;
                 uint ram = synthOverlayLoadAddress + (uint)at;
@@ -223,10 +271,10 @@ namespace DSPRE.ROMFiles
                 Put32(ov7, _sites.PriceLiteral, ram + (uint)pricesAt);
                 Put32(ov7, _sites.PriceLiteral + 4, ram + (uint)pricesAt + 2);
                 ov7[_sites.PriceCountCompare] = (byte)rows.Count;
-                _inPlace = false;
-                _blockStart = at; _blockLength = block.Length;
                 Where = "moved to the expanded ARM9 area";
             }
+            else if (_inPlace || _blockStart >= 0)
+                throw new InvalidOperationException("The Battle Point lists don't fit where they are; apply the \"Expand the Battle Point lists\" patch in the ROM Patch Toolbox.");
             else throw new InvalidOperationException("The Battle Point lists were moved by a patch DSPRE doesn't know, so it won't write them.");
 
             // The script command's copy is read by no retail script; keep it matching while it still fits.
@@ -303,7 +351,7 @@ namespace DSPRE.ROMFiles
             {
                 if (!_inPlace && _blockStart < 0) return "A patch moved these lists somewhere DSPRE doesn't follow, so they can't be saved here.";
                 if (NeedsExpansion)
-                    return $"The item counter holds {VanillaLeft} items and the TM counter {VanillaRight} until the ARM9 expansion is applied in the ROM Patch Toolbox.";
+                    return $"The item counter holds {VanillaLeft} items and the TM counter {VanillaRight} where they are. The \"Expand the Battle Point lists\" patch in the ROM Patch Toolbox makes room for {MaxListItems} each.";
                 if (Left.Count > MaxListItems || Right.Count > MaxListItems) return $"Each counter can show up to {MaxListItems} items.";
                 // The price lookup's row count is a byte immediate.
                 if (PriceRows().Count > 255) return "The game can price up to 255 different items across both counters.";

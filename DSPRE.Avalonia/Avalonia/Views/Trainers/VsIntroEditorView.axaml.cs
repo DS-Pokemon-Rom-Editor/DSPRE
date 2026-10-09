@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void BannerGraphics_Click(object sender, RoutedEventArgs e) => VM?.ShowBannerInGraphics();
         private void Animate_Click(object sender, RoutedEventArgs e) => VM?.ToggleAnimation();
         private void PlayMotion_Click(object sender, RoutedEventArgs e) => VM?.ToggleMotion();
-        private async void InstallTimings_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.InstallTimingsAsync(); }
+        private void InstallTimings_Click(object sender, RoutedEventArgs e) => VM?.OpenTimingPatch();
         private void ShowMugshot_Click(object sender, RoutedEventArgs e) => VM?.ShowMugshot();
 
         private void PaintSlot_Click(object sender, RoutedEventArgs e)

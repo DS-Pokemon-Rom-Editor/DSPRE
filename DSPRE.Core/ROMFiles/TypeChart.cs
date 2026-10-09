@@ -42,12 +42,17 @@ namespace DSPRE.ROMFiles
         private string _path;
         private int _offset;
         private string _ovPath;
+        /// <summary>The battle overlay file whose code points at the chart.</summary>
+        public string CodePath => _ovPath;
         private bool _countIsCompare;
         private bool _modulusIsMovs;
 
         public const string Marker = "TYPECHARTXP1";
         /// <summary>Capped at 255 because Conversion 2's bound is a byte immediate.</summary>
         public const int ExpandedCapacity = 255;
+
+        /// <summary>The size of the block the toolbox patch places.</summary>
+        public static int ExpansionBlockLength => (SyntheticOverlaySpace.HeaderSize + ExpandedCapacity * RecordSize + 3) & ~3;
 
         /// <summary>Whether the chart already lives in a block DSPRE placed in the expanded ARM9 area.</summary>
         public bool InExpansion { get; private set; }
@@ -238,7 +243,7 @@ namespace DSPRE.ROMFiles
             if (Problem() is string p) { Capacity = oldCapacity; throw new InvalidOperationException(p); }
 
             byte[] chart = ToBytes();
-            byte[] block = new byte[(SyntheticOverlaySpace.HeaderSize + chart.Length + 3) & ~3];
+            byte[] block = new byte[ExpansionBlockLength];
             System.Text.Encoding.ASCII.GetBytes(Marker).CopyTo(block, 0);
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
             BitConverter.GetBytes((uint)block.Length).CopyTo(block, 0x10);
@@ -246,7 +251,7 @@ namespace DSPRE.ROMFiles
             chart.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
 
             byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
-            int at = SyntheticOverlaySpace.FindFree(synth, block.Length, 4, SyntheticOverlaySpace.Reserved(synth));
+            int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) { Capacity = oldCapacity; throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the type chart."); }
             byte[] ov = File.ReadAllBytes(_ovPath);
             byte[] ovBefore = (byte[])ov.Clone(), synthBefore = (byte[])synth.Clone();

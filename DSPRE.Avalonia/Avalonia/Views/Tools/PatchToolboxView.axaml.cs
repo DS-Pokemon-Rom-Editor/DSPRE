@@ -55,7 +55,8 @@ namespace DSPRE.Avalonia.Views.Tools
 
         private void Requires_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Control c && c.DataContext is PatchRowViewModel { RequiresTab: { } tab }) VM?.GoToTab(tab);
+            // The search may be narrowed to this patch, which would hide the one it needs.
+            if (sender is Control c && c.DataContext is PatchRowViewModel { RequiresKey: { } key }) VM?.ShowOnly(key);
         }
 
         private void Apply_Click(object sender, RoutedEventArgs e)

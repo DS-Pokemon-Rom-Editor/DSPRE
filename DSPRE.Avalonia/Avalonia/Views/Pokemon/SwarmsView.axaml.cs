@@ -17,16 +17,20 @@ namespace DSPRE.Avalonia.Views.Pokemon
             base.OnAttachedToVisualTree(e);
             _window = TopLevel.GetTopLevel(this) as Window;
             if (_window != null) _window.Activated += Window_Activated;
+            AppEvents.RomPatchStateChanged += OnPatchStateChanged;
         }
 
         protected override void OnDetachedFromVisualTree(global::Avalonia.VisualTreeAttachmentEventArgs e)
         {
             if (_window != null) _window.Activated -= Window_Activated;
             _window = null;
+            AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
             base.OnDetachedFromVisualTree(e);
         }
 
         private void Window_Activated(object sender, System.EventArgs e) => VM?.RefreshSpecies();
+
+        private void OnPatchStateChanged(object sender, System.EventArgs e) => VM?.OnPatchStateChanged();
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
         private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();

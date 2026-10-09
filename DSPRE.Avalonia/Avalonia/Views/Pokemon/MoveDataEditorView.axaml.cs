@@ -19,15 +19,22 @@ namespace DSPRE.Avalonia.Views.Pokemon
             ViewModel.NeedsExpansion += (kind, listed) => _ = OfferExpansionAsync(kind, listed);
         }
 
-        /// <summary>Changing a list means moving it out of the game's overlay first; offered here so the tick just made goes in.</summary>
+        /// <summary>Changing a list means moving it out of the game's overlay first, which its toolbox patch does.</summary>
         private async System.Threading.Tasks.Task OfferExpansionAsync(DSPRE.ROMFiles.MoveCategoryTable.Kind kind, bool listed)
         {
             string name = DSPRE.ROMFiles.MoveCategoryTable.NameOf(kind);
-            if (!await DialogHelper.AskYesNo($"Changing the {name} move list needs the \"Expand the {name} move list\" patch from the ROM Patch Toolbox, which moves the list into the expanded ARM9 area with room for {DSPRE.ROMFiles.MoveCategoryTable.ExpandedCapacity} moves. Apply it now?",
-                                             "Move Data Editor")) return;
-            if (!await Arm9ExpansionOffer.EnsureAsync($"Changing the {name} move list", "Move Data Editor")) return;
-            if (ViewModel.ExpandList(kind, listed) is string error)
-                await DialogHelper.ShowError($"The {name} move list was not expanded:\n{error}", "Move Data Editor");
+            try
+            {
+                string key = kind == DSPRE.ROMFiles.MoveCategoryTable.Kind.Punching ? "punchingMovesExpanded" : "soundMovesExpanded";
+                await PatchHandover.OfferAsync(key, $"Expand the {name} move list", $"Changing the {name} move list", "Move Data Editor");
+            }
+            finally
+            {
+                // The binding drops a re-raised value it already read, so the boxes are set back from the lists directly.
+                PunchingBox.IsChecked = ViewModel.IsPunching;
+                SoundBox.IsChecked = ViewModel.IsSound;
+                ViewModel.RefreshCategories();
+            }
         }
 
         private static DSPRE.ROMFiles.MoveCategoryTable.Kind KindOf(object sender) =>

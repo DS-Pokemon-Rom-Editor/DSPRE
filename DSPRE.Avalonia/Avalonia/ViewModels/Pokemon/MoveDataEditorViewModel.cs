@@ -418,6 +418,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RaiseCategories();
         }
 
+        /// <summary>Shows the ticks as the lists hold them, after a declined or failed expansion.</summary>
+        public void RefreshCategories() => RaiseCategories();
+
         private void RaiseCategories()
         {
             foreach (string n in new[] { nameof(IsPunching), nameof(IsSound), nameof(PunchingNote), nameof(SoundNote),
@@ -444,26 +447,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 if (_punching != null && !_punching.Moves.SequenceEqual(_savedPunching)) { _punching.Save(); _savedPunching = _punching.Moves.ToList(); }
                 if (_sound != null && !_sound.Moves.SequenceEqual(_savedSound)) { _sound.Save(); _savedSound = _sound.Moves.ToList(); }
-                return null;
-            }
-            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is UnauthorizedAccessException)
-            {
-                return ex.Message;
-            }
-        }
-
-        /// <summary>Moves a list into the expanded ARM9 area, then applies the tick that asked for it.</summary>
-        public string ExpandList(MoveCategoryTable.Kind kind, bool listed)
-        {
-            MoveCategoryTable table = kind == MoveCategoryTable.Kind.Punching ? _punching : _sound;
-            if (table == null) return "The list is not available for this ROM.";
-            try
-            {
-                table.MoveToExpansion();
-                if (kind == MoveCategoryTable.Kind.Punching) _savedPunching = table.Moves.ToList(); else _savedSound = table.Moves.ToList();
-                AppEvents.RaiseRomPatchStateChanged();
-                if (kind == MoveCategoryTable.Kind.Punching) IsPunching = listed; else IsSound = listed;
-                RaiseCategories();
                 return null;
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException || ex is UnauthorizedAccessException)
@@ -596,6 +579,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SyncContestEffects(_contestAppeal);
             AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.NamesChanged  -= OnNamesChanged;  AppEvents.NamesChanged  += OnNamesChanged;
+            AppEvents.RomPatchStateChanged -= OnPatchStateChanged; AppEvents.RomPatchStateChanged += OnPatchStateChanged;
+        }
+
+        // A list moved by its toolbox patch is reread, unless ticks made here are still unsaved.
+        private void OnPatchStateChanged(object sender, EventArgs e)
+        {
+            if (!CategoriesChanged) LoadCategories();
         }
         private void OnLabelsChanged(object sender, EventArgs e)
         {
@@ -644,7 +634,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 global::Avalonia.Threading.DispatcherPriority.Background);
         }
         /// <summary>Unsubscribes from app-wide events; call when the editor window closes.</summary>
-        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.NamesChanged -= OnNamesChanged; }
+        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.NamesChanged -= OnNamesChanged; AppEvents.RomPatchStateChanged -= OnPatchStateChanged; }
 
         // ── Commands ──────────────────────────────────────────────────────────
 

@@ -553,8 +553,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         /// <summary>Redraws the preview when art in the intro archive is saved elsewhere, such as an edited animation.</summary>
-        public void Attach() => AppEvents.ArchiveMemberSaved += OnArchiveMemberSaved;
-        public void Detach() => AppEvents.ArchiveMemberSaved -= OnArchiveMemberSaved;
+        public void Attach() { AppEvents.ArchiveMemberSaved += OnArchiveMemberSaved; AppEvents.RomPatchStateChanged += OnRomPatchStateChanged; }
+        public void Detach() { AppEvents.ArchiveMemberSaved -= OnArchiveMemberSaved; AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged; }
+
+        private void OnRomPatchStateChanged(object sender, EventArgs e) => OnPatchStateChanged();
 
         private void OnArchiveMemberSaved(object sender, DirNames dir)
         {

@@ -49,10 +49,11 @@
                     Padding="12,10" Margin="4">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Grid.Column="0" Spacing="3">
-                  <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
-                    <TextBlock Text="{Binding AuthorText}" IsVisible="{Binding HasAuthor}" FontSize="12"
-                               VerticalAlignment="Bottom" Foreground="{DynamicResource Editor.Subtle}"/>
+                  <!-- Authors sit under the title: beside it, a long credit ran under the Apply button. -->
+                  <StackPanel Spacing="1">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding AuthorText}" IsVisible="{Binding HasAuthor}" FontSize="12" TextWrapping="Wrap"
+                               Foreground="{DynamicResource Editor.Subtle}"/>
                   </StackPanel>
                   <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12"
                              Foreground="{DynamicResource Editor.Subtle}"/>

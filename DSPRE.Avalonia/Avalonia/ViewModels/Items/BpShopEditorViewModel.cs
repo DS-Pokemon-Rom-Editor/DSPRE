@@ -110,7 +110,22 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (_expansionOffered || _shop?.NeedsExpansion != true) return;
             _expansionOffered = true;
-            if (await Arm9ExpansionOffer.EnsureAsync("A longer counter list", "Battle Point Shop")) Changed();
+            await PatchHandover.OfferAsync("bpShopExpanded", "Expand the Battle Point lists", "A longer counter list", "Battle Point Shop");
+        }
+
+        /// <summary>After the toolbox moved the lists, follows them to their new place and keeps the entries being edited.</summary>
+        public void OnPatchStateChanged()
+        {
+            if (_shop == null || !_shop.IsPlatinum) return;
+            BpShopData moved;
+            try { moved = BpShopData.Load(); }
+            catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return; }
+            if (moved.Expanded == _shop.Expanded) return;
+            List<BpShopData.Entry> left = _shop.Left.ToList(), right = _shop.Right.ToList();
+            moved.Left.Clear(); moved.Left.AddRange(left);
+            moved.Right.Clear(); moved.Right.AddRange(right);
+            _shop = moved;
+            Changed();
         }
 
         public void Remove(bool right)
@@ -189,7 +204,11 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public async Task<bool> SaveChangesAsync()
         {
             if (_shop == null) return true;
-            if (_shop.NeedsExpansion && await Arm9ExpansionOffer.EnsureAsync("A longer counter list", "Battle Point Shop")) Changed();
+            if (_shop.NeedsExpansion)
+            {
+                await PatchHandover.OfferAsync("bpShopExpanded", "Expand the Battle Point lists", "A longer counter list", "Battle Point Shop");
+                return false;
+            }
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Battle Point Shop"); return false; }
             try { _shop.Save(ItemNames.Length); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)

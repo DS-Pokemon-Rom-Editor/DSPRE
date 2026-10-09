@@ -15,6 +15,9 @@ namespace DSPRE.Avalonia.Views.Items
         public MartEditorView(MartEditorViewModel viewModel) : this()
         {
             DataContext = viewModel;
+            System.EventHandler patched = (_, _) => viewModel.OnPatchStateChanged();
+            AppEvents.RomPatchStateChanged += patched;
+            DetachedFromVisualTree += (_, _) => AppEvents.RomPatchStateChanged -= patched;
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e)
@@ -30,7 +33,7 @@ namespace DSPRE.Avalonia.Views.Items
         private void AddItem_Click(object sender, RoutedEventArgs e) => ViewModel?.AddItem();
         private void RemoveItem_Click(object sender, RoutedEventArgs e) => ViewModel?.RemoveLastItem();
         private void AddShop_Click(object sender, RoutedEventArgs e) => ViewModel?.AddShop();
-        private async void Expand_Click(object sender, RoutedEventArgs e) { if (ViewModel != null) await ViewModel.OfferExpansionAsync(); }
+        private void Expand_Click(object sender, RoutedEventArgs e) => ViewModel?.OfferExpansion();
         private async void RemoveShop_Click(object sender, RoutedEventArgs e)
         {
             if (!await DialogHelper.AskYesNo(

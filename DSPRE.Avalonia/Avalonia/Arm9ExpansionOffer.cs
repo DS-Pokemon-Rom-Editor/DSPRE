@@ -3,10 +3,10 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia
 {
-    /// <summary>Offers the ROM Patch Toolbox's ARM9 expansion when a table editor needs more room than the game has.</summary>
+    /// <summary>Sends a table editor that needs more room than the game has to the ARM9 expansion in the ROM Patch Toolbox.</summary>
     internal static class Arm9ExpansionOffer
     {
-        /// <summary>True when the expansion is in place, after asking and applying the toolbox patch if needed.</summary>
+        /// <summary>True when the expansion is already in place; otherwise points at the toolbox patch and returns false.</summary>
         public static async Task<bool> EnsureAsync(string need, string title)
         {
             if (SyntheticOverlaySpace.Available()) return true;
@@ -15,10 +15,8 @@ namespace DSPRE.Avalonia
                 await DialogHelper.ShowInfo($"{need} needs the ARM9 expansion. {why}", title);
                 return false;
             }
-            if (!await DialogHelper.AskYesNo($"{need} needs the ARM9 expansion, which isn't applied to this ROM yet. Apply it now?", title))
-                return false;
-            PatchToolboxLogic.ApplyARM9ExpansionPatch();
-            return SyntheticOverlaySpace.Available();
+            await PatchHandover.OfferAsync("arm9", "Expand ARM9 (synthetic overlay)", need, title);
+            return false;
         }
     }
 }

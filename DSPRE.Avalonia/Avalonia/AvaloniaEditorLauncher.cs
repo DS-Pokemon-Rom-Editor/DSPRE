@@ -385,6 +385,7 @@ namespace DSPRE.Avalonia
         public static void OpenWildHeldItems() => OpenTableEditor("Wild Held Items", WildHeldItemOdds.WhyNot,
             () => new WildHeldItemOddsView(new WildHeldItemOddsViewModel(true)), 640, 360, 460, 340);
 
+
         public static void OpenGrowthCurves() => OpenTableEditor("Growth Curves", GrowthTable.WhyNot,
             () => new GrowthCurveEditorView(new GrowthCurveEditorViewModel(true)), 900, 680, 700, 460);
 
@@ -1200,6 +1201,22 @@ namespace DSPRE.Avalonia
             if (Refused("PatchToolboxView")) return;
             if (BringForwardWindow<PatchToolboxView>()) return;
             new PatchToolboxView().ShowManaged();
+        }
+
+        /// <summary>Opens the toolbox showing one patch, for an editor that needs it.</summary>
+        public static void OpenPatchToolboxAt(string key)
+        {
+            if (Refused("PatchToolboxView")) return;
+            IReadOnlyList<Window> open = (global::Avalonia.Application.Current?.ApplicationLifetime
+                        as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows;
+            PatchToolboxView view = open?.OfType<PatchToolboxView>().FirstOrDefault();
+            if (view == null) { view = new PatchToolboxView(); view.ShowManaged(); }
+            else
+            {
+                if (view.WindowState == global::Avalonia.Controls.WindowState.Minimized) view.WindowState = global::Avalonia.Controls.WindowState.Normal;
+                view.Activate();
+            }
+            (view.DataContext as PatchToolboxViewModel)?.ShowOnly(key);
         }
 
         public static void OpenCustomCommandManager()

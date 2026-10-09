@@ -85,7 +85,7 @@ namespace DSPRE.ROMFiles
             new(119, 0x136E, new byte[] { 0x0A, 0x1C, 0x00, 0x90 }, 0x104),
         };
 
-        private static int BlockLength => (SyntheticOverlaySpace.HeaderSize + TableAt + Classes * FieldsPerClass + 3) & ~3;
+        public static int BlockLength => (SyntheticOverlaySpace.HeaderSize + TableAt + Classes * FieldsPerClass + 3) & ~3;
 
         private readonly int _block;
         private readonly byte[] _table, _saved;
@@ -116,6 +116,12 @@ namespace DSPRE.ROMFiles
             return offset.Value + ActiveClassInPayload <= synth.Length
                 && synth.AsSpan((int)offset.Value, ActiveClassInPayload).SequenceEqual(expected.AsSpan(0, ActiveClassInPayload));
         }
+
+        public static int HookCount => Sites.Length;
+        public static IEnumerable<int> HookedOverlays => Sites.Select(s => s.Overlay).Distinct();
+
+        /// <summary>An overlay's file, decompressed first, as the hooks write it.</summary>
+        public static string OverlayFilePath(int ov) => OverlayFile(ov);
 
         private static string OverlayFile(int ov)
         {
@@ -158,7 +164,7 @@ namespace DSPRE.ROMFiles
             uint activeClass = TrainerClassMetadataPatch.SyntheticBase + TrainerClassMetadataPatch.InstalledOffset().Value + ActiveClassInPayload;
             BitConverter.GetBytes(activeClass).CopyTo(block, SyntheticOverlaySpace.HeaderSize + ClassWordAt);
 
-            int at = SyntheticOverlaySpace.FindFree(synth, block.Length, 4, SyntheticOverlaySpace.Reserved(synth));
+            int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));
             if (at < 0) throw new InvalidOperationException("No free space was found in the expanded ARM9 area for the intro timings.");
             uint code = synthOverlayLoadAddress + (uint)(at + SyntheticOverlaySpace.HeaderSize);
 
