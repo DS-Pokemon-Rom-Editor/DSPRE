@@ -203,6 +203,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _file != null && _selectedSetIndex >= 0 && _selectedSetIndex < _file.Sets.Count
                 ? _file.Sets[_selectedSetIndex] : null;
 
+        public void RefreshNames()
+        {
+            if (SpeciesNames.Count == 0) return;
+            _suppress = true;
+            try { ListSync.Apply(SpeciesNames, GetPokemonNames()); }
+            finally { _suppress = false; }
+            if (CurrentSet == null) return;
+            int keep = _selectedEncounterIndex;
+            RefreshSetDisplay();
+            if (keep < 0 || keep >= EncounterRows.Count) return;
+            _selectedEncounterIndex = -1;
+            SelectedEncounterIndex = keep;
+        }
+
         private void RefreshSetDisplay()
         {
             BugContestEncounterSet set = CurrentSet;

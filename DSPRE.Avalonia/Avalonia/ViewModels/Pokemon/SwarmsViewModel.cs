@@ -214,6 +214,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Changed();
         }
 
+        public void RefreshNames()
+        {
+            if (_table == null) return;
+            _pokemonNames = GetPokemonNames();
+            RefreshSpecies();
+        }
+
         /// <summary>Re-reads each destination's Pokémon, which the Wild editor may have changed.</summary>
         public void RefreshSpecies()
         {

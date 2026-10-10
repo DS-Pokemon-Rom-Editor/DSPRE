@@ -142,6 +142,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             UpdateStatus();
         }
 
+        public void RefreshNames()
+        {
+            if (PokemonNames.Count == 0 || _file == null) return;
+            _suppress = true;
+            try { DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, GetPokemonNames()); }
+            finally { _suppress = false; }
+            int slot = _selectedSlotIndex;
+            RefreshSlotLabels();
+            _selectedSlotIndex = -1;
+            if (slot >= 0 && slot < SlotLabels.Count) SelectedSlotIndex = slot;
+        }
+
         private void RefreshSlotLabels()
         {
             _suppress = true;

@@ -25,6 +25,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             public string Name { get; init; }
             private int _species, _level;
             public int Species { get => _species; set { if (value < 0 || value == _species) return; _species = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Species))); Changed?.Invoke(); } }
+            internal void Reselect() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Species)));
             public int Level { get => _level; set { if (value == _level) return; _level = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Level))); Changed?.Invoke(); } }
         }
 
@@ -58,6 +59,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public bool HasRoutesNote => RoutesNote.Length > 0;
 
         public RoamersViewModel() { }
+
+        public void RefreshNames()
+        {
+            if (!Loaded) return;
+            PokemonNames = GetPokemonNames();
+            Raise(nameof(PokemonNames));
+            // The combos drop their pick when their list is replaced; give it back once they have the new list.
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { foreach (SlotRow s in Slots) s.Reselect(); },
+                global::Avalonia.Threading.DispatcherPriority.Background);
+        }
 
         public void Setup()
         {

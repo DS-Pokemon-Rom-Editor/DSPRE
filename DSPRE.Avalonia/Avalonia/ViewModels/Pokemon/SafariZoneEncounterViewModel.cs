@@ -34,6 +34,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<string> FileNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> SpeciesNames { get; } = new ObservableCollection<string>();
 
+        public void RefreshNames()
+        {
+            if (SpeciesNames.Count == 0) return;
+            SafariZoneGroupViewModel[] groups = { GrassVM, SurfVM, OldRodVM, GoodRodVM, SuperRodVM };
+            foreach (SafariZoneGroupViewModel g in groups) g?.BeginNameRefresh();
+            try { DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames()); }
+            finally { foreach (SafariZoneGroupViewModel g in groups) g?.EndNameRefresh(); }
+        }
+
         public SafariZoneGroupViewModel GrassVM { get; }
         public SafariZoneGroupViewModel SurfVM { get; }
         public SafariZoneGroupViewModel OldRodVM { get; }

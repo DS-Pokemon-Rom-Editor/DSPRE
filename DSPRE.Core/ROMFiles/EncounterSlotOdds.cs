@@ -114,6 +114,9 @@ namespace DSPRE.ROMFiles
             foreach (Method m in Methods) for (int i = 0; i < m.Percents.Length; i++) m.Percents[i] = snapshot[k++];
         }
 
+        /// <summary>Raised after the odds were written, for editors that show slot chances.</summary>
+        public static event Action Saved;
+
         public void Save()
         {
             if (Problem() is string p) throw new InvalidOperationException(p);
@@ -121,6 +124,8 @@ namespace DSPRE.ROMFiles
             {
                 string error = HgEngine.HgEngineSlotOdds.Write(Methods.Select(m => m.Percents).ToList());
                 if (error != null) throw new InvalidOperationException(error);
+                _cache = default;
+                Saved?.Invoke();
                 return;
             }
             Dictionary<int, byte[]> files = new Dictionary<int, byte[]>();
@@ -142,6 +147,8 @@ namespace DSPRE.ROMFiles
                 }
             }
             foreach ((int ov, byte[] d) in files) File.WriteAllBytes(OverlayUtils.GetPath(ov), d);
+            _cache = default;
+            Saved?.Invoke();
         }
 
         private static (string key, EncounterSlotOdds odds) _cache;
@@ -158,9 +165,9 @@ namespace DSPRE.ROMFiles
                     return at >= 0 ? fromSource[at] : null;
                 }
                 SlotOddsMethod[] methods = SlotOddsMethods;
-                if (methods == null) return null;
+                if (methods == null) return RetailPercents(methodName);
                 // Only a legacy project can still hold a compressed overlay; a label lookup won't decompress it.
-                if (methods.Any(m => OverlayUtils.IsStillCompressed(m.Overlay))) return null;
+                if (methods.Any(m => OverlayUtils.IsStillCompressed(m.Overlay))) return RetailPercents(methodName);
                 // Re-read only when a selector overlay changed on disk.
                 string key = romID + ":" + string.Join(",", methods.Select(m => m.Overlay).Distinct()
                     .Select(ov => OverlayUtils.GetPath(ov)).Select(p => p + File.GetLastWriteTimeUtc(p).Ticks));
@@ -169,6 +176,28 @@ namespace DSPRE.ROMFiles
             }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException
                                       || e is UnauthorizedAccessException || e is IndexOutOfRangeException) { return null; }
+        }
+
+        /// <summary>Retail chances, for versions whose slot code DSPRE can't read.</summary>
+        private static int[] RetailPercents(string methodName)
+        {
+            if (gameFamily == GameFamilies.HGSS)
+                return methodName switch
+                {
+                    "Walking" => new[] { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 },
+                    "Surfing" => new[] { 60, 30, 5, 4, 1 },
+                    "Fishing (all rods)" => new[] { 40, 30, 15, 10, 5 },
+                    "Rock Smash" => new[] { 80, 20 },
+                    "Headbutt" => new[] { 50, 15, 15, 10, 5, 5 },
+                    _ => null,
+                };
+            return methodName switch
+            {
+                "Walking" => new[] { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 },
+                "Surfing" or "Old Rod" => new[] { 60, 30, 5, 4, 1 },
+                "Good Rod" or "Super Rod" => new[] { 40, 40, 15, 4, 1 },
+                _ => null,
+            };
         }
 
         /// <summary>A slot's label with its live chance: "20%" alone, or "Surf 1 · 60%" with a prefix.</summary>

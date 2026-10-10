@@ -180,6 +180,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        public void RefreshNames()
+        {
+            if (SpeciesNames.Count == 0) return;
+            _suppress = true;
+            try { DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames()); }
+            finally { _suppress = false; }
+            if (_file == null) return;
+            int slot = _selectedSlotIndex;
+            RefreshGroupDisplay();
+            _selectedSlotIndex = -1;
+            if (slot >= 0 && slot < EncounterSlots.Count) SelectedSlotIndex = slot;
+            else if (EncounterSlots.Count > 0) SelectedSlotIndex = 0;
+        }
+
         private void RefreshGroupDisplay()
         {
             if (_file == null || _selectedGroupIndex < 0 || _selectedGroupIndex >= _file.Groups.Count) return;

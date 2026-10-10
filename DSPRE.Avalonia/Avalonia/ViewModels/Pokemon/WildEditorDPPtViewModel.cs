@@ -68,6 +68,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string Label { get => _label; set { if (_label == value) return; _label = value; OnPropertyChanged(); } }
         public string RateLabel { get; set; }
 
+        private string _note, _noteTip;
+        public string Note { get => _note; set { if (_note == value) return; _note = value; OnPropertyChanged(); } }
+        public string NoteTip { get => _noteTip; set { if (_noteTip == value) return; _noteTip = value; OnPropertyChanged(); } }
+
+        public sealed class Replacement
+        {
+            public IImage Icon { get; init; }
+            public string Tip { get; init; }
+        }
+
+        private string _warning;
+        /// <summary>Why this slot gives a glitch Pokémon when the game uses it, or null.</summary>
+        public string Warning { get => _warning; set { if (_warning == value) return; _warning = value; OnPropertyChanged(); } }
+
+        private IReadOnlyList<Replacement> _replacements = Array.Empty<Replacement>();
+        public IReadOnlyList<Replacement> Replacements { get => _replacements; set { _replacements = value ?? Array.Empty<Replacement>(); OnPropertyChanged(); } }
+
         private int _pokemonIndex;
         public int PokemonIndex
         {
@@ -181,7 +198,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // ── Encounter rates ───────────────────────────────────────────────
-        private int _walkingRate;  public int WalkingRate  { get => _walkingRate;  set { if (Set(ref _walkingRate,  value) && !_loading) { _current.walkingRate  = (byte)value; SetDirty(); } } }
+        private int _walkingRate;  public int WalkingRate  { get => _walkingRate;  set { if (Set(ref _walkingRate,  value) && !_loading) { _current.walkingRate  = (byte)value; SetDirty(); SetNotes(); } } }
         private int _surfRate;     public int SurfRate     { get => _surfRate;     set { if (Set(ref _surfRate,     value) && !_loading) { _current.surfRate     = (byte)value; SetDirty(); } } }
         private int _oldRodRate;   public int OldRodRate   { get => _oldRodRate;   set { if (Set(ref _oldRodRate,   value) && !_loading) { _current.oldRodRate   = (byte)value; SetDirty(); } } }
         private int _goodRodRate;  public int GoodRodRate  { get => _goodRodRate;  set { if (Set(ref _goodRodRate,  value) && !_loading) { _current.goodRodRate  = (byte)value; SetDirty(); } } }
@@ -189,6 +206,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── Walking encounters (12 slots) ─────────────────────────────────
         public ObservableCollection<WildEncounterRow> WalkingRows { get; } = new();
+        public ObservableCollection<WildTimeRow> WalkingSlots { get; } = new();
 
         // ── Time-specific (day/night, 2 each) ────────────────────────────
         public ObservableCollection<WildEncounterRow> DayRows    { get; } = new();
@@ -310,7 +328,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                                          SapphireRows, EmeraldRows, FireRedRows, LeafGreenRows,
                                          SurfRows, OldRodRows, GoodRodRows, SuperRodRows })
                 foreach (WildEncounterRow row in coll)
-                    row.PropertyChanged += (_, e) => { if (!_loading && e.PropertyName != nameof(WildEncounterRow.PokemonIcon) && e.PropertyName != nameof(WildEncounterRow.Label)) SetDirty(); };
+                    row.PropertyChanged += (_, e) =>
+                    {
+                        if (_loading) return;
+                        if (e.PropertyName == nameof(WildEncounterRow.PokemonIndex) && !WalkingRows.Contains((WildEncounterRow)_)) SetNotes();
+                        if (e.PropertyName != nameof(WildEncounterRow.PokemonIcon) && e.PropertyName != nameof(WildEncounterRow.Label)
+                            && e.PropertyName != nameof(WildEncounterRow.Note) && e.PropertyName != nameof(WildEncounterRow.NoteTip)
+                            && e.PropertyName != nameof(WildEncounterRow.Replacements)) SetDirty();
+                    };
         }
 
         // ── Constructor ───────────────────────────────────────────────────
@@ -323,6 +348,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (string n in pokemonNames) PokemonNames.Add(n);
             BuildEncounterNameList(totalHeaders);
             AppEvents.NamesChanged += OnNamesChanged;   // live-refresh species names from the Text editor
+            EncounterSlotOdds.Saved += OnOddsSaved;
 
             int count = EncounterNames.Count;
             if (encToOpen >= count) encToOpen = 0;
@@ -370,6 +396,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public async Task SaveCommand()
         {
             if (_current == null) return;
+            List<string> problems = new List<string>();
+            WildEncounterChecks.Check(problems, "Walking", WalkingRate, WalkingRows, false);
+            foreach (ObservableCollection<WildEncounterRow> rows in new[] { WalkingRows, SwarmRows, RadarRows, RubyRows, SapphireRows, EmeraldRows, FireRedRows, LeafGreenRows })
+                foreach (WildEncounterRow r in rows) if (r.Warning != null) problems.Add(r.Warning);
+            WildEncounterChecks.Check(problems, "Surf", SurfRate, SurfRows, true);
+            WildEncounterChecks.Check(problems, "Old Rod", OldRodRate, OldRodRows, true);
+            WildEncounterChecks.Check(problems, "Good Rod", GoodRodRate, GoodRodRows, true);
+            WildEncounterChecks.Check(problems, "Super Rod", SuperRodRate, SuperRodRows, true);
+            if (problems.Count > 0 && !await DialogHelper.AskYesNo("These slots can be rolled but look wrong:\n" + WildEncounterChecks.Describe(problems)
+                    + "\n\nSave anyway?", "Wild Pokémon Editor")) return;
             WriteWalkingRowsToFile();
             WriteWaterRowsToFile();
             _current.SaveToFileDefaultDir(_selectedEncounterIndex, showSuccessMessage: false);
@@ -383,10 +419,27 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ── Private helpers ───────────────────────────────────────────────
         private void OnNamesChanged(object sender, System.EventArgs e)
-            => DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, DSPRE.RomInfo.GetPokemonNames());
+        {
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, DSPRE.RomInfo.GetPokemonNames());
+            RefreshNotes();
+        }
+
+        private void OnOddsSaved() => global::Avalonia.Threading.Dispatcher.UIThread.Post(RefreshSlotLabels);
+
+        // The "Replaced by" tips carry species names; rebuilding them is not an edit.
+        private void RefreshNotes()
+        {
+            if (_current == null) return;
+            bool was = _loading;
+            _loading = true;
+            try { SetNotes(); }
+            finally { _loading = was; }
+        }
+
         public void Detach()
         {
             AppEvents.NamesChanged -= OnNamesChanged;
+            EncounterSlotOdds.Saved -= OnOddsSaved;
             _pokemonIcons.Dispose();
         }
 
@@ -462,10 +515,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RefreshSlotLabels()
         {
             for (int i = 0; i < WalkingRows.Count; i++) WalkingRows[i].Label = EncounterSlotOdds.SlotLabel("Walking", i);
-            for (int i = 0; i < SurfRows.Count; i++) SurfRows[i].Label = EncounterSlotOdds.SlotLabel("Surfing", i, $"Surf {i+1}");
-            for (int i = 0; i < OldRodRows.Count; i++) OldRodRows[i].Label = EncounterSlotOdds.SlotLabel("Old Rod", i, $"Old Rod {i+1}");
-            for (int i = 0; i < GoodRodRows.Count; i++) GoodRodRows[i].Label = EncounterSlotOdds.SlotLabel("Good Rod", i, $"Good Rod {i+1}");
-            for (int i = 0; i < SuperRodRows.Count; i++) SuperRodRows[i].Label = EncounterSlotOdds.SlotLabel("Super Rod", i, $"Super Rod {i+1}");
+            for (int i = 0; i < SurfRows.Count; i++) SurfRows[i].Label = EncounterSlotOdds.SlotLabel("Surfing", i);
+            for (int i = 0; i < OldRodRows.Count; i++) OldRodRows[i].Label = EncounterSlotOdds.SlotLabel("Old Rod", i);
+            for (int i = 0; i < GoodRodRows.Count; i++) GoodRodRows[i].Label = EncounterSlotOdds.SlotLabel("Good Rod", i);
+            for (int i = 0; i < SuperRodRows.Count; i++) SuperRodRows[i].Label = EncounterSlotOdds.SlotLabel("Super Rod", i);
         }
 
         private void PopulateRows()
@@ -501,14 +554,75 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             SyncRows(EmeraldRows,   2, i => $"Emerald {i+1}",   i => (int)_current.emeraldPokemon[i],   _ => 0, null, null, false);
             SyncRows(FireRedRows,   2, i => $"FireRed {i+1}",   i => (int)_current.fireRedPokemon[i],   _ => 0, null, null, false);
             SyncRows(LeafGreenRows, 2, i => $"LeafGreen {i+1}", i => (int)_current.leafGreenPokemon[i], _ => 0, null, null, false);
-            SyncRows(SurfRows,     5, i => EncounterSlotOdds.SlotLabel("Surfing", i, $"Surf {i+1}"),     i => _current.surfPokemon[i],     _ => 0, i => _current.surfMinLevels[i],     i => _current.surfMaxLevels[i],     true);
-            SyncRows(OldRodRows,   5, i => EncounterSlotOdds.SlotLabel("Old Rod", i, $"Old Rod {i+1}"),  i => _current.oldRodPokemon[i],   _ => 0, i => _current.oldRodMinLevels[i],   i => _current.oldRodMaxLevels[i],   true);
-            SyncRows(GoodRodRows,  5, i => EncounterSlotOdds.SlotLabel("Good Rod", i, $"Good Rod {i+1}"), i => _current.goodRodPokemon[i],  _ => 0, i => _current.goodRodMinLevels[i],  i => _current.goodRodMaxLevels[i],  true);
-            SyncRows(SuperRodRows, 5, i => EncounterSlotOdds.SlotLabel("Super Rod", i, $"Super Rod {i+1}"),i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
+            SyncRows(SurfRows,     5, i => EncounterSlotOdds.SlotLabel("Surfing", i),   i => _current.surfPokemon[i],     _ => 0, i => _current.surfMinLevels[i],     i => _current.surfMaxLevels[i],     true);
+            SyncRows(OldRodRows,   5, i => EncounterSlotOdds.SlotLabel("Old Rod", i),   i => _current.oldRodPokemon[i],   _ => 0, i => _current.oldRodMinLevels[i],   i => _current.oldRodMaxLevels[i],   true);
+            SyncRows(GoodRodRows,  5, i => EncounterSlotOdds.SlotLabel("Good Rod", i),  i => _current.goodRodPokemon[i],  _ => 0, i => _current.goodRodMinLevels[i],  i => _current.goodRodMaxLevels[i],  true);
+            SyncRows(SuperRodRows, 5, i => EncounterSlotOdds.SlotLabel("Super Rod", i), i => _current.superRodPokemon[i], _ => 0, i => _current.superRodMinLevels[i], i => _current.superRodMaxLevels[i], true);
+            if (WalkingSlots.Count == 0)
+                for (int i = 0; i < 12; i++)
+                    WalkingSlots.Add(new WildTimeRow(WalkingRows[i], i is 2 or 3 ? DayRows[i - 2] : null, i is 2 or 3 ? NightRows[i - 2] : null));
+            SetNotes();
 
             _loading = false;
             HookRowsOnce();   // subscribe row edits → SetDirty (idempotent)
         }
+
+        // Walking slots each method replaces: day/night 2-3, swarm 0-1, Trophy Garden 6-7, Dual Slot 8-9, Radar 4-5 and 10-11.
+        private void SetNotes()
+        {
+            for (int i = 0; i < WalkingRows.Count; i++)
+                (WalkingRows[i].Note, WalkingRows[i].NoteTip) = i switch
+                {
+                    0 or 1 => ("Swarm", "During a swarm here the swarm Pokémon replaces this slot."),
+                    4 or 5 or 10 or 11 => ("Poké Radar", "A shaking patch found with the Poké Radar can give the radar Pokémon here."),
+                    6 or 7 => ("Trophy Garden", "In the Trophy Garden the day's Pokémon replaces this slot."),
+                    8 or 9 => ("Dual Slot", "A GBA game in the second slot puts its Pokémon here, once the National Pokédex is obtained."),
+                    _ => (null, null),
+                };
+            (string Game, ObservableCollection<WildEncounterRow> Rows)[] gba =
+                { ("Ruby", RubyRows), ("Sapphire", SapphireRows), ("Emerald", EmeraldRows), ("FireRed", FireRedRows), ("LeafGreen", LeafGreenRows) };
+            for (int i = 0; i < WalkingRows.Count; i++)
+                WalkingRows[i].Replacements = i switch
+                {
+                    0 or 1 => Reps(Rep(SwarmRows, i, "Swarm")),
+                    4 or 5 => Reps(Rep(RadarRows, i - 4, "Poké Radar")),
+                    10 or 11 => Reps(Rep(RadarRows, i - 8, "Poké Radar")),
+                    8 or 9 => Reps(gba.Select(g => Rep(g.Rows, i - 8, "Dual Slot " + g.Game)).ToArray()),
+                    _ => null,
+                };
+            // The game copies these in without checking for an empty slot, so an empty one makes a glitch Pokémon.
+            bool walks = WalkingRate > 0;
+            foreach (WildEncounterRow r in WalkingRows) r.Warning = null;
+            for (int i = 0; i < SwarmRows.Count; i++)
+                SwarmRows[i].Warning = walks && SwarmRows[i].PokemonIndex <= 0 ? $"Empty: if a swarm comes here, walking slot {i + 1} gives a glitch Pokémon." : null;
+            for (int i = 0; i < DayRows.Count && i + 2 < WalkingRows.Count; i++)
+            {
+                List<string> times = new List<string>();
+                if (walks && DayRows[i].PokemonIndex <= 0) times.Add("day");
+                if (walks && NightRows.Count > i && NightRows[i].PokemonIndex <= 0) times.Add("night");
+                WalkingRows[i + 2].Warning = times.Count > 0 ? $"The {string.Join(" and ", times)} Pokémon is empty: then this slot gives a glitch Pokémon." : null;
+            }
+            int[] radarSlots = { 5, 6, 11, 12 };
+            for (int i = 0; i < RadarRows.Count && i < radarSlots.Length; i++)
+                RadarRows[i].Warning = walks && RadarRows[i].PokemonIndex <= 0 ? $"Empty: in a Poké Radar patch, walking slot {radarSlots[i]} gives a glitch Pokémon." : null;
+            foreach ((string game, ObservableCollection<WildEncounterRow> rows) in gba)
+                for (int i = 0; i < rows.Count; i++)
+                    rows[i].Warning = walks && rows[i].PokemonIndex <= 0 ? $"Empty: with {game} in the second slot, walking slot {i + 9} gives a glitch Pokémon." : null;
+            for (int i = 0; i < SwarmRows.Count; i++) (SwarmRows[i].Note, SwarmRows[i].NoteTip) = ($"Walking {i + 1}", "During a swarm here.");
+            int[] radar = { 5, 6, 11, 12 };
+            for (int i = 0; i < RadarRows.Count && i < radar.Length; i++) (RadarRows[i].Note, RadarRows[i].NoteTip) = ($"Walking {radar[i]}", "In a shaking patch found with the Poké Radar.");
+            foreach (ObservableCollection<WildEncounterRow> game in new[] { RubyRows, SapphireRows, EmeraldRows, FireRedRows, LeafGreenRows })
+                for (int i = 0; i < game.Count; i++) (game[i].Note, game[i].NoteTip) = ($"Walking {i + 9}", "With that game in the second slot, once the National Pokédex is obtained.");
+        }
+
+        private WildEncounterRow.Replacement Rep(ObservableCollection<WildEncounterRow> rows, int i, string what)
+        {
+            if (i < 0 || i >= rows.Count || rows[i].PokemonIndex <= 0) return null;
+            int species = rows[i].PokemonIndex;
+            return new WildEncounterRow.Replacement { Icon = _pokemonIcons.Get(species), Tip = $"{what}: {(species < PokemonNames.Count ? PokemonNames[species] : species.ToString())}" };
+        }
+
+        private static IReadOnlyList<WildEncounterRow.Replacement> Reps(params WildEncounterRow.Replacement[] reps) => reps.Where(r => r != null).ToList();
 
         // ── Encounter-file management ────────────────────────────────────────────────────
         public void AddEncounterFile()

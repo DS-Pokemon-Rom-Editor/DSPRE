@@ -88,6 +88,18 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Undo() => _activeTab?.Undo();
         public void Redo() => _activeTab?.Redo();
 
+        public void RefreshNames()
+        {
+            HoneyTreeVM?.RefreshNames();
+            GreatMarshVM?.RefreshNames();
+            TrophyGardenVM?.RefreshNames();
+            HeadbuttVM?.RefreshNames();
+            BugContestVM?.RefreshNames();
+            SafariZoneVM?.RefreshNames();
+            SwarmsVM?.RefreshNames();
+            RoamersVM?.RefreshNames();
+        }
+
         // Design-time constructor.
         public SpecialEncountersEditorViewModel()
         {

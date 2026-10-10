@@ -106,6 +106,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void Touch() { if (!_suppress) Changed?.Invoke(this, EventArgs.Empty); }
 
+        // Around a rename of the shared species list: a combo that drops its pick must not write it back.
+        internal void BeginNameRefresh() => _suppress = true;
+        internal void EndNameRefresh() { _suppress = false; SetData(_group, keepSelection: true); }
+
         // ── Normal: Morning ─────────────────────────────────────────────────────────
         private int _morningIndex = -1;
         public int MorningIndex { get => _morningIndex; set { if (Set(ref _morningIndex, value)) LoadNormal(_group?.MorningEncounters, value, v => MorningSpecies = v, v => MorningLevel = v, v => MorningForm = v); } }

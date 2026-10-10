@@ -19,6 +19,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             DataContext = vm;
             EditorWindowChrome.Attach(this, vm);
+            System.EventHandler names = (_, _) => VM?.RefreshNames();
+            AppEvents.NamesChanged += names;
+            Closed += (_, _) => AppEvents.NamesChanged -= names;
         }
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
