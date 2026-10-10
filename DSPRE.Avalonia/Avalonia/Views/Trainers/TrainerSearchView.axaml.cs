@@ -17,6 +17,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         public TrainerSearchView(TrainerSearchViewModel vm) : this()
         {
             DataContext = vm;
+            Opened += async (_, _) => await vm.LoadFactsAsync();
         }
 
         private void Search_Click(object sender, RoutedEventArgs e) => VM?.Search();

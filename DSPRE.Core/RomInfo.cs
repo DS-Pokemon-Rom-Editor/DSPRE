@@ -542,15 +542,16 @@ namespace DSPRE
         /// <summary>
         /// Data tables in the intro code: the six emblems the Team Rocket or Galactic grunt intro flies in (eight s32
         /// each), the column order of the black block wipe (eight bytes), and the emblem's palette, tiles, cells and
-        /// animation in the encounter effect archive (null where unconfirmed).
+        /// animation in the encounter effect archive (null where unconfirmed). LeagueParticles: the League intro's fire and bar
+        /// particle files, or null where the game has none.
         /// </summary>
-        public sealed record VsIntroMotionSites(int FlightOverlay, int FlightTable, int BlockOverlay, int BlockOrder, int[] EmblemMembers);
+        public sealed record VsIntroMotionSites(int FlightOverlay, int FlightTable, int BlockOverlay, int BlockOrder, int[] EmblemMembers, int[] LeagueParticles);
 
         private static readonly Dictionary<string, VsIntroMotionSites> VsIntroMotionTable = new()
         {
-            ["IPKE"] = new(117, 0xAD4, 1, 0x21080, new[] { 3, 156, 158, 157 }),
-            ["CPUE"] = new(5, 0x29114, 5, 0x28C08, new[] { 0, 2, 4, 3 }),
-            ["ADAE"] = new(5, 0x20558, 5, 0x1FF7C, new[] { 0, 2, 4, 3 }),
+            ["IPKE"] = new(117, 0xAD4, 1, 0x21080, new[] { 3, 156, 158, 157 }, new[] { 151, 152 }),
+            ["CPUE"] = new(5, 0x29114, 5, 0x28C08, new[] { 0, 2, 4, 3 }, new[] { 107, 108 }),
+            ["ADAE"] = new(5, 0x20558, 5, 0x1FF7C, new[] { 0, 2, 4, 3 }, null),
         };
 
         /// <summary>
@@ -659,6 +660,15 @@ namespace DSPRE
         public static int locationNamesTextNumber { get; private set; }
         public static int trainerNameLenOffset { get; private set; }
         public static int trainerNameMaxLen => SetTrainerNameMaxLen();
+        /// <summary>The longest trainer name the editors accept.</summary>
+        public static int trainerNameMaxChars
+        {
+            get
+            {
+                int plain = trainerNameMaxLen;
+                return plain > TrainerFile.defaultNameLen ? plain : TrainerFile.CompressedNameLen(plain + 1);
+            }
+        }
         public static int trainerFunnyScriptNumber { get; private set; }
         /// <summary>US-version text archive numbers only; not yet confirmed for other localizations.</summary>
         public static int battleTowerTrainerNamesMessageNumber { get; private set; }
@@ -868,6 +878,7 @@ namespace DSPRE
             OWtablePath = null;
             OWTableOffset = 0;
             OverlayUtils.ForgetOverlayTable();
+            DVCalculator.TrainerClassGender.Invalidate();
 
             string path = Path.GetFullPath(romFolderName);
 

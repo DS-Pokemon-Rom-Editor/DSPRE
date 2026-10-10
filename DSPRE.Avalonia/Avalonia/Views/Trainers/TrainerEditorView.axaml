@@ -25,16 +25,24 @@
             <Button Content="Add trainer" controls:Icon.Key="addIcon" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
             <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
             <Button Content="Search…" controls:Icon.Key="lens"        Click="Search_Click"/>
-            <Button Content="Reorder party…" Click="Reorder_Click"/>
-            <Button Content="DV calc…"       Click="DVCalc_Click"/>
-            <Button Content="Battle messages" Click="BattleMessages_Click"/>
-            <Button Content="Trainer classes" Click="TrainerClasses_Click" ToolTip.Tip="Jump to this trainer's class on the Classes tab"/>
-            <Button Content="Export trainer…" controls:Icon.Key="export" Click="ExportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer (properties + party) to a .trf file"/>
-            <Button Content="Import trainer…" controls:Icon.Key="import" Click="ImportTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Load a .trf file into this trainer slot"/>
-            <Button Content="Export properties…" controls:Icon.Key="export" Click="ExportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save just this trainer's raw properties to a .trp file"/>
-            <Button Content="Import properties…" controls:Icon.Key="import" Click="ImportProperties_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's raw properties from a .trp file"/>
-            <Button Content="Export party…" controls:Icon.Key="export" Click="ExportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
-            <Button Content="Import party…" controls:Icon.Key="import" Click="ImportParty_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
+            <Button controls:EditorToolbar.Slot="Import" Content="Import" controls:Icon.Key="import" IsVisible="{Binding !IsHgeActive}">
+              <Button.Flyout>
+                <MenuFlyout>
+                  <MenuItem Header="Trainer…" Click="ImportTrainer_Click" ToolTip.Tip="Load a .trf file into this trainer slot"/>
+                  <MenuItem Header="Properties…" Click="ImportProperties_Click" ToolTip.Tip="Replace this trainer's properties from a .trp file"/>
+                  <MenuItem Header="Party…" Click="ImportParty_Click" ToolTip.Tip="Replace this trainer's party from a .pdat file"/>
+                </MenuFlyout>
+              </Button.Flyout>
+            </Button>
+            <Button controls:EditorToolbar.Slot="Export" Content="Export" controls:Icon.Key="export" IsVisible="{Binding !IsHgeActive}">
+              <Button.Flyout>
+                <MenuFlyout>
+                  <MenuItem Header="Trainer…" Click="ExportTrainer_Click" ToolTip.Tip="Save this trainer (properties and party) to a .trf file"/>
+                  <MenuItem Header="Properties…" Click="ExportProperties_Click" ToolTip.Tip="Save this trainer's properties to a .trp file"/>
+                  <MenuItem Header="Party…" Click="ExportParty_Click" ToolTip.Tip="Save this trainer's party to a .pdat file"/>
+                </MenuFlyout>
+              </Button.Flyout>
+            </Button>
         </controls:EditorToolbar>
         <Border DockPanel.Dock="Top" Padding="8,3" Background="#2D6A4F" IsVisible="{Binding ShowHgEngineBanner}">
           <TextBlock Text="{Binding HgEngineBanner}" Foreground="White" FontSize="12"/>
@@ -47,12 +55,16 @@
         <Panel>
         <Grid ColumnDefinitions="240,*">
       <DockPanel Grid.Column="0" Margin="4">
-        <TextBox DockPanel.Dock="Top" Text="{Binding TrainerList.Filter}" PlaceholderText="Search trainers" Margin="0,0,0,4"
-                 ToolTip.Tip="Name, class or number. Close spellings count when nothing matches exactly."/>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+          <TextBox Text="{Binding TrainerList.Filter}" PlaceholderText="Search trainers"
+                   ToolTip.Tip="Name, class or number. Close spellings count when nothing matches exactly."/>
+          <CheckBox Grid.Column="1" Content="Fuzzy" IsChecked="{Binding TrainerList.Fuzzy}" Margin="6,0,0,0" VerticalAlignment="Center"
+                    ToolTip.Tip="Always include close spellings"/>
+        </Grid>
         <ListBox x:Name="TrainerList" ItemsSource="{Binding TrainerList.Shown}" SelectedIndex="{Binding TrainerList.ShownIndex}"/>
       </DockPanel>
 
-      <ScrollViewer Grid.Column="1" Padding="8,8,8,24">
+      <ScrollViewer x:Name="DetailScroll" Grid.Column="1" Padding="8,8,8,24">
         <StackPanel Spacing="8">
 
           <!-- Properties -->
@@ -60,14 +72,25 @@
             <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto">
               <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center" Margin="0,0,6,2"/>
               <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding TrainerName}" MaxLength="{Binding TrainerNameMaxLength}" Margin="0,0,8,2"/>
-              <Border Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" Width="96" Height="96"
-                      Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-                <Image Source="{Binding ClassImage}" Stretch="Uniform"/>
-              </Border>
+              <StackPanel Grid.Row="0" Grid.Column="2" Grid.RowSpan="3" Spacing="4">
+                <Border Width="96" Height="96"
+                        Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                  <Image Source="{Binding ClassImage}" Stretch="Uniform"/>
+                </Border>
+                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" IsVisible="{Binding HasClassSprite}">
+                  <NumericUpDown Width="70" Minimum="0" Maximum="{Binding ClassFrameMax}" Increment="1" Value="{Binding ClassFrame}"
+                                 ToolTip.Tip="Sprite frame shown here; not saved"/>
+                  <Button controls:Icon.Key="{Binding PlayIcon}" Click="PlaySprite_Click" IsEnabled="{Binding CanPlay}" ToolTip.Tip="Play the sprite's animation"/>
+                </StackPanel>
+              </StackPanel>
 
               <TextBlock Grid.Row="1" Grid.Column="0" Text="Class" VerticalAlignment="Center" Margin="0,0,6,2"/>
-              <controls:FusionAutoCompleteBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,8,2"
-                        ItemsSource="{Binding TrainerClassItems}" SelectedIndex="{Binding TrainerClassIndex}"/>
+              <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,8,2">
+                <controls:FusionAutoCompleteBox HorizontalAlignment="Stretch" ItemsSource="{Binding TrainerClassItems}" SelectedIndex="{Binding TrainerClassIndex}"/>
+                <TextBlock Grid.Column="1" Text="{Binding ClassGender}" VerticalAlignment="Center" Margin="6,0,0,0"
+                           Foreground="{DynamicResource Editor.Subtle}" ToolTip.Tip="Class gender, used for the party's natures"/>
+                <Button Grid.Column="2" controls:Icon.Key="goto" Margin="4,0,0,0" Click="TrainerClasses_Click" ToolTip.Tip="Open this class on the Classes tab"/>
+              </Grid>
 
               <WrapPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" ItemSpacing="12" LineSpacing="4" Margin="0,4,8,0">
                 <CheckBox Content="Double battle" IsChecked="{Binding DoubleBattle}" IsVisible="{Binding !IsHgeActive}"/>
@@ -83,9 +106,9 @@
                   <TextBlock Text="Party size" VerticalAlignment="Center"/>
                   <NumericUpDown Width="90" Minimum="{Binding PartyCountMinimum}" Maximum="6" Increment="1" Value="{Binding PartyCount}"/>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasClassSprite}">
-                  <TextBlock Text="Frame" VerticalAlignment="Center"/>
-                  <NumericUpDown Width="80" Minimum="0" Maximum="{Binding ClassFrameMax}" Increment="1" Value="{Binding ClassFrame}"/>
+                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPrize}" ToolTip.Tip="{Binding PrizeTip}">
+                  <TextBlock Text="Prize" VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding PrizeText}" VerticalAlignment="Center" FontWeight="SemiBold"/>
                 </StackPanel>
               </WrapPanel>
             </Grid>
@@ -106,7 +129,7 @@
           </GroupBox>
 
           <!-- Held items -->
-          <GroupBox Header="Trainer-held items">
+          <GroupBox Header="Trainer bag items">
             <ItemsControl ItemsSource="{Binding TrainerItems}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel ItemSpacing="4" LineSpacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
@@ -122,14 +145,18 @@
                (repopulated in code, see TrainerEditorViewModel.SetupAsync); the same static, generic
                labels as before otherwise. -->
           <GroupBox Header="AI flags">
+            <DockPanel>
+            <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="AI notes" controls:Icon.Key="OpenLink" Click="AiNotes_Click"
+                    IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Lhea's notes on how the Gen 4 trainer AI picks moves"/>
             <ItemsControl ItemsSource="{Binding AiFlags}">
               <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel ItemSpacing="4" LineSpacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:AiFlagViewModel">
-                  <CheckBox Content="{Binding Label}" IsChecked="{Binding Checked}" Width="220" Margin="0,0,4,0"/>
+                  <CheckBox Content="{Binding Label}" IsChecked="{Binding Checked}" Width="220" Margin="0,0,4,0" ToolTip.Tip="{Binding Tip}"/>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </DockPanel>
           </GroupBox>
 
           <!-- Party -->
@@ -143,10 +170,16 @@
                   <Border IsVisible="{Binding IsVisible}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                           CornerRadius="3" Padding="6" Margin="0,0,0,6" Background="{DynamicResource Editor.PanelBg}">
                     <Grid ColumnDefinitions="64,*,*" RowDefinitions="Auto,Auto,Auto,Auto">
-                      <Border Grid.Column="0" Grid.RowSpan="3" Width="56" Height="56" VerticalAlignment="Top"
-                              Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-                        <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
-                      </Border>
+                      <StackPanel Grid.Column="0" Grid.RowSpan="3" Spacing="4" VerticalAlignment="Top">
+                        <Border Width="56" Height="56"
+                                Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                          <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
+                          <Button controls:Icon.Key="arrowup" Padding="4,2" Click="MonUp_Click" ToolTip.Tip="{Binding MoveUpTip}"/>
+                          <Button controls:Icon.Key="arrowdown" Padding="4,2" Click="MonDown_Click" ToolTip.Tip="{Binding MoveDownTip}"/>
+                        </StackPanel>
+                      </StackPanel>
 
                       <!-- Row 0: species + level -->
                       <StackPanel Grid.Row="0" Grid.Column="1" Margin="6,0,4,2">
@@ -160,24 +193,39 @@
 
                       <!-- Row 1: form/gender/ability/iv/ball -->
                       <WrapPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="6,2,0,2">
-                        <StackPanel Width="110" Margin="0,0,6,0" IsVisible="{Binding FormVisible}">
+                        <StackPanel Width="140" Margin="0,0,6,0" IsVisible="{Binding ShowFormNames}">
+                          <TextBlock Text="Form" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding FormNames}" SelectedIndex="{Binding FormIndex}" IsEnabled="{Binding HasForms}"/>
+                        </StackPanel>
+                        <StackPanel Width="110" Margin="0,0,6,0" IsVisible="{Binding ShowFormNumber}">
                           <TextBlock Text="Form" FontSize="10"/>
                           <NumericUpDown Minimum="0" Maximum="{Binding FormMaximum}" Increment="1" Value="{Binding FormId}"/>
                         </StackPanel>
-                        <StackPanel Width="120" Margin="0,0,6,0" IsVisible="{Binding GenderVisible}">
+                        <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding GenderVisible}">
                           <TextBlock Text="Gender" FontSize="10"/>
-                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GenderItems}" SelectedIndex="{Binding GenderIndex}"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GenderItems}" SelectedIndex="{Binding GenderIndex}" IsEnabled="{Binding GenderEnabled}"/>
                         </StackPanel>
-                        <StackPanel Width="150" Margin="0,0,6,0">
+                        <StackPanel Width="190" Margin="0,0,6,0">
                           <TextBlock Text="Ability" FontSize="10"/>
                           <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AbilityItems}" SelectedIndex="{Binding AbilityIndex}" IsEnabled="{Binding AbilityEnabled}"/>
                         </StackPanel>
-                        <CheckBox Content="Shiny" VerticalAlignment="Bottom" Margin="0,0,6,4"
-                                  IsVisible="{Binding ShinyVisible}" IsEnabled="{Binding ShinyEnabled}" IsChecked="{Binding ForceShiny}"
-                                  ToolTip.Tip="{Binding ShinyNote}" ToolTip.ShowOnDisabled="True"/>
-                        <StackPanel Width="90" Margin="0,0,6,0">
-                          <TextBlock Text="IV (diff.)" FontSize="10"/>
+                        <StackPanel Width="80" Margin="0,0,6,0">
+                          <TextBlock Text="DV" FontSize="10" ToolTip.Tip="Sets every IV, and with the trainer and species, the nature"/>
                           <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding Difficulty}"/>
+                        </StackPanel>
+                        <StackPanel Width="40" Margin="0,0,6,0">
+                          <TextBlock Text="IVs" FontSize="10"/>
+                          <TextBlock Text="{Binding IvText}" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <StackPanel Width="250" Margin="0,0,6,0" IsVisible="{Binding !HgeNatureEnabled}">
+                          <TextBlock Text="Nature" FontSize="10"/>
+                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}" SelectedItem="{Binding SelectedNatureChoice}"
+                                    PlaceholderText="{Binding NatureText}" MaxDropDownHeight="360" ToolTip.Tip="Picking one sets the highest DV that gives it"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,6,0" IsVisible="{Binding ShinyVisible}">
+                          <TextBlock Text=" " FontSize="10"/>
+                          <CheckBox Content="Shiny" IsEnabled="{Binding ShinyEnabled}" IsChecked="{Binding ForceShiny}"
+                                    ToolTip.Tip="{Binding ShinyNote}" ToolTip.ShowOnDisabled="True"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding BallEnabled}">
                           <StackPanel Width="150">
@@ -210,29 +258,44 @@
                         </StackPanel>
                       </WrapPanel>
 
-                      <!-- Row 2: held item + moves -->
-                      <WrapPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="6,2,0,0">
-                        <StackPanel Width="180" Margin="0,0,6,0" IsVisible="{Binding ItemEnabled}">
-                          <TextBlock Text="Held item" FontSize="10"/>
-                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}"/>
-                        </StackPanel>
-                        <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
+                      <!-- Row 2: held item, then the moves on their own row -->
+                      <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Margin="6,2,0,0" Spacing="2">
+                      <StackPanel Width="220" HorizontalAlignment="Left" IsVisible="{Binding ItemEnabled}">
+                        <TextBlock Text="Held item" FontSize="10"/>
+                        <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" HorizontalAlignment="Stretch" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}"/>
+                      </StackPanel>
+                      <StackPanel IsVisible="{Binding ShowDefaultMoves}">
+                        <TextBlock Text="Level-up moves" FontSize="10" ToolTip.Tip="The last four moves it learns by this level"/>
+                        <ItemsControl ItemsSource="{Binding DefaultMoves}">
+                          <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel ItemSpacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                              <Border Width="150" Padding="6,4" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource Editor.Border}">
+                                <TextBlock Text="{Binding}" Foreground="{DynamicResource Editor.Subtle}"/>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                      <WrapPanel>
+                        <StackPanel Width="140" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
                           <TextBlock Text="Move 1" FontSize="10"/>
                           <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move1}"/>
                         </StackPanel>
-                        <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
+                        <StackPanel Width="140" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
                           <TextBlock Text="Move 2" FontSize="10"/>
                           <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move2}"/>
                         </StackPanel>
-                        <StackPanel Width="150" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
+                        <StackPanel Width="140" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
                           <TextBlock Text="Move 3" FontSize="10"/>
                           <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move3}"/>
                         </StackPanel>
-                        <StackPanel Width="150" IsVisible="{Binding MovesEnabled}">
+                        <StackPanel Width="140" IsVisible="{Binding MovesEnabled}">
                           <TextBlock Text="Move 4" FontSize="10"/>
                           <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}"/>
                         </StackPanel>
                       </WrapPanel>
+                      </StackPanel>
 
                       <Expander Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Header="Advanced"
                                 IsVisible="{Binding HgeAdvancedVisible}" Margin="0,4,0,0" IsExpanded="False">
@@ -329,6 +392,45 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+          </GroupBox>
+
+          <GroupBox Header="Battle messages" IsVisible="{Binding !IsHgeActive}">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="Edit" controls:Icon.Key="pencil" Click="BattleMessages_Click"
+                      ToolTip.Tip="Open this trainer in the Battle Message editor"/>
+              <ItemsControl ItemsSource="{Binding BattleLines}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:TrainerEditorViewModel+BattleLine">
+                    <Grid ColumnDefinitions="230,*" Margin="0,2">
+                      <TextBlock Text="{Binding When}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap" Margin="8,0"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </DockPanel>
+          </GroupBox>
+
+          <GroupBox Header="Used in" IsVisible="{Binding !IsHgeActive}">
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8">
+                <Button Content="Find uses" controls:Icon.Key="lens" Click="FindUses_Click"
+                        ToolTip.Tip="Scripts, events, battle messages, rematches and phone entries that use this trainer"/>
+                <TextBlock Text="{Binding UsesStatus}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+              <ItemsControl ItemsSource="{Binding Uses}" Margin="0,6,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:TrainerEditorViewModel+TrainerUse">
+                    <Grid ColumnDefinitions="140,220,*" Margin="0,2" Background="Transparent" DoubleTapped="Use_DoubleTapped"
+                          ToolTip.Tip="Double-click a script or event to open it">
+                      <TextBlock Text="{Binding Kind}" Foreground="{DynamicResource Editor.Subtle}"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Location}" TextWrapping="Wrap"/>
+                      <TextBlock Grid.Column="2" Text="{Binding Places}" TextWrapping="Wrap" Margin="8,0,0,0"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </DockPanel>
           </GroupBox>
 
           <!-- Fixed spacer: guarantees scroll room past the last party card. -->

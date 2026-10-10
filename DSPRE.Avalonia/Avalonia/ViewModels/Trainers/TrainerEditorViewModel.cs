@@ -71,6 +71,163 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public ObservableCollection<TrainerPartyMonViewModel> Party { get; } = new ObservableCollection<TrainerPartyMonViewModel>();
         public ObservableCollection<AiFlagViewModel> AiFlags { get; } = new ObservableCollection<AiFlagViewModel>();
 
+        /// <summary>The trainer's battle messages, read-only here; the Battle Message editor changes them.</summary>
+        public sealed record BattleLine(string When, string Text);
+        public ObservableCollection<BattleLine> BattleLines { get; } = new ObservableCollection<BattleLine>();
+        public bool HasBattleLines => BattleLines.Count > 0;
+
+        private void LoadBattleLines(int trainer)
+        {
+            BattleLines.Clear();
+            if (IsHgeActive) { OnPropertyChanged(nameof(HasBattleLines)); return; }
+            try
+            {
+                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerTextTable, DirNames.trainerTextOffset });
+                TextArchive text = new TextArchive(trainerMessageTextNumber);
+                foreach (TrainerMessageTable.Entry e in TrainerMessageTable.Read().Where(e => e.TrainerId == trainer).OrderBy(e => e.TriggerId))
+                    BattleLines.Add(new BattleLine(BattleMessageEditorViewModel.TriggerDescription(e.TriggerId),
+                        e.MessageId >= 0 && e.MessageId < text.messages.Count ? Shown(text.messages[e.MessageId]) : ""));
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is ArgumentException)
+            {
+                AppLogger.Warn($"Battle messages of trainer {trainer}: {ex.Message}");
+            }
+            OnPropertyChanged(nameof(HasBattleLines));
+        }
+
+        // Line and page breaks are stored as escapes; here the text reads on as one paragraph.
+        private static string Shown(string message) => string.Join(" ", message.Split(new[] { "\\n", "\\r", "\\f", "\n" }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()));
+
+        // ── Where the trainer is used ───────────────────────────────────────────────
+        /// <summary>One use of the trainer, and for scripts and events the places whose headers load that file.</summary>
+        public sealed record TrainerUse(string Kind, string Location, string Places, int SourceId);
+        public ObservableCollection<TrainerUse> Uses { get; } = new ObservableCollection<TrainerUse>();
+        private string _usesStatus = "";
+        public string UsesStatus { get => _usesStatus; private set => Set(ref _usesStatus, value); }
+
+        public async Task FindUsesAsync()
+        {
+            int id = _loadedTrainerId;
+            if (id < 0 || IsHgeActive) return;
+            Uses.Clear();
+            UsesStatus = "Looking…";
+            (List<TrainerReference> refs, string error) = await Task.Run<(List<TrainerReference>, string)>(() =>
+                TrainerReferenceScanner.TryFindCurrentProjectReferences(id, out List<TrainerReference> found, out string err) ? (found, null) : (null, err));
+            if (id != _loadedTrainerId) return;
+            if (refs == null) { UsesStatus = error ?? "The scan failed."; return; }
+            IReadOnlyList<string> labels = HeaderLabels.Friendly();
+            string Places(HeaderLinks.Kind kind, int file) => file < 0 ? "" :
+                string.Join(", ", HeaderLinks.HeadersLinking(kind, file).Select(h => h.Header < labels.Count ? labels[h.Header] : h.Header.ToString()));
+            foreach (TrainerReference r in refs)
+            {
+                string places = r.Kind == "Script" ? Places(HeaderLinks.Kind.Script, r.SourceId)
+                    : r.Kind == "Event" ? Places(HeaderLinks.Kind.Event, r.SourceId) : "";
+                Uses.Add(new TrainerUse(r.Kind, r.Location, places, r.SourceId));
+            }
+            UsesStatus = Uses.Count == 0 ? "Not used anywhere." : "";
+        }
+
+        /// <summary>Opens the script or event file a use is in.</summary>
+        public void OpenUse(TrainerUse use)
+        {
+            if (use == null || use.SourceId < 0) return;
+            if (use.Kind == "Script") AvaloniaEditorLauncher.OpenScriptEditor(use.SourceId);
+            else if (use.Kind == "Event") AvaloniaEditorLauncher.OpenEventEditor(use.SourceId);
+        }
+
+        private void OnTextSaved(object sender, int archive)
+        {
+            if (archive == trainerMessageTextNumber && _loadedTrainerId >= 0) LoadBattleLines(_loadedTrainerId);
+        }
+
+        // ── Prize money ─────────────────────────────────────────────────────────────
+        private readonly Dictionary<int, int?> _prizeMul = new Dictionary<int, int?>();
+
+        private int? PrizeMultiplier(int trainerClass)
+        {
+            if (trainerClass < 0) return null;
+            if (!_prizeMul.TryGetValue(trainerClass, out int? mul))
+                _prizeMul[trainerClass] = mul = TrainerPrize.TryGetMultiplier(trainerClass, out int m) ? m : null;
+            return mul;
+        }
+
+        private TrainerPartyMonViewModel LastPartyMon => Party.Take((int)PartyCount).LastOrDefault();
+
+        /// <summary>What beating this trainer pays, or null when the class multiplier can't be read.</summary>
+        public string PrizeText => LastPartyMon is TrainerPartyMonViewModel last && PrizeMultiplier(_trainerClassIndex) is int mul
+            ? TrainerPrize.Amount((int)last.Level, mul, DoubleBattle).ToString("N0") : null;
+        public bool HasPrize => PrizeText != null;
+        public string PrizeTip => PrizeMultiplier(_trainerClassIndex) is int mul
+            ? $"Last Pokémon's level × 4 × the class multiplier ({mul}){(DoubleBattle ? " × 2 for a double battle" : "")}. Amulet Coin doubles it."
+            : null;
+        private void RaisePrize() { OnPropertyChanged(nameof(PrizeText)); OnPropertyChanged(nameof(HasPrize)); OnPropertyChanged(nameof(PrizeTip)); }
+
+        // ── What each party member's personality gives ──────────────────────────────
+        // Edits come in bursts (a load sets every field), so the recount runs once after them.
+        private bool _derivedQueued;
+        private void QueueDerived()
+        {
+            if (_derivedQueued) return;
+            _derivedQueued = true;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { _derivedQueued = false; RefreshDerived(); },
+                global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        private void RefreshDerived()
+        {
+            if (_trainer == null && !IsHgeActive) return;
+            (ushort tid, byte cls, List<(int pokeId, int level, int gender, int ability, int dv)> input) = GetDVCalcInput();
+            List<DVCalculator.PartyMon> mons = input.Select(p => new DVCalculator.PartyMon(p.pokeId, p.level, p.gender, p.ability, p.dv)).ToList();
+            if (mons.Count == 0 || mons.Any(m => m.Species <= 0)) return;
+            bool male;
+            try { male = DVCalculator.TrainerClassGender.GetTrainerClassGender(cls); }
+            catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { male = true; }
+            try
+            {
+                uint[] pids = DVCalculator.PartyPids(tid, cls, male, mons);
+                for (int i = 0; i < mons.Count && i < Party.Count; i++)
+                {
+                    // The default flags' result for this slot, the slots before it as they are.
+                    List<DVCalculator.PartyMon> plain = new List<DVCalculator.PartyMon>(mons);
+                    plain[i] = plain[i] with { Gender = 0, Ability = 0 };
+                    uint defaultPid = DVCalculator.PartyPids(tid, cls, male, plain)[i];
+                    List<TrainerPartyMonViewModel.NatureChoice> choices = DVCalculator.SlotOptions(tid, cls, male, mons, i, highestOnly: true)
+                        .OrderBy(t => t.Nature).Select(t => new TrainerPartyMonViewModel.NatureChoice(t.Nature, t.DV)).ToList();
+                    Party[i].ShowPersonality(pids[i], defaultPid, choices, _chooseMoves ? null : DefaultMoveNames(Party[i]));
+                }
+            }
+            catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException)
+            {
+                AppLogger.Warn("Trainer party natures: " + e.Message);
+            }
+        }
+
+        private List<string> DefaultMoveNames(TrainerPartyMonViewModel mon)
+        {
+            ushort[] moves = LevelUpMoves(mon);
+            return moves == null ? null : moves.Where(m => m > 0).Select(m => m < MoveNames.Count ? MoveNames[m] : m.ToString()).ToList();
+        }
+
+        private ushort[] LevelUpMoves(TrainerPartyMonViewModel mon)
+        {
+            try
+            {
+                return IsHgeActive ? HgeLevelUpMoves(mon.DataSpeciesId, (int)mon.Level)
+                    : new LearnsetData(mon.SpeciesIndex).GetLearnsetAtLevel((int)mon.Level);
+            }
+            catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { return null; }
+        }
+
+        /// <summary>Swaps a party member with the one above or below it.</summary>
+        public void MoveMon(TrainerPartyMonViewModel mon, int delta)
+        {
+            int from = Party.IndexOf(mon), to = from + delta, count = (int)_partyCount;
+            if (from < 0 || to < 0 || to >= count) return;
+            List<int> order = Enumerable.Range(0, count).ToList();
+            (order[from], order[to]) = (order[to], order[from]);
+            ReorderParty(order);
+        }
+
         // Held items (4 combos)
         public ObservableCollection<TrainerItemSlotViewModel> TrainerItems { get; } = new ObservableCollection<TrainerItemSlotViewModel>();
 
@@ -181,6 +338,24 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             "Prioritize Extremes", "Baton Pass", "Tag Strategy", "Check HP", "Weather", "Harassment"
         };
 
+        // Each flag's intent, from Lhea's notes on the Gen 4 trainer AI.
+        public const string AiNotesUrl = "https://gist.github.com/lhearachel/ff61af1f58c84c96592b0b8184dba096";
+        private static readonly string[] AiFlagTips =
+        {
+            "Discourage moves which would result in a (literally or functionally) wasted turn or which would immediately benefit the opponent.",
+            "Prioritize raw damage output over all other outcomes.",
+            "Provide additional logic to encourage/discourage certain move effects in particular circumstances.",
+            "On the first turn of the battle (for the entire battle, not the battler), prioritize setup moves.",
+            "Prioritize \"Risky\" attacking or status moves.",
+            "Prioritize moves with variable power, flat damage, high base power, or zero power.",
+            "Prioritize setting up when at higher HP thresholds and passing stat stage bonuses to party members.",
+            "Encourage moves which would benefit our partner and discourage moves which would harm them.",
+            "Discourage certain move effects at particular HP thresholds for both the attacker and target.",
+            "Set up weather effects on the first turn of battle if they are not already present.",
+            "Incentivize usage of moves which harass or disrupt the opponent's strategy.",
+        };
+        private static string AiFlagTip(int i) => i >= 0 && i < AiFlagTips.Length ? AiFlagTips[i] : null;
+
         private string _statusText = "Not loaded";
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
@@ -245,7 +420,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string _trainerName = "";
         public string TrainerName { get => _trainerName; set { if (Set(ref _trainerName, value) && !_suppress) SetDirty(); } }
         public int TrainerNameMaxLength { get; } = SafeNameMax();
-        private static int SafeNameMax() { try { return trainerNameMaxLen; } catch { return TrainerFile.defaultNameLen; } }
+        private static int SafeNameMax() { try { return trainerNameMaxChars; } catch { return TrainerFile.CompressedNameLen(TrainerFile.defaultNameLen + 1); } }
 
         private int _trainerClassIndex = -1;
         public int TrainerClassIndex
@@ -259,7 +434,18 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(TrainerClassIndex)));
                     return;
                 }
-                if (Set(ref _trainerClassIndex, value)) { if (!_suppress) SetDirty(); UpdateTrainerSprite(); }
+                if (Set(ref _trainerClassIndex, value)) { if (!_suppress) SetDirty(); UpdateTrainerSprite(); OnPropertyChanged(nameof(ClassGender)); }
+            }
+        }
+
+        /// <summary>The class's gender, which goes into every party Pokémon's personality.</summary>
+        public string ClassGender
+        {
+            get
+            {
+                if (_trainerClassIndex < 0 || IsHgeActive) return "";
+                try { return DVCalculator.TrainerClassGender.GetTrainerClassGender(_trainerClassIndex) ? "Male" : "Female"; }
+                catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { return ""; }
             }
         }
 
@@ -297,6 +483,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             set
             {
                 if (!Set(ref _chooseMoves, value)) return;
+                QueueDerived();
                 if (value && !_suppress) FillLevelUpMoves();
                 ApplyMovesEnabled();
                 if (!_suppress) SetDirty();
@@ -362,7 +549,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (e.PropertyName == nameof(HasUnsavedChanges)) OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         // RecordUndoSnapshot runs BEFORE the _dirty short-circuit so EVERY edit is captured (not just the first).
-        private void SetDirty() { if (_suppress) return; RecordUndoSnapshot(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        private void SetDirty() { RaisePrize(); QueueDerived(); if (_suppress) return; RecordUndoSnapshot(); if (_dirty) return; _dirty = true; OnPropertyChanged(nameof(HasUnsavedChanges)); }
         private void SetClean() { if (!_dirty) return; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
@@ -423,7 +610,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!Design.IsDesignMode) return;
             TrainerNames.Add("DESIGN TRAINER");
-            for (int i = 0; i < AiFlagLabels.Length; i++) AiFlags.Add(new AiFlagViewModel(AiFlagLabels[i]));
+            for (int i = 0; i < AiFlagLabels.Length; i++) AiFlags.Add(new AiFlagViewModel(AiFlagLabels[i]) { Tip = AiFlagTip(i) });
         }
 
         public TrainerEditorViewModel(bool _) { }
@@ -460,6 +647,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged;
             AppEvents.ClassIntrosSaved -= OnClassIntrosSaved;
             Data.TrainerCapsuleCatalog.Changed -= ShowCapsuleNames;
+            TextArchive.Saved -= OnTextSaved;
+            StopPlaying();
         }
 
         private void OnClassIntrosSaved(object sender, EventArgs e) => Classes?.RefreshIntroSummary();
@@ -511,6 +700,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 string[] classNames = GetTrainerClassNames();
                 foreach (string n in TrainerListEntries(classNames)) TrainerNames.Add(n);
                 AppEvents.NamesChanged += OnNamesChanged;   // live-refresh names from the Text editor
+                TextArchive.Saved += OnTextSaved;
                 AppEvents.RomPatchStateChanged += OnRomPatchStateChanged;
                 AppEvents.ClassIntrosSaved += OnClassIntrosSaved;
 
@@ -545,7 +735,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 {
                     for (int i = 0; i < AiFlagLabels.Length; i++)
                     {
-                        AiFlagViewModel f = new AiFlagViewModel(AiFlagLabels[i]);
+                        AiFlagViewModel f = new AiFlagViewModel(AiFlagLabels[i]) { Tip = AiFlagTip(i) };
                         f.Changed += (s, e) => SetDirty();
                         AiFlags.Add(f);
                     }
@@ -645,6 +835,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 StatusText = _statusAfterLoad ?? $"Trainer {index} loaded.";
                 _statusAfterLoad = null;
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
+                LoadBattleLines(index);
+                RaisePrize();
+                QueueDerived();
+                Uses.Clear();
+                UsesStatus = "";
             }
             catch (Exception ex)
             {
@@ -956,15 +1151,55 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // ── Sprite ──────────────────────────────────────────────────────────────────
         private void UpdateTrainerSprite()
         {
+            StopPlaying();
             if (_trainerClassIndex < 0) { ClassImage = null; return; }
             int maxFrame = _sprite.Load(_trainerClassIndex);
             ClassFrameMax = maxFrame;
             OnPropertyChanged(nameof(HasClassSprite));
+            OnPropertyChanged(nameof(CanPlay));
             _classFrame = _sprite.DefaultFrame;
             OnPropertyChanged(nameof(ClassFrame));
             RenderSprite();
         }
         private void RenderSprite() => ClassImage = _sprite.Render((int)_classFrame, 96, 96);
+
+        // Plays the class sprite's frames at their own lengths, as the Classes tab does.
+        private global::Avalonia.Threading.DispatcherTimer _animTimer;
+        private int _playCountdown;
+        private bool _isPlaying;
+        public bool IsPlaying { get => _isPlaying; private set { if (Set(ref _isPlaying, value)) OnPropertyChanged(nameof(PlayIcon)); } }
+        public string PlayIcon => _isPlaying ? "stop" : "play";
+        public bool CanPlay => _classFrameMax > 0;
+
+        public void TogglePlay()
+        {
+            if (_isPlaying) { StopPlaying(); return; }
+            if (!CanPlay) return;
+            _animTimer ??= new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000.0 / 60) };
+            _animTimer.Tick -= AnimTick;
+            _animTimer.Tick += AnimTick;
+            _classFrame = 0; OnPropertyChanged(nameof(ClassFrame)); RenderSprite();
+            _playCountdown = _sprite.GetFrameDuration(0);
+            IsPlaying = true;
+            _animTimer.Start();
+        }
+
+        private void StopPlaying()
+        {
+            _animTimer?.Stop();
+            if (!_isPlaying) return;
+            IsPlaying = false;
+            _classFrame = _sprite.DefaultFrame; OnPropertyChanged(nameof(ClassFrame)); RenderSprite();
+        }
+
+        private void AnimTick(object sender, EventArgs e)
+        {
+            if (--_playCountdown > 0) return;
+            _classFrame = ((int)_classFrame + 1) % Math.Max(1, (int)_classFrameMax + 1);
+            OnPropertyChanged(nameof(ClassFrame));
+            RenderSprite();
+            _playCountdown = _sprite.GetFrameDuration((int)_classFrame);
+        }
 
         // ── Save ──────────────────────────────────────────────────────────────────────
         public void Save()
@@ -1437,18 +1672,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
         }
 
-        // ── Mon reorder support ──────────────────────────────────────────────────────
-        public IEnumerable<(int index, string display)> GetPartyForReorder()
-        {
-            int count = (int)_partyCount;
-            for (int i = 0; i < count && i < Party.Count; i++)
-            {
-                TrainerPartyMonViewModel m = Party[i];
-                string name = m.SpeciesIndex >= 0 && m.SpeciesIndex < PokemonNames.Count ? PokemonNames[m.SpeciesIndex] : "?";
-                yield return (i, $"[{i}] {name} Lv. {(int)m.Level}");
-            }
-        }
-
+        // ── Party order ───────────────────────────────────────────────────────────────
         public void ReorderParty(List<int> newOrder)
         {
             int count = newOrder.Count;
@@ -1469,7 +1693,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (index >= 0 && index < TrainerNames.Count) SelectedTrainerIndex = index;
         }
 
-        // ── DV Calculator support ─────────────────────────────────────────────────────
+        // ── Personality inputs ────────────────────────────────────────────────────────
         public (ushort trainerId, byte trainerClass, List<(int pokeId, int level, int gender, int ability, int dv)> party) GetDVCalcInput()
         {
             List<(int, int, int, int, int)> list = new List<(int, int, int, int, int)>();
@@ -1491,20 +1715,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             return (tid, (byte)Math.Max(0, _trainerClassIndex), list);
         }
 
-        public void ApplyDVCalc(IReadOnlyList<(int dv, int gender, int ability)> results)
-        {
-            for (int i = 0; i < results.Count && i < Party.Count; i++)
-            {
-                TrainerPartyMonViewModel m = Party[i];
-                m.Difficulty = results[i].dv;
-                m.GenderIndex = results[i].gender;
-                if (!IsHgeActive) m.AbilityIndex = results[i].ability;
-                else if (results[i].ability == 2) m.AbilityIndex = 1;
-                else if (m.AbilityIndex != 2) m.AbilityIndex = 0;
-            }
-            SetDirty();
-        }
-
         // ── Defaults for newly enabled fields ─────────────────────────────────────────
         // Ticking custom moves otherwise saves four empty moves, which the game gives the Pokémon.
         private void FillLevelUpMoves()
@@ -1521,9 +1731,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 if (mon.SpeciesIndex <= 0 || (mon.FormId > 0 && !IsHgeActive) || mon.Move1 > 0 || mon.Move2 > 0 || mon.Move3 > 0 || mon.Move4 > 0) continue;
                 try
                 {
-                    ushort[] moves = IsHgeActive
-                        ? HgeLevelUpMoves(mon.DataSpeciesId, (int)mon.Level)
-                        : new LearnsetData(mon.SpeciesIndex).GetLearnsetAtLevel((int)mon.Level);
+                    ushort[] moves = LevelUpMoves(mon);
                     if (moves == null) continue;
                     mon.Move1 = moves[0]; mon.Move2 = moves[1]; mon.Move3 = moves[2]; mon.Move4 = moves[3];
                 }
@@ -1623,6 +1831,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get => _checked;
             set { if (_checked != value) { _checked = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Checked))); Changed?.Invoke(this, EventArgs.Empty); } }
         }
+        /// <summary>What the flag makes the AI favour, or null for flags with no note.</summary>
+        public string Tip { get; init; }
         public AiFlagViewModel(string label, int value = -1) { Label = label; Value = value; }
     }
 

@@ -161,6 +161,36 @@ namespace DSPRE
             return natureDict;
         }
 
+        /// <summary>One party member as the personality roll reads it; Gender and Ability are the override flags.</summary>
+        public readonly record struct PartyMon(int Species, int Level, int Gender, int Ability, int Dv);
+
+        /// <summary>Each party member's personality in party order; on HGSS a forced gender or ability carries to the next.</summary>
+        public static uint[] PartyPids(uint trainer, uint trainerClass, bool maleTrainer, IReadOnlyList<PartyMon> party)
+        {
+            ResetGenderMod(maleTrainer);
+            uint[] pids = new uint[party.Count];
+            for (int i = 0; i < party.Count; i++)
+            {
+                PartyMon p = party[i];
+                pids[i] = generatePID(trainer, trainerClass, (uint)p.Species, (byte)p.Level, new PokemonPersonalData(p.Species).genderVec, p.Gender, p.Ability, (byte)p.Dv);
+            }
+            return pids;
+        }
+
+        /// <summary>Every DV of one party member with the IV and nature it gives, optionally only the highest DV per nature.</summary>
+        public static List<DVIVNatureTriplet> SlotOptions(uint trainer, uint trainerClass, bool maleTrainer, IReadOnlyList<PartyMon> party, int index, bool highestOnly)
+        {
+            ResetGenderMod(maleTrainer);
+            if (RomInfo.gameFamily == GameFamilies.HGSS || RomInfo.AIBackportEnabled)
+                for (int i = 0; i < index && i < party.Count; i++)
+                    UpdateGenderMod((ushort)party[i].Species, new PokemonPersonalData(party[i].Species).genderVec, party[i].Gender, party[i].Ability);
+            PartyMon p = party[index];
+            List<DVIVNatureTriplet> triplets = getAllNatures(trainer, trainerClass, (uint)p.Species, (byte)p.Level,
+                new PokemonPersonalData(p.Species).genderVec, p.Gender, p.Ability);
+            if (highestOnly) filterHighestDV(ref triplets);
+            return triplets;
+        }
+
         public static readonly List<string> Natures = new List<string>
             {
             "Hardy: Neutral",
@@ -197,6 +227,13 @@ namespace DSPRE
             private static List<bool> trainerClassGenders = new List<bool>();
 
             private static bool tableLoaded = false;
+
+            /// <summary>Forgets the table read from the previous ROM.</summary>
+            public static void Invalidate()
+            {
+                trainerClassGenders.Clear();
+                tableLoaded = false;
+            }
 
             private static readonly Dictionary<(RomInfo.GameFamilies, RomInfo.GameLanguages), int> genderTableOffsets = new Dictionary<(RomInfo.GameFamilies, RomInfo.GameLanguages), int>
             {

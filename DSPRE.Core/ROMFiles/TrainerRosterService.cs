@@ -152,7 +152,7 @@ namespace DSPRE.ROMFiles
             trainerId = -1;
             error = null;
             string trainerName = string.IsNullOrWhiteSpace(name) ? "Trainer" : name.Trim();
-            int trainerNameLimit = trainerNameMaxLen;
+            int trainerNameLimit = trainerNameMaxChars;
             if (trainerName.Length > trainerNameLimit)
             {
                 error = $"Trainer names are limited to {trainerNameLimit} characters in this ROM.";

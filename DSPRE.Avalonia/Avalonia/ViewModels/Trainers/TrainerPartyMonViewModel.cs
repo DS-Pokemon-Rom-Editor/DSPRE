@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using global::Avalonia.Media.Imaging;
 using DSPRE.Avalonia;
 using DSPRE.HgEngine;
+using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
 using DSPRE.Avalonia.Data;
 using Avalonia.Threading;
@@ -128,6 +130,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     /// </summary>
     public class TrainerPartyMonViewModel : INotifyPropertyChanged
     {
+        // HGSS carries a slot's set gender or ability into the natures of the slots after it, so order matters there.
+        private static string OrderNote => gameFamily == GameFamilies.HGSS ? "\nA set gender or ability changes the natures of the Pokémon after it." : "";
+        public string MoveUpTip => "Move up the party" + OrderNote;
+        public string MoveDownTip => "Move down the party" + OrderNote;
+
         public event PropertyChangedEventHandler PropertyChanged;
         public event EventHandler Changed;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -178,7 +185,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _ballEnabled;
         public bool BallEnabled { get => _ballEnabled; set => Set(ref _ballEnabled, value); }
         private bool _movesEnabled;
-        public bool MovesEnabled { get => _movesEnabled; set => Set(ref _movesEnabled, value); }
+        public bool MovesEnabled { get => _movesEnabled; set { if (Set(ref _movesEnabled, value)) OnPropertyChanged(nameof(ShowDefaultMoves)); } }
         private bool _itemEnabled;
         public bool ItemEnabled { get => _itemEnabled; set => Set(ref _itemEnabled, value); }
         private bool _abilityEnabled;
@@ -215,11 +222,116 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int SpeciesIndex
         {
             get => _speciesIndex;
-            set { if (RejectCleared(value, nameof(SpeciesIndex))) return; if (Set(ref _speciesIndex, value)) { RebuildAbilities(); UpdateIcon(); Touch(); } }
+            set { if (RejectCleared(value, nameof(SpeciesIndex))) return; if (Set(ref _speciesIndex, value)) { RebuildAbilities(); RebuildForms(); UpdateIcon(); Touch(); } }
         }
 
         private decimal _formId;
-        public decimal FormId { get => _formId; set { if (Set(ref _formId, value)) { if (HgEngineProject.IsActive) RebuildAbilities(); Touch(); } } }
+        public decimal FormId { get => _formId; set { if (Set(ref _formId, value)) { if (HgEngineProject.IsActive) RebuildAbilities(); OnPropertyChanged(nameof(FormIndex)); Touch(); } } }
+
+        // ── Forms, by name where the game names them ────────────────────────────────
+        public ObservableCollection<string> FormNames { get; } = new ObservableCollection<string>();
+        /// <summary>The species has forms to pick from; for the rest the form box stays off.</summary>
+        public bool HasForms => FormNames.Count > 1;
+        public bool ShowFormNames => FormVisible && !HgEngineProject.IsActive;
+        public bool ShowFormNumber => FormVisible && HgEngineProject.IsActive;
+        public int FormIndex
+        {
+            get => _formBlank ? -1 : FormNames.Count > 1 ? Math.Min((int)_formId, FormNames.Count - 1) : 0;
+            set { if (value >= 0 && value < FormNames.Count && FormNames.Count > 1) FormId = value; }
+        }
+
+        private void RebuildForms()
+        {
+            string[] names = PokemonForms.NamesOf(_speciesIndex) ?? new[] { "Normal" };
+            FormNames.Clear();
+            foreach (string n in names) FormNames.Add(n);
+            OnPropertyChanged(nameof(HasForms));
+            RepushFormIndex();
+            GenderEnabled = GenderVisible && GenderRatio(_speciesIndex) is not (0 or 254 or 255);
+        }
+
+        // As with the ability list: the box drops its selection when its rows refill and ignores the same value raised again.
+        private bool _formBlank, _formRepushPending;
+        private void RepushFormIndex()
+        {
+            if (_formRepushPending) return;
+            _formRepushPending = true;
+            Dispatcher.UIThread.Post(() =>
+            {
+                _formBlank = true; OnPropertyChanged(nameof(FormIndex));
+                Dispatcher.UIThread.Post(() => { _formBlank = false; _formRepushPending = false; OnPropertyChanged(nameof(FormIndex)); }, DispatcherPriority.Background);
+            }, DispatcherPriority.Background);
+        }
+
+        private static byte GenderRatio(int species)
+        {
+            if (species <= 0) return 255;
+            try { return new PokemonPersonalData(species).genderVec; }
+            catch (Exception e) when (e is System.IO.IOException || e is ArgumentException) { return 127; }
+        }
+
+        private bool _genderEnabled = true;
+        /// <summary>Off for a species that is always one gender or genderless.</summary>
+        public bool GenderEnabled { get => _genderEnabled; private set => Set(ref _genderEnabled, value); }
+
+        // ── What the personality gives, filled in by the editor ─────────────────────
+        public sealed record NatureChoice(string Nature, int Dv)
+        {
+            public override string ToString() => $"{Nature} (DV {Dv})";
+        }
+
+        private string _natureText = "";
+        public string NatureText { get => _natureText; private set => Set(ref _natureText, value); }
+        private string _ivText = "";
+        public string IvText { get => _ivText; private set => Set(ref _ivText, value); }
+        private IReadOnlyList<NatureChoice> _natureChoices = Array.Empty<NatureChoice>();
+        /// <summary>The highest DV giving each nature this Pokémon can have.</summary>
+        public IReadOnlyList<NatureChoice> NatureChoices { get => _natureChoices; private set { _natureChoices = value; OnPropertyChanged(); OnPropertyChanged(nameof(SelectedNatureChoice)); } }
+        public NatureChoice SelectedNatureChoice
+        {
+            get => _natureChoices.FirstOrDefault(c => c.Dv == (int)_difficulty);
+            set { if (value != null && value.Dv != (int)_difficulty) Difficulty = value.Dv; }
+        }
+
+        private IReadOnlyList<string> _defaultMoves = Array.Empty<string>();
+        /// <summary>The level-up moves it knows when the trainer has no custom moves.</summary>
+        public IReadOnlyList<string> DefaultMoves { get => _defaultMoves; private set { _defaultMoves = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShowDefaultMoves)); } }
+        public bool ShowDefaultMoves => !_movesEnabled && _defaultMoves.Count > 0;
+
+        /// <summary>Shows the nature, IVs and nature choices a personality gives, and the default gender and ability.</summary>
+        public void ShowPersonality(uint pid, uint defaultPid, IReadOnlyList<NatureChoice> choices, IReadOnlyList<string> defaultMoves)
+        {
+            NatureText = DVCalculator.Natures[DVCalculator.getNatureFromPID(pid)];
+            IvText = ((int)_difficulty * 31 / 255).ToString();
+            NatureChoices = choices;
+            DefaultMoves = defaultMoves ?? Array.Empty<string>();
+
+            byte ratio = GenderRatio(DataSpeciesId);
+            string gender = ratio switch { 255 => "Genderless", 254 => "Female", 0 => "Male", _ => (defaultPid & 0xFF) < ratio ? "Female" : "Male" };
+            string genderLabel = $"Default ({gender})";
+            if (GenderItems.Count > 0 && GenderItems[0] != genderLabel)
+            {
+                bool was = _suppress; _suppress = true;
+                int keep = _genderIndex;
+                GenderItems[0] = genderLabel;
+                _genderIndex = keep;
+                _suppress = was;
+                Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(GenderIndex)), DispatcherPriority.Background);
+            }
+
+            if (_abilityEditable && !HgEngineProject.IsActive && AbilityItems.Count == 3 && DataSpeciesId >= 0 && DataSpeciesId < _abilities.Length)
+            {
+                (int abi1, int abi2) ab = _abilities[DataSpeciesId];
+                string abilityLabel = $"Default ({AbilityName(ab.abi2 != 0 && (defaultPid & 1) != 0 ? ab.abi2 : ab.abi1)})";
+                if (AbilityItems[0] != abilityLabel)
+                {
+                    _rebuildingAbilities = true;
+                    try { AbilityItems[0] = abilityLabel; }
+                    finally { _rebuildingAbilities = false; }
+                    RepushAbilityIndex();
+                }
+            }
+        }
 
         /// <summary>The species id this slot's form reads its abilities and learnset from.</summary>
         public int DataSpeciesId => HgEngineProject.IsActive ? HgEngineFormRegistry.ResolveFormSpecies(_speciesIndex, (int)_formId) : _speciesIndex;
@@ -244,7 +356,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _shinyVisible; public bool ShinyVisible { get => _shinyVisible; set => Set(ref _shinyVisible, value); }
         private bool _shinyEnabled; public bool ShinyEnabled { get => _shinyEnabled; set { if (Set(ref _shinyEnabled, value)) OnPropertyChanged(nameof(ShinyNote)); } }
         public string ShinyNote => _shinyEnabled ? null : "Needs the trainer shiny patch";
-        private decimal _difficulty; public decimal Difficulty { get => _difficulty; set { if (Set(ref _difficulty, value)) Touch(); } }
+        private decimal _difficulty; public decimal Difficulty { get => _difficulty; set { if (Set(ref _difficulty, value)) { OnPropertyChanged(nameof(SelectedNatureChoice)); Touch(); } } }
         private decimal _ballSeals;
         public decimal BallSeals
         {

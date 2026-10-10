@@ -5,7 +5,7 @@
         x:Class="DSPRE.Avalonia.Views.Trainers.TrainerSearchView"
         x:DataType="vm:TrainerSearchViewModel"
         Title="Search trainers"
-        Width="380" Height="440"
+        Width="720" Height="560" MinWidth="560" MinHeight="400"
         WindowStartupLocation="CenterOwner">
 
   <Design.DataContext>
@@ -16,23 +16,37 @@
     <StackPanel DockPanel.Dock="Top" Spacing="6">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <ComboBox Width="150" ItemsSource="{Binding Operators}" SelectedIndex="{Binding OperatorIndex}"/>
+        <TextBox Width="260" Text="{Binding SearchText}" PlaceholderText="Name" KeyUp="Search_KeyUp"/>
         <CheckBox Content="Case sensitive" IsChecked="{Binding CaseSensitive}" VerticalAlignment="Center"/>
       </StackPanel>
-      <TextBox Text="{Binding SearchText}" PlaceholderText="Search text" KeyUp="Search_KeyUp"/>
+      <WrapPanel ItemSpacing="6" LineSpacing="6" IsEnabled="{Binding HasFacts}">
+        <controls:FusionAutoCompleteBox Width="210" ItemsSource="{Binding ClassChoices}" SelectedIndex="{Binding ClassIndex}"/>
+        <ComboBox Width="190" ItemsSource="{Binding AiChoices}" SelectedIndex="{Binding AiIndex}" ToolTip.Tip="An AI flag the trainer uses"/>
+        <ComboBox Width="160" ItemsSource="{Binding BattleChoices}" SelectedIndex="{Binding BattleIndex}"/>
+        <controls:FusionAutoCompleteBox Width="210" ItemsSource="{Binding SpeciesChoices}" SelectedIndex="{Binding SpeciesIndex}" ToolTip.Tip="A Pokémon in the party"/>
+        <controls:FusionAutoCompleteBox Width="210" ItemsSource="{Binding ItemChoices}" SelectedIndex="{Binding ItemIndex}" ToolTip.Tip="An item a party Pokémon holds"/>
+        <ComboBox Width="160" ItemsSource="{Binding MovesChoices}" SelectedIndex="{Binding MovesIndex}"/>
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <TextBlock Text="Party" VerticalAlignment="Center"/>
+          <NumericUpDown Width="90" Minimum="0" Maximum="6" Increment="1" FormatString="0" Value="{Binding MinParty}"/>
+          <TextBlock Text="to" VerticalAlignment="Center"/>
+          <NumericUpDown Width="90" Minimum="0" Maximum="6" Increment="1" FormatString="0" Value="{Binding MaxParty}"/>
+        </StackPanel>
+      </WrapPanel>
       <StackPanel Orientation="Horizontal" Spacing="6">
         <Button Content="Search" controls:Icon.Key="lens" Click="Search_Click"/>
-        <Button Content="Reset" controls:Icon.Key="resetIcon"  Click="Reset_Click"/>
+        <Button Content="Reset" controls:Icon.Key="resetIcon" Click="Reset_Click"/>
         <CheckBox Content="Auto-search" IsChecked="{Binding AutoSearch}" VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding Status}" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
-      <TextBlock Text="Results (double-click to go):" Margin="0,4,0,0"/>
     </StackPanel>
 
     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="6" Margin="0,8,0,0">
-      <Button Content="Go to" controls:Icon.Key="goto"  Click="GoTo_Click" IsDefault="True"/>
+      <Button Content="Go to" controls:Icon.Key="goto" Click="GoTo_Click" IsDefault="True"/>
       <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
     </StackPanel>
 
     <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}"
-             DoubleTapped="Result_DoubleTapped" Margin="0,4,0,0"/>
+             DoubleTapped="Result_DoubleTapped" Margin="0,8,0,0"/>
   </DockPanel>
 </Window>

@@ -6,8 +6,8 @@ namespace DSPRE.Avalonia
         {
             Add("TrainerEditorView", "Trainer Editor",
                 S("tab:Trainers>name:TrainerList", "Trainers", "Every trainer in the game. Pick one to edit it."),
-                S("tab:Trainers>name:PartyBox", "The party", "Each Pokémon's species, level, moves and held item. Right-click a species, move or item to open it in its own editor, or Ctrl+click it."),
-                S("tab:Trainers>name:TrainerToolbar", "Tools", "Search, reorder the party, edit battle messages and the trainer's class, or move trainers in and out as files. Ctrl+Z undoes, Ctrl+S saves."),
+                S("tab:Trainers>name:PartyBox", "The party", "Each Pokémon's species, level, moves and held item. The DV sets its IVs and, with the trainer, its nature; picking a nature sets the DV. The arrows move it up or down the party. Right-click a species, move or item to open it in its own editor, or Ctrl+click it."),
+                S("tab:Trainers>name:TrainerToolbar", "Tools", "Search, or move a trainer, its properties or its party in and out as files. Ctrl+Z undoes, Ctrl+S saves."),
                 S("tab:Classes", "Classes", "Each trainer class: its name, gender, prize money and the music that plays when its trainers spot you."));
 
             // Serves both the class sprite editor and the player back sprite editor.

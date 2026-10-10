@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -28,7 +29,17 @@ namespace DSPRE.Avalonia.Views.Trainers
             DataContext = vm;
             EditorWindowChrome.Attach(this, vm, onClosed: vm.Detach);
             vm.TrainerList.KeepInView(TrainerList);
+            // Another trainer starts at its top, not wherever the last one was scrolled to.
+            vm.PropertyChanged += (_, e) =>
+            {
+                // After the cards relayout, or their growth scrolls it back down.
+                if (e.PropertyName == nameof(TrainerEditorViewModel.SelectedTrainerIndex))
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => DetailScroll.Offset = default, global::Avalonia.Threading.DispatcherPriority.Background);
+            };
         }
+
+        private async void AiNotes_Click(object sender, RoutedEventArgs e)
+            => await Launcher.LaunchUriAsync(new System.Uri(TrainerEditorViewModel.AiNotesUrl));
 
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
@@ -42,6 +53,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             // give it its own instance now that the ROM/trainer data is actually loaded, starting
             // on whichever class the current trainer uses.
             ClassesTabView.DataContext = vm.Classes = new TrainerClassesViewModel(vm.TrainerClassIndex);
+            vm.Classes.OpenTrainer = id => { MainTabs.SelectedIndex = 0; vm.GoToTrainer(id); };
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
@@ -87,35 +99,29 @@ namespace DSPRE.Avalonia.Views.Trainers
         private async void Search_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            TrainerSearchViewModel dlgVm = new TrainerSearchViewModel(VM.TrainerNames);
+            TrainerSearchViewModel dlgVm = new TrainerSearchViewModel(VM.TrainerNames, VM.TrainerClassItems, VM.AiFlags.Select(f => f.Label),
+                VM.PokemonNames, VM.ItemNames);
             TrainerSearchView dlg = new TrainerSearchView(dlgVm);
             await dlg.ShowDialog(this);
             if (dlgVm.Confirmed) VM.GoToTrainer(dlgVm.ResultIndex);
         }
 
-        private async void Reorder_Click(object sender, RoutedEventArgs e)
+        private void PlaySprite_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
+        private async void FindUses_Click(object sender, RoutedEventArgs e) => await Safe(VM?.FindUsesAsync());
+
+        private void Use_DoubleTapped(object sender, global::Avalonia.Input.TappedEventArgs e)
         {
-            if (VM == null) return;
-            MonReorderViewModel dlgVm = new MonReorderViewModel(VM.GetPartyForReorder());
-            MonReorderView dlg = new MonReorderView(dlgVm);
-            await dlg.ShowDialog(this);
-            if (dlgVm.Confirmed) VM.ReorderParty(dlgVm.ResultOrder);
+            if ((sender as Control)?.DataContext is TrainerEditorViewModel.TrainerUse use) VM?.OpenUse(use);
         }
 
-        private async void DVCalc_Click(object sender, RoutedEventArgs e)
+        private void MonUp_Click(object sender, RoutedEventArgs e)
         {
-            if (VM == null) return;
-            (ushort trainerId, byte trainerClass, List<(int pokeId, int level, int gender, int ability, int dv)> party) input = VM.GetDVCalcInput();
-            if (input.party.Count == 0) return;
-            DVCalcViewModel dlgVm = new DVCalcViewModel(input.trainerId, input.trainerClass, input.party);
-            DVCalcView dlg = new DVCalcView(dlgVm);
-            await dlg.ShowDialog(this);
-            if (dlgVm.Confirmed)
-            {
-                List<(int dv, int gender, int ability)> results = new System.Collections.Generic.List<(int dv, int gender, int ability)>();
-                foreach (DVCalcSlotViewModel s in dlgVm.Slots) results.Add(((int)s.DV, s.GenderIndex, s.AbilityIndex));
-                VM.ApplyDVCalc(results);
-            }
+            if ((sender as Control)?.DataContext is ViewModels.Trainers.TrainerPartyMonViewModel mon) VM?.MoveMon(mon, -1);
+        }
+
+        private void MonDown_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as Control)?.DataContext is ViewModels.Trainers.TrainerPartyMonViewModel mon) VM?.MoveMon(mon, 1);
         }
     }
 }

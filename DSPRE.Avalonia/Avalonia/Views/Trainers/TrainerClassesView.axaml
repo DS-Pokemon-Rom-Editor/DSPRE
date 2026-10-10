@@ -10,6 +10,18 @@
   </Design.DataContext>
 
   <DockPanel>
+    <controls:EditorToolbar>
+        <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" ToolTip.Tip="Save this trainer class"
+                IsEnabled="{Binding HasUnsavedChanges}"/>
+        <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
+        <Button Content="Add trainer class…" controls:Icon.Key="addIcon" Click="AddTrainerClass_Click"
+                ToolTip.Tip="Platinum (English) or an hg-engine checkout."
+                IsEnabled="{Binding CanOfferAddClass}" IsVisible="{Binding !ShowClassCopy}"/>
+        <Button controls:EditorToolbar.Slot="Add" Content="Copy class" controls:Icon.Key="copy" Click="CopyClass_Click" IsVisible="{Binding ShowClassCopy}"
+                ToolTip.Tip="Add a copy of the selected class at the end"/>
+        <Button Content="Remove last class" controls:Icon.Key="deleteIcon" Click="RemoveLastClass_Click" IsVisible="{Binding ShowClassCopy}"/>
+    </controls:EditorToolbar>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
       <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
@@ -17,16 +29,12 @@
 
     <Grid ColumnDefinitions="220,*">
       <DockPanel Grid.Column="0" Margin="4">
-        <Button DockPanel.Dock="Top" Content="Add trainer class…" controls:Icon.Key="addIcon" Click="AddTrainerClass_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"
-                ToolTip.Tip="Platinum (English) or an hg-engine checkout."
-                IsEnabled="{Binding CanOfferAddClass}" IsVisible="{Binding !ShowClassCopy}"/>
-        <Button DockPanel.Dock="Top" Content="Copy class" controls:Icon.Key="copy" Click="CopyClass_Click" HorizontalAlignment="Stretch"
-                Margin="0,0,0,4" IsVisible="{Binding ShowClassCopy}"
-                ToolTip.Tip="Adds the selected class again at the end, with its name, description, sprite and metadata."/>
-        <Button DockPanel.Dock="Top" Content="Remove last class" controls:Icon.Key="deleteIcon" Click="RemoveLastClass_Click"
-                HorizontalAlignment="Stretch" Margin="0,0,0,4" IsVisible="{Binding ShowClassCopy}"/>
-        <TextBox DockPanel.Dock="Top" Text="{Binding ClassList.Filter}" PlaceholderText="Search classes" Margin="0,0,0,4"
-                 ToolTip.Tip="Name or number. Close spellings count when nothing matches exactly."/>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+          <TextBox Text="{Binding ClassList.Filter}" PlaceholderText="Search classes"
+                   ToolTip.Tip="Name or number. Close spellings count when nothing matches exactly."/>
+          <CheckBox Grid.Column="1" Content="Fuzzy" IsChecked="{Binding ClassList.Fuzzy}" Margin="6,0,0,0" VerticalAlignment="Center"
+                    ToolTip.Tip="Always include close spellings"/>
+        </Grid>
         <ListBox x:Name="ClassList" ItemsSource="{Binding ClassList.Shown}" SelectedIndex="{Binding ClassList.ShownIndex}"/>
       </DockPanel>
 
@@ -47,6 +55,8 @@
             <StackPanel Grid.Column="1" Spacing="2" Margin="10,0,0,0" VerticalAlignment="Top">
               <TextBlock Text="Class name"/>
               <TextBox Text="{Binding ClassName}"/>
+              <TextBlock Text="Name with article" Margin="0,6,0,0" IsVisible="{Binding ShowWithArticle}"/>
+              <TextBox Text="{Binding WithArticle}" IsVisible="{Binding ShowWithArticle}" ToolTip.Tip="As in &quot;a Youngster&quot;"/>
             </StackPanel>
           </Grid>
 
@@ -59,19 +69,25 @@
           </StackPanel>
 
           <StackPanel Spacing="2" IsVisible="{Binding ShowPrizeMul}">
-            <TextBlock Text="Prize money multiplier"/>
+            <TextBlock Text="Prize money multiplier" ToolTip.Tip="Prize money: last Pokémon's level × 4 × this, doubled in double battles and by Amulet Coin"/>
             <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding PrizeMultiplier}"/>
           </StackPanel>
 
           <StackPanel Spacing="2" IsEnabled="{Binding MusicEnabled}">
             <TextBlock Text="Eye contact music [main]"
                        ToolTip.Tip="The SSEQ that plays when a trainer of this class spots the player. Disabled means this class has none."/>
-            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <NumericUpDown Width="140" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
+              <Button controls:Icon.Key="{Binding MainPlayIcon}" Click="PlayMain_Click" ToolTip.Tip="Play or stop"/>
+            </StackPanel>
           </StackPanel>
 
           <StackPanel Spacing="2" IsVisible="{Binding MusicAltEnabled}">
             <TextBlock Text="Eye contact music [Alt]" ToolTip.Tip="HGSS only: a second eye-contact music slot for this class."/>
-            <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicAlt}"/>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <NumericUpDown Width="140" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicAlt}"/>
+              <Button controls:Icon.Key="{Binding AltPlayIcon}" Click="PlayAlt_Click" ToolTip.Tip="Play or stop"/>
+            </StackPanel>
           </StackPanel>
 
           <Button Content="Enable eye-contact music for this class" Click="EnableMusic_Click"
@@ -80,7 +96,10 @@
           <StackPanel Spacing="8" IsVisible="{Binding ShowMetadata}">
             <StackPanel Spacing="2">
               <TextBlock Text="Battle music"/>
-              <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleMusic}"/>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <NumericUpDown Width="140" Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleMusic}"/>
+                <Button controls:Icon.Key="{Binding BattlePlayIcon}" Click="PlayBattle_Click" ToolTip.Tip="Play or stop"/>
+              </StackPanel>
             </StackPanel>
             <StackPanel Spacing="2">
               <TextBlock Text="VS intro"/>
@@ -92,10 +111,10 @@
             </StackPanel>
           </StackPanel>
 
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <Button Content="Save trainer class" controls:Icon.Key="saveButton" Click="Save_Click"/>
-            <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-            <controls:UndoRedoButtons/>
+          <StackPanel Spacing="2" IsVisible="{Binding HasClassTrainers}">
+            <TextBlock Text="Trainers in this class"/>
+            <ListBox ItemsSource="{Binding ClassTrainers}" MaxHeight="240" DoubleTapped="ClassTrainer_DoubleTapped"
+                     ToolTip.Tip="Double-click to open the trainer"/>
           </StackPanel>
         </StackPanel>
       </ScrollViewer>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using global::Avalonia.Controls;
@@ -178,7 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         // ── Undo / redo: the loaded class's fields ──────────────────────────
-        private sealed record ClassState(string Name, decimal MusicMain, decimal MusicAlt, int Gender, int Prize, int BattleMusic);
+        private sealed record ClassState(string Name, string WithArticle, decimal MusicMain, decimal MusicAlt, int Gender, int Prize, int BattleMusic);
         private DSPRE.Avalonia.ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
@@ -186,14 +187,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void Redo() => _undo?.Redo();
         private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
-        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(new ClassState(_className, _musicMain, _musicAlt, _genderIndex, _prizeMultiplier,
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(new ClassState(_className, _withArticle, _musicMain, _musicAlt, _genderIndex, _prizeMultiplier,
             _battleMusic));
 
         private void ApplyState(byte[] state)
         {
             ClassState s = DSPRE.Avalonia.UndoJson.Read<ClassState>(state);
             _suppress = true;
-            ClassName = s.Name; MusicMain = s.MusicMain; MusicAlt = s.MusicAlt;
+            ClassName = s.Name; WithArticle = s.WithArticle; MusicMain = s.MusicMain; MusicAlt = s.MusicAlt;
             GenderIndex = s.Gender; PrizeMultiplier = s.Prize; BattleMusic = s.BattleMusic;
             _suppress = false;
             bool dirty = _undo.IsDirty || _musicAdded;
@@ -273,6 +274,24 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string _className = "";
         public string ClassName { get => _className; set { if (Set(ref _className, value)) MarkDirty(); } }
 
+        // The class bank's twin holds each name with its article ("a Youngster"), which a rename would leave behind.
+        private string _withArticle = "", _loadedWithArticle;
+        public string WithArticle { get => _withArticle; set { if (Set(ref _withArticle, value ?? "")) MarkDirty(); } }
+        public bool ShowWithArticle => _loadedWithArticle != null;
+
+        private static string ReadWithArticle(int index)
+        {
+            if (HgEngineProject.IsActive) return null;
+            try
+            {
+                List<string> withArticle = new TextArchive(trainerClassWithArticleMessageNumber).messages;
+                List<string> names = new TextArchive(trainerClassMessageNumber).messages;
+                // Only trusted when it lines up with the class names.
+                return withArticle.Count == names.Count && index >= 0 && index < withArticle.Count ? withArticle[index] : null;
+            }
+            catch (Exception e) when (e is System.IO.IOException || e is System.IO.InvalidDataException || e is UnauthorizedAccessException) { return null; }
+        }
+
         private decimal _musicMain;
         public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) MarkDirty(); } }
 
@@ -332,8 +351,85 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _suppress = false;
             _dirty = false;
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            AppEvents.RaiseNamesChanged();
+            _raisingNames = true;
+            try { AppEvents.RaiseNamesChanged(); } finally { _raisingNames = false; }
             SelectedClassIndex = Math.Max(0, Math.Min(select, ClassNames.Count - 1));
+        }
+
+        private bool _raisingNames;
+
+        public void Attach() { AppEvents.NamesChanged += OnNamesChanged; DSPRE.Avalonia.Data.MusicPreview.Changed += OnMusicChanged; }
+        public void Detach()
+        {
+            AppEvents.NamesChanged -= OnNamesChanged;
+            DSPRE.Avalonia.Data.MusicPreview.Changed -= OnMusicChanged;
+            if (DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 0)) || DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 1)) || DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 2))) DSPRE.Avalonia.Data.MusicPreview.Stop();
+        }
+
+        // ── Music previews ──────────────────────────────────────────────────────────
+        private void OnMusicChanged() => global::Avalonia.Threading.Dispatcher.UIThread.Post(RaiseMusicIcons);
+        private void RaiseMusicIcons() { OnPropertyChanged(nameof(MainPlayIcon)); OnPropertyChanged(nameof(AltPlayIcon)); OnPropertyChanged(nameof(BattlePlayIcon)); }
+        public string MainPlayIcon => DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 0)) ? "stop" : "play";
+        public string AltPlayIcon => DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 1)) ? "stop" : "play";
+        public string BattlePlayIcon => DSPRE.Avalonia.Data.MusicPreview.StartedBy((this, 2)) ? "stop" : "play";
+        /// <summary>Plays or stops one of the class's songs: 0 eye contact, 1 its alternate, 2 battle music.</summary>
+        public void PlayMusic(int which) => DSPRE.Avalonia.Data.MusicPreview.Toggle((int)(which == 0 ? _musicMain : which == 1 ? _musicAlt : _battleMusic), (this, which));
+
+        // ── Trainers of the class ───────────────────────────────────────────────────
+        /// <summary>Opens a trainer in the Trainers tab; set by the window hosting this tab.</summary>
+        public Action<int> OpenTrainer { get; set; }
+        public sealed record ClassTrainer(int Id, string Label) { public override string ToString() => Label; }
+        public ObservableCollection<ClassTrainer> ClassTrainers { get; } = new ObservableCollection<ClassTrainer>();
+        public bool HasClassTrainers => ClassTrainers.Count > 0;
+        private Dictionary<int, List<int>> _trainersByClass;
+
+        private async void ShowClassTrainers(int classId)
+        {
+            if (HgEngineProject.IsActive) return;
+            if (_trainersByClass == null)
+            {
+                _trainersByClass = await Task.Run(() =>
+                {
+                    Dictionary<int, List<int>> map = new Dictionary<int, List<int>>();
+                    try
+                    {
+                        string dir = gameDirs[DirNames.trainerProperties].unpackedDir;
+                        int count = Directory.GetFiles(dir).Length;
+                        for (int i = 0; i < count; i++)
+                        {
+                            using FileStream fs = File.OpenRead(Path.Combine(dir, i.ToString("D4")));
+                            int cls = new TrainerProperties((ushort)i, fs).trainerClass;
+                            if (!map.TryGetValue(cls, out List<int> ids)) map[cls] = ids = new List<int>();
+                            ids.Add(i);
+                        }
+                    }
+                    catch (Exception e) when (e is IOException || e is ArgumentException) { AppLogger.Warn("Trainers by class: " + e.Message); }
+                    return map;
+                });
+            }
+            if (classId != _selectedIndex) return;
+            ClassTrainers.Clear();
+            string[] names;
+            try { names = GetSimpleTrainerNames(); }
+            catch (Exception e) when (e is IOException || e is ArgumentException) { names = Array.Empty<string>(); }
+            if (_trainersByClass.TryGetValue(classId, out List<int> list))
+                foreach (int id in list) ClassTrainers.Add(new ClassTrainer(id, $"[{id:D3}] {(id < names.Length ? names[id] : "")}"));
+            OnPropertyChanged(nameof(HasClassTrainers));
+        }
+
+        // A class renamed in the Text editor: the list follows without touching the open class's edits.
+        private void OnNamesChanged(object sender, EventArgs e)
+        {
+            if (_raisingNames || _pendingClass != null) return;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                string[] names = GetTrainerClassNames();
+                bool was = _suppress;
+                _suppress = true;
+                try { Data.ListSync.Apply(ClassNames, names.Select((n, i) => $"[{i:D3}] {n}").ToList()); }
+                finally { _suppress = was; }
+                OnPropertyChanged(nameof(SelectedClassIndex));
+            });
         }
 
         /// <summary>The id a new class gets, or -1 with nothing to add to.</summary>
@@ -430,7 +526,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             StatusText = _metadata == TrainerClassMetadataDetectionState.Inconsistent ? _metadataNote : $"{ClassNames.Count} trainer classes.";
             OnPropertyChanged(nameof(ShowGender));
             OnPropertyChanged(nameof(ShowClassCopy));
-            if (_selectedIndex >= 0 && _selectedIndex < ClassNames.Count && !HasUnsavedChanges) LoadClass(_selectedIndex);
+            if (_selectedIndex < 0 || _selectedIndex >= ClassNames.Count || _pendingClass != null) return;
+
+            // Reload from the new source, then put back only the fields the user had changed.
+            ClassState mine = HasUnsavedChanges && _loadedState != null ? DSPRE.Avalonia.UndoJson.Read<ClassState>(TakeState()) : null;
+            ClassState loaded = mine != null ? DSPRE.Avalonia.UndoJson.Read<ClassState>(_loadedState) : null;
+            LoadClass(_selectedIndex);
+            if (mine == null) return;
+            if (mine.Name != loaded.Name) ClassName = mine.Name;
+            if (mine.WithArticle != loaded.WithArticle) WithArticle = mine.WithArticle;
+            if (mine.MusicMain != loaded.MusicMain) MusicMain = mine.MusicMain;
+            if (mine.MusicAlt != loaded.MusicAlt) MusicAlt = mine.MusicAlt;
+            if (mine.Gender != loaded.Gender) GenderIndex = mine.Gender;
+            if (mine.Prize != loaded.Prize) PrizeMultiplier = mine.Prize;
+            if (mine.BattleMusic != loaded.BattleMusic) BattleMusic = mine.BattleMusic;
         }
 
         /// <summary>Mirrors the WinForms <c>SetupTrainerClassEncounterMusicTable</c>: a variable-size ARM9
@@ -455,9 +564,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void LoadClass(int index)
         {
             if (_pendingClass != null && index == PendingIndex) { LoadPendingClass(); return; }
+            ShowClassTrainers(index);
+            RaiseMusicIcons();
 
             _suppress = true;
             ClassName = ClassNames[index].Substring(ClassNames[index].IndexOf(' ') + 1);
+            _loadedWithArticle = ReadWithArticle(index);
+            WithArticle = _loadedWithArticle ?? "";
+            OnPropertyChanged(nameof(ShowWithArticle));
 
             if (_musicDict.TryGetValue((byte)index, out (uint entryOffset, ushort musicD, ushort? musicN) entry))
             {
@@ -528,7 +642,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(CanPlayAnimation));
             _suppress = false;
             ResetUndo();
+            _loadedState = TakeState();
         }
+
+        // The fields as the class was loaded, to tell the user's edits from what the ROM held.
+        private byte[] _loadedState;
 
         /// <summary>Re-renders the (bigger) class-sprite preview shown at the top of this tab. Call
         /// after the sprite editor saves changes, since it edits the same NCGR/NCLR files on disk.</summary>
@@ -547,6 +665,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             _suppress = true;
             ClassName = _pendingClass.Name;
+            _loadedWithArticle = null;
+            WithArticle = "";
+            OnPropertyChanged(nameof(ShowWithArticle));
             MusicEnabled = _pendingClass.AddMusic;
             MusicMain = _pendingClass.MusicMain;
             MusicAlt = _pendingClass.MusicNight;
@@ -685,6 +806,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
 
             int savedIndex = _selectedIndex;
+            if (_loadedWithArticle != null && WithArticle != _loadedWithArticle)
+            {
+                try
+                {
+                    TextArchive withArticle = new TextArchive(trainerClassWithArticleMessageNumber);
+                    withArticle.messages[savedIndex] = WithArticle;
+                    withArticle.SaveToExpandedDir(trainerClassWithArticleMessageNumber, showSuccessMessage: false);
+                    _loadedWithArticle = WithArticle;
+                }
+                catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException) { failures.Add("Name with article: " + ex.Message); }
+            }
             if (!TrySaveClassName(savedIndex, ClassName, out string nameError))
             {
                 failures.Add(nameError);

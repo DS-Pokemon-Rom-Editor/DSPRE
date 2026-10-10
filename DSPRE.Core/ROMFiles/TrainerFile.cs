@@ -370,6 +370,9 @@ namespace DSPRE.ROMFiles {
     }
     public class TrainerFile : RomFile {
         public const int defaultNameLen = 7; // battle copies the name into an 8-character buffer with its end mark
+
+        /// <summary>Letters a compressed trainer name fits in a buffer of this many units.</summary>
+        public static int CompressedNameLen(int bufferUnits) => Math.Max(0, (bufferUnits - 2) * 15 / 9);
         public const int POKE_IN_PARTY = 6;
         public static readonly string NAME_NOT_FOUND = "NAME READ ERROR";
 

@@ -51,6 +51,14 @@ namespace DSPRE.Avalonia.Data
 
         public bool IsFiltered => _filter.Trim().Length > 0;
 
+        private bool _fuzzy;
+        /// <summary>Also shows close spellings, not only when nothing matches exactly.</summary>
+        public bool Fuzzy
+        {
+            get => _fuzzy;
+            set { if (_fuzzy == value) return; _fuzzy = value; Raise(nameof(Fuzzy)); Rebuild(); }
+        }
+
         public int ShownIndex
         {
             get => _map.IndexOf(_getIndex());
@@ -75,7 +83,7 @@ namespace DSPRE.Avalonia.Data
                 else
                 {
                     for (int i = 0; i < _source.Count; i++)
-                        if (SearchMatch.Contains(_source[i], q)) _map.Add(i);
+                        if (SearchMatch.Contains(_source[i], q) || _fuzzy && SearchMatch.NearMiss(_source[i], q)) _map.Add(i);
                     if (_map.Count == 0)
                         for (int i = 0; i < _source.Count; i++)
                             if (SearchMatch.NearMiss(_source[i], q)) _map.Add(i);

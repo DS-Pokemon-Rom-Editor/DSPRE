@@ -73,6 +73,13 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private struct Entry { public int messageID; public uint trainerId; public ushort triggerId; }
 
+        /// <summary>When a battle message is shown, as this editor lists it.</summary>
+        public static string TriggerDescription(ushort trigger)
+        {
+            foreach ((TrainerMessageType type, string desc) t in Triggers) if ((ushort)t.type == trigger) return t.desc;
+            return $"Trigger {trigger}";
+        }
+
         // ── hg-engine source-backed state ───────────────────────────────────────────────
         // hg-engine keeps each trainer's messages in its own `.text` array in data/Trainers.c, and its
         // build makes the message table only for trainers listed in sTrainerTextOrder.

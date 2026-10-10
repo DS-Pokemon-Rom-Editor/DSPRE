@@ -13,6 +13,8 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             InitializeComponent();
             DataContextChanged += (_, _) => VM?.ClassList.KeepInView(ClassList);
+            AttachedToVisualTree += (_, _) => VM?.Attach();
+            DetachedFromVisualTree += (_, _) => VM?.Detach();
         }
 
         public TrainerClassesView(TrainerClassesViewModel vm) : this()
@@ -25,6 +27,14 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void Discard_Click(object sender, RoutedEventArgs e) => VM?.DiscardChanges();
 
         private void TogglePlay_Click(object sender, RoutedEventArgs e) => VM?.TogglePlay();
+        private void PlayMain_Click(object sender, RoutedEventArgs e) => VM?.PlayMusic(0);
+        private void PlayAlt_Click(object sender, RoutedEventArgs e) => VM?.PlayMusic(1);
+        private void PlayBattle_Click(object sender, RoutedEventArgs e) => VM?.PlayMusic(2);
+
+        private void ClassTrainer_DoubleTapped(object sender, global::Avalonia.Input.TappedEventArgs e)
+        {
+            if ((sender as ListBox)?.SelectedItem is TrainerClassesViewModel.ClassTrainer t) VM?.OpenTrainer?.Invoke(t.Id);
+        }
 
         // Adds the entry with music = 0/0 so the Main/Alt fields can be set before Save writes it.
         private async void EnableMusic_Click(object sender, RoutedEventArgs e)

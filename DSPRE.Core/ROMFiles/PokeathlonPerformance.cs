@@ -58,27 +58,11 @@ namespace DSPRE.ROMFiles
             return _table = table;
         }
 
-        private static readonly Dictionary<int, string[]> FormLabels = new Dictionary<int, string[]>
-        {
-            [172] = new[] { "Normal", "Spiky-eared" },
-            [201] = new[] { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
-                            "T", "U", "V", "W", "X", "Y", "Z", "!", "?" },
-            [386] = new[] { "Normal", "Attack", "Defense", "Speed" },
-            [412] = new[] { "Plant", "Sandy", "Trash" },
-            [413] = new[] { "Plant", "Sandy", "Trash" },
-            [422] = new[] { "West Sea", "East Sea" },
-            [423] = new[] { "West Sea", "East Sea" },
-            [479] = new[] { "Normal", "Heat", "Wash", "Frost", "Fan", "Mow" },
-            [487] = new[] { "Altered", "Origin" },
-            [492] = new[] { "Land", "Sky" },
-            [493] = new[] { "Normal", "Fighting", "Flying", "Poison", "Ground", "Rock", "Bug", "Ghost", "Steel", "???",
-                            "Fire", "Water", "Grass", "Electric", "Psychic", "Ice", "Dragon", "Dark" },
-        };
 
         public static string[] FormNamesOf(int species)
         {
             int forms = FormsOf(species);
-            if (FormLabels.TryGetValue(species, out string[] names) && names.Length == forms) return names;
+            if (PokemonForms.Labels.TryGetValue(species, out string[] names) && names.Length == forms) return names;
             return forms == 1 ? new[] { "Normal" } : Enumerable.Range(0, forms).Select(f => f == 0 ? "Normal" : $"Form {f}").ToArray();
         }
 
