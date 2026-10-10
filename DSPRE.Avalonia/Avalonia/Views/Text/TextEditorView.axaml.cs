@@ -18,6 +18,8 @@ namespace DSPRE.Avalonia.Views.Text
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
+            // Tunnel, so Enter reaches the search before the text box can take it.
+            SearchBox.AddHandler(KeyDownEvent, Search_KeyDown, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
         }
 
         /// <summary>
@@ -109,13 +111,20 @@ namespace DSPRE.Avalonia.Views.Text
 
         private void Search_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Enter) VM?.Search();
+            if (e.Key != Key.Enter) return;
+            VM?.Search();
+            e.Handled = true;
         }
 
         private void SearchResult_DoubleTapped(object sender, TappedEventArgs e)
         {
-            if (SearchResultsList.SelectedItem is TextSearchResultVM r)
-                VM?.GoToResult(r);
+            if (SearchResultsList.SelectedItem is not TextSearchResultVM r || VM == null) return;
+            VM.GoToResult(r);
+            // The archive's rows may still be filling, so scroll once layout has caught up.
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (LinesGrid.SelectedItem != null) LinesGrid.ScrollIntoView(LinesGrid.SelectedItem, null);
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
         private static async Task RunSafe(System.Func<Task> action)

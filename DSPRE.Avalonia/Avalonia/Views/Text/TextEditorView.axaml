@@ -16,6 +16,7 @@
     <controls:EditorToolbar>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="160" ItemsSource="{Binding ArchiveNames}"
                                         SelectedIndex="{Binding SelectedArchiveIndex}"/>
+        <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Text" FileId="{Binding SelectedArchiveIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon"    Click="AddArchive_Click"    ToolTip.Tip="Add a new text archive"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveArchive_Click" ToolTip.Tip="Delete the last text archive"/>
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -49,7 +50,7 @@
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Spacing="4">
           <TextBlock Text="Search &amp; replace" FontWeight="Bold"/>
-          <TextBox Text="{Binding SearchText}"  PlaceholderText="Search text"  KeyDown="Search_KeyDown"/>
+          <TextBox x:Name="SearchBox" Text="{Binding SearchText}" PlaceholderText="Search text"/>
           <TextBox Text="{Binding ReplaceText}" PlaceholderText="Replace with"/>
           <CheckBox Content="Case sensitive"          IsChecked="{Binding CaseSensitive}"/>
           <CheckBox Content="Search all archives"     IsChecked="{Binding SearchAllArchives}"/>
@@ -68,8 +69,8 @@
     <!-- ── Message grid + line controls ────────────────────────────────────── -->
     <DockPanel>
       <controls:EditorToolbar x:Name="LineButtons" DockPanel.Dock="Bottom">
-          <Button Content="Add string" controls:Icon.Key="addIcon"    Click="AddString_Click"/>
-          <Button Content="Remove string" controls:Icon.Key="deleteIcon" Click="RemoveString_Click"/>
+          <Button Content="Add message" controls:Icon.Key="addIcon"    Click="AddString_Click"/>
+          <Button Content="Remove message" controls:Icon.Key="deleteIcon" Click="RemoveString_Click"/>
           <Button Content="Move up" controls:Icon.Key="arrowup"   Click="MoveUp_Click"   IsEnabled="{Binding CanMoveUp}"/>
           <Button Content="Move down" controls:Icon.Key="arrowdown" Click="MoveDown_Click" IsEnabled="{Binding CanMoveDown}"/>
       </controls:EditorToolbar>
