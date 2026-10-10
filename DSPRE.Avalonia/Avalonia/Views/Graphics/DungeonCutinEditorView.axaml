@@ -22,6 +22,7 @@
 	  <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
 	          ToolTip.Tip="Open this splash screen in the Graphics window, where its drawing, colours and arrangement for all four times of day sit together."/>
 	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
+	  <TextBlock Text="{Binding ImportNote}" IsVisible="{Binding HasImportNote}" Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 	</controls:EditorToolbar>
 
 	<ListBox x:Name="CutinList" DockPanel.Dock="Left" Width="220" Margin="8,8,8,8"

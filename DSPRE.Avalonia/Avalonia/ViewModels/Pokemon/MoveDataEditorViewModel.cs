@@ -5,7 +5,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using DSPRE.HgEngine;
@@ -15,6 +14,8 @@ using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChange
 using static DSPRE.MoveData;
 using static DSPRE.RomInfo;
 using DSPRE.Avalonia.Data;
+using DSPRE.Avalonia.Views.Shell;
+using DSPRE.Csv;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -503,9 +504,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RefreshDirty();
             RaiseUndoState();
         }
-        private Dictionary<string, int> _typeNameToId;
-        private Dictionary<string, MoveSplit> _splitNameToEnum;
-        private Dictionary<string, ushort> _rangeNameToValue;
 
         // ── Constructor ────────────────────────────────────────────────────────
         public MoveDataEditorViewModel()
@@ -562,8 +560,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 entry.PropertyChanged += (_, __) => { if (!_loading && _currentFile != null) { RebuildFlagField(); SetDirty(); } };
                 Flags.Add(entry);
             }
-
-            BuildLookupDictionaries(typeNames);
 
             if (MoveNames.Count > 1)
             {
@@ -789,15 +785,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
 
                 using (StreamWriter writer = new StreamWriter(path))
-                {
-                    writer.WriteLine("Move ID,Move Name,Move Type,Move Split,Power,Accuracy,Priority,Side Effect Probability,PP,Range");
-                    foreach ((int i, MoveData move) in moves)
-                    {
-                        string typeStr  = (int)move.movetype < typeNames.Length ? typeNames[(int)move.movetype] : $"UnknownType_{(int)move.movetype}";
-                        string rangeStr = MoveData.GetAttackRangeName(move.target);
-                        writer.WriteLine($"{i},{names[i]},{typeStr},{move.split},{move.damage},{move.accuracy},{move.priority},{move.sideEffectProbability},{move.pp},{rangeStr}");
-                    }
-                }
+                    MoveDataCsv.Write(writer, names, typeNames, moves.Select(kv => (kv.Key, kv.Value)));
 
                 string message = $"Move data exported to:\n{path}";
                 if (skipped.Count > 0)
@@ -818,42 +806,21 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DialogHelper.ShowError("Save or discard the new move first.", "Import CSV", owner);
                 return;
             }
-            string path = await DialogHelper.OpenFile(owner, "Import Move Data from CSV",
-                new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
-            if (path == null) return;
-
-            string[] typeNamesArr = GetTypeNames();
-            MoveDataImportResult result = ValidateAndParseCSV(path, typeNamesArr);
-
-            // Build preview text
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine($"Total rows read:  {result.TotalRowsRead}");
-            sb.AppendLine($"Valid entries:    {result.ValidCount}");
-            sb.AppendLine($"Errors:           {result.ErrorCount}");
-            sb.AppendLine($"Warnings:         {result.Warnings.Count}");
-            sb.AppendLine($"Name mismatches:  {result.UniqueNameMismatches.Count}");
-
-            if (result.HasErrors)
+            // Compare against unsaved imports too, so a second import shows the right changes.
+            MoveDataCsv importer = new MoveDataCsv(MoveNames.ToArray(), GetTypeNames(), id =>
             {
-                sb.AppendLine("\nERRORS:");
-                foreach (MoveImportError e in result.Errors) sb.AppendLine($"  {e}");
-            }
-            if (result.HasWarnings)
-            {
-                sb.AppendLine("\nWARNINGS:");
-                foreach (MoveImportWarning w in result.Warnings) sb.AppendLine($"  {w}");
-            }
-            if (result.ValidCount == 0)
-            {
-                await DialogHelper.ShowError(sb.ToString(), "Import: No Valid Entries");
-                return;
-            }
-
-            sb.AppendLine($"\n{result.ValidCount} move(s) will be imported. Save writes them. Proceed?");
-            bool proceed = await DialogHelper.AskYesNo(sb.ToString(), "Confirm Import");
-            if (!proceed) return;
-
-            await StageImportedData(result.ValidEntries);
+                if (id == _currentId && _currentFile != null) return (_currentFile, SourceLoadError);
+                if (_pendingImports.TryGetValue(id, out MoveData staged)) return (staged, null);
+                try
+                {
+                    MoveData move = LoadRecord(id, out string loadError);
+                    return (move, loadError);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return (null, ex.Message); }
+            });
+            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
+            if (session == null) return;
+            await StageImportedData(session.Accepted.Select(r => ((MoveDataCsv.Entry)r.Value).Move).ToList());
         }
 
 
@@ -945,116 +912,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _currentFile.flagField = field;
         }
 
-        private void BuildLookupDictionaries(string[] typeNames)
-        {
-            _typeNameToId = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i < typeNames.Length; i++)
-                if (!string.IsNullOrEmpty(typeNames[i]) && !_typeNameToId.ContainsKey(typeNames[i]))
-                    _typeNameToId[typeNames[i]] = i;
-
-            _splitNameToEnum = new Dictionary<string, MoveSplit>(StringComparer.OrdinalIgnoreCase);
-            foreach (MoveSplit s in Enum.GetValues(typeof(MoveSplit)))
-                _splitNameToEnum[s.ToString()] = s;
-
-            _rangeNameToValue = new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
-            foreach ((ushort value, string name, string description) r in AttackRangeDescriptions)
-                _rangeNameToValue[r.name] = r.value;
-        }
-
-        private MoveDataImportResult ValidateAndParseCSV(string filePath, string[] typeNames)
-        {
-            MoveDataImportResult result = new MoveDataImportResult();
-            try
-            {
-                string[] lines = File.ReadAllLines(filePath);
-                if (lines.Length == 0) { result.Errors.Add(new MoveImportError(0, "File is empty.")); return result; }
-
-                string[] header = lines[0].Split(',');
-                if (header.Length < 10 || !header[0].Trim().Equals("Move ID", StringComparison.OrdinalIgnoreCase))
-                { result.Errors.Add(new MoveImportError(1, "Invalid CSV header.")); return result; }
-
-                result.TotalRowsRead = lines.Length - 1;
-
-                for (int i = 1; i < lines.Length; i++)
-                {
-                    if (string.IsNullOrWhiteSpace(lines[i])) continue;
-                    string[] parts = ParseCSVLine(lines[i]);
-                    if (parts.Length < 10) { result.Errors.Add(new MoveImportError(i + 1, $"Expected 10 columns, got {parts.Length}.")); continue; }
-
-                    MoveRowValidationResult rowResult = ValidateRow(i + 1, parts, typeNames);
-                    result.Warnings.AddRange(rowResult.Warnings);
-                    result.NameMismatches.AddRange(rowResult.NameMismatches);
-                    if (rowResult.IsValid) result.ValidEntries.Add(rowResult.Entry);
-                    else result.Errors.AddRange(rowResult.Errors);
-                }
-            }
-            catch (Exception ex) { result.Errors.Add(new MoveImportError(0, $"Failed to read file: {ex.Message}")); }
-            return result;
-        }
-
-        private static string[] ParseCSVLine(string line)
-        {
-            List<string> list = new List<string>();
-            StringBuilder cur  = new StringBuilder();
-            bool inQ = false;
-            foreach (char c in line)
-            {
-                if (c == '"')  inQ = !inQ;
-                else if (c == ',' && !inQ) { list.Add(cur.ToString().Trim()); cur.Clear(); }
-                else cur.Append(c);
-            }
-            list.Add(cur.ToString().Trim());
-            return list.ToArray();
-        }
-
-        private MoveRowValidationResult ValidateRow(int lineNumber, string[] parts, string[] typeNames)
-        {
-            MoveRowValidationResult res = new MoveRowValidationResult { LineNumber = lineNumber };
-            MoveDataImportEntry entry = new MoveDataImportEntry();
-
-            if (!int.TryParse(parts[0].Trim(), out int moveId) || moveId < 0 || moveId >= MoveNames.Count)
-            { res.Errors.Add(new MoveImportError(lineNumber, $"Invalid Move ID '{parts[0]}'.")); }
-            else
-            {
-                entry.MoveID   = moveId;
-                entry.MoveName = MoveNames[moveId];
-                string csvName = parts[1].Trim();
-                if (!csvName.Equals(MoveNames[moveId], StringComparison.OrdinalIgnoreCase))
-                {
-                    res.Warnings.Add(new MoveImportWarning(lineNumber, $"Name mismatch for ID {moveId}: ROM='{MoveNames[moveId]}', CSV='{csvName}'."));
-                    res.NameMismatches.Add(new MoveNameMismatch(moveId, MoveNames[moveId], csvName, lineNumber));
-                }
-            }
-
-            if (_typeNameToId.TryGetValue(parts[2].Trim(), out int typeId)) entry.MoveType = (PokemonType)typeId;
-            else res.Errors.Add(new MoveImportError(lineNumber, $"Unknown type '{parts[2]}'."));
-
-            if (_splitNameToEnum.TryGetValue(parts[3].Trim(), out MoveSplit split)) entry.Split = split;
-            else res.Errors.Add(new MoveImportError(lineNumber, $"Unknown split '{parts[3]}'."));
-
-            if (byte.TryParse(parts[4].Trim(), out byte power))   entry.Power = power;
-            else res.Errors.Add(new MoveImportError(lineNumber, $"Invalid power '{parts[4]}'."));
-
-            if (byte.TryParse(parts[5].Trim(), out byte acc))     entry.Accuracy = acc;
-            else res.Errors.Add(new MoveImportError(lineNumber, $"Invalid accuracy '{parts[5]}'."));
-
-            if (sbyte.TryParse(parts[6].Trim(), out sbyte prio))  entry.Priority = prio;
-            else res.Errors.Add(new MoveImportError(lineNumber, $"Invalid priority '{parts[6]}'."));
-
-            if (byte.TryParse(parts[7].Trim(), out byte fx))      entry.SideEffectProbability = fx;
-            else res.Errors.Add(new MoveImportError(lineNumber, $"Invalid effect% '{parts[7]}'."));
-
-            if (byte.TryParse(parts[8].Trim(), out byte pp))      entry.PP = pp;
-            else res.Errors.Add(new MoveImportError(lineNumber, $"Invalid PP '{parts[8]}'."));
-
-            if (_rangeNameToValue.TryGetValue(parts[9].Trim(), out ushort rng)) entry.Range = rng;
-            else res.Errors.Add(new MoveImportError(lineNumber, $"Unknown range '{parts[9]}'."));
-
-            res.Entry   = entry;
-            res.IsValid = res.Errors.Count == 0;
-            return res;
-        }
-
         /// <summary>Imported values wait in memory, keyed by move id, until Save or Discard. The current move takes
         /// them directly and its undo history restarts from them.</summary>
         private async Task StageImportedData(List<MoveDataImportEntry> entries)
@@ -1110,7 +967,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RaiseUndoState();
             }
             Status = _pendingImports.Count == 0 ? string.Empty
-                : _pendingImports.Count == 1 ? "1 move imported, not saved" : $"{_pendingImports.Count} moves imported, not saved";
+                : _pendingImports.Count == 1 ? "1 imported move has unsaved changes. Press Save to write them to disk." : $"{_pendingImports.Count} imported moves have unsaved changes. Press Save to write them to disk.";
             RefreshDirty();
 
             if (failures.Count == 0) return;

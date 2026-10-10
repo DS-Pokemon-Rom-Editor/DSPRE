@@ -1,0 +1,106 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Shell"
+        xmlns:csv="clr-namespace:DSPRE.Csv;assembly=DSPRE.Core"
+        x:Class="DSPRE.Avalonia.Views.Shell.CsvImportReviewView"
+        x:DataType="vm:CsvImportReviewViewModel"
+        Title="{Binding Title}"
+        Width="1040" Height="680" MinWidth="760" MinHeight="460"
+        WindowStartupLocation="CenterOwner">
+
+  <DockPanel Margin="10">
+    <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
+      <TextBlock Text="{Binding Summary}" TextWrapping="Wrap"/>
+      <TextBlock Text="{Binding FileText}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Bad}" IsVisible="{Binding HasFileProblems}"/>
+      <TextBlock Text="{Binding FileText}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding HasNotes}"/>
+    </StackPanel>
+
+    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="0,8,0,0">
+      <Button Grid.Column="0" Content="Skip rows with errors" Click="SkipErrors_Click" Margin="0,0,6,0"/>
+      <Button Grid.Column="1" Content="Keep all warnings" Click="KeepWarnings_Click"/>
+      <TextBlock Grid.Column="2" Text="Apply adds the changes to the editor. Press Save there to write them to disk."
+                 TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0"/>
+      <Button Grid.Column="3" Content="Cancel" Click="Cancel_Click" Margin="0,0,6,0"/>
+      <Button Grid.Column="4" Content="Apply" Click="Apply_Click" IsEnabled="{Binding CanApply}"/>
+    </Grid>
+
+    <TabControl SelectedIndex="{Binding SelectedTab}">
+      <TabItem Header="{Binding ProblemsHeader}">
+        <Grid ColumnDefinitions="*,8,320" Margin="0,6,0,0">
+          <DockPanel Grid.Column="0">
+            <CheckBox DockPanel.Dock="Top" Content="Show resolved problems" IsChecked="{Binding ShowSettled}" Margin="0,0,0,4"/>
+            <DataGrid ItemsSource="{Binding Problems}" SelectedItem="{Binding Selected}" IsReadOnly="True"
+                      GridLinesVisibility="Horizontal" HeadersVisibility="Column" CanUserResizeColumns="True">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="60"/>
+                <DataGridTextColumn Header="Entry" Binding="{Binding What}" Width="150"/>
+                <DataGridTextColumn Header="Column" Binding="{Binding Column}" Width="120"/>
+                <DataGridTemplateColumn Header="State" Width="80">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:CsvImportReviewViewModel+ProblemRow">
+                      <Panel Margin="6,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding State}" Foreground="{DynamicResource Editor.Bad}" IsVisible="{Binding IsError}"/>
+                        <TextBlock Text="{Binding State}" Foreground="{DynamicResource Editor.Warn}" IsVisible="{Binding IsWarning}"/>
+                        <TextBlock Text="{Binding State}" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding !IsOpen}"/>
+                      </Panel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Problem" Binding="{Binding Message}" Width="*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </DockPanel>
+
+          <ScrollViewer Grid.Column="2">
+            <StackPanel Spacing="8" IsVisible="{Binding HasSelection}">
+              <TextBlock Text="{Binding Selected.Message}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+
+              <StackPanel Spacing="4" IsVisible="{Binding HasFixes}">
+                <TextBlock Text="Fixes" Foreground="{DynamicResource Editor.Subtle}"/>
+                <ItemsControl ItemsSource="{Binding Fixes}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="csv:CsvFix">
+                      <Button Content="{Binding Label}" Tag="{Binding}" Click="Fix_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+
+              <StackPanel Spacing="4" IsVisible="{Binding CanEdit}">
+                <TextBlock Text="{Binding EditLabel}" Foreground="{DynamicResource Editor.Subtle}"/>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBox Grid.Column="0" Text="{Binding EditText}" KeyDown="Edit_KeyDown"/>
+                  <Button Grid.Column="1" Content="Change" Click="Edit_Click" Margin="6,0,0,0"/>
+                </Grid>
+              </StackPanel>
+
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="{Binding SkipText}" Click="Skip_Click"/>
+                <Button Content="{Binding KeepText}" Click="Keep_Click" IsVisible="{Binding CanKeep}"
+                        ToolTip.Tip="Import the row as it is"/>
+              </StackPanel>
+
+              <TextBlock Text="Row" Foreground="{DynamicResource Editor.Subtle}" Margin="0,6,0,0"/>
+              <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6">
+                <TextBlock Text="{Binding RowText}" TextWrapping="Wrap" FontSize="12"/>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="{Binding ChangesHeader}">
+        <DataGrid ItemsSource="{Binding Changes}" IsReadOnly="True" Margin="0,6,0,0"
+                  GridLinesVisibility="Horizontal" HeadersVisibility="Column" CanUserResizeColumns="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Entry" Binding="{Binding Record}" Width="170" x:DataType="csv:CsvChange"/>
+            <DataGridTextColumn Header="Field" Binding="{Binding Field}" Width="150" x:DataType="csv:CsvChange"/>
+            <DataGridTextColumn Header="Current" Binding="{Binding Old}" Width="*" x:DataType="csv:CsvChange"/>
+            <DataGridTextColumn Header="Imported" Binding="{Binding New}" Width="*" x:DataType="csv:CsvChange"/>
+          </DataGrid.Columns>
+        </DataGrid>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

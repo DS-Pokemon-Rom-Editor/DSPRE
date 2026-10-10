@@ -85,9 +85,7 @@ namespace DSPRE.Avalonia.Views.Graphics
             string path = files[0].TryGetLocalPath();
             if (path == null) return;
 
-            string error = await _vm.ImportCsvAsync(path);
-            if (error != null)
-                await DialogHelper.ShowError($"Import failed: {error}", "Import Error", this);
+            await _vm.ImportCsvAsync(this, path);
         }
 
         private async void ImportMorning_Click(object sender, RoutedEventArgs e) => await ImportTimezone(DungeonCutinTimezone.Morning);

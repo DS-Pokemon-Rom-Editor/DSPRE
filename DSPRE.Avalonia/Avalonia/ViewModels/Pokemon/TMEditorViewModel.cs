@@ -12,6 +12,8 @@ using DSPRE.ROMFiles;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.DSUtils;
 using static DSPRE.RomInfo;
+using DSPRE.Avalonia.Views.Shell;
+using DSPRE.Csv;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -28,7 +30,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged([CallerMemberName] string name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            if (name == nameof(HasUnsavedChanges)) ClearImportedWhenClean();
+        }
+
+        // Shown after a CSV import until the changes are saved or discarded.
+        private bool _imported;
+        public string ImportNote => _imported ? "CSV import has unsaved changes. Press Save to write them to disk." : "";
+        public bool HasImportNote => _imported;
+        private void MarkImported() { _imported = true; OnPropertyChanged(nameof(ImportNote)); OnPropertyChanged(nameof(HasImportNote)); }
+        private void ClearImportedWhenClean()
+        {
+            if (!_imported || HasUnsavedChanges) return;
+            _imported = false;
+            OnPropertyChanged(nameof(ImportNote));
+            OnPropertyChanged(nameof(HasImportNote));
+        }
 
         private bool Set<T>(ref T field, T value, [CallerMemberName] string name = null)
         {
@@ -300,15 +318,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             try
             {
                 using StreamWriter writer = new StreamWriter(path);
-                writer.WriteLine("Machine,Move ID,Move Name,Palette ID");
-                for (int i = 0; i < _curMachineMoves.Length; i++)
-                {
-                    string label = TMEditor.MachineLabelFromIndex(i);
-                    int moveId = _curMachineMoves[i];
-                    string moveName = GetMoveNameFromID(moveId);
-                    int paletteId = _curMachinePalettes[i];
-                    writer.WriteLine($"{label},{moveId},{moveName},{paletteId}");
-                }
+                MachineCsv.Write(writer, MachineLabels(), MoveNames.ToArray(), _curMachineMoves, _curMachinePalettes);
 
                 await DialogHelper.ShowInfo("Machine data exported successfully.", "Export Complete");
             }
@@ -321,48 +331,24 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public async Task ImportCommand(Window owner)
         {
-            string path = await DialogHelper.OpenFile(
-                owner,
-                "Import Machine Data",
-                new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
+            MachineCsv importer = new MachineCsv(MachineLabels(), MoveNames.ToArray(), _curMachineMoves, _curMachinePalettes, _palettesKnown,
+                palette => TypeIndexToPalette(PaletteToTypeIndex(palette)) == palette);
+            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
+            if (session == null) return;
 
-            if (path == null) return;
-
-            try
+            foreach (CsvRecord r in session.Accepted)
             {
-                string[] lines = File.ReadAllLines(path);
-                int skipped = 0;
-                for (int i = 1; i < lines.Length; i++) // skip header
-                {
-                    string[] parts = lines[i].Split(',');
-                    if (parts.Length < 4) continue;
-
-                    string machineLabel = parts[0].Trim();
-                    int moveId = int.Parse(parts[1].Trim());
-                    int paletteId = int.Parse(parts[3].Trim());
-                    int machineIndex = TMEditor.MachineIndexFromLabel(machineLabel);
-                    if (machineIndex < 0 || machineIndex >= _curMachineMoves.Length) { skipped++; continue; }
-
-                    _curMachineMoves[machineIndex] = moveId;
-                    if (_palettesKnown) _curMachinePalettes[machineIndex] = paletteId;
-                }
-
-                RefreshMachineMoveList();
-                OnMachineSelected(_selectedMachineIndex);
-                SetDirty(true);
-                await DialogHelper.ShowInfo(skipped == 0 ? "Machine data imported successfully."
-                    : $"Machine data imported. {skipped} row(s) name machines this ROM doesn't have and were skipped.", "Import Complete");
+                MachineCsv.Entry e = (MachineCsv.Entry)r.Value;
+                _curMachineMoves[e.Machine] = e.Move;
+                _curMachinePalettes[e.Machine] = e.Palette;
             }
-            catch (Exception ex)
-            {
-                AppLogger.Error($"TM Editor: Failed to import machine data. Exception: {ex.Message}");
-                await DialogHelper.ShowError(
-                    "An error occurred while importing the machine data. Please ensure the file format is correct.",
-                    "Import Error");
-            }
+            RefreshMachineMoveList();
+            OnMachineSelected(_selectedMachineIndex);
+            SetDirty(true);
+            MarkImported();
         }
 
-
+        private string[] MachineLabels() => Enumerable.Range(0, _curMachineMoves.Length).Select(TMEditor.MachineLabelFromIndex).ToArray();
 
         // ----------------------------------------------------------------
         // Private helpers

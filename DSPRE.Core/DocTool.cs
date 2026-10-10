@@ -836,9 +836,6 @@ namespace DSPRE
         public static bool ExportEggMoveDataToCSV(List<EggMoveEntry> eggMoveData, string filePath, string[] pokeNames, string[] moveNames)
             => EggMoveCsv.Export(eggMoveData, filePath, pokeNames, moveNames);
 
-        public static bool ImportEggMoveDataFromCSV(ref List<EggMoveEntry> eggMoveData, string filePath)
-            => EggMoveCsv.Import(ref eggMoveData, filePath);
-
         private static void ExportTrainersToText(string trainerDataPath, string[] trainerNames, string[] trainerClassNames, string[] pokeNames, string[] itemNames, string[] moveNames, string[] abilityNames)
         {
             // Write the Trainer Data to the Text file

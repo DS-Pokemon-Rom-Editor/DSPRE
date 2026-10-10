@@ -11,13 +11,31 @@ using Avalonia.Media;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 
 using DSPRE.Avalonia.Data;
+using DSPRE.Avalonia.Views.Shell;
+using DSPRE.Csv;
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
     public class EggMoveEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            if (n == nameof(HasUnsavedChanges)) ClearImportedWhenClean();
+        }
+
+        // Shown after a CSV import until the changes are saved or discarded.
+        private bool _imported;
+        public string ImportNote => _imported ? "CSV import has unsaved changes. Press Save to write them to disk." : "";
+        public bool HasImportNote => _imported;
+        private void MarkImported() { _imported = true; OnPropertyChanged(nameof(ImportNote)); OnPropertyChanged(nameof(HasImportNote)); }
+        private void ClearImportedWhenClean()
+        {
+            if (!_imported || HasUnsavedChanges) return;
+            _imported = false;
+            OnPropertyChanged(nameof(ImportNote));
+            OnPropertyChanged(nameof(HasImportNote));
+        }
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         {
             if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true;
@@ -462,17 +480,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string path = await DialogHelper.OpenFile(owner, "Import Egg Move Data",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
             if (path == null) return;
-            bool ok = EggMoveCsv.Import(ref _eggMoveData, path);
-            if (ok)
-            {
-                RefreshMonList();
-                UpdateEntryCountLabel();
-                UpdateListSizeLabel();
-                SetDirty(true);
-                await DialogHelper.ShowInfo("Egg move data imported successfully.", "Import Complete");
-            }
-            else
-                await DialogHelper.ShowError("Failed to import egg move data. Check the logs.", "Import Failed");
+            EggMoveTableCsv importer = new EggMoveTableCsv(_monNames, _moveNames, _eggMoveData);
+            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, CsvImportSession.Open(importer, path));
+            if (session == null) return;
+            _eggMoveData = importer.Result(session.Accepted);
+            RefreshMonList();
+            UpdateEntryCountLabel();
+            UpdateListSizeLabel();
+            SetDirty(true);
+            MarkImported();
         }
 
 

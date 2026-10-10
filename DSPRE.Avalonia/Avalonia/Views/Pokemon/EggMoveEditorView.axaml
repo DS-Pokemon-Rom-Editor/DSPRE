@@ -21,6 +21,7 @@
 		<Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
 		<TextBlock Text="{Binding MonCountText}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 		<TextBlock Text="{Binding ListSizeText}" Foreground="{Binding ListSizeBrush}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+	  <TextBlock Text="{Binding ImportNote}" IsVisible="{Binding HasImportNote}" Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 	</controls:EditorToolbar>
 
 	<DockPanel Margin="8" LastChildFill="True">

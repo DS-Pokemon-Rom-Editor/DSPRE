@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -13,6 +12,8 @@ using AvaBitmap = Avalonia.Media.Imaging.Bitmap;
 using static DSPRE.RomInfo;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using DSPRE.Avalonia.Data;
+using DSPRE.Avalonia.Views.Shell;
+using DSPRE.Csv;
 
 namespace DSPRE.Avalonia.ViewModels.Graphics
 {
@@ -87,7 +88,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            if (n == nameof(HasUnsavedChanges)) ClearImportedWhenClean();
+        }
+
+        // Shown after a CSV import until the changes are saved or discarded.
+        private bool _imported;
+        public string ImportNote => _imported ? "CSV import has unsaved changes. Press Save to write them to disk." : "";
+        public bool HasImportNote => _imported;
+        private void MarkImported() { _imported = true; OnPropertyChanged(nameof(ImportNote)); OnPropertyChanged(nameof(HasImportNote)); }
+        private void ClearImportedWhenClean()
+        {
+            if (!_imported || HasUnsavedChanges) return;
+            _imported = false;
+            OnPropertyChanged(nameof(ImportNote));
+            OnPropertyChanged(nameof(HasImportNote));
+        }
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
@@ -319,34 +336,13 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        private static readonly string[] CsvHeader =
-        {
-            "ZoneID", "WipeType",
-            "MorningPalette", "MorningTiles", "MorningScreen",
-            "NoonPalette", "NoonTiles", "NoonScreen",
-            "EveningPalette", "EveningTiles", "EveningScreen",
-            "NightPalette", "NightTiles", "NightScreen",
-            "NameMessageId"
-        };
-
         public async Task<string> ExportCsvAsync(string path)
         {
             try
             {
-                List<string> lines = new List<string> { string.Join(",", CsvHeader) };
-                foreach (DungeonCutinRow row in Rows)
-                {
-                    lines.Add(string.Join(",", new[]
-                    {
-                        row.HeaderIndex, row.WipeType,
-                        row.MorningPaletteId, row.MorningTilesId, row.MorningScreenId,
-                        row.NoonPaletteId, row.NoonTilesId, row.NoonScreenId,
-                        row.EveningPaletteId, row.EveningTilesId, row.EveningScreenId,
-                        row.NightPaletteId, row.NightTilesId, row.NightScreenId,
-                        row.NameMessageId
-                    }.Select(v => v.ToString(CultureInfo.InvariantCulture))));
-                }
-                await File.WriteAllLinesAsync(path, lines);
+                using StringWriter writer = new StringWriter();
+                DungeonCutinCsv.Write(writer, Rows.Select(Values).ToArray());
+                await File.WriteAllTextAsync(path, writer.ToString());
                 return null;
             }
             catch (Exception ex)
@@ -355,70 +351,20 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             }
         }
 
-        public async Task<string> ImportCsvAsync(string path)
+        /// <summary>Imports the table from a CSV file. Changes stay unsaved until Save.</summary>
+        public async Task ImportCsvAsync(Window owner, string path)
         {
-            try
+            DungeonCutinCsv importer = new DungeonCutinCsv(Rows.Select(Values).ToArray(), Headers.ToArray());
+            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, CsvImportSession.Open(importer, path));
+            if (session == null) return;
+            foreach (CsvRecord r in session.Accepted)
             {
-                string[] lines = await File.ReadAllLinesAsync(path);
-                List<string> dataLines = lines.Skip(1).Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
-
-                if (dataLines.Count != RowCount)
-                    return $"Expected exactly {RowCount} rows, found {dataLines.Count}. " +
-                        "This is a fixed-size ARM9-embedded table with no room to grow or shrink; " +
-                        "import was rejected to avoid corrupting adjacent ARM9 data.";
-
-                List<int[]> parsedRows = new List<int[]>(RowCount);
-                for (int i = 0; i < dataLines.Count; i++)
-                {
-                    string[] parts = dataLines[i].Split(',');
-                    if (parts.Length != FieldsPerRow)
-                        return $"Row {i + 1}: expected {FieldsPerRow} columns, found {parts.Length}.";
-
-                    int[] values = new int[FieldsPerRow];
-                    for (int c = 0; c < FieldsPerRow; c++)
-                    {
-                        if (!int.TryParse(parts[c], NumberStyles.Integer, CultureInfo.InvariantCulture, out values[c]))
-                            return $"Row {i + 1}, column {c + 1} ('{parts[c]}') is not a valid integer.";
-                    }
-                    parsedRows.Add(values);
-                }
-
-                Rows.Clear();
-                int rowNum = 0;
-                foreach (int[] v in parsedRows)
-                {
-                    rowNum++;
-                    DungeonCutinRow row = new DungeonCutinRow(Headers)
-                    {
-                        RowNumber = rowNum,
-                        HeaderIndex = v[0],
-                        WipeType = v[1],
-                        MorningPaletteId = v[2],
-                        MorningTilesId = v[3],
-                        MorningScreenId = v[4],
-                        NoonPaletteId = v[5],
-                        NoonTilesId = v[6],
-                        NoonScreenId = v[7],
-                        EveningPaletteId = v[8],
-                        EveningTilesId = v[9],
-                        EveningScreenId = v[10],
-                        NightPaletteId = v[11],
-                        NightTilesId = v[12],
-                        NightScreenId = v[13],
-                        NameMessageId = v[14],
-                    };
-                    row.PropertyChanged += (_, __) => { Changed(); if (ReferenceEquals(row, SelectedRow)) RefreshPreviews(); };
-                    Rows.Add(row);
-                }
-                // Steps hold values by row position, so the import is one step over the rows it replaced.
-                Changed();
-                SelectedRow = Rows.Count > 0 ? Rows[0] : null;
-                return null;
+                DungeonCutinCsv.Entry e = (DungeonCutinCsv.Entry)r.Value;
+                SetValues(Rows[e.Row], e.Values);
             }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
+            RefreshPreviews();
+            Changed();
+            MarkImported();
         }
 
         // ── Private helpers ───────────────────────────────────────────────────
