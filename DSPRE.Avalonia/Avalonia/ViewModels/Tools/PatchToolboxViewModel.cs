@@ -25,17 +25,18 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         /// <summary>The patches grouped by what they change; a patch with no group lands in Other.</summary>
         public ObservableCollection<PatchTabViewModel> Tabs { get; } = new ObservableCollection<PatchTabViewModel>();
 
-        private static readonly string[] TabNames = { "Foundation", "Trainers", "Text", "Items and Pokémon", "Moves", "Maps and graphics", "External", "Other" };
+        private static readonly string[] TabNames = { "Foundation", "Trainers", "Items and Pokémon", "Moves", "Maps and graphics", "External", "Other" };
 
         private static readonly Dictionary<string, string> TabOf = new Dictionary<string, string>
         {
             ["arm9"] = "Foundation", ["matrix"] = "Foundation", ["dynamicHeaders"] = "Foundation", ["scrcmdRepoint"] = "Foundation",
             ["trainerClassMetadata"] = "Trainers", ["vsIntroTimings"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
-            ["sentenceCase"] = "Text", ["itemSentenceCase"] = "Text", ["trainerNames"] = "Text",
+            // Grouped by what the patch is about, not what it edits: name patches sit with their subject.
+            ["sentenceCase"] = "Items and Pokémon", ["itemSentenceCase"] = "Items and Pokémon", ["trainerNames"] = "Trainers",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
             ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["regionalDexCount"] = "Items and Pokémon", ["evolutionSlots"] = "Items and Pokémon", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon",
             ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics",
-            ["platPatches"] = "External",
+            ["platPatches"] = "External", ["g4Patcher"] = "External",
         };
 
         // Words a search should hit beyond the title and description.
@@ -48,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["sameHeldItemOdds"] = "held item odds wild", ["itemStandardize"] = "item numbers scripts ground items order",
             ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai", ["regionalDexCount"] = "regional pokedex dex size count complete professor rating", ["evolutionSlots"] = "evolution evolutions evo slots methods more expand", ["typeChartExpanded"] = "type chart matchups effectiveness expand", ["swarmTableExpanded"] = "swarm swarms outbreak table expand rows", ["bpShopExpanded"] = "battle point bp shop counter tm exchange expand", ["martsExpanded"] = "mart marts shop poke mart items custom expand",
             ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable",
-            ["platPatches"] = "external platinum patches link",
+            ["platPatches"] = "external platinum patches link", ["g4Patcher"] = "external asm code injection armips patches link kalaay",
         };
 
         private string _search = "";
@@ -153,6 +154,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             if (row == null || !row.CanApply) return;
             DSPRE.PatchToolboxLogic.ApplyByKey(row.Key);   // shows its own confirm/result prompts
             AppEvents.RaiseRomPatchStateChanged();         // any open editor gating on a patch flag re-checks
+            // The sentence-case patches rewrite names that open editors list.
+            if (row.Key == "sentenceCase" || row.Key == "itemSentenceCase") AppEvents.RaiseNamesChanged();
             Refresh();
         }
     }
