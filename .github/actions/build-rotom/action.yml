@@ -58,7 +58,7 @@ runs:
     - name: Check rotom version
       shell: bash
       env:
-        ROTOM_VERSION: rotom 0.6.0
+        ROTOM_VERSION: rotom 0.7.0
         OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
       run: |
         set -euo pipefail
