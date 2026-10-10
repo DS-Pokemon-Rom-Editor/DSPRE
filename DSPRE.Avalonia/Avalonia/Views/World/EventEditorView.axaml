@@ -13,6 +13,7 @@
   <DockPanel>
     <controls:EditorToolbar>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="150" ItemsSource="{Binding EventNames}" SelectedIndex="{Binding SelectedEventIndex}"/>
+        <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Event" FileId="{Binding SelectedEventIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemFile_Click"/>
         <Button x:Name="SaveButton" Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>

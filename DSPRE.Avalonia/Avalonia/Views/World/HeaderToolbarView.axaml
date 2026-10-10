@@ -21,5 +21,7 @@
     <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
     <Button Content="Copy" controls:Icon.Key="copy" Click="Copy_Click" ToolTip.Tip="Copy this header's fields"/>
     <Button Content="Paste" controls:Icon.Key="paste" Click="Paste_Click" ToolTip.Tip="Paste copied header fields over this one"/>
+    <Button controls:EditorToolbar.Slot="Extra" Content="Search" controls:Icon.Key="lens" Click="Search_Click"
+            ToolTip.Tip="Advanced header search: find headers by any field"/>
   </controls:EditorToolbar>
 </UserControl>

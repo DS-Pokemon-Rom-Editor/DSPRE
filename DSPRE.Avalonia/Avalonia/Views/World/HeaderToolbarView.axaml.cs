@@ -21,6 +21,7 @@ namespace DSPRE.Avalonia.Views.World
         private void Reset_Click(object sender, RoutedEventArgs e) => VM?.Reset();
         private void Copy_Click(object sender, RoutedEventArgs e) => VM?.Copy();
         private void Paste_Click(object sender, RoutedEventArgs e) => VM?.Paste();
+        private void Search_Click(object sender, RoutedEventArgs e) => AvaloniaEditorLauncher.OpenHeaderSearch();
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private async void AddHeader_Click(object sender, RoutedEventArgs e) => await Safe(VM?.AddHeaderAsync());

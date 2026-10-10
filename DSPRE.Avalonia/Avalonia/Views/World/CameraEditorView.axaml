@@ -13,6 +13,8 @@
 
     <!-- ── Toolbar ─────────────────────────────────────────────────────── -->
     <controls:EditorToolbar>
+        <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Camera" FileId="{Binding SelectedCamera.Index, FallbackValue=-1}"
+                                ToolTip.Tip="Map headers that use this camera"/>
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="SaveTable_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>

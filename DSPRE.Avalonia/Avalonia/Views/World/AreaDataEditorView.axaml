@@ -12,6 +12,7 @@
   <DockPanel>
     <controls:EditorToolbar>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="160" ItemsSource="{Binding AreaNames}" SelectedIndex="{Binding SelectedIndex}"/>
+        <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="AreaData" FileId="{Binding SelectedIndex}"/>
         <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
         <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>

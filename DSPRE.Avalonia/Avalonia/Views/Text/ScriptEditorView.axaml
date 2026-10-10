@@ -14,6 +14,7 @@
     <controls:EditorToolbar>
         <TextBlock Text="Source:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="260" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
+        <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Script" FileId="{Binding SelectedScriptIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAdd}"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveLast_Click" IsEnabled="{Binding CanRemoveLast}"
                 ToolTip.Tip="Deletes the highest-numbered script file, unless a header still uses it"/>
