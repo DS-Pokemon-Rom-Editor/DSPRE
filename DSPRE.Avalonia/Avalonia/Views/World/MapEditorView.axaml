@@ -17,6 +17,7 @@
           <ComboBox x:Name="ViewModeBox" Width="110" ItemsSource="{Binding ViewModes}" SelectedIndex="{Binding ViewModeIndex}"/>
           <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
           <controls:FusionAutoCompleteBox Width="140" ItemsSource="{Binding MapNames}" SelectedIndex="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
+          <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Map" FileId="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
           <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
           <controls:FusionAutoCompleteBox Width="140" ItemsSource="{Binding Matrices}" SelectedIndex="{Binding SelectedMatrixIndex}" IsVisible="{Binding IsMatrixView}"/>
           <TextBlock controls:EditorToolbar.Slot="Picker" Text="{Binding MatrixInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding IsMatrixView}"/>
@@ -153,7 +154,11 @@
               <StackPanel Grid.Column="1" Margin="6,0,0,0" Spacing="6" IsVisible="{Binding HasBuildingSelected}">
                 <StackPanel Spacing="2">
                   <TextBlock Text="Model ID" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>
-                  <NumericUpDown HorizontalAlignment="Stretch" Minimum="0" Maximum="65535" Increment="1" Value="{Binding BModelId}"/>
+                  <Grid ColumnDefinitions="*,Auto">
+                    <NumericUpDown HorizontalAlignment="Stretch" Minimum="0" Maximum="65535" Increment="1" Value="{Binding BModelId}"/>
+                    <Button Grid.Column="1" Content="Choose…" Margin="4,0,0,0" Click="ChooseModel_Click"
+                            ToolTip.Tip="Pick the model from a list with a preview"/>
+                  </Grid>
                 </StackPanel>
                 <StackPanel Spacing="2">
                   <TextBlock Text="Position (tiles · fine)" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"/>

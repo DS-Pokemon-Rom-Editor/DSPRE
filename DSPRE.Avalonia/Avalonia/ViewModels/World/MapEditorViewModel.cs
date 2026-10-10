@@ -1075,6 +1075,131 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool TrySelectedBuildingAnchorNorm(out float nx, out float ny, out float nz)
             => TryBuildingAnchorNorm(_selectedBuildingIndex, out nx, out ny, out nz);
 
+        /// <summary>The building whose model a ray (normalized render space) hits first, as a Buildings-list index, or -1.</summary>
+        public int BuildingAlong(float ox, float oy, float oz, float dx, float dy, float dz)
+        {
+            if (Model3D == null) return -1;
+            Building nearest = null;
+            float best = float.MaxValue;
+            foreach (NsbmdRenderModel.BuildingMaterials placed in Model3D.Buildings)
+            {
+                if (placed.Source == null) continue;
+                foreach (NsbmdMeshPart part in Model3D.Parts)
+                {
+                    if (part.MaterialIndex < placed.FirstKey || part.MaterialIndex >= placed.FirstKey + placed.Count || part.Vertices == null) continue;
+                    float[] v = part.Vertices;
+                    for (int t = 0; t + 2 < part.VertexCount; t += 3)
+                    {
+                        int a = t * 8, b = a + 8, c = a + 16;
+                        if (RayHitsTriangle(ox, oy, oz, dx, dy, dz, v[a], v[a + 1], v[a + 2], v[b], v[b + 1], v[b + 2], v[c], v[c + 1], v[c + 2], out float d) && d < best)
+                        { best = d; nearest = placed.Source; }
+                    }
+                }
+            }
+            if (nearest == null) return -1;
+            for (int i = 0; i < BuildingCount; i++)
+                if (ResolveBuildingAt(i) is (MapFile _, int _, int _, Building b) && b == nearest) return i;
+            return -1;
+        }
+
+        // Moller-Trumbore, both faces.
+        private static bool RayHitsTriangle(float ox, float oy, float oz, float dx, float dy, float dz,
+            float ax, float ay, float az, float bx, float by, float bz, float cx, float cy, float cz, out float t)
+        {
+            t = 0f;
+            float e1x = bx - ax, e1y = by - ay, e1z = bz - az, e2x = cx - ax, e2y = cy - ay, e2z = cz - az;
+            float px = dy * e2z - dz * e2y, py = dz * e2x - dx * e2z, pz = dx * e2y - dy * e2x;
+            float det = e1x * px + e1y * py + e1z * pz;
+            if (Math.Abs(det) < 1e-9f) return false;
+            float inv = 1f / det;
+            float sx = ox - ax, sy = oy - ay, sz = oz - az;
+            float u = (sx * px + sy * py + sz * pz) * inv;
+            if (u < 0f || u > 1f) return false;
+            float qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
+            float w = (dx * qx + dy * qy + dz * qz) * inv;
+            if (w < 0f || u + w > 1f) return false;
+            t = (e2x * qx + e2y * qy + e2z * qz) * inv;
+            return t > 0f;
+        }
+
+        /// <summary>The selected building's own triangles, tinted, so it can be found in 3D without the move handle; null for none.</summary>
+        public IReadOnlyList<NsbmdGlControl.HighlightBatch> SelectedBuildingHighlight()
+        {
+            if (Model3D == null || ResolveSelectedBuilding() is not (MapFile _, int _, int _, Building building)) return null;
+            NsbmdRenderModel.BuildingMaterials placed = Model3D.Buildings.FirstOrDefault(b => b.Source == building);
+            if (placed == null) return null;
+            List<NsbmdGlControl.HighlightBatch> batches = new List<NsbmdGlControl.HighlightBatch>();
+            foreach (NsbmdMeshPart part in Model3D.Parts)
+                if (part.MaterialIndex >= placed.FirstKey && part.MaterialIndex < placed.FirstKey + placed.Count && part.Vertices != null)
+                    batches.Add(new NsbmdGlControl.HighlightBatch { MaterialKey = part.MaterialIndex, Mesh = part.Vertices.Length == part.VertexCount * 8 ? part.Vertices : part.Vertices.Take(part.VertexCount * 8).ToArray(), R = 2.2f, G = 1.9f, B = 0.4f });
+            return batches;
+        }
+
+        /// <summary>The models and building textures the selected building's map uses, for the model picker.</summary>
+        public (string ModelDir, string TexturePack)? BuildingModelSource()
+        {
+            if (ResolveSelectedBuilding() == null) return null;
+            byte? area = null;
+            int pack = -1;
+            if (IsHeaderView && _selectedBuildingIndex >= 0 && _selectedBuildingIndex < _headerBuildingIndex.Count)
+            {
+                int ci = _headerBuildingIndex[_selectedBuildingIndex].CellIndex;
+                if (ci >= 0 && ci < _headerCells.Count) area = _headerCells[ci].AreaId;
+            }
+            else
+            {
+                area = AreaForMap(_selectedMapIndex);
+                pack = _buildingTilesetIndex - 1;
+            }
+            bool interior = false;
+            if (area is byte aid)
+                try
+                {
+                    AreaData data = new AreaData(aid);
+                    interior = gameFamily == GameFamilies.HGSS && gameDirs.ContainsKey(DirNames.interiorBuildingModels) && data.areaType == AreaData.TYPE_INDOOR;
+                    if (IsHeaderView) pack = data.buildingsTileset;
+                }
+                catch (Exception ex) when (ex is IOException || ex is ArgumentException) { AppLogger.Warn($"Area {aid} unreadable: {ex.Message}"); }
+            string texture = pack >= 0 ? Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, pack.ToString("D4")) : null;
+            return (gameDirs[interior ? DirNames.interiorBuildingModels : DirNames.exteriorBuildingModels].unpackedDir, texture);
+        }
+
+        /// <summary>A box around the highlighted triangles, as thin crossed strips per edge, so the building shows through trees.</summary>
+        public static float[] OutlineOf(IReadOnlyList<NsbmdGlControl.HighlightBatch> batches)
+        {
+            if (batches == null || batches.Count == 0) return null;
+            float x0 = float.MaxValue, y0 = float.MaxValue, z0 = float.MaxValue, x1 = float.MinValue, y1 = float.MinValue, z1 = float.MinValue;
+            foreach (NsbmdGlControl.HighlightBatch b in batches)
+                for (int i = 0; i + 2 < b.Mesh.Length; i += 8)
+                {
+                    x0 = Math.Min(x0, b.Mesh[i]); x1 = Math.Max(x1, b.Mesh[i]);
+                    y0 = Math.Min(y0, b.Mesh[i + 1]); y1 = Math.Max(y1, b.Mesh[i + 1]);
+                    z0 = Math.Min(z0, b.Mesh[i + 2]); z1 = Math.Max(z1, b.Mesh[i + 2]);
+                }
+            if (x0 > x1) return null;
+            float w = Math.Max(Math.Max(x1 - x0, y1 - y0), z1 - z0) * 0.012f;
+            List<float> v = new List<float>(12 * 12 * 8);
+            void Vtx(float x, float y, float z) { v.Add(x); v.Add(y); v.Add(z); v.Add(0); v.Add(0); v.Add(1f); v.Add(0.84f); v.Add(0.24f); }
+            // An axis-aligned edge from a to b, widened along the two other axes.
+            void Edge(float ax, float ay, float az, float bx, float by, float bz)
+            {
+                bool alongX = ax != bx, alongY = ay != by;
+                (float, float, float)[] sides = alongX ? new[] { (0f, w, 0f), (0f, 0f, w) }
+                    : alongY ? new[] { (w, 0f, 0f), (0f, 0f, w) } : new[] { (w, 0f, 0f), (0f, w, 0f) };
+                foreach ((float sx, float sy, float sz) in sides)
+                {
+                    Vtx(ax - sx, ay - sy, az - sz); Vtx(bx - sx, by - sy, bz - sz); Vtx(bx + sx, by + sy, bz + sz);
+                    Vtx(ax - sx, ay - sy, az - sz); Vtx(bx + sx, by + sy, bz + sz); Vtx(ax + sx, ay + sy, az + sz);
+                }
+            }
+            foreach (float y in new[] { y0, y1 })
+            {
+                Edge(x0, y, z0, x1, y, z0); Edge(x1, y, z0, x1, y, z1); Edge(x1, y, z1, x0, y, z1); Edge(x0, y, z1, x0, y, z0);
+            }
+            foreach ((float x, float z) in new[] { (x0, z0), (x1, z0), (x1, z1), (x0, z1) }) Edge(x, y0, z, x, y1, z);
+            return v.ToArray();
+        }
+
         /// <summary>Normalized→raw scale of the current scene, so the view can convert a gizmo
         /// drag (normalized units) back into raw map units.</summary>
         public float ModelScale => Model3D?.Scale ?? 1f;
@@ -2330,6 +2455,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                             ModelId = (int)b.modelID,
                             TileX = b.xPosition,
                             TileZ = b.zPosition,
+                            Source = b,
                         });
                     }
 

@@ -177,6 +177,7 @@ namespace DSPRE.Avalonia.Gl
                         ModelId = (int)b.modelID,
                         TileX = cellX * MapFile.mapSize + b.xPosition,
                         TileZ = cellY * MapFile.mapSize + b.zPosition,
+                        Source = b,
                     });
                     CollectSwappableTextures(b.NSBMDFile, (int)b.modelID, interior, swappable);
                 }

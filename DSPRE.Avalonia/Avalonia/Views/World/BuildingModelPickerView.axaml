@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        xmlns:gl="clr-namespace:DSPRE.Avalonia.Gl"
+        x:Class="DSPRE.Avalonia.Views.World.BuildingModelPickerView"
+        x:DataType="vm:BuildingModelPickerViewModel"
+        Title="Choose building model"
+        Width="860" Height="560" MinWidth="600" MinHeight="380"
+        WindowStartupLocation="CenterOwner">
+
+  <Design.DataContext>
+    <vm:BuildingModelPickerViewModel/>
+  </Design.DataContext>
+
+  <DockPanel Margin="10">
+    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" Margin="0,10,0,0">
+      <TextBlock Text="{Binding Status}" VerticalAlignment="Center" FontSize="12" TextWrapping="Wrap"
+                 Foreground="{DynamicResource Editor.Subtle}"/>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+        <Button Content="Use model" Click="Use_Click" IsDefault="True" IsEnabled="{Binding HasSelection}"/>
+        <Button Content="Cancel" Click="Cancel_Click" IsCancel="True"/>
+      </StackPanel>
+    </Grid>
+
+    <Grid ColumnDefinitions="260,*">
+      <DockPanel Grid.Column="0" Margin="0,0,8,0">
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Watermark="Search by number or name" Text="{Binding Search}" Margin="0,0,0,6"/>
+        <ListBox x:Name="ModelList" ItemsSource="{Binding Shown}" SelectedItem="{Binding Selected}" DoubleTapped="List_DoubleTapped"/>
+      </DockPanel>
+      <Border Grid.Column="1" x:Name="GlHost" Background="#1F1F23" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+        <gl:NsbmdGlControl x:Name="GlView"/>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

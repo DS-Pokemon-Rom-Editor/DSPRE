@@ -34,6 +34,9 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Gizmo axis (0=X,1=Y,2=Z) and the raw normalized-space drag delta along it (via <see cref="NsbmdGlControl.ScreenDragToAxis"/>); the caller applies its own model-scale division.</summary>
         public Action<int, float> NudgeAxis;
         public Action<Point> Pick;
+        /// <summary>A left press and release that did not drag, outside the edit and paint modes.</summary>
+        public Action<Point> Click;
+        private Point? _clickStart;
 
         public Gl3DPointerNavigation(Border host, NsbmdGlControl view)
         {
@@ -50,7 +53,7 @@ namespace DSPRE.Avalonia.Gl
         private void OnPressed(object sender, PointerPressedEventArgs e)
         {
             PointerPoint pt = e.GetCurrentPoint(_host);
-            _dragAxis = -1; _painting = false; _orbiting = false; _panning = false;
+            _dragAxis = -1; _painting = false; _orbiting = false; _panning = false; _clickStart = null;
 
             if (IsPaintModeActive?.Invoke() == true)
             {
@@ -76,6 +79,7 @@ namespace DSPRE.Avalonia.Gl
                 else
                 {
                     _panning = true;
+                    _clickStart = pt.Position;
                 }
             }
 
@@ -105,6 +109,9 @@ namespace DSPRE.Avalonia.Gl
 
         private void OnReleased(object sender, PointerReleasedEventArgs e)
         {
+            Point end = e.GetPosition(_host);
+            if (_clickStart is Point start && Math.Abs(end.X - start.X) <= 3 && Math.Abs(end.Y - start.Y) <= 3) Click?.Invoke(end);
+            _clickStart = null;
             _lastPointer = null; _orbiting = false; _panning = false; _painting = false; _dragAxis = -1;
             e.Pointer.Capture(null);
         }

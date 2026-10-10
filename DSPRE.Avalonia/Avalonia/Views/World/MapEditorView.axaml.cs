@@ -42,6 +42,14 @@ namespace DSPRE.Avalonia.Views.World
                 PaintAt = PaintAt,
                 IsEditModeActive = () => VM?.EditMode3D == true,
                 Pick = pos => { int b = PickBuilding(pos); if (b >= 0 && VM != null) VM.SelectedBuildingIndex = b; },
+                Click = pos =>
+                {
+                    if (VM == null) return;
+                    int b = GlView.ScreenToRay((float)pos.X, (float)pos.Y, out float ox, out float oy, out float oz, out float dx, out float dy, out float dz)
+                        ? VM.BuildingAlong(ox, oy, oz, dx, dy, dz) : -1;
+                    if (b < 0) b = PickBuilding(pos);
+                    if (b >= 0) VM.SelectedBuildingIndex = b;
+                },
                 NudgeAxis = (axis, normDelta) =>
                 {
                     if (VM == null) return;
@@ -179,6 +187,18 @@ namespace DSPRE.Avalonia.Views.World
                 GlView.SetGizmoTarget(nx, ny, nz);
             else
                 GlView.ClearGizmoTarget();
+            // Without the move handle, the selected building is tinted and boxed instead.
+            IReadOnlyList<NsbmdGlControl.HighlightBatch> highlight = VM.EditMode3D ? null : VM.SelectedBuildingHighlight();
+            GlView.SetHighlight(highlight);
+            GlView.SetOutline(MapEditorViewModel.OutlineOf(highlight));
+        }
+
+        private async void ChooseModel_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM?.BuildingModelSource() is not (string dir, string texture)) return;
+            BuildingModelPickerViewModel picker = new BuildingModelPickerViewModel(dir, texture, (int)VM.BModelId);
+            if (TopLevel.GetTopLevel(this) is not Window owner) return;
+            if (await new BuildingModelPickerView(picker).ShowDialog<int?>(owner) is int chosen) VM.BModelId = chosen;
         }
 
         /// <summary>Finds the building whose anchor is nearest the screen point (within a pixel radius), or -1.</summary>
