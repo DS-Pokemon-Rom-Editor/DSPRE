@@ -19,7 +19,18 @@ namespace DSPRE.Avalonia.Views.World
                 Gesture = new KeyGesture(Key.Z, KeyModifiers.Control),
                 Command = new EditorWindowChrome.RelayCommand(() =>
                 {
-                    if (_half == ShapeTab && vm.Shape.CanUndo) vm.Shape.Undo();
+                    if (FocusManager?.GetFocusedElement() is TextBox text) { if (text.CanUndo) text.Undo(); }
+                    else if (_half == ShapeTab) { if (vm.Shape.CanUndo) vm.Shape.Undo(); }
+                    else vm.Tiles.UndoPaint();
+                }),
+            });
+            KeyBindings.Add(new KeyBinding
+            {
+                Gesture = new KeyGesture(Key.Y, KeyModifiers.Control),
+                Command = new EditorWindowChrome.RelayCommand(() =>
+                {
+                    if (FocusManager?.GetFocusedElement() is TextBox text) { if (text.CanRedo) text.Redo(); }
+                    else if (_half != ShapeTab) vm.Tiles.RedoPaint();
                 }),
             });
         }
