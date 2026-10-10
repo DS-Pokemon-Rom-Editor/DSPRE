@@ -13,7 +13,7 @@ namespace DSPRE.Avalonia.Views.World
             InitializeComponent();
             Opened += (_, _) => vm.CountHeaders();
 
-            // The Tiles tab handles its own Ctrl+Z in the painter; the Shape tab has only its toolbar Undo.
+            // Ctrl+Z and Ctrl+Y go to the focused text box, else to the open tab's undo. The Shape tab has no redo.
             KeyBindings.Add(new KeyBinding
             {
                 Gesture = new KeyGesture(Key.Z, KeyModifiers.Control),
