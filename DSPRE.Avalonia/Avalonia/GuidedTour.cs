@@ -220,7 +220,8 @@ namespace DSPRE.Avalonia
                     Title = "The Tools menu",
                     Body = $"Power tools: {(beta ? "Validation & Where-Used, " : "")}the ROM Patch Toolbox, overlays, music " +
                            "and battle tables, data exports, archive tools and Settings.\n\n" +
-                           "Tip: press Ctrl+P anywhere and type an editor's name to open it instantly."
+                           "Tip: press Ctrl+P anywhere and type an editor's name to open it instantly. Right-click any " +
+                           "menu item to pin it beside the menus; right-click the pinned button to take it off."
                 },
                 new Step
                 {

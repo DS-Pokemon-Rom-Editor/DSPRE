@@ -48,6 +48,7 @@ namespace DSPRE.Avalonia.Views.Shell
             };
 
             RecentMenu.SubmenuOpened += (_, _) => RebuildRecentMenu();
+            SetupFavourites();
             ProjectSourceWatcher.ScriptsCompiled += (result, paths) =>
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(() => NoteOutsideScriptCompile(result, paths));
 

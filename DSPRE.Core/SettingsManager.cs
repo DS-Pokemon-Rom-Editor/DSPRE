@@ -100,6 +100,9 @@ namespace DSPRE
 
         /// <summary>Most-recently-opened projects (.nds files or extracted folders), newest first.</summary>
         public List<string> recentProjects { get; set; } = new List<string>();
+
+        /// <summary>Menu items pinned beside the menus, by their place in the menus ("Trainers > Trainer editor").</summary>
+        public List<string> favouriteMenuItems { get; set; } = new List<string>();
     }
 
     public static class SettingsManager

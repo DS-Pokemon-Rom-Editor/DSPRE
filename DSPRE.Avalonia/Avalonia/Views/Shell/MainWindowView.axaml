@@ -21,7 +21,7 @@
       <Image x:Name="GameIconImage" DockPanel.Dock="Right" Width="28" Height="28" Margin="4,2,10,2"
              IsVisible="False" RenderOptions.BitmapInterpolationMode="None"
              DoubleTapped="GameIcon_DoubleTapped"/>
-      <Menu IsEnabled="{Binding !IsBusy}">
+      <Menu x:Name="MainMenu" DockPanel.Dock="Left" IsEnabled="{Binding !IsBusy}">
       <MenuItem Header="_File" x:Name="FileMenu">
         <MenuItem Header="Open ROM…" Click="OpenRom_Click"/>
         <MenuItem Header="Open extracted folder…" Click="OpenFolder_Click"/>
@@ -258,6 +258,7 @@
         <MenuItem Header="About" Click="About_Click"/>
       </MenuItem>
       </Menu>
+      <StackPanel x:Name="FavouritesBar" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0"/>
     </DockPanel>
 
     <!-- ── Status bar ─────────────────────────────────────────────────────── -->
