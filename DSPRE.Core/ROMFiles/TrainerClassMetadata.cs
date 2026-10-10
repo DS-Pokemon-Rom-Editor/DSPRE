@@ -213,13 +213,29 @@ namespace DSPRE.ROMFiles
             return "RCSN";
         }
 
-        public static string GetAssetLabel(TrainerClassMetadataAssetField field)
+        /// <summary>The asset as the VS intro editor names it for this style, such as "Large Poké Ball palette".</summary>
+        public static string GetAssetLabel(int style, TrainerClassMetadataAssetField field)
         {
-            return field.ToString()
-                .Replace("Group1", "Group 1 ")
-                .Replace("Group2", "Group 2 ")
-                .Replace("Group3", "Group 3 ")
-                .ToUpperInvariant();
+            string name = field.ToString();
+            string slot = name.StartsWith("Group2", StringComparison.Ordinal) ? (style == 0 ? "Large Poké Ball" : "Portrait")
+                : name.StartsWith("Group3", StringComparison.Ordinal) ? "VS mark"
+                : style == 4 ? "Background"
+                : style == 1 || style == 13 ? "Banner"
+                : style == 3 ? "Backdrop"
+                : style == 2 ? "Frame"
+                : style is 5 or 6 ? "Emblem"
+                : "Small Poké Ball";
+            string part = field switch
+            {
+                TrainerClassMetadataAssetField.Group1Rlcn or TrainerClassMetadataAssetField.Group2Rlcn or TrainerClassMetadataAssetField.Group3Rlcn => "palette",
+                TrainerClassMetadataAssetField.Group1Rgcn or TrainerClassMetadataAssetField.Group2Rgcn or TrainerClassMetadataAssetField.Group3Rgcn => "tiles",
+                TrainerClassMetadataAssetField.Group1Recn or TrainerClassMetadataAssetField.Group2Recn or TrainerClassMetadataAssetField.Group3Recn => "cells",
+                TrainerClassMetadataAssetField.Group1Rcsn2 => "screen 2",
+                TrainerClassMetadataAssetField.Group1Rcsn3 => "screen 3",
+                TrainerClassMetadataAssetField.Group1Rcsn1 => "screen",
+                _ => "animation",
+            };
+            return slot + " " + part;
         }
     }
 
@@ -489,16 +505,16 @@ namespace DSPRE.ROMFiles
                     ushort memberId = record.GetAsset(field);
                     if (memberId >= memberCount)
                     {
-                        result.Errors.Add(TrainerClassMetadataSchema.GetAssetLabel(field) +
-                            " references missing a109 member " + memberId + ".");
+                        result.Errors.Add(TrainerClassMetadataSchema.GetAssetLabel(record.VsStyle, field) +
+                            " " + memberId + " doesn't exist.");
                         continue;
                     }
 
                     Stream member = archive[memberId];
                     if (member.Length < 4)
                     {
-                        result.Warnings.Add(TrainerClassMetadataSchema.GetAssetLabel(field) +
-                            " member " + memberId + " is too short to identify its Nitro type.");
+                        result.Warnings.Add(TrainerClassMetadataSchema.GetAssetLabel(record.VsStyle, field) +
+                            " " + memberId + " is too short to be a picture file.");
                         continue;
                     }
 
@@ -511,8 +527,8 @@ namespace DSPRE.ROMFiles
                     string expectedMagic = TrainerClassMetadataSchema.GetExpectedMagic(field);
                     if (!string.Equals(actualMagic, expectedMagic, StringComparison.Ordinal))
                     {
-                        result.Warnings.Add(TrainerClassMetadataSchema.GetAssetLabel(field) + " member " +
-                            memberId + " begins with " + FormatMagic(magicBytes) + "; expected " + expectedMagic + ".");
+                        result.Warnings.Add(TrainerClassMetadataSchema.GetAssetLabel(record.VsStyle, field) + " " +
+                            memberId + " is the wrong kind of file.");
                     }
                 }
             }
@@ -524,11 +540,6 @@ namespace DSPRE.ROMFiles
             {
                 archive?.Free();
             }
-        }
-
-        private static string FormatMagic(byte[] value)
-        {
-            return "0x" + string.Concat(value.Select(b => b.ToString("X2")));
         }
 
         private static bool TryGetAssetArchivePath(out string path)

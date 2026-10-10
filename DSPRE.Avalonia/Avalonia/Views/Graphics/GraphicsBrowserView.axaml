@@ -141,10 +141,11 @@
 
             <ScrollViewer IsVisible="{Binding ShowsPalette}" HorizontalScrollBarVisibility="Disabled">
               <StackPanel Margin="16" Spacing="8">
-                <ItemsControl ItemsSource="{Binding PaletteColours}" MaxWidth="480" HorizontalAlignment="Left"
+                <ItemsControl ItemsSource="{Binding PaletteColours}" HorizontalAlignment="Left"
                               ToolTip.Tip="Every picture using these colours changes too">
+                  <!-- Sixteen across, so each row is one bank of colours. -->
                   <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                    <ItemsPanelTemplate><UniformGrid Columns="16"/></ItemsPanelTemplate>
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:GraphicPainterViewModel+Swatch">

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
@@ -22,6 +23,10 @@ namespace DSPRE.Avalonia.Data
             public ushort[] FaceColours, PlayerColours;
             /// <summary>League frame: tiles, cells, and the palette file the record picks.</summary>
             public int[] Frame;
+            /// <summary>League frame animation: sequence 0 is the player's frame, 1 the opponent's.</summary>
+            public int FrameAnim = -1;
+            /// <summary>League: the fire and bar particle files, or null where the game has none.</summary>
+            public int[] Particles;
             public int FramePalette = -1, NamePalette = -1, EndX = 214, ClashFrames = 32;
             /// <summary>HGSS Rocket executive backdrop: palette, tiles, then the streaks, outlined R and filled R screens.</summary>
             public int[] Backdrop;
@@ -126,14 +131,25 @@ namespace DSPRE.Avalonia.Data
             return bg == 0 ? null : screen.Render();
         }
 
-        private (DsBgScreen.Oam[] Cell, byte[] Tiles, Func<int, ushort[]> Colours)? Sprite(int[] m, ushort[] colours, bool rows = false)
+        private (DsBgScreen.Oam[] Cell, byte[] Tiles, Func<int, ushort[]> Colours)? Sprite(int[] m, ushort[] colours, bool rows = false, int cell = 0)
         {
             if (m == null || m.Length < 3) return null;
             byte[] tiles = DsBgScreen.ReadCharacters(_member(m[1]));
             List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(_member(m[2]));
             if (tiles.Length == 0 || cells.Count == 0) return null;
             ushort[] all = colours ?? DsBgScreen.ReadColours(_member(m[0]));
-            return (cells[0], tiles, p => DsBgScreen.Row(all, rows ? p % Math.Max(1, all.Length / 16) : 0));
+            return (cells[Math.Clamp(cell, 0, cells.Count - 1)], tiles, p => DsBgScreen.Row(all, rows ? p % Math.Max(1, all.Length / 16) : 0));
+        }
+
+        private readonly Dictionary<int, NanrFile> _anims = new Dictionary<int, NanrFile>();
+
+        /// <summary>The cell shown <paramref name="sixtieths"/> after the animation started, or its first cell before that.</summary>
+        private int AnimCell(int member, int sequence, int sixtieths)
+        {
+            if (member < 0) return 0;
+            if (!_anims.TryGetValue(member, out NanrFile anim)) _anims[member] = anim = NanrFile.Read(_member(member));
+            if (anim == null) return 0;
+            return anim.CellOf(sequence, anim.FrameAt(sequence, Math.Max(0, sixtieths)));
         }
 
         private static void DrawSprite((DsBgScreen.Oam[] Cell, byte[] Tiles, Func<int, ushort[]> Colours)? s, byte[] rgba, int x, int y, double scale = 1)
@@ -203,18 +219,18 @@ namespace DSPRE.Avalonia.Data
 
         // Three burst copies play the mark's second sequence while shrinking from double size, three frames apart,
         // and hide once full size; the fourth is the letters, playing the first sequence at full size.
-        private void VsMark(Scene s, int[] vs, byte[] rgba, int x, int y, int frame, int start)
+        private void VsMark(Scene s, int[] vs, byte[] rgba, int x, int y, int frame, int start, bool copies = true, bool letters = true)
         {
             int shrink = s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.VsShrink), gap = s.Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field.VsGap);
             if (vs == null) return;
-            if (vs.Length < 4) { VsMarkStill(Sprite(vs, null), rgba, x, y, frame, start); return; }
-            if (frame < 0) { DrawSprite(Sequence(vs, 0, 0, true), rgba, x, y); return; }
+            if (vs.Length < 4) { if (letters) VsMarkStill(Sprite(vs, null), rgba, x, y, frame, start); return; }
+            if (frame < 0) { if (letters) DrawSprite(Sequence(vs, 0, 0, true), rgba, x, y); return; }
             for (int k = 0; k < 4; k++)
             {
                 int t = frame - start - gap * k;
                 if (t < 0) continue;
-                if (k == 3) { DrawSprite(Sequence(vs, 0, t, true), rgba, x, y); continue; }
-                if (t >= shrink) continue;
+                if (k == 3) { if (letters) DrawSprite(Sequence(vs, 0, t, true), rgba, x, y); continue; }
+                if (t >= shrink || !copies) continue;
                 DrawSprite(Sequence(vs, 1, t, true), rgba, x, y, 2 - t / (double)shrink);
             }
         }
@@ -301,7 +317,7 @@ namespace DSPRE.Avalonia.Data
 
         // ── Elite Four and Champion ───────────────────────────────────────────────────────────────
 
-        // The fire particles are 3D and not drawn here; this is how long the game waits for them.
+        // How long the game waits for the fire particles to burn out.
         private const int LeagueFireTicks = 33;
         private static readonly double[] LeagueReveal = { 16 / 3.0, 32 / 3.0, 16, 16, 16, 16 * 5 / 6.0, 16 * 4 / 6.0, 16 * 3 / 6.0, 16 * 2 / 6.0, 16 / 6.0 };
 
@@ -320,6 +336,8 @@ namespace DSPRE.Avalonia.Data
             // The 3D layer replaces the field after the flash, so the scene is all but black behind.
             byte[] rgba = FieldGrid();
             if (f >= FlashesEnd(Flashes(s))) Brightness(rgba, -15);
+            // The bars start on the flash-in tick and sit behind the portraits: the 3D layer drops to the sprites' priority.
+            if (s.Particles?.Length == 2 && f >= t.Reveal) DrawParticles(rgba, _bars, s.Particles[1], BarEmitters, f - t.Reveal + 1);
 
             int k = f - t.In;
             double px = AddMove(-128, 56, 80, 6, k), ox = AddMove(384, 200, -80, 6, k), py = 92, oy = 92;
@@ -340,14 +358,22 @@ namespace DSPRE.Avalonia.Data
             {
                 bool dark = f < t.Reveal;
                 ushort[] frameColours = DsBgScreen.ReadColours(_member(s.FramePalette));
-                (DsBgScreen.Oam[] Cell, byte[] Tiles, Func<int, ushort[]> Colours)? frameSprite =
-                    s.Frame != null ? Sprite(new[] { -1, s.Frame[0], s.Frame[1] }, frameColours, rows: true) : null;
-                DrawSprite(frameSprite, rgba, (int)Math.Round(px + 16), (int)Math.Round(py + 4));
-                DrawSprite(frameSprite, rgba, (int)Math.Round(ox - 16), (int)Math.Round(oy + 4));
+                // Each side plays its own sequence, still until the flash-out ends, then 2/60 s per tick.
+                int played = f >= t.Reveal - 1 ? (f - (t.Reveal - 1) + 1) * 2 : -1;
+                if (s.Frame != null)
+                {
+                    DrawSprite(Sprite(new[] { -1, s.Frame[0], s.Frame[1] }, frameColours, rows: true, cell: AnimCell(s.FrameAnim, 0, played)),
+                        rgba, (int)Math.Round(px + 16), (int)Math.Round(py + 4));
+                    DrawSprite(Sprite(new[] { -1, s.Frame[0], s.Frame[1] }, frameColours, rows: true, cell: AnimCell(s.FrameAnim, 1, played)),
+                        rgba, (int)Math.Round(ox - 16), (int)Math.Round(oy + 4));
+                }
                 DrawSprite(Sprite(s.PlayerFace, dark ? Silhouette(s.PlayerFace, s.PlayerColours) : s.PlayerColours), rgba, (int)Math.Round(px), (int)Math.Round(py));
                 DrawSprite(Sprite(s.Face, dark ? Silhouette(s.Face, s.FaceColours) : s.FaceColours), rgba, (int)Math.Round(ox), (int)Math.Round(oy));
             }
-            VsMark(s, s.Vs, rgba, 128, 96, f, t.Vs);
+            // The fire starts a tick before the VS mark and draws between the portraits and the finished letters.
+            VsMark(s, s.Vs, rgba, 128, 96, f, t.Vs, letters: false);
+            if (s.Particles?.Length == 2 && f >= t.Vs - 1 && f < t.FlashOut) DrawParticles(rgba, _fire, s.Particles[0], FireEmitters, f - t.Vs + 2);
+            VsMark(s, s.Vs, rgba, 128, 96, f, t.Vs, copies: false);
             if (f >= t.Vs && f < t.Leave) Name(s, rgba, 168, 105);
 
             if (frame < 0) return rgba;

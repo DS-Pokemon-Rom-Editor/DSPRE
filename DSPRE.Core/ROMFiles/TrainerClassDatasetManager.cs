@@ -114,10 +114,15 @@ namespace DSPRE.ROMFiles
 
             FileSnapshot nameJson = null, descriptionJson = null;
             bool mutationStarted = false;
+            // The optional per-class timing row follows the class, so the copy starts with the source's timings.
+            VsIntroTimingAddon timing = null;
+            byte[] timingBefore = null;
             try
             {
                 TextArchive names = new TextArchive(trainerClassMessageNumber);
                 TextArchive descriptions = new TextArchive(DescriptionArchiveId);
+                timing = VsIntroTimingAddon.Load();
+                timingBefore = timing?.Snapshot();
                 byte[] metadata = File.ReadAllBytes(MetadataPath(sourceClassId));
                 byte[][] graphics = graphicsSources.Select(File.ReadAllBytes).ToArray();
                 nameJson = FileSnapshot.Capture(TextArchive.GetFilePaths(trainerClassMessageNumber).jsonPath);
@@ -130,8 +135,11 @@ namespace DSPRE.ROMFiles
                 for (int i = 0; i < graphics.Length; i++) File.WriteAllBytes(graphicsDestinations[i], graphics[i]);
                 names.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
                 descriptions.SaveToExpandedDir(DescriptionArchiveId, showSuccessMessage: false);
+                timing?.CopyRow(sourceClassId, newClassId);
+                timing?.Save();
 
                 TrainerClassMetadataStore.SetManagedRecordCount(newClassId + 1);
+
                 return true;
             }
             catch (Exception ex)
@@ -142,6 +150,7 @@ namespace DSPRE.ROMFiles
                     foreach (string path in addedFiles) TryDelete(path, rollbackErrors);
                     nameJson?.Restore(rollbackErrors);
                     descriptionJson?.Restore(rollbackErrors);
+                    RestoreTiming(timing, timingBefore, rollbackErrors);
                 }
                 newClassId = -1;
                 error = "The trainer class was not added: " + ex.Message +
@@ -284,10 +293,15 @@ namespace DSPRE.ROMFiles
             byte[][] graphics = null;
             FileSnapshot nameJson = null, descriptionJson = null;
             bool mutationStarted = false;
+            // A class added later at this number must not pick up the removed one's timings.
+            VsIntroTimingAddon timing = null;
+            byte[] timingBefore = null;
             try
             {
                 TextArchive names = new TextArchive(trainerClassMessageNumber);
                 TextArchive descriptions = new TextArchive(DescriptionArchiveId);
+                timing = VsIntroTimingAddon.Load();
+                timingBefore = timing?.Snapshot();
                 metadata = File.ReadAllBytes(metadataPath);
                 graphics = graphicsPaths.Select(File.ReadAllBytes).ToArray();
                 nameJson = FileSnapshot.Capture(TextArchive.GetFilePaths(trainerClassMessageNumber).jsonPath);
@@ -300,8 +314,11 @@ namespace DSPRE.ROMFiles
                 descriptions.messages.RemoveAt(removedClassId);
                 names.SaveToExpandedDir(trainerClassMessageNumber, showSuccessMessage: false);
                 descriptions.SaveToExpandedDir(DescriptionArchiveId, showSuccessMessage: false);
+                timing?.CopyRow(-1, removedClassId);
+                timing?.Save();
 
                 TrainerClassMetadataStore.SetManagedRecordCount(removedClassId);
+
                 return true;
             }
             catch (Exception ex)
@@ -313,12 +330,20 @@ namespace DSPRE.ROMFiles
                     for (int i = 0; i < graphicsPaths.Length; i++) TryRestoreDeletedFile(graphicsPaths[i], graphics[i], rollbackErrors);
                     nameJson?.Restore(rollbackErrors);
                     descriptionJson?.Restore(rollbackErrors);
+                    RestoreTiming(timing, timingBefore, rollbackErrors);
                 }
                 removedClassId = -1;
                 error = "The trainer class was not removed: " + ex.Message +
                     (mutationStarted ? RollbackSummary(rollbackErrors) : " No files were changed.");
                 return false;
             }
+        }
+
+        private static void RestoreTiming(VsIntroTimingAddon timing, byte[] before, List<string> rollbackErrors)
+        {
+            if (timing == null || before == null) return;
+            try { timing.Restore(before); timing.Save(); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { rollbackErrors.Add("VS intro timings: " + e.Message); }
         }
 
         private static bool TryCountContiguousMembers(string directory, out int count, out string error)

@@ -204,11 +204,30 @@ namespace DSPRE.ROMFiles
         public byte[] Snapshot() => (byte[])_table.Clone();
         public void Restore(byte[] state) { if (state?.Length == _table.Length) state.CopyTo(_table, 0); }
 
-        public void Save()
+        /// <summary>Copies <paramref name="from"/>'s timings to <paramref name="to"/>, or the game's when it has none.</summary>
+        public void CopyRow(int from, int to)
+        {
+            if (to < 0 || to >= Classes) return;
+            for (int f = 0; f < FieldsPerClass; f++)
+                _table[to * FieldsPerClass + f] = from >= 0 && from < Classes ? _table[from * FieldsPerClass + f] : (byte)0;
+        }
+
+        public bool ClassChanged(int trainerClass) =>
+            trainerClass >= 0 && trainerClass < Classes
+            && !_table.AsSpan(trainerClass * FieldsPerClass, FieldsPerClass).SequenceEqual(_saved.AsSpan(trainerClass * FieldsPerClass, FieldsPerClass));
+
+        public void Save() => Save(_ => true);
+
+        /// <summary>Writes the rows of the classes <paramref name="include"/> accepts; the others stay unsaved.</summary>
+        public void Save(Func<int, bool> include)
         {
             if (!HasChanges) return;
-            DSUtils.WriteToFile(Filesystem.expArmPath, _table, (uint)(_block + SyntheticOverlaySpace.HeaderSize + TableAt));
-            _table.CopyTo(_saved, 0);
+            byte[] written = (byte[])_saved.Clone();
+            for (int c = 0; c < Classes; c++)
+                if (include(c)) Array.Copy(_table, c * FieldsPerClass, written, c * FieldsPerClass, FieldsPerClass);
+            if (written.AsSpan().SequenceEqual(_saved)) return;
+            DSUtils.WriteToFile(Filesystem.expArmPath, written, (uint)(_block + SyntheticOverlaySpace.HeaderSize + TableAt));
+            written.CopyTo(_saved, 0);
         }
     }
 }

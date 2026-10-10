@@ -109,16 +109,55 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try { _classNames = GetTrainerClassNames(); } catch { _classNames = Array.Empty<string>(); }
         }
 
+        /// <summary>Reads the classes again; an unsaved edit stays only if its class is unchanged on disk.</summary>
+        private void ReloadClasses()
+        {
+            Dictionary<int, byte[]> wasSaved = new();
+            Dictionary<int, TrainerClassMetadataRecord> edits = new();
+            Dictionary<int, int[]> timingEdits = new();
+            VsIntroTimingAddon.Field[] fields = Enum.GetValues<VsIntroTimingAddon.Field>();
+            for (int i = 0; i < _records.Count; i++)
+            {
+                wasSaved[i] = _savedRecords[i];
+                if (!_records[i].ToByteArray().SequenceEqual(_savedRecords[i])) edits[i] = _records[i];
+                if (_timing?.ClassChanged(i) == true) timingEdits[i] = fields.Select(f => _timing.Get(i, f)).ToArray();
+            }
+            int keep = _recordIndex, tab = SelectedTab;
+            try
+            {
+                _names = VsIntroNames.Read();
+                LoadClassRecords();
+            }
+            catch (Exception e) when (e is System.IO.IOException || e is InvalidOperationException || e is UnauthorizedAccessException)
+            {
+                StatusText = "The classes couldn't be read again: " + e.Message;
+                return;
+            }
+            LoadTimings();
+            for (int i = 0; i < _records.Count; i++)
+            {
+                if (!wasSaved.TryGetValue(i, out byte[] old) || !old.SequenceEqual(_savedRecords[i])) continue;
+                if (edits.TryGetValue(i, out TrainerClassMetadataRecord edit)) _records[i] = edit;
+                if (_timing != null && timingEdits.TryGetValue(i, out int[] values))
+                    for (int f = 0; f < fields.Length; f++) _timing.Set(i, fields[f], values[f]);
+            }
+            StartClass = Math.Clamp(keep, 0, Math.Max(0, _records.Count - 1));
+            ReadyClassRecords();
+            SelectedTab = tab;
+            Raise(nameof(HasUnsavedChanges));
+        }
+
         private void ReadyClassRecords()
         {
-            ClassRecordNames.Clear();
-            for (int i = 0; i < _records.Count; i++)
-                ClassRecordNames.Add($"[{i:D3}] {(i < _classNames.Length ? _classNames[i] : "")}");
-            StaticNameChoices.Clear();
-            for (int i = 0; i < _names.Trainers.Length; i++) StaticNameChoices.Add($"[{i}] {_names.Trainers[i]}");
+            // In place, so a reload keeps the list's selection and the name picker's choice.
+            ListSync.Apply(ClassRecordNames, Enumerable.Range(0, _records.Count)
+                .Select(i => $"[{i:D3}] {(i < _classNames.Length ? _classNames[i] : "")}").ToList());
+            ListSync.Apply(StaticNameChoices, _names.Trainers.Select((n, i) => $"[{i}] {n}").ToList());
             BuildSlots();
             ReadyTimings();
             StartUndo();
+            // A reload refills the list on the same class; forget it so selecting it again shows the new record.
+            _recordIndex = -1;
             SelectedRecordIndex = StartClass >= 0 && StartClass < _records.Count ? StartClass : 0;
             SelectedTab = 2;
             StatusText = "";
@@ -400,8 +439,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     {
                         Kind = VsIntroPreview.Layout.League, Face = portrait, Vs = mark,
                         PlayerFace = Four(PlayerGirl ? _sites.PlayerFaceGirl : _sites.PlayerFaceBoy),
-                        Frame = Get(Field.Group1Rgcn, Field.Group1Recn), FramePalette = r.GetAsset(Field.Group1Rlcn),
+                        Frame = Get(Field.Group1Rgcn, Field.Group1Recn), FrameAnim = r.GetAsset(Field.Group1Rnan), FramePalette = r.GetAsset(Field.Group1Rlcn),
                         ClashFrames = r.Style2Timing, NamePalette = _sites.NamePalette, Name = name,
+                        Particles = VsIntroMotionCodeSites?.LeagueParticles,
                     };
                 case 3:
                     return new VsIntroPreview.Scene
@@ -488,18 +528,32 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private async Task<bool> SaveRecordsAsync()
         {
             List<string> failures = new();
+            List<string> saved = new();
+            HashSet<int> failed = new();
             for (int i = 0; i < _records.Count; i++)
             {
-                if (_records[i].ToByteArray().SequenceEqual(_savedRecords[i])) continue;
-                TrainerClassMetadataValidationResult check = TrainerClassMetadataStore.ValidatePresentation(_records[i], _names.Trainers.Length);
-                if (!check.IsValid) { failures.Add($"Class {i}: " + string.Join(" ", check.Errors)); continue; }
-                if (!TrainerClassMetadataStore.TryWritePresentationFields(i, _records[i], out string error)) { failures.Add($"Class {i}: {error}"); continue; }
-                _savedRecords[i] = _records[i].ToByteArray();
+                bool recordChanged = !_records[i].ToByteArray().SequenceEqual(_savedRecords[i]);
+                if (!recordChanged && _timing?.ClassChanged(i) != true) continue;
+                if (recordChanged)
+                {
+                    TrainerClassMetadataValidationResult check = TrainerClassMetadataStore.ValidatePresentation(_records[i], _names.Trainers.Length);
+                    string error = check.IsValid ? null : string.Join(" ", check.Errors);
+                    if (error == null && TrainerClassMetadataStore.TryWritePresentationFields(i, _records[i], out error))
+                        _savedRecords[i] = _records[i].ToByteArray();
+                    if (error != null) { failures.Add($"{ClassRecordNames[i]}: {error}"); failed.Add(i); continue; }
+                }
+                saved.Add(ClassRecordNames[i]);
+            }
+            try { _timing?.Save(c => !failed.Contains(c)); }
+            catch (Exception e) when (e is System.IO.IOException || e is UnauthorizedAccessException)
+            {
+                failures.Add("Timings: " + e.Message);
             }
             Raise(nameof(HasUnsavedChanges));
             if (failures.Count > 0)
             {
-                await DialogHelper.ShowError("Some class intros were not saved:\n" + string.Join("\n", failures), Title);
+                string done = saved.Count > 0 ? "Saved: " + string.Join(", ", saved) + ".\n\n" : "";
+                await DialogHelper.ShowError(done + "Not saved, still unsaved:\n" + string.Join("\n", failures), Title);
                 return false;
             }
             SaveNotice.Saved(UnsavedChangesDescription);

@@ -42,7 +42,8 @@ namespace DSPRE.Avalonia.Data
                 if (nanr != null)
                 {
                     NanrFile file = NanrFile.Read(nanr);
-                    cell = file.CellOf(sequence, file.FrameAt(sequence, ticks));
+                    // Frame delays are sixtieths of a second; cell animations advance 2 per tick.
+                    cell = file.CellOf(sequence, file.FrameAt(sequence, ticks * 2));
                 }
             }
             catch { }

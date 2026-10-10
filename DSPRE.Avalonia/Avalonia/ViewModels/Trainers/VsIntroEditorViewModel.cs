@@ -507,8 +507,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         Kind = VsIntroPreview.Layout.League, Face = Rec.FaceMembers(), Vs = Four(s.VsMark),
                         FaceColours = ClassColours(IsPlatinum ? Rec.Get(RecordField.Class) : -1),
                         PlayerFace = Four(_girl ? s.PlayerFaceGirl : s.PlayerFaceBoy), PlayerColours = ClassColours(IsPlatinum ? (_girl ? 1 : 0) : -1),
-                        Frame = new[] { frame[1], frame[2] }, FramePalette = Rec.Get(RecordField.FramePalette),
+                        Frame = new[] { frame[1], frame[2] }, FrameAnim = frame[3], FramePalette = Rec.Get(RecordField.FramePalette),
                         ClashFrames = Rec.Get(RecordField.ClashFrames), NamePalette = s.NamePalette, Name = name,
+                        Particles = VsIntroMotionCodeSites?.LeagueParticles,
                     };
                 default:
                     return new VsIntroPreview.Scene
@@ -553,8 +554,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         /// <summary>Redraws the preview when art in the intro archive is saved elsewhere, such as an edited animation.</summary>
-        public void Attach() { AppEvents.ArchiveMemberSaved += OnArchiveMemberSaved; AppEvents.RomPatchStateChanged += OnRomPatchStateChanged; }
-        public void Detach() { AppEvents.ArchiveMemberSaved -= OnArchiveMemberSaved; AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged; }
+        public void Attach() { AppEvents.ArchiveMemberSaved += OnArchiveMemberSaved; AppEvents.RomPatchStateChanged += OnRomPatchStateChanged; AppEvents.NamesChanged += OnNamesChanged; }
+        public void Detach() { AppEvents.ArchiveMemberSaved -= OnArchiveMemberSaved; AppEvents.RomPatchStateChanged -= OnRomPatchStateChanged; AppEvents.NamesChanged -= OnNamesChanged; }
+
+        // Classes added, removed or renamed, or trainers renamed, in another editor.
+        private void OnNamesChanged(object sender, EventArgs e) => global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (IsClassRecords) { ReloadClasses(); return; }
+            _names = VsIntroNames.Read();
+            RefreshAll();
+        });
 
         private void OnRomPatchStateChanged(object sender, EventArgs e) => OnPatchStateChanged();
 
@@ -837,8 +846,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public async Task<bool> SaveChangesAsync()
         {
             bool hadMotion = _motion?.HasChanges == true || _timing?.HasChanges == true;
-            if (!await SaveMotionAsync() || !await SaveTimingsAsync()) return false;
+            if (!await SaveMotionAsync()) return false;
+            // A class's timings are saved with its intro record, so a class that fails keeps both unsaved.
             if (IsClassRecords) return await SaveRecordsAsync();
+            if (!await SaveTimingsAsync()) return false;
             if (_t == null || !_t.HasChanges)
             {
                 if (hadMotion) { Raise(nameof(HasUnsavedChanges)); SaveNotice.Saved(UnsavedChangesDescription); StatusText = "Saved. Save the ROM to keep the changes."; }

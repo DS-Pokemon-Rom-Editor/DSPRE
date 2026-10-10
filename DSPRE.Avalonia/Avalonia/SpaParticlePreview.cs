@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using global::Avalonia;
 using global::Avalonia.Media.Imaging;
@@ -78,6 +79,16 @@ namespace DSPRE.Avalonia
         /// <summary>Adds an emitter layer (the timeline interpreter calls this as CreateEmitter commands fire).</summary>
         public void AddLayer(Layer l) => _layers.Add(l);
 
+        /// <summary>Draws translucent polygons as the DS does: sorted by Y, strict depth test, depth from opaque pixels only.</summary>
+        public bool DsRaster { get; set; }
+
+        private readonly record struct Quad(SpaTexture Tex, double Cx, double Cy, double AxX, double AxY, double AyX, double AyY,
+            byte R, byte G, byte B, double Alpha, int TileS, int TileT, bool FlipS, bool FlipT, double Depth, int YTop, int YBottom, bool Translucent);
+
+        private readonly List<Quad> _quads = new List<Quad>();
+        private double[] _depth;
+        private int[] _translucentId;
+
         public bool HasEmitters => _layers.Count > 0;
         public bool AllFinished => _layers.TrueForAll(l => l.Sim.Finished);
 
@@ -93,7 +104,26 @@ namespace DSPRE.Avalonia
 
         public WriteableBitmap RenderFrame()
         {
+            RenderBgra();
+            WriteableBitmap wb = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96),
+                PixelFormat.Bgra8888, AlphaFormat.Premul);
+            using (ILockedFramebuffer fb = wb.Lock())
+            {
+                int rowBytes = fb.RowBytes;
+                if (rowBytes == Width * 4)
+                    Marshal.Copy(_buf, 0, fb.Address, _buf.Length);
+                else
+                    for (int y = 0; y < Height; y++)
+                        Marshal.Copy(_buf, y * Width * 4, fb.Address + y * rowBytes, Width * 4);
+            }
+            return wb;
+        }
+
+        /// <summary>The frame as premultiplied BGRA rows, for drawing over another picture. The buffer is reused.</summary>
+        public byte[] RenderBgra()
+        {
             Array.Clear(_buf, 0, _buf.Length);
+            _quads.Clear();
             foreach (Layer layer in _layers)
             {
                 // The real battle particle camera: eye at
@@ -222,26 +252,24 @@ namespace DSPRE.Avalonia
                         px += layer.OffsetX * axx - layer.OffsetY * ayx;
                         py += layer.OffsetX * axy - layer.OffsetY * ayy;
                     }
-                    if (textured)
+                    if (textured && DsRaster)
+                    {
+                        double ex = Math.Abs(axx) + Math.Abs(ayx), ey = Math.Abs(axy) + Math.Abs(ayy);
+                        int top = (int)Math.Clamp(Math.Floor(py - ey), 0, Height), bottom = (int)Math.Clamp(Math.Ceiling(py + ey), 0, Height);
+                        // A3I5 and A5I3 textures make the polygon translucent whatever its alpha.
+                        bool translucent = tex.Format == 1 || tex.Format == 6 || PolyAlpha(p.Alpha) < 31;
+                        _quads.Add(new Quad(tex, px, py, axx, axy, ayx, ayy, p.R, p.G, p.B, p.Alpha, tileS, tileT,
+                            layer.FlipS, layer.FlipT, depth, top, bottom, translucent));
+                    }
+                    else if (textured)
                         BlitQuad(tex, px, py, axx, axy, ayx, ayy, p.R, p.G, p.B, p.Alpha, tileS, tileT,
                                  layer.FlipS, layer.FlipT);
                     else
                         Splat((int)Math.Round(px), (int)Math.Round(py), Math.Max(1, (int)Math.Round(sc * DotRadiusPx)), p.R, p.G, p.B, p.Alpha);
                 }
             }
-
-            WriteableBitmap wb = new WriteableBitmap(new PixelSize(Width, Height), new Vector(96, 96),
-                PixelFormat.Bgra8888, AlphaFormat.Premul);
-            using (ILockedFramebuffer fb = wb.Lock())
-            {
-                int rowBytes = fb.RowBytes;
-                if (rowBytes == Width * 4)
-                    Marshal.Copy(_buf, 0, fb.Address, _buf.Length);
-                else
-                    for (int y = 0; y < Height; y++)
-                        Marshal.Copy(_buf, y * Width * 4, fb.Address + y * rowBytes, Width * 4);
-            }
-            return wb;
+            if (DsRaster) DrawQueuedDs();
+            return _buf;
         }
 
         // Pinhole eye z in px-units: a world point (x,y,z)pu projects to 128 + x·ZE/(ZE−z), the same
@@ -430,6 +458,83 @@ namespace DSPRE.Avalonia
                     _buf[i + 1] = Over(_buf[i + 1], tex.Rgba[ti + 1] * (g / 255.0) * contrib, invc);   // G
                     _buf[i + 2] = Over(_buf[i + 2], tex.Rgba[ti + 0] * (r / 255.0) * contrib, invc);   // R
                     _buf[i + 3] = Over(_buf[i + 3], 255 * contrib, invc);                              // A
+                }
+            }
+        }
+
+        private static int PolyAlpha(double alpha) => (int)Math.Clamp(Math.Round(alpha * 31), 0, 31);
+
+        // Opaque polygons first, then by bottom Y, then top Y; ties keep submission order (stable sort).
+        private void DrawQueuedDs()
+        {
+            int n = Width * Height;
+            if (_depth == null || _depth.Length != n) { _depth = new double[n]; _translucentId = new int[n]; }
+            Array.Fill(_depth, double.MaxValue);
+            Array.Fill(_translucentId, -1);
+            List<(Quad Q, int Id)> order = new List<(Quad, int)>(_quads.Count);
+            int id = MinPolygonId;
+            foreach (Quad q in _quads)
+            {
+                order.Add((q, id));
+                id = id == MaxPolygonId ? MinPolygonId : id + 1;
+            }
+            List<(Quad Q, int Id)> sorted = order.Select((o, i) => (o, i))
+                .OrderBy(x => x.o.Q.Translucent ? 1 : 0).ThenBy(x => x.o.Q.YBottom).ThenBy(x => x.o.Q.YTop).ThenBy(x => x.i)
+                .Select(x => x.o).ToList();
+            foreach ((Quad q, int polyId) in sorted) BlitQuadDs(q, polyId);
+        }
+
+        // The particle library's polygon ID range (both games' particle systems pass 6 to 63).
+        private const int MinPolygonId = 6, MaxPolygonId = 63;
+
+        private void BlitQuadDs(Quad q, int polyId)
+        {
+            int polyAlpha = PolyAlpha(q.Alpha);
+            if (polyAlpha == 0) return;
+            SpaTexture tex = q.Tex;
+            double det = q.AxX * q.AyY - q.AyX * q.AxY;
+            if (Math.Abs(det) < 1e-6) return;
+            double inv = 1.0 / det;
+            double ex = Math.Abs(q.AxX) + Math.Abs(q.AyX), ey = Math.Abs(q.AxY) + Math.Abs(q.AyY);
+            int x0 = Math.Max(0, (int)Math.Floor(q.Cx - ex)), x1 = Math.Min(Width - 1, (int)Math.Ceiling(q.Cx + ex));
+            int y0 = Math.Max(0, (int)Math.Floor(q.Cy - ey)), y1 = Math.Min(Height - 1, (int)Math.Ceiling(q.Cy + ey));
+            for (int y = y0; y <= y1; y++)
+            {
+                double dy = y - q.Cy;
+                for (int x = x0; x <= x1; x++)
+                {
+                    double dx = x - q.Cx;
+                    double u = (dx * q.AyY - dy * q.AyX) * inv, v = (q.AxX * dy - q.AxY * dx) * inv;
+                    if (u < -1 || u > 1 || v < -1 || v > 1) continue;
+                    if (q.FlipS) u = -u;
+                    if (q.FlipT) v = -v;
+                    int tx = (int)(TexelCoord((u + 1.0) * 0.5 * q.TileS, tex.RepeatS, tex.MirrorX) * tex.Width);
+                    int ty = (int)(TexelCoord((v + 1.0) * 0.5 * q.TileT, tex.RepeatT, tex.MirrorY) * tex.Height);
+                    tx = Math.Clamp(tx, 0, tex.Width - 1); ty = Math.Clamp(ty, 0, tex.Height - 1);
+                    int ti = (ty * tex.Width + tx) * 4;
+                    int texAlpha = (int)Math.Round(tex.Rgba[ti + 3] * 31 / 255.0);
+                    if (texAlpha == 0) continue;
+                    // Modulate: the texel's alpha scales the polygon's, both 5-bit.
+                    int a = ((texAlpha + 1) * (polyAlpha + 1) - 1) >> 5;
+                    if (a == 0) continue;
+                    int pi = y * Width + x;
+                    if (!(q.Depth < _depth[pi])) continue;
+                    double r = tex.Rgba[ti + 0] * (q.R / 255.0), g = tex.Rgba[ti + 1] * (q.G / 255.0), b = tex.Rgba[ti + 2] * (q.B / 255.0);
+                    int i = pi * 4;
+                    if (a == 31)
+                    {
+                        _buf[i + 0] = (byte)b; _buf[i + 1] = (byte)g; _buf[i + 2] = (byte)r; _buf[i + 3] = 255;
+                        _depth[pi] = q.Depth;
+                        _translucentId[pi] = -1;
+                        continue;
+                    }
+                    if (_translucentId[pi] == polyId) continue;
+                    double c = (a + 1) / 32.0, invc = 1.0 - c;
+                    _buf[i + 0] = Over(_buf[i + 0], b * c, invc);
+                    _buf[i + 1] = Over(_buf[i + 1], g * c, invc);
+                    _buf[i + 2] = Over(_buf[i + 2], r * c, invc);
+                    _buf[i + 3] = Over(_buf[i + 3], 255 * c, invc);
+                    _translucentId[pi] = polyId;
                 }
             }
         }
