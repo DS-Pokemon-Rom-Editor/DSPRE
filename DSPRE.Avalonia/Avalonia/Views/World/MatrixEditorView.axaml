@@ -14,10 +14,14 @@
     <controls:EditorToolbar>
         <TextBlock Text="Matrix:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="200" ItemsSource="{Binding MatrixNames}" SelectedIndex="{Binding SelectedMatrixIndex}"/>
+        <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Matrix" FileId="{Binding SelectedMatrixIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <ToggleButton x:Name="PaintToggle" Content="Paint" controls:Icon.Key="brush" IsChecked="{Binding PaintMode}"
-                      ToolTip.Tip="On: click or drag fills cells with the paint value. Off: click selects, and a header cell opens its header."/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="AddMatrix_Click" ToolTip.Tip="Add an empty matrix at the end"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveMatrix_Click"
+                ToolTip.Tip="Deletes the highest-numbered matrix, unless a header still uses it"/>
+        <TextBlock Text="Name:" VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <TextBox Width="160" Text="{Binding MatrixName}" IsEnabled="{Binding HasMatrix}" MaxLength="127"/>
         <TextBlock Text="Size:" VerticalAlignment="Center" Margin="6,0,0,0"/>
         <NumericUpDown Width="110" Minimum="1" Maximum="255" Increment="1" FormatString="0" Value="{Binding SizeWidth}"
                        IsEnabled="{Binding HasMatrix}" ToolTip.Tip="Width in maps. New cells are empty."/>
@@ -40,65 +44,97 @@
     <TextBlock DockPanel.Dock="Top" Text="{Binding SizeWarning}" IsVisible="{Binding HasSizeWarning}" TextWrapping="Wrap"
                Foreground="{DynamicResource Editor.Warning}" Margin="8,6,8,0"/>
 
-    <ItemsControl x:Name="LegendBar" DockPanel.Dock="Top" ItemsSource="{Binding Legend}" Margin="8,6,8,0">
-      <ItemsControl.ItemsPanel>
-        <ItemsPanelTemplate><WrapPanel ItemSpacing="14" LineSpacing="4"/></ItemsPanelTemplate>
-      </ItemsControl.ItemsPanel>
-      <ItemsControl.ItemTemplate>
-        <DataTemplate x:DataType="vm:MatrixEditorViewModel+LegendEntry">
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
-          </StackPanel>
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
-
     <TabControl Margin="4">
       <TabItem Header="Maps">
         <DockPanel Margin="4">
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-            <TextBlock Text="Paint value:" VerticalAlignment="Center" IsEnabled="{Binding PaintMode}"/>
-            <NumericUpDown Width="130" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MapPaint}"/>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+            <ToggleButton x:Name="PaintToggle" Content="Paint" controls:Icon.Key="brush" IsChecked="{Binding PaintMode}"
+                          ToolTip.Tip="Click or drag to fill cells with the value beside it"/>
+            <NumericUpDown Width="130" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding MapPaint}"
+                           ToolTip.Tip="The value Paint fills cells with"/>
           </StackPanel>
+          <ItemsControl x:Name="LegendBar" DockPanel.Dock="Top" ItemsSource="{Binding Legend}" Margin="0,0,0,6">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel ItemSpacing="14" LineSpacing="4"/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MatrixEditorViewModel+LegendEntry">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <gl:MatrixGridControl x:Name="MapGrid"/>
           </ScrollViewer>
         </DockPanel>
       </TabItem>
 
-      <TabItem Header="Headers" IsVisible="{Binding HasHeaders}">
-        <DockPanel Margin="4">
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-            <TextBlock Text="Paint value:" VerticalAlignment="Center" IsEnabled="{Binding PaintMode}"/>
-            <NumericUpDown Width="130" Minimum="0" Maximum="65535" Increment="1" Value="{Binding HeaderPaint}"/>
+      <TabItem Header="Headers">
+        <Panel Margin="4">
+          <DockPanel IsVisible="{Binding HasHeaders}">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+            <ToggleButton Content="Paint" controls:Icon.Key="brush" IsChecked="{Binding PaintMode}"
+                          ToolTip.Tip="Click or drag to fill cells with the value beside it"/>
+            <NumericUpDown Width="130" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding HeaderPaint}"
+                           ToolTip.Tip="The value Paint fills cells with"/>
           </StackPanel>
-          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <gl:MatrixGridControl x:Name="HeaderGrid"/>
-          </ScrollViewer>
-        </DockPanel>
+          <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Legend}" Margin="0,0,0,6">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel ItemSpacing="14" LineSpacing="4"/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:MatrixEditorViewModel+LegendEntry">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <Border Width="14" Height="14" CornerRadius="3" Background="{Binding Brush}" VerticalAlignment="Center"/>
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+              <gl:MatrixGridControl x:Name="HeaderGrid"/>
+            </ScrollViewer>
+          </DockPanel>
+          <StackPanel IsVisible="{Binding CanAddHeaders}" Spacing="8" Margin="6">
+            <Button Content="Add header section" controls:Icon.Key="addIcon" Click="AddHeaders_Click" HorizontalAlignment="Left"
+                    ToolTip.Tip="Without one, every cell uses the header that loads the matrix"/>
+          </StackPanel>
+        </Panel>
       </TabItem>
 
-      <TabItem Header="Heights" IsVisible="{Binding HasHeights}">
-        <DockPanel Margin="4">
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-            <TextBlock Text="Paint value:" VerticalAlignment="Center" IsEnabled="{Binding PaintMode}"/>
-            <NumericUpDown Width="110" Minimum="0" Maximum="255" Increment="1" Value="{Binding HeightPaint}"/>
+      <TabItem Header="Heights">
+        <Panel Margin="4">
+          <DockPanel IsVisible="{Binding HasHeights}">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+            <ToggleButton Content="Paint" controls:Icon.Key="brush" IsChecked="{Binding PaintMode}"
+                          ToolTip.Tip="Click or drag to fill cells with the value beside it"/>
+            <NumericUpDown Width="110" Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding HeightPaint}"
+                           ToolTip.Tip="The value Paint fills cells with"/>
           </StackPanel>
-          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
-            <gl:MatrixGridControl x:Name="HeightGrid"/>
-          </ScrollViewer>
-        </DockPanel>
-      </TabItem>
-
-      <TabItem Header="Sections">
-        <StackPanel Margin="10" Spacing="8">
-          <StackPanel Orientation="Horizontal">
-            <Button Content="Add header section" controls:Icon.Key="addIcon"  Click="AddHeaders_Click" IsEnabled="{Binding CanAddHeaders}"/>
-            <controls:HelpTip Text="Header and height sections are optional. Adding one enables its tab."/>
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
+              <TextBlock Text="0" FontSize="12" VerticalAlignment="Center"/>
+              <Border Width="160" Height="14" CornerRadius="3" VerticalAlignment="Center">
+                <Border.Background>
+                  <LinearGradientBrush StartPoint="0%,50%" EndPoint="100%,50%">
+                    <GradientStop Color="#2A4A8C" Offset="0"/>
+                    <GradientStop Color="#BA6A2C" Offset="1"/>
+                  </LinearGradientBrush>
+                </Border.Background>
+              </Border>
+              <TextBlock Text="32 and up" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+              <gl:MatrixGridControl x:Name="HeightGrid"/>
+            </ScrollViewer>
+          </DockPanel>
+          <StackPanel IsVisible="{Binding CanAddHeights}" Spacing="8" Margin="6">
+            <Button Content="Add height section" controls:Icon.Key="addIcon" Click="AddHeights_Click" HorizontalAlignment="Left"
+                    ToolTip.Tip="Without one, every map sits at height 0"/>
           </StackPanel>
-          <Button Content="Add heights section" controls:Icon.Key="addIcon" Click="AddHeights_Click" IsEnabled="{Binding CanAddHeights}"/>
-        </StackPanel>
+        </Panel>
       </TabItem>
     </TabControl>
   </DockPanel>

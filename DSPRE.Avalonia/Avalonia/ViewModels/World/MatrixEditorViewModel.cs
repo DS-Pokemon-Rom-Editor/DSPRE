@@ -45,6 +45,21 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal SizeHeight { get => Height; set => Resize(Width, (int)value); }
         public bool HasMatrix => _matrix != null;
 
+        /// <summary>The matrix's own name. Stored with a one-byte length, so it is cut to fit 127 bytes.</summary>
+        public string MatrixName
+        {
+            get => _matrix?.name ?? "";
+            set
+            {
+                if (_matrix == null || _suppress) return;
+                string name = value ?? "";
+                while (System.Text.Encoding.UTF8.GetByteCount(name) > 127) name = name.Substring(0, name.Length - 1);
+                if (name == _matrix.name) return;
+                _matrix.name = name;
+                MarkDirty();
+            }
+        }
+
         /// <summary>Why this size would overrun the game's matrix buffer, or empty.</summary>
         public string SizeWarning
         {
@@ -365,7 +380,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void RaiseLoaded()
         {
             OnPropertyChanged(nameof(Width)); OnPropertyChanged(nameof(Height));
-            OnPropertyChanged(nameof(SizeWidth)); OnPropertyChanged(nameof(SizeHeight)); OnPropertyChanged(nameof(HasMatrix));
+            OnPropertyChanged(nameof(SizeWidth)); OnPropertyChanged(nameof(SizeHeight)); OnPropertyChanged(nameof(HasMatrix)); OnPropertyChanged(nameof(MatrixName));
             OnPropertyChanged(nameof(SizeWarning)); OnPropertyChanged(nameof(HasSizeWarning));
             OnPropertyChanged(nameof(HasHeaders)); OnPropertyChanged(nameof(HasHeights));
             OnPropertyChanged(nameof(CanAddHeaders)); OnPropertyChanged(nameof(CanAddHeights));
@@ -394,9 +409,61 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_matrix == null || _selectedIndex < 0) return;
             _matrix.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false);
             SetClean();
+            // The list shows the name, which may have changed.
+            _suppress = true;
+            try { if (_selectedIndex < MatrixNames.Count) MatrixNames[_selectedIndex] = new GameMatrix(_selectedIndex).ToString(); }
+            finally { _suppress = false; }
+            OnPropertyChanged(nameof(SelectedMatrixIndex));
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved matrix {_selectedIndex}.";
             AppEvents.RaiseMatrixSaved(this, _selectedIndex);
+        }
+
+        /// <summary>Adds an empty 1×1 matrix at the end and opens it.</summary>
+        public async Task AddMatrixAsync()
+        {
+            if (_dirty && !await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "matrix")) return;
+            try
+            {
+                int id = Filesystem.GetMatrixCount();
+                new GameMatrix().SaveToFileDefaultDir(id, showSuccessMessage: false);
+                MatrixNames.Add(new GameMatrix(id).ToString());
+                SetClean();
+                SelectedMatrixIndex = id;
+                StatusText = $"Added matrix {id}.";
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Couldn't add a matrix:\n{ex.Message}", "Matrix Editor");
+            }
+        }
+
+        /// <summary>Deletes the highest-numbered matrix, unless a header still loads it.</summary>
+        public async Task RemoveLastMatrixAsync()
+        {
+            int count = MatrixNames.Count;
+            if (count <= 1) { await DialogHelper.ShowInfo("At least one matrix must stay.", "Matrix Editor"); return; }
+            int last = count - 1;
+            // A header still pointing at the matrix would load garbage, so it stays while one does.
+            List<(ushort Header, string Name)> uses = HeaderLinks.HeadersLinking(HeaderLinks.Kind.Matrix, last);
+            if (uses.Count > 0)
+            {
+                await DialogHelper.ShowInfo($"Matrix {last} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
+                    + Environment.NewLine + "Point them at another matrix first.", "Matrix Editor");
+                return;
+            }
+            if (!await DialogHelper.AskYesNo($"Delete the last matrix ({last})?", "Confirm deletion")) return;
+            try
+            {
+                File.Delete(Path.Combine(gameDirs[DirNames.matrices].unpackedDir, last.ToString("D4")));
+                if (_selectedIndex == last) { SetClean(); SelectedMatrixIndex = last - 1; }
+                MatrixNames.RemoveAt(last);
+                StatusText = $"Removed matrix {last}.";
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Couldn't remove matrix {last}:\n{ex.Message}", "Matrix Editor");
+            }
         }
 
         public async Task ImportAsync()

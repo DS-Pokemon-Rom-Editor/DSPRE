@@ -43,12 +43,11 @@ namespace DSPRE.Avalonia
 
             Add("MatrixEditorView", "Matrix Editor",
                 S("toolbar", "The matrix", "A matrix is the grid that joins maps into one seamless world. Pick one here."),
-                S("name:LegendBar", "Colours", "Cells are coloured by the kind of place they belong to: town, route, cave and so on."),
+                S("name:LegendBar", "Colours", "Cells are coloured by the kind of place they belong to: town, route, cave and so on. Heights are coloured from low to high."),
                 S("tab:Maps", "Maps", "Which map sits in each cell. With Paint off, click a cell to see its value and double-click it to open that map."),
                 S("tab:Headers", "Headers", "Which header each cell belongs to, and so its name, music and events. With Paint off, click a cell to open its header."),
-                S("tab:Heights", "Heights", "How high each map sits, so maps at different levels line up."),
-                S("tab:Sections", "Sections", "Add a headers or heights section to a matrix that has none, which shows its tab."),
-                S("name:PaintToggle", "Painting", "Turn on Paint, set the paint value on the tab, then click or drag across cells to fill them."),
+                S("tab:Heights", "Heights", "How high each map sits, so maps at different levels line up. A matrix without headers or heights offers to add them on its tab."),
+                S("name:PaintToggle", "Painting", "Turn on Paint, set the value beside it, then click or drag across cells to fill them. Each tab keeps its own value."),
                 S("name:SpawnButton", "Starting point", "Makes the selected cell the place a new game begins."),
                 S("toolbar", "Saving", "Save keeps the matrix; in its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too. Import and Export move a matrix in and out as a file."));
 

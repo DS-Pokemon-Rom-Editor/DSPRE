@@ -138,6 +138,8 @@ namespace DSPRE.Avalonia.Views.World
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private void AddHeaders_Click(object sender, RoutedEventArgs e) => VM?.AddHeaderSection();
+        private async void AddMatrix_Click(object sender, RoutedEventArgs e) => await Safe(VM?.AddMatrixAsync());
+        private async void RemoveMatrix_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastMatrixAsync());
         private void AddHeights_Click(object sender, RoutedEventArgs e) => VM?.AddHeightsSection();
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
