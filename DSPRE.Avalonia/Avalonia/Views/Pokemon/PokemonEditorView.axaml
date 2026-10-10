@@ -52,6 +52,7 @@
           <Border DockPanel.Dock="Top" Margin="0,0,0,4">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <TextBlock Text="{Binding EntryCount, StringFormat=Entries: {0}}" VerticalAlignment="Center"/>
+              <Button Content="Import CSV…" controls:Icon.Key="import" Click="Learnset_Import_Click"/>
               <Button Content="Export CSV…" controls:Icon.Key="export" Click="Learnset_Export_Click"/>
               <Button Content="Bulk edit all" controls:Icon.Key="tableEditor" Click="Learnset_BulkEdit_Click"/>
               <TextBlock Text="Warning: exceeds vanilla 20-move limit!" IsVisible="{Binding ExceedsVanillaLimit}" Foreground="OrangeRed" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -78,6 +79,11 @@
       </TabItem>
       <TabItem Header="Evolutions">
         <DockPanel Margin="8" DataContext="{Binding EvolutionsVM}">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="12" Margin="0,0,0,6">
+            <Button Content="Import CSV…" controls:Icon.Key="import" Click="Evolutions_Import_Click"/>
+            <Button Content="Export CSV…" controls:Icon.Key="export" Click="Evolutions_Export_Click"/>
+            <TextBlock Text="{Binding ImportNote}" IsVisible="{Binding HasImportNote}" Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+          </StackPanel>
           <ScrollViewer HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="6">
               <TextBlock Text="{Binding AltFormNotice}" IsVisible="{Binding IsAltForm}"

@@ -1,12 +1,13 @@
 using Avalonia.Controls;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
+using DSPRE.Avalonia.Views.Shell;
+using DSPRE.Csv;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
@@ -135,11 +136,33 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Builds the current mon's learnset as CSV (level, move id, move name).</summary>
         public string BuildCsv()
         {
-            StringBuilder sb = new System.Text.StringBuilder();
-            sb.AppendLine("Level,MoveID,MoveName");
-            foreach (LearnsetEntryRow e in Entries)
-                sb.AppendLine($"{e.Level},{e.MoveIndex},{(e.MoveIndex >= 0 && e.MoveIndex < MoveNames.Count ? MoveNames[e.MoveIndex] : "")}");
-            return sb.ToString();
+            using System.IO.StringWriter writer = new System.IO.StringWriter();
+            LearnsetCsv.Write(writer, System.Array.Empty<string>(), _moveNamesArr,
+                new[] { (_currentId, (IReadOnlyList<LearnsetCsv.Move>)Moves()) }, single: true);
+            return writer.ToString();
+        }
+
+        private List<LearnsetCsv.Move> Moves() => Entries.Select(e => new LearnsetCsv.Move(e.Level, e.MoveIndex)).ToList();
+
+        /// <summary>Replaces this Pokémon's learnset from a CSV file. Changes stay unsaved until Save.</summary>
+        public async System.Threading.Tasks.Task ImportCsvAsync(Window owner)
+        {
+            if (_current == null) return;
+            if (_loadError != null)
+            {
+                await DialogHelper.ShowError("The learnset could not be read.\n" + _loadError, "Import CSV", owner);
+                return;
+            }
+            LearnsetCsv importer = new LearnsetCsv(RomInfo.GetPokemonNames(), _moveNamesArr, _currentId + 1, _currentId, _ => (Moves(), null));
+            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
+            if (session == null) return;
+            if (!importer.Result(session.Accepted).TryGetValue(_currentId, out List<LearnsetCsv.Move> moves)) return;
+            _current.list.Clear();
+            foreach (LearnsetCsv.Move m in moves) _current.list.Add(((byte)m.Level, (ushort)m.MoveId));
+            RefreshEntries();
+            SelectedEntryIndex = -1;
+            SetDirty();
+            StatusText = "CSV import has unsaved changes. Press Save to write them to disk.";
         }
 
         // ─── Load ─────────────────────────────────────────────────────────────────

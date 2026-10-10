@@ -24,7 +24,9 @@
   </UserControl.Styles>
   <DockPanel LastChildFill="True" Margin="10">
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+      <Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click" ToolTip.Tip="Import personal data from a CSV file"/>
       <Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click" ToolTip.Tip="Export every Pokémon's personal data"/>
+      <TextBlock Text="{Binding ImportNote}" IsVisible="{Binding HasImportNote}" Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="12,0,0,0"/>
     </StackPanel>
     <TextBlock DockPanel.Dock="Top" Text="{Binding HgLoadError}" IsVisible="{Binding HasHgLoadError}"
                Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap" Margin="0,0,0,8"/>

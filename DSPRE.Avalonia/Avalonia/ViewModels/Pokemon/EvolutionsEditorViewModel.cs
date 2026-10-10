@@ -6,7 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using DSPRE.Avalonia.Views.Shell;
+using DSPRE.Csv;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
@@ -80,19 +83,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ROM hack repurpose/add methods AND say what their parameter is (level / item / move / species…).
         // hg-engine mode has no equivalent per-index customisation store (the method list itself is read
         // live from the checkout, not user-curated), so it infers a meaning from the real EVO_* name instead.
-        private EvolutionParamMeaning Meaning
+        private EvolutionParamMeaning Meaning => MeaningFor(_methodIndex, UseHgEngineNames, HgMethodNames);
+
+        internal static EvolutionParamMeaning MeaningFor(int method, bool hgEngine, string[] hgNames)
         {
-            get
-            {
-                if (_methodIndex < 0) return EvolutionParamMeaning.Ignored;
-                if (UseHgEngineNames) return MeaningFromHgEngineName();
-                return (EvolutionParamMeaning)DSPRE.Avalonia.Data.LabelStore.GetAttr("evolution_methods", _methodIndex);
-            }
+            if (method < 0) return EvolutionParamMeaning.Ignored;
+            if (hgEngine) return MeaningFromHgEngineName(hgNames != null && method < hgNames.Length ? hgNames[method] : null);
+            return (EvolutionParamMeaning)DSPRE.Avalonia.Data.LabelStore.GetAttr("evolution_methods", method);
         }
 
-        private EvolutionParamMeaning MeaningFromHgEngineName()
+        private static EvolutionParamMeaning MeaningFromHgEngineName(string name)
         {
-            string name = HgMethodNames != null && _methodIndex < HgMethodNames.Length ? HgMethodNames[_methodIndex] : null;
             if (string.IsNullOrEmpty(name) || name == "EVO_NONE") return EvolutionParamMeaning.Ignored;
             if (name.Contains("LEVEL")) return EvolutionParamMeaning.FromLevel;
             if (name.Contains("ITEM") || name.Contains("STONE")) return EvolutionParamMeaning.ItemName;
@@ -107,7 +108,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>The target-species dropdown is disabled for a CustomNumber method: its parameter is a
         /// raw value and the evolution target is handled by the hack's own code, not a picked species.</summary>
         // hg-engine reads the target for every method except EVO_NONE.
-        public bool IsTargetEnabled => UseHgEngineNames ? Meaning != EvolutionParamMeaning.Ignored : Meaning != EvolutionParamMeaning.CustomNumber;
+        internal static bool NeedsTargetFor(int method, bool hgEngine, string[] hgNames)
+        {
+            EvolutionParamMeaning meaning = MeaningFor(method, hgEngine, hgNames);
+            return hgEngine ? meaning != EvolutionParamMeaning.Ignored : meaning != EvolutionParamMeaning.CustomNumber;
+        }
+
+        public bool IsTargetEnabled => NeedsTargetFor(_methodIndex, UseHgEngineNames, HgMethodNames);
 
         /// <summary>Re-raises the parameter-display properties after the param meaning was customised.</summary>
         public void RefreshParam()
@@ -193,7 +200,22 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            if (n != nameof(HasUnsavedChanges)) return;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImportNote)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasImportNote)));
+        }
+
+        public string ImportNote
+        {
+            get
+            {
+                int n = _pending.Count + (_heldRecord && _dirty ? 1 : 0);
+                return n == 0 ? "" : $"{n} imported Pokémon {(n == 1 ? "has" : "have")} unsaved changes. Press Save to write them to disk.";
+            }
+        }
+        public bool HasImportNote => ImportNote.Length > 0;
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         {
             if (System.Collections.Generic.EqualityComparer<T>.Default.Equals(f, v)) return false;
@@ -289,10 +311,33 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ─── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Evolutions (Mon {_currentId})";
+        public bool HasUnsavedChanges => _dirty || _pending.Count > 0;
+        public string UnsavedChangesDescription => _pending.Count > 0 ? $"Evolutions ({_pending.Count + (_dirty ? 1 : 0)} Pokémon)" : $"Evolutions (Mon {_currentId})";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void DiscardChanges()
+        {
+            _pending.Clear();
+            DiscardRecordEdits();
+        }
+
+        /// <summary>Drops the shown Pokémon's edits and keeps the other imported ones. The caller loads a Pokémon next.</summary>
+        public void DiscardRecordEdits() { _heldRecord = false; _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+
+        // Imported Pokémon waiting for Save. The shown one moves back here on switch, so switching doesn't prompt.
+        private readonly Dictionary<int, EvolutionCsv.Slot[]> _pending = new Dictionary<int, EvolutionCsv.Slot[]>();
+        private bool _heldRecord;
+
+        /// <summary>Edits on the shown Pokémon that switching would lose.</summary>
+        public bool HasRecordEdits => _dirty && !_heldRecord;
+
+        /// <summary>Called before another Pokémon is loaded: keeps the shown one's imported edits.</summary>
+        public void HoldForSwitch()
+        {
+            if (!_heldRecord) return;
+            if (_dirty) _pending[_currentId] = CurrentSlots();
+            _heldRecord = false;
+            _dirty = false;
+        }
 
         private int _currentId = -1;
 
@@ -307,7 +352,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ── Undo / redo (ISupportsUndo) ────────────────────────────────────────
         // Snapshot = the per-row (method, param, target) values, lossless and independent of how Save()
         // compacts the file. Edit bursts within CoalesceMs collapse into one step.
-        private readonly DSPRE.Avalonia.UndoHistory<(int, int, int)[]> _history = new();
+        private readonly DSPRE.Avalonia.UndoHistory<(int, int, int, int)[]> _history = new();
         private DateTime _lastCaptureUtc = DateTime.MinValue;
         private const int CoalesceMs = 500;
 
@@ -317,15 +362,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Redo() { if (_history.CanRedo) ApplyRows(_history.Redo()); }
         private void RaiseUndoState() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
-        private (int, int, int)[] SnapshotRows()
+        private (int, int, int, int)[] SnapshotRows()
         {
-            (int, int, int)[] s = new (int, int, int)[EvoRows.Count];
+            (int, int, int, int)[] s = new (int, int, int, int)[EvoRows.Count];
             for (int i = 0; i < EvoRows.Count; i++)
-                s[i] = (EvoRows[i].MethodIndex, EvoRows[i].Param, EvoRows[i].TargetIndex);
+                s[i] = (EvoRows[i].MethodIndex, EvoRows[i].Param, EvoRows[i].TargetIndex, EvoRows[i].HgTargetFormId);
             return s;
         }
 
-        private void ApplyRows((int, int, int)[] s)
+        private void ApplyRows((int, int, int, int)[] s)
         {
             if (s == null) return;
             _loading = true;
@@ -334,6 +379,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 EvoRows[i].MethodIndex = s[i].Item1;
                 EvoRows[i].Param       = s[i].Item2;
                 EvoRows[i].TargetIndex = s[i].Item3;
+                EvoRows[i].HgTargetFormId = s[i].Item4;
             }
             _loading = false;
             _dirty = _history.IsDirty;
@@ -395,50 +441,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _currentId = id;
                 IsAltForm = id >= DSPRE.RomInfo.GetPokemonNames().Length;
 
-                if (UseHgEngineSource)
-                {
-                    // Evolutions isn't synced from a packed NARC, so the vanilla read path below would
-                    // show stale ROM data instead of the checkout's real data/Evolutions.c.
-                    _hgLoadError = null;
-                    if (!DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvoRows.Count, out List<HgEngineEvolutions.EvoEntry> hgEntries, out string loadError))
-                        _hgLoadError = loadError;
-                    for (int i = 0; i < EvoRows.Count; i++)
-                    {
-                        EvolutionRowViewModel row = EvoRows[i];
-                        if (i < hgEntries.Count)
-                        {
-                            HgEngineEvolutions.EvoEntry e = hgEntries[i];
-                            int idx = _hgMethodOptions.FindIndex(o => o.Value == e.MethodValue);
-                            bool targetListed = e.TargetSpeciesId >= 0 && e.TargetSpeciesId < PokemonNames.Count;
-                            if (e.Unresolved) _hgLoadError ??= $"Evolution {i + 1} could not be read: {e.RawText}";
-                            if (idx < 0) _hgLoadError ??= $"Evolution {i + 1} uses method {e.MethodValue}, which this checkout doesn't name.";
-                            if (!targetListed) _hgLoadError ??= $"Evolution {i + 1} targets species {e.TargetSpeciesId}, which isn't in the species list.";
-                            row.MethodIndex = idx >= 0 ? idx : 0;
-                            row.Param       = e.Param;
-                            row.TargetIndex = targetListed ? e.TargetSpeciesId : 0;
-                            row.HgTargetFormId = e.TargetFormId;
-                        }
-                        else
-                        {
-                            row.MethodIndex = 0; row.Param = 0; row.TargetIndex = 0; row.HgTargetFormId = 0;
-                        }
-                    }
-                }
-                else
-                {
-                    _current = id > 0 ? new EvolutionFile(id) : new EvolutionFile();
-                    if (_current.data == null)
-                        _current.data = new EvolutionData[EvoRows.Count];
-
-                    for (int i = 0; i < EvoRows.Count; i++)
-                    {
-                        EvolutionRowViewModel row = EvoRows[i];
-                        EvolutionData d = i < _current.data.Length ? _current.data[i] : default;
-                        row.MethodIndex = (int)d.method;
-                        row.Param       = d.param;
-                        row.TargetIndex = d.target >= 0 ? d.target : 0;
-                    }
-                }
+                (EvolutionCsv.Slot[] slots, string error) = ReadSlots(id);
+                // Saving rows that didn't load faithfully would overwrite the real entries.
+                _hgLoadError = UseHgEngineSource ? error : null;
+                if (!UseHgEngineSource) _current = new EvolutionFile();
+                ShowSlots(slots);
 
                 _dirty = false;
                 OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -448,6 +455,128 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 RaiseUndoState();
             }
             finally { _loading = false; }
+
+            // The import is one undo step on top of the saved data.
+            _heldRecord = _pending.Remove(id, out EvolutionCsv.Slot[] held);
+            if (_heldRecord) TakeImported(held);
+        }
+
+        /// <summary>A Pokémon's slots from the ROM, or on hg-engine from data/Evolutions.c, with why they can't be saved.</summary>
+        private (EvolutionCsv.Slot[] Slots, string Error) ReadSlots(int id)
+        {
+            EvolutionCsv.Slot[] slots = new EvolutionCsv.Slot[EvoRows.Count];
+            string error = null;
+            if (UseHgEngineSource)
+            {
+                // Evolutions isn't synced from a packed NARC, so the vanilla read would show stale ROM data.
+                if (!DSPRE.HgEngine.HgEngineEvolutions.TryGetEntries(id, EvoRows.Count, out List<HgEngineEvolutions.EvoEntry> hgEntries, out string loadError))
+                    error = loadError;
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    if (hgEntries == null || i >= hgEntries.Count) { slots[i] = new EvolutionCsv.Slot(NoneMethod, 0, 0, 0); continue; }
+                    HgEngineEvolutions.EvoEntry e = hgEntries[i];
+                    int idx = _hgMethodOptions.FindIndex(o => o.Value == e.MethodValue);
+                    bool targetListed = e.TargetSpeciesId >= 0 && e.TargetSpeciesId < PokemonNames.Count;
+                    if (e.Unresolved) error ??= $"Evolution {i + 1} could not be read: {e.RawText}";
+                    if (idx < 0) error ??= $"Evolution {i + 1} uses method {e.MethodValue}, which this checkout doesn't name.";
+                    if (!targetListed) error ??= $"Evolution {i + 1} targets species {e.TargetSpeciesId}, which isn't in the species list.";
+                    slots[i] = new EvolutionCsv.Slot(idx >= 0 ? idx : 0, e.Param, targetListed ? e.TargetSpeciesId : 0, e.TargetFormId);
+                }
+            }
+            else
+            {
+                EvolutionFile file = id > 0 ? new EvolutionFile(id) : new EvolutionFile();
+                for (int i = 0; i < slots.Length; i++)
+                {
+                    EvolutionData d = file.data != null && i < file.data.Length ? file.data[i] : default;
+                    slots[i] = new EvolutionCsv.Slot((int)d.method, d.param, d.target >= 0 ? d.target : 0, 0);
+                }
+            }
+            return (slots, error);
+        }
+
+        private void ShowSlots(IReadOnlyList<EvolutionCsv.Slot> slots)
+        {
+            for (int i = 0; i < EvoRows.Count; i++)
+            {
+                EvolutionCsv.Slot s = i < slots.Count ? slots[i] : new EvolutionCsv.Slot(NoneMethod, 0, 0, 0);
+                EvoRows[i].MethodIndex = s.Method;
+                EvoRows[i].Param = s.Param;
+                EvoRows[i].TargetIndex = s.Target;
+                EvoRows[i].HgTargetFormId = s.Form;
+            }
+        }
+
+        private void TakeImported(EvolutionCsv.Slot[] slots)
+        {
+            _loading = true;
+            ShowSlots(slots);
+            _loading = false;
+            _lastCaptureUtc = DateTime.MinValue;
+            RecordUndoSnapshot();
+            _dirty = _history.IsDirty;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        private EvolutionCsv.Slot[] CurrentSlots() => EvoRows.Select(r => new EvolutionCsv.Slot(r.MethodIndex, r.Param, r.TargetIndex, r.HgTargetFormId)).ToArray();
+
+        private int NoneMethod => UseHgEngineSource ? Math.Max(0, _hgMethodOptions.FindIndex(o => o.Name == "EVO_NONE")) : (int)EvolutionMethod.None;
+
+        // ─── CSV ──────────────────────────────────────────────────────────────────
+        private EvolutionCsv.Setup CsvSetup() => new EvolutionCsv.Setup
+        {
+            Pokemon = _rowPokemonNames,
+            Methods = MethodNames.ToArray(),
+            // Earlier exports and the docs export wrote the code's own method names.
+            MethodAliases = UseHgEngineSource ? null : Enum.GetValues<EvolutionMethod>().Select(m => ((int)(short)m, m.ToString())),
+            NoneMethod = NoneMethod,
+            LastTarget = _lastTarget,
+            FirstForm = DSPRE.RomInfo.GetPokemonNames().Length,
+            SlotCount = EvoRows.Count,
+            Items = _itemNames,
+            Moves = _moveNames,
+            Meaning = m => EvolutionRowViewModel.MeaningFor(m, UseHgEngineSource, _hgMethodNamesArray),
+            NeedsTarget = m => EvolutionRowViewModel.NeedsTargetFor(m, UseHgEngineSource, _hgMethodNamesArray),
+            Current = id => id == _currentId ? (CurrentSlots(), _hgLoadError)
+                : _pending.TryGetValue(id, out EvolutionCsv.Slot[] staged) ? (staged, null) : ReadSlots(id),
+        };
+
+        private int SpeciesCount => UseHgEngineSource ? _rowPokemonNames.Length : Math.Min(RomInfo.GetEvolutionFilesCount(), _rowPokemonNames.Length);
+
+        /// <summary>Every Pokémon's evolutions as this editor holds them, unsaved edits included.</summary>
+        public async System.Threading.Tasks.Task ExportCsvAsync(Window owner)
+        {
+            string path = await DialogHelper.SaveFile(owner, "Export evolutions CSV", new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "evolutions.csv");
+            if (path == null) return;
+            try
+            {
+                EvolutionCsv.Setup setup = CsvSetup();
+                using System.IO.StreamWriter writer = new System.IO.StreamWriter(path);
+                EvolutionCsv.Write(writer, setup, Enumerable.Range(0, SpeciesCount).Select(id => (id, (IReadOnlyList<EvolutionCsv.Slot>)setup.Current(id).Slots)));
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Evolutions", owner);
+            }
+        }
+
+        /// <summary>Replaces the evolutions of the Pokémon in the file. Changes stay unsaved until Save.</summary>
+        public async System.Threading.Tasks.Task ImportCsvAsync(Window owner)
+        {
+            if (_currentId < 0) return;
+            EvolutionCsv importer = new EvolutionCsv(CsvSetup());
+            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
+            if (session == null) return;
+
+            Dictionary<int, EvolutionCsv.Slot[]> result = importer.Result(session.Accepted);
+            foreach ((int id, EvolutionCsv.Slot[] slots) in result)
+            {
+                if (id != _currentId) { _pending[id] = slots; continue; }
+                TakeImported(slots);
+                _heldRecord = true;
+            }
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            SaveNotice.Show(result.Count == 1 ? "Evolutions imported for 1 Pokémon." : $"Evolutions imported for {result.Count} Pokémon.");
         }
 
         // ─── Save ─────────────────────────────────────────────────────────────────
@@ -457,34 +586,54 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (UseHgEngineSource) { _ = SaveHgEngineAsync(); return; }
             if (_current == null) return;
 
-            EvolutionFile newFile = new EvolutionFile();
-            List<EvolutionData> data = new System.Collections.Generic.List<EvolutionData>();
-
-            for (int i = 0; i < EvoRows.Count; i++)
+            foreach ((int id, EvolutionCsv.Slot[] slots) in _pending.OrderBy(kv => kv.Key).ToList())
             {
-                EvolutionRowViewModel row = EvoRows[i];
-                EvolutionData ed = new EvolutionData
+                string pendingProblem = BuildFile(slots, out EvolutionFile pendingFile);
+                if (pendingProblem != null)
                 {
-                    method = (EvolutionMethod)row.MethodIndex,
-                    param  = (short)row.Param,
-                    target = (short)row.TargetIndex
-                };
-                if (ed.method == EvolutionMethod.None) continue;
-                string problem = ed.Problem(row.IsTargetEnabled);
-                if (problem == null && row.IsTargetEnabled && row.TargetIndex > _lastTarget)
-                    problem = $"targets #{row.TargetIndex}, which is not a species";
-                if (problem != null)
-                {
-                    _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved: evolution {i + 1} {problem}.", "Evolutions");
+                    _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions of {NameOf(id)} were not saved: {pendingProblem}.", "Evolutions");
                     return;
                 }
-                data.Add(ed);
+                pendingFile.SaveToFileDefaultDir(id, showSuccessMessage: false);
+                _pending.Remove(id);
             }
 
-            newFile.data = data.ToArray();
+            string problem = BuildFile(CurrentSlots(), out EvolutionFile newFile);
+            if (problem != null)
+            {
+                _ = DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved: {problem}.", "Evolutions");
+                return;
+            }
             newFile.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
             _current = newFile;
             MarkSaved();
+        }
+
+        private string NameOf(int id) => id >= 0 && id < _rowPokemonNames.Length ? $"#{id} {_rowPokemonNames[id]}" : $"#{id}";
+
+        /// <summary>The file for one Pokémon's slots, or why it can't be written.</summary>
+        private string BuildFile(IReadOnlyList<EvolutionCsv.Slot> slots, out EvolutionFile file)
+        {
+            file = new EvolutionFile();
+            List<EvolutionData> data = new List<EvolutionData>();
+            for (int i = 0; i < slots.Count; i++)
+            {
+                EvolutionData ed = new EvolutionData
+                {
+                    method = (EvolutionMethod)slots[i].Method,
+                    param  = (short)slots[i].Param,
+                    target = (short)slots[i].Target
+                };
+                if (ed.method == EvolutionMethod.None) continue;
+                bool needsTarget = EvolutionRowViewModel.NeedsTargetFor(slots[i].Method, false, null);
+                string problem = ed.Problem(needsTarget);
+                if (problem == null && needsTarget && slots[i].Target > _lastTarget)
+                    problem = $"targets #{slots[i].Target}, which is not a species";
+                if (problem != null) return $"evolution {i + 1} {problem}";
+                data.Add(ed);
+            }
+            file.data = data.ToArray();
+            return null;
         }
 
         async System.Threading.Tasks.Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -505,29 +654,36 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved:\n{_hgLoadError}", "Evolutions");
                 return;
             }
-            List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> uiEntries = new System.Collections.Generic.List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)>(EvoRows.Count);
-            foreach (EvolutionRowViewModel row in EvoRows)
-            {
-                string methodName = row.MethodIndex >= 0 && row.MethodIndex < _hgMethodOptions.Count
-                    ? _hgMethodOptions[row.MethodIndex].Name : "EVO_NONE";
-                uiEntries.Add((methodName, row.Param, row.TargetIndex, row.HgTargetFormId));
-            }
+            List<(int Species, List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> Entries)> work =
+                _pending.OrderBy(kv => kv.Key).Select(kv => (kv.Key, SourceEntries(kv.Value))).ToList();
+            work.Add((species, SourceEntries(CurrentSlots())));
 
+            string failed = null;
             (bool saved, string error) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
-                DSPRE.HgEngine.HgEngineEvolutions.TrySetEntries(species, uiEntries, out string writeError) ? null : writeError);
+            {
+                foreach ((int id, List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> entries) in work)
+                    if (!DSPRE.HgEngine.HgEngineEvolutions.TrySetEntries(id, entries, out string writeError)) { failed = NameOf(id); return writeError; }
+                return null;
+            });
             if (!saved)
             {
                 if (error == null) return;
-                AppLogger.Error($"hg-engine evolutions write failed for species {species}: {error}");
-                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions were not saved:\n{error}", "Evolutions");
+                AppLogger.Error($"hg-engine evolutions write failed for species {failed ?? species.ToString()}: {error}");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"Evolutions{(failed != null ? " of " + failed : "")} were not saved:\n{error}", "Evolutions");
                 return;
             }
+            foreach ((int id, _) in work) _pending.Remove(id);
             if (species == _currentId) MarkSaved();
+            else OnPropertyChanged(nameof(HasUnsavedChanges));
         }
+
+        private List<(string MethodName, int Param, int TargetSpeciesId, int TargetFormId)> SourceEntries(IEnumerable<EvolutionCsv.Slot> slots)
+            => slots.Select(s => (s.Method >= 0 && s.Method < _hgMethodOptions.Count ? _hgMethodOptions[s.Method].Name : "EVO_NONE", s.Param, s.Target, s.Form)).ToList();
 
         private void MarkSaved()
         {
             _dirty = false;
+            _heldRecord = false;
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));
             _history.MarkSaved();

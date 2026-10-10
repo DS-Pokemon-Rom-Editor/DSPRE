@@ -29,5 +29,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.SaveAll();
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddRow();
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveSelected();
+        private async void Import_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ImportAsync(this); }
+        private async void Export_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportAsync(this); }
     }
 }

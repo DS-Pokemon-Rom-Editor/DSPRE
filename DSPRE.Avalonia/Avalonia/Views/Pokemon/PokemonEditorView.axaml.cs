@@ -108,6 +108,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void OpenSizePage_Click(object sender, RoutedEventArgs e) => ViewModel.PokedexVM?.OpenSizePage();
 
         private void OpenEvolutionSlots_Click(object sender, RoutedEventArgs e) => ViewModel.EvolutionsVM?.OpenSlotsPatch();
+        private async void Evolutions_Import_Click(object sender, RoutedEventArgs e) => await ViewModel.EvolutionsVM.ImportCsvAsync(this);
+        private async void Evolutions_Export_Click(object sender, RoutedEventArgs e) => await ViewModel.EvolutionsVM.ExportCsvAsync(this);
 
         private void PlayCry_Click(object sender, RoutedEventArgs e)
         {
@@ -154,6 +156,9 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private void Learnset_BulkEdit_Click(object sender, RoutedEventArgs e)
             => new BulkLearnsetEditorView(new BulkLearnsetEditorViewModel(true)).ShowManaged();
+
+        private async void Learnset_Import_Click(object sender, RoutedEventArgs e)
+            => await ViewModel.LearnsetVM.ImportCsvAsync(this);
 
         private async void Learnset_Export_Click(object sender, RoutedEventArgs e)
         {

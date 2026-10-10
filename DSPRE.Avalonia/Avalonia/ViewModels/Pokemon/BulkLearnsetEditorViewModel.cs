@@ -9,6 +9,8 @@ using global::Avalonia.Controls;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
+using DSPRE.Avalonia.Views.Shell;
+using DSPRE.Csv;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
@@ -179,6 +181,57 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Rows.RemoveAt(_selectedRow);
             Dirty();
         }
+
+        /// <summary>Writes every Pokémon's rows as this editor holds them, unsaved edits included.</summary>
+        public async Task ExportAsync(Window owner)
+        {
+            string path = await DialogHelper.SaveFile(owner, "Export learnsets CSV", new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "learnsets.csv");
+            if (path == null) return;
+            try
+            {
+                using System.IO.StreamWriter writer = new System.IO.StreamWriter(path);
+                LearnsetCsv.Write(writer, SpeciesNames.ToArray(), MoveNames.ToArray(), Lists().Select(kv => (kv.Key, (IReadOnlyList<LearnsetCsv.Move>)kv.Value)), single: false);
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Bulk Learnsets", owner);
+            }
+        }
+
+        /// <summary>Replaces the learnsets of the Pokémon in the file. Changes stay unsaved until Save all.</summary>
+        public async Task ImportAsync(Window owner)
+        {
+            if (_loadError != null)
+            {
+                await DialogHelper.ShowError("The learnsets couldn't be read:\n" + _loadError, "Bulk Learnsets", owner);
+                return;
+            }
+            Dictionary<int, List<LearnsetCsv.Move>> now = Lists();
+            LearnsetCsv importer = new LearnsetCsv(SpeciesNames.ToArray(), MoveNames.ToArray(), _learnsetCount, -1,
+                id => (now.TryGetValue(id, out List<LearnsetCsv.Move> list) ? list : new List<LearnsetCsv.Move>(), null));
+            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
+            if (session == null) return;
+
+            Dictionary<int, List<LearnsetCsv.Move>> imported = importer.Result(session.Accepted);
+            // A Pokémon's new rows go where its old ones started, so the grid keeps its order.
+            List<BulkLearnsetRow> rows = new List<BulkLearnsetRow>();
+            HashSet<int> placed = new HashSet<int>();
+            foreach (BulkLearnsetRow r in _all)
+            {
+                if (!imported.TryGetValue(r.SpeciesIndex, out List<LearnsetCsv.Move> list)) { rows.Add(r); continue; }
+                if (placed.Add(r.SpeciesIndex)) rows.AddRange(list.Select(m => new BulkLearnsetRow(SpeciesNames, MoveNames, r.SpeciesIndex, m.Level, m.MoveId, Dirty)));
+            }
+            foreach ((int id, List<LearnsetCsv.Move> list) in imported.OrderBy(kv => kv.Key))
+                if (placed.Add(id)) rows.AddRange(list.Select(m => new BulkLearnsetRow(SpeciesNames, MoveNames, id, m.Level, m.MoveId, Dirty)));
+            _all.Clear();
+            _all.AddRange(rows);
+            ApplyFilter();
+            Dirty();
+            StatusText = $"Learnsets imported for {imported.Count} Pokémon. Press Save all to write them to disk.";
+        }
+
+        private Dictionary<int, List<LearnsetCsv.Move>> Lists() => _all.GroupBy(r => r.SpeciesIndex).OrderBy(g => g.Key)
+            .ToDictionary(g => g.Key, g => g.Select(r => new LearnsetCsv.Move(r.Level, r.MoveIndex)).Distinct().ToList());
 
         public void SaveAll()
         {

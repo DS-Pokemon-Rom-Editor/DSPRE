@@ -20,6 +20,8 @@
         <controls:UndoRedoButtons/>
         <Button Content="Add row" controls:Icon.Key="addIcon"  Click="Add_Click"/>
         <Button Content="Remove" controls:Icon.Key="deleteIcon"   Click="Remove_Click"/>
+        <Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click"/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">

@@ -12,6 +12,8 @@ using Avalonia.Media.Imaging;
 using DSPRE.HgEngine;
 using DSPRE.ROMFiles;
 using DSPRE.Resources;
+using DSPRE.Avalonia.Views.Shell;
+using DSPRE.Csv;
 using IEditorWithUnsavedChanges = global::DSPRE.Editors.IEditorWithUnsavedChanges;
 using static DSPRE.RomInfo;
 
@@ -21,15 +23,31 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            if (n != nameof(HasUnsavedChanges)) return;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImportNote)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasImportNote)));
+        }
+
+        public string ImportNote
+        {
+            get
+            {
+                int n = _pending.Count + (_heldRecord && _dirty ? 1 : 0);
+                return n == 0 ? "" : $"{n} imported Pokémon {(n == 1 ? "has" : "have")} unsaved changes. Press Save to write them to disk.";
+            }
+        }
+        public bool HasImportNote => ImportNote.Length > 0;
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
         // ── IEditorWithUnsavedChanges ──────────────────────────────────────────
         private bool _dirty;
-        public bool HasUnsavedChanges => _dirty;
+        public bool HasUnsavedChanges => _dirty || _pending.Count > 0;
         public string UnsavedChangesDescription =>
-            _current != null ? $"Personal Data (Mon {_currentId} - {(_currentId < PokemonNames.Count ? PokemonNames[_currentId] : "")})" : "Personal Data Editor";
+            _pending.Count > 0 ? $"Personal Data ({_pending.Count + (_dirty ? 1 : 0)} Pokémon)"
+            : _current != null ? $"Personal Data (Mon {_currentId} - {(_currentId < PokemonNames.Count ? PokemonNames[_currentId] : "")})" : "Personal Data Editor";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -38,6 +56,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         public void DiscardChanges()
         {
+            _pending.Clear();
+            DiscardRecordEdits();
+        }
+
+        /// <summary>Puts back the shown Pokémon's saved state and keeps the other imported ones.</summary>
+        public void DiscardRecordEdits()
+        {
+            _heldRecord = false;
             // Staged side-table values and pending follower operations exist only here, so put back the saved state.
             if (_dirty && _savedSnapshot != null && _current != null)
             {
@@ -45,6 +71,86 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyState(_savedSnapshot);
             }
             SetClean();
+        }
+
+        // Imported Pokémon waiting for Save. The shown one moves back here on switch, so switching doesn't prompt.
+        private readonly Dictionary<int, byte[]> _pending = new Dictionary<int, byte[]>();
+        private bool _heldRecord;
+
+        /// <summary>Edits switching would lose. Imports can be held; edits outside the personal data can't.</summary>
+        public bool HasRecordEdits => _dirty && !(_heldRecord && OnlyDataChanged());
+
+        /// <summary>Called before another Pokémon is loaded: keeps the shown one's imported edits.</summary>
+        public void HoldForSwitch()
+        {
+            if (!_heldRecord || !OnlyDataChanged()) return;
+            if (_dirty) _pending[_currentId] = _current.ToByteArray();
+            _heldRecord = false;
+            SetClean();
+        }
+
+        private bool OnlyDataChanged()
+        {
+            if (_savedSnapshot == null || _current == null) return false;
+            PersonalSnapshot now = Snapshot(), was = _savedSnapshot;
+            return now.Hatch == was.Hatch && Equals(now.Hg, was.Hg) && Same(now.Followers, was.Followers)
+                && Same(now.ExtraTms, was.ExtraTms) && Same(now.SourceMachineMoves, was.SourceMachineMoves)
+                && (now.Athlon == null ? was.Athlon == null : was.Athlon != null && now.Athlon.Length == was.Athlon.Length
+                    && now.Athlon.Zip(was.Athlon).All(r => r.First.AsSpan().SequenceEqual(r.Second)));
+        }
+
+        private static bool Same<T>(T[] a, T[] b) => a == null ? b == null : b != null && a.SequenceEqual(b);
+
+        /// <summary>Applies an import as one undo step on top of the saved data.</summary>
+        private void TakeImported(byte[] data)
+        {
+            _loading = true;
+            _current = new PokemonPersonalData(new MemoryStream(data));
+            PopulateFromCurrent();
+            _loading = false;
+            _lastCaptureUtc = DateTime.MinValue;
+            RecordUndoSnapshot();
+            _dirty = _history.IsDirty;
+            Title = _dirty ? "● Personal Data Editor" : "Personal Data Editor";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+
+        /// <summary>A Pokémon's personal data as this editor holds it, with why it can't be used.</summary>
+        private (PokemonPersonalData Data, string Error) HeldData(int id)
+        {
+            if (id == _currentId && _current != null)
+                return (new PokemonPersonalData(new MemoryStream(_current.ToByteArray())), _hgLoadError);
+            if (_pending.TryGetValue(id, out byte[] staged)) return (new PokemonPersonalData(new MemoryStream(staged)), null);
+            try
+            {
+                PokemonPersonalData d = new PokemonPersonalData(id);
+                // The unpacked copy is the last build; Species.c is what the checkout holds now.
+                if (HgEngineProject.IsActive && !HgEngineSpeciesPersonalFields.TryLoadInto(id, d, out string error))
+                    return (null, "Species.c could not be read: " + error);
+                return (d, null);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { return (null, e.Message); }
+        }
+
+        /// <summary>Writes the imported Pokémon not shown into Species.c. Runs inside the save's hg-engine session.</summary>
+        private string WritePendingSource()
+        {
+            foreach ((int id, byte[] bytes) in _pending)
+                if (!HgEngineSpeciesPersonalFields.TryWriteSource(id, new PokemonPersonalData(new MemoryStream(bytes)), out string error))
+                    return $"Species {id}: {error}";
+            return null;
+        }
+
+        private void FinishPending()
+        {
+            foreach ((int id, byte[] bytes) in _pending)
+            {
+                // Readers of the unpacked copy see the edit before the next build replaces it.
+                new PokemonPersonalData(new MemoryStream(bytes)).SaveToFileDefaultDir(id, showSuccessMessage: false);
+                AppEvents.RaisePersonalDataSaved(this, id);
+            }
+            _pending.Clear();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         // ── Name lists (ComboBox sources) ─────────────────────────────────────
@@ -761,10 +867,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 (HgStaged _hgLoaded, int _hgLoadedBounceValue, bool _owPendingCreate, string _owPendingSpritePath) pending = (_hgLoaded, _hgLoadedBounceValue, _owPendingCreate, _owPendingSpritePath);
                 (bool committed, string commitError) = await DSPRE.Avalonia.HgEngineSave.RunAsync(() =>
                 {
+                    sourceError = WritePendingSource();
+                    if (sourceError != null) return sourceError;
                     sourceError = SaveHgEngineSource(out partlySaved);
                     // Steps that did succeed are kept when a later one fails.
                     return partlySaved ? null : sourceError;
                 });
+                if (committed) FinishPending();
                 if (!committed)
                 {
                     // Nothing reached disk, so the save's own bookkeeping goes back to what is still pending.
@@ -816,6 +925,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 await DSPRE.Avalonia.DialogHelper.ShowError($"The machine moves of species {_currentId} were not saved:\n{machineError}", "Personal Data");
                 return;
             }
+            if (!HgEngineProject.IsActive) FinishPending();
             // Side tables can change on their own, so the personal file is only written when its bytes did.
             if (_savedSnapshot?.Data == null || !_current.ToByteArray().AsSpan().SequenceEqual(_savedSnapshot.Data))
                 _current.SaveToFileDefaultDir(_currentId, showSuccessMessage: false);
@@ -826,6 +936,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _history.Capture(saved, coalesce: true);
             _history.MarkSaved();
             _savedSnapshot = saved;
+            _heldRecord = false;
             SetClean();
             SaveNotice.Saved(UnsavedChangesDescription);
             RaiseUndoState();
@@ -937,6 +1048,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return failures.Count == 0 ? null : string.Join("\n", failures);
         }
 
+        private PersonalDataCsv.Lists CsvLists() => new PersonalDataCsv.Lists
+        {
+            Pokemon = _allFileNames, Types = _typeNamesArr, Abilities = _abilityNamesArr, Items = _itemNamesArr,
+            GrowthCurves = GrowthCurveNames.ToArray(), EggGroups = EggGroupNames.ToArray(), DexColors = DexColorNames.ToArray(),
+        };
+
+        /// <summary>Every Pokémon's personal data as this editor holds it, unsaved edits included.</summary>
         public async Task ExportCommand(Window owner)
         {
             string path = await DialogHelper.SaveFile(owner, "Export Personal Data to CSV",
@@ -944,93 +1062,40 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (path == null) return;
             try
             {
-                using StreamWriter writer = new StreamWriter(path);
-                writer.WriteLine("Pokemon ID,Pokemon Name,Type 1,Type 2,Base HP,Base Atk,Base Def,Base SpAtk,Base SpDef,Base Speed," +
-                    "EV HP,EV Atk,EV Def,EV SpAtk,EV SpDef,EV Speed," +
-                    "Ability 1,Ability 2,Item 1,Item 2," +
-                    "Catch Rate,Base Exp,Gender Ratio,Egg Steps,Base Friendship,Growth Curve," +
-                    "Egg Group 1,Egg Group 2,Escape Rate,Dex Color,Flip");
-                // The unpacked copy is the last build; Species.c is what the checkout holds now.
-                bool fromSource = HgEngineProject.IsActive;
                 List<int> unread = new List<int>();
+                List<(int, PokemonPersonalData)> rows = new List<(int, PokemonPersonalData)>();
                 for (int i = 0; i < GetPersonalFilesCount(); i++)
                 {
-                    PokemonPersonalData d = new PokemonPersonalData(i);
-                    if (fromSource && !HgEngineSpeciesPersonalFields.TryLoadInto(i, d, out _)) { unread.Add(i); continue; }
-                    string pn = i < _allFileNames.Length ? _allFileNames[i] : $"Pokemon_{i}";
-                    string t1 = (int)d.type1 < _typeNamesArr.Length ? _typeNamesArr[(int)d.type1] : d.type1.ToString();
-                    string t2 = (int)d.type2 < _typeNamesArr.Length ? _typeNamesArr[(int)d.type2] : d.type2.ToString();
-                    string a1 = d.firstAbility  < _abilityNamesArr.Length ? _abilityNamesArr[d.firstAbility]  : $"Ability_{d.firstAbility}";
-                    string a2 = d.secondAbility < _abilityNamesArr.Length ? _abilityNamesArr[d.secondAbility] : $"Ability_{d.secondAbility}";
-                    string i1 = d.item1 < _itemNamesArr.Length ? _itemNamesArr[d.item1] : $"Item_{d.item1}";
-                    string i2 = d.item2 < _itemNamesArr.Length ? _itemNamesArr[d.item2] : $"Item_{d.item2}";
-                    writer.WriteLine($"{i},{pn},{t1},{t2},{d.baseHP},{d.baseAtk},{d.baseDef},{d.baseSpAtk},{d.baseSpDef},{d.baseSpeed}," +
-                        $"{d.evHP},{d.evAtk},{d.evDef},{d.evSpAtk},{d.evSpDef},{d.evSpeed}," +
-                        $"{a1},{a2},{i1},{i2}," +
-                        $"{d.catchRate},{d.givenExp},{d.genderVec},{d.eggSteps},{d.baseFriendship},{d.growthCurve}," +
-                        $"{(PokemonEggGroup)d.eggGroup1},{(PokemonEggGroup)d.eggGroup2},{d.escapeRate},{d.color},{d.flip}");
+                    (PokemonPersonalData d, string error) = HeldData(i);
+                    if (error != null) unread.Add(i); else rows.Add((i, d));
                 }
+                using (StreamWriter writer = new StreamWriter(path))
+                    PersonalDataCsv.Write(writer, CsvLists(), rows);
                 string note = unread.Count == 0 ? ""
-                    : $"\n\n{unread.Count} Pokémon could not be read from Species.c and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}";
+                    : $"\n\n{unread.Count} Pokémon could not be read and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}";
                 await DialogHelper.ShowInfo($"Exported to:\n{path}{note}", "Export Complete");
             }
             catch (Exception ex) { await DialogHelper.ShowError($"Error: {ex.Message}", "Export Error"); }
         }
 
+        /// <summary>Imports the Pokémon in the file. Changes stay unsaved until Save.</summary>
         public async Task ImportCommand(Window owner)
         {
-            // The reload after importing would drop this Pokémon's staged edits.
-            if (HasUnsavedChanges) { await DialogHelper.ShowError("Save or discard this Pokémon's changes first.", "Import Error"); return; }
-            string path = await DialogHelper.OpenFile(owner, "Import Personal Data from CSV",
-                new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter });
-            if (path == null) return;
-            try
+            if (_current == null) return;
+            PersonalDataCsv importer = new PersonalDataCsv(CsvLists(), GetPersonalFilesCount(), HeldData);
+            CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
+            if (session == null) return;
+
+            List<CsvRecord> accepted = session.Accepted;
+            foreach (CsvRecord r in accepted)
             {
-                string[] lines = File.ReadAllLines(path);
-                if (lines.Length < 2) { await DialogHelper.ShowError("File is empty or has no data rows.", "Import Error"); return; }
-                int imported = 0, skipped = 0;
-                // The next build replaces the unpacked copy from Species.c, so on hg-engine that is where rows go.
-                bool toSource = HgEngineProject.IsActive;
-                List<string> failed = new List<string>();
-                for (int i = 1; i < lines.Length; i++)
-                {
-                    if (string.IsNullOrWhiteSpace(lines[i])) continue;
-                    string[] p = lines[i].Split(',');
-                    if (p.Length < 31) { skipped++; continue; }
-                    if (!int.TryParse(p[0].Trim(), out int id) || id < 0 || id >= GetPersonalFilesCount()) { skipped++; continue; }
-                    PokemonPersonalData d = new PokemonPersonalData(id);
-                    if (toSource && !HgEngineSpeciesPersonalFields.TryLoadInto(id, d, out string readError)) { failed.Add($"{id}: {readError}"); continue; }
-                    if (byte.TryParse(p[4].Trim(), out byte v)) d.baseHP    = v;
-                    if (byte.TryParse(p[5].Trim(), out v))  d.baseAtk   = v;
-                    if (byte.TryParse(p[6].Trim(), out v))  d.baseDef   = v;
-                    if (byte.TryParse(p[7].Trim(), out v))  d.baseSpAtk = v;
-                    if (byte.TryParse(p[8].Trim(), out v))  d.baseSpDef = v;
-                    if (byte.TryParse(p[9].Trim(), out v))  d.baseSpeed = v;
-                    if (byte.TryParse(p[10].Trim(), out v)) d.evHP    = v;
-                    if (byte.TryParse(p[11].Trim(), out v)) d.evAtk   = v;
-                    if (byte.TryParse(p[12].Trim(), out v)) d.evDef   = v;
-                    if (byte.TryParse(p[13].Trim(), out v)) d.evSpAtk = v;
-                    if (byte.TryParse(p[14].Trim(), out v)) d.evSpDef = v;
-                    if (byte.TryParse(p[15].Trim(), out v)) d.evSpeed = v;
-                    if (byte.TryParse(p[21].Trim(), out v)) d.catchRate     = v;
-                    if (byte.TryParse(p[22].Trim(), out v)) d.givenExp      = v;
-                    if (byte.TryParse(p[23].Trim(), out v)) d.genderVec     = v;
-                    if (byte.TryParse(p[24].Trim(), out v)) d.eggSteps      = v;
-                    if (byte.TryParse(p[25].Trim(), out v)) d.baseFriendship= v;
-                    if (byte.TryParse(p[28].Trim(), out v)) d.escapeRate    = v;
-                    if (Enum.TryParse(p[2].Trim(),  out PokemonType t1)) d.type1 = t1;
-                    if (Enum.TryParse(p[3].Trim(),  out PokemonType t2)) d.type2 = t2;
-                    if (toSource && !HgEngineSpeciesPersonalFields.TryWriteSource(id, d, out string writeError)) { failed.Add($"{id}: {writeError}"); continue; }
-                    d.SaveToFileDefaultDir(id, showSuccessMessage: false);
-                    AppEvents.RaisePersonalDataSaved(this, id);
-                    imported++;
-                }
-                if (_currentId >= 0) LoadMon(_currentId);
-                string note = failed.Count == 0 ? ""
-                    : $"\n\nNot imported:\n{string.Join("\n", failed.Take(10))}{(failed.Count > 10 ? "\n..." : "")}";
-                await DialogHelper.ShowInfo($"Imported {imported} entries. Skipped {skipped}.{note}", "Import Complete");
+                PersonalDataCsv.Entry e = (PersonalDataCsv.Entry)r.Value;
+                if (e.Id != _currentId) { _pending[e.Id] = e.Data.ToByteArray(); continue; }
+                TakeImported(e.Data.ToByteArray());
+                _heldRecord = true;
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Error: {ex.Message}", "Import Error"); }
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            SaveNotice.Show(accepted.Count == 1 ? "1 Pokémon imported." : $"{accepted.Count} Pokémon imported.");
         }
 
         public void AddMachineCommand()
@@ -1575,6 +1640,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _history.Reset(_savedSnapshot);   // loaded state is the clean undo baseline for this mon
             _lastCaptureUtc = DateTime.MinValue;
             RaiseUndoState();
+
+            _heldRecord = _pending.Remove(id, out byte[] held);
+            if (_heldRecord) TakeImported(held);
         }
 
         /// <summary>Pushes <see cref="_current"/> into the bound fields + machine lists. Caller guards with _loading.</summary>

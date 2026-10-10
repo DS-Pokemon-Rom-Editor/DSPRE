@@ -83,9 +83,10 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     PutSelectorBack();
                     return;
                 }
-                if (HasUnsavedChanges) { _ = ConfirmDiscardAsync(value); return; }
+                if (HasRecordEdits) { _ = ConfirmDiscardAsync(value); return; }
                 _selectedMonIndex = value;
                 OnPropertyChanged();
+                HoldImports();
                 LoadMon(value);
             }
         }
@@ -109,13 +110,46 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
             => await SaveAllAsync();
 
-        public void DiscardChanges()
+        /// <summary>Edits that switching Pokémon would lose. Imported Pokémon are held until Save instead.</summary>
+        private bool HasRecordEdits =>
+            _pendingSpecies != null ||
+            PersonalVM.HasRecordEdits ||
+            LearnsetVM.HasUnsavedChanges ||
+            EvolutionsVM.HasRecordEdits ||
+            PokedexVM.HasUnsavedChanges ||
+            SpriteVM.HasUnsavedChanges ||
+            PokewalkerVM.HasUnsavedChanges ||
+            BattleDisplayVM.HasUnsavedChanges;
+
+        private void HoldImports()
         {
-            PersonalVM.DiscardChanges();
+            PersonalVM.HoldForSwitch();
+            EvolutionsVM.HoldForSwitch();
+        }
+
+        /// <summary>What the switch prompt saves or discards: Save writes everything, Discard keeps the imports.</summary>
+        private sealed class RecordEdits : IEditorWithUnsavedChanges
+        {
+            private readonly PokemonEditorViewModel _owner;
+            public RecordEdits(PokemonEditorViewModel owner) { _owner = owner; }
+            public bool HasUnsavedChanges => _owner.HasRecordEdits;
+            public string UnsavedChangesDescription => _owner.UnsavedChangesDescription;
+            public void SaveChanges() => _owner.SaveAll();
+            public Task<bool> SaveChangesAsync() => _owner.SaveAllAsync();
+            public void DiscardChanges() => _owner.DiscardChanges(keepImports: true);
+        }
+
+        public void DiscardChanges() => DiscardChanges(keepImports: false);
+
+        private void DiscardChanges(bool keepImports)
+        {
+            // Keep the imports and only discard manual edits.
+            if (keepImports) { HoldImports(); PersonalVM.DiscardRecordEdits(); } else PersonalVM.DiscardChanges();
             BattleDisplayVM.DiscardChanges();
             // These three only clear their flag on discard, so their edits are put back by reading the mon again.
             if (LearnsetVM.HasUnsavedChanges)   { LearnsetVM.DiscardChanges();   LearnsetVM.LoadMon(_selectedMonIndex); }
-            if (EvolutionsVM.HasUnsavedChanges) { EvolutionsVM.DiscardChanges(); EvolutionsVM.LoadMon(_selectedMonIndex); }
+            if (keepImports) EvolutionsVM.DiscardRecordEdits();
+            else if (EvolutionsVM.HasUnsavedChanges) { EvolutionsVM.DiscardChanges(); EvolutionsVM.LoadMon(_selectedMonIndex); }
             if (PokedexVM.HasUnsavedChanges)    PokedexVM.DiscardChanges();
             if (SpriteVM.HasUnsavedChanges)     { SpriteVM.DiscardChanges();     SpriteVM.LoadMon(_selectedMonIndex); }
             if (PokewalkerVM.HasUnsavedChanges) PokewalkerVM.DiscardChanges();
@@ -394,13 +428,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private async System.Threading.Tasks.Task ConfirmDiscardAsync(int pendingIndex)
         {
             // The same Save / Discard / Cancel prompt every other editor shows when switching records.
-            if (!await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "Pokémon"))
+            if (!await RecordSwitchGuard.ConfirmLeaveAsync(new RecordEdits(this), _owner, "Pokémon"))
             {
                 PutSelectorBack();
                 return;
             }
             _selectedMonIndex = pendingIndex;
             OnPropertyChanged(nameof(SelectedMonIndex));
+            HoldImports();
             LoadMon(pendingIndex);
         }
     }
