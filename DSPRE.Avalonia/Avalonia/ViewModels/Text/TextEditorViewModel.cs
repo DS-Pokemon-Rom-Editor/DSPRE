@@ -237,7 +237,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         private string _replaceText = "";
         public string ReplaceText { get => _replaceText; set => Set(ref _replaceText, value); }
 
-        private bool _searchAllArchives;
+        private bool _searchAllArchives = true;
         public bool SearchAllArchives { get => _searchAllArchives; set => Set(ref _searchAllArchives, value); }
 
         private bool _caseSensitive;
@@ -581,13 +581,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         // ── Add / remove archives ────────────────────────────────────────────────
         public void AddArchive()
         {
-            int newId = ArchiveNames.Count;
-            TextArchive archive = new TextArchive(newId, new List<string> { "Your text here." });
-            archive.SaveToExpandedDir(newId, showSuccessMessage: false, sender: this);
-
-            (string binPath, string jsonPath) = TextArchive.GetFilePaths(newId);
-            TextConverter.JSONToBin(jsonPath, binPath, CharMapManager.GetCharMapPath());
-
+            int newId = NewProjectFiles.AddTextArchive(sender: this);
             ArchiveNames.Add("Text Archive " + newId);
             SelectedArchiveIndex = newId;
         }

@@ -160,6 +160,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
+        private async void FillMissing_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.FillMissingAsync(); }
         private void AddTree_Click(object sender, RoutedEventArgs e) => VM?.AddTree();
         private void AddNormalGroup_Click(object sender, RoutedEventArgs e) => VM?.AddGroup(special: false);
         private void RemoveNormalGroup_Click(object sender, RoutedEventArgs e) => VM?.RemoveGroup(special: false);

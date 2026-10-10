@@ -245,27 +245,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 await DialogHelper.ShowInfo("Save or discard the open script first.", "Script Editor");
                 return;
             }
-            string archiveDir = gameDirs[DirNames.scripts].unpackedDir;
-            int members = System.IO.Directory.Exists(archiveDir) ? System.IO.Directory.GetFiles(archiveDir).Count(f => int.TryParse(Path.GetFileName(f), out _)) : 0;
-            if (members - 1 > id)
-            {
-                await DialogHelper.ShowInfo($"The script archive holds {members} files but the sources stop at {id}, so the last one isn't known here. Open the project's scripts folder to see what sits past it.", "Script Editor");
-                return;
-            }
-            List<(ushort Header, string Name)> uses = HeaderLinks.HeadersLinking(HeaderLinks.Kind.Script, id);
-            if (uses.Count > 0)
-            {
-                await DialogHelper.ShowInfo($"Script file {id} stays: these headers still use it." + Environment.NewLine + HeaderLinks.Describe(uses)
-                    + Environment.NewLine + "Point them at another script file first.", "Script Editor");
-                return;
-            }
+            // A header may load the file as its level script too, which this check covers.
+            if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfo(keep, "Script Editor"); return; }
             if (!await DialogHelper.AskYesNo($"Delete script file {id}, its source and its compiled copy?", "Confirm deletion")) return;
             try
             {
                 string source = _sourceFiles.FirstOrDefault(f => _scriptIdByPath.TryGetValue(f, out int x) && x == id);
-                if (source != null && System.IO.File.Exists(source)) System.IO.File.Delete(source);
-                string member = Path.Combine(archiveDir, id.ToString("D4"));
-                if (System.IO.File.Exists(member)) System.IO.File.Delete(member);
+                NewProjectFiles.DeleteScriptFile(id);
                 bool wasShown = SelectedScriptIndex >= 0 && SelectedScriptIndex < _sourceFiles.Count && SamePath(_sourceFiles[SelectedScriptIndex], source);
                 RefreshScriptList();
                 if (wasShown || SelectedScriptIndex >= _sourceFiles.Count) SelectedScriptIndex = _sourceFiles.Count - 1;
@@ -1039,20 +1025,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         {
             try
             {
-                List<string> roots = SourceRoots().ToList();
-                string root = roots.FirstOrDefault() ?? Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts");
-                System.IO.Directory.CreateDirectory(root);
-
-                int id = NextScriptId();
-                string path;
-                do
-                {
-                    path = Path.Combine(root, id.ToString("D4") + ".rotom");
-                    id++;
-                } while (System.IO.File.Exists(path));
-
-                // rotom numbers script slots from #1.
-                System.IO.File.WriteAllText(path, "script Main #1:\n\tEnd\n");
+                (int _, string path) = NewProjectFiles.AddScript();
                 RefreshScriptList();
                 SelectedScriptIndex = _sourceFiles.FindIndex(p => SamePath(p, path));
                 StatusText = "Added " + DisplayPath(path) + ".";
@@ -1219,48 +1192,17 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
 
         private bool LegacyScriptsExist()
-            => SourceRoots().Any(root =>
+            => RotomTool.ScriptSourceRoots().Any(root =>
                 System.IO.Directory.Exists(root)
                 && System.IO.Directory.EnumerateFiles(root, "*.script", System.IO.SearchOption.AllDirectories).Any());
 
         // Minimal rotom.toml parsing: avoids a TOML dependency but only handles a flat source_roots = ["..."] array. Replace with Tomlyn if the config schema grows.
-        private IEnumerable<string> SourceRoots()
-        {
-            string configPath = System.IO.Path.Combine(RotomTool.ProjectRoot, "rotom.toml");
-            if (System.IO.File.Exists(configPath))
-            {
-                string config = System.IO.File.ReadAllText(configPath);
-                Match match = Regex.Match(config, @"source_roots\s*=\s*\[(.*?)\]", RegexOptions.Singleline);
-                if (match.Success)
-                {
-                    bool found = false;
-                    foreach (Match quoted in Regex.Matches(match.Groups[1].Value, @"""([^""]+)""|'([^']+)'"))
-                    {
-                        found = true;
-                        string path = quoted.Groups[1].Success ? quoted.Groups[1].Value : quoted.Groups[2].Value;
-                        yield return Path.IsPathRooted(path) ? path : Path.Combine(RotomTool.ProjectRoot, path);
-                    }
-                    if (found) yield break;
-                }
-            }
-
-            foreach (string path in new[]
-            {
-                Path.Combine(RotomTool.ProjectRoot, "expanded", "scripts"),
-                Path.Combine(RotomTool.ProjectRoot, "scripts"),
-                Path.Combine(RotomTool.ProjectRoot, ".rotom", "scripts")
-            })
-            {
-                if (System.IO.Directory.Exists(path)) yield return path;
-            }
-        }
-
         private void RefreshScriptList()
         {
             _sourceFiles.Clear();
             ScriptNames.Clear();
 
-            foreach (string root in SourceRoots().Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (string root in RotomTool.ScriptSourceRoots().Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 if (!System.IO.Directory.Exists(root)) continue;
                 IEnumerable<string> files = System.IO.Directory

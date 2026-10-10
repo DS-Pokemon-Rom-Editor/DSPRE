@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DSPRE.ROMFiles;
 
@@ -29,6 +30,38 @@ namespace DSPRE
 
         // One rotom at a time: two project compiles both rewrite compile state and text archives.
         private static readonly System.Threading.SemaphoreSlim OneAtATime = new System.Threading.SemaphoreSlim(1, 1);
+
+        /// <summary>Where the project's script sources live: rotom.toml's source_roots, or the usual folders.</summary>
+        public static IEnumerable<string> ScriptSourceRoots()
+        {
+            string configPath = Path.Combine(ProjectRoot, "rotom.toml");
+            if (File.Exists(configPath))
+            {
+                string config = File.ReadAllText(configPath);
+                Match match = Regex.Match(config, @"source_roots\s*=\s*\[(.*?)\]", RegexOptions.Singleline);
+                if (match.Success)
+                {
+                    bool found = false;
+                    foreach (Match quoted in Regex.Matches(match.Groups[1].Value, @"""([^""]+)""|'([^']+)'"))
+                    {
+                        found = true;
+                        string path = quoted.Groups[1].Success ? quoted.Groups[1].Value : quoted.Groups[2].Value;
+                        yield return Path.IsPathRooted(path) ? path : Path.Combine(ProjectRoot, path);
+                    }
+                    if (found) yield break;
+                }
+            }
+
+            foreach (string path in new[]
+            {
+                Path.Combine(ProjectRoot, "expanded", "scripts"),
+                Path.Combine(ProjectRoot, "scripts"),
+                Path.Combine(ProjectRoot, ".rotom", "scripts")
+            })
+            {
+                if (Directory.Exists(path)) yield return path;
+            }
+        }
 
         public static Task<Result> RunAsync(params string[] args) => RunInAsync(ProjectRoot, args);
 

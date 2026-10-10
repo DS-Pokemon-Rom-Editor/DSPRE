@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Avalonia.Controls;
@@ -52,7 +53,7 @@ namespace DSPRE.Avalonia
             Window win = new Window
             {
                 Title = title,
-                Width = 340, Height = 250,
+                Width = 340, SizeToContent = SizeToContent.Height,
                 CanResize = false,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 Content = new StackPanel
@@ -61,8 +62,6 @@ namespace DSPRE.Avalonia
                     Spacing = 10,
                     Children =
                     {
-                        new TextBlock { Text = "How much red, green and blue, each from 0 to 255.",
-                                        TextWrapping = global::Avalonia.Media.TextWrapping.Wrap, FontSize = 12 },
                         new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children =
                         {
                             preview,
@@ -145,6 +144,14 @@ namespace DSPRE.Avalonia
         public static async Task<(bool Yes, bool Checked)> AskWithCheck(string message, string title, string yes, string no,
                                                                          string check, bool isChecked, Window owner = null)
         {
+            (bool answer, bool[] ticked) = await AskWithChecks(message, title, yes, no, new[] { (check, isChecked) }, owner);
+            return (answer, ticked[0]);
+        }
+
+        /// <summary>A question with a check box per option; the ticks come back in the same order.</summary>
+        public static async Task<(bool Yes, bool[] Checked)> AskWithChecks(string message, string title, string yes, string no,
+                                                                           (string Label, bool IsChecked)[] options, Window owner = null)
+        {
             bool answer = false;
             Window win = new Window
             {
@@ -161,7 +168,7 @@ namespace DSPRE.Avalonia
                 TextWrapping = global::Avalonia.Media.TextWrapping.Wrap,
                 Margin = new global::Avalonia.Thickness(16, 16, 16, 8),
             };
-            CheckBox box = new CheckBox { Content = check, IsChecked = isChecked, Margin = new global::Avalonia.Thickness(16, 0, 16, 8) };
+            CheckBox[] boxes = options.Select(o => new CheckBox { Content = o.Label, IsChecked = o.IsChecked, Margin = new global::Avalonia.Thickness(16, 0, 16, 4) }).ToArray();
 
             Button yesBtn = new Button { Content = yes, MinWidth = 72 };
             yesBtn.Click += (_, _) => { answer = true; win.Close(); };
@@ -179,7 +186,8 @@ namespace DSPRE.Avalonia
 
             StackPanel root = new StackPanel();
             root.Children.Add(msgText);
-            root.Children.Add(box);
+            foreach (CheckBox box in boxes) root.Children.Add(box);
+            btnRow.Margin = new global::Avalonia.Thickness(8, 8, 8, 12);
             root.Children.Add(btnRow);
             win.Content = root;
 
@@ -193,7 +201,7 @@ namespace DSPRE.Avalonia
                 win.Show();
                 await closed.Task;
             }
-            return (answer, box.IsChecked == true);
+            return (answer, boxes.Select(b => b.IsChecked == true).ToArray());
         }
 
         /// <summary>Shows text the user can select and copy, with a Copy button for all of it.</summary>

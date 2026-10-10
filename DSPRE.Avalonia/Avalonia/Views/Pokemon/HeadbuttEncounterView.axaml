@@ -14,8 +14,11 @@
     <controls:EditorToolbar>
         <TextBlock Text="Headbutt file:" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
+        <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Headbutt" FileId="{Binding SelectedFileIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
+        <Button controls:EditorToolbar.Slot="Add" Content="Fill missing" controls:Icon.Key="addIcon" Click="FillMissing_Click"
+                ToolTip.Tip="Add an empty headbutt file for every header without one"/>
         <ToggleButton Content="Move trees" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}"
                       ToolTip.Tip="3D edit mode: click a tree to select it, then drag the red/blue handles to move it across the map. Arrow keys nudge one tile."/>
         <TextBlock Text="View:" VerticalAlignment="Center"/>

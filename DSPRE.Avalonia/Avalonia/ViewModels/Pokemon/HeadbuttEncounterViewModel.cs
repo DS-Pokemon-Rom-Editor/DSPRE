@@ -31,6 +31,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Out-of-range values show clamped so the boxes never coerce, and are only replaced when the user picks another value.
         private const int MaxShownLevel = 100;
         public int SpeciesIndex { get => _e.pokemonID < Species.Count ? _e.pokemonID : -1; set { if (value < 0 || value == SpeciesIndex) return; _e.pokemonID = (ushort)value; On(nameof(SpeciesIndex)); _changed(); } }
+        internal void Reselect() => On(nameof(SpeciesIndex));
         public decimal MinLevel { get => Math.Min((int)_e.minLevel, MaxShownLevel); set { if (value == MinLevel) return; _e.minLevel = (byte)value; On(nameof(MinLevel)); _changed(); } }
         public decimal MaxLevel { get => Math.Min((int)_e.maxLevel, MaxShownLevel); set { if (value == MaxLevel) return; _e.maxLevel = (byte)value; On(nameof(MaxLevel)); _changed(); } }
     }
@@ -83,6 +84,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<string> Species { get; } = new ObservableCollection<string>();
         public ObservableCollection<HeadbuttEncRow> NormalEncounters { get; } = new ObservableCollection<HeadbuttEncRow>();
         public ObservableCollection<HeadbuttEncRow> SpecialEncounters { get; } = new ObservableCollection<HeadbuttEncRow>();
+
+        public void RefreshNames()
+        {
+            if (Species.Count == 0) return;
+            ListSync.Apply(Species, GetPokemonNames());
+            foreach (HeadbuttEncRow row in NormalEncounters) row.Reselect();
+            foreach (HeadbuttEncRow row in SpecialEncounters) row.Reselect();
+        }
         public ObservableCollection<string> NormalTreeGroups { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> SpecialTreeGroups { get; } = new ObservableCollection<string>();
         public ObservableCollection<HeadbuttTreeRow> SelectedGroupTrees { get; } = new ObservableCollection<HeadbuttTreeRow>();
@@ -211,6 +220,27 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 StatusText = "Error: " + ex.Message;
                 await DialogHelper.ShowError($"Failed to set up Headbutt Editor:\n{ex.Message}", "Headbutt Editor");
+            }
+        }
+
+        /// <summary>Headbutt files go by header number; this makes an empty one for every header that has none.</summary>
+        public async Task FillMissingAsync()
+        {
+            if (HgEngineProject.IsActive) return;
+            int headers = GetHeaderCount();
+            int have = Filesystem.GetHeadbuttCount();
+            if (have >= headers) { await DialogHelper.ShowInfo($"Every header up to {headers - 1} has a headbutt file.", "Headbutt Editor"); return; }
+            string which = headers - have == 1 ? $"an empty headbutt file {have} for header {have}" : $"empty headbutt files {have} to {headers - 1}, one for each header without one";
+            if (!await DialogHelper.AskYesNo($"Add {which}?", "Headbutt Editor")) return;
+            try
+            {
+                int made = NewProjectFiles.FillHeadbuttFiles(headers);
+                for (int i = FileNames.Count; i < Filesystem.GetHeadbuttCount(); i++) FileNames.Add("Headbutt File " + i);
+                StatusText = $"Added {made} empty headbutt files.";
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("Couldn't add headbutt files:\n" + ex.Message, "Headbutt Editor");
             }
         }
 

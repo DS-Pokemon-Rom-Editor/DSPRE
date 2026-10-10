@@ -176,6 +176,61 @@ namespace DSPRE.Avalonia.ViewModels.Text
             StatusText = $"Level script {id} was saved in another editor and reloaded.";
         }
 
+        /// <summary>Adds a level script with no triggers at the end of the script archive, built at once.</summary>
+        public async Task AddFileAsync()
+        {
+            if (_dirty && !await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "level script")) return;
+            if (HgEngine.HgEngineProject.IsActive || !RotomTool.IsAvailable)
+            {
+                await DialogHelper.ShowInfo("New level scripts are built with Rotom, which this project can't use.", "Level Script Editor");
+                return;
+            }
+            try
+            {
+                (int id, string _) = NewProjectFiles.AddBlankLevelScript();
+                RotomTool.Result built = await RotomTool.CompileProjectAsync();
+                if (!built.Success) { await DialogHelper.ShowError("The script build failed:\n" + RotomTool.FormatDetails(built), "Level Script Editor"); return; }
+                SyncScriptNames();
+                SetClean();
+                SelectedScriptIndex = id;
+                StatusText = $"Added level script {id}.";
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("Couldn't add a level script:\n" + ex.Message, "Level Script Editor");
+            }
+        }
+
+        /// <summary>Deletes the last script-archive file, unless a header loads it as its scripts or level script.</summary>
+        public async Task RemoveLastFileAsync()
+        {
+            if (HgEngine.HgEngineProject.IsActive) return;
+            int id = NewProjectFiles.NextScriptId() - 1;
+            if (id <= 0) return;
+            if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfo(keep, "Level Script Editor"); return; }
+            if (!await DialogHelper.AskYesNo($"Delete script file {id}, its source and its compiled copy?", "Confirm deletion")) return;
+            try
+            {
+                if (_selScript == id) { SetClean(); SelectedScriptIndex = id - 1; }
+                NewProjectFiles.DeleteScriptFile(id);
+                SyncScriptNames();
+                StatusText = $"Removed script file {id}.";
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("Couldn't remove the file:\n" + ex.Message, "Level Script Editor");
+            }
+        }
+
+        private void SyncScriptNames()
+        {
+            int count = Filesystem.GetScriptCount();
+            _suppress = true;
+            while (ScriptNames.Count > count) ScriptNames.RemoveAt(ScriptNames.Count - 1);
+            while (ScriptNames.Count < count) ScriptNames.Add("Script File " + ScriptNames.Count);
+            _suppress = false;
+        }
+
         public async Task SetupAsync(Window owner)
         {
             _owner = owner;

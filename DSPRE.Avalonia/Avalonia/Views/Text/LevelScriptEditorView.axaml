@@ -12,8 +12,12 @@
   <DockPanel>
     <controls:EditorToolbar>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="150" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
+        <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="LevelScript" FileId="{Binding SelectedScriptIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"    Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
+        <Button Content="Add" controls:Icon.Key="addIcon" Click="AddFile_Click" ToolTip.Tip="Add a level script with no triggers"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveFile_Click"
+                ToolTip.Tip="Deletes the last script file, unless a header still uses it"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
         <CheckBox Content="Word-align padding" IsChecked="{Binding WordAlignmentPadding}" VerticalAlignment="Center"/>

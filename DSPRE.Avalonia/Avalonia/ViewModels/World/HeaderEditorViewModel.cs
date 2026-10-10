@@ -416,7 +416,21 @@ namespace DSPRE.Avalonia.ViewModels.World
             TreeFolders.Add(folder);
         }
 
-        public HeaderEditorViewModel(bool _) { AppEvents.HeaderSaved += OnSavedElsewhere; MusicPreview.Changed += OnMusicChanged; }
+        public HeaderEditorViewModel(bool _)
+        {
+            AppEvents.HeaderSaved += OnSavedElsewhere;
+            AppEvents.RomPatchStateChanged += OnPatchStateChanged;
+            MusicPreview.Changed += OnMusicChanged;
+        }
+
+        // Applying the dynamic headers patch with this window open enables Add and Remove last.
+        private void OnPatchStateChanged(object sender, EventArgs e)
+        {
+            if (_dynamicHeaders == MapHeader.UsesDynamicHeaders) return;
+            _dynamicHeaders = MapHeader.UsesDynamicHeaders;
+            CanAddRemove = _dynamicHeaders;
+            OnPropertyChanged(nameof(CanAddRemove));
+        }
 
         private void OnMusicChanged() => Dispatcher.UIThread.Post(() => { OnPropertyChanged(nameof(DayPlayIcon)); OnPropertyChanged(nameof(NightPlayIcon)); });
         public string DayPlayIcon => MusicPreview.StartedBy((this, false)) ? "stop" : "play";
@@ -426,7 +440,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Detach()
         {
             AppEvents.HeaderSaved -= OnSavedElsewhere;
+            AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
             AppEvents.LabelsChanged -= OnLabelsChanged;
+            MusicPreview.Changed -= OnMusicChanged;
         }
 
         // Another open copy of this header saved: show it, unless this copy holds its own edits.
@@ -1337,9 +1353,53 @@ namespace DSPRE.Avalonia.ViewModels.World
             RebuildTree();
             SelectHeader((ushort)newId);
 
-            await DialogHelper.ShowInfo(
-                "New header added. (Creating associated Text/Script/Level-Script/Event files is not yet available in the Avalonia editor; add them from the respective editors.)",
-                "Header added");
+            await GiveNewHeaderFilesAsync(newId);
+        }
+
+        /// <summary>Offers a copied header new files of its own; on HGSS the headbutt files fill up to it.</summary>
+        private async Task GiveNewHeaderFilesAsync(int newId)
+        {
+            if (HgEngine.HgEngineProject.IsActive)
+            {
+                await DialogHelper.ShowInfo($"Header {newId} added. Pick its script and text files below.", "Header added");
+                return;
+            }
+            bool hgss = gameFamily == GameFamilies.HGSS;
+            List<(string Label, bool IsChecked)> options = new List<(string, bool)>
+            {
+                ("New script file", true), ("New level script, with no triggers", true), ("New event file, empty", true), ("New text archive", true),
+            };
+            if (hgss) options.Add(("Headbutt file", true));
+            (bool create, bool[] pick) = await DialogHelper.AskWithChecks(
+                $"Header {newId} was added as a copy, so it uses the copied header's files. Give it new ones of its own?",
+                "Header added", "Create", "Keep the copied ones", options.ToArray());
+            if (!create) return;
+
+            List<string> made = new List<string>();
+            try
+            {
+                if ((pick[0] || pick[1]) && !RotomTool.IsAvailable)
+                    throw new InvalidOperationException("Rotom isn't available, so new script files can't be built.");
+                if (pick[0]) { ScriptFileId = NewProjectFiles.AddScript().Id; made.Add($"script file {ScriptFileId}"); }
+                if (pick[1]) { LevelScriptId = NewProjectFiles.AddBlankLevelScript().Id; made.Add($"level script {LevelScriptId}"); }
+                if (pick[2]) { EventFileId = NewProjectFiles.AddEventFile(); made.Add($"event file {EventFileId}"); }
+                if (pick[3]) { TextArchiveId = NewProjectFiles.AddTextArchive(sender: this); made.Add($"text archive {TextArchiveId}"); }
+                if (hgss && pick[4] && NewProjectFiles.FillHeadbuttFiles(newId + 1) > 0) made.Add($"headbutt file {newId}");
+                if (made.Count > 0) Save();
+                // Scripts are built from their sources; a new one needs its compiled copy before anything reads it.
+                if (pick[0] || pick[1])
+                {
+                    RotomTool.Result built = await RotomTool.CompileProjectAsync();
+                    if (!built.Success) throw new InvalidOperationException("The script build failed:\n" + RotomTool.FormatDetails(built));
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
+            {
+                await DialogHelper.ShowError((made.Count > 0 ? $"Made {string.Join(", ", made)}, then: " : "") + ex.Message, "Header added");
+                return;
+            }
+            if (made.Count > 0)
+                await DialogHelper.ShowInfo($"Header {newId} now has {string.Join(", ", made)}.", "Header added");
         }
 
         public async Task RemoveHeaderAsync()

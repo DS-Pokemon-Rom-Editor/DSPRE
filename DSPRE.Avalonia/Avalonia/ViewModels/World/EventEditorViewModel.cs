@@ -1331,8 +1331,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
-                int newId = Filesystem.GetEventFileCount();
-                new EventFile().SaveToFileDefaultDir(newId, showSuccessMessage: false);
+                int newId = NewProjectFiles.AddEventFile();
                 EventNames.Add("Event File " + newId);
                 SelectedEventIndex = newId;
                 StatusText = $"Added event file {newId}.";

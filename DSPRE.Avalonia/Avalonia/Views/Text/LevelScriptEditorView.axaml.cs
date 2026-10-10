@@ -51,6 +51,8 @@ namespace DSPRE.Avalonia.Views.Text
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private void Add_Click(object sender, RoutedEventArgs e) => VM?.AddTrigger();
+        private async void AddFile_Click(object sender, RoutedEventArgs e) => await Safe(VM?.AddFileAsync());
+        private async void RemoveFile_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastFileAsync());
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveTrigger();
         private void GoToScript_Click(object sender, RoutedEventArgs e) => VM?.GoToTriggerScript();
 
