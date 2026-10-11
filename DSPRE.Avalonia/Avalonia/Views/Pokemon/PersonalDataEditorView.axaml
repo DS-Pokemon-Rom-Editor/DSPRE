@@ -114,9 +114,9 @@
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EscapeRate}"     Minimum="0" Maximum="255"
                                ToolTip.Tip="How likely it is to run away each turn in the Great Marsh or Safari Zone, out of 255"/>
                 <TextBlock Grid.Row="4" Grid.Column="0" Text="Flip:"            Classes="label"
-                           ToolTip.Tip="Some screens, such as Platinum's summary screen, show the sprite mirrored unless this is ticked"/>
+                           ToolTip.Tip="Unticked, some screens show the sprite mirrored, such as Platinum's summary. HeartGold and SoulSilver never mirror the summary sprite"/>
                 <CheckBox  Grid.Row="4" Grid.Column="1" IsChecked="{Binding FlipFlag}"
-                           ToolTip.Tip="Some screens, such as Platinum's summary screen, show the sprite mirrored unless this is ticked"/>
+                           ToolTip.Tip="Unticked, some screens show the sprite mirrored, such as Platinum's summary. HeartGold and SoulSilver never mirror the summary sprite"/>
                 <TextBlock Grid.Row="6" Grid.Column="0" Text="Gender ratio:"    Classes="label"/>
                 <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="10">
                   <NumericUpDown Value="{Binding GenderVec}" Minimum="0" Maximum="254" MinWidth="120"/>

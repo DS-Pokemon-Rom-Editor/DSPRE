@@ -1435,15 +1435,15 @@ namespace DSPRE
             ["platExtraTms"] = ("hzla", "extra TMs"),
             ["trainerClassTablesExpanded"] = ("Mixone", "trainer class table expansion"),
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
-            ["punchingMovesExpanded"] = ("DSPRE", "punching move list expansion"),
-            ["soundMovesExpanded"] = ("DSPRE", "sound move list expansion"),
-            ["regionalDexCount"] = ("DSPRE", "regional Pokédex size"),
-            ["evolutionSlots"] = ("DSPRE", "evolution slots"),
-            ["vsIntroTimings"] = ("DSPRE", "VS intro timing"),
-            ["typeChartExpanded"] = ("DSPRE", "type chart expansion"),
-            ["swarmTableExpanded"] = ("DSPRE", "swarm table expansion"),
-            ["bpShopExpanded"] = ("DSPRE", "Battle Point list expansion"),
-            ["martsExpanded"] = ("DSPRE", "mart expansion"),
+            ["punchingMovesExpanded"] = ("Mixone", "punching move list expansion"),
+            ["soundMovesExpanded"] = ("Mixone", "sound move list expansion"),
+            ["regionalDexCount"] = ("Mixone", "regional Pokédex size"),
+            ["evolutionSlots"] = ("Mixone", "evolution slots"),
+            ["vsIntroTimings"] = ("Mixone", "VS intro timing"),
+            ["typeChartExpanded"] = ("Mixone", "type chart expansion"),
+            ["swarmTableExpanded"] = ("Mixone", "swarm table expansion"),
+            ["bpShopExpanded"] = ("Mixone", "Battle Point list expansion"),
+            ["martsExpanded"] = ("Mixone", "mart expansion"),
         };
 
         private const string MoveListResearch = "built on MrHam88's research and the DS Pokémon Hacking wiki's move editing guide (Yako and Lhea)";
@@ -1693,6 +1693,16 @@ namespace DSPRE
                 }));
 
             list.Add(PlatPatchesStatus());
+            list.Add(new PatchInfo
+            {
+                Key = "g4Patcher",
+                Title = "G4Patcher",
+                Author = "Kalaay",
+                Link = "https://github.com/KalaayPT/G4Patcher",
+                Description = "Applies .asm code patches, such as EV and IV checking or a portable PC, to an unpacked project folder.",
+                State = PatchState.Unsupported,
+                Reason = "Separate tool",
+            });
 
             list.Add(Status("trainerClassTablesExpanded", "Trainer class tables",
                 $"Moves the gender and prize money tables into the synthetic overlay with room for {TrainerClassTableExpansion.MaxClasses} classes, so the Trainer Classes editor can add classes. Requires the ARM9 expansion patch.",
@@ -1944,7 +1954,9 @@ namespace DSPRE
             List<ushort> order = RegionalDexCount.SavedOrder();
             if (order == null) return Unsupported("The regional order could not be read");
             if (RegionalDexCount.Problem(order) != null) return Unsupported($"More than {RegionalDexCount.Max} species");
-            return RegionalDexCount.Matches(order) ? PatchState.Applied : PatchState.Available;
+            if (!RegionalDexCount.Matches(order)) return PatchState.Available;
+            // An untouched game already matches its own order; that is not this patch and earns no credit.
+            return RegionalDexCount.Current() == RegionalDexCount.Retail ? Unsupported("Already matches") : PatchState.Applied;
         }
 
         private static PatchState EvolutionSlotsProbe()

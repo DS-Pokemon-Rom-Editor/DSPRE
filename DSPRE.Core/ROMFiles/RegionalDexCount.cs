@@ -24,6 +24,14 @@ namespace DSPRE.ROMFiles
             _ => Array.Empty<int>(),
         };
 
+        // The US retail counts.
+        public static Counts Retail => gameFamily switch
+        {
+            GameFamilies.DP => new Counts(150, 149, 151),
+            GameFamilies.Plat => new Counts(210, 209, 210),
+            _ => new Counts(254, 253, -1),
+        };
+
         private static bool HasBound => SpotOf(GameTable.RegionalDexLookupBound) != null;
 
         /// <summary>Why the counts can't be read or set in this ROM, or null.</summary>
