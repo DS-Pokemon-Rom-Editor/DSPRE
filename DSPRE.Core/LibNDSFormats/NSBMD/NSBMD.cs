@@ -256,6 +256,7 @@ namespace LibNDSFormats.NSBMD {
                         mod.Objects[d].ParentID = e;
                         mod.Objects[d].StackID = stackID = polystack2 = emptystack = emptystack + 1;//stackID + 1;//-1;
                         mod.Objects[d].RestoreID = -1;
+                        mod.NodeOrder.Add(d);
                         break;
                     case 0x26: //NodeDesc[001]
                         d = reader.ReadByte();
@@ -268,6 +269,7 @@ namespace LibNDSFormats.NSBMD {
                         mod.Objects[d].ParentID = e;
                         mod.Objects[d].StackID = stackID = polystack2 = g;
                         mod.Objects[d].RestoreID = -1;
+                        mod.NodeOrder.Add(d);
                         break;
                     case 0x46: // 4 bytes follow
                         d = reader.ReadByte();
@@ -280,6 +282,7 @@ namespace LibNDSFormats.NSBMD {
                         mod.Objects[d].ParentID = e;
                         mod.Objects[d].StackID = stackID = polystack2 = emptystack = emptystack + 1; //stackID + 1;
                         mod.Objects[d].RestoreID = stackID = g;
+                        mod.NodeOrder.Add(d);
                         break;
                     case 0x66: //NodeDesc[011]
                         d = reader.ReadByte();
@@ -293,6 +296,7 @@ namespace LibNDSFormats.NSBMD {
                         mod.Objects[d].ParentID = e;
                         mod.Objects[d].StackID = stackID = polystack2 = g;
                         mod.Objects[d].RestoreID = h;
+                        mod.NodeOrder.Add(d);
                         break;
                     ////////////////////////////////////////////
                     // node's visibility
@@ -375,6 +379,7 @@ namespace LibNDSFormats.NSBMD {
                             mod.Polygons[d].StackID = polystack2;
                         }
                         mod.Polygons[d].JointID = curjoint;
+                        mod.Polygons[d].NodesBefore = mod.NodeOrder.Count;
                         mod.Objects[curjoint].childs.Add(d);
                         matid = -1;
                         codeptr += 2;

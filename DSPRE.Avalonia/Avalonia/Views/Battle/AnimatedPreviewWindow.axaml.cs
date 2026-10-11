@@ -119,6 +119,8 @@ namespace DSPRE.Avalonia.Views.Battle
                      walkerFor, walkerStartId, scriptHome, actionsFor);
             _vm.PlaceNpcs(footFinder);
             GlView.SetModel(scene);
+            // The field clears to black.
+            GlView.ClearColour = (0f, 0f, 0f);
             GlView.SpritesSeeThroughGeometry = ShowPeopleThroughWalls;
             Apply();
             _vm.FrameAdvanced += (_, _) => Apply();

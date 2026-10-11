@@ -19,10 +19,10 @@ namespace DSPRE.Avalonia.Gl
     /// </summary>
     public class NsbmdGlControl : OpenGlControlBase
     {
-        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int NodeIndex; public int CullMode; public bool Fog; public bool TexAlpha; public float[] TexMatrix; }
+        private struct GpuPart { public int Vbo; public int VertexCount; public int TextureId; public float Alpha; public int MaterialKey; public int NodeIndex; public int CullMode; public bool Fog; public bool Shade; public bool TexAlpha; public float[] TexMatrix; }
 
         private GlFunctions _f;
-        private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc, _matColorLoc, _texAlphaLoc;
+        private int _program, _vao, _mvpLoc, _texLoc, _hasTexLoc, _alphaLoc, _texMtxLoc, _matColorLoc, _texAlphaLoc, _shadeLoc;
         private int _viewLoc, _fogOnLoc, _fogColorLoc, _fogLoc, _fogClipLoc, _fogTableLoc;
         private int _spotOnLoc, _spotCenterLoc, _spotScaleLoc, _spotTrisLoc, _spotTriCountLoc,
                     _spotTexLoc, _spotSizeLoc, _camPosLoc, _camDirLoc, _spotRightLoc, _spotUpLoc;
@@ -62,6 +62,11 @@ namespace DSPRE.Avalonia.Gl
         private int _gizmoVbo, _gizmoCount;
         private bool _gizmoDirty;
         private bool _showGizmos;
+
+        // Outline around a selection (8 floats/vertex triangles), drawn over everything.
+        private float[] _outlineMesh;
+        private int _outlineVbo;
+        private bool _outlineDirty;
         public bool ShowGizmos { get => _showGizmos; set { _showGizmos = value; RequestNextFrameRendering(); } }
 
         // Textured/flat toggle: every vertex already carries its material's diffuse colour
@@ -630,6 +635,42 @@ namespace DSPRE.Avalonia.Gl
             RequestNextFrameRendering();
         }
 
+        /// <summary>Thin edges (8 floats/vertex triangles, scene space) drawn over everything; null to clear.</summary>
+        public void SetOutline(float[] mesh)
+        {
+            _outlineMesh = mesh;
+            _outlineDirty = true;
+            RequestNextFrameRendering();
+        }
+
+        private void RenderOutline(int stride)
+        {
+            if (_outlineDirty)
+            {
+                if (_outlineVbo != 0) { _f.DeleteBuffers(1, new[] { _outlineVbo }); _outlineVbo = 0; }
+                if (_outlineMesh != null && _outlineMesh.Length >= 24)
+                {
+                    int[] arr = new int[1]; _f.GenBuffers(1, arr); _outlineVbo = arr[0];
+                    _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _outlineVbo);
+                    GCHandle h = GCHandle.Alloc(_outlineMesh, GCHandleType.Pinned);
+                    try { _f.BufferData(GlFunctions.GL_ARRAY_BUFFER, (IntPtr)(_outlineMesh.Length * sizeof(float)), h.AddrOfPinnedObject(), GlFunctions.GL_STATIC_DRAW); }
+                    finally { h.Free(); }
+                }
+                _outlineDirty = false;
+            }
+            if (_outlineVbo == 0) return;
+            _f.Disable(GlFunctions.GL_DEPTH_TEST);
+            _f.Disable(GlFunctions.GL_CULL_FACE);
+            _f.Uniform1i(_hasTexLoc, 0);
+            _f.Uniform1f(_alphaLoc, 1f);
+            _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _outlineVbo);
+            _f.EnableVertexAttribArray(0); _f.VertexAttribPointer(0, 3, GlFunctions.GL_FLOAT, false, stride, IntPtr.Zero);
+            _f.EnableVertexAttribArray(1); _f.VertexAttribPointer(1, 2, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(3 * sizeof(float)));
+            _f.EnableVertexAttribArray(2); _f.VertexAttribPointer(2, 3, GlFunctions.GL_FLOAT, false, stride, (IntPtr)(5 * sizeof(float)));
+            _f.DrawArrays(GlFunctions.GL_TRIANGLES, 0, _outlineMesh.Length / 8);
+            _f.Enable(GlFunctions.GL_DEPTH_TEST);
+        }
+
         private void FreeHighlight()
         {
             foreach ((int Vbo, int Count, int MaterialKey, float R, float G, float B) h in _highlightGpu) if (h.Vbo != 0) _f?.DeleteBuffers(1, new[] { h.Vbo });
@@ -704,7 +745,7 @@ namespace DSPRE.Avalonia.Gl
                     "out vec2 vUv;\nout vec3 vColor;\nout vec2 vWorld;\nout float vEye;\nout vec3 vPos;\n" +
                     "void main(){ vUv = (uTexMtx * vec3(aUv, 1.0)).xy; vColor = aColor; vWorld = aPos.xz; vEye = -(uView * vec4(aPos, 1.0)).z; vPos = aPos; gl_Position = uMvp * vec4(aPos, 1.0); }\n";
                 string fs = header +
-                    "uniform sampler2D uTex;\nuniform int uHasTex;\nuniform int uTexAlpha;\nuniform float uAlpha;\n" +
+                    "uniform sampler2D uTex;\nuniform int uHasTex;\nuniform int uTexAlpha;\nuniform int uShade;\nuniform float uAlpha;\n" +
                     // Per-tile permission tint (uTint>0): sample a 32x32 collision-colour texture by the fragment's
                     // world-tile and mix it into the surface AFTER the alpha discard, so the collision colour follows
                     // the real texture shape (trees/lamps tinted on their pixels; transparent texels stay clear).
@@ -767,9 +808,9 @@ namespace DSPRE.Avalonia.Gl
                     "  return mix(c, t.rgb, uTint * t.a);\n" +
                     "}\n" +
                     "void main(){\n" +
-                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv);\n" +
-                    "    if (uTexAlpha == 1) { if (t.a < 0.02) discard; fragColor = vec4(fogged(tintRgb(t.rgb) * uMatColor), uAlpha * t.a); }\n" +
-                    "    else { if (t.a < 0.5) discard; fragColor = vec4(fogged(tintRgb(t.rgb) * uMatColor), uAlpha); } }\n" +
+                    "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); vec3 rgb = uShade == 1 ? t.rgb * vColor : t.rgb;\n" +
+                    "    if (uTexAlpha == 1) { if (t.a < 0.02) discard; fragColor = vec4(fogged(tintRgb(rgb) * uMatColor), uAlpha * t.a); }\n" +
+                    "    else { if (t.a < 0.5) discard; fragColor = vec4(fogged(tintRgb(rgb) * uMatColor), uAlpha); } }\n" +
                     "  else { fragColor = vec4(fogged(tintRgb(vColor) * uMatColor), uAlpha); }\n" +
                     "}\n";
 
@@ -783,6 +824,7 @@ namespace DSPRE.Avalonia.Gl
                 _hasTexLoc = _f.GetUniformLocation(_program, "uHasTex");
                 _alphaLoc = _f.GetUniformLocation(_program, "uAlpha");
                 _texAlphaLoc = _f.GetUniformLocation(_program, "uTexAlpha");
+                _shadeLoc = _f.GetUniformLocation(_program, "uShade");
                 _tintLoc = _f.GetUniformLocation(_program, "uTint");
                 _tileOriginLoc = _f.GetUniformLocation(_program, "uTileOrigin");
                 _tileSizeLoc = _f.GetUniformLocation(_program, "uTileSize");
@@ -836,6 +878,7 @@ namespace DSPRE.Avalonia.Gl
                 FreeHighlight();
                 if (_spriteVbo != 0) _f?.DeleteBuffers(1, new[] { _spriteVbo });
                 if (_gizmoVbo != 0) _f?.DeleteBuffers(1, new[] { _gizmoVbo });
+                if (_outlineVbo != 0) { _f?.DeleteBuffers(1, new[] { _outlineVbo }); _outlineVbo = 0; _outlineDirty = true; }
                 if (_haveEditVbo && _editVbo != 0) _f?.DeleteBuffers(1, new[] { _editVbo });
                 if (_vao != 0) _f?.DeleteVertexArrays(1, new[] { _vao });
             }
@@ -926,7 +969,7 @@ namespace DSPRE.Avalonia.Gl
 
                 _parts.Add(new GpuPart { Vbo = vbo, VertexCount = part.VertexCount, TextureId = texId,
                     Alpha = part.Alpha, MaterialKey = part.MaterialIndex, NodeIndex = part.NodeIndex,
-                    CullMode = part.CullMode, Fog = part.Fog, TexAlpha = HasPartialAlpha(tex?.Rgba), TexMatrix = part.TexMatrix });
+                    CullMode = part.CullMode, Fog = part.Fog, Shade = part.Shade, TexAlpha = HasPartialAlpha(tex?.Rgba), TexMatrix = part.TexMatrix });
             }
             _uploadPending = false;
         }
@@ -1164,6 +1207,7 @@ namespace DSPRE.Avalonia.Gl
                     _f.Uniform1i(_hasTexLoc, 1);
                 }
                 else _f.Uniform1i(_hasTexLoc, 0);
+                if (_shadeLoc >= 0) _f.Uniform1i(_shadeLoc, part.Shade ? 1 : 0);
 
                 // Real per-material translucency (ported from WinForms PR #209): materials like the
                 // "h_kage" building drop-shadow plane or puddle overlays carry their own NSBMD alpha
@@ -1228,6 +1272,7 @@ namespace DSPRE.Avalonia.Gl
                 }
             }
             if (_texAlphaLoc >= 0) _f.Uniform1i(_texAlphaLoc, 0);
+            if (_shadeLoc >= 0) _f.Uniform1i(_shadeLoc, 0);
             if (_texMtxLoc >= 0) _f.UniformMatrix3fv(_texMtxLoc, 1, false, IdentityTexMatrix);
             if (_matColorLoc >= 0) _f.Uniform3f(_matColorLoc, 1f, 1f, 1f);
             if (_fogOnLoc >= 0) _f.Uniform1i(_fogOnLoc, 0);
@@ -1240,6 +1285,7 @@ namespace DSPRE.Avalonia.Gl
             if (_spotOnLoc >= 0) _f.Uniform1i(_spotOnLoc, 0);
             RenderMarkers(stride);
             if (_showGizmos) RenderGizmos(stride);
+            RenderOutline(stride);
             if (_editMode && _gizmoTargetVisible) RenderEditGizmo(stride);
             RenderScreenLayers(behind: false, stride);
 

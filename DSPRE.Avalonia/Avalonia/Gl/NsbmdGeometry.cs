@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using DSPRE.ROMFiles;
 using System.Drawing;
 using LibNDSFormats.NSBMD;
@@ -16,6 +17,8 @@ namespace DSPRE.Avalonia.Gl
         public float[] Vertices;      // interleaved pos.xyz, uv.st, col.rgb (8 floats/vertex)
         public int VertexCount;
         public float Alpha = 1f;      // material alpha (0-1); < 1 needs GL_BLEND when drawn
+        /// <summary>Texel times vertex colour, as the DS draws an unlit modulate material.</summary>
+        public bool Shade;
 
         /// <summary>
         /// Which faces the DS would draw, out of the material's polygon attribute: 0 draws neither, 1 drops
@@ -42,6 +45,10 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Reads the cull mode out of a material's polygon attribute. </summary>
         public static int FromPolyAttrib(uint attr, uint mask) =>
             (mask & 0xC0) == 0 ? None : (int)((attr >> 6) & 3);
+
+        /// <summary>Modulate mode with no lights, where the DS multiplies the texel by the vertex colour.</summary>
+        public static bool Modulates(uint attr, uint mask) =>
+            ((mask & 0x30) == 0 || ((attr >> 4) & 3) == 0) && ((mask & 0xF) == 0 || (attr & 0xF) == 0);
     }
 
     /// <summary>A model ready for GL: per-material triangle parts + decoded textures.</summary>
@@ -52,6 +59,8 @@ namespace DSPRE.Avalonia.Gl
         public float[] Transform;
         public int ModelId;
         public int TileX, TileZ;
+        /// <summary>The map's building this was placed from, so an editor can find its parts again.</summary>
+        public DSPRE.ROMFiles.Building Source;
     }
 
     public sealed class NsbmdRenderModel
@@ -62,6 +71,7 @@ namespace DSPRE.Avalonia.Gl
         /// <summary>Which faces each material draws, so a backdrop does not show its inside.</summary>
         public Dictionary<int, int> MaterialCullByKey = new Dictionary<int, int>();
         public Dictionary<int, bool> MaterialFogByKey = new Dictionary<int, bool>();
+        public Dictionary<int, bool> MaterialShadeByKey = new Dictionary<int, bool>();
         public Dictionary<int, float[]> MaterialTexMatrixByKey = new Dictionary<int, float[]>();
         // Material names, so a terrain animation (which targets materials by name, e.g. "river")
         // can be matched to the parts it should move.
@@ -78,6 +88,7 @@ namespace DSPRE.Avalonia.Gl
             public NSBMDModel Model;
             public float[] Transform;
             public float OffsetX, OffsetY, OffsetZ;
+            public DSPRE.ROMFiles.Building Source;
         }
         public List<BuildingMaterials> Buildings = new List<BuildingMaterials>();
 
@@ -388,7 +399,7 @@ namespace DSPRE.Avalonia.Gl
                         {
                             ModelId = b.ModelId, FirstKey = offset, Count = b.Model.Materials.Count,
                             Model = b.Model, Transform = b.Transform,
-                            TileX = b.TileX, TileZ = b.TileZ,
+                            TileX = b.TileX, TileZ = b.TileZ, Source = b.Source,
                         });
                         if (cellSwaps.TryGetValue(b.ModelId, out Dictionary<string, NsbmdTextureData> swaps))
                             for (int k = 0; k < b.Model.Materials.Count; k++)
@@ -685,16 +696,29 @@ namespace DSPRE.Avalonia.Gl
             MTX44[] stack = new MTX44[32];
             for (int i = 0; i < stack.Length; i++) { stack[i] = new MTX44(); stack[i].LoadIdentity(); }
             MTX44 running = new MTX44(); running.LoadIdentity();
-            foreach (NSBMDObject obj in model.Objects)
+            // Nodes and shapes interleave in the render commands, so each shape uses the matrix stack as it stood then.
+            List<int> order = model.NodeOrder.Count > 0 ? model.NodeOrder : Enumerable.Range(0, model.Objects.Count).ToList();
+            for (int step = 0; step <= order.Count; step++)
             {
-                if (obj.RestoreID != -1) running = stack[obj.RestoreID].Clone();
+                foreach (NSBMDPolygon poly in model.Polygons)
+                {
+                    bool now = poly.NodesBefore == step
+                        || (step == order.Count && (poly.NodesBefore < 0 || poly.NodesBefore > order.Count));
+                    if (now) AccumulatePolygon(poly);
+                }
+                if (step == order.Count) break;
+
+                int node = order[step];
+                if (node < 0 || node >= model.Objects.Count) continue;
+                NSBMDObject obj = model.Objects[node];
+                if (obj.RestoreID != -1) running = stack[obj.RestoreID & 0x1f].Clone();
                 if (obj.StackID != -1)
                 {
                     if (obj.visible)
                     {
                         // A joint animation replaces a part's own matrix for this frame, keeping
                         // whatever the model says about anything the animation does not touch.
-                        float[] mtx = jointMatrix?.Invoke(model.Objects.IndexOf(obj), obj) ?? obj.materix;
+                        float[] mtx = jointMatrix?.Invoke(node, obj) ?? obj.materix;
                         MTX44 b = new MTX44(); b.SetValues(mtx);
                         running = running.MultMatrix(b);
                     }
@@ -703,7 +727,7 @@ namespace DSPRE.Avalonia.Gl
                 }
             }
 
-            foreach (NSBMDPolygon poly in model.Polygons)
+            void AccumulatePolygon(NSBMDPolygon poly)
             {
                 int matId = poly.MatId;
                 NSBMDMaterial mat = (matId >= 0 && matId < model.Materials.Count) ? model.Materials[matId] : null;
@@ -728,10 +752,14 @@ namespace DSPRE.Avalonia.Gl
                     list = new List<float>();
                     byMat[key] = list;
                 }
-                InterpretPolyData(poly.PolyData, poly.StackID, stack, model.modelScale, mat, sceneTransform, list, r, g, b);
+                bool coloured = InterpretPolyData(poly.PolyData, poly.StackID, stack, model.modelScale, mat, sceneTransform, list, r, g, b);
 
                 if (mat != null)
                 {
+                    // The material's own diffuse counts only when it really sets the vertex colour, not the grey stand-in.
+                    bool sets = coloured || (mat.diffuseColor && c.R + c.G + c.B >= 0.05f * 255);
+                    if (sets && NsbmdCull.Modulates(mat.PolyAttrib, mat.PolyAttribMask)) target.MaterialShadeByKey[key] = true;
+
                     // Real per-material translucency (ported from WinForms PR #209) instead of hiding
                     // materials outright: "h_kage" (影 = shadow) drop-shadow planes and puddle/window
                     // overlays now render with their actual NSBMD alpha via GL_BLEND (NsbmdGlControl),
@@ -810,8 +838,9 @@ namespace DSPRE.Avalonia.Gl
                 float alpha = result.MaterialAlphaByKey.TryGetValue(kv.Key, out float a) ? a : 1f;
                 int cull = result.MaterialCullByKey.TryGetValue(kv.Key, out int c) ? c : NsbmdCull.None;
                 bool fog = result.MaterialFogByKey.TryGetValue(kv.Key, out bool f) && f;
+                bool shade = result.MaterialShadeByKey.TryGetValue(kv.Key, out bool s) && s;
                 result.MaterialTexMatrixByKey.TryGetValue(kv.Key, out float[] texMtx);
-                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha, CullMode = cull, Fog = fog, TexMatrix = texMtx });
+                result.Parts.Add(new NsbmdMeshPart { MaterialIndex = kv.Key, Vertices = kv.Value.ToArray(), VertexCount = kv.Value.Count / 8, Alpha = alpha, CullMode = cull, Fog = fog, Shade = shade, TexMatrix = texMtx });
                 result.TotalVertices += kv.Value.Count / 8;
             }
         }
@@ -840,10 +869,12 @@ namespace DSPRE.Avalonia.Gl
             return srt.ToMatrix3(mode, hw);
         }
 
-        private static void InterpretPolyData(byte[] poly, int polyStackId, MTX44[] stack, float modelScale,
+        /// <returns>Whether the list set its own vertex colour.</returns>
+        private static bool InterpretPolyData(byte[] poly, int polyStackId, MTX44[] stack, float modelScale,
             NSBMDMaterial mat, float[] sceneTransform, List<float> outVerts, float cr, float cg, float cb)
         {
-            if (poly == null || poly.Length == 0) return;
+            if (poly == null || poly.Length == 0) return false;
+            bool coloured = false;
 
             float texW = mat != null && mat.width > 0 ? mat.width : 1f;
             float texH = mat != null && mat.height > 0 ? mat.height : 1f;
@@ -901,6 +932,7 @@ namespace DSPRE.Avalonia.Gl
                                 vr = (colour & 0x1f) / 31f;
                                 vg = ((colour >> 5) & 0x1f) / 31f;
                                 vb = ((colour >> 10) & 0x1f) / 31f;
+                                coloured = true;
                                 break;
                             }
                         case 0x21: idx += 4; break;   // NORMAL (lighting deferred)
@@ -963,7 +995,17 @@ namespace DSPRE.Avalonia.Gl
 
                         case 0x10: case 0x12: case 0x13: idx += 4; break;
                         case 0x29: case 0x2a: case 0x2b: idx += 4; break;
-                        case 0x30: case 0x31: case 0x32: case 0x33: idx += 4; break;
+                        case 0x30:                    // DIF_AMB: bit 15 makes the diffuse the vertex colour
+                            {
+                                int difAmb = S32(poly, ref idx);
+                                if ((difAmb & 0x8000) == 0) break;
+                                vr = (difAmb & 0x1f) / 31f;
+                                vg = ((difAmb >> 5) & 0x1f) / 31f;
+                                vb = ((difAmb >> 10) & 0x1f) / 31f;
+                                coloured = true;
+                                break;
+                            }
+                        case 0x31: case 0x32: case 0x33: idx += 4; break;
                         case 0x34: idx += 0x80; break;
                         case 0x50: case 0x60: idx += 4; break;
                         case 0x70: idx += 12; break;
@@ -973,6 +1015,7 @@ namespace DSPRE.Avalonia.Gl
                     }
                 }
             }
+            return coloured;
         }
 
         private static void LoadOrMult(byte[] poly, ref int idx, MTX44 cur, int count, bool load)
@@ -1006,11 +1049,13 @@ namespace DSPRE.Avalonia.Gl
                 float alpha = result.MaterialAlphaByKey.TryGetValue(material, out float a) ? a : 1f;
                 int cull = result.MaterialCullByKey.TryGetValue(material, out int c) ? c : NsbmdCull.None;
                 bool fog = result.MaterialFogByKey.TryGetValue(material, out bool f) && f;
+                bool shade = result.MaterialShadeByKey.TryGetValue(material, out bool s) && s;
                 result.MaterialTexMatrixByKey.TryGetValue(material, out float[] texMtx);
                 result.Parts.Add(new NsbmdMeshPart
                 {
                     TexMatrix = texMtx,
                     Fog = fog,
+                    Shade = shade,
                     MaterialIndex = material,
                     NodeIndex = kv.Key.Node,
                     Vertices = kv.Value.ToArray(),

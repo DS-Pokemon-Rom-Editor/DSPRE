@@ -36,6 +36,9 @@ namespace LibNDSFormats.NSBMD
 
         public int JointID { get; set; }
 
+        /// <summary>How many <see cref="NSBMDModel.NodeOrder"/> entries had run when this shape was drawn; -1 when unknown.</summary>
+        public int NodesBefore { get; set; } = -1;
+
         #endregion Properties 
     }
 }

@@ -31,6 +31,8 @@ namespace LibNDSFormats.NSBMD
         /// NSBMD polygons.
         /// </summary>
         public readonly List<NSBMDPolygon> Polygons = new List<NSBMDPolygon>();
+        /// <summary>Node ids in the order the render commands set their matrices.</summary>
+        public readonly List<int> NodeOrder = new List<int>();
 
         #endregion Fields 
 
