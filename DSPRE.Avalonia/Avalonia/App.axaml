@@ -122,6 +122,12 @@
 			</Setter>
 		</Style>
 
+		<!-- Long tooltips wrap at roughly 100 characters instead of running across the screen. -->
+		<Style Selector="ToolTip /template/ ContentPresenter">
+			<Setter Property="MaxWidth" Value="620"/>
+			<Setter Property="TextWrapping" Value="Wrap"/>
+		</Style>
+
 		<!-- DSPRE-local rounding + tweaks (last so its setters win over the base Fusion themes). -->
 		<StyleInclude Source="Themes/DspreTweaks.axaml"/>
 	</Application.Styles>
