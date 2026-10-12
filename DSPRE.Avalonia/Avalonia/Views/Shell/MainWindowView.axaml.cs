@@ -574,11 +574,19 @@ namespace DSPRE.Avalonia.Views.Shell
                 await OpenHgEngineFolderCoreAsync(offerFolder, askToClose: false);
                 return;
             }
+            // First successful ROM load ever: ask now, because the tour itself has to wait for the Maps setup.
+            bool tour = false;
+            if (SettingsManager.Settings?.guidedTourShown == false)
+            {
+                SettingsManager.Settings.guidedTourShown = true;
+                SettingsManager.Save();
+                tour = await DialogHelper.AskTwoWay(
+                    "A short tour shows the main window and the editor menus. Tools > Guided tour shows it again later.",
+                    "New to DSPRE?", "Show me around", "Not now");
+            }
             // The Maps workspace skipped its setup at boot (no ROM yet); run it now.
             await Maps.EnsureSetupAsync();
-            // First successful ROM load ever: walk the user through the UI once.
-            if (SettingsManager.Settings?.guidedTourShown == false)
-                GuidedTour.Start(this);
+            if (tour) GuidedTour.Start(this);
         }
 
         /// <summary>
