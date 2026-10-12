@@ -31,6 +31,10 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public string Name = "";
         public string Detail = "";
 
+        /// <summary>For a sequence, its instrument bank, and whether the overworld loads it with its sound groups.</summary>
+        public int Bank = -1;
+        public bool InOverworld;
+
         /// <summary>For a cry, the Pokemon number its bank is named after, which is not always the bank's
         /// own number: HeartGold's bank 474 is BANK_PV504, Rotom's Wash form.</summary>
         public int NamedNumber;
@@ -111,10 +115,18 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             SdatArchive sdat = SoundArchive.Load();
             if (sdat == null) { Status = "This ROM has no sound archive."; return; }
 
+            // The two groups the field loads.
+            HashSet<int> overworld = new HashSet<int>();
+            foreach (KeyValuePair<int, string> g in sdat.GroupNames)
+                if (g.Value is "GROUP_GLOBAL" or "GROUP_SE_FIELD" && g.Key < sdat.Groups.Count)
+                    foreach (SdatGroupItem it in sdat.Groups[g.Key])
+                        if (it.Type == 0) overworld.Add(it.Index);
+
             foreach (KeyValuePair<int, string> kv in sdat.SeqNames.OrderBy(k => k.Key))
             {
                 string name = kv.Value ?? "";
-                AudioItem item = new AudioItem { Number = kv.Key, Name = name };
+                SdatSeqInfo seq = kv.Key < sdat.Sequences.Count ? sdat.Sequences[kv.Key] : null;
+                AudioItem item = new AudioItem { Number = kv.Key, Name = name, Bank = seq?.BankNo ?? -1, InOverworld = overworld.Contains(kv.Key) };
 
                 // The cry sequence is what the Cries tab stands for, so it is not listed twice.
                 if (name == SoundArchive.CrySequenceName) continue;
@@ -156,6 +168,14 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                     });
             }
 
+            BankChoices.Add("All banks");
+            foreach (IGrouping<int, AudioItem> bank in _allEffects.Where(e => e.Bank >= 0).GroupBy(e => e.Bank).OrderBy(b => b.Key))
+            {
+                string bankName = sdat.BankNames.TryGetValue(bank.Key, out string n) ? n : bank.Key.ToString();
+                _effectBanks.Add(bank.Key);
+                BankChoices.Add($"{bankName} ({bank.Count()})");
+            }
+
             ApplyFilter();
             Status = $"{_allCries.Count} cries, {_allMusic.Count} tunes, {_allFanfares.Count} fanfares, "
                    + $"{_allEffects.Count} sound effects, {_allSounds.Count} sounds they are made of.";
@@ -171,21 +191,40 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             set { if (Set(ref _search, value)) ApplyFilter(); }
         }
 
+        public ObservableCollection<string> BankChoices { get; } = new();
+        private readonly List<int> _effectBanks = new();
+
+        private int _bankIndex;
+        public int BankIndex
+        {
+            get => _bankIndex;
+            set { if (value >= 0 && Set(ref _bankIndex, value)) ApplyFilter(); }
+        }
+
+        private bool _overworldOnly;
+        public bool OverworldOnly
+        {
+            get => _overworldOnly;
+            set { if (Set(ref _overworldOnly, value)) ApplyFilter(); }
+        }
+
         private void ApplyFilter()
         {
-            void Fill(ObservableCollection<AudioItem> into, List<AudioItem> from)
+            void Fill(ObservableCollection<AudioItem> into, List<AudioItem> from, Func<AudioItem, bool> keep = null)
             {
                 into.Clear();
                 foreach (AudioItem i in from)
-                    if (string.IsNullOrWhiteSpace(_search)
-                     || SearchMatch.Contains(i.Name, _search)
-                     || i.Number.ToString().Contains(_search))
+                    if ((keep == null || keep(i))
+                     && (string.IsNullOrWhiteSpace(_search)
+                         || SearchMatch.Contains(i.Name, _search)
+                         || i.Number.ToString().Contains(_search)))
                         into.Add(i);
             }
+            int bank = _bankIndex > 0 && _bankIndex <= _effectBanks.Count ? _effectBanks[_bankIndex - 1] : -1;
             Fill(Cries, _allCries);
             Fill(Music, _allMusic);
             Fill(Fanfares, _allFanfares);
-            Fill(Effects, _allEffects);
+            Fill(Effects, _allEffects, e => (bank < 0 || e.Bank == bank) && (!_overworldOnly || e.InOverworld));
             Fill(Sounds, _allSounds);
             OnPropertyChanged(nameof(FoundSummary));
         }

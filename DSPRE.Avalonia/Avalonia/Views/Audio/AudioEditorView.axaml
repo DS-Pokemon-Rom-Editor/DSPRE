@@ -108,12 +108,21 @@
         </ListBox>
       </TabItem>
       <TabItem Header="Sound effects">
-        <ListBox ItemsSource="{Binding Effects}" SelectedItem="{Binding SelectedEffect}"
-                 DoubleTapped="List_DoubleTapped">
-          <ListBox.ItemTemplate>
-            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,6">
+            <TextBlock Text="Bank:" VerticalAlignment="Center"/>
+            <controls:FusionAutoCompleteBox ItemsSource="{Binding BankChoices}" SelectedIndex="{Binding BankIndex}" Width="260"
+                                            ToolTip.Tip="Type part of a bank name to search"/>
+            <CheckBox Content="Overworld" IsChecked="{Binding OverworldOnly}" VerticalAlignment="Center"
+                      ToolTip.Tip="Only the sound effects the overworld loads"/>
+          </StackPanel>
+          <ListBox ItemsSource="{Binding Effects}" SelectedItem="{Binding SelectedEffect}"
+                   DoubleTapped="List_DoubleTapped">
+            <ListBox.ItemTemplate>
+              <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
       </TabItem>
       <TabItem Header="Sounds"
                ToolTip.Tip="The sounds the music and the sound effects are made of. Each one can be heard, saved and replaced.">

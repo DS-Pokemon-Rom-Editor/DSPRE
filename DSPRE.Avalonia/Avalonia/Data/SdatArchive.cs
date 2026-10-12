@@ -28,6 +28,9 @@ namespace DSPRE.Avalonia.Data
         public int HeapSize;
     }
 
+    /// <summary>One item a sound group loads: type 0 sequence, 1 bank, 2 wave archive, 3 sequence archive.</summary>
+    public readonly record struct SdatGroupItem(int Type, int LoadFlags, int Index);
+
     /// <summary>One wave archive (SWAR) entry: just which sub-file holds it.</summary>
     public sealed class SdatWaveArcInfo
     {
@@ -56,6 +59,10 @@ namespace DSPRE.Avalonia.Data
         public List<SdatBankInfo> Banks { get; } = new List<SdatBankInfo>();
         public List<SdatWaveArcInfo> WaveArcs { get; } = new List<SdatWaveArcInfo>();
         public List<SdatPlayerInfo> Players { get; } = new List<SdatPlayerInfo>();
+
+        // What each sound group loads, by group number.
+        public List<List<SdatGroupItem>> Groups { get; } = new List<List<SdatGroupItem>>();
+        public Dictionary<int, string> GroupNames { get; } = new Dictionary<int, string>();
 
         // seq number -> name (from SYMB), only entries that had a name are present.
         public Dictionary<int, string> SeqNames { get; } = new Dictionary<int, string>();
@@ -88,6 +95,7 @@ namespace DSPRE.Avalonia.Data
             int bankTableOff = (int)U32(infoOffset + 16);
             int waveArcTableOff = (int)U32(infoOffset + 20);
             int playerTableOff = (int)U32(infoOffset + 24);
+            int groupTableOff = (int)U32(infoOffset + 28);
 
             List<int> ReadOffsetTable(int relOff)
             {
@@ -152,6 +160,24 @@ namespace DSPRE.Avalonia.Data
                 a.Players.Add(new SdatPlayerInfo { SeqMax = d[at], AllocChannelMask = U16(at + 2), HeapSize = (int)U32(at + 4) });
             }
 
+            // Each record: item count u32, then per item type u8, load flags u8, padding u16, index u32.
+            List<int> groupOffs = ReadOffsetTable(groupTableOff);
+            for (int i = 0; i < groupOffs.Count; i++)
+            {
+                List<SdatGroupItem> items = new List<SdatGroupItem>();
+                int at = infoOffset + groupOffs[i];
+                if (groupOffs[i] != 0 && at + 4 <= d.Length)
+                {
+                    int n = (int)U32(at);
+                    for (int k = 0; k < n && at + 4 + k * 8 + 8 <= d.Length; k++)
+                    {
+                        int item = at + 4 + k * 8;
+                        items.Add(new SdatGroupItem(d[item], d[item + 1], (int)U32(item + 4)));
+                    }
+                }
+                a.Groups.Add(items);
+            }
+
             // ── SYMB block (optional): mirrors INFO's per-category offset tables, entries point at C strings ──
             if (symbOffset > 0 && symbOffset + symbSize <= d.Length && symbOffset + 40 <= d.Length)
             {
@@ -180,6 +206,7 @@ namespace DSPRE.Avalonia.Data
                 ReadNames((int)U32(symbOffset + 8), a.SeqNames);
                 ReadNames((int)U32(symbOffset + 16), a.BankNames);
                 ReadNames((int)U32(symbOffset + 20), a.WaveArcNames);
+                ReadNames((int)U32(symbOffset + 28), a.GroupNames);
             }
 
             return a;
