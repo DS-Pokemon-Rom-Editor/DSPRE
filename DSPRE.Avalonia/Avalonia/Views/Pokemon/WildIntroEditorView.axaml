@@ -68,7 +68,7 @@
           <ComboBox ItemsSource="{Binding SequenceChoices}" SelectedIndex="{Binding SequenceIndex}" HorizontalAlignment="Stretch"
                     IsEnabled="{Binding MusicEditable}"/>
           <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding MusicElsewhere}">
-            <TextBlock Text="Trainers use this intro too, so its music is edited in the VS Intro Editor." Classes="subtle" VerticalAlignment="Center"/>
+            <TextBlock Text="Its music is set in the VS intro editor." Classes="subtle" VerticalAlignment="Center"/>
             <Button Content="Open VS intro editor" controls:Icon.Key="OpenLink" Click="OpenVsIntros_Click"/>
           </StackPanel>
         </StackPanel>

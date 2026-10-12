@@ -23,6 +23,7 @@ namespace DSPRE.Avalonia.Views.Trainers
             Loaded += (_, _) => SetupAnimEditor();
             DataContextChanged += (_, _) => HookVm();
             Closing += (_, _) => { VM?.StopAnimPreview(); VM?.StopTopBar(); };
+            NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         public TrainerSpriteEditorView(TrainerSpriteEditorViewModel vm) : this()

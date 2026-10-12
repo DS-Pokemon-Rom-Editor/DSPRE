@@ -122,6 +122,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        public void RefreshNames()
+        {
+            if (SpeciesNames.Count == 0) return;
+            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, GetAttackNames());
+            List<string> filter = new List<string> { "All species" };
+            for (int i = 0; i < _learnsetCount; i++)
+                filter.Add(i < SpeciesNames.Count ? $"{i}: {SpeciesNames[i]}" : $"Species {i}");
+            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesFilter, filter);
+        }
+
         // hg-engine: each species' own LevelMoves in learnsets.json as loaded, to save only what changed.
         private Dictionary<int, List<(int level, int move)>> _sourceLists;
         private string _loadError;

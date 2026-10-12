@@ -89,7 +89,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             RebuildList();
             _selected = -1;
             SelectedIndex = Backgrounds.Count == 0 ? -1 : Math.Clamp(keep, 0, Backgrounds.Count - 1);
-            StatusText = $"{_table.Rows.Count} backgrounds · " + (_table.FromSource ? DSPRE.HgEngine.HgEngineMoveBackgrounds.RelPath : $"overlay {MoveBackgroundTableSite.Overlay}");
+            StatusText = $"{_table.Rows.Count} backgrounds" + (_table.FromSource ? " · " + DSPRE.HgEngine.HgEngineMoveBackgrounds.RelPath : "");
             OnPropertyChanged(nameof(CanResize));
             OnPropertyChanged(nameof(HasUnsavedChanges));
             _undo = new ByteStateUndo(TakeState, ApplyState, () => { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); });

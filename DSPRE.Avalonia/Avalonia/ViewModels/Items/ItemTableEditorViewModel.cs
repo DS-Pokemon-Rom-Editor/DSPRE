@@ -187,7 +187,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             Data = data;
             _dirty = dirty;
-            HeaderLabel = $"{data.ID:D4}: {headerName}";
+            HeaderLabel = headerName;
         }
 
         public int Odds

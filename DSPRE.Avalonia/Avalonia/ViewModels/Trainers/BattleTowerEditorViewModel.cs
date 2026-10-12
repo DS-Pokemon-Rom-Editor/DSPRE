@@ -255,6 +255,26 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             UpdateStatus();
         }
 
+        public void RefreshNames()
+        {
+            if (_trainerFile == null || _setFile == null) return;
+            int trainer = _selectedTrainerIndex, set = _selectedSetIndex;
+            DSPRE.Avalonia.Data.ListSync.Apply(TrainerClassNames, GetTrainerClassNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, GetPokemonNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, GetAttackNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, GetItemNames());
+            _suppress = true;
+            DSPRE.Avalonia.Data.ListSync.Apply(TrainerLabels, _trainerFile.Trainers.Select((t, i) => $"[{i:D3}] {t}").ToList());
+            DSPRE.Avalonia.Data.ListSync.Apply(SetLabels, _setFile.Sets.Select((s, i) => $"Set {i:D3}: {s}").ToList());
+            if (CurrentTrainer != null)
+                DSPRE.Avalonia.Data.ListSync.Apply(SetIdLabels, CurrentTrainer.SetIDs.Select(id => $"Set {id:D3}: {SetLabelFor(id)}").ToList());
+            _suppress = false;
+            OnPropertyChanged(nameof(AddSetPreviewLabel));
+            // A list box drops its pick when the picked row's text is replaced, after this returns.
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { SelectedTrainerIndex = trainer; SelectedSetIndex = set; },
+                global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
         private void MarkDirty()
         {
             _undo?.Record();

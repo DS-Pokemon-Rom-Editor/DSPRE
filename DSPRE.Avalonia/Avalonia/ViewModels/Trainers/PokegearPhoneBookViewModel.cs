@@ -20,13 +20,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
         private readonly PokegearPhoneBook.Book _book;
-        private readonly string[] _names = System.Array.Empty<string>();
+        private string[] _names = System.Array.Empty<string>();
         private readonly int[] _archives;
-        private readonly string[] _locations = System.Array.Empty<string>();
+        private string[] _locations = System.Array.Empty<string>();
         private readonly Dictionary<ushort, int> _rematchRowByTrainer = new();
-        private readonly int _classNameCount;
-        private readonly string[] _classNames = System.Array.Empty<string>();
-        private readonly List<string> _phoneMessages;
+        private int _classNameCount;
+        private string[] _classNames = System.Array.Empty<string>();
+        private List<string> _phoneMessages;
         private List<int> _listed = new();
         private List<int> _sorted = new();
         private int _current = -1;
@@ -36,10 +36,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public ObservableCollection<string> ContactLabels { get; } = new();
         public List<string> TypeChoices { get; } = PokegearPhoneBook.TypeNames.ToList();
-        public List<string> TitleChoices { get; } = new();
-        public List<string> TrainerChoices { get; } = new();
-        public List<string> MapChoices { get; } = new();
-        public List<string> ItemChoices { get; } = new();
+        public ObservableCollection<string> TitleChoices { get; } = new();
+        public ObservableCollection<string> TrainerChoices { get; } = new();
+        public ObservableCollection<string> MapChoices { get; } = new();
+        public ObservableCollection<string> ItemChoices { get; } = new();
         public List<string> GreetingChoices { get; } = new() { "Boy", "Girl", "Bill", "Kenji", "Man", "Woman", "Old man", "Old woman", "No greeting" };
         public List<string> WeekdayChoices { get; } = new() { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Never" };
         public List<string> TimeChoices { get; } = new() { "Morning", "Day", "Night", "Never" };
@@ -114,33 +114,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 return;
             }
 
-            _names = PokegearContactArchives.Names(_book.Entries.Count);
             _archives = PokegearContactArchives.Find(_book.Entries.Count);
-            _locations = _book.Entries.Select(e => LocationText(e.MapId)).ToArray();
-
-            _classNames = SafeNames(GetTrainerClassNames);
-            _classNameCount = _classNames.Length;
-            if (pokegearPhoneMessageArchive >= 0)
-            {
-                try { _phoneMessages = new TextArchive(pokegearPhoneMessageArchive).messages; } catch { }
-            }
-            for (int t = 0; t < 256; t++)
-            {
-                string label = TitleText((byte)t);
-                if (label.Length == 0)
-                    label = t == PokegearPhoneBook.TitleNone ? "(no title)"
-                        : PokegearPhoneBook.TitleReadsPastEnd((byte)t) ? "(undefined)" : "(blank)";
-                TitleChoices.Add($"{t}: {label}");
-            }
-
-            string[] trainers = SafeNames(() => DSPRE.TrainerNames.GetAll());
-            for (int i = 0; i < trainers.Length; i++) TrainerChoices.Add(i == 0 ? "0: (not a trainer)" : trainers[i]);
-
-            IReadOnlyList<string> headers = HeaderLabels.Friendly();
-            foreach (string h in headers) MapChoices.Add(h);
-
-            string[] items = SafeNames(() => GetItemNames());
-            for (int i = 0; i < items.Length; i++) ItemChoices.Add($"{i}: {items[i]}");
+            ReadNames();
 
             if (PokegearRematchTable.IsSupported)
             {
@@ -155,6 +130,45 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SelectedListIndex = position >= 0 ? position : (_listed.Count > 0 ? 0 : -1);
             StartUndo();
             UpdateStatus();
+        }
+
+        // In-place list updates, so the bound combos keep their picks when names change.
+        private void ReadNames()
+        {
+            _names = PokegearContactArchives.Names(_book.Entries.Count);
+            _locations = _book.Entries.Select(e => LocationText(e.MapId)).ToArray();
+
+            _classNames = SafeNames(GetTrainerClassNames);
+            _classNameCount = _classNames.Length;
+            _phoneMessages = null;
+            if (pokegearPhoneMessageArchive >= 0)
+            {
+                try { _phoneMessages = new TextArchive(pokegearPhoneMessageArchive).messages; } catch { }
+            }
+            List<string> titles = new List<string>();
+            for (int t = 0; t < 256; t++)
+            {
+                string label = TitleText((byte)t);
+                if (label.Length == 0)
+                    label = t == PokegearPhoneBook.TitleNone ? "(no title)"
+                        : PokegearPhoneBook.TitleReadsPastEnd((byte)t) ? "(undefined)" : "(blank)";
+                titles.Add($"{t}: {label}");
+            }
+            DSPRE.Avalonia.Data.ListSync.Apply(TitleChoices, titles);
+
+            string[] trainers = SafeNames(() => DSPRE.TrainerNames.GetAll());
+            DSPRE.Avalonia.Data.ListSync.Apply(TrainerChoices, trainers.Select((n, i) => i == 0 ? "0: (not a trainer)" : n).ToList());
+            DSPRE.Avalonia.Data.ListSync.Apply(MapChoices, HeaderLabels.Friendly());
+            string[] items = SafeNames(() => GetItemNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(ItemChoices, items.Select((n, i) => $"{i}: {n}").ToList());
+        }
+
+        public void RefreshNames()
+        {
+            if (_book == null) return;
+            ReadNames();
+            RebuildList();
+            RebuildSortRows();
         }
 
         private static string[] SafeNames(System.Func<string[]> read)
@@ -380,10 +394,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private Entry Current => _current >= 0 ? _book.Entries[_current] : null;
 
-        public string Heading => Current == null ? ""
-            : _archives != null && _current < _archives.Length
-                ? $"{NameOf(_current)}  ·  contact {_current}  ·  text archive {_archives[_current]}"
-                : $"{NameOf(_current)}  ·  contact {_current}";
+        public string Heading => Current == null ? "" : NameOf(_current);
+
+        public string NameHelp => Current != null && _archives != null && _current < _archives.Length
+            ? $"Rename this contact in the Text editor, archive {_archives[_current]}."
+            : "Rename this contact in the Text editor.";
 
         private int _typeIndex = -1, _titleIndex = -1, _trainerIndex = -1, _mapIndex = -1, _giftIndex = -1,
             _greetingIndex = -1, _weekdayIndex = -1, _timeIndex = -1, _groupIndex = -1;
@@ -497,7 +512,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             foreach (string p in new[]
             {
-                nameof(IsEntrySelected), nameof(Heading), nameof(IsTrainerType), nameof(UsesSchedule), nameof(TypeNote), nameof(IsKenji),
+                nameof(IsEntrySelected), nameof(Heading), nameof(NameHelp), nameof(IsTrainerType), nameof(UsesSchedule), nameof(TypeNote), nameof(IsKenji),
                 nameof(RematchRow), nameof(HasRematchRow), nameof(Problems), nameof(HasProblems),
             }) OnPropertyChanged(p);
         }

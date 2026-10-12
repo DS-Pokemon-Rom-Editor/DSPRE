@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.Views.Items
     {
         private BpShopEditorViewModel VM => DataContext as BpShopEditorViewModel;
 
-        public BpShopEditorView() { InitializeComponent(); }
+        public BpShopEditorView() { InitializeComponent(); NameRefresh.Bind(this, () => VM?.RefreshNames()); }
 
         public BpShopEditorView(BpShopEditorViewModel vm) : this()
         {

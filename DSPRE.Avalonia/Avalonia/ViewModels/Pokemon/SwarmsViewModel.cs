@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_table != null) return;
             string why = SwarmTable.WhyNot();
             if (why != null) { WhyNotLoaded = why; Raise(nameof(WhyNotLoaded)); return; }
-            HeaderNames = HeaderLists.GetHeaderListBoxNames().ToArray();
+            HeaderNames = HeaderLabels.Friendly().ToArray();
             _pokemonNames = GetPokemonNames();
             _table = SwarmTable.Load();
             _saved = _table.Snapshot();

@@ -219,7 +219,7 @@ namespace DSPRE.Avalonia
         public static void OpenItemTableEditor()
         {
             if (Refused("ItemTableEditorView")) return;
-            new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames(), HeaderLists.GetHeaderListBoxNames())).ShowManaged();
+            new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames(), HeaderLabels.Friendly())).ShowManaged();
         }
 
         public static void OpenMartEditor()
@@ -334,7 +334,7 @@ namespace DSPRE.Avalonia
             // Diamond and Pearl have only the effect combos, and only on supported ROMs.
             if (Refused("TableEditorView")) return;
             if (BringForwardWindow<TableEditorView>()) return;
-            new TableEditorView(new TableEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
+            new TableEditorView(new TableEditorViewModel(HeaderLabels.Friendly())).ShowManaged();
         }
 
         /// <param name="headbuttFile">Opens on the Headbutt tab at this file; -1 opens on the first tab.</param>
@@ -730,13 +730,13 @@ namespace DSPRE.Avalonia
                 _ = DialogHelper.ShowError("The Fly / Warp Editor isn't checked against Japanese Pearl yet, so it stays closed rather than risk writing the wrong place.", "Fly / Warp Editor");
                 return;
             }
-            new FlyEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
+            new FlyEditorView(HeaderLabels.Friendly().ToList()).ShowManaged();
         }
 
         public static void OpenDungeonCutinEditor()
         {
             if (Refused("DungeonCutinEditorView")) return;
-            new DungeonCutinEditorView(HeaderLists.GetHeaderListBoxNames()).ShowManaged();
+            new DungeonCutinEditorView(HeaderLabels.Friendly().ToList()).ShowManaged();
         }
 
         public static void OpenTitleScreenEditor()
@@ -1005,7 +1005,7 @@ namespace DSPRE.Avalonia
         public static void OpenSpawnEditor()
         {
             if (Refused("SpawnEditorView")) return;
-            new SpawnEditorView(new SpawnEditorViewModel(HeaderLists.GetHeaderListBoxNames())).ShowManaged();
+            new SpawnEditorView(new SpawnEditorViewModel(HeaderLabels.Friendly().ToList())).ShowManaged();
         }
 
         public static void OpenHeaderSearch()

@@ -44,11 +44,11 @@
               <TextBox Text="{Binding TrainerName}"/>
 
               <TextBlock Text="Message 1"/>
-              <TextBox Text="{Binding Message1}"/>
+              <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding Message1}"/>
               <TextBlock Text="Message 2"/>
-              <TextBox Text="{Binding Message2}"/>
+              <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding Message2}"/>
               <TextBlock Text="Message 3"/>
-              <TextBox Text="{Binding Message3}"/>
+              <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding Message3}"/>
 
               <TextBlock Text="Pokémon sets this trainer can draw from" FontWeight="Bold" Margin="0,8,0,0"/>
               <ListBox x:Name="SetIdList" Height="160" ItemsSource="{Binding SetIdLabels}" SelectedIndex="{Binding SelectedSetIdIndex}"

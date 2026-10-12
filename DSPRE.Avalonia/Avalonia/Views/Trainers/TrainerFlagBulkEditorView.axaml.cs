@@ -12,6 +12,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         public TrainerFlagBulkEditorView()
         {
             InitializeComponent();
+            NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         public TrainerFlagBulkEditorView(TrainerFlagBulkEditorViewModel vm) : this()

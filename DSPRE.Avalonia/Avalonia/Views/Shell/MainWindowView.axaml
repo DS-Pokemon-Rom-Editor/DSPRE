@@ -39,11 +39,11 @@
           <MenuItem Header="Compile ROM" Click="CompileRom_Click" IsEnabled="{Binding CanCompileRom}"
                     ToolTip.Tip="{Binding HgEngineNote}"/>
           <MenuItem Header="hg-engine settings" Click="HgEngineSettings_Click" IsEnabled="{Binding IsHgEngineLinked}"
-                    ToolTip.Tip="The checkout's config.h and config.s options"/>
+                    ToolTip.Tip="hg-engine build options"/>
           <MenuItem Header="hg-engine patches" Click="HgEnginePatches_Click" IsEnabled="{Binding IsHgEngineLinked}"
                     ToolTip.Tip="Every hook, byte replacement and repoint the checkout applies to the game's code"/>
           <MenuItem Header="hg-engine ROM review" Click="HgeRomReview_Click" IsVisible="{Binding Shown[HgeRomReviewView]}" IsEnabled="{Binding CanUseHgeRomReview}"
-                    ToolTip.Tip="Pokémon graphics as an hg-engine ROM stores them, with a check of the archive its data tables live in"/>
+                    ToolTip.Tip="Check a built hg-engine ROM"/>
           <MenuItem Header="Battle tests" Click="BattleTests_Click" IsVisible="{Binding HgeDevOn}" IsEnabled="{Binding IsHgEngineLinked}"
                     ToolTip.Tip="hg-engine's battle test scenarios in data/battle_tests"/>
         </MenuItem>
@@ -54,9 +54,9 @@
       <MenuItem Header="_Pokémon" x:Name="PokemonMenu" IsEnabled="{Binding IsRomLoaded}">
         <MenuItem Header="Pokémon editor"   Click="PokemonEditor_Click" IsEnabled="{Binding CanUsePokemonEditor}" ToolTip.Tip="{Binding HgeUnlinkedNote}"/>
         <MenuItem Header="Form editor (hg-engine)" Click="HgEngineFormEditor_Click" IsVisible="{Binding Shown[HgEngineFormEditorView]}" IsEnabled="{Binding CanUseHgEngineFormEditor}"
-                  ToolTip.Tip="Which form species (Mega/regional/Gmax/etc.) exist per base Pokémon, from the linked checkout's PokeFormDataTbl.c"/>
+                  ToolTip.Tip="Which forms each Pokémon has"/>
         <MenuItem Header="Ability flags (hg-engine)" Click="AbilityFlags_Click" IsVisible="{Binding Shown[AbilityFlagsEditorView]}" IsEnabled="{Binding CanUseAbilityFlagsEditor}"
-                  ToolTip.Tip="Which abilities Mold Breaker ignores, Neutralizing Gas turns off, and Trace or Skill Swap can't take"/>
+                  ToolTip.Tip="Mold Breaker, Neutralizing Gas, Trace and Skill Swap rules"/>
         <MenuItem Header="Growth curves" Click="GrowthCurves_Click" IsVisible="{Binding Shown[GrowthCurveEditorView]}" IsEnabled="{Binding CanUseGrowthCurves}"
                   ToolTip.Tip="{Binding BlockedNote[GrowthCurveEditorView], TargetNullValue='The EXP each growth rate needs per level'}"/>
         <MenuItem Header="Pokédex lists" Click="PokedexLists_Click" IsEnabled="{Binding Usable[PokedexListsView]}"
@@ -94,7 +94,7 @@
         <MenuItem Header="Wild held items" Click="WildHeldItems_Click" IsVisible="{Binding Shown[WildHeldItemOddsView]}" IsEnabled="{Binding CanUseWildHeldItems}"
                   ToolTip.Tip="{Binding BlockedNote[WildHeldItemOddsView], TargetNullValue='How often wild Pokémon hold their common or rare item'}"/>
         <MenuItem Header="Special encounters editor" Click="SpecialEncountersEditor_Click" IsEnabled="{Binding CanUseSpecialEncountersEditor}"
-                  ToolTip.Tip="Headbutt trees, Bug Contest, Safari Zone, honey trees, Great Marsh, Trophy Garden and swarms"/>
+                  ToolTip.Tip="Headbutt, Bug Contest, Safari, honey trees, Great Marsh, Trophy Garden, swarms"/>
         <MenuItem Header="Wild Pokémon intro editor" Click="WildIntroEditor_Click" IsVisible="{Binding Shown[WildIntroEditorView]}" IsEnabled="{Binding CanUseWildIntroEditor}"
                   ToolTip.Tip="{Binding BlockedNote[WildIntroEditorView], TargetNullValue='The intros and music of wild Pokémon battles'}"/>
       </MenuItem>
@@ -148,7 +148,7 @@
           </MenuItem.IsVisible>
         </MenuItem>
         <MenuItem Header="Item tables (pickup, hidden, Rock Smash)" Click="ItemTableEditor_Click" IsEnabled="{Binding Usable[ItemTableEditorView]}"
-                  ToolTip.Tip="Where items come from: the Pickup ability's common/rare tables, hidden ground items, and HGSS Rock Smash drops"/>
+                  ToolTip.Tip="Pickup, hidden items and Rock Smash drops"/>
       </MenuItem>
 
       <MenuItem Header="Te_xt" x:Name="TextMenu" IsEnabled="{Binding IsRomLoaded}">
@@ -248,7 +248,7 @@
         </MenuItem>
         <Separator/>
         <MenuItem Header="Edit dropdown labels" Click="LabelEditor_Click" IsEnabled="{Binding IsRomLoaded}"
-                  ToolTip.Tip="Rename or add entries for hardcoded dropdowns (e.g. evolution methods), per project or global"/>
+                  ToolTip.Tip="Rename entries in fixed dropdowns such as evolution methods"/>
         <MenuItem Header="Toggle theme (light / dark)" Click="ToggleTheme_Click"
                   ToolTip.Tip="Also in Settings, where the choice is listed with the other appearance options"/>
         <MenuItem Header="Welcome &amp; tutorial" Click="Welcome_Click"/>
@@ -284,7 +284,7 @@
       <Border IsVisible="{Binding !IsRomLoaded}" Background="{DynamicResource Editor.PanelBg}">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Width="440">
           <TextBlock Text="No ROM loaded" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-          <TextBlock Text="Open a game to start editing. Your edits go to a project folder next to the ROM; the original file is never touched."
+          <TextBlock Text="Open a game to start editing."
                      TextWrapping="Wrap" TextAlignment="Center" Opacity="0.75"/>
           <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
             <Button Content="Open ROM (.nds)…" controls:Icon.Key="open_rom" Click="OpenRom_Click"/>

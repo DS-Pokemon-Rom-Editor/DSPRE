@@ -14,6 +14,7 @@ namespace DSPRE.Avalonia.Views.World
             DataContext = vm;
             InitializeComponent();
             EditorWindowChrome.Attach(this, vm);
+            NameRefresh.Bind(this, vm.RefreshNames);
         }
 
         // Called from matrix editor with pre-selected header + coords

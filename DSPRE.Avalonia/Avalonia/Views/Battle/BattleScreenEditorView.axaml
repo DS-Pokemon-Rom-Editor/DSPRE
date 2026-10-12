@@ -118,7 +118,7 @@
 
           <StackPanel x:Name="SampleSection" Orientation="Horizontal">
             <TextBlock Text="Sample" FontWeight="SemiBold"/>
-            <controls:HelpTip Text="Preview only, nothing is written to the ROM. Use it to check an edited bar against a long name or a full bar."/>
+            <controls:HelpTip Text="Preview only, nothing is saved."/>
           </StackPanel>
           <TextBlock Text="How many Pokemon a side" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
           <ComboBox SelectedIndex="{Binding BattleSizeChoice}" HorizontalAlignment="Stretch"

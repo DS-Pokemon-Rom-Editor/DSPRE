@@ -241,9 +241,10 @@
                   BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4"
                   IsVisible="{Binding ShowRockSmashItemTables}">
             <StackPanel Spacing="6">
-              <TextBlock Text="Item drop tables" FontWeight="SemiBold" FontSize="12"/>
-              <TextBlock Text="8 slots each; a Rock Smash item roll picks a table by header, then a slot with fixed odds (25/20/10/10/10/10/10/5%)."
-                         FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+              <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="Item drop tables" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"/>
+                <controls:HelpTip Text="Each header picks a table. Its slots drop at 25, 20, 10, 10, 10, 10, 10 and 5%."/>
+              </StackPanel>
 
               <TextBlock Text="Default" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
               <UniformGrid Columns="8" DataContext="{Binding RockSmashDefaultTable}" x:DataType="vm:RockSmashItemSlotsRow">

@@ -10,6 +10,7 @@ namespace DSPRE.Avalonia.Views.Items
         public MartEditorView()
         {
             InitializeComponent();
+            NameRefresh.Bind(this, () => ViewModel?.RefreshNames());
         }
 
         public MartEditorView(MartEditorViewModel viewModel) : this()

@@ -88,7 +88,7 @@
             <TextBlock Text="Render state" FontWeight="SemiBold"/>
             <TextBlock Text="Draw type" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <ComboBox ItemsSource="{Binding DrawTypeOptions}" SelectedIndex="{Binding DrawTypeIndex}" HorizontalAlignment="Stretch"
-                      ToolTip.Tip="How this overworld is rendered: not drawn, a camera-facing billboard sprite, or a real 3D model."/>
+                      ToolTip.Tip="Not drawn, a flat sprite or a 3D model."/>
             <TextBlock Text="Shadow" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <ComboBox ItemsSource="{Binding ShadowTypeOptions}" SelectedIndex="{Binding ShadowTypeIndex}" HorizontalAlignment="Stretch"/>
             <TextBlock Text="Footmark" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
@@ -104,7 +104,7 @@
 
           <StackPanel Spacing="4" IsVisible="{Binding IsExpansionApplied}">
             <TextBlock Text="Renderer / animation (read-only)" FontWeight="SemiBold"
-                       ToolTip.Tip="Resource IDs and code pointers cloned from another entry. Shown for reference when picking a clone source below."/>
+                       ToolTip.Tip="What this entry copied from another one."/>
             <TextBlock Text="{Binding RendererInfoText, StringFormat='Renderer row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding AnimationInfoText, StringFormat='Animation row: {0}'}" FontSize="11" FontFamily="Consolas,Cascadia Mono,monospace" TextWrapping="Wrap"/>
           </StackPanel>

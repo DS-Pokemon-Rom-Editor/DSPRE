@@ -36,7 +36,9 @@ namespace DSPRE.Avalonia
         public static event EventHandler ClassIntrosSaved;
         public static void RaiseClassIntrosSaved() => ClassIntrosSaved?.Invoke(null, EventArgs.Empty);
 
-        public static void RaiseNamesChanged() => NamesChanged?.Invoke(null, EventArgs.Empty);
+        /// <summary>Counts <see cref="NamesChanged"/> raises, so a view that was hidden can tell it missed one.</summary>
+        public static int NamesVersion { get; private set; }
+        public static void RaiseNamesChanged() { NamesVersion++; NamesChanged?.Invoke(null, EventArgs.Empty); }
         public static void RaiseLabelsChanged() => LabelsChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseRomPatchStateChanged() => RomPatchStateChanged?.Invoke(null, EventArgs.Empty);
         public static void RaiseBannerChanged() => BannerChanged?.Invoke(null, EventArgs.Empty);

@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
     {
         private BreedingItemsViewModel VM => DataContext as BreedingItemsViewModel;
 
-        public BreedingItemsView() { InitializeComponent(); }
+        public BreedingItemsView() { InitializeComponent(); NameRefresh.Bind(this, () => VM?.RefreshNames()); }
 
         public BreedingItemsView(BreedingItemsViewModel vm) : this() { DataContext = vm; }
 

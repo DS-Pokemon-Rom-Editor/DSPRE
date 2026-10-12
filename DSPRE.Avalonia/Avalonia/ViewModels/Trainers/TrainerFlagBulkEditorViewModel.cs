@@ -37,8 +37,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         };
         private const int AI_FLAG_COUNT = TrainerProperties.AI_COUNT;
 
-        private readonly string[] _trainerNames;
-        private readonly string[] _trainerClassNames;
+        private string[] _trainerNames;
+        private string[] _trainerClassNames;
         private readonly int _trainerCount;
         private readonly Dictionary<int, TrainerProperties> _trainerData = new();
         private readonly HashSet<int> _selectedTrainerIds = new();
@@ -177,6 +177,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             RefreshFlagChecklistFromSelection();
             ResetUndo();
             UpdateStatus();
+        }
+
+        public void RefreshNames()
+        {
+            _trainerNames = DSPRE.TrainerNames.GetAll();
+            _trainerClassNames = GetTrainerClassNames();
+            RebuildTree();
+            RefreshFlagChecklistFromSelection();
         }
 
         private void LoadAllTrainerData()

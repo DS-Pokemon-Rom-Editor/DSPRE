@@ -2097,7 +2097,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 _suppress = true; if (matrixCount > 0) { _selectedMatrix = 0; OnPropertyChanged(nameof(SelectedMatrixIndex)); } _suppress = false;
 
                 HeaderNames.Clear();
-                List<string> headerNames = HeaderLists.GetHeaderListBoxNames();
+                IReadOnlyList<string> headerNames = HeaderLabels.Friendly();
                 if (headerNames != null) foreach (string n in headerNames) HeaderNames.Add(n);
                 // Only defaults when nobody has set HeaderId yet (a standalone popup has no sidebar to
                 // follow); the embedded Maps-workspace instance already has it set by this point.

@@ -858,12 +858,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── Warp fields ───────────────────────────────────────────────────────────────
         private decimal _warpHeader, _warpAnchor, _warpHeight;
         public decimal WarpHeader { get => _warpHeader; set { if (Set(ref _warpHeader, value)) { OnPropertyChanged(nameof(WarpHeaderName)); if (!_suppress && _warp != null) { _warp.header = (ushort)value; Dirty(); } } } }
-        private List<string> _headerNames;
+        private IReadOnlyList<string> _headerNames;
         public string WarpHeaderName
         {
             get
             {
-                try { _headerNames ??= HeaderLists.GetHeaderListBoxNames(); } catch { return ""; }
+                try { _headerNames ??= HeaderLabels.Friendly(); } catch { return ""; }
                 if (_headerNames == null) return "";
                 int i = (int)_warpHeader;
                 return i >= 0 && i < _headerNames.Count ? _headerNames[i].Trim() : "No such header";

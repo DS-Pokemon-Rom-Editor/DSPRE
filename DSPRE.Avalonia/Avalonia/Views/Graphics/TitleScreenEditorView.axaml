@@ -59,7 +59,7 @@
 			  <StackPanel Spacing="8">
 				<StackPanel Orientation="Horizontal">
 				  <TextBlock Text="Colours (advanced)" FontWeight="Bold"/>
-				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours for you. Use these only to edit the colour file by hand."/>
+				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours."/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal" Spacing="6">
 				  <Button Content="Import colours…" controls:Icon.Key="import" Click="ImportPalette_Click"/>
@@ -104,7 +104,7 @@
 			  <StackPanel Spacing="8">
 				<StackPanel Orientation="Horizontal">
 				  <TextBlock Text="Colours (advanced)" FontWeight="Bold"/>
-				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours for you. Use these only to edit the colour file by hand."/>
+				  <controls:HelpTip Text="Importing the logo or background rebuilds these colours."/>
 				</StackPanel>
 				<StackPanel Orientation="Horizontal" Spacing="6">
 				  <Button Content="Import colours…" controls:Icon.Key="import" Click="ImportPalette_Click"/>

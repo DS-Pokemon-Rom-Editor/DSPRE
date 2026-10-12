@@ -70,14 +70,14 @@
                     IsCheckedChanged="Gizmos_Toggled"
                     ToolTip.Tip="Cyan marks the 32×32 tile cell, yellow the map model's real extent."/>
           <CheckBox Content="Grid layout" IsChecked="{Binding StitchGrid}" IsEnabled="{Binding IsStitchedView}" VerticalAlignment="Center"
-                    ToolTip.Tip="Stitch maps on a fixed 32-tile grid, the way the DS does. Off lays them out by their geometry."/>
+                    ToolTip.Tip="Place maps on the game's 32-tile grid."/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <ToggleButton Content="Move buildings" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"
-                        ToolTip.Tip="3D edit mode: click a building to select it, then drag the red/green/blue axis handles to move it (X/Y/Z). Arrow keys nudge one tile. In 'This header' view this works across every map shown."/>
+                        ToolTip.Tip="Click a building, then drag its handles or use the arrow keys."/>
           <ToggleButton Content="Paint" controls:Icon.Key="brush" IsChecked="{Binding PaintMode}" IsEnabled="{Binding CanEdit}" VerticalAlignment="Center"
-                        ToolTip.Tip="Paint mode: locks the camera to Top; left-click/drag on the map to paint the selected collision (or type, if the Type overlay is shown) onto tiles. In 'This header' view this paints whichever of the header's maps is under the cursor."/>
+                        ToolTip.Tip="Click or drag on the map to paint tiles."/>
           <CheckBox Content="Snap to tile" IsChecked="{Binding SnapToTile}" VerticalAlignment="Center"
-                    ToolTip.Tip="Snap building dragging to whole tiles (arrow keys always snap; the input boxes still do fine sub-tile adjustment)"/>
+                    ToolTip.Tip="Snap dragged buildings to whole tiles"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
             <TextBlock Text="View:" VerticalAlignment="Center"/>
@@ -117,7 +117,7 @@
             <StackPanel DockPanel.Dock="Top" Spacing="4">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Collision painter" FontWeight="Bold"/>
-                <controls:HelpTip Text="Click or drag on the grid below to paint, middle-click to fill, right-click to pick. In 'This header' view, use Paint in the 3D view instead."/>
+                <controls:HelpTip Text="Click or drag to paint, middle-click to fill, right-click to pick."/>
               </StackPanel>
               <controls:IdNameSelector Maximum="255" Value="{Binding CollisionValue}" Names="{Binding CollisionNames}" Keys="{Binding CollisionKeys}"
                                        ToolTip.Tip="A number with no name is painted as it is"/>
@@ -158,7 +158,7 @@
               <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupBuilding_Click" IsEnabled="{Binding HasBuildingSelected}"/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <Button Content="Import…" controls:Icon.Key="import" Click="ImportBuildings_Click" IsEnabled="{Binding IsSingleMap}"
-                      ToolTip.Tip="Replaces one map's whole building list, single map view only. In 'This header' view, use the per-building Add/Remove/Duplicate/gizmo instead."/>
+                      ToolTip.Tip="Replace this map's building list."/>
               <Button Content="Export…" controls:Icon.Key="export" Click="ExportBuildings_Click" IsEnabled="{Binding IsSingleMap}"/>
               <TextBlock Text="{Binding BuildingLimitWarning}" IsVisible="{Binding HasBuildingLimitWarning}"
                          Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="6,0,0,0"
@@ -208,7 +208,7 @@
             <StackPanel Margin="8" Spacing="8">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{Binding AreaLabel}" FontWeight="SemiBold"/>
-                <controls:HelpTip Text="The area a map belongs to picks its textures, terrain animation and light. Every header using the area shares these, and they're saved with the map."/>
+                <controls:HelpTip Text="Every header using this area shares its textures, animation and light."/>
               </StackPanel>
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,6,Auto,6,Auto">
                 <TextBlock Grid.Row="0" Text="Global NSBTA" VerticalAlignment="Center" Margin="0,0,10,0" IsVisible="{Binding IsHgssGame}"/>

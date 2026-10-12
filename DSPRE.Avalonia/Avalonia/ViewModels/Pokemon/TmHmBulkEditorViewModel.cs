@@ -30,7 +30,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         { if (EqualityComparer<T>.Default.Equals(f, v)) return false; f = v; OnPropertyChanged(n); return true; }
 
-        private readonly string[] _pokemonNames;
+        private string[] _pokemonNames;
         private readonly int _speciesCount;
         // Each species' ticked rows. A row is a machine slot, or on hg-engine one move however many slots teach it.
         private readonly Dictionary<int, SortedSet<int>> _compat = new();
@@ -41,7 +41,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         public ObservableCollection<SpeciesFamilyTreeNode> Tree { get; } = new();
         public ObservableCollection<FlagChecklistItem> MachineChecklist { get; } = new();
-        public string[] MachineNamesList { get; }
+        public string[] MachineNamesList { get; private set; }
 
         public bool IsByPokemonMode => !IsByMachineMode;
         private bool _isByMachineMode;

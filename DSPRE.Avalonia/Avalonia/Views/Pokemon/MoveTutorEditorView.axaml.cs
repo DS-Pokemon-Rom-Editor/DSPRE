@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
     {
         private MoveTutorEditorViewModel VM => DataContext as MoveTutorEditorViewModel;
 
-        public MoveTutorEditorView() { InitializeComponent(); }
+        public MoveTutorEditorView() { InitializeComponent(); NameRefresh.Bind(this, () => VM?.RefreshNames()); }
 
         public MoveTutorEditorView(MoveTutorEditorViewModel vm) : this() { DataContext = vm; }
 

@@ -14,6 +14,7 @@ namespace DSPRE.Avalonia.Views.Tools
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
+            NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         public TableEditorView(TableEditorViewModel vm) : this()

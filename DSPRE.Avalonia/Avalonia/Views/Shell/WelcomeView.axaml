@@ -54,7 +54,7 @@
                        ScrollViewer.HorizontalScrollBarVisibility="Disabled" Loaded="RecentList_Loaded"/>
             </StackPanel>
           </ScrollViewer>
-          <TextBlock Text="Nothing here yet. Projects you open will show up here for quick access."
+          <TextBlock Text="No recent projects."
                      IsVisible="{Binding !HasRecents}" Opacity="0.7" TextWrapping="Wrap"/>
         </Panel>
       </DockPanel>

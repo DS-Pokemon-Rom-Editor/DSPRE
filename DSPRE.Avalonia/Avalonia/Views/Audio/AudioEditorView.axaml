@@ -47,7 +47,7 @@
         </TextBox>
         <StackPanel x:Name="AudioActions" Orientation="Horizontal" Spacing="6">
           <Button Content="Export WAV…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanPlay}"
-                  ToolTip.Tip="Save this as a WAV. A cry is saved as its own sample; everything else is saved as it sounds when played."/>
+                  ToolTip.Tip="Save as a WAV, as it sounds when played."/>
           <Button Content="Export MIDI…" controls:Icon.Key="export" Click="ExportMidi_Click" IsEnabled="{Binding CanSaveMidi}"
                   ToolTip.Tip="{Binding SaveMidiHelp}"/>
           <Button Content="Export SoundFont…" controls:Icon.Key="export" Click="ExportSoundFont_Click"
@@ -64,7 +64,7 @@
                 Background="{DynamicResource Editor.PanelBg}" Height="118">
           <views:NoteTrackView x:Name="Notes"
                                PointerPressed="Notes_PointerPressed"
-                               ToolTip.Tip="The notes the sequence plays, time across and pitch up, one colour per track. Click anywhere to play from there."/>
+                               ToolTip.Tip="Click anywhere to play from there."/>
         </Border>
 
         <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
@@ -134,7 +134,7 @@
         </DockPanel>
       </TabItem>
       <TabItem Header="Sounds"
-               ToolTip.Tip="The sounds the music and the sound effects are made of. Each one can be heard, saved and replaced.">
+               ToolTip.Tip="The sounds music and sound effects are made of.">
         <TreeView ItemsSource="{Binding SoundSets}" SelectedItem="{Binding SelectedSoundNode, Mode=TwoWay}"
                   DoubleTapped="List_DoubleTapped">
           <TreeView.DataTemplates>

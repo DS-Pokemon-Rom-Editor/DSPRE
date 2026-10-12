@@ -36,7 +36,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
 
-        public string[] TypeNames { get; } = Array.Empty<string>();
+        public string[] TypeNames { get; private set; } = Array.Empty<string>();
         public int TypeCount { get; }
 
         public event EventHandler CellsChanged;
@@ -56,6 +56,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public string NameOf(int type) => type < TypeNames.Length ? TypeNames[type] : $"Type {type}";
+
+        /// <summary>Raised after the type names are read again, so the chart can redraw its headings.</summary>
+        public event EventHandler NamesRefreshed;
+
+        public void RefreshNames()
+        {
+            if (_chart == null) return;
+            TypeNames = GetTypeNames();
+            Raise(nameof(TypeNames)); Raise(nameof(SelectedTitle));
+            NamesRefreshed?.Invoke(this, EventArgs.Empty);
+        }
 
         public int TenthsAt(int attacker, int defender) => _chart?.Find(attacker, defender)?.Tenths ?? TypeChart.Neutral;
         public bool ForesightAt(int attacker, int defender) => _chart?.Find(attacker, defender)?.ForesightRemovable ?? false;
@@ -198,8 +209,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         public string Room => _chart == null ? ""
-            : _chart.FromSource ? $"{_chart.Matchups.Count} matchups · chart {_chart.Where}"
-            : $"{_chart.Matchups.Count} of {_chart.MaxMatchups} matchups used · chart {_chart.Where}";
+            : _chart.FromSource ? $"{_chart.Matchups.Count} matchups"
+            : $"{_chart.Matchups.Count} of {_chart.MaxMatchups} matchups used";
 
         public string Problem => _chart?.Problem() ?? "";
         public bool HasProblem => Problem.Length > 0;

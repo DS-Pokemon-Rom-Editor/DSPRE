@@ -38,7 +38,7 @@
         <Button Content="Screenshot" controls:Icon.Key="cameraIcon" Click="Screenshot_Click"
                 ToolTip.Tip="Saves what the map view is currently showing as a PNG."/>
         <Button Content="Report…" controls:Icon.Key="bug" Click="ExportDebug_Click"
-                ToolTip.Tip="Saves where every map and event was placed, plus a picture of the view, to attach to a bug report."/>
+                ToolTip.Tip="Save the layout and a picture for a bug report."/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
@@ -46,7 +46,7 @@
         <TextBlock Grid.Column="0" Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
         <TextBlock Grid.Column="1" Text="{Binding HoverCoordsText}" FontSize="12" FontFamily="Consolas,Menlo,monospace"
                    Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center" Margin="12,0,0,0"
-                   ToolTip.Tip="The tile under the pointer: which matrix cell, the tile within that map, and the absolute tile the event file stores."/>
+                   ToolTip.Tip="The tile under the pointer."/>
       </Grid>
     </Border>
 
@@ -72,7 +72,7 @@
               <CheckBox Content="Triggers"   IsChecked="{Binding ShowTriggers}" FontSize="12"/>
               <CheckBox Content="Spawnables" IsChecked="{Binding ShowSpawnables}" FontSize="12"/>
               <CheckBox Content="Grid"       IsChecked="{Binding ShowGrid}" IsEnabled="{Binding GridToggleEnabled}" FontSize="12"
-                        ToolTip.Tip="Highlights each map's out-of-bounds tile boundary. Only available for a matrix of 4 cells or fewer (an expensive per-tile scan on larger ones)."/>
+                        ToolTip.Tip="Show where each map ends, on matrices of 4 cells or fewer."/>
               <CheckBox Content="Gizmos" IsChecked="False" FontSize="12" IsVisible="{Binding ShowBetaFeatures}"
                         IsCheckedChanged="Gizmos_Toggled"
                         ToolTip.Tip="Cyan marks the 32×32 tile cell, yellow the map model's real extent."/>
@@ -80,7 +80,7 @@
                         ToolTip.Tip="Stitch on a fixed 32-tile grid like the DS. Off lays maps out by their geometry."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <ToggleButton Content="Move" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}" FontSize="12" Padding="6,2"
-                            ToolTip.Tip="3D edit mode: click an event to select it, then drag the red/green/blue handles to move it (X=tile, Y=height, Z=tile). Arrow keys nudge one tile."/>
+                            ToolTip.Tip="Click an event, then drag its handles or use the arrow keys."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
               <TextBlock Text="View:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <ToggleButton x:Name="Mode2DToggle" Content="2D" IsChecked="{Binding Flat2D}" FontSize="12" Padding="6,2"
@@ -208,19 +208,19 @@
                   <StackPanel Spacing="3" IsVisible="{Binding OwTrainerFieldsVisible}" Margin="0,4,0,0">
                     <TextBlock Text="Trainer" FontWeight="Bold"/>
                     <controls:FusionAutoCompleteBox controls:EditorLink.To="Trainer" ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="Script number doesn't match a known trainer (edit Script below directly)"
+                    <TextBlock Text="No trainer has this script number."
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
-                    <TextBlock Text="Trainer 0 is the empty slot. Pick another or the battle has nobody in it."
+                    <TextBlock Text="Trainer 0 is empty. Pick another."
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIsDummy}"/>
                     <CheckBox Content="Partner (double battle)" IsChecked="{Binding OwPartnerTrainer}"/>
                     <TextBlock Text="Sight range" FontWeight="Bold" Margin="0,4,0,0"
-                               ToolTip.Tip="How many tiles ahead the trainer notices the player. Stored in the first general parameter."/>
+                               ToolTip.Tip="How many tiles ahead the trainer sees."/>
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
                   </StackPanel>
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwIsApricornTree}" Margin="0,4,0,0">
                     <TextBlock Text="Apricorn bed" FontWeight="Bold"
-                               ToolTip.Tip="Which apricorn bed this tree belongs to. The same field a trainer uses for sight range (the first general parameter)."/>
+                               ToolTip.Tip="Which apricorn bed this tree belongs to."/>
                     <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwSight}"/>
                     <TextBlock Text="{Binding OwApricornNote}" FontSize="10" TextWrapping="Wrap"
                                Foreground="{DynamicResource Editor.Subtle}"/>
@@ -239,9 +239,9 @@
                   </StackPanel>
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwScriptSectionVisible}">
-                    <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Locked to the value derived from the Item/Trainer selection above, unless Type is Standard"/>
+                    <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Set by the item or trainer above unless Type is Standard"/>
                     <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
-                    <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
+                    <TextBlock Text="This map's scripts have no script with this number."
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptGenericWarningVisible}"/>
                     <TextBlock Text="{Binding OwScriptCommonInfo}"
                                FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptHasCommonInfo}"/>
@@ -256,7 +256,7 @@
                              ToolTip.Tip="While this flag is set, the overworld is not placed on the map."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwFlag}"/>
                   <TextBlock Text="Parameter 3" FontWeight="Bold" Margin="0,4,0,0"
-                             ToolTip.Tip="A third general value kept with the event. Platinum never reads it; HeartGold reads it for walking Pokémon."/>
+                             ToolTip.Tip="HeartGold reads this for walking Pokémon."/>
                   <NumericUpDown Minimum="0" Maximum="65535" Value="{Binding OwParam2}"/>
 
                   <TextBlock Text="Movement range" FontWeight="Bold" Margin="0,4,0,0"
@@ -349,7 +349,7 @@
                   </Grid>
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
                   <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding TrScriptIndex}" HorizontalAlignment="Stretch"/>
-                  <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
+                  <TextBlock Text="This map's scripts have no script with this number."
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptGenericWarningVisible}"/>
                   <TextBlock Text="{Binding TrScriptCommonInfo}"
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptHasCommonInfo}"/>
@@ -420,7 +420,7 @@
                   </Grid>
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
                   <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" HorizontalAlignment="Stretch"/>
-                  <TextBlock Text="Script number doesn't match a script in this map's script file (edit the number below directly)"
+                  <TextBlock Text="This map's scripts have no script with this number."
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptGenericWarningVisible}"/>
                   <TextBlock Text="{Binding SpScriptCommonInfo}"
                              FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptHasCommonInfo}"/>

@@ -34,7 +34,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private byte[] _saved;
         private ByteStateUndo _undo;
 
-        public string[] SpeciesNames { get; } = Array.Empty<string>();
+        public ObservableCollection<string> SpeciesNames { get; } = new ObservableCollection<string>();
         public string LoadError { get; }
         public bool HasLoadError => LoadError != null;
 
@@ -43,7 +43,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public PokedexListsViewModel(bool load)
         {
             if (!load) return;
-            SpeciesNames = GetPokemonNames();
+            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
             if (!PokedexLists.TryLoad(out _lists, out string error)) { LoadError = error; return; }
             foreach (PokedexLists.ListInfo info in _lists.Lists.Where(i => i.Member != PokedexLists.Regional && i.Group != PokedexLists.Group.Unused))
                 ListChoices.Add(new ListChoice { Info = info, Text = info.Name });
@@ -53,7 +53,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             RefreshAll();
         }
 
-        private string Name(int species) => species < SpeciesNames.Length ? SpeciesNames[species] : $"Species {species}";
+        private string Name(int species) => species < SpeciesNames.Count ? SpeciesNames[species] : $"Species {species}";
+
+        public void RefreshNames()
+        {
+            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
+            if (_lists == null) return;
+            RefreshRegional(Math.Max(0, _regionalIndex));
+            RefreshEntries(Math.Max(0, _entryIndex));
+        }
 
         // ── Regional dex ─────────────────────────────────────────────────────────────────────────
 

@@ -38,7 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Changed(true);
         }
 
-        public string[] MoveNames { get; } = Array.Empty<string>();
+        public ObservableCollection<string> MoveNames { get; } = new ObservableCollection<string>();
         public string[] Places => _data?.Places ?? Array.Empty<string>();
         public bool Platinum => _data?.Platinum ?? false;
         public bool HeartGold => _data != null && !_data.Platinum;
@@ -49,10 +49,26 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public List<(string Name, int Row)> Species { get; } = new List<(string, int)>();
         // Rows of Species the filter lets through; built once per filter so the ListBox keeps its selection.
         private List<int> _shown;
-        private List<string> _shownNames;
         private List<int> Shown => _shown ??= Enumerable.Range(0, Species.Count)
             .Where(i => _speciesFilter.Length == 0 || SearchMatch.Contains(Species[i].Name, _speciesFilter)).ToList();
-        public List<string> SpeciesNames => _shownNames ??= Shown.Select(i => Species[i].Name).ToList();
+        // Rows rename in place, so the ListBox keeps its selection when names change.
+        public ObservableCollection<SpeciesRow> SpeciesNames { get; } = new ObservableCollection<SpeciesRow>();
+        private void ShowNames()
+        {
+            SpeciesNames.Clear();
+            foreach (int i in Shown) SpeciesNames.Add(new SpeciesRow { Name = Species[i].Name });
+        }
+
+        public sealed class SpeciesRow : INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler PropertyChanged;
+            private string _name;
+            public string Name
+            {
+                get => _name;
+                set { if (_name == value) return; _name = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name))); }
+            }
+        }
 
         private string _speciesFilter = "";
         public string SpeciesFilter
@@ -63,8 +79,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 value ??= "";
                 if (value == _speciesFilter) return;
                 _speciesFilter = value;
-                _shown = null; _shownNames = null;
-                Raise(); Raise(nameof(SpeciesNames)); Raise(nameof(SelectedSpecies));
+                _shown = null; ShowNames();
+                Raise(); Raise(nameof(SelectedSpecies));
             }
         }
         public ObservableCollection<CheckRow> MovesOfSpecies { get; } = new ObservableCollection<CheckRow>();
@@ -82,17 +98,33 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _savedPool = _data.PoolBytes();
             _savedMasks = _data.MaskBytes();
             StartUndo();
-            MoveNames = GetAttackNames();
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, GetAttackNames());
             for (int i = 0; i < _data.Pool.Count; i++) Pool.Add(new PoolRow(this, i));
 
             string[] names = _data.FromSource ? GetPokemonNames() : GetPokemonNamesWithForms(508);
             for (int id = 1; id < names.Length; id++)
                 if (MoveTutorData.RowOf(id) is int row && row >= 0) Species.Add((names[id], row));
             _species = 0; _tutor = 0;
+            ShowNames();
             ShowSpecies(); ShowTutor();
         }
 
-        private string Name(int move) => move < MoveNames.Length ? MoveNames[move] : $"Move {move}";
+        public void RefreshNames()
+        {
+            if (_data == null) return;
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, GetAttackNames());
+            string[] names = _data.FromSource ? GetPokemonNames() : GetPokemonNamesWithForms(508);
+            int at = 0;
+            for (int id = 1; id < names.Length && at < Species.Count; id++)
+                if (MoveTutorData.RowOf(id) is int row && row >= 0) Species[at++] = (names[id], row);
+            List<int> shown = Shown;
+            for (int k = 0; k < shown.Count && k < SpeciesNames.Count; k++) SpeciesNames[k].Name = Species[shown[k]].Name;
+            foreach (PoolRow p in Pool) p.Refresh();
+            _tutorNames = null; Raise(nameof(TutorNames)); Raise(nameof(SelectedTutor));
+            ShowSpecies(); ShowTutor();
+        }
+
+        private string Name(int move) => move < MoveNames.Count ? MoveNames[move] : $"Move {move}";
 
         public sealed class PoolRow : INotifyPropertyChanged
         {
@@ -206,7 +238,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        public string Problem => _data?.Problem(MoveNames.Length) ?? "";
+        public string Problem => _data?.Problem(MoveNames.Count) ?? "";
         public bool HasProblem => Problem.Length > 0;
 
         private void Changed(bool movesRenamed)
@@ -229,7 +261,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Move Tutors"); return false; }
             if (_data.FromSource)
             {
-                (bool saved, string error) = await HgEngineSave.RunAsync(() => { _data.Save(MoveNames.Length); return null; });
+                (bool saved, string error) = await HgEngineSave.RunAsync(() => { _data.Save(MoveNames.Count); return null; });
                 if (!saved)
                 {
                     if (error != null) await DialogHelper.ShowError("The move tutors were not saved:\n" + error, "Move Tutors");
@@ -238,7 +270,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
             else
             {
-                try { _data.Save(MoveNames.Length); }
+                try { _data.Save(MoveNames.Count); }
                 catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
                 {
                     await DialogHelper.ShowError("The move tutors were not saved:\n" + e.Message, "Move Tutors");

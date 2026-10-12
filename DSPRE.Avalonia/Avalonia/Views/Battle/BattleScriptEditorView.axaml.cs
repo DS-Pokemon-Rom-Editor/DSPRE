@@ -19,6 +19,7 @@ namespace DSPRE.Avalonia.Views.Battle
             InitializeComponent();
             Loaded += (_, _) => SetupEditor();
             DataContextChanged += (_, _) => HookVm();
+            NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         private BattleScriptEditorViewModel VM => DataContext as BattleScriptEditorViewModel;

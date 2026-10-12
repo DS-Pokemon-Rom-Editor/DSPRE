@@ -51,7 +51,7 @@
       <DockPanel Margin="6">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
           <TextBlock Text="Letters" FontWeight="SemiBold"/>
-          <controls:HelpTip Text="The number is the picture's place in the font, beside the character it writes. Empty slots are marked."/>
+          <controls:HelpTip Text="Each picture's number in the font, beside the character it writes."/>
         </StackPanel>
 
         <TextBox DockPanel.Dock="Top" Text="{Binding Search}" Margin="0,0,0,4"
@@ -99,7 +99,7 @@
           <StackPanel Spacing="8" Width="230">
             <StackPanel Orientation="Horizontal">
               <TextBlock Text="Shade" FontWeight="SemiBold"/>
-              <controls:HelpTip Text="Four shades, two bits a pixel. Left button paints the shade picked here. Right button rubs out."/>
+              <controls:HelpTip Text="Left button paints the picked shade, right button rubs out."/>
             </StackPanel>
             <ComboBox x:Name="ShadePicker" SelectedIndex="1" Width="200">
               <ComboBoxItem>Nothing</ComboBoxItem>
@@ -110,7 +110,7 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
               <TextBlock Text="Width" FontWeight="SemiBold"/>
-              <controls:HelpTip Text="How far along the next letter starts. The red line shows it; anything drawn past it sits under whatever comes next."/>
+              <controls:HelpTip Text="Where the next letter starts, shown by the red line."/>
             </StackPanel>
             <NumericUpDown Value="{Binding GlyphWidth}" Minimum="0" Maximum="16" FormatString="0"
                            IsEnabled="{Binding HasGlyph}" Width="120" HorizontalAlignment="Left"/>

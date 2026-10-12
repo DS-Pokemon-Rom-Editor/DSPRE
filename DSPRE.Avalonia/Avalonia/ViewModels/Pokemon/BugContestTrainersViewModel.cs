@@ -96,6 +96,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Load();
         }
 
+        public void RefreshNames()
+        {
+            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
+            _names = BugContestTrainerFile.OpponentNames();
+            DSPRE.Avalonia.Data.ListSync.Apply(OpponentNames, _names);
+        }
+
         private void Load()
         {
             string path = Filesystem.GetBugContestTrainerPath();

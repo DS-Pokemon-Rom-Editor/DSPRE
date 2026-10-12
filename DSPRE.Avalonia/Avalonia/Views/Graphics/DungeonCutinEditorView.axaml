@@ -20,7 +20,7 @@
 	  <Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click"/>
 	  <Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
 	  <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
-	          ToolTip.Tip="Open this splash screen in the Graphics window, where its drawing, colours and arrangement for all four times of day sit together."/>
+	          ToolTip.Tip="Open in the Graphics window"/>
 	  <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Foreground="OrangeRed"/>
 	  <TextBlock Text="{Binding ImportNote}" IsVisible="{Binding HasImportNote}" Foreground="{DynamicResource Editor.Warn}" VerticalAlignment="Center" Margin="12,0,0,0"/>
 	</controls:EditorToolbar>
@@ -48,7 +48,7 @@
 			  <StackPanel Spacing="2">
 				<TextBlock Text="Wipe type (unused)"/>
 				<TextBox Text="{Binding SelectedRow.WipeType}" Width="80"
-				         ToolTip.Tip="The game never reads this, so changing it does nothing. It is kept so import and export do not lose it."/>
+				         ToolTip.Tip="Unused by the game."/>
 			  </StackPanel>
 			  <StackPanel Spacing="2">
 				<TextBlock Text="Name line"/>

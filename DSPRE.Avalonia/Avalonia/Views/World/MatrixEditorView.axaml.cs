@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,6 +21,9 @@ namespace DSPRE.Avalonia.Views.World
         {
             InitializeComponent();
             HeightGrid.RampByValue = true;
+            System.EventHandler patched = (_, _) => VM?.OnPatchStateChanged();
+            AttachedToVisualTree += (_, _) => AppEvents.RomPatchStateChanged += patched;
+            DetachedFromVisualTree += (_, _) => AppEvents.RomPatchStateChanged -= patched;
 
             MapGrid.Changed += (_, _) => VM?.MarkDirty();
             HeaderGrid.Changed += (_, _) => VM?.MarkDirty();
@@ -56,7 +60,7 @@ namespace DSPRE.Avalonia.Views.World
                     "No header for this cell");
                 return;
             }
-            List<string> names = HeaderLists.GetHeaderListBoxNames();
+            List<string> names = HeaderLabels.Friendly().ToList();
             new SpawnEditorView(null, names, header, VM.SelCol, VM.SelRow).ShowManaged();
         }
 

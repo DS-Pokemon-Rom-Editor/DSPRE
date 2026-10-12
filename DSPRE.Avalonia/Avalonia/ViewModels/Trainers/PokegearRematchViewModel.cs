@@ -94,10 +94,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public string StatusText { get => _statusText; set => Set(ref _statusText, value); }
 
         private string _tableNote = "";
-        public string TableNote { get => _tableNote; set => Set(ref _tableNote, value); }
+        public string TableNote { get => _tableNote; set { if (Set(ref _tableNote, value)) OnPropertyChanged(nameof(HasNotes)); } }
 
         private string _reachabilityNote = "";
-        public string ReachabilityNote { get => _reachabilityNote; set => Set(ref _reachabilityNote, value); }
+        public string ReachabilityNote { get => _reachabilityNote; set { if (Set(ref _reachabilityNote, value)) OnPropertyChanged(nameof(HasNotes)); } }
+        public bool HasNotes => !string.IsNullOrEmpty(_tableNote) || !string.IsNullOrEmpty(_reachabilityNote);
 
         /// <summary>Which phone book entry reaches this row, if any.</summary>
         public string RowNote
@@ -227,8 +228,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             foreach (string n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
 
-            RematchChoices.Add("(end of chain - 0x0000)");
-            RematchChoices.Add("(skip this level - 0xFFFF)");
+            RematchChoices.Add("Ends here");
+            RematchChoices.Add("Skip this level");
             foreach (string n in TrainerNames) RematchChoices.Add(n);
 
             _rows = PokegearRematchTable.ReadAll(out _location, out _loadError);
@@ -243,7 +244,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SelectedRowListIndex = listPosition;
 
             TableNote = _location != null
-                ? "Table found in " + _location.Description
+                ? ""
                 : _loadError ?? "The Pokégear rematch table couldn't be located in this ROM.";
 
             UpdateStatus();
@@ -278,8 +279,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             if (unreachableRows == 0 && callersWithoutRow.Count == 0)
             {
-                ReachabilityNote = $"Every row is called by one of the {_phoneEntryByTrainer.Count} " +
-                    "Pokégear callers, and every caller has a row.";
+                ReachabilityNote = "";
                 return;
             }
 
@@ -300,9 +300,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string RowLabel(int rowIndex)
         {
             RematchTable.Row row = _rows[rowIndex];
-            if (row.IsEmpty) return $"Row {rowIndex}: (empty)";
+            if (row.IsEmpty) return $"{rowIndex}: (empty)";
 
-            string label = $"Row {rowIndex}: {TrainerLabel(row.BaseTrainerId)}";
+            string label = $"{rowIndex}: {TrainerLabel(row.BaseTrainerId)}";
             if (_phoneEntryByTrainer.Count == 0) return label;
 
             return _phoneEntryByTrainer.TryGetValue(row.BaseTrainerId, out int entry)

@@ -36,7 +36,7 @@
           </Border>
           <StackPanel Spacing="6" VerticalAlignment="Center">
             <Button Content="Import…" controls:Icon.Key="import" Click="ImportIcon_Click"
-                    ToolTip.Tip="Replace the icon. Must be exactly 32×32 px with at most 15 opaque colors; transparent pixels stay transparent in the DS menu."/>
+                    ToolTip.Tip="Replace the icon with a 32×32 PNG of up to 15 colours."/>
             <Button Content="Export…" controls:Icon.Key="export" Click="ExportIcon_Click" ToolTip.Tip="PNG image"/>
             <TextBlock Text="32×32 px, 15 colors + transparency" FontSize="11" Opacity="0.7"/>
           </StackPanel>
@@ -46,7 +46,7 @@
 
         <StackPanel Orientation="Horizontal">
           <TextBlock Text="Menu titles" FontWeight="SemiBold"/>
-          <controls:HelpTip Text="The text shown under the icon in the DS system menu (usually game name, then publisher). Line breaks matter."/>
+          <controls:HelpTip Text="The text under the icon in the DS menu, line breaks included."/>
         </StackPanel>
         <ItemsControl x:Name="TitlesList" ItemsSource="{Binding Titles}">
           <ItemsControl.ItemTemplate>

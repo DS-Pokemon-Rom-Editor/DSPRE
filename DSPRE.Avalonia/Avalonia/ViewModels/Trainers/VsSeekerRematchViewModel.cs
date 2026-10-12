@@ -192,13 +192,13 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             foreach (string n in DSPRE.TrainerNames.GetAll()) TrainerNames.Add(n);
 
-            RematchChoices.Add("(skip this level - 0xFFFF)");
-            RematchChoices.Add("(end of chain - 0x0000)");
+            RematchChoices.Add("Skip this level");
+            RematchChoices.Add("Ends here");
             foreach (string n in TrainerNames) RematchChoices.Add(n);
 
             _rows = VsSeekerRematchTable.ReadAll(out _location, out string loadError);
             TableNote = _location != null
-                ? "Table found in " + _location.Description
+                ? ""
                 : loadError ?? "The Vs. Seeker rematch table couldn't be located in this ROM.";
 
             RebuildRowList();
@@ -214,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private string RowLabel(int rowIndex)
         {
             RematchTable.Row row = _rows[rowIndex];
-            return row.IsEmpty ? $"Row {rowIndex}: (empty)" : $"Row {rowIndex}: {TrainerLabel(row.BaseTrainerId)}";
+            return row.IsEmpty ? $"{rowIndex}: (empty)" : $"{rowIndex}: {TrainerLabel(row.BaseTrainerId)}";
         }
 
         private string TrainerLabel(int trainerId) =>

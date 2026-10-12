@@ -153,7 +153,7 @@
               </GroupBox>
               </StackPanel>
               <Button Content="Rebuild sort lists" Click="RebuildDexSortLists_Click" IsVisible="{Binding CanRebuildSortLists}" HorizontalAlignment="Left"
-                      ToolTip.Tip="Lists every Pokémon in the Pokédex's weight and height sorts, ordered by the saved values"/>
+                      ToolTip.Tip="Rebuild the Pokédex weight and height sorts"/>
               <GroupBox Header="Size comparison">
                 <StackPanel Orientation="Horizontal" Spacing="16">
                 <Grid ColumnDefinitions="120,120,8,120" RowDefinitions="Auto,4,Auto,6,Auto,6,Auto,6,Auto" Margin="0,4,0,0" VerticalAlignment="Top">

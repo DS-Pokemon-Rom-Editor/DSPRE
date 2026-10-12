@@ -89,7 +89,7 @@
 
         <Panel>
         <TabControl x:Name="MapTabs">
-          <TabItem ToolTip.Tip="The header is this location's settings record: music, weather, camera, flags and which files it uses." AutomationProperties.Name="Header">
+          <TabItem ToolTip.Tip="This location's music, weather, camera, flags and files." AutomationProperties.Name="Header">
             <TabItem.Header>
               <StackPanel Orientation="Horizontal" Spacing="5">
                 <Image Source="{x:Static ava:EditorIcons.Header}" Width="16" Height="16"

@@ -112,7 +112,7 @@
           <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,4">
             <TextBox Text="{Binding TileSearch}" PlaceholderText="Search tiles or textures" IsEnabled="{Binding Ready}"/>
             <ComboBox Grid.Column="1" ItemsSource="{Binding TileViews}" SelectedIndex="{Binding TileViewIndex}" Margin="4,0,0,0"
-                      ToolTip.Tip="How tiles are pictured. Automatic shows flat ground from above and anything taller angled."/>
+                      ToolTip.Tip="Automatic shows flat ground from above and taller tiles angled."/>
           </Grid>
           <ListBox Classes="strip" ItemsSource="{Binding ShownTiles}" SelectedItem="{Binding ShownTile}"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">

@@ -34,7 +34,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public sealed class BerryRow : INotifyPropertyChanged
         {
             public event PropertyChangedEventHandler PropertyChanged;
-            public string Name { get; init; }
+            private string _name;
+            public string Name
+            {
+                get => _name;
+                set { if (_name == value) return; _name = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name))); }
+            }
             public int Item { get; init; }
             private bool _changed;
             public bool Changed
@@ -62,6 +67,18 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 BerryRows.Add(new BerryRow { Name = BerryNames[b], Item = item });
             }
             _selected = 0;
+        }
+
+        public void RefreshNames()
+        {
+            string[] items = GetItemNames();
+            for (int b = 0; b < BerryRows.Count; b++)
+            {
+                int item = BerryRows[b].Item;
+                BerryNames[b] = item < items.Length ? items[item] : $"Berry {b + 1}";
+                BerryRows[b].Name = BerryNames[b];
+            }
+            Raise(nameof(SelectedName));
         }
 
         private int _selected = -1;

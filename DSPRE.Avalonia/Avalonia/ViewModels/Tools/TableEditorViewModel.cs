@@ -410,7 +410,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
                 OnPropertyChanged(nameof(NoTablesAvailable));
                 ResetUndo();
-                StatusText = _tablesNote ?? $"Tables loaded ({gameFamily}).";
+                StatusText = _tablesNote ?? "";
             }
             catch (Exception ex)
             {
@@ -528,6 +528,17 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private BattleMusicTables _battleTables;
         private bool _fromSource;
         private string _tablesNote;
+
+        public void RefreshNames()
+        {
+            if (_pokeNames.Length == 0 || _vsTrainerList == null || _vsPokemonList == null) return;
+            _pokeNames = GetPokemonNames();
+            _trcNames = GetTrainerClassNames();
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, _pokeNames.Select((n, i) => $"[{i}] {n}").ToList());
+            DSPRE.Avalonia.Data.ListSync.Apply(TrainerNames, _trcNames.Select((n, i) => $"[{i:D3}] {n}").ToList());
+            DSPRE.Avalonia.Data.ListSync.Apply(VsTrainerItems, _vsTrainerList.Select(t => $"{TrainerLabel(t.Item1)} uses Combo #{t.Item2}").ToList());
+            DSPRE.Avalonia.Data.ListSync.Apply(VsPokemonItems, Enumerable.Range(0, _vsPokemonList.Count).Select(PokemonRowLabel).ToList());
+        }
 
         private string TrainerLabel(int classID) =>
             classID >= 0 && classID < _trcNames.Length ? $"[{classID:D3}] {_trcNames[classID]}" : $"[{classID:D3}] ?";

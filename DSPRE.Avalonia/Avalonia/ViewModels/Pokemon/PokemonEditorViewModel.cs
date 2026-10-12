@@ -286,6 +286,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Releases app-wide event subscriptions held by child VMs; call when the window closes.</summary>
         public void Detach() { EvolutionsVM?.Detach(); PersonalVM?.Detach(); }
 
+        public void RefreshNames()
+        {
+            if (PersonalVM == null) return;
+            string[] full = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
+            List<string> decorated = new List<string>(full.Length + 1);
+            for (int i = 0; i < full.Length; i++) decorated.Add($"{i:D3} {full[i]}");
+            // An unsaved new species keeps its row at the end.
+            if (_pendingSpecies != null && _pendingListIndex >= 0 && _pendingListIndex < PokemonNames.Count)
+                decorated.Add(PokemonNames[_pendingListIndex]);
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, decorated);
+            PersonalVM.RefreshNames(full);
+            LearnsetVM?.RefreshNames();
+            EvolutionsVM?.RefreshNames(full);
+            int id = _selectedMonIndex;
+            SetBaseTitle($"Pokémon Editor - #{id} {(id >= 0 && id < PokemonNames.Count ? PokemonNames[id] : $"#{id}")}");
+        }
+
         // ─── Save all ─────────────────────────────────────────────────────────────
         public void SaveAll()
         {

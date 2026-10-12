@@ -77,8 +77,8 @@
                   <controls:FusionAutoCompleteBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability1Index}"/>
                   <TextBlock Grid.Row="6" Grid.Column="0" Text="Ability 2:" Classes="label"/>
                   <controls:FusionAutoCompleteBox  Grid.Row="6" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability2Index}"/>
-                  <TextBlock Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Classes="subtle" TextWrapping="Wrap" IsVisible="{Binding !ShowHgEngineExtras}"
-                             Text="The Pokédex's type search takes type changes after Rebuild sort lists in Pokédex lists."/>
+                  <controls:HelpTip Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Left" IsVisible="{Binding !ShowHgEngineExtras}"
+                             Text="After changing types, rebuild the sort lists in Pokédex lists."/>
                 </Grid>
               </GroupBox>
               <GroupBox Grid.Column="2" Header="Held items">
@@ -233,7 +233,7 @@
       <TabItem Header="TM/HM">
         <DockPanel Margin="8">
           <Button DockPanel.Dock="Bottom" Content="Bulk editor" Click="TmHmBulkEditor_Click" HorizontalAlignment="Left" Margin="0,8,0,0"
-                   ToolTip.Tip="Edit TM/HM compatibility across many Pokémon at once, or per-machine across the whole dex"/>
+                   ToolTip.Tip="Edit TM/HM compatibility for many Pokémon at once"/>
           <Grid ColumnDefinitions="*,8,Auto,8,*">
             <DockPanel Grid.Column="0">
               <TextBlock DockPanel.Dock="Top" Text="Can learn:" FontWeight="SemiBold" Margin="0,0,0,4"/>

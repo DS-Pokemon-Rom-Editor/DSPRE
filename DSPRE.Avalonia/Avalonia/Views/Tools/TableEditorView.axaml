@@ -77,9 +77,9 @@
           <StackPanel Grid.Column="1" Margin="8,0,0,0" Spacing="6">
             <TextBlock Text="VS animation (effect)" FontWeight="Bold"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding VsAnimation}"/>
-            <TextBlock Text="Battle SSEQ (music)" FontWeight="Bold"/>
+            <TextBlock Text="Battle music" FontWeight="Bold"/>
             <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleSseq}"/>
-            <controls:HelpTip Text="Each entry pairs a VS. animation with a battle theme. Trainer classes and wild Pokémon pick an entry by number."
+            <controls:HelpTip Text="Each entry pairs a VS. animation with battle music."
                               HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
         </Grid></controls:CappedWidth>
@@ -110,7 +110,7 @@
                                Increment="1" Value="{Binding TrainerSpriteFrame}"/>
               </StackPanel>
             </StackPanel>
-            <controls:HelpTip Text="Links a trainer class to an effect combo, so every trainer of that class gets the same VS. animation and battle theme."
+            <controls:HelpTip Text="Every trainer of the class gets this combo's VS. animation and music."
                               HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
         </Grid></controls:CappedWidth>
@@ -135,7 +135,7 @@
               <Button Content="Add row" controls:Icon.Key="addIcon" Click="AddVsPokemonRow_Click"/>
               <Button Content="Remove row" controls:Icon.Key="deleteIcon" Click="RemoveVsPokemonRow_Click"/>
             </StackPanel>
-            <controls:HelpTip Text="Links a wild Pokémon to an effect combo, played whenever it's met in the grass or by script." HorizontalAlignment="Left" Margin="0,8,0,0"/>
+            <controls:HelpTip Text="This wild Pokémon gets the combo's animation and music." HorizontalAlignment="Left" Margin="0,8,0,0"/>
           </StackPanel>
         </Grid></controls:CappedWidth>
       </TabItem>

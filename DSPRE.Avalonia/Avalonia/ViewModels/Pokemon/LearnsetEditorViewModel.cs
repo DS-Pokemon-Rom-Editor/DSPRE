@@ -131,6 +131,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             foreach (string n in moveNames) MoveNames.Add(n);
         }
 
+        public void RefreshNames()
+        {
+            _moveNamesArr = RomInfo.GetAttackNames();
+            DSPRE.Avalonia.Data.ListSync.Apply(MoveNames, _moveNamesArr);
+            foreach (LearnsetEntryRow e in Entries) e.UpdateDisplay(_moveNamesArr);
+        }
+
         public int CurrentId => _currentId;
 
         /// <summary>Builds the current mon's learnset as CSV (level, move id, move name).</summary>

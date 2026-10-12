@@ -11,8 +11,8 @@ namespace DSPRE
         private static List<string> _friendly;
 
         /// <summary>
-        /// One label per header: its number, its internal name, and the place it is, where the game
-        /// answers for it.
+        /// One label per header: its number and the place it is, or its internal name where the game
+        /// does not say which place it is.
         /// </summary>
         public static IReadOnlyList<string> Friendly()
         {
@@ -23,7 +23,7 @@ namespace DSPRE
             bool trusted = false;
             try
             {
-                List<string> internalNames = HeaderLists.GetHeaderListBoxNames();
+                List<string> internalNames = HeaderLists.GetInternalNames();
                 if (internalNames == null) return _friendly = built;
 
                 List<string> places = RomInfo.GetLocationNames();
@@ -48,9 +48,9 @@ namespace DSPRE
 
                 for (int i = 0; i < internalNames.Count; i++)
                 {
-                    string label = internalNames[i].TrimEnd('\0').TrimEnd();
                     string place = trust && at[i] >= 0 ? places[at[i]] : null;
-                    built.Add(string.IsNullOrWhiteSpace(place) ? label : label + "   " + place);
+                    string name = string.IsNullOrWhiteSpace(place) ? internalNames[i].Trim() : place.Trim();
+                    built.Add($"{i:D3} {name}");
                 }
             }
             catch { }

@@ -28,7 +28,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Undo() => _undo?.Undo();
         public void Redo() => _undo?.Redo();
 
-        public string[] ItemNames { get; } = Array.Empty<string>();
+        public ObservableCollection<string> ItemNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<EntryViewModel> Left { get; } = new ObservableCollection<EntryViewModel>();
         public ObservableCollection<EntryViewModel> Right { get; } = new ObservableCollection<EntryViewModel>();
 
@@ -41,7 +41,16 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public BpShopEditorViewModel(bool load)
         {
             if (!load) return;
-            ItemNames = GetItemNames();
+            RefreshNames();
+            _shop = BpShopData.Load();
+            _saved = _shop.Snapshot();
+            StartUndo();
+            Rebuild();
+        }
+
+        public void RefreshNames()
+        {
+            string[] names = GetItemNames();
             // "TM06" alone doesn't say what's for sale; name the move too.
             try
             {
@@ -50,15 +59,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 for (int m = 0; m < moves.Length; m++)
                 {
                     int item = TMEditor.MachineItemId(m);
-                    if (item > 0 && item < ItemNames.Length && moves[m] > 0 && moves[m] < moveNames.Length)
-                        ItemNames[item] = $"{ItemNames[item]} {moveNames[moves[m]]}";
+                    if (item > 0 && item < names.Length && moves[m] > 0 && moves[m] < moveNames.Length)
+                        names[item] = $"{names[item]} {moveNames[moves[m]]}";
                 }
             }
             catch (Exception e) when (e is IOException || e is InvalidOperationException || e is IndexOutOfRangeException) { }
-            _shop = BpShopData.Load();
-            _saved = _shop.Snapshot();
-            StartUndo();
-            Rebuild();
+            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, names);
         }
 
         public sealed class EntryViewModel : INotifyPropertyChanged
@@ -181,7 +187,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
         }
 
-        public string Problem => _shop?.Problem(ItemNames.Length) ?? "";
+        public string Problem => _shop?.Problem(ItemNames.Count) ?? "";
         public bool HasProblem => Problem.Length > 0;
 
         public string Warning => _shop?.RightHasNonTm == true
@@ -210,7 +216,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 return false;
             }
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Battle Point Shop"); return false; }
-            try { _shop.Save(ItemNames.Length); }
+            try { _shop.Save(ItemNames.Count); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException || e is InvalidDataException)
             {
                 await DialogHelper.ShowError("The Battle Point shop was not saved:\n" + e.Message, "Battle Point Shop");

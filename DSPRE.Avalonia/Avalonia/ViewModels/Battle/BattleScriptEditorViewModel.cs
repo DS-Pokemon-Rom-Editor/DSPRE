@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public enum Archive { MoveScripts = 0, EffectScripts = 1, Subroutines = 2, MoveAnimation = 3, SubAnimation = 4 }
 
         private readonly WazaSeqVersion _version;
-        private readonly string[] _moveNames;
+        private string[] _moveNames;
         private readonly ScriptNarc[] _narcs = new ScriptNarc[5];
 
         public bool IsAvailable { get; }
@@ -336,6 +336,18 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // ── Entry (file) selection ────────────────────────────────────────────────
         public ObservableCollection<string> FileItems { get; } = new ObservableCollection<string>();
+
+        public void RefreshNames()
+        {
+            _moveNames = SafeMoveNames();
+            _speciesNames = null;
+            OnPropertyChanged(nameof(SpeciesNames));
+            if (!IsAvailable) return;
+            List<string> labels = _sourceOrder != null && _sourceById != null
+                ? _sourceOrder.Select(LabelFor).ToList()
+                : Enumerable.Range(0, FileItems.Count).Select(LabelFor).ToList();
+            DSPRE.Avalonia.Data.ListSync.Apply(FileItems, labels);
+        }
 
         private void BuildFileList()
         {

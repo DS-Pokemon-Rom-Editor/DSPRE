@@ -765,7 +765,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     Data.TrainerCapsuleCatalog.Changed += ShowCapsuleNames;
                 }
 
-                StatusText = $"Loaded {TrainerNames.Count} trainers ({gameFamily}).";
+                StatusText = $"{TrainerNames.Count} trainers.";
                 if (TrainerNames.Count > 0)
                     SelectedTrainerIndex = Math.Min(Math.Max(0, InitialIndex), TrainerNames.Count - 1);
             }

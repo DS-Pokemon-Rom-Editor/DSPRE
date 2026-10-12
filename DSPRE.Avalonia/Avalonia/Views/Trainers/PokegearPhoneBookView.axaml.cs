@@ -27,6 +27,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         public PokegearPhoneBookView()
         {
             InitializeComponent();
+            NameRefresh.Bind(this, () => VM?.RefreshNames());
 
             SortList.AddHandler(PointerPressedEvent, SortList_PointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
             SortList.AddHandler(PointerMovedEvent, SortList_PointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);

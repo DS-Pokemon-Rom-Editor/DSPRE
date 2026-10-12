@@ -484,7 +484,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SelectedHeaderId = FindInitialHeaderId();   // so only this header's folder opens on load
                 RebuildTree();
 
-                StatusText = $"Loaded {_headerListNames.Count} headers ({gameFamily}).";
+                StatusText = $"{_headerListNames.Count} headers.";
                 SelectHeader(SelectedHeaderId);
             }
             catch (FileNotFoundException)

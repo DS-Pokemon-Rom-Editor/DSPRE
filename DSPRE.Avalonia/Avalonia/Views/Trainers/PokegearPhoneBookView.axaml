@@ -27,7 +27,7 @@
           <TextBlock Text="{Binding LoadError}" IsVisible="{Binding HasLoadError}" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
           <StackPanel Orientation="Horizontal">
             <TextBlock Text="{Binding Heading}" FontSize="16" FontWeight="SemiBold"/>
-            <controls:HelpTip Text="A contact's name is the first message of the text archive shown in its heading. Edit it in the Text editor."/>
+            <controls:HelpTip Text="{Binding NameHelp}"/>
           </StackPanel>
           <TextBlock Text="{Binding Problems}" IsVisible="{Binding HasProblems}" FontSize="11"
                      Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap"/>
@@ -35,7 +35,7 @@
           <Grid x:Name="ContactGrid" ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="10">
             <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Call type"/>
-              <controls:HelpTip Text="Which call routine runs this contact. Each special type has its own routine, so a trainer switched to one keeps the trainer call data. Only Trainer, Buena, Ethan / Lyra, Gym Leader and Irwin call at random."/>
+              <controls:HelpTip Text="Only Trainer, Buena, Ethan / Lyra, Gym Leader and Irwin call at random."/>
             </StackPanel>
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="10">
               <ComboBox ItemsSource="{Binding TypeChoices}" SelectedIndex="{Binding TypeIndex}" Width="200"/>
@@ -44,13 +44,13 @@
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Title"/>
-              <controls:HelpTip Text="The label under the name in the contact list. 0-199 are trainer classes, 200 shows no title, and 201-207 are phone titles such as Pokémon Professor. Higher values read past the phone text, so what shows is undefined."/>
+              <controls:HelpTip Text="0-199 are trainer classes, 200 is none and 201-207 are phone titles."/>
             </StackPanel>
             <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding TitleChoices}" SelectedIndex="{Binding TitleIndex}" HorizontalAlignment="Stretch"/>
 
             <StackPanel Grid.Row="2" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Trainer"/>
-              <controls:HelpTip Text="The trainer this contact is. The game matches it after a win to offer their number, rematches and gifts, so it must match the trainer battled and their Rematch Editor row. Pick 'not a trainer' for people you never battle."/>
+              <controls:HelpTip Text="Must match the trainer battled and their Pokégear rematch row."/>
             </StackPanel>
             <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
               <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding TrainerIndex}" HorizontalAlignment="Stretch"/>
@@ -59,13 +59,13 @@
 
             <StackPanel Grid.Row="3" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Map"/>
-              <controls:HelpTip Text="Where the contact lives. Calling them while you're on this map plays their local line, they don't call you at random while you're there, and their dialogue can name the place or a wild Pokémon found there."/>
+              <controls:HelpTip Text="On this map they say their local line and never call at random."/>
             </StackPanel>
             <controls:FusionAutoCompleteBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding MapChoices}" SelectedIndex="{Binding MapIndex}" HorizontalAlignment="Stretch"/>
 
             <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Rematch gift"/>
-              <controls:HelpTip Text="An item handed over each time you win a rematch against this trainer. Cheri Berry gives a random berry."/>
+              <controls:HelpTip Text="Given for each rematch win, and Cheri Berry gives a random berry."/>
             </StackPanel>
             <controls:FusionAutoCompleteBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemChoices}" SelectedIndex="{Binding GiftIndex}" HorizontalAlignment="Stretch"
                       ToolTip.Tip="Given after each rematch win. Cheri Berry gives a random berry."/>
@@ -80,13 +80,13 @@
 
             <StackPanel Grid.Row="6" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Greeting"/>
-              <controls:HelpTip Text="The style of greeting said at the start of a trainer's call, with a line for each time of day."/>
+              <controls:HelpTip Text="Greeting style, with a line for each time of day."/>
             </StackPanel>
             <ComboBox Grid.Row="6" Grid.Column="1" ItemsSource="{Binding GreetingChoices}" SelectedIndex="{Binding GreetingIndex}" Width="200" HorizontalAlignment="Left"/>
 
             <StackPanel Grid.Row="7" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Rematch day"/>
-              <controls:HelpTip Text="The day and time when calling this trainer or Gym Leader can set up a rematch. Day covers 10:00 to 19:59. Trainers can still offer a rematch when they call you on other days; Gym Leaders also need all 16 badges. Never turns it off."/>
+              <controls:HelpTip Text="Day is 10:00 to 19:59, and Gym Leaders also need all 16 badges."/>
             </StackPanel>
             <StackPanel x:Name="RematchDayBox" Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsEnabled="{Binding UsesSchedule}"
                         ToolTip.Tip="When calling this contact can set up a rematch">
@@ -98,7 +98,7 @@
 
             <StackPanel Grid.Row="8" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Random calls"/>
-              <controls:HelpTip Text="A random call first picks a group, 0 half the time, 1 three times in ten and 2 the rest, then a contact in that group. A contact in a small group calls more often. Never keeps them from calling at random."/>
+              <controls:HelpTip Text="Group 0 calls half the time, group 1 three times in ten and group 2 the rest."/>
             </StackPanel>
             <ComboBox Grid.Row="8" Grid.Column="1" ItemsSource="{Binding GroupChoices}" SelectedIndex="{Binding GroupIndex}" Width="200" HorizontalAlignment="Left"
                       ToolTip.Tip="How often this contact's group is picked when a random call rings"/>
@@ -124,7 +124,7 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Sort order" FontWeight="SemiBold"
                          ToolTip.Tip="Drag a contact to move it, or use Alt+Up and Alt+Down"/>
-              <controls:HelpTip Text="The Pokégear lists contacts by title, by name or by location. Each contact keeps its own position in all three, so renaming or moving one leaves the order alone. Drag a contact, or press Auto Sort, to change a list."/>
+              <controls:HelpTip Text="Drag a contact or press Auto sort to change a list."/>
             </StackPanel>
             <Button Grid.Column="1" Content="Auto sort" Click="AutoSort_Click" ToolTip.Tip="{Binding AutoSortTip}"/>
           </Grid>

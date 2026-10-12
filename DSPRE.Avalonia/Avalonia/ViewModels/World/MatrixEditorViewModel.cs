@@ -77,6 +77,9 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         public bool HasSizeWarning => SizeWarning.Length > 0;
 
+        /// <summary>Expand Matrix 0 raises the size limit, so the warning is read again after a patch.</summary>
+        public void OnPatchStateChanged() { OnPropertyChanged(nameof(SizeWarning)); OnPropertyChanged(nameof(HasSizeWarning)); }
+
         private void Resize(int width, int height)
         {
             if (_matrix == null || _suppress) return;

@@ -694,6 +694,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         private string[] _allFileNames;
         private string[] _machineMoveNames;
+        private int[] _machineMoves = System.Array.Empty<int>();
         private string[] _typeNamesArr;
         private string[] _abilityNamesArr;
         private string[] _itemNamesArr;
@@ -760,6 +761,21 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             LoadEnumLabels();
             LoadHeldItemOdds();
             // LoadMon is called by parent PokemonEditorViewModel after all child VMs are ready
+        }
+
+        public void RefreshNames(string[] pokemonNames)
+        {
+            _typeNamesArr     = GetTypeNames();
+            _abilityNamesArr  = GetAbilityNames();
+            _itemNamesArr     = GetItemNames();
+            _machineMoveNames = TMEditor.ReadMachineMoveNames().ToArray();
+            _machineMoves = TMEditor.ReadMachineMoves();
+            _allFileNames     = pokemonNames;
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, _allFileNames);
+            DSPRE.Avalonia.Data.ListSync.Apply(TypeNames, _typeNamesArr);
+            DSPRE.Avalonia.Data.ListSync.Apply(AbilityNames, _abilityNamesArr);
+            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, _itemNamesArr);
+            RebuildMachineLists();
         }
 
         /// <summary>Growth-curve / egg-group / dex-color dropdowns come from the customisable LabelStore

@@ -247,6 +247,12 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
+        public void RefreshNames()
+        {
+            _locationNames = RomInfo.GetLocationNames();
+            UpdateHeaderDependents(_selectedHeaderIndex);
+        }
+
         // ── Header-dependent updates ───────────────────────────────────────────
         private void UpdateHeaderDependents(int headerIndex)
         {

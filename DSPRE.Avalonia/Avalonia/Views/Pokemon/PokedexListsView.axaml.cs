@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
     {
         private PokedexListsViewModel VM => DataContext as PokedexListsViewModel;
 
-        public PokedexListsView() { InitializeComponent(); }
+        public PokedexListsView() { InitializeComponent(); NameRefresh.Bind(this, () => VM?.RefreshNames()); }
 
         public PokedexListsView(PokedexListsViewModel vm) : this()
         {

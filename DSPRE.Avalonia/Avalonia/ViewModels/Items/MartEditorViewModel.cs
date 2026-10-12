@@ -19,7 +19,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private readonly Action _changed;
 
         public int Slot { get; }
-        public string[] ItemNames { get; }
+        public ObservableCollection<string> ItemNames { get; }
         public bool HasTier => _getTier != null;
         /// <summary>Vanilla stock tier, or on hg-engine the badges needed (Kanto's count too).</summary>
         public int MaxTier { get; }
@@ -29,7 +29,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             get => _getItem();
             set
             {
-                if (value < 0 || value >= ItemNames.Length || value > ushort.MaxValue || value == _getItem()) return;
+                if (value < 0 || value >= ItemNames.Count || value > ushort.MaxValue || value == _getItem()) return;
                 _setItem((ushort)value);
                 Notify();
                 _changed();
@@ -48,7 +48,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             }
         }
 
-        internal MartItemRowVM(int slot, string[] itemNames, Func<ushort> getItem,
+        internal MartItemRowVM(int slot, ObservableCollection<string> itemNames, Func<ushort> getItem,
             Action<ushort> setItem, Action changed, Func<ushort> getTier = null,
             Action<ushort> setTier = null, int maxTier = 6)
         {
@@ -88,7 +88,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
     public sealed class MartEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         private MartData _data;
-        private readonly string[] _itemNames;
+        private readonly ObservableCollection<string> _itemNames = new ObservableCollection<string>();
         private byte[] _saved;
         private MartShopVM _selectedShop;
 
@@ -124,14 +124,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public bool CanRemoveCustomShop => CanResize && SelectedShop?.SpecialtySource?.IsCustom == true
             && SelectedShop.SpecialtySource.Id == _data.SpecialtyShops.Count - 1;
         public string ResizeStatus => _data?.FromSource == true
-            ? $"Edited in hg-engine's {DSPRE.HgEngine.HgEngineMarts.SourceRelPath}. Lists can be any length; the marts themselves are the game's slots."
+            ? $"Edited in {DSPRE.HgEngine.HgEngineMarts.SourceRelPath}."
             : CanResize
-            ? $"The marts have room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items each."
-            : "Adding or removing items or marts needs the \"Expand the marts\" patch from the ROM Patch Toolbox.";
+            ? $"Room for {MartData.RoomyShops} marts of {MartData.RoomyItems} items."
+            : "Adding items or marts needs the Expand the marts patch.";
         public string NewShopDisplayGuide => _data?.FromSource == true ? ""
             : SelectedShop?.SpecialtySource?.IsCustom == true
-            ? $"To display this mart, call SpMartScreen {SelectedShop.SpecialtySource.Id} from your script. DSPRE does not modify scripts automatically."
-            : "Custom marts receive a new SpMartScreen ID. You remain responsible for calling that ID from an event script.";
+            ? $"Open it with SpMartScreen {SelectedShop.SpecialtySource.Id} in a script."
+            : "A custom mart opens with its SpMartScreen number in a script.";
 
         public MartEditorViewModel()
         {
@@ -141,10 +141,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
             SelectedShop = sample;
         }
 
+        public void RefreshNames() => DSPRE.Avalonia.Data.ListSync.Apply(_itemNames, RomInfo.GetItemNames());
+
         public MartEditorViewModel(MartData data, string[] itemNames)
         {
             _data = data ?? throw new ArgumentNullException(nameof(data));
-            _itemNames = itemNames ?? Array.Empty<string>();
+            DSPRE.Avalonia.Data.ListSync.Apply(_itemNames, itemNames ?? Array.Empty<string>());
             PopulateShops();
             StartUndo();
         }

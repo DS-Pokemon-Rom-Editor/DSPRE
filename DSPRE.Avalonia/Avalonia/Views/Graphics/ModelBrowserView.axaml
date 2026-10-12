@@ -146,14 +146,14 @@
               <TextBlock Text="Pictures" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <ComboBox ItemsSource="{Binding TextureChoices}" SelectedIndex="{Binding TextureChoice, Mode=TwoWay}"
                         HorizontalAlignment="Stretch" FontSize="12"
-                        ToolTip.Tip="Buildings and map scenery take their pictures from a set shared by a whole map, so the model does not say which one. Pick the set you want to see it in."/>
+                        ToolTip.Tip="Which texture set to show it with."/>
             </StackPanel>
 
             <StackPanel Spacing="2" IsVisible="{Binding HasAnimationChoice}">
               <TextBlock Text="Movement" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <ComboBox ItemsSource="{Binding AnimationChoices}" SelectedIndex="{Binding AnimationIndex, Mode=TwoWay}"
                         HorizontalAlignment="Stretch" FontSize="12"
-                        ToolTip.Tip="Which movement to put on this model. Buildings keep their movements in a separate archive and do not say which one is theirs, so this is a choice."/>
+                        ToolTip.Tip="Which animation to play on this model."/>
             </StackPanel>
 
             <StackPanel Spacing="2" IsVisible="{Binding HasSlideChoice}">
@@ -181,7 +181,7 @@
               <TextBlock Text="Hidden parts" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <ComboBox ItemsSource="{Binding ShowingChoices}" SelectedItem="{Binding ShowingChoiceName, Mode=TwoWay}"
                         HorizontalAlignment="Stretch" FontSize="12"
-                        ToolTip.Tip="Parts of the model being hidden and shown again. Hidden parts are left out of the preview."/>
+                        ToolTip.Tip="Parts of the model that are hidden and shown."/>
             </StackPanel>
 
           <WrapPanel x:Name="PlayBar" Classes="toolbar" Orientation="Horizontal">

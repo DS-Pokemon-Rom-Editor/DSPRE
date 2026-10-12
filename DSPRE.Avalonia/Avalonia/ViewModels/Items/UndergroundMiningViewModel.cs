@@ -39,14 +39,20 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _table = MiningTable.Load();
             _saved = _table.ToBytes();
             StartUndo();
+            foreach (MiningTable.Row row in _table.Treasures) Rows.Add(new TreasureRow(this, row));
+            RefreshNames();
+        }
+
+        public void RefreshNames()
+        {
             string[] items = GetItemNames();
             Dictionary<string, int> seen = new Dictionary<string, int>();
-            foreach (MiningTable.Row row in _table.Treasures)
+            foreach (TreasureRow r in Rows)
             {
-                string name = _table.NameOf(row, items);
+                string name = _table.NameOf(r.Row, items);
                 seen[name] = seen.TryGetValue(name, out int n) ? n + 1 : 1;
                 // Rotated shapes of one treasure are separate rows.
-                Rows.Add(new TreasureRow(this, row, seen[name] > 1 ? $"{name} ({seen[name]})" : name));
+                r.Name = seen[name] > 1 ? $"{name} ({seen[name]})" : name;
             }
         }
 
@@ -55,9 +61,15 @@ namespace DSPRE.Avalonia.ViewModels.Items
             public event PropertyChangedEventHandler PropertyChanged;
             private readonly UndergroundMiningViewModel _o;
             private readonly MiningTable.Row _row;
-            public string Name { get; }
+            private string _name;
+            public string Name
+            {
+                get => _name;
+                set { if (_name == value) return; _name = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name))); }
+            }
             public int Item => _row.BagItem;
-            public TreasureRow(UndergroundMiningViewModel owner, MiningTable.Row row, string name) { _o = owner; _row = row; Name = name; }
+            internal MiningTable.Row Row => _row;
+            public TreasureRow(UndergroundMiningViewModel owner, MiningTable.Row row) { _o = owner; _row = row; }
 
             public decimal W0 { get => _row.Weights[0]; set => Set(0, value); }
             public decimal W1 { get => _row.Weights[1]; set => Set(1, value); }

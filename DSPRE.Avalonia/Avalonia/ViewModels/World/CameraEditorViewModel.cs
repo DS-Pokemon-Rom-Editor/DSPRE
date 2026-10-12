@@ -396,7 +396,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 SelectedCamera = Cameras.Count > 0 ? Cameras[0] : null;
                 LoadPreviewPlaces();
                 LoadPreviewWeathers();
-                StatusText = $"Loaded {camCount} cameras ({(IsHgss ? "HGSS" : "DP/Plat")})";
+                StatusText = $"{camCount} cameras.";
             }
             catch (Exception ex)
             {

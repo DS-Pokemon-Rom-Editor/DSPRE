@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.Views.Items
     {
         private UndergroundMiningViewModel VM => DataContext as UndergroundMiningViewModel;
 
-        public UndergroundMiningView() { InitializeComponent(); }
+        public UndergroundMiningView() { InitializeComponent(); NameRefresh.Bind(this, () => VM?.RefreshNames()); }
 
         public UndergroundMiningView(UndergroundMiningViewModel vm) : this() { DataContext = vm; }
 

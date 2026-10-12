@@ -74,7 +74,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (Loaded) return;
             PokemonNames = GetPokemonNames();
-            HeaderNames = HeaderLists.GetHeaderListBoxNames().ToArray();
+            HeaderNames = HeaderLabels.Friendly().ToArray();
             if (HgEngineProject.IsActive)
             {
                 if (!HgEngineRoamers.TryRead(out List<HgEngineRoamers.Slot> slots, out List<int> routes, out string error)) { WhyNotLoaded = error; Raise(nameof(WhyNotLoaded)); return; }

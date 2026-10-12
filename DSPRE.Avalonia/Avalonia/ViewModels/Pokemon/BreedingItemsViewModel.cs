@@ -37,8 +37,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        public string[] SpeciesNames { get; } = Array.Empty<string>();
-        public string[] ItemNames { get; } = Array.Empty<string>();
+        public ObservableCollection<string> SpeciesNames { get; } = new ObservableCollection<string>();
+        public ObservableCollection<string> ItemNames { get; } = new ObservableCollection<string>();
         public ObservableCollection<RowViewModel> Rows { get; } = new ObservableCollection<RowViewModel>();
 
         public BreedingItemsViewModel() { }
@@ -46,12 +46,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public BreedingItemsViewModel(bool load)
         {
             if (!load) return;
-            SpeciesNames = GetPokemonNames();
-            ItemNames = GetItemNames();
+            RefreshNames();
             _table = IncenseBreedingTable.Load();
             _saved = _table.ToBytes();
             foreach (IncenseBreedingTable.Row row in _table.Rows) Rows.Add(new RowViewModel(row, Changed) { Number = Rows.Count + 1 });
             StartUndo();
+        }
+
+        public void RefreshNames()
+        {
+            DSPRE.Avalonia.Data.ListSync.Apply(SpeciesNames, GetPokemonNames());
+            DSPRE.Avalonia.Data.ListSync.Apply(ItemNames, GetItemNames());
         }
 
         public sealed class RowViewModel : INotifyPropertyChanged
@@ -83,7 +88,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
-        public string Problem => _table?.Problem(SpeciesNames.Length, ItemNames.Length) ?? "";
+        public string Problem => _table?.Problem(SpeciesNames.Count, ItemNames.Count) ?? "";
         public bool HasProblem => Problem.Length > 0;
 
         private void Changed()
@@ -101,7 +106,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             if (_table == null) return true;
             if (HasProblem) { await DialogHelper.ShowError(Problem, "Breeding Items"); return false; }
-            try { _table.Save(SpeciesNames.Length, ItemNames.Length); }
+            try { _table.Save(SpeciesNames.Count, ItemNames.Count); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
             {
                 await DialogHelper.ShowError("The breeding items were not saved:\n" + e.Message, "Breeding Items");

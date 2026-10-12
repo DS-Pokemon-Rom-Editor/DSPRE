@@ -84,7 +84,7 @@
                     Padding="14,8" FontSize="14"/>
             <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
                     Padding="14,8" FontSize="14"
-                    ToolTip.Tip="Open this Pokemon's sprites in the Graphics window, where the drawing, its colours and its shiny colours can be painted by hand."/>
+                    ToolTip.Tip="Open in the Graphics window"/>
           </StackPanel>
 
           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
@@ -210,17 +210,17 @@
           <StackPanel Spacing="10" Margin="4">
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBlock Text="Sprite sheet" Width="80" VerticalAlignment="Center" FontWeight="SemiBold"
-                         ToolTip.Tip="Get the shiny palette from a fully shiny-colored Back+Front sheet. Artwork is unchanged, only colors are read from it."/>
+                         ToolTip.Tip="Take the shiny colours from a shiny sheet."/>
               <Button Classes="sprite-btn" Content="Import female…" controls:Icon.Key="import" Click="ImportFemaleShinySheet_Click" IsVisible="{Binding ShowFemaleShinyFormImport}"/>
               <Button Classes="sprite-btn" Content="Export female…" controls:Icon.Key="export" Click="ExportFemaleShinySheet_Click"/>
               <Button Classes="sprite-btn" Content="Import male…" controls:Icon.Key="import" Click="ImportMaleShinySheet_Click" IsVisible="{Binding !IsHgEngineSourced}"/>
               <Button Classes="sprite-btn" Content="Export male…" controls:Icon.Key="export" Click="ExportMaleShinySheet_Click"/>
               <Border Width="1" Margin="4,2" Background="{DynamicResource Editor.Border}" IsVisible="{Binding CanUseFullSheet}"/>
               <Button Classes="sprite-btn" Content="Import both…" controls:Icon.Key="import" Click="ImportShinyFullSheet_Click" IsVisible="{Binding ShowShinyFullSheetImport}"
-                      ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference sheet covering both genders; artwork is unchanged."/>
+                      ToolTip.Tip="Take the shiny colours from a shiny sheet."/>
               <Button Classes="sprite-btn" Content="Export both…" controls:Icon.Key="export" Click="ExportShinyFullSheet_Click" IsVisible="{Binding CanUseFullSheet}"/>
             </StackPanel>
-            <TextBlock Text="Shiny colours come from this species' hg-engine source (male back.png), the only shiny file there is."
+            <TextBlock Text="Shiny colours come from the male back sprite."
                        IsVisible="{Binding IsHgEngineSourced}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
             <Grid ColumnDefinitions="*,8,*,8,*,8,*">
               <StackPanel Grid.Column="0" Spacing="4" HorizontalAlignment="Center">
@@ -234,7 +234,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
                   <Button Classes="sprite-btn" Content="Import…" controls:Icon.Key="import" Click="ImportFemaleBackShiny_Click" IsVisible="{Binding ShowFemaleShinyFormImport}"
-                          ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference image; artwork is unchanged."/>
+                          ToolTip.Tip="Take the shiny colours from a shiny image."/>
                   <Button Classes="sprite-btn" Content="Export…" controls:Icon.Key="export" Click="ExportFemaleBackShiny_Click"/>
                 </StackPanel>
               </StackPanel>
@@ -249,7 +249,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
                   <Button Classes="sprite-btn" Content="Import…" controls:Icon.Key="import" Click="ImportMaleBackShiny_Click"
-                          ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference image; artwork is unchanged."/>
+                          ToolTip.Tip="Take the shiny colours from a shiny image."/>
                   <Button Classes="sprite-btn" Content="Export…" controls:Icon.Key="export" Click="ExportMaleBackShiny_Click"/>
                 </StackPanel>
               </StackPanel>
@@ -264,7 +264,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
                   <Button Classes="sprite-btn" Content="Import…" controls:Icon.Key="import" Click="ImportFemaleFrontShiny_Click" IsVisible="{Binding ShowFemaleShinyFormImport}"
-                          ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference image; artwork is unchanged."/>
+                          ToolTip.Tip="Take the shiny colours from a shiny image."/>
                   <Button Classes="sprite-btn" Content="Export…" controls:Icon.Key="export" Click="ExportFemaleFrontShiny_Click"/>
                 </StackPanel>
               </StackPanel>
@@ -279,7 +279,7 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="4">
                   <Button Classes="sprite-btn" Content="Import…" controls:Icon.Key="import" Click="ImportMaleFrontShiny_Click" IsVisible="{Binding !IsHgEngineSourced}"
-                          ToolTip.Tip="Derives the shiny palette from a full shiny-colored reference image; artwork is unchanged."/>
+                          ToolTip.Tip="Take the shiny colours from a shiny image."/>
                   <Button Classes="sprite-btn" Content="Export…" controls:Icon.Key="export" Click="ExportMaleFrontShiny_Click"/>
                 </StackPanel>
               </StackPanel>

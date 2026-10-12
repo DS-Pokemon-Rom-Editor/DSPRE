@@ -26,6 +26,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         internal string[] MoveNames;
         internal string[] PokemonNames;
 
+        internal void SetNames(string[] items, string[] moves, string[] pokemon)
+        {
+            ItemNames = items; MoveNames = moves; PokemonNames = pokemon;
+            OnPropertyChanged(nameof(ParamLabel));
+        }
+
         // Set by the parent VM when hg-engine is linked: MethodIndex then indexes into the real EVO_*
         // names read from the checkout instead of DSPRE's vanilla EvolutionMethod enum + LabelStore.
         internal bool UseHgEngineNames;
@@ -254,6 +260,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 row.UseHgEngineNames = UseHgEngineSource;
                 row.HgMethodNames = _hgMethodNamesArray;
             }
+        }
+
+        public void RefreshNames(string[] pokemonNames)
+        {
+            _itemNames = RomInfo.GetItemNames();
+            _moveNames = RomInfo.GetAttackNames();
+            _rowPokemonNames = pokemonNames;
+            List<string> targets = new List<string>();
+            for (int i = 0; i <= _lastTarget && i < pokemonNames.Length; i++) targets.Add(pokemonNames[i]);
+            DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, targets);
+            foreach (EvolutionRowViewModel row in EvoRows) row.SetNames(_itemNames, _moveNames, _rowPokemonNames);
         }
 
         private void OnLabelsChanged(object sender, EventArgs e)

@@ -118,7 +118,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         public bool HasSelection => Selected != null;
         public string SelectedName => Selected?.Name ?? "Nothing picked";
-        public string SelectedWhat => Selected?.Piece.What ?? "Pick a piece, on either screen or in the list.";
+        public string SelectedWhat => Selected?.Piece.What ?? "Pick a piece on either screen or in the list.";
         public string SelectedShared => Selected?.Piece.SharedNote;
         public bool SelectedIsShared => !string.IsNullOrEmpty(SelectedShared);
 
@@ -133,7 +133,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         /// <summary>Whether the picked piece is one this editor can hand to the painter.</summary>
         public bool CanPaint => CannotPaintBecause == null;
         public string CannotPaintBecause =>
-            Selected == null ? "Pick a piece first."
+            Selected == null ? ""
             : Selected.IsMissing ? "This piece could not be drawn, so there is nothing to paint."
             : Selected.Piece.CannotEditBecause
               ?? (Selected.Piece.Drawing < 0 ? "This piece is not a single drawing in an archive." : null);
@@ -239,7 +239,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
                 int missing = _pieces.Count(p => p.Rgba == null);
                 StatusText = missing == 0
-                    ? $"{_pieces.Count} pieces, all drawn from this ROM."
+                    ? $"{_pieces.Count} pieces."
                     : $"{_pieces.Count} pieces, {missing} of them could not be drawn.";
             }
             catch (Exception ex)

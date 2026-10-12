@@ -8,7 +8,7 @@ namespace DSPRE.Avalonia.Views.Items
     {
         private BerryDataEditorViewModel VM => DataContext as BerryDataEditorViewModel;
 
-        public BerryDataEditorView() { InitializeComponent(); }
+        public BerryDataEditorView() { InitializeComponent(); NameRefresh.Bind(this, () => VM?.RefreshNames()); }
 
         public BerryDataEditorView(BerryDataEditorViewModel vm) : this() { DataContext = vm; }
 

@@ -1152,6 +1152,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             Load(id);
         }
 
+        public void RefreshNames()
+        {
+            if (_set.NamingScreen || _entryIds.Count == 0) return;
+            List<string> names = _set.Names(SpriteCount());
+            List<string> labels = _entryIds.Select(i => $"[{_set.FileStem(i)}] {(i < names.Count ? names[i] : "")}").ToList();
+            DSPRE.Avalonia.Data.ListSync.Apply(ClassNames, labels);
+        }
+
         private int SpriteCount()
         {
             try { return Directory.GetFiles(gameDirs[_set.Archive].unpackedDir).Length / DSPRE.ROMFiles.TrainerBackSprites.FilesPerSprite; }

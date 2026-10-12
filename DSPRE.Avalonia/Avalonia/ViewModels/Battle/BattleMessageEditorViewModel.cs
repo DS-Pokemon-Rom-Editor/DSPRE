@@ -448,26 +448,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             _suppress = false;
         }
 
-        // ── Display / raw text conversion (mirrors Scintilla helpers) ──────────────────
-        private static string DisplayText(string raw)
-        {
-            foreach (string b in new[] { "\\n", "\\r", "\\f" }) raw = raw.Replace(b, b + Environment.NewLine);
-            return raw;
-        }
-
-        // A line break shown after \n, \r or \f markup is only for display; one typed anywhere else becomes \n.
-        private static string RawText(string display)
-        {
-            string s = display.Replace("\r\n", "\n").Replace('\r', '\n');
-            StringBuilder sb = new StringBuilder(s.Length);
-            foreach (char c in s)
-            {
-                if (c != '\n') { sb.Append(c); continue; }
-                bool afterMarkup = sb.Length >= 2 && sb[^2] == '\\' && (sb[^1] == 'n' || sb[^1] == 'r' || sb[^1] == 'f');
-                if (!afterMarkup) sb.Append("\\n");
-            }
-            return sb.ToString();
-        }
+        private static string DisplayText(string raw) => MessageMarkup.ToDisplay(raw);
+        private static string RawText(string display) => MessageMarkup.ToRaw(display);
 
         // ── Commands ────────────────────────────────────────────────────────────────────
         private bool HgeRefusesEdit(string title)

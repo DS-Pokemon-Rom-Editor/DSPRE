@@ -14,6 +14,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         public BattleTowerEditorView()
         {
             InitializeComponent();
+            NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         public BattleTowerEditorView(BattleTowerEditorViewModel vm) : this()
