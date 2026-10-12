@@ -155,7 +155,7 @@ namespace DSPRE.Avalonia.Views.Audio
             if (focused is TextBox or ComboBox) return;
             if (e.Key is Key.Up or Key.Down)
             {
-                if (focused is ListBoxItem or ListBox) return;
+                if (focused is ListBoxItem or ListBox or TreeViewItem or TreeView) return;
                 if (OpenList() is ListBox list && list.ItemCount > 0)
                 {
                     list.SelectedIndex = Math.Clamp(list.SelectedIndex + (e.Key == Key.Down ? 1 : -1), 0, list.ItemCount - 1);

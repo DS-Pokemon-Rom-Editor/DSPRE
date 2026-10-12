@@ -12,6 +12,21 @@
     <vm:AudioEditorViewModel/>
   </Design.DataContext>
 
+  <!-- The Music, Sound effects and Sounds trees: a bold group with its count, then its items. -->
+  <Window.Styles>
+    <Style Selector="TreeViewItem">
+      <Setter Property="IsExpanded" Value="{ReflectionBinding IsExpanded, Mode=TwoWay}"/>
+    </Style>
+  </Window.Styles>
+  <Window.DataTemplates>
+    <TreeDataTemplate DataType="vm:AudioGroup" ItemsSource="{Binding Items}">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+        <TextBlock Text="{Binding Count}" Foreground="{DynamicResource Editor.Subtle}"/>
+      </StackPanel>
+    </TreeDataTemplate>
+  </Window.DataTemplates>
+
   <DockPanel>
     <controls:EditorToolbar>
         <StackPanel x:Name="SaveButtons" Orientation="Horizontal" Spacing="6">
@@ -92,12 +107,12 @@
         </ListBox>
       </TabItem>
       <TabItem Header="Music">
-        <ListBox ItemsSource="{Binding Music}" SelectedItem="{Binding SelectedMusic}"
-                 DoubleTapped="List_DoubleTapped">
-          <ListBox.ItemTemplate>
-            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <TreeView ItemsSource="{Binding MusicBanks}" SelectedItem="{Binding SelectedMusicNode, Mode=TwoWay}"
+                  DoubleTapped="List_DoubleTapped">
+          <TreeView.DataTemplates>
+            <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+          </TreeView.DataTemplates>
+        </TreeView>
       </TabItem>
       <TabItem Header="Fanfares">
         <ListBox ItemsSource="{Binding Fanfares}" SelectedItem="{Binding SelectedFanfare}"
@@ -109,29 +124,23 @@
       </TabItem>
       <TabItem Header="Sound effects">
         <DockPanel>
-          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,6">
-            <TextBlock Text="Bank:" VerticalAlignment="Center"/>
-            <controls:FusionAutoCompleteBox ItemsSource="{Binding BankChoices}" SelectedIndex="{Binding BankIndex}" Width="260"
-                                            ToolTip.Tip="Type part of a bank name to search"/>
-            <CheckBox Content="Overworld" IsChecked="{Binding OverworldOnly}" VerticalAlignment="Center"
-                      ToolTip.Tip="Only the sound effects the overworld loads"/>
-          </StackPanel>
-          <ListBox ItemsSource="{Binding Effects}" SelectedItem="{Binding SelectedEffect}"
-                   DoubleTapped="List_DoubleTapped">
-            <ListBox.ItemTemplate>
-              <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+          <CheckBox DockPanel.Dock="Top" Content="Can play in overworld" IsChecked="{Binding OverworldOnly}" Margin="0,0,0,6"/>
+          <TreeView ItemsSource="{Binding EffectBanks}" SelectedItem="{Binding SelectedEffectNode, Mode=TwoWay}"
+                    DoubleTapped="List_DoubleTapped">
+            <TreeView.DataTemplates>
+              <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+            </TreeView.DataTemplates>
+          </TreeView>
         </DockPanel>
       </TabItem>
       <TabItem Header="Sounds"
                ToolTip.Tip="The sounds the music and the sound effects are made of. Each one can be heard, saved and replaced.">
-        <ListBox ItemsSource="{Binding Sounds}" SelectedItem="{Binding SelectedSound}"
-                 DoubleTapped="List_DoubleTapped">
-          <ListBox.ItemTemplate>
-            <DataTemplate><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <TreeView ItemsSource="{Binding SoundSets}" SelectedItem="{Binding SelectedSoundNode, Mode=TwoWay}"
+                  DoubleTapped="List_DoubleTapped">
+          <TreeView.DataTemplates>
+            <DataTemplate DataType="vm:AudioItem"><TextBlock Text="{Binding Label}" FontFamily="Consolas,monospace" FontSize="13"/></DataTemplate>
+          </TreeView.DataTemplates>
+        </TreeView>
       </TabItem>
     </TabControl>
   </DockPanel>

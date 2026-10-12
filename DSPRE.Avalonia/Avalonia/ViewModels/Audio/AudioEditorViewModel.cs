@@ -56,6 +56,22 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public string Label => $"{Number,5}  {Name}" + (_isPending ? "  (not saved)" : "");
     }
 
+    /// <summary>A group in the audio trees: a bank of tunes or effects, or a set of sounds.</summary>
+    public sealed class AudioGroup : INotifyPropertyChanged
+    {
+        public event PropertyChangedEventHandler PropertyChanged;
+        public string Name { get; init; }
+        public ObservableCollection<AudioItem> Items { get; } = new();
+        public string Count => Items.Count.ToString();
+
+        private bool _isExpanded;
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set { if (_isExpanded == value) return; _isExpanded = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded))); }
+        }
+    }
+
     /// <summary>Everything the ROM can play, in one place.</summary>
     public class AudioEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
@@ -72,6 +88,10 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         public ObservableCollection<AudioItem> Music { get; } = new();
         public ObservableCollection<AudioItem> Fanfares { get; } = new();
         public ObservableCollection<AudioItem> Effects { get; } = new();
+        public ObservableCollection<AudioGroup> EffectBanks { get; } = new();
+        public ObservableCollection<AudioGroup> MusicBanks { get; } = new();
+        public ObservableCollection<AudioGroup> SoundSets { get; } = new();
+        private readonly Dictionary<int, string> _bankNames = new();
         public ObservableCollection<AudioItem> Sounds { get; } = new();
 
         private readonly List<AudioItem> _allCries = new();
@@ -168,13 +188,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                     });
             }
 
-            BankChoices.Add("All banks");
-            foreach (IGrouping<int, AudioItem> bank in _allEffects.Where(e => e.Bank >= 0).GroupBy(e => e.Bank).OrderBy(b => b.Key))
-            {
-                string bankName = sdat.BankNames.TryGetValue(bank.Key, out string n) ? n : bank.Key.ToString();
-                _effectBanks.Add(bank.Key);
-                BankChoices.Add($"{bankName} ({bank.Count()})");
-            }
+            foreach (KeyValuePair<int, string> bank in sdat.BankNames) _bankNames[bank.Key] = bank.Value;
 
             ApplyFilter();
             Status = $"{_allCries.Count} cries, {_allMusic.Count} tunes, {_allFanfares.Count} fanfares, "
@@ -189,16 +203,6 @@ namespace DSPRE.Avalonia.ViewModels.Audio
         {
             get => _search;
             set { if (Set(ref _search, value)) ApplyFilter(); }
-        }
-
-        public ObservableCollection<string> BankChoices { get; } = new();
-        private readonly List<int> _effectBanks = new();
-
-        private int _bankIndex;
-        public int BankIndex
-        {
-            get => _bankIndex;
-            set { if (value >= 0 && Set(ref _bankIndex, value)) ApplyFilter(); }
         }
 
         private bool _overworldOnly;
@@ -220,13 +224,54 @@ namespace DSPRE.Avalonia.ViewModels.Audio
                          || i.Number.ToString().Contains(_search)))
                         into.Add(i);
             }
-            int bank = _bankIndex > 0 && _bankIndex <= _effectBanks.Count ? _effectBanks[_bankIndex - 1] : -1;
             Fill(Cries, _allCries);
-            Fill(Music, _allMusic);
             Fill(Fanfares, _allFanfares);
-            Fill(Effects, _allEffects, e => (bank < 0 || e.Bank == bank) && (!_overworldOnly || e.InOverworld));
-            Fill(Sounds, _allSounds);
+            FillGroups(MusicBanks, Music, _allMusic, i => i.Bank, BankName);
+            FillGroups(EffectBanks, Effects, _allEffects, i => i.Bank, BankName, i => !_overworldOnly || i.InOverworld);
+            FillGroups(SoundSets, Sounds, _allSounds, i => i.WaveArc, a => _allSounds.First(s => s.WaveArc == a).Detail);
             OnPropertyChanged(nameof(FoundSummary));
+        }
+
+        private string BankName(int bank) => _bankNames.TryGetValue(bank, out string n) ? n : bank < 0 ? "No bank" : "Bank " + bank;
+
+        // A search that names a group keeps the whole group; otherwise only the items whose name matches.
+        private void FillGroups(ObservableCollection<AudioGroup> groups, ObservableCollection<AudioItem> flat, List<AudioItem> from,
+                                Func<AudioItem, int> key, Func<int, string> groupName, Func<AudioItem, bool> keep = null)
+        {
+            groups.Clear();
+            flat.Clear();
+            bool searching = !string.IsNullOrWhiteSpace(_search);
+            foreach (IGrouping<int, AudioItem> part in from.GroupBy(key).OrderBy(b => b.Key))
+            {
+                string name = groupName(part.Key);
+                bool groupMatches = searching && SearchMatch.Contains(name, _search);
+                AudioGroup group = new AudioGroup { Name = name, IsExpanded = searching };
+                foreach (AudioItem i in part)
+                    if ((keep == null || keep(i))
+                        && (!searching || groupMatches || SearchMatch.Contains(i.Name, _search) || i.Number.ToString().Contains(_search)))
+                    {
+                        group.Items.Add(i);
+                        flat.Add(i);
+                    }
+                if (group.Items.Count > 0) groups.Add(group);
+            }
+        }
+
+        // What each tree has picked; a group row picks nothing.
+        public object SelectedMusicNode
+        {
+            get => _selectedMusic;
+            set { SelectedMusic = value as AudioItem; OnPropertyChanged(); }
+        }
+        public object SelectedEffectNode
+        {
+            get => _selectedEffect;
+            set { SelectedEffect = value as AudioItem; OnPropertyChanged(); }
+        }
+        public object SelectedSoundNode
+        {
+            get => _selectedSound;
+            set { SelectedSound = value as AudioItem; OnPropertyChanged(); }
         }
 
         public string FoundSummary => string.IsNullOrWhiteSpace(_search)
