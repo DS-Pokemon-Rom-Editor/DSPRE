@@ -410,13 +410,15 @@ namespace DSPRE.ROMFiles
                 int sound = HasFootsteps(family) ? value & FootstepMask : 0;
                 if (value == 0x00) return (60 / 255f, 160 / 255f, 70 / 255f);
                 if (value == BlockedBit) return (180 / 255f, 60 / 255f, 60 / 255f);
+                // Each sound gets its own hue; blocked keeps the hue but goes dark.
                 if (sound > 0 && sound < FootstepSounds)
-                    return IsBlocked(value) ? Hsv((sound * 7) % 30, 0.6, 0.72) : Hsv(95 + (sound * 11) % 60, 0.6, 0.66);
+                    return Hsv((sound * 137) % 360, 0.7, IsBlocked(value) ? 0.45 : 0.9);
                 return Hsv((value * 47) % 360, 0.55, 0.85);
             }
+            if (value == 0x00) return (45 / 255f, 45 / 255f, 50 / 255f);
             TileBehaviour behaviour = FindBehaviour(value, family);
             int seed = behaviour != null && Seeds.TryGetValue(behaviour.Key, out int s) ? s : value;
-            return Hsv((seed * 47) % 360, 0.55, 0.85);
+            return Hsv((seed * 137.508) % 360, 0.75, 0.9);
         }
 
         private static (float r, float g, float b) Hsv(double h, double s, double v)

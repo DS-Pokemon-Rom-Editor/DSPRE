@@ -97,7 +97,7 @@
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" MinWidth="300"/>
         <ColumnDefinition Width="Auto"/>
-        <ColumnDefinition Width="420" MinWidth="380"/>
+        <ColumnDefinition Width="480" MinWidth="380"/>
       </Grid.ColumnDefinitions>
       <!-- 3D preview (geometry; textures deferred) -->
       <Border x:Name="GlHost" Grid.Column="0" Background="Transparent" Margin="4">
@@ -113,7 +113,7 @@
             <StackPanel DockPanel.Dock="Top" Spacing="4">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Collision painter" FontWeight="Bold"/>
-                <controls:HelpTip Text="Click or drag on a grid below to paint. In 'This header' view, use Paint in the 3D view instead."/>
+                <controls:HelpTip Text="Click or drag on the grid below to paint, middle-click to fill, right-click to pick. In 'This header' view, use Paint in the 3D view instead."/>
               </StackPanel>
               <controls:IdNameSelector Maximum="255" Value="{Binding CollisionValue}" Names="{Binding CollisionNames}" Keys="{Binding CollisionKeys}"
                                        ToolTip.Tip="A number with no name is painted as it is"/>
@@ -124,14 +124,25 @@
                 <Button Content="Scan used types" controls:Icon.Key="lens" HorizontalAlignment="Left" Click="ScanTypes_Click"/>
               </StackPanel>
             </StackPanel>
-            <Grid RowDefinitions="Auto,*,Auto,*,Auto" IsVisible="{Binding IsSingleMap}">
-              <TextBlock Grid.Row="0" Text="Collision" FontWeight="Bold" Margin="0,2"/>
-              <gl:PermissionGridControl Grid.Row="1" x:Name="CollisionGrid" MinHeight="180"/>
-              <TextBlock Grid.Row="2" Text="Type" FontWeight="Bold" Margin="0,4,0,2"/>
-              <gl:PermissionGridControl Grid.Row="3" x:Name="TypeGrid" MinHeight="180"/>
-              <TextBlock Grid.Row="4" Margin="0,4,0,0" TextWrapping="Wrap" MinHeight="16"
+            <StackPanel Spacing="4" Margin="0,0,14,0" IsVisible="{Binding IsSingleMap}">
+              <StackPanel Orientation="Horizontal" Spacing="12">
+                <RadioButton GroupName="PermissionLayer" IsChecked="{Binding PermissionShowsCollision}">
+                  <StackPanel Spacing="2">
+                    <gl:PermissionGridControl x:Name="CollisionThumb" Width="64" Height="64" IsHitTestVisible="False"/>
+                    <TextBlock Text="Collision" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </RadioButton>
+                <RadioButton GroupName="PermissionLayer" IsChecked="{Binding PermissionShowsType}">
+                  <StackPanel Spacing="2">
+                    <gl:PermissionGridControl x:Name="TypeThumb" Width="64" Height="64" IsHitTestVisible="False"/>
+                    <TextBlock Text="Type" HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </RadioButton>
+              </StackPanel>
+              <gl:PermissionGridControl x:Name="PermGrid" MinHeight="180"/>
+              <TextBlock TextWrapping="Wrap" MinHeight="16"
                          Foreground="{DynamicResource Editor.Subtle}" Text="{Binding PermissionHover}"/>
-            </Grid>
+            </StackPanel>
           </DockPanel>
           </ScrollViewer>
         </TabItem>

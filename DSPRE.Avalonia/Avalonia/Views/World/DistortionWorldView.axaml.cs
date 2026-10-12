@@ -34,6 +34,8 @@ namespace DSPRE.Avalonia.Views.World
             BehaviourGrid.Changed += Painted;
             CollisionGrid.Hovered += Hovered;
             BehaviourGrid.Hovered += Hovered;
+            CollisionGrid.Picked += (_, value) => VM?.PickCollision(value);
+            BehaviourGrid.Picked += (_, value) => VM?.PickBehaviour(value);
 
             vm.SceneShown += ShowScene;
             vm.PlatformShown += ShowPlatform;

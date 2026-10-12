@@ -263,6 +263,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             _behaviourPainterIndex >= 0 && _behaviourPainterIndex < BehaviourPainters.Count
                 ? BehaviourPainters[_behaviourPainterIndex].Value : (byte)0;
 
+        public void PickCollision(byte value) => CollisionPainterIndex = TilePermissions.IsBlocked(value) ? 1 : 0;
+
+        // A behaviour with no painter is left alone.
+        public void PickBehaviour(byte value)
+        {
+            for (int i = 0; i < BehaviourPainters.Count; i++)
+                if (BehaviourPainters[i].Value == value) { BehaviourPainterIndex = i; return; }
+        }
+
         private string _floorNote = "";
         public string FloorNote { get => _floorNote; private set => Set(ref _floorNote, value); }
 

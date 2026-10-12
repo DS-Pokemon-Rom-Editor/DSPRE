@@ -416,6 +416,15 @@ namespace DSPRE.Avalonia.ViewModels.World
             }
         }
 
+        // Which layer the permission grid shows and paints.
+        private bool _permissionShowsType;
+        public bool PermissionShowsType
+        {
+            get => _permissionShowsType;
+            set { if (Set(ref _permissionShowsType, value)) OnPropertyChanged(nameof(PermissionShowsCollision)); }
+        }
+        public bool PermissionShowsCollision { get => !_permissionShowsType; set => PermissionShowsType = !value; }
+
         private string _permissionHover = "";
         public string PermissionHover { get => _permissionHover; private set => Set(ref _permissionHover, value); }
 

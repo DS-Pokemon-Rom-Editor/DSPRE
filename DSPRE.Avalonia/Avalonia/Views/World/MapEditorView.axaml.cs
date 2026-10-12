@@ -27,12 +27,20 @@ namespace DSPRE.Avalonia.Views.World
             InitializeComponent();
             DSPRE.Avalonia.Controls.SidePanelWidth.Remember(SplitGrid, () => SettingsManager.Settings.mapEditorSidePanelWidth,
                 w => SettingsManager.Settings.mapEditorSidePanelWidth = w);
-            CollisionGrid.IsCollision = true;
-            TypeGrid.IsCollision = false;
-            CollisionGrid.Changed += (_, _) => { VM?.MarkDirty(); VM?.RebuildOverlay(); };
-            TypeGrid.Changed += (_, _) => { VM?.MarkDirty(); VM?.RebuildOverlay(); };
-            CollisionGrid.Hovered += (_, at) => VM?.HoverPermission(at);
-            TypeGrid.Hovered += (_, at) => VM?.HoverPermission(at);
+            CollisionThumb.IsCollision = true;
+            TypeThumb.IsCollision = false;
+            PermGrid.Changed += (_, _) =>
+            {
+                VM?.MarkDirty(); VM?.RebuildOverlay();
+                CollisionThumb.InvalidateVisual(); TypeThumb.InvalidateVisual();
+            };
+            PermGrid.Hovered += (_, at) => VM?.HoverPermission(at);
+            PermGrid.Picked += (_, value) =>
+            {
+                if (VM == null) return;
+                if (VM.PermissionShowsType) VM.TypeValue = value;
+                else VM.CollisionValue = value;
+            };
 
             // Left-drag pans, right-drag orbits, wheel zooms. In 3D edit mode a left-press grabs a
             // gizmo axis (to drag the building) or picks a building. See Gl3DPointerNavigation.
@@ -144,7 +152,7 @@ namespace DSPRE.Avalonia.Views.World
                 };
                 vm.PaintModeChanged += (_, _) => { if (VM.PaintMode) GlView.SetOrientation(0f, 89f); };   // lock to Top
                 vm.ViewModeChanged += (_, _) => ApplyViewMode();
-                vm.PaintedTile += (_, _) => { CollisionGrid.SetData(VM.Collisions); TypeGrid.SetData(VM.Types); };
+                vm.PaintedTile += (_, _) => ShowPermissions();
                 vm.PropertyChanged += OnVmPropertyChanged;
                 GlView.ShowTextures = vm.ShowTextures;
                 vm.EditModeChanged += (_, _) => RefreshGizmo();
@@ -154,12 +162,20 @@ namespace DSPRE.Avalonia.Views.World
             ApplyViewMode();
         }
 
+        private void ShowPermissions()
+        {
+            if (VM == null) return;
+            bool type = VM.PermissionShowsType;
+            CollisionThumb.SetData(VM.Collisions);
+            TypeThumb.SetData(VM.Types);
+            PermGrid.IsCollision = !type;
+            PermGrid.SetData(type ? VM.Types : VM.Collisions);
+            PermGrid.PaintValue = type ? VM.TypePaintValue : VM.CollisionPaintValue;
+        }
+
         private void OnMapLoaded(object sender, EventArgs e)
         {
-            CollisionGrid.SetData(VM.Collisions);
-            TypeGrid.SetData(VM.Types);
-            CollisionGrid.PaintValue = VM.CollisionPaintValue;
-            TypeGrid.PaintValue = VM.TypePaintValue;
+            ShowPermissions();
             GlView.SetModel(VM.Model3D);
             GlView.BuildingAnimator = BuildingAnimatorFor(VM.Model3D);
             RefreshGizmo();
@@ -228,8 +244,8 @@ namespace DSPRE.Avalonia.Views.World
 
         private void OnVmPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(MapEditorViewModel.CollisionPaintValue)) CollisionGrid.PaintValue = VM.CollisionPaintValue;
-            else if (e.PropertyName == nameof(MapEditorViewModel.TypePaintValue)) TypeGrid.PaintValue = VM.TypePaintValue;
+            if (e.PropertyName is nameof(MapEditorViewModel.CollisionPaintValue) or nameof(MapEditorViewModel.TypePaintValue)
+                or nameof(MapEditorViewModel.PermissionShowsType)) ShowPermissions();
             else if (e.PropertyName == nameof(MapEditorViewModel.ShowTextures)) GlView.ShowTextures = VM.ShowTextures;
         }
 

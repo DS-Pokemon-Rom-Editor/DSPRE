@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Input;
@@ -8,7 +10,7 @@ namespace DSPRE.Avalonia.Gl
 {
     /// <summary>
     /// Paintable 32×32 byte grid for map movement permissions (collision / type).
-    /// Click or drag to fill cells with the current paint value; cells are colour-coded
+    /// Left-click or drag paints, middle-click fills, right-click picks; cells are colour-coded
     /// by value. Raises <see cref="Changed"/> on edits so the editor can mark itself dirty.
     /// </summary>
     public class PermissionGridControl : Control
@@ -37,20 +39,64 @@ namespace DSPRE.Avalonia.Gl
         {
             ClipToBounds = true;
             Focusable = false;
+            RenderOptions.SetTextRenderingMode(this, TextRenderingMode.Antialias);
         }
 
         public void SetData(byte[,] data)
         {
             _data = data;
+            _text.Clear();
             InvalidateVisual();
+        }
+
+        /// <summary>Raised with the value under a right-click, so the painter can take it.</summary>
+        public event EventHandler<byte> Picked;
+
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            double side = Math.Min(availableSize.Width, availableSize.Height);
+            if (double.IsInfinity(side)) side = MinHeight;
+            return new Size(Math.Max(side, MinHeight), Math.Max(side, MinHeight));
         }
 
         protected override void OnPointerPressed(PointerPressedEventArgs e)
         {
             base.OnPointerPressed(e);
+            PointerUpdateKind kind = e.GetCurrentPoint(this).Properties.PointerUpdateKind;
+            if (kind == PointerUpdateKind.RightButtonPressed)
+            {
+                if (_data != null && At(e.GetPosition(this)) is (int pc, int pr)) Picked?.Invoke(this, _data[pr, pc]);
+                e.Handled = true;
+                return;
+            }
+            if (kind == PointerUpdateKind.MiddleButtonPressed)
+            {
+                if (At(e.GetPosition(this)) is (int fc, int fr)) Fill(fc, fr);
+                e.Handled = true;
+                return;
+            }
             _painting = true;
             e.Pointer.Capture(this);
             Paint(e.GetPosition(this));
+        }
+
+        private void Fill(int col, int row)
+        {
+            int cols = Math.Min(Size, UsedColumns), rows = Math.Min(Size, UsedRows);
+            if (_data == null || col >= cols || row >= rows) return;
+            byte from = _data[row, col];
+            if (from == PaintValue) return;
+            Stack<(int c, int r)> todo = new Stack<(int c, int r)>();
+            todo.Push((col, row));
+            while (todo.Count > 0)
+            {
+                (int c, int r) = todo.Pop();
+                if (c < 0 || r < 0 || c >= cols || r >= rows || _data[r, c] != from) continue;
+                _data[r, c] = PaintValue;
+                todo.Push((c + 1, r)); todo.Push((c - 1, r)); todo.Push((c, r + 1)); todo.Push((c, r - 1));
+            }
+            InvalidateVisual();
+            Changed?.Invoke(this, EventArgs.Empty);
         }
 
         protected override void OnPointerMoved(PointerEventArgs e)
@@ -81,6 +127,22 @@ namespace DSPRE.Avalonia.Gl
             e.Pointer.Capture(null);
         }
 
+        // Hex IDs per value, rebuilt when the cell size changes.
+        private readonly Dictionary<(byte, bool), FormattedText> _text = new Dictionary<(byte, bool), FormattedText>();
+        private double _textSize;
+
+        private FormattedText IdText(byte value)
+        {
+            if (_text.TryGetValue((value, IsCollision), out FormattedText t)) return t;
+            (float r, float g, float b) = PermissionColors.Rgb(value, IsCollision);
+            IBrush ink = 0.299 * r + 0.587 * g + 0.114 * b > 0.55 ? Brushes.Black
+                       : !IsCollision && value == 0 ? new SolidColorBrush(Color.FromArgb(70, 255, 255, 255)) : Brushes.White;
+            t = new FormattedText(value.ToString("X2"), CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
+                                  Typeface.Default, Math.Min(12, _textSize * 0.6), ink);
+            _text[(value, IsCollision)] = t;
+            return t;
+        }
+
         private double CellSize => Math.Max(1, Math.Min(Bounds.Width, Bounds.Height) / Size);
 
         private void Paint(Point p)
@@ -103,17 +165,23 @@ namespace DSPRE.Avalonia.Gl
             ctx.FillRectangle(Brushes.Black, new Rect(0, 0, full, full));
             if (_data == null) return;
 
-            Pen grid = new Pen(new SolidColorBrush(Color.FromArgb(40, 255, 255, 255)));
+            Pen grid = new Pen(new SolidColorBrush(Color.FromArgb(140, 0, 0, 0)));
+            bool ids = cs * (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) >= 12;
+            if (ids && Math.Abs(_textSize - cs) > 0.01) { _text.Clear(); _textSize = cs; }
             for (int row = 0; row < Size; row++)
                 for (int col = 0; col < Size; col++)
                 {
-                    IBrush brush = PermissionColors.Brush(_data[row, col], IsCollision);
-                    ctx.FillRectangle(brush, new Rect(col * cs, row * cs, cs, cs));
+                    byte v = _data[row, col];
+                    Rect cell = new Rect(col * cs, row * cs, cs, cs);
+                    ctx.FillRectangle(PermissionColors.Brush(v, IsCollision), cell);
+                    if (ids)
+                    {
+                        FormattedText t = IdText(v);
+                        ctx.DrawText(t, new Point(cell.X + (cs - t.Width) / 2, cell.Y + (cs - t.Height) / 2));
+                    }
                     if (row >= UsedRows || col >= UsedColumns)
-                        ctx.FillRectangle(new SolidColorBrush(Color.FromArgb(190, 0, 0, 0)),
-                            new Rect(col * cs, row * cs, cs, cs));
+                        ctx.FillRectangle(new SolidColorBrush(Color.FromArgb(190, 0, 0, 0)), cell);
                 }
-            // light grid lines
             for (int i = 0; i <= Size; i++)
             {
                 ctx.DrawLine(grid, new Point(i * cs, 0), new Point(i * cs, full));
