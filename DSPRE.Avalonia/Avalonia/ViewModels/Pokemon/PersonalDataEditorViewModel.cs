@@ -163,8 +163,17 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<string> EggGroupNames { get; } = new();
 
         // ── TM machine list boxes ─────────────────────────────────────────────
-        public ObservableCollection<string> AddedMachines    { get; } = new();
-        public ObservableCollection<string> AddableMachines  { get; } = new();
+        public ObservableCollection<MachineRow> AddedMachines    { get; } = new();
+        public ObservableCollection<MachineRow> AddableMachines  { get; } = new();
+
+        /// <summary>A TM or HM in the compatibility lists: its label and the move it teaches.</summary>
+        public sealed class MachineRow
+        {
+            public int Index { get; init; }
+            public int Move { get; init; }
+            public string Label { get; init; }
+            public override string ToString() => Label;
+        }
 
         private int _selectedAddedMachineIndex = -1;
         public int SelectedAddedMachineIndex
@@ -712,8 +721,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 foreach (string n in Enum.GetNames(typeof(PokemonGrowthCurve))) GrowthCurveNames.Add(n);
                 foreach (string n in Enum.GetNames(typeof(PokemonDexColor)))    DexColorNames.Add(n);
                 foreach (string n in Enum.GetNames(typeof(PokemonEggGroup)))    EggGroupNames.Add(n);
-                AddedMachines.Add("TM01 - Focus Punch"); AddedMachines.Add("TM02 - Dragon Claw");
-                AddableMachines.Add("TM03 - Water Pulse"); AddableMachines.Add("TM04 - Calm Mind");
+                AddedMachines.Add(new MachineRow { Label = "TM01 - Focus Punch" }); AddedMachines.Add(new MachineRow { Index = 1, Label = "TM02 - Dragon Claw" });
+                AddableMachines.Add(new MachineRow { Index = 2, Label = "TM03 - Water Pulse" }); AddableMachines.Add(new MachineRow { Index = 3, Label = "TM04 - Calm Mind" });
                 BaseHP = 45; BaseAtk = 49; BaseDef = 49; BaseSpe = 45; BaseSpA = 65; BaseSpD = 65;
                 EvSpA = 1; CatchRate = 45; BaseExp = 64; GenderVec = 31; EggSteps = 20;
                 BaseFriendship = 70; EscapeRate = 0;
@@ -727,6 +736,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _abilityNamesArr = GetAbilityNames();
             _itemNamesArr    = GetItemNames();
             _machineMoveNames = TMEditor.ReadMachineMoveNames().ToArray();
+            _machineMoves = TMEditor.ReadMachineMoves();
 
             // Full pokemon name list (base + alt forms this ROM actually has data for + extra)
             _allFileNames = GetPokemonNamesWithForms(GetPersonalFilesCount());
@@ -752,6 +762,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _abilityNamesArr  = GetAbilityNames();
             _itemNamesArr     = GetItemNames();
             _machineMoveNames = TMEditor.ReadMachineMoveNames().ToArray();
+            _machineMoves = TMEditor.ReadMachineMoves();
             _allFileNames     = pokemonNames;
 
             foreach (string n in _allFileNames)    PokemonNames.Add(n);
@@ -1117,7 +1128,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void AddMachineCommand()
         {
             if (_current == null || _selectedAddableMachineIndex < 0 || _selectedAddableMachineIndex >= AddableMachines.Count) return;
-            int idx = TMEditor.MachineIndexFromLabel(AddableMachines[_selectedAddableMachineIndex]);
+            int idx = AddableMachines[_selectedAddableMachineIndex].Index;
             if (idx < 0) return;
             SetMachine(idx, true);
             RebuildMachineLists();
@@ -1127,7 +1138,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void RemoveMachineCommand()
         {
             if (_current == null || _selectedAddedMachineIndex < 0 || _selectedAddedMachineIndex >= AddedMachines.Count) return;
-            int idx = TMEditor.MachineIndexFromLabel(AddedMachines[_selectedAddedMachineIndex]);
+            int idx = AddedMachines[_selectedAddedMachineIndex].Index;
             // hg-engine's build adds every level-up move back, which the row's "(level-up)" says.
             if (LearnedByLevelUp(idx)) return;
             if (idx < 0) return;
@@ -1701,7 +1712,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 string label = TMEditor.MachineLabelFromIndex(i);
                 string move  = _machineMoveNames.Length > i ? _machineMoveNames[i] : $"UNK_{i}";
-                string entry = LearnedByLevelUp(i) ? $"{label} - {move} (level-up)" : $"{label} - {move}";
+                MachineRow entry = new MachineRow
+                {
+                    Index = i,
+                    Move = _machineMoves.Length > i ? _machineMoves[i] : 0,
+                    Label = LearnedByLevelUp(i) ? $"{label} - {move} (level-up)" : $"{label} - {move}",
+                };
                 if (HasMachine(i)) AddedMachines.Add(entry);
                 else                               AddableMachines.Add(entry);
             }

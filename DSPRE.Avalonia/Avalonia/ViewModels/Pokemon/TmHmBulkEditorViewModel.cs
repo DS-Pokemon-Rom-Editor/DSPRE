@@ -175,11 +175,34 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _families = BuildFamilies();
 
             for (int p = 0; p < MachineNamesList.Length; p++)
-                MachineChecklist.Add(new FlagChecklistItem { Index = _order[p], Name = MachineNamesList[p] });
+                MachineChecklist.Add(new FlagChecklistItem { Index = _order[p], Name = MachineNamesList[p], Move = MachineMove(p) });
 
             RebuildTree();
             RefreshMachineChecklistFromSelection();
             ResetUndo();
+            UpdateStatus();
+        }
+
+        // The move a checklist row teaches: on hg-engine a row is one move, otherwise one machine slot.
+        private int MachineMove(int position)
+        {
+            if (FromSource) return position < _rowMove.Length ? _rowMove[position] : 0;
+            _vanillaMachineMoves ??= TMEditor.ReadMachineMoves();
+            int slot = _order[position];
+            return slot >= 0 && slot < _vanillaMachineMoves.Length ? _vanillaMachineMoves[slot] : 0;
+        }
+        private int[] _vanillaMachineMoves;
+
+        public void RefreshNames()
+        {
+            _pokemonNames = GetPokemonNames();
+            if (FromSource) { _rowOfMove.Clear(); BuildMoveRows(out string[] labels); MachineNamesList = labels; }
+            else MachineNamesList = BuildMachineLabels();
+            MachineChecklist.Clear();
+            for (int p = 0; p < MachineNamesList.Length; p++)
+                MachineChecklist.Add(new FlagChecklistItem { Index = _order[p], Name = MachineNamesList[p], Move = MachineMove(p) });
+            RebuildTree();
+            RefreshMachineChecklistFromSelection();
             UpdateStatus();
         }
 

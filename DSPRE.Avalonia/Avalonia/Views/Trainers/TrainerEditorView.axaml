@@ -22,8 +22,8 @@
             <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
             <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Undo (Ctrl+Z)"/>
             <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-            <Button Content="Add trainer" controls:Icon.Key="addIcon" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
-            <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the final added trainer if no event, script, message, rematch table, or phonebook entry uses it"/>
+            <Button Content="Add" controls:Icon.Key="addIcon" Click="AddTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Append a new, blank trainer after the last one"/>
+            <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveTrainer_Click" IsVisible="{Binding !IsHgeActive}" ToolTip.Tip="Remove the last trainer if nothing uses it"/>
             <Button Content="Search…" controls:Icon.Key="lens"        Click="Search_Click"/>
             <Button controls:EditorToolbar.Slot="Import" Content="Import" controls:Icon.Key="import" IsVisible="{Binding !IsHgeActive}">
               <Button.Flyout>
@@ -233,10 +233,10 @@
                             <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}"
                                       MaxDropDownHeight="360"/>
                             <Button Content="Design" Click="DesignCapsule_Click" Margin="0,2,0,0" FontSize="11" Padding="6,1"
-                                    ToolTip.Tip="Open in Ball Capsules"/>
+                                    ToolTip.Tip="Open in Ball Capsules" IsVisible="{Binding HasCapsule}"/>
                           </StackPanel>
                           <Border Width="64" Height="64" CornerRadius="32" Background="#2A7FA8C8" BorderBrush="#557FA8C8" BorderThickness="1"
-                                  ClipToBounds="True">
+                                  ClipToBounds="True" IsVisible="{Binding HasCapsule}">
                             <ItemsControl ItemsSource="{Binding CapsuleStickers}">
                               <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
@@ -269,32 +269,46 @@
                         <ItemsControl ItemsSource="{Binding DefaultMoves}">
                           <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel ItemSpacing="6"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                           <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="x:String">
-                              <Border Width="150" Padding="6,4" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource Editor.Border}">
-                                <TextBlock Text="{Binding}" Foreground="{DynamicResource Editor.Subtle}"/>
+                            <DataTemplate x:DataType="vm:TrainerPartyMonViewModel+DefaultMove">
+                              <Border Width="260" Padding="6,4" Margin="0,0,0,4" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource Editor.Border}">
+                                <DockPanel>
+                                  <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move}" Margin="0,0,6,0"/>
+                                  <TextBlock Text="{Binding Name}" Foreground="{DynamicResource Editor.Subtle}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                </DockPanel>
                               </Border>
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
                       </StackPanel>
-                      <WrapPanel>
-                        <StackPanel Width="140" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
-                          <TextBlock Text="Move 1" FontSize="10"/>
-                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move1}"/>
-                        </StackPanel>
-                        <StackPanel Width="140" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
-                          <TextBlock Text="Move 2" FontSize="10"/>
-                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move2}"/>
-                        </StackPanel>
-                        <StackPanel Width="140" Margin="0,0,6,0" IsVisible="{Binding MovesEnabled}">
-                          <TextBlock Text="Move 3" FontSize="10"/>
-                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move3}"/>
-                        </StackPanel>
-                        <StackPanel Width="140" IsVisible="{Binding MovesEnabled}">
-                          <TextBlock Text="Move 4" FontSize="10"/>
-                          <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}"/>
-                        </StackPanel>
-                      </WrapPanel>
+                      <StackPanel IsVisible="{Binding MovesEnabled}">
+                        <TextBlock Text="Moves" FontSize="10"/>
+                        <WrapPanel>
+                          <Border Width="260" Padding="4,2" Margin="0,0,6,4" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource Editor.Border}">
+                            <DockPanel>
+                              <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move1}" Margin="0,0,6,0"/>
+                              <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move1}"/>
+                            </DockPanel>
+                          </Border>
+                          <Border Width="260" Padding="4,2" Margin="0,0,6,4" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource Editor.Border}">
+                            <DockPanel>
+                              <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move2}" Margin="0,0,6,0"/>
+                              <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move2}"/>
+                            </DockPanel>
+                          </Border>
+                          <Border Width="260" Padding="4,2" Margin="0,0,6,4" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource Editor.Border}">
+                            <DockPanel>
+                              <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move3}" Margin="0,0,6,0"/>
+                              <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move3}"/>
+                            </DockPanel>
+                          </Border>
+                          <Border Width="260" Padding="4,2" Margin="0,0,6,4" CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource Editor.Border}">
+                            <DockPanel>
+                              <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move4}" Margin="0,0,6,0"/>
+                              <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}"/>
+                            </DockPanel>
+                          </Border>
+                        </WrapPanel>
+                      </StackPanel>
                       </StackPanel>
 
                       <Expander Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" Header="Advanced"

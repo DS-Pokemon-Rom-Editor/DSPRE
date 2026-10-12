@@ -45,10 +45,24 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="" Width="76" CanUserResize="False">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:DataType="vm:BulkLearnsetRow">
+              <controls:MoveBadges Move="{Binding MoveIndex}" Margin="4,0"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
         <DataGridTemplateColumn Header="Move" Width="*">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate x:DataType="vm:BulkLearnsetRow">
               <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding MoveIndex}" HorizontalAlignment="Stretch" Margin="2"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="Power  Acc.  PP" Width="130" CanUserResize="False">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate x:DataType="vm:BulkLearnsetRow">
+              <controls:MoveBadges Move="{Binding MoveIndex}" ShowIcons="False" ShowStats="True" Margin="4,0"/>
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>

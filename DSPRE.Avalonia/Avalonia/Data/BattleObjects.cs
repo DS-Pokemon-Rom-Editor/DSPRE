@@ -221,7 +221,7 @@ namespace DSPRE.Avalonia.Data
         };
 
         // Physical, special, status: the order of the game's category icon table.
-        private static readonly string[] KindOrder = { "MoveIcon.Physical", "MoveIcon.Special", "MoveIcon.Status" };
+        public static readonly string[] KindOrder = { "MoveIcon.Physical", "MoveIcon.Special", "MoveIcon.Status" };
 
         private static readonly object BanksLock = new();
         private static string _banksFor;

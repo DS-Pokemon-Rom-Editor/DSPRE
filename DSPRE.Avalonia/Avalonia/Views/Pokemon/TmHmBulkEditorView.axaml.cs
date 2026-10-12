@@ -12,6 +12,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         public TmHmBulkEditorView()
         {
             InitializeComponent();
+            NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         public TmHmBulkEditorView(TmHmBulkEditorViewModel vm) : this()

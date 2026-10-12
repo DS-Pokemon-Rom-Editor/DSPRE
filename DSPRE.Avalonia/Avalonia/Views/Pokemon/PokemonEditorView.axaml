@@ -32,7 +32,7 @@
                 ToolTip.Tip="Save every tab (Ctrl+S)"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button Content="Add new…" controls:Icon.Key="addIcon" Click="AddSpecies_Click" IsVisible="{Binding ShowHgEngineBanner}" IsEnabled="{Binding CanAddSpecies}"
+        <Button Content="Add…" controls:Icon.Key="addIcon" Click="AddSpecies_Click" IsVisible="{Binding ShowHgEngineBanner}" IsEnabled="{Binding CanAddSpecies}"
                 ToolTip.Tip="Add a new base species. It is created when you save."/>
         <Button Content="Cry" controls:Icon.Key="speaker" Click="PlayCry_Click" ToolTip.Tip="Play cry"/>
         <Button Content="Edit cry" controls:Icon.Key="pencil" Click="EditCry_Click" ToolTip.Tip="Open in the Audio editor"/>
@@ -72,8 +72,24 @@
               <Button Grid.Column="14" Content="Down" controls:Icon.Key="arrowdown"   Click="Learnset_MoveDown_Click" MinWidth="44" IsEnabled="{Binding CanMoveDown}"/>
             </Grid>
           </Border>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="64,74,180,Auto" Margin="12,4,0,2" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource Editor.Subtle}">
+            <Grid Grid.Column="3" ColumnDefinitions="40,44,28" Margin="6,0,0,0">
+              <TextBlock Text="Power" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Column="1" Text="Acc." HorizontalAlignment="Right"/>
+              <TextBlock Grid.Column="2" Text="PP" HorizontalAlignment="Right"/>
+            </Grid>
+          </Grid>
           <ListBox ItemsSource="{Binding Entries}" SelectedIndex="{Binding SelectedEntryIndex}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-            <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}" FontFamily="Consolas,monospace" FontSize="12"/></DataTemplate></ListBox.ItemTemplate>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="64,74,180,Auto">
+                  <TextBlock Text="{Binding LevelText}" FontFamily="Consolas,monospace" FontSize="12" VerticalAlignment="Center"/>
+                  <controls:MoveBadges Grid.Column="1" Move="{Binding MoveIndex}" Margin="0,0,8,0"/>
+                  <TextBlock Grid.Column="2" Text="{Binding MoveName}" VerticalAlignment="Center"/>
+                  <controls:MoveBadges Grid.Column="3" Move="{Binding MoveIndex}" ShowIcons="False" ShowStats="True"/>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
           </ListBox>
         </DockPanel>
       </TabItem>

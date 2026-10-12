@@ -114,7 +114,8 @@ namespace DSPRE.Avalonia.Controls
             if (label is "Discard" or "Reset" or "Revert") return ToolbarSlot.Discard;
             if (label == "Undo") return ToolbarSlot.Undo;
             if (label == "Redo") return ToolbarSlot.Redo;
-            if (label.StartsWith("Add", StringComparison.OrdinalIgnoreCase) || label.StartsWith("New", StringComparison.OrdinalIgnoreCase)) return ToolbarSlot.Add;
+            if (label.StartsWith("Add", StringComparison.OrdinalIgnoreCase) || label.StartsWith("New", StringComparison.OrdinalIgnoreCase)
+                || label.Equals("Duplicate", StringComparison.OrdinalIgnoreCase)) return ToolbarSlot.Add;
             if (label.StartsWith("Remove", StringComparison.OrdinalIgnoreCase) || label.StartsWith("Delete", StringComparison.OrdinalIgnoreCase)) return ToolbarSlot.Remove;
             if (label.StartsWith("Import", StringComparison.OrdinalIgnoreCase)) return ToolbarSlot.Import;
             if (label.StartsWith("Export", StringComparison.OrdinalIgnoreCase)) return ToolbarSlot.Export;
@@ -122,11 +123,14 @@ namespace DSPRE.Avalonia.Controls
         }
 
         private readonly List<StackPanel> _captioned = new();
+        private readonly List<StackPanel> _groupPanels = new();
 
         private void Arrange()
         {
             foreach ((Control item, int _) in _placed) item.PropertyChanged -= ChildChanged;
             _panel.Children.Clear();
+            foreach (StackPanel g in _groupPanels) g.Children.Clear();
+            _groupPanels.Clear();
             foreach (StackPanel pair in _captioned) pair.Children.Clear();
             _captioned.Clear();
             _dividers.Clear();
@@ -156,20 +160,28 @@ namespace DSPRE.Avalonia.Controls
             IOrderedEnumerable<(Control Item, ToolbarSlot Slot, int Order)> ordered =
                 slotted.OrderBy(x => GroupOf(x.Slot)).ThenBy(x => x.Slot == ToolbarSlot.Extra || x.Slot == ToolbarSlot.Picker ? 0 : (int)x.Slot).ThenBy(x => x.Order);
 
+            // Each group sits in one piece, so a toolbar that has to wrap never splits Add from Remove last.
             int lastGroup = -1;
+            StackPanel groupPanel = null;
             foreach ((Control item, ToolbarSlot slot, int _) in ordered)
             {
                 int group = GroupOf(slot);
-                if (lastGroup >= 0 && group != lastGroup)
+                if (group != lastGroup)
                 {
-                    Control divider = new global::Avalonia.Controls.Shapes.Rectangle { Width = 1, Margin = new Thickness(3, 4, 9, 4), VerticalAlignment = VerticalAlignment.Stretch };
-                    divider.Bind(global::Avalonia.Controls.Shapes.Shape.FillProperty, this.GetResourceObservable("Editor.Separator"));
-                    _panel.Children.Add(divider);
-                    _dividers.Add((divider, group));
+                    if (lastGroup >= 0)
+                    {
+                        Control divider = new global::Avalonia.Controls.Shapes.Rectangle { Width = 1, Margin = new Thickness(3, 4, 9, 4), VerticalAlignment = VerticalAlignment.Stretch };
+                        divider.Bind(global::Avalonia.Controls.Shapes.Shape.FillProperty, this.GetResourceObservable("Editor.Separator"));
+                        _panel.Children.Add(divider);
+                        _dividers.Add((divider, group));
+                    }
+                    groupPanel = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+                    _groupPanels.Add(groupPanel);
+                    _panel.Children.Add(groupPanel);
                 }
                 if (item.Margin == default) item.Margin = new Thickness(0, 2, 6, 2);
                 if (item.VerticalAlignment == VerticalAlignment.Stretch) item.VerticalAlignment = VerticalAlignment.Center;
-                _panel.Children.Add(item);
+                groupPanel.Children.Add(item);
                 _placed.Add((item, group));
                 item.PropertyChanged += ChildChanged;
                 lastGroup = group;

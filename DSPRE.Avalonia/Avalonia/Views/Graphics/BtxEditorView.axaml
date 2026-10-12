@@ -26,7 +26,7 @@
       <StackPanel x:Name="EntryButtons" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2" IsVisible="{Binding ShowEntryButtons}">
         <Button Content="Add custom entry…" controls:Icon.Key="addIcon" Click="AddEntry_Click" IsEnabled="{Binding CanAddEntry}"
                 ToolTip.Tip="{Binding AddEntryNote}"/>
-        <Button Content="Delete selected entry" controls:Icon.Key="deleteIcon" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}"
+        <Button Content="Remove selected" controls:Icon.Key="deleteIcon" Click="DeleteEntry_Click" IsEnabled="{Binding CanDeleteSelected}"
                 IsVisible="{Binding IsExpansionApplied}" ToolTip.Tip="Only entries you added"/>
       </StackPanel>
       <TextBlock Text="{Binding ModifiedCount}" Foreground="OrangeRed" FontSize="12"/>

@@ -293,18 +293,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             set { if (value != null && value.Dv != (int)_difficulty) Difficulty = value.Dv; }
         }
 
-        private IReadOnlyList<string> _defaultMoves = Array.Empty<string>();
+        public sealed record DefaultMove(int Move, string Name);
+        private IReadOnlyList<DefaultMove> _defaultMoves = Array.Empty<DefaultMove>();
         /// <summary>The level-up moves it knows when the trainer has no custom moves.</summary>
-        public IReadOnlyList<string> DefaultMoves { get => _defaultMoves; private set { _defaultMoves = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShowDefaultMoves)); } }
+        public IReadOnlyList<DefaultMove> DefaultMoves { get => _defaultMoves; private set { _defaultMoves = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShowDefaultMoves)); } }
         public bool ShowDefaultMoves => !_movesEnabled && _defaultMoves.Count > 0;
 
         /// <summary>Shows the nature, IVs and nature choices a personality gives, and the default gender and ability.</summary>
-        public void ShowPersonality(uint pid, uint defaultPid, IReadOnlyList<NatureChoice> choices, IReadOnlyList<string> defaultMoves)
+        public void ShowPersonality(uint pid, uint defaultPid, IReadOnlyList<NatureChoice> choices, IReadOnlyList<DefaultMove> defaultMoves)
         {
             NatureText = DVCalculator.Natures[DVCalculator.getNatureFromPID(pid)];
             IvText = ((int)_difficulty * 31 / 255).ToString();
             NatureChoices = choices;
-            DefaultMoves = defaultMoves ?? Array.Empty<string>();
+            DefaultMoves = defaultMoves ?? Array.Empty<DefaultMove>();
 
             byte ratio = GenderRatio(DataSpeciesId);
             string gender = ratio switch { 255 => "Genderless", 254 => "Female", 0 => "Male", _ => (defaultPid & 0xFF) < ratio ? "Female" : "Male" };
@@ -364,7 +365,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             set
             {
                 if (!Set(ref _ballSeals, value)) return;
-                OnPropertyChanged(nameof(CapsuleIndex));
+                OnPropertyChanged(nameof(CapsuleIndex)); OnPropertyChanged(nameof(HasCapsule));
                 ShowCapsule();
                 Touch();
             }
@@ -377,6 +378,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get => _capsuleNames;
             set { _capsuleNames = value ?? Array.Empty<string>(); OnPropertyChanged(); OnPropertyChanged(nameof(CapsuleIndex)); ShowCapsule(); }
         }
+
+        /// <summary>Whether a capsule is picked, so its preview and Design button are worth showing.</summary>
+        public bool HasCapsule => _ballSeals > 0;
 
         public int CapsuleIndex
         {

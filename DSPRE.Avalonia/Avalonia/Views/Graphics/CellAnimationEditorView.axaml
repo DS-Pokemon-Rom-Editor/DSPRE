@@ -49,8 +49,8 @@
                          ToolTip.Tip="Jump straight to a sequence by its number"/>
         </StackPanel>
         <StackPanel x:Name="SequenceButtons" DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
-          <Button Content="Add on the end" controls:Icon.Key="addIcon" Click="AddSequence_Click" FontSize="11" Padding="7,2"/>
-          <Button Content="Remove the last" controls:Icon.Key="deleteIcon" Click="RemoveSequence_Click" FontSize="11" Padding="7,2"/>
+          <Button Content="Add" controls:Icon.Key="addIcon" Click="AddSequence_Click" FontSize="11" Padding="7,2"/>
+          <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveSequence_Click" FontSize="11" Padding="7,2"/>
         </StackPanel>
         <ListBox x:Name="SequenceList" ItemsSource="{Binding Sequences}" SelectedIndex="{Binding SelectedSequence}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">

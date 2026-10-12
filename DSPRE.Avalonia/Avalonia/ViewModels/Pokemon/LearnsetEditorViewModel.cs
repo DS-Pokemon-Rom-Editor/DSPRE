@@ -34,12 +34,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // Display string shown in the list (e.g. "Lv.  5: Tackle")
         public string Display { get; private set; }
+        public string LevelText => $"Lv. {_level,3}";
+        public string MoveName { get; private set; }
 
         public void UpdateDisplay(string[] moveNames)
         {
-            string moveName = (_moveIndex >= 0 && _moveIndex < moveNames.Length) ? moveNames[_moveIndex] : $"#{_moveIndex}";
-            Display = $"Lv. {_level,3}: {moveName}";
-            OnPropertyChanged(nameof(Display));
+            MoveName = (_moveIndex >= 0 && _moveIndex < moveNames.Length) ? moveNames[_moveIndex] : $"#{_moveIndex}";
+            Display = $"Lv. {_level,3}: {MoveName}";
+            OnPropertyChanged(nameof(Display)); OnPropertyChanged(nameof(LevelText)); OnPropertyChanged(nameof(MoveName));
         }
     }
 

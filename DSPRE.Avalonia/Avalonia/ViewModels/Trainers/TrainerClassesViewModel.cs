@@ -230,7 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool ShowMetadata => _metadataFields != null;
 
         private int _battleMusic;
-        public int BattleMusic { get => _battleMusic; set { if (Set(ref _battleMusic, value)) MarkDirty(); } }
+        public int BattleMusic { get => _battleMusic; set { if (Set(ref _battleMusic, value)) { OnPropertyChanged(nameof(BattleMusicIndex)); MarkDirty(); } } }
 
         private string _introSummary = "";
         public string IntroSummary { get => _introSummary; private set => Set(ref _introSummary, value); }
@@ -293,10 +293,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private decimal _musicMain;
-        public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) MarkDirty(); } }
+        public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) { OnPropertyChanged(nameof(MusicMainIndex)); MarkDirty(); } } }
+
+        /// <summary>The game's music tracks by name, for the three music pickers.</summary>
+        public DSPRE.Avalonia.ViewModels.World.MappedCombo MusicNames { get; } = new DSPRE.Avalonia.ViewModels.World.MappedCombo();
+        public int MusicMainIndex { get => MusicNames.IndexOf((int)_musicMain); set { if (value >= 0) MusicMain = MusicNames.KeyAt(value); } }
+        public int MusicAltIndex { get => MusicNames.IndexOf((int)_musicAlt); set { if (value >= 0) MusicAlt = MusicNames.KeyAt(value); } }
+        public int BattleMusicIndex { get => MusicNames.IndexOf(_battleMusic); set { if (value >= 0) BattleMusic = MusicNames.KeyAt(value); } }
 
         private decimal _musicAlt;
-        public decimal MusicAlt { get => _musicAlt; set { if (Set(ref _musicAlt, value)) MarkDirty(); } }
+        public decimal MusicAlt { get => _musicAlt; set { if (Set(ref _musicAlt, value)) { OnPropertyChanged(nameof(MusicAltIndex)); MarkDirty(); } } }
 
         private bool _musicEnabled;
         public bool MusicEnabled { get => _musicEnabled; private set => Set(ref _musicEnabled, value); }
@@ -487,6 +493,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public TrainerClassesViewModel(int initialClass)
         {
+            MusicNames.LoadSequences();
             _animTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000.0 / 60) };
             _animTimer.Tick += (_, _) => AnimTick();
             _animTimer.Start();

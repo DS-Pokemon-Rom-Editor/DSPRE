@@ -127,7 +127,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string Title { get => _title; private set => Set(ref _title, value); }
 
         public ObservableCollection<string> MonList    { get; } = new();
-        public ObservableCollection<string> MoveList   { get; } = new();
+        public ObservableCollection<EggMoveRow> MoveList { get; } = new();
+        public sealed class EggMoveRow { public int Move { get; init; } public string Name { get; init; } }
         public ObservableCollection<string> MonNames   { get; } = new();
         public ObservableCollection<string> MoveNames  { get; } = new();
         public ObservableCollection<string> SearchResults { get; } = new();
@@ -355,7 +356,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
             entry.moveIDs.Add((ushort)CbMoveIndex);
             _eggMoveData[_selectedMonIndex] = entry;
-            MoveList.Add(MoveLabel((ushort)CbMoveIndex));
+            MoveList.Add(Row((ushort)CbMoveIndex));
             SelectedMoveIndex = entry.moveIDs.Count - 1;
             UpdateMoveCountLabel();
             UpdateListSizeLabel();
@@ -368,7 +369,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             EggMoveEntry entry = _eggMoveData[_selectedMonIndex];
             entry.moveIDs[_selectedMoveIndex] = (ushort)CbMoveIndex;
             _eggMoveData[_selectedMonIndex] = entry;
-            MoveList[_selectedMoveIndex] = MoveLabel((ushort)CbMoveIndex);
+            MoveList[_selectedMoveIndex] = Row((ushort)CbMoveIndex);
             SetDirty(true);
         }
 
@@ -561,11 +562,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             MoveList.Clear();
             if (monIdx < 0 || monIdx >= _eggMoveData.Count) return;
-            foreach (ushort id in _eggMoveData[monIdx].moveIDs) MoveList.Add(MoveLabel(id));
+            foreach (ushort id in _eggMoveData[monIdx].moveIDs) MoveList.Add(Row(id));
         }
 
         private string MonLabel(int id)  => id >= 0 && id < _monNames.Length  ? _monNames[id]  : $"SPECIES_{id}";
         private string MoveLabel(ushort id) => id < _moveNames.Length ? _moveNames[id] : $"MOVE_{id}";
+        private EggMoveRow Row(ushort id) => new EggMoveRow { Move = id, Name = MoveLabel(id) };
 
         private void UpdateMonStatus()
         {

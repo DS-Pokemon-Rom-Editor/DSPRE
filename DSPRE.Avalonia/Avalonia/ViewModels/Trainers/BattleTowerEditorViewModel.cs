@@ -173,7 +173,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int AddSetNumber
         {
             get => _addSetNumber;
-            set { if (Set(ref _addSetNumber, value)) OnPropertyChanged(nameof(AddSetPreviewLabel)); }
+            set { if (value >= 0 && Set(ref _addSetNumber, value)) OnPropertyChanged(nameof(AddSetPreviewLabel)); }
         }
 
         public string AddSetPreviewLabel => $"({SetLabelFor(AddSetNumber)})";
@@ -194,7 +194,35 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private int _setSpeciesIndex = -1;
-        public int SetSpeciesIndex { get => _setSpeciesIndex; set { if (Set(ref _setSpeciesIndex, value) && !_suppress) SetFieldChanged(SetField.Species); } }
+        public int SetSpeciesIndex { get => _setSpeciesIndex; set { if (!Set(ref _setSpeciesIndex, value)) return; RebuildForms(); if (!_suppress) SetFieldChanged(SetField.Species); } }
+
+        /// <summary>The picked species' form names; a form with no name keeps the number box.</summary>
+        public ObservableCollection<string> FormNames { get; } = new ObservableCollection<string>();
+        public bool ShowFormNames => FormNames.Count > 1 && _form < FormNames.Count;
+        public bool ShowFormNumber => !ShowFormNames && _form != 0;
+        public int FormIndex { get => !_formBlank && _form < FormNames.Count ? _form : -1; set { if (value >= 0 && !_formBlank) Form = value; } }
+        private bool _formBlank, _formRepushPending;
+
+        private void RebuildForms()
+        {
+            string[] names = _setSpeciesIndex > 0 ? PokemonForms.NamesOf(_setSpeciesIndex) : null;
+            DSPRE.Avalonia.Data.ListSync.Apply(FormNames, names ?? new[] { "Normal" });
+            RaiseForms();
+            // Rewriting the names drops the box's pick after this returns, so the pick is pushed again: blank, then the form.
+            if (_formRepushPending) return;
+            _formRepushPending = true;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                _formBlank = true; OnPropertyChanged(nameof(FormIndex));
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { _formBlank = false; _formRepushPending = false; OnPropertyChanged(nameof(FormIndex)); },
+                    global::Avalonia.Threading.DispatcherPriority.Background);
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
+        }
+
+        private void RaiseForms()
+        {
+            OnPropertyChanged(nameof(FormIndex)); OnPropertyChanged(nameof(ShowFormNames)); OnPropertyChanged(nameof(ShowFormNumber));
+        }
 
         private int _move1 = -1, _move2 = -1, _move3 = -1, _move4 = -1;
         public int Move1 { get => _move1; set { if (Set(ref _move1, value) && !_suppress) SetFieldChanged(SetField.Move1); } }
@@ -209,7 +237,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int ItemIndex { get => _itemIndex; set { if (Set(ref _itemIndex, value) && !_suppress) SetFieldChanged(SetField.Item); } }
 
         private int _form;
-        public int Form { get => _form; set { if (Set(ref _form, value) && !_suppress) SetFieldChanged(SetField.Form); } }
+        public int Form { get => _form; set { if (!Set(ref _form, value)) return; RaiseForms(); if (!_suppress) SetFieldChanged(SetField.Form); } }
 
         private bool _evHp, _evAtk, _evDef, _evSpe, _evSpa, _evSpd;
         public bool EvHp { get => _evHp; set { if (Set(ref _evHp, value) && !_suppress) SetFieldChanged(SetField.Evs); } }

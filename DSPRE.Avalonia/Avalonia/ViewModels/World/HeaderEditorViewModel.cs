@@ -48,6 +48,29 @@ namespace DSPRE.Avalonia.ViewModels.World
             for (int i = 0; i < labels.Count; i++) Keys.Add(i);
         }
 
+        /// <summary>Fills with this game's music tracks.</summary>
+        public void LoadMusic() => Load(RomInfo.gameFamily switch
+        {
+            RomInfo.GameFamilies.DP => PokeDatabase.MusicDB.DPMusicDict,
+            RomInfo.GameFamilies.Plat => PokeDatabase.MusicDB.PtMusicDict,
+            _ => PokeDatabase.MusicDB.HGSSMusicDict,
+        });
+
+        /// <summary>Fills with every music sequence in the sound archive, battle and eye-contact themes included.</summary>
+        public void LoadSequences()
+        {
+            Names.Clear(); Keys.Clear();
+            SdatArchive sdat;
+            try { sdat = SoundArchive.Load(); } catch (Exception e) when (e is System.IO.IOException || e is InvalidOperationException) { return; }
+            if (sdat?.SeqNames == null) return;
+            foreach (KeyValuePair<int, string> kv in sdat.SeqNames.OrderBy(kv => kv.Key))
+            {
+                if (kv.Value == null || kv.Value.StartsWith("SEQ_SE_", StringComparison.Ordinal) || kv.Value == SoundArchive.CrySequenceName) continue;
+                Keys.Add(kv.Key);
+                Names.Add(VsIntroNames.SequenceLabel(kv.Key, kv.Value));
+            }
+        }
+
         public int IndexOf(int value) => Keys.IndexOf(value);
         public int KeyAt(int index) => index >= 0 && index < Keys.Count ? Keys[index] : -1;
     }

@@ -86,8 +86,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<CheckRow> MovesOfSpecies { get; } = new ObservableCollection<CheckRow>();
         public ObservableCollection<CheckRow> SpeciesOfMove { get; } = new ObservableCollection<CheckRow>();
         // Built once per change: a new list on every read makes the ListBox drop its selection.
-        private List<string> _tutorNames;
-        public List<string> TutorNames => _tutorNames ??= _data?.Pool.Select((t, i) => $"{i + 1}. {Name(t.Move)}").ToList() ?? new List<string>();
+        private List<TutorRow> _tutorNames;
+        public List<TutorRow> TutorNames => _tutorNames ??= _data?.Pool.Select((t, i) => new TutorRow { Move = t.Move, Label = $"{i + 1}. {Name(t.Move)}" }).ToList() ?? new List<TutorRow>();
+        public sealed class TutorRow { public int Move { get; init; } public string Label { get; init; } public override string ToString() => Label; }
 
         public MoveTutorEditorViewModel() { }
 
@@ -193,7 +194,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             private readonly Func<bool> _get;
             private readonly Action<bool> _set;
             public string Name { get; }
-            public CheckRow(string name, Func<bool> get, Action<bool> set) { Name = name; _get = get; _set = set; }
+            public int Move { get; }
+            public CheckRow(string name, Func<bool> get, Action<bool> set, int move = 0) { Name = name; _get = get; _set = set; Move = move; }
             public bool IsChecked { get => _get(); set { if (value != _get()) { _set(value); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked))); } } }
             internal void Refresh() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked)));
         }
@@ -222,7 +224,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             for (int t = 0; t < _data.Pool.Count; t++)
             {
                 int tutor = t;
-                MovesOfSpecies.Add(new CheckRow($"{t + 1}. {Name(_data.Pool[t].Move)}", () => _data.Learns(row, tutor), v => { _data.SetLearns(row, tutor, v); Changed(false); }));
+                MovesOfSpecies.Add(new CheckRow($"{t + 1}. {Name(_data.Pool[t].Move)}", () => _data.Learns(row, tutor), v => { _data.SetLearns(row, tutor, v); Changed(false); }, _data.Pool[t].Move));
             }
         }
 

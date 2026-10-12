@@ -36,17 +36,15 @@ namespace DSPRE.Avalonia.Controls
                 try { DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { _kind switch { Kind.Item => RomInfo.DirNames.itemIcons, Kind.Pokemon => RomInfo.DirNames.monIcons, _ => RomInfo.DirNames.moveData } }); }
                 catch { }
             }
+            // Move data can be edited while open, so moves are not cached here; MoveInfo is told about saves.
+            if (_kind == Kind.MoveType) return Data.MoveInfo.Of(id) is Data.MoveInfo.Facts mf ? Data.TypeIcons.For(mf.Type) : null;
             if (_cache.TryGetValue(id, out Bitmap known)) return known;
 
             Bitmap icon = null;
             try
             {
-                if (_kind == Kind.MoveType) icon = Data.TypeIcons.For((int)new DSPRE.MoveData(id).movetype);
-                else
-                {
-                    RawImage raw = _kind == Kind.Item ? DSUtils.GetItemPicRaw(id, 32, 32) : DSUtils.GetPokePicRaw(id, 32, 32);
-                    if (raw != null) icon = ImageConverter.ToAvaloniaBitmap(raw);
-                }
+                RawImage raw = _kind == Kind.Item ? DSUtils.GetItemPicRaw(id, 32, 32) : DSUtils.GetPokePicRaw(id, 32, 32);
+                if (raw != null) icon = ImageConverter.ToAvaloniaBitmap(raw);
             }
             catch { icon = null; }
             _cache[id] = icon;

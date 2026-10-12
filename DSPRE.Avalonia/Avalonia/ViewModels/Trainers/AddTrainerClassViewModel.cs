@@ -45,7 +45,16 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool AddMusic { get => _addMusic; set => Set(ref _addMusic, value); }
 
         private decimal _musicMain;
-        public decimal MusicMain { get => _musicMain; set => Set(ref _musicMain, value); }
+        public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) OnPropertyChanged(nameof(MusicMainIndex)); } }
+
+        public DSPRE.Avalonia.ViewModels.World.MappedCombo MusicNames { get; } = CreateMusicNames();
+        public int MusicMainIndex { get => MusicNames.IndexOf((int)_musicMain); set { if (value >= 0) MusicMain = MusicNames.KeyAt(value); } }
+        private static DSPRE.Avalonia.ViewModels.World.MappedCombo CreateMusicNames()
+        {
+            DSPRE.Avalonia.ViewModels.World.MappedCombo combo = new DSPRE.Avalonia.ViewModels.World.MappedCombo();
+            if (!global::Avalonia.Controls.Design.IsDesignMode) combo.LoadSequences();
+            return combo;
+        }
 
         public ObservableCollection<string> SpriteChoices { get; } = new();
 

@@ -78,6 +78,7 @@
               <Grid ColumnDefinitions="*,110">
                 <DockPanel Margin="0,0,8,0">
                   <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                  <controls:MoveBadges DockPanel.Dock="Left" Margin="0,0,6,0" Move="{Binding Item, Converter={x:Static controls:TaughtMoveConverter.Instance}}"/>
                   <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" AllowsNone="False" ItemsSource="{Binding $parent[ListBox].((vm:BpShopEditorViewModel)DataContext).ItemNames}" SelectedIndex="{Binding Item}"/>
                 </DockPanel>
                 <NumericUpDown Grid.Column="1" Classes="bp" Value="{Binding Price}"/>

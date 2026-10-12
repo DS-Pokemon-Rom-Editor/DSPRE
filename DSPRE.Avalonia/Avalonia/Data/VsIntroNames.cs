@@ -63,9 +63,12 @@ namespace DSPRE.Avalonia.Data
         }
         public string SpeciesName(int id) => At(Species, id, $"Pokémon {id}");
 
-        public string Sequence(int id)
+        public string Sequence(int id) => SequenceLabel(id, _sequences.TryGetValue(id, out string name) ? name : null);
+
+        /// <summary>A sequence as the music pickers show it: what it is where known, then its name without SEQ_.</summary>
+        public static string SequenceLabel(int id, string name)
         {
-            if (!_sequences.TryGetValue(id, out string name) || string.IsNullOrEmpty(name)) return $"Theme {id}";
+            if (string.IsNullOrEmpty(name)) return $"Theme {id}";
             string raw = name.StartsWith("SEQ_", StringComparison.Ordinal) ? name.Substring(4) : name;
             string plain = PlainTheme(raw);
             return plain == null ? raw : $"{plain} · {raw}";

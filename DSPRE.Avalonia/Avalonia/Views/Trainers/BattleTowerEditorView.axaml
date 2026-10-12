@@ -31,7 +31,7 @@
       <TabItem Header="Trainers">
         <Grid ColumnDefinitions="280,*" Margin="6">
           <DockPanel Grid.Column="0" Margin="0,0,6,0">
-            <Button DockPanel.Dock="Top" Content="New trainer" controls:Icon.Key="addIcon" Click="NewTrainer_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
+            <Button DockPanel.Dock="Top" Content="Add" controls:Icon.Key="addIcon" Click="NewTrainer_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding TrainerLabels}" SelectedIndex="{Binding SelectedTrainerIndex}"/>
           </DockPanel>
 
@@ -54,9 +54,8 @@
               <ListBox x:Name="SetIdList" Height="160" ItemsSource="{Binding SetIdLabels}" SelectedIndex="{Binding SelectedSetIdIndex}"
                        DoubleTapped="SetIdList_DoubleTapped"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="Add set #:" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding AddSetNumber}" Minimum="0" Maximum="9999" Width="120"/>
-                <TextBlock Text="{Binding AddSetPreviewLabel}" VerticalAlignment="Center"/>
+                <controls:FusionAutoCompleteBox Width="280" ItemsSource="{Binding SetLabels}" SelectedIndex="{Binding AddSetNumber}"
+                                                PlaceholderText="Set to add"/>
                 <Button Content="Add" controls:Icon.Key="addIcon" Click="AddSet_Click"/>
                 <Button Content="Remove selected" controls:Icon.Key="deleteIcon" Click="RemoveSet_Click"/>
               </StackPanel>
@@ -68,7 +67,7 @@
       <TabItem Header="Pokémon sets">
         <Grid ColumnDefinitions="280,*" Margin="6">
           <DockPanel Grid.Column="0" Margin="0,0,6,0">
-            <Button DockPanel.Dock="Top" Content="New set" controls:Icon.Key="addIcon" Click="NewSet_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
+            <Button DockPanel.Dock="Top" Content="Add" controls:Icon.Key="addIcon" Click="NewSet_Click" HorizontalAlignment="Stretch" Margin="0,0,0,4"/>
             <ListBox ItemsSource="{Binding SetLabels}" SelectedIndex="{Binding SelectedSetIndex}"/>
           </DockPanel>
 
@@ -84,13 +83,25 @@
                 <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SetSpeciesIndex}" HorizontalAlignment="Stretch"/>
 
                 <TextBlock Text="Move 1"/>
-                <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move1}" HorizontalAlignment="Stretch"/>
+                <DockPanel>
+                  <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move1}" Margin="0,0,6,0"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move1}" HorizontalAlignment="Stretch"/>
+                </DockPanel>
                 <TextBlock Text="Move 2"/>
-                <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move2}" HorizontalAlignment="Stretch"/>
+                <DockPanel>
+                  <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move2}" Margin="0,0,6,0"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move2}" HorizontalAlignment="Stretch"/>
+                </DockPanel>
                 <TextBlock Text="Move 3"/>
-                <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move3}" HorizontalAlignment="Stretch"/>
+                <DockPanel>
+                  <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move3}" Margin="0,0,6,0"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move3}" HorizontalAlignment="Stretch"/>
+                </DockPanel>
                 <TextBlock Text="Move 4"/>
-                <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}" HorizontalAlignment="Stretch"/>
+                <DockPanel>
+                  <controls:MoveBadges DockPanel.Dock="Left" Move="{Binding Move4}" Margin="0,0,6,0"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding Move4}" HorizontalAlignment="Stretch"/>
+                </DockPanel>
 
                 <TextBlock Text="Nature"/>
                 <ComboBox ItemsSource="{Binding NatureNames}" SelectedIndex="{Binding NatureIndex}" HorizontalAlignment="Stretch"/>
@@ -98,8 +109,14 @@
                 <TextBlock Text="Held item"/>
                 <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding ItemIndex}" HorizontalAlignment="Stretch"/>
 
-                <TextBlock Text="Form"/>
-                <NumericUpDown Value="{Binding Form}" Minimum="0" Maximum="65535" HorizontalAlignment="Left" Width="140"/>
+                <StackPanel Spacing="4" IsVisible="{Binding ShowFormNames}">
+                  <TextBlock Text="Form"/>
+                  <ComboBox ItemsSource="{Binding FormNames}" SelectedIndex="{Binding FormIndex}" HorizontalAlignment="Left" Width="220"/>
+                </StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding ShowFormNumber}">
+                  <TextBlock Text="Form"/>
+                  <NumericUpDown Value="{Binding Form}" Minimum="0" Maximum="65535" HorizontalAlignment="Left" Width="140"/>
+                </StackPanel>
 
                 <TextBlock Text="Maxed EVs" FontWeight="Bold" Margin="0,8,0,0"/>
                 <WrapPanel>

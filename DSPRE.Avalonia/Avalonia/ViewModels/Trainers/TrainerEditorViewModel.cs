@@ -202,18 +202,23 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
 
-        private List<string> DefaultMoveNames(TrainerPartyMonViewModel mon)
+        private List<TrainerPartyMonViewModel.DefaultMove> DefaultMoveNames(TrainerPartyMonViewModel mon)
         {
             ushort[] moves = LevelUpMoves(mon);
-            return moves == null ? null : moves.Where(m => m > 0).Select(m => m < MoveNames.Count ? MoveNames[m] : m.ToString()).ToList();
+            return moves == null ? null : moves.Where(m => m > 0)
+                .Select(m => new TrainerPartyMonViewModel.DefaultMove(m, m < MoveNames.Count ? MoveNames[m] : m.ToString())).ToList();
         }
+
+        private bool _learnsetsUnpacked;
 
         private ushort[] LevelUpMoves(TrainerPartyMonViewModel mon)
         {
             try
             {
-                return IsHgeActive ? HgeLevelUpMoves(mon.DataSpeciesId, (int)mon.Level)
-                    : new LearnsetData(mon.SpeciesIndex).GetLearnsetAtLevel((int)mon.Level);
+                if (IsHgeActive) return HgeLevelUpMoves(mon.DataSpeciesId, (int)mon.Level);
+                // Read before anything else unpacked them, the files are missing and the defaults would stay empty.
+                if (!_learnsetsUnpacked) { DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.learnsets }); _learnsetsUnpacked = true; }
+                return new LearnsetData(mon.SpeciesIndex).GetLearnsetAtLevel((int)mon.Level);
             }
             catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { return null; }
         }

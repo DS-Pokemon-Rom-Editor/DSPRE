@@ -21,7 +21,7 @@
     <TabControl Margin="4">
       <TabItem Header="Moves">
         <DockPanel Margin="4">
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="36,240,70,Auto,Auto,Auto,*" Margin="0,0,20,4">
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="36,276,70,Auto,Auto,Auto,*" Margin="0,0,20,4">
             <TextBlock Grid.Column="1" Text="Move" FontWeight="SemiBold"/>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="2" IsVisible="{Binding Platinum}" ToolTip.Tip="Red Shards">
               <Image Width="24" Height="24" Source="{Binding Source=72, Converter={x:Static controls:GameIconConverter.Item}}"/>
@@ -45,11 +45,10 @@
           <ListBox ItemsSource="{Binding Pool}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+PoolRow">
-                <Grid ColumnDefinitions="36,240,70,Auto,Auto,Auto,*" IsEnabled="{Binding Editable}">
+                <Grid ColumnDefinitions="36,276,70,Auto,Auto,Auto,*" IsEnabled="{Binding Editable}">
                   <TextBlock Grid.Column="0" Text="{Binding Number}" VerticalAlignment="Center"/>
                   <DockPanel Grid.Column="1" Margin="0,0,6,0">
-                    <Image DockPanel.Dock="Left" Width="32" Height="16" Margin="0,0,4,0" RenderOptions.BitmapInterpolationMode="None"
-                           Source="{Binding Move, Converter={x:Static controls:GameIconConverter.MoveType}}"/>
+                    <controls:MoveBadges DockPanel.Dock="Left" Margin="0,0,4,0" Move="{Binding Move}"/>
                     <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" AllowsNone="False"
                         ItemsSource="{Binding $parent[ListBox].((vm:MoveTutorEditorViewModel)DataContext).MoveNames}" SelectedIndex="{Binding Move}"/>
                   </DockPanel>
@@ -73,21 +72,57 @@
         <Grid ColumnDefinitions="240,*" Margin="4">
           <DockPanel Grid.Column="0" Margin="0,0,8,0">
             <TextBox DockPanel.Dock="Top" Text="{Binding SpeciesFilter}" PlaceholderText="Filter" Margin="0,0,0,4"/>
-            <ListBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SelectedSpecies}"/>
+            <ListBox ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SelectedSpecies}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+SpeciesRow"><TextBlock Text="{Binding Name}"/></DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
           </DockPanel>
-          <ListBox Grid.Column="1" ItemsSource="{Binding MovesOfSpecies}">
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+CheckRow">
-                <CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked}"/>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
+          <DockPanel Grid.Column="1">
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="74,220,Auto" Margin="12,0,0,2" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource Editor.Subtle}">
+              <Grid Grid.Column="2" ColumnDefinitions="40,44,28" Margin="6,0,0,0">
+                <TextBlock Text="Power" HorizontalAlignment="Right"/>
+                <TextBlock Grid.Column="1" Text="Acc." HorizontalAlignment="Right"/>
+                <TextBlock Grid.Column="2" Text="PP" HorizontalAlignment="Right"/>
+              </Grid>
+            </Grid>
+            <ListBox ItemsSource="{Binding MovesOfSpecies}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+CheckRow">
+                  <Grid ColumnDefinitions="74,220,Auto">
+                    <controls:MoveBadges Move="{Binding Move}" HorizontalAlignment="Left"/>
+                    <CheckBox Grid.Column="1" Content="{Binding Name}" IsChecked="{Binding IsChecked}"/>
+                    <controls:MoveBadges Grid.Column="2" Move="{Binding Move}" ShowIcons="False" ShowStats="True"/>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
         </Grid>
       </TabItem>
 
       <TabItem Header="By move">
-        <Grid ColumnDefinitions="240,*" Margin="4">
-          <ListBox Grid.Column="0" ItemsSource="{Binding TutorNames}" SelectedIndex="{Binding SelectedTutor}" Margin="0,0,8,0"/>
+        <Grid ColumnDefinitions="470,*" Margin="4">
+          <DockPanel Grid.Column="0" Margin="0,0,8,0">
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="74,190,Auto" Margin="12,0,0,2" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource Editor.Subtle}">
+              <Grid Grid.Column="2" ColumnDefinitions="40,44,28" Margin="6,0,0,0">
+                <TextBlock Text="Power" HorizontalAlignment="Right"/>
+                <TextBlock Grid.Column="1" Text="Acc." HorizontalAlignment="Right"/>
+                <TextBlock Grid.Column="2" Text="PP" HorizontalAlignment="Right"/>
+              </Grid>
+            </Grid>
+            <ListBox ItemsSource="{Binding TutorNames}" SelectedIndex="{Binding SelectedTutor}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+TutorRow">
+                  <Grid ColumnDefinitions="74,190,Auto">
+                    <controls:MoveBadges Move="{Binding Move}" HorizontalAlignment="Left"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center"/>
+                    <controls:MoveBadges Grid.Column="2" Move="{Binding Move}" ShowIcons="False" ShowStats="True"/>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
           <ListBox Grid.Column="1" ItemsSource="{Binding SpeciesOfMove}">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:MoveTutorEditorViewModel+CheckRow">

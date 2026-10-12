@@ -19,7 +19,6 @@
                 <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
                 <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}" ToolTip.Tip="Undo (Ctrl+Z)"/>
                 <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}" ToolTip.Tip="Redo (Ctrl+Y)"/>
-                <Separator Width="12"/>
                 <TextBlock VerticalAlignment="Center">Item:</TextBlock>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}"
                                                 SelectedIndex="{Binding SelectedItemIndex}"
@@ -28,11 +27,10 @@
                 <NumericUpDown Value="{Binding SelectedItemIndex}"
                                Minimum="0" Maximum="{Binding MaxItemIndex}"
                                Width="100" FormatString="0"/>
-                <Separator Width="12"/>
                 <Button x:Name="ExportButton" Click="Export_Click" Content="Export…" controls:Icon.Key="export"/>
                 <Button Content="Open icon in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
                         ToolTip.Tip="Open this item's icon in the Graphics window, where it can be painted by hand."/>
-                <Button x:Name="AddItemButton" Content="Add new item…" controls:Icon.Key="addIcon" IsVisible="{Binding ShowHgEngineBanner}"
+                <Button x:Name="AddItemButton" Content="Add…" controls:Icon.Key="addIcon" IsVisible="{Binding ShowHgEngineBanner}"
                         ToolTip.Tip="Mint a brand new item in the linked hg-engine checkout"/>
         </controls:EditorToolbar>
         <TextBlock DockPanel.Dock="Top" Margin="8,3" Text="{Binding SharedDataNote}" IsVisible="{Binding HasSharedDataNote}"

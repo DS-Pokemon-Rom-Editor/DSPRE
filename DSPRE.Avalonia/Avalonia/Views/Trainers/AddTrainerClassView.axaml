@@ -48,12 +48,15 @@
                 HorizontalAlignment="Stretch" MaxDropDownHeight="320"/>
 
       <CheckBox Content="Give this class eye-contact music" IsChecked="{Binding AddMusic}" IsEnabled="{Binding CanAddMusic}" Margin="0,8,0,0"/>
-      <TextBlock Text="Eye-contact music needs the &quot;Trainer encounter music table&quot; patch from the ROM Patch Toolbox."
+      <TextBlock Text="Eye-contact music needs the Trainer encounter music table patch."
                  IsVisible="{Binding MusicNeedsPatch}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
       <StackPanel Spacing="2" IsEnabled="{Binding AddMusic}">
         <TextBlock Text="Eye contact music" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"
-                   ToolTip.Tip="The SSEQ that plays when a trainer of this class spots the player."/>
-        <NumericUpDown Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
+                   ToolTip.Tip="Plays when a trainer of this class spots the player."/>
+        <DockPanel>
+          <NumericUpDown DockPanel.Dock="Right" Width="110" Margin="4,0,0,0" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
+          <controls:FusionAutoCompleteBox ItemsSource="{Binding MusicNames.Names}" SelectedIndex="{Binding MusicMainIndex}" PlaceholderText="Unnamed track"/>
+        </DockPanel>
       </StackPanel>
     </StackPanel>
   </DockPanel>

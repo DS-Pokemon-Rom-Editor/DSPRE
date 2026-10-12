@@ -14,6 +14,8 @@ namespace DSPRE.Avalonia.Models
 
         public int Index { get; init; }
         public string Name { get; init; }
+        /// <summary>The move a machine row teaches, or 0.</summary>
+        public int Move { get; init; }
 
         private bool? _isChecked;
         public bool? IsChecked

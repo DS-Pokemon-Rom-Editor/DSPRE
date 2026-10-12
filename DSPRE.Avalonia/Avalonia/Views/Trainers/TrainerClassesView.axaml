@@ -15,12 +15,12 @@
                 IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <Button Content="Add trainer class…" controls:Icon.Key="addIcon" Click="AddTrainerClass_Click"
+        <Button Content="Add…" controls:Icon.Key="addIcon" Click="AddTrainerClass_Click"
                 ToolTip.Tip="Platinum (English) or an hg-engine checkout."
                 IsEnabled="{Binding CanOfferAddClass}" IsVisible="{Binding !ShowClassCopy}"/>
-        <Button controls:EditorToolbar.Slot="Add" Content="Copy class" controls:Icon.Key="copy" Click="CopyClass_Click" IsVisible="{Binding ShowClassCopy}"
+        <Button controls:EditorToolbar.Slot="Add" Content="Duplicate" controls:Icon.Key="copy" Click="CopyClass_Click" IsVisible="{Binding ShowClassCopy}"
                 ToolTip.Tip="Add a copy of the selected class at the end"/>
-        <Button Content="Remove last class" controls:Icon.Key="deleteIcon" Click="RemoveLastClass_Click" IsVisible="{Binding ShowClassCopy}"/>
+        <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveLastClass_Click" IsVisible="{Binding ShowClassCopy}"/>
     </controls:EditorToolbar>
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8,3">
@@ -74,18 +74,20 @@
           </StackPanel>
 
           <StackPanel Spacing="2" IsEnabled="{Binding MusicEnabled}">
-            <TextBlock Text="Eye contact music [main]"
-                       ToolTip.Tip="The SSEQ that plays when a trainer of this class spots the player. Disabled means this class has none."/>
+            <TextBlock Text="Eye-contact music"
+                       ToolTip.Tip="Plays when a trainer of this class spots the player."/>
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <NumericUpDown Width="140" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
+              <controls:FusionAutoCompleteBox Width="260" ItemsSource="{Binding MusicNames.Names}" SelectedIndex="{Binding MusicMainIndex}" PlaceholderText="Unnamed track"/>
+              <NumericUpDown Width="110" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicMain}"/>
               <Button controls:Icon.Key="{Binding MainPlayIcon}" Click="PlayMain_Click" ToolTip.Tip="Play or stop"/>
             </StackPanel>
           </StackPanel>
 
           <StackPanel Spacing="2" IsVisible="{Binding MusicAltEnabled}">
-            <TextBlock Text="Eye contact music [Alt]" ToolTip.Tip="HGSS only: a second eye-contact music slot for this class."/>
+            <TextBlock Text="Second eye-contact music"/>
             <StackPanel Orientation="Horizontal" Spacing="4">
-              <NumericUpDown Width="140" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicAlt}"/>
+              <controls:FusionAutoCompleteBox Width="260" ItemsSource="{Binding MusicNames.Names}" SelectedIndex="{Binding MusicAltIndex}" PlaceholderText="Unnamed track"/>
+              <NumericUpDown Width="110" Minimum="0" Maximum="65535" Increment="1" Value="{Binding MusicAlt}"/>
               <Button controls:Icon.Key="{Binding AltPlayIcon}" Click="PlayAlt_Click" ToolTip.Tip="Play or stop"/>
             </StackPanel>
           </StackPanel>
@@ -97,7 +99,8 @@
             <StackPanel Spacing="2">
               <TextBlock Text="Battle music"/>
               <StackPanel Orientation="Horizontal" Spacing="4">
-                <NumericUpDown Width="140" Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleMusic}"/>
+                <controls:FusionAutoCompleteBox Width="260" ItemsSource="{Binding MusicNames.Names}" SelectedIndex="{Binding BattleMusicIndex}" PlaceholderText="Unnamed track"/>
+                <NumericUpDown Width="110" Minimum="0" Maximum="65535" Increment="1" Value="{Binding BattleMusic}"/>
                 <Button controls:Icon.Key="{Binding BattlePlayIcon}" Click="PlayBattle_Click" ToolTip.Tip="Play or stop"/>
               </StackPanel>
             </StackPanel>

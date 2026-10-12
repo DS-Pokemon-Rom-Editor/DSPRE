@@ -46,8 +46,7 @@
 					<ListBox.ItemTemplate>
 						<DataTemplate x:DataType="vm:TMEditorViewModel+MachineRow">
 							<StackPanel Orientation="Horizontal" Spacing="6">
-								<Image Width="32" Height="16" RenderOptions.BitmapInterpolationMode="None"
-									   Source="{Binding Move, Converter={x:Static controls:GameIconConverter.MoveType}}"/>
+								<controls:MoveBadges Move="{Binding Move}"/>
 								<TextBlock Text="{Binding Text}" VerticalAlignment="Center"/>
 							</StackPanel>
 						</DataTemplate>
