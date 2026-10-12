@@ -78,14 +78,9 @@
 
 	  <!-- Battle sequence -->
 	  <GroupBox x:Name="EffectBox" Grid.Row="2" Grid.Column="0" Header="Battle sequence (effect)">
-		<ComboBox ItemsSource="{Binding BattleSeqItems}"
-				  SelectedIndex="{Binding BattleSeqIndex}"
-				  HorizontalAlignment="Stretch" VerticalAlignment="Top" MinWidth="0">
-		  <!-- Realized all at once, so the open list is as wide as its longest entry instead of growing while scrolling. -->
-		  <ComboBox.ItemsPanel>
-			<ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate>
-		  </ComboBox.ItemsPanel>
-		</ComboBox>
+		<controls:FusionAutoCompleteBox ItemsSource="{Binding BattleSeqItems}" SelectedIndex="{Binding BattleSeqIndex}"
+										HorizontalAlignment="Stretch" VerticalAlignment="Top"
+										ToolTip.Tip="Type a number or part of the description to search"/>
 	  </GroupBox>
 
 	  <!-- Description -->

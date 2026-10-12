@@ -132,7 +132,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public int RangeIndex { get => _rangeIndex; set { if (Set(ref _rangeIndex, value) && _currentFile != null) { _currentFile.target = AttackRangeDescriptions[value].value; SetDirty(); } } }
 
         private int _battleSeqIndex;
-        public int BattleSeqIndex { get => _battleSeqIndex; set { if (Set(ref _battleSeqIndex, value) && _currentFile != null) { _currentFile.battleeffect = (ushort)value; SetDirty(); } } }
+        public int BattleSeqIndex { get => _battleSeqIndex; set { if (value < 0) return; if (Set(ref _battleSeqIndex, value) && _currentFile != null) { _currentFile.battleeffect = (ushort)value; SetDirty(); } } }
 
         private int _contestIndex;
         public int ContestIndex { get => _contestIndex; set { if (Set(ref _contestIndex, value) && _currentFile != null) { _currentFile.contestConditionType = (ContestCondition)value; SetDirty(); } } }
