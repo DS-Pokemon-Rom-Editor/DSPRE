@@ -18,18 +18,6 @@ namespace DSPRE.Avalonia.Views.Controls
         private double _playhead;
 
         /// <summary>Hands over the notes to draw and how long the whole thing runs for.</summary>
-        private string _emptyBecause = "Nothing to show. Pick a piece of music, a fanfare or a sound effect.";
-
-        /// <summary>What to say when there are no notes, since "pick something" is wrong when something
-        /// is already picked and simply has no notes to show.</summary>
-        public void SayWhyEmpty(string because)
-        {
-            _emptyBecause = string.IsNullOrWhiteSpace(because)
-                ? "Nothing to show. Pick a piece of music, a fanfare or a sound effect."
-                : because;
-            InvalidateVisual();
-        }
-
         public void SetNotes(IReadOnlyList<SseqPlayer.Note> notes, double totalSeconds)
         {
             _notes = notes;
@@ -65,15 +53,7 @@ namespace DSPRE.Avalonia.Views.Controls
             double w = Bounds.Width, h = Bounds.Height;
             if (w <= 0 || h <= 0) return;
 
-            if (_notes == null || _notes.Count == 0)
-            {
-                SolidColorBrush faint = new SolidColorBrush(Color.FromArgb(110, 128, 128, 128));
-                FormattedText text = new FormattedText(_emptyBecause,
-                    System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
-                    Typeface.Default, 12, faint);
-                ctx.DrawText(text, new Point(10, h / 2 - text.Height / 2));
-                return;
-            }
+            if (_notes == null || _notes.Count == 0) return;
 
             // Fit the pitches that are actually played rather than all hundred and twenty eight, so a
             // sequence using one octave is not a thin line across the middle.

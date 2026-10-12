@@ -178,7 +178,7 @@ namespace DSPRE.Avalonia.ViewModels.Audio
 
             ApplyFilter();
             Status = $"{_allCries.Count} cries, {_allMusic.Count} tunes, {_allFanfares.Count} fanfares, "
-                   + $"{_allEffects.Count} sound effects, {_allSounds.Count} sounds they are made of.";
+                   + $"{_allEffects.Count} sound effects, {_allSounds.Count} sounds.";
         }
 
         // ── narrowing the lists down ────────────────────────────────────────────────
@@ -318,16 +318,9 @@ namespace DSPRE.Avalonia.ViewModels.Audio
             get
             {
                 AudioItem it = Selected;
-                if (it == null) return "Pick something to hear it.";
-                if (it.IsCry && it.IsPending) return it.Name + ". The new cry is not saved yet.";
-                if (it.IsSample && it.IsPending) return $"{it.Detail}, sound {it.SampleIndex}. The new sound is not saved yet.";
-                if (it.IsCry) return it.Name + ". A cry is a sample of its own, so it can be replaced.";
-                if (it.IsSample)
-                    return $"{it.Detail}, sound {it.SampleIndex}. One of the sounds the game is built from, so it "
-                         + "can be replaced. More than one tune or effect may use it.";
-                return it.Name + ". This is written-out notes played on the game's own instruments, so it "
-                     + "can be saved as sound but a WAV cannot replace it. The sounds it plays "
-                     + "are on the Sounds tab, and those can be replaced.";
+                if (it == null) return "";
+                string name = it.IsSample ? $"{it.Detail}, sound {it.SampleIndex}" : it.Name;
+                return it.IsPending ? name + " (not saved)" : name;
             }
         }
 

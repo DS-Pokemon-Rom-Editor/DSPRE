@@ -69,7 +69,7 @@ namespace DSPRE.Avalonia.Views.Audio
             {
                 _playWhenDrawn = false;
                 _pcm = null; Wave.Show(null, Rate);
-                Notes.SayWhyEmpty(null); Notes.SetNotes(null, 0); ShowTime(0);
+                Notes.SetNotes(null, 0); ShowTime(0);
                 return;
             }
 
@@ -92,16 +92,6 @@ namespace DSPRE.Avalonia.Views.Audio
             // The notes come from the sequence itself rather than from the sound, so a cry has none.
             IReadOnlyList<SseqPlayer.Note> notes = await Task.Run(() => { try { return vm.ReadSelectedNotes(); } catch { return null; } }, token);
             if (token.IsCancellationRequested) return;
-            // A cry and a sound have no notes of their own: what is heard is the sound itself. Say that
-            // rather than leaving a panel that reads as though nothing was picked.
-            Notes.SayWhyEmpty(vm.Selected == null
-                ? null
-                : vm.Selected.IsCry
-                    ? "A cry is one sound rather than notes, so there is nothing to show here."
-                    : vm.Selected.IsSample
-                        ? "This is one of the sounds the game plays rather than notes, so there is nothing "
-                          + "to show here. The tunes that play it are on the Music tab."
-                        : null);
             Notes.SetNotes(notes, Wave.Seconds);
 
             ShowTime(0);
