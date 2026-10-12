@@ -31,9 +31,9 @@ namespace DSPRE.Avalonia
 
             Add("BattleScriptEditorView", "Move Animations & Battle Scripts",
                 S("name:EntryPicker", "Pick a script", "Choose what to edit: move scripts, move effects, shared subroutines or move animations. Then pick an entry."),
-                S("tab:Read", "Read", "Move animations laid out step by step. Show as switches between a guided, script and raw view; click a line for details."),
-                S("tab:Cards", "Cards", "Each command as a card. Expand one to change its command and values, or use its arrow and remove buttons to move or remove it."),
-                S("tab:Text", "Text", "The same commands as lines you can type. Mistakes are listed below, and Cards stays locked until they are fixed."),
+                S("tab:Cards", "Cards", "Each command as a card. Click a card to change its command and values; the arrows move it and the minus removes it."),
+                S("tab:Script", "Script", "The same commands as lines you can type or paste. Mistakes are underlined, and Cards stays locked until they are fixed."),
+                S("tab:Read", "Read", "Move animations laid out step by step, read only. Show as picks a guided, script or raw view; click a line for details."),
                 S("name:ScriptButtons", "Commands and help", "Add command adds a new line. Command guide explains what every command does."),
                 S("name:PreviewPanel", "Preview", "For move animations, the battle scene plays the move. Change the backdrop, ground and HP gauges, or cast it from the enemy side."),
                 S("name:EditParticlesButton", "Particles", "Opens the particle effects this move uses."),

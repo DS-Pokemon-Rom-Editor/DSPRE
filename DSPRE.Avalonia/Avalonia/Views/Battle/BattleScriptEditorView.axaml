@@ -70,47 +70,6 @@
       </Grid.IsVisible>
       <Grid Grid.Column="0" RowDefinitions="*,Auto">
         <TabControl x:Name="EditorTabs" Grid.Row="0" Padding="0" SelectionChanged="EditorTabs_SelectionChanged">
-          <TabItem Header="Read">
-            <Panel>
-            <TextBlock IsVisible="{Binding !IsAnimation}" Margin="16" TextWrapping="Wrap"
-                       VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
-                       Text="Only move animations can be read here. Use the Cards or Text tab."/>
-            <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsAnimation}">
-              <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
-                <TextBlock Text="Show as:" VerticalAlignment="Center" FontSize="12"/>
-                <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center">
-                  <ComboBoxItem Content="Guided"/>
-                  <ComboBoxItem Content="Script"/>
-                  <ComboBoxItem Content="Raw"/>
-                </ComboBox>
-                <TextBlock Text="{Binding ViewSummary}" VerticalAlignment="Center" FontSize="12"
-                           Foreground="{DynamicResource Editor.Subtle}"/>
-              </StackPanel>
-              <TextBlock Grid.Row="1" Text="{Binding ViewNote}" TextWrapping="Wrap" Margin="4,0,4,4"
-                         FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
-              <Border Grid.Row="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto">
-                  <ListBox ItemsSource="{Binding ViewLines}" SelectedItem="{Binding PickedLine}"
-                           Background="Transparent" BorderThickness="0">
-                    <ListBox.ItemTemplate>
-                      <DataTemplate>
-                        <TextBlock Text="{Binding Display}" FontFamily="Consolas,monospace" FontSize="12"/>
-                      </DataTemplate>
-                    </ListBox.ItemTemplate>
-                  </ListBox>
-                </ScrollViewer>
-              </Border>
-              <Border Grid.Row="3" Margin="4,4,4,0" Padding="6,4" IsVisible="{Binding HasPickedDetail}"
-                      Background="{DynamicResource Editor.StatusBg}" CornerRadius="3">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="{Binding PickedDetail}" TextWrapping="Wrap" FontSize="12"/>
-                  <TextBlock Text="{Binding PickedSource}" FontSize="11" FontStyle="Italic"
-                             Foreground="{DynamicResource Editor.Subtle}"/>
-                </StackPanel>
-              </Border>
-            </Grid>
-            </Panel>
-          </TabItem>
           <!-- Card view: each command as a collapsible container -->
           <TabItem Header="Cards">
             <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
@@ -125,7 +84,8 @@
                   <Expander.Header>
                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="2" HorizontalAlignment="Stretch">
                       <TextBlock Grid.Column="0" Text="{Binding Summary}" TextTrimming="CharacterEllipsis"
-                                 FontFamily="Consolas,monospace" FontSize="12" VerticalAlignment="Center"/>
+                                 FontFamily="Consolas,monospace" FontSize="12" VerticalAlignment="Center"
+                                 ToolTip.Tip="Click to change this command and its values"/>
                       <Button Grid.Column="1" controls:Icon.Key="arrowup" Click="Up_Click" ToolTip.Tip="Move up" Padding="6,0" FontSize="12"/>
                       <Button Grid.Column="2" controls:Icon.Key="arrowdown" Click="Down_Click" ToolTip.Tip="Move down" Padding="6,0" FontSize="12"/>
                       <Button Grid.Column="3" controls:Icon.Key="deleteIcon" Click="Remove_Click" ToolTip.Tip="Remove" Padding="6,0" FontSize="12"/>
@@ -176,16 +136,55 @@
               </ScrollViewer>
             </Border>
           </TabItem>
-          <!-- Text view: the same commands as editable "OPCODE_NAME arg arg" lines with live red-squiggle validation.
-               Whatever is here IS the card list and vice-versa (no explicit save); switching to Cards is blocked while
-               the text has errors. -->
-          <TabItem Header="Text">
+          <!-- The same commands as typed lines; Cards stays locked while a line has an error. -->
+          <TabItem Header="Script">
             <ae:TextEditor x:Name="CommandsTextEditor" ShowLineNumbers="True" WordWrap="False"
                            FontFamily="Consolas,monospace" FontSize="12"
                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
           </TabItem>
+          <TabItem Header="Read">
+            <Panel>
+            <TextBlock IsVisible="{Binding !IsAnimation}" Margin="16" TextWrapping="Wrap"
+                       VerticalAlignment="Top" Foreground="{DynamicResource Editor.Subtle}"
+                       Text="Only move animations can be read here. Use the Cards or Script tab."/>
+            <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsAnimation}">
+              <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
+                <TextBlock Text="Show as:" VerticalAlignment="Center" FontSize="12"/>
+                <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center">
+                  <ComboBoxItem Content="Guided"/>
+                  <ComboBoxItem Content="Script"/>
+                  <ComboBoxItem Content="Raw"/>
+                </ComboBox>
+                <TextBlock Text="{Binding ViewSummary}" VerticalAlignment="Center" FontSize="12"
+                           Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+              <TextBlock Grid.Row="1" Text="{Binding ViewNote}" TextWrapping="Wrap" Margin="4,0,4,4"
+                         FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              <Border Grid.Row="2" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                  <ListBox ItemsSource="{Binding ViewLines}" SelectedItem="{Binding PickedLine}"
+                           Background="Transparent" BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding Display}" FontFamily="Consolas,monospace" FontSize="12"/>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </ScrollViewer>
+              </Border>
+              <Border Grid.Row="3" Margin="4,4,4,0" Padding="6,4" IsVisible="{Binding HasPickedDetail}"
+                      Background="{DynamicResource Editor.StatusBg}" CornerRadius="3">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding PickedDetail}" TextWrapping="Wrap" FontSize="12"/>
+                  <TextBlock Text="{Binding PickedSource}" FontSize="11" FontStyle="Italic"
+                             Foreground="{DynamicResource Editor.Subtle}"/>
+                </StackPanel>
+              </Border>
+            </Grid>
+            </Panel>
+          </TabItem>
         </TabControl>
-        <!-- parse-error banner (shown only while the text has errors) -->
+        <!-- Shown while the script has errors. -->
         <Border Grid.Row="1" IsVisible="{Binding HasTextErrors}" Background="#3A1414" CornerRadius="3" Margin="0,4,0,0" Padding="8,4">
           <TextBlock Text="{Binding TextErrorSummary}" Foreground="#FF8888" FontSize="12" TextWrapping="Wrap"/>
         </Border>

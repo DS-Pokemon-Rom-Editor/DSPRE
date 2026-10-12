@@ -280,15 +280,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         public bool HasViewLines => ViewLines.Count > 0;
 
         private int _openTab;
-        /// <summary>Which of Read, Cards and Text is open, so help meant for one does not sit above them all.</summary>
+        /// <summary>Which of Cards, Script and Read is open.</summary>
         public int OpenTab
         {
             get => _openTab;
             set { if (Set(ref _openTab, value)) OnPropertyChanged(nameof(ShowTextHelp)); }
         }
 
-        /// <summary>The note about how to write a command belongs to the text view, not to the others.</summary>
-        public bool ShowTextHelp => _openTab == 2 || !IsAnimation;
+        /// <summary>The note on writing a command: on the Script tab for animations, always for other scripts.</summary>
+        public bool ShowTextHelp => _openTab == 1 || !IsAnimation;
 
         public string ViewSummary
         {
@@ -510,6 +510,16 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         // The opcode's parameter count for these args (animation opcodes report only their fixed leading args; a
         // message command's count follows its tag).
+        // Words the game reads after the opcode: an animation command's variable list adds the count it carries.
+        private int ExpectedArgCount(int opId, IReadOnlyList<int> args)
+        {
+            if (!IsAnimation) return ArgCountOf(opId, args);
+            if (!BattleAnimCommands.TryGet(_version, opId, out BattleAnimCommand op)) return -1;
+            if (!op.IsVariable) return op.ArgCount;
+            int count = op.CountIndex >= 0 && op.CountIndex < args.Count ? args[op.CountIndex] : 0;
+            return op.ArgCount + Math.Max(0, count);
+        }
+
         private int ArgCountOf(int opId, IReadOnlyList<int> args)
         {
             if (IsAnimation) return BattleAnimCommands.TryGet(_version, opId, out BattleAnimCommand op) ? op.ArgCount : 0;
@@ -561,13 +571,30 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             if (!IsAvailable || _fileIndex < 0 || !CurrentNarc.Available) return;
             if (HasTextErrors)   // the cards are stale while the text is invalid, don't persist the wrong thing
             {
-                _ = DSPRE.Avalonia.DialogHelper.ShowInfo("The command text has errors. Fix the red-underlined line(s) before saving.", "Fix errors first");
+                _ = DSPRE.Avalonia.DialogHelper.ShowInfo("The script has errors. Fix the underlined lines before saving.", "Fix errors first");
                 return;
             }
             List<WazaSeqCommand> cmds = BuildCommands();
             byte[] bytes = IsAnimation ? BattleAnimScript.Serialize(cmds) : WazaSeqScript.Serialize(cmds);
+            if (!ReadsBackTheSame(cmds, bytes))
+            {
+                _ = DSPRE.Avalonia.DialogHelper.ShowError("These commands would not read back the same once saved, so nothing was written. " +
+                    "Check that each command has the number of values it takes.", "Not saved");
+                return;
+            }
             CurrentNarc.Put(_fileIndex, bytes);
             LoadEntry();   // reflect the canonical form
+        }
+
+        private bool ReadsBackTheSame(List<WazaSeqCommand> written, byte[] bytes)
+        {
+            List<WazaSeqCommand> back = IsAnimation ? BattleAnimScript.Parse(bytes, _version) : WazaSeqScript.Parse(bytes, _version);
+            List<WazaSeqCommand> a = written.Where(c => !c.OnlyTail).ToList();
+            List<WazaSeqCommand> b = back.Where(c => !c.OnlyTail).ToList();
+            if (a.Count != b.Count) return false;
+            for (int i = 0; i < a.Count; i++)
+                if (a[i].OpId != b[i].OpId || !(a[i].Args ?? Array.Empty<int>()).SequenceEqual(b[i].Args ?? Array.Empty<int>())) return false;
+            return true;
         }
 
         private async System.Threading.Tasks.Task SaveSourceAsync()
@@ -859,6 +886,15 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                     foreach (int k in slotValue.Keys) if (k > maxIdx) maxIdx = k;
                     int[] args = new int[maxIdx + 1];
                     foreach (KeyValuePair<int, int> kv in slotValue) args[kv.Key] = kv.Value;
+                    // A wrong count shifts every word after it, so the game and the next load read other commands.
+                    int expected = ExpectedArgCount(opId, args);
+                    if (expected >= 0 && args.Length != expected)
+                    {
+                        int col = Math.Max(0, rawLine.IndexOf(cmdName, StringComparison.Ordinal));
+                        errors.Add(new TextError(lineStart + col, rawLine.TrimEnd().Length - col,
+                            $"{cmdName} takes {expected} value{(expected == 1 ? "" : "s")}, this line has {args.Length}"));
+                        continue;
+                    }
                     parsed.Add((opId, args));
                 }
             }

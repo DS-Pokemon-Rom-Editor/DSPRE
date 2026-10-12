@@ -47,7 +47,7 @@ namespace DSPRE.Avalonia.Views.Battle
         }
         private static ScriptCmdRow Row(object sender) => (sender as Control)?.DataContext as ScriptCmdRow;
 
-        // ── Text tab (AvaloniaEdit) wiring: live two-way sync with the VM + red-squiggle error markers ──
+        // ── Script tab: two-way sync with the view model and squiggles under errors ──
         private void SetupEditor()
         {
             if (_editorReady || CommandsTextEditor == null) return;
@@ -106,13 +106,12 @@ namespace DSPRE.Avalonia.Views.Battle
         {
             if (!ReferenceEquals(e.Source, EditorTabs) || EditorTabs == null || VM == null) return;   // ignore child selectors
             VM.OpenTab = EditorTabs.SelectedIndex;
-            // The tabs are Read, Cards, Text. Cards cannot be built while the text has errors, so that
-            // one bounces back to the text to fix them.
-            if (EditorTabs.SelectedIndex == 1 && VM.HasTextErrors)
+            // Cards, Script, Read: Cards can't be built while the script has errors, so it bounces back to Script.
+            if (EditorTabs.SelectedIndex == 0 && VM.HasTextErrors)
             {
-                Dispatcher.UIThread.Post(() => EditorTabs.SelectedIndex = 2);
+                Dispatcher.UIThread.Post(() => EditorTabs.SelectedIndex = 1);
                 await DSPRE.Avalonia.DialogHelper.ShowInfo(
-                    "Can't view the commands as cards while the text has errors. Fix the red-underlined line(s) first.",
+                    "Cards can't open while the script has errors. Fix the underlined lines first.",
                     "Fix errors first");
             }
         }
