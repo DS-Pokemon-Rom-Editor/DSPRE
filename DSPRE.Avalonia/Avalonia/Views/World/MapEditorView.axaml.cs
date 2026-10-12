@@ -148,6 +148,7 @@ namespace DSPRE.Avalonia.Views.World
                 vm.OverlayChanged += (_, _) =>
                 {
                     GlView.SetOverlay(VM.OverlayMesh, VM.OverlayVertexCount);
+                    GlView.OverlayAlpha = VM.TintStrength;
                     GlView.SetTileTint(VM.TintOn, VM.TintStrength, VM.TintOx, VM.TintOz, VM.TintSx, VM.TintSz, VM.TintRgba);
                 };
                 vm.PaintModeChanged += (_, _) => { if (VM.PaintMode) GlView.SetOrientation(0f, 89f); };   // lock to Top

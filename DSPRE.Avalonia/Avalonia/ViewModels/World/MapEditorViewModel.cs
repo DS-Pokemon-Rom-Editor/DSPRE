@@ -447,13 +447,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         // ── 3D permission overlay ──────────────────────────────────────────────────────
         public ObservableCollection<string> OverlayModes { get; } = new ObservableCollection<string> { "No overlay", "Collision", "Type" };
         private int _overlayModeIndex;
-        public int OverlayModeIndex { get => _overlayModeIndex; set { if (Set(ref _overlayModeIndex, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); OnPropertyChanged(nameof(MeshToggleEnabled)); RebuildOverlay(); } } }
+        public int OverlayModeIndex { get => _overlayModeIndex; set { if (Set(ref _overlayModeIndex, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); OnPropertyChanged(nameof(ShowOverlayOpacity)); OnPropertyChanged(nameof(MeshToggleEnabled)); RebuildOverlay(); } } }
 
         // Mesh mode (default): the overlay is a re-coloured copy of the real ground mesh, conforming to the
         // surface. Plane mode: a flat tile grid the user can raise with OverlayHeight (for top-down editing).
         private bool _overlayAsMesh = true;
         public bool OverlayAsMesh { get => _overlayAsMesh; set { if (Set(ref _overlayAsMesh, value)) { OnPropertyChanged(nameof(ShowOverlayHeight)); RebuildOverlay(); } } }
         public bool ShowOverlayHeight => !_overlayAsMesh && _overlayModeIndex > 0;
+        public bool ShowOverlayOpacity => _overlayModeIndex > 0;
         /// <summary>"Mesh" only has a visible effect with an overlay mode selected (it re-colours the
         /// overlay itself, which isn't drawn at all in "No overlay") and for a single loaded map;
         /// stitched ("This header" / "Full matrix") views always render the flat plane overlay instead
@@ -473,7 +474,14 @@ namespace DSPRE.Avalonia.ViewModels.World
         // Per-tile texture tint (mesh mode): the map textures themselves are shaded by the collision colour in the
         // shader, so trees/lamps get the colour on their real pixels and transparent texels stay clear.
         public bool TintOn { get; private set; }
-        public float TintStrength => 0.5f;
+        public float TintStrength => _overlayOpacity / 100f;
+
+        private int _overlayOpacity = 90;
+        public int OverlayOpacity
+        {
+            get => _overlayOpacity;
+            set { if (Set(ref _overlayOpacity, Math.Clamp(value, 0, 100))) OverlayChanged?.Invoke(this, EventArgs.Empty); }
+        }
         public float TintOx { get; private set; }
         public float TintOz { get; private set; }
         public float TintSx { get; private set; }

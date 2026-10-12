@@ -75,6 +75,9 @@ namespace DSPRE.Avalonia.Gl
         private bool _showTextures = true;
         public bool ShowTextures { get => _showTextures; set { _showTextures = value; RequestNextFrameRendering(); } }
 
+        private float _overlayAlpha = 0.5f;
+        public float OverlayAlpha { get => _overlayAlpha; set { _overlayAlpha = value; RequestNextFrameRendering(); } }
+
         // ── Terrain animation ──────────────────────────────────────────────────────────── Per-material
         // texture matrices, keyed the same way as the model's materials.
         private Dictionary<int, float[]> _texMatrices;
@@ -805,13 +808,17 @@ namespace DSPRE.Avalonia.Gl
                     "  if (tc.x < 0.0 || tc.y < 0.0 || tc.x >= 32.0 || tc.y >= 32.0) return c;\n" +
                     "  vec2 cuv = (floor(tc) + 0.5) / 32.0;\n" +
                     "  vec4 t = texture(uColl, cuv);\n" +
-                    "  return mix(c, t.rgb, uTint * t.a);\n" +
+                    // The hue is the palette's own; the texture keeps only a little light and shade so shapes still read.
+                    "  vec3 shaded = t.rgb * (0.75 + 0.35 * dot(c, vec3(0.299, 0.587, 0.114)));\n" +
+                    "  vec2 f = fract(tc), edge = min(f, 1.0 - f) / max(fwidth(tc), vec2(1e-5));\n" +
+                    "  if (min(edge.x, edge.y) < 1.0) shaded *= 0.45;\n" +
+                    "  return mix(c, shaded, uTint * t.a);\n" +
                     "}\n" +
                     "void main(){\n" +
                     "  if (uHasTex == 1) { vec4 t = texture(uTex, vUv); vec3 rgb = uShade == 1 ? t.rgb * vColor : t.rgb;\n" +
-                    "    if (uTexAlpha == 1) { if (t.a < 0.02) discard; fragColor = vec4(fogged(tintRgb(rgb) * uMatColor), uAlpha * t.a); }\n" +
-                    "    else { if (t.a < 0.5) discard; fragColor = vec4(fogged(tintRgb(rgb) * uMatColor), uAlpha); } }\n" +
-                    "  else { fragColor = vec4(fogged(tintRgb(vColor) * uMatColor), uAlpha); }\n" +
+                    "    if (uTexAlpha == 1) { if (t.a < 0.02) discard; fragColor = vec4(tintRgb(fogged(rgb * uMatColor)), uAlpha * t.a); }\n" +
+                    "    else { if (t.a < 0.5) discard; fragColor = vec4(tintRgb(fogged(rgb * uMatColor)), uAlpha); } }\n" +
+                    "  else { fragColor = vec4(tintRgb(fogged(vColor * uMatColor)), uAlpha); }\n" +
                     "}\n";
 
                 int v = _f.CompileShaderOrThrow(GlFunctions.GL_VERTEX_SHADER, vs);
@@ -1419,7 +1426,7 @@ namespace DSPRE.Avalonia.Gl
             _f.Enable(GlFunctions.GL_DEPTH_TEST);
             _f.DepthMask(false);
             _f.Uniform1i(_hasTexLoc, 0);
-            _f.Uniform1f(_alphaLoc, 0.5f);
+            _f.Uniform1f(_alphaLoc, _overlayAlpha);
 
             _f.BindBuffer(GlFunctions.GL_ARRAY_BUFFER, _overlayVbo);
             _f.EnableVertexAttribArray(0); _f.VertexAttribPointer(0, 3, GlFunctions.GL_FLOAT, false, stride, IntPtr.Zero);

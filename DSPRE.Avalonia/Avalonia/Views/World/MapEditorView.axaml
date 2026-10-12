@@ -55,6 +55,10 @@
           </StackPanel>
           <CheckBox Content="Mesh" IsChecked="{Binding OverlayAsMesh}" IsEnabled="{Binding MeshToggleEnabled}" VerticalAlignment="Center"
                     ToolTip.Tip="Paint collision on the map surface. Off gives a flat plane you can raise. Needs an Overlay mode; 'This header' and 'Full matrix' always use the flat plane."/>
+          <TextBlock Text="Opacity:" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayOpacity}"/>
+          <Slider Width="100" Minimum="0" Maximum="100" SmallChange="5" LargeChange="10" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding OverlayOpacity}"
+                  VerticalAlignment="Center" IsVisible="{Binding ShowOverlayOpacity}"
+                  ToolTip.Tip="{Binding OverlayOpacity, StringFormat='{}{0}%'}"/>
           <TextBlock Text="Height:" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"/>
           <Slider Width="120" Minimum="-5" Maximum="20" SmallChange="0.25" LargeChange="1"
                   Value="{Binding OverlayHeight}" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"
