@@ -1927,8 +1927,11 @@ namespace DSPRE
                             break;
 
                         case GameLanguages.French:
-                        case GameLanguages.Spanish:
                             ramAddrOfPointer = 0x021F931C;
+                            break;
+
+                        case GameLanguages.Spanish:
+                            ramAddrOfPointer = gameVersion == GameVersions.SoulSilver ? 0x021F933C : 0x021F931C;
                             break;
 
                         case GameLanguages.German:
