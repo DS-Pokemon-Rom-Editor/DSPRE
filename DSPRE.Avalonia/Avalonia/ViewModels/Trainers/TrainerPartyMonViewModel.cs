@@ -278,10 +278,49 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public sealed record NatureChoice(string Nature, int Dv)
         {
             public override string ToString() => $"{Nature} (DV {Dv})";
+            public string Name => NatureParts.Of(Nature).Name;
+            public string Up => NatureParts.Of(Nature).Up;
+            public string Down => NatureParts.Of(Nature).Down;
+            public string DvText => $"DV {Dv}";
+        }
+
+        /// <summary>A nature as "Timid: +Spe, -Atk" split into its name and the stats it raises and lowers.</summary>
+        public readonly record struct NatureParts(string Name, string Up, string Down)
+        {
+            public static NatureParts Of(string nature)
+            {
+                if (string.IsNullOrEmpty(nature)) return new NatureParts("", "", "");
+                int colon = nature.IndexOf(':');
+                if (colon < 0) return new NatureParts(nature, "", "");
+                string[] effects = nature.Substring(colon + 1).Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                string up = effects.FirstOrDefault(e => e.StartsWith('+')) ?? "";
+                string down = effects.FirstOrDefault(e => e.StartsWith('-')) ?? "";
+                return new NatureParts(nature.Substring(0, colon), up, down);
+            }
         }
 
         private string _natureText = "";
-        public string NatureText { get => _natureText; private set => Set(ref _natureText, value); }
+        public string NatureText
+        {
+            get => _natureText;
+            private set { if (Set(ref _natureText, value)) { OnPropertyChanged(nameof(NatureName)); OnPropertyChanged(nameof(NatureUp)); OnPropertyChanged(nameof(NatureDown)); } }
+        }
+        public string NatureName => NatureParts.Of(_natureText).Name;
+        public string NatureUp => NatureParts.Of(_natureText).Up;
+        public string NatureDown => NatureParts.Of(_natureText).Down;
+
+        // Every IV of a trainer's Pokémon is the same, so Hidden Power follows from the DV alone. The games take the
+        // type from the IVs' lowest bits and the power from the next ones (pokeplatinum CalcHiddenPowerTypeAndPower).
+        private int Iv => (int)_difficulty * 31 / 255;
+        public int HiddenPowerType => (Iv & 1) != 0 ? 17 : 1;   // all six odd: Dark; all even: Fighting
+        public int HiddenPowerPower => (Iv & 2) != 0 ? 70 : 30;
+        public global::Avalonia.Media.Imaging.Bitmap HiddenPowerIcon => DSPRE.Avalonia.Data.TypeIcons.For(HiddenPowerType);
+        public string HiddenPowerTip => $"Hidden Power: {TypeName(HiddenPowerType)}, power {HiddenPowerPower}";
+        private static string TypeName(int type)
+        {
+            try { string[] names = RomInfo.GetTypeNames(); return type < names.Length ? names[type] : $"Type {type}"; }
+            catch { return $"Type {type}"; }
+        }
         private string _ivText = "";
         public string IvText { get => _ivText; private set => Set(ref _ivText, value); }
         private IReadOnlyList<NatureChoice> _natureChoices = Array.Empty<NatureChoice>();
@@ -303,7 +342,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void ShowPersonality(uint pid, uint defaultPid, IReadOnlyList<NatureChoice> choices, IReadOnlyList<DefaultMove> defaultMoves)
         {
             NatureText = DVCalculator.Natures[DVCalculator.getNatureFromPID(pid)];
-            IvText = ((int)_difficulty * 31 / 255).ToString();
+            IvText = $"{Iv}/31";
+            OnPropertyChanged(nameof(HiddenPowerType)); OnPropertyChanged(nameof(HiddenPowerPower));
+            OnPropertyChanged(nameof(HiddenPowerIcon)); OnPropertyChanged(nameof(HiddenPowerTip));
             NatureChoices = choices;
             DefaultMoves = defaultMoves ?? Array.Empty<DefaultMove>();
 

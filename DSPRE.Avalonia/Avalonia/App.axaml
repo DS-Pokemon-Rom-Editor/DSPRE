@@ -34,6 +34,9 @@
 					<SolidColorBrush x:Key="Editor.Good"       Color="#1B7F2E"/>
 					<SolidColorBrush x:Key="Editor.Warn"       Color="#A65B00"/>
 					<SolidColorBrush x:Key="Editor.Bad"        Color="#C22323"/>
+					<!-- A nature's raised and lowered stat, as the summary screen colours them. -->
+					<SolidColorBrush x:Key="Stat.Up"           Color="#C22323"/>
+					<SolidColorBrush x:Key="Stat.Down"         Color="#1F5FBF"/>
 				</ResourceDictionary>
 				<ResourceDictionary x:Key="Dark">
 					<SolidColorBrush x:Key="Editor.ToolbarBg"  Color="#323232"/>
@@ -47,6 +50,8 @@
 					<SolidColorBrush x:Key="Editor.Good"       Color="#5FD07A"/>
 					<SolidColorBrush x:Key="Editor.Warn"       Color="#F0A250"/>
 					<SolidColorBrush x:Key="Editor.Bad"        Color="#FF7B72"/>
+					<SolidColorBrush x:Key="Stat.Up"           Color="#FF7B72"/>
+					<SolidColorBrush x:Key="Stat.Down"         Color="#6CA8FF"/>
 				</ResourceDictionary>
 			</ResourceDictionary.ThemeDictionaries>
 		</ResourceDictionary>

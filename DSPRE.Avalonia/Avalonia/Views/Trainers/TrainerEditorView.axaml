@@ -225,15 +225,40 @@
                           <TextBlock Text="DV" FontSize="10" ToolTip.Tip="Sets every IV, and with the trainer and species, the nature"/>
                           <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding Difficulty}"/>
                         </StackPanel>
-                        <StackPanel Width="40" Margin="0,0,6,0">
-                          <TextBlock Text="IVs" FontSize="10"/>
+                        <StackPanel Width="56" Margin="0,0,6,0">
+                          <TextBlock Text="IVs" FontSize="10" ToolTip.Tip="Every stat gets this IV"/>
                           <TextBlock Text="{Binding IvText}" Margin="0,8,0,0"/>
+                        </StackPanel>
+                        <StackPanel Width="86" Margin="0,0,6,0" IsVisible="{Binding !HgeNatureEnabled}" ToolTip.Tip="{Binding HiddenPowerTip}">
+                          <TextBlock Text="Hidden Power" FontSize="10"/>
+                          <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,6,0,0">
+                            <Image Source="{Binding HiddenPowerIcon}" Width="32" Height="16" RenderOptions.BitmapInterpolationMode="None"/>
+                            <TextBlock Text="{Binding HiddenPowerPower}" VerticalAlignment="Center"/>
+                          </StackPanel>
                         </StackPanel>
                         <StackPanel Width="250" Margin="0,0,6,0" IsVisible="{Binding !HgeNatureEnabled}">
                           <TextBlock Text="Nature" FontSize="10"/>
                           <Grid ColumnDefinitions="*,Auto">
-                            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}" SelectedItem="{Binding SelectedNatureChoice}"
-                                      PlaceholderText="{Binding NatureText}" MaxDropDownHeight="360" ToolTip.Tip="Picking one sets the highest DV that gives it"/>
+                            <ComboBox x:Name="NatureBox" HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}" SelectedItem="{Binding SelectedNatureChoice}"
+                                      MaxDropDownHeight="360" ToolTip.Tip="Picking one sets the highest DV that gives it">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TrainerPartyMonViewModel+NatureChoice">
+                                  <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{Binding Name}"/>
+                                    <TextBlock Text="{Binding Up}" Foreground="{DynamicResource Stat.Up}"/>
+                                    <TextBlock Text="{Binding Down}" Foreground="{DynamicResource Stat.Down}"/>
+                                    <TextBlock Text="{Binding DvText}" Foreground="{DynamicResource Editor.Subtle}"/>
+                                  </StackPanel>
+                                </DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <!-- The DV in use is often not the highest for its nature, so the box shows no pick; the nature is drawn over it. -->
+                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="11,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                        IsVisible="{Binding #NatureBox.SelectedItem, Converter={x:Static ObjectConverters.IsNull}}">
+                              <TextBlock Text="{Binding NatureName}"/>
+                              <TextBlock Text="{Binding NatureUp}" Foreground="{DynamicResource Stat.Up}"/>
+                              <TextBlock Text="{Binding NatureDown}" Foreground="{DynamicResource Stat.Down}"/>
+                            </StackPanel>
                             <Button Grid.Column="1" Content="All…" Margin="4,0,0,0" Click="AllNatures_Click"
                                     ToolTip.Tip="Every DV with the IVs and nature it gives"/>
                           </Grid>
