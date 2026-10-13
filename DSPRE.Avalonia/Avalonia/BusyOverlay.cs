@@ -29,11 +29,26 @@ namespace DSPRE.Avalonia
             return top is Window w && Busy.Contains(w);
         }
 
-        public static async Task RunAsync(string text, string hint, Action work, Window owner = null)
+        public static Task RunAsync(string text, string hint, Action work, Window owner = null) => RunAsync(text, hint, work, null, owner);
+
+        /// <summary>
+        /// As <see cref="RunAsync(string, string, Action, Window)"/>, then runs <paramref name="thenOnUiThread"/> while the
+        /// card is still up, so an editor that builds on the UI thread is ready before the card goes.
+        /// </summary>
+        public static async Task RunAsync(string text, string hint, Action work, Action thenOnUiThread, Window owner = null)
         {
             await OneAtATime.WaitAsync();
-            try { await RunOneAsync(text, hint, work, owner); }
+            try { await RunOneAsync(text, hint, work, thenOnUiThread, owner); }
             finally { OneAtATime.Release(); }
+        }
+
+        private static async Task AfterWork(Action work, Action thenOnUiThread)
+        {
+            await Task.Run(work);
+            if (thenOnUiThread == null) return;
+            // Let the card draw its latest frame before the UI thread is taken up.
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Render);
+            thenOnUiThread();
         }
 
         /// <summary>Whether file work is running behind any busy card, in any window.</summary>
@@ -50,19 +65,19 @@ namespace DSPRE.Avalonia
             finally { OneAtATime.Release(); }
         }
 
-        private static async Task RunOneAsync(string text, string hint, Action work, Window owner)
+        private static async Task RunOneAsync(string text, string hint, Action work, Action thenOnUiThread, Window owner)
         {
             owner ??= OwnerWindow.Current;
             if (owner is MainWindowView { DataContext: MainWindowViewModel vm })
             {
                 vm.BusyText = text; vm.BusyHint = hint; vm.IsBusy = true;
-                try { await Task.Run(work); }
+                try { await AfterWork(work, thenOnUiThread); }
                 finally { vm.IsBusy = false; }
                 return;
             }
 
             OverlayLayer layer = owner == null ? null : OverlayLayer.GetOverlayLayer(owner);
-            if (layer == null) { await Task.Run(work); return; }
+            if (layer == null) { await AfterWork(work, thenOnUiThread); return; }
 
             Control content = owner.Content as Control;
             bool wasEnabled = content?.IsEnabled ?? true;
@@ -77,7 +92,7 @@ namespace DSPRE.Avalonia
             layer.Children.Add(cover);
             if (content != null) content.IsEnabled = false;
             Busy.Add(owner);
-            try { await Task.Run(work); }
+            try { await AfterWork(work, thenOnUiThread); }
             finally
             {
                 Busy.Remove(owner);

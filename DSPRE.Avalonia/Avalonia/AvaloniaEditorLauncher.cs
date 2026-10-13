@@ -97,20 +97,31 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Pokémon Editor" + (initialMon != 1 ? At(GetPokemonNames, initialMon) : "") + "…",
-                    "Reading species data, learnsets, evolutions and sprites.",
+                PokemonEditorView view = null;
+                // Every tab reads its archives up front, and the window is built while the card is still up, so the
+                // editor is smooth once it shows.
+                await BusyOverlay.RunAsync("Opening Pokémon Editor" + (initialMon != 1 ? At(GetPokemonNames, initialMon) : "") + "…",
+                    "Reading species data, learnsets, evolutions, the Pokédex and sprites.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> {
-                        DirNames.personalPokeData, DirNames.learnsets,
-                        DirNames.evolutions, DirNames.monIcons }));
-                SetMonIconsPalTableAddress();
+                        DirNames.personalPokeData, DirNames.learnsets, DirNames.evolutions, DirNames.monIcons,
+                        DirNames.pokedexAreas, DirNames.pokedexData, DirNames.pokedexDataAltered, DirNames.footprintGraphics,
+                        DirNames.pokedexSearchSteps, DirNames.regionalDexSpecies, DirNames.regionalDexNumbers,
+                        DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites, DirNames.pokeHeight, DirNames.pokeHeightForms,
+                        DirNames.pokemonSpriteOffsets, DirNames.pokeYofs, DirNames.pokeShadowOfx, DirNames.pokeShadow,
+                        DirNames.pokeAnim, DirNames.pokeAnimDefs, DirNames.battleBg, DirNames.battleObj, DirNames.windowFrames }),
+                    () =>
+                    {
+                        SetMonIconsPalTableAddress();
 
-                // Full Pokémon name list (base + alt forms this ROM actually has data for + extras)
-                string[] fullList = GetPokemonNamesWithForms(GetPersonalFilesCount());
-                string[] moveNames = GetAttackNames();
+                        // Full Pokémon name list (base + alt forms this ROM actually has data for + extras)
+                        string[] fullList = GetPokemonNamesWithForms(GetPersonalFilesCount());
+                        string[] moveNames = GetAttackNames();
 
-                int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Length - 1));
-                PokemonEditorViewModel vm = new PokemonEditorViewModel(fullList, moveNames, initialMon: mon);
-                new PokemonEditorView(vm).ShowManaged();
+                        int mon = System.Math.Clamp(initialMon, 0, System.Math.Max(0, fullList.Length - 1));
+                        PokemonEditorViewModel vm = new PokemonEditorViewModel(fullList, moveNames, initialMon: mon);
+                        view = new PokemonEditorView(vm);
+                    });
+                view?.ShowManaged();
             }
             catch (System.Exception ex)
             {
