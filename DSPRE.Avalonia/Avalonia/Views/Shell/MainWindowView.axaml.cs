@@ -494,6 +494,11 @@ namespace DSPRE.Avalonia.Views.Shell
             else
             {
                 SettingsManager.RemoveRecentProject(path);
+                if (string.Equals(SettingsManager.Settings.openDefaultRom, path, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    SettingsManager.Settings.openDefaultRom = "";
+                    SettingsManager.Save();
+                }
                 (DataContext as MainWindowViewModel)?.RefreshRecents();
                 await DialogHelper.ShowError("This project no longer exists and was removed from the recent list:\n" + path, "Open Recent");
             }

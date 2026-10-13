@@ -179,6 +179,18 @@ namespace DSPRE
                             else ShowWelcomeIfEnabled();
                         });
                     }
+                    else if (!string.IsNullOrWhiteSpace(defaultRom))
+                    {
+                        // Moved or deleted since it was chosen: say so once and stop trying it on every launch.
+                        SettingsManager.Settings.openDefaultRom = "";
+                        SettingsManager.Save();
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+                        {
+                            await DSPRE.Avalonia.DialogHelper.ShowInfo(
+                                $"The default ROM is no longer there, so it was removed from Settings:\n\n{defaultRom}", "DSPRE");
+                            ShowWelcomeIfEnabled();
+                        });
+                    }
                     else
                     {
                         global::Avalonia.Threading.Dispatcher.UIThread.Post(ShowWelcomeIfEnabled);
