@@ -52,7 +52,7 @@
 
 	  <!-- Right bottom: Add alias controls -->
 	  <StackPanel x:Name="AliasPanel" Grid.Row="2" Grid.Column="2" Margin="0,6,0,0" Spacing="4">
-		<TextBlock Text="Code to alias:"/>
+		<TextBlock Text="Code to alias"/>
 		<ComboBox ItemsSource="{Binding CodeItems}"
 				  SelectedIndex="{Binding SelectedCodeIndex}"
 				  HorizontalAlignment="Stretch"/>

@@ -18,7 +18,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
         private void Locate_Click(object sender, RoutedEventArgs e) => VM?.Locate();
-        private async void RateHelp_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ShowRateHelp());
 
         private static async Task Safe(Task task)
         {

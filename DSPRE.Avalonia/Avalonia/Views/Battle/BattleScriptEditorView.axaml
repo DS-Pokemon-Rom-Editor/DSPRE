@@ -41,7 +41,7 @@
       <TextBlock IsVisible="{Binding ArchiveNotAvailable}" Text="{Binding ArchiveUnavailableText}"
                  FontSize="12" Foreground="OrangeRed" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding EntryHeader}" FontWeight="SemiBold"/>
-      <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line, like AddParticles slot=0 data=482. Lines starting with // are comments."
+      <TextBlock IsVisible="{Binding ShowTextHelp}" Text="One command per line. // starts a comment."
                  FontSize="12" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
     </StackPanel>
 
@@ -149,7 +149,7 @@
                        Text="Only move animations can be read here. Use the Cards or Script tab."/>
             <Grid RowDefinitions="Auto,Auto,*,Auto" IsVisible="{Binding IsAnimation}">
               <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="6" Margin="4,4,4,2">
-                <TextBlock Text="Show as:" VerticalAlignment="Center" FontSize="12"/>
+                <TextBlock Text="Show as" VerticalAlignment="Center" FontSize="12"/>
                 <ComboBox SelectedIndex="{Binding ViewMode}" MinWidth="150" VerticalAlignment="Center">
                   <ComboBoxItem Content="Guided"/>
                   <ComboBoxItem Content="Script"/>
@@ -199,8 +199,6 @@
       <Grid MinHeight="420" RowDefinitions="Auto,Auto,Auto,Auto,*">
         <StackPanel Grid.Row="0" Spacing="1" Margin="0,0,0,4" IsVisible="{Binding HasPreview}">
           <TextBlock Text="Animation preview" FontWeight="SemiBold"/>
-          <TextBlock Text="Reproduces the vanilla-game routines (particles, Pokémon move/rotate/scale/flash, shake, fade). Effects redefined in custom C code may differ."
-                     FontSize="10" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
         </StackPanel>
         <Border Grid.Row="1" Height="225" CornerRadius="4"
                 BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" IsVisible="{Binding HasPreview}">
@@ -267,14 +265,14 @@
                   ToolTip.Tip="This move's particle files"/>
           <CheckBox Content="Performed by enemy" IsChecked="{Binding AttackerIsEnemy}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
-                    ToolTip.Tip="Preview the move cast from the enemy (top) side: flips side branches, attacker-anchored emitters and lunges."/>
+                    ToolTip.Tip="Play the move as the opponent uses it."/>
           <CheckBox Content="Second animation" IsChecked="{Binding SecondTurnVariant}"
                     IsVisible="{Binding HasTurnCheck}" VerticalAlignment="Center" Margin="0,2,6,2"
-                    ToolTip.Tip="This move holds two animations and the game alternates them by the battle's turn count. Tick this to watch the second one."/>
-          <TextBlock Text="Backdrop:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
+                    ToolTip.Tip="The game alternates two animations for this move by turn."/>
+          <TextBlock Text="Backdrop" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
           <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedIndex="{Binding BackgroundIndex}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="150" MaxDropDownHeight="360" Margin="0,2,6,2"
-                    ToolTip.Tip="The real battle-scene backdrop (scenery behind the platforms) from pl_batt_bg.narc, not a move effect."/>
+                    ToolTip.Tip="The battle backdrop behind the platforms."/>
           <Button Content="HP gauges" IsVisible="{Binding HasPreview}" VerticalAlignment="Center" Margin="0,2,6,2"
                   ToolTip.Tip="Configure the gauge readout (species, level, HP %).">
             <Button.Flyout>
@@ -296,10 +294,10 @@
               </Flyout>
             </Button.Flyout>
           </Button>
-          <TextBlock Text="Terrain:" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
+          <TextBlock Text="Terrain" VerticalAlignment="Center" IsVisible="{Binding HasPreview}" FontSize="12" Margin="0,2,4,2"/>
           <ComboBox ItemsSource="{Binding TerrainOptions}" SelectedIndex="{Binding TerrainIndex}"
                     IsVisible="{Binding HasPreview}" VerticalAlignment="Center" MinWidth="130" MaxDropDownHeight="360" Margin="0,2,6,2"
-                    ToolTip.Tip="Render the real in-game ground/terrain platforms (pl_batt_obj.narc) the Pokémon stand on: the tray some move animations interact with."/>
+                    ToolTip.Tip="The platforms the Pokémon stand on."/>
           <TextBlock Text="{Binding CellAnimNote}" VerticalAlignment="Center" TextWrapping="Wrap"
                      FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
           <TextBlock Text="{Binding PreviewNotes}" IsVisible="{Binding HasPreviewNotes}"

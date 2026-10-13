@@ -192,8 +192,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public HeadbuttEncounterViewModel() { }
         public HeadbuttEncounterViewModel(bool _) { }
 
-        /// <summary>Headbutt file to open once loaded (set before SetupAsync; e.g. from a "Go to Headbutt #N" jump).</summary>
-        public int InitialIndex { get; set; }
+        /// <summary>Headbutt file to open once loaded (set before SetupAsync; e.g. from a "Go to Headbutt #N" jump), or -1 for the first with trees.</summary>
+        public int InitialIndex { get; set; } = -1;
 
         public async Task SetupAsync(Window owner)
         {
@@ -214,7 +214,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 int count = Filesystem.GetHeadbuttCount();
                 for (int i = 0; i < count; i++) FileNames.Add("Headbutt File " + i);
                 StatusText = $"{count} headbutt files.";
-                if (count > 0) SelectedFileIndex = System.Math.Clamp(InitialIndex, 0, count - 1);
+                if (count > 0) SelectedFileIndex = System.Math.Clamp(InitialIndex < 0 ? FirstWithTrees(count) : InitialIndex, 0, count - 1);
             }
             catch (Exception ex)
             {
@@ -242,6 +242,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 await DialogHelper.ShowError("Couldn't add headbutt files:\n" + ex.Message, "Headbutt Editor");
             }
+        }
+
+        // Opened without a file in mind: start on one with trees rather than the empty file 0.
+        private static int FirstWithTrees(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                try
+                {
+                    HeadbuttEncounterFile file;
+                    if (HgEngineProject.IsActive) { if (!HgEngineHeadbutt.TryLoad(i, out file, out _)) continue; }
+                    else file = new HeadbuttEncounterFile((ushort)i);
+                    if (file.normalTreeGroups.Count > 0 || file.specialTreeGroups.Count > 0) return i;
+                }
+                catch (System.IO.IOException) { }
+            }
+            return 0;
         }
 
         private void LoadFile(int index)
@@ -281,9 +298,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private void RefreshGroups()
         {
             NormalTreeGroups.Clear();
-            for (int i = 0; i < _file.normalTreeGroups.Count; i++) NormalTreeGroups.Add($"Normal group {i} ({_file.normalTreeGroups[i].trees.Count} trees)");
+            for (int i = 0; i < _file.normalTreeGroups.Count; i++) NormalTreeGroups.Add($"Group {i + 1}");
             SpecialTreeGroups.Clear();
-            for (int i = 0; i < _file.specialTreeGroups.Count; i++) SpecialTreeGroups.Add($"Special group {i} ({_file.specialTreeGroups[i].trees.Count} trees)");
+            for (int i = 0; i < _file.specialTreeGroups.Count; i++) SpecialTreeGroups.Add($"Group {i + 1}");
             SelectedGroupTrees.Clear();
         }
 
@@ -299,13 +316,28 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // activates/clears a slot.
             for (int i = 0; i < trees.Count; i++)
                 if (!trees[i].IsUnused)
-                    SelectedGroupTrees.Add(new HeadbuttTreeRow($"Tree (slot {i + 1})", trees[i], OnTreeChanged));
+                    SelectedGroupTrees.Add(new HeadbuttTreeRow($"Tree {i + 1}", trees[i], OnTreeChanged));
             _selTree = -1;
             OnPropertyChanged(nameof(SelectedNormalGroupIndex));
             OnPropertyChanged(nameof(SelectedSpecialGroupIndex));
             OnPropertyChanged(nameof(SelectedTreeIndex));
             OnPropertyChanged(nameof(GroupTreeSummary));
             RefreshTreeMarkers();   // the map is already built for the whole file, only re-mark this group
+            FocusGroup();
+        }
+
+        /// <summary>Raised with the selected group's centre in render space, so the view can move to it.</summary>
+        public event EventHandler<(float X, float Y, float Z)> GroupFocused;
+
+        private void FocusGroup()
+        {
+            if (_selGroup < 0 || Model3D == null) return;
+            foreach (TreeBox box in _treeBoxes)
+                if (box.Special == _specialGroupActive && box.Group == _selGroup)
+                {
+                    GroupFocused?.Invoke(this, ((box.MinX + box.MaxX) / 2, box.Ground, (box.MinZ + box.MaxZ) / 2));
+                    return;
+                }
         }
 
         public string GroupTreeSummary
@@ -317,7 +349,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 if (_selGroup >= groups.Count) return "";
                 int used = 0, total = groups[_selGroup].trees.Count;
                 foreach (HeadbuttTree t in groups[_selGroup].trees) if (!t.IsUnused) used++;
-                return $"{used} / {total} slots used";
+                return $"{used} of {total} trees";
             }
         }
 
@@ -423,20 +455,20 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             Model3D = null;
             try
             {
-                if (_matrix == null) { MapInfo = "No header/matrix for this headbutt file."; MapLoaded?.Invoke(this, EventArgs.Empty); RefreshTreeMarkers(); return; }
+                if (_matrix == null) { MapInfo = "No map for this file."; MapLoaded?.Invoke(this, EventArgs.Empty); RefreshTreeMarkers(); return; }
 
                 HashSet<(int x, int y)> include = HeaderCells();
                 if (include.Count == 0 && _headerId == MapHeader.Everywhere)
                 {
-                    MapInfo = "Header 0 is the game's catch-all header, not a place, so there is no map to show.";
+                    MapInfo = "Header 0 has no map.";
                     MapLoaded?.Invoke(this, EventArgs.Empty);
                     RefreshTreeMarkers();
                     return;
                 }
                 Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include);
-                MapInfo = Model3D != null
-                    ? $"Header {_headerId} · matrix {_matrixId} · {include.Count} maps · area {_areaDataId}"
-                    : $"Header {_headerId} · matrix {_matrixId}: no renderable maps.";
+                IReadOnlyList<string> headers = HeaderLabels.Friendly();
+                string place = _headerId < headers.Count ? headers[_headerId] : $"Header {_headerId}";
+                MapInfo = Model3D != null ? place : place + ": no map to show.";
             }
             catch (Exception ex) { MapInfo = "Map render failed: " + ex.Message; AppLogger.Error("Headbutt map render failed: " + ex.Message); }
             MapLoaded?.Invoke(this, EventArgs.Empty);

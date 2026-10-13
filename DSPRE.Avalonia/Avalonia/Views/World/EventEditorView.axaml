@@ -66,7 +66,7 @@
               <TextBlock Text="left-drag pan · right-drag orbit · wheel zoom" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             </StackPanel>
             <WrapPanel x:Name="ShowBar" Classes="toolbar">
-              <TextBlock Text="Show:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="Show" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <CheckBox Content="Overworlds" IsChecked="{Binding ShowOverworlds}" FontSize="12"/>
               <CheckBox Content="Warps"      IsChecked="{Binding ShowWarps}" FontSize="12"/>
               <CheckBox Content="Triggers"   IsChecked="{Binding ShowTriggers}" FontSize="12"/>
@@ -82,7 +82,7 @@
               <ToggleButton Content="Move" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}" FontSize="12" Padding="6,2"
                             ToolTip.Tip="Click an event, then drag its handles or use the arrow keys."/>
               <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
-              <TextBlock Text="View:" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="View" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <ToggleButton x:Name="Mode2DToggle" Content="2D" IsChecked="{Binding Flat2D}" FontSize="12" Padding="6,2"
                             ToolTip.Tip="Flat top-down view, showing every map in the header at once."/>
               <Button Content="Top" Click="CamTop_Click" FontSize="12" Padding="6,2" ToolTip.Tip="Top-down camera"

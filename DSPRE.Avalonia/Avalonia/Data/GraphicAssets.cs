@@ -578,9 +578,9 @@ namespace DSPRE.Avalonia.Data
         public static readonly Archive[] All =
         {
             // Six files per Pokemon, in this order, per PokemonSpriteEditorViewModel.cs:24 and :855.
-            new Archive { Dir = DirNames.pokemonBattleSprites, Title = "Pokemon battle sprites", In = Group.PokemonSprites,
-                What = "Front and back of every Pokemon as it appears in a battle, with its normal and shiny colours.",
-                Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokemon Sprite Editor",
+            new Archive { Dir = DirNames.pokemonBattleSprites, Title = "Pokémon battle sprites", In = Group.PokemonSprites,
+                What = "Front and back of every Pokémon as it appears in a battle, with its normal and shiny colours.",
+                Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon Sprite Editor",
                 ScrambledPixels = true, FrameWidth = 80, FrameHeight = 80,
                 Stride = 6,
                 PartNames = new[] { "Back, female", "Back, male", "Front, female", "Front, male",
@@ -593,8 +593,8 @@ namespace DSPRE.Avalonia.Data
             // This archive is not laid out in runs: a form's two drawings sit near the front and its two
             // sets of colours a hundred files further on.
             new Archive { Dir = DirNames.otherPokemonBattleSprites, Title = "Alternate form sprites", In = Group.PokemonSprites,
-                What = "Battle sprites for the forms that are not a Pokemon's default one.",
-                Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokemon Sprite Editor",
+                What = "Battle sprites for the forms that are not a Pokémon's default one.",
+                Colours = Pairing.NearestInSameArchive, DeepEditor = "Pokémon Sprite Editor",
                 ScrambledPixels = true, FrameWidth = 80, FrameHeight = 80,
                 ColourEntry = i => AlternateFormSprites.ColoursFor(i, shiny: false),
                 ShinyColourEntry = i => AlternateFormSprites.ColoursFor(i, shiny: true),
@@ -602,9 +602,9 @@ namespace DSPRE.Avalonia.Data
                 BuildUnits = count => AlternateFormSprites.UnitsFor(
                     All.First(x => x.Dir == DirNames.otherPokemonBattleSprites), count) },
             // Seven shared files, then one icon per Pokemon, then eggs and forms (PokemonIconFiles).
-            new Archive { Dir = DirNames.monIcons, Title = "Pokemon party icons", In = Group.PokemonIcons,
+            new Archive { Dir = DirNames.monIcons, Title = "Pokémon party icons", In = Group.PokemonIcons,
                 What = "The small pictures used in the party, the box and the menus.",
-                Colours = Pairing.OnePaletteForAll, DeepEditor = "Pokemon Editor",
+                Colours = Pairing.OnePaletteForAll, DeepEditor = "Pokémon Editor",
                 PixelWidth = 32, FrameWidth = 32, FrameHeight = 32,
                 ColourBank = i =>
                 {
@@ -680,7 +680,7 @@ namespace DSPRE.Avalonia.Data
                 NameOf = GraphicUnits.BackdropName,
                 BuildUnits = n => GraphicUnits.BattleBackdrops(All.First(x => x.Dir == DirNames.battleBg), n) },
             new Archive { Dir = DirNames.battleObj, Title = "Battle objects", In = Group.BattleScenery,
-                What = "The ground the Pokemon stand on, the HP bars, the name boxes and the rest of the "
+                What = "The ground the Pokémon stand on, the HP bars, the name boxes and the rest of the "
                      + "battle screen.",
                 ColourEntry = BattleObjects.ColoursFor,
                 DrawingEntry = BattleObjects.DrawingFor,
@@ -793,7 +793,7 @@ namespace DSPRE.Avalonia.Data
                 ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.bagGraphics, i) },
             // One palette, layout and animation first, then a footprint per Pokemon.
             new Archive { Dir = DirNames.footprintGraphics, Title = "Footprints", In = Group.PokemonIcons,
-                What = "Each Pokemon's footprint, shown in the Pokédex and on the summary screen.",
+                What = "Each Pokémon's footprint, shown in the Pokédex and on the summary screen.",
                 Colours = Pairing.OnePaletteForAll,
                 CellPlacementEntry = _ => FirstCellLayout(DirNames.footprintGraphics),
                 // After the colours, animation and cell layout comes one drawing per species, from species 0.
@@ -812,8 +812,8 @@ namespace DSPRE.Avalonia.Data
                 ColourEntry = i => ScreenGraphicsLayouts.ColoursFor(DirNames.openingDemoGraphics, i),
                 ColourBank = i => ScreenGraphicsLayouts.BankFor(DirNames.openingDemoGraphics, i),
                 ArrangementEntry = i => ScreenGraphicsLayouts.ArrangementFor(DirNames.openingDemoGraphics, i) },
-            new Archive { Dir = DirNames.pokewalkerSprites, Title = "Pokéwalker Pokemon", In = Group.PokemonIcons,
-                What = "The Pokemon on the Pokéwalker's screen, two frames each. Four shades of grey.",
+            new Archive { Dir = DirNames.pokewalkerSprites, Title = "Pokéwalker Pokémon", In = Group.PokemonIcons,
+                What = "The Pokémon on the Pokéwalker's screen, two frames each. Four shades of grey.",
                 Pokewalker = (DSPRE.ROMFiles.PokewalkerImage.SpriteWidth, DSPRE.ROMFiles.PokewalkerImage.SpriteHeight),
                 NameOf = PokewalkerPictureName },
             new Archive { Dir = DirNames.pokewalkerIcons, Title = "Pokéwalker icons", In = Group.PokemonIcons,

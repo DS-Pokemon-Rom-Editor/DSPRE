@@ -17,7 +17,7 @@
     <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
-        <controls:HelpTip Text="Item and quantity pairs that item events give. Entries in use can't be removed. Saving renumbers the item events."/>
+        <controls:HelpTip Text="Entries in use can't be removed, and saving renumbers the item events."/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
@@ -26,7 +26,7 @@
         <StackPanel Orientation="Horizontal" Spacing="6">
           <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding NewItemIndex}"
                     Width="260" HorizontalAlignment="Left"/>
-          <TextBlock Text="Qty:" VerticalAlignment="Center" Margin="8,0,0,0"/>
+          <TextBlock Text="Qty" VerticalAlignment="Center" Margin="8,0,0,0"/>
           <NumericUpDown Value="{Binding NewQuantity}" Minimum="1" Maximum="99" FormatString="0" Width="90"/>
           <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" MinWidth="70"/>
         </StackPanel>

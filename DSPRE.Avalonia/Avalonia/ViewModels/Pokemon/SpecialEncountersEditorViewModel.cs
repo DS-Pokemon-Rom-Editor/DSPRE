@@ -95,6 +95,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             TrophyGardenVM?.RefreshNames();
             HeadbuttVM?.RefreshNames();
             BugContestVM?.RefreshNames();
+            BugContestTrainersVM?.RefreshNames();
             SafariZoneVM?.RefreshNames();
             SwarmsVM?.RefreshNames();
             RoamersVM?.RefreshNames();
@@ -136,7 +137,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             else if (hgss)
             {
                 // The tab sets it up when first shown; the 3D view is heavy.
-                HeadbuttVM = new HeadbuttEncounterViewModel(true) { InitialIndex = headbuttFile < 0 ? 0 : headbuttFile };
+                HeadbuttVM = new HeadbuttEncounterViewModel(true) { InitialIndex = headbuttFile };
                 HeadbuttVM.PropertyChanged += OnChildChanged;
                 ShowHeadbutt = true;
                 StartOnHeadbutt = headbuttFile >= 0 || headbuttOnly;

@@ -25,7 +25,7 @@
 	<!-- ds-rom projects: read only -->
 	<StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10,8,10,0" IsVisible="{Binding IsDsRomProject}">
 	  <TextBlock Text="Read only: ds-rom handles the compression" FontWeight="SemiBold" VerticalAlignment="Center"/>
-	  <controls:HelpTip Text="Overlays sit uncompressed on disk so they can be edited. Compressed marks the ones compressed again on Save ROM, a choice that lives in overlays.yaml."/>
+	  <controls:HelpTip Text="Compressed overlays are packed again on Save ROM."/>
 	</StackPanel>
 
 	<DataGrid ItemsSource="{Binding Overlays}" Margin="10"

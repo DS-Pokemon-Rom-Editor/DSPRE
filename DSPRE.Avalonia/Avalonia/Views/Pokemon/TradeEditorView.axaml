@@ -17,7 +17,7 @@
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
-		<TextBlock Text="Trade ID:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+		<TextBlock Text="Trade ID" VerticalAlignment="Center" Margin="12,0,0,0"/>
 		<NumericUpDown x:Name="TradePicker" Value="{Binding TradeID}"
 					   Minimum="{Binding TradeIDMin}"
 					   Maximum="{Binding TradeIDMax}"
@@ -39,79 +39,79 @@
 
 			<Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
 
-			  <TextBlock Grid.Row="0"  Grid.Column="0" Text="Species:"          VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="0"  Grid.Column="0" Text="Species"          VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="0" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedSpecies, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
 			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedSpecies}"/>
 			  </DockPanel>
 
-			  <TextBlock Grid.Row="1"  Grid.Column="0" Text="Requested:"        VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="1"  Grid.Column="0" Text="Requested"        VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="1" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedRequested, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
 			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SelectedRequested}"/>
 			  </DockPanel>
 
-			  <TextBlock Grid.Row="2"  Grid.Column="0" Text="Ability:"          VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="2"  Grid.Column="0" Text="Ability"          VerticalAlignment="Center"/>
 			  <controls:FusionAutoCompleteBox  Grid.Row="2"  Grid.Column="1" ItemsSource="{Binding AbilityNames}"  SelectedIndex="{Binding SelectedAbility}"/>
 
-			  <TextBlock Grid.Row="3"  Grid.Column="0" Text="Held item:"        VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="3"  Grid.Column="0" Text="Held item"        VerticalAlignment="Center"/>
 			  <DockPanel Grid.Row="3" Grid.Column="1">
 			    <Image DockPanel.Dock="Right" Width="32" Height="32" Margin="4,0,0,0" Source="{Binding SelectedHeldItem, Converter={x:Static controls:GameIconConverter.Item}}"/>
 			    <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding SelectedHeldItem}"/>
 			  </DockPanel>
 
-			  <TextBlock Grid.Row="4"  Grid.Column="0" Text="OT gender:"        VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="4"  Grid.Column="0" Text="OT gender"        VerticalAlignment="Center"/>
 			  <ComboBox  Grid.Row="4"  Grid.Column="1" ItemsSource="{Binding OTGenderNames}" SelectedIndex="{Binding SelectedOTGender}"/>
 
-			  <TextBlock Grid.Row="5"  Grid.Column="0" Text="Language:"         VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="5"  Grid.Column="0" Text="Language"         VerticalAlignment="Center"/>
 			  <ComboBox  Grid.Row="5"  Grid.Column="1" ItemsSource="{Binding LanguageNames}" SelectedIndex="{Binding SelectedLanguage}"/>
 
-			  <TextBlock Grid.Row="6"  Grid.Column="0" Text="OT ID:"            VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="6"  Grid.Column="0" Text="OT ID"            VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="6"  Grid.Column="1" Value="{Binding OtID}"  Minimum="0" Maximum="2147483647"/>
 
-			  <TextBlock Grid.Row="7"  Grid.Column="0" Text="PID:"              VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="7"  Grid.Column="0" Text="PID"              VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="7"  Grid.Column="1" Value="{Binding Pid}"   Minimum="0" Maximum="2147483647"/>
 
-			  <TextBlock Grid.Row="8"  Grid.Column="0" Text="HP IV:"            VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="8"  Grid.Column="0" Text="HP IV"            VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="8"  Grid.Column="1" Value="{Binding HpIV}"  Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="9"  Grid.Column="0" Text="Atk IV:"           VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="9"  Grid.Column="0" Text="Atk IV"           VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="9"  Grid.Column="1" Value="{Binding AtkIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="10" Grid.Column="0" Text="Def IV:"           VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="10" Grid.Column="0" Text="Def IV"           VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="10" Grid.Column="1" Value="{Binding DefIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="11" Grid.Column="0" Text="Spe IV:"           VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="11" Grid.Column="0" Text="Spe IV"           VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="11" Grid.Column="1" Value="{Binding SpeIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="12" Grid.Column="0" Text="SpAtk IV:"         VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="12" Grid.Column="0" Text="SpAtk IV"         VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="12" Grid.Column="1" Value="{Binding SpaIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="13" Grid.Column="0" Text="SpDef IV:"         VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="13" Grid.Column="0" Text="SpDef IV"         VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="13" Grid.Column="1" Value="{Binding SpdIV}" Minimum="0" Maximum="31"/>
 
-			  <TextBlock Grid.Row="14" Grid.Column="0" Text="Cool:"             VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="14" Grid.Column="0" Text="Cool"             VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="14" Grid.Column="1" Value="{Binding Cool}"  Minimum="0" Maximum="255"/>
 
-			  <TextBlock Grid.Row="15" Grid.Column="0" Text="Beauty:"           VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="15" Grid.Column="0" Text="Beauty"           VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="15" Grid.Column="1" Value="{Binding Beauty}" Minimum="0" Maximum="255"/>
 
-			  <TextBlock Grid.Row="16" Grid.Column="0" Text="Cute:"             VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="16" Grid.Column="0" Text="Cute"             VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="16" Grid.Column="1" Value="{Binding Cute}"  Minimum="0" Maximum="255"/>
 
-			  <TextBlock Grid.Row="17" Grid.Column="0" Text="Smart:"            VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="17" Grid.Column="0" Text="Smart"            VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="17" Grid.Column="1" Value="{Binding Smart}" Minimum="0" Maximum="255"/>
 
-			  <TextBlock Grid.Row="18" Grid.Column="0" Text="Tough:"            VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="18" Grid.Column="0" Text="Tough"            VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="18" Grid.Column="1" Value="{Binding Tough}" Minimum="0" Maximum="255"/>
 
-			  <TextBlock Grid.Row="19" Grid.Column="0" Text="Sheen:"            VerticalAlignment="Center"/>
+			  <TextBlock Grid.Row="19" Grid.Column="0" Text="Sheen"            VerticalAlignment="Center"/>
 			  <NumericUpDown Grid.Row="19" Grid.Column="1" Value="{Binding Sheen}" Minimum="0" Maximum="255"/>
 			</Grid>
 
 			<!-- HGSS-only unknown field -->
 			<StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsHGSS}">
-			  <TextBlock Text="Unknown (HGSS):" VerticalAlignment="Center"/>
+			  <TextBlock Text="Unknown (HGSS)" VerticalAlignment="Center"/>
 			  <NumericUpDown Value="{Binding Unknown}" Minimum="0" Maximum="2147483647"/>
 			</StackPanel>
 		  </StackPanel>
@@ -124,10 +124,10 @@
 		<StackPanel Spacing="8">
 		  <TextBlock Text="Text data" FontWeight="Bold"/>
 
-		  <TextBlock Text="Nickname (max 10 chars):"/>
+		  <TextBlock Text="Nickname (max 10 chars)"/>
 		  <TextBox Text="{Binding Nickname}" MaxLength="10"/>
 
-		  <TextBlock Text="OT name (max 7 chars):"/>
+		  <TextBlock Text="OT name (max 7 chars)"/>
 		  <TextBox Text="{Binding OtName}" MaxLength="7"/>
 		</StackPanel>
 	  </Border>

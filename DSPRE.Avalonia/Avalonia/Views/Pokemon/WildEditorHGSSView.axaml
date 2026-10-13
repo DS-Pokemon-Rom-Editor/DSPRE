@@ -43,7 +43,7 @@
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <TextBlock Text="Encounter file:" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,6,0"/>
+        <TextBlock Text="Encounter file" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,6,0"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="300"/>
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Encounters" FileId="{Binding SelectedEncounterIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
@@ -59,11 +59,11 @@
     <Border DockPanel.Dock="Top" Padding="8,3" Margin="10,8,10,0" Background="#9B2226" IsVisible="{Binding HasSourceLoadError}">
       <TextBlock Text="{Binding SourceLoadError, StringFormat='Saving is off: {0}'}" Foreground="White" FontSize="12" TextWrapping="Wrap"/>
     </Border>
-    <TabControl Margin="10">
+    <TabControl Margin="10" SelectedIndex="{Binding SelectedTab}">
       <TabItem Header="Walking">
         <DockPanel Margin="8">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
-            <TextBlock Text="Walk rate:" Classes="lbl"/>
+            <TextBlock Text="Walk rate" Classes="lbl"/>
             <NumericUpDown Value="{Binding WalkingRate}" Minimum="0" Maximum="255" Width="100"/>
             <TextBlock Text="A rate of 0 means nothing appears in the grass here." Classes="lbl"
                        Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding NothingWalksHere}"/>
@@ -123,13 +123,13 @@
       <TabItem Header="Water">
         <DockPanel Margin="8">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
-            <TextBlock Text="Surf rate:"      Classes="lbl"/>
+            <TextBlock Text="Surf rate"      Classes="lbl"/>
             <NumericUpDown Value="{Binding SurfRate}"     Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Old Rod rate:"   Classes="lbl"/>
+            <TextBlock Text="Old Rod rate"   Classes="lbl"/>
             <NumericUpDown Value="{Binding OldRodRate}"   Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Good Rod rate:"  Classes="lbl"/>
+            <TextBlock Text="Good Rod rate"  Classes="lbl"/>
             <NumericUpDown Value="{Binding GoodRodRate}"  Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Super Rod rate:" Classes="lbl"/>
+            <TextBlock Text="Super Rod rate" Classes="lbl"/>
             <NumericUpDown Value="{Binding SuperRodRate}" Minimum="0" Maximum="255" Width="100"/>
           </StackPanel>
           <ScrollViewer>
@@ -341,7 +341,7 @@
             <GroupBox Header="Rock Smash">
               <StackPanel Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                  <TextBlock Text="Rock Smash rate:" Classes="lbl"/>
+                  <TextBlock Text="Rock Smash rate" Classes="lbl"/>
                   <NumericUpDown Value="{Binding RockSmashRate}" Minimum="0" Maximum="255" Width="100"/>
                 </StackPanel>
                 <DataGrid ItemsSource="{Binding RockSmashRows}" AutoGenerateColumns="False">

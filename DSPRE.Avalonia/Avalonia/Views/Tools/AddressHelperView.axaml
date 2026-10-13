@@ -16,7 +16,7 @@
 
 	<DockPanel>
 		<controls:EditorToolbar>
-				<TextBlock Text="RAM address (hex):"/>
+				<TextBlock Text="RAM address (hex)"/>
 				<TextBox x:Name="AddressBox" Width="130"
 						 Text="{Binding AddressInput}"
 						 PlaceholderText="e.g. 02004800"/>

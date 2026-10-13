@@ -206,8 +206,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int _evSpD; public int EvSpD { get => _evSpD; set { if (Set(ref _evSpD, value) && !_loading) { _current.evSpDef = (byte)value; SetDirty(); } } }
 
         // ── Types ─────────────────────────────────────────────────────────────
-        private int _type1Index; public int Type1Index { get => _type1Index; set { if (Set(ref _type1Index, value) && !_loading && _current != null) { _current.type1 = (PokemonType)value; SetDirty(); } } }
-        private int _type2Index; public int Type2Index { get => _type2Index; set { if (Set(ref _type2Index, value) && !_loading && _current != null) { _current.type2 = (PokemonType)value; SetDirty(); } } }
+        private int _type1Index; public int Type1Index { get => _type1Index; set { if (Set(ref _type1Index, value) && !_loading && _current != null && value >= 0) { _current.type1 = (PokemonType)value; SetDirty(); } } }
+        private int _type2Index; public int Type2Index { get => _type2Index; set { if (Set(ref _type2Index, value) && !_loading && _current != null && value >= 0) { _current.type2 = (PokemonType)value; SetDirty(); } } }
 
         // ── Abilities ─────────────────────────────────────────────────────────
         private int _ability1Index; public int Ability1Index { get => _ability1Index; set { if (Set(ref _ability1Index, value) && !_loading && _current != null && value >= 0) { _current.firstAbility  = (ushort)value; SetDirty(); } } }
@@ -1269,7 +1269,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool OnFemaleModel => _followerModelIndex < _followerModels.Length && _followerModels[_followerModelIndex].Label == HgssFollowers.FemaleLabel;
         public bool FollowerTooTallEditable => OnBaseModel;
         public bool FollowerMotionEditable => !OnFemaleModel;
-        public string FollowerTooTallTip => OnBaseModel ? "Stays in its ball on maps that keep tall followers out" : BaseModelUsed;
+        public string FollowerTooTallTip => OnBaseModel ? "Maps that keep tall followers out" : BaseModelUsed;
         public string FollowerMotionTip => OnFemaleModel ? BaseModelUsed : null;
         private const string BaseModelUsed = "The game uses the base model's value";
 
@@ -1417,8 +1417,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public ObservableCollection<PokeathlonStatRow> PokeathlonStats { get; } = new();
         public int[] StarOptions { get; } = { 0, 1, 2, 3, 4 };
         public string[] AthlonSizeOptions { get; } = { "Circle 1", "Circle 2", "Circle 3" };
-        public string[] AthlonLiftOptions { get; } = { "1 · 8 px", "2 · 8 px", "3 · 16 px" };
-        public string[] AthlonOffsetOptions { get; } = { "1 · 3 px", "2 · 4 px", "3 · 5 px" };
+        public string[] AthlonLiftOptions { get; } = { "8 px (1)", "8 px (2)", "16 px" };
+        public string[] AthlonOffsetOptions { get; } = { "3 px", "4 px", "5 px" };
 
         public bool AthlonRaised
         {

@@ -77,13 +77,13 @@
         <DockPanel Margin="4">
           <!-- Search bar -->
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <TextBlock Text="Variable:" VerticalAlignment="Center"/>
+            <TextBlock Text="Variable" VerticalAlignment="Center"/>
             <TextBox Text="{Binding VarSearchText}" Width="120" PlaceholderText="e.g. 0x4001"/>
             <RadioButton Content="Dec" IsChecked="{Binding !VarHexMode}" GroupName="varMode"/>
             <RadioButton Content="Hex" IsChecked="{Binding VarHexMode}"  GroupName="varMode"/>
             <Button Content="Search" controls:Icon.Key="lens"    Click="VarSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear" controls:Icon.Key="Cross"     Click="VarClear_Click"/>
-            <controls:HelpTip Text="Files that use this variable. Double-click a row to copy its ID."/>
+            <controls:HelpTip Text="Double-click a file to copy its ID."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding VariableResults}"
                     AutoGenerateColumns="False"
@@ -104,13 +104,13 @@
       <TabItem Header="Flag watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <TextBlock Text="Flag:" VerticalAlignment="Center"/>
+            <TextBlock Text="Flag" VerticalAlignment="Center"/>
             <TextBox Text="{Binding FlagSearchText}" Width="120" PlaceholderText="e.g. 0x200"/>
             <RadioButton Content="Dec" IsChecked="{Binding !FlagHexMode}" GroupName="flagMode"/>
             <RadioButton Content="Hex" IsChecked="{Binding FlagHexMode}"  GroupName="flagMode"/>
             <Button Content="Search" controls:Icon.Key="lens"    Click="FlagSearch_Click"  IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear" controls:Icon.Key="Cross"     Click="FlagClear_Click"/>
-            <controls:HelpTip Text="Overworld hide flags and script flag commands. Double-click a row to copy it."/>
+            <controls:HelpTip Text="Double-click a row to copy it."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding FlagResults}"
                     AutoGenerateColumns="False"
@@ -131,11 +131,11 @@
       <TabItem Header="Overworld watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <TextBlock Text="Sprite entry:" VerticalAlignment="Center"/>
+            <TextBlock Text="Sprite entry" VerticalAlignment="Center"/>
             <NumericUpDown Value="{Binding OwEntryIdSearch}" Minimum="0" Maximum="9999" Width="120"/>
             <Button Content="Search" controls:Icon.Key="lens"    Click="OwSearch_Click" IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear" controls:Icon.Key="Cross"     Click="OwClear_Click"/>
-            <controls:HelpTip Text="Overworlds that use this sprite entry. Double-click a row to open it in the Event Editor."/>
+            <controls:HelpTip Text="Double-click an overworld to open it in the Event editor."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding OwWatcherResults}"
                     AutoGenerateColumns="False"
@@ -158,11 +158,11 @@
       <TabItem Header="Trainer watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
+            <TextBlock Text="Trainer" VerticalAlignment="Center"/>
             <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerNamesList}" SelectedIndex="{Binding SelectedTrainerIndex}" Width="260"/>
             <Button Content="Search" controls:Icon.Key="lens"    Click="TrainerWatchSearch_Click" IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear" controls:Icon.Key="Cross"     Click="TrainerWatchClear_Click"/>
-            <controls:HelpTip Text="Scripts and functions that name this trainer, overworld trainer battles, Vs. Seeker and Pokégear rematch rows, battle messages and phone contacts. Double-click a row to open it."/>
+            <controls:HelpTip Text="Double-click a row to open what uses this trainer."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding TrainerWatcherResults}"
                     AutoGenerateColumns="False"
@@ -184,11 +184,11 @@
       <TabItem Header="Class watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <TextBlock Text="Class:" VerticalAlignment="Center"/>
+            <TextBlock Text="Class" VerticalAlignment="Center"/>
             <controls:FusionAutoCompleteBox ItemsSource="{Binding ClassNamesList}" SelectedIndex="{Binding SelectedClassIndex}" Width="260"/>
             <Button Content="Search" controls:Icon.Key="lens"    Click="ClassWatchSearch_Click" IsEnabled="{Binding DataLoaded}"/>
             <Button Content="Clear" controls:Icon.Key="Cross"     Click="ClassWatchClear_Click"/>
-            <controls:HelpTip Text="Trainers of this class and everything that uses them, Battle Tower trainers of the class, and scripts that print its name. Double-click a row to open it."/>
+            <controls:HelpTip Text="Double-click a row to open what uses this class."/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding ClassWatcherResults}"
                     AutoGenerateColumns="False"
@@ -213,10 +213,10 @@
           <TabItem Header="File watcher">
             <DockPanel Margin="4">
               <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-                <TextBlock Text="Script file ID:" VerticalAlignment="Center"/>
+                <TextBlock Text="Script file ID" VerticalAlignment="Center"/>
                 <NumericUpDown Value="{Binding FileWatcherScriptFileId}" Minimum="0" Width="90" FormatString="0"/>
                 <Button Content="Search" controls:Icon.Key="lens" Click="FileWatcherSearch_Click" IsEnabled="{Binding DataLoaded}"/>
-                <controls:HelpTip Text="Headers that use this script file. Double-click a row to copy it."/>
+                <controls:HelpTip Text="Double-click a header to copy it."/>
               </StackPanel>
               <DataGrid ItemsSource="{Binding FileWatcherResults}"
                         AutoGenerateColumns="False"
@@ -237,11 +237,11 @@
           <TabItem Header="ID watcher">
             <DockPanel Margin="4">
               <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-                <TextBlock Text="Script file:" VerticalAlignment="Center"/>
+                <TextBlock Text="Script file" VerticalAlignment="Center"/>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ScriptFileEntries}"
                           SelectedIndex="{Binding SelectedScriptFileIndex}"
                           Width="160"/>
-                <TextBlock Text="Script ID:" VerticalAlignment="Center"/>
+                <TextBlock Text="Script ID" VerticalAlignment="Center"/>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ScriptIdEntries}"
                           SelectedIndex="{Binding SelectedScriptIdIndex}"
                           Width="120"/>
@@ -271,10 +271,10 @@
       <TabItem Header="Header watcher">
         <DockPanel Margin="4">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-            <TextBlock Text="Header ID:" VerticalAlignment="Center"/>
+            <TextBlock Text="Header ID" VerticalAlignment="Center"/>
             <NumericUpDown Value="{Binding HeaderSearchId}" Minimum="0" Width="90" FormatString="0"/>
             <Button Content="Search" controls:Icon.Key="lens" Click="HeaderSearch_Click" IsEnabled="{Binding DataLoaded}"/>
-            <controls:HelpTip Text="Incoming warps lead to this header from other event files. Outgoing warps leave from its own event file. Double-click a warp to go to that header, or a property to copy its value."/>
+            <controls:HelpTip Text="Double-click a warp to go to its header, or a property to copy it."/>
           </StackPanel>
 
           <Grid ColumnDefinitions="220,8,*">

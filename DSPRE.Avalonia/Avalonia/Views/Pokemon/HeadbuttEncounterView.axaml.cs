@@ -126,6 +126,8 @@ namespace DSPRE.Avalonia.Views.Pokemon
             if (vm == null) return;
             _setupDone = true;
             vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); };
+            // Picking a group brings its tree into view, close enough to see the tiles around it.
+            vm.GroupFocused += (_, p) => { GlView.LookAt(p.X, p.Y, p.Z); GlView.Distance = 1.2f; };
             vm.MarkersChanged += (_, _) =>
             {
                 GlView.SetMarkers(VM.MarkerMesh, VM.MarkerVertexCount);

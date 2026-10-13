@@ -14,7 +14,7 @@
       <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
       <controls:UndoRedoButtons/>
       <Button Content="Rebuild sort lists" controls:Icon.Key="reload" Click="Rebuild_Click"
-              ToolTip.Tip="Builds every sort list again from the species' names, types, heights, weights and body shapes. The regional order is kept."/>
+              ToolTip.Tip="Rebuild every sort list from the current data."/>
     </controls:EditorToolbar>
 
     <TextBlock DockPanel.Dock="Bottom" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Margin="8,4"
@@ -66,9 +66,9 @@
             </ListBox>
             <DockPanel Grid.Column="2">
               <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6" IsVisible="{Binding ShowsCopyChoice}">
-                <TextBlock Text="Copy:" VerticalAlignment="Center"/>
+                <TextBlock Text="Copy" VerticalAlignment="Center"/>
                 <ComboBox ItemsSource="{Binding CopyNames}" SelectedIndex="{Binding CopyIndex}" Width="200"
-                          ToolTip.Tip="The game keeps a second copy of the Pokédex data for Giratina's other forme, and this list differs between them"/>
+                          ToolTip.Tip="Giratina's other forme has its own copy of this list."/>
               </StackPanel>
               <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,6,Auto,4,Auto,4,Auto,4,Auto" Margin="0,6,0,0">
                 <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" AllowsNone="False"

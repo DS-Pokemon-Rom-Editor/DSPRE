@@ -5,7 +5,7 @@
         x:Class="DSPRE.Avalonia.Views.Items.ItemTableEditorView"
         x:DataType="vm:ItemTableEditorViewModel"
         Title="Item tables (pickup, hidden, Rock Smash)"
-        Width="900" Height="640"
+        Width="1340" Height="680"
         MinWidth="760" MinHeight="500"
         WindowStartupLocation="CenterScreen">
   <Design.DataContext>
@@ -28,7 +28,7 @@
           <Border x:Name="DivisorBox" DockPanel.Dock="Bottom" Margin="0,4,0,0" Padding="6"
                   BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4">
             <StackPanel Orientation="Horizontal" Spacing="10">
-              <TextBlock Text="Activation divisor (1-255):" VerticalAlignment="Center"/>
+              <TextBlock Text="Activation divisor (1-255)" VerticalAlignment="Center"/>
               <NumericUpDown Value="{Binding ActivationDivisorEdit}"
                              Minimum="1" Maximum="255" FormatString="0" Width="100"/>
               <TextBlock Text="Pickup happens on roughly one battle in this many."
@@ -66,8 +66,8 @@
                       HorizontalScrollBarVisibility="Auto"
                       MinHeight="160">
               <DataGrid.Columns>
-                <DataGridTextColumn Header="Level range" Binding="{Binding LevelRange}" Width="90" IsReadOnly="True"/>
-                <DataGridTemplateColumn Header="Item 1"  Width="140">
+                <DataGridTextColumn Header="Level range" Binding="{Binding LevelRange}" Width="84" IsReadOnly="True"/>
+                <DataGridTemplateColumn Header="Item 1"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -75,7 +75,7 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Item 2"  Width="140">
+                <DataGridTemplateColumn Header="Item 2"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -83,7 +83,7 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Item 3"  Width="140">
+                <DataGridTemplateColumn Header="Item 3"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -91,7 +91,7 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Item 4"  Width="140">
+                <DataGridTemplateColumn Header="Item 4"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -99,7 +99,7 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Item 5"  Width="140">
+                <DataGridTemplateColumn Header="Item 5"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -107,7 +107,7 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Item 6"  Width="140">
+                <DataGridTemplateColumn Header="Item 6"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -115,7 +115,7 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Item 7"  Width="140">
+                <DataGridTemplateColumn Header="Item 7"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -123,7 +123,7 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Item 8"  Width="140">
+                <DataGridTemplateColumn Header="Item 8"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -131,7 +131,7 @@
                     </DataTemplate>
                   </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Item 9"  Width="140">
+                <DataGridTemplateColumn Header="Item 9"  Width="*" MinWidth="130">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate x:DataType="vm:CommonPickupRow">
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNamesList}"
@@ -205,19 +205,19 @@
                   IsEnabled="{Binding HiddenItemSelected}">
             <StackPanel Spacing="10">
               <StackPanel Spacing="4">
-                <TextBlock Text="Item:" FontSize="12"/>
+                <TextBlock Text="Item" FontSize="12"/>
                 <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}"
                           SelectedIndex="{Binding SelectedItemID}"
                           HorizontalAlignment="Stretch"/>
               </StackPanel>
               <Grid ColumnDefinitions="*,12,*">
                 <StackPanel Grid.Column="0" Spacing="4">
-                  <TextBlock Text="Amount:" FontSize="12"/>
+                  <TextBlock Text="Amount" FontSize="12"/>
                   <NumericUpDown Value="{Binding SelectedAmount}"
                                  Minimum="1" Maximum="99" FormatString="0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="4">
-                  <TextBlock Text="Script ID:" FontSize="12"/>
+                  <TextBlock Text="Script ID" FontSize="12"/>
                   <NumericUpDown Value="{Binding SelectedScriptID}"
                                  Minimum="0" Maximum="255" FormatString="0"/>
                 </StackPanel>
@@ -247,7 +247,7 @@
               </StackPanel>
 
               <TextBlock Text="Default" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
-              <UniformGrid Columns="8" DataContext="{Binding RockSmashDefaultTable}" x:DataType="vm:RockSmashItemSlotsRow">
+              <UniformGrid Columns="4" DataContext="{Binding RockSmashDefaultTable}" x:DataType="vm:RockSmashItemSlotsRow">
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11" Margin="1"/>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11" Margin="1"/>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11" Margin="1"/>
@@ -259,7 +259,7 @@
               </UniformGrid>
 
               <TextBlock Text="Ruins of Alph" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
-              <UniformGrid Columns="8" DataContext="{Binding RockSmashRuinsOfAlphTable}" x:DataType="vm:RockSmashItemSlotsRow">
+              <UniformGrid Columns="4" DataContext="{Binding RockSmashRuinsOfAlphTable}" x:DataType="vm:RockSmashItemSlotsRow">
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11" Margin="1"/>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11" Margin="1"/>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11" Margin="1"/>
@@ -271,7 +271,7 @@
               </UniformGrid>
 
               <TextBlock Text="Cliff cave" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
-              <UniformGrid Columns="8" DataContext="{Binding RockSmashCliffCaveTable}" x:DataType="vm:RockSmashItemSlotsRow">
+              <UniformGrid Columns="4" DataContext="{Binding RockSmashCliffCaveTable}" x:DataType="vm:RockSmashItemSlotsRow">
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11" Margin="1"/>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11" Margin="1"/>
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11" Margin="1"/>
@@ -289,10 +289,14 @@
                      IsVisible="{Binding !ShowRockSmashItemTables}"
                      Text="Drop tables can only be edited on English HeartGold and SoulSilver. The per-header odds and the table below work in any language."/>
 
-          <TextBlock DockPanel.Dock="Top" Text="{Binding RockSmashCount}" FontSize="11" Margin="0,0,0,4"/>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
+            <TextBox Width="220" Text="{Binding RockSmashSearch}" PlaceholderText="Search headers"/>
+            <CheckBox Content="Only headers with odds" IsChecked="{Binding RockSmashOnlyWithOdds}"/>
+            <TextBlock Text="{Binding RockSmashCount}" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Subtle}"/>
+          </StackPanel>
 
           <DataGrid x:Name="RockSmashGrid"
-                    ItemsSource="{Binding RockSmashRows}"
+                    ItemsSource="{Binding RockSmashShown}"
                     CanUserReorderColumns="False"
                     IsReadOnly="False"
                     HorizontalScrollBarVisibility="Auto">

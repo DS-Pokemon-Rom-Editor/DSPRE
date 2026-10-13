@@ -14,7 +14,7 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="Scope:" VerticalAlignment="Center"/>
+        <TextBlock Text="Scope" VerticalAlignment="Center"/>
         <RadioButton Content="This project" GroupName="scope" IsChecked="{Binding !GlobalScope}"/>
         <RadioButton Content="Global"       GroupName="scope" IsChecked="{Binding GlobalScope}"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>

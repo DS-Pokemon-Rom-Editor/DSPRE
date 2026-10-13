@@ -90,6 +90,9 @@ namespace DSPRE.ROMFiles {
         public byte surfRate { get; set; }
         public byte walkingRate { get; set; }
 
+        /// <summary>Whether any kind of encounter here can happen at all.</summary>
+        public virtual bool HasEncounters => walkingRate > 0 || surfRate > 0 || oldRodRate > 0 || goodRodRate > 0 || superRodRate > 0;
+
         /* Levels */
         public byte[] goodRodMaxLevels = new byte[5];
         public byte[] goodRodMinLevels = new byte[5];
@@ -463,6 +466,8 @@ namespace DSPRE.ROMFiles {
     public class EncounterFileHGSS : EncounterFile {
         #region Fields (9)
         public byte rockSmashRate;
+
+        public override bool HasEncounters => base.HasEncounters || rockSmashRate > 0;
         public ushort[] morningPokemon = new ushort[12];
         public ushort[] dayPokemon = new ushort[12];
         public ushort[] nightPokemon = new ushort[12];

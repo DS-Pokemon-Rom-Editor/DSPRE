@@ -41,7 +41,7 @@
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <TextBlock Text="Encounter file:" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,6,0"/>
+        <TextBlock Text="Encounter file" Classes="lbl" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,6,0"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" ItemsSource="{Binding EncounterNames}" SelectedIndex="{Binding SelectedEncounterIndex}" MinWidth="300"/>
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Encounters" FileId="{Binding SelectedEncounterIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon"     Click="AddFile_Click"/>
@@ -51,11 +51,11 @@
         <Button Content="Repair all" controls:Icon.Key="wrench" Click="RepairAll_Click" ToolTip.Tip="Reset corrupted fields in every encounter file to defaults"/>
         <Button x:Name="SlotOddsButton" Content="% slot odds" Click="SlotOdds_Click" ToolTip.Tip="Edit the chance of each slot, shared by every encounter file"/>
     </controls:EditorToolbar>
-    <TabControl Margin="10">
+    <TabControl Margin="10" SelectedIndex="{Binding SelectedTab}">
       <TabItem Header="Walking">
         <DockPanel Margin="8">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
-            <TextBlock Text="Walk rate:" Classes="lbl"/>
+            <TextBlock Text="Walk rate" Classes="lbl"/>
             <NumericUpDown Value="{Binding WalkingRate}" Minimum="0" Maximum="255" Width="100"/>
           </StackPanel>
           <DataGrid ItemsSource="{Binding WalkingSlots}" AutoGenerateColumns="False" CanUserResizeColumns="True">
@@ -116,13 +116,13 @@
       <TabItem Header="Water">
         <DockPanel Margin="8">
           <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,8">
-            <TextBlock Text="Surf rate:"      Classes="lbl"/>
+            <TextBlock Text="Surf rate"      Classes="lbl"/>
             <NumericUpDown Value="{Binding SurfRate}"     Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Old Rod rate:"   Classes="lbl"/>
+            <TextBlock Text="Old Rod rate"   Classes="lbl"/>
             <NumericUpDown Value="{Binding OldRodRate}"   Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Good Rod rate:"  Classes="lbl"/>
+            <TextBlock Text="Good Rod rate"  Classes="lbl"/>
             <NumericUpDown Value="{Binding GoodRodRate}"  Minimum="0" Maximum="255" Width="100"/>
-            <TextBlock Text="Super Rod rate:" Classes="lbl"/>
+            <TextBlock Text="Super Rod rate" Classes="lbl"/>
             <NumericUpDown Value="{Binding SuperRodRate}" Minimum="0" Maximum="255" Width="100"/>
           </StackPanel>
           <ScrollViewer>
@@ -321,11 +321,11 @@
       <TabItem Header="Forms">
         <StackPanel x:Name="FormDataBox" Margin="12" Spacing="10">
           <Grid ColumnDefinitions="Auto,8,200" RowDefinitions="Auto,6,Auto,6,Auto">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Shellos form:" Classes="lbl"/>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Shellos form" Classes="lbl"/>
             <controls:FusionAutoCompleteBox Grid.Row="0" Grid.Column="2" ItemsSource="{Binding ShellosFormNames}" SelectedIndex="{Binding ShellosFormIndex}"/>
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="Gastrodon form:" Classes="lbl"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Gastrodon form" Classes="lbl"/>
             <controls:FusionAutoCompleteBox Grid.Row="2" Grid.Column="2" ItemsSource="{Binding ShellosFormNames}" SelectedIndex="{Binding GastrodonFormIndex}"/>
-            <TextBlock Grid.Row="4" Grid.Column="0" Text="Unown letters:" Classes="lbl"/>
+            <TextBlock Grid.Row="4" Grid.Column="0" Text="Unown letters" Classes="lbl"/>
             <controls:FusionAutoCompleteBox Grid.Row="4" Grid.Column="2" ItemsSource="{Binding UnownTableNames}" SelectedIndex="{Binding UnownTableIndex}"/>
           </Grid>
         </StackPanel>

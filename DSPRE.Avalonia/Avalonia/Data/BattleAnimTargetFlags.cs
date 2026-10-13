@@ -41,10 +41,10 @@ namespace DSPRE.Avalonia.Data
             }
             else if ((flag & SpecificBattler) != 0)
             {
-                if ((flag & Attacker) != 0) parts.Add("the player's first Pokemon");
-                if ((flag & AttackerPartner) != 0) parts.Add("the player's second Pokemon");
-                if ((flag & Defender) != 0) parts.Add("the enemy's first Pokemon");
-                if ((flag & DefenderPartner) != 0) parts.Add("the enemy's second Pokemon");
+                if ((flag & Attacker) != 0) parts.Add("the player's first Pokémon");
+                if ((flag & AttackerPartner) != 0) parts.Add("the player's second Pokémon");
+                if ((flag & Defender) != 0) parts.Add("the enemy's first Pokémon");
+                if ((flag & DefenderPartner) != 0) parts.Add("the enemy's second Pokémon");
             }
             else
             {

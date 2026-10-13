@@ -39,8 +39,8 @@
       <TextBox Text="{Binding Search}" PlaceholderText="Search by archive or file number"/>
       <CheckBox Content="Only the ones with art to draw them" IsChecked="{Binding DrawableOnly}"
                 ToolTip.Tip="An animation needs a layout and a sheet of tiles before anything can be shown"/>
-      <CheckBox Content="Hide the ones another editor does better" IsChecked="{Binding HideSpecialised}"
-                ToolTip.Tip="Trainer and Pokémon sprites have editors that own their poses and colours. Turn this off to reach their animation files anyway."/>
+      <CheckBox Content="Include sprites with their own editor" IsChecked="{Binding IncludeSpecialised}"
+                ToolTip.Tip="Trainer and Pokémon sprites are edited in their own editors."/>
     </StackPanel>
 
     <ListBox ItemsSource="{Binding Found}" SelectedIndex="{Binding SelectedIndex}"

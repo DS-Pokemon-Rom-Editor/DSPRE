@@ -12,7 +12,7 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="Headbutt file:" VerticalAlignment="Center"/>
+        <TextBlock Text="Headbutt file" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Headbutt" FileId="{Binding SelectedFileIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -20,8 +20,8 @@
         <Button controls:EditorToolbar.Slot="Add" Content="Fill missing" controls:Icon.Key="addIcon" Click="FillMissing_Click"
                 ToolTip.Tip="Add an empty headbutt file for every header without one"/>
         <ToggleButton Content="Move trees" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}"
-                      ToolTip.Tip="3D edit mode: click a tree to select it, then drag the red/blue handles to move it across the map. Arrow keys nudge one tile."/>
-        <TextBlock Text="View:" VerticalAlignment="Center"/>
+                      ToolTip.Tip="Click a tree, then drag its handles or use the arrow keys."/>
+        <TextBlock Text="View" VerticalAlignment="Center"/>
         <Button Content="Top" Click="CamTop_Click" Padding="6,2" ToolTip.Tip="Top-down camera"/>
         <Button Content="Iso" Click="CamIso_Click" Padding="6,2" ToolTip.Tip="Isometric camera"/>
         <Button controls:Icon.Key="resetIcon" Click="CamReset_Click" Padding="6,2" ToolTip.Tip="Reset camera"/>
@@ -36,19 +36,26 @@
         <TabItem Header="Normal">
           <Grid ColumnDefinitions="*,260" Margin="4">
             <ScrollViewer Grid.Column="0" Margin="0,0,6,0">
-              <ItemsControl ItemsSource="{Binding NormalEncounters}">
+              <StackPanel>
+                <Grid ColumnDefinitions="72,34,*,84,84" Margin="0,0,0,2">
+                  <TextBlock Grid.Column="2" Text="Pokémon" FontWeight="SemiBold" FontSize="12"/>
+                  <TextBlock Grid.Column="3" Text="Min level" FontWeight="SemiBold" FontSize="12" Margin="2,0,0,0"/>
+                  <TextBlock Grid.Column="4" Text="Max level" FontWeight="SemiBold" FontSize="12" Margin="2,0,0,0"/>
+                </Grid>
+                <ItemsControl ItemsSource="{Binding NormalEncounters}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:HeadbuttEncRow">
                     <Grid ColumnDefinitions="72,34,*,84,84" Margin="0,1">
                       <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
                       <Image Grid.Column="1" Width="32" Height="32" Source="{Binding SpeciesIndex, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
                       <controls:FusionAutoCompleteBox Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="0" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
-                      <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0" ToolTip.Tip="Minimum level"/>
-                      <NumericUpDown Grid.Column="4" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0" ToolTip.Tip="Maximum level"/>
+                      <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0"/>
+                      <NumericUpDown Grid.Column="4" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0"/>
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              </StackPanel>
             </ScrollViewer>
             <DockPanel Grid.Column="1">
               <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
@@ -70,19 +77,13 @@
               <ListBox ItemsSource="{Binding SelectedGroupTrees}" SelectedIndex="{Binding SelectedTreeIndex}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:HeadbuttTreeRow">
-                    <StackPanel Margin="0,1">
-                      <Grid ColumnDefinitions="46,*,*">
-                        <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
-                        <NumericUpDown Grid.Column="1" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalX}" Margin="2,0"/>
-                        <NumericUpDown Grid.Column="2" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalY}" Margin="2,0"/>
-                      </Grid>
-                      <StackPanel Orientation="Horizontal" Margin="48,0,0,0">
-                        <TextBlock FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding MatrixX, StringFormat='cell ({0}'}"/>
-                        <TextBlock FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding MatrixY, StringFormat=',{0})'}"/>
-                        <TextBlock FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding MapX, StringFormat='  tile ({0}'}"/>
-                        <TextBlock FontSize="10" Foreground="{DynamicResource Editor.Subtle}" Text="{Binding MapY, StringFormat=',{0})'}"/>
-                      </StackPanel>
-                    </StackPanel>
+                    <Grid ColumnDefinitions="54,Auto,*,Auto,*" Margin="0,1">
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
+                      <TextBlock Grid.Column="1" Text="X" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
+                      <NumericUpDown Grid.Column="2" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalX}" Margin="0,0,6,0"/>
+                      <TextBlock Grid.Column="3" Text="Y" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
+                      <NumericUpDown Grid.Column="4" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalY}"/>
+                    </Grid>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
               </ListBox>
@@ -93,19 +94,26 @@
         <TabItem Header="Special">
           <Grid ColumnDefinitions="*,260" Margin="4">
             <ScrollViewer Grid.Column="0" Margin="0,0,6,0">
-              <ItemsControl ItemsSource="{Binding SpecialEncounters}">
+              <StackPanel>
+                <Grid ColumnDefinitions="72,34,*,84,84" Margin="0,0,0,2">
+                  <TextBlock Grid.Column="2" Text="Pokémon" FontWeight="SemiBold" FontSize="12"/>
+                  <TextBlock Grid.Column="3" Text="Min level" FontWeight="SemiBold" FontSize="12" Margin="2,0,0,0"/>
+                  <TextBlock Grid.Column="4" Text="Max level" FontWeight="SemiBold" FontSize="12" Margin="2,0,0,0"/>
+                </Grid>
+                <ItemsControl ItemsSource="{Binding SpecialEncounters}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:HeadbuttEncRow">
                     <Grid ColumnDefinitions="72,34,*,84,84" Margin="0,1">
                       <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
                       <Image Grid.Column="1" Width="32" Height="32" Source="{Binding SpeciesIndex, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
                       <controls:FusionAutoCompleteBox Grid.Column="2" HorizontalAlignment="Stretch" MinWidth="0" ItemsSource="{Binding Species}" SelectedIndex="{Binding SpeciesIndex}"/>
-                      <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0" ToolTip.Tip="Minimum level"/>
-                      <NumericUpDown Grid.Column="4" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0" ToolTip.Tip="Maximum level"/>
+                      <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Value="{Binding MinLevel}" Margin="2,0,0,0"/>
+                      <NumericUpDown Grid.Column="4" Minimum="0" Maximum="100" Value="{Binding MaxLevel}" Margin="2,0,0,0"/>
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              </StackPanel>
             </ScrollViewer>
             <DockPanel Grid.Column="1">
               <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
@@ -127,10 +135,12 @@
               <ListBox ItemsSource="{Binding SelectedGroupTrees}" SelectedIndex="{Binding SelectedTreeIndex}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:HeadbuttTreeRow">
-                    <Grid ColumnDefinitions="46,*,*" Margin="0,1">
+                    <Grid ColumnDefinitions="54,Auto,*,Auto,*" Margin="0,1">
                       <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" FontSize="12"/>
-                      <NumericUpDown Grid.Column="1" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalX}" Margin="2,0"/>
-                      <NumericUpDown Grid.Column="2" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalY}" Margin="2,0"/>
+                      <TextBlock Grid.Column="1" Text="X" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
+                      <NumericUpDown Grid.Column="2" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalX}" Margin="0,0,6,0"/>
+                      <TextBlock Grid.Column="3" Text="Y" VerticalAlignment="Center" FontSize="12" Margin="0,0,4,0"/>
+                      <NumericUpDown Grid.Column="4" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding GlobalY}"/>
                     </Grid>
                   </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -144,8 +154,6 @@
       <DockPanel Grid.Column="1" Margin="0,4,4,4">
         <TextBlock DockPanel.Dock="Top" Text="{Binding MapInfo}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" Margin="2,0,0,3"/>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="2,0,0,3">
-          <TextBlock Text="left-drag pan · right-drag orbit · wheel zoom · hover a tree for its Pokémon ·"
-                     FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
           <controls:IconImage Key="dot_green"/>
           <TextBlock Text="normal" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
           <controls:IconImage Key="dot_yellow"/>

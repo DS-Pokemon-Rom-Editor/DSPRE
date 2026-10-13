@@ -12,7 +12,7 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="Matrix:" VerticalAlignment="Center"/>
+        <TextBlock Text="Matrix" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="200" ItemsSource="{Binding MatrixNames}" SelectedIndex="{Binding SelectedMatrixIndex}"/>
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Matrix" FileId="{Binding SelectedMatrixIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"   Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -20,9 +20,9 @@
         <Button Content="Add" controls:Icon.Key="addIcon" Click="AddMatrix_Click" ToolTip.Tip="Add an empty matrix at the end"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveMatrix_Click"
                 ToolTip.Tip="Deletes the highest-numbered matrix, unless a header still uses it"/>
-        <TextBlock Text="Name:" VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <TextBlock Text="Name" VerticalAlignment="Center" Margin="6,0,0,0"/>
         <TextBox Width="160" Text="{Binding MatrixName}" IsEnabled="{Binding HasMatrix}" MaxLength="127"/>
-        <TextBlock Text="Size:" VerticalAlignment="Center" Margin="6,0,0,0"/>
+        <TextBlock Text="Size" VerticalAlignment="Center" Margin="6,0,0,0"/>
         <NumericUpDown Width="110" Minimum="1" Maximum="255" Increment="1" FormatString="0" Value="{Binding SizeWidth}"
                        IsEnabled="{Binding HasMatrix}" ToolTip.Tip="Width in maps. New cells are empty."/>
         <TextBlock Text="×" VerticalAlignment="Center"/>

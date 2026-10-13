@@ -12,7 +12,7 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="Source:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
+        <TextBlock Text="Source" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <controls:FusionAutoCompleteBox x:Name="FilePicker" Width="260" ItemsSource="{Binding ScriptNames}" SelectedIndex="{Binding SelectedScriptIndex}"/>
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Script" FileId="{Binding SelectedScriptIndex}"/>
         <Button Content="Add" controls:Icon.Key="addIcon" Click="Add_Click" IsEnabled="{Binding CanAdd}"/>
@@ -22,7 +22,7 @@
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding IsEditable}"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding IsEditable}"/>
         <Button Content="Find in file" controls:Icon.Key="lens" Click="Find_Click" IsEnabled="{Binding IsEditable}"/>
-        <TextBlock Text="Theme:" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
+        <TextBlock Text="Theme" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <ComboBox Width="150" ItemsSource="{Binding EditorThemeNames}" SelectedIndex="{Binding SelectedEditorThemeIndex}"/>
     </controls:EditorToolbar>
 

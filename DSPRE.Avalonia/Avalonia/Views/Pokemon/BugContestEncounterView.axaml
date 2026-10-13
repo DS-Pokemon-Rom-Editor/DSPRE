@@ -21,55 +21,42 @@
           <Button Content="Locate" controls:Icon.Key="folder"  Click="Locate_Click"/>
       </controls:EditorToolbar>
 
-      <Grid ColumnDefinitions="*,250" Margin="8">
-        <DockPanel Grid.Column="0" Margin="0,0,8,0">
-          <StackPanel DockPanel.Dock="Top" Spacing="4">
-            <TextBlock Text="Encounter set" FontWeight="Bold"/>
-            <ComboBox HorizontalAlignment="Stretch"
-                      ItemsSource="{Binding SetNames}"
-                      SelectedIndex="{Binding SelectedSetIndex}"/>
-            <TextBlock Text="{Binding SetDescription}" Foreground="{DynamicResource Editor.Subtle}"
-                       TextWrapping="Wrap" Margin="0,2,0,4"/>
-          </StackPanel>
-          <ListBox ItemsSource="{Binding EncounterRows}"
-                   SelectedIndex="{Binding SelectedEncounterIndex}">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.PokemonInLabel}}"/>
-                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-            </ListBox>
-        </DockPanel>
-
-        <StackPanel Grid.Column="1" Spacing="6">
-          <TextBlock Text="Species" FontWeight="Bold"/>
-          <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch"
-                    ItemsSource="{Binding SpeciesNames}"
-                    SelectedIndex="{Binding SpeciesIndex}"/>
-          <Border Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
-                  Height="72" Width="72" HorizontalAlignment="Left">
-            <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
-          </Border>
-          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" >
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Min level" VerticalAlignment="Center" Margin="0,0,6,2"/>
-            <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="100" Increment="1" Value="{Binding MinLevel}" Margin="0,0,0,2"/>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="Max level" VerticalAlignment="Center" Margin="0,0,6,2"/>
-            <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="100" Increment="1" Value="{Binding MaxLevel}" Margin="0,0,0,2"/>
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="Rate" VerticalAlignment="Center" Margin="0,0,6,2"/>
-            <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" Increment="1" Value="{Binding Rate}" Margin="0,0,0,2"/>
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="Score" VerticalAlignment="Center" Margin="0,0,6,2"/>
-            <NumericUpDown Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="255" Increment="1" Value="{Binding Score}" Margin="0,0,0,2"/>
-            <TextBlock Grid.Row="4" Grid.Column="0" Text="Terminator*" VerticalAlignment="Center" Margin="0,0,6,2"/>
-            <NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding DummyValue}" IsEnabled="False" Margin="0,0,0,2"/>
-          </Grid>
-          <TextBlock Text="{Binding EffectiveRateText}" Foreground="{Binding EffectiveRateColor}" FontWeight="Bold"/>
-          <TextBlock Text="{Binding RateWarning}" Foreground="DarkRed" TextWrapping="Wrap" FontSize="12"/>
-          <Button Content="Rate help" Click="RateHelp_Click" HorizontalAlignment="Left"/>
+      <DockPanel Margin="8">
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
+          <TextBlock Text="Encounter set" FontWeight="Bold"/>
+          <ComboBox Width="320" HorizontalAlignment="Left" ItemsSource="{Binding SetNames}" SelectedIndex="{Binding SelectedSetIndex}"/>
+          <TextBlock Text="{Binding SetDescription}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
         </StackPanel>
-      </Grid>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding RateWarning}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0"
+                   IsVisible="{Binding RateWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="40,240,90,90,90,70,90" Margin="12,0,0,4">
+          <TextBlock Grid.Column="1" Text="Pokémon" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="2" Text="Min level" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="3" Text="Max level" FontWeight="SemiBold"/>
+          <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4">
+            <TextBlock Text="Rate" FontWeight="SemiBold"/>
+            <controls:HelpTip Text="The game rolls 0-99 and takes the first slot whose rate the roll reaches, so rates must go down the list and the last is 0."/>
+          </StackPanel>
+          <TextBlock Grid.Column="5" Text="Chance" FontWeight="SemiBold"/>
+          <TextBlock Grid.Column="6" Text="Score" FontWeight="SemiBold"/>
+        </Grid>
+        <ListBox ItemsSource="{Binding Rows}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:BugContestEncounterViewModel+BugRow">
+              <Grid ColumnDefinitions="40,240,90,90,90,70,90">
+                <Image Width="32" Height="32" Source="{Binding Species, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+                <controls:FusionAutoCompleteBox Grid.Column="1" controls:EditorLink.To="Pokemon" Margin="0,0,8,0"
+                                                ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}"/>
+                <NumericUpDown Grid.Column="2" Minimum="0" Maximum="100" Increment="1" Value="{Binding MinLevel}" Margin="0,0,8,0"/>
+                <NumericUpDown Grid.Column="3" Minimum="0" Maximum="100" Increment="1" Value="{Binding MaxLevel}" Margin="0,0,8,0"/>
+                <NumericUpDown Grid.Column="4" Minimum="0" Maximum="255" Increment="1" Value="{Binding Rate}" Margin="0,0,8,0"/>
+                <TextBlock Grid.Column="5" Text="{Binding Chance}" Foreground="{Binding ChanceBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Column="6" Minimum="0" Maximum="255" Increment="1" Value="{Binding Score}"/>
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
     </DockPanel>
   </Grid>
 </UserControl>

@@ -398,7 +398,7 @@ namespace DSPRE.Avalonia.Views.World
                 string path = gameDirs[DirNames.encounters].unpackedDir;
                 string[] names = GetPokemonNames();
                 int headerCount = GetHeaderCount();
-                int initial = VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : 0;
+                int initial = VM != null && VM.CanOpenEncounters ? (int)VM.WildPokemon : -1;
 
                 if (gameFamily == GameFamilies.DP || gameFamily == GameFamilies.Plat)
                 {

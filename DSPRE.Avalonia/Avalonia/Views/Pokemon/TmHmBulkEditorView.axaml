@@ -16,7 +16,7 @@
         <ToggleButton x:Name="ByPokemonButton" Content="By Pokémon" IsChecked="{Binding IsByPokemonMode, Mode=OneWay}" Click="ByPokemonMode_Click" Margin="0,0,6,4"/>
         <ToggleButton Content="By TM/HM" IsChecked="{Binding IsByMachineMode, Mode=OneWay}" Click="ByMachineMode_Click" Margin="0,0,12,4"/>
 
-        <TextBlock Text="Machine:" VerticalAlignment="Center" Margin="0,0,6,4" IsVisible="{Binding IsByMachineMode}"/>
+        <TextBlock Text="Machine" VerticalAlignment="Center" Margin="0,0,6,4" IsVisible="{Binding IsByMachineMode}"/>
         <controls:FusionAutoCompleteBox ItemsSource="{Binding MachineNamesList}" SelectedIndex="{Binding CurrentMachineIndex}"
                   Width="220" Margin="0,0,12,4" IsVisible="{Binding IsByMachineMode}"/>
 
@@ -32,7 +32,7 @@
                 ToolTip.Tip="Keep only the machines every member shares"/>
         <Button Content="Copy compatibility to…" controls:Icon.Key="copy" Click="CopyTo_Click" IsEnabled="{Binding IsByPokemonMode}" Margin="0,0,12,4"/>
 
-        <TextBlock Text="Filter:" VerticalAlignment="Center" Margin="0,0,6,4"/>
+        <TextBlock Text="Filter" VerticalAlignment="Center" Margin="0,0,6,4"/>
         <TextBox x:Name="FilterBox" Text="{Binding FilterText}" Width="180" PlaceholderText="pokémon name…" Margin="0,0,0,4"/>
     </controls:EditorToolbar>
 
@@ -49,16 +49,29 @@
       </TreeView>
 
       <Grid x:Name="MachinePanel" Grid.Column="1">
-        <ScrollViewer IsVisible="{Binding IsByPokemonMode}">
-          <ItemsControl Margin="16" ItemsSource="{Binding MachineChecklist}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate DataType="models:FlagChecklistItem">
-                <CheckBox Content="{Binding Name}" IsThreeState="True" IsChecked="{Binding IsChecked, Mode=OneWay}"
-                          Click="MachineCheckBox_Click" Margin="0,2"/>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
+        <DockPanel IsVisible="{Binding IsByPokemonMode}">
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="74,240,Auto" Margin="16,8,0,0" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource Editor.Subtle}">
+            <Grid Grid.Column="2" ColumnDefinitions="40,44,28" Margin="6,0,0,0">
+              <TextBlock Text="Power" HorizontalAlignment="Right"/>
+              <TextBlock Grid.Column="1" Text="Acc." HorizontalAlignment="Right"/>
+              <TextBlock Grid.Column="2" Text="PP" HorizontalAlignment="Right"/>
+            </Grid>
+          </Grid>
+          <ScrollViewer>
+            <ItemsControl Margin="16,4,16,16" ItemsSource="{Binding MachineChecklist}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="models:FlagChecklistItem">
+                  <Grid ColumnDefinitions="74,240,Auto" Margin="0,2">
+                    <controls:MoveBadges Move="{Binding Move}" HorizontalAlignment="Left"/>
+                    <CheckBox Grid.Column="1" Content="{Binding Name}" IsThreeState="True" IsChecked="{Binding IsChecked, Mode=OneWay}"
+                              Click="MachineCheckBox_Click"/>
+                    <controls:MoveBadges Grid.Column="2" Move="{Binding Move}" ShowIcons="False" ShowStats="True"/>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
 
         <TextBlock IsVisible="{Binding IsByMachineMode}" Margin="16" TextWrapping="Wrap"
                    Text="Tick Pokémon on the left to let them learn this machine."/>

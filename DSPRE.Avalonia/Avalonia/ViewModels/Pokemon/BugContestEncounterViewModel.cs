@@ -37,7 +37,29 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private BugContestEncounterFile _file;
 
         public ObservableCollection<string> SetNames { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> EncounterRows { get; } = new ObservableCollection<string>();
+        public ObservableCollection<BugRow> Rows { get; } = new ObservableCollection<BugRow>();
+
+        /// <summary>One slot of the shown set, edited in place.</summary>
+        public sealed class BugRow : INotifyPropertyChanged
+        {
+            public event PropertyChangedEventHandler PropertyChanged;
+            private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            private readonly BugContestEncounter _e;
+            private readonly Action _edited;
+            public BugRow(BugContestEncounter e, ObservableCollection<string> species, Action edited) { _e = e; SpeciesNames = species; _edited = edited; }
+            public ObservableCollection<string> SpeciesNames { get; }
+            public int Species => _e.Species;
+            public int SpeciesIndex { get => _e.Species < SpeciesNames.Count ? _e.Species : -1; set { if (value < 0 || value == _e.Species) return; _e.Species = (ushort)value; Raise(); Raise(nameof(Species)); _edited(); } }
+            // Shown clamped to the boxes' range; only an edit to that box writes it back.
+            public decimal MinLevel { get => Math.Min((int)_e.MinLevel, 100); set { if ((byte)value == _e.MinLevel) return; _e.MinLevel = (byte)value; Raise(); _edited(); } }
+            public decimal MaxLevel { get => Math.Min((int)_e.MaxLevel, 100); set { if ((byte)value == _e.MaxLevel) return; _e.MaxLevel = (byte)value; Raise(); _edited(); } }
+            public decimal Rate { get => _e.Rate; set { if ((byte)value == _e.Rate) return; _e.Rate = (byte)value; Raise(); _edited(); } }
+            public decimal Score { get => _e.Score; set { if ((byte)value == _e.Score) return; _e.Score = (byte)value; Raise(); _edited(); } }
+            private string _chance = "";
+            public string Chance { get => _chance; set { if (_chance == value) return; _chance = value; Raise(); } }
+            private IBrush _chanceBrush = Brushes.Gray;
+            public IBrush ChanceBrush { get => _chanceBrush; set { if (_chanceBrush == value) return; _chanceBrush = value; Raise(); } }
+        }
         public ObservableCollection<string> SpeciesNames { get; } = new ObservableCollection<string>();
 
         private bool _isAvailable;
@@ -47,20 +69,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private string _setDescription = "";
         public string SetDescription { get => _setDescription; set => Set(ref _setDescription, value); }
 
-        private string _effectiveRateText = "Effective: ~0%";
-        public string EffectiveRateText { get => _effectiveRateText; set => Set(ref _effectiveRateText, value); }
-
-        private IBrush _effectiveRateColor = Brushes.Gray;
-        public IBrush EffectiveRateColor { get => _effectiveRateColor; set => Set(ref _effectiveRateColor, value); }
-
         private string _rateWarning = "";
         public string RateWarning { get => _rateWarning; set => Set(ref _rateWarning, value); }
-
-        private Bitmap _pokemonIcon;
-        public Bitmap PokemonIcon { get => _pokemonIcon; set => Set(ref _pokemonIcon, value); }
-
-        private decimal _dummyValue;
-        public decimal DummyValue { get => _dummyValue; set => Set(ref _dummyValue, value); }
 
         private int _selectedSetIndex = -1;
         public int SelectedSetIndex
@@ -68,28 +78,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get => _selectedSetIndex;
             set { if (Set(ref _selectedSetIndex, value) && value >= 0) RefreshSetDisplay(); }
         }
-
-        private int _selectedEncounterIndex = -1;
-        public int SelectedEncounterIndex
-        {
-            get => _selectedEncounterIndex;
-            set { if (Set(ref _selectedEncounterIndex, value)) LoadEncounter(value); }
-        }
-
-        private int _speciesIndex = -1;
-        public int SpeciesIndex { get => _speciesIndex; set { if (Set(ref _speciesIndex, value) && !_suppress && value >= 0) ApplyEdit(e => e.Species = (ushort)value); } }
-
-        private decimal _minLevel = 1;
-        public decimal MinLevel { get => _minLevel; set { if (Set(ref _minLevel, value) && !_suppress) ApplyEdit(e => e.MinLevel = (byte)value); } }
-
-        private decimal _maxLevel = 1;
-        public decimal MaxLevel { get => _maxLevel; set { if (Set(ref _maxLevel, value) && !_suppress) ApplyEdit(e => e.MaxLevel = (byte)value); } }
-
-        private decimal _rate;
-        public decimal Rate { get => _rate; set { if (Set(ref _rate, value) && !_suppress) { ApplyEdit(e => e.Rate = (byte)value); UpdateRateDisplay(); } } }
-
-        private decimal _score;
-        public decimal Score { get => _score; set { if (Set(ref _score, value) && !_suppress) ApplyEdit(e => e.Score = (byte)value); } }
 
         // ── Dirty tracking ───────────────────────────────────────────────────────
         private bool _dirty;
@@ -123,9 +111,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     en.Species = (ushort)v[0]; en.MinLevel = (byte)v[1]; en.MaxLevel = (byte)v[2];
                     en.Rate = (byte)v[3]; en.Score = (byte)v[4]; en.Dummy = (ushort)v[5];
                 }
-            int row = _selectedEncounterIndex;
             RefreshSetDisplay();
-            if (row >= 0 && row < EncounterRows.Count) { _selectedEncounterIndex = -1; SelectedEncounterIndex = row; }
             if (_undo.IsDirty) SetDirty(); else SetClean();
         }
 
@@ -148,7 +134,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (!Design.IsDesignMode) return;
             IsAvailable = true;
             SetNames.Add("National Park");
-            EncounterRows.Add("Caterpie");
         }
 
         public BugContestEncounterViewModel(bool _) { }
@@ -209,12 +194,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _suppress = true;
             try { ListSync.Apply(SpeciesNames, GetPokemonNames()); }
             finally { _suppress = false; }
-            if (CurrentSet == null) return;
-            int keep = _selectedEncounterIndex;
-            RefreshSetDisplay();
-            if (keep < 0 || keep >= EncounterRows.Count) return;
-            _selectedEncounterIndex = -1;
-            SelectedEncounterIndex = keep;
         }
 
         private void RefreshSetDisplay()
@@ -223,81 +202,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (set == null) return;
             SetDescription = set.Description;
 
-            _suppress = true;
-            EncounterRows.Clear();
-            foreach (BugContestEncounter enc in set.Encounters) EncounterRows.Add(enc.ToString());
-            _suppress = false;
-
-            // Reset first so entry 0 of the new set still loads its fields.
-            _selectedEncounterIndex = -1;
-            if (EncounterRows.Count > 0) SelectedEncounterIndex = 0;
-            else { OnPropertyChanged(nameof(SelectedEncounterIndex)); ClearFields(); }
+            Rows.Clear();
+            foreach (BugContestEncounter enc in set.Encounters) Rows.Add(new BugRow(enc, SpeciesNames, RowEdited));
             UpdateRateDisplay();
-        }
-
-        private void LoadEncounter(int index)
-        {
-            BugContestEncounterSet set = CurrentSet;
-            if (set == null || index < 0 || index >= set.Encounters.Count) { ClearFields(); return; }
-            BugContestEncounter enc = set.Encounters[index];
-
-            _suppress = true;
-            SpeciesIndex = enc.Species < SpeciesNames.Count ? enc.Species : -1;
-            // Shown clamped to the boxes' range; only an edit to that box writes it back.
-            MinLevel = Clamp(enc.MinLevel, 0, 100);
-            MaxLevel = Clamp(enc.MaxLevel, 0, 100);
-            Rate = enc.Rate;
-            Score = enc.Score;
-            DummyValue = enc.Dummy;
-            _suppress = false;
-
-            UpdateIcon(enc.Species);
-            UpdateRateDisplay();
-        }
-
-        private static decimal Clamp(int v, int lo, int hi) => Math.Max(lo, Math.Min(hi, v));
-
-        private void ClearFields()
-        {
-            _suppress = true;
-            SpeciesIndex = -1; MinLevel = 1; MaxLevel = 1; Rate = 0; Score = 0; DummyValue = 0;
-            PokemonIcon = null;
-            EffectiveRateText = "Effective: ~0%"; EffectiveRateColor = StatusBrushes.Quiet; RateWarning = "";
-            _suppress = false;
-        }
-
-        // Only the edited field is written, so a value the boxes can't show survives other edits.
-        private void ApplyEdit(Action<BugContestEncounter> change)
-        {
-            BugContestEncounterSet set = CurrentSet;
-            if (set == null || _selectedEncounterIndex < 0 || _selectedEncounterIndex >= set.Encounters.Count) return;
-            BugContestEncounter enc = set.Encounters[_selectedEncounterIndex];
-            change(enc);
-
-            Edited();
-
-            int sel = _selectedEncounterIndex;
-            _suppress = true;
-            EncounterRows[sel] = enc.ToString();
-            _suppress = false;
-            // Replacing the selected row clears the list's selection, which also blanks the fields; put both back
-            // so the next edit lands on this slot with its real values.
-            _selectedEncounterIndex = sel;
-            OnPropertyChanged(nameof(SelectedEncounterIndex));
-            LoadEncounter(sel);
-
-            if (_speciesIndex >= 0) UpdateIcon(_speciesIndex);
-        }
-
-        private void UpdateIcon(int species)
-        {
-            try
-            {
-                if (species <= 0) { PokemonIcon = null; return; }
-                RawImage gdi = DSUtils.GetPokePicRaw(species, 64, 64);
-                PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
-            }
-            catch { PokemonIcon = null; }
         }
 
         // ── Effective-rate calculation + validation (ported verbatim) ───────────────
@@ -341,18 +248,19 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             return string.Join("\n", warnings);
         }
 
+        private void RowEdited()
+        {
+            Edited();
+            UpdateRateDisplay();
+        }
+
         private void UpdateRateDisplay()
         {
-            if (_selectedEncounterIndex >= 0)
+            for (int i = 0; i < Rows.Count; i++)
             {
-                int eff = CalculateEffectiveRate(_selectedEncounterIndex);
-                EffectiveRateText = $"Effective: ~{eff}%";
-                EffectiveRateColor = eff == 0 ? StatusBrushes.Bad : eff < 5 ? StatusBrushes.Warn : StatusBrushes.Good;
-            }
-            else
-            {
-                EffectiveRateText = "Effective: ~0%";
-                EffectiveRateColor = Brushes.Gray;
+                int eff = CalculateEffectiveRate(i);
+                Rows[i].Chance = eff + "%";
+                Rows[i].ChanceBrush = eff == 0 ? StatusBrushes.Bad : eff < 5 ? StatusBrushes.Warn : StatusBrushes.Good;
             }
             RateWarning = ValidateRates();
         }
@@ -403,14 +311,5 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string path = Filesystem.GetBugContestEncounterPath();
             if (File.Exists(path)) SystemShell.RevealInFileManager(path);
         }
-
-        public Task ShowRateHelp() => DialogHelper.ShowInfo(
-            "The Rate value is a THRESHOLD, not a percentage.\n\n" +
-            "The game rolls 0-99 and checks entries top to bottom; the first entry where (roll >= rate) wins.\n\n" +
-            "Effective rate:\n" +
-            "  • First entry: 100 - rate\n" +
-            "  • Other entries: rate[previous] - rate[current]\n\n" +
-            "Rates must strictly descend, or later entries never trigger.",
-            "Rate System Help");
     }
 }

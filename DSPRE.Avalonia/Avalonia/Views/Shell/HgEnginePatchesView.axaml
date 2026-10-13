@@ -19,7 +19,7 @@
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <TextBlock Text="Show:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <TextBlock Text="Show" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <ComboBox Width="160" ItemsSource="{Binding Binaries}" SelectedIndex="{Binding BinaryFilter}"/>
         <Button Content="Reload" controls:Icon.Key="reload" Click="Reload_Click"/>
     </controls:EditorToolbar>
@@ -33,7 +33,6 @@
     <Border x:Name="AddPatchPanel" DockPanel.Dock="Bottom" Background="{DynamicResource Editor.PanelBg}" BorderBrush="{DynamicResource Editor.Border}"
             BorderThickness="0,1,0,0" Padding="8">
       <StackPanel Spacing="6">
-        <TextBlock Text="Add a patch, or pick one in the table to change or remove it" FontWeight="Bold" FontSize="12"/>
         <WrapPanel>
           <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,0,10,4">
             <TextBlock Text="List" VerticalAlignment="Center"/>

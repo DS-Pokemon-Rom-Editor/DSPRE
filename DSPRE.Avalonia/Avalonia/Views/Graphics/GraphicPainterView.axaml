@@ -33,7 +33,7 @@
                      IsVisible="{Binding HasFrames}"/>
           <ComboBox ItemsSource="{Binding Frames}" SelectedIndex="{Binding FrameIndex, Mode=TwoWay}"
                     IsVisible="{Binding HasFrames}" MinWidth="120" FontSize="12" Margin="0,0,10,0"
-                    ToolTip.Tip="This file holds more than one picture. Pick which to paint, or All of it to see them together.">
+                    ToolTip.Tip="Which picture in this file to paint.">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="vm:GraphicPainterViewModel+Frame">
                 <TextBlock Text="{Binding Name}"/>
@@ -61,8 +61,7 @@
 
     <Border DockPanel.Dock="Bottom" Padding="8,4" Background="{DynamicResource Editor.PanelBg}">
       <StackPanel Spacing="5">
-        <TextBlock Text="The colours. Click one to paint with it. With one picked, Change this colour above alters the colour itself, and every pixel already using it changes too."
-                   FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+        <controls:HelpTip HorizontalAlignment="Left" Text="Click a colour to paint with it. Change this colour edits it everywhere it is used."/>
         <ListBox x:Name="ColourList" ItemsSource="{Binding Colours}" SelectedItem="{Binding SelectedSwatch}"
                  MaxHeight="96" Background="Transparent" BorderThickness="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">

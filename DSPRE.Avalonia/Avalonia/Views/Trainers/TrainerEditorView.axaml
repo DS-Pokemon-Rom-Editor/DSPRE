@@ -78,6 +78,7 @@
                   <Image Source="{Binding ClassImage}" Stretch="Uniform"/>
                 </Border>
                 <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Center" IsVisible="{Binding HasClassSprite}">
+                  <TextBlock Text="Frame" VerticalAlignment="Center"/>
                   <NumericUpDown Width="70" Minimum="0" Maximum="{Binding ClassFrameMax}" Increment="1" Value="{Binding ClassFrame}"
                                  ToolTip.Tip="Sprite frame shown here; not saved"/>
                   <Button controls:Icon.Key="{Binding PlayIcon}" Click="PlaySprite_Click" IsEnabled="{Binding CanPlay}" ToolTip.Tip="Play the sprite's animation"/>
@@ -169,11 +170,11 @@
                 <DataTemplate x:DataType="vm:TrainerPartyMonViewModel">
                   <Border IsVisible="{Binding IsVisible}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                           CornerRadius="3" Padding="6" Margin="0,0,0,6" Background="{DynamicResource Editor.PanelBg}">
-                    <Grid ColumnDefinitions="64,*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <Grid ColumnDefinitions="74,*,*" RowDefinitions="Auto,Auto,Auto,Auto">
                       <StackPanel Grid.Column="0" Grid.RowSpan="3" Spacing="4" VerticalAlignment="Top">
-                        <Border Width="56" Height="56"
+                        <Border Width="66" Height="66"
                                 Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-                          <Image Source="{Binding PokemonIcon}" Stretch="Uniform"/>
+                          <Image Source="{Binding PokemonIcon}" Width="64" Height="64" RenderOptions.BitmapInterpolationMode="None"/>
                         </Border>
                         <StackPanel Orientation="Horizontal" Spacing="2" HorizontalAlignment="Center">
                           <Button controls:Icon.Key="arrowup" Padding="4,2" Click="MonUp_Click" ToolTip.Tip="{Binding MoveUpTip}"/>

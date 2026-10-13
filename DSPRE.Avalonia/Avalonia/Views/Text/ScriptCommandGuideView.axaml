@@ -13,7 +13,7 @@
 
   <DockPanel Margin="8">
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
-      <TextBlock Text="Search:" VerticalAlignment="Center"/>
+      <TextBlock Text="Search" VerticalAlignment="Center"/>
       <TextBox Text="{Binding SearchText}" Width="260" PlaceholderText="command, parameter or description"/>
       <ComboBox ItemsSource="{Binding SectionNames}" SelectedIndex="{Binding SectionIndex}" IsVisible="{Binding HasSections}" MinWidth="180"/>
     </StackPanel>

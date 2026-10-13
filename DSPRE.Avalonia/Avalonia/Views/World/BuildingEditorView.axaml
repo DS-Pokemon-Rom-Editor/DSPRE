@@ -19,7 +19,7 @@
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
         <CheckBox Content="Interior (HGSS)" IsChecked="{Binding Interior}" IsEnabled="{Binding IsHGSS}" VerticalAlignment="Center"/>
-        <TextBlock Text="Textures:" VerticalAlignment="Center"/>
+        <TextBlock Text="Textures" VerticalAlignment="Center"/>
         <ComboBox Width="150" ItemsSource="{Binding Textures}" SelectedIndex="{Binding SelectedTextureIndex}"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>

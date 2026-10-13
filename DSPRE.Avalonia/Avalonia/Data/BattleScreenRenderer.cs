@@ -202,7 +202,7 @@ namespace DSPRE.Avalonia.Data
                 Piece piece = new Piece
                 {
                     Name = player ? "Ground, your side" : "Ground, their side",
-                    What = "The tray the Pokemon stands on.",
+                    What = "The tray the Pokémon stands on.",
                     Archive = DirNames.battleObj,
                     Drawing = files.HasValue ? (player ? files.Value.MineDrawing : files.Value.EnemyDrawing) : -1,
                     Layout = files.HasValue ? (player ? files.Value.MineLayout : files.Value.EnemyLayout) : -1,
@@ -227,7 +227,7 @@ namespace DSPRE.Avalonia.Data
                 Piece piece = new Piece
                 {
                     Name = BattleGaugeComposer.NameOf(kind),
-                    What = "The name, level and health of one Pokemon.",
+                    What = "The name, level and health of one Pokémon.",
                     Archive = DirNames.battleObj,
                     Drawing = BattleObjects.Find(thing, "Drawing"),
                     Layout = BattleObjects.Find(thing, "As it appears"),
@@ -365,14 +365,14 @@ namespace DSPRE.Avalonia.Data
                 case TouchMenu.Command:
                     yield return new("TouchScreen.Layer.CommandSilhouette:Screen", "Command silhouette",
                         "The shape behind the command buttons, see-through over the background.", 3, 1, true);
-                    yield return new("TouchScreen.Layer.CommandButtons:Screen", "Command buttons", "Fight, Bag, Pokemon and Run.", 2, 0, false);
+                    yield return new("TouchScreen.Layer.CommandButtons:Screen", "Command buttons", "Fight, Bag, Pokémon and Run.", 2, 0, false);
                     break;
                 case TouchMenu.Fight:
                     yield return new("TouchScreen.Layer.MoveButtons:Screen", "Move buttons",
                         "The four move buttons. The game colours each one after its move's type.", 2, 0, false);
                     break;
                 case TouchMenu.Target:
-                    yield return new("TouchScreen.Layer.TargetButtons:Screen", "Target buttons", "Which Pokemon a move is aimed at.", 2, 0, false);
+                    yield return new("TouchScreen.Layer.TargetButtons:Screen", "Target buttons", "Which Pokémon a move is aimed at.", 2, 0, false);
                     yield return new("TouchScreen.Layer.TargetOutlines:Screen", "Target outlines",
                         "The outlines over the target buttons, see-through.", 1, 1, true);
                     break;

@@ -55,7 +55,7 @@ namespace DSPRE.Avalonia.Data
         /// </summary>
         public const string HowItWorks =
             "Every cry plays the same short sequence; what makes them different is the sample it is given, "
-            + "one per Pokemon. Taking a cry out gives you that sample on its own, as ordinary sound.";
+            + "one per Pokémon. Taking a cry out gives you that sample on its own, as ordinary sound.";
 
         /// <summary>The prefix the sound archive puts on the name of every bank that holds a cry.</summary>
         public const string CryBankPrefix = "BANK_PV";
@@ -209,9 +209,9 @@ namespace DSPRE.Avalonia.Data
             if (RefusedByHgEngine(sdatPath, out problem)) return false;
 
             int arc = CryWaveArchive(species);
-            if (arc < 0) { problem = "This ROM has no cry for that Pokemon to replace."; return false; }
+            if (arc < 0) { problem = "This ROM has no cry for that Pokémon to replace."; return false; }
             SdatWaveArcInfo arcInfo = sdat.WaveArcs[arc];
-            if (arcInfo == null) { problem = "This ROM has no cry for that Pokemon to replace."; return false; }
+            if (arcInfo == null) { problem = "This ROM has no cry for that Pokémon to replace."; return false; }
 
             byte[] file;
             try { file = File.ReadAllBytes(path); }
@@ -272,7 +272,7 @@ namespace DSPRE.Avalonia.Data
             if (RefusedByHgEngine(sdatPath, out problem)) return null;
 
             int arc = CryWaveArchive(species);
-            if (arc < 0 || sdat.WaveArcs[arc] == null) { problem = "This ROM has no cry for that Pokemon to replace."; return null; }
+            if (arc < 0 || sdat.WaveArcs[arc] == null) { problem = "This ROM has no cry for that Pokémon to replace."; return null; }
 
             short[] pcm = ReadImport(path, out int rate, out problem);
             if (pcm == null) return null;

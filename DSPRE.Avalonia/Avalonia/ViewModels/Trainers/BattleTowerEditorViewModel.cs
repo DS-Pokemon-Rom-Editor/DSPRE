@@ -5,6 +5,7 @@ using System.Linq;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using global::Avalonia.Media;
+using DSPRE.Avalonia.Data;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
@@ -160,9 +161,17 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private string _message1 = "", _message2 = "", _message3 = "";
-        public string Message1 { get => _message1; set { if (Set(ref _message1, value) && !_suppress) { CurrentTrainer.Messages[0] = value; MarkDirty(); } } }
-        public string Message2 { get => _message2; set { if (Set(ref _message2, value) && !_suppress) { CurrentTrainer.Messages[1] = value; MarkDirty(); } } }
-        public string Message3 { get => _message3; set { if (Set(ref _message3, value) && !_suppress) { CurrentTrainer.Messages[2] = value; MarkDirty(); } } }
+        // The \r each message ends with is kept out of the boxes and put back on save.
+        private readonly string[] _messageEnds = { "", "", "" };
+        public string Message1 { get => _message1; set { if (Set(ref _message1, value) && !_suppress) { CurrentTrainer.Messages[0] = MessageMarkup.ToRaw(value, _messageEnds[0]); MarkDirty(); } } }
+        public string Message2 { get => _message2; set { if (Set(ref _message2, value) && !_suppress) { CurrentTrainer.Messages[1] = MessageMarkup.ToRaw(value, _messageEnds[1]); MarkDirty(); } } }
+        public string Message3 { get => _message3; set { if (Set(ref _message3, value) && !_suppress) { CurrentTrainer.Messages[2] = MessageMarkup.ToRaw(value, _messageEnds[2]); MarkDirty(); } } }
+
+        private string ShowMessage(BattleTowerTrainer trainer, int i)
+        {
+            _messageEnds[i] = "";
+            return trainer.Messages.Length > i ? MessageMarkup.ToDisplay(trainer.Messages[i], out _messageEnds[i]) : "";
+        }
 
         public ObservableCollection<string> SetIdLabels { get; } = new();
 
@@ -341,9 +350,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             TrainerClassIndex = trainer.TrainerType < TrainerClassNames.Count ? trainer.TrainerType : -1;
             TrainerName = trainer.Name;
-            Message1 = trainer.Messages.Length > 0 ? trainer.Messages[0] : "";
-            Message2 = trainer.Messages.Length > 1 ? trainer.Messages[1] : "";
-            Message3 = trainer.Messages.Length > 2 ? trainer.Messages[2] : "";
+            Message1 = ShowMessage(trainer, 0);
+            Message2 = ShowMessage(trainer, 1);
+            Message3 = ShowMessage(trainer, 2);
             RefreshSetIdsList(trainer);
             _suppress = false;
             OnPropertyChanged(nameof(IsTrainerSelected));

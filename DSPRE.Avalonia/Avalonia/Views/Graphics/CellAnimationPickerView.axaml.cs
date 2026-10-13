@@ -49,8 +49,8 @@ namespace DSPRE.Avalonia.Views.Graphics
                 case "Trainer Back Sprite Editor":
                     AvaloniaEditorLauncher.OpenTrainerBackSpriteEditor(TrainerGraphicsLayout.ClassOf(pick.Animation));
                     break;
-                case "Pokemon Sprite Editor":
-                case "Pokemon Editor":
+                case "Pokémon Sprite Editor":
+                case "Pokémon Editor":
                     _ = AvaloniaEditorLauncher.OpenPokemonEditorAsync(pick.Animation / 6);
                     break;
                 case "Bottom Screen Editor":

@@ -399,7 +399,30 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public RockSmashItemSlotsRow RockSmashRuinsOfAlphTable { get; private set; }
         public RockSmashItemSlotsRow RockSmashCliffCaveTable { get; private set; }
 
-        public string RockSmashCount => $"Headers: {RockSmashRows.Count}";
+        public string RockSmashCount => $"{RockSmashShown.Count} of {RockSmashRows.Count} headers";
+
+        /// <summary>The headers the list shows; RockSmashRows keeps every header for saving and undo.</summary>
+        public ObservableCollection<RockSmashHeaderRow> RockSmashShown { get; } = new();
+
+        private string _rockSmashSearch = "";
+        public string RockSmashSearch { get => _rockSmashSearch; set { if (_rockSmashSearch == (value ?? "")) return; _rockSmashSearch = value ?? ""; OnPropertyChanged(); FilterRockSmash(); } }
+
+        private bool _rockSmashOnlyWithOdds = true;
+        public bool RockSmashOnlyWithOdds { get => _rockSmashOnlyWithOdds; set { if (_rockSmashOnlyWithOdds == value) return; _rockSmashOnlyWithOdds = value; OnPropertyChanged(); FilterRockSmash(); } }
+
+        // Filtered only when the search or the toggle changes, so a row being edited to 0 stays in view.
+        private void FilterRockSmash()
+        {
+            RockSmashShown.Clear();
+            string search = _rockSmashSearch.Trim();
+            foreach (RockSmashHeaderRow r in RockSmashRows)
+            {
+                if (_rockSmashOnlyWithOdds && r.Odds == 0) continue;
+                if (search.Length > 0 && !SearchMatch.Contains(r.HeaderLabel, search)) continue;
+                RockSmashShown.Add(r);
+            }
+            OnPropertyChanged(nameof(RockSmashCount));
+        }
 
         // ── Dirty ─────────────────────────────────────────────────────────────
         private bool _pickupDirty;
@@ -518,7 +541,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             ShowRockSmashItemTables = true;
 
             _rawItemNames = Enumerable.Range(0, 30).Select(i => $"Item {i}").ToArray();
-            for (int i = 0; i < 30; i++) ItemNames.Add($"{i}: {_rawItemNames[i]}");
+            for (int i = 0; i < 30; i++) ItemNames.Add(_rawItemNames[i]);
 
             for (int i = 0; i < COMMON_COUNT; i++) _commonIDs.Add((ushort)(i % 10));
             for (int i = 0; i < RARE_COUNT;   i++) _rareIDs.Add((ushort)(i % 10));
@@ -534,7 +557,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public ItemTableEditorViewModel(string[] itemNames, IEnumerable<string> headerNames = null)
         {
             _rawItemNames = itemNames;
-            for (int i = 0; i < itemNames.Length; i++) ItemNames.Add($"{i}: {itemNames[i]}");
+            for (int i = 0; i < itemNames.Length; i++) ItemNames.Add(itemNames[i]);
             _headerNames = headerNames?.ToArray() ?? Array.Empty<string>();
 
             ShowPickupTab           = RomInfo.pickupTableOverlayNumber != -1;
@@ -614,7 +637,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 // Build initial rows
                 ActivationRowVM divisorRow = new ActivationRowVM("Activation %", _activationDivisor);
                 divisorRow.Probability  = $"{chance:F2}%";
-                divisorRow.Description  = "1/divisor × 100 (modulo-based)";
+                divisorRow.Description  = "";
                 ActivationRows.Add(divisorRow);
 
                 int prev = 0;
@@ -625,7 +648,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                     double prob = chance / 100.0 * range;
                     ActivationRowVM row = new ActivationRowVM($"Slot {i + 1}", thresh);
                     row.Probability  = $"{prob:F2}%";
-                    row.Description  = $"{prev}, {thresh - 1} ({range} values)";
+                    row.Description  = $"{prev}-{thresh - 1}";
                     ActivationRows.Add(row);
                     prev = thresh;
                 }
@@ -634,7 +657,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 double rareProb = chance / 100.0 * 2;
                 ActivationRowVM rareRow = new ActivationRowVM("Rare (98-99)", 0);
                 rareRow.Probability = $"{rareProb:F2}%";
-                rareRow.Description = "98 to 99 (2 values)";
+                rareRow.Description = "98-99";
                 ActivationRows.Add(rareRow);
             }
             else
@@ -774,7 +797,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 string name = i < _headerNames.Length ? _headerNames[i] : $"Header {i}";
                 RockSmashRows.Add(new RockSmashHeaderRow(data, name, SetRockSmashDirty));
             }
-            OnPropertyChanged(nameof(RockSmashCount));
+            FilterRockSmash();
 
             if (ShowRockSmashItemTables)
             {

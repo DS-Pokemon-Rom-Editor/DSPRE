@@ -218,6 +218,19 @@ namespace DSPRE.Avalonia.Data
             catch { return $"Pokémon {species}"; }
         }
 
+        /// <summary>For every file id of the given kind that some header references, those header ids. One pass over the headers.</summary>
+        public static Dictionary<int, List<ushort>> HeadersByRef(RefKind kind)
+        {
+            Dictionary<int, List<ushort>> result = new Dictionary<int, List<ushort>>();
+            foreach (HeaderRefs h in ScanHeaders())
+            {
+                int v = RefValue(h, kind);
+                if (!result.TryGetValue(v, out List<ushort> ids)) result[v] = ids = new List<ushort>();
+                ids.Add(h.Id);
+            }
+            return result;
+        }
+
         /// <summary>Header ids that reference the given file id of the given kind.</summary>
         public static List<ushort> HeadersUsing(RefKind kind, int id)
         {

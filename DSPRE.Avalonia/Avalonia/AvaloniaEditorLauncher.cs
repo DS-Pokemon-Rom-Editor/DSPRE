@@ -445,9 +445,10 @@ namespace DSPRE.Avalonia
                 1000, 700).ShowManaged();
         }
 
-        public static void OpenWildEditor(int initialIndex = 0) => _ = OpenWildEditorAsync(initialIndex);
+        /// <param name="initialIndex">The encounter file to open, or -1 for the first one with encounters.</param>
+        public static void OpenWildEditor(int initialIndex = -1) => _ = OpenWildEditorAsync(initialIndex);
 
-        public static async System.Threading.Tasks.Task OpenWildEditorAsync(int initialIndex = 0)
+        public static async System.Threading.Tasks.Task OpenWildEditorAsync(int initialIndex = -1)
         {
             if (Refused("WildEditorView")) return;
 
@@ -1408,14 +1409,14 @@ namespace DSPRE.Avalonia
             switch (archive)
             {
                 case RomInfo.DirNames.pokemonBattleSprites:
-                    return ("Pokemon Editor", () => { _ = OpenPokemonEditorAsync(fileIndex / 6); });
+                    return ("Pokémon Editor", () => { _ = OpenPokemonEditorAsync(fileIndex / 6); });
 
                 case RomInfo.DirNames.monIcons:
                 {
                         PokemonIconFiles.Icon icon = DSPRE.ROMFiles.PokemonIconFiles.Describe(fileIndex);
                     if (icon == null) return null;
                     int entry = icon.EditorId;
-                    return ("Pokemon Editor", () => { _ = OpenPokemonEditorAsync(entry); });
+                    return ("Pokémon Editor", () => { _ = OpenPokemonEditorAsync(entry); });
                 }
 
                 case RomInfo.DirNames.trainerGraphics:

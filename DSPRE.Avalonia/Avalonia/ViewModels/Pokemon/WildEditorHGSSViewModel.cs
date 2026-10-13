@@ -222,9 +222,32 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             EncounterSlotOdds.Saved += OnOddsSaved;
 
             int count = EncounterNames.Count;
+            if (encToOpen < 0) encToOpen = FirstWithEncounters(count);
             if (encToOpen >= count) encToOpen = 0;
             _selectedEncounterIndex = encToOpen;
             LoadFile(encToOpen);
+            SelectedTab = FirstTabWithEncounters();
+        }
+
+        /// <summary>The tab shown. Set once on open to the first one with encounters, then left to the user.</summary>
+        public int SelectedTab { get; set; }
+
+        private int FirstTabWithEncounters()
+        {
+            if (_current == null || _current.walkingRate > 0) return 0;
+            if (_current.surfRate > 0 || _current.oldRodRate > 0 || _current.goodRodRate > 0 || _current.superRodRate > 0) return 1;
+            return _current.HasEncounters ? 2 : 0;
+        }
+
+        // Opened without a file in mind: start on one that has encounters rather than the empty file 0.
+        private int FirstWithEncounters(int count)
+        {
+            for (int id = 0; id < count; id++)
+            {
+                try { if (LoadRecord(Path.Combine(_dirPath, id.ToString("D4")), id, out _).HasEncounters) return id; }
+                catch (IOException) { }
+            }
+            return 0;
         }
 
         // ── Constructor (design-time) ─────────────────────────────────────

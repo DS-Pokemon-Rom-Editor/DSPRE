@@ -137,19 +137,21 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool HideSpecialised
         {
             get => _hideSpecialised;
-            set { if (Set(ref _hideSpecialised, value)) Show(); }
+            set { if (Set(ref _hideSpecialised, value)) { OnPropertyChanged(nameof(IncludeSpecialised)); Show(); } }
         }
+
+        public bool IncludeSpecialised { get => !HideSpecialised; set => HideSpecialised = !value; }
 
         // These own poses, colours and source images. Frame order and timing are this window's job.
         private static readonly string[] OwnsTheArtwork =
         {
-            "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokemon Sprite Editor",
+            "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokémon Sprite Editor",
         };
 
         // Editors that work on frames; the graphics list also names archive users like the Header Editor.
         private static readonly string[] HandsOffTo =
         {
-            "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokemon Sprite Editor", "Pokemon Editor", "Bottom Screen Editor",
+            "Trainer Sprite Editor", "Trainer Back Sprite Editor", "Pokémon Sprite Editor", "Pokémon Editor", "Bottom Screen Editor",
         };
 
         private static string HandOff(string deepEditor) => Array.IndexOf(HandsOffTo, deepEditor) >= 0 ? deepEditor : null;
@@ -219,7 +221,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             RaiseSelection();
             StatusText = $"{Found.Count} shown"
                        + (_hideSpecialised && specialised > 0
-                            ? $", {specialised} hidden that another editor does better"
+                            ? $", {specialised} with their own editor hidden"
                             : "");
         }
 

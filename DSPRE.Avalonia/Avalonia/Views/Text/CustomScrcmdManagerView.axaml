@@ -23,7 +23,7 @@
   <DockPanel Margin="10">
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
       <TextBlock Text="Script command databases" FontWeight="SemiBold"/>
-      <controls:HelpTip Text="Per-ROM script command databases (edited_databases). Import replaces the selected project's scrcmd_database.json; changes can be applied live by reparsing all scripts."/>
+      <controls:HelpTip Text="Import replaces the selected project's script command list."/>
     </StackPanel>
 
     <Border DockPanel.Dock="Bottom" Margin="0,8,0,0">

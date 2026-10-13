@@ -151,7 +151,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     ? new[] { enc.swarmPokemon[row.Method == 2 ? 3 : Math.Min((int)row.Method, 1)] }
                     : enc.swarmPokemon.Take(2).Distinct().ToArray();
                 ids = mons.Where(m => m != 0).Select(m => (int)m).ToArray();
-                text = string.Join(", ", mons.Select(m => m == 0 ? "none" : m < _pokemonNames.Length ? _pokemonNames[m] : $"#{m}"))
+                text = string.Join(", ", mons.Select(m => m < _pokemonNames.Length ? _pokemonNames[m] : $"#{m}"))
                     + $" (file {file})";
                 read = true;
             }

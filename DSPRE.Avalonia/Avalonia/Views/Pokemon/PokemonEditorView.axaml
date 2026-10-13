@@ -61,7 +61,7 @@
           </Border>
           <Border DockPanel.Dock="Bottom" Padding="0,6,0,0">
             <Grid ColumnDefinitions="Auto,8,80,8,*,8,Auto,4,Auto,4,Auto,4,Auto,4,Auto">
-              <TextBlock Grid.Column="0" Text="Level:" Classes="lbl"/>
+              <TextBlock Grid.Column="0" Text="Level" Classes="lbl"/>
               <NumericUpDown Grid.Column="2" Value="{Binding AddLevel}" Minimum="1" Maximum="100" FormatString="0" Width="80"/>
               <controls:FusionAutoCompleteBox controls:EditorLink.To="Move" Grid.Column="4" ItemsSource="{Binding MoveNames}" SelectedIndex="{Binding AddMoveIndex}" HorizontalAlignment="Stretch"/>
               <Button Grid.Column="6"  Content="Add" controls:Icon.Key="addIcon"    Click="Learnset_Add_Click"      MinWidth="60" IsEnabled="{Binding CanAdd}"/>
@@ -107,7 +107,7 @@
               <Grid ColumnDefinitions="180,8,80,8,180,16,Auto">
                 <TextBlock Grid.Column="0" Text="Method"         FontWeight="SemiBold" FontSize="12"/>
                 <TextBlock Grid.Column="2" Text="Param"          FontWeight="SemiBold" FontSize="12"/>
-                <TextBlock Grid.Column="4" Text="Target Pokemon" FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Grid.Column="4" Text="Target Pokémon" FontWeight="SemiBold" FontSize="12"/>
                 <TextBlock Grid.Column="6" Text="Param type"     FontWeight="SemiBold" FontSize="12"/>
               </Grid><Separator/>
               <ItemsControl ItemsSource="{Binding EvoRows}">

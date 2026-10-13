@@ -5,120 +5,113 @@
              x:Class="DSPRE.Avalonia.Views.Pokemon.SafariZoneGroupView"
              x:DataType="vm:SafariZoneGroupViewModel">
 
-  <Grid ColumnDefinitions="*,*" Margin="4">
+  <UserControl.Resources>
+    <DataTemplate x:Key="EncounterCell" x:DataType="vm:SafariZoneGroupViewModel+EncounterCell">
+      <Grid ColumnDefinitions="36,170,64,Auto" IsVisible="{Binding Exists}" Margin="0,0,12,0">
+        <Image Width="32" Height="32" Source="{Binding Species, Converter={x:Static controls:GameIconConverter.Pokemon}}"/>
+        <controls:FusionAutoCompleteBox Grid.Column="1" controls:EditorLink.To="Pokemon" Margin="0,0,4,0"
+                                        ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding SpeciesIndex}"/>
+        <NumericUpDown Grid.Column="2" Minimum="0" Maximum="100" Increment="1" FormatString="0" Value="{Binding Level}"/>
+        <NumericUpDown Grid.Column="3" Width="56" Margin="4,0,0,0" Minimum="0" Maximum="31" Increment="1" FormatString="0"
+                       Value="{Binding Form}" IsVisible="{Binding ShowForms}"/>
+      </Grid>
+    </DataTemplate>
+  </UserControl.Resources>
 
-    <!-- ── Normal encounters (Morning / Day / Night) ─────────────────────────── -->
-    <GroupBox Grid.Column="0" Header="Normal encounters" Margin="0,0,4,0">
-      <TabControl>
-        <TabItem Header="Morning">
-          <DockPanel>
-            <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
-              <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding MorningSpecies}"/>
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="Level" VerticalAlignment="Center"/>
-                <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding MorningLevel}"/>
-                <TextBlock Text="Form" VerticalAlignment="Center" IsVisible="{Binding ShowForms}"/>
-                <NumericUpDown Width="90" Minimum="0" Maximum="31" Increment="1" Value="{Binding MorningForm}" IsVisible="{Binding ShowForms}"/>
-              </StackPanel>
-            </StackPanel>
-            <ListBox ItemsSource="{Binding MorningItems}" SelectedIndex="{Binding MorningIndex}">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.PokemonInLabel}}"/>
-                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
-                </StackPanel>
+  <Grid RowDefinitions="*,Auto,*" Margin="4">
+
+    <GroupBox Grid.Row="0" Header="Normal encounters">
+      <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="28,Auto,Auto,Auto" Margin="4,0,0,2" TextElement.FontWeight="SemiBold">
+          <TextBlock Text="Slot"/>
+          <Grid Grid.Column="1" ColumnDefinitions="36,170,64,Auto" Margin="0,0,12,0">
+            <TextBlock Grid.Column="1" Text="Morning"/>
+            <TextBlock Grid.Column="2" Text="Level"/>
+            <TextBlock Grid.Column="3" Width="56" Margin="4,0,0,0" Text="Form" IsVisible="{Binding ShowForms}"/>
+          </Grid>
+          <Grid Grid.Column="2" ColumnDefinitions="36,170,64,Auto" Margin="0,0,12,0">
+            <TextBlock Grid.Column="1" Text="Day"/>
+            <TextBlock Grid.Column="2" Text="Level"/>
+            <TextBlock Grid.Column="3" Width="56" Margin="4,0,0,0" Text="Form" IsVisible="{Binding ShowForms}"/>
+          </Grid>
+          <Grid Grid.Column="3" ColumnDefinitions="36,170,64,Auto" Margin="0,0,12,0">
+            <TextBlock Grid.Column="1" Text="Night"/>
+            <TextBlock Grid.Column="2" Text="Level"/>
+            <TextBlock Grid.Column="3" Width="56" Margin="4,0,0,0" Text="Form" IsVisible="{Binding ShowForms}"/>
+          </Grid>
+        </Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding NormalRows}" Margin="4,0,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SafariZoneGroupViewModel+SlotRow">
+                <Grid ColumnDefinitions="28,Auto,Auto,Auto" Margin="0,1">
+                  <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                  <ContentControl Grid.Column="1" Content="{Binding Morning}" ContentTemplate="{StaticResource EncounterCell}"/>
+                  <ContentControl Grid.Column="2" Content="{Binding Day}" ContentTemplate="{StaticResource EncounterCell}"/>
+                  <ContentControl Grid.Column="3" Content="{Binding Night}" ContentTemplate="{StaticResource EncounterCell}"/>
+                </Grid>
               </DataTemplate>
-            </ListBox.ItemTemplate>
-            </ListBox>
-          </DockPanel>
-        </TabItem>
-        <TabItem Header="Day">
-          <DockPanel>
-            <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
-              <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding DaySpecies}"/>
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="Level" VerticalAlignment="Center"/>
-                <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding DayLevel}"/>
-                <TextBlock Text="Form" VerticalAlignment="Center" IsVisible="{Binding ShowForms}"/>
-                <NumericUpDown Width="90" Minimum="0" Maximum="31" Increment="1" Value="{Binding DayForm}" IsVisible="{Binding ShowForms}"/>
-              </StackPanel>
-            </StackPanel>
-            <ListBox ItemsSource="{Binding DayItems}" SelectedIndex="{Binding DayIndex}">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.PokemonInLabel}}"/>
-                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-            </ListBox>
-          </DockPanel>
-        </TabItem>
-        <TabItem Header="Night">
-          <DockPanel>
-            <StackPanel DockPanel.Dock="Bottom" Margin="0,4,0,0" Spacing="3">
-              <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding NightSpecies}"/>
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="Level" VerticalAlignment="Center"/>
-                <NumericUpDown Width="110" Minimum="0" Maximum="100" Increment="1" Value="{Binding NightLevel}"/>
-                <TextBlock Text="Form" VerticalAlignment="Center" IsVisible="{Binding ShowForms}"/>
-                <NumericUpDown Width="90" Minimum="0" Maximum="31" Increment="1" Value="{Binding NightForm}" IsVisible="{Binding ShowForms}"/>
-              </StackPanel>
-            </StackPanel>
-            <ListBox ItemsSource="{Binding NightItems}" SelectedIndex="{Binding NightIndex}">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                  <Image Width="32" Height="32" Source="{Binding Converter={x:Static controls:GameIconConverter.PokemonInLabel}}"/>
-                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-            </ListBox>
-          </DockPanel>
-        </TabItem>
-      </TabControl>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
     </GroupBox>
 
-    <!-- ── Object encounters (shared slots + requirements) ───────────────────── -->
-    <GroupBox Grid.Column="1" Header="Object encounters" Margin="4,0,0,0">
+    <GridSplitter Grid.Row="1" Height="6" ResizeDirection="Rows" Background="Transparent"/>
+
+    <GroupBox Grid.Row="2" Header="Bonus encounters">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
-          <Button Content="Add slot" controls:Icon.Key="addIcon"    Click="AddObject_Click"    IsEnabled="{Binding CanEditObjectSlotCount}"/>
-          <Button Content="Remove slot" controls:Icon.Key="deleteIcon" Click="RemoveObject_Click" IsEnabled="{Binding CanEditObjectSlotCount}"/>
+          <Button Content="Add" controls:Icon.Key="addIcon" Click="AddObject_Click" IsEnabled="{Binding CanEditObjectSlotCount}"/>
+          <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveObject_Click" IsEnabled="{Binding CanEditObjectSlotCount}"/>
           <TextBlock Text="!" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"
                      IsVisible="{Binding NoSlotsWarning}" ToolTip.Tip="No bonus slots: surfing and every rod here give level 5 Magikarp"/>
         </StackPanel>
-        <ListBox DockPanel.Dock="Top" Height="90"
-                 ItemsSource="{Binding ObjectItems}" SelectedIndex="{Binding ObjectIndex}"/>
-
-        <ScrollViewer>
-          <StackPanel Spacing="3" Margin="0,6,0,0">
-            <TextBlock Text="Morning" FontWeight="Bold"/>
-            <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjMorningSpecies}"/>
-            <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjMorningLevel}"/>
-            <NumericUpDown Minimum="0" Maximum="31" Increment="1" Value="{Binding ObjMorningForm}" IsVisible="{Binding ShowForms}" ToolTip.Tip="Form"/>
-            <TextBlock Text="Day" FontWeight="Bold"/>
-            <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjDaySpecies}"/>
-            <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjDayLevel}"/>
-            <NumericUpDown Minimum="0" Maximum="31" Increment="1" Value="{Binding ObjDayForm}" IsVisible="{Binding ShowForms}" ToolTip.Tip="Form"/>
-            <TextBlock Text="Night" FontWeight="Bold"/>
-            <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding ObjNightSpecies}"/>
-            <NumericUpDown Minimum="0" Maximum="100" Increment="1" Value="{Binding ObjNightLevel}"/>
-            <NumericUpDown Minimum="0" Maximum="31" Increment="1" Value="{Binding ObjNightForm}" IsVisible="{Binding ShowForms}" ToolTip.Tip="Form"/>
-            <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,4,0,0">
-              <TextBlock Text="Requirement" FontWeight="Bold"/>
-              <TextBlock Text="!" FontWeight="Bold" Foreground="{DynamicResource Editor.Warn}"
-                         IsVisible="{Binding RequirementTypeWarning}" ToolTip.Tip="The game reads type 0 out of bounds"/>
-            </StackPanel>
-            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding ReqType}"/>
-            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding ReqPoints}" ToolTip.Tip="Points"/>
-            <TextBlock Text="Optional requirement" FontWeight="Bold" Margin="0,4,0,0"/>
-            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding OptReqType}"/>
-            <NumericUpDown Minimum="0" Maximum="255" Increment="1" Value="{Binding OptReqPoints}" ToolTip.Tip="Points"/>
-          </StackPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="28,Auto,Auto,Auto" Margin="4,0,0,2" TextElement.FontWeight="SemiBold">
+          <TextBlock Text="Slot"/>
+          <Grid Grid.Column="1" ColumnDefinitions="36,170,64,Auto" Margin="0,0,12,0">
+            <TextBlock Grid.Column="1" Text="Morning"/>
+            <TextBlock Grid.Column="2" Text="Level"/>
+            <TextBlock Grid.Column="3" Width="56" Margin="4,0,0,0" Text="Form" IsVisible="{Binding ShowForms}"/>
+          </Grid>
+          <Grid Grid.Column="2" ColumnDefinitions="36,170,64,Auto" Margin="0,0,12,0">
+            <TextBlock Grid.Column="1" Text="Day"/>
+            <TextBlock Grid.Column="2" Text="Level"/>
+            <TextBlock Grid.Column="3" Width="56" Margin="4,0,0,0" Text="Form" IsVisible="{Binding ShowForms}"/>
+          </Grid>
+          <Grid Grid.Column="3" ColumnDefinitions="36,170,64,Auto" Margin="0,0,12,0">
+            <TextBlock Grid.Column="1" Text="Night"/>
+            <TextBlock Grid.Column="2" Text="Level"/>
+            <TextBlock Grid.Column="3" Width="56" Margin="4,0,0,0" Text="Form" IsVisible="{Binding ShowForms}"/>
+          </Grid>
+        </Grid>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding ObjectRows}" Margin="4,0,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SafariZoneGroupViewModel+ObjectRow">
+                <StackPanel Margin="0,1,0,8">
+                  <Grid ColumnDefinitions="28,Auto,Auto,Auto">
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center"/>
+                    <ContentControl Grid.Column="1" Content="{Binding Morning}" ContentTemplate="{StaticResource EncounterCell}"/>
+                    <ContentControl Grid.Column="2" Content="{Binding Day}" ContentTemplate="{StaticResource EncounterCell}"/>
+                    <ContentControl Grid.Column="3" Content="{Binding Night}" ContentTemplate="{StaticResource EncounterCell}"/>
+                  </Grid>
+                  <StackPanel Orientation="Horizontal" Spacing="6" Margin="64,3,0,0">
+                    <TextBlock Text="Needs" VerticalAlignment="Center"/>
+                    <ComboBox Width="150" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding ReqType}"/>
+                    <NumericUpDown Width="64" Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding ReqPoints}"/>
+                    <TextBlock Text="points" VerticalAlignment="Center"/>
+                    <TextBlock Text="!" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Warn}"
+                               IsVisible="{Binding RequirementTypeWarning}" ToolTip.Tip="The game reads type 0 out of bounds"/>
+                    <TextBlock Text="and" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    <ComboBox Width="150" ItemsSource="{Binding ObjectTypeNames}" SelectedIndex="{Binding OptReqType}"/>
+                    <NumericUpDown Width="64" Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding OptReqPoints}"/>
+                    <TextBlock Text="points" VerticalAlignment="Center"/>
+                  </StackPanel>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </ScrollViewer>
       </DockPanel>
     </GroupBox>

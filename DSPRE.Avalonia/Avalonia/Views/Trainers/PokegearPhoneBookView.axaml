@@ -71,12 +71,12 @@
                       ToolTip.Tip="Given after each rematch win. Cheri Berry gives a random berry."/>
 
             <StackPanel Grid.Row="5" Orientation="Horizontal" VerticalAlignment="Center">
-              <TextBlock Text="Call on their map"/>
-              <controls:HelpTip Text="The phone script a trainer contact uses when you call them from their own map. Other call types ignore it."/>
+              <TextBlock Text="Phone script on their map"/>
+              <controls:HelpTip Text="The phone script number used when you call them from their own map."/>
             </StackPanel>
             <NumericUpDown Grid.Row="5" Grid.Column="1" Value="{Binding LocalScript}" Minimum="0" Maximum="65535" Increment="1" FormatString="0"
                            Width="140" HorizontalAlignment="Left" IsEnabled="{Binding IsTrainerType}"
-                           ToolTip.Tip="Phone script used when you call this trainer from their own map"/>
+/>
 
             <StackPanel Grid.Row="6" Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="Greeting"/>
@@ -114,6 +114,7 @@
                 <NumericUpDown Value="{Binding LocationRank}" Minimum="1" Maximum="{Binding ContactCount}" Increment="1" FormatString="0" Width="110"/>
               </StackPanel>
             </GroupBox>
+
           </Grid>
         </StackPanel>
       </ScrollViewer>

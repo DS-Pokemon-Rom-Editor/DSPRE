@@ -569,7 +569,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     return;
                 }
 
-                RawImage gdi = DSUtils.GetPokePicRaw(_speciesIndex, 56, 56);
+                RawImage gdi = DSUtils.GetPokePicRaw(_speciesIndex, 32, 32);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
             catch { PokemonIcon = null; }

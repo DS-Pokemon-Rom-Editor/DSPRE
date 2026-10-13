@@ -36,46 +36,46 @@
           <controls:CappedWidth Cap="980"><StackPanel Spacing="8" Margin="8">
             <GroupBox Header="Base stats">
               <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*" RowDefinitions="Auto,8,Auto" Margin="4">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="HP:"      Classes="label"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="HP"      Classes="label"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding BaseHP}"  Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Attack:"  Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Attack"  Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding BaseAtk}" Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="0" Grid.Column="4" Text="Defense:" Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="0" Grid.Column="4" Text="Defense" Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="5" Value="{Binding BaseDef}" Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Sp. Atk:" Classes="label"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Sp. Atk" Classes="label"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding BaseSpA}" Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Sp. Def:" Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Sp. Def" Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding BaseSpD}" Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="2" Grid.Column="4" Text="Speed:"   Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="4" Text="Speed"   Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="5" Value="{Binding BaseSpe}" Minimum="0" Maximum="255"/>
               </Grid>
             </GroupBox>
             <GroupBox Header="EV yields">
               <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*" RowDefinitions="Auto,8,Auto" Margin="4">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="HP:"      Classes="label"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="HP"      Classes="label"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding EvHP}"  Minimum="0" Maximum="3"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Attack:"  Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Attack"  Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding EvAtk}" Minimum="0" Maximum="3"/>
-                <TextBlock Grid.Row="0" Grid.Column="4" Text="Defense:" Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="0" Grid.Column="4" Text="Defense" Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="5" Value="{Binding EvDef}" Minimum="0" Maximum="3"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Sp. Atk:" Classes="label"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Sp. Atk" Classes="label"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding EvSpA}" Minimum="0" Maximum="3"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Sp. Def:" Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Sp. Def" Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EvSpD}" Minimum="0" Maximum="3"/>
-                <TextBlock Grid.Row="2" Grid.Column="4" Text="Speed:"   Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="4" Text="Speed"   Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="5" Value="{Binding EvSpe}" Minimum="0" Maximum="3"/>
               </Grid>
             </GroupBox>
             <Grid ColumnDefinitions="*,8,*">
               <GroupBox Grid.Column="0" Header="Types and abilities">
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto" Margin="4">
-                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Type 1:"    Classes="label"/>
-                  <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding TypeNames}"    SelectedIndex="{Binding Type1Index}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Type 2:"    Classes="label"/>
-                  <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding TypeNames}"    SelectedIndex="{Binding Type2Index}"/>
-                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Ability 1:" Classes="label"/>
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Type 1"    Classes="label"/>
+                  <controls:FusionAutoCompleteBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding TypeNames}" SelectedIndex="{Binding Type1Index}" AllowsNone="False"/>
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Type 2"    Classes="label"/>
+                  <controls:FusionAutoCompleteBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding TypeNames}" SelectedIndex="{Binding Type2Index}" AllowsNone="False"/>
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Ability 1" Classes="label"/>
                   <controls:FusionAutoCompleteBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability1Index}"/>
-                  <TextBlock Grid.Row="6" Grid.Column="0" Text="Ability 2:" Classes="label"/>
+                  <TextBlock Grid.Row="6" Grid.Column="0" Text="Ability 2" Classes="label"/>
                   <controls:FusionAutoCompleteBox  Grid.Row="6" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding Ability2Index}"/>
                   <controls:HelpTip Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Left" IsVisible="{Binding !ShowHgEngineExtras}"
                              Text="After changing types, rebuild the sort lists in Pokédex lists."/>
@@ -83,10 +83,10 @@
               </GroupBox>
               <GroupBox Grid.Column="2" Header="Held items">
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,2,Auto,8,Auto,2,Auto,8,Auto" Margin="4">
-                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Item 1:" Classes="label"/>
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Item 1" Classes="label"/>
                   <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1Index}"/>
                   <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Item1Odds}" Classes="subtle" IsVisible="{Binding HasHeldItemOdds}"/>
-                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Item 2:" Classes="label"/>
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Item 2" Classes="label"/>
                   <controls:FusionAutoCompleteBox controls:EditorLink.To="Item"  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2Index}"/>
                   <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Item2Odds}" Classes="subtle" IsVisible="{Binding HasHeldItemOdds}"/>
                   <Button Grid.Row="8" Grid.Column="1" Content="Wild held items" controls:Icon.Key="OpenLink" HorizontalAlignment="Left"
@@ -103,13 +103,13 @@
           <controls:CappedWidth Cap="980"><StackPanel Spacing="8" Margin="8">
             <GroupBox Header="General">
               <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto,8,Auto" Margin="4">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Catch rate:"      Classes="label"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Catch rate"      Classes="label"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding CatchRate}"      Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Base exp:"        Classes="label" Margin="12,0,6,0" IsVisible="{Binding !ShowHgEngineExtras}"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Base exp"        Classes="label" Margin="12,0,6,0" IsVisible="{Binding !ShowHgEngineExtras}"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding BaseExp}"        Minimum="0" Maximum="255" IsVisible="{Binding !ShowHgEngineExtras}"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Base friendship:" Classes="label"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Base friendship" Classes="label"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding BaseFriendship}" Minimum="0" Maximum="255"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Escape rate:"     Classes="label" Margin="12,0,6,0"
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Escape rate"     Classes="label" Margin="12,0,6,0"
                            ToolTip.Tip="How likely it is to run away each turn in the Great Marsh or Safari Zone, out of 255"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EscapeRate}"     Minimum="0" Maximum="255"
                                ToolTip.Tip="How likely it is to run away each turn in the Great Marsh or Safari Zone, out of 255"/>
@@ -122,22 +122,22 @@
                   <NumericUpDown Value="{Binding GenderVec}" Minimum="0" Maximum="254" MinWidth="120"/>
                   <TextBlock Text="{Binding GenderLabel}" VerticalAlignment="Center" FontStyle="Italic"/>
                 </StackPanel>
-                <TextBlock Grid.Row="8" Grid.Column="0" Text="Growth curve:"    Classes="label"/>
+                <TextBlock Grid.Row="8" Grid.Column="0" Text="Growth curve"    Classes="label"/>
                 <ComboBox  Grid.Row="8" Grid.Column="1" ItemsSource="{Binding GrowthCurveNames}" SelectedIndex="{Binding GrowthCurveIndex}"/>
-                <TextBlock Grid.Row="10" Grid.Column="0" Text="Dex color:"      Classes="label"/>
+                <TextBlock Grid.Row="10" Grid.Column="0" Text="Dex color"      Classes="label"/>
                 <ComboBox  Grid.Row="10" Grid.Column="1" ItemsSource="{Binding DexColorNames}"   SelectedIndex="{Binding DexColorIndex}"/>
               </Grid>
             </GroupBox>
             <GroupBox Header="Egg groups and hatch">
               <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto" Margin="4">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Egg group 1:" Classes="label"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Egg group 1" Classes="label"/>
                 <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding EggGroupNames}" SelectedIndex="{Binding EggGroup1Index}"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Egg group 2:" Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Egg group 2" Classes="label" Margin="12,0,6,0"/>
                 <ComboBox  Grid.Row="0" Grid.Column="3" ItemsSource="{Binding EggGroupNames}" SelectedIndex="{Binding EggGroup2Index}"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Hatch result:" Classes="label" IsVisible="{Binding !ShowHgEngineExtras}"
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Hatch result" Classes="label" IsVisible="{Binding !ShowHgEngineExtras}"
                            ToolTip.Tip="Babies that need an incense are set in Pokémon > Breeding Items"/>
                 <controls:FusionAutoCompleteBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HatchResultIndex}" IsVisible="{Binding !ShowHgEngineExtras}"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Egg steps:"    Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Egg steps"    Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding EggSteps}" Minimum="0" Maximum="255"/>
               </Grid>
             </GroupBox>
@@ -145,19 +145,19 @@
               <StackPanel Spacing="6" Margin="4">
                 <TextBlock Text="{Binding RetailFollowerNote}" IsVisible="{Binding HasRetailFollowerNote}" FontStyle="Italic" TextWrapping="Wrap"/>
                 <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto" IsVisible="{Binding RetailFollowerEditable}">
-                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Model:" Classes="label" IsVisible="{Binding HasFollowerModelChoice}"/>
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="Model" Classes="label" IsVisible="{Binding HasFollowerModelChoice}"/>
                   <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding FollowerModelNames}" SelectedIndex="{Binding FollowerModelIndex}"
                              IsVisible="{Binding HasFollowerModelChoice}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Size:" Classes="label"/>
+                  <TextBlock Grid.Row="2" Grid.Column="0" Text="Size" Classes="label"/>
                   <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding FollowerSizeOptions}" SelectedIndex="{Binding FollowerSizeIndex}"/>
-                  <TextBlock Grid.Row="2" Grid.Column="2" Text="Raw bits:" Classes="label" Margin="12,0,6,0"/>
+                  <TextBlock Grid.Row="2" Grid.Column="2" Text="Raw bits" Classes="label" Margin="12,0,6,0"/>
                   <TextBox   Grid.Row="2" Grid.Column="3" Text="{Binding FollowerRawBits}" MaxLength="4" FontFamily="Consolas,monospace"
                              Width="70" HorizontalAlignment="Left"/>
-                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Hover:" Classes="label"/>
+                  <TextBlock Grid.Row="4" Grid.Column="0" Text="Hover" Classes="label"/>
                   <ComboBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding FollowerMotionOptions}" SelectedIndex="{Binding FollowerMotionIndex}"
                              IsEnabled="{Binding FollowerMotionEditable}" ToolTip.ShowOnDisabled="True"
                              ToolTip.Tip="{Binding FollowerMotionTip}"/>
-                  <CheckBox  Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2" Content="Too tall" IsChecked="{Binding FollowerTooTall}" Margin="12,0,0,0"
+                  <CheckBox  Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="2" Content="Stays in its ball on some maps" IsChecked="{Binding FollowerTooTall}" Margin="12,0,0,0"
                              IsEnabled="{Binding FollowerTooTallEditable}" ToolTip.ShowOnDisabled="True" ToolTip.Tip="{Binding FollowerTooTallTip}"/>
                 </Grid>
                 <TextBlock Text="{Binding FollowerArtWarning}" IsVisible="{Binding HasFollowerArtWarning}"
@@ -173,12 +173,13 @@
             <TextBlock Text="{Binding PokeathlonNote}" IsVisible="{Binding HasPokeathlonNote}" FontStyle="Italic" TextWrapping="Wrap"/>
             <StackPanel Spacing="8" IsVisible="{Binding PokeathlonEditable}">
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPokeathlonFormChoice}">
-                <TextBlock Text="Form:" Classes="label"/>
+                <TextBlock Text="Form" Classes="label"/>
                 <ComboBox ItemsSource="{Binding PokeathlonFormNames}" SelectedIndex="{Binding PokeathlonFormIndex}" MinWidth="140"/>
               </StackPanel>
               <GroupBox Header="Performance">
                 <StackPanel Spacing="4" Margin="4">
                   <Grid ColumnDefinitions="80,124,*,*,*" Margin="0,0,0,2">
+                    <TextBlock Grid.Column="1" Text="In game" FontWeight="Bold"/>
                     <TextBlock Grid.Column="2" Text="Minimum" FontWeight="Bold" Margin="4,0"/>
                     <TextBlock Grid.Column="3" Text="Base" FontWeight="Bold" Margin="4,0"/>
                     <TextBlock Grid.Column="4" Text="Maximum" FontWeight="Bold" Margin="4,0"/>
@@ -207,8 +208,8 @@
               </GroupBox>
               <GroupBox Header="In the events">
                 <controls:CappedWidth Cap="520"><Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto" Margin="4">
-                  <CheckBox Grid.Row="0" Grid.ColumnSpan="2" Content="Raised" IsChecked="{Binding AthlonRaised}"
-                            ToolTip.Tip="A sprite above it sits 24 px up instead of 16"/>
+                  <CheckBox Grid.Row="0" Grid.ColumnSpan="2" Content="Sprite above sits higher" IsChecked="{Binding AthlonRaised}"
+                            ToolTip.Tip="24 px up instead of 16"/>
                   <TextBlock Grid.Row="2" Grid.Column="0" Text="Hitbox" Classes="label" Margin="0,0,12,0"
                              ToolTip.Tip="One of three collision circles, sized per event"/>
                   <ComboBox Grid.Row="2" Grid.Column="1" MinWidth="0" HorizontalAlignment="Stretch"
@@ -293,26 +294,26 @@
           <controls:CappedWidth Cap="980"><StackPanel Spacing="8" Margin="8">
             <GroupBox Header="Breeding / dex">
               <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto" Margin="4">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Hidden ability:"  Classes="label"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Hidden ability"  Classes="label"/>
                 <controls:FusionAutoCompleteBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding AbilityNames}" SelectedIndex="{Binding HgHiddenAbilityIndex}"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Base exp:"        Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Base exp"        Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding HgBaseExp}" Minimum="0" Maximum="65535"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Baby Pokémon:"    Classes="label"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Baby Pokémon"    Classes="label"/>
                 <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon"  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding HgBabyMonIndex}"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Regional Dex #:"  Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Regional Dex #"  Classes="label" Margin="12,0,6,0"/>
                 <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding HgRegionalDexNumber}" Minimum="0" Maximum="65535"/>
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="Icon palette:"    Classes="label"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Icon palette"    Classes="label"/>
                 <ComboBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding IconPaletteOptions}" SelectedIndex="{Binding HgIconPaletteIndex}"/>
               </Grid>
             </GroupBox>
             <GroupBox Header="Overworld follower">
               <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,4,Auto" Margin="4">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Size (0=small, 1=big):" Classes="label"/>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Size (0=small, 1=big)" Classes="label"/>
                 <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding HgFollowerSize}" Minimum="0" Maximum="1"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="Bounce speed:" Classes="label" Margin="12,0,6,0"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Bounce speed" Classes="label" Margin="12,0,6,0"/>
                 <ComboBox  Grid.Row="0" Grid.Column="3" ItemsSource="{Binding FollowerBounceOptions}" SelectedIndex="{Binding HgFollowerBounceIndex}"/>
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="OW female form:" Classes="label"
-                           ToolTip.Tip="Raw C expression from SpeciesToOWFormFemale.c (e.g. FALSE, or OW_FEMALE_MASK | SPECIES_X_OVERWORLD_FEMALE)."/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="OW female form" Classes="label"
+                           ToolTip.Tip="The female overworld, or FALSE for none."/>
                 <TextBox   Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding HgOwFemaleFormExpression}"/>
                 <TextBlock Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding HgOwFemaleFormError}" IsVisible="{Binding HasHgOwFemaleFormError}"
                            Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
@@ -336,12 +337,12 @@
                   </StackPanel>
                   <StackPanel Spacing="6">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                      <TextBlock Text="Size class:" Classes="label"/>
+                      <TextBlock Text="Size class" Classes="label"/>
                       <ComboBox ItemsSource="{Binding OwSizeClassOptions}" SelectedIndex="{Binding OwSizeClassIndex}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding OwNeedsTemplate}">
-                      <TextBlock Text="Template species:" Classes="label"
-                                 ToolTip.Tip="No sprite sheet exists for this species yet. Pick an existing species to clone its animation metadata from; only the artwork is replaced."/>
+                      <TextBlock Text="Template species" Classes="label"
+                                 ToolTip.Tip="Copy another species' sprite layout, then replace the art."/>
                       <controls:FusionAutoCompleteBox ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding OwTemplateSpeciesIndex}" MinWidth="200"/>
                     </StackPanel>
                     <Button Content="Import sprite sheet…" controls:Icon.Key="import" Click="ImportOwSprite_Click"/>

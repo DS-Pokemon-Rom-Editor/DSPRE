@@ -36,13 +36,13 @@
       <!-- Row 1: Header + Direction -->
       <Grid x:Name="SpawnHeaderRow" ColumnDefinitions="*,12,*">
         <StackPanel Grid.Column="0" Spacing="3">
-          <TextBlock Text="Spawn header:" Classes="lbl"/>
+          <TextBlock Text="Spawn header" Classes="lbl"/>
           <controls:FusionAutoCompleteBox ItemsSource="{Binding HeaderNames}"
                                           SelectedIndex="{Binding SelectedHeaderIndex}"
                                           HorizontalAlignment="Stretch"/>
         </StackPanel>
         <StackPanel Grid.Column="2" Spacing="3">
-          <TextBlock Text="Player direction:" Classes="lbl"/>
+          <TextBlock Text="Player direction" Classes="lbl"/>
           <ComboBox ItemsSource="{Binding DirectionNames}"
                     SelectedIndex="{Binding PlayerDirIndex}"
                     HorizontalAlignment="Stretch"/>
@@ -50,27 +50,26 @@
       </Grid>
 
       <!-- Row 2: Location name -->
-      <TextBlock Text="{Binding LocationName}" FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}"/>
 
       <!-- Row 3: Coordinates -->
       <Grid x:Name="CoordsGrid" ColumnDefinitions="Auto,8,90,16,Auto,8,90" RowDefinitions="Auto,6,Auto">
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Matrix X:" Classes="lbl"/>
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Matrix X" Classes="lbl"/>
         <NumericUpDown Grid.Row="0" Grid.Column="2" Value="{Binding MatrixX}"
                        Minimum="0" Maximum="{Binding MatrixXMax}" FormatString="0" Width="90"/>
-        <TextBlock Grid.Row="0" Grid.Column="4" Text="Matrix Y:" Classes="lbl"/>
+        <TextBlock Grid.Row="0" Grid.Column="4" Text="Matrix Y" Classes="lbl"/>
         <NumericUpDown Grid.Row="0" Grid.Column="6" Value="{Binding MatrixY}"
                        Minimum="0" Maximum="{Binding MatrixYMax}" FormatString="0" Width="90"/>
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Local X:" Classes="lbl"/>
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Local X" Classes="lbl"/>
         <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding LocalX}"
                        Minimum="0" Maximum="31" FormatString="0" Width="90"/>
-        <TextBlock Grid.Row="2" Grid.Column="4" Text="Local Y:" Classes="lbl"/>
+        <TextBlock Grid.Row="2" Grid.Column="4" Text="Local Y" Classes="lbl"/>
         <NumericUpDown Grid.Row="2" Grid.Column="6" Value="{Binding LocalY}"
                        Minimum="0" Maximum="31" FormatString="0" Width="90"/>
       </Grid>
 
       <!-- Row 4: Initial money -->
       <StackPanel x:Name="MoneyRow" Orientation="Horizontal" Spacing="8">
-        <TextBlock Text="Initial money:" Classes="lbl"/>
+        <TextBlock Text="Initial money" Classes="lbl"/>
         <NumericUpDown Value="{Binding InitialMoney}"
                        Minimum="0" Maximum="999999" FormatString="0" Width="110"/>
       </StackPanel>

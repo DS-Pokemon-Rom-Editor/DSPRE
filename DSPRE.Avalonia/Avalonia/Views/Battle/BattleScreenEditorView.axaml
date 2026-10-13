@@ -40,7 +40,7 @@
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
           <TextBlock Text="Ground" Classes="label"/>
           <ComboBox Width="110" ItemsSource="{Binding TerrainNames}" SelectedIndex="{Binding TerrainIndex}"
-                    ToolTip.Tip="Which terrain the Pokemon stand on, which picks the platforms and their colours"/>
+                    ToolTip.Tip="Which terrain the Pokémon stand on, which picks the platforms and their colours"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,16,4">
           <TextBlock Text="Time" Classes="label"/>
@@ -118,7 +118,7 @@
             <TextBlock Text="Sample" FontWeight="SemiBold"/>
             <controls:HelpTip Text="Preview only, nothing is saved."/>
           </StackPanel>
-          <TextBlock Text="How many Pokemon a side" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
+          <TextBlock Text="How many Pokémon a side" Classes="hint" IsVisible="{Binding GaugeTextIsReal}"/>
           <ComboBox SelectedIndex="{Binding BattleSizeChoice}" HorizontalAlignment="Stretch"
                     IsVisible="{Binding GaugeTextIsReal}">
             <ComboBoxItem>One, a single battle</ComboBoxItem>
@@ -128,7 +128,7 @@
           <CheckBox Content="Show the numbers instead of the bar"
                     IsChecked="{Binding NumbersInsteadOfBar}" IsVisible="{Binding IsDoubles}"/>
 
-          <TextBlock Text="Pokemon name" Classes="hint"/>
+          <TextBlock Text="Pokémon name" Classes="hint"/>
           <TextBox Text="{Binding SampleName}"/>
           <TextBlock Text="Level" Classes="hint"/>
           <NumericUpDown Value="{Binding SampleLevel}" Minimum="1" Maximum="100" FormatString="0"/>

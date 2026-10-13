@@ -20,10 +20,10 @@
       <StackPanel Spacing="6">
         <TextBlock Text="Somewhere else? Say where and check it:" Opacity="0.85"/>
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <TextBlock Text="Script file:" VerticalAlignment="Center"/>
+          <TextBlock Text="Script file" VerticalAlignment="Center"/>
           <NumericUpDown Minimum="0" Maximum="9999" Increment="1" FormatString="0" Width="110"
                          Value="{Binding FileId}"/>
-          <TextBlock Text="Script:" VerticalAlignment="Center" Margin="6,0,0,0"/>
+          <TextBlock Text="Script" VerticalAlignment="Center" Margin="6,0,0,0"/>
           <TextBox Text="{Binding ContainerName}" Width="140" PlaceholderText="script_13"/>
           <Button Content="Verify" Click="Verify_Click"/>
         </StackPanel>

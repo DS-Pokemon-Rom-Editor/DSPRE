@@ -13,7 +13,7 @@
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
-        <TextBlock Text="Curve:" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <TextBlock Text="Curve" VerticalAlignment="Center" Margin="12,0,0,0"/>
         <ComboBox ItemsSource="{Binding CurveNames}" SelectedIndex="{Binding SelectedCurve}" MinWidth="150"/>
         <TextBlock Text="{Binding Level100}" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{DynamicResource Editor.Subtle}"/>
     </controls:EditorToolbar>

@@ -19,10 +19,10 @@
 		  <controls:UndoRedoButtons/>
 		</StackPanel>
 		<StackPanel x:Name="RankBar" Orientation="Horizontal" Spacing="6" Margin="12,2,6,2">
-		  <TextBlock Text="Rank:" VerticalAlignment="Center"/>
+		  <TextBlock Text="Rank" VerticalAlignment="Center"/>
 		  <ComboBox ItemsSource="{Binding RankNames}" SelectedIndex="{Binding SelectedRankIndex}" Width="140"/>
 		  <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
-		          ToolTip.Tip="Open the card in the Graphics window, where its drawing, its two arrangements and every rank's colours sit together."/>
+		          ToolTip.Tip="Open in the Graphics window"/>
 		</StackPanel>
 		<TextBlock Text="{Binding StatusText}" Foreground="OrangeRed" Margin="12,2,6,2"/>
 	</controls:EditorToolbar>

@@ -26,15 +26,19 @@
 
     <StackPanel x:Name="AreaFields" Margin="14" Spacing="10" MaxWidth="440" HorizontalAlignment="Left">
       <GroupBox Header="Texture packs" ToolTip.Tip="Which texture sets the map and its buildings use.">
-        <Grid ColumnDefinitions="160,*,Auto" RowDefinitions="Auto,Auto">
+        <Grid ColumnDefinitions="160,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
           <TextBlock Grid.Row="0" Grid.Column="0" Text="Map textures" VerticalAlignment="Center"/>
           <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding MapTileset}" Margin="2"/>
           <Button Grid.Row="0" Grid.Column="2" Content="Open" controls:Icon.Key="OpenLink" Click="OpenMapTextures_Click" Margin="4,2,0,2"
                   ToolTip.Tip="Open in Map and building textures"/>
-          <TextBlock Grid.Row="1" Grid.Column="0" Text="Building textures" VerticalAlignment="Center"/>
-          <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding BuildingsTileset}" Margin="2"/>
-          <Button Grid.Row="1" Grid.Column="2" Content="Open" controls:Icon.Key="OpenLink" Click="OpenBuildingTextures_Click" Margin="4,2,0,2"
+          <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding MapTexturePlaces}" FontSize="11" Margin="4,0,0,6"
+                     Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="Building textures" VerticalAlignment="Center"/>
+          <NumericUpDown Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="65535" Value="{Binding BuildingsTileset}" Margin="2"/>
+          <Button Grid.Row="2" Grid.Column="2" Content="Open" controls:Icon.Key="OpenLink" Click="OpenBuildingTextures_Click" Margin="4,2,0,2"
                   ToolTip.Tip="Open in Map and building textures"/>
+          <TextBlock Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding BuildingTexturePlaces}" FontSize="11" Margin="4,0,0,0"
+                     Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
         </Grid>
       </GroupBox>
       <GroupBox Header="Lighting and animation">

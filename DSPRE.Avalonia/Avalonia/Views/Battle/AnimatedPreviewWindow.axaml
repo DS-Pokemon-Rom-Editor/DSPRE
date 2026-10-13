@@ -38,7 +38,7 @@
         <ComboBox Width="110" ItemsSource="{Binding BorderNames}" SelectedIndex="{Binding BorderIndex}"
                   ToolTip.Tip="Which message box border to draw with."/>
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <TextBlock Text="Start:" VerticalAlignment="Center"/>
+          <TextBlock Text="Start" VerticalAlignment="Center"/>
           <ComboBox Width="200" ItemsSource="{Binding StartBesideNames}" SelectedIndex="{Binding StartBesideIndex}"
                     ToolTip.Tip="Where the walk begins. Picking an event puts you beside it, facing it."/>
           <ToggleButton Content="Place" IsChecked="{Binding PlacingStart}"

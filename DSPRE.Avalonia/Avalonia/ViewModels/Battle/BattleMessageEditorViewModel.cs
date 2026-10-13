@@ -47,28 +47,28 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
         private static readonly (TrainerMessageType type, string desc)[] Triggers =
         {
-            (TrainerMessageType.PRE_BATTLE, "Pre-Battle in Overworld"),
-            (TrainerMessageType.DEFEAT, "on Defeat (Player wins)"),
-            (TrainerMessageType.POST_BATTLE, "Post-Battle in Overworld"),
-            (TrainerMessageType.PRE_DOUBLE_BATTLE_1, "Pre-Double Battle (Trainer 1)"),
-            (TrainerMessageType.DOUBLE_BATTLE_DEFEAT_1, "on Double Battle Defeat (Trainer 1)"),
-            (TrainerMessageType.POST_DOUBLE_BATTLE_1, "Post-Double Battle (Trainer 1)"),
-            (TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_1, "Not Enough Pokémon for Double Battle (Trainer 1)"),
-            (TrainerMessageType.PRE_DOUBLE_BATTLE_2, "Pre-Double Battle (Trainer 2)"),
-            (TrainerMessageType.DOUBLE_BATTLE_DEFEAT_2, "on Double Battle Defeat (Trainer 2)"),
-            (TrainerMessageType.POST_DOUBLE_BATTLE_2, "Post-Double Battle (Trainer 2)"),
-            (TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2, "Not Enough Pokémon for Double Battle (Trainer 2)"),
-            (TrainerMessageType.NOT_MORNING_UNUSED, "when not Morning (Unused)"),
-            (TrainerMessageType.NOT_NIGHT_UNUSED, "when not Night (Unused)"),
-            (TrainerMessageType.FIRST_DAMAGE, "on First Damage dealt (Unused)"),
-            (TrainerMessageType.ACTIVE_BATTLER_HALF_HP, "when active Battler Half HP (Unused)"),
-            (TrainerMessageType.LAST_BATTLER, "when Last Battler sent out"),
-            (TrainerMessageType.LAST_BATTLER_HALF_HP, "when Last Battler Half HP"),
-            (TrainerMessageType.REMATCH, "before Rematch"),
-            (TrainerMessageType.DOUBLE_BATTLE_REMATCH_1, "on Double Battle Rematch (Trainer 1)"),
-            (TrainerMessageType.DOUBLE_BATTLE_REMATCH_2, "on Double Battle Rematch (Trainer 2)"),
-            (TrainerMessageType.WIN, "Victory (Trainer wins) - HG/SS"),
-            (TrainerMessageType.WIN_DPPT, "Victory (Trainer wins) - DP/PT"),
+            (TrainerMessageType.PRE_BATTLE, "Before battle"),
+            (TrainerMessageType.DEFEAT, "When they lose"),
+            (TrainerMessageType.POST_BATTLE, "After battle"),
+            (TrainerMessageType.PRE_DOUBLE_BATTLE_1, "Before double battle (trainer 1)"),
+            (TrainerMessageType.DOUBLE_BATTLE_DEFEAT_1, "When they lose a double battle (trainer 1)"),
+            (TrainerMessageType.POST_DOUBLE_BATTLE_1, "After double battle (trainer 1)"),
+            (TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_1, "Not enough Pokémon for a double battle (trainer 1)"),
+            (TrainerMessageType.PRE_DOUBLE_BATTLE_2, "Before double battle (trainer 2)"),
+            (TrainerMessageType.DOUBLE_BATTLE_DEFEAT_2, "When they lose a double battle (trainer 2)"),
+            (TrainerMessageType.POST_DOUBLE_BATTLE_2, "After double battle (trainer 2)"),
+            (TrainerMessageType.DOUBLE_BATTLE_NOT_ENOUGH_POKEMON_2, "Not enough Pokémon for a double battle (trainer 2)"),
+            (TrainerMessageType.NOT_MORNING_UNUSED, "When not morning (unused)"),
+            (TrainerMessageType.NOT_NIGHT_UNUSED, "When not night (unused)"),
+            (TrainerMessageType.FIRST_DAMAGE, "First damage dealt (unused)"),
+            (TrainerMessageType.ACTIVE_BATTLER_HALF_HP, "Pokémon in battle at half HP (unused)"),
+            (TrainerMessageType.LAST_BATTLER, "Last Pokémon sent out"),
+            (TrainerMessageType.LAST_BATTLER_HALF_HP, "Last Pokémon at half HP"),
+            (TrainerMessageType.REMATCH, "Before rematch"),
+            (TrainerMessageType.DOUBLE_BATTLE_REMATCH_1, "Double battle rematch (trainer 1)"),
+            (TrainerMessageType.DOUBLE_BATTLE_REMATCH_2, "Double battle rematch (trainer 2)"),
+            (TrainerMessageType.WIN, "When they win (HGSS)"),
+            (TrainerMessageType.WIN_DPPT, "When they win (DP/Pt)"),
         };
 
         private struct Entry { public int messageID; public uint trainerId; public ushort triggerId; }
@@ -641,7 +641,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
 
             if (_current.Any(e => e.trainerId != (uint)_currentTrainerId)) { Info("Error: Some entries have a trainer ID that does not match the selected trainer.", StatusBrushes.Bad); return; }
 
-            List<string> dups = _current.GroupBy(e => e.triggerId).Where(g => g.Count() > 1).Select(g => TriggerName(g.Key)).ToList();
+            List<string> dups = _current.GroupBy(e => e.triggerId).Where(g => g.Count() > 1).Select(g => TriggerDescription(g.Key)).ToList();
             if (dups.Any()) { Info($"Warning: Duplicate message trigger types: {string.Join(", ", dups)}", StatusBrushes.Warn); return; }
 
             if (_current.Any(e => e.messageID >= 0 && e.messageID < _archive.messages.Count && string.IsNullOrWhiteSpace(_archive.messages[e.messageID])))

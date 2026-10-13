@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using global::Avalonia.Controls;
 using DSPRE.Avalonia;
+using DSPRE.Avalonia.Data;
 using DSPRE.Editors;
 using DSPRE.ROMFiles;
 using static DSPRE.RomInfo;
@@ -68,8 +70,63 @@ namespace DSPRE.Avalonia.ViewModels.World
         public int InitialIndex { get; set; }
 
         private decimal _mapTileset, _buildingsTileset, _thirdField, _lightType;
-        public decimal MapTileset { get => _mapTileset; set { if (Set(ref _mapTileset, value) && _area != null) { _area.mapTileset = (ushort)value; if (!_suppress) Dirty(); } } }
-        public decimal BuildingsTileset { get => _buildingsTileset; set { if (Set(ref _buildingsTileset, value) && _area != null) { _area.buildingsTileset = (ushort)value; if (!_suppress) Dirty(); } } }
+        public decimal MapTileset { get => _mapTileset; set { if (Set(ref _mapTileset, value) && _area != null) { _area.mapTileset = (ushort)value; OnPropertyChanged(nameof(MapTexturePlaces)); if (!_suppress) Dirty(); } } }
+        public decimal BuildingsTileset { get => _buildingsTileset; set { if (Set(ref _buildingsTileset, value) && _area != null) { _area.buildingsTileset = (ushort)value; OnPropertyChanged(nameof(BuildingTexturePlaces)); if (!_suppress) Dirty(); } } }
+
+        // Texture packs have no names, so each is shown by the places whose area data uses it.
+        public string MapTexturePlaces => PlacesUsingPack((int)_mapTileset, buildings: false);
+        public string BuildingTexturePlaces => PlacesUsingPack((int)_buildingsTileset, buildings: true);
+
+        // Per area data entry, its two packs as saved and the places of the headers that use it. Read once.
+        private (int Map, int Buildings)[] _areaPacks;
+        private List<string>[] _areaPlaces;
+
+        private void ReadPackUsers()
+        {
+            if (_areaPacks != null) return;
+            int count = AreaNames.Count;
+            _areaPacks = new (int, int)[count];
+            _areaPlaces = new List<string>[count];
+            IReadOnlyList<string> labels = HeaderLabels.Friendly();
+            Dictionary<int, List<ushort>> byArea = ProjectIndex.HeadersByRef(RefKind.AreaData);
+            for (int i = 0; i < count; i++)
+            {
+                _areaPacks[i] = (-1, -1);
+                try { AreaData a = new AreaData((byte)i); _areaPacks[i] = (a.mapTileset, a.buildingsTileset); }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { }
+                _areaPlaces[i] = new List<string>();
+                if (!byArea.TryGetValue(i, out List<ushort> headers)) continue;
+                foreach (ushort h in headers)
+                {
+                    // Friendly labels read "NNN Place"; the place alone is what tells packs apart.
+                    string label = h < labels.Count ? labels[h] : "";
+                    string place = label.Length > 4 ? label.Substring(4) : label;
+                    if (place.Length > 0 && !_areaPlaces[i].Contains(place)) _areaPlaces[i].Add(place);
+                }
+            }
+        }
+
+        private string PlacesUsingPack(int pack, bool buildings)
+        {
+            if (AreaNames.Count == 0) return "";
+            ReadPackUsers();
+            List<string> places = new List<string>();
+            for (int i = 0; i < _areaPacks.Length; i++)
+            {
+                // The entry open here counts with its unsaved value, the rest as saved.
+                int used = i == _selectedIndex ? pack : (buildings ? _areaPacks[i].Buildings : _areaPacks[i].Map);
+                if (used != pack) continue;
+                foreach (string p in _areaPlaces[i]) if (!places.Contains(p)) places.Add(p);
+            }
+            if (places.Count == 0) return "No map uses it";
+            // Location 0 is the game's placeholder place for unused headers; real places go first.
+            string placeholder = null;
+            try { List<string> names = GetLocationNames(); if (names != null && names.Count > 0) placeholder = names[0]?.Trim(); }
+            catch (Exception e) when (e is IOException || e is InvalidOperationException) { }
+            if (!string.IsNullOrEmpty(placeholder) && places.Remove(placeholder)) places.Add(placeholder);
+            const int Shown = 3;
+            return string.Join(", ", places.Take(Shown)) + (places.Count > Shown ? $" +{places.Count - Shown}" : "");
+        }
         /// <summary>Third field of the area record. HGSS keeps the terrain animation index
         /// here; DP/Pt keeps a model set index that nothing in the game reads, so the label follows the game.</summary>
         public string ThirdFieldLabel => IsHGSS ? "Global NSBTA" : "Unused";
@@ -172,6 +229,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             ThirdField = IsHGSS ? _area.groundAnimation : _area.movingModelSet;
             LightType = _area.lightType;
             AreaTypeIndex = _area.areaType == 0 ? 0 : 1;
+            OnPropertyChanged(nameof(MapTexturePlaces));
+            OnPropertyChanged(nameof(BuildingTexturePlaces));
         }
 
         public AreaDataEditorViewModel() { }
@@ -285,6 +344,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         private void AreaCountChanged()
         {
+            _areaPacks = null;
             OnPropertyChanged(nameof(RemoveTip));
             RaiseUndoState();
         }
@@ -295,7 +355,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public void Save()
         {
             if (_area == null || _selectedIndex < 0) return;
-            try { _area.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
+            try { _area.SaveToFileDefaultDir(_selectedIndex, showSuccessMessage: false); if (_areaPacks != null && _selectedIndex < _areaPacks.Length) _areaPacks[_selectedIndex] = (_area.mapTileset, _area.buildingsTileset); SetClean(); _history.MarkSaved(); RaiseUndoState(); StatusText = $"Saved area data {_selectedIndex}."; SaveNotice.Saved(UnsavedChangesDescription); AppEvents.RaiseAreaDataSaved(this, _selectedIndex); }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Area Data"); }
         }
     }

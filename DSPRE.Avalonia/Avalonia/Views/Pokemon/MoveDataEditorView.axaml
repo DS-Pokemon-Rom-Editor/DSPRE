@@ -31,13 +31,13 @@
 		<Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}" IsDefault="True"/>
 		<Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
 		<controls:UndoRedoButtons/>
-		<TextBlock Text="Move:" VerticalAlignment="Center"/>
+		<TextBlock Text="Move" VerticalAlignment="Center"/>
 		<controls:IdNameSelector x:Name="MovePicker" Value="{Binding SelectedMoveIndex}" Maximum="{Binding MaxMoveIndex}" Names="{Binding MoveNames}" Width="380"/>
 		<Button x:Name="EditMoveScriptButton" Content="Edit move script" controls:Icon.Key="pencil" Click="EditMoveScript_Click"
 				ToolTip.Tip="Open this move's battle script. Platinum and HGSS only."/>
 		<Button Content="Export CSV…" controls:Icon.Key="export" Click="Export_Click" Margin="12,0,0,0"/>
 		<Button Content="Import CSV…" controls:Icon.Key="import" Click="Import_Click"/>
-		<Button Content="Add new move…" controls:Icon.Key="addIcon" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
+		<Button Content="Add…" controls:Icon.Key="addIcon" Click="AddMove_Click" IsVisible="{Binding ShowHgEngineBanner}"
 				ToolTip.Tip="Add a new move to the hg-engine checkout"/>
 	</controls:EditorToolbar>
 
@@ -62,15 +62,15 @@
 	  <GroupBox x:Name="PropertiesBox" Grid.Row="0" Grid.Column="0" Header="Move properties">
 		<Grid RowDefinitions="Auto,8,Auto,8,Auto" ColumnDefinitions="Auto,*">
 
-		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Type:"   Classes="label"/>
+		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Type"   Classes="label"/>
 		  <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding TypeNames}"
 					 SelectedIndex="{Binding TypeIndex}"/>
 
-		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Split:"  Classes="label"/>
+		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Split"  Classes="label"/>
 		  <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding SplitNames}"
 					 SelectedIndex="{Binding SplitIndex}"/>
 
-		  <TextBlock Grid.Row="4" Grid.Column="0" Text="Range:"  Classes="label"/>
+		  <TextBlock Grid.Row="4" Grid.Column="0" Text="Range"  Classes="label"/>
 		  <ComboBox  Grid.Row="4" Grid.Column="1" ItemsSource="{Binding RangeItems}"
 					 SelectedIndex="{Binding RangeIndex}" MinWidth="220"/>
 		</Grid>
@@ -115,23 +115,23 @@
 	  <GroupBox x:Name="StatsBox" Grid.Row="0" Grid.Column="2" Header="Stats">
 		<Grid RowDefinitions="Auto,8,Auto,8,Auto,8,Auto,8,Auto" ColumnDefinitions="Auto,*">
 
-		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Power:"           Classes="label"/>
+		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Power"           Classes="label"/>
 		  <NumericUpDown Grid.Row="0" Grid.Column="1"
 						 Value="{Binding Power}" Minimum="0" Maximum="255" Increment="1"/>
 
-		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Accuracy:"        Classes="label"/>
+		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Accuracy"        Classes="label"/>
 		  <NumericUpDown Grid.Row="2" Grid.Column="1"
 						 Value="{Binding Accuracy}" Minimum="0" Maximum="{Binding AccuracyMax}" Increment="1"/>
 
-		  <TextBlock Grid.Row="4" Grid.Column="0" Text="PP:"              Classes="label"/>
+		  <TextBlock Grid.Row="4" Grid.Column="0" Text="PP"              Classes="label"/>
 		  <NumericUpDown Grid.Row="4" Grid.Column="1"
 						 Value="{Binding PP}" Minimum="0" Maximum="255" Increment="1"/>
 
-		  <TextBlock Grid.Row="6" Grid.Column="0" Text="Priority:"        Classes="label"/>
+		  <TextBlock Grid.Row="6" Grid.Column="0" Text="Priority"        Classes="label"/>
 		  <NumericUpDown Grid.Row="6" Grid.Column="1"
 						 Value="{Binding Priority}" Minimum="{Binding PriorityMin}" Maximum="{Binding PriorityMax}" Increment="1"/>
 
-		  <TextBlock Grid.Row="8" Grid.Column="0" Text="Effect %:"        Classes="label"/>
+		  <TextBlock Grid.Row="8" Grid.Column="0" Text="Effect %"        Classes="label"/>
 		  <NumericUpDown Grid.Row="8" Grid.Column="1"
 						 Value="{Binding SideEffectPct}" Minimum="0" Maximum="{Binding SideEffectMax}" Increment="1"/>
 		</Grid>
@@ -141,15 +141,15 @@
 	  <GroupBox x:Name="ContestBox" Grid.Row="2" Grid.Column="2" Header="Contest">
 		<Grid RowDefinitions="Auto,8,Auto,8,Auto" ColumnDefinitions="Auto,*">
 
-		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Condition:" Classes="label"/>
+		  <TextBlock Grid.Row="0" Grid.Column="0" Text="Condition" Classes="label"/>
 		  <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding ContestNames}"
 					 SelectedIndex="{Binding ContestIndex}"/>
 
-		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Effect:"    Classes="label" IsVisible="{Binding HasContestEffects}"/>
+		  <TextBlock Grid.Row="2" Grid.Column="0" Text="Effect"    Classes="label" IsVisible="{Binding HasContestEffects}"/>
 		  <ComboBox  Grid.Row="2" Grid.Column="1" ItemsSource="{Binding ContestEffectNames}"
 					 SelectedIndex="{Binding ContestAppeal}" HorizontalAlignment="Stretch" IsVisible="{Binding HasContestEffects}"/>
 
-		  <TextBlock Grid.Row="4" Grid.Column="0" Text="Hearts:"    Classes="label" IsVisible="{Binding HasContestEffects}"/>
+		  <TextBlock Grid.Row="4" Grid.Column="0" Text="Hearts"    Classes="label" IsVisible="{Binding HasContestEffects}"/>
 		  <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ContestHearts}" VerticalAlignment="Center" IsVisible="{Binding HasContestEffects}"/>
 		</Grid>
 	  </GroupBox>

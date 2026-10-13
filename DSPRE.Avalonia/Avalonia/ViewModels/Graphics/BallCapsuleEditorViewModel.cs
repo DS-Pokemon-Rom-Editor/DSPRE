@@ -150,7 +150,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get
             {
                 if (_capsuleIndex == 0) return "";
-                if (!_usedBy.TryGetValue(_capsuleIndex, out List<string> who) || who.Count == 0) return "No trainer's Pokemon carries this capsule.";
+                if (!_usedBy.TryGetValue(_capsuleIndex, out List<string> who) || who.Count == 0) return "No trainer's Pokémon carries this capsule.";
                 return "Carried by " + (who.Count <= 6 ? string.Join(", ", who) : $"{string.Join(", ", who.Take(6))} and {who.Count - 6} more");
             }
         }

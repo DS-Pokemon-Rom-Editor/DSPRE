@@ -11,7 +11,7 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="File:" VerticalAlignment="Center"/>
+        <TextBlock Text="File" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="200" ItemsSource="{Binding FileNames}" SelectedIndex="{Binding SelectedFileIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton"     Click="Save_Click"   IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>

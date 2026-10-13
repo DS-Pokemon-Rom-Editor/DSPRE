@@ -13,18 +13,18 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-          <TextBlock Text="View:" VerticalAlignment="Center"/>
+          <TextBlock Text="View" VerticalAlignment="Center"/>
           <ComboBox x:Name="ViewModeBox" Width="110" ItemsSource="{Binding ViewModes}" SelectedIndex="{Binding ViewModeIndex}"/>
-          <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
+          <TextBlock Text="Map" VerticalAlignment="Center" IsVisible="{Binding IsSingleMap}"/>
           <controls:FusionAutoCompleteBox Width="140" ItemsSource="{Binding MapNames}" SelectedIndex="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
           <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Map" FileId="{Binding SelectedMapIndex}" IsVisible="{Binding IsSingleMap}"/>
-          <TextBlock Text="Matrix:" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
+          <TextBlock Text="Matrix" VerticalAlignment="Center" IsVisible="{Binding IsMatrixView}"/>
           <controls:FusionAutoCompleteBox Width="140" ItemsSource="{Binding Matrices}" SelectedIndex="{Binding SelectedMatrixIndex}" IsVisible="{Binding IsMatrixView}"/>
           <TextBlock controls:EditorToolbar.Slot="Picker" Text="{Binding MatrixInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" IsVisible="{Binding IsMatrixView}"/>
-          <TextBlock Text="Header:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
+          <TextBlock Text="Header" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
           <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding HeaderNames}" SelectedIndex="{Binding SelectedHeaderIndex}" IsVisible="{Binding IsHeaderView}"
-                                          ToolTip.Tip="When embedded in the Maps workspace this follows the sidebar; opened standalone, pick a header here."/>
-          <TextBlock Text="Map:" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
+                                          ToolTip.Tip="Which header's maps to show."/>
+          <TextBlock Text="Map" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
           <controls:FusionAutoCompleteBox x:Name="MapPicker" Width="110" ItemsSource="{Binding HeaderMapNames}" SelectedIndex="{Binding SelectedHeaderMapIndex}" IsVisible="{Binding IsHeaderView}"
                     ToolTip.Tip="The map to edit. Picking a building or painting a square picks its map."/>
           <Button controls:EditorToolbar.Slot="Extra" Content="Animate" controls:Icon.Key="play" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
@@ -50,16 +50,16 @@
                     ToolTip.Tip="{Binding AreaLabel, StringFormat='Saved to {0}, with the map'}"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Text="Show:" VerticalAlignment="Center"/>
+            <TextBlock Text="Show" VerticalAlignment="Center"/>
             <ComboBox Width="110" ItemsSource="{Binding OverlayModes}" SelectedIndex="{Binding OverlayModeIndex}"/>
           </StackPanel>
           <CheckBox Content="Mesh" IsChecked="{Binding OverlayAsMesh}" IsEnabled="{Binding MeshToggleEnabled}" VerticalAlignment="Center"
-                    ToolTip.Tip="Paint collision on the map surface. Off gives a flat plane you can raise. Needs an Overlay mode; 'This header' and 'Full matrix' always use the flat plane."/>
-          <TextBlock Text="Opacity:" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayOpacity}"/>
+                    ToolTip.Tip="Paint on the map surface instead of a flat plane."/>
+          <TextBlock Text="Opacity" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayOpacity}"/>
           <Slider Width="100" Minimum="0" Maximum="100" SmallChange="5" LargeChange="10" TickFrequency="5" IsSnapToTickEnabled="True" Value="{Binding OverlayOpacity}"
                   VerticalAlignment="Center" IsVisible="{Binding ShowOverlayOpacity}"
                   ToolTip.Tip="{Binding OverlayOpacity, StringFormat='{}{0}%'}"/>
-          <TextBlock Text="Height:" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"/>
+          <TextBlock Text="Height" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"/>
           <Slider Width="120" Minimum="-5" Maximum="20" SmallChange="0.25" LargeChange="1"
                   Value="{Binding OverlayHeight}" VerticalAlignment="Center" IsVisible="{Binding ShowOverlayHeight}"
                   ToolTip.Tip="Lift the flat permission plane off the map surface (in tiles)"/>
@@ -80,7 +80,7 @@
                     ToolTip.Tip="Snap dragged buildings to whole tiles"/>
           <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="3,1"/>
           <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-            <TextBlock Text="View:" VerticalAlignment="Center"/>
+            <TextBlock Text="View" VerticalAlignment="Center"/>
             <ToggleButton Content="2D" IsChecked="{Binding Flat2D}" VerticalAlignment="Center" Padding="6,2"
                           ToolTip.Tip="Flat top-down view, easier to paint accurately."/>
             <Button Content="Top" Click="CamTop_Click" VerticalAlignment="Center" Padding="6,2" ToolTip.Tip="Top-down camera" IsEnabled="{Binding !Flat2D}"/>

@@ -13,9 +13,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     /// encounter lists, plus a set of "object" encounter slots that are shared
     /// (by index) across the three times and carry item requirements.
     ///
-    /// Mirrors the WinForms <c>SafariZoneEncounterGroupEditor</c> + its three
-    /// <c>SafariZoneEncounterEditorTab</c>s. Raises <see cref="Changed"/> on any edit
-    /// so the parent <see cref="SafariZoneEncounterViewModel"/> can mark itself dirty.
+    /// Each slot is one row with its three times side by side, edited in place.
+    /// Raises <see cref="Changed"/> on any edit so the parent
+    /// <see cref="SafariZoneEncounterViewModel"/> can mark itself dirty.
     /// </summary>
     public class SafariZoneGroupViewModel : INotifyPropertyChanged
     {
@@ -39,18 +39,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // Set on the surfing group: with no bonus slots the game hands surfing and every rod ten level 5 Magikarp.
         public bool WarnWhenNoSlots { get; set; }
         public bool NoSlotsWarning => WarnWhenNoSlots && _group != null && _group.ObjectRequirements.Count == 0;
-        public bool RequirementTypeWarning => _group != null && _objectIndex >= 0 && _reqType == 0;
 
         public ObservableCollection<string> SpeciesNames { get; }
         public ObservableCollection<string> ObjectTypeNames { get; } = new ObservableCollection<string>();
 
-        // Normal encounter lists (display) per time-of-day.
-        public ObservableCollection<string> MorningItems { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> DayItems { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> NightItems { get; } = new ObservableCollection<string>();
-
-        // Object slots (display), one entry per shared object slot.
-        public ObservableCollection<string> ObjectItems { get; } = new ObservableCollection<string>();
+        public ObservableCollection<SlotRow> NormalRows { get; } = new ObservableCollection<SlotRow>();
+        public ObservableCollection<ObjectRow> ObjectRows { get; } = new ObservableCollection<ObjectRow>();
 
         public SafariZoneGroupViewModel(ObservableCollection<string> speciesNames)
         {
@@ -62,83 +56,35 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         {
             _group = group;
             _suppress = true;
-            RebuildNormal(MorningItems, group?.MorningEncounters);
-            RebuildNormal(DayItems, group?.DayEncounters);
-            RebuildNormal(NightItems, group?.NightEncounters);
-            RebuildObjects();
+            NormalRows.Clear();
+            ObjectRows.Clear();
+            if (group != null)
+            {
+                int normal = Math.Max(group.MorningEncounters.Count, Math.Max(group.DayEncounters.Count, group.NightEncounters.Count));
+                for (int i = 0; i < normal; i++)
+                    NormalRows.Add(new SlotRow(this, i, group.MorningEncounters, group.DayEncounters, group.NightEncounters));
+                RebuildObjects();
+            }
             _suppress = false;
             OnPropertyChanged(nameof(NoSlotsWarning));
-
-            // Reset first so index 0 on the new group still reloads the fields.
-            _morningIndex = _dayIndex = _nightIndex = _objectIndex = -1;
-            MorningIndex = MorningItems.Count > 0 ? 0 : -1;
-            DayIndex = DayItems.Count > 0 ? 0 : -1;
-            NightIndex = NightItems.Count > 0 ? 0 : -1;
-            ObjectIndex = ObjectItems.Count > 0 ? 0 : -1;
         }
 
-        /// <summary>Rebinds to a group read again (an undo), staying on the rows that were picked.</summary>
-        public void SetData(SafariZoneEncounterGroup group, bool keepSelection)
-        {
-            int morning = _morningIndex, day = _dayIndex, night = _nightIndex, obj = _objectIndex;
-            SetData(group);
-            if (!keepSelection) return;
-            if (morning >= 0 && morning < MorningItems.Count) MorningIndex = morning;
-            if (day >= 0 && day < DayItems.Count) DayIndex = day;
-            if (night >= 0 && night < NightItems.Count) NightIndex = night;
-            if (obj >= 0 && obj < ObjectItems.Count) ObjectIndex = obj;
-        }
-
-        private static void RebuildNormal(ObservableCollection<string> col, BindingList<SafariZoneEncounter> src)
-        {
-            col.Clear();
-            if (src == null) return;
-            foreach (SafariZoneEncounter e in src) col.Add(e.ToString());
-        }
+        /// <summary>Rebinds to a group read again (an undo). Rows edit in place, so there is no selection to keep.</summary>
+        public void SetData(SafariZoneEncounterGroup group, bool keepSelection) => SetData(group);
 
         private void RebuildObjects()
         {
-            ObjectItems.Clear();
+            ObjectRows.Clear();
             if (_group == null) return;
             for (int i = 0; i < _group.ObjectRequirements.Count; i++)
-                ObjectItems.Add($"Object slot {i}");
+                ObjectRows.Add(new ObjectRow(this, i));
         }
 
         private void Touch() { if (!_suppress) Changed?.Invoke(this, EventArgs.Empty); }
 
         // Around a rename of the shared species list: a combo that drops its pick must not write it back.
         internal void BeginNameRefresh() => _suppress = true;
-        internal void EndNameRefresh() { _suppress = false; SetData(_group, keepSelection: true); }
-
-        // ── Normal: Morning ─────────────────────────────────────────────────────────
-        private int _morningIndex = -1;
-        public int MorningIndex { get => _morningIndex; set { if (Set(ref _morningIndex, value)) LoadNormal(_group?.MorningEncounters, value, v => MorningSpecies = v, v => MorningLevel = v, v => MorningForm = v); } }
-        private int _morningSpecies = -1;
-        public int MorningSpecies { get => _morningSpecies; set { if (Set(ref _morningSpecies, value) && !_suppress) ApplyNormal(_group?.MorningEncounters, _morningIndex, MorningItems, value, null); } }
-        private decimal _morningLevel;
-        public decimal MorningLevel { get => _morningLevel; set { if (Set(ref _morningLevel, value) && !_suppress) ApplyNormal(_group?.MorningEncounters, _morningIndex, MorningItems, null, (int)value); } }
-        private decimal _morningForm;
-        public decimal MorningForm { get => _morningForm; set { if (Set(ref _morningForm, value) && !_suppress) ApplyNormal(_group?.MorningEncounters, _morningIndex, MorningItems, null, null, (int)value); } }
-
-        // ── Normal: Day ─────────────────────────────────────────────────────────────
-        private int _dayIndex = -1;
-        public int DayIndex { get => _dayIndex; set { if (Set(ref _dayIndex, value)) LoadNormal(_group?.DayEncounters, value, v => DaySpecies = v, v => DayLevel = v, v => DayForm = v); } }
-        private int _daySpecies = -1;
-        public int DaySpecies { get => _daySpecies; set { if (Set(ref _daySpecies, value) && !_suppress) ApplyNormal(_group?.DayEncounters, _dayIndex, DayItems, value, null); } }
-        private decimal _dayLevel;
-        public decimal DayLevel { get => _dayLevel; set { if (Set(ref _dayLevel, value) && !_suppress) ApplyNormal(_group?.DayEncounters, _dayIndex, DayItems, null, (int)value); } }
-        private decimal _dayForm;
-        public decimal DayForm { get => _dayForm; set { if (Set(ref _dayForm, value) && !_suppress) ApplyNormal(_group?.DayEncounters, _dayIndex, DayItems, null, null, (int)value); } }
-
-        // ── Normal: Night ───────────────────────────────────────────────────────────
-        private int _nightIndex = -1;
-        public int NightIndex { get => _nightIndex; set { if (Set(ref _nightIndex, value)) LoadNormal(_group?.NightEncounters, value, v => NightSpecies = v, v => NightLevel = v, v => NightForm = v); } }
-        private int _nightSpecies = -1;
-        public int NightSpecies { get => _nightSpecies; set { if (Set(ref _nightSpecies, value) && !_suppress) ApplyNormal(_group?.NightEncounters, _nightIndex, NightItems, value, null); } }
-        private decimal _nightLevel;
-        public decimal NightLevel { get => _nightLevel; set { if (Set(ref _nightLevel, value) && !_suppress) ApplyNormal(_group?.NightEncounters, _nightIndex, NightItems, null, (int)value); } }
-        private decimal _nightForm;
-        public decimal NightForm { get => _nightForm; set { if (Set(ref _nightForm, value) && !_suppress) ApplyNormal(_group?.NightEncounters, _nightIndex, NightItems, null, null, (int)value); } }
+        internal void EndNameRefresh() { _suppress = false; SetData(_group); }
 
         // Levels show clamped to the boxes' range so they never coerce; only an edit to that box writes it back.
         private const int MaxShownLevel = 100;
@@ -153,126 +99,116 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private static ushort WithSpecies(ushort id, int species) => (ushort)(species | (FormBits(id) << DSPRE.HgEngine.HgEngineTrainerSource.FormShift));
         private static ushort WithForm(ushort id, int form) => (ushort)(BaseSpecies(id) | (Math.Clamp(form, 0, 31) << DSPRE.HgEngine.HgEngineTrainerSource.FormShift));
 
-        private void LoadNormal(BindingList<SafariZoneEncounter> src, int index, Action<int> setSpecies, Action<decimal> setLevel, Action<decimal> setForm)
+        /// <summary>One encounter of one time of day. Only the edited field is written, so a value the boxes can't show survives other edits.</summary>
+        public sealed class EncounterCell : INotifyPropertyChanged
         {
-            if (src == null || index < 0 || index >= src.Count) return;
-            _suppress = true;
-            int species = BaseSpecies(src[index].pokemonID);
-            setSpecies(species < SpeciesNames.Count ? species : -1);
-            setLevel(Math.Min((int)src[index].level, MaxShownLevel));
-            setForm(FormBits(src[index].pokemonID));
-            _suppress = false;
-        }
+            public event PropertyChangedEventHandler PropertyChanged;
+            private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            private readonly SafariZoneGroupViewModel _owner;
+            private readonly SafariZoneEncounter _e;
 
-        // Only the edited field is written, so an out-of-range value the boxes can't show survives other edits.
-        private void ApplyNormal(BindingList<SafariZoneEncounter> src, int index, ObservableCollection<string> display, int? species, int? level, int? form = null)
-        {
-            if (src == null || index < 0 || index >= src.Count) return;
-            if (species is int sp) { if (sp < 0) return; src[index].pokemonID = WithSpecies(src[index].pokemonID, sp); }
-            if (form is int f) src[index].pokemonID = WithForm(src[index].pokemonID, f);
-            if (level is int lv) src[index].level = (byte)Math.Max(0, Math.Min(255, lv));
-            // Replacing the selected row clears that list's selection, and every later edit would then miss the slot.
-            int morning = _morningIndex, day = _dayIndex, night = _nightIndex;
-            _suppress = true;
-            display[index] = src[index].ToString();
-            _morningIndex = morning; _dayIndex = day; _nightIndex = night;
-            OnPropertyChanged(nameof(MorningIndex)); OnPropertyChanged(nameof(DayIndex)); OnPropertyChanged(nameof(NightIndex));
-            _suppress = false;
-            Touch();
-        }
+            public EncounterCell(SafariZoneGroupViewModel owner, SafariZoneEncounter e) { _owner = owner; _e = e; }
 
-        // ── Object slots (shared index across the three times + requirements) ─────────
-        private int _objectIndex = -1;
-        public int ObjectIndex
-        {
-            get => _objectIndex;
-            set { if (Set(ref _objectIndex, value)) LoadObject(value); }
-        }
-
-        private int _objMorningSpecies = -1;
-        public int ObjMorningSpecies { get => _objMorningSpecies; set { if (Set(ref _objMorningSpecies, value) && !_suppress) ApplyObjectEncounter(_group?.MorningEncountersObject, value, null); } }
-        private decimal _objMorningLevel;
-        public decimal ObjMorningLevel { get => _objMorningLevel; set { if (Set(ref _objMorningLevel, value) && !_suppress) ApplyObjectEncounter(_group?.MorningEncountersObject, null, (int)value); } }
-        private decimal _objMorningForm;
-        public decimal ObjMorningForm { get => _objMorningForm; set { if (Set(ref _objMorningForm, value) && !_suppress) ApplyObjectEncounter(_group?.MorningEncountersObject, null, null, (int)value); } }
-
-        private int _objDaySpecies = -1;
-        public int ObjDaySpecies { get => _objDaySpecies; set { if (Set(ref _objDaySpecies, value) && !_suppress) ApplyObjectEncounter(_group?.DayEncountersObject, value, null); } }
-        private decimal _objDayLevel;
-        public decimal ObjDayLevel { get => _objDayLevel; set { if (Set(ref _objDayLevel, value) && !_suppress) ApplyObjectEncounter(_group?.DayEncountersObject, null, (int)value); } }
-        private decimal _objDayForm;
-        public decimal ObjDayForm { get => _objDayForm; set { if (Set(ref _objDayForm, value) && !_suppress) ApplyObjectEncounter(_group?.DayEncountersObject, null, null, (int)value); } }
-
-        private int _objNightSpecies = -1;
-        public int ObjNightSpecies { get => _objNightSpecies; set { if (Set(ref _objNightSpecies, value) && !_suppress) ApplyObjectEncounter(_group?.NightEncountersObject, value, null); } }
-        private decimal _objNightLevel;
-        public decimal ObjNightLevel { get => _objNightLevel; set { if (Set(ref _objNightLevel, value) && !_suppress) ApplyObjectEncounter(_group?.NightEncountersObject, null, (int)value); } }
-        private decimal _objNightForm;
-        public decimal ObjNightForm { get => _objNightForm; set { if (Set(ref _objNightForm, value) && !_suppress) ApplyObjectEncounter(_group?.NightEncountersObject, null, null, (int)value); } }
-
-        private int _reqType = -1;
-        public int ReqType
-        {
-            get => _reqType;
-            set
+            public bool Exists => _e != null;
+            public bool ShowForms => _owner.ShowForms;
+            public ObservableCollection<string> SpeciesNames => _owner.SpeciesNames;
+            public int Species => _e == null ? 0 : BaseSpecies(_e.pokemonID);
+            public int SpeciesIndex
             {
-                if (!Set(ref _reqType, value)) return;
-                OnPropertyChanged(nameof(RequirementTypeWarning));
-                if (!_suppress) ApplyRequirement(_group?.ObjectRequirements, value, null);
+                get => _e != null && Species < SpeciesNames.Count ? Species : -1;
+                set
+                {
+                    if (_e == null || value < 0 || _owner._suppress || value == Species) return;
+                    _e.pokemonID = WithSpecies(_e.pokemonID, value);
+                    Raise(); Raise(nameof(Species)); _owner.Touch();
+                }
+            }
+            public decimal Level
+            {
+                get => _e == null ? 0 : Math.Min((int)_e.level, MaxShownLevel);
+                set
+                {
+                    if (_e == null || _owner._suppress || (int)value == Math.Min((int)_e.level, MaxShownLevel)) return;
+                    _e.level = (byte)Math.Clamp((int)value, 0, 255);
+                    Raise(); _owner.Touch();
+                }
+            }
+            public decimal Form
+            {
+                get => _e == null ? 0 : FormBits(_e.pokemonID);
+                set
+                {
+                    if (_e == null || _owner._suppress || (int)value == FormBits(_e.pokemonID)) return;
+                    _e.pokemonID = WithForm(_e.pokemonID, (int)value);
+                    Raise(); _owner.Touch();
+                }
             }
         }
-        private decimal _reqPoints;
-        public decimal ReqPoints { get => _reqPoints; set { if (Set(ref _reqPoints, value) && !_suppress) ApplyRequirement(_group?.ObjectRequirements, null, (int)value); } }
 
-        private int _optReqType = -1;
-        public int OptReqType { get => _optReqType; set { if (Set(ref _optReqType, value) && !_suppress) ApplyRequirement(_group?.OptionalObjectRequirements, value, null); } }
-        private decimal _optReqPoints;
-        public decimal OptReqPoints { get => _optReqPoints; set { if (Set(ref _optReqPoints, value) && !_suppress) ApplyRequirement(_group?.OptionalObjectRequirements, null, (int)value); } }
+        private static SafariZoneEncounter At(BindingList<SafariZoneEncounter> list, int i) => list != null && i < list.Count ? list[i] : null;
 
-        private void LoadObject(int index)
+        /// <summary>One normal slot: the same slot number at morning, day and night.</summary>
+        public class SlotRow
         {
-            if (_group == null || index < 0 || index >= _group.ObjectRequirements.Count) return;
-            _suppress = true;
-            ObjMorningSpecies = SpeciesOf(_group.MorningEncountersObject, index);
-            ObjMorningLevel = LevelOf(_group.MorningEncountersObject, index);
-            ObjMorningForm = FormOf(_group.MorningEncountersObject, index);
-            ObjDaySpecies = SpeciesOf(_group.DayEncountersObject, index);
-            ObjDayLevel = LevelOf(_group.DayEncountersObject, index);
-            ObjDayForm = FormOf(_group.DayEncountersObject, index);
-            ObjNightSpecies = SpeciesOf(_group.NightEncountersObject, index);
-            ObjNightLevel = LevelOf(_group.NightEncountersObject, index);
-            ObjNightForm = FormOf(_group.NightEncountersObject, index);
-            ReqType = _group.ObjectRequirements[index].typeID;
-            ReqPoints = _group.ObjectRequirements[index].quantity;
-            OptReqType = _group.OptionalObjectRequirements[index].typeID;
-            OptReqPoints = _group.OptionalObjectRequirements[index].quantity;
-            _suppress = false;
+            public SlotRow(SafariZoneGroupViewModel owner, int index, BindingList<SafariZoneEncounter> morning, BindingList<SafariZoneEncounter> day, BindingList<SafariZoneEncounter> night)
+            {
+                Label = (index + 1).ToString();
+                Morning = new EncounterCell(owner, At(morning, index));
+                Day = new EncounterCell(owner, At(day, index));
+                Night = new EncounterCell(owner, At(night, index));
+            }
+
+            public string Label { get; }
+            public EncounterCell Morning { get; }
+            public EncounterCell Day { get; }
+            public EncounterCell Night { get; }
         }
 
-        private int SpeciesOf(BindingList<SafariZoneEncounter> list, int i) =>
-            list != null && i < list.Count && BaseSpecies(list[i].pokemonID) < SpeciesNames.Count ? BaseSpecies(list[i].pokemonID) : -1;
-        private static int FormOf(BindingList<SafariZoneEncounter> list, int i) =>
-            list != null && i < list.Count ? FormBits(list[i].pokemonID) : 0;
-        private int LevelOf(BindingList<SafariZoneEncounter> list, int i) =>
-            list != null && i < list.Count ? Math.Min((int)list[i].level, MaxShownLevel) : 0;
-
-        private void ApplyObjectEncounter(BindingList<SafariZoneEncounter> list, int? species, int? level, int? form = null)
+        /// <summary>One bonus slot, with the objects that unlock it.</summary>
+        public sealed class ObjectRow : SlotRow, INotifyPropertyChanged
         {
-            int i = _objectIndex;
-            if (list == null || i < 0 || i >= list.Count) return;
-            if (species is int sp) { if (sp < 0) return; list[i].pokemonID = WithSpecies(list[i].pokemonID, sp); }
-            if (form is int f) list[i].pokemonID = WithForm(list[i].pokemonID, f);
-            if (level is int lv) list[i].level = (byte)Math.Max(0, Math.Min(255, lv));
-            Touch();
-        }
+            public event PropertyChangedEventHandler PropertyChanged;
+            private void Raise([CallerMemberName] string n = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            private readonly SafariZoneGroupViewModel _owner;
+            private readonly SafariZoneObjectRequirement _req;
+            private readonly SafariZoneObjectRequirement _opt;
 
-        private void ApplyRequirement(BindingList<SafariZoneObjectRequirement> list, int? type, int? points)
-        {
-            int i = _objectIndex;
-            if (list == null || i < 0 || i >= list.Count) return;
-            if (type is int t) { if (t < 0) return; list[i].typeID = (byte)t; }
-            if (points is int p) list[i].quantity = (byte)Math.Max(0, Math.Min(255, p));
-            Touch();
+            public ObjectRow(SafariZoneGroupViewModel owner, int index)
+                : base(owner, index, owner._group.MorningEncountersObject, owner._group.DayEncountersObject, owner._group.NightEncountersObject)
+            {
+                _owner = owner;
+                _req = owner._group.ObjectRequirements[index];
+                _opt = owner._group.OptionalObjectRequirements[index];
+            }
+
+            public ObservableCollection<string> ObjectTypeNames => _owner.ObjectTypeNames;
+            public bool RequirementTypeWarning => _req.typeID == 0;
+
+            public int ReqType
+            {
+                get => _req.typeID;
+                set
+                {
+                    if (value < 0 || _owner._suppress || value == _req.typeID) return;
+                    _req.typeID = (byte)value;
+                    Raise(); Raise(nameof(RequirementTypeWarning)); _owner.Touch();
+                }
+            }
+            public decimal ReqPoints
+            {
+                get => _req.quantity;
+                set { if (_owner._suppress || (int)value == _req.quantity) return; _req.quantity = (byte)Math.Clamp((int)value, 0, 255); Raise(); _owner.Touch(); }
+            }
+            public int OptReqType
+            {
+                get => _opt.typeID;
+                set { if (value < 0 || _owner._suppress || value == _opt.typeID) return; _opt.typeID = (byte)value; Raise(); _owner.Touch(); }
+            }
+            public decimal OptReqPoints
+            {
+                get => _opt.quantity;
+                set { if (_owner._suppress || (int)value == _opt.quantity) return; _opt.quantity = (byte)Math.Clamp((int)value, 0, 255); Raise(); _owner.Touch(); }
+            }
         }
 
         // ── Add / remove object slot (keeps all six lists + requirements in sync) ─────
@@ -287,7 +223,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _group.ObjectSlots = (byte)_group.ObjectRequirements.Count;
             _suppress = true; RebuildObjects(); _suppress = false;
             OnPropertyChanged(nameof(NoSlotsWarning));
-            ObjectIndex = ObjectItems.Count - 1;
             Touch();
         }
 
@@ -303,7 +238,6 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _group.ObjectSlots = (byte)_group.ObjectRequirements.Count;
             _suppress = true; RebuildObjects(); _suppress = false;
             OnPropertyChanged(nameof(NoSlotsWarning));
-            ObjectIndex = ObjectItems.Count > 0 ? ObjectItems.Count - 1 : -1;
             Touch();
         }
     }

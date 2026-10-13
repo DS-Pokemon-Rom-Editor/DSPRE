@@ -74,12 +74,12 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             get
             {
                 List<string> bits = new List<string>();
-                if (Drawing >= 0) bits.Add("drawing " + Drawing);
-                if (Arrangement >= 0) bits.Add("arrangement " + Arrangement);
-                if (Cells >= 0) bits.Add("layout " + Cells);
-                if (Animation >= 0) bits.Add("animation " + Animation);
-                if (PaletteMember >= 0) bits.Add("colours " + PaletteMember);
-                return string.Join(", ", bits);
+                if (Drawing >= 0) bits.Add("drawing");
+                if (Arrangement >= 0 || Cells >= 0) bits.Add("layout");
+                if (Animation >= 0) bits.Add("animation");
+                if (PaletteMember >= 0) bits.Add("colours");
+                string where = string.Join(", ", bits);
+                return where.Length == 0 ? where : char.ToUpperInvariant(where[0]) + where.Substring(1);
             }
         }
     }

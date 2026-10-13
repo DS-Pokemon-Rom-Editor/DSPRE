@@ -207,8 +207,8 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
 
         private static string FriendlyGroup(GraphicAssets.Group g) => g switch
         {
-            GraphicAssets.Group.PokemonSprites => "Pokemon sprites",
-            GraphicAssets.Group.PokemonIcons => "Pokemon icons",
+            GraphicAssets.Group.PokemonSprites => "Pokémon sprites",
+            GraphicAssets.Group.PokemonIcons => "Pokémon icons",
             GraphicAssets.Group.Trainers => "Trainers",
             GraphicAssets.Group.BattleScenery => "Battle scenery",
             GraphicAssets.Group.BattleGauges => "Battle HP bars",

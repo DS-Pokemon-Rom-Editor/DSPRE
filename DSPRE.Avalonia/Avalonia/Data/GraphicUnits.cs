@@ -466,7 +466,7 @@ namespace DSPRE.Avalonia.Data
             // poke_win is a cell graphic, so it brings its animation and layout with it.
             int poke = ugmenu + 1;
             if (poke + 3 < fileCount)
-                Row("Pokemon window", (poke, "Animation"), (poke + 1, "Layout"),
+                Row("Pokémon window", (poke, "Animation"), (poke + 1, "Layout"),
                     (poke + 2, "Drawing"), (poke + 3, "Colours"));
 
             FillGaps(units, a, fileCount, spokenFor);

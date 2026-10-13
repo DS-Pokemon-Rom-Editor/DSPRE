@@ -360,7 +360,7 @@ namespace DSPRE.Avalonia.Data
             new(73, "NCER", "Cells for sprite 72", 72, 75, -1, 74, -1),
             new(74, "NANR", "Animations for sprite 72", 72, 75, 73, -1, -1),
             new(75, "NCLR", "OBJ palette for sprite 72", 72, -1, 73, -1, -1),
-            new(76, "NCGR", "Pokemon icon placeholder tiles; cells, animation and palette come from the poketool icon NARC, not this archive", -1, -1, -1, -1, -1),
+            new(76, "NCGR", "Pokémon icon placeholder tiles; cells, animation and palette come from the poketool icon NARC, not this archive", -1, -1, -1, -1, -1),
             new(77, "NCGR", "Footprint sprite frame; palette comes from the pokefoot NARC", -1, -1, 78, 79, -1),
             new(78, "NCER", "Cells for footprint sprite 77", 77, -1, -1, 79, -1),
             new(79, "NANR", "Animations for footprint sprite 77", 77, -1, 78, -1, -1),
