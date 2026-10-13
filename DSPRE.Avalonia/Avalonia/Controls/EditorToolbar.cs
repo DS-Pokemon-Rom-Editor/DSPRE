@@ -68,6 +68,103 @@ namespace DSPRE.Avalonia.Controls
             DockPanel.SetDock(this, Dock.Top);
             Child = _panel;
             Items.CollectionChanged += (_, _) => Arrange();
+            Loaded += (_, _) => FitWindowOnce();
+            SizeChanged += (_, _) => global::Avalonia.Threading.Dispatcher.UIThread.Post(UpdateCompact, global::Avalonia.Threading.DispatcherPriority.Background);
+            // The tour's "?" joins the row after the window opens, so a late arrival is fitted too.
+            _panel.Children.CollectionChanged += (_, _) =>
+            {
+                if (_fitted && DateTime.UtcNow - _fittedAt < TimeSpan.FromSeconds(5))
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(FitWindow, global::Avalonia.Threading.DispatcherPriority.Background);
+            };
+        }
+
+        private bool _fitted;
+        private DateTime _fittedAt;
+
+        /// <summary>
+        /// Widens an editor's own window when it first opens so the toolbar fits on one row, as far as the screen allows.
+        /// A toolbar embedded in the main window leaves that window alone.
+        /// </summary>
+        private void FitWindowOnce()
+        {
+            if (_fitted) return;
+            _fitted = true;
+            _fittedAt = DateTime.UtcNow;
+            FitWindow();
+        }
+
+        private void FitWindow()
+        {
+            if (TopLevel.GetTopLevel(this) is not Window window || window is Views.Shell.MainWindowView) return;
+            double needed = Padding.Left + Padding.Right;
+            foreach (Control child in _panel.Children)
+            {
+                if (!child.IsVisible) continue;
+                child.Measure(Size.Infinity);
+                needed += child.DesiredSize.Width;
+            }
+            double shortBy = Math.Ceiling(needed - Bounds.Width);
+            if (shortBy <= 0) return;
+            double screen = window.Screens.ScreenFromWindow(window)?.WorkingArea.Width / window.RenderScaling ?? double.MaxValue;
+            double width = Math.Min(window.Bounds.Width + shortBy, screen - 32);
+            if (width > window.Bounds.Width) window.Width = width;
+        }
+
+        // ── Narrow windows: buttons with an icon drop their text before the row has to wrap ───────────────────
+        private bool _compact;
+        // A label's width while shown, so the full row can be worked out while labels are hidden.
+        private readonly Dictionary<TextBlock, double> _labelWidths = new();
+        // Tooltips this toolbar set while compact, to take back when the labels return.
+        private readonly HashSet<Control> _tipsAdded = new();
+
+        /// <summary>The text beside an icon on a button, or null for a button with no icon or no text.</summary>
+        private static TextBlock IconLabel(Control c)
+        {
+            if ((c as ContentControl)?.Content is not StackPanel panel || panel.Children.Count != 2) return null;
+            bool hasIcon = panel.Children.Any(x => x is global::Avalonia.Controls.Image);
+            return hasIcon ? panel.Children.OfType<TextBlock>().FirstOrDefault(t => !string.IsNullOrEmpty(t.Text)) : null;
+        }
+
+        private IEnumerable<(Control Button, TextBlock Label)> IconButtons()
+        {
+            foreach ((Control item, int _) in _placed)
+            {
+                if (item is StackPanel pair && _captioned.Contains(pair)) continue;
+                if (item is UndoRedoButtons undoRedo)
+                {
+                    foreach (Control button in undoRedo.Children)
+                        if (IconLabel(button) is TextBlock inner) yield return (button, inner);
+                    continue;
+                }
+                if (IconLabel(item) is TextBlock label) yield return (item, label);
+            }
+        }
+
+        private void UpdateCompact()
+        {
+            if (_placed.Count == 0 || Bounds.Width <= 0) return;
+            double available = Bounds.Width - Padding.Left - Padding.Right;
+            double full = 0;
+            foreach (Control child in _panel.Children)
+            {
+                if (!child.IsVisible) continue;
+                child.Measure(Size.Infinity);
+                full += child.DesiredSize.Width;
+            }
+            foreach ((Control _, TextBlock label) in IconButtons())
+            {
+                if (label.IsVisible) { label.Measure(Size.Infinity); _labelWidths[label] = label.DesiredSize.Width + 5; }
+                else if (_labelWidths.TryGetValue(label, out double w)) full += w;
+            }
+            bool compact = full > available + 0.5;
+            if (compact == _compact) return;
+            _compact = compact;
+            foreach ((Control button, TextBlock label) in IconButtons())
+            {
+                label.IsVisible = !compact;
+                if (compact && ToolTip.GetTip(button) == null) { ToolTip.SetTip(button, label.Text); _tipsAdded.Add(button); }
+                else if (!compact && _tipsAdded.Remove(button)) ToolTip.SetTip(button, null);
+            }
         }
 
         // XAML adds a child before setting its label, so the last child was slotted unlabelled until something re-arranged.
@@ -127,6 +224,12 @@ namespace DSPRE.Avalonia.Controls
 
         private void Arrange()
         {
+            // Labels hidden for a narrow row come back before the row is rebuilt; the check runs again after.
+            foreach ((Control button, TextBlock label) in IconButtons())
+            {
+                label.IsVisible = true;
+                if (_tipsAdded.Remove(button)) ToolTip.SetTip(button, null);
+            }
             foreach ((Control item, int _) in _placed) item.PropertyChanged -= ChildChanged;
             _panel.Children.Clear();
             foreach (StackPanel g in _groupPanels) g.Children.Clear();
@@ -187,6 +290,8 @@ namespace DSPRE.Avalonia.Controls
                 lastGroup = group;
             }
             UpdateDividers();
+            _compact = false;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(UpdateCompact, global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
         private void ChildChanged(object sender, AvaloniaPropertyChangedEventArgs e)

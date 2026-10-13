@@ -58,6 +58,18 @@ namespace DSPRE.Avalonia
         => BusyOverlay.RunAsync(busyText, busyHint, work);
 
         /// <summary>
+        /// Runs <paramref name="work"/> behind the busy card, then builds the window while the card is still up, so
+        /// the editor opens ready instead of freezing after the card goes. A null window means nothing to show.
+        /// </summary>
+        private static async System.Threading.Tasks.Task OpenBehindCardAsync(string busyText, string busyHint, System.Action work,
+                                                                               System.Func<global::Avalonia.Controls.Window> build)
+        {
+            global::Avalonia.Controls.Window window = null;
+            await BusyOverlay.RunAsync(busyText, busyHint, work, () => window = build());
+            window?.ShowManaged();
+        }
+
+        /// <summary>
         /// Everything in the ROM that makes a noise: the cries, the music, the fanfares and the sound
         /// effects, listed out of the sound archive's own names.
         /// </summary>
@@ -70,17 +82,17 @@ namespace DSPRE.Avalonia
             try
             {
                 // The species list is counted from the personal data, which a fresh project has not unpacked yet.
-                await RunBusyAsync("Opening Audio Editor…", "Reading the cries, music and sound effects.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData }));
-
-                string[] names;
-                try { names = GetPokemonNamesWithForms(GetPersonalFilesCount()); }
-                catch { names = System.Array.Empty<string>(); }
-
-                await System.Threading.Tasks.Task.Yield();
-                AudioEditorViewModel vm = new ViewModels.Audio.AudioEditorViewModel(names);
-                if (showCryFor > 0) vm.ShowCryFor(showCryFor);
-                new Views.Audio.AudioEditorView(vm).ShowManaged();
+                await OpenBehindCardAsync("Opening Audio Editor…", "Reading the cries, music and sound effects.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData }),
+                    () =>
+                    {
+                        string[] names;
+                        try { names = GetPokemonNamesWithForms(GetPersonalFilesCount()); }
+                        catch { names = System.Array.Empty<string>(); }
+                        AudioEditorViewModel vm = new ViewModels.Audio.AudioEditorViewModel(names);
+                        if (showCryFor > 0) vm.ShowCryFor(showCryFor);
+                        return new Views.Audio.AudioEditorView(vm);
+                    });
             }
             catch (System.Exception ex)
             {
@@ -161,12 +173,15 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Move Data Editor" + (initialIndex > 0 ? At(GetAttackNames, initialIndex) : "") + "…", "Reading every move.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData }));
-                MoveDataEditorView view = new MoveDataEditorView();
-                if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
-                    vm.SelectedMoveIndex = initialIndex;   // setter clamps + loads
-                view.ShowManaged();
+                await OpenBehindCardAsync("Opening Move Data Editor" + (initialIndex > 0 ? At(GetAttackNames, initialIndex) : "") + "…", "Reading every move.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.moveData }),
+                    () =>
+                    {
+                        MoveDataEditorView view = new MoveDataEditorView();
+                        if (initialIndex > 0 && view.DataContext is MoveDataEditorViewModel vm)
+                            vm.SelectedMoveIndex = initialIndex;   // setter clamps + loads
+                        return view;
+                    });
             }
             catch (System.Exception ex)
             {
@@ -214,12 +229,14 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Item Editor" + (initialIndex > 1 ? At(GetItemNames, initialIndex) : "") + "…", "Reading every item and its icon.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData }));
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
-                ItemEditorViewModel vm = new ItemEditorViewModel(GetItemNames());
-                if (initialIndex > 0) vm.SelectedItemIndex = System.Math.Clamp(initialIndex, 0, vm.MaxItemIndex);
-                new ItemEditorView(vm).ShowManaged();
+                await OpenBehindCardAsync("Opening Item Editor" + (initialIndex > 1 ? At(GetItemNames, initialIndex) : "") + "…", "Reading every item and its icon.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemData, DirNames.itemIcons }),
+                    () =>
+                    {
+                        ItemEditorViewModel vm = new ItemEditorViewModel(GetItemNames());
+                        if (initialIndex > 0) vm.SelectedItemIndex = System.Math.Clamp(initialIndex, 0, vm.MaxItemIndex);
+                        return new ItemEditorView(vm);
+                    });
             }
             catch (System.Exception ex)
             {
@@ -257,12 +274,15 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Trade Editor…", "Reading the in-game trades.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData }));
-                TradeEditorView view = new TradeEditorView();
-                if (initialIndex > 0 && view.DataContext is TradeEditorViewModel vm)
-                    _ = vm.ChangeTradeIDAsync(initialIndex);   // async load; freshly opened editor isn't dirty
-                view.ShowManaged();
+                await OpenBehindCardAsync("Opening Trade Editor…", "Reading the in-game trades.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.tradeData }),
+                    () =>
+                    {
+                        TradeEditorView view = new TradeEditorView();
+                        if (initialIndex > 0 && view.DataContext is TradeEditorViewModel vm)
+                            _ = vm.ChangeTradeIDAsync(initialIndex);   // async load; freshly opened editor isn't dirty
+                        return view;
+                    });
             }
             catch (System.Exception ex)
             {
@@ -278,11 +298,10 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Text Editor…", "Reading every text archive.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives }));
-                new EditorHostWindow("Text editor",
-                    new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }),
-                    980, 640).ShowManaged();
+                await OpenBehindCardAsync("Opening Text Editor…", "Reading every text archive.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives }),
+                    () => new EditorHostWindow("Text editor",
+                        new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }), 980, 640));
             }
             catch (System.Exception ex)
             {
@@ -435,12 +454,15 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening TM/HM Bulk Editor…", "Reading which Pokémon learn each TM and HM.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions }));
-                TmHmBulkEditorViewModel vm = new TmHmBulkEditorViewModel(GetPokemonNames());
-                EditorHostWindow window = new EditorHostWindow("TM/HM bulk editor", new TmHmBulkEditorView(vm), 1050, 700);
-                window.Closed += (_, _) => vm.Detach();
-                window.ShowManaged();
+                await OpenBehindCardAsync("Opening TM/HM Bulk Editor…", "Reading which Pokémon learn each TM and HM.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.evolutions }),
+                    () =>
+                    {
+                        TmHmBulkEditorViewModel vm = new TmHmBulkEditorViewModel(GetPokemonNames());
+                        EditorHostWindow window = new EditorHostWindow("TM/HM bulk editor", new TmHmBulkEditorView(vm), 1050, 700);
+                        window.Closed += (_, _) => vm.Detach();
+                        return window;
+                    });
             }
             catch (System.Exception ex)
             {
@@ -465,8 +487,16 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Wild Pokémon Editor…", "Reading this game's encounter files.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons }));
+                await OpenBehindCardAsync("Opening Wild Pokémon Editor…", "Reading this game's encounter files.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.encounters, DirNames.monIcons }), BuildWild);
+            }
+            catch (System.Exception ex)
+            {
+                await DialogHelper.ShowError("Couldn't open the Wild Pokémon Editor: " + ex.Message, "Wild Pokémon Editor");
+            }
+
+            global::Avalonia.Controls.Window BuildWild()
+            {
                 string path = gameDirs[DirNames.encounters].unpackedDir;
                 string[] names = GetPokemonNames();
                 int headerCount = GetHeaderCount();
@@ -479,19 +509,15 @@ namespace DSPRE.Avalonia
                     WildEditorDPPtViewModel vm = new WildEditorDPPtViewModel(path, names, initialIndex, headerCount);
                     EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor (DPPt)", new WildEditorDPPtView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
                     window.Closed += (_, _) => vm.Detach();
-                    window.ShowManaged();
+                    return window;
                 }
                 else
                 {
                     WildEditorHGSSViewModel vm = new WildEditorHGSSViewModel(path, names, initialIndex, headerCount);
                     EditorHostWindow window = new EditorHostWindow("Wild Pokémon editor (HGSS)", new WildEditorHGSSView(vm), 1000, 680) { MinWidth = 960, MinHeight = 520 };
                     window.Closed += (_, _) => vm.Detach();
-                    window.ShowManaged();
+                    return window;
                 }
-            }
-            catch (System.Exception ex)
-            {
-                await DialogHelper.ShowError("Couldn't open the Wild Pokémon Editor: " + ex.Message, "Wild Pokémon Editor");
             }
         }
 
@@ -557,17 +583,15 @@ namespace DSPRE.Avalonia
             TModel vm = make();
             try
             {
-                await RunBusyAsync("Opening " + title + "…", busyHint, () => load(vm));
-                ready(vm);
+                // The list and the preview keep their widths, so a narrower window would squeeze the settings away.
+                await OpenBehindCardAsync("Opening " + title + "…", busyHint, () => load(vm),
+                    () => { ready(vm); return new EditorHostWindow(title, view(vm), width, height) { MinWidth = minWidth }; });
             }
             catch (System.Exception ex) when (ex is System.IO.IOException || ex is System.IO.InvalidDataException
                                               || ex is System.InvalidOperationException || ex is System.UnauthorizedAccessException)
             {
                 _ = DialogHelper.ShowError(title + " could not be opened:\n" + ex.Message, title);
-                return;
             }
-            // The list and the preview keep their widths, so a narrower window would squeeze the settings away.
-            new EditorHostWindow(title, view(vm), width, height) { MinWidth = minWidth }.ShowManaged();
         }
 
         public static void OpenCameraEditor()
@@ -584,9 +608,9 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Trainer Editor" + (initialIndex > 0 ? At(GetSimpleTrainerNames, initialIndex) : "") + "…", "Reading every trainer, party and trainer sprite.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics }));
-                new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }).ShowManaged();
+                await OpenBehindCardAsync("Opening Trainer Editor" + (initialIndex > 0 ? At(GetSimpleTrainerNames, initialIndex) : "") + "…", "Reading every trainer, party and trainer sprite.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties, DirNames.trainerParty, DirNames.trainerGraphics }),
+                    () => new TrainerEditorView(new TrainerEditorViewModel(true) { InitialIndex = initialIndex }));
             }
             catch (System.Exception ex)
             {
@@ -602,11 +626,14 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Trainer Sprite Editor…", "Reading the trainer class sprites.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics }));
-                TrainerSpriteEditorView window = new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex));
-                if (closed != null) window.Closed += (_, _) => closed();
-                window.ShowManaged();
+                await OpenBehindCardAsync("Opening Trainer Sprite Editor…", "Reading the trainer class sprites.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerGraphics }),
+                    () =>
+                    {
+                        TrainerSpriteEditorView window = new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialClassIndex));
+                        if (closed != null) window.Closed += (_, _) => closed();
+                        return window;
+                    });
             }
             catch (System.Exception ex)
             {
@@ -624,17 +651,14 @@ namespace DSPRE.Avalonia
             if (Refused("TrainerFlagBulkEditorView")) return;
 
             TrainerFlagBulkEditorViewModel vm = null;
-            await RunBusyAsync("Opening Trainer Flag Bulk Editor…",
+            await OpenBehindCardAsync("Opening Trainer Flag Bulk Editor…",
                 "Reading every trainer's AI flags.",
                 () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
                     vm = new TrainerFlagBulkEditorViewModel();
-                });
-            if (vm == null) return;
-
-            new EditorHostWindow("Trainer flag bulk editor",
-                new TrainerFlagBulkEditorView(vm), 1050, 700).ShowManaged();
+                },
+                () => vm == null ? null : new EditorHostWindow("Trainer flag bulk editor", new TrainerFlagBulkEditorView(vm), 1050, 700));
         }
 
         public static void OpenVsSeekerRematchEditor(int initialRowIndex = -1) => _ = OpenVsSeekerRematchEditorAsync(initialRowIndex);
@@ -644,13 +668,10 @@ namespace DSPRE.Avalonia
             if (Refused("VsSeekerRematchView")) return;
 
             VsSeekerRematchViewModel vm = null;
-            await RunBusyAsync("Opening Vs. Seeker Rematch Editor…",
+            await OpenBehindCardAsync("Opening Vs. Seeker Rematch Editor…",
                 "Reading the rematch table and trainer names.",
-                () => vm = new VsSeekerRematchViewModel(initialRowIndex));
-            if (vm == null) return;
-
-            new EditorHostWindow("Vs. Seeker rematch editor",
-                new VsSeekerRematchView(vm), 900, 600).ShowManaged();
+                () => vm = new VsSeekerRematchViewModel(initialRowIndex),
+                () => vm == null ? null : new EditorHostWindow("Vs. Seeker rematch editor", new VsSeekerRematchView(vm), 900, 600));
         }
 
         public static void OpenHgEngineSettings()
@@ -680,13 +701,10 @@ namespace DSPRE.Avalonia
             if (Refused("PokegearRematchView")) return;
 
             PokegearRematchViewModel vm = null;
-            await RunBusyAsync("Opening Pokégear Rematch Editor…",
+            await OpenBehindCardAsync("Opening Pokégear Rematch Editor…",
                 "Reading the rematch table, the phone book and trainer names.",
-                () => vm = new PokegearRematchViewModel(initialRowIndex));
-            if (vm == null) return;
-
-            new EditorHostWindow("Pokégear rematch editor",
-                new PokegearRematchView(vm), 950, 640).ShowManaged();
+                () => vm = new PokegearRematchViewModel(initialRowIndex),
+                () => vm == null ? null : new EditorHostWindow("Pokégear rematch editor", new PokegearRematchView(vm), 950, 640));
         }
 
         public static void OpenPokegearPhoneBook(int initialEntry = -1) => _ = OpenPokegearPhoneBookAsync(initialEntry);
@@ -698,16 +716,14 @@ namespace DSPRE.Avalonia
             try
             {
                 PokegearPhoneBookViewModel vm = null;
-                await RunBusyAsync("Opening Pokégear Phone Book…",
+                await OpenBehindCardAsync("Opening Pokégear Phone Book…",
                     "Reading the phone book, contact names, trainers, maps and items.",
                     () =>
                     {
                         DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerProperties });
                         vm = new PokegearPhoneBookViewModel(initialEntry);
-                    });
-                if (vm == null) return;
-
-                new EditorHostWindow("Pokégear phone book", new PokegearPhoneBookView(vm), 1320, 700).ShowManaged();
+                    },
+                    () => vm == null ? null : new EditorHostWindow("Pokégear phone book", new PokegearPhoneBookView(vm), 1320, 700));
             }
             catch (System.Exception ex)
             {
@@ -723,9 +739,9 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Starter Editor…", "Finding the starter script.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts, DirNames.personalPokeData }));
-                new StarterEditorView().ShowManaged();
+                await OpenBehindCardAsync("Opening Starter Editor…", "Finding the starter script.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.scripts, DirNames.personalPokeData }),
+                    () => new StarterEditorView());
             }
             catch (System.Exception ex)
             {
@@ -768,10 +784,8 @@ namespace DSPRE.Avalonia
                 // Reading every archive to find the animations takes a moment, so the looking happens
                 // behind the busy overlay. The window itself is built here, on the thread that owns it.
                 CellAnimationPickerViewModel vm = new ViewModels.Graphics.CellAnimationPickerViewModel();
-                await RunBusyAsync("Looking for animations…",
-                                   "Reading every archive in the ROM.", vm.Gather);
-                vm.Ready();
-                new Views.Graphics.CellAnimationPickerView(vm).ShowManaged();
+                await OpenBehindCardAsync("Looking for animations…", "Reading every archive in the ROM.", vm.Gather,
+                    () => { vm.Ready(); return new Views.Graphics.CellAnimationPickerView(vm); });
             }
             catch (System.Exception ex)
             {
@@ -885,9 +899,9 @@ namespace DSPRE.Avalonia
             if (Refused("NamingScreenEditor")) return;
             try
             {
-                await RunBusyAsync("Opening Naming Screen Editor…", "Reading the naming screen's graphics.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.nameInputGraphics }));
-                new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(48, TrainerSpriteSet.NamingIcons)).ShowManaged();
+                await OpenBehindCardAsync("Opening Naming Screen Editor…", "Reading the naming screen's graphics.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.nameInputGraphics }),
+                    () => new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(48, TrainerSpriteSet.NamingIcons)));
             }
             catch (System.Exception ex)
             {
@@ -948,16 +962,15 @@ namespace DSPRE.Avalonia
             try
             {
                 ParticleLibraryViewModel vm = new ViewModels.Graphics.ParticleLibraryViewModel();
-                await RunBusyAsync("Looking for particles…", "Reading every archive in the ROM.", () =>
+                await OpenBehindCardAsync("Looking for particles…", "Reading every archive in the ROM.", () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> {
                         DirNames.wazaParticle, DirNames.ballParticles, DirNames.wazaEffectScripts, DirNames.wazaEffectSub,
                         DirNames.encounterEffectGraphics }
                         .Where(d => gameDirs.ContainsKey(d)).ToList());
                     vm.Gather();
-                });
-                vm.Ready();
-                new Views.Graphics.ParticleLibraryView(vm).ShowManaged();
+                },
+                () => { vm.Ready(); return new Views.Graphics.ParticleLibraryView(vm); });
             }
             catch (System.Exception ex)
             {
@@ -977,7 +990,7 @@ namespace DSPRE.Avalonia
             Dictionary<int, List<string>> usedBy = null;
             try
             {
-                await RunBusyAsync("Opening Ball Capsules…", "Reading the seals and their effects.", () =>
+                await OpenBehindCardAsync("Opening Ball Capsules…", "Reading the seals and their effects.", () =>
                 {
                     DSUtils.TryUnpackNarcs(new List<DirNames> {
                         DirNames.personalPokeData, DirNames.pokemonBattleSprites, DirNames.otherPokemonBattleSprites,
@@ -985,13 +998,15 @@ namespace DSPRE.Avalonia
                         .Where(d => gameDirs.ContainsKey(d)).ToList());
                     Data.SendOutGraphics.Unpack();
                     usedBy = Data.TrainerCapsuleCatalog.UsedBy();
+                },
+                () =>
+                {
+                    SetMonIconsPalTableAddress();
+                    string[] names = GetPokemonNamesWithForms(GetPersonalFilesCount());
+                    BallCapsuleEditorViewModel vm = new ViewModels.Graphics.BallCapsuleEditorViewModel(names) { UsedBy = usedBy };
+                    if (trainerCapsule > 0) vm.CapsuleIndex = trainerCapsule;
+                    return new Views.Graphics.BallCapsuleEditorView(vm);
                 });
-                SetMonIconsPalTableAddress();
-
-                string[] names = GetPokemonNamesWithForms(GetPersonalFilesCount());
-                BallCapsuleEditorViewModel vm = new ViewModels.Graphics.BallCapsuleEditorViewModel(names) { UsedBy = usedBy };
-                if (trainerCapsule > 0) vm.CapsuleIndex = trainerCapsule;
-                new Views.Graphics.BallCapsuleEditorView(vm).ShowManaged();
             }
             catch (System.Exception ex)
             {
@@ -1106,12 +1121,15 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Overworld Editor…", "Reading every overworld sprite.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites }));
-                SetOWtable();
-                Set3DOverworldsDict();
-                ReadOWTable();
-                new BtxEditorView(new BtxEditorViewModel(true)).ShowManaged();
+                await OpenBehindCardAsync("Opening Overworld Editor…", "Reading every overworld sprite.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites }),
+                    () =>
+                    {
+                        SetOWtable();
+                        Set3DOverworldsDict();
+                        ReadOWTable();
+                        return new BtxEditorView(new BtxEditorViewModel(true));
+                    });
             }
             catch (System.Exception ex)
             {
@@ -1143,9 +1161,8 @@ namespace DSPRE.Avalonia
             if (Refused("HgeRomReviewView")) return;
             try
             {
-                await RunBusyAsync("Opening hg-engine ROM review…", "Reading the icons and the a/0/2/8 tables.", HgeRomReviewViewModel.Unpack);
-                await System.Threading.Tasks.Task.Yield();
-                new HgeRomReviewView(new HgeRomReviewViewModel()).ShowManaged();
+                await OpenBehindCardAsync("Opening hg-engine ROM review…", "Reading the icons and the a/0/2/8 tables.", HgeRomReviewViewModel.Unpack,
+                    () => new HgeRomReviewView(new HgeRomReviewViewModel()));
             }
             catch (System.Exception ex)
             {
@@ -1160,15 +1177,14 @@ namespace DSPRE.Avalonia
             if (Refused("DistortionWorldView")) return;
             try
             {
-                await RunBusyAsync("Opening Distortion World…", "Reading the floors, their maps, props and events.", DistortionWorldViewModel.Unpack);
-                await System.Threading.Tasks.Task.Yield();
-                DistortionWorldViewModel vm = new ViewModels.World.DistortionWorldViewModel();
-                if (!vm.Available)
-                {
-                    AppMessages.Info("This ROM has no Distortion World data to edit.", "Distortion World");
-                    return;
-                }
-                new Views.World.DistortionWorldView(vm).ShowManaged();
+                await OpenBehindCardAsync("Opening Distortion World…", "Reading the floors, their maps, props and events.", DistortionWorldViewModel.Unpack,
+                    () =>
+                    {
+                        DistortionWorldViewModel vm = new ViewModels.World.DistortionWorldViewModel();
+                        if (vm.Available) return new Views.World.DistortionWorldView(vm);
+                        AppMessages.Info("This ROM has no Distortion World data to edit.", "Distortion World");
+                        return null;
+                    });
             }
             catch (System.Exception ex)
             {
@@ -1312,9 +1328,8 @@ namespace DSPRE.Avalonia
             try
             {
                 GraphicsBrowserViewModel vm = new ViewModels.Graphics.GraphicsBrowserViewModel(loadImmediately: false);
-                await RunBusyAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan);
-                vm.Publish();
-                new Views.Graphics.GraphicsBrowserView(vm).ShowManaged();
+                await OpenBehindCardAsync("Opening Graphics…", "Finding every picture in the ROM.", vm.Scan,
+                    () => { vm.Publish(); return new Views.Graphics.GraphicsBrowserView(vm); });
             }
             catch (System.Exception ex)
             {
@@ -1404,9 +1419,9 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Trainer Back Sprite Editor…", "Reading the player back sprites.",
-                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerBackGraphics }));
-                new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialSprite, TrainerSpriteSet.Backs)).ShowManaged();
+                await OpenBehindCardAsync("Opening Trainer Back Sprite Editor…", "Reading the player back sprites.",
+                    () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.trainerBackGraphics }),
+                    () => new TrainerSpriteEditorView(new TrainerSpriteEditorViewModel(initialSprite, TrainerSpriteSet.Backs)));
             }
             catch (System.Exception ex)
             {
@@ -1520,10 +1535,10 @@ namespace DSPRE.Avalonia
 
             try
             {
-                await RunBusyAsync("Opening Battle Screen…", "Reading battle backgrounds, gauges, text boxes and fonts.",
+                await OpenBehindCardAsync("Opening Battle Screen…", "Reading battle backgrounds, gauges, text boxes and fonts.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> {
-                        DirNames.battleObj, DirNames.battleBg, DirNames.windowFrames, DirNames.fonts }));
-                new Views.Battle.BattleScreenEditorView().ShowManaged();
+                        DirNames.battleObj, DirNames.battleBg, DirNames.windowFrames, DirNames.fonts }),
+                    () => new Views.Battle.BattleScreenEditorView());
             }
             catch (System.Exception ex)
             {
@@ -1561,9 +1576,8 @@ namespace DSPRE.Avalonia
                 // Listing means reading every 3D archive to see what is in it, which is far too much
                 // file work to do on the click.
                 ModelBrowserViewModel vm = new ViewModels.Graphics.ModelBrowserViewModel();
-                await RunBusyAsync("Opening Models…", "Finding every model and texture in the ROM.", vm.Scan);
-                vm.Publish();
-                new Views.Graphics.ModelBrowserView(vm).ShowManaged();
+                await OpenBehindCardAsync("Opening Models…", "Finding every model and texture in the ROM.", vm.Scan,
+                    () => { vm.Publish(); return new Views.Graphics.ModelBrowserView(vm); });
             }
             catch (System.Exception ex)
             {
