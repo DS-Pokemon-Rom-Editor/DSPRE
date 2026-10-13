@@ -1562,7 +1562,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                 ViewMatrixNames.Add(name);
             }
         }
-        public decimal MaxViewArea => Math.Clamp(Filesystem.GetAreaDataCount() - 1, 0, byte.MaxValue);
+        // Bound before any ROM is open, when there are no area data files to count.
+        public decimal MaxViewArea => RomInfo.gameDirs?.ContainsKey(RomInfo.DirNames.areaData) == true
+            ? Math.Clamp(Filesystem.GetAreaDataCount() - 1, 0, byte.MaxValue) : 0;
 
         private void ShowOnChosen()
         {

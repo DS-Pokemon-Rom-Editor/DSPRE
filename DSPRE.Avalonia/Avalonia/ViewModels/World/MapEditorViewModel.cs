@@ -265,7 +265,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => _previewArea;
             set { if (Set(ref _previewArea, value) && !_suppress && _area == null && _map != null) { UsePreviewArea(); RebuildPreview(); } }
         }
-        public decimal MaxPreviewArea => Math.Clamp(Filesystem.GetAreaDataCount() - 1, 0, byte.MaxValue);
+        // Bound before any ROM is open, when there are no area data files to count.
+        public decimal MaxPreviewArea => RomInfo.gameDirs?.ContainsKey(RomInfo.DirNames.areaData) == true
+            ? Math.Clamp(Filesystem.GetAreaDataCount() - 1, 0, byte.MaxValue) : 0;
 
         // The texture boxes follow the preview area; with no area of its own there is nothing for them to save into.
         private void UsePreviewArea()
