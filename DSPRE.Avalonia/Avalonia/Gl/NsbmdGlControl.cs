@@ -598,11 +598,12 @@ namespace DSPRE.Avalonia.Gl
 
         public void ShowTestCube() { SetModel(CubeModel()); }
 
-        public void SetModel(NsbmdRenderModel model)
+        /// <param name="keepView">Keep the camera where it is, for a scene rebuilt after an edit.</param>
+        public void SetModel(NsbmdRenderModel model, bool keepView = false)
         {
             _model = model;
             _uploadPending = true;
-            _targetX = _targetY = _targetZ = 0f;   // recentre when the scene changes
+            if (!keepView) _targetX = _targetY = _targetZ = 0f;   // recentre when the scene changes
             _gizmoMesh = model?.GizmoMesh;
             _gizmoCount = model?.GizmoVertexCount ?? 0;
             _gizmoDirty = true;

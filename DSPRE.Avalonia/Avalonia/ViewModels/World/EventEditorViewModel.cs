@@ -137,6 +137,82 @@ namespace DSPRE.Avalonia.ViewModels.World
         public event EventHandler MarkersChanged;
 
         public NsbmdRenderModel Model3D { get; private set; }
+
+        /// <summary>Set when the scene was rebuilt for an edit, so the view keeps its camera where it is.</summary>
+        public bool KeepViewOnLoad { get; private set; }
+
+        // ── Overworlds the game draws as a 3D model ────────────────────────────────────────────────────
+        // They are built into the scene the way buildings are. Moving or changing one shows its picture until
+        // the scene is rebuilt, a moment after the edits stop.
+        private string _builtModelObjects = "";
+        private global::Avalonia.Threading.DispatcherTimer _modelRebuild;
+
+        private string ModelObjectsNow()
+        {
+            if (_file == null || !_showOw) return "";
+            StringBuilder key = new StringBuilder();
+            foreach (Overworld ow in _file.overworlds)
+                if (Overworld3DObjects.IsModel(ow.overlayTableEntry))
+                    key.Append(ow.overlayTableEntry).Append(',').Append(ow.xMatrixPosition).Append(',').Append(ow.yMatrixPosition).Append(',')
+                       .Append(ow.xMapPosition).Append(',').Append(ow.yMapPosition).Append(',').Append(ow.zPosition).Append(';');
+            return key.ToString();
+        }
+
+        private bool ModelObjectsAsBuilt => _builtModelObjects == ModelObjectsNow();
+
+        private void RebuildForModelObjectsSoon()
+        {
+            if (_modelRebuild == null)
+            {
+                _modelRebuild = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+                _modelRebuild.Tick += (_, _) =>
+                {
+                    _modelRebuild.Stop();
+                    if (ModelObjectsAsBuilt || _matrix == null) return;
+                    KeepViewOnLoad = true;
+                    try { DisplayMap(); }
+                    finally { KeepViewOnLoad = false; }
+                };
+            }
+            _modelRebuild.Stop();
+            _modelRebuild.Start();
+        }
+
+        /// <summary>The model overworlds standing on one map, placed in its local space the way buildings are.</summary>
+        private IEnumerable<PlacedBuilding> ModelObjectsOn(int cellX, int cellY, MapFile map, float altitudeY)
+        {
+            List<PlacedBuilding> placed = new List<PlacedBuilding>();
+            if (_file == null || !_showOw) return placed;
+            BdhcFile terrain = null;
+            if (map?.bdhc != null && BdhcFile.TryParse(map.bdhc, out BdhcFile parsed)) terrain = parsed;
+            foreach (Overworld ow in _file.overworlds)
+            {
+                if (ow.xMatrixPosition != cellX || ow.yMatrixPosition != cellY || !Overworld3DObjects.IsModel(ow.overlayTableEntry)) continue;
+                NSBMD nsbmd = Overworld3DObjects.Load(ow.overlayTableEntry);
+                if (nsbmd == null) continue;
+                NSBMDModel model = nsbmd.models[0];
+
+                float unit = NsbmdGeometry.TileSize / 16f;   // one field unit
+                float localX = (ow.xMapPosition + 0.5f) * NsbmdGeometry.TileSize;
+                float localZ = (ow.yMapPosition + 0.5f) * NsbmdGeometry.TileSize + Overworld3DObjects.OffsetZ(ow.overlayTableEntry) * unit;
+                // The same ground the markers stand on: the terrain nearest the event's own height.
+                float y = 0f;
+                if (terrain != null && terrain.TryGetHeight(localX, localZ, HeightHint(ow) - altitudeY, out float ground)) y = ground;
+                float x = localX - NsbmdGeometry.MapStride / 2f;
+                float z = localZ - NsbmdGeometry.MapStride / 2f;
+
+                float scale = (model.modelScale == 0 ? 1f : model.modelScale) / 64f;
+                placed.Add(new PlacedBuilding
+                {
+                    Model = model,
+                    Transform = Mat4.Multiply(Mat4.Scale(scale, scale, scale), Mat4.Translate(x / scale, y / scale, z / scale)),
+                    ModelId = -1 - (int)ow.overlayTableEntry,
+                    TileX = cellX * MapFile.mapSize + ow.xMapPosition,
+                    TileZ = cellY * MapFile.mapSize + ow.yMapPosition,
+                });
+            }
+            return placed;
+        }
         public float[] MarkerMesh { get; private set; }
         public int MarkerVertexCount { get; private set; }
 
@@ -171,6 +247,11 @@ namespace DSPRE.Avalonia.ViewModels.World
         private global::Avalonia.Media.Imaging.Bitmap _owSpritePreview;
         public global::Avalonia.Media.Imaging.Bitmap OwSpritePreview { get => _owSpritePreview; private set => Set(ref _owSpritePreview, value); }
         public bool HasOwSpritePreview => _owSpritePreview != null;
+
+        /// <summary>The model shown in the sprite box for an entry the game draws as a model, or null.</summary>
+        public NsbmdRenderModel OwModelPreview { get; private set; }
+        public bool HasOwModelPreview => OwModelPreview != null;
+        public event EventHandler OwModelPreviewChanged;
 
         // ── Overworld "kind" radio group (Standard / Trainer / Item), mirrors WinForms'
         // normalRadioButton/isTrainerRadioButton/isItemRadioButton: selecting a kind sets ow.type and
@@ -861,7 +942,22 @@ namespace DSPRE.Avalonia.ViewModels.World
         private void UpdateOwSpritePreview()
         {
             global::Avalonia.Media.Imaging.Bitmap bmp = null;
-            if (_ow != null)
+            NsbmdRenderModel model = null;
+            if (_ow != null && Overworld3DObjects.IsModel(_ow.overlayTableEntry))
+            {
+                try { if (Overworld3DObjects.Load(_ow.overlayTableEntry) is NSBMD nsbmd) model = NsbmdGeometry.BuildModel(nsbmd.models[0]); }
+                catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is IndexOutOfRangeException)
+                {
+                    AppLogger.Error("UpdateOwSpritePreview model: " + ex.Message);
+                }
+            }
+            if (!ReferenceEquals(model, OwModelPreview))
+            {
+                OwModelPreview = model;
+                OnPropertyChanged(nameof(HasOwModelPreview));
+                OwModelPreviewChanged?.Invoke(this, EventArgs.Empty);
+            }
+            if (_ow != null && model == null)
             {
                 try
                 {
@@ -1578,7 +1674,9 @@ namespace DSPRE.Avalonia.ViewModels.World
                     scopeName = "events";
                 }
 
-                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include, mode: StitchMode);
+                _builtModelObjects = ModelObjectsNow();
+                Model3D = MatrixSceneBuilder.Build(_matrix, _areaDataId, gameFamily, areaForMap: null, includeCells: include, mode: StitchMode,
+                                                   extrasForCell: ModelObjectsOn);
                 string scope = include == null ? "full" : $"{include.Count} maps, {scopeName}";
                 MapInfo = Model3D != null
                     ? $"Matrix {_matrixId}  ·  {_matrix.width}×{_matrix.height} ({scope})  ·  area {_areaDataId}"
@@ -1719,11 +1817,15 @@ namespace DSPRE.Avalonia.ViewModels.World
                 // Overworlds → real sprite billboards (foot anchored on the surface). Selected
                 // overworlds also get a white ground ring so the selection is obvious.
                 float spriteH = tileX * m.Scale * 1.6f;
+                bool modelsAsBuilt = ModelObjectsAsBuilt;
+                if (!modelsAsBuilt) RebuildForModelObjectsSoon();
                 if (_showOw)
                     foreach (Overworld ow in _file.overworlds)
                     {
                         bool sel = ReferenceEquals(ow, _current);
                         if (sel) Quad(ow, (1f, 1f, 1f));
+                        // Already in the scene as its model; a ring marks it when picked.
+                        if (Overworld3DObjects.IsModel(ow.overlayTableEntry) && modelsAsBuilt) continue;
 
                         OverworldSprites.SpritePixels pix = OverworldSprites.Get(ow.overlayTableEntry, (ushort)Math.Max((short)0, ow.orientation));
                         (float x, float y, float z) foot = Foot(ow);

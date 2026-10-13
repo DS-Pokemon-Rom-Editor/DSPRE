@@ -121,7 +121,8 @@ namespace DSPRE.Avalonia.Views.World
                 // saving, and when hosted standalone, EditorHostWindow already guards unsaved changes on
                 // close via this VM's IEditorWithUnsavedChanges. When embedded in the Maps workspace tab,
                 // the workspace's own Save/Reset handles it instead.
-                vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D); RefreshGizmo(); LoadPegmanIcon(); };
+                vm.MapLoaded += (_, _) => { GlView.SetModel(VM.Model3D, keepView: VM.KeepViewOnLoad); RefreshGizmo(); LoadPegmanIcon(); };
+                vm.OwModelPreviewChanged += (_, _) => OwModelView.SetModel(VM.OwModelPreview);
                 vm.WalkTileChanged += (_, _) =>
                     GlView.SetTileTint(VM.WalkTintOn, VM.WalkTintStrength, VM.WalkTintOx, VM.WalkTintOz,
                                        VM.WalkTintSx, VM.WalkTintSz, VM.WalkTintRgba);

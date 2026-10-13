@@ -36,11 +36,14 @@ namespace DSPRE.Avalonia.Gl
         /// null or returns no value, <paramref name="fallbackAreaId"/> is used.
         /// <paramref name="includeCells"/>, when supplied, limits the build to those matrix cells
         /// (e.g. only the cells an event file's events occupy) instead of the whole matrix.
+        /// <paramref name="extrasForCell"/>, when supplied, adds models standing on a cell's map (cell x, cell y,
+        /// the map, its altitude), placed the way buildings are.
         /// </summary>
         public static NsbmdRenderModel Build(GameMatrix matrix, byte fallbackAreaId,
             GameFamilies gameFamily, Func<int, byte?> areaForMap = null,
             ISet<(int x, int y)> includeCells = null,
-            NsbmdGeometry.MatrixStitchMode mode = NsbmdGeometry.MatrixStitchMode.Continuous)
+            NsbmdGeometry.MatrixStitchMode mode = NsbmdGeometry.MatrixStitchMode.Continuous,
+            Func<int, int, MapFile, float, IEnumerable<PlacedBuilding>> extrasForCell = null)
         {
             if (matrix == null) return null;
             List<NsbmdGeometry.MatrixCellGeometry> cells = new List<NsbmdGeometry.MatrixCellGeometry>();
@@ -64,6 +67,12 @@ namespace DSPRE.Avalonia.Gl
                         MapFile map = new MapFile(mapIndex, gameFamily, discardMoveperms: true);
                         NsbmdGeometry.MatrixCellGeometry geo = BuildCellGeometry(map, areaId, gameFamily, x, y, altitudeY,
                             mapTexDir, extBldDir, intBldDir, bldTexDir, areaCache);
+                        if (geo != null && extrasForCell?.Invoke(x, y, map, altitudeY) is IEnumerable<PlacedBuilding> extra)
+                        {
+                            List<PlacedBuilding> all = new List<PlacedBuilding>(geo.Buildings ?? (IReadOnlyList<PlacedBuilding>)Array.Empty<PlacedBuilding>());
+                            all.AddRange(extra);
+                            geo.Buildings = all;
+                        }
                         if (geo != null) cells.Add(geo);
                     }
                     catch (Exception ex) { AppLogger.Error($"Matrix cell ({x},{y}) map {mapIndex} failed: {ex.Message}"); }

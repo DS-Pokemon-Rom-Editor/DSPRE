@@ -174,7 +174,10 @@
                     <ComboBox Grid.Column="0" ItemsSource="{Binding OwSpriteEntries}" SelectedIndex="{Binding OwSpriteIndex}" HorizontalAlignment="Stretch"/>
                     <Border Grid.Column="1" Width="40" Height="40" Margin="6,0,0,0" Background="{DynamicResource Editor.PanelBg}"
                             BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
-                      <Image Source="{Binding OwSpritePreview}" IsVisible="{Binding HasOwSpritePreview}" Stretch="Uniform" Margin="2"/>
+                      <Panel>
+                        <Image Source="{Binding OwSpritePreview}" IsVisible="{Binding HasOwSpritePreview}" Stretch="Uniform" Margin="2"/>
+                        <gl:NsbmdGlControl x:Name="OwModelView" IsVisible="{Binding HasOwModelPreview}" IsHitTestVisible="False"/>
+                      </Panel>
                     </Border>
                   </Grid>
 

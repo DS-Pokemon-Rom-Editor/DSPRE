@@ -73,6 +73,7 @@ namespace DSPRE.Avalonia
             // Sprites are kept by overworld number, which means a different ROM's are a different
             // picture under the same number.
             OverworldSprites.ClearCache();
+            DSPRE.ROMFiles.Overworld3DObjects.Forget();
             // The font and its letter numbering belong to the ROM that was open, not the new one.
             Views.Controls.FieldMessageBoxView.Font = null;
             Views.Controls.FieldMessageBoxView.Frame = null;

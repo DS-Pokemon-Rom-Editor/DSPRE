@@ -2056,8 +2056,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public bool CanUndo => _history.CanUndo;
         public bool CanRedo => _history.CanRedo;
-        public void Undo() { if (CanUndo) ApplyStep(_history.Undo()); }
-        public void Redo() { if (CanRedo) ApplyStep(_history.Redo()); }
+        // The status line would otherwise still describe the change just taken back.
+        public void Undo() { if (!CanUndo) return; ApplyStep(_history.Undo()); StatusText = "Undone."; }
+        public void Redo() { if (!CanRedo) return; ApplyStep(_history.Redo()); StatusText = "Redone."; }
         private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
         private MapStep TakeStep()

@@ -2350,6 +2350,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
                 foreach (Npc npc in _npcs)
                 {
                     if (!IsOnMap(npc) || !npc.Motion.Visible) continue;
+                    // Signposts, the book and the like are models, already in the scene the editor built.
+                    if (DSPRE.ROMFiles.Overworld3DObjects.IsModel(npc.Event.overlayTableEntry)) continue;
                     OverworldSprites.SpritePixels pix = OverworldSprites.Get(npc.Event.overlayTableEntry, (ushort)npc.Motion.Facing,
                                                    PictureFor(npc.Event.overlayTableEntry, npc.Motion.Facing, npc.Motion.Cycle));
                     if (pix == null || pix.Width <= 0 || pix.Height <= 0) continue;
