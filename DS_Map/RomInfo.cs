@@ -1054,8 +1054,12 @@ namespace DSPRE
                             break;
 
                         case GameLanguages.French:
-                        case GameLanguages.Spanish:
                             ramAddrOfPointer = 0x021F931C;
+                            break;
+
+                        case GameLanguages.Spanish:
+                            // Spanish SoulSilver loads overlay 1 0x20 bytes higher than Spanish HeartGold.
+                            ramAddrOfPointer = gameVersion == GameVersions.SoulSilver ? 0x021F933C : 0x021F931C;
                             break;
 
                         case GameLanguages.German:
@@ -1078,6 +1082,7 @@ namespace DSPRE
                         {
                             MessageBox.Show("Something went wrong reading the Overworld configuration table.\nOverworld sprites in the Event Editor will be " +
                                 "displayed incorrectly or not displayed at all.", "Decompression error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            OWtablePath = null;
                             return;
                         }
 
@@ -2580,6 +2585,10 @@ namespace DSPRE
                             OverworldTable.Add(entryID, tup);
                         }
                     }
+                    break;
+
+                case GameFamilies.HGSS when OWtablePath is null:
+                    // The table pointer couldn't be resolved for this ROM; the user was already warned.
                     break;
 
                 case GameFamilies.HGSS:
