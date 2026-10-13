@@ -240,6 +240,15 @@
         <MenuItem Header="Archive tools">
           <MenuItem Header="Unpack archive to folder…" Click="NarcUnpack_Click"/>
           <MenuItem Header="Pack folder into archive…" Click="NarcPack_Click"/>
+          <MenuItem Header="Rename files by list…" Click="RenameByList_Click"/>
+          <MenuItem Header="Rename files by content…" Click="RenameByContent_Click"/>
+          <MenuItem Header="Name list from folder…" Click="ListFromFolder_Click"/>
+          <MenuItem Header="Name list from C enum…" Click="ListFromEnum_Click"/>
+          <Separator/>
+          <MenuItem Header="Unpack building archives" Click="UnpackBuildingArchives_Click" IsEnabled="{Binding IsRomLoaded}"
+                    ToolTip.Tip="Read building models, textures and area data again from the ROM's archives"/>
+          <MenuItem Header="Unpack all archives" Click="UnpackAllArchives_Click" IsEnabled="{Binding IsRomLoaded}"
+                    ToolTip.Tip="Read every archive again from the ROM"/>
         </MenuItem>
         <MenuItem Header="Model texture tools">
           <MenuItem Header="Add or replace model textures…" Click="NsbmdAddTex_Click"/>

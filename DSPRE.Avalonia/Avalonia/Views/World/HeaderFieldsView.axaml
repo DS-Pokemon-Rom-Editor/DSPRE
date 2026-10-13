@@ -3,6 +3,7 @@
         xmlns:vc="clr-namespace:DSPRE.Avalonia.Views.Controls"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.World"
+        xmlns:world="clr-namespace:DSPRE.Avalonia.Views.World"
         x:Class="DSPRE.Avalonia.Views.World.HeaderFieldsView"
         x:DataType="vm:HeaderEditorViewModel">
   <!-- The header detail form. Shared by the standalone Header editor and the Maps workspace's Header tab.
@@ -30,22 +31,22 @@
       <GroupBox x:Name="LocationGroup" Header="Location and area">
         <Grid ColumnDefinitions="*,16,*,16,Auto" RowDefinitions="Auto,8,Auto">
           <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
-            <TextBlock Classes="fieldlabel" Text="Internal name"/>
+            <TextBlock Classes="fieldlabel" Text="Internal name" world:HeaderFieldCopy.Key="InternalName"/>
             <StackPanel Orientation="Horizontal" Spacing="6">
               <TextBox Width="180" Text="{Binding InternalName}"/>
               <TextBlock Text="{Binding InternalNameLen}" Foreground="{Binding InternalNameColor}" VerticalAlignment="Center"/>
             </StackPanel>
           </StackPanel>
           <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
-            <TextBlock Classes="fieldlabel" Text="Location name"/>
+            <TextBlock Classes="fieldlabel" Text="Location name" world:HeaderFieldCopy.Key="LocationName"/>
             <controls:FusionAutoCompleteBox HorizontalAlignment="Stretch" ItemsSource="{Binding LocationNames}" SelectedIndex="{Binding LocationNameIndex}"/>
           </StackPanel>
           <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
-            <TextBlock Classes="fieldlabel" Text="Map type"/>
+            <TextBlock Classes="fieldlabel" Text="Map type" world:HeaderFieldCopy.Key="MapType"/>
             <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AreaSettingsItems}" SelectedIndex="{Binding AreaSettingsIndex}"/>
           </StackPanel>
           <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2" IsVisible="{Binding ShowAreaIcon}">
-            <TextBlock Classes="fieldlabel" Text="Area icon"/>
+            <TextBlock Classes="fieldlabel" Text="Area icon" world:HeaderFieldCopy.Key="AreaIcon"/>
             <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AreaIconItems}" SelectedIndex="{Binding AreaIconIndex}"/>
           </StackPanel>
           <!-- The area icon is a ~130x37 pixel banner, so it gets a fixed frame. -->
@@ -61,21 +62,21 @@
       <GroupBox x:Name="SoundGroup" Header="Appearance and sound">
         <Grid ColumnDefinitions="*,16,*,16,Auto" RowDefinitions="Auto,8,Auto,8,Auto">
           <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
-            <TextBlock Classes="fieldlabel" Text="Music (day)"/>
+            <TextBlock Classes="fieldlabel" Text="Music (day)" world:HeaderFieldCopy.Key="MusicDay"/>
             <Grid ColumnDefinitions="*,4,Auto">
               <controls:IdNameSelector Value="{Binding MusicDayValue}" Names="{Binding MusicDay.Names}" Keys="{Binding MusicDay.Keys}"/>
               <Button Grid.Column="2" Classes="small" controls:Icon.Key="{Binding DayPlayIcon}" Click="PlayDayMusic_Click" ToolTip.Tip="Play or stop"/>
             </Grid>
           </StackPanel>
           <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
-            <TextBlock Classes="fieldlabel" Text="Music (night)"/>
+            <TextBlock Classes="fieldlabel" Text="Music (night)" world:HeaderFieldCopy.Key="MusicNight"/>
             <Grid ColumnDefinitions="*,4,Auto">
               <controls:IdNameSelector Value="{Binding MusicNightValue}" Names="{Binding MusicNight.Names}" Keys="{Binding MusicNight.Keys}"/>
               <Button Grid.Column="2" Classes="small" controls:Icon.Key="{Binding NightPlayIcon}" Click="PlayNightMusic_Click" ToolTip.Tip="Play or stop"/>
             </Grid>
           </StackPanel>
           <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
-            <TextBlock Classes="fieldlabel" Text="Weather"/>
+            <TextBlock Classes="fieldlabel" Text="Weather" world:HeaderFieldCopy.Key="Weather"/>
             <Grid ColumnDefinitions="*,4,Auto">
               <controls:IdNameSelector Maximum="{Binding WeatherMax}" Value="{Binding WeatherValue}" Names="{Binding Weather.Names}" Keys="{Binding Weather.Keys}"/>
               <Button Grid.Column="2" Classes="small" controls:Icon.Key="questionMark" ToolTip.Tip="Weather and map memory"
@@ -99,14 +100,14 @@
             </StackPanel>
           </StackPanel>
           <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2">
-            <TextBlock Classes="fieldlabel" Text="Camera angle"/>
+            <TextBlock Classes="fieldlabel" Text="Camera angle" world:HeaderFieldCopy.Key="Camera"/>
             <controls:IdNameSelector Maximum="{Binding CameraMax}" Value="{Binding CameraValue}" Names="{Binding Camera.Names}" Keys="{Binding Camera.Keys}"/>
           </StackPanel>
           <!-- A battle background is graphics picked by number, not a linked file, so it sits with the other looks. -->
           <StackPanel Grid.Row="4" Grid.Column="0" Spacing="2">
-            <TextBlock Classes="fieldlabel" Text="Battle background"/>
+            <TextBlock Classes="fieldlabel" Text="Battle background" world:HeaderFieldCopy.Key="BattleBackground"/>
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <NumericUpDown Width="90" Minimum="0" Maximum="{Binding BattleBackgroundMax}" Value="{Binding BattleBackground}"/>
+              <controls:IdNameSelector Width="260" Maximum="{Binding BattleBackgroundMax}" Value="{Binding BattleBackground}" Names="{Binding BattleBackgroundNames}"/>
               <Button x:Name="OpenBattleSceneryButton" Content="Open" controls:Icon.Key="OpenLink" Click="OpenBattleScenery_Click" Padding="8,2"
                       ToolTip.Tip="Show this scenery and every place that fights on it"/>
             </StackPanel>
@@ -123,40 +124,40 @@
       <!-- Linked files. The Open buttons go to the referenced file in its editor. -->
       <GroupBox x:Name="LinkedFilesGroup" Header="Linked files">
         <Grid ColumnDefinitions="Auto,Auto,28,Auto,Auto" RowDefinitions="Auto,8,Auto,8,Auto,8,Auto">
-          <TextBlock Grid.Row="0" Grid.Column="0" Classes="inlinelabel" Text="Matrix"/>
+          <TextBlock Grid.Row="0" Grid.Column="0" Classes="inlinelabel" Text="Matrix" world:HeaderFieldCopy.Key="Matrix"/>
           <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="6">
             <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding MatrixId}"/>
             <Button Content="Open" controls:Icon.Key="OpenLink" Click="OpenMatrix_Click" Padding="8,2" ToolTip.Tip="{Binding OpenTips[Matrix]}"/>
           </StackPanel>
-          <TextBlock Grid.Row="0" Grid.Column="3" Classes="inlinelabel" Text="Area data"/>
+          <TextBlock Grid.Row="0" Grid.Column="3" Classes="inlinelabel" Text="Area data" world:HeaderFieldCopy.Key="AreaData"/>
           <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Horizontal" Spacing="6">
             <NumericUpDown Width="90" Minimum="0" Maximum="255" Value="{Binding AreaDataId}"/>
             <Button Content="Open" controls:Icon.Key="OpenLink" Click="OpenAreaData_Click" Padding="8,2" ToolTip.Tip="{Binding OpenTips[AreaData]}"/>
           </StackPanel>
 
-          <TextBlock Grid.Row="2" Grid.Column="0" Classes="inlinelabel" Text="Script file"/>
+          <TextBlock Grid.Row="2" Grid.Column="0" Classes="inlinelabel" Text="Script file" world:HeaderFieldCopy.Key="ScriptFile"/>
           <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="6">
             <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding ScriptFileId}"/>
             <Button Content="Open" controls:Icon.Key="OpenLink" Click="OpenScripts_Click" Padding="8,2" ToolTip.Tip="{Binding OpenTips[Script]}"/>
           </StackPanel>
-          <TextBlock Grid.Row="2" Grid.Column="3" Classes="inlinelabel" Text="Level script file"/>
+          <TextBlock Grid.Row="2" Grid.Column="3" Classes="inlinelabel" Text="Level script file" world:HeaderFieldCopy.Key="LevelScript"/>
           <StackPanel Grid.Row="2" Grid.Column="4" Orientation="Horizontal" Spacing="6">
             <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding LevelScriptId}"/>
             <Button Content="Open" controls:Icon.Key="OpenLink" Click="OpenLevelScripts_Click" Padding="8,2" ToolTip.Tip="{Binding OpenTips[LevelScript]}"/>
           </StackPanel>
 
-          <TextBlock Grid.Row="4" Grid.Column="0" Classes="inlinelabel" Text="Event file"/>
+          <TextBlock Grid.Row="4" Grid.Column="0" Classes="inlinelabel" Text="Event file" world:HeaderFieldCopy.Key="EventFile"/>
           <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="6">
             <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding EventFileId}"/>
             <Button Content="Open" controls:Icon.Key="OpenLink" Click="OpenEvents_Click" Padding="8,2" ToolTip.Tip="{Binding OpenTips[Event]}"/>
           </StackPanel>
-          <TextBlock Grid.Row="4" Grid.Column="3" Classes="inlinelabel" Text="Text archive"/>
+          <TextBlock Grid.Row="4" Grid.Column="3" Classes="inlinelabel" Text="Text archive" world:HeaderFieldCopy.Key="TextArchive"/>
           <StackPanel Grid.Row="4" Grid.Column="4" Orientation="Horizontal" Spacing="6">
             <NumericUpDown Width="90" Minimum="0" Maximum="65535" Value="{Binding TextArchiveId}"/>
             <Button Content="Open" controls:Icon.Key="OpenLink" Click="OpenTexts_Click" Padding="8,2" ToolTip.Tip="{Binding OpenTips[Text]}"/>
           </StackPanel>
 
-          <TextBlock Grid.Row="6" Grid.Column="0" Classes="inlinelabel" Text="Encounters"/>
+          <TextBlock Grid.Row="6" Grid.Column="0" Classes="inlinelabel" Text="Encounters" world:HeaderFieldCopy.Key="Encounters"/>
           <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Spacing="6">
             <NumericUpDown Width="90" Minimum="0" Maximum="{Binding WildPokeMax}" Value="{Binding WildPokemon}"/>
             <Button Content="Open" controls:Icon.Key="OpenLink" Click="OpenEncounters_Click" IsEnabled="{Binding CanOpenEncounters}" Padding="8,2" ToolTip.Tip="{Binding OpenTips[Encounters]}"/>
@@ -165,7 +166,7 @@
       </GroupBox>
 
       <!-- Map settings: the flags, and on HeartGold and SoulSilver the region, town map and Pokégear fields. -->
-      <GroupBox x:Name="MapSettingsGroup" Header="Map settings">
+      <GroupBox x:Name="MapSettingsGroup" Header="Map settings" world:HeaderFieldCopy.Key="MapSettings">
         <StackPanel Spacing="10">
           <WrapPanel Classes="flags">
             <CheckBox Content="Bicycle"     IsChecked="{Binding Flag0}"/>
@@ -178,7 +179,7 @@
           </WrapPanel>
           <Grid x:Name="HgssGroup" ColumnDefinitions="*,16,*" RowDefinitions="Auto,8,Auto" IsVisible="{Binding ShowHgssOnly}">
             <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
-              <TextBlock Classes="fieldlabel" Text="Town map position"/>
+              <TextBlock Classes="fieldlabel" Text="Town map position" world:HeaderFieldCopy.Key="TownMap"/>
               <StackPanel Orientation="Horizontal" Spacing="6">
                 <TextBlock Classes="inlinelabel" Text="X" Margin="0,0,2,0"/>
                 <NumericUpDown Width="90" Minimum="0" Maximum="63" Value="{Binding WorldmapX}"/>
@@ -187,15 +188,15 @@
               </StackPanel>
             </StackPanel>
             <StackPanel Grid.Row="0" Grid.Column="2" Spacing="2">
-              <TextBlock Classes="fieldlabel" Text="Follow mode"/>
+              <TextBlock Classes="fieldlabel" Text="Follow mode" world:HeaderFieldCopy.Key="FollowMode"/>
               <ComboBox HorizontalAlignment="Left" Width="160" ItemsSource="{Binding FollowModeItems}" SelectedIndex="{Binding FollowModeIndex}"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
-              <TextBlock Classes="fieldlabel" Text="Mom's call" ToolTip.Tip="Which line Mom opens with when called from this map."/>
+              <TextBlock Classes="fieldlabel" Text="Mom's call" world:HeaderFieldCopy.Key="MomCall" ToolTip.Tip="Which line Mom opens with when called from this map."/>
               <NumericUpDown Width="90" HorizontalAlignment="Left" Minimum="0" Maximum="15" Value="{Binding MomCallIntroParam}"/>
             </StackPanel>
             <StackPanel Grid.Row="2" Grid.Column="2" Spacing="2">
-              <TextBlock Classes="fieldlabel" Text="Region"/>
+              <TextBlock Classes="fieldlabel" Text="Region" world:HeaderFieldCopy.Key="Region"/>
               <StackPanel Orientation="Horizontal" Spacing="16">
                 <RadioButton Content="Johto" GroupName="region" IsChecked="{Binding JohtoFlag}"/>
                 <RadioButton Content="Kanto" GroupName="region" IsChecked="{Binding KantoFlag}"/>

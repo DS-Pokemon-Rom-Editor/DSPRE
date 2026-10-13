@@ -21,6 +21,7 @@
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemPack_Click"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button Content="Show file" controls:Icon.Key="folder" Click="ShowFile_Click" ToolTip.Tip="The pack as last saved"/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
@@ -50,8 +51,14 @@
       </DockPanel>
       <Border x:Name="TexturePreview" Grid.Column="3" Background="#2A2A2E" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
         <Panel>
-          <Image Source="{Binding Preview}" Stretch="Uniform" Margin="8"
-                 RenderOptions.BitmapInterpolationMode="None"/>
+          <ScrollViewer x:Name="PreviewScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
+                        PointerWheelChanged="Preview_Wheel" PointerPressed="Preview_Pressed" PointerMoved="Preview_Moved"
+                        PointerReleased="Preview_Released">
+            <Image x:Name="PreviewImage" Source="{Binding Preview}" Stretch="Uniform" Margin="8"
+                   RenderOptions.BitmapInterpolationMode="None"/>
+          </ScrollViewer>
+          <Button x:Name="FitButton" Content="Fit" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6"
+                  Click="Fit_Click" IsVisible="False" ToolTip.Tip="Fit the texture to the box"/>
           <TextBlock Text="{Binding PreviewReason}" IsVisible="{Binding HasPreviewReason}"
                      Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"
                      HorizontalAlignment="Center" VerticalAlignment="Center" Margin="18"/>

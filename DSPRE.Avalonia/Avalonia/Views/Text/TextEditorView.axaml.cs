@@ -17,6 +17,8 @@ namespace DSPRE.Avalonia.Views.Text
         public TextEditorView()
         {
             InitializeComponent();
+            // The list takes Enter for itself, so it is caught on the way in.
+            SearchResultsList.AddHandler(KeyDownEvent, SearchResult_KeyDown, RoutingStrategies.Tunnel);
             Loaded += OnLoadedSetup;
             // Tunnel, so Enter reaches the search before the text box can take it.
             SearchBox.AddHandler(KeyDownEvent, Search_KeyDown, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
@@ -113,6 +115,16 @@ namespace DSPRE.Avalonia.Views.Text
         {
             if (e.Key != Key.Enter) return;
             VM?.Search();
+            e.Handled = true;
+        }
+
+        private void ShowArchiveFile_Click(object sender, RoutedEventArgs e) => VM?.ShowArchiveFile();
+        private void OpenArchiveFile_Click(object sender, RoutedEventArgs e) => VM?.OpenArchiveFile();
+
+        private void SearchResult_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter) return;
+            SearchResult_DoubleTapped(sender, null);
             e.Handled = true;
         }
 

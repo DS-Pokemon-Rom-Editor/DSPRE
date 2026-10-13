@@ -356,29 +356,9 @@ namespace DSPRE.Avalonia.Views.World
             OpenPreview().StepInBeside(tile.Value.x, tile.Value.z);
         }
 
-        private async void Screenshot_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                string path = await DialogHelper.SaveFile(TopLevel.GetTopLevel(this) as Window,
-                    "Save map view screenshot",
-                    new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } },
-                    $"dspre_events_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-                if (path == null) return;
-
-                GlView.CaptureFrame((rgba, w, h) =>
-                {
-                    try
-                    {
-                        if (rgba == null || w <= 0 || h <= 0) throw new Exception("the view returned no pixels");
-                        SaveRgbaToPng(rgba, w, h, path);
-                        if (VM != null) VM.StatusText = $"Screenshot saved to {path}";
-                    }
-                    catch (Exception ex) { _ = DialogHelper.ShowError($"Could not save the screenshot:\n{ex.Message}", "Screenshot"); }
-                });
-            }
-            catch (Exception ex) { await DialogHelper.ShowError($"Could not save the screenshot:\n{ex.Message}", "Screenshot"); }
-        }
+        private async void Screenshot_Click(object sender, RoutedEventArgs e) =>
+            await GlScreenshot.SaveAsync(GlView, TopLevel.GetTopLevel(this) as Window, "dspre_events",
+                path => { if (VM != null) VM.StatusText = $"Screenshot saved to {path}"; });
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Import_Click(object sender, RoutedEventArgs e) =>
@@ -437,21 +417,7 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         // Builds a PNG from a raw RGBA framebuffer (origin bottom-left → flipped to top-left for the image).
-        private static void SaveRgbaToPng(byte[] rgba, int w, int h, string path)
-        {
-            WriteableBitmap bmp = new global::Avalonia.Media.Imaging.WriteableBitmap(
-                new PixelSize(w, h), new Vector(96, 96),
-                global::Avalonia.Platform.PixelFormats.Rgba8888,
-                global::Avalonia.Platform.AlphaFormat.Unpremul);
-            using (ILockedFramebuffer fb = bmp.Lock())
-            {
-                int rowBytes = w * 4;
-                for (int y = 0; y < h; y++)
-                    System.Runtime.InteropServices.Marshal.Copy(
-                        rgba, (h - 1 - y) * rowBytes, fb.Address + y * fb.RowBytes, rowBytes);
-            }
-            bmp.Save(path, PngBitmapEncoderOptions.Default);
-        }
+        private static void SaveRgbaToPng(byte[] rgba, int w, int h, string path) => GlScreenshot.SaveRgbaToPng(rgba, w, h, path);
 
         private void GoToOwScript_Click(object sender, RoutedEventArgs e) => VM?.GoToOverworldScript();
         private void GoToTrScript_Click(object sender, RoutedEventArgs e) => VM?.GoToTriggerScript();

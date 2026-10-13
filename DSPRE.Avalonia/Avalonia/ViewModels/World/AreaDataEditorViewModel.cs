@@ -7,6 +7,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using global::Avalonia.Controls;
+using global::Avalonia.Platform.Storage;
 using DSPRE.Avalonia;
 using DSPRE.Avalonia.Data;
 using DSPRE.Editors;
@@ -291,6 +292,52 @@ namespace DSPRE.Avalonia.ViewModels.World
                 OnPropertyChanged(nameof(UnsavedChangesDescription));
             }
             catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load area data {index}:\n{ex.Message}", "Area Data"); }
+        }
+
+        // ── Import / export of the shown entry ──────────────────────────────────────────
+        private static readonly FilePickerFileType[] AreaFiles =
+        {
+            new FilePickerFileType("Area data") { Patterns = new[] { "*.bin" } },
+            new FilePickerFileType("All files") { Patterns = new[] { "*" } },
+        };
+
+        public async Task ExportAsync(Window owner)
+        {
+            if (_area == null || _selectedIndex < 0) return;
+            string path = await DialogHelper.SaveFile(owner, "Export area data", AreaFiles, $"area_data_{_selectedIndex:D4}.bin");
+            if (path == null) return;
+            try { File.WriteAllBytes(path, _area.ToByteArray()); StatusText = $"Exported area data {_selectedIndex}."; }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Area Data");
+            }
+        }
+
+        /// <summary>Puts an exported entry in place of the shown one, unsaved and undoable.</summary>
+        public async Task ImportAsync(Window owner)
+        {
+            if (_area == null || _selectedIndex < 0) return;
+            string path = await DialogHelper.OpenFile(owner, "Import area data", AreaFiles);
+            if (path == null) return;
+            byte[] data;
+            try { data = File.ReadAllBytes(path); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Area Data");
+                return;
+            }
+            // Every game's entry is eight bytes; anything else is some other file.
+            if (data.Length != _area.ToByteArray().Length)
+            {
+                await DialogHelper.ShowError($"That file is {data.Length} bytes; an area data entry is {_area.ToByteArray().Length}.", "Area Data");
+                return;
+            }
+            _area = new AreaData(new MemoryStream(data));
+            _suppress = true;
+            PopulateFromArea();
+            _suppress = false;
+            Dirty();
+            StatusText = $"Imported area data into entry {_selectedIndex} (unsaved).";
         }
 
         // ── Add / remove (the last entry only: headers refer to area data by number) ─────

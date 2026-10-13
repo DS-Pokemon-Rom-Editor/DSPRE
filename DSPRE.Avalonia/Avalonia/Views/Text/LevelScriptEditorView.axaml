@@ -20,7 +20,9 @@
                 ToolTip.Tip="Deletes the last script file, unless a header still uses it"/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button Content="Show file" controls:Icon.Key="folder" Click="ShowFile_Click" ToolTip.Tip="The level script as last saved"/>
         <CheckBox Content="Word-align padding" IsChecked="{Binding WordAlignmentPadding}" VerticalAlignment="Center"/>
+        <ToggleButton Content="Hex" IsChecked="{Binding ShowHex}" ToolTip.Tip="Numbers in hex instead of decimal"/>
     </controls:EditorToolbar>
 
     <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
@@ -50,10 +52,14 @@
                      IsVisible="{Binding NewScriptHasCommonInfo}"/>
           <StackPanel Spacing="6" IsVisible="{Binding IsVariableType}">
             <TextBlock Text="Variable to watch" FontSize="12"/>
-            <NumericUpDown Minimum="{Binding FirstVariable}" Maximum="{Binding LastVariable}" Increment="1" Value="{Binding NewVariable}"/>
+            <NumericUpDown Minimum="{Binding FirstVariable}" Maximum="{Binding LastVariable}" Increment="1" Value="{Binding NewVariable}"
+                           IsVisible="{Binding ShowDecimal}"/>
+            <TextBox Text="{Binding NewVariableHex}" IsVisible="{Binding ShowHex}"/>
             <TextBlock Text="Expected value" FontSize="12"/>
-            <NumericUpDown Minimum="0" Maximum="{Binding LastVariable}" Increment="1" Value="{Binding NewValue}"
+            <NumericUpDown Minimum="0" Maximum="{Binding LastVariable}" Increment="1" Value="{Binding NewValue}" IsVisible="{Binding ShowDecimal}"
                            ToolTip.Tip="{Binding FirstVariable, StringFormat='From {0} this is another variable to compare with'}"/>
+            <TextBox Text="{Binding NewValueHex}" IsVisible="{Binding ShowHex}"
+                     ToolTip.Tip="{Binding FirstVariable, StringFormat='From {0} this is another variable to compare with'}"/>
           </StackPanel>
           <Button Content="Add trigger" controls:Icon.Key="addIcon" HorizontalAlignment="Stretch" Click="Add_Click" Margin="0,4,0,0"/>
         </StackPanel>

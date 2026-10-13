@@ -256,6 +256,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool IsHgeActive => HgEngineProject.IsActive;
         public ObservableCollection<AiFlagViewModel> TrainerDataTypeFlags { get; } = new ObservableCollection<AiFlagViewModel>();
         public ObservableCollection<string> BattleTypeOptions { get; } = new ObservableCollection<string>();
+
+        // The trainer's battle type is OR'd into the battle's flags (pokeplatinum trainer_data.c); vanilla trainers
+        // use only these two. Any other value shows as its number and is kept.
+        public IReadOnlyList<string> BattleTypeNames { get; } = new[] { "Single", "Double" };
+        public IList<int> BattleTypeKeys { get; } = new[] { 0, 2 };
         private int[] _battleTypeValues = Array.Empty<int>();
         private int _battleTypeIndex;
         public int BattleTypeIndex

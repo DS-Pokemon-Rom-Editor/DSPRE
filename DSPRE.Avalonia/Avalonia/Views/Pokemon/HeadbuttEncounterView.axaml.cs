@@ -165,6 +165,13 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private async void FillMissing_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.FillMissingAsync(); }
         private void AddTree_Click(object sender, RoutedEventArgs e) => VM?.AddTree();
         private void AddNormalGroup_Click(object sender, RoutedEventArgs e) => VM?.AddGroup(special: false);
+        private void DuplicateNormalGroup_Click(object sender, RoutedEventArgs e) => VM?.DuplicateGroup(special: false);
+        private void DuplicateSpecialGroup_Click(object sender, RoutedEventArgs e) => VM?.DuplicateGroup(special: true);
+        private async void Import_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ImportAsync(TopLevel.GetTopLevel(this) as Window); }
+        private async void Export_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportAsync(TopLevel.GetTopLevel(this) as Window); }
+        private async void Screenshot_Click(object sender, RoutedEventArgs e) =>
+            await DSPRE.Avalonia.Gl.GlScreenshot.SaveAsync(GlView, TopLevel.GetTopLevel(this) as Window, "dspre_headbutt",
+                path => { if (VM != null) VM.StatusText = $"Screenshot saved to {path}"; });
         private void RemoveNormalGroup_Click(object sender, RoutedEventArgs e) => VM?.RemoveGroup(special: false);
         private void AddSpecialGroup_Click(object sender, RoutedEventArgs e) => VM?.AddGroup(special: true);
         private void RemoveSpecialGroup_Click(object sender, RoutedEventArgs e) => VM?.RemoveGroup(special: true);

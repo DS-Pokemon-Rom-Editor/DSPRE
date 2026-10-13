@@ -27,6 +27,7 @@
           <TextBlock Text="Map" VerticalAlignment="Center" IsVisible="{Binding IsHeaderView}"/>
           <controls:FusionAutoCompleteBox x:Name="MapPicker" Width="110" ItemsSource="{Binding HeaderMapNames}" SelectedIndex="{Binding SelectedHeaderMapIndex}" IsVisible="{Binding IsHeaderView}"
                     ToolTip.Tip="The map to edit. Picking a building or painting a square picks its map."/>
+          <Button controls:EditorToolbar.Slot="Extra" Content="Screenshot" controls:Icon.Key="cameraIcon" Click="Screenshot_Click"/>
           <Button controls:EditorToolbar.Slot="Extra" Content="Animate" controls:Icon.Key="play" Click="AnimatedPreview_Click" IsVisible="{Binding ShowBetaFeatures}"
                   ToolTip.Tip="Plays the map, with its water moving as it does in game."/>
           <Button x:Name="EditModelButton" Content="Modify map model" controls:Icon.Key="pencil" Click="EditModel_Click" IsEnabled="{Binding CanEditModel}"
@@ -133,7 +134,11 @@
               <controls:IdNameSelector Maximum="255" Value="{Binding TypeValue}" Names="{Binding TypeNames}" Keys="{Binding TypeKeys}"
                                        ToolTip.Tip="A number with no name is painted as it is"/>
               <StackPanel Spacing="4" Margin="0,4,0,4">
-                <Button Content="Scan used types" controls:Icon.Key="lens" HorizontalAlignment="Left" Click="ScanTypes_Click"/>
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                  <Button Content="Scan used types" controls:Icon.Key="lens" Click="ScanTypes_Click"/>
+                  <Button Content="Clear layer" controls:Icon.Key="deleteIcon" Click="ClearLayer_Click" IsVisible="{Binding IsSingleMap}"
+                          ToolTip.Tip="Sets every square of the layer shown below to 0"/>
+                </StackPanel>
               </StackPanel>
             </StackPanel>
             <StackPanel Spacing="4" Margin="0,0,14,0" IsVisible="{Binding IsSingleMap}">
@@ -257,9 +262,13 @@
         <TabItem Header="Files / I/O" IsEnabled="{Binding IsSingleMap}">
           <ScrollViewer>
             <StackPanel Margin="8" Spacing="10">
+              <Button Content="Show map file" controls:Icon.Key="folder" Click="ShowMapFile_Click" HorizontalAlignment="Left"
+                      ToolTip.Tip="The map as last saved"/>
               <GroupBox Header="3D model">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                   <Button Content="Export model…" controls:Icon.Key="export" Click="ExportNsbmd_Click"/>
+                  <Button Content="Export textured…" controls:Icon.Key="export" Click="ExportTexturedNsbmd_Click"
+                          ToolTip.Tip="With the Map textures pack's textures inside the model"/>
                   <Button Content="Export DAE…" controls:Icon.Key="export"   Click="ExportDae_Click"/>
                   <Button Content="Export GLB…" controls:Icon.Key="export"   Click="ExportGlb_Click"/>
                 </StackPanel>

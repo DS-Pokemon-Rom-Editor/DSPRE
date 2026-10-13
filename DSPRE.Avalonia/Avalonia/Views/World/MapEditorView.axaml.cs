@@ -311,6 +311,18 @@ namespace DSPRE.Avalonia.Views.World
         private async void ExportBuildings_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportBuildingsAsync());
 
         private async void ExportNsbmd_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportNsbmdAsync());
+        private async void ExportTexturedNsbmd_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportTexturedNsbmdAsync());
+        private void ShowMapFile_Click(object sender, RoutedEventArgs e) => VM?.ShowMapFile();
+        private void ClearLayer_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null) return;
+            VM.ClearPermissionLayer();
+            ShowPermissions();
+            PermGrid.InvalidateVisual(); CollisionThumb.InvalidateVisual(); TypeThumb.InvalidateVisual();
+        }
+        private async void Screenshot_Click(object sender, RoutedEventArgs e) =>
+            await GlScreenshot.SaveAsync(GlView, TopLevel.GetTopLevel(this) as Window, "dspre_map",
+                path => { if (VM != null) VM.StatusText = $"Screenshot saved to {path}"; });
         private void ExportDae_Click(object sender, RoutedEventArgs e) => VM?.ExportDae();
         private void ExportGlb_Click(object sender, RoutedEventArgs e) => VM?.ExportGlb();
         private async void ImportTerrain_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportTerrainAsync());

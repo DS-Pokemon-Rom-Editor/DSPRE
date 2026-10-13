@@ -371,6 +371,59 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (special) SelectedSpecialGroupIndex = groups.Count - 1; else SelectedNormalGroupIndex = groups.Count - 1;
         }
 
+        /// <summary>Adds a copy of the selected group, trees and all, to the end of its list and selects it.</summary>
+        public void DuplicateGroup(bool special)
+        {
+            if (_file == null || _specialGroupActive != special || CurrentGroup() is not HeadbuttTreeGroup group) return;
+            BindingList<HeadbuttTreeGroup> groups = special ? _file.specialTreeGroups : _file.normalTreeGroups;
+            groups.Add(new HeadbuttTreeGroup(group));
+            Dirty();
+            RefreshGroups();
+            if (special) SelectedSpecialGroupIndex = groups.Count - 1; else SelectedNormalGroupIndex = groups.Count - 1;
+        }
+
+        // ── Import / export of the shown file ──────────────────────────────────────────
+        private static readonly global::Avalonia.Platform.Storage.FilePickerFileType[] HeadbuttFiles =
+        {
+            new global::Avalonia.Platform.Storage.FilePickerFileType("Headbutt file") { Patterns = new[] { "*.bin" } },
+            new global::Avalonia.Platform.Storage.FilePickerFileType("All files") { Patterns = new[] { "*" } },
+        };
+
+        public async Task ExportAsync(Window owner)
+        {
+            if (_file == null || _selFile < 0) return;
+            string path = await DialogHelper.SaveFile(owner, "Export headbutt file", HeadbuttFiles, $"headbutt_{_selFile:D4}.bin");
+            if (path == null) return;
+            try { System.IO.File.WriteAllBytes(path, _file.ToByteArray()); StatusText = $"Exported headbutt file {_selFile}."; }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Headbutt");
+            }
+        }
+
+        /// <summary>Puts an exported file in place of the shown one, unsaved and undoable.</summary>
+        public async Task ImportAsync(Window owner)
+        {
+            if (_file == null || _selFile < 0) return;
+            string path = await DialogHelper.OpenFile(owner, "Import headbutt file", HeadbuttFiles);
+            if (path == null) return;
+            HeadbuttEncounterFile read;
+            try { read = new HeadbuttEncounterFile((ushort)_selFile, System.IO.File.ReadAllBytes(path)); }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException || ex is System.IO.EndOfStreamException || ex is ArgumentException)
+            {
+                await DialogHelper.ShowError($"That file could not be read as a headbutt file:\n{ex.Message}", "Headbutt");
+                return;
+            }
+            _file = read;
+            _selGroup = -1;
+            _specialGroupActive = false;
+            BuildEncounterRows();
+            RefreshGroups();
+            ShowGroupTrees();
+            Dirty();
+            StatusText = $"Imported into headbutt file {_selFile} (unsaved).";
+        }
+
         /// <summary>Takes the selected group, and its trees, out of the normal or special list.</summary>
         public void RemoveGroup(bool special)
         {

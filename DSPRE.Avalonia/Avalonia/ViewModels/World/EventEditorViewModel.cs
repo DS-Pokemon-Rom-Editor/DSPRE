@@ -1043,14 +1043,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             get => ((ushort)_trVarVal).ToString("X4");
             set { if (TryParseHex(value, out ushort v)) TrVarValue = v; else OnPropertyChanged(nameof(TrVarValueHex)); }
         }
-        private static bool TryParseHex(string s, out ushort value)
-        {
-            value = 0;
-            if (string.IsNullOrWhiteSpace(s)) return false;
-            s = s.Trim();
-            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
-            return ushort.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out value);
-        }
+        private static bool TryParseHex(string s, out ushort value) => HexText.TryParseUShort(s, out value);
 
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;

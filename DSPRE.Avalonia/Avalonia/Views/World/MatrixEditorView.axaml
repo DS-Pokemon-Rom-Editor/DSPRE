@@ -80,6 +80,8 @@
                           ToolTip.Tip="Click or drag to fill cells with the value beside it"/>
             <NumericUpDown Width="130" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding HeaderPaint}"
                            ToolTip.Tip="The value Paint fills cells with"/>
+            <Button Content="Remove section" controls:Icon.Key="deleteIcon" Click="RemoveHeaders_Click"
+                    ToolTip.Tip="Every cell then uses the header that loads the matrix"/>
           </StackPanel>
           <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Legend}" Margin="0,0,0,6">
             <ItemsControl.ItemsPanel>
@@ -113,6 +115,8 @@
                           ToolTip.Tip="Click or drag to fill cells with the value beside it"/>
             <NumericUpDown Width="110" Minimum="0" Maximum="255" Increment="1" FormatString="0" Value="{Binding HeightPaint}"
                            ToolTip.Tip="The value Paint fills cells with"/>
+            <Button Content="Remove section" controls:Icon.Key="deleteIcon" Click="RemoveHeights_Click"
+                    ToolTip.Tip="Every map then sits at height 0"/>
           </StackPanel>
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
               <TextBlock Text="0" FontSize="12" VerticalAlignment="Center"/>

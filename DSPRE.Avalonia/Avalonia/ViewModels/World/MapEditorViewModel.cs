@@ -2892,6 +2892,45 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { File.WriteAllBytes(path, _map.mapModelData); StatusText = "Exported map model."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
         }
+        /// <summary>The model with the textures of the map texture pack in use put inside it, for tools that read them there.</summary>
+        public async Task ExportTexturedNsbmdAsync()
+        {
+            if (_map?.mapModelData == null) return;
+            string pack = Path.Combine(gameDirs[DirNames.mapTextures].unpackedDir, MapTilesetIndex.ToString("D4"));
+            if (!File.Exists(pack)) { await DialogHelper.ShowError($"Map Tileset {MapTilesetIndex} could not be found.", "Export Error"); return; }
+            FilePickerFileType filter = new FilePickerFileType("Model (.nsbmd)") { Patterns = new[] { "*.nsbmd" } };
+            string path = await DialogHelper.SaveFile(_owner, "Export textured map model", new[] { filter }, ModelName() + "_textured.nsbmd");
+            if (path == null) return;
+            try
+            {
+                File.WriteAllBytes(path, NSBUtils.BuildNSBMDwithTextures(_map.mapModelData, File.ReadAllBytes(pack)));
+                StatusText = $"Exported the map model with Map Tileset {MapTilesetIndex}.";
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
+            {
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error");
+            }
+        }
+
+        /// <summary>The saved map file in the file manager. Unsaved changes are not in it yet.</summary>
+        public void ShowMapFile()
+        {
+            if (_selectedMapIndex < 0) return;
+            SystemShell.RevealInFileManager(Path.Combine(gameDirs[DirNames.maps].unpackedDir, _selectedMapIndex.ToString("D4")));
+            if (HasUnsavedChanges) StatusText = "The file holds the map as last saved.";
+        }
+
+        /// <summary>Sets every square of the layer shown, collision or type, to 0.</summary>
+        public void ClearPermissionLayer()
+        {
+            if (_map == null || !IsSingleMap) return;
+            byte[,] layer = PermissionShowsType ? _map.types : _map.collisions;
+            Array.Clear(layer, 0, layer.Length);
+            MarkDirty();
+            RebuildOverlay();
+            StatusText = PermissionShowsType ? "Cleared the type layer." : "Cleared the collision layer.";
+        }
+
         public void ExportDae() { if (_map != null) try { ModelUtils.ModelToDAE(ModelName(), _map.mapModelData, MapTextureData()); StatusText = "Exported DAE."; } catch (Exception ex) { AppLogger.Error("DAE export: " + ex.Message); } }
         public void ExportGlb() { if (_map != null) try { ModelUtils.ModelToGLB(ModelName(), _map.mapModelData, MapTextureData()); StatusText = "Exported GLB."; } catch (Exception ex) { AppLogger.Error("GLB export: " + ex.Message); } }
 

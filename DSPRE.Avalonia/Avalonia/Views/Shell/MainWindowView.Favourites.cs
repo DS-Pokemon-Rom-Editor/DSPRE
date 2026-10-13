@@ -28,7 +28,24 @@ namespace DSPRE.Avalonia.Views.Shell
                     e.Handled = true;
                 }, RoutingStrategies.Tunnel, handledEventsToo: true);
             }
+            SeedDefaultFavourites();
             RebuildFavourites();
+        }
+
+        // The editors most work starts in, pinned once on a first run; anyone who already pinned keeps their own.
+        private static readonly string[] DefaultFavourites =
+        {
+            "Pokémon > Pokémon editor", "Trainers > Trainer editor", "World > Map editor",
+            "World > Event editor", "Text > Script editor", "Text > Text editor",
+        };
+
+        private void SeedDefaultFavourites()
+        {
+            if (SettingsManager.Settings.favouritesSeeded) return;
+            List<string> pins = SettingsManager.Settings.favouriteMenuItems ??= new List<string>();
+            if (pins.Count == 0) pins.AddRange(DefaultFavourites.Where(_menuByPath.ContainsKey));
+            SettingsManager.Settings.favouritesSeeded = true;
+            SettingsManager.Save();
         }
 
         // Items that run something: no submenu, not the recent-projects list that rebuilds itself.

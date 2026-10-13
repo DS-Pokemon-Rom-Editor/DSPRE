@@ -103,6 +103,9 @@ namespace DSPRE
 
         /// <summary>Menu items pinned beside the menus, by their place in the menus ("Trainers > Trainer editor").</summary>
         public List<string> favouriteMenuItems { get; set; } = new List<string>();
+
+        /// <summary>Set once the default pins have been offered, so pins removed later stay removed.</summary>
+        public bool favouritesSeeded { get; set; }
     }
 
     public static class SettingsManager

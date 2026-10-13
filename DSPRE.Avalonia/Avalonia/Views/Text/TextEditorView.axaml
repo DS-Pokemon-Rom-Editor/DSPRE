@@ -23,6 +23,8 @@
         <controls:UndoRedoButtons/>
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button Content="Show file" controls:Icon.Key="folder" Click="ShowArchiveFile_Click" ToolTip.Tip="The archive as last saved"/>
+        <Button Content="Open file" controls:Icon.Key="OpenLink" Click="OpenArchiveFile_Click" ToolTip.Tip="In the program your system opens it with"/>
         <CheckBox Content="Hex line numbers" IsChecked="{Binding HexNumbering}" VerticalAlignment="Center"/>
         <CheckBox Content="Message box" IsChecked="{Binding ShowPreview}" VerticalAlignment="Center"
                   ToolTip.Tip="Show the selected line the way the game would, in its own message box."/>
@@ -58,7 +60,7 @@
             <Button Content="Search" controls:Icon.Key="lens"  Click="Search_Click"  MinWidth="90"/>
             <Button Content="Replace" Click="Replace_Click" Width="90"/>
           </StackPanel>
-          <TextBlock Text="Results (double-click to go):" Margin="0,6,0,0"/>
+          <TextBlock Text="Results (double-click or Enter to go)" Margin="0,6,0,0"/>
         </StackPanel>
         <ListBox ItemsSource="{Binding SearchResults}"
                  DoubleTapped="SearchResult_DoubleTapped"
@@ -92,7 +94,7 @@
             <TextBlock Text="{Binding PreviewFontNote}" IsVisible="{Binding HasPreviewFontNote}"
                        TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel Orientation="Horizontal" Spacing="6">
-              <TextBlock Text="Border:" VerticalAlignment="Center" FontSize="12"/>
+              <TextBlock Text="Border" VerticalAlignment="Center" FontSize="12"/>
               <ComboBox Width="110" ItemsSource="{Binding BorderNames}" SelectedIndex="{Binding BorderIndex}"
                         ToolTip.Tip="Which message box border to draw with."/>
             </StackPanel>

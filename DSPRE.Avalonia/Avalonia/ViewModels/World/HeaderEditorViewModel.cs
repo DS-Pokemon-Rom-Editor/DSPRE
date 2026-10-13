@@ -123,6 +123,7 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         // Widths of the packed header fields, so a box cannot hold a value the save would mask.
         public decimal BattleBackgroundMax => IsDp ? 15 : 31;
+        public IReadOnlyList<string> BattleBackgroundNames => DSPRE.Resources.BattleBackgrounds.Names();
         public decimal WeatherMax => IsHgss ? 127 : 255;
         public decimal CameraMax => IsHgss ? 63 : 255;
 
@@ -379,6 +380,68 @@ namespace DSPRE.Avalonia.ViewModels.World
         public bool KantoFlag { get => _kantoFlag; set { if (Set(ref _kantoFlag, value)) { ApplyHgss(h => h.kantoFlag = value); OnPropertyChanged(nameof(JohtoFlag)); } } }
         public bool JohtoFlag => !_kantoFlag;
 
+        // ── Copying one field to another header ──────────────────────────────────────
+        // Kept for the session, so a value copied on one header can be pasted on any other.
+        private static readonly Dictionary<string, object[]> HeldFields = new Dictionary<string, object[]>();
+
+        private (System.Func<object[]> Get, System.Action<object[]> Set)? FieldAccess(string key) => key switch
+        {
+            "InternalName" => (() => new object[] { InternalName }, v => InternalName = (string)v[0]),
+            "LocationName" => (() => new object[] { LocationNameIndex }, v => LocationNameIndex = (int)v[0]),
+            "MapType" => (() => new object[] { AreaSettingsIndex }, v => AreaSettingsIndex = (int)v[0]),
+            "AreaIcon" => (() => new object[] { AreaIconIndex }, v => AreaIconIndex = (int)v[0]),
+            "MusicDay" => (() => new object[] { MusicDayValue }, v => MusicDayValue = (decimal)v[0]),
+            "MusicNight" => (() => new object[] { MusicNightValue }, v => MusicNightValue = (decimal)v[0]),
+            "Weather" => (() => new object[] { WeatherValue }, v => WeatherValue = (decimal)v[0]),
+            "Camera" => (() => new object[] { CameraValue }, v => CameraValue = (decimal)v[0]),
+            "BattleBackground" => (() => new object[] { BattleBackground }, v => BattleBackground = (decimal)v[0]),
+            "Matrix" => (() => new object[] { MatrixId }, v => MatrixId = (decimal)v[0]),
+            "AreaData" => (() => new object[] { AreaDataId }, v => AreaDataId = (decimal)v[0]),
+            "ScriptFile" => (() => new object[] { ScriptFileId }, v => ScriptFileId = (decimal)v[0]),
+            "LevelScript" => (() => new object[] { LevelScriptId }, v => LevelScriptId = (decimal)v[0]),
+            "EventFile" => (() => new object[] { EventFileId }, v => EventFileId = (decimal)v[0]),
+            "TextArchive" => (() => new object[] { TextArchiveId }, v => TextArchiveId = (decimal)v[0]),
+            "Encounters" => (() => new object[] { WildPokemon }, v => WildPokemon = (decimal)v[0]),
+            "MapSettings" => (() => new object[] { Flag0, Flag1, Flag2, Flag3, Flag4, Flag5, Flag6 },
+                              v => { Flag0 = (bool)v[0]; Flag1 = (bool)v[1]; Flag2 = (bool)v[2]; Flag3 = (bool)v[3];
+                                     Flag4 = (bool)v[4]; Flag5 = (bool)v[5]; Flag6 = (bool)v[6]; }),
+            "TownMap" => (() => new object[] { WorldmapX, WorldmapY }, v => { WorldmapX = (decimal)v[0]; WorldmapY = (decimal)v[1]; }),
+            "FollowMode" => (() => new object[] { FollowModeIndex }, v => FollowModeIndex = (int)v[0]),
+            "MomCall" => (() => new object[] { MomCallIntroParam }, v => MomCallIntroParam = (decimal)v[0]),
+            "Region" => (() => new object[] { KantoFlag }, v => KantoFlag = (bool)v[0]),
+            _ => null,
+        };
+
+        public bool CanCopyField(string key) => _header != null && FieldAccess(key) != null;
+
+        public void CopyField(string key)
+        {
+            if (!CanCopyField(key)) return;
+            HeldFields[key] = FieldAccess(key).Value.Get();
+            StatusText = "Copied " + (HeldField(key) ?? key) + ".";
+        }
+
+        public void PasteField(string key)
+        {
+            if (!CanCopyField(key) || !HeldFields.TryGetValue(key, out object[] held)) return;
+            FieldAccess(key).Value.Set(held);
+            StatusText = "Pasted " + HeldField(key) + ".";
+        }
+
+        /// <summary>The copied value as the menu shows it, or null when nothing is held for the field.</summary>
+        public string HeldField(string key)
+        {
+            if (!HeldFields.TryGetValue(key, out object[] held)) return null;
+            return key switch
+            {
+                "MapSettings" => "map settings",
+                "TownMap" => $"{held[0]}, {held[1]}",
+                "Region" => (bool)held[0] ? "Kanto" : "Johto",
+                "InternalName" => (string)held[0],
+                _ => System.Convert.ToString(held[0], System.Globalization.CultureInfo.InvariantCulture),
+            };
+        }
+
         // ── Dirty tracking ───────────────────────────────────────────────────────────
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
@@ -562,7 +625,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             OnPropertyChanged(nameof(ShowAreaIcon));
             OnPropertyChanged(nameof(WildPokeMax));
             OnPropertyChanged(nameof(NoEncountersId));
-            OnPropertyChanged(nameof(BattleBackgroundMax));
+            OnPropertyChanged(nameof(BattleBackgroundMax)); OnPropertyChanged(nameof(BattleBackgroundNames));
             OnPropertyChanged(nameof(WeatherMax));
             OnPropertyChanged(nameof(CameraMax));
         }
@@ -1293,8 +1356,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         // What each linked file is called, one name used for the field, the tab and the Open button.
         private static readonly (string Key, string Name, string Editor)[] LinkedFiles =
         {
-            ("Matrix", "matrix", "Matrix editor"), ("AreaData", "area data", "Area Data editor"),
-            ("Script", "script file", "Script editor"), ("LevelScript", "level script file", "Level Script editor"),
+            ("Matrix", "matrix", "Matrix editor"), ("AreaData", "area data", "Area data editor"),
+            ("Script", "script file", "Script editor"), ("LevelScript", "level script file", "Level script editor"),
             ("Event", "event file", "Event editor"), ("Text", "text archive", "Text editor"),
             ("Encounters", "encounters", "Encounters editor"),
         };

@@ -258,8 +258,29 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public string Title =>
             IsRomLoaded
-                ? $"DSPRE - {GetGameDisplayName()}{ProjectNameSuffix} (Avalonia preview)"
+                ? $"DSPRE - {GetGameDisplayName()}{RomIdSuffix}{ProjectNameSuffix} (Avalonia preview)"
                 : "DSPRE (Avalonia preview)";
+
+        /// <summary>
+        /// " [CPUE, America]": the ROM's game code and its region, since the language alone does not tell an American
+        /// cartridge from a European one. Only Platinum has a European English code (CPUP); Diamond, Pearl and HGSS
+        /// share the E code with America, told apart by the revision byte as DSPRE has always done (0x0A is Europe).
+        /// </summary>
+        private static string RomIdSuffix
+        {
+            get
+            {
+                string id = romID;
+                if (string.IsNullOrWhiteSpace(id)) return "";
+                string region = id.Length == 4 ? id[3] switch
+                {
+                    'E' => romRevision == 0x0A ? "Europe" : "America", 'P' => "Europe", 'J' => "Japan", 'K' => "Korea",
+                    'F' => "France", 'D' => "Germany", 'I' => "Italy", 'S' => "Spain",
+                    _ => null,
+                } : null;
+                return region == null ? $" [{id}]" : $" [{id}, {region}]";
+            }
+        }
 
         /// <summary>" - name" of the open project folder, so two open projects of the same game can be told apart.</summary>
         private static string ProjectNameSuffix

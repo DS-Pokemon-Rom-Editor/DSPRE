@@ -616,6 +616,33 @@ namespace DSPRE.Avalonia.ViewModels.Text
         }
 
         // ── Save ─────────────────────────────────────────────────────────────────
+        /// <summary>
+        /// The file the shown archive is edited from: hg-engine's own source, the project's text file, or the packed
+        /// archive when neither exists. Null when no archive is shown.
+        /// </summary>
+        private string ArchiveSourceFile()
+        {
+            if (_selectedArchiveIndex < 0) return null;
+            string owned = (_managedSource ?? _generatedSource)?.FullPath;
+            if (!string.IsNullOrEmpty(owned) && File.Exists(owned)) return owned;
+            (string binPath, string jsonPath) = TextArchive.GetFilePaths(_selectedArchiveIndex);
+            return File.Exists(jsonPath) ? jsonPath : binPath;
+        }
+
+        public void ShowArchiveFile()
+        {
+            if (ArchiveSourceFile() is not string path) return;
+            SystemShell.RevealInFileManager(path);
+            if (HasUnsavedChanges) StatusText = "The file holds the archive as last saved.";
+        }
+
+        public void OpenArchiveFile()
+        {
+            if (ArchiveSourceFile() is not string path) return;
+            SystemShell.OpenWithDefaultApp(path);
+            StatusText = HasUnsavedChanges ? "Opened the archive as last saved." : "Opened the archive.";
+        }
+
         public void Save()
         {
             if (_current == null) return;

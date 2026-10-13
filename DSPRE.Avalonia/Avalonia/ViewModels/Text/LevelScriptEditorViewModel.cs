@@ -52,10 +52,36 @@ namespace DSPRE.Avalonia.ViewModels.Text
             get => _newScriptId;
             set { if (Set(ref _newScriptId, value)) { OnPropertyChanged(nameof(NewScriptCommonInfo)); OnPropertyChanged(nameof(NewScriptHasCommonInfo)); } }
         }
-        public decimal NewVariable { get => _newVariable; set => Set(ref _newVariable, value); }
+        public decimal NewVariable { get => _newVariable; set { if (Set(ref _newVariable, value)) OnPropertyChanged(nameof(NewVariableHex)); } }
         public decimal FirstVariable => VariableValueTrigger.FirstVariable;
         public decimal LastVariable => VariableValueTrigger.LastVariable;
-        public decimal NewValue { get => _newValue; set => Set(ref _newValue, value); }
+        public decimal NewValue { get => _newValue; set { if (Set(ref _newValue, value)) OnPropertyChanged(nameof(NewValueHex)); } }
+
+        // Hex shows the trigger list and the two numbers below in hex, as variables are usually written.
+        public bool ShowHex
+        {
+            get => LevelScriptTrigger.DisplayInHex;
+            set
+            {
+                if (LevelScriptTrigger.DisplayInHex == value) return;
+                LevelScriptTrigger.DisplayInHex = value;
+                OnPropertyChanged(); OnPropertyChanged(nameof(ShowDecimal));
+                int keep = SelectedTriggerIndex;
+                RefreshTriggers();
+                SelectedTriggerIndex = keep;
+            }
+        }
+        public bool ShowDecimal => !ShowHex;
+        public string NewVariableHex
+        {
+            get => "0x" + ((ushort)_newVariable).ToString("X4");
+            set { if (DSPRE.Avalonia.Data.HexText.TryParseUShort(value, out ushort v) && v >= FirstVariable && v <= LastVariable) NewVariable = v; else OnPropertyChanged(nameof(NewVariableHex)); }
+        }
+        public string NewValueHex
+        {
+            get => "0x" + ((ushort)_newValue).ToString("X4");
+            set { if (DSPRE.Avalonia.Data.HexText.TryParseUShort(value, out ushort v) && v <= LastVariable) NewValue = v; else OnPropertyChanged(nameof(NewValueHex)); }
+        }
 
         /// <summary>A script number of 2000+ on Platinum/HGSS may be a "common"/global script rather than
         /// a plain local one in the current file (see <see cref="CommonScriptId"/>); surfaced here so
@@ -358,6 +384,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StatusText = "Imported (unsaved).";
             }
             catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+        }
+
+        /// <summary>The level script's file in the file manager, as last saved.</summary>
+        public void ShowFile()
+        {
+            if (_selScript < 0) return;
+            SystemShell.RevealInFileManager(Path.Combine(Filesystem.scripts, _selScript.ToString("D4")));
+            if (HasUnsavedChanges) StatusText = "The file holds the level script as last saved.";
         }
 
         public async Task ExportAsync()

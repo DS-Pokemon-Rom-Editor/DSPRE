@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -59,7 +61,100 @@ namespace DSPRE.Avalonia
                 }
             }
             userFile.ExtractToFolder(finalExtractedPath);
-            await DialogHelper.ShowInfo("The contents of " + narcPath + " have been extracted to:\n" + finalExtractedPath, "Archive unpacked");
+            if (await DialogHelper.AskYesNo("The contents of " + narcPath + " have been extracted to:\n" + finalExtractedPath + Br + Br
+                    + "Rename the files by their contents?", "Archive unpacked", owner))
+                await RenameByContentIn(owner, finalExtractedPath, ask: false);
+        }
+
+        // ── Batch rename and name lists ──────────────────────────────────────────────
+        private static readonly FilePickerFileType ListFilter = new FilePickerFileType("List file") { Patterns = new[] { "*.list", "*.txt" } };
+
+        private static string FileCount(int n) => n + " file" + (n == 1 ? "" : "s");
+
+        public static async Task RenameByList(Window owner)
+        {
+            string folder = await DialogHelper.OpenFolder(owner, "Choose the folder whose files to rename");
+            if (string.IsNullOrEmpty(folder)) return;
+            int files = FileListTools.FilesInOrder(folder).Length;
+            if (files == 0) { await DialogHelper.ShowInfo("That folder has no files.", "Batch rename"); return; }
+            string listPath = await DialogHelper.OpenFile(owner, "Choose the list of names", new[] { ListFilter, DialogHelper.AllFilter });
+            if (string.IsNullOrEmpty(listPath)) return;
+
+            List<string> names = FileListTools.ReadList(File.ReadAllLines(listPath));
+            if (names.Count == 0) { await DialogHelper.ShowError("The list has no names, only comments or empty lines.", "Batch rename", owner); return; }
+            int count = Math.Min(files, names.Count);
+            string note = names.Count > files ? Br + Br + $"The list has {names.Count} names for {FileCount(files)}; the rest of the list is not used."
+                        : names.Count < files ? Br + Br + $"The list has names for {count} of the {FileCount(files)}; the others keep their names." : "";
+            if (!await DialogHelper.AskYesNo($"Rename {FileCount(count)} in \"{folder}\", in name order, to the names in the list? "
+                    + "A name already taken gets a number added." + note, "Batch rename", owner))
+                return;
+            bool isolate = names.Count < files && await DialogHelper.AskYesNo(
+                $"Move the {FileCount(files - count)} the list does not name into a \"{FileListTools.IsolatedFolderName}\" subfolder?", "Batch rename", owner);
+            try
+            {
+                (int renamed, int isolated) = FileListTools.RenameByList(folder, names, isolate);
+                await DialogHelper.ShowInfo($"Renamed {FileCount(renamed)}." + (isolated > 0 ? $" Moved {FileCount(isolated)} into {FileListTools.IsolatedFolderName}." : ""),
+                                            "Batch rename");
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("Renaming stopped part way:\n" + ex.Message, "Batch rename", owner);
+            }
+        }
+
+        public static async Task RenameByContent(Window owner)
+        {
+            string folder = await DialogHelper.OpenFolder(owner, "Choose the folder whose files to rename");
+            if (!string.IsNullOrEmpty(folder)) await RenameByContentIn(owner, folder, ask: true);
+        }
+
+        private static async Task RenameByContentIn(Window owner, string folder, bool ask)
+        {
+            int files = FileListTools.FilesInOrder(folder).Length;
+            if (files == 0) { await DialogHelper.ShowInfo("That folder has no files.", "Batch rename"); return; }
+            if (ask && !await DialogHelper.AskYesNo($"Rename the {FileCount(files)} in \"{folder}\" by their contents? "
+                    + "A name already taken gets a number added.", "Batch rename", owner))
+                return;
+            List<string> list;
+            try { list = FileListTools.RenameByContent(folder); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("Renaming stopped part way:\n" + ex.Message, "Batch rename", owner);
+                return;
+            }
+            int named = list.Count - FileListTools.ListHeader("").Count;
+            if (named == 0) { await DialogHelper.ShowInfo("None of the files' contents were recognised.", "Batch rename"); return; }
+            if (!await DialogHelper.AskYesNo($"Renamed {FileCount(named)} by their contents. Save a list of the new names?", "Batch rename", owner)) return;
+            await SaveList(owner, list, Path.GetFileName(folder));
+        }
+
+        public static async Task ListFromFolder(Window owner)
+        {
+            string folder = await DialogHelper.OpenFolder(owner, "Choose the folder to list");
+            if (string.IsNullOrEmpty(folder)) return;
+            if (FileListTools.FilesInOrder(folder).Length == 0) { await DialogHelper.ShowInfo("That folder has no files.", "Name list"); return; }
+            await SaveList(owner, FileListTools.FolderList(folder), Path.GetFileName(folder));
+        }
+
+        public static async Task ListFromEnum(Window owner)
+        {
+            string source = await DialogHelper.OpenFile(owner, "Choose a C file with an enum, one entry per line", new[] { DialogHelper.AllFilter });
+            if (string.IsNullOrEmpty(source)) return;
+            List<string> list;
+            try { list = FileListTools.EnumList(File.ReadAllLines(source), Path.GetFileNameWithoutExtension(source)); }
+            catch (FormatException ex) { await DialogHelper.ShowError("The enum could not be read: " + ex.Message, "Name list", owner); return; }
+            await SaveList(owner, list, Path.GetFileNameWithoutExtension(source));
+        }
+
+        private static async Task SaveList(Window owner, List<string> list, string name)
+        {
+            string dest = await DialogHelper.SaveFile(owner, "Save the list", new[] { ListFilter }, name + ".list");
+            if (string.IsNullOrEmpty(dest)) return;
+            try { File.WriteAllLines(dest, list); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("The list could not be saved:\n" + ex.Message, "Name list", owner);
+            }
         }
 
         public static async Task PackFolderToNarc(Window owner)

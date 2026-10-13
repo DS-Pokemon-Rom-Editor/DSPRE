@@ -95,8 +95,11 @@
 
               <WrapPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" ItemSpacing="12" LineSpacing="4" Margin="0,4,8,0">
                 <CheckBox Content="Double battle" IsChecked="{Binding DoubleBattle}" IsVisible="{Binding !IsHgeActive}"/>
-                <NumericUpDown Value="{Binding BattleTypeValue}" Width="110" Minimum="0" Maximum="4294967295" IsVisible="{Binding !IsHgeActive}"
-                               ToolTip.Tip="Battle type flags, 2 is double"/>
+                <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsHgeActive}">
+                  <TextBlock Text="Battle type" VerticalAlignment="Center"/>
+                  <controls:IdNameSelector Value="{Binding BattleTypeValue}" Width="200" Maximum="4294967295"
+                                           Names="{Binding BattleTypeNames}" Keys="{Binding BattleTypeKeys}"/>
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsHgeActive}">
                   <TextBlock Text="Battle type" VerticalAlignment="Center"/>
                   <ComboBox Width="180" ItemsSource="{Binding BattleTypeOptions}" SelectedIndex="{Binding BattleTypeIndex}"/>

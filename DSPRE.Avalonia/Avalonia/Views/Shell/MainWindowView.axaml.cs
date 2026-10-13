@@ -1218,6 +1218,10 @@ namespace DSPRE.Avalonia.Views.Shell
         // ── Standalone file tools (no ROM required) ─────────────────────────
         private async void NarcUnpack_Click(object sender, RoutedEventArgs e) => await FileToolActions.UnpackNarcToFolder(this);
         private async void NarcPack_Click(object sender, RoutedEventArgs e) => await FileToolActions.PackFolderToNarc(this);
+        private async void RenameByList_Click(object sender, RoutedEventArgs e) => await FileToolActions.RenameByList(this);
+        private async void RenameByContent_Click(object sender, RoutedEventArgs e) => await FileToolActions.RenameByContent(this);
+        private async void ListFromFolder_Click(object sender, RoutedEventArgs e) => await FileToolActions.ListFromFolder(this);
+        private async void ListFromEnum_Click(object sender, RoutedEventArgs e) => await FileToolActions.ListFromEnum(this);
         private async void NsbmdAddTex_Click(object sender, RoutedEventArgs e) => await FileToolActions.AddTexturesToNsbmd(this);
         private async void NsbmdRemoveTex_Click(object sender, RoutedEventArgs e) => await FileToolActions.RemoveTexturesFromNsbmd(this);
         private async void NsbmdSaveTex_Click(object sender, RoutedEventArgs e) => await FileToolActions.SaveTexturesFromNsbmd(this);

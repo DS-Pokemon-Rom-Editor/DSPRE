@@ -431,6 +431,14 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         }
 
         // ── Import / export whole packs ─────────────────────────────────────────────────
+        /// <summary>The pack's file in the file manager, as last saved.</summary>
+        public void ShowFile()
+        {
+            if (_packIndex < 0) return;
+            SystemShell.RevealInFileManager(PackPath(_packIndex));
+            if (HasUnsavedChanges) StatusText = "The file holds the pack as last saved.";
+        }
+
         public async Task ExportAsync()
         {
             if (_packIndex < 0) return;

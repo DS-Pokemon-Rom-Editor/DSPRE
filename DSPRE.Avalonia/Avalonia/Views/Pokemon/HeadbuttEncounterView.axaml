@@ -17,6 +17,9 @@
         <controls:HeadersButton controls:EditorToolbar.Slot="Picker" Source="Headbutt" FileId="{Binding SelectedFileIndex}"/>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <controls:UndoRedoButtons/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
+        <Button controls:EditorToolbar.Slot="Extra" Content="Screenshot" controls:Icon.Key="cameraIcon" Click="Screenshot_Click"/>
         <Button controls:EditorToolbar.Slot="Add" Content="Fill missing" controls:Icon.Key="addIcon" Click="FillMissing_Click"
                 ToolTip.Tip="Add an empty headbutt file for every header without one"/>
         <ToggleButton Content="Move trees" controls:Icon.Key="move" IsChecked="{Binding EditMode3D}"
@@ -61,6 +64,7 @@
               <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
                   <Button controls:Icon.Key="addIcon" Click="AddNormalGroup_Click" ToolTip.Tip="Add a tree group" Padding="6,1"/>
+                  <Button controls:Icon.Key="copy" Click="DuplicateNormalGroup_Click" ToolTip.Tip="Duplicate the selected tree group" Padding="6,1"/>
                   <Button controls:Icon.Key="deleteIcon" Click="RemoveNormalGroup_Click" ToolTip.Tip="Remove the selected tree group" Padding="6,1"/>
                 </StackPanel>
                 <TextBlock Text="Tree groups" FontWeight="Bold" VerticalAlignment="Center"/>
@@ -119,6 +123,7 @@
               <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
                   <Button controls:Icon.Key="addIcon" Click="AddSpecialGroup_Click" ToolTip.Tip="Add a tree group" Padding="6,1"/>
+                  <Button controls:Icon.Key="copy" Click="DuplicateSpecialGroup_Click" ToolTip.Tip="Duplicate the selected tree group" Padding="6,1"/>
                   <Button controls:Icon.Key="deleteIcon" Click="RemoveSpecialGroup_Click" ToolTip.Tip="Remove the selected tree group" Padding="6,1"/>
                 </StackPanel>
                 <TextBlock Text="Tree groups" FontWeight="Bold" VerticalAlignment="Center"/>

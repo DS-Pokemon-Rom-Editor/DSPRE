@@ -473,6 +473,10 @@ namespace DSPRE.ROMFiles
             return result;
         }
 
+        private static string UnpackedFolderName =>
+            RomInfo.gameDirs.TryGetValue(DirNames.encounterEffectGraphics, out (string packedDir, string unpackedDir) dirs)
+                ? Path.GetFileName(dirs.unpackedDir) : "encounterEffectGraphics";
+
         private static void ValidateConsumedAssets(TrainerClassMetadataRecord record,
             TrainerClassMetadataValidationResult result)
         {
@@ -505,8 +509,10 @@ namespace DSPRE.ROMFiles
                     ushort memberId = record.GetAsset(field);
                     if (memberId >= memberCount)
                     {
+                        // Say what would fix it: a number the archive has, or the file added where Save ROM packs from.
                         result.Errors.Add(TrainerClassMetadataSchema.GetAssetLabel(record.VsStyle, field) +
-                            " " + memberId + " doesn't exist.");
+                            " " + memberId + " doesn't exist. The archive has files 0 to " + (memberCount - 1) +
+                            ": pick one of those, or add the file to unpacked/" + UnpackedFolderName + " under the number it should have.");
                         continue;
                     }
 

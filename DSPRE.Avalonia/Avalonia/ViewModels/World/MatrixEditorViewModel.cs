@@ -407,6 +407,28 @@ namespace DSPRE.Avalonia.ViewModels.World
             RaiseLoaded();
         }
 
+        /// <summary>Drops the header section, after asking: every cell then uses the header that loads the matrix.</summary>
+        public async System.Threading.Tasks.Task RemoveHeaderSectionAsync()
+        {
+            if (_matrix == null || !_matrix.hasHeadersSection) return;
+            if (!await DialogHelper.AskYesNo("Remove this matrix's header section? Every cell will then use the header that loads the matrix.",
+                                             "Remove header section", _owner)) return;
+            _matrix.hasHeadersSection = false;
+            MarkDirty();
+            RaiseLoaded();
+        }
+
+        /// <summary>Drops the height section, after asking: every map then sits at height 0.</summary>
+        public async System.Threading.Tasks.Task RemoveHeightsSectionAsync()
+        {
+            if (_matrix == null || !_matrix.hasHeightsSection) return;
+            if (!await DialogHelper.AskYesNo("Remove this matrix's height section? Every map will then sit at height 0.",
+                                             "Remove height section", _owner)) return;
+            _matrix.hasHeightsSection = false;
+            MarkDirty();
+            RaiseLoaded();
+        }
+
         public void Save()
         {
             if (_matrix == null || _selectedIndex < 0) return;
