@@ -4,6 +4,14 @@
 
 ---
 
+## 2.3.4
+- Fixed the Event Editor on Spanish SoulSilver. It looked for the overworld sprite table in the
+  wrong place, showed a warning and then crashed, leaving the map and events empty. The table is
+  now found and overworld sprites show as normal. If the table ever can't be found on some other
+  version, you still get the warning but the editor no longer crashes.
+
+---
+
 ## 2.3.3
 - The Ground Item Scripts window, opened from the Event Editor, can now change an existing entry
   instead of only adding and removing them. Selecting an entry loads its item and quantity into the
