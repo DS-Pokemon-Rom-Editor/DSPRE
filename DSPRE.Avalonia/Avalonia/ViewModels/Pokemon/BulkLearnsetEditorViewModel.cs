@@ -209,6 +209,23 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             }
         }
 
+        /// <summary>Writes every Pokémon's level-up moves as JSON, unsaved edits included.</summary>
+        public async Task ExportJsonAsync(Window owner)
+        {
+            string path = await DialogHelper.SaveFile(owner, "Export learnsets JSON", new[] { DialogHelper.JsonFilter, DialogHelper.AllFilter }, "LearnsetData.json");
+            if (path == null) return;
+            try
+            {
+                string json = DocTool.LearnsetJson(Lists().OrderBy(kv => kv.Key)
+                    .Select(kv => (kv.Key, kv.Value.Select(m => (m.Level, m.MoveId)))));
+                System.IO.File.WriteAllText(path, json);
+            }
+            catch (Exception ex) when (ex is System.IO.IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Bulk Learnsets", owner);
+            }
+        }
+
         /// <summary>Replaces the learnsets of the Pokémon in the file. Changes stay unsaved until Save all.</summary>
         public async Task ImportAsync(Window owner)
         {

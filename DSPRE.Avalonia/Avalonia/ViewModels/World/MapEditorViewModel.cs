@@ -743,14 +743,48 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public bool HasBuildingSelected => ResolveSelectedBuilding() != null;
 
-        private decimal _bModelId, _bx, _by, _bz, _bRotX, _bRotY, _bRotZ;
+        private decimal _bModelId, _bx, _by, _bz, _bRotX, _bRotY, _bRotZ, _bRawX, _bRawY, _bRawZ;
         public decimal BModelId { get => _bModelId; set { if (Set(ref _bModelId, value) && !_suppress) ApplyBuilding(reloadModel: true); } }
         public decimal BX { get => _bx; set { if (Set(ref _bx, value) && !_suppress) ApplyBuilding(); } }
         public decimal BY { get => _by; set { if (Set(ref _by, value) && !_suppress) ApplyBuilding(); } }
         public decimal BZ { get => _bz; set { if (Set(ref _bz, value) && !_suppress) ApplyBuilding(); } }
-        public decimal BRotX { get => _bRotX; set { if (Set(ref _bRotX, value) && !_suppress) ApplyBuilding(); } }
-        public decimal BRotY { get => _bRotY; set { if (Set(ref _bRotY, value) && !_suppress) ApplyBuilding(); } }
-        public decimal BRotZ { get => _bRotZ; set { if (Set(ref _bRotZ, value) && !_suppress) ApplyBuilding(); } }
+        // Each rotation axis is written only by its own boxes, so editing anything else about a building keeps its
+        // stored rotation exactly. Degrees and the raw stored value are two views of the same number.
+        public decimal BRotX { get => _bRotX; set { if (Set(ref _bRotX, value) && !_suppress) SetRotation(0, DegToU16(value)); } }
+        public decimal BRotY { get => _bRotY; set { if (Set(ref _bRotY, value) && !_suppress) SetRotation(1, DegToU16(value)); } }
+        public decimal BRotZ { get => _bRotZ; set { if (Set(ref _bRotZ, value) && !_suppress) SetRotation(2, DegToU16(value)); } }
+        public decimal BRawX { get => _bRawX; set { if (Set(ref _bRawX, value) && !_suppress) SetRotation(0, (ushort)value); } }
+        public decimal BRawY { get => _bRawY; set { if (Set(ref _bRawY, value) && !_suppress) SetRotation(1, (ushort)value); } }
+        public decimal BRawZ { get => _bRawZ; set { if (Set(ref _bRawZ, value) && !_suppress) SetRotation(2, (ushort)value); } }
+
+        private static decimal Degrees(ushort raw) => Math.Round((decimal)raw * 360m / 65536m, 2);
+
+        private void ShowRotation(Building b)
+        {
+            BRotX = Degrees(b.xRotation); BRotY = Degrees(b.yRotation); BRotZ = Degrees(b.zRotation);
+            BRawX = b.xRotation; BRawY = b.yRotation; BRawZ = b.zRotation;
+        }
+
+        private void SetRotation(int axis, ushort raw)
+        {
+            (MapFile map, int cellX, int cellY, Building building)? resolved = ResolveSelectedBuilding();
+            if (resolved == null) return;
+            Building b = resolved.Value.building;
+            if (axis == 0) b.xRotation = raw; else if (axis == 1) b.yRotation = raw; else b.zRotation = raw;
+            _suppress = true;
+            ShowRotation(b);
+            _suppress = false;
+            ApplyBuilding();
+        }
+
+        // Scale is stored as sixteenths of the model's size, so 1 is normal and each step is one stored unit.
+        private const decimal ScaleUnit = 16m;
+        private decimal _bScaleX = 1, _bScaleY = 1, _bScaleZ = 1;
+        public decimal BScaleX { get => _bScaleX; set { if (Set(ref _bScaleX, value) && !_suppress) ApplyBuilding(); } }
+        public decimal BScaleY { get => _bScaleY; set { if (Set(ref _bScaleY, value) && !_suppress) ApplyBuilding(); } }
+        public decimal BScaleZ { get => _bScaleZ; set { if (Set(ref _bScaleZ, value) && !_suppress) ApplyBuilding(); } }
+        private static decimal ScaleOf(uint stored) => stored / ScaleUnit;
+        private static uint StoredScale(decimal scale) => (uint)Math.Clamp(Math.Round(scale * ScaleUnit), 1m, ushort.MaxValue);
 
         // The stored rotation values are always readable/writable, but the GAME only reads them once
         // the Building Rotation patch (Patch Toolbox) has been applied. Gate the controls so it's not
@@ -805,7 +839,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             // Positions are shown as the FULL fractional tile coordinate (whole tile + fraction/65536), so
             // the input boxes can fine-tune sub-tile placement after a coarse snap-drag.
             BModelId = b.modelID; BX = Coord(b.xPosition, b.xFraction); BY = Coord(b.yPosition, b.yFraction); BZ = Coord(b.zPosition, b.zFraction);
-            BRotX = (decimal)Math.Round(Building.U16ToDeg(b.xRotation)); BRotY = (decimal)Math.Round(Building.U16ToDeg(b.yRotation)); BRotZ = (decimal)Math.Round(Building.U16ToDeg(b.zRotation));
+            ShowRotation(b);
+            BScaleX = ScaleOf(b.width); BScaleY = ScaleOf(b.height); BScaleZ = ScaleOf(b.length);
             _suppress = false;
             GizmoTargetChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -821,7 +856,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             return ((short)pos, (ushort)frac);
         }
 
-        private static ushort DegToU16(decimal deg) => (ushort)(((double)deg % 360) / 360.0 * 65536.0);
+        private static ushort DegToU16(decimal deg) => (ushort)((int)Math.Round((deg % 360m + 360m) % 360m * 65536m / 360m) & 0xFFFF);
 
         private void ApplyBuilding(bool reloadModel = false)
         {
@@ -831,7 +866,10 @@ namespace DSPRE.Avalonia.ViewModels.World
             b.modelID = (uint)_bModelId;
             (short px, ushort fx) = SplitCoord(_bx); (short py, ushort fy) = SplitCoord(_by); (short pz, ushort fz) = SplitCoord(_bz);
             b.xPosition = px; b.xFraction = fx; b.yPosition = py; b.yFraction = fy; b.zPosition = pz; b.zFraction = fz;
-            b.xRotation = DegToU16(_bRotX); b.yRotation = DegToU16(_bRotY); b.zRotation = DegToU16(_bRotZ);
+            // A stored 0 shows as the smallest box value; only an edit to a scale box writes it back.
+            if (StoredScale(_bScaleX) != Math.Max(1u, b.width)) b.width = StoredScale(_bScaleX);
+            if (StoredScale(_bScaleY) != Math.Max(1u, b.height)) b.height = StoredScale(_bScaleY);
+            if (StoredScale(_bScaleZ) != Math.Max(1u, b.length)) b.length = StoredScale(_bScaleZ);
             if (reloadModel) b.NSBMDFile = null;   // force reload of the (new) model in BuildPreview
             MaybeTransferBuildingAcrossCells();
             MarkSelectedBuildingDirty();

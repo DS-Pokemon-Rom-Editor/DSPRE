@@ -125,7 +125,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public int Value
         {
             get => _value;
-            set { if (_value != value) { _value = value; OnPC(); } }
+            set { if (_value != value) { _value = value; OnPC(); OnPC(nameof(EditValue)); } }
         }
 
         private string _probability = "";
@@ -134,11 +134,31 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private string _description = "";
         public string Description { get => _description; set { _description = value; OnPC(); } }
 
-        // Activation rows are a READ-ONLY view (the DataGrid is IsReadOnly): the divisor + slot thresholds are
-        // computed by RecalcActivation; only the divisor (ActivationDivisorEdit) is user-editable and saved.
-        public ActivationRowVM(string label, int value)
+        // Slot rows edit their threshold through the table, which refuses a value out of order; the divisor and
+        // rare rows only show what the table works out.
+        private readonly System.Func<int, bool> _edit;
+        public bool IsEditable => _edit != null;
+
+        // Set briefly to a refused value: the binding only sends a value back that differs from the last one it
+        // read, so the box is shown the refused number first and then the stored one.
+        private decimal? _refused;
+
+        public decimal EditValue
         {
-            Label = label; _value = value;
+            get => _refused ?? _value;
+            set
+            {
+                if ((int)value == _value || _edit == null) return;
+                if (_edit((int)value)) return;
+                _refused = value;
+                OnPC(nameof(EditValue));
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { _refused = null; OnPC(nameof(EditValue)); });
+            }
+        }
+
+        public ActivationRowVM(string label, int value, System.Func<int, bool> edit = null)
+        {
+            Label = label; _value = value; _edit = edit;
         }
     }
 
@@ -646,7 +666,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
                     int thresh = _weightTable[i];
                     int range  = thresh - prev;
                     double prob = chance / 100.0 * range;
-                    ActivationRowVM row = new ActivationRowVM($"Slot {i + 1}", thresh);
+                    int slot = i;
+                    ActivationRowVM row = new ActivationRowVM($"Slot {i + 1}", thresh, v => UpdateWeightThreshold(slot, v));
                     row.Probability  = $"{prob:F2}%";
                     row.Description  = $"{prev}-{thresh - 1}";
                     ActivationRows.Add(row);
@@ -673,7 +694,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                     ActivationRowVM row = ActivationRows[i + 1];
                     row.Value       = thresh;
                     row.Probability = $"{prob:F2}%";
-                    row.Description = $"{prev}, {thresh - 1} ({range} values)";
+                    row.Description = $"{prev}-{thresh - 1}";
                     prev = thresh;
                 }
             }

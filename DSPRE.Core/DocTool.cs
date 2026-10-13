@@ -707,11 +707,7 @@ namespace DSPRE
             string executablePath = AppDomain.CurrentDomain.BaseDirectory;
             string docsFolderPath = Path.Combine(executablePath, "Docs");
             string learnsetDataPath = Path.Combine(docsFolderPath, "LearnsetData.json");
-            ScriptDatabase.InitializeMoveNamesIfNeeded();
-            ScriptDatabase.InitializePokemonNamesIfNeeded();
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.personalPokeData, DirNames.learnsets, DirNames.moveData });
-
-            string[] pokeNames = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
 
             // Create the Docs folder if it doesn't exist
             if (!Directory.Exists(docsFolderPath))
@@ -719,12 +715,33 @@ namespace DSPRE
                 Directory.CreateDirectory(docsFolderPath);
             }
 
-            // Create JSON structure
-            Dictionary<string, object> learnsetJson = new Dictionary<string, object>();
-
+            List<(int Species, IEnumerable<(int Level, int Move)> Moves)> sets = new List<(int, IEnumerable<(int, int)>)>();
             for (int i = 0; i < RomInfo.GetLearnsetFilesCount(); i++)
             {
                 LearnsetData curLearnsetData = new LearnsetData(i);
+                List<(int Level, int Move)> moves = new List<(int Level, int Move)>();
+                foreach ((byte level, ushort move) e in curLearnsetData.list) moves.Add((e.level, e.move));
+                sets.Add((i, moves));
+            }
+
+            File.WriteAllText(learnsetDataPath, LearnsetJson(sets));
+            return learnsetDataPath;
+        }
+
+        /// <summary>
+        /// Every learnset given as JSON keyed by SPECIES_ name, each with its level-up moves as MOVE_ names.
+        /// Shared by the docs export and the editors, which pass their own (possibly unsaved) lists.
+        /// </summary>
+        public static string LearnsetJson(IEnumerable<(int Species, IEnumerable<(int Level, int Move)> Moves)> sets)
+        {
+            ScriptDatabase.InitializeMoveNamesIfNeeded();
+            ScriptDatabase.InitializePokemonNamesIfNeeded();
+            string[] pokeNames = RomInfo.GetPokemonNamesWithForms(RomInfo.GetPersonalFilesCount());
+
+            Dictionary<string, object> learnsetJson = new Dictionary<string, object>();
+            foreach ((int Species, IEnumerable<(int Level, int Move)> Moves) set in sets)
+            {
+                int i = set.Species;
                 string speciesName = "SPECIES_UNKNOWN";
 
                 if (ScriptDatabase.pokemonNames.ContainsKey((ushort)i))
@@ -737,23 +754,20 @@ namespace DSPRE
                     speciesName = $"SPECIES_{pokeNames[i].ToUpper().Replace(" ", "_").Replace("-", "_").Replace("__", "_")}";
                 }
 
-
                 List<Dictionary<string, object>> levelMoves = new List<Dictionary<string, object>>();
-
-                foreach ((byte level, ushort move) entry in curLearnsetData.list)
+                foreach ((int Level, int Move) entry in set.Moves)
                 {
-                    if (entry.move == 0) continue; // Skip empty moves
+                    if (entry.Move == 0) continue; // Skip empty moves
 
                     string moveName = "MOVE_UNKNOWN";
-
-                    if (ScriptDatabase.moveNames.ContainsKey(entry.move))
+                    if (ScriptDatabase.moveNames.ContainsKey((ushort)entry.Move))
                     {
-                        moveName = $"{ScriptDatabase.moveNames[entry.move].ToUpper().Replace(" ", "_")}";
+                        moveName = $"{ScriptDatabase.moveNames[(ushort)entry.Move].ToUpper().Replace(" ", "_")}";
                     }
 
                     levelMoves.Add(new Dictionary<string, object>
                     {
-                        { "Level", entry.level },
+                        { "Level", (byte)entry.Level },
                         { "Move", moveName }
                     });
                 }
@@ -764,11 +778,7 @@ namespace DSPRE
                 };
             }
 
-            // Write JSON to file
-            string json = Newtonsoft.Json.JsonConvert.SerializeObject(learnsetJson, Newtonsoft.Json.Formatting.Indented);
-            File.WriteAllText(learnsetDataPath, json);
-
-            return learnsetDataPath;
+            return Newtonsoft.Json.JsonConvert.SerializeObject(learnsetJson, Newtonsoft.Json.Formatting.Indented);
         }
 
         private static void ExportEvolutionDataToCSV(string evolutionDataPath, string[] pokeNames, string[] itemNames, string[] moveNames)

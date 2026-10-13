@@ -173,6 +173,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 global::Avalonia.Threading.DispatcherPriority.Background);
         }
 
+        /// <summary>Every DV, IV and nature this slot can get with the slots before it as they are now.</summary>
+        public List<DVIVNatureTriplet> AllNatureOptions(TrainerPartyMonViewModel mon)
+        {
+            int slot = Party.IndexOf(mon);
+            (ushort tid, byte cls, List<(int pokeId, int level, int gender, int ability, int dv)> input) = GetDVCalcInput();
+            List<DVCalculator.PartyMon> mons = input.Select(p => new DVCalculator.PartyMon(p.pokeId, p.level, p.gender, p.ability, p.dv)).ToList();
+            if (slot < 0 || slot >= mons.Count || mons[slot].Species <= 0) return new List<DVIVNatureTriplet>();
+            bool male;
+            try { male = DVCalculator.TrainerClassGender.GetTrainerClassGender(cls); }
+            catch (Exception e) when (e is IOException || e is ArgumentException || e is IndexOutOfRangeException) { male = true; }
+            return DVCalculator.SlotOptions(tid, cls, male, mons, slot, highestOnly: false);
+        }
+
         private void RefreshDerived()
         {
             if (_trainer == null && !IsHgeActive) return;

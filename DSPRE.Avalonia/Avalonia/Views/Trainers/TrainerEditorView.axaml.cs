@@ -119,6 +119,14 @@ namespace DSPRE.Avalonia.Views.Trainers
             if ((sender as Control)?.DataContext is ViewModels.Trainers.TrainerPartyMonViewModel mon) VM?.MoveMon(mon, -1);
         }
 
+        private async void AllNatures_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null || (sender as Control)?.DataContext is not ViewModels.Trainers.TrainerPartyMonViewModel mon) return;
+            ViewModels.Pokemon.DVCalcNatureViewerViewModel picker = new ViewModels.Pokemon.DVCalcNatureViewerViewModel(VM.AllNatureOptions(mon));
+            await new Views.Pokemon.DVCalcNatureViewerView(picker).ShowDialog(this);
+            if (picker.SelectedDV >= 0) mon.Difficulty = picker.SelectedDV;
+        }
+
         private void MonDown_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.DataContext is ViewModels.Trainers.TrainerPartyMonViewModel mon) VM?.MoveMon(mon, 1);

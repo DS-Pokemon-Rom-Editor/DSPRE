@@ -191,11 +191,34 @@
                   <TextBlock Text="Requires the building rotation patch (patch toolbox)" FontSize="9" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding !BuildingRotationEnabled}"/>
                   <Grid ColumnDefinitions="18,*" RowDefinitions="Auto,Auto,Auto">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotX}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+                    <Grid Grid.Row="0" Grid.Column="1" ColumnDefinitions="*,4,*" Margin="0,0,0,2">
+                      <NumericUpDown HorizontalAlignment="Stretch" Minimum="0" Maximum="359.99" Increment="1" FormatString="0.##" Value="{Binding BRotX}" IsEnabled="{Binding BuildingRotationEnabled}" ToolTip.Tip="Degrees"/>
+                      <NumericUpDown Grid.Column="2" HorizontalAlignment="Stretch" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding BRawX}" IsEnabled="{Binding BuildingRotationEnabled}" ToolTip.Tip="Stored value (65536 is a full turn)"/>
+                    </Grid>
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Y" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotY}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,4,*" Margin="0,0,0,2">
+                      <NumericUpDown HorizontalAlignment="Stretch" Minimum="0" Maximum="359.99" Increment="1" FormatString="0.##" Value="{Binding BRotY}" IsEnabled="{Binding BuildingRotationEnabled}" ToolTip.Tip="Degrees"/>
+                      <NumericUpDown Grid.Column="2" HorizontalAlignment="Stretch" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding BRawY}" IsEnabled="{Binding BuildingRotationEnabled}" ToolTip.Tip="Stored value (65536 is a full turn)"/>
+                    </Grid>
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" Minimum="0" Maximum="359" Increment="1" Value="{Binding BRotZ}" IsEnabled="{Binding BuildingRotationEnabled}"/>
+                    <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,4,*">
+                      <NumericUpDown HorizontalAlignment="Stretch" Minimum="0" Maximum="359.99" Increment="1" FormatString="0.##" Value="{Binding BRotZ}" IsEnabled="{Binding BuildingRotationEnabled}" ToolTip.Tip="Degrees"/>
+                      <NumericUpDown Grid.Column="2" HorizontalAlignment="Stretch" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding BRawZ}" IsEnabled="{Binding BuildingRotationEnabled}" ToolTip.Tip="Stored value (65536 is a full turn)"/>
+                    </Grid>
+                  </Grid>
+                </StackPanel>
+                <StackPanel Spacing="2">
+                  <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Text="Scale" FontSize="10" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
+                    <controls:HelpTip Text="1 is the model's normal size. Each step is 1/16."/>
+                  </StackPanel>
+                  <Grid ColumnDefinitions="18,*" RowDefinitions="Auto,Auto,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="X" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="0.0625" Maximum="4095.9375" Increment="0.0625" FormatString="0.####" Value="{Binding BScaleX}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Y" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" Margin="0,0,0,2" Minimum="0.0625" Maximum="4095.9375" Increment="0.0625" FormatString="0.####" Value="{Binding BScaleY}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Z" VerticalAlignment="Center"/>
+                    <NumericUpDown Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" Minimum="0.0625" Maximum="4095.9375" Increment="0.0625" FormatString="0.####" Value="{Binding BScaleZ}"/>
                   </Grid>
                 </StackPanel>
               </StackPanel>

@@ -13,6 +13,7 @@ namespace DSPRE.Avalonia.Views.Pokemon
         {
             InitializeComponent();
             Loaded += OnLoadedSetup;
+            NameRefresh.Bind(this, () => VM?.RefreshNames());
         }
 
         public BulkLearnsetEditorView(BulkLearnsetEditorViewModel vm) : this() { DataContext = vm; EditorWindowChrome.Attach(this, vm); }
@@ -31,5 +32,6 @@ namespace DSPRE.Avalonia.Views.Pokemon
         private void Remove_Click(object sender, RoutedEventArgs e) => VM?.RemoveSelected();
         private async void Import_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ImportAsync(this); }
         private async void Export_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportAsync(this); }
+        private async void ExportJson_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ExportJsonAsync(this); }
     }
 }

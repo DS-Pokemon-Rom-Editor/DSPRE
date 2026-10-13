@@ -220,8 +220,12 @@
                         </StackPanel>
                         <StackPanel Width="250" Margin="0,0,6,0" IsVisible="{Binding !HgeNatureEnabled}">
                           <TextBlock Text="Nature" FontSize="10"/>
-                          <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}" SelectedItem="{Binding SelectedNatureChoice}"
-                                    PlaceholderText="{Binding NatureText}" MaxDropDownHeight="360" ToolTip.Tip="Picking one sets the highest DV that gives it"/>
+                          <Grid ColumnDefinitions="*,Auto">
+                            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}" SelectedItem="{Binding SelectedNatureChoice}"
+                                      PlaceholderText="{Binding NatureText}" MaxDropDownHeight="360" ToolTip.Tip="Picking one sets the highest DV that gives it"/>
+                            <Button Grid.Column="1" Content="All…" Margin="4,0,0,0" Click="AllNatures_Click"
+                                    ToolTip.Tip="Every DV with the IVs and nature it gives"/>
+                          </Grid>
                         </StackPanel>
                         <StackPanel Margin="0,0,6,0" IsVisible="{Binding ShinyVisible}">
                           <TextBlock Text=" " FontSize="10"/>

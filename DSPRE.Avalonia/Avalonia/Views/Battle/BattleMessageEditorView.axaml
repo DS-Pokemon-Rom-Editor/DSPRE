@@ -2,10 +2,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Battle"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+        xmlns:views="clr-namespace:DSPRE.Avalonia.Views.Controls"
         x:Class="DSPRE.Avalonia.Views.Battle.BattleMessageEditorView"
         x:DataType="vm:BattleMessageEditorViewModel"
         Title="Trainer battle messages"
-        Width="900" Height="620"
+        Width="1100" Height="680"
         WindowStartupLocation="CenterOwner">
 
   <Design.DataContext>
@@ -14,7 +15,7 @@
 
   <DockPanel>
     <controls:EditorToolbar>
-        <TextBlock Text="Trainer:" VerticalAlignment="Center"/>
+        <TextBlock Text="Trainer" VerticalAlignment="Center"/>
         <controls:FusionAutoCompleteBox Width="320" ItemsSource="{Binding Trainers}" SelectedIndex="{Binding SelectedTrainerIndex}"/>
         <Button Content="Save all" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
@@ -25,7 +26,7 @@
       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}" VerticalAlignment="Center"/>
     </Border>
 
-    <Grid ColumnDefinitions="*,300" Margin="6">
+    <Grid ColumnDefinitions="*,540" Margin="6">
       <!-- Entries -->
       <DockPanel Grid.Column="0" Margin="0,0,6,0">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
@@ -54,7 +55,19 @@
           <Button Content="Edit trigger" controls:Icon.Key="pencil" Click="EditTrigger_Click"/>
           <Button Content="Save message" controls:Icon.Key="saveButton" Click="SaveMessage_Click"/>
         </StackPanel>
-        <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding MessageText}" Margin="0,4,0,0"/>
+        <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="0,6,0,0">
+          <views:FieldMessageBoxView x:Name="PreviewBox" FitToFrame="True" Height="96" HorizontalAlignment="Stretch"
+                                     Text="{Binding PreviewText}" HasMore="{Binding PreviewHasMore}"/>
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="{Binding PreviewStepText}" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+              <TextBlock Text="{Binding PreviewWarning}" IsVisible="{Binding HasPreviewWarning}" TextWrapping="Wrap" FontSize="12"
+                         Foreground="{DynamicResource Editor.Warn}"/>
+            </StackPanel>
+            <Button Grid.Column="1" Content="Next stop" Click="PreviewNext_Click" IsEnabled="{Binding HasPreview}"/>
+          </Grid>
+        </StackPanel>
+        <TextBox AcceptsReturn="True" TextWrapping="Wrap" Text="{Binding MessageText}" Margin="0,4,0,0" VerticalContentAlignment="Top"/>
       </DockPanel>
     </Grid>
   </DockPanel>

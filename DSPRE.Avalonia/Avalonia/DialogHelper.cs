@@ -186,7 +186,10 @@ namespace DSPRE.Avalonia
 
             StackPanel root = new StackPanel();
             root.Children.Add(msgText);
-            foreach (CheckBox box in boxes) root.Children.Add(box);
+            // A long list scrolls instead of growing the window past the screen.
+            StackPanel boxList = new StackPanel();
+            foreach (CheckBox box in boxes) boxList.Children.Add(box);
+            root.Children.Add(new ScrollViewer { Content = boxList, MaxHeight = 420 });
             btnRow.Margin = new global::Avalonia.Thickness(8, 8, 8, 12);
             root.Children.Add(btnRow);
             win.Content = root;
@@ -382,6 +385,9 @@ namespace DSPRE.Avalonia
 
         public static readonly FilePickerFileType CsvFilter =
             new FilePickerFileType("CSV Files") { Patterns = new[] { "*.csv" } };
+
+        public static readonly FilePickerFileType JsonFilter =
+            new FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } };
 
         public static readonly FilePickerFileType PngFilter =
             new FilePickerFileType("PNG Images") { Patterns = new[] { "*.png" } };

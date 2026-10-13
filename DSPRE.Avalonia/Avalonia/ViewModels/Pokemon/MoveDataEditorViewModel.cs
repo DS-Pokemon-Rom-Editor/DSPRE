@@ -694,6 +694,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _history.MarkSaved();   // current state is now the on-disk baseline (undo can still go past it)
             }
             SetClean();
+            DSPRE.Avalonia.Data.MoveInfo.Forget();
             SaveNotice.Saved(UnsavedChangesDescription);
             RaiseUndoState();
         }
@@ -820,7 +821,60 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             });
             CsvImportSession session = await CsvImportReviewView.ReviewAsync(owner, importer);
             if (session == null) return;
-            await StageImportedData(session.Accepted.Select(r => ((MoveDataCsv.Entry)r.Value).Move).ToList());
+            List<MoveDataCsv.Entry> entries = session.Accepted.Select(r => (MoveDataCsv.Entry)r.Value).ToList();
+            // A row that only renames leaves the move data as it is, so it stages nothing.
+            List<MoveDataImportEntry> changed = entries.Select(e => e.Move).Where(DataDiffers).ToList();
+            if (changed.Count > 0) await StageImportedData(changed);
+            if (!HgEngineProject.IsActive) await OfferRenamesAsync(owner, entries.Where(e => e.NameDiffers).ToList());
+        }
+
+        private bool DataDiffers(MoveDataImportEntry e)
+        {
+            MoveData m;
+            if (e.MoveID == _currentId && _currentFile != null) m = _currentFile;
+            else if (!_pendingImports.TryGetValue(e.MoveID, out m))
+            {
+                try { m = LoadRecord(e.MoveID, out string loadError); if (loadError != null) return true; }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { return true; }
+            }
+            return m.movetype != e.MoveType || m.split != e.Split || m.damage != e.Power || m.accuracy != e.Accuracy || m.priority != e.Priority
+                || m.sideEffectProbability != e.SideEffectProbability || m.pp != e.PP || m.target != e.Range;
+        }
+
+        // Names live in a text archive, not in move data, so a rename is written straight away as the Text editor would.
+        private async Task OfferRenamesAsync(Window owner, List<MoveDataCsv.Entry> differing)
+        {
+            if (differing.Count == 0) return;
+            (string Label, bool IsChecked)[] options = differing
+                .Select(e => ($"{e.Move.MoveID}: {e.Move.MoveName} to {e.CsvName}", false))
+                .Append(("Title Case (Water Gun, not WATER GUN)", true)).ToArray();
+            (bool yes, bool[] ticked) = await DialogHelper.AskWithChecks(
+                "The file names these moves differently. Rename the ticked ones in the ROM? Names are saved now.",
+                "Rename moves", "Rename", "Keep ROM names", options, owner);
+            if (!yes) return;
+            bool titleCase = ticked[^1];
+            try
+            {
+                TextArchive names = new TextArchive(attackNamesTextNumber);
+                int renamed = 0;
+                for (int i = 0; i < differing.Count; i++)
+                {
+                    int id = differing[i].Move.MoveID;
+                    if (!ticked[i] || id < 0 || id >= names.messages.Count) continue;
+                    string name = differing[i].CsvName;
+                    names.messages[id] = titleCase ? System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant()) : name;
+                    renamed++;
+                }
+                if (renamed == 0) return;
+                names.SaveToExpandedDir(attackNamesTextNumber, showSuccessMessage: false);
+                SyncNames();
+                AppEvents.RaiseNamesChanged();
+                Status = renamed == 1 ? "Renamed 1 move." : $"Renamed {renamed} moves.";
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError("Renaming failed:\n" + ex.Message, "Rename moves", owner);
+            }
         }
 
 

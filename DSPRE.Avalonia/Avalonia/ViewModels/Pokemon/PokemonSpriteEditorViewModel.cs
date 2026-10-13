@@ -774,7 +774,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
                 if (imported.Width != SpriteWidth || imported.Height != SpriteHeight)
                 {
-                    StatusText = $"Sprite must be {SpriteWidth}×{SpriteHeight} pixels (got {imported.Width}×{imported.Height}).";
+                    StatusText = $"Sprite must be {SpriteWidth}×{SpriteHeight} pixels, its two 80×80 frames side by side (got {imported.Width}×{imported.Height}).";
                     return;
                 }
 

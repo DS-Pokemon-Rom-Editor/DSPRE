@@ -147,7 +147,54 @@ namespace DSPRE.Avalonia.ViewModels.Battle
         }
 
         private string _messageText = "";
-        public string MessageText { get => _messageText; set => Set(ref _messageText, value); }
+        public string MessageText { get => _messageText; set { if (Set(ref _messageText, value)) RefreshPreview(); } }
+
+        // ── Preview: the overworld and in-battle boxes share one text area on every game (27 by 4 tiles at
+        // 2,19), so the field box's paging and line width match both; only the border art differs.
+        private readonly List<FieldMessageFrame> _previewFrames = new List<FieldMessageFrame>();
+        private int _previewFrame;
+        public Func<string, int> MeasureText { get; set; } = t => (t ?? "").Length * 6;
+        private FieldMessageFrame CurrentPreview =>
+            _previewFrame >= 0 && _previewFrame < _previewFrames.Count ? _previewFrames[_previewFrame] : null;
+        public string PreviewText => CurrentPreview?.Text ?? "";
+        public bool HasPreview => CurrentPreview != null;
+        public bool PreviewHasMore => CurrentPreview != null && CurrentPreview.Wait != MessageWait.None;
+        public string PreviewStepText => _previewFrames.Count > 1 ? $"Stop {_previewFrame + 1} of {_previewFrames.Count}" : "";
+        public string PreviewWarning
+        {
+            get
+            {
+                FieldMessageFrame f = CurrentPreview;
+                if (f == null) return null;
+                if (f.TooWide && f.TooManyLines) return "This runs past the right edge and past the bottom of the box.";
+                if (f.TooWide) return "A line here runs past the right edge of the box.";
+                if (f.TooManyLines) return "There are more lines here than the box can show.";
+                return null;
+            }
+        }
+        public bool HasPreviewWarning => PreviewWarning != null;
+
+        public void NextPreviewStep()
+        {
+            if (_previewFrames.Count == 0) return;
+            _previewFrame = (_previewFrame + 1) % _previewFrames.Count;
+            RaisePreviewChanged();
+        }
+
+        public void RefreshPreview()
+        {
+            _previewFrames.Clear();
+            _previewFrame = 0;
+            string raw = RawText(_messageText ?? "");
+            if (raw.Length > 0) _previewFrames.AddRange(FieldMessageScript.Frames(raw, MeasureText));
+            RaisePreviewChanged();
+        }
+
+        private void RaisePreviewChanged()
+        {
+            foreach (string n in new[] { nameof(PreviewText), nameof(HasPreview), nameof(PreviewHasMore), nameof(PreviewStepText), nameof(PreviewWarning), nameof(HasPreviewWarning) })
+                OnPropertyChanged(n);
+        }
 
         private string _infoText = "";
         public string InfoText { get => _infoText; set => Set(ref _infoText, value); }
@@ -392,7 +439,7 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             {
                 foreach (Entry e in _current)
                 {
-                    string trigger = TriggerName(e.triggerId);
+                    string trigger = TriggerDescription(e.triggerId);
                     string text = e.messageID >= 0 && e.messageID < _archive.messages.Count ? _archive.messages[e.messageID] : "<invalid>";
                     Entries.Add($"[{trigger}] {text}");
                 }
@@ -401,6 +448,8 @@ namespace DSPRE.Avalonia.ViewModels.Battle
             // Rebuilding the list clears its selection; keep the row being edited (the last one after a removal).
             keep = Math.Min(keep, Entries.Count - 1);
             if (keep >= 0) { _selectedEntryIndex = keep; OnPropertyChanged(nameof(SelectedEntryIndex)); }
+            // A trainer opened fresh shows its first message rather than empty fields.
+            else if (!keepSelection && Entries.Count > 0) { _selectedEntryIndex = -1; SelectedEntryIndex = 0; }
             CheckForMistakes();
         }
 

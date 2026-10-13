@@ -2,6 +2,8 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.Avalonia.Views.Controls;
+using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Views.Battle
 {
@@ -22,12 +24,19 @@ namespace DSPRE.Avalonia.Views.Battle
             EditorWindowChrome.Attach(this, vm);
         }
 
+        private void PreviewNext_Click(object sender, RoutedEventArgs e) => VM?.NextPreviewStep();
+
         private async void OnLoadedSetup(object sender, RoutedEventArgs e)
         {
             if (_setupDone || Design.IsDesignMode) return;
             BattleMessageEditorViewModel vm = VM;
             if (vm == null) return;
             _setupDone = true;
+            // The game's own letters and a border; the Text editor's chosen border is left alone when already loaded.
+            FieldMessageBoxView.Font ??= FieldFont.LoadTalkFont();
+            FieldMessageBoxView.Frame ??= FieldWindowFrame.Load(0);
+            vm.MeasureText = FieldMessageBoxView.Measure;
+            vm.RefreshPreview();
             await vm.SetupAsync(this);
         }
 

@@ -44,13 +44,24 @@
             <DataGrid Grid.Row="2" x:Name="ActivationGrid"
                       ItemsSource="{Binding ActivationRows}"
                       CanUserReorderColumns="False" CanUserResizeColumns="True"
-                      IsReadOnly="True" MinHeight="140" MaxHeight="220"
+                      MinHeight="140" MaxHeight="220"
                       HorizontalScrollBarVisibility="Auto">
               <DataGrid.Columns>
                 <DataGridTextColumn Header="Slot"        Binding="{Binding Label}"       Width="100" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Threshold"   Binding="{Binding Value}"       Width="90"  IsReadOnly="True"/>
-                <DataGridTextColumn Header="Probability" Binding="{Binding Probability}" Width="100" IsReadOnly="True"/>
-                <DataGridTextColumn Header="Range"       Binding="{Binding Description}" Width="*"   IsReadOnly="True"/>
+                <DataGridTemplateColumn Header="Threshold" Width="110">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate x:DataType="vm:ActivationRowVM">
+                      <Panel>
+                        <NumericUpDown IsVisible="{Binding IsEditable}" Minimum="1" Maximum="99" Increment="1" FormatString="0"
+                                       Value="{Binding EditValue, UpdateSourceTrigger=LostFocus}" Margin="2,1"
+                                       ToolTip.Tip="Rolls below this and at or above the slot before give this slot"/>
+                        <TextBlock IsVisible="{Binding !IsEditable}" Text="{Binding Value}" VerticalAlignment="Center" Margin="8,0"/>
+                      </Panel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Chance" Binding="{Binding Probability}" Width="100" IsReadOnly="True"/>
+                <DataGridTextColumn Header="Roll"        Binding="{Binding Description}" Width="*"   IsReadOnly="True"/>
               </DataGrid.Columns>
             </DataGrid>
 

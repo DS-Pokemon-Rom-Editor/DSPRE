@@ -13,8 +13,11 @@ namespace DSPRE.Csv
     {
         public sealed class Entry
         {
-            public Entry(MoveDataImportEntry move) { Move = move; }
+            public Entry(MoveDataImportEntry move, string csvName) { Move = move; CsvName = csvName; }
             public MoveDataImportEntry Move { get; }
+            /// <summary>The name the file gave, which may differ from the ROM's; the ROM keeps its own unless renamed.</summary>
+            public string CsvName { get; }
+            public bool NameDiffers => CsvName.Length > 0 && CsvNames.Key(CsvName) != CsvNames.Key(Move.MoveName ?? "");
         }
 
         private const int Id = 0, Name = 1, Type = 2, Split = 3, Power = 4, Accuracy = 5, Priority = 6, Effect = 7, Pp = 8, Range = 9;
@@ -77,7 +80,7 @@ namespace DSPRE.Csv
                 MoveID = id, MoveName = _moves[id], MoveType = (PokemonType)type, Split = (MoveSplit)split, Power = (byte)power,
                 Accuracy = (byte)accuracy, Priority = (sbyte)priority, SideEffectProbability = (byte)effect, PP = (byte)pp,
                 Range = AttackRangeDescriptions[range].value,
-            });
+            }, c.Text(Name).Trim());
         }
 
         public override void CheckTogether(IReadOnlyList<CsvRecord> records) => CsvRules.OneRowPerRecord(records, r => (r.Value as Entry)?.Move.MoveID ?? -1, "move", On);
@@ -96,6 +99,8 @@ namespace DSPRE.Csv
                     sideEffectProbability = e.SideEffectProbability, pp = e.PP, target = e.Range,
                 };
                 CsvRules.Compare(changes, r.Label, ColumnNames, Type, Cells(names, _typeNames, e.MoveID, was), Cells(names, _typeNames, e.MoveID, now));
+                // Names are text, not move data: listing a different one lets the editor offer the rename after Apply.
+                if (((Entry)r.Value).NameDiffers) changes.Add(new CsvChange(r.Label, ColumnNames[Name], e.MoveName, ((Entry)r.Value).CsvName));
             }
             return changes;
         }
