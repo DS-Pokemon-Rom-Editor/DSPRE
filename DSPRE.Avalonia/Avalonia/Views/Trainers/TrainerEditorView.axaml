@@ -112,7 +112,15 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPrize}" ToolTip.Tip="{Binding PrizeTip}">
                   <TextBlock Text="Prize" VerticalAlignment="Center"/>
-                  <TextBlock Text="{Binding PrizeText}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                  <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+                    <Border Width="{Binding PrizeSign.Size.Width}" Height="{Binding PrizeSign.Size.Height}" VerticalAlignment="Center"
+                            Background="{DynamicResource Editor.Text}" IsVisible="{Binding HasPrizeSign}" Margin="0,2,0,0">
+                      <Border.OpacityMask>
+                        <ImageBrush Source="{Binding PrizeSign}"/>
+                      </Border.OpacityMask>
+                    </Border>
+                    <TextBlock Text="{Binding PrizeText}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                  </StackPanel>
                 </StackPanel>
               </WrapPanel>
             </Grid>

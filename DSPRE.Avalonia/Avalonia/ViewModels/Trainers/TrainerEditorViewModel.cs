@@ -157,6 +157,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public string PrizeText => LastPartyMon is TrainerPartyMonViewModel last && PrizeMultiplier(_trainerClassIndex) is int mul
             ? TrainerPrize.Amount((int)last.Level, mul, DoubleBattle).ToString("N0") : null;
         public bool HasPrize => PrizeText != null;
+        /// <summary>The Pokédollar sign from the ROM's font, which the character map writes as $.</summary>
+        public Bitmap PrizeSign => DSPRE.Avalonia.Data.GameGlyph.Mask('$');
+        public bool HasPrizeSign => PrizeSign != null;
         public string PrizeTip => PrizeMultiplier(_trainerClassIndex) is int mul
             ? $"Last Pokémon's level × 4 × the class multiplier ({mul}){(DoubleBattle ? " × 2 for a double battle" : "")}. Amulet Coin doubles it."
             : null;
