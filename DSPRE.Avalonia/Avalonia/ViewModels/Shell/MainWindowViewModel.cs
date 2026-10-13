@@ -248,7 +248,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         // ── Live status-bar line ───────────────────────────────────────────────
-        public const string IdleStatus = "Open an editor from the menus, or press Ctrl+P and type its name.";
+        public const string IdleStatus = "Open a game to start editing.";
         private string _statusText = IdleStatus;
         public string StatusText
         {
@@ -441,17 +441,9 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         }
 
         // ── Recent projects for the pre-ROM empty state ────────────────────────
-        public System.Collections.ObjectModel.ObservableCollection<string> RecentProjects { get; } = new();
-        public bool HasRecents => RecentProjects.Count > 0;
+        public RecentProjectsViewModel Recents { get; } = new();
 
-        public void RefreshRecents()
-        {
-            RecentProjects.Clear();
-            List<string> recents = SettingsManager.Settings?.recentProjects;
-            if (recents != null)
-                foreach (string r in recents.Take(5)) RecentProjects.Add(r);
-            OnPropertyChanged(nameof(HasRecents));
-        }
+        public void RefreshRecents() => Recents.Reload();
 
         // ── Design-time constructor ────────────────────────────────────────────
         public MainWindowViewModel()

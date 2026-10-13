@@ -1267,6 +1267,7 @@ namespace DSPRE.Avalonia
         /// <summary>Opens the Ctrl+P quick-open palette over the given window.</summary>
         public static void OpenCommandPalette(global::Avalonia.Controls.Window owner)
         {
+            if (!IsRomLoaded) return;   // every entry it lists needs a ROM
             CommandPaletteViewModel vm = new CommandPaletteViewModel(PaletteCommands(), DynamicCommands);
             CommandPaletteView view = new CommandPaletteView(vm);
             if (owner != null) view.ShowDialog(owner); else view.ShowManaged();

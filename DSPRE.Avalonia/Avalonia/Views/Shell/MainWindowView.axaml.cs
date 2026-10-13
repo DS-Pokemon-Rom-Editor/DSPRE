@@ -49,6 +49,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
             RecentMenu.SubmenuOpened += (_, _) => RebuildRecentMenu();
             SetupFavourites();
+            ProjectDrop.Attach(this, () => this);
             ProjectSourceWatcher.ScriptsCompiled += (result, paths) =>
                 global::Avalonia.Threading.Dispatcher.UIThread.Post(() => NoteOutsideScriptCompile(result, paths));
 
@@ -1176,13 +1177,6 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private void GuidedTour_Click(object sender, RoutedEventArgs e)
             => GuidedTour.Start(this);
-
-        // Quick-open buttons in the pre-ROM empty state (item DataContext = the full path).
-        private async void RecentQuick_Click(object sender, RoutedEventArgs e)
-        {
-            if ((sender as Button)?.DataContext is string path)
-                await OpenRecentAsync(path);
-        }
 
         private async void ExportDocs_Click(object sender, RoutedEventArgs e)
         {
