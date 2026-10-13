@@ -230,7 +230,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool ShowMetadata => _metadataFields != null;
 
         private int _battleMusic;
-        public int BattleMusic { get => _battleMusic; set { if (Set(ref _battleMusic, value)) { OnPropertyChanged(nameof(BattleMusicIndex)); MarkDirty(); } } }
+        public int BattleMusic { get => _battleMusic; set { if (Set(ref _battleMusic, value)) { DSPRE.Avalonia.Data.MusicPreview.StopIfStartedBy((this, 2)); OnPropertyChanged(nameof(BattleMusicIndex)); MarkDirty(); } } }
 
         private string _introSummary = "";
         public string IntroSummary { get => _introSummary; private set => Set(ref _introSummary, value); }
@@ -293,7 +293,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private decimal _musicMain;
-        public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) { OnPropertyChanged(nameof(MusicMainIndex)); MarkDirty(); } } }
+        public decimal MusicMain { get => _musicMain; set { if (Set(ref _musicMain, value)) { DSPRE.Avalonia.Data.MusicPreview.StopIfStartedBy((this, 0)); OnPropertyChanged(nameof(MusicMainIndex)); MarkDirty(); } } }
 
         /// <summary>The game's music tracks by name, for the three music pickers.</summary>
         public DSPRE.Avalonia.ViewModels.World.MappedCombo MusicNames { get; } = new DSPRE.Avalonia.ViewModels.World.MappedCombo();
@@ -302,7 +302,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int BattleMusicIndex { get => MusicNames.IndexOf(_battleMusic); set { if (value >= 0) BattleMusic = MusicNames.KeyAt(value); } }
 
         private decimal _musicAlt;
-        public decimal MusicAlt { get => _musicAlt; set { if (Set(ref _musicAlt, value)) { OnPropertyChanged(nameof(MusicAltIndex)); MarkDirty(); } } }
+        public decimal MusicAlt { get => _musicAlt; set { if (Set(ref _musicAlt, value)) { DSPRE.Avalonia.Data.MusicPreview.StopIfStartedBy((this, 1)); OnPropertyChanged(nameof(MusicAltIndex)); MarkDirty(); } } }
 
         private bool _musicEnabled;
         public bool MusicEnabled { get => _musicEnabled; private set => Set(ref _musicEnabled, value); }

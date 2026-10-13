@@ -43,6 +43,12 @@ namespace DSPRE.Avalonia.Data
             Start(seqId, tag);
         }
 
+        /// <summary>Stops playback started by <paramref name="tag"/>, as when the track it played is changed.</summary>
+        public static void StopIfStartedBy(object tag)
+        {
+            if (StartedBy(tag)) Stop();
+        }
+
         public static void Start(int seqId, object tag = null)
         {
             Stop();

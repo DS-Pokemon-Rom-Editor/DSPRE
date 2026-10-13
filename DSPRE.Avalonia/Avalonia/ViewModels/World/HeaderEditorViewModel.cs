@@ -313,7 +313,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal MusicDayValue
         {
             get => _musicDayValue;
-            set { if (Set(ref _musicDayValue, value)) { Apply(h => h.musicDayID = (ushort)value); SyncMusicCombo(MusicDay, (int)value, i => _musicDayComboIndex = i, nameof(MusicDayComboIndex)); OnPropertyChanged(nameof(DayPlayIcon)); } }
+            set { if (Set(ref _musicDayValue, value)) { MusicPreview.StopIfStartedBy((this, false)); Apply(h => h.musicDayID = (ushort)value); SyncMusicCombo(MusicDay, (int)value, i => _musicDayComboIndex = i, nameof(MusicDayComboIndex)); OnPropertyChanged(nameof(DayPlayIcon)); } }
         }
         private int _musicDayComboIndex = -1;
         public int MusicDayComboIndex
@@ -326,7 +326,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         public decimal MusicNightValue
         {
             get => _musicNightValue;
-            set { if (Set(ref _musicNightValue, value)) { Apply(h => h.musicNightID = (ushort)value); SyncMusicCombo(MusicNight, (int)value, i => _musicNightComboIndex = i, nameof(MusicNightComboIndex)); OnPropertyChanged(nameof(NightPlayIcon)); } }
+            set { if (Set(ref _musicNightValue, value)) { MusicPreview.StopIfStartedBy((this, true)); Apply(h => h.musicNightID = (ushort)value); SyncMusicCombo(MusicNight, (int)value, i => _musicNightComboIndex = i, nameof(MusicNightComboIndex)); OnPropertyChanged(nameof(NightPlayIcon)); } }
         }
         private int _musicNightComboIndex = -1;
         public int MusicNightComboIndex
