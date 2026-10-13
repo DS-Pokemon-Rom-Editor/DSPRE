@@ -28,6 +28,13 @@ namespace DSPRE.Avalonia
             string narcPath = await DialogHelper.OpenFile(owner, "Select an archive to unpack", new[] { NarcFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(narcPath)) return;
 
+            string ownFolder = ProjectUnpackedFolderFor(narcPath);
+            if (ownFolder != null && !await DialogHelper.AskYesNo(
+                    "This is one of the open project's archives, and DSPRE already keeps it unpacked here:" + Br + Br + ownFolder + Br + Br
+                    + "That folder has the changes made in DSPRE. The archive only gets them when the ROM is saved." + Br + Br
+                    + "Unpack the archive anyway?", "Already unpacked by DSPRE", owner))
+                return;
+
             Narc userFile = Narc.Open(narcPath);
             if (userFile is null)
             {
@@ -63,8 +70,38 @@ namespace DSPRE.Avalonia
             string dest = await DialogHelper.SaveFile(owner, "Save archive as", new[] { NarcFilter }, Path.GetFileName(folder) + ".narc");
             if (string.IsNullOrEmpty(dest)) return;
 
+            string ownFolder = ProjectUnpackedFolderFor(dest);
+            if (ownFolder != null && !await DialogHelper.AskYesNo(
+                    "This is one of the open project's archives. DSPRE builds it from this folder when the ROM is saved:" + Br + Br + ownFolder + Br + Br
+                    + "Putting the files in that folder instead is usually what you want. "
+                    + "If you replace the archive, DSPRE asks which copy to keep the next time it checks it." + Br + Br
+                    + "Replace the archive anyway?", "DSPRE builds this archive", owner))
+                return;
+
             Narc.FromFolder(folder).Save(dest);
             await DialogHelper.ShowInfo("The contents of folder \"" + folder + "\" have been packed to:\n" + dest, "Archive created");
+        }
+
+        private static readonly string Br = System.Environment.NewLine;
+
+        /// <summary>
+        /// The unpacked folder DSPRE keeps for <paramref name="archivePath"/> when that file is one of the open
+        /// project's archives and DSPRE has unpacked it; otherwise null. Other archives get no warning.
+        /// </summary>
+        private static string ProjectUnpackedFolderFor(string archivePath)
+        {
+            if (!AvaloniaEditorLauncher.IsRomLoaded || RomInfo.gameDirs == null || string.IsNullOrEmpty(archivePath)) return null;
+            string target;
+            try { target = Path.GetFullPath(archivePath); }
+            catch (System.Exception e) when (e is System.ArgumentException || e is System.NotSupportedException || e is PathTooLongException) { return null; }
+            foreach ((string packedDir, string unpackedDir) paths in RomInfo.gameDirs.Values)
+            {
+                if (string.IsNullOrEmpty(paths.packedDir) || string.IsNullOrEmpty(paths.unpackedDir)) continue;
+                if (!string.Equals(Path.GetFullPath(paths.packedDir), target, System.StringComparison.OrdinalIgnoreCase)) continue;
+                return Directory.Exists(paths.unpackedDir) && Directory.EnumerateFileSystemEntries(paths.unpackedDir).Any()
+                    ? Path.GetFullPath(paths.unpackedDir) : null;
+            }
+            return null;
         }
 
         // ── NSBMD Utility ──────────────────────────────────────────────────────────
