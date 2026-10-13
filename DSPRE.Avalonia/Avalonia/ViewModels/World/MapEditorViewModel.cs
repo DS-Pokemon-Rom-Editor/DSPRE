@@ -115,7 +115,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
                 if (Set(ref _viewModeIndex, value))
                 {
-                    OnPropertyChanged(nameof(IsSingleMap)); OnPropertyChanged(nameof(IsMatrixView));
+                    OnPropertyChanged(nameof(IsSingleMap)); OnPropertyChanged(nameof(IsMatrixView)); OnPropertyChanged(nameof(NoHeaderNote));
                     OnPropertyChanged(nameof(IsHeaderView)); OnPropertyChanged(nameof(CanEdit));
                     OnPropertyChanged(nameof(IsStitchedView));
                     OnPropertyChanged(nameof(MeshToggleEnabled));
@@ -248,6 +248,43 @@ namespace DSPRE.Avalonia.ViewModels.World
         private bool _areaDirty;
 
         public bool HasArea => _area != null;
+
+        /// <summary>
+        /// Set when no header uses the map on show. The game loads a map, and takes its textures from the area data,
+        /// only through a header, so such a map is previewed with an area the user picks, as in the Event editor.
+        /// </summary>
+        public string NoHeaderNote => IsSingleMap && _map != null && _area == null && _selectedMapIndex >= 0
+            ? $"No header uses map {_selectedMapIndex}, so the game never loads it. Pick area data to preview its textures."
+            : null;
+
+        private readonly Dictionary<int, int> _previewAreas = new Dictionary<int, int>();
+        private decimal _previewArea;
+        /// <summary>The area a map no header uses is previewed with; nothing is saved from it.</summary>
+        public decimal PreviewArea
+        {
+            get => _previewArea;
+            set { if (Set(ref _previewArea, value) && !_suppress && _area == null && _map != null) { UsePreviewArea(); RebuildPreview(); } }
+        }
+        public decimal MaxPreviewArea => Math.Clamp(Filesystem.GetAreaDataCount() - 1, 0, byte.MaxValue);
+
+        // The texture boxes follow the preview area; with no area of its own there is nothing for them to save into.
+        private void UsePreviewArea()
+        {
+            if (_selectedMapIndex >= 0) _previewAreas[_selectedMapIndex] = (int)_previewArea;
+            AreaData area;
+            try { area = new AreaData((byte)_previewArea); }
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException) { return; }
+            bool was = _suppress;
+            _suppress = true;
+            try
+            {
+                if (MapTilesets.Count > 0) { _mapTilesetIndex = Math.Min(area.mapTileset, MapTilesets.Count - 1); OnPropertyChanged(nameof(MapTilesetIndex)); }
+                int bld = area.buildingsTileset + 1; // building combo has "None" at index 0
+                _buildingTilesetIndex = bld >= 0 && bld < BuildingTilesets.Count ? bld : 0;
+                OnPropertyChanged(nameof(BuildingTilesetIndex));
+            }
+            finally { _suppress = was; }
+        }
         public bool IsHgssGame => gameFamily == GameFamilies.HGSS;
         public string AreaLabel
         {
@@ -709,10 +746,12 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// <summary>Points the map model editor at the map to edit; false when there is none.</summary>
         public bool PrepareModelEdit()
         {
+            _modelAreaId = AreaIdForImport;
             if (IsSingleMap) return _map != null;
             if (!CanEditModel) return false;
             // The single-map fields follow the header map until EndModelEdit, so import checks and warp moves read it.
             HeaderMapCell cell = _headerCells[_selectedHeaderMap];
+            _modelAreaId = cell.AreaId;
             _borrowed = (_map, _selectedMapIndex);
             _map = cell.Map;
             _selectedMapIndex = cell.MapIndex;
@@ -721,6 +760,37 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
 
         private (MapFile map, int index)? _borrowed;
+        private int _modelAreaId;
+
+        /// <summary>The area whose map textures the toolbar's Map textures box changes.</summary>
+        public int AreaIdForImport => _area == null ? -1 : _areaId;
+
+        /// <summary>
+        /// What the map just brought in lacks here, for the import review. Null when it lacks nothing. Call it while
+        /// the imported map is the one being edited, so the events are checked against it.
+        /// </summary>
+        public MapImportReviewViewModel ReviewImport((byte[,] collisions, byte[,] types) permissionsBefore, bool fromModelWindow)
+        {
+            if (_map == null) return null;
+            int areaId = fromModelWindow ? _modelAreaId : AreaIdForImport;
+            // A map no header uses has no area, so it is checked against the pack its preview is drawn with.
+            int pack = MapTilesetIndex;
+            if (areaId >= 0)
+            {
+                try { pack = new AreaData((byte)areaId).mapTileset; }
+                catch (Exception ex) when (ex is IOException || ex is ArgumentException) { }
+            }
+            List<MapImportCheck.BuildingTrouble> buildings;
+            try { buildings = MapImportCheck.Buildings(_map, areaId, gameFamily); }
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException)
+            {
+                AppLogger.Error("Import review buildings: " + ex.Message);
+                buildings = new List<MapImportCheck.BuildingTrouble>();
+            }
+            MapImportReviewViewModel review = new MapImportReviewViewModel(this, $"Map {_selectedMapIndex}", _map, areaId, pack,
+                                                                           buildings, EventsOnUnwalkableSquares(permissionsBefore));
+            return review.HasAny ? review : null;
+        }
 
         /// <summary>Gives the single-map view back its own map after a header map's model edit.</summary>
         public void EndModelEdit()
@@ -1417,13 +1487,21 @@ namespace DSPRE.Avalonia.ViewModels.World
             public string WarpTrouble { get; init; }
             /// <summary>For a map edge: the squares the import closed where the neighbouring map is open.</summary>
             public List<(int x, int y)> Squares { get; init; }
-            private bool _move = true;
+            /// <summary>Set once the fix has run on this row.</summary>
+            public bool Fixed { get; set; }
+            // Nothing is moved unless the user ticks it.
+            private bool _move;
             public bool Move { get => _move; set { _move = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Move))); } }
             private string _result;
             public string Result { get => _result; set { _result = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Result))); } }
             public string Text => File < 0
                 ? $"{Kind}{(Squares != null ? "" : $" at {X},{Y}")} ({WarpTrouble})"
                 : $"{Kind} {Index} of event file {File} at {X},{Y} ({WarpTrouble ?? (Water ? "water" : "blocked")})";
+            // Short columns for the import review's grid.
+            public string Who => File < 0 ? Kind : $"{Kind} {Index}";
+            public string FileText => File < 0 ? "" : File.ToString();
+            public string Where => Squares != null ? $"{Squares.Count} squares" : $"{X},{Y}";
+            public string Why => WarpTrouble ?? (Water ? "Water" : "Blocked");
             public event PropertyChangedEventHandler PropertyChanged;
         }
 
@@ -1785,11 +1863,84 @@ namespace DSPRE.Avalonia.ViewModels.World
         private string BehaviourName(byte value) => TilePermissions.BehaviourLabel(value, gameFamily);
 
         /// <summary>Moves the ticked events to the nearest open, dry, free square. Written with the map on Save.</summary>
+        /// <summary>
+        /// The open square nearest (x, y) on this map that no other event of the file stands on, nor any square in
+        /// <paramref name="claimed"/>. Open means walkable and not water.
+        /// </summary>
+        private (int x, int y)? NearestOpenSquare(EventFile events, Event e, int x, int y, HashSet<byte> waterTypes, HashSet<(int, int)> claimed)
+        {
+            int n = MapFile.mapSize;
+            HashSet<(int, int)> taken = new HashSet<(int, int)>(AllEvents(events)
+                .Where(o => o.e != e && o.e.xMatrixPosition == e.xMatrixPosition && o.e.yMatrixPosition == e.yMatrixPosition)
+                .Select(o => ((int)o.e.xMapPosition, (int)o.e.yMapPosition)));
+            if (claimed != null) taken.UnionWith(claimed);
+            bool Open(int cx, int cy) => (_map.collisions[cy, cx] & 0x80) == 0 && !waterTypes.Contains(_map.types[cy, cx]) && !taken.Contains((cx, cy));
+
+            Queue<(int x, int y)> queue = new Queue<(int x, int y)>();
+            bool[,] visited = new bool[n, n];
+            queue.Enqueue((x, y)); visited[y, x] = true;
+            while (queue.Count > 0)
+            {
+                (int qx, int qy) = queue.Dequeue();
+                if ((qx, qy) != (x, y) && Open(qx, qy)) return (qx, qy);
+                foreach ((int dx, int dy) in new[] { (0, 1), (1, 0), (0, -1), (-1, 0) })
+                {
+                    int nx = qx + dx, ny = qy + dy;
+                    if (nx < 0 || ny < 0 || nx >= n || ny >= n || visited[ny, nx]) continue;
+                    visited[ny, nx] = true;
+                    queue.Enqueue((nx, ny));
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Shows on each selected row what Fix selected will do, worked out as the fix does it, and clears the others.
+        /// Nothing changes until the fix runs.
+        /// </summary>
+        public void PlanFixes(IEnumerable<EventClash> clashes)
+        {
+            if (_map == null) return;
+            HashSet<byte> waterTypes = WaterTypes();
+            Dictionary<int, HashSet<(int, int)>> claimed = new Dictionary<int, HashSet<(int, int)>>();
+            foreach (EventClash c in clashes)
+            {
+                if (c.Fixed) continue;
+                if (!c.Move) { c.Result = null; continue; }
+                if (c.File < 0)
+                {
+                    c.Result = c.Squares == null ? null
+                        : _beforeImport.collisions == null ? "can't: the map before the import is not known"
+                        : $"will put back {c.Squares.Count} squares";
+                    continue;
+                }
+                if (c.WarpTrouble != null) { c.Result = "will put its squares back"; continue; }
+                EventFile events;
+                try { events = EventsOf(c.File); }
+                catch (Exception ex) when (ex is IOException || ex is ArgumentException) { c.Result = "can't: " + ex.Message; continue; }
+                List<Event> list = c.Kind switch
+                {
+                    "Overworld" => events.overworlds.Cast<Event>().ToList(),
+                    "Warp" => events.warps.Cast<Event>().ToList(),
+                    "Sign/item" => events.spawnables.Cast<Event>().ToList(),
+                    _ => events.triggers.Cast<Event>().ToList(),
+                };
+                if (c.Index >= list.Count) { c.Result = "not found"; continue; }
+                if (!claimed.TryGetValue(c.File, out HashSet<(int, int)> mine)) claimed[c.File] = mine = new HashSet<(int, int)>();
+                if (NearestOpenSquare(events, list[c.Index], c.X, c.Y, waterTypes, mine) is (int tx, int ty))
+                {
+                    mine.Add((tx, ty));
+                    c.Result = $"will move to {tx},{ty}";
+                }
+                else c.Result = "no open square on this map";
+            }
+        }
+
         public int MoveEvents(IEnumerable<EventClash> clashes)
         {
             if (_map == null) return 0;
             HashSet<byte> waterTypes = WaterTypes();
-            int n = MapFile.mapSize, moved = 0;
+            int moved = 0;
             foreach (EventClash c in clashes.Where(c => c.Move && c.File < 0))
             {
                 if (c.Squares == null) continue;
@@ -1797,6 +1948,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (collisions == null) { c.Result = "not kept: the map before the import is not known"; continue; }
                 foreach ((int x, int y) in c.Squares) { _map.collisions[y, x] = collisions[y, x]; _map.types[y, x] = types[y, x]; }
                 MarkDirty();
+                c.Fixed = true;
+                c.Move = false;
                 c.Result = $"{c.Squares.Count} put back";
                 moved++;
             }
@@ -1818,34 +1971,16 @@ namespace DSPRE.Avalonia.ViewModels.World
                     {
                         // A warp stays at its door; its squares are restored instead.
                         c.Result = KeepWarpSquares(c.X, c.Y, waterTypes, out bool leadsOn);
+                        c.Fixed = true;
+                        c.Move = false;
                         // A restored warp that still leads nowhere is not fixed.
                         if (leadsOn) moved++;
                         continue;
                     }
                     Event e = list[c.Index];
-                    HashSet<(int, int)> taken = new HashSet<(int, int)>(AllEvents(events)
-                        .Where(o => o.e != e && o.e.xMatrixPosition == e.xMatrixPosition && o.e.yMatrixPosition == e.yMatrixPosition)
-                        .Select(o => ((int)o.e.xMapPosition, (int)o.e.yMapPosition)));
-                    bool Open(int x, int y) => (_map.collisions[y, x] & 0x80) == 0 && !waterTypes.Contains(_map.types[y, x]) && !taken.Contains((x, y));
-
-                    (int x, int y)? to = null;
-                    Queue<(int x, int y)> queue = new Queue<(int x, int y)>();
-                    bool[,] visited = new bool[n, n];
-                    queue.Enqueue((c.X, c.Y)); visited[c.Y, c.X] = true;
-                    while (queue.Count > 0 && to == null)
-                    {
-                        (int qx, int qy) = queue.Dequeue();
-                        if ((qx, qy) != (c.X, c.Y) && Open(qx, qy)) { to = (qx, qy); break; }
-                        foreach ((int dx, int dy) in new[] { (0, 1), (1, 0), (0, -1), (-1, 0) })
-                        {
-                            int nx = qx + dx, ny = qy + dy;
-                            if (nx < 0 || ny < 0 || nx >= n || ny >= n || visited[ny, nx]) continue;
-                            visited[ny, nx] = true;
-                            queue.Enqueue((nx, ny));
-                        }
-                    }
-                    if (to is not (int tx, int ty)) { c.Result = "no open square on this map"; continue; }
+                    if (NearestOpenSquare(events, e, c.X, c.Y, waterTypes, null) is not (int tx, int ty)) { c.Result = "no open square on this map"; continue; }
                     MoveEvent(group.Key, events, c.Kind, c.Index, e, (short)tx, (short)ty);
+                    c.Fixed = true;
                     c.Result = $"moved to {tx},{ty}";
                     c.Move = false;
                     moved++;
@@ -2161,7 +2296,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 ResolveTilesetForMap(index);
                 RefreshBuildings();
 
-                OpenModelEditor(index, AreaForMap(index) ?? 0);
+                OpenModelEditor(index, AreaForMap(index) ?? (byte)_previewArea);
 
                 SetClean();
                 ResetUndo();
@@ -2359,9 +2494,21 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// </summary>
         private void ResolveTilesetForMap(int mapIndex)
         {
-            if (_mapToArea == null || !_mapToArea.TryGetValue(mapIndex, out byte areaId)) { _area = null; RaiseArea(); return; }
+            if (_mapToArea == null || !_mapToArea.TryGetValue(mapIndex, out byte areaId))
+            {
+                _area = null;
+                RaiseArea();
+                OnPropertyChanged(nameof(NoHeaderNote));
+                bool was = _suppress;
+                _suppress = true;
+                PreviewArea = _previewAreas.TryGetValue(mapIndex, out int chosen) ? chosen : 0;
+                _suppress = was;
+                UsePreviewArea();
+                return;
+            }
             LoadArea(areaId);
             SyncTilesetsToArea();
+            OnPropertyChanged(nameof(NoHeaderNote));
         }
 
         /// <summary>Points the tileset pickers at the loaded area's packs.</summary>
@@ -2630,27 +2777,52 @@ namespace DSPRE.Avalonia.ViewModels.World
             StatusText = $"Saved map {_selectedMapIndex}.";
         }
 
-        public async Task ImportAsync()
+        /// <summary>Brings in a map file (everything) or a model file (the model only). True when something came in.</summary>
+        public async Task<bool> ImportAsync()
         {
-            if (_selectedMapIndex < 0) return;
-            FilePickerFileType filter = new FilePickerFileType("Map file") { Patterns = new[] { "*.bin", "*.*" } };
-            string path = await DialogHelper.OpenFile(_owner, "Import map .bin", new[] { filter });
-            if (path == null) return;
-            try
-            {
-                _map = new MapFile(path, gameFamily, false);
-                BuildPreview();
-                RefreshBuildings();
-                MarkDirty();
-                OnPropertyChanged(nameof(Collisions));
-                OnPropertyChanged(nameof(Types));
-                MapLoaded?.Invoke(this, EventArgs.Empty);
-                StatusText = "Imported map (unsaved).";
-            }
-            catch (Exception ex)
+            if (_selectedMapIndex < 0 || _map == null) return false;
+            FilePickerFileType bothFiles = new FilePickerFileType("Map or model") { Patterns = new[] { "*.bin", "*.nsbmd" } };
+            FilePickerFileType mapFiles = new FilePickerFileType("Map file") { Patterns = new[] { "*.bin" } };
+            FilePickerFileType modelFiles = new FilePickerFileType("Map model") { Patterns = new[] { "*.nsbmd" } };
+            FilePickerFileType allFiles = new FilePickerFileType("All files") { Patterns = new[] { "*" } };
+            string path = await DialogHelper.OpenFile(_owner, "Import map or model", new[] { bothFiles, mapFiles, modelFiles, allFiles });
+            if (path == null) return false;
+            byte[] data;
+            try { data = File.ReadAllBytes(path); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error");
+                return false;
             }
+
+            // The file's contents decide, so a renamed file or one with no extension still comes in.
+            if (MapFile.ReadImport(data, gameFamily, out MapFile read, out byte[] model, out bool converted) is string whynot)
+            {
+                await DialogHelper.ShowError(whynot, "Import Error");
+                return false;
+            }
+            bool wholeMap = read != null;
+            string done;
+            // Filling the loaded map, not swapping it for a new one, keeps the import on the undo history.
+            if (wholeMap)
+            {
+                _map.TakeContentsOf(read, gameFamily);
+                done = converted ? "Imported map, converted from the other game's layout (unsaved)." : "Imported map (unsaved).";
+            }
+            else
+            {
+                _map.LoadMapModel(model, showMessages: false);
+                done = $"Imported model, {model.Length:n0} bytes (unsaved).";
+            }
+            BuildPreview();
+            RefreshBuildings();
+            MarkDirty();
+            OnPropertyChanged(nameof(Collisions));
+            OnPropertyChanged(nameof(Types));
+            MapLoaded?.Invoke(this, EventArgs.Empty);
+            string missing = MapImportCheck.Note(_map, MapTilesetIndex);
+            StatusText = missing == null ? done : done + " " + missing;
+            return true;
         }
 
         public async Task ExportAsync()

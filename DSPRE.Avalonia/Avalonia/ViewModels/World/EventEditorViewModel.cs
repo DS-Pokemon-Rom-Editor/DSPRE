@@ -463,9 +463,32 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             AppEvents.NamesChanged -= OnNamesChanged;
             AppEvents.NamesChanged += OnNamesChanged;
+            AppEvents.RomPatchStateChanged -= OnPatchStateChanged;
+            AppEvents.RomPatchStateChanged += OnPatchStateChanged;
         }
 
-        public void Detach() => AppEvents.NamesChanged -= OnNamesChanged;
+        public void Detach() { AppEvents.NamesChanged -= OnNamesChanged; AppEvents.RomPatchStateChanged -= OnPatchStateChanged; }
+
+        // The item standardisation patch changes what each ground item entry is called; the script number stays.
+        // The item standardisation patch renumbers every ground item in the event files on disk and tells the user
+        // unsaved changes here are dropped, so the open file is read again with the new names. Other patches leave it.
+        private void OnPatchStateChanged(object sender, EventArgs e)
+        {
+            if (IsHGE) return;
+            bool standardized;
+            try { standardized = PatchToolboxLogic.CheckScriptsStandardizedItemNumbers(); }
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException) { return; }
+            if (standardized == _itemsStandardized) return;
+
+            PopulateOwItemEntries();
+            if (_selectedIndex < 0) return;
+            int keepOw = _selOw;
+            LoadFile(_selectedIndex);
+            // Refilling the item list drops the box's pick, so the overworld is picked again once it has settled.
+            if (keepOw >= 0)
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => SelectedOverworldIndex = keepOw,
+                                                                     global::Avalonia.Threading.DispatcherPriority.Background);
+        }
 
         /// <summary>For a standalone window closing; the Maps workspace's instance keeps listening while its tab is hidden.</summary>
         public void DetachSaves()
@@ -474,6 +497,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             AppEvents.MapSaved -= OnMapSavedElsewhere;
         }
 
+        private bool _itemsStandardized;
+
         private void PopulateOwItemEntries()
         {
             OwItemEntries.Clear();
@@ -481,7 +506,8 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 string[] itemNames = RomInfo.GetItemNames();
-                if (PatchToolboxLogic.CheckScriptsStandardizedItemNumbers())
+                _itemsStandardized = PatchToolboxLogic.CheckScriptsStandardizedItemNumbers();
+                if (_itemsStandardized)
                 {
                     foreach (string name in itemNames) OwItemEntries.Add(name);
                 }
@@ -669,6 +695,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         }
         public decimal SpType { get => _spType; set { if (Set(ref _spType, value) && !_suppress && _spawn != null) { _spawn.type = (ushort)value; Dirty(); } } }
         public decimal SpDir { get => _spDir; set { if (Set(ref _spDir, value) && !_suppress && _spawn != null) { _spawn.dir = (ushort)value; Dirty(); } } }
+        public IReadOnlyList<string> SpawnableTypeNames => DSPRE.Resources.PokeDatabase.EventEditor.Spawnables.typesArray;
+        public IReadOnlyList<string> SpawnableDirectionNames => DSPRE.Resources.PokeDatabase.EventEditor.Spawnables.orientationsArray;
 
         public int SpScriptIndex
         {
@@ -1139,12 +1167,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             try
             {
                 _file = new EventFile(index);
-                // The old file's events must not stay editable through the shared boxes or the gizmo.
-                _current = null; _spawn = null; _ow = null; _warp = null; _trig = null;
-                _selSpawn = _selOw = _selWarp = _selTrig = -1;
-                foreach (string n in new[] { nameof(HasSelectedEvent), nameof(HasSpawn), nameof(HasOw), nameof(HasWarp), nameof(HasTrig),
-                                          nameof(SelectedSpawnableIndex), nameof(SelectedOverworldIndex), nameof(SelectedWarpIndex), nameof(SelectedTriggerIndex) })
-                    OnPropertyChanged(n);
+                ClearSelection();
                 RefreshLists();
                 ResolveMatrixForFile(index);
                 SetClean();
@@ -1410,8 +1433,63 @@ namespace DSPRE.Avalonia.ViewModels.World
                 }
             }
             catch (Exception ex) { AppLogger.Error("Matrix resolve failed: " + ex.Message); }
+            // A file no header uses comes back on the matrix and textures picked for it last time, both together.
+            (int Matrix, int Area) chosen = (-1, 0);
+            bool hasChoice = _headerId < 0 && _viewChoices.TryGetValue(eventIndex, out chosen);
+            if (_headerId < 0) FillViewMatrixNames();
+            _settingView = true;
+            ViewMatrixIndex = hasChoice ? chosen.Matrix : -1;
+            ViewArea = hasChoice ? chosen.Area : 0;
+            _settingView = false;
+            OnPropertyChanged(nameof(NeedsViewChoice));
+            if (hasChoice) { ShowOnChosen(); PopulateAvailableScripts(pairedScriptFileId); return; }
             OnPropertyChanged(nameof(GridToggleEnabled));
             PopulateAvailableScripts(pairedScriptFileId);
+            DisplayMap();
+        }
+
+        // ── A file no header uses is drawn on whichever matrix and textures the user picks. The header-driven
+        // parts (scope, camera, scripts) stay as they are for a file with no header. ──────────────────────────
+        public bool NeedsViewChoice => _headerId < 0;
+        private readonly Dictionary<int, (int Matrix, int Area)> _viewChoices = new Dictionary<int, (int Matrix, int Area)>();
+        private bool _settingView;
+        // A list, not a number box: "nothing picked yet" has to be a state the box keeps.
+        public ObservableCollection<string> ViewMatrixNames { get; } = new ObservableCollection<string>();
+        private int _viewMatrixIndex = -1;
+        private decimal _viewArea;
+        public int ViewMatrixIndex { get => _viewMatrixIndex; set { if (Set(ref _viewMatrixIndex, value) && !_settingView) ShowOnChosen(); } }
+        public decimal ViewArea { get => _viewArea; set { if (Set(ref _viewArea, value) && !_settingView) ShowOnChosen(); } }
+
+        private void FillViewMatrixNames()
+        {
+            int count = Filesystem.GetMatrixCount();
+            if (ViewMatrixNames.Count == count) return;
+            ViewMatrixNames.Clear();
+            for (int i = 0; i < count; i++)
+            {
+                string name;
+                try { name = new GameMatrix(i).ToString(); }
+                catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is EndOfStreamException) { name = "Matrix " + i; }
+                ViewMatrixNames.Add(name);
+            }
+        }
+        public decimal MaxViewArea => Math.Clamp(Filesystem.GetAreaDataCount() - 1, 0, byte.MaxValue);
+
+        private void ShowOnChosen()
+        {
+            if (_headerId >= 0 || _viewMatrixIndex < 0) return;
+            int matrixId = _viewMatrixIndex;
+            try { _matrix = new GameMatrix(matrixId); }
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException || ex is EndOfStreamException)
+            {
+                StatusText = $"Matrix {matrixId} could not be read: {ex.Message}";
+                return;
+            }
+            _matrixId = matrixId;
+            _areaDataId = (byte)_viewArea;
+            if (_selectedIndex >= 0) _viewChoices[_selectedIndex] = (matrixId, _areaDataId);
+            _collisionCache.Clear();
+            OnPropertyChanged(nameof(GridToggleEnabled));
             DisplayMap();
         }
 
@@ -1470,7 +1548,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if (_matrix == null)
                 {
-                    MapInfo = "No header references this event file, so there is no matrix to render.";
+                    MapInfo = "No header uses this event file, so the game never loads it. Pick a matrix and area data to preview it.";
                     MapLoaded?.Invoke(this, EventArgs.Empty); RefreshMarkers(); return;
                 }
 
@@ -2218,19 +2296,67 @@ namespace DSPRE.Avalonia.ViewModels.World
             AppEvents.RaiseEventFileSaved(this, _selectedIndex);
         }
 
-        public async Task ImportAsync()
+        /// <summary>
+        /// Imports events from a file. Into an empty file everything comes in; otherwise <paramref name="choose"/> picks
+        /// which events, and whether this file's own go first.
+        /// </summary>
+        public async Task ImportAsync(Func<EventFile, Task<EventImportChoice>> choose)
         {
-            if (_selectedIndex < 0) return;
+            if (_selectedIndex < 0 || _file == null) return;
             FilePickerFileType filter = new FilePickerFileType("Event file") { Patterns = new[] { "*.ev", "*.bin", "*.*" } };
             string path = await DialogHelper.OpenFile(_owner, "Import event file", new[] { filter });
             if (path == null) return;
-            try
+            EventFile source;
+            try { using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) source = new EventFile(fs); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is ArgumentException)
             {
-                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read)) _file = new EventFile(fs);
-                RefreshLists(); Dirty(); RefreshMarkers();
-                StatusText = "Imported event file (unsaved).";
+                await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error");
+                return;
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+
+            EventImportChoice choice;
+            if (EventCount(source) == 0)
+            {
+                if (EventCount(_file) == 0) { StatusText = "That file has no events."; return; }
+                if (!await DialogHelper.AskYesNo("That file has no events. Importing it removes every event in this one.", "Import events", _owner)) return;
+                choice = EventImportChoice.All(source, clearFirst: true);
+            }
+            else if (EventCount(_file) == 0) choice = EventImportChoice.All(source, clearFirst: false);
+            else
+            {
+                choice = await choose(source);
+                if (choice == null) return;
+            }
+
+            ClearSelection();
+            if (choice.ClearFirst) { _file.overworlds.Clear(); _file.warps.Clear(); _file.triggers.Clear(); _file.spawnables.Clear(); }
+            int renumbered = 0;
+            foreach (int i in choice.Overworlds)
+            {
+                Overworld ow = source.overworlds[i];
+                // Scripts and hide flags find an overworld by its id, so two can't share one.
+                if (_file.overworlds.Any(o => o.owID == ow.owID)) { ow.owID = (ushort)FreeOverworldId(); renumbered++; }
+                _file.overworlds.Add(ow);
+            }
+            foreach (int i in choice.Warps) _file.warps.Add(source.warps[i]);
+            foreach (int i in choice.Triggers) _file.triggers.Add(source.triggers[i]);
+            foreach (int i in choice.Spawnables) _file.spawnables.Add(source.spawnables[i]);
+            RefreshLists(); Dirty(); RefreshMarkers();
+            int count = choice.Overworlds.Length + choice.Warps.Length + choice.Triggers.Length + choice.Spawnables.Length;
+            StatusText = $"Imported {count} events (unsaved)." + (renumbered > 0 ? $" {renumbered} overworlds got a new ID." : "");
+        }
+
+        private static int EventCount(EventFile f) =>
+            (f.overworlds?.Count ?? 0) + (f.warps?.Count ?? 0) + (f.triggers?.Count ?? 0) + (f.spawnables?.Count ?? 0);
+
+        // The previous events must not stay editable through the shared boxes or the gizmo.
+        private void ClearSelection()
+        {
+            _current = null; _spawn = null; _ow = null; _warp = null; _trig = null;
+            _selSpawn = _selOw = _selWarp = _selTrig = -1;
+            foreach (string n in new[] { nameof(HasSelectedEvent), nameof(HasSpawn), nameof(HasOw), nameof(HasWarp), nameof(HasTrig),
+                                      nameof(SelectedSpawnableIndex), nameof(SelectedOverworldIndex), nameof(SelectedWarpIndex), nameof(SelectedTriggerIndex) })
+                OnPropertyChanged(n);
         }
 
         /// <summary>Builds a complete text dump of the current 3D scene: matrix layout, per-cell map
@@ -2313,5 +2439,21 @@ namespace DSPRE.Avalonia.ViewModels.World
             try { System.IO.File.WriteAllBytes(path, _file.ToByteArray()); StatusText = "Exported."; }
             catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
         }
+    }
+
+    /// <summary>Which events of an imported file to add, by index in that file.</summary>
+    public sealed class EventImportChoice
+    {
+        public bool ClearFirst;
+        public int[] Overworlds, Warps, Triggers, Spawnables;
+
+        public static EventImportChoice All(EventFile f, bool clearFirst) => new EventImportChoice
+        {
+            ClearFirst = clearFirst,
+            Overworlds = Enumerable.Range(0, f.overworlds?.Count ?? 0).ToArray(),
+            Warps = Enumerable.Range(0, f.warps?.Count ?? 0).ToArray(),
+            Triggers = Enumerable.Range(0, f.triggers?.Count ?? 0).ToArray(),
+            Spawnables = Enumerable.Range(0, f.spawnables?.Count ?? 0).ToArray(),
+        };
     }
 }

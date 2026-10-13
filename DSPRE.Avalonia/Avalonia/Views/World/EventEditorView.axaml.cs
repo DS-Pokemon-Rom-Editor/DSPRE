@@ -32,13 +32,15 @@ namespace DSPRE.Avalonia.Views.World
             DSPRE.Avalonia.Controls.SidePanelWidth.Remember(SplitGrid, () => SettingsManager.Settings.eventEditorSidePanelWidth,
                 w => SettingsManager.Settings.eventEditorSidePanelWidth = w);
 
-            // Left-drag pans, right-drag orbits, wheel zooms. In 3D edit mode a left-press grabs a
+            // Left-drag pans, right-drag orbits, wheel zooms, a click picks an event. In 3D edit mode a left-press grabs a
             // gizmo axis (to drag the event) or picks the nearest event. See Gl3DPointerNavigation.
             _nav = new Gl3DPointerNavigation(GlHost, GlView)
             {
                 IsEditModeActive = () => VM?.EditMode3D == true,
                 BeginGizmoDrag = () => VM?.BeginGizmoDrag(),
                 Pick = PickEvent,
+                // A click that does not drag selects an event outside Move too.
+                Click = PickEvent,
                 NudgeAxis = (axis, normDelta) =>
                 {
                     if (VM == null) return;
@@ -378,7 +380,8 @@ namespace DSPRE.Avalonia.Views.World
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
-        private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e) =>
+            await Safe(VM?.ImportAsync(source => EventImportDialog.ShowAsync(source, TopLevel.GetTopLevel(this) as Window)));
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
 
         private async void ManageGroundItems_Click(object sender, RoutedEventArgs e)
@@ -456,11 +459,29 @@ namespace DSPRE.Avalonia.Views.World
         private void AddOw_Click(object sender, RoutedEventArgs e) => VM?.AddOverworld();
         private void RemoveOw_Click(object sender, RoutedEventArgs e) => VM?.RemoveOverworld();
         private void DupOw_Click(object sender, RoutedEventArgs e) => VM?.DuplicateOverworld();
-        private void OverworldList_KeyDown(object sender, KeyEventArgs e)
+        // Delete removes and Ctrl+D duplicates the picked entry in whichever list has focus.
+        private void EventList_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Delete || VM?.HasOw != true) return;
-            VM.RemoveOverworld();
+            if (VM == null || sender is not Control list) return;
+            bool delete = e.Key == Key.Delete;
+            bool duplicate = e.Key == Key.D && e.KeyModifiers.HasFlag(KeyModifiers.Control);
+            if (!delete && !duplicate) return;
+            switch (list.Tag as string)
+            {
+                case "ow": if (delete) VM.RemoveOverworld(); else VM.DuplicateOverworld(); break;
+                case "warp": if (delete) VM.RemoveWarp(); else VM.DuplicateWarp(); break;
+                case "trig": if (delete) VM.RemoveTrigger(); else VM.DuplicateTrigger(); break;
+                case "spawn": if (delete) VM.RemoveSpawnable(); else VM.DuplicateSpawnable(); break;
+                default: return;
+            }
             e.Handled = true;
+            // Refilling the list drops keyboard focus with the old row, so the next shortcut would go nowhere. The
+            // rows are rebuilt after this handler, so focus goes to the picked row once they have settled.
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                Control row = list is ListBox box && box.SelectedIndex >= 0 ? box.ContainerFromIndex(box.SelectedIndex) : null;
+                if (row == null || !row.Focus()) list.Focus();
+            }, global::Avalonia.Threading.DispatcherPriority.ContextIdle);
         }
         private void SortAsc_Click(object sender, RoutedEventArgs e) => VM?.SortOverworldsAsc();
         private void SortDesc_Click(object sender, RoutedEventArgs e) => VM?.SortOverworldsDesc();

@@ -700,9 +700,16 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public void BringIn(string path)
         {
-            if (Path.GetExtension(path).Equals(".pdsmap", StringComparison.OrdinalIgnoreCase))
+            string extension = Path.GetExtension(path);
+            if (extension.Equals(".pdsmap", StringComparison.OrdinalIgnoreCase))
             {
                 BringInProject(path);
+                return;
+            }
+            // Anything not a Map Studio or OBJ file is judged by its contents: a model, or a whole map.
+            if (!extension.Equals(".pdsts", StringComparison.OrdinalIgnoreCase) && !extension.Equals(".obj", StringComparison.OrdinalIgnoreCase))
+            {
+                ReplaceFrom(path);
                 return;
             }
 
@@ -727,6 +734,55 @@ namespace DSPRE.Avalonia.ViewModels.World
 
             int spreading = set.Tiles.Count(t => t.Spreads);
             Note = $"{set.Tiles.Count} tiles, {set.SmartDrawings.Count} smart drawings";
+        }
+
+        /// <summary>
+        /// Puts a model file in place of this map's model (permissions, buildings and terrain stay), or a whole map file
+        /// in place of all of it.
+        /// </summary>
+        private void ReplaceFrom(string path)
+        {
+            if (_map == null) return;
+            byte[] data;
+            try { data = File.ReadAllBytes(path); }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { Warning = ex.Message; return; }
+            if (MapFile.ReadImport(data, _family, out MapFile read, out byte[] model, out bool converted) is string whynot) { Warning = whynot; return; }
+
+            Remember();
+            if (model != null)
+            {
+                _map.LoadMapModel(model, showMessages: false);
+                ImportedSinceOpen = true;
+                Replaced($"Model imported, {model.Length:n0} bytes.");
+                return;
+            }
+            _map.TakeContentsOf(read, _family);
+            ImportedSinceOpen = true;
+            Replaced(converted ? "Map imported and converted from the other game's layout." : "Map imported.");
+        }
+
+        private void Remember()
+        {
+            _before.Add((byte[])_map.ToByteArray().Clone());
+            if (_before.Count > 32) _before.RemoveAt(0);
+            Raise(nameof(CanUndo));
+        }
+
+        private void Replaced(string note)
+        {
+            _knownModel = _map.mapModelData;
+            Dirty = true;
+            Rebuild();
+            Note = note;
+            string missing = null;
+            try { missing = MapImportCheck.Note(_map, new AreaData(_areaId).mapTileset); }
+            catch (Exception ex) when (ex is IOException || ex is ArgumentException) { }
+            string replaces = _set != null ? "Applying the tile grid replaces the imported model." : null;
+            Warning = replaces != null && missing != null ? replaces + " " + missing : replaces ?? missing;
+            Changed?.Invoke(this, EventArgs.Empty);
+            // The building outlines on the grid come from the map, which now holds other buildings.
+            SelectedBuilding = -1;
+            GridChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void SizePlaces(MapTileset set)
@@ -1620,27 +1676,11 @@ namespace DSPRE.Avalonia.ViewModels.World
             if (_map?.buildings == null || _map.buildings.Count == 0) return null;
             try
             {
-                DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.buildingTextures });
                 AreaData area = new AreaData(_areaId);
-                string packPath = Path.Combine(gameDirs[DirNames.buildingTextures].unpackedDir, area.buildingsTileset.ToString("D4"));
-                if (!File.Exists(packPath)) return null;
-                NSBTXLoader.LoadNsbtx(new MemoryStream(File.ReadAllBytes(packPath)), out List<NSBMDTexture> textures, out List<NSBMDPalette> colours);
-                HashSet<string> have = new HashSet<string>((textures ?? new List<global::LibNDSFormats.NSBMD.NSBMDTexture>()).Select(t => t.texname.TrimEnd('\0'))
-                    .Concat((colours ?? new List<global::LibNDSFormats.NSBMD.NSBMDPalette>()).Select(c => c.palname.TrimEnd('\0'))), StringComparer.Ordinal);
-                string dir = BuildingModelsDir();
-                SortedDictionary<uint, List<string>> bad = new SortedDictionary<uint, List<string>>();
-                foreach (uint id in _map.buildings.Select(b => b.modelID).Distinct())
-                {
-                    string path = Path.Combine(dir, id.ToString("D4"));
-                    MapMesh mesh = File.Exists(path) ? MapMesh.Read(File.ReadAllBytes(path), out _) : null;
-                    if (mesh == null) { bad[id] = new List<string> { "no such model" }; continue; }
-                    List<string> lacking = mesh.Faces.Select(f => f.Material).Distinct()
-                        .SelectMany(m => new[] { mesh.PictureFor(m) >= 0 ? mesh.NameOfPicture(mesh.PictureFor(m)) : null,
-                                                  mesh.ColoursFor(m) >= 0 ? mesh.NameOfColours(mesh.ColoursFor(m)) : null })
-                        .Where(n => !string.IsNullOrEmpty(n) && !have.Contains(NitroDictionary.Fit(n))).Distinct().ToList();
-                    if (lacking.Count > 0) bad[id] = lacking;
-                }
-                if (bad.Count == 0) return null;
+                List<MapImportCheck.BuildingTrouble> found = MapImportCheck.Buildings(_map, _areaId, _family);
+                if (found.Count == 0) return null;
+                SortedDictionary<uint, List<string>> bad = new SortedDictionary<uint, List<string>>(
+                    found.ToDictionary(t => t.Model, t => t.NoSuchModel ? new List<string> { "no such model" } : t.Lacking));
                 return $"Buildings drawn pink, their textures are not in area {_areaId}'s building pack {area.buildingsTileset}: "
                      + string.Join("; ", bad.Take(4).Select(kv => $"{kv.Key} ({string.Join(", ", kv.Value.Take(3))})"))
                      + (bad.Count > 4 ? $" and {bad.Count - 4} more" : "") + ".";
@@ -2454,7 +2494,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                                                                        WantedGround(new HashSet<(int x, int z)>(_ramps))));
         }
 
-        /// <summary>True once a PDSMS map has been applied since the window opened.</summary>
+        /// <summary>True once a PDSMS map or a map file has been brought in since the window opened.</summary>
         public bool ImportedSinceOpen { get; set; }
 
         // The height a changed square is meant to be walked at, in map units: its ground tile, or a ramp's middle.
@@ -2531,9 +2571,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             byte[] model = TileBake.ToModel(baked, out string whynot, TileScale);
             if (model == null) { Warning = whynot; return; }
 
-            _before.Add((byte[])_map.ToByteArray().Clone());
-            if (_before.Count > 32) _before.RemoveAt(0);
-            Raise(nameof(CanUndo));
+            Remember();
 
             if (MapFile.TooBigForTheGame(model.Length, 0) is string tooBig) { Warning = tooBig + " Remove detail or split the map."; return; }
             _map.LoadMapModel(model, showMessages: false);
@@ -2635,6 +2673,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             Rebuild();
             Note = "Reverted.";
             Changed?.Invoke(this, EventArgs.Empty);
+            GridChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void ShowTile()

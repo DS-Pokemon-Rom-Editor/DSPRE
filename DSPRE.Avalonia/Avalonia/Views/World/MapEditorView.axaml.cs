@@ -282,17 +282,25 @@ namespace DSPRE.Avalonia.Views.World
                 await window.ShowDialog(owner);
 
                 vm.AfterMapModelEdited();
-                if (vm.MapModel.Tiles.ImportedSinceOpen)
-                {
-                    List<MapEditorViewModel.EventClash> clashes = vm.EventsOnUnwalkableSquares(permissionsBefore);
-                    if (clashes.Count > 0) await new EventsAfterImportView(vm, clashes).ShowDialog(owner);
-                }
+                if (vm.MapModel.Tiles.ImportedSinceOpen && vm.ReviewImport(permissionsBefore, fromModelWindow: true) is MapImportReviewViewModel review)
+                    await new MapImportReviewView(review).ShowDialog(owner);
             }
             finally { vm.EndModelEdit(); }
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
-        private async void Import_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ImportAsync());
+        private async void Import_Click(object sender, RoutedEventArgs e)
+        {
+            MapEditorViewModel vm = VM;
+            if (vm == null) return;
+            (byte[,] collisions, byte[,] types) permissionsBefore = vm.PermissionsNow();
+            bool imported;
+            try { imported = await vm.ImportAsync(); }
+            catch (Exception ex) { AppLogger.Error("Map import: " + ex.Message); return; }
+            if (!imported || TopLevel.GetTopLevel(this) is not Window owner) return;
+            if (vm.ReviewImport(permissionsBefore, fromModelWindow: false) is MapImportReviewViewModel review)
+                await new MapImportReviewView(review).ShowDialog(owner);
+        }
         private async void Export_Click(object sender, RoutedEventArgs e) => await Safe(VM?.ExportAsync());
         private void AddMap_Click(object sender, RoutedEventArgs e) => VM?.AddMapFile();
         private async void RemMap_Click(object sender, RoutedEventArgs e) => await Safe(VM?.RemoveLastMapFileAsync());

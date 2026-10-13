@@ -137,14 +137,17 @@ namespace DSPRE.Avalonia.Views.World
 
             IReadOnlyList<IStorageFile> files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Import tileset or map",
+                Title = "Import tileset, map or model",
                 AllowMultiple = false,
                 FileTypeFilter = new[]
                 {
-                    new FilePickerFileType("Tileset or map") { Patterns = new[] { "*.pdsts", "*.pdsmap", "*.obj" } },
+                    new FilePickerFileType("Tileset, map or model") { Patterns = new[] { "*.pdsts", "*.pdsmap", "*.obj", "*.nsbmd", "*.bin" } },
                     new FilePickerFileType("Map Studio tileset") { Patterns = new[] { "*.pdsts" } },
                     new FilePickerFileType("Map Studio map") { Patterns = new[] { "*.pdsmap" } },
                     new FilePickerFileType("OBJ") { Patterns = new[] { "*.obj" } },
+                    new FilePickerFileType("Map model") { Patterns = new[] { "*.nsbmd" } },
+                    new FilePickerFileType("Map file") { Patterns = new[] { "*.bin" } },
+                    new FilePickerFileType("All files") { Patterns = new[] { "*" } },
                 },
             });
             if (files == null || files.Count == 0) return;

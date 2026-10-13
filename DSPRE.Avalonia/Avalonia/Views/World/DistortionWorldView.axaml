@@ -57,7 +57,7 @@
                   <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
                   <Button Content="Animate" controls:Icon.Key="play" Click="Animate_Click"/>
                   <Rectangle Width="1" Fill="{DynamicResource Editor.Separator}" Margin="6,1"/>
-                  <Button Content="Edit map model" controls:Icon.Key="pencil" Click="EditModel_Click"
+                  <Button Content="Modify map model" controls:Icon.Key="pencil" Click="EditModel_Click"
                           />
                   <ComboBox Width="200" Margin="4,0,0,0" ItemsSource="{Binding MapCells}"
                             SelectedIndex="{Binding SelectedMapCell}">

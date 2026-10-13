@@ -65,6 +65,12 @@
               <TextBlock Text="{Binding MapInfo}" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <TextBlock Text="left-drag pan · right-drag orbit · wheel zoom" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
             </StackPanel>
+            <WrapPanel Classes="toolbar" IsVisible="{Binding NeedsViewChoice}">
+              <TextBlock Text="Matrix" VerticalAlignment="Center" FontSize="12"/>
+              <controls:FusionAutoCompleteBox Width="220" ItemsSource="{Binding ViewMatrixNames}" SelectedIndex="{Binding ViewMatrixIndex}"/>
+              <TextBlock Text="Area data" VerticalAlignment="Center" FontSize="12"/>
+              <NumericUpDown Width="110" Minimum="0" Maximum="{Binding MaxViewArea}" Increment="1" FormatString="0" Value="{Binding ViewArea}"/>
+            </WrapPanel>
             <WrapPanel x:Name="ShowBar" Classes="toolbar">
               <TextBlock Text="Show" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
               <CheckBox Content="Overworlds" IsChecked="{Binding ShowOverworlds}" FontSize="12"/>
@@ -137,7 +143,7 @@
             <Grid ColumnDefinitions="180,*">
               <ListBox Grid.Column="0" ItemsSource="{Binding Overworlds}"
                        SelectedIndex="{Binding SelectedOverworldIndex}"
-                       KeyDown="OverworldList_KeyDown"/>
+                       Tag="ow" KeyDown="EventList_KeyDown"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasOw}">
                   <TextBlock Text="Position" FontWeight="Bold"/>
@@ -286,7 +292,7 @@
                       ToolTip.Tip="Show the destination header's event file here"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
-              <ListBox Grid.Column="0" ItemsSource="{Binding Warps}" SelectedIndex="{Binding SelectedWarpIndex}"/>
+              <ListBox Grid.Column="0" ItemsSource="{Binding Warps}" SelectedIndex="{Binding SelectedWarpIndex}" Tag="warp" KeyDown="EventList_KeyDown"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasWarp}">
                   <TextBlock Text="Position" FontWeight="Bold"/>
@@ -325,7 +331,7 @@
               <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupTrig_Click" IsEnabled="{Binding HasTrig}"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
-              <ListBox Grid.Column="0" ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}"/>
+              <ListBox Grid.Column="0" ItemsSource="{Binding Triggers}" SelectedIndex="{Binding SelectedTriggerIndex}" Tag="trig" KeyDown="EventList_KeyDown"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasTrig}">
                   <TextBlock Text="Position" FontWeight="Bold"/>
@@ -396,7 +402,7 @@
               <Button Content="Duplicate" controls:Icon.Key="copy" Click="DupSpawn_Click" IsEnabled="{Binding HasSpawn}"/>
             </StackPanel>
             <Grid ColumnDefinitions="180,*">
-              <ListBox Grid.Column="0" ItemsSource="{Binding Spawnables}" SelectedIndex="{Binding SelectedSpawnableIndex}"/>
+              <ListBox Grid.Column="0" ItemsSource="{Binding Spawnables}" SelectedIndex="{Binding SelectedSpawnableIndex}" Tag="spawn" KeyDown="EventList_KeyDown"/>
               <ScrollViewer Grid.Column="1" Margin="6,0,0,0" Padding="0,0,14,0">
                 <StackPanel Spacing="3" IsVisible="{Binding HasSpawn}">
                   <TextBlock Text="Position" FontWeight="Bold"/>
@@ -430,11 +436,11 @@
                             ToolTip.Tip="Open this script, following a common script to its own file."/>
                   </Grid>
                   <TextBlock Text="Type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <Grid ColumnDefinitions="72,*,72,*">
+                  <Grid ColumnDefinitions="72,*" RowDefinitions="Auto,Auto" RowSpacing="4">
                     <TextBlock Grid.Column="0" Text="Type" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Column="1" Margin="0,0,6,0" Minimum="0" Maximum="65535" Value="{Binding SpType}"/>
-                    <TextBlock Grid.Column="2" Text="Direction" VerticalAlignment="Center"/>
-                    <NumericUpDown Grid.Column="3" Minimum="0" Maximum="65535" Value="{Binding SpDir}"/>
+                    <controls:IdNameSelector Grid.Column="1" Value="{Binding SpType}" Names="{Binding SpawnableTypeNames}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Direction" VerticalAlignment="Center"/>
+                    <controls:IdNameSelector Grid.Row="1" Grid.Column="1" Value="{Binding SpDir}" Names="{Binding SpawnableDirectionNames}"/>
                   </Grid>
                 </StackPanel>
               </ScrollViewer>

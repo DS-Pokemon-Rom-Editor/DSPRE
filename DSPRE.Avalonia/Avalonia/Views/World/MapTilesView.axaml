@@ -22,7 +22,7 @@
       <Button Content="From map" Click="TakeApart_Click"
               ToolTip.Tip="Use this map's own tiles"/>
       <Button Content="Import…" controls:Icon.Key="import" Click="BringIn_Click" Margin="4,0,0,0"
-              ToolTip.Tip=".pdsts, .pdsmap or .obj"/>
+              ToolTip.Tip=".pdsts, .pdsmap, .obj, .nsbmd or a map .bin"/>
       <Button Content="Export set…" controls:Icon.Key="export" Click="SaveSet_Click" Margin="4,0,0,0" IsEnabled="{Binding Ready}"/>
       <Button Content="Add textures to ROM" controls:Icon.Key="addIcon" Click="PutPictures_Click" Margin="4,0,0,0"
               IsEnabled="{Binding HasOwnPictures}"

@@ -233,6 +233,8 @@ namespace DSPRE.Avalonia.Controls
                 if (index < 0)
                 {
                     _lastCommittedItem = null;
+                    // Cleared from outside, so the box must not keep showing an old pick or search.
+                    if (!_editingText && !IsKeyboardFocusWithin && !string.IsNullOrEmpty(Text)) SetCurrentValue(TextProperty, string.Empty);
                 }
 
                 if (index < 0 && SelectedItem != null)

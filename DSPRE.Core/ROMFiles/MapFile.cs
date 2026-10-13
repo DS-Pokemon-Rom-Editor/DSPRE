@@ -168,6 +168,76 @@ namespace DSPRE.ROMFiles {
         /// </summary>
         public const int ModelRoom = 0xF000, TerrainRoom = 0x9000;
 
+        /// <summary>
+        /// Reads a map BIN for <paramref name="family"/>, falling back to the other layout (HGSS maps carry a sound plate
+        /// section DP and Pt maps lack), which is converted on save. Null when the file reads as neither.
+        /// </summary>
+        public static MapFile ReadForGame(byte[] data, GameFamilies family, out bool converted)
+        {
+            converted = false;
+            MapFile own = TryRead(data, family);
+            if (own != null) return own;
+            MapFile other = TryRead(data, family == GameFamilies.HGSS ? GameFamilies.Plat : GameFamilies.HGSS);
+            converted = other != null;
+            return other;
+        }
+
+        /// <summary>
+        /// Reads a file brought in as a whole map or a model, by its contents, so a renamed file or one with no
+        /// extension still works. Exactly one of <paramref name="map"/> and <paramref name="model"/> is set on success.
+        /// </summary>
+        /// <returns>Why the file can't be used, or null.</returns>
+        public static string ReadImport(byte[] data, GameFamilies family, out MapFile map, out byte[] model, out bool converted)
+        {
+            map = null; model = null; converted = false;
+            if (data != null && data.Length >= 4 && BitConverter.ToUInt32(data, 0) == NSBMD.NDS_TYPE_BMD0)
+            {
+                // A map's textures come from its area's pack, so any carried in the file are left out, as on load.
+                byte[] bare = data.Length > 0x10 && BitConverter.ToInt16(data, 0xE) > 1 ? NSBUtils.GetModelWithoutTextures(data) : data;
+                string whynot = CannotUseModel(bare);
+                if (whynot == null) model = bare;
+                return whynot;
+            }
+            map = data == null ? null : ReadForGame(data, family, out converted);
+            if (map == null) return "That file is neither a map nor an NSBMD model.";
+            string tooBig = TooBigForTheGame(map.mapModelData.Length, map.bdhc?.Length ?? 0);
+            if (tooBig != null) map = null;
+            return tooBig;
+        }
+
+        /// <summary>
+        /// Puts another map's model, permissions, buildings, terrain and sound plates in this one, so everything holding
+        /// this map sees them. Sound plates exist only in HGSS maps.
+        /// </summary>
+        public void TakeContentsOf(MapFile other, GameFamilies family)
+        {
+            LoadMapModel(other.mapModelData, showMessages: false);
+            ImportPermissions(other.CollisionsToByteArray());
+            ImportBuildings(other.BuildingsToByteArray());
+            ImportTerrain(other.bdhc);
+            bgs = family == GameFamilies.HGSS ? other.bgs : blankBGS;
+        }
+
+        /// <summary>Why a model file can't be this map's model, or null when it can.</summary>
+        public static string CannotUseModel(byte[] model)
+        {
+            if (model == null || model.Length < 4 || BitConverter.ToUInt32(model, 0) != NSBMD.NDS_TYPE_BMD0) return "That file is not an NSBMD model.";
+            return TooBigForTheGame(model.Length, 0);
+        }
+
+        private static MapFile TryRead(byte[] data, GameFamilies family)
+        {
+            try
+            {
+                MapFile map = new MapFile(new MemoryStream(data), family, discardMoveperms: false, showMessages: false);
+                return map.correctnessFlag && map.mapModelData != null ? map : null;
+            }
+            catch (Exception ex) when (ex is EndOfStreamException || ex is ArgumentException || ex is IOException || ex is OverflowException)
+            {
+                return null;
+            }
+        }
+
         /// <summary>Why the game could not load this map's model or terrain, or null when both fit.</summary>
         public static string TooBigForTheGame(int modelBytes, int terrainBytes) =>
             modelBytes > ModelRoom

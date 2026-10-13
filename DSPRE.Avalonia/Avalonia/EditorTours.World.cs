@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia
                 S("tab:Buildings", "Buildings", "Every building placed on this map. Pick one to move, turn or swap it; drag its handles in the 3D view."),
                 S("tab:Area", "Area", "The light of this map's area and, in some games, its terrain animation and indoor setting. Every header in the same area shares them."),
                 S("tab:Files / I/O", "Files", "Export this map's model, and bring in or save out its terrain, sound plates and movement permissions."),
-                S("name:EditModelButton", "Changing the ground", "Build or reshape this map from tiles, or import a map made in Pokémon DS Map Studio."),
+                S("name:EditModelButton", "Changing the ground", "Build or reshape this map from tiles, or import a Pokémon DS Map Studio map, a model (.nsbmd) or a whole map (.bin)."),
                 S("name:SaveButton", "Saving", "Save keeps your edits; in its own window Ctrl+S, Ctrl+Z and Ctrl+Y work too. Closing with unsaved edits asks first."));
 
             Add("EventEditorView", "Event Editor",
@@ -90,7 +90,7 @@ namespace DSPRE.Avalonia
             Add("DistortionWorldView", "Distortion World",
                 S("name:FloorList", "Floors", "Each floor of the Distortion World. Pick one to edit it."),
                 S("tab:Map>name:GlHost", "The map", "The floor in 3D. Drag to pan, right-drag to orbit, wheel to zoom."),
-                S("tab:Map>name:MapViewBar", "View", "Change the camera, show one floor or the whole world, or colour squares by gravity. Animate plays it; Edit map model edits the map picked beside it."),
+                S("tab:Map>name:MapViewBar", "View", "Change the camera, show one floor or the whole world, or colour squares by gravity. Animate plays it; Modify map model edits the map picked beside it."),
                 S("tab:Map>name:SurfaceBox", "Surfaces", "Pick the ground or a wall, floor or ceiling surface to paint."),
                 S("tab:Collision", "Collision", "Pick Walkable or Blocked and paint the grid for the chosen surface."),
                 S("tab:Tiles", "Tiles", "Pick a square type and paint it onto the chosen surface."),
@@ -102,7 +102,7 @@ namespace DSPRE.Avalonia
                 S("toolbar", "Saving", "Save keeps every change (Ctrl+S) and Discard throws them away."));
 
             Add("MapModelEditorView", "Map model editor",
-                S("tab:Tiles>name:SetupBar", "Getting started", "Start with From map to use this map's own tiles, or Import a Pokémon DS Map Studio tileset, map or model. Apply builds the map from your tiles."),
+                S("tab:Tiles>name:SetupBar", "Getting started", "Start with From map to use this map's own tiles, or Import a Pokémon DS Map Studio tileset, map or model. Import also takes an .nsbmd model or a whole map .bin, which replace this map straight away. Apply builds the map from your tiles."),
                 S("tab:Tiles>name:TilePalette", "Tiles", "Pick a tile to paint with, or search by name or texture."),
                 S("tab:Tiles>name:Painter", "Painting", "Paint the map square by square. With the pen, right-click picks a tile and middle-click fills."),
                 S("tab:Tiles>name:ToolStrip", "Tools", "Paint, erase, fill, lines, shapes and selections. Heights paints how high each square is; a selection can become a ramp or stairs."),
