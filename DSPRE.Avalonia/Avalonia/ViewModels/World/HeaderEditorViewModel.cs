@@ -1466,18 +1466,26 @@ namespace DSPRE.Avalonia.ViewModels.World
             {
                 if ((pick[0] || pick[1]) && !RotomTool.IsAvailable)
                     throw new InvalidOperationException("Rotom isn't available, so new script files can't be built.");
-                if (pick[0]) { ScriptFileId = NewProjectFiles.AddScript().Id; made.Add($"script file {ScriptFileId}"); }
-                if (pick[1]) { LevelScriptId = NewProjectFiles.AddBlankLevelScript().Id; made.Add($"level script {LevelScriptId}"); }
-                if (pick[2]) { EventFileId = NewProjectFiles.AddEventFile(); made.Add($"event file {EventFileId}"); }
-                if (pick[3]) { TextArchiveId = NewProjectFiles.AddTextArchive(sender: this); made.Add($"text archive {TextArchiveId}"); }
-                if (hgss && pick[4] && NewProjectFiles.FillHeadbuttFiles(newId + 1) > 0) made.Add($"headbutt file {newId}");
-                if (made.Count > 0) Save();
-                // Scripts are built from their sources; a new one needs its compiled copy before anything reads it.
-                if (pick[0] || pick[1])
+                int script = pick[0] ? NewProjectFiles.AddScript().Id : -1;
+                if (script >= 0) made.Add($"script file {script}");
+                int level = pick[1] ? NewProjectFiles.AddBlankLevelScript().Id : -1;
+                if (level >= 0) made.Add($"level script {level}");
+                // Scripts are built from their sources, so the header only points at them once they are built; an open
+                // script or level script tab follows the header and would otherwise read a file not there yet.
+                if (script >= 0 || level >= 0)
                 {
                     RotomTool.Result built = await RotomTool.CompileProjectAsync();
                     if (!built.Success) throw new InvalidOperationException("The script build failed:\n" + RotomTool.FormatDetails(built));
                 }
+                if (script >= 0) ScriptFileId = script;
+                if (level >= 0) LevelScriptId = level;
+                if (pick[2]) { EventFileId = NewProjectFiles.AddEventFile(); made.Add($"event file {EventFileId}"); }
+                if (pick[3]) { TextArchiveId = NewProjectFiles.AddTextArchive(sender: this); made.Add($"text archive {TextArchiveId}"); }
+                // Headbutt files are numbered by header, so every one missing below the new header is made too.
+                int filled = hgss && pick[4] ? NewProjectFiles.FillHeadbuttFiles(newId + 1) : 0;
+                if (filled == 1) made.Add($"headbutt file {newId}");
+                else if (filled > 1) made.Add($"headbutt files {newId + 1 - filled} to {newId} ({filled} were missing)");
+                if (made.Count > 0) Save();
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is InvalidOperationException)
             {
