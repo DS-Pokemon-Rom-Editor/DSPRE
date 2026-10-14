@@ -204,6 +204,9 @@ namespace DSPRE
         private const uint PTdeOffset  = 0xE980C, PTitOffset  = 0xE97D0, PTspOffset = 0xE9848;
         private const uint HGSSjpOffset = 0xF9630, HGSSusOffset = 0xF9E80, HGSSfrOffset = 0xF9E64;
         private const uint HGSSdeOffset = 0xF9E34, HGSSitOffset = 0xF9DF8, HGSSspOffset = 0xF9E68;
+        // Spanish SoulSilver's arm9 runs 0x20 longer than Spanish HeartGold's and the table moves with it; English
+        // SoulSilver keeps HeartGold's.
+        private const uint SSspOffset = 0xF9E70;
 
         /// <summary>
         /// Japanese Diamond and Pearl share one fly table offset, but their header tables sit 4 bytes apart,
@@ -244,7 +247,7 @@ namespace DSPRE
                             case GameLanguages.French:   return HGSSfrOffset;
                             case GameLanguages.German:   return HGSSdeOffset;
                             case GameLanguages.Italian:  return HGSSitOffset;
-                            case GameLanguages.Spanish:  return HGSSspOffset;
+                            case GameLanguages.Spanish:  return gameVersion == GameVersions.SoulSilver ? SSspOffset : HGSSspOffset;
                             default: return HGSSusOffset;
                         }
                     default: return DPusOffset;
@@ -1732,7 +1735,7 @@ namespace DSPRE
                             itemTableOffset = 0x10010C;
                             break;
                         case GameLanguages.Spanish:
-                            itemTableOffset = 0x10017C;
+                            itemTableOffset = gameVersion == GameVersions.SoulSilver ? 0x100184u : 0x10017C;
                             break;
                         default:
                             itemTableOffset = 0x100194;
@@ -2654,32 +2657,20 @@ namespace DSPRE
                     break;
 
                 case GameFamilies.HGSS:
-                    if (RomInfo.gameLanguage.Equals(GameLanguages.Japanese))
+                    // SoulSilver keeps English HeartGold's spot, even in Spanish where most arm9 tables sit 8 bytes later.
+                    switch (RomInfo.gameLanguage)
                     {
-                        //Jap HGSS
-                        trainerNameLenOffset = 0x7342E;
-                    }
-                    else if (gameVersion.Equals(GameVersions.SoulSilver))
-                    {
-                        //All SS languages except Jap
-                        trainerNameLenOffset = 0x72EC2;
-                    }
-                    else
-                    {
-                        //All HG languages except Jap
-                        switch (RomInfo.gameLanguage)
-                        {
-                            case GameLanguages.English:
-                            case GameLanguages.Italian:
-                            case GameLanguages.German:
-                            case GameLanguages.French:
-                                trainerNameLenOffset = 0x7342E;
-                                break;
+                        case GameLanguages.Japanese:
+                            trainerNameLenOffset = 0x72EC2;
+                            break;
 
-                            case GameLanguages.Spanish:
-                                trainerNameLenOffset = 0x73426;
-                                break;
-                        }
+                        case GameLanguages.Spanish:
+                            trainerNameLenOffset = gameVersion == GameVersions.SoulSilver ? 0x7342E : 0x73426;
+                            break;
+
+                        default:
+                            trainerNameLenOffset = 0x7342E;
+                            break;
                     }
                     break;
             }
