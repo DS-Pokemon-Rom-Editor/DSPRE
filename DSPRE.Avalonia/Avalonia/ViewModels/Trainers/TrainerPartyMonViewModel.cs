@@ -448,15 +448,27 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public IList<string> CapsuleNames
         {
             get => _capsuleNames;
-            set { _capsuleNames = value ?? Array.Empty<string>(); OnPropertyChanged(); OnPropertyChanged(nameof(CapsuleIndex)); ShowCapsule(); }
+            set
+            {
+                _capsuleNames = value ?? Array.Empty<string>();
+                // New rows clear the box, and its binding still holds the old index, so announcing that same index would
+                // leave the box empty. It reads as nothing picked while the rows change, then as the stored one.
+                _rowsChanging = true;
+                try { OnPropertyChanged(); OnPropertyChanged(nameof(CapsuleIndex)); }
+                finally { _rowsChanging = false; }
+                OnPropertyChanged(nameof(CapsuleIndex));
+                ShowCapsule();
+            }
         }
 
         /// <summary>Whether a capsule is picked, so its preview and Design button are worth showing.</summary>
         public bool HasCapsule => !CustomPokeballsEnabled && _ballSeals > 0;
 
+        private bool _rowsChanging;
+
         public int CapsuleIndex
         {
-            get => CustomPokeballsEnabled
+            get => _rowsChanging ? -1 : CustomPokeballsEnabled
                 ? TrainerCustomPokeballsPatch.BallItemIds.IndexOf((int)_ballSeals)
                 : _ballSeals >= 0 && _ballSeals < _capsuleNames.Count ? (int)_ballSeals : -1;
             set
