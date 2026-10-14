@@ -29,6 +29,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
 
         private static readonly Dictionary<string, string> TabOf = new Dictionary<string, string>
         {
+            ["trainerCustomPokeballs"] = "Trainers",
             ["arm9"] = "Foundation", ["matrix"] = "Foundation", ["dynamicHeaders"] = "Foundation", ["scrcmdRepoint"] = "Foundation",
             ["trainerClassMetadata"] = "Trainers", ["vsIntroTimings"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
             // Grouped by what the patch is about, not what it edits: name patches sit with their subject.
@@ -42,6 +43,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         // Words a search should hit beyond the title and description.
         private static readonly Dictionary<string, string> KeywordsOf = new Dictionary<string, string>
         {
+            ["trainerCustomPokeballs"] = "pokeball ball capsule seals trainer party apricorn net ultra",
             ["arm9"] = "synthetic overlay memory expansion expand required", ["matrix"] = "matrix 0 map size expand", ["dynamicHeaders"] = "header narc allocate headers",
             ["scrcmdRepoint"] = "script command table custom commands", ["trainerClassMetadata"] = "gender prize eye contact music vs intro class", ["vsIntroTimings"] = "vs intro timing flash slide hold class encounter effect",
             ["trainerClassTablesExpanded"] = "class tables expand", ["trainerEncounterBgmRepointed"] = "encounter music bgm table", ["trainerShiny"] = "shiny trainer party",

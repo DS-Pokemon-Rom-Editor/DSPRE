@@ -270,14 +270,18 @@
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding BallEnabled}">
                           <StackPanel>
-                            <TextBlock Text="Ball Capsule" FontSize="10"/>
+                            <TextBlock Text="{Binding BallLabel}" FontSize="10"/>
                             <StackPanel Orientation="Horizontal" Spacing="4">
                               <ComboBox Width="150" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}"
                                         MaxDropDownHeight="360"/>
                               <Button Content="Edit" controls:Icon.Key="pencil" Click="DesignCapsule_Click"
                                       ToolTip.Tip="Open in Ball Capsules" IsVisible="{Binding HasCapsule}"/>
                             </StackPanel>
+                            <TextBlock Text="{Binding BallValueNote}" IsVisible="{Binding HasUnsupportedBallValue}" FontSize="10"
+                                       TextWrapping="Wrap" MaxWidth="150" HorizontalAlignment="Left"/>
                           </StackPanel>
+                          <Image Source="{Binding BallIcon}" Width="64" Height="64" IsVisible="{Binding CustomPokeballsEnabled}"
+                                 RenderOptions.BitmapInterpolationMode="None"/>
                           <Border Width="64" Height="64" CornerRadius="32" Background="#2A7FA8C8" BorderBrush="#557FA8C8" BorderThickness="1"
                                   ClipToBounds="True" IsVisible="{Binding HasCapsule}">
                             <ItemsControl ItemsSource="{Binding CapsuleStickers}">

@@ -557,6 +557,40 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyTrainerCustomPokeballsPatch()
+        {
+            if (!TrainerCustomPokeballsPatch.SupportsCurrentRom)
+            {
+                ShowError("The trainer custom Pokéballs patch supports US HeartGold/SoulSilver, EU English HeartGold and Italian HeartGold, without hg-engine.", "Unsupported");
+                return false;
+            }
+            if (AlreadyApplied(Probe(TrainerCustomPokeballsPatch.DetectCurrentProject))) return false;
+            if (TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) is string why)
+            {
+                ShowError(why, "Trainer custom Pokéballs");
+                return false;
+            }
+            if (!ConfirmYesNo("Replace the ARM9 trainer capsule routine with custom Pokéball selection.\n\n" +
+                "Each party member's capsule field becomes a Pokéball item ID. Zero keeps the default Poké Ball. " +
+                "Enemy trainers can no longer use ball capsule seals. Existing nonzero capsule values will be interpreted as item IDs; review them in the Trainer editor.\n\n" +
+                "No ARM9 expansion or synthetic overlay is required." + BackupNote("the ARM9") +
+                "\n\nDo you wish to continue?" + CreditNote("trainerCustomPokeballs"), "Confirm to proceed"))
+            {
+                ShowInfo("No changes have been made.", "Operation canceled");
+                return false;
+            }
+            ARM9.DecompressIfMarked();
+            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            try { TrainerCustomPokeballsPatch.Apply(); }
+            catch (Exception ex)
+            {
+                ShowError("Operation failed. Restore the ARM9 backup if needed.\n\n" + ex.Message, "Trainer custom Pokéballs");
+                return false;
+            }
+            ShowInfo("The trainer custom Pokéballs patch has been applied. Select each party member's Pokéball in the Trainer editor.", "Operation successful.");
+            return true;
+        }
+
         /// <summary>The external trainer shiny patch from PR #271 (US HeartGold/SoulSilver, Italian HeartGold).</summary>
         public static bool ApplyTrainerShinyPatch()
         {
@@ -1429,6 +1463,7 @@ namespace DSPRE
             ["sameHeldItemOdds"] = ("Mixone", "held item odds"),
             ["buildingRotation"] = ("MrHam88", "building rotation"),
             ["trainerShiny"] = ("MrHam88", "shiny trainer Pokémon"),
+            ["trainerCustomPokeballs"] = ("MrHam88", "trainer custom Pokéballs"),
             ["trainerClassMetadata"] = ("MrHam88", "trainer class metadata"),
             ["owSpriteExpansion"] = ("hzla", "custom overworld sprites"),
             ["platItemExpansion"] = ("hzla", "item expansion"),
@@ -1451,6 +1486,7 @@ namespace DSPRE
         // What a patch was built on and how, as its author asked to be credited.
         private static readonly Dictionary<string, string> CreditSources = new Dictionary<string, string>
         {
+            ["trainerCustomPokeballs"] = "built on the pokeheartgold decompilation",
             ["trainerClassMetadata"] = "built on the pokeheartgold decompilation and Mixone's Ghidra symbol map, and developed with AI assistance",
             ["punchingMovesExpanded"] = MoveListResearch,
             ["soundMovesExpanded"] = MoveListResearch,
@@ -1720,6 +1756,17 @@ namespace DSPRE
                     if (TrainerClassTableExpansion.MusicTableHasRoom) return PatchState.Applied;
                     if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum (English) only");
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("trainerCustomPokeballs", "Trainer custom Pokéballs",
+                "Choose a Pokéball for each trainer party member instead of ball capsule seals (US HeartGold/SoulSilver, EU English HeartGold, Italian HeartGold). ARM9 only; no expansion required.",
+                () =>
+                {
+                    if (RomInfo.isHGE) return Unsupported("Not compatible with hg-engine");
+                    if (!TrainerCustomPokeballsPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (TrainerCustomPokeballsPatch.DetectCurrentProject()) return PatchState.Applied;
+                    return TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) == null
+                        ? PatchState.Available : Unsupported("Capsule routine modified");
                 }));
 
             return list;
@@ -2147,6 +2194,7 @@ namespace DSPRE
                 case "bdhcam": return ApplyBDHCamPatch();   // caller re-queries statuses afterwards
                 case "buildingRotation": return ApplyBuildingRotationPatch();
                 case "trainerShiny": return ApplyTrainerShinyPatch();
+                case "trainerCustomPokeballs": return ApplyTrainerCustomPokeballsPatch();
                 case "trainerClassMetadata": return ApplyTrainerClassMetadataPatch();
                 case "dynamicHeaders": return ApplyDynamicHeadersPatch();
                 case "matrix": return ApplyMatrixExpansionPatch();

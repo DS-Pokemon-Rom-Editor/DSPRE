@@ -407,12 +407,43 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (!Set(ref _ballSeals, value)) return;
                 OnPropertyChanged(nameof(CapsuleIndex)); OnPropertyChanged(nameof(HasCapsule));
+                OnPropertyChanged(nameof(BallValueNote));
+                OnPropertyChanged(nameof(HasUnsupportedBallValue));
                 ShowCapsule();
                 Touch();
             }
         }
 
-        // Picker row N is capsule N; row 0 is none.
+        private bool _customPokeballsEnabled;
+        private bool _refreshingCapsulePicker;
+        public bool CustomPokeballsEnabled => _customPokeballsEnabled;
+        public string BallLabel => CustomPokeballsEnabled ? "Pokéball" : "Ball Capsule";
+        public bool HasUnsupportedBallValue => CustomPokeballsEnabled && CapsuleIndex < 0;
+        public string BallValueNote => HasUnsupportedBallValue
+            ? $"Unsupported item ID {(int)_ballSeals}; choose a Pokéball." : null;
+        public int BallPreviewItemId => CustomPokeballsEnabled && CapsuleIndex >= 0
+            ? (_ballSeals == 0 ? 4 : (int)_ballSeals) : -1;
+        private Bitmap _ballIcon;
+        public Bitmap BallIcon { get => _ballIcon; private set => Set(ref _ballIcon, value); }
+
+        public void ConfigureCapsulePicker(bool customPokeballs, IList<string> capsuleNames)
+        {
+            _refreshingCapsulePicker = true;
+            try
+            {
+                _customPokeballsEnabled = customPokeballs;
+                CapsuleNames = customPokeballs
+                    ? TrainerCustomPokeballsPatch.BallItemIds.Select(id => id == 0 ? "Default (Poké Ball)" :
+                        id < ItemNames.Count ? $"[{id}] {ItemNames[id]}" : $"Item {id}").ToArray()
+                    : capsuleNames;
+                OnPropertyChanged(nameof(CustomPokeballsEnabled)); OnPropertyChanged(nameof(BallLabel));
+                OnPropertyChanged(nameof(HasCapsule)); OnPropertyChanged(nameof(BallValueNote));
+                OnPropertyChanged(nameof(HasUnsupportedBallValue));
+            }
+            finally { _refreshingCapsulePicker = false; }
+        }
+
+        // Vanilla rows are capsule IDs; patched rows map to the non-contiguous ball item IDs.
         private IList<string> _capsuleNames = Array.Empty<string>();
         public IList<string> CapsuleNames
         {
@@ -421,12 +452,18 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         /// <summary>Whether a capsule is picked, so its preview and Design button are worth showing.</summary>
-        public bool HasCapsule => _ballSeals > 0;
+        public bool HasCapsule => !CustomPokeballsEnabled && _ballSeals > 0;
 
         public int CapsuleIndex
         {
-            get => _ballSeals >= 0 && _ballSeals < _capsuleNames.Count ? (int)_ballSeals : -1;
-            set { if (value >= 0 && value < _capsuleNames.Count) BallSeals = value; }
+            get => CustomPokeballsEnabled
+                ? TrainerCustomPokeballsPatch.BallItemIds.IndexOf((int)_ballSeals)
+                : _ballSeals >= 0 && _ballSeals < _capsuleNames.Count ? (int)_ballSeals : -1;
+            set
+            {
+                if (_refreshingCapsulePicker || value < 0 || value >= _capsuleNames.Count) return;
+                BallSeals = CustomPokeballsEnabled ? TrainerCustomPokeballsPatch.BallItemIds[value] : value;
+            }
         }
 
         /// <summary>The chosen capsule's seals, placed on a 64 by 64 picture of the ball.</summary>
@@ -435,6 +472,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void ShowCapsule()
         {
             CapsuleStickers.Clear();
+            Bitmap previous = BallIcon;
+            BallIcon = null;
+            previous?.Dispose();
+            if (CustomPokeballsEnabled)
+            {
+                if (BallPreviewItemId >= 0)
+                    BallIcon = ImageConverter.ToAvaloniaBitmap(DSUtils.GetItemPicRaw(BallPreviewItemId, 32, 32));
+                return;
+            }
             foreach (CapsuleSticker s in Data.TrainerCapsuleCatalog.Stickers((int)_ballSeals)) CapsuleStickers.Add(s);
         }
 

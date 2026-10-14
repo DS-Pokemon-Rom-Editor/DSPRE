@@ -11,6 +11,18 @@ namespace DSPRE
     {
         private static readonly Dictionary<string, string> Detail = new()
         {
+            ["trainerCustomPokeballs"] =
+                "What it does\n" +
+                "Repurposes each trainer party member's ball capsule field as a Pokéball item ID. " +
+                "Zero keeps the default Poké Ball. Enemy trainers lose capsule seal effects. Existing nonzero " +
+                "capsule values become item IDs, so review existing parties after applying.\n\n" +
+                "Where to edit\n" +
+                "The Trainer editor switches Ball Capsule to a Pokéball picker, hides Design and previews the item icon. " +
+                "The picker offers the 16 original balls and the eight HGSS balls, including Apricorn balls and Sport Ball. " +
+                "Park Ball is not supported by the game's setter. Unknown values are preserved until replaced.\n\n" +
+                "Requirements\n" +
+                "US HeartGold/SoulSilver, EU English HeartGold or Italian HeartGold. No ARM9 expansion or synthetic overlay required. " +
+                "Not compatible with hg-engine.",
             ["trainerClassMetadata"] =
                 "What it does\n" +
                 "Each trainer class gets its own record in a/1/5/5 holding its gender, prize money, eye-contact music, " +
@@ -119,6 +131,8 @@ namespace DSPRE
             ["trainerShiny"] = ("The ARM9's trainer party setup is pointed at the routine, and flag 0x40 is left out of the party member's ability.",
                 "156 bytes in the synthetic overlay, at the offset chosen when applying.",
                 "the ARM9"),
+            ["trainerCustomPokeballs"] = ("Replaces the 84-byte ARM9 trainer capsule routine at file offset 0x72A44 in place.",
+                "No additional space or synthetic overlay.", "the ARM9"),
             ["trainerClassMetadata"] = ("Hooks in the ARM9 and overlays 1, 12, 80, 115, 117, 118, 119 and 120 read each class's record, and a/1/5/5 holds a record per class.",
                 "About 8 KB in the synthetic overlay, plus a/1/5/5.",
                 "the ARM9, overlays 1, 12, 80, 115, 117, 118, 119 and 120 and the synthetic overlay, and of a/1/5/5 as unpacked/a155.narc"),
