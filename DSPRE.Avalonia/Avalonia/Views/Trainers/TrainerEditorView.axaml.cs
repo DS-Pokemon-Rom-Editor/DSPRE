@@ -15,7 +15,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void DesignCapsule_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as Control)?.DataContext is ViewModels.Trainers.TrainerPartyMonViewModel mon)
-                AvaloniaEditorLauncher.OpenBallCapsuleEditorAt((int)mon.BallSeals);
+                if (!mon.CustomPokeballsEnabled) AvaloniaEditorLauncher.OpenBallCapsuleEditorAt((int)mon.BallSeals);
         }
 
         public TrainerEditorView()

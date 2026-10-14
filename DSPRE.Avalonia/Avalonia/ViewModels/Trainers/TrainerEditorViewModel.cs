@@ -55,6 +55,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _abilityEditable;
         private bool _genderEditable;
         private bool _shinyPatch;
+        private bool _customPokeballsPatch;
         private bool _ballEnabled;
         private bool _formVisible;
 
@@ -646,6 +647,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             DSPRE.Avalonia.Data.ListSync.Apply(PokemonNames, GetPokemonNames());
             DSPRE.Avalonia.Data.ListSync.Apply(MoveNames,    GetAttackNames());
             DSPRE.Avalonia.Data.ListSync.Apply(ItemNames,    GetItemNames());
+            if (_customPokeballsPatch) ShowCapsuleNames();
             string[] classNames = GetTrainerClassNames();
             // Replacing the selected row can clear the list's selection, as in RefreshTrainerListEntry.
             int keep = _selectedTrainerIndex;
@@ -679,7 +681,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private void OnClassIntrosSaved(object sender, EventArgs e) => Classes?.RefreshIntroSummary();
 
-        // The patch toolbox can add the trainer shiny or class metadata patch while the editor is open.
+        // Reconfigure controls without reloading party data or discarding unsaved edits.
         private void OnRomPatchStateChanged(object sender, EventArgs e)
         {
             bool shiny = gameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
@@ -689,13 +691,20 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 foreach (TrainerPartyMonViewModel mon in Party) mon.ShinyEnabled = shiny;
             }
             Classes?.RefreshPatchState();
+            bool customPokeballs = TrainerCustomPokeballsPatch.DetectCurrentProject();
+            if (customPokeballs != _customPokeballsPatch)
+            {
+                _customPokeballsPatch = customPokeballs;
+                if (customPokeballs) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
+                ShowCapsuleNames();
+            }
         }
 
         // A new list instance after a save makes every picker refresh its rows.
         private void ShowCapsuleNames()
         {
-            List<string> names = Data.TrainerCapsuleCatalog.Names();
-            foreach (TrainerPartyMonViewModel mon in Party) mon.CapsuleNames = names;
+            IList<string> names = _customPokeballsPatch ? Array.Empty<string>() : Data.TrainerCapsuleCatalog.Names();
+            foreach (TrainerPartyMonViewModel mon in Party) mon.ConfigureCapsulePicker(_customPokeballsPatch, names);
         }
 
         // ── Setup ─────────────────────────────────────────────────────────────────────
@@ -713,6 +722,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
                 _genderEditable = gameFamily == GameFamilies.HGSS || AIBackportEnabled;
                 _shinyPatch = gameFamily == GameFamilies.HGSS && TrainerShinyPatch.DetectCurrentProject();
+                _customPokeballsPatch = TrainerCustomPokeballsPatch.DetectCurrentProject();
+                if (_customPokeballsPatch) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.itemIcons });
                 _abilityEditable = _genderEditable;
                 _ballEnabled = gameFamily != GameFamilies.DP;
                 _formVisible = gameFamily != GameFamilies.DP;
@@ -785,7 +796,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     Party.Add(mon);
                 }
                 ApplyHgeGatingToParty();
-                if (_ballEnabled && Data.TrainerCapsuleCatalog.Available)
+                if (_ballEnabled && (_customPokeballsPatch || Data.TrainerCapsuleCatalog.Available))
                 {
                     ShowCapsuleNames();
                     Data.TrainerCapsuleCatalog.Changed += ShowCapsuleNames;
