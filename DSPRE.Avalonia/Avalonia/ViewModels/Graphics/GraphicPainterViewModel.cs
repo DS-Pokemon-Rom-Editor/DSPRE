@@ -361,6 +361,10 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         private string _status = "";
         public string Status { get => _status; set => Set(ref _status, value); }
 
+        private string _pointer = "";
+        /// <summary>The pixel under the pointer, counted from 0 at the top left of what is shown.</summary>
+        public string Pointer { get => _pointer; set => Set(ref _pointer, value); }
+
         /// <summary>Writes the painting back into the game. Says why when it cannot, having changed
         /// nothing.</summary>
         public string Save()

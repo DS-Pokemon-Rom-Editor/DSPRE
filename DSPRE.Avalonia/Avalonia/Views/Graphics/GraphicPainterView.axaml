@@ -53,7 +53,10 @@
 
     <Border DockPanel.Dock="Bottom" Padding="8,6" Background="{DynamicResource Editor.StatusBg}">
       <StackPanel Spacing="3">
-        <TextBlock Text="{Binding InkDescription}" FontSize="12"/>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Right" Text="{Binding Pointer}" FontSize="12"/>
+          <TextBlock Text="{Binding InkDescription}" FontSize="12"/>
+        </DockPanel>
         <TextBlock Text="{Binding Status}" FontSize="11" TextWrapping="Wrap"
                    Foreground="{DynamicResource Editor.Subtle}"/>
       </StackPanel>
@@ -89,8 +92,21 @@
     </Border>
 
     <Panel>
-      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                    IsVisible="{Binding CanPaint}">
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,*" IsVisible="{Binding CanPaint}">
+      <!-- Pixel numbers stay on the edges while the drawing scrolls under them. -->
+      <Border Width="24" Height="24" IsVisible="{Binding ShowGrid}"
+              Background="{DynamicResource Editor.StatusBg}"/>
+      <v:PixelRuler x:Name="TopRuler" Grid.Column="1" Height="24" Orientation="Horizontal"
+                    Cell="{Binding Zoom}" Count="{Binding ViewWidth}" IsVisible="{Binding ShowGrid}"
+                    Background="{DynamicResource Editor.StatusBg}" Foreground="{DynamicResource Editor.Text}"
+                    Accent="{DynamicResource SystemControlHighlightAccentBrush}"/>
+      <v:PixelRuler x:Name="LeftRuler" Grid.Row="1" Width="24" Orientation="Vertical"
+                    Cell="{Binding Zoom}" Count="{Binding ViewHeight}" IsVisible="{Binding ShowGrid}"
+                    Background="{DynamicResource Editor.StatusBg}" Foreground="{DynamicResource Editor.Text}"
+                    Accent="{DynamicResource SystemControlHighlightAccentBrush}"/>
+      <ScrollViewer x:Name="CanvasScroll" Grid.Row="1" Grid.Column="1"
+                    HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                    ScrollChanged="CanvasScroll_ScrollChanged">
         <!-- Sized from the zoom rather than stretched to fit, so one pixel of the drawing is always a
              whole number of screen pixels and the grid lines land on the edges. -->
         <Panel x:Name="CanvasHost"
@@ -98,12 +114,15 @@
                HorizontalAlignment="Center" VerticalAlignment="Center"
                PointerPressed="Canvas_PointerPressed"
                PointerMoved="Canvas_PointerMoved"
+               PointerExited="Canvas_PointerExited"
+               LayoutUpdated="CanvasHost_LayoutUpdated"
                PointerWheelChanged="Canvas_PointerWheelChanged">
           <Image x:Name="Canvas" Source="{Binding Picture}" Stretch="Fill"
                  RenderOptions.BitmapInterpolationMode="None"/>
           <v:PixelGrid Cell="{Binding Zoom}" IsVisible="{Binding GridOn}" IsHitTestVisible="False"/>
         </Panel>
       </ScrollViewer>
+      </Grid>
 
       <TextBlock Text="{Binding Trouble}" IsVisible="{Binding HasTrouble}"
                  TextWrapping="Wrap" MaxWidth="420" FontSize="13" TextAlignment="Center"

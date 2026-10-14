@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using DSPRE.Avalonia.ViewModels;
+using DSPRE.Avalonia.Views.Controls;
 
 namespace DSPRE.Avalonia.Views.Graphics
 {
@@ -74,8 +75,37 @@ namespace DSPRE.Avalonia.Views.Graphics
 
         private void Canvas_PointerMoved(object sender, PointerEventArgs e)
         {
+            bool over = PixelUnder(e, out int x, out int y);
+            ShowPointer(over ? x : -1, over ? y : -1);
             if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-            if (PixelUnder(e, out int x, out int y)) ViewModel?.Paint(x, y, startOfStroke: false);
+            if (over) ViewModel?.Paint(x, y, startOfStroke: false);
+        }
+
+        private void Canvas_PointerExited(object sender, PointerEventArgs e) => ShowPointer(-1, -1);
+
+        private void ShowPointer(int x, int y)
+        {
+            this.FindControl<PixelRuler>("TopRuler").Hot = x;
+            this.FindControl<PixelRuler>("LeftRuler").Hot = y;
+            if (ViewModel != null) ViewModel.Pointer = x < 0 ? "" : $"Column {x}, row {y}";
+        }
+
+        // ── the rulers ─────────────────────────────────────────────────────────────────────────────
+
+        private void CanvasScroll_ScrollChanged(object sender, ScrollChangedEventArgs e) => PlaceRulers();
+        private void CanvasHost_LayoutUpdated(object sender, EventArgs e) => PlaceRulers();
+
+        /// <summary>Lines pixel 0 on each ruler up with the drawing, wherever scrolling has put it.</summary>
+        private void PlaceRulers()
+        {
+            Panel host = this.FindControl<Panel>("CanvasHost");
+            PixelRuler top = this.FindControl<PixelRuler>("TopRuler");
+            PixelRuler left = this.FindControl<PixelRuler>("LeftRuler");
+            if (host == null || top == null || left == null) return;
+            Point? across = host.TranslatePoint(new Point(0, 0), top);
+            Point? down = host.TranslatePoint(new Point(0, 0), left);
+            if (across is Point a && top.Start != a.X) top.Start = a.X;
+            if (down is Point d && left.Start != d.Y) left.Start = d.Y;
         }
 
         // ── the colours ────────────────────────────────────────────────────────────────────────────
