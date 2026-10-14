@@ -669,7 +669,13 @@ namespace DSPRE.Avalonia.Data
                 {
                     ScriptNarc narc = new ScriptNarc(DirNames.encounterEffectGraphics);
                     bool Palette(int k) => k >= 0 && k < narc.Count && Identify(narc.Get(k)) == Kind.Palette;
-                    return Palette(i - 1) ? i - 1 : Palette(i + 1) ? i + 1 : -1;
+                    // A layout or animation uses its set's palette, which sits beside the set's drawing.
+                    int at = i;
+                    Kind kind = Identify(narc.Get(i));
+                    if (kind == Kind.CellLayout || kind == Kind.CellAnimation)
+                        for (int k = i - 1; k >= 0 && k >= i - 3; k--)
+                            if (Identify(narc.Get(k)) == Kind.TileGraphic) { at = k; break; }
+                    return Palette(at - 1) ? at - 1 : Palette(at + 1) ? at + 1 : -1;
                 } },
 
             new Archive { Dir = DirNames.battleBg, Title = "Battle backgrounds", In = Group.BattleScenery,
@@ -1003,18 +1009,25 @@ namespace DSPRE.Avalonia.Data
         /// <summary>The drawing that a layout or a tile map arranges: the nearest one before it, else after.</summary>
         private static byte[] FindDrawing(ScriptNarc narc, int index)
         {
+            int at = FindDrawingIndex(narc, index);
+            return at >= 0 ? narc.Get(at) : null;
+        }
+
+        // The nearest drawing to a layout, before it first: how sets of palette, tiles and cells are usually laid out.
+        private static int FindDrawingIndex(ScriptNarc narc, int index)
+        {
             for (int i = index - 1; i >= 0 && i > index - 64; i--)
             {
                 byte[] b = narc.Get(i);
-                if (b != null && Identify(b) == Kind.TileGraphic) return b;
+                if (b != null && Identify(b) == Kind.TileGraphic) return i;
             }
             for (int i = index + 1; i < index + 64; i++)
             {
                 byte[] b = narc.Get(i);
                 if (b == null) break;
-                if (Identify(b) == Kind.TileGraphic) return b;
+                if (Identify(b) == Kind.TileGraphic) return i;
             }
-            return null;
+            return -1;
         }
 
 
@@ -1032,6 +1045,8 @@ namespace DSPRE.Avalonia.Data
 
             int drawingAt = -1;
             try { drawingAt = a.DrawingEntry?.Invoke(layoutIndex) ?? -1; } catch { }
+            // Where the game's pairing is not known, the drawing the picture was shown with is the one written.
+            if (drawingAt < 0 && a.DrawingArchive == null) drawingAt = FindDrawingIndex(narc, layoutIndex);
             byte[] drawing = drawingAt >= 0 ? narc.Get(drawingAt) : null;
             if (drawing == null)
                 return "The drawing this layout arranges is not known, so it cannot be put back.";
@@ -1060,12 +1075,12 @@ namespace DSPRE.Avalonia.Data
                 NCER ncer = new NCER(chrPath, 0, Path.GetFileName(chrPath));
                 if (ncer.Banks == null || ncer.Banks.Length == 0) return "This layout has no pieces in it.";
 
-                // Draw it once to find where the trim cut, so the pieces can be put back against the
-                // canvas they were laid out on rather than against the trimmed picture.
+                // Draw it once to find where the crop cut, so the pieces can be put back against the
+                // canvas they were laid out on rather than against the cropped picture.
                 RawImage whole = ncer.Get_RawImage(ncgr, nclr, 0, CellCanvas, CellCanvas, true, -1, null);
                 if (whole == null || whole.IsEmpty) return "This sprite could not be put together.";
-                (byte[] _, int shownW, int shownH) = TrimBlank(ToRgba(whole), whole.Width, whole.Height,
-                                                    out int cutLeft, out int cutTop);
+                (byte[] _, int shownW, int shownH) = CropToPieces(ToRgba(whole), whole.Width, whole.Height, ncer.Banks[0],
+                                                       out int cutLeft, out int cutTop);
 
                 // The picture has to be the one this sprite is drawn at, or every piece would be read
                 // from the wrong place and the edit would land somewhere else entirely.
@@ -1272,8 +1287,10 @@ namespace DSPRE.Avalonia.Data
                     if (cell == null || cell.IsEmpty)
                         return new Preview { Kind = kind, Whynot = "This sprite could not be put together." };
                     // These are laid out on a whole screen's worth of room and most of them use a corner of
-                    // it, so show what was actually drawn rather than a mostly empty screen.
-                    (byte[] crop, int cw, int ch) = TrimBlank(ToRgba(cell), cell.Width, cell.Height);
+                    // it, so show the pieces rather than a mostly empty screen.
+                    (byte[] crop, int cw, int ch) = ncer.Banks != null && ncer.Banks.Length > 0
+                        ? CropToPieces(ToRgba(cell), cell.Width, cell.Height, ncer.Banks[0], out _, out _)
+                        : TrimBlank(ToRgba(cell), cell.Width, cell.Height);
                     return new Preview { Rgba = crop, Width = cw, Height = ch, Kind = kind };
                 }
 
@@ -1320,6 +1337,34 @@ namespace DSPRE.Avalonia.Data
 
         private static (byte[] rgba, int w, int h) TrimBlank(byte[] rgba, int w, int h)
             => TrimBlank(rgba, w, h, out _, out _);
+
+        /// <summary>
+        /// Cuts a sprite drawn on the canvas down to the rectangle its pieces cover, see-through edges included, so a
+        /// 96 by 64 VS portrait stays 96 by 64 whatever its outer columns hold. Falls back to the drawn pixels when
+        /// the pieces say nothing.
+        /// </summary>
+        private static (byte[] rgba, int w, int h) CropToPieces(byte[] rgba, int w, int h, Ekona.Images.Bank bank,
+                                                                out int cutLeft, out int cutTop)
+        {
+            int left = w, top = h, right = 0, bottom = 0;
+            foreach (Ekona.Images.OAM oam in bank.oams ?? Array.Empty<Ekona.Images.OAM>())
+            {
+                System.Drawing.Size size = Ekona.Images.Actions.Get_OAMSize(oam.obj0.shape, oam.obj1.size);
+                // Where the renderer puts the piece: the canvas middle plus its offset.
+                int x0 = w / 2 + oam.obj1.xOffset, y0 = h / 2 + oam.obj0.yOffset;
+                left = Math.Min(left, x0); top = Math.Min(top, y0);
+                right = Math.Max(right, x0 + size.Width); bottom = Math.Max(bottom, y0 + size.Height);
+            }
+            left = Math.Max(0, left); top = Math.Max(0, top); right = Math.Min(w, right); bottom = Math.Min(h, bottom);
+            if (right <= left || bottom <= top) return TrimBlank(rgba, w, h, out cutLeft, out cutTop);
+
+            cutLeft = left; cutTop = top;
+            int nw = right - left, nh = bottom - top;
+            byte[] outp = new byte[nw * nh * 4];
+            for (int y = 0; y < nh; y++)
+                Array.Copy(rgba, ((top + y) * w + left) * 4, outp, y * nw * 4, nw * 4);
+            return (outp, nw, nh);
+        }
 
         /// <summary>Trims the blank border off a picture, saying where the picture it kept began.</summary>
         private static (byte[] rgba, int w, int h) TrimBlank(byte[] rgba, int w, int h,

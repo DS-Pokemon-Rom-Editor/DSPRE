@@ -16,6 +16,7 @@ namespace DSPRE.Avalonia.Data
         {
             int[] owner = new int[width * height];
             for (int i = 0; i < owner.Length; i++) owner[i] = -1;
+            bool[] covered = new bool[width * height];   // owned only by being under a piece, not seen in it
 
             for (int i = 0; i < bank.oams.Length; i++)
             {
@@ -42,6 +43,24 @@ namespace DSPRE.Avalonia.Data
                             owner[y * width + x] = i;   // later pieces win, as on screen
                     }
                 }
+            }
+
+            // A see-through pixel still belongs to the piece covering it, or blank parts of a sprite could
+            // never be painted in. The piece on top takes it, as for visible pixels.
+            for (int i = 0; i < bank.oams.Length; i++)
+            {
+                OAM oam = bank.oams[i];
+                if (oam.width == 0 || oam.height == 0) continue;
+                int left = canvasW / 2 + oam.obj1.xOffset - cropLeft;
+                int top = canvasH / 2 + oam.obj0.yOffset - cropTop;
+                for (int y = Math.Max(0, top); y < Math.Min(height, top + oam.height); y++)
+                    for (int x = Math.Max(0, left); x < Math.Min(width, left + oam.width); x++)
+                    {
+                        int at = y * width + x;
+                        if (owner[at] >= 0 && !covered[at]) continue;
+                        owner[at] = i;
+                        covered[at] = true;
+                    }
             }
             return owner;
         }
