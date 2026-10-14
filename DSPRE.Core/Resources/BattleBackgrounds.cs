@@ -6,8 +6,8 @@ namespace DSPRE.Resources
 {
     /// <summary>
     /// What a map header's battle background number picks, in Platinum and HGSS (pokeplatinum
-    /// generated/battle_backgrounds.txt, pokeheartgold include/constants/battle.h). Diamond and Pearl keep a smaller
-    /// field whose values are not named publicly, so they show as numbers.
+    /// generated/battle_backgrounds.txt, pokeheartgold include/constants/battle.h). Diamond and Pearl use the first 12:
+    /// pokediamond's battle setup bounds the header value below 12 and swaps in 1 while surfing.
     /// </summary>
     public static class BattleBackgrounds
     {
@@ -36,6 +36,7 @@ namespace DSPRE.Resources
         /// <summary>The names for the open game, or none when its values are not known.</summary>
         public static IReadOnlyList<string> Names() => gameFamily switch
         {
+            GameFamilies.DP => Shared,
             GameFamilies.Plat => PlatinumNames,
             GameFamilies.HGSS => HgssNames,
             _ => Array.Empty<string>(),
