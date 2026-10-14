@@ -561,17 +561,17 @@ namespace DSPRE
         {
             if (!TrainerCustomPokeballsPatch.SupportsCurrentRom)
             {
-                ShowError("The trainer custom Pokéballs patch supports US HeartGold/SoulSilver, EU English HeartGold and Italian HeartGold, without hg-engine.", "Unsupported");
+                ShowError("The trainer custom Poké Balls patch is for HeartGold and SoulSilver, without hg-engine.", "Unsupported");
                 return false;
             }
             if (AlreadyApplied(Probe(TrainerCustomPokeballsPatch.DetectCurrentProject))) return false;
             if (TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) is string why)
             {
-                ShowError(why, "Trainer custom Pokéballs");
+                ShowError(why, "Trainer custom Poké Balls");
                 return false;
             }
-            if (!ConfirmYesNo("Replace the ARM9 trainer capsule routine with custom Pokéball selection.\n\n" +
-                "Each party member's capsule field becomes a Pokéball item ID. Zero keeps the default Poké Ball. " +
+            if (!ConfirmYesNo("Replace the ARM9 trainer capsule routine with custom Poké Ball selection.\n\n" +
+                "Each party member's capsule field becomes a Poké Ball item ID. Zero keeps the default Poké Ball. " +
                 "Enemy trainers can no longer use ball capsule seals. Existing nonzero capsule values will be interpreted as item IDs; review them in the Trainer editor.\n\n" +
                 "No ARM9 expansion or synthetic overlay is required." + BackupNote("the ARM9") +
                 "\n\nDo you wish to continue?" + CreditNote("trainerCustomPokeballs"), "Confirm to proceed"))
@@ -584,10 +584,10 @@ namespace DSPRE
             try { TrainerCustomPokeballsPatch.Apply(); }
             catch (Exception ex)
             {
-                ShowError("Operation failed. Restore the ARM9 backup if needed.\n\n" + ex.Message, "Trainer custom Pokéballs");
+                ShowError("Operation failed. Restore the ARM9 backup if needed.\n\n" + ex.Message, "Trainer custom Poké Balls");
                 return false;
             }
-            ShowInfo("The trainer custom Pokéballs patch has been applied. Select each party member's Pokéball in the Trainer editor.", "Operation successful.");
+            ShowInfo("The trainer custom Poké Balls patch has been applied. Select each party member's Poké Ball in the Trainer editor.", "Operation successful.");
             return true;
         }
 
@@ -1463,7 +1463,7 @@ namespace DSPRE
             ["sameHeldItemOdds"] = ("Mixone", "held item odds"),
             ["buildingRotation"] = ("MrHam88", "building rotation"),
             ["trainerShiny"] = ("MrHam88", "shiny trainer Pokémon"),
-            ["trainerCustomPokeballs"] = ("MrHam88", "trainer custom Pokéballs"),
+            ["trainerCustomPokeballs"] = ("MrHam88", "trainer custom Poké Balls"),
             ["trainerClassMetadata"] = ("MrHam88", "trainer class metadata"),
             ["owSpriteExpansion"] = ("hzla", "custom overworld sprites"),
             ["platItemExpansion"] = ("hzla", "item expansion"),
@@ -1758,8 +1758,8 @@ namespace DSPRE
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
-            list.Add(Status("trainerCustomPokeballs", "Trainer custom Pokéballs",
-                "Choose a Pokéball for each trainer party member instead of ball capsule seals (US HeartGold/SoulSilver, EU English HeartGold, Italian HeartGold). ARM9 only; no expansion required.",
+            list.Add(Status("trainerCustomPokeballs", "Trainer custom Poké Balls",
+                "Choose a Poké Ball for each trainer party member instead of ball capsule seals. ARM9 only; no expansion required.",
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported("Not compatible with hg-engine");

@@ -417,10 +417,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private bool _customPokeballsEnabled;
         private bool _refreshingCapsulePicker;
         public bool CustomPokeballsEnabled => _customPokeballsEnabled;
-        public string BallLabel => CustomPokeballsEnabled ? "Pokéball" : "Ball Capsule";
+        public string BallLabel => CustomPokeballsEnabled ? "Poké Ball" : "Ball Capsule";
         public bool HasUnsupportedBallValue => CustomPokeballsEnabled && CapsuleIndex < 0;
         public string BallValueNote => HasUnsupportedBallValue
-            ? $"Unsupported item ID {(int)_ballSeals}; choose a Pokéball." : null;
+            ? $"Unsupported item ID {(int)_ballSeals}; choose a Poké Ball." : null;
         public int BallPreviewItemId => CustomPokeballsEnabled && CapsuleIndex >= 0
             ? (_ballSeals == 0 ? 4 : (int)_ballSeals) : -1;
         private Bitmap _ballIcon;
