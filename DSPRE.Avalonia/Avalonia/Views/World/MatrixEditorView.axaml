@@ -20,16 +20,16 @@
         <Button Content="Add" controls:Icon.Key="addIcon" Click="AddMatrix_Click" ToolTip.Tip="Add an empty matrix at the end"/>
         <Button Content="Remove last" controls:Icon.Key="deleteIcon" Click="RemoveMatrix_Click"
                 ToolTip.Tip="Deletes the highest-numbered matrix, unless a header still uses it"/>
+        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
+        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
         <TextBlock Text="Name" VerticalAlignment="Center" Margin="6,0,0,0"/>
         <TextBox Width="160" Text="{Binding MatrixName}" IsEnabled="{Binding HasMatrix}" MaxLength="127"/>
         <TextBlock Text="Size" VerticalAlignment="Center" Margin="6,0,0,0"/>
-        <NumericUpDown Width="110" Minimum="1" Maximum="255" Increment="1" FormatString="0" Value="{Binding SizeWidth}"
+        <NumericUpDown controls:EditorToolbar.Slot="Extra" Width="110" Minimum="1" Maximum="255" Increment="1" FormatString="0" Value="{Binding SizeWidth}"
                        IsEnabled="{Binding HasMatrix}" ToolTip.Tip="Width in maps. New cells are empty."/>
         <TextBlock Text="×" VerticalAlignment="Center"/>
-        <NumericUpDown Width="110" Minimum="1" Maximum="255" Increment="1" FormatString="0" Value="{Binding SizeHeight}"
+        <NumericUpDown controls:EditorToolbar.Slot="Extra" Width="110" Minimum="1" Maximum="255" Increment="1" FormatString="0" Value="{Binding SizeHeight}"
                        IsEnabled="{Binding HasMatrix}" ToolTip.Tip="Height in maps. New cells are empty."/>
-        <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click"/>
-        <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click"/>
         <Button x:Name="SpawnButton" Content="Set spawn to selection" controls:Icon.Key="pin" Click="SetSpawn_Click"
                 ToolTip.Tip="Set the game's start position to the selected matrix cell"/>
     </controls:EditorToolbar>

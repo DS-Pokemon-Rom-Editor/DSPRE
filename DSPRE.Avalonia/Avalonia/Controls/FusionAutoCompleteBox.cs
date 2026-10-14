@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
 
 namespace DSPRE.Avalonia.Controls
@@ -51,7 +52,17 @@ namespace DSPRE.Avalonia.Controls
             MinimumPrefixLength = 0;
             IsTextCompletionEnabled = false;
             TextFilter = FilterText;
+            // Only the user's own edits filter the list, not a name the editor sets while the box has focus.
+            AddHandler(TextInputEvent, (_, _) => _userEdit = true, RoutingStrategies.Tunnel, handledEventsToo: true);
+            AddHandler(KeyDownEvent, (_, e) =>
+            {
+                if (e.Key is Key.Back or Key.Delete
+                    || (e.KeyModifiers.HasFlag(KeyModifiers.Control) && e.Key is Key.V or Key.X))
+                    _userEdit = true;
+            }, RoutingStrategies.Tunnel, handledEventsToo: true);
         }
+
+        private bool _userEdit;
 
         /// <summary>
         /// Gets or sets the zero-based item index. This mirrors ComboBox.SelectedIndex so existing
@@ -124,7 +135,7 @@ namespace DSPRE.Avalonia.Controls
             bool matchesSelectedItem = SelectedItem != null &&
                 string.Equals(Text, FormatValue(SelectedItem), StringComparison.OrdinalIgnoreCase);
 
-            if (!matchesSelectedItem && IsKeyboardFocusWithin)
+            if (!matchesSelectedItem && IsKeyboardFocusWithin && _userEdit)
             {
                 _editingText = true;
                 _showAllItems = false;
@@ -132,6 +143,7 @@ namespace DSPRE.Avalonia.Controls
                 _anyContainsText = AnyItemContains(Text);
                 SetCurrentValue(TextFilterProperty, FilterText);
             }
+            _userEdit = false;
 
             base.OnTextChanged(e);
         }
