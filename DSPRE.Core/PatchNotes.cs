@@ -201,7 +201,7 @@ namespace DSPRE
             if (patch.Key == "trainerClassMetadata" && patch.State == PatchToolboxLogic.PatchState.Applied &&
                 TrainerClassMetadataPatch.InstalledOffset() is uint offset)
                 text.Append("Installed at\nSynthetic overlay offset 0x").Append(offset.ToString("X"))
-                    .Append(" (runtime address 0x").Append((TrainerClassMetadataPatch.SyntheticBase + offset).ToString("X8")).Append(").\n\n");
+                    .Append(" (runtime address 0x").Append((RomInfo.synthOverlayLoadAddress + offset).ToString("X8")).Append(").\n\n");
             string credit = PatchToolboxLogic.CreditLine(patch.Key);
             if (credit != null) text.Append("Credits\n").Append(credit).Append('.');
             return text.ToString().TrimEnd();

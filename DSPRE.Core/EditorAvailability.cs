@@ -71,7 +71,7 @@ namespace DSPRE
             ["MartEditorView"] = new Rule
             {
                 Title = "The Mart Editor", Hge = HgEngine.Source,
-                Unsupported = Unless(IsMartEditorAvailable, "The Mart Editor currently supports English Diamond, Pearl, Platinum, HeartGold and SoulSilver ROMs."),
+                Unsupported = Unless(IsMartEditorAvailable, "The Mart Editor does not support this ROM."),
             },
             ["WildHeldItemOddsView"] = new Rule { Title = "The Wild held items editor", Hge = HgEngine.Open, Unsupported = () => NoSpot(GameTable.WildHeldItemOdds) },
             ["GrowthCurveEditorView"] = new Rule { Title = "The Growth curve editor", Hge = HgEngine.Open },
@@ -129,7 +129,7 @@ namespace DSPRE
             ["VsSeekerRematchView"] = new Rule
             {
                 Title = "The Vs. Seeker Rematch Editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(() => VsSeekerRematchTable.IsSupported, "The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum (English)."),
+                Unsupported = Unless(() => VsSeekerRematchTable.IsSupported, "The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum."),
             },
             ["PokegearRematchView"] = new Rule
             {
@@ -145,7 +145,7 @@ namespace DSPRE
             ["DungeonCutinEditorView"] = new Rule
             {
                 Title = "The Dungeon Cut-in Editor", Hge = HgEngine.NeedsLink,
-                Unsupported = Unless(IsDungeonCutinEditorAvailable, "The Dungeon Cut-in editor is available for English and Spanish HeartGold and SoulSilver ROMs."),
+                Unsupported = Unless(IsDungeonCutinEditorAvailable, "The Dungeon Cut-in editor is available for HeartGold and SoulSilver ROMs."),
             },
             ["TitleScreenEditorView"] = new Rule
             {

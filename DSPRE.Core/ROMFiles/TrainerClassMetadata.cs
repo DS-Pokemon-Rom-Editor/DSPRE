@@ -244,10 +244,6 @@ namespace DSPRE.ROMFiles
         public const int RecordLength = 0x34;
         public const int MinimumRecordCount = 1;
 
-        private const uint GenderHookOffset = 0x735F8;
-        private const uint EyeContactHookOffset = 0x55098;
-        private const int ExpectedSpeciesEntryCount = 43;
-
         private static string detectedWorkDir;
         private static TrainerClassMetadataDetectionState detectionState;
         private static string detectionDetail;
@@ -280,7 +276,7 @@ namespace DSPRE.ROMFiles
             detectedWorkDir = currentWorkDir;
             recordCount = 0;
 
-            if (RomInfo.gameFamily != GameFamilies.HGSS || RomInfo.gameLanguage != GameLanguages.English)
+            if (RomInfo.trainerClassMetadataHooks == null)
             {
                 detectionState = TrainerClassMetadataDetectionState.Stock;
                 detectionDetail = "TCM schema-v1 detection is limited to English HeartGold and SoulSilver.";
@@ -289,15 +285,15 @@ namespace DSPRE.ROMFiles
             }
 
             bool archiveMarker = TryInspectArchive(out recordCount, out string archiveDetail);
-            bool genderHookMarker = HasThumbVeneer(GenderHookOffset, 0x00, 0x49, 0x08, 0x47);
-            bool eyeContactHookMarker = HasThumbVeneer(EyeContactHookOffset, 0x00, 0x4A, 0x10, 0x47);
+            bool genderHookMarker = HasThumbVeneer(RomInfo.trainerClassMetadataHooks.Gender, 0x00, 0x49, 0x08, 0x47);
+            bool eyeContactHookMarker = HasThumbVeneer(RomInfo.trainerClassMetadataHooks.EyeContact, 0x00, 0x4A, 0x10, 0x47);
 
             RomInfo.SetBattleEffectsData();
             bool retiredTrainerTableMarker = TryReadByte(RomInfo.vsTrainerEntryTableOffsetToSizeLimiter, out byte trainerCount) &&
                 TryReadUInt32(RomInfo.vsTrainerEntryTableOffsetToRAMAddress, out uint trainerPointer) &&
                 trainerCount == 0 && trainerPointer == 0;
             bool speciesTableMarker = TryReadByte(RomInfo.vsPokemonEntryTableOffsetToSizeLimiter, out byte speciesCount) &&
-                speciesCount >= ExpectedSpeciesEntryCount;
+                speciesCount >= RomInfo.trainerClassMetadataHooks.VanillaVsPokemonCount;
 
             bool[] markers =
             {

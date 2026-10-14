@@ -77,7 +77,7 @@ namespace DSPRE.ROMFiles
                 }
                 if (m.Slots - 1 > m.Boundaries.Length)
                 {
-                    int tail = m.Boundaries[0][0] + LandLastSlotSite;
+                    int tail = m.Boundaries[0][0] + m.LastSlotSite;
                     int imm = Imm(d, tail, m.Name);
                     if (tail + 3 >= d.Length) throw new InvalidDataException($"The {m.Name} slot code runs past the end of its overlay.");
                     byte branch = d[tail + 3];
@@ -139,7 +139,7 @@ namespace DSPRE.ROMFiles
                     foreach (int site in m.Sites.Boundaries[b]) { Imm(d, site, m.Name); d[site] = (byte)bounds[b]; }
                 if (m.HasEqualityTail)
                 {
-                    int tail = m.Sites.Boundaries[0][0] + LandLastSlotSite;
+                    int tail = m.Sites.Boundaries[0][0] + m.Sites.LastSlotSite;
                     Imm(d, tail, m.Name);
                     bool oneRoll = m.Percents[m.Percents.Length - 2] == 1;
                     d[tail] = (byte)(oneRoll ? bounds[^2] : bounds[^1]);

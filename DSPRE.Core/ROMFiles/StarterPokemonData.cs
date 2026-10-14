@@ -239,6 +239,11 @@ namespace DSPRE.ROMFiles
         /// </summary>
         internal static void PatchDpPtSelectionSceneAsm(byte[] starterData, int[] newSpecies)
         {
+            if (RomInfo.starterSceneSpeciesLiterals is int[] literals)
+            {
+                PatchSelectionSceneLiterals(starterData, literals, newSpecies);
+                return;
+            }
             if (string.IsNullOrEmpty(RomInfo.starterGraphicsPrefix)) return;
             byte[] prefix = DSUtils.StringToByteArray(RomInfo.starterGraphicsPrefix);
             List<int> matches = DSUtils.SearchBytes(starterData, prefix);
@@ -315,6 +320,25 @@ namespace DSPRE.ROMFiles
                     starterData[innerOffset + 1] = 0x68;
                 }
             }
+        }
+
+        /// <summary>
+        /// Japanese DP passes each sprite's species to the scene's sprite loader as a pool word that follows the
+        /// word holding that sprite's slot (0x204, 0x208, 0x20C), so the species are rewritten in place.
+        /// </summary>
+        private static void PatchSelectionSceneLiterals(byte[] data, int[] literals, int[] newSpecies)
+        {
+            for (int i = 0; i < literals.Length; i++)
+            {
+                int at = literals[i];
+                if (at < 4 || at + 4 > data.Length || ReadLong(data, at - 4) != 0x204 + 4 * i)
+                {
+                    AppLogger.Warn("StarterPokemonData: the selection scene's sprite species were not found where expected, " +
+                        "so the scene keeps its old sprites. The overlay may already be modified by another tool.");
+                    return;
+                }
+            }
+            for (int i = 0; i < literals.Length; i++) WriteLong(data, literals[i], newSpecies[i]);
         }
 
         private static bool IsDpPtSelectionScenePatched(byte[] data, int offset) =>

@@ -112,7 +112,7 @@ namespace DSPRE.ROMFiles
             uint? offset = TrainerClassMetadataPatch.InstalledOffset();
             if (offset == null) return false;
             byte[] synth = File.ReadAllBytes(Filesystem.expArmPath);
-            byte[] expected = TrainerClassMetadataPatch.BuildPayload(TrainerClassMetadataPatch.SyntheticBase + offset.Value);
+            byte[] expected = TrainerClassMetadataPatch.BuildPayload(RomInfo.synthOverlayLoadAddress + offset.Value);
             return offset.Value + ActiveClassInPayload <= synth.Length
                 && synth.AsSpan((int)offset.Value, ActiveClassInPayload).SequenceEqual(expected.AsSpan(0, ActiveClassInPayload));
         }
@@ -161,7 +161,7 @@ namespace DSPRE.ROMFiles
             BitConverter.GetBytes(1u).CopyTo(block, 0x0C);
             BitConverter.GetBytes((uint)block.Length).CopyTo(block, 0x10);
             Code.CopyTo(block, SyntheticOverlaySpace.HeaderSize);
-            uint activeClass = TrainerClassMetadataPatch.SyntheticBase + TrainerClassMetadataPatch.InstalledOffset().Value + ActiveClassInPayload;
+            uint activeClass = RomInfo.synthOverlayLoadAddress + TrainerClassMetadataPatch.InstalledOffset().Value + ActiveClassInPayload;
             BitConverter.GetBytes(activeClass).CopyTo(block, SyntheticOverlaySpace.HeaderSize + ClassWordAt);
 
             int at = SyntheticOverlaySpace.Place(synth, block.Length, SyntheticOverlaySpace.Reserved(synth));

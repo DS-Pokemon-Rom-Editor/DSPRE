@@ -119,11 +119,14 @@ namespace DSPRE.ROMFiles
         }
     }
 
-    /// <summary>HeartGold's three Rock Smash item tables in overlay 1, eight item slots each; offsets confirmed on English HeartGold only.</summary>
+    /// <summary>HeartGold and SoulSilver's three Rock Smash item tables in overlay 1, eight item slots each, back to back.</summary>
     public static class RockSmashItemSlots
     {
-        public const int Overlay = 1, Slots = 8;
-        public const uint RuinsOfAlphOffset = 0x23D04, DefaultOffset = 0x23D14, CliffCaveOffset = 0x23D24;
+        public const int Slots = 8;
+        public static int Overlay => RomInfo.rockSmashItemTablesOverlayNumber;
+        public static uint RuinsOfAlphOffset => RomInfo.rockSmashItemTablesOffset;
+        public static uint DefaultOffset => RomInfo.rockSmashItemTablesOffset + 0x10;
+        public static uint CliffCaveOffset => RomInfo.rockSmashItemTablesOffset + 0x20;
 
         public static ushort[] Read(uint offset)
         {
@@ -150,12 +153,10 @@ namespace DSPRE.ROMFiles
         }
 
         /// <summary>The map type that picks this table, which is also its index in hg-engine's array.</summary>
-        private static int TableType(uint offset) => offset switch
-        {
-            DefaultOffset => 0,
-            RuinsOfAlphOffset => 1,
-            CliffCaveOffset => 2,
-            _ => throw new ArgumentException($"No Rock Smash table at 0x{offset:X}."),
-        };
+        private static int TableType(uint offset) =>
+            offset == DefaultOffset ? 0
+            : offset == RuinsOfAlphOffset ? 1
+            : offset == CliffCaveOffset ? 2
+            : throw new ArgumentException($"No Rock Smash table at 0x{offset:X}.");
     }
 }

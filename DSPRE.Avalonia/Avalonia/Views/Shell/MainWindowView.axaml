@@ -106,7 +106,7 @@
         <MenuItem Header="Trainer back sprite editor" Click="TrainerBackSpriteEditor_Click" IsVisible="{Binding Shown[TrainerSpriteEditorView]}" IsEnabled="{Binding CanUseTrainerSpriteEditor}" ToolTip.Tip="{Binding BlockedNote[TrainerSpriteEditorView]}"/>
         <Separator/>
         <MenuItem Header="Vs. Seeker rematch editor" Click="VsSeekerRematchEditor_Click" IsEnabled="{Binding CanUseVsSeekerRematchEditor}" IsVisible="{Binding IsDpOrPlatinum}"
-                  ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Diamond/Pearl/Platinum (English): which trainer rematches via the Vs. Seeker for each encounter trainer'}"/>
+                  ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Diamond, Pearl and Platinum: which trainer rematches via the Vs. Seeker for each encounter trainer'}"/>
         <MenuItem Header="Pokégear rematch editor" Click="PokegearRematchEditor_Click" IsEnabled="{Binding CanUsePokegearRematchEditor}" IsVisible="{Binding !IsDpOrPlatinum}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='HeartGold/SoulSilver: which trainer you rematch when a Pokégear caller wants a battle'}"/>
         <MenuItem Header="Pokégear phone book" Click="PokegearPhoneBook_Click" IsVisible="{Binding Shown[PokegearPhoneBookView]}" IsEnabled="{Binding CanUsePokegearPhoneBook}"

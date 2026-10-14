@@ -25,7 +25,7 @@ namespace DSPRE.ROMFiles
             DSUtils.TryUnpackNarcs(new List<RomInfo.DirNames> { RomInfo.DirNames.synthOverlay });
             return (RomPatchState.flag_arm9Expanded || PatchToolboxLogic.CheckFilesArm9ExpansionApplied())
                 && File.Exists(Filesystem.expArmPath)
-                && new FileInfo(Filesystem.expArmPath).Length >= 0x16000;
+                && new FileInfo(Filesystem.expArmPath).Length >= RomInfo.synthOverlaySize;
         }
 
         /// <summary>Byte ranges already owned by a marked block.</summary>
@@ -66,7 +66,8 @@ namespace DSPRE.ROMFiles
             return ranges;
         }
 
-        public const int PlatPatchesFixedStart = 0x10000, PlatPatchesFixedEnd = 0x16000;
+        public static int PlatPatchesFixedStart => RomInfo.platPatchesFixedStart;
+        public static int PlatPatchesFixedEnd => RomInfo.synthOverlaySize;
 
         // PlatPatches' blocks store no length and their unused rows read as zero, so each is reserved by its full layout.
         private static readonly (string Marker, int Length)[] PlatPatchesLayouts =

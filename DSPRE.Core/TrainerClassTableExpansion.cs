@@ -12,9 +12,8 @@ namespace DSPRE
     /// (repoint+extend sTrainerClassGender, sTrainerClassPrizeMul, sTrainerEncounterBGMs into the
     /// synthetic overlay, then append name and name-with-article text-archive entries) instead of requiring
     /// manual hex editing. The new class also gets a front sprite, copied from a class the user picks.
-    /// Platinum-English only: sTrainerClassPrizeMul and the gender-table pointer
-    /// slot only have confirmed offsets for that version. Every other language/family is refused
-    /// outright rather than guessed at, since neither array has any bounds checking in the game.
+    /// Platinum only, wherever sTrainerClassPrizeMul and the gender-table pointer are measured. Every other
+    /// family is refused outright rather than guessed at, since neither array has any bounds checking in the game.
     ///
     /// Every write goes through <see cref="RepointByteArrayTable"/>: a fresh, full copy of the table
     /// (existing bytes + the new entry) is written into free space in the synthetic overlay and the
@@ -25,52 +24,17 @@ namespace DSPRE
     public static class TrainerClassTableExpansion
     {
         public static bool IsSupportedForCurrentRom =>
-            RomInfo.gameFamily == GameFamilies.Plat && RomInfo.gameLanguage == GameLanguages.English;
+            RomInfo.gameFamily == GameFamilies.Plat && RomInfo.trainerClassGenderPointerOffset != 0 && RomInfo.trainerPrizeTable?.Pointer > 0;
 
-        // ── sTrainerClassGender (byte[N], 0=Male 1=Female), lives in arm9 ────────────────────────
-        private const uint GenderTablePointerOffset = 0x793B4;
-        private const uint VanillaGenderTableFileOffset = 0xF0714;
-        private const int VanillaGenderTableCount = 0x69;
-
-        // ── sTrainerClassPrizeMul (byte[N]), lives in overlay 16 ─────────────────────────────────
-        private const int PrizeMulOverlayNumber = 16;
-        private const uint PrizeMulTablePointerOverlayOffset = 0x816C;
-        private const uint VanillaPrizeMulTableOverlayOffset = 0x359E0;
-        private const int VanillaPrizeMulTableCount = 0x69;
-
-        // Prize multiplier is also known for DP/HGSS English, but neither has a known repoint
-        // pointer (pointerOffset 0 below means "always read/write the vanilla table directly").
-        // HGSS stores u16 {classId, multiplier} pairs instead of a plain byte array, so vanillaCount
-        // means "pairs" there, not bytes.
+        // A pointer of 0 means "always read/write the vanilla table directly" (DP and HGSS).
         public static bool IsPrizeMulSupportedForCurrentRom => TryGetPrizeMulTableInfo(out _, out _, out _, out _, out _);
 
         private static bool TryGetPrizeMulTableInfo(out int overlayNumber, out uint pointerOffset, out uint vanillaOffset, out int vanillaCount, out bool isPaired)
         {
-            overlayNumber = 0; pointerOffset = 0; vanillaOffset = 0; vanillaCount = 0; isPaired = false;
-            if (RomInfo.gameLanguage != GameLanguages.English) return false;
-
-            switch (RomInfo.gameFamily)
-            {
-                case GameFamilies.Plat:
-                    overlayNumber = PrizeMulOverlayNumber;
-                    pointerOffset = PrizeMulTablePointerOverlayOffset;
-                    vanillaOffset = VanillaPrizeMulTableOverlayOffset;
-                    vanillaCount = VanillaPrizeMulTableCount;
-                    return true;
-                case GameFamilies.DP:
-                    overlayNumber = 11;
-                    vanillaOffset = 0x32960;
-                    vanillaCount = 0x62;
-                    return true;
-                case GameFamilies.HGSS:
-                    overlayNumber = 12;
-                    vanillaOffset = 0x34C04;
-                    vanillaCount = 129;
-                    isPaired = true;
-                    return true;
-                default:
-                    return false;
-            }
+            RomInfo.TrainerPrizeTable t = RomInfo.trainerPrizeTable;
+            overlayNumber = t?.Overlay ?? 0; pointerOffset = t?.Pointer ?? 0; vanillaOffset = t?.Table ?? 0;
+            vanillaCount = t?.Count ?? 0; isPaired = t?.Paired ?? false;
+            return t != null;
         }
 
         // sTrainerEncounterBGMs' offsets are already tracked (all languages) by
@@ -95,8 +59,8 @@ namespace DSPRE
             return -1;
         }
 
-        private static uint GenderPointer => BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, GenderTablePointerOffset, 4), 0);
-        private static uint PrizePointer => BitConverter.ToUInt32(DSUtils.ReadFromFile(OverlayUtils.GetPath(PrizeMulOverlayNumber), PrizeMulTablePointerOverlayOffset, 4), 0);
+        private static uint GenderPointer => BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, RomInfo.trainerClassGenderPointerOffset, 4), 0);
+        private static uint PrizePointer => BitConverter.ToUInt32(DSUtils.ReadFromFile(OverlayUtils.GetPath(RomInfo.trainerPrizeTable.Overlay), RomInfo.trainerPrizeTable.Pointer, 4), 0);
 
         /// <summary>Whether the gender and prize tables have room for every class, as the toolbox patch leaves them.</summary>
         public static bool ClassTablesHaveRoom
@@ -105,7 +69,7 @@ namespace DSPRE
             {
                 try
                 {
-                    EnsureOverlayDecompressed(PrizeMulOverlayNumber);
+                    EnsureOverlayDecompressed(RomInfo.trainerPrizeTable.Overlay);
                     return RoomyTable(GenderPointer, GenderMarker, MaxClasses) >= 0 && RoomyTable(PrizePointer, PrizeMarker, MaxClasses) >= 0;
                 }
                 catch (Exception e) when (e is IOException || e is ArgumentException) { return false; }
@@ -132,7 +96,7 @@ namespace DSPRE
         /// <summary>The sizes of the blocks the class tables patch places, in the order it places them.</summary>
         public static int[] ClassTableBlockLengths()
         {
-            EnsureOverlayDecompressed(PrizeMulOverlayNumber);
+            EnsureOverlayDecompressed(RomInfo.trainerPrizeTable.Overlay);
             List<int> lengths = new List<int>();
             if (RoomyTable(GenderPointer, GenderMarker, MaxClasses) < 0) lengths.Add(RoomyBlockLength(MaxClasses));
             if (RoomyTable(PrizePointer, PrizeMarker, MaxClasses) < 0) lengths.Add(RoomyBlockLength(MaxClasses));
@@ -204,15 +168,15 @@ namespace DSPRE
 
             try
             {
-                uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, GenderTablePointerOffset, 4), 0);
+                uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, RomInfo.trainerClassGenderPointerOffset, 4), 0);
                 IsGenderTableRepointed = ptr >= RomInfo.synthOverlayLoadAddress;
             }
             catch { /* leave false */ }
 
             try
             {
-                string ov16Path = OverlayUtils.GetPath(PrizeMulOverlayNumber);
-                uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(ov16Path, PrizeMulTablePointerOverlayOffset, 4), 0);
+                string prizePath = OverlayUtils.GetPath(RomInfo.trainerPrizeTable.Overlay);
+                uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(prizePath, RomInfo.trainerPrizeTable.Pointer, 4), 0);
                 IsPrizeMulTableRepointed = ptr >= RomInfo.synthOverlayLoadAddress;
             }
             catch { /* leave false */ }
@@ -256,8 +220,8 @@ namespace DSPRE
         {
             gender = 0;
             error = null;
-            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum (English)."; return false; }
-            if (!TryResolveByteTable(RomInfo.arm9Path, GenderTablePointerOffset, RomInfo.arm9Path, VanillaGenderTableFileOffset, VanillaGenderTableCount, out byte[] table, out error))
+            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum."; return false; }
+            if (!TryResolveByteTable(RomInfo.arm9Path, RomInfo.trainerClassGenderPointerOffset, RomInfo.arm9Path, RomInfo.trainerClassGenderTableOffset, RomInfo.vanillaTrainerClassCount, out byte[] table, out error))
                 return false;
             if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
             gender = table[classId];
@@ -267,21 +231,21 @@ namespace DSPRE
         public static bool TryWriteGender(int classId, byte gender, out string error)
         {
             error = null;
-            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum (English)."; return false; }
-            if (!TryResolveByteTable(RomInfo.arm9Path, GenderTablePointerOffset, RomInfo.arm9Path, VanillaGenderTableFileOffset, VanillaGenderTableCount, out byte[] table, out error))
+            if (!IsSupportedForCurrentRom) { error = "Only implemented for Platinum."; return false; }
+            if (!TryResolveByteTable(RomInfo.arm9Path, RomInfo.trainerClassGenderPointerOffset, RomInfo.arm9Path, RomInfo.trainerClassGenderTableOffset, RomInfo.vanillaTrainerClassCount, out byte[] table, out error))
                 return false;
             if (classId < 0 || classId >= table.Length) { error = "Class index out of range."; return false; }
 
-            uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, GenderTablePointerOffset, 4), 0);
+            uint ptr = BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, RomInfo.trainerClassGenderPointerOffset, 4), 0);
             if (ptr < RomInfo.synthOverlayLoadAddress)
             {
                 // Not repointed: the retail table is the one the game reads, and classId is inside it.
-                if (ptr != ARM9.address + VanillaGenderTableFileOffset)
+                if (ptr != ARM9.address + RomInfo.trainerClassGenderTableOffset)
                 {
                     error = "The gender table was moved inside arm9, so it can't be written here.";
                     return false;
                 }
-                DSUtils.WriteToFile(RomInfo.arm9Path, new[] { gender }, (uint)(VanillaGenderTableFileOffset + classId));
+                DSUtils.WriteToFile(RomInfo.arm9Path, new[] { gender }, (uint)(RomInfo.trainerClassGenderTableOffset + classId));
                 return true;
             }
 
@@ -422,13 +386,13 @@ namespace DSPRE
 
         // ── Add a whole new trainer class ─────────────────────────────────────────────────────────
         /// <summary>Why a class with this name can't be added, or null. Checked when the user adds it, before Save.</summary>
-        // Class adding is English only, so a blank entry gets the English article.
-        private static string WithArticle(string name) =>
-            ("AEIOU".IndexOf(char.ToUpperInvariant(name.TrimStart().FirstOrDefault())) >= 0 ? "an " : "a ") + name.Trim();
+        // A blank entry gets the English article in English; other languages keep the name as typed.
+        private static string WithArticle(string name) => RomInfo.gameLanguage != GameLanguages.English ? name.Trim()
+            : ("AEIOU".IndexOf(char.ToUpperInvariant(name.TrimStart().FirstOrDefault())) >= 0 ? "an " : "a ") + name.Trim();
 
         public static string AddRefusal(string name)
         {
-            if (!IsSupportedForCurrentRom) return "Adding trainer classes is only supported for Platinum (English) right now.";
+            if (!IsSupportedForCurrentRom) return "Adding trainer classes is only supported for Platinum right now.";
             if (!SyntheticOverlaySpace.Available()) return NeedsExpansion;
             return string.IsNullOrWhiteSpace(name) ? "Enter a class name." : null;
         }
@@ -468,13 +432,13 @@ namespace DSPRE
             if (error != null) return false;
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives, DirNames.trainerGraphics });
-            EnsureOverlayDecompressed(PrizeMulOverlayNumber);
+            EnsureOverlayDecompressed(RomInfo.trainerPrizeTable.Overlay);
 
             // Validate every table resolves before writing anything (all-or-nothing).
-            if (!TryResolveByteTable(RomInfo.arm9Path, GenderTablePointerOffset, RomInfo.arm9Path, VanillaGenderTableFileOffset, VanillaGenderTableCount, out byte[] genderTable, out error))
+            if (!TryResolveByteTable(RomInfo.arm9Path, RomInfo.trainerClassGenderPointerOffset, RomInfo.arm9Path, RomInfo.trainerClassGenderTableOffset, RomInfo.vanillaTrainerClassCount, out byte[] genderTable, out error))
                 return false;
-            string ov16Path = OverlayUtils.GetPath(PrizeMulOverlayNumber);
-            if (!TryResolveByteTable(ov16Path, PrizeMulTablePointerOverlayOffset, ov16Path, VanillaPrizeMulTableOverlayOffset, VanillaPrizeMulTableCount, out byte[] prizeMulTable, out error))
+            string prizePath = OverlayUtils.GetPath(RomInfo.trainerPrizeTable.Overlay);
+            if (!TryResolveByteTable(prizePath, RomInfo.trainerPrizeTable.Pointer, prizePath, RomInfo.trainerPrizeTable.Table, RomInfo.trainerPrizeTable.Count, out byte[] prizeMulTable, out error))
                 return false;
             int newClassId = genderTable.Length;
             if (!SpriteComplete(spriteFromClass >= 0 ? spriteFromClass : newClassId))
@@ -525,9 +489,13 @@ namespace DSPRE
                 nameArchive.messages.Add(name);
                 nameArchive.SaveToExpandedDir(RomInfo.trainerClassMessageNumber, showSuccessMessage: false);
 
-                TextArchive articleArchive = new TextArchive(RomInfo.trainerClassWithArticleMessageNumber);
-                articleArchive.messages.Add(string.IsNullOrWhiteSpace(nameWithArticle) ? WithArticle(name) : nameWithArticle);
-                articleArchive.SaveToExpandedDir(RomInfo.trainerClassWithArticleMessageNumber, showSuccessMessage: false);
+                // Japanese and Korean have no article bank.
+                if (RomInfo.trainerClassWithArticleMessageNumber >= 0)
+                {
+                    TextArchive articleArchive = new TextArchive(RomInfo.trainerClassWithArticleMessageNumber);
+                    articleArchive.messages.Add(string.IsNullOrWhiteSpace(nameWithArticle) ? WithArticle(name) : nameWithArticle);
+                    articleArchive.SaveToExpandedDir(RomInfo.trainerClassWithArticleMessageNumber, showSuccessMessage: false);
+                }
 
                 Detect();
                 return true;
@@ -549,18 +517,18 @@ namespace DSPRE
 
         private static bool MoveClassTablesUnchanged(out string error)
         {
-            error = !IsSupportedForCurrentRom ? "Only Platinum (English) is supported."
+            error = !IsSupportedForCurrentRom ? "Only Platinum is supported."
                 : !SyntheticOverlaySpace.Available() ? NeedsExpansion : null;
             if (error != null) return false;
 
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.synthOverlay, DirNames.textArchives });
-            EnsureOverlayDecompressed(PrizeMulOverlayNumber);
+            EnsureOverlayDecompressed(RomInfo.trainerPrizeTable.Overlay);
             Detect();
 
-            string ov16Path = OverlayUtils.GetPath(PrizeMulOverlayNumber);
-            if (!TryResolveByteTable(RomInfo.arm9Path, GenderTablePointerOffset, RomInfo.arm9Path, VanillaGenderTableFileOffset, VanillaGenderTableCount, out byte[] genderTable, out error))
+            string prizePath = OverlayUtils.GetPath(RomInfo.trainerPrizeTable.Overlay);
+            if (!TryResolveByteTable(RomInfo.arm9Path, RomInfo.trainerClassGenderPointerOffset, RomInfo.arm9Path, RomInfo.trainerClassGenderTableOffset, RomInfo.vanillaTrainerClassCount, out byte[] genderTable, out error))
                 return false;
-            if (!TryResolveByteTable(ov16Path, PrizeMulTablePointerOverlayOffset, ov16Path, VanillaPrizeMulTableOverlayOffset, VanillaPrizeMulTableCount, out byte[] prizeMulTable, out error))
+            if (!TryResolveByteTable(prizePath, RomInfo.trainerPrizeTable.Pointer, prizePath, RomInfo.trainerPrizeTable.Table, RomInfo.trainerPrizeTable.Count, out byte[] prizeMulTable, out error))
                 return false;
 
             // A moved table's length is read from the class name count, so both must already match it.
@@ -576,14 +544,14 @@ namespace DSPRE
                 uint old = GenderPointer;
                 long at = PlaceRoomyTable(GenderMarker, genderTable, MaxClasses, old, genderTable.Length, out error);
                 if (at < 0) return false;
-                DSUtils.WriteToFile(RomInfo.arm9Path, BitConverter.GetBytes(RomInfo.synthOverlayLoadAddress + (uint)at), GenderTablePointerOffset);
+                DSUtils.WriteToFile(RomInfo.arm9Path, BitConverter.GetBytes(RomInfo.synthOverlayLoadAddress + (uint)at), RomInfo.trainerClassGenderPointerOffset);
             }
             if (RoomyTable(PrizePointer, PrizeMarker, MaxClasses) < 0)
             {
                 uint old = PrizePointer;
                 long at = PlaceRoomyTable(PrizeMarker, prizeMulTable, MaxClasses, old, prizeMulTable.Length, out error);
                 if (at < 0) return false;
-                DSUtils.WriteToFile(ov16Path, BitConverter.GetBytes(RomInfo.synthOverlayLoadAddress + (uint)at), PrizeMulTablePointerOverlayOffset);
+                DSUtils.WriteToFile(prizePath, BitConverter.GetBytes(RomInfo.synthOverlayLoadAddress + (uint)at), RomInfo.trainerPrizeTable.Pointer);
             }
             Detect();
             return true;
@@ -592,7 +560,7 @@ namespace DSPRE
         /// <summary>Moves the eye-contact music table into the synthetic overlay unchanged.</summary>
         public static bool MoveEncounterMusicTable(out string error)
         {
-            error = !IsSupportedForCurrentRom ? "Only Platinum (English) is supported."
+            error = !IsSupportedForCurrentRom ? "Only Platinum is supported."
                 : !SyntheticOverlaySpace.Available() ? NeedsExpansion : null;
             if (error != null) return false;
             if (MusicTableHasRoom) return true;
@@ -621,9 +589,7 @@ namespace DSPRE
             try
             {
                 RomInfo.SetEncounterMusicTableOffsetToRAMAddress();
-                uint tableSizeOffset = 10;
-                if (RomInfo.gameFamily == GameFamilies.HGSS) tableSizeOffset += 2;
-                uint lengthFieldOffset = RomInfo.encounterMusicTableOffsetToRAMAddress - tableSizeOffset;
+                uint lengthFieldOffset = RomInfo.encounterMusicCountSite;
 
                 uint ptr = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0);
                 bool repointed = ptr >= RomInfo.synthOverlayLoadAddress;
@@ -736,9 +702,9 @@ namespace DSPRE
                 try
                 {
                     int classCount = new TextArchive(RomInfo.trainerClassMessageNumber).messages.Count;
-                    uint gender = BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, GenderTablePointerOffset, 4), 0);
+                    uint gender = BitConverter.ToUInt32(DSUtils.ReadFromFile(RomInfo.arm9Path, RomInfo.trainerClassGenderPointerOffset, 4), 0);
                     if (gender >= load) ranges.Add((gender - load, gender - load + classCount));
-                    uint prize = BitConverter.ToUInt32(DSUtils.ReadFromFile(OverlayUtils.GetPath(PrizeMulOverlayNumber), PrizeMulTablePointerOverlayOffset, 4), 0);
+                    uint prize = BitConverter.ToUInt32(DSUtils.ReadFromFile(OverlayUtils.GetPath(RomInfo.trainerPrizeTable.Overlay), RomInfo.trainerPrizeTable.Pointer, 4), 0);
                     if (prize >= load) ranges.Add((prize - load, prize - load + classCount));
                 }
                 catch { /* an unreadable table reserves nothing */ }
@@ -749,7 +715,7 @@ namespace DSPRE
                 uint music = BitConverter.ToUInt32(ARM9.ReadBytes(RomInfo.encounterMusicTableOffsetToRAMAddress, 4), 0);
                 if (music >= load)
                 {
-                    uint lengthField = RomInfo.encounterMusicTableOffsetToRAMAddress - (RomInfo.gameFamily == GameFamilies.HGSS ? 12u : 10u);
+                    uint lengthField = RomInfo.encounterMusicCountSite;
                     int entrySize = RomInfo.gameFamily == GameFamilies.HGSS ? 6 : 4;
                     ranges.Add((music - load, music - load + ARM9.ReadByte(lengthField) * entrySize));
                 }

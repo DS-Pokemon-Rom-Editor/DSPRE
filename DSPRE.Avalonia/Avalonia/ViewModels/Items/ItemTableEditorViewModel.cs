@@ -241,7 +241,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
     }
 
     /// <summary>One of Rock Smash's three fixed 8-slot item tables, hardcoded in HGSS's ov001.bin
-    /// (English offsets only, see <see cref="RomInfo.IsRockSmashItemTableAvailable"/>).</summary>
+    /// (see <see cref="RomInfo.IsRockSmashItemTableAvailable"/>).</summary>
     public class RockSmashItemSlotsRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
@@ -410,7 +410,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         // ── Rock Smash (HGSS) ────────────────────────────────────────────────────
         // Per-header odds/table (data/a/2/5/3): available for any HGSS ROM, any language.
-        // The 3 hardcoded item-slot tables are RockSmashItemSlots, at English-only-confirmed offsets.
+        // The three fixed item-slot tables are RockSmashItemSlots, at RomInfo.rockSmashItemTablesOffset.
 
         public bool ShowRockSmashTab { get; }
         public bool ShowRockSmashItemTables { get; private set; }

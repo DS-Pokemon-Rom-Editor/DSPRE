@@ -57,7 +57,6 @@ namespace DSPRE.ROMFiles
         {
             if (gameFamily != GameFamilies.HGSS) return "Followers exist only in HeartGold and SoulSilver.";
             if (HgEngineProject.IsActive || IsHgEngineBaseProject) return "hg-engine keeps follower data in its source.";
-            if (romID != "IPKE") return "Follower editing supports HeartGold (US) only.";
             if (FollowerModelTableOffset < 0 || !File.Exists(arm9Path)) return "Follower tables not found.";
             if (ARM9.CheckCompressionMark()) return "arm9 is compressed.";
             // The tables must still read as the retail ones: Bulbasaur 0, Ivysaur 1, Venusaur 2 with a female model, Unown 27 forms.

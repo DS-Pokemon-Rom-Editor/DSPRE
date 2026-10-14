@@ -15,7 +15,7 @@ namespace DSPRE
 {
     /// <summary>Class to store ROM data from GEN IV Pokémon games</summary>
 
-    public class RomInfo
+    public partial class RomInfo
     {
         public const string folderSuffix = "_DSPRE_contents"; // changed back to public static string
         private static string dataFolderName;
@@ -98,6 +98,20 @@ namespace DSPRE
         public static GameFamilies gameFamily { get; private set; }
 
         public static uint synthOverlayLoadAddress = 0x023C8000;
+        /// <summary>How much of the synthetic overlay the game loads.</summary>
+        public const int synthOverlaySize = 0x16000;
+        /// <summary>The game's archive id for the synthetic overlay's NARC (weather_sys.narc in DP and Pt, a/0/2/8 in HGSS).</summary>
+        public static byte synthOverlayArchiveId => gameFamily == GameFamilies.HGSS ? (byte)28 : (byte)65;
+
+        /// <summary>
+        /// The ARM9 expansion's sites as ARM9 file offsets: the boot pair (movs r0, #0; movs r1, #3) it replaces with a call,
+        /// where its loader goes, and the RAM address of the game's file loader the loader calls.
+        /// </summary>
+        public sealed record Arm9ExpansionSites(uint Boot, uint Loader, uint FileLoader);
+
+        /// <summary>Measured where a dump needs its own; otherwise null and ToolboxDB's per-language entry applies.</summary>
+        public static Arm9ExpansionSites arm9ExpansionSites =>
+            MeasuredHere?.Arm9Expansion is uint[] s && s.Length == 3 ? new Arm9ExpansionSites(s[0], s[1], s[2]) : null;
         public static uint arm9spawnOffset { get; private set; }
 
         public static int initialMoneyOverlayNumber { get; private set; }
@@ -121,6 +135,7 @@ namespace DSPRE
         public static byte[] starterArm9SearchSuffix { get; private set; }
         public static string starterGraphicsPrefix { get; private set; }        // DP/Pt only
         public static string starterGraphicsPrefixInner { get; private set; }   // DP/Pt only
+        public static int[] starterSceneSpeciesLiterals { get; private set; }    // Japanese DP only
         public static string starterCriesPrefix { get; private set; }           // HGSS only
         public static int starterHeldItemScriptFileID { get; private set; } = -1; // DP/Pt only
         public static uint starterHeldItemOffset { get; private set; }            // DP/Pt only
@@ -183,7 +198,15 @@ namespace DSPRE
 
         public static uint conditionalMusicTableOffsetToRAMAddress { get; internal set; }
         public static uint encounterMusicTableOffsetToRAMAddress { get; internal set; }
+        /// <summary>The row count's compare immediate, read before the table's literal; Japanese DP's loop sits four bytes further back.</summary>
+        public static uint encounterMusicCountSite => encounterMusicTableOffsetToRAMAddress
+            - (gameFamily == GameFamilies.HGSS ? 12u : gameFamily == GameFamilies.DP && gameLanguage == GameLanguages.Japanese ? 14u : 10u);
         public static uint dungeonCutinTableOffsetToRAMAddress { get; internal set; }
+        /// <summary>
+        /// HGSS: the Ruins of Alph, default and Cliff Cave Rock Smash item tables in overlay 1, found by content in every
+        /// dump. SoulSilver keeps HeartGold's offsets with its own exclusive items.
+        /// </summary>
+        public static uint rockSmashItemTablesOffset => gameLanguage == GameLanguages.Japanese ? 0x23B78u : 0x23D04u;
 
         public static uint vsTrainerEntryTableOffsetToRAMAddress { get; internal set; }
         public static uint vsPokemonEntryTableOffsetToRAMAddress { get; internal set; }
@@ -218,6 +241,7 @@ namespace DSPRE
         {
             get
             {
+                if (MeasuredHere?.FlyTable is uint measured) return measured;
                 switch (gameFamily)
                 {
                     case GameFamilies.DP:
@@ -399,7 +423,8 @@ namespace DSPRE
         };
 
         public static MoveListSites MoveListSitesOf(GameTable table) =>
-            romID != null && MoveListSiteTable.TryGetValue((romID, romRevision, table), out MoveListSites sites) ? sites : null;
+            romID != null && (MoveListSiteTable.TryGetValue((SiteKey.id, SiteKey.rev, table), out MoveListSites sites)
+                              || MeasuredMoveListSites.TryGetValue((CodeKey.id, CodeKey.rev, table), out sites)) ? sites : null;
 
         // In the type chart's overlay: the literals holding the chart's address (column 0, +1 and +2), the
         // `cmp rN, #count` Conversion 2 bounds its record walk with, and the `movs r1, #count` its random
@@ -412,7 +437,8 @@ namespace DSPRE
         };
 
         public static (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus)? TypeChartPointerSites =>
-            romID != null && TypeChartSites.TryGetValue((romID, romRevision), out (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) s) ? s : null;
+            romID != null && (TypeChartSites.TryGetValue(SiteKey, out (int[] col0, int[] col1, int[] col2, int countCompare, int countModulus) s)
+                              || MeasuredTypeChartSites.TryGetValue(CodeKey, out s)) ? s : null;
 
         /// <summary>
         /// Battle Point exchange code sites: Platinum's corner list pointers, overlay 7 price literal (the next one is +2)
@@ -431,7 +457,9 @@ namespace DSPRE
         /// One encounter method's `cmp r0, #boundary` sites per slot boundary in the selector's overlay; a boundary
         /// may be compared in two places.
         /// </summary>
-        public sealed record SlotOddsMethod(string Name, int Overlay, int Slots, int[][] Boundaries);
+        /// <param name="LastSlotSite">The last-slot compare's distance from the first compare (land only); Japanese
+        /// Diamond and Pearl compare each boundary once more, which moves it.</param>
+        public sealed record SlotOddsMethod(string Name, int Overlay, int Slots, int[][] Boundaries, int LastSlotSite = LandLastSlotSite);
 
         /// <summary>Land's `cmp r0, #x` then branch for the last two slots, relative to the land selector's first compare.</summary>
         public const int LandLastSlotSite = 0x72;
@@ -474,8 +502,25 @@ namespace DSPRE
             },
         };
 
-        public static SlotOddsMethod[] SlotOddsMethods =>
-            romID != null && SlotOddsTable.TryGetValue((romID, romRevision), out SlotOddsMethod[] m) ? m : null;
+        public static SlotOddsMethod[] SlotOddsMethods
+        {
+            get
+            {
+                if (romID == null) return null;
+                if (SlotOddsTable.TryGetValue(SiteKey, out SlotOddsMethod[] m)) return m;
+                if (MeasuredSlotOddsMethods.TryGetValue(CodeKey, out SlotOddsMethod[] whole)) return whole;
+                if (!MeasuredSlotOddsBases.TryGetValue(CodeKey, out int[] bases)) return null;
+                // The selectors are the US ones moved: every boundary keeps its distance from its method's first compare.
+                SlotOddsMethod[] us = SlotOddsTable[gameFamily switch
+                {
+                    GameFamilies.DP => ("ADAE", 5), GameFamilies.Plat => ("CPUE", 1), _ => ("IPKE", 0),
+                }];
+                return us.Select((method, i) => method with
+                {
+                    Boundaries = method.Boundaries.Select(sites => sites.Select(at => at + bases[i] - method.Boundaries[0][0]).ToArray()).ToArray(),
+                }).ToArray();
+            }
+        }
 
         /// <summary>
         /// The swarm destination table. HGSS rows are u16 header + u16 method; DP/Pt rows are a u32 header. The
@@ -504,10 +549,10 @@ namespace DSPRE
         };
 
         public static SwarmSites SwarmCodeSites =>
-            romID != null && SwarmSiteTable.TryGetValue((romID, romRevision), out SwarmSites s) ? s : null;
+            romID != null && (SwarmSiteTable.TryGetValue(SiteKey, out SwarmSites s) || MeasuredSwarmSites.TryGetValue(CodeKey, out s)) ? s : null;
 
         public static BpShopSites BpShopCodeSites =>
-            romID != null && BpShopSiteTable.TryGetValue((romID, romRevision), out BpShopSites s) ? s : null;
+            romID != null && (BpShopSiteTable.TryGetValue(SiteKey, out BpShopSites s) || MeasuredBpShopSites.TryGetValue(CodeKey, out s)) ? s : null;
 
         /// <summary>
         /// Special trainer battle intros, as file offsets in the named binary, -1 where the game has none.
@@ -540,7 +585,9 @@ namespace DSPRE
         private static readonly Dictionary<string, string> VsIntroSameAs = new() { ["IPGE"] = "IPKE", ["APAE"] = "ADAE" };
 
         public static VsIntroSites VsIntroCodeSites =>
-            romID != null && VsIntroSiteTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out string same) ? same : romID, out VsIntroSites s) ? s : null;
+            romID == null ? null
+            : VsIntroSiteTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out string same) ? same : romID, out VsIntroSites s) ? s
+            : MeasuredVsIntroSites.TryGetValue(CodeKey, out s) ? s : null;
 
         /// <summary>
         /// Data tables in the intro code: the six emblems the Team Rocket or Galactic grunt intro flies in (eight s32
@@ -564,11 +611,14 @@ namespace DSPRE
         public static int MatrixMaxCells(bool expansionPatched) => gameFamily == GameFamilies.HGSS ? (expansionPatched ? 799 * 2 : 799) : 900;
 
         public static VsIntroMotionSites VsIntroMotionCodeSites =>
-            romID != null && VsIntroMotionTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out string same) ? same : romID, out VsIntroMotionSites s) ? s : null;
+            romID == null ? null
+            : VsIntroMotionTable.TryGetValue(VsIntroSameAs.TryGetValue(romID, out string same) ? same : romID, out VsIntroMotionSites s) ? s
+            : MeasuredVsIntroMotion.TryGetValue(CodeKey, out s) ? s : null;
 
         /// <summary>Where this ROM keeps <paramref name="table"/>, or null for an unsupported version.</summary>
         public static TableSpot? SpotOf(GameTable table) =>
-            romID != null && TableSpots.TryGetValue((romID, romRevision, table), out TableSpot spot) ? spot : null;
+            romID != null && (TableSpots.TryGetValue((CodeKey.id, CodeKey.rev, table), out TableSpot spot)
+                              || MeasuredTableSpots.TryGetValue((CodeKey.id, CodeKey.rev, table), out spot)) ? spot : null;
 
         private static int ReadRomRevision(string dir)
         {
@@ -592,9 +642,129 @@ namespace DSPRE
         /// HGSS arm9 file offsets of the follower tables read by SpeciesToOverworldModelIndexOffset,
         /// OverworldModelLookupFormCount and OverworldModelLookupHasFemaleForm; -1 on other versions.
         /// </summary>
-        public static int FollowerModelTableOffset => romID == "IPKE" ? 0xFF088 : -1;
-        public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : -1;
-        public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : -1;
+        /// <summary>DP/Pt: the class switch picking each trainer class's battle music, as (arm9 table, entries), or null.</summary>
+        public static (int Table, int Count)? ClassJumpSite =>
+            VsIntroCodeSites is VsIntroSites s && s.ClassJumpTable >= 0 ? (s.ClassJumpTable, s.ClassJumpCount)
+            : MeasuredHere?.ClassJumpTable is int t ? (t, MeasuredHere.ClassJumpCount ?? 0) : null;
+        /// <summary>
+        /// The trainer class gender table in arm9, one byte per class (1 female), or 0 when unknown. A dump that keeps it
+        /// apart from its language's usual place has it measured.
+        /// </summary>
+        public static uint trainerClassGenderTableOffset => MeasuredHere?.TrainerClassGender ?? (gameFamily, gameLanguage) switch
+        {
+            (GameFamilies.DP, GameLanguages.English) => 0xF8010,
+            (GameFamilies.DP, GameLanguages.French) => 0xF8054,
+            (GameFamilies.DP, GameLanguages.German) => 0xF8024,
+            (GameFamilies.DP, GameLanguages.Italian) => 0xF7FC8,
+            (GameFamilies.DP, GameLanguages.Spanish) => 0xF8060,
+            (GameFamilies.DP, GameLanguages.Korean) => 0xF3660,
+            (GameFamilies.Plat, GameLanguages.English) => 0xF0714,
+            (GameFamilies.Plat, GameLanguages.Japanese) => 0xEFDA4,
+            (GameFamilies.Plat, GameLanguages.French) => 0xF079C,
+            (GameFamilies.Plat, GameLanguages.German) => 0xF076C,
+            (GameFamilies.Plat, GameLanguages.Italian) => 0xF0730,
+            (GameFamilies.Plat, GameLanguages.Spanish) => 0xF07A8,
+            (GameFamilies.Plat, GameLanguages.Korean) => 0xF119C,
+            (GameFamilies.HGSS, GameLanguages.English) => 0xFFB90,
+            (GameFamilies.HGSS, GameLanguages.Japanese) => 0xFF310,
+            (GameFamilies.HGSS, GameLanguages.French) => 0xFFB74,
+            (GameFamilies.HGSS, GameLanguages.German) => 0xFFB44,
+            (GameFamilies.HGSS, GameLanguages.Italian) => 0xFFB08,
+            (GameFamilies.HGSS, GameLanguages.Spanish) => 0xFFB78,
+            _ => 0u,
+        };
+        /// <summary>Platinum: the arm9 literal pointing at the trainer class gender table, or 0 where it is not measured.</summary>
+        public static uint trainerClassGenderPointerOffset =>
+            gameFamily == GameFamilies.Plat ? MeasuredHere?.ClassGenderPointer ?? 0u : 0u;
+
+        /// <summary>The trainer class prize multipliers: overlay, pointer literal there (0 when none is known), table, length.</summary>
+        public sealed record TrainerPrizeTable(int Overlay, uint Pointer, uint Table, int Count, bool Paired);
+
+        /// <summary>
+        /// Measured per dump. Platinum's is a byte per class behind a pointer; DP's has no known pointer; HGSS keeps u16
+        /// {class, multiplier} pairs, so its count is pairs.
+        /// </summary>
+        public static TrainerPrizeTable trainerPrizeTable => MeasuredHere?.PrizeTable is not uint table ? null : gameFamily switch
+        {
+            GameFamilies.Plat => new TrainerPrizeTable(16, MeasuredHere.PrizePointer ?? 0, table, 0x69, false),
+            GameFamilies.DP => new TrainerPrizeTable(11, 0, table, 0x62, false),
+            GameFamilies.HGSS => new TrainerPrizeTable(12, 0, table, 129, true),
+            _ => null,
+        };
+        /// <summary>The vanilla game's trainer class count: the gender table's length.</summary>
+        public static int vanillaTrainerClassCount => gameFamily switch
+        {
+            GameFamilies.DP => 98,
+            GameFamilies.Plat => 105,
+            GameFamilies.HGSS => 129,
+            _ => 0,
+        };
+
+        /// <summary>
+        /// The trainer shiny patch's ARM9 sites: the call that frees the raw party records, the ability mask, and the six
+        /// routines its payload calls.
+        /// </summary>
+        public sealed record TrainerShinySites(int Hook, int Mask, uint[] CallTargets);
+
+        /// <summary>Measured per HeartGold and SoulSilver dump.</summary>
+        public static TrainerShinySites trainerShinySites =>
+            MeasuredHere?.TrainerShiny is uint[] s && s.Length == 8 ? new TrainerShinySites((int)s[0], (int)s[1], s[2..]) : null;
+
+        /// <summary>
+        /// The building rotation patch's sites: the field overlay, the hook in it that passes each building's rotation,
+        /// and the routine the payload calls to build the rotation matrix.
+        /// </summary>
+        public sealed record BuildingRotationSites(int Overlay, uint Hook, uint RotationRoutine);
+
+        /// <summary>Measured per dump; Japanese DP has its own hook and payload.</summary>
+        public static BuildingRotationSites buildingRotationSites =>
+            MeasuredHere?.BuildingRotation is uint[] s && s.Length == 2
+                ? new BuildingRotationSites(gameFamily == GameFamilies.HGSS ? 1 : 5, s[0], s[1])
+                : null;
+
+        /// <summary>
+        /// The trainer class metadata patch's ARM9 veneers (gender and eye-contact music lookups) and the vanilla VS
+        /// Pokemon table's length, which its detection compares against.
+        /// </summary>
+        public sealed record TrainerClassMetadataHooks(uint Gender, uint EyeContact, int VanillaVsPokemonCount);
+
+        /// <summary>US HeartGold and SoulSilver only.</summary>
+        public static TrainerClassMetadataHooks trainerClassMetadataHooks =>
+            CodeKey == ("IPKE", 0) || CodeKey == ("IPGE", 0) ? new TrainerClassMetadataHooks(0x735F8, 0x55098, 43) : null;
+
+        /// <summary>hzla's PlatPatches: the RAM addresses of their item file and TM/HM hooks in the ARM9.</summary>
+        public sealed record PlatPatchesHooks(uint ItemFileId, uint ItemIsTmHm);
+
+        /// <summary>US Platinum only.</summary>
+        public static PlatPatchesHooks platPatchesHooks =>
+            CodeKey == ("CPUE", 1) ? new PlatPatchesHooks(0x0207CE78, 0x0205E060) : null;
+
+        /// <summary>Where PlatPatches keep their fixed blocks in the synthetic overlay, up to its end.</summary>
+        public const int platPatchesFixedStart = 0x10000;
+
+        /// <summary>
+        /// The Distortion World's tables in code: the overlay, the floors whose headers the moving platform and prop lists
+        /// are keyed by, and the counts the searches expect.
+        /// </summary>
+        public sealed record TornWorldCodeLayout(int Overlay, uint[] MovingPlatformFloors, uint[] PropFloors,
+            int PropKinds, int AnimationKinds, int HoverSteps, int ElevatorPaths);
+
+        /// <summary>Platinum only.</summary>
+        public static TornWorldCodeLayout tornWorldCode => gameFamily != GameFamilies.Plat ? null
+            : new TornWorldCodeLayout(9, new uint[] { 573, 574, 575, 576, 577, 579, 580, 581 }, new uint[] { 573, 579, 582, 583 }, 25, 5, 8, 22);
+
+        /// <summary>HGSS: the overlay holding the Rock Smash item tables.</summary>
+        public const int rockSmashItemTablesOverlayNumber = 1;
+
+        /// <summary>The Battle Frontier Brains' VS records: overlay, file offset there, rows and row size.</summary>
+        public sealed record FrontierBrainTable(int Overlay, uint Table, int Count, int RowSize);
+
+        /// <summary>US HeartGold and SoulSilver only.</summary>
+        public static FrontierBrainTable frontierBrainTable =>
+            CodeKey == ("IPKE", 0) || CodeKey == ("IPGE", 0) ? new FrontierBrainTable(80, 0x13CB8, 6, 0x0C) : null;
+        public static int FollowerModelTableOffset => romID == "IPKE" ? 0xFF088 : MeasuredHere?.FollowerModels ?? -1;
+        public static int FollowerFormCountTableOffset => romID == "IPKE" ? 0xFE8D4 : MeasuredHere?.FollowerFormCounts ?? -1;
+        public static int FollowerFemaleTableOffset => romID == "IPKE" ? 0xFECAE : MeasuredHere?.FollowerFemale ?? -1;
 
         /// <summary>
         /// HGSS: species whose Pokéwalker picture is picked by form, each with the first of its form pictures in
@@ -609,10 +779,11 @@ namespace DSPRE
         public static int PokewalkerIconLeadIn => gameFamily == GameFamilies.HGSS ? 7 : -1;
 
         /// <summary>HGSS arm9 file offset of sPokeathlonPerformanceArcIdxs, the first Pokéathlon record of each species; -1 elsewhere.</summary>
-        public static int PokeathlonMemberTableOffset => romID == "IPKE" ? 0xFF7B4 : -1;
+        public static int PokeathlonMemberTableOffset => romID == "IPKE" ? 0xFF7B4 : MeasuredHere?.PokeathlonMembers ?? -1;
 
         /// <summary>Text archive whose lines 78-87 name the ten Bug-Catching Contest opponents; -1 where unknown.</summary>
-        public static int BugContestTextNumber => gameFamily == GameFamilies.HGSS && gameLanguage != GameLanguages.Japanese ? 246 : -1;
+        public static int BugContestTextNumber =>
+            gameFamily == GameFamilies.HGSS && gameLanguage != GameLanguages.Japanese ? TextBank(246) : MeasuredHere?.BugContestText ?? -1;
         public static string OWtablePath { get; private set; }
 
         public static uint monIconPalTableAddress { get; private set; }
@@ -732,7 +903,8 @@ namespace DSPRE
             Italian,
             Spanish,
             French,
-            German
+            German,
+            Korean
         }
 
         public enum DirNames : byte
@@ -999,6 +1171,7 @@ namespace DSPRE
             SetMoveTextNumbers();
             SetTypesTextNumber();
             SetTrainerMessageTextNumber();
+            if (gameLanguage == GameLanguages.Korean) SetKoreanTextNumbers();
 
             InitScriptDBs();
 
@@ -1240,6 +1413,7 @@ namespace DSPRE
                     }
                     break;
             }
+            if (MeasuredHere?.HeaderTable is uint measured) headerTableOffset = measured;
         }
 
         public static void SetupSpawnSettings()
@@ -1339,6 +1513,9 @@ namespace DSPRE
                     }
                     break;
             }
+            Measure m = MeasuredHere;
+            if (m?.Spawn is uint spawn) arm9spawnOffset = spawn;
+            if (m?.InitialMoney is uint money) initialMoneyOverlayOffset = money;
         }
 
         public static void SetPickupTableOffsets()
@@ -1499,6 +1676,13 @@ namespace DSPRE
                     }
                     break;
             }
+            if (MeasuredHere?.PickupDivisor is uint divisor) pickupActivationDivisorOffset = divisor;
+            if (MeasuredHere is Measure m && m.PickupCommon is uint common && m.PickupRare is uint rare && m.PickupWeight is uint weight)
+            {
+                pickupCommonItemsOffset = common;
+                pickupRareItemsOffset = rare;
+                pickupWeightTableOffset = weight;
+            }
         }
 
         /// <summary>Offsets for the Starter Pokémon editor. </summary>
@@ -1510,6 +1694,7 @@ namespace DSPRE
             starterArm9SearchSuffix = null;
             starterGraphicsPrefix = null;
             starterGraphicsPrefixInner = null;
+            starterSceneSpeciesLiterals = null;
             starterCriesPrefix = null;
             starterHeldItemScriptFileID = -1;
             starterHeldItemOffset = 0;
@@ -1529,6 +1714,10 @@ namespace DSPRE
                     switch (gameLanguage)
                     {
                         case GameLanguages.Japanese:
+                            // The scene loads each sprite's species from a literal pool word, not from the
+                            // immediates the US code builds, so the US rewrite has nothing to match.
+                            starterGraphicsPrefix = starterGraphicsPrefixInner = null;
+                            starterSceneSpeciesLiterals = new[] { 0x16A8, 0x16B0, 0x16B8 };
                             starterSpeciesOffset = 0x30;
                             starterScreenTextNumber = 318;
                             starterPokedexSpeciesTextNumber = 607;
@@ -1615,10 +1804,14 @@ namespace DSPRE
                 case GameFamilies.HGSS:
                     pokegearRematchOverlayNumber = 26;
                     pokegearRematchFallbackTableOffset = 0x20C;
-                    // Japanese archives are numbered differently and this one hasn't been checked there.
-                    if (gameLanguage != GameLanguages.Japanese) pokegearPhoneMessageArchive = 271;
+                    // Japanese archives are numbered differently; a measured Japanese dump gives its own.
+                    pokegearPhoneMessageArchive = gameLanguage != GameLanguages.Japanese ? 271 : MeasuredHere?.PokegearPhoneText ?? -1;
                     break;
             }
+            Measure m = MeasuredHere;
+            if (m?.RematchTable is uint table) vsSeekerRematchTableOffset = table;
+            if (m?.RematchPointers != null) vsSeekerRematchPointerOffsets = m.RematchPointers;
+            if (m?.RematchRowCompare is int compare) vsSeekerRematchRowCompareOffset = compare;
         }
 
         /// <summary>The text archives field scripts read menus and shared messages from.</summary>
@@ -1628,8 +1821,16 @@ namespace DSPRE
             fieldSharedMessageArchives = System.Array.Empty<int>();
             systemFontPaletteEntry = -1;
             fieldTouchMenuTextArchive = -1;
-            // Japanese archives are numbered differently and these have not been checked there.
-            if (gameLanguage == GameLanguages.Japanese) return;
+            // Japanese archives are numbered differently; only those measured on a Japanese dump are known.
+            if (gameLanguage == GameLanguages.Japanese)
+            {
+                Measure m = MeasuredHere;
+                fieldMenuEntriesArchive = m?.MenuEntriesText ?? -1;
+                fieldTouchMenuTextArchive = m?.TouchMenuText ?? -1;
+                systemFontPaletteEntry = m?.SystemFontPalette ?? -1;
+                fieldSharedMessageArchives = m?.SharedMessagesText ?? System.Array.Empty<int>();
+                return;
+            }
 
             switch (gameFamily)
             {
@@ -1746,6 +1947,12 @@ namespace DSPRE
                     AppLogger.Error("SetItemTableOffset: Unsupported game");
                     throw new NotSupportedException("Game not supported");
             }
+            Measure m = MeasuredHere;
+            if (m?.ItemTable is uint table) itemTableOffset = table;
+            if (m?.ItemLimitSite is uint limit) itemLimitSite = limit;
+            // Japanese DP opens the loader with push {lr}; sub sp, #4 and loads the limit from the pool; the site is the sub.
+            if (gameFamily == GameFamilies.DP && gameLanguage == GameLanguages.Japanese)
+                itemLimitSignature = "81B0031C ??48 8342 00D9 0023 0029";
         }
 
         public static void SetItemReferenceOffsets()
@@ -1766,6 +1973,15 @@ namespace DSPRE
             // SCRIPT_ID(VISIBLE_ITEMS, 321) in sMapObjectEventTurnbackCaveRoom_GriseousOrbItem; seen in US and French.
             if (gameFamily == GameFamilies.Plat && gameLanguage != GameLanguages.Japanese)
                 distortionWorldItemScriptOffset = 0x8E2A;
+
+            Measure m = MeasuredHere;
+            if (m?.HiddenItemTable is uint hidden && m.HiddenItemCountSites != null)
+            {
+                hiddenItemTableOffset = hidden;
+                hiddenItemTableCapacity = 231;
+                hiddenItemCountSites = m.HiddenItemCountSites;
+            }
+            if (m?.DistortionWorldItemScript is uint script) distortionWorldItemScriptOffset = script;
         }
 
         public static void SetMartOffsets()
@@ -1775,9 +1991,19 @@ namespace DSPRE
             martSpecialtyPointerOffset = 0;
             martSpecialtyShopCount = 0;
 
-            // The other regional ARM9 layouts remain unavailable until they have been measured
-            // against representative projects, rather than trusting a version table alone.
-            if (gameLanguage != GameLanguages.English) return;
+            // Other languages use the layouts measured on their dumps; the shop count is the same in all of them.
+            if (gameLanguage != GameLanguages.English)
+            {
+                Measure m = MeasuredHere;
+                if (m?.MartCommonCount is uint count && m.MartCommonPointer is uint common && m.MartSpecialtyPointer is uint specialty)
+                {
+                    martCommonCountOffset = count;
+                    martCommonPointerOffset = common;
+                    martSpecialtyPointerOffset = specialty;
+                    martSpecialtyShopCount = gameFamily switch { GameFamilies.DP => 19, GameFamilies.Plat => 20, _ => 30 };
+                }
+                return;
+            }
 
             switch (gameFamily)
             {
@@ -1840,6 +2066,7 @@ namespace DSPRE
                     }
                     break;
             }
+            if (MeasuredHere?.CameraLiterals is uint[] measured) cameraTblOffsetsToRAMaddress = measured;
         }
 
         /// <summary>The candidate right after the render table's 0xFFFF row, else the last candidate.</summary>
@@ -1874,7 +2101,7 @@ namespace DSPRE
                             break;
 
                         default:
-                            OWTableOffset = 0x22B84;
+                            OWTableOffset = MeasuredHere?.OwTable ?? 0x22B84;
                             break;
                     }
                     break;
@@ -1901,7 +2128,7 @@ namespace DSPRE
                             break;
 
                         default:
-                            OWTableOffset = 0x2BC34;
+                            OWTableOffset = MeasuredHere?.OwTable ?? 0x2BC34;
                             break;
                     }
                     break;
@@ -1946,7 +2173,7 @@ namespace DSPRE
                             break;
 
                         default:
-                            ramAddrOfPointer = 0x021F92FC;
+                            ramAddrOfPointer = MeasuredHere?.OwTablePointer ?? 0x021F92FC;
                             break;
                     }
 
@@ -2005,12 +2232,14 @@ namespace DSPRE
                             conditionalMusicTableOffsetToRAMAddress = 0x66238;
                             break;
                     }
+                    if (MeasuredHere?.ConditionalMusic is uint measured) conditionalMusicTableOffsetToRAMAddress = measured;
                     break;
             }
         }
 
         public static void SetDungeonCutinTableOffsetToRAMAddress()
         {
+            dungeonCutinTableOffsetToRAMAddress = 0;
             if (gameFamily != GameFamilies.HGSS) return;
             switch (gameLanguage)
             {
@@ -2022,6 +2251,7 @@ namespace DSPRE
                     dungeonCutinTableOffsetToRAMAddress = 0x6A384;
                     break;
             }
+            if (MeasuredHere?.DungeonCutin is uint measured) dungeonCutinTableOffsetToRAMAddress = measured;
         }
 
         public static void SetBattleEffectsData()
@@ -2054,6 +2284,13 @@ namespace DSPRE
                             effectsComboTableOffsetToRAMAddress = 0x51260;
                             break;
                     }
+                    if (MeasuredHere is Measure vs && vs.VsPokemonEntry is uint pokemon && vs.VsTrainerEntry is uint trainer
+                        && vs.EffectCombo is uint vsCombo)
+                    {
+                        vsPokemonEntryTableOffsetToRAMAddress = pokemon;
+                        vsTrainerEntryTableOffsetToRAMAddress = trainer;
+                        effectsComboTableOffsetToRAMAddress = vsCombo;
+                    }
                     vsPokemonEntryTableOffsetToSizeLimiter = vsPokemonEntryTableOffsetToRAMAddress - 0xA;
                     vsTrainerEntryTableOffsetToSizeLimiter = vsTrainerEntryTableOffsetToRAMAddress - 0xA;
                     effectsComboTableOffsetToSizeLimiter = effectsComboTableOffsetToRAMAddress - 0x1E;
@@ -2061,10 +2298,16 @@ namespace DSPRE
 
                 case GameFamilies.DP:
                     // The second pointer has to agree before the table is trusted.
+                    effectsComboTableOffsetToRAMAddress = 0;
                     if (gameLanguage == GameLanguages.English)
                     {
                         effectsComboTableOffsetToRAMAddress = 0x47580;
                         effectsComboTableSecondPointerOffset = 0x4759C;
+                    }
+                    else if (MeasuredHere?.EffectCombo is uint combo && MeasuredHere.EffectComboSecond is uint second)
+                    {
+                        effectsComboTableOffsetToRAMAddress = combo;
+                        effectsComboTableSecondPointerOffset = second;
                     }
                     break;
 
@@ -2081,10 +2324,20 @@ namespace DSPRE
                         case GameLanguages.Spanish:
                         case GameLanguages.German:
                             effectsComboTableOffsetToRAMAddress = 0x51C84;
+                            effectsComboTableSecondPointerOffset = 0x51CA0;
                             break;
 
                         case GameLanguages.Japanese:
                             effectsComboTableOffsetToRAMAddress = 0x514C0;
+                            effectsComboTableSecondPointerOffset = 0x514DC;
+                            break;
+
+                        default:
+                            if (MeasuredHere?.EffectCombo is uint ptCombo && MeasuredHere.EffectComboSecond is uint ptSecond)
+                            {
+                                effectsComboTableOffsetToRAMAddress = ptCombo;
+                                effectsComboTableSecondPointerOffset = ptSecond;
+                            }
                             break;
                     }
                     break;
@@ -2155,10 +2408,16 @@ namespace DSPRE
                     }
                     break;
             }
+            if (MeasuredHere?.EncounterMusic is uint measured) encounterMusicTableOffsetToRAMAddress = measured;
         }
 
         public static void SetMonIconsPalTableAddress()
         {
+            if (MeasuredHere?.MonIconPaletteLiteral is uint literal)
+            {
+                monIconPalTableAddress = BitConverter.ToUInt32(ARM9.ReadBytes(literal, 4), 0);
+                return;
+            }
             switch (RomInfo.gameFamily)
             {
                 case GameFamilies.DP:
@@ -2308,6 +2567,14 @@ namespace DSPRE
                         pokedexWeightTextNumber = 605;
                         pokedexHeightTextNumber = 606;
                         pokedexCategoryTextNumber = 607;
+                        // Japanese DP keeps 5 lines per species, English to Spanish, where the others keep 6.
+                        if (MeasuredHere?.DexForeignSpecies is int jpSpecies && MeasuredHere.DexForeignBanks is int[] jpBanks)
+                        {
+                            pokedexForeignSpeciesTableOffset = jpSpecies;
+                            pokedexForeignEntryTextNumbers = Enumerable.Repeat(jpBanks[0], 5).ToArray();
+                            pokedexForeignNameTextNumbers = Enumerable.Repeat(jpBanks[1], 5).ToArray();
+                            pokedexForeignCategoryTextNumbers = Enumerable.Repeat(jpBanks[2], 5).ToArray();
+                        }
                         break;
                     }
                     pokedexCategoryTextNumber = 621;
@@ -2322,6 +2589,13 @@ namespace DSPRE
                         pokedexForeignNameTextNumbers = new[] { 622, 622, 622, 622, 622 };
                         pokedexForeignCategoryTextNumbers = new[] { 623, 623, 623, 623, 623 };
                     }
+                    else if (MeasuredHere?.DexForeignSpecies is int foreignSpecies && MeasuredHere.DexForeignBanks is int[] banks)
+                    {
+                        pokedexForeignSpeciesTableOffset = foreignSpecies;
+                        pokedexForeignEntryTextNumbers = Enumerable.Repeat(banks[0], 5).ToArray();
+                        pokedexForeignNameTextNumbers = Enumerable.Repeat(banks[1], 5).ToArray();
+                        pokedexForeignCategoryTextNumbers = Enumerable.Repeat(banks[2], 5).ToArray();
+                    }
                     break;
 
                 case GameFamilies.Plat:
@@ -2332,6 +2606,10 @@ namespace DSPRE
                         pokedexWeightTextNumber = 694;
                         pokedexHeightTextNumber = 696;
                         pokedexCategoryTextNumber = 698;
+                        // Japanese games list English, French, German, Italian and Spanish.
+                        pokedexForeignEntryTextNumbers = new[] { 688, 689, 690, 691, 692 };
+                        pokedexForeignNameTextNumbers = new[] { 699, 700, 701, 702, 703 };
+                        pokedexForeignCategoryTextNumbers = new[] { 704, 705, 706, 707, 708 };
                         break;
                     }
                     pokedexCategoryTextNumber = 711;
@@ -2347,6 +2625,7 @@ namespace DSPRE
                 case GameFamilies.HGSS:
                     if (japanese) playerCharacterNamesTextNumber = 438;
                     else if (gameLanguage == GameLanguages.English) playerCharacterNamesTextNumber = 445;
+                    else if (MeasuredHere?.PlayerNamesText is int playerNames) playerCharacterNamesTextNumber = playerNames;
                     if (japanese)
                     {
                         pokedexMessagesTextNumber = 790;
@@ -2354,6 +2633,10 @@ namespace DSPRE
                         pokedexWeightTextNumber = 799;
                         pokedexHeightTextNumber = 801;
                         pokedexCategoryTextNumber = 803;
+                        pokedexForeignEntryTextNumbers = new[] { 793, 794, 795, 796, 797 };
+                        pokedexForeignNameTextNumbers = new[] { 804, 805, 806, 807, 808 };
+                        pokedexForeignCategoryTextNumbers = new[] { 809, 810, 811, 812, 813 };
+                        SetMeasuredDexArea();
                         break;
                     }
                     pokedexMessagesTextNumber = 802;
@@ -2371,8 +2654,19 @@ namespace DSPRE
                         pokedexAreaSortTableOffset = 0x140E0;
                         pokedexAreaSortTableCount = 142;
                     }
+                    else SetMeasuredDexArea();
                     break;
             }
+        }
+
+        private static void SetMeasuredDexArea()
+        {
+            if (MeasuredHere is not Measure m || m.DexFieldZones is not int fieldZones || m.DexDungeonZones is not int dungeonZones
+                || m.DexAreaSort is not int areaSort) return;
+            pokedexFieldZoneTableOffset = fieldZones;
+            pokedexDungeonZoneTableOffset = dungeonZones;
+            pokedexAreaSortTableOffset = areaSort;
+            pokedexAreaSortTableCount = 142;
         }
 
         private static void SetAttackNamesTextNumber()
@@ -2399,18 +2693,18 @@ namespace DSPRE
             {
                 case GameFamilies.DP:
                     itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 341 : 344;
-                    // The bank before the names; the Japanese bank is unknown.
-                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 0 : 343;
+                    // The bank before the names, in every language.
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 340 : 343;
                     break;
 
                 case GameFamilies.Plat:
                     itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 390 : 392;
-                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 0 : 391;
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 389 : 391;
                     break;
 
                 default:
                     itemNamesTextNumber = gameLanguage == GameLanguages.Japanese ? 219 : 222;
-                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 0 : 221;
+                    itemDescriptionsTextNumber = gameLanguage == GameLanguages.Japanese ? 218 : 221;
                     break;
             }
         }
@@ -2508,7 +2802,8 @@ namespace DSPRE
                     break;
             }
 
-            trainerClassWithArticleMessageNumber = trainerClassMessageNumber + 1;
+            // Japanese has no article bank; the bank after the classes holds other text there.
+            trainerClassWithArticleMessageNumber = gameLanguage == GameLanguages.Japanese ? -1 : trainerClassMessageNumber + 1;
         }
         // US-version text archive numbers only; not yet confirmed for other localizations.
         private static void SetBattleTowerTextNumbers()
@@ -2569,6 +2864,7 @@ namespace DSPRE
                     trainerFunnyScriptNumber = 740;
                     break;
             }
+            if (MeasuredHere?.TrainerScript is int measured) trainerFunnyScriptNumber = measured;
         }
 
         private static void SetTypesTextNumber()
@@ -2586,6 +2882,60 @@ namespace DSPRE
                     typesTextNumber = jp ? 724 : 735;
                     break;
             }
+        }
+
+        /// <summary>The text bank holding each in-game trade's nickname, then each trade's OT name.</summary>
+        public static int tradeTextNumber => gameFamily switch
+        {
+            GameFamilies.DP => gameLanguage == GameLanguages.Japanese ? 324 : TextBank(326),
+            GameFamilies.Plat => gameLanguage == GameLanguages.Japanese ? 369 : TextBank(370),
+            GameFamilies.HGSS => gameLanguage == GameLanguages.Japanese ? 198 : TextBank(200),
+            _ => -1,
+        };
+
+        /// <summary>The bank holding US text bank <paramref name="usBank"/> in this ROM's language, or -1 when Korean lacks it.</summary>
+        public static int TextBank(int usBank) =>
+            gameLanguage != GameLanguages.Korean || usBank < 0 ? usBank
+            : KoreanTextBanks.TryGetValue(gameFamily, out Dictionary<int, int> banks) && banks.TryGetValue(usBank, out int korean) ? korean : -1;
+
+        private static int[] TextBanks(int[] usBanks) => usBanks?.Select(TextBank).Where(b => b >= 0).ToArray();
+
+        // Korean takes the US branches above, so each text number holds its US bank here and is moved to the Korean one.
+        // DP's foreign Pokédex banks and HGSS's player names were measured on the Korean dumps and are left as they are.
+        private static void SetKoreanTextNumbers()
+        {
+            starterScreenTextNumber = TextBank(starterScreenTextNumber);
+            starterPokedexSpeciesTextNumber = TextBank(starterPokedexSpeciesTextNumber);
+            pokegearPhoneMessageArchive = TextBank(pokegearPhoneMessageArchive);
+            fieldMenuEntriesArchive = TextBank(fieldMenuEntriesArchive);
+            fieldSharedMessageArchives = TextBanks(fieldSharedMessageArchives);
+            fieldTouchMenuTextArchive = TextBank(fieldTouchMenuTextArchive);
+            abilityNamesTextNumber = TextBank(abilityNamesTextNumber);
+            pokedexMessagesTextNumber = TextBank(pokedexMessagesTextNumber);
+            pokedexEntryTextNumber = TextBank(pokedexEntryTextNumber);
+            pokedexCategoryTextNumber = TextBank(pokedexCategoryTextNumber);
+            pokedexHeightTextNumber = TextBank(pokedexHeightTextNumber);
+            pokedexWeightTextNumber = TextBank(pokedexWeightTextNumber);
+            if (gameFamily != GameFamilies.DP)
+            {
+                pokedexForeignEntryTextNumbers = TextBanks(pokedexForeignEntryTextNumbers);
+                pokedexForeignNameTextNumbers = TextBanks(pokedexForeignNameTextNumbers);
+                pokedexForeignCategoryTextNumbers = TextBanks(pokedexForeignCategoryTextNumbers);
+            }
+            attackNamesTextNumber = TextBank(attackNamesTextNumber);
+            pokemonNamesTextNumbers = TextBanks(pokemonNamesTextNumbers);
+            itemNamesTextNumber = TextBank(itemNamesTextNumber);
+            itemDescriptionsTextNumber = TextBank(itemDescriptionsTextNumber);
+            locationNamesTextNumber = TextBank(locationNamesTextNumber);
+            trainerNamesMessageNumber = TextBank(trainerNamesMessageNumber);
+            trainerClassMessageNumber = TextBank(trainerClassMessageNumber);
+            trainerClassWithArticleMessageNumber = -1;
+            battleTowerTrainerNamesMessageNumber = TextBank(battleTowerTrainerNamesMessageNumber);
+            battleTowerTrainerMessagesNumber = TextBank(battleTowerTrainerMessagesNumber);
+            moveNamesTextNumbers = TextBank(moveNamesTextNumbers);
+            moveDescriptionsTextNumbers = TextBank(moveDescriptionsTextNumbers);
+            typesTextNumber = TextBank(typesTextNumber);
+            trainerMessageTextNumber = TextBank(trainerMessageTextNumber);
         }
 
         private static void SetTrainerMessageTextNumber()
@@ -2625,9 +2975,9 @@ namespace DSPRE
                             trainerNameLenOffset = 0x6AC8E;
                             break;
 
-                        case GameLanguages.Japanese: //?
+                        case GameLanguages.Japanese:
                         default:
-                            trainerNameLenOffset = -1;
+                            trainerNameLenOffset = MeasuredHere?.TrainerNameLength ?? -1;
                             break;
                     }
                     break;
@@ -2674,10 +3024,12 @@ namespace DSPRE
                     }
                     break;
             }
+            if (MeasuredHere?.TrainerNameLength is int measured) trainerNameLenOffset = measured;
         }
 
         public static int GetMachineMoveOffset()
         {
+            if (MeasuredHere?.MachineMoves is int measured) return measured;
             switch (RomInfo.gameFamily)
             {
                 case RomInfo.GameFamilies.DP:
@@ -2740,70 +3092,6 @@ namespace DSPRE
             }
         }
 
-        public static uint GetItemTableOffset()
-        {
-            switch (RomInfo.gameFamily)
-            {
-                case RomInfo.GameFamilies.DP:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0xF85B4;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xFA520;
-                        case RomInfo.GameLanguages.French:
-                            return 0xF85F8;
-                        case RomInfo.GameLanguages.German:
-                            return 0xF85C8;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0xF856C;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0xF8604;
-                        default:
-                            return 0xF85B4;
-                    }
-                case RomInfo.GameFamilies.Plat:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0xF0CC4;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xF0354;
-                        case RomInfo.GameLanguages.French:
-                            return 0xF0D4C;
-                        case RomInfo.GameLanguages.German:
-                            return 0xF0D1C;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0xF0CE0;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0xF0D58;
-                        default:
-                            return 0xF0CC4;
-                    }
-                case RomInfo.GameFamilies.HGSS:
-                    switch (RomInfo.gameLanguage)
-                    {
-                        case RomInfo.GameLanguages.English:
-                            return 0x100194;
-                        case RomInfo.GameLanguages.Japanese:
-                            return 0xFF914;
-                        case RomInfo.GameLanguages.French:
-                            return 0x100178;
-                        case RomInfo.GameLanguages.German:
-                            return 0x100148;
-                        case RomInfo.GameLanguages.Italian:
-                            return 0x10010C;
-                        case RomInfo.GameLanguages.Spanish:
-                            return 0x10017C;
-                        default:
-                            return 0x100194;
-                    }
-                default:
-                    AppLogger.Error("GetNarcTableOffset: Unsupported game");
-                    throw new NotSupportedException("Game not supported");
-            }
-        }
-
         /// <summary>Whether the egg move limit counts only up to the last Pokémon header rather than the whole table.</summary>
         public static bool EggMoveLimitCountsHeadersOnly => gameFamily == GameFamilies.HGSS;
 
@@ -2816,6 +3104,7 @@ namespace DSPRE
 
         public static int GetEggMoveTableOffset()
         {
+            if (MeasuredHere?.EggMoves is int measured) return measured;
             switch (RomInfo.gameFamily)
             {
                 case RomInfo.GameFamilies.DP:
@@ -3062,6 +3351,14 @@ namespace DSPRE
                     gameLanguage = GameLanguages.German;
                     break;
 
+                case "ADAK":
+                case "APAK":
+                case "CPUK":
+                case "IPKK":
+                case "IPGK":
+                    gameLanguage = GameLanguages.Korean;
+                    break;
+
                 default:
                     gameLanguage = GameLanguages.Japanese;
                     break;
@@ -3091,6 +3388,17 @@ namespace DSPRE
         private void SetNarcDirs()
         {
             Dictionary<DirNames, string> packedDirsDict = null;
+            // French, German, Italian, Spanish and Korean DP and Platinum load their screen graphics with text in them from
+            // resource/<language>/ (the game's RESOURCE_DIR); English and Japanese keep them in the plain folders.
+            string Localized(string plain, string folder, string file)
+            {
+                string lang = gameLanguage switch
+                {
+                    GameLanguages.French => "fra", GameLanguages.German => "ger",
+                    GameLanguages.Italian => "ita", GameLanguages.Spanish => "spa", GameLanguages.Korean => "kor", _ => null,
+                };
+                return lang == null ? plain : $@"{dataFolderName}\resource\{lang}\{folder}\{file}";
+            }
             switch (gameFamily)
             {
                 case GameFamilies.DP:
@@ -3106,10 +3414,10 @@ namespace DSPRE
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\msg.narc",
                         [DirNames.fonts] = $@"{dataFolderName}\graphic\font.narc",
                         [DirNames.windowFrames] = $@"{dataFolderName}\graphic\winframe.narc",
-                        [DirNames.summaryGraphics] = $@"{dataFolderName}\graphic\pst_gra.narc",
+                        [DirNames.summaryGraphics] = Localized($@"{dataFolderName}\graphic\pst_gra.narc", "p_status", "pst_gra.narc"),
                         [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\graphic\waza_oshie_gra.narc",
-                        [DirNames.battlePartyGraphics] = $@"{dataFolderName}\battle\graphic\b_plist_gra.narc",
-                        [DirNames.bagGraphics] = $@"{dataFolderName}\graphic\bag_gra.narc",
+                        [DirNames.battlePartyGraphics] = Localized($@"{dataFolderName}\battle\graphic\b_plist_gra.narc", "b_plist", "b_plist_gra.narc"),
+                        [DirNames.bagGraphics] = Localized($@"{dataFolderName}\graphic\bag_gra.narc", "bag", "bag_gra.narc"),
                         [DirNames.footprintGraphics] = $@"{dataFolderName}\poketool\pokefoot\pokefoot.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
@@ -3136,10 +3444,10 @@ namespace DSPRE
                         [DirNames.trainerParty] = $@"{dataFolderName}\poketool\trainer\trpoke.narc",
                         [DirNames.trainerGraphics] = $@"{dataFolderName}\poketool\trgra\trfgra.narc",
                         [DirNames.trainerBackGraphics] = $@"{dataFolderName}\poketool\trgra\trbgra.narc",
-                        [DirNames.poketch] = $@"{dataFolderName}\graphic\poketch.narc",
-                        [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
+                        [DirNames.poketch] = Localized($@"{dataFolderName}\graphic\poketch.narc", "poketch", "poketch.narc"),
+                        [DirNames.trainerCardGraphics] = Localized($@"{dataFolderName}\graphic\trainer_case.narc", "trainer_case", "trainer_case.narc"),
                         [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\graphic\field_encounteffect.narc",
-                        [DirNames.nameInputGraphics] = $@"{dataFolderName}\data\namein.narc",
+                        [DirNames.nameInputGraphics] = Localized($@"{dataFolderName}\data\namein.narc", "nameinput", "namein.narc"),
                         [DirNames.moveData] = $@"{dataFolderName}\poketool\waza\waza_tbl.narc",
 
                         [DirNames.monIcons] = $@"{dataFolderName}\poketool\icongra\poke_icon.narc",
@@ -3176,7 +3484,7 @@ namespace DSPRE
                         [DirNames.wazaEffectCellAnm] = $@"{dataFolderName}\wazaeffect\effectclact\wecellanm.narc",
                         [DirNames.wazaParticle] = $@"{dataFolderName}\wazaeffect\effectdata\waza_particle.narc",
                         [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\batt_bg.narc",
-                        [DirNames.battleObj] = $@"{dataFolderName}\battle\graphic\batt_obj.narc",
+                        [DirNames.battleObj] = Localized($@"{dataFolderName}\battle\graphic\batt_obj.narc", "battle_graphic", "batt_obj.narc"),
 
                         [DirNames.itemData] = $@"{dataFolderName}\itemtool\itemdata\item_data.narc",
                         [DirNames.itemIcons] = $@"{dataFolderName}\itemtool\itemdata\item_icon.narc",
@@ -3195,7 +3503,7 @@ namespace DSPRE
                         [DirNames.regionalDexSpecies] = $@"{dataFolderName}\poketool\shinzukan.narc",
                         [DirNames.pokedexGraphics] = gameLanguage == GameLanguages.Japanese
                             ? $@"{dataFolderName}\graphic\zukan.narc"
-                            : $@"{dataFolderName}\resource\eng\zukan\zukan.narc",
+                            : Localized($@"{dataFolderName}\resource\eng\zukan\zukan.narc", "zukan", "zukan.narc"),
                         [DirNames.pokedexAreas] = gameVersion == GameVersions.Pearl
                             ? $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_enc_pearl.narc"
                             : $@"{dataFolderName}\application\zukanlist\zkn_data\zukan_enc_diamond.narc",
@@ -3245,12 +3553,12 @@ namespace DSPRE
                         [DirNames.wazaEffectCellAnm] = $@"{dataFolderName}\wazaeffect\effectclact\wecellanm.narc",
                         [DirNames.wazaParticle] = $@"{dataFolderName}\wazaeffect\effectdata\waza_particle.narc",
                         [DirNames.battleBg] = $@"{dataFolderName}\battle\graphic\pl_batt_bg.narc",
-                        [DirNames.battleObj] = $@"{dataFolderName}\battle\graphic\pl_batt_obj.narc",
+                        [DirNames.battleObj] = Localized($@"{dataFolderName}\battle\graphic\pl_batt_obj.narc", "battle_graphic", "pl_batt_obj.narc"),
                         [DirNames.ballParticles] = $@"{dataFolderName}\wazaeffect\effectdata\ball_particle.narc",
                         [DirNames.trainerBackGraphics] = $@"{dataFolderName}\poketool\trgra\trbgra.narc",
-                        [DirNames.trainerCardGraphics] = $@"{dataFolderName}\graphic\trainer_case.narc",
+                        [DirNames.trainerCardGraphics] = Localized($@"{dataFolderName}\graphic\trainer_case.narc", "trainer_case", "trainer_case.narc"),
                         [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\graphic\field_encounteffect.narc",
-                        [DirNames.nameInputGraphics] = $@"{dataFolderName}\data\namein.narc",
+                        [DirNames.nameInputGraphics] = Localized($@"{dataFolderName}\data\namein.narc", "nameinput", "namein.narc"),
 
                         [DirNames.synthOverlay] = $@"{dataFolderName}\data\weather_sys.narc",
                         [DirNames.dynamicHeaders] = $@"{dataFolderName}\debug\cb_edit\d_test.narc",
@@ -3264,7 +3572,7 @@ namespace DSPRE
                         [DirNames.regionalDexSpecies] = $@"{dataFolderName}\poketool\shinzukan.narc",
                         [DirNames.pokedexGraphics] = gameLanguage == GameLanguages.Japanese
                             ? $@"{dataFolderName}\graphic\zukan.narc"
-                            : $@"{dataFolderName}\resource\eng\zukan\zukan.narc",
+                            : Localized($@"{dataFolderName}\resource\eng\zukan\zukan.narc", "zukan", "zukan.narc"),
 
                         [DirNames.tornWorld] = $@"{dataFolderName}\fielddata\tornworld\tw_arc.narc",
                         [DirNames.tornWorldAttributes] = $@"{dataFolderName}\fielddata\tornworld\tw_arc_attr.narc",
@@ -3272,12 +3580,12 @@ namespace DSPRE
                         [DirNames.textArchives] = $@"{dataFolderName}\msgdata\" + suffix + '_' + "msg.narc",
                         [DirNames.fonts] = $@"{dataFolderName}\graphic\pl_font.narc",
                         [DirNames.windowFrames] = $@"{dataFolderName}\graphic\pl_winframe.narc",
-                        [DirNames.summaryGraphics] = $@"{dataFolderName}\graphic\pl_pst_gra.narc",
+                        [DirNames.summaryGraphics] = Localized($@"{dataFolderName}\graphic\pl_pst_gra.narc", "p_status", "pl_pst_gra.narc"),
                         [DirNames.moveRelearnerGraphics] = $@"{dataFolderName}\graphic\waza_oshie_gra.narc",
-                        [DirNames.battlePartyGraphics] = $@"{dataFolderName}\battle\graphic\pl_b_plist_gra.narc",
-                        [DirNames.bagGraphics] = $@"{dataFolderName}\graphic\pl_bag_gra.narc",
+                        [DirNames.battlePartyGraphics] = Localized($@"{dataFolderName}\battle\graphic\pl_b_plist_gra.narc", "b_plist", "pl_b_plist_gra.narc"),
+                        [DirNames.bagGraphics] = Localized($@"{dataFolderName}\graphic\pl_bag_gra.narc", "bag", "pl_bag_gra.narc"),
                         [DirNames.footprintGraphics] = $@"{dataFolderName}\poketool\pokefoot\pokefoot.narc",
-                        [DirNames.poketch] = $@"{dataFolderName}\graphic\poketch.narc",
+                        [DirNames.poketch] = Localized($@"{dataFolderName}\graphic\poketch.narc", "poketch", "poketch.narc"),
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
 
@@ -3574,13 +3882,8 @@ namespace DSPRE
             return (!isHGE || HgEngine.HgEngineMarts.Enabled) && martSpecialtyShopCount > 0;
         }
 
-        /// <summary>Checks if Hidden Items editor is available for the current ROM version. </summary>
-        /// <returns>True if hidden items editor is available, false otherwise</returns>
-        public static bool IsHiddenItemsEditorAvailable()
-        {
-            // Hidden items is only available for HeartGold US
-            return gameVersion == GameVersions.HeartGold && gameLanguage == GameLanguages.English;
-        }
+        /// <summary>Whether this ROM's hidden item table and its count checks are known.</summary>
+        public static bool IsHiddenItemsEditorAvailable() => hiddenItemTableCapacity > 0;
 
         /// <summary>Checks if the Rock Smash per-header odds/table editor is available. </summary>
         public static bool IsRockSmashEditorAvailable()
@@ -3589,24 +3892,23 @@ namespace DSPRE
         }
 
         /// <summary>
-        /// Checks if the Rock Smash item-drop tables (the 3 hardcoded 8-slot tables in ov001.bin, offsets
-        /// 0x23D04/0x23D14/0x23D24 per
+        /// Checks if the Rock Smash item-drop tables (the three fixed 8-slot tables in ov001.bin at
+        /// <see cref="rockSmashItemTablesOffset"/>, see
         /// https://ds-pokemon-hacking.github.io/docs/generation-iv/guides/hgss-rock_smash/) are safe to
         /// edit.
         /// </summary>
         public static bool IsRockSmashItemTableAvailable()
         {
-            return gameFamily == GameFamilies.HGSS && gameLanguage == GameLanguages.English;
+            return gameFamily == GameFamilies.HGSS;
         }
 
         /// <summary>
-        /// HGSS only (Diamond/Pearl/Platinum have no equivalent system), English and Spanish only, the only
-        /// revisions with confirmed offsets.
+        /// HGSS only (Diamond/Pearl/Platinum have no equivalent system), wherever the table's literal is known.
         /// </summary>
         public static bool IsDungeonCutinEditorAvailable()
         {
-            return gameFamily == GameFamilies.HGSS &&
-                (gameLanguage == GameLanguages.English || gameLanguage == GameLanguages.Spanish);
+            SetDungeonCutinTableOffsetToRAMAddress();
+            return dungeonCutinTableOffsetToRAMAddress != 0;
         }
 
         public static bool IsTitleScreenEditorAvailable() => gameFamily == GameFamilies.HGSS;
@@ -3629,12 +3931,12 @@ namespace DSPRE
         public static (int ncgr, int nclr, int nscr) TitleScreenCopyrightMembers => (15, 16, 17);
 
         /// <summary>The text bank naming the Ball Capsule seals in the US games.</summary>
-        public static int SealNamesTextNumber => gameFamily switch
+        public static int SealNamesTextNumber => TextBank(gameFamily switch
         {
             GameFamilies.DP => 10,
             GameFamilies.Plat => 12,
             _ => 15,
-        };
+        });
 
         public static bool IsTrainerCardEditorAvailable() =>
             gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP;
@@ -3708,6 +4010,9 @@ namespace DSPRE
                     break;
                 case GameLanguages.Spanish:
                     languageName = "ES";
+                    break;
+                case GameLanguages.Korean:
+                    languageName = "KO";
                     break;
                 default:
                     languageName = "??";

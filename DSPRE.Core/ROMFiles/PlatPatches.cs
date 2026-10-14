@@ -15,7 +15,6 @@ namespace DSPRE.ROMFiles
     public static class PlatPatches
     {
         private static readonly byte[] HookBytes = { 0x00, 0x4B, 0x18, 0x47 };
-        private const uint ItemFileIdHook = 0x0207CE78, ItemIsTmHmHook = 0x0205E060;
         private const int MarkerLength = 0x10;
 
         /// <summary>The marker offset a hook leads to, or -1 when the hook or marker isn't there.</summary>
@@ -65,8 +64,8 @@ namespace DSPRE.ROMFiles
             try
             {
                 (byte[] arm9, byte[] synth) = Files();
-                if (arm9 == null) return null;
-                int i = FollowHook(arm9, synth, ItemFileIdHook, "ITEMEXPV2");
+                if (arm9 == null || RomInfo.platPatchesHooks == null) return null;
+                int i = FollowHook(arm9, synth, RomInfo.platPatchesHooks.ItemFileId, "ITEMEXPV2");
                 if (i < 0 || i + 0x298 > synth.Length) return null;
                 ItemExpansion e = new ItemExpansion
                 {
@@ -133,8 +132,8 @@ namespace DSPRE.ROMFiles
             try
             {
                 (byte[] arm9, byte[] synth) = Files();
-                if (arm9 == null) return null;
-                int m = FollowHook(arm9, synth, ItemIsTmHmHook, "EXTRATMSV1");
+                if (arm9 == null || RomInfo.platPatchesHooks == null) return null;
+                int m = FollowHook(arm9, synth, RomInfo.platPatchesHooks.ItemIsTmHm, "EXTRATMSV1");
                 if (m < 0 || m + 0x608 > synth.Length) return null;
                 uint table = BitConverter.ToUInt32(synth, m + 0x5C);
                 if (table != synthOverlayLoadAddress + (uint)m + 0x510) return null;

@@ -281,7 +281,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private static string ReadWithArticle(int index)
         {
-            if (HgEngineProject.IsActive) return null;
+            // Japanese and Korean have no article bank.
+            if (HgEngineProject.IsActive || trainerClassWithArticleMessageNumber < 0) return null;
             try
             {
                 List<string> withArticle = new TextArchive(trainerClassWithArticleMessageNumber).messages;

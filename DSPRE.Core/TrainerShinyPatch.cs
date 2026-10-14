@@ -13,46 +13,21 @@ namespace DSPRE
     /// </summary>
     public static class TrainerShinyPatch
     {
-        private const uint Arm9Base = 0x02000000;
-        private const uint SyntheticBase = 0x023C8000;
-        private const int LoadedCapacity = 0x16000;
-        private const int HookOffset = 0x73A84;
         private const int PayloadLength = 156;
 
         // Patch v0.1.0: SHA-256 of the payload after zeroing the six checked BLs and the table pointer.
         private const string PayloadFingerprint = "a5c8e302fb7a3fd14e2ad437c3701013fd3fe3bb079c1f8ca2d6ead95df89966";
         private static readonly int[] CallOffsets = { 0x2E, 0x4A, 0x54, 0x60, 0x7C, 0x8C };
-        private static readonly uint[] CallTargets = { 0x02074640, 0x02074644, 0x0206E540, 0x0206E540, 0x0206EC40, 0x0201AB0C };
-
-        /// <summary>Per ROM: the ARM9 expansion's call into its loader and the loader itself, which the patch needs.</summary>
-        private sealed record Expansion(byte[] Call, int LoaderAt, byte[] Loader);
-
-        private static readonly byte[] UsLoader =
-        {
-            0xFC,0xB5,0x05,0x48,0xC0,0x46,0x1C,0x21,0x00,0x22,0x02,0x4D,0xA8,0x47,
-            0x00,0x20,0x03,0x21,0xFC,0xBD,0x09,0x75,0x00,0x02,0x00,0x80,0x3C,0x02,
-        };
-
-        private static readonly Dictionary<string, Expansion> Expansions = new()
-        {
-            ["IPKE"] = new Expansion(new byte[] { 0x0F, 0xF1, 0x30, 0xFB }, 0x110334, UsLoader),
-            ["IPGE"] = new Expansion(new byte[] { 0x0F, 0xF1, 0x30, 0xFB }, 0x110334, UsLoader),
-            ["IPKI"] = new Expansion(new byte[] { 0x10, 0xF1, 0xCE, 0xF9 }, 0x111070, new byte[]
-            {
-                0xFC,0xB5,0x04,0x48,0x1C,0x21,0x00,0x22,0xF6,0xF6,0x46,0xFA,
-                0x00,0x20,0x03,0x21,0xFC,0xBD,0x00,0x00,0x00,0x80,0x3C,0x02,0x00,
-            }),
-        };
-        private const int ExpansionCallAt = 0xCD0;
 
         public static bool DetectCurrentProject()
         {
-            if (RomInfo.romID == null || !Expansions.ContainsKey(RomInfo.romID) || !RomInfo.IsDsRomProject) return false;
+            // The routine sits in the synthetic overlay, so the ARM9 expansion must be in place too.
+            if (!SupportsCurrentRom || !RomInfo.IsDsRomProject || !PatchToolboxLogic.CheckFilesArm9ExpansionApplied()) return false;
             try
             {
                 byte[] arm9 = File.ReadAllBytes(RomInfo.arm9Path);
                 byte[] synthetic = File.Exists(Filesystem.expArmPath) ? File.ReadAllBytes(Filesystem.expArmPath) : null;
-                return Inspect(RomInfo.romID, true, arm9, synthetic);
+                return Inspect(RomInfo.trainerShinySites, arm9, synthetic);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
@@ -60,15 +35,13 @@ namespace DSPRE
             }
         }
 
-        public static bool Inspect(string romId, bool dsRomProject, byte[] arm9, byte[] synthetic)
+        private static bool Inspect(RomInfo.TrainerShinySites sites, byte[] arm9, byte[] synthetic)
         {
-            if (romId == null || !dsRomProject || !Expansions.TryGetValue(romId, out Expansion expansion)) return false;
-            if (!Matches(arm9, ExpansionCallAt, expansion.Call) || !Matches(arm9, expansion.LoaderAt, expansion.Loader)) return false;
-            if (!Matches(arm9, 0x73AA2, 0xB0, 0x23)) return false;
-            if (!TryReadBl(arm9, HookOffset, Arm9Base + HookOffset, out uint target)) return false;
+            if (!Matches(arm9, sites.Mask, PatchedMask)) return false;
+            if (!TryReadBl(arm9, sites.Hook, ARM9.address + (uint)sites.Hook, out uint target)) return false;
 
-            long offset = (long)target - SyntheticBase;
-            if ((target & 3) != 0 || offset < 0 || offset + PayloadLength > LoadedCapacity ||
+            long offset = (long)target - RomInfo.synthOverlayLoadAddress;
+            if ((target & 3) != 0 || offset < 0 || offset + PayloadLength > RomInfo.synthOverlaySize ||
                 synthetic == null || offset + PayloadLength > synthetic.Length)
                 return false;
 
@@ -76,7 +49,7 @@ namespace DSPRE
             Array.Copy(synthetic, (int)offset, payload, 0, payload.Length);
             for (int i = 0; i < CallOffsets.Length; i++)
             {
-                if (!TryReadBl(payload, CallOffsets[i], target + (uint)CallOffsets[i], out uint callee) || callee != CallTargets[i])
+                if (!TryReadBl(payload, CallOffsets[i], target + (uint)CallOffsets[i], out uint callee) || callee != sites.CallTargets[i])
                     return false;
                 Array.Clear(payload, CallOffsets[i], 4);
             }
@@ -103,23 +76,22 @@ namespace DSPRE
             0x07, 0xB0, 0xF0, 0xBD, 0x08, 0x10, 0x0A, 0x12, 0x00, 0x00, 0x00, 0x00,
         };
 
-        // ARM9 before the patch: the call that frees the raw party records, and the ability mask (mov r3, #0xF0).
-        private const int MaskOffset = 0x73AA2;
-        private static readonly byte[] OriginalHook = { 0xA7, 0xF7, 0x42, 0xF8 };
+        // ARM9 before the patch: the call that frees the raw party records (the last routine the payload calls), and the
+        // ability mask (mov r3, #0xF0).
         private static readonly byte[] OriginalMask = { 0xF0, 0x23 };
         private static readonly byte[] PatchedMask = { 0xB0, 0x23 };
 
         /// <summary>Where the toolbox offers to place the routine in the synthetic overlay.</summary>
         public const uint DefaultPayloadOffset = 0x12100;
 
-        public static bool SupportsCurrentRom => RomInfo.romID != null && Expansions.ContainsKey(RomInfo.romID);
+        public static bool SupportsCurrentRom => RomInfo.trainerShinySites != null && PatchToolboxLogic.Arm9ExpansionWhyNot() == null;
 
         /// <summary>The routine for a given runtime address.</summary>
         public static byte[] BuildPayload(uint address)
         {
             byte[] payload = (byte[])PayloadTemplate.Clone();
             for (int i = 0; i < CallOffsets.Length; i++)
-                PatchToolboxLogic.BuildThumbBl(address + (uint)CallOffsets[i], CallTargets[i]).CopyTo(payload, CallOffsets[i]);
+                PatchToolboxLogic.BuildThumbBl(address + (uint)CallOffsets[i], RomInfo.trainerShinySites.CallTargets[i]).CopyTo(payload, CallOffsets[i]);
             BitConverter.GetBytes(address + 0x94).CopyTo(payload, 0x98);
             return payload;
         }
@@ -127,7 +99,9 @@ namespace DSPRE
         /// <summary>Why the ARM9 can't take the patch, or null when its two hook sites are as the game ships them.</summary>
         public static string WhyNotApplicable(byte[] arm9)
         {
-            if (!Matches(arm9, HookOffset, OriginalHook) || !Matches(arm9, MaskOffset, OriginalMask))
+            RomInfo.TrainerShinySites sites = RomInfo.trainerShinySites;
+            bool freesRecords = TryReadBl(arm9, sites.Hook, ARM9.address + (uint)sites.Hook, out uint callee) && callee == sites.CallTargets[^1];
+            if (!freesRecords || !Matches(arm9, sites.Mask, OriginalMask))
                 return "The ARM9 code this patch hooks has already been changed.";
             return null;
         }
@@ -135,10 +109,11 @@ namespace DSPRE
         /// <summary>Writes the routine at <paramref name="payloadOffset"/> in the synthetic overlay and hooks the ARM9 to it.</summary>
         public static void Apply(uint payloadOffset)
         {
-            uint address = SyntheticBase + payloadOffset;
+            RomInfo.TrainerShinySites sites = RomInfo.trainerShinySites;
+            uint address = RomInfo.synthOverlayLoadAddress + payloadOffset;
             DSUtils.WriteToFile(Filesystem.expArmPath, BuildPayload(address), payloadOffset);
-            ARM9.WriteBytes(PatchToolboxLogic.BuildThumbBl(Arm9Base + HookOffset, address), HookOffset);
-            ARM9.WriteBytes(PatchedMask, MaskOffset);
+            ARM9.WriteBytes(PatchToolboxLogic.BuildThumbBl(ARM9.address + (uint)sites.Hook, address), (uint)sites.Hook);
+            ARM9.WriteBytes(PatchedMask, (uint)sites.Mask);
         }
 
         /// <summary>The routine with its relocated parts zeroed, for the fingerprint and the range status.</summary>

@@ -36,6 +36,8 @@ namespace DSPRE.ROMFiles
         private byte[] _code;
         private int _routeTable, _adjTable, _switch, _reverse = -1;
         private Family _family;
+        // Japanese DP was built with another compiler: the same routines with reordered instructions and registers.
+        private bool _japaneseDp;
         private int[] _setters;   // Platinum: the after-battle state setter per slot (0 = none)
 
         private enum Family { DP, Plat, HGSS }
@@ -71,6 +73,16 @@ namespace DSPRE.ROMFiles
                 SpeciesReg = 7, LevelReg = 6,
             },
         };
+
+        // Japanese DP loads all three species from the pool (6-byte cases) and keeps species in r6, level in r7.
+        private static readonly Layout JapaneseDpLayout = new Layout
+        {
+            SwitchLength = 0x20, JoinOffset = 0x28, DefaultOffset = 0x20, TableOffset = 0x12,
+            PatchedCode = Hex("02 2D 0D D8 A8 00 02 A1 09 18 0E 88 4F 88 0B E0 C0 46"),
+            SpeciesReg = 6, LevelReg = 7,
+        };
+
+        private Layout LayoutHere => _japaneseDp ? JapaneseDpLayout : Layouts[_family];
 
         // Reverse mappings as the game has them, and as DSPRE writes them (a loop over the slot table).
         private static readonly byte[] PtReversePatched = Hex("30 B5 09 4B 00 24 A5 00 5D 5B 8D 42 03 D0 01 34 06 2C F8 D3 30 BD A4 00 04 4B 1B 59 00 2B 01 D0 11 1C 98 47 30 BD C0 46");
@@ -126,7 +138,8 @@ namespace DSPRE.ROMFiles
             try { code = File.ReadAllBytes(arm9Path); }
             catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { error = e.Message; return false; }
 
-            RoamerData d = new RoamerData { _code = code, _family = family.Value };
+            RoamerData d = new RoamerData { _code = code, _family = family.Value,
+                _japaneseDp = family == Family.DP && gameLanguage == GameLanguages.Japanese };
             error = d.Read();
             if (error != null) return false;
             data = d;
@@ -135,25 +148,28 @@ namespace DSPRE.ROMFiles
 
         private string Read()
         {
-            Layout layout = Layouts[_family];
+            Layout layout = LayoutHere;
             string fail = "the roamer code isn't the game's own, so it may have been patched";
 
             // Routes: the lookup's cmp gives the count, the literal after it the table.
             // Other lookups share this shape; the game's route count (29 in DP and Platinum, 41 in HGSS) picks it out.
             string routeCountByte = _family == Family.HGSS ? "29" : "1D";
-            int lookup = FindOne(_code, $"10 B5 04 1C {routeCountByte} 2C 01 D3 ?? ?? ?? ?? 01 48 A1 00 40 58 10 BD");
+            int lookup = FindOne(_code, _japaneseDp
+                ? $"10 B5 04 1C {routeCountByte} 2C 01 D3 ?? ?? ?? ?? A1 00 01 48 40 58 10 BD"
+                : $"10 B5 04 1C {routeCountByte} 2C 01 D3 ?? ?? ?? ?? 01 48 A1 00 40 58 10 BD");
             if (lookup < 0) return $"The roamer route lookup wasn't found; {fail}.";
             int routeCount = _code[lookup + 4];
             _routeTable = ToFile(Word(_code, lookup + 20));
             if (_routeTable < 0 || _routeTable + routeCount * 4 > _code.Length) return "The roamer route table is outside arm9.";
             for (int i = 0; i < routeCount; i++) Routes.Add((int)Word(_code, _routeTable + i * 4));
 
-            int adjUse = FindOne(_code, "?? 21 ?? 4A 41 43 50 5A 54 18 01 28");
+            // movs r1,#entry; ldr r2,=table; muls r1,r0; ldrh r0,[r2,r1] (Japanese DP: the ldr first, then muls r0,r1).
+            int adjUse = FindOne(_code, _japaneseDp ? "?? 4A ?? 21 48 43 15 18 10 5A 01 28" : "?? 21 ?? 4A 41 43 50 5A 54 18 01 28");
             if (adjUse < 0) return $"The roamer adjacency table wasn't found; {fail}.";
-            int entry = _code[adjUse];
+            int entry = _code[_japaneseDp ? adjUse + 2 : adjUse];
             if (entry != 12 && entry != 14) return "The roamer adjacency table has an entry size DSPRE doesn't know.";
             AdjacencyMax = (entry - 2) / 2;
-            _adjTable = ToFile(Word(_code, LiteralOf(adjUse + 2, _code)));
+            _adjTable = ToFile(Word(_code, LiteralOf(_japaneseDp ? adjUse : adjUse + 2, _code)));
             if (_adjTable < 0 || _adjTable + routeCount * entry > _code.Length) return "The roamer adjacency table is outside arm9.";
             for (int i = 0; i < routeCount; i++)
             {
@@ -171,11 +187,12 @@ namespace DSPRE.ROMFiles
             }
 
             // Slots.
-            string prologueSig = PrologueText(_family);
+            string prologueSig = _japaneseDp ? "F0 B5 89 B0 04 90 0D 1C ?? ?? ?? ?? 05 90 29 1C ?? ?? ?? ?? 04 1C" : PrologueText(_family);
             int prologue = FindOne(_code, prologueSig);
             if (prologue < 0) return $"The roamer creation routine wasn't found; {fail}.";
             _switch = prologue + prologueSig.Split(' ').Length;
-            if (!At(_code, _switch + layout.JoinOffset, JoinText(_family))) return $"The roamer creation routine doesn't hand species and level on as the game does; {fail}.";
+            string join = _japaneseDp ? "20 1C 04 21 32 1C ?? ?? ?? ?? 20 1C 06 21 3A 1C" : JoinText(_family);
+            if (!At(_code, _switch + layout.JoinOffset, join)) return $"The roamer creation routine doesn't hand species and level on as the game does; {fail}.";
 
             if (IsPatched(layout))
             {
@@ -342,7 +359,7 @@ namespace DSPRE.ROMFiles
         public void Save(int mapCount, int speciesCount)
         {
             if (Problem(mapCount, speciesCount) is string p) throw new InvalidOperationException(p);
-            Layout layout = Layouts[_family];
+            Layout layout = LayoutHere;
             byte[] code = (byte[])_code.Clone();
 
             for (int r = 0; r < Routes.Count; r++) BitConverter.GetBytes((uint)Routes[r]).CopyTo(code, _routeTable + r * 4);

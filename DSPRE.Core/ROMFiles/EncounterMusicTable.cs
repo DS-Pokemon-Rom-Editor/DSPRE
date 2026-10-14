@@ -33,7 +33,7 @@ namespace DSPRE.ROMFiles
             where.Start = ram - (where.Repointed ? RomInfo.synthOverlayLoadAddress : ARM9.address);
             where.Path = where.Repointed ? Filesystem.expArmPath : RomInfo.arm9Path;
 
-            byte count = ARM9.ReadByte(RomInfo.encounterMusicTableOffsetToRAMAddress - (hgss ? 12u : 10u));
+            byte count = ARM9.ReadByte(RomInfo.encounterMusicCountSite);
             List<Row> rows = new List<Row>(count);
             using DSUtils.EasyReader reader = new DSUtils.EasyReader(where.Path, where.Start);
             for (int i = 0; i < count; i++)

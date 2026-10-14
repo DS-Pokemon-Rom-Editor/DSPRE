@@ -59,7 +59,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public PokedexGraphicsEditorViewModel(int species, string pageId)
         {
             _sample = new DexSample(species);
-            _pages = DexPageRecipes.For(gameFamily);
+            _pages = DexPageLanguages.ForLoadedRom();
             foreach (DexPage p in _pages) PageNames.Add(p.Name);
             BuildComposer();
             int start = pageId == null ? 0 : Math.Max(0, _pages.ToList().FindIndex(p => p.Id == pageId));

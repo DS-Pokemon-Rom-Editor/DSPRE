@@ -616,6 +616,7 @@ namespace DSPRE.Resources {
                 ["ADAF"] = GameVersions.Diamond,
                 ["ADAD"] = GameVersions.Diamond,
                 ["ADAJ"] = GameVersions.Diamond,
+                ["ADAK"] = GameVersions.Diamond,
 
                 ["APAE"] = GameVersions.Pearl,
                 ["APAS"] = GameVersions.Pearl,
@@ -623,6 +624,7 @@ namespace DSPRE.Resources {
                 ["APAF"] = GameVersions.Pearl,
                 ["APAD"] = GameVersions.Pearl,
                 ["APAJ"] = GameVersions.Pearl,
+                ["APAK"] = GameVersions.Pearl,
 
                 ["CPUE"] = GameVersions.Platinum,
                 ["CPUS"] = GameVersions.Platinum,
@@ -631,6 +633,7 @@ namespace DSPRE.Resources {
                 ["CPUD"] = GameVersions.Platinum,
                 ["CPUJ"] = GameVersions.Platinum,
                 ["CPUP"] = GameVersions.Platinum,
+                ["CPUK"] = GameVersions.Platinum,
 
                 ["IPKE"] = GameVersions.HeartGold,
                 ["IPKS"] = GameVersions.HeartGold,
@@ -638,13 +641,15 @@ namespace DSPRE.Resources {
                 ["IPKF"] = GameVersions.HeartGold,
                 ["IPKD"] = GameVersions.HeartGold,
                 ["IPKJ"] = GameVersions.HeartGold,
+                ["IPKK"] = GameVersions.HeartGold,
 
                 ["IPGE"] = GameVersions.SoulSilver,
                 ["IPGS"] = GameVersions.SoulSilver,
                 ["IPGI"] = GameVersions.SoulSilver,
                 ["IPGF"] = GameVersions.SoulSilver,
                 ["IPGD"] = GameVersions.SoulSilver,
-                ["IPGJ"] = GameVersions.SoulSilver
+                ["IPGJ"] = GameVersions.SoulSilver,
+                ["IPGK"] = GameVersions.SoulSilver
             };
 
             private static readonly Dictionary<GameFamilies, Dictionary<byte, string>> collisionLabels = new Dictionary<GameFamilies, Dictionary<byte, string>>();

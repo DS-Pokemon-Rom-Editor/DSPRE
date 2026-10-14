@@ -183,7 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (!IsSupported)
             {
-                StatusText = "The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum (English).";
+                StatusText = "The Vs. Seeker Rematch Editor only supports Diamond, Pearl and Platinum.";
                 _rows = new List<RematchTable.Row>();
                 return;
             }

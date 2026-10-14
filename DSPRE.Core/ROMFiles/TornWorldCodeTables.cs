@@ -7,23 +7,21 @@ namespace DSPRE.ROMFiles
     /// <summary>Distortion World tables that live in code: moving platforms and static props.</summary>
     public static class TornWorldCodeTables
     {
-        public const int OverlayNumber = 9;
-
-        private static readonly uint[] MovingPlatformFloors = { 573, 574, 575, 576, 577, 579, 580, 581 };
-
-        private static readonly uint[] PropFloors = { 573, 579, 582, 583 };
+        public static int OverlayNumber => RomInfo.tornWorldCode.Overlay;
+        private static uint[] MovingPlatformFloors => RomInfo.tornWorldCode.MovingPlatformFloors;
+        private static uint[] PropFloors => RomInfo.tornWorldCode.PropFloors;
 
         private const int MovingPlatformSize = 24;
         private const int PropSize = 16;
-        private const int PropKindCount = 25;
-        private const int AnimationKindCount = 5;
-        private const int HoverStepCount = 8;
-        private const int ElevatorPathCount = 22;
+        private static int PropKindCount => RomInfo.tornWorldCode.PropKinds;
+        private static int AnimationKindCount => RomInfo.tornWorldCode.AnimationKinds;
+        private static int HoverStepCount => RomInfo.tornWorldCode.HoverSteps;
+        private static int ElevatorPathCount => RomInfo.tornWorldCode.ElevatorPaths;
         private const int ElevatorPathSize = 32;
         private const int FixedOne = 0x1000;
 
         private const float HoverStepPerFrame = 0x800 / (float)FixedOne;
-        private const uint PropKindInvalid = PropKindCount;
+        private static uint PropKindInvalid => (uint)PropKindCount;
 
         public class MovingPlatform
         {

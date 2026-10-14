@@ -81,6 +81,8 @@ namespace DSPRE.ROMFiles
                 ushort At(int o) => o >= 0 && o + 2 <= arm9.Length ? BitConverter.ToUInt16(arm9, o) : (ushort)0;
                 if (table < 0x14 || count <= 0 || table + 2 * count > arm9.Length) return null;
                 ushort subs = At(table - 0x14), movs = At(table - 0x12), cmp = At(table - 0x10);
+                // Japanese DP sets the default before the subtraction.
+                if ((subs & 0xFF00) == 0x2100 && (movs & 0xFF00) == 0x3800) (subs, movs) = (movs, subs);
                 if ((subs & 0xFF00) != 0x3800 || (movs & 0xFF00) != 0x2100 || cmp != (0x2800 | (count - 1))
                     || At(table - 2) != AddPcR0) return null;
 
@@ -110,9 +112,8 @@ namespace DSPRE.ROMFiles
 
         internal BattleMusicTables(bool fromHgEngineSource = false) => FromHgEngineSource = fromHgEngineSource;
 
-        // Only the English Diamond and Pearl layout is known.
-        public static bool IsSupported => gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat
-            || (gameFamily == GameFamilies.DP && gameLanguage == GameLanguages.English);
+        // Every dump's combo table is measured; Diamond and Pearl still refuse a table whose two pointers disagree.
+        public static bool IsSupported => gameFamily == GameFamilies.HGSS || gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP;
 
         // ── Selection ────────────────────────────────────────────────────────────────────────────
 
@@ -233,8 +234,8 @@ namespace DSPRE.ROMFiles
             if (musicLiteral != 0)
                 t.MusicPointerAgrees = BitConverter.ToUInt32(ARM9.ReadBytes(musicLiteral, 4), 0)
                     == BitConverter.ToUInt32(ARM9.ReadBytes(effectsComboTableOffsetToRAMAddress, 4), 0) + 2;
-            if (!hgss && sites != null && sites.ClassJumpTable >= 0 && File.Exists(arm9Path))
-                t.ClassJumps = ClassJumpTable.Decode(File.ReadAllBytes(arm9Path), sites.ClassJumpTable, sites.ClassJumpCount);
+            if (!hgss && ClassJumpSite is (int table, int count) && File.Exists(arm9Path))
+                t.ClassJumps = ClassJumpTable.Decode(File.ReadAllBytes(arm9Path), table, count);
             return t;
         }
 

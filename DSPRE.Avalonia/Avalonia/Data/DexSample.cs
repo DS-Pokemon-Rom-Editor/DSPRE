@@ -91,7 +91,9 @@ namespace DSPRE.Avalonia.Data
                 catch (Exception ex) { AppLogger.Warn("Pokédex foreign species: " + ex.Message); _foreignSpecies = Array.Empty<int>(); }
             }
             int slot = Array.IndexOf(_foreignSpecies, species);
-            return slot < 0 ? -1 : slot * 6 + DiamondPearlLanguages[language];
+            if (slot < 0) return -1;
+            // Japanese DP lists only the five other languages, in the order of its tabs.
+            return gameLanguage == GameLanguages.Japanese ? slot * 5 + language : slot * 6 + DiamondPearlLanguages[language];
         }
 
         private string Line(int bank, int line)

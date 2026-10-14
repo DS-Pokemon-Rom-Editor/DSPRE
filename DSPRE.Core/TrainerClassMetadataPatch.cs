@@ -18,7 +18,6 @@ namespace DSPRE
     {
         public const int PayloadSize = 0x2068;
         public const uint DefaultPayloadOffset = 0x12200;
-        public const uint SyntheticBase = 0x023C8000;
 
         public static bool SupportsCurrentRom =>
             RomInfo.gameLanguage == RomInfo.GameLanguages.English && (RomInfo.romID == "IPKE" || RomInfo.romID == "IPGE");
@@ -100,7 +99,7 @@ namespace DSPRE
                 byte[] file = File.ReadAllBytes(RomInfo.arm9Path);
                 if (pointer.Offset + 4 > file.Length) return null;
                 uint address = BitConverter.ToUInt32(file, (int)pointer.Offset) - pointer.Value;
-                return address >= SyntheticBase && address - SyntheticBase + PayloadSize <= 0x16000 ? address - SyntheticBase : null;
+                return address >= RomInfo.synthOverlayLoadAddress && address - RomInfo.synthOverlayLoadAddress + PayloadSize <= RomInfo.synthOverlaySize ? address - RomInfo.synthOverlayLoadAddress : null;
             }
             catch (Exception ex) when (ex is IOException || ex is InvalidDataException || ex is InvalidOperationException) { return null; }
         }
@@ -132,7 +131,7 @@ namespace DSPRE
         {
             Data d = Load();
             List<byte[]> records = BuildRecords();   // before the hooks retire the tables it reads
-            uint address = SyntheticBase + payloadOffset;
+            uint address = RomInfo.synthOverlayLoadAddress + payloadOffset;
             foreach (Target t in d.Targets)
             {
                 string path = PathOf(t.Path);
@@ -152,11 +151,7 @@ namespace DSPRE
         }
 
         // ── a/1/5/5 from the game's tables (port of build_trainer_class_metadata_narc.py) ──────────────────
-        private const int ClassCount = 129, RecordSize = 0x34;
-        private const uint Ov12Base = 0x022378C0, Ov80Base = 0x02229EE0, Ov115Base = 0x0225F020, Ov117Base = 0x0225F020;
-        private const int GenderOffset = 0xFFB90, TrainerComboOffset = 0xFC3CA, ComboTableOffset = 0xFC40A, EyeMusicOffset = 0xFC61C;
-        private const uint PrizeTableAddress = 0x0226C4C4, FrontierBrainTableAddress = 0x0223DB98;
-        private const int TrainerComboCount = 32, ComboCount = 45, EyeMusicCount = 44, DefaultCombo = 0x29;
+        private const int RecordSize = 0x34, DefaultCombo = 0x29;
         private const ushort DefaultEyeMusic = 1108;
 
         private static readonly ushort[] Style0Small = { 0, 4, 6, 5 }, Style0Large = { 0, 7, 9, 8 };
@@ -176,24 +171,13 @@ namespace DSPRE
             2, 3, 4, 5, 6, 8, 9, 11, 14, 20, 21, 24, 25, 69, 31, 34, 36, 38, 42, 43, 46, 47, 49, 52, 55, 56, 60, 62, 63, 64,
             65, 68, 77, 78, 79, 82, 113, 115, 121, 122, 116, 114, 117, 118,
         };
-        private static readonly Dictionary<int, uint> Vs20RecordByEffect = new()
-        {
-            [12] = 0x022603B0, [13] = 0x022603C4, [14] = 0x022603D8, [15] = 0x022603EC, [16] = 0x02260400, [17] = 0x02260414,
-            [18] = 0x02260428, [19] = 0x0226043C, [20] = 0x02260450, [21] = 0x02260464, [22] = 0x02260478, [23] = 0x0226048C,
-            [24] = 0x022604A0, [25] = 0x022604B4, [26] = 0x022604C8, [27] = 0x022604DC, [28] = 0x02260374,
-        };
-        private static readonly Dictionary<int, uint> Vs8RecordByEffect = new()
-        {
-            [29] = 0x02260388, [30] = 0x02260390, [31] = 0x02260398, [32] = 0x022603A0, [33] = 0x022603A8,
-        };
+        // Effects 12 to 27 are the gym records in order and 28 the rival's, 29 to 33 the league's, 40 to 44 the executives'.
+        private const int FirstGymEffect = 12, RivalEffect = 28, FirstLeagueEffect = 29, LastLeagueEffect = 33,
+            FirstExecutiveEffect = 40, LastExecutiveEffect = 44, LeagueRecordSize = 8, ExecutiveRecordSize = 8;
         private static readonly Dictionary<int, ushort[]> Vs8BackgroundByEffect = new()
         {
             [29] = new ushort[] { 0x2F, 0x30, 0x31, 0x32 }, [30] = new ushort[] { 0x33, 0x30, 0x31, 0x32 }, [31] = new ushort[] { 0x34, 0x30, 0x31, 0x32 },
             [32] = new ushort[] { 0x35, 0x30, 0x31, 0x32 }, [33] = new ushort[] { 0x36, 0x30, 0x31, 0x32 },
-        };
-        private static readonly Dictionary<int, uint> RocketAdminRecordByEffect = new()
-        {
-            [40] = 0x0225FACC, [41] = 0x0225FAD4, [42] = 0x0225FADC, [43] = 0x0225FAE4, [44] = 0x0225FAEC,
         };
         private static readonly Dictionary<int, int> FrontierBrainRowByClass = new() { [97] = 0, [99] = 4, [100] = 1, [101] = 5, [102] = 3 };
 
@@ -212,38 +196,43 @@ namespace DSPRE
 
         private static List<byte[]> BuildRecords()
         {
+            RomInfo.VsIntroSites sites = RomInfo.VsIntroCodeSites ?? throw new InvalidDataException("This ROM's VS intro records are not mapped.");
+            RomInfo.TrainerPrizeTable prize = RomInfo.trainerPrizeTable ?? throw new InvalidDataException("This ROM's prize table is not mapped.");
+            RomInfo.FrontierBrainTable brains = RomInfo.frontierBrainTable ?? throw new InvalidDataException("This ROM's Frontier Brain table is not mapped.");
+            BattleMusicTables music = BattleMusicTables.LoadRom() ?? throw new InvalidDataException("The battle music tables could not be read.");
+            List<EncounterMusicTable.Row> eyeMusic = EncounterMusicTable.Read().Rows;
+            int classCount = RomInfo.vanillaTrainerClassCount;
+
             byte[] arm9 = File.ReadAllBytes(RomInfo.arm9Path);
             byte[] Ov(int n) { if (OverlayUtils.IsCompressed(n)) OverlayUtils.Decompress(n); return File.ReadAllBytes(OverlayUtils.GetPath(n)); }
-            byte[] ov12 = Ov(12), ov80 = Ov(80), ov115 = Ov(115), ov117 = Ov(117);
+            byte[] prizeOverlay = Ov(prize.Overlay), brainOverlay = Ov(brains.Overlay), recordOverlay = Ov(sites.RecordOverlay),
+                executiveOverlay = Ov(sites.ExecutiveOverlay);
 
-            byte[] genders = Slice(arm9, GenderOffset, ClassCount, "gender table");
-            byte[] comboMap = Slice(arm9, TrainerComboOffset, TrainerComboCount * 2, "trainer-to-combo table");
-            ushort[] comboRows = Enumerable.Range(0, TrainerComboCount).Select(i => U16(comboMap, i * 2)).ToArray();
+            byte[] genders = Slice(arm9, RomInfo.trainerClassGenderTableOffset, classCount, "gender table");
+            ushort[] comboRows = music.Classes.Rows.Select(r => (ushort)((r.Class & 0x3FF) | (r.Combo << 10))).ToArray();
             if (!comboRows.SequenceEqual(ExpectedTrainerComboRows))
                 throw new InvalidDataException("The trainer-to-combo table is not the retail US HeartGold/SoulSilver one, which the patch's builder needs.");
             Dictionary<int, int> comboByClass = comboRows.ToDictionary(r => r & 0x3FF, r => r >> 10);
 
-            byte[] comboBlob = Slice(arm9, ComboTableOffset, ComboCount * 4, "combo table");
-            (ushort Effect, ushort Music)[] combos = Enumerable.Range(0, ComboCount).Select(i => (Effect: U16(comboBlob, i * 4), Music: U16(comboBlob, i * 4 + 2))).ToArray();
+            (ushort Effect, ushort Music)[] combos = music.Combos.Rows.Select(c => (Effect: c.Transition, Music: c.Sequence)).ToArray();
             if (!combos.Select(c => c.Effect).SequenceEqual(ExpectedComboEffects))
                 throw new InvalidDataException("The combo table's effects are not the retail US HeartGold/SoulSilver ones.");
 
-            byte[] eyeBlob = Slice(arm9, EyeMusicOffset, EyeMusicCount * 6, "eye-contact music table");
-            (ushort Class, ushort Main, ushort Alt)[] eyeRows = Enumerable.Range(0, EyeMusicCount).Select(i => (Class: U16(eyeBlob, i * 6), Main: U16(eyeBlob, i * 6 + 2), Alt: U16(eyeBlob, i * 6 + 4))).ToArray();
+            (ushort Class, ushort Main, ushort Alt)[] eyeRows = eyeMusic.Select(e => (Class: e.Class, Main: e.Music, Alt: e.NightMusic ?? e.Music)).ToArray();
             if (!eyeRows.Select(e => e.Class).SequenceEqual(ExpectedEyeMusicClasses))
                 throw new InvalidDataException("The eye-contact music table's classes are not the retail US HeartGold/SoulSilver ones.");
             Dictionary<int, (ushort Main, ushort Alt)> eyeByClass = eyeRows.ToDictionary(e => (int)e.Class, e => (e.Main, e.Alt));
 
-            byte[] prizeBlob = Slice(ov12, PrizeTableAddress - Ov12Base, ClassCount * 4, "prize table");
-            (int Class, ushort Coefficient)[] prizeRows = Enumerable.Range(0, ClassCount).Select(i => (Class: (int)U16(prizeBlob, i * 4), Coefficient: U16(prizeBlob, i * 4 + 2))).ToArray();
-            if (!prizeRows.Select(p => p.Class).OrderBy(x => x).SequenceEqual(Enumerable.Range(0, ClassCount)))
+            byte[] prizeBlob = Slice(prizeOverlay, prize.Table, prize.Count * 4, "prize table");
+            (int Class, ushort Coefficient)[] prizeRows = Enumerable.Range(0, prize.Count).Select(i => (Class: (int)U16(prizeBlob, i * 4), Coefficient: U16(prizeBlob, i * 4 + 2))).ToArray();
+            if (!prizeRows.Select(p => p.Class).OrderBy(x => x).SequenceEqual(Enumerable.Range(0, classCount)))
                 throw new InvalidDataException("The prize table does not hold each trainer class 0 to 128 once.");
             Dictionary<int, ushort> prizeByClass = prizeRows.ToDictionary(p => p.Class, p => p.Coefficient);
 
-            byte[] brainTable = Slice(ov80, FrontierBrainTableAddress - Ov80Base, 6 * 0x0C, "Frontier Brain table");
+            byte[] brainTable = Slice(brainOverlay, brains.Table, brains.Count * brains.RowSize, "Frontier Brain table");
 
             List<byte[]> records = new List<byte[]>();
-            for (int c = 0; c < ClassCount; c++)
+            for (int c = 0; c < classCount; c++)
             {
                 byte[] r = new byte[RecordSize];
                 Put16(r, 0x00, genders[c]);
@@ -255,9 +244,10 @@ namespace DSPRE
                 (ushort effect, ushort battleMusic) = combos[comboId];
                 Put16(r, 0x08, battleMusic);
 
-                if (Vs20RecordByEffect.TryGetValue(effect, out uint vs20))
+                if (effect >= FirstGymEffect && effect <= RivalEffect)
                 {
-                    byte[] s = Slice(ov115, vs20 - Ov115Base, 0x14, "style 1 recipe");
+                    long vs20 = effect == RivalEffect ? sites.RivalRecord : sites.GymTable + (effect - FirstGymEffect) * sites.GymSize;
+                    byte[] s = Slice(recordOverlay, vs20, sites.GymSize, "style 1 recipe");
                     Put16(r, 0x0A, 1);
                     bool savedRival = U16(s, 0x08) == 0x17;
                     Put16(r, 0x0C, savedRival ? 0 : (int)U32(s, 0x04));
@@ -267,9 +257,9 @@ namespace DSPRE
                     Put16(r, 0x16, s[0x10]); Put16(r, 0x18, s[0x11]); Put16(r, 0x1E, s[0x12]);
                     Quartet(r, 0x2C, StandardSymbols);
                 }
-                else if (Vs8RecordByEffect.TryGetValue(effect, out uint vs8))
+                else if (effect >= FirstLeagueEffect && effect <= LastLeagueEffect)
                 {
-                    byte[] s = Slice(ov115, vs8 - Ov115Base, 0x08, "style 2 recipe");
+                    byte[] s = Slice(recordOverlay, sites.LeagueTable + (effect - FirstLeagueEffect) * LeagueRecordSize, LeagueRecordSize, "style 2 recipe");
                     Put16(r, 0x0A, 2);
                     Put16(r, 0x0C, U16(s, 0x06));
                     Put16(r, 0x14, s[0x03]);
@@ -278,9 +268,9 @@ namespace DSPRE
                     Quartet(r, 0x16, Vs8BackgroundByEffect[effect]);
                     Quartet(r, 0x2C, StandardSymbols);
                 }
-                else if (RocketAdminRecordByEffect.TryGetValue(effect, out uint admin))
+                else if (effect >= FirstExecutiveEffect && effect <= LastExecutiveEffect)
                 {
-                    byte[] s = Slice(ov117, admin - Ov117Base, 0x08, "style 3 recipe");
+                    byte[] s = Slice(executiveOverlay, sites.ExecutiveTable + (effect - FirstExecutiveEffect) * ExecutiveRecordSize, ExecutiveRecordSize, "style 3 recipe");
                     Put16(r, 0x0A, 3);
                     Put16(r, 0x0C, (int)U32(s, 0x04));
                     Quartet(r, 0x24, new[] { (int)s[0], s[1], s[2], s[3] });

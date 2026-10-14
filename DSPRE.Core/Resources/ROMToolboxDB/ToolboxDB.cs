@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Resources;
 using static DSPRE.RomInfo;
@@ -96,7 +97,35 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 ["initOffset" + "_" + RomInfo.GameFamilies.HGSS + "_" + RomInfo.GameLanguages.Japanese] = 0x02110604,
             };
 
-            internal ARM9PatchData() {
+            private static string Key(string field) => field + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage;
+
+            /// <summary>Whether this per-language entry exists, which DSPRE wrote before measuring each dump.</summary>
+            internal static bool HasLanguageEntry => arm9ExpansionCodeDB.ContainsKey(Key(nameof(branchString)));
+
+            /// <summary>Whether DSPRE can apply the expansion to this ROM.</summary>
+            internal static bool Supported => RomInfo.arm9ExpansionSites != null || HasLanguageEntry;
+
+            /// <summary>The expansion for this ROM: its measured sites where it has them, else the per-language entry.</summary>
+            internal ARM9PatchData() : this(RomInfo.arm9ExpansionSites == null) { }
+
+            /// <param name="languageEntry">The per-language entry even where measured sites exist, to recognise an older apply.</param>
+            internal ARM9PatchData(bool languageEntry) {
+                if (!languageEntry && RomInfo.arm9ExpansionSites is Arm9ExpansionSites sites)
+                {
+                    // push {r2-r7, lr}; ldr r0, =synthetic overlay; movs r1, #archive; movs r2, #member; bl file loader;
+                    // movs r0, #0; movs r1, #3 (the boot pair it replaced); pop {r2-r7, pc}; .word synthetic overlay.
+                    List<byte> loader = new List<byte> { 0xFC, 0xB5, 0x04, 0x48, RomInfo.synthOverlayArchiveId, 0x21,
+                        (byte)syntheticOverlayFileNumbersDB[RomInfo.gameFamily], 0x22 };
+                    loader.AddRange(PatchToolboxLogic.BuildThumbBl(ARM9.address + sites.Loader + 8, sites.FileLoader));
+                    loader.AddRange(new byte[] { 0x00, 0x20, 0x03, 0x21, 0xFC, 0xBD, 0x00, 0x00 });
+                    loader.AddRange(BitConverter.GetBytes(RomInfo.synthOverlayLoadAddress));
+                    loader.Add(0x00);
+                    branchOffset = sites.Boot;
+                    initOffset = sites.Loader;
+                    branchString = Hex(PatchToolboxLogic.BuildThumbBl(ARM9.address + sites.Boot, ARM9.address + sites.Loader));
+                    initString = Hex(loader);
+                    return;
+                }
                 if (RomInfo.gameFamily == GameFamilies.HGSS && RomInfo.gameLanguage == GameLanguages.Japanese)
                 {
                     branchOffset = arm9ExpansionOffsetsDB[nameof(branchOffset) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage] - ARM9.address;
@@ -109,6 +138,8 @@ namespace DSPRE.Resources.ROMToolboxDB {
                 branchString = arm9ExpansionCodeDB[nameof(branchString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
                 initString = arm9ExpansionCodeDB[nameof(initString) + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage];
             }
+
+            private static string Hex(IEnumerable<byte> bytes) => string.Join(" ", bytes.Select(b => b.ToString("X2")));
         }
         internal class BDHCAMPatchData {
             internal byte overlayNumber;
@@ -219,51 +250,29 @@ namespace DSPRE.Resources.ROMToolboxDB {
             internal BuildingRotationPatchData()
             {
                 defaultPayloadOffset = 0x00011CE8;
-
-                switch (RomInfo.romID)
-                {
-                    case "ADAE":
-                    case "APAE":
-                        overlayNumber = 5;
-                        hookOverlayOffset = 0x0001097E;
-                        hookRuntimeAddress = 0x021E7E5E;
-                        rotationMatrixFunctionAddress = 0x0201CAA8;
-                        break;
-                    case "APAF":
-                        overlayNumber = 5;
-                        hookOverlayOffset = 0x0001097E;
-                        hookRuntimeAddress = 0x021E7FDE;
-                        rotationMatrixFunctionAddress = 0x0201CAF4;
-                        break;
-                    case "CPUE":
-                        overlayNumber = 5;
-                        hookOverlayOffset = 0x00010AD2;
-                        hookRuntimeAddress = 0x021E1852;
-                        rotationMatrixFunctionAddress = 0x0201E268;
-                        break;
-                    case "IPKE":
-                    case "IPGE":
-                        overlayNumber = 1;
-                        hookOverlayOffset = 0x0000E1C6;
-                        hookRuntimeAddress = 0x021F3AC6;
-                        rotationMatrixFunctionAddress = 0x02020D2C;
-                        break;
-                    case "IPKI":
-                        overlayNumber = 1;
-                        hookOverlayOffset = 0x0000E1C6;
-                        hookRuntimeAddress = 0x021F3A66;
-                        rotationMatrixFunctionAddress = 0x02020D2C;
-                        break;
-                    default:
-                        throw new NotSupportedException();
-                }
-
+                RomInfo.BuildingRotationSites sites = RomInfo.buildingRotationSites ?? throw new NotSupportedException();
+                overlayNumber = (byte)sites.Overlay;
+                hookOverlayOffset = sites.Hook;
+                hookRuntimeAddress = OverlayUtils.OverlayTable.GetRAMAddress(sites.Overlay) + sites.Hook;
+                rotationMatrixFunctionAddress = sites.RotationRoutine;
                 payload = LoadPayload();
             }
 
+            // Japanese DP's field code keeps the building in r4 and the matrix at sp+0x24, and its hook replaces
+            // add r0, sp, #0x14; ldrh r0, [r0] (the US hook's pair is a compare and branch there):
+            // push {r0, lr}; add r0, sp, #0x2C; mov r1, r4; adds r1, #0x74; bl <rotation>; pop {r0, r3};
+            // add r0, sp, #0x14; ldrh r0, [r0]; bx r3. The call is rebuilt on apply.
+            private static readonly byte[] JapaneseDpPayload =
+            {
+                0x01, 0xB5, 0x0B, 0xA8, 0x21, 0x1C, 0x74, 0x31, 0x00, 0x00, 0x00, 0x00, 0x09, 0xBC, 0x05, 0xA8, 0x00, 0x88, 0x18, 0x47,
+            };
+
             private byte[] LoadPayload()
             {
-                byte[] payload = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BuildingRotationPatchDB", Assembly.GetExecutingAssembly()).GetObject(RomInfo.romID + "_rotation");
+                if (RomInfo.gameFamily == GameFamilies.DP && RomInfo.gameLanguage == GameLanguages.Japanese) return (byte[])JapaneseDpPayload.Clone();
+                // One routine per family; only its call into the rotation routine differs by dump, and that is rebuilt on apply.
+                string key = RomInfo.gameFamily switch { GameFamilies.DP => "ADAE", GameFamilies.Plat => "CPUE", _ => "IPKE" };
+                byte[] payload = (byte[])new ResourceManager("DSPRE.Resources.ROMToolboxDB.BuildingRotationPatchDB", Assembly.GetExecutingAssembly()).GetObject(key + "_rotation");
                 if (payload == null)
                 {
                     throw new NotSupportedException();

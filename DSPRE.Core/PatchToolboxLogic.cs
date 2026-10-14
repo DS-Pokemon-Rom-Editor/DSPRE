@@ -134,13 +134,20 @@ namespace DSPRE
         /// <summary>Why the ARM9 expansion can't be applied to this ROM, or null when it can (or already is).</summary>
         public static string Arm9ExpansionWhyNot() =>
             RomInfo.isHGE ? HgEngine.HgEngineSyntheticOverlay.ToolboxReason
-            : !ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage)
+            : !ARM9PatchData.Supported
                 ? "The ARM9 expansion isn't available for this game's language."
             : null;
 
         public static bool CheckFilesArm9ExpansionApplied()
         {
-            ARM9PatchData data = new ARM9PatchData();
+            if (!ARM9PatchData.Supported) return false;
+            if (Arm9ExpansionIn(new ARM9PatchData())) return true;
+            // A ROM expanded before its dump was measured carries the per-language entry instead.
+            return RomInfo.arm9ExpansionSites != null && ARM9PatchData.HasLanguageEntry && Arm9ExpansionIn(new ARM9PatchData(languageEntry: true));
+        }
+
+        private static bool Arm9ExpansionIn(ARM9PatchData data)
+        {
 
             byte[] branchCode = DSUtils.HexStringToByteArray(data.branchString);
             byte[] branchCodeRead = ARM9.ReadBytes(data.branchOffset, data.branchString.Length / 3 + 1); //Read branchCode
@@ -240,6 +247,8 @@ namespace DSPRE
 
         public static bool CheckFilesDynamicHeadersPatchApplied()
         {
+            // The check reads at offsets known for other languages only; Korean cannot have the patch.
+            if (RomInfo.gameLanguage == GameLanguages.Korean) return false;
             DynamicHeadersPatchData data = new DynamicHeadersPatchData();
             ushort initValue = BitConverter.ToUInt16(ARM9.ReadBytes(data.initOffset, 0x2), 0);
             return initValue == 0xB500;
@@ -991,6 +1000,7 @@ namespace DSPRE
         public static bool ApplyDynamicHeadersPatch()
         {
             // A second run would split the already-patched table over the headers it moved out.
+            if (RomInfo.gameLanguage == GameLanguages.Korean) return false;
             if (AlreadyApplied(RomPatchState.flag_DynamicHeadersPatchApplied || Probe(CheckFilesDynamicHeadersPatchApplied))) return false;
 
             DynamicHeadersPatchData data = new DynamicHeadersPatchData();
@@ -1072,14 +1082,16 @@ namespace DSPRE
 
         // WildMonSetRandomHeldItem gives a species listing one item twice that item every time; turning its
         // branch-if-different into an unconditional branch sends every species through the odds.
-        private static readonly byte[] SameItemBranchVanilla = { 0x09, 0xD1 }, SameItemBranchPatched = { 0x09, 0xE0 };
+        // The branch distance is the ROM's own (9 halfwords in US, 8 in Japanese DP); only the condition changes.
+        private const byte BranchIfDifferent = 0xD1, BranchAlways = 0xE0;
 
         public static PatchState SameHeldItemOddsState()
         {
             if (ROMFiles.GameTableFile.WhyNot(GameTable.HeldItemSameItemBranch, 2) is string why) return Unsupported(why);
             byte[] now = ROMFiles.GameTableFile.Read(GameTable.HeldItemSameItemBranch, 2);
-            if (now.AsSpan().SequenceEqual(SameItemBranchPatched)) return PatchState.Applied;
-            if (now.AsSpan().SequenceEqual(SameItemBranchVanilla)) return PatchState.Available;
+            if (now[0] is < 0x08 or > 0x09) return Unsupported("The code there has already been changed by something else.");
+            if (now[1] == BranchAlways) return PatchState.Applied;
+            if (now[1] == BranchIfDifferent) return PatchState.Available;
             return Unsupported("The code there has already been changed by something else.");
         }
 
@@ -1090,7 +1102,8 @@ namespace DSPRE
                 "held item odds say, instead of always." + BackupNote("the ARM9") + "\n\nApply this patch?" + CreditNote("sameHeldItemOdds"), "Confirm to proceed"))
                 return false;
             BackUp(ROMFiles.GameTableFile.PathOf(RomInfo.SpotOf(GameTable.HeldItemSameItemBranch).Value));
-            ROMFiles.GameTableFile.Write(GameTable.HeldItemSameItemBranch, SameItemBranchPatched);
+            byte[] branch = ROMFiles.GameTableFile.Read(GameTable.HeldItemSameItemBranch, 2);
+            ROMFiles.GameTableFile.Write(GameTable.HeldItemSameItemBranch, new[] { branch[0], BranchAlways });
             ShowInfo("Same held items now use the held item odds.", "Operation successful.");
             return true;
         }
@@ -1098,7 +1111,7 @@ namespace DSPRE
         /// <summary>Moves the trainer class gender and prize tables into blocks with room for every class.</summary>
         public static bool ApplyMoveTrainerClassTables()
         {
-            if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) { ShowError("Only Platinum (English) is supported.", "Patch not applied"); return false; }
+            if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) { ShowError("Only Platinum is supported.", "Patch not applied"); return false; }
             if (AlreadyApplied(TrainerClassTableExpansion.ClassTablesHaveRoom)) return false;
             if (PlacementNote(TrainerClassTableExpansion.ClassTableBlockLengths(), out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo("This copies the trainer class gender table and prize money table into their own blocks in the synthetic overlay with room for " +
@@ -1107,7 +1120,8 @@ namespace DSPRE
                 "\n\nApply this patch?" + CreditNote("trainerClassTablesExpanded"), "Confirm to proceed"))
                 return false;
             File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
-            File.Copy(OverlayUtils.GetPath(16), OverlayUtils.GetPath(16) + BackupSuffix, overwrite: true);
+            string prizeOverlay = OverlayUtils.GetPath(RomInfo.trainerPrizeTable.Overlay);
+            File.Copy(prizeOverlay, prizeOverlay + BackupSuffix, overwrite: true);
             File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
             string error = null;
             bool moved = false;
@@ -1124,7 +1138,7 @@ namespace DSPRE
         public static bool ApplyMoveEncounterMusicTable()
         {
             if (AlreadyApplied(TrainerClassTableExpansion.MusicTableHasRoom)) return false;
-            if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) { ShowError("Only Platinum (English) is supported.", "Patch not applied"); return false; }
+            if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) { ShowError("Only Platinum is supported.", "Patch not applied"); return false; }
             if (PlacementNote(new[] { TrainerClassTableExpansion.MusicBlockLength }, out int[] offsets) is not string placement) return false;
             if (!ConfirmYesNo("This copies the eye-contact music table into its own block in the synthetic overlay with room for an entry per class (" +
                 TrainerClassTableExpansion.MaxClasses + "), and points the ARM9 at it. Giving a class music then writes into that room and raises the entry count." + placement + "\n\n" +
@@ -1619,7 +1633,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!ARM9PatchData.arm9ExpansionCodeDB.ContainsKey("branchString" + "_" + RomInfo.gameFamily + "_" + RomInfo.gameLanguage))
+                    if (!ARM9PatchData.Supported)
                         return Unsupported("Unsupported language");
                     bool applied = RomPatchState.flag_arm9Expanded || CheckFilesArm9ExpansionApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
@@ -1650,7 +1664,7 @@ namespace DSPRE
                 }));
 
             list.Add(Status("trainerShiny", "Shiny trainer Pokémon",
-                "Lets party members ticked Shiny in the Trainer editor battle shiny (US HeartGold/SoulSilver, Italian HeartGold). Requires the ARM9 expansion patch and a ds-rom-format project.",
+                "Party members ticked Shiny in the Trainer editor are shiny in battle (HeartGold/SoulSilver). Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
@@ -1685,6 +1699,8 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.gameFamily == GameFamilies.DP) return Unsupported("Unsupported");
+                    // Its offsets are known for the US, European and Japanese ARM9s only.
+                    if (RomInfo.gameLanguage == GameLanguages.Korean) return Unsupported("Unsupported language");
                     bool applied = RomPatchState.flag_DynamicHeadersPatchApplied || CheckFilesDynamicHeadersPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
@@ -1744,7 +1760,7 @@ namespace DSPRE
                 $"Moves the gender and prize money tables into the synthetic overlay with room for {TrainerClassTableExpansion.MaxClasses} classes, so the Trainer Classes editor can add classes. Requires the ARM9 expansion patch.",
                 () =>
                 {
-                    if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum (English) only");
+                    if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum only");
                     if (TrainerClassTableExpansion.ClassTablesHaveRoom) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
@@ -1754,7 +1770,7 @@ namespace DSPRE
                 () =>
                 {
                     if (TrainerClassTableExpansion.MusicTableHasRoom) return PatchState.Applied;
-                    if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum (English) only");
+                    if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum only");
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
