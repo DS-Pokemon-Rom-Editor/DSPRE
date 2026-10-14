@@ -1177,6 +1177,42 @@ namespace DSPRE {
             return (excess >= 0 && excess < extras.Length) ? extras[excess].monId : id;
         }
 
+        /// <summary>
+        /// The party icon a form shows, as the game picks it: the extra icons after the two eggs, one run per species
+        /// with form icons, in the same order in DP, Pt and HGSS (DP stops after Gastrodon). The species itself when
+        /// the form has no icon of its own, or the ROM lacks it.
+        /// </summary>
+        public static int MonIconIndex(int species, int form, out int paletteIndex) {
+            paletteIndex = species;
+            if (form <= 0) return species;
+            (int first, int forms) = species switch {
+                386 => (496, 3),    // Deoxys: Attack, Defense, Speed
+                201 => (500, 27),   // Unown: B to ?
+                412 => (527, 2),    // Burmy: Sandy, Trash
+                413 => (529, 2),    // Wormadam: Sandy, Trash
+                422 => (531, 1),    // Shellos: East Sea
+                423 => (532, 1),    // Gastrodon: East Sea
+                487 => (533, 1),    // Giratina: Origin
+                492 => (534, 1),    // Shaymin: Sky
+                479 => (535, 5),    // Rotom: Heat, Wash, Frost, Fan, Mow
+                _ => (-1, 0),
+            };
+            if (first < 0 || form > forms) return species;
+            int index = first + form - 1;
+            string dir = gameDirs[DirNames.monIcons].unpackedDir;
+            if (!File.Exists(Path.Combine(dir, (index + 7).ToString("D4"))) && !File.Exists(Path.Combine(dir, (index + 7).ToString("D5"))))
+                return species;
+            // The game reads Unown's palette one slot back, from the unused Unown A icon's; they all match anyway.
+            paletteIndex = species == 201 ? index - 1 : index;
+            return index;
+        }
+
+        /// <summary>A species' party icon in the given form.</summary>
+        public static RawImage GetFormPokePicRaw(int species, int form, int w, int h) {
+            int index = MonIconIndex(species, form, out int palette);
+            return index == species ? GetPokePicRaw(species, w, h) : GetPokePicRaw(index, w, h, GetMonIconPaletteId(palette));
+        }
+
         /// <summary>GDI-free twin of <see cref="GetPokePic"/>, composes the mon icon straight into a <see cref="RawImage"/> (no System.Drawing).</summary>
         public static RawImage GetPokePicRaw(int species, int w, int h, int paletteIdOverride = -1) {
             LoadMonIconParts(species, paletteIdOverride, out ImageBase imageBase, out PaletteBase paletteBase, out SpriteBase spriteBase, out int[] OAMenabled);

@@ -149,7 +149,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public ObservableCollection<string> PokemonNames { get; }
         public ObservableCollection<string> MoveNames { get; }
         public ObservableCollection<string> ItemNames { get; }
-        public ObservableCollection<string> GenderItems { get; } = new ObservableCollection<string> { "Default Gender", "Male", "Female" };
+        public ObservableCollection<string> GenderItems { get; } = new ObservableCollection<string> { "Auto gender", "Male", "Female" };
         public ObservableCollection<string> AbilityItems { get; } = new ObservableCollection<string>();
 
         /// <summary>Full ability list (not species-restricted), for hg-engine's optional explicit
@@ -226,7 +226,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         }
 
         private decimal _formId;
-        public decimal FormId { get => _formId; set { if (Set(ref _formId, value)) { if (HgEngineProject.IsActive) RebuildAbilities(); OnPropertyChanged(nameof(FormIndex)); Touch(); } } }
+        public decimal FormId { get => _formId; set { if (Set(ref _formId, value)) { if (HgEngineProject.IsActive) RebuildAbilities(); OnPropertyChanged(nameof(FormIndex)); UpdateIcon(); Touch(); } } }
 
         // ── Forms, by name where the game names them ────────────────────────────────
         public ObservableCollection<string> FormNames { get; } = new ObservableCollection<string>();
@@ -350,7 +350,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
             byte ratio = GenderRatio(DataSpeciesId);
             string gender = ratio switch { 255 => "Genderless", 254 => "Female", 0 => "Male", _ => (defaultPid & 0xFF) < ratio ? "Female" : "Male" };
-            string genderLabel = $"Default ({gender})";
+            string genderLabel = $"Auto ({gender})";
             if (GenderItems.Count > 0 && GenderItems[0] != genderLabel)
             {
                 bool was = _suppress; _suppress = true;
@@ -364,7 +364,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_abilityEditable && !HgEngineProject.IsActive && AbilityItems.Count == 3 && DataSpeciesId >= 0 && DataSpeciesId < _abilities.Length)
             {
                 (int abi1, int abi2) ab = _abilities[DataSpeciesId];
-                string abilityLabel = $"Default ({AbilityName(ab.abi2 != 0 && (defaultPid & 1) != 0 ? ab.abi2 : ab.abi1)})";
+                string abilityLabel = $"Auto ({AbilityName(ab.abi2 != 0 && (defaultPid & 1) != 0 ? ab.abi2 : ab.abi1)})";
                 if (AbilityItems[0] != abilityLabel)
                 {
                     _rebuildingAbilities = true;
@@ -499,7 +499,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 }
                 else
                 {
-                    AbilityItems.Add("Default Ability");
+                    AbilityItems.Add("Auto ability");
                     AbilityItems.Add(a1);
                     AbilityItems.Add(a2);
                 }
@@ -610,7 +610,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                     return;
                 }
 
-                RawImage gdi = DSUtils.GetPokePicRaw(_speciesIndex, 32, 32);
+                // Forms with their own party icon (Unown letters, Rotom, Deoxys...) show it, as the game does.
+                RawImage gdi = DSUtils.GetFormPokePicRaw(_speciesIndex, (int)_formId, 32, 32);
                 PokemonIcon = ImageConverter.ToAvaloniaBitmap(gdi);
             }
             catch { PokemonIcon = null; }

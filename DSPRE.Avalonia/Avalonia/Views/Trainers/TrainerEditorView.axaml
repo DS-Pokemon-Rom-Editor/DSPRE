@@ -181,7 +181,7 @@
                 <DataTemplate x:DataType="vm:TrainerPartyMonViewModel">
                   <Border IsVisible="{Binding IsVisible}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"
                           CornerRadius="3" Padding="6" Margin="0,0,0,6" Background="{DynamicResource Editor.PanelBg}">
-                    <Grid ColumnDefinitions="74,*,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                    <Grid ColumnDefinitions="74,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
                       <StackPanel Grid.Column="0" Grid.RowSpan="3" Spacing="4" VerticalAlignment="Top">
                         <Border Width="66" Height="66"
                                 Background="{DynamicResource Editor.ToolbarBg}" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
@@ -194,11 +194,11 @@
                       </StackPanel>
 
                       <!-- Row 0: species + level -->
-                      <StackPanel Grid.Row="0" Grid.Column="1" Margin="6,0,4,2">
+                      <StackPanel Grid.Row="0" Grid.Column="1" Width="260" Margin="6,0,6,2">
                         <TextBlock Text="Species" FontSize="10"/>
                         <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" HorizontalAlignment="Stretch" ItemsSource="{Binding PokemonNames}" SelectedIndex="{Binding SpeciesIndex}"/>
                       </StackPanel>
-                      <StackPanel Grid.Row="0" Grid.Column="2" Margin="0,0,0,2">
+                      <StackPanel Grid.Row="0" Grid.Column="2" Width="110" HorizontalAlignment="Left" Margin="0,0,0,2">
                         <TextBlock Text="Level" FontSize="10"/>
                         <NumericUpDown Minimum="1" Maximum="100" Increment="1" Value="{Binding Level}"/>
                       </StackPanel>
@@ -269,12 +269,14 @@
                                     ToolTip.Tip="{Binding ShinyNote}" ToolTip.ShowOnDisabled="True"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding BallEnabled}">
-                          <StackPanel Width="150">
+                          <StackPanel>
                             <TextBlock Text="Ball Capsule" FontSize="10"/>
-                            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}"
-                                      MaxDropDownHeight="360"/>
-                            <Button Content="Design" Click="DesignCapsule_Click" Margin="0,2,0,0" FontSize="11" Padding="6,1"
-                                    ToolTip.Tip="Open in Ball Capsules" IsVisible="{Binding HasCapsule}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                              <ComboBox Width="150" ItemsSource="{Binding CapsuleNames}" SelectedIndex="{Binding CapsuleIndex}"
+                                        MaxDropDownHeight="360"/>
+                              <Button Content="Edit" controls:Icon.Key="pencil" Click="DesignCapsule_Click"
+                                      ToolTip.Tip="Open in Ball Capsules" IsVisible="{Binding HasCapsule}"/>
+                            </StackPanel>
                           </StackPanel>
                           <Border Width="64" Height="64" CornerRadius="32" Background="#2A7FA8C8" BorderBrush="#557FA8C8" BorderThickness="1"
                                   ClipToBounds="True" IsVisible="{Binding HasCapsule}">
