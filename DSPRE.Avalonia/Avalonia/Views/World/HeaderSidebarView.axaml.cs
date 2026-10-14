@@ -15,6 +15,13 @@ namespace DSPRE.Avalonia.Views.World
         private void ExpandAll_Click(object sender, RoutedEventArgs e) => VM?.ExpandAllFolders();
         private void CollapseAll_Click(object sender, RoutedEventArgs e) => VM?.CollapseAllFolders();
 
+        // Results go to the view this list belongs to: the main grouped view or the Header editor window.
+        private void Search_Click(object sender, RoutedEventArgs e)
+        {
+            HeaderEditorViewModel vm = VM;
+            if (vm != null) AvaloniaEditorLauncher.OpenHeaderSearchFor(id => vm.GoToHeader(id));
+        }
+
         // ── Leaf context menu: select the right-clicked header, then open the editor ──
         private void CtxOpen(object sender, System.Action<HeaderEditorViewModel> open)
         {

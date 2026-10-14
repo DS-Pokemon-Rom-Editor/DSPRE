@@ -1038,10 +1038,13 @@ namespace DSPRE.Avalonia
             new SpawnEditorView(new SpawnEditorViewModel(HeaderLabels.Friendly().ToList())).ShowManaged();
         }
 
-        public static void OpenHeaderSearch()
+        public static void OpenHeaderSearch() => OpenHeaderSearchFor(null);
+
+        /// <summary>Opens the advanced header search with its results going to <paramref name="goTo"/>.</summary>
+        public static void OpenHeaderSearchFor(System.Action<int> goTo)
         {
             if (!IsRomLoaded) return;
-            new HeaderSearchView(new HeaderSearchViewModel(true)).ShowManaged();
+            new HeaderSearchView(new HeaderSearchViewModel(true)) { GoTo = goTo }.ShowManaged();
         }
 
         public static void OpenMapEditor(int mapIndex = -1)
