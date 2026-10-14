@@ -408,8 +408,19 @@ namespace DSPRE.Models
 
         /// <param name="cut">Collects the faces cut into squares because no tile is big enough for them.</param>
         /// <param name="split">Collects, for each face cut, the parts it was cut into.</param>
+        /// <param name="pieceOf">Collects the piece each face or part went into.</param>
         public static List<Piece> PiecesOf(MapMesh mesh, List<MapMesh.Face> cut = null,
-                                           Dictionary<MapMesh.Face, List<MapMesh.Face>> split = null)
+                                           Dictionary<MapMesh.Face, List<MapMesh.Face>> split = null,
+                                           Dictionary<MapMesh.Face, Piece> pieceOf = null)
+        {
+            List<Piece> all = PiecesOfMap(mesh, cut, split);
+            if (pieceOf != null)
+                foreach (Piece piece in all)
+                    foreach (MapMesh.Face face in piece.Faces) pieceOf[face] = piece;
+            return all;
+        }
+
+        private static List<Piece> PiecesOfMap(MapMesh mesh, List<MapMesh.Face> cut, Dictionary<MapMesh.Face, List<MapMesh.Face>> split)
         {
             const float Slack = 1e-3f;
             Dictionary<(int x, int z), Piece> bySquare = new Dictionary<(int x, int z), Piece>();
@@ -430,11 +441,11 @@ namespace DSPRE.Models
             // Parts over the same squares are one tile whatever their heights, so a cliff of stacked strips needs one layer.
             void Place(MapMesh.Face part)
             {
-                MapMesh.Vertex[] v = part.Corners.Select(c => mesh.Vertices[c]).ToArray();
+                (float x0, float x1, float z0, float z1) stand = StandBox(mesh, part);
                 int Edge(float at) => (int)Math.Round((at + HalfMap) / TileWidth);
-                int left = Math.Clamp(Edge(v.Min(q => q.X)), 0, 31), top = Math.Clamp(Edge(v.Min(q => q.Z)), 0, 31);
-                int across = Math.Max(1, Math.Min(32 - left, Edge(v.Max(q => q.X)) - left));
-                int down = Math.Max(1, Math.Min(32 - top, Edge(v.Max(q => q.Z)) - top));
+                int left = Math.Clamp(Edge(stand.x0), 0, 31), top = Math.Clamp(Edge(stand.z0), 0, 31);
+                int across = Math.Max(1, Math.Min(32 - left, Edge(stand.x1) - left));
+                int down = Math.Max(1, Math.Min(32 - top, Edge(stand.z1) - top));
                 if (across == 1 && down == 1) { BySquare(part); return; }
                 (int left, int top, int across, int down) key = (left, top, across, down);
                 if (!byFootprint.TryGetValue(key, out Piece piece))
@@ -445,8 +456,62 @@ namespace DSPRE.Models
                 piece.Faces.Add(part);
             }
 
-            // Pictures repeating within two squares are cut per square, others into the largest tiles, so a long road gives few tiles.
-            List<MapMesh.Face> Cut(MapMesh.Face face) => CutIntoSquares(mesh, face, CutsIntoFewTiles(mesh, face) ? 1 : MostSquares);
+            // A part cut again is replaced by its own parts in the map face's list, so only map faces are put back whole.
+            Dictionary<MapMesh.Face, MapMesh.Face> partOf = new Dictionary<MapMesh.Face, MapMesh.Face>();
+            void Record(MapMesh.Face face, List<MapMesh.Face> parts)
+            {
+                if (partOf.TryGetValue(face, out MapMesh.Face whole))
+                {
+                    if (split != null && split.TryGetValue(whole, out List<MapMesh.Face> list))
+                    {
+                        int at = list.IndexOf(face);
+                        list.RemoveAt(at);
+                        list.InsertRange(at, parts);
+                    }
+                }
+                else
+                {
+                    whole = face;
+                    cut?.Add(face);
+                    if (split != null) split[face] = parts;
+                }
+                foreach (MapMesh.Face part in parts) partOf[part] = whole;
+            }
+
+            // Something standing is only ever cut along its length; gentle slopes are ground and cut like it.
+            List<MapMesh.Face> Cut(MapMesh.Face face)
+            {
+                if (Strip(face) && CutStrip(mesh, face) is List<MapMesh.Face> strip) return strip;
+                if (Steep(mesh, face) && !TooBig(face)) return null;
+                (int x, int z) every = StripCuts(mesh, face);
+                return CutIntoSquares(mesh, face, every.x, every.z);
+            }
+
+            bool TooBig(MapMesh.Face face)
+            {
+                (float x0, float x1, float z0, float z1) b = StandBox(mesh, face);
+                return b.x1 - b.x0 > MostSquares * TileWidth + Slack || b.z1 - b.z0 > MostSquares * TileWidth + Slack;
+            }
+
+            HashSet<int> objectFloor = ObjectFloors(mesh);
+            // Pictures worn by something standing; a flat band of one, as under a DP or Platinum tree row, is part of
+            // that row and is cut with it.
+            HashSet<int> standingPicture = new HashSet<int>(mesh.Faces.Where(f => Rises(mesh, f)).Select(f => f.Material));
+            bool Strip(MapMesh.Face f) => !Flat(f) || standingPicture.Contains(f.Material);
+
+            // A part of a long face joins the others standing on its squares, so a cut tree row's trunk, base and
+            // canopy become one tree instead of three strips on three layers.
+            void Queue(MapMesh.Face part)
+            {
+                float px0 = float.MaxValue, px1 = float.MinValue, pz0 = float.MaxValue, pz1 = float.MinValue;
+                foreach (int c in part.Corners)
+                {
+                    MapMesh.Vertex v = mesh.Vertices[c];
+                    px0 = Math.Min(px0, v.X); px1 = Math.Max(px1, v.X); pz0 = Math.Min(pz0, v.Z); pz1 = Math.Max(pz1, v.Z);
+                }
+                if (px1 - px0 <= TileWidth + Slack && pz1 - pz0 <= TileWidth + Slack) BySquare(part);
+                else wide.Add((part, px0, px1, pz0, pz1));
+            }
 
             foreach (MapMesh.Face face in mesh.Faces)
             {
@@ -458,18 +523,25 @@ namespace DSPRE.Models
                     x0 = Math.Min(x0, v.X); x1 = Math.Max(x1, v.X); z0 = Math.Min(z0, v.Z); z1 = Math.Max(z1, v.Z);
                 }
                 if (x1 - x0 <= TileWidth + Slack && z1 - z0 <= TileWidth + Slack) BySquare(face);
+                // A fence, wall or canopy row longer than one picture is cut along its length into single objects.
+                else if (Strip(face) && CutStrip(mesh, face) is List<MapMesh.Face> strip)
+                {
+                    Record(face, strip);
+                    foreach (MapMesh.Face part in strip) Queue(part);
+                }
                 // A face bigger than any tile would pull every object it lies under into one group, so it is cut first.
                 else if (x1 - x0 > MostSquares * TileWidth + Slack || z1 - z0 > MostSquares * TileWidth + Slack)
                 {
                     List<MapMesh.Face> parts = Cut(face);
                     if (parts == null) BySquare(face);
-                    else { cut?.Add(face); if (split != null) split[face] = parts; foreach (MapMesh.Face part in parts) Place(part); }
+                    else { Record(face, parts); foreach (MapMesh.Face part in parts) Queue(part); }
                 }
                 else wide.Add((face, x0, x1, z0, z1));
             }
 
             // Evenly lit flat ground repeating within two squares is cut per square so each square can be painted alone.
-            // A flat face under something standing, or stacked on another, stays with that object.
+            // A flat face stacked on another, or an object's own floor under it, stays with that object; plain ground
+            // under a lamp or a rock is still ground.
             bool Flat(MapMesh.Face f)
             {
                 float y = mesh.Vertices[f.Corners[0]].Y;
@@ -488,13 +560,28 @@ namespace DSPRE.Models
             for (int i = wide.Count - 1; i >= 0; i--)
             {
                 (MapMesh.Face face, float x0, float x1, float z0, float z1) w = wide[i];
-                if (!Flat(w.face) || !CutsIntoFewTiles(mesh, w.face) || standing.Any(o => Under(w, o)) || Stacked(w)) continue;
+                if (!Flat(w.face) || !CutsIntoFewTiles(mesh, w.face) || Stacked(w)
+                    || (objectFloor.Contains(w.face.Material) && standing.Any(o => Under(w, o)))) continue;
                 List<MapMesh.Face> parts = CutIntoSquares(mesh, w.face);
                 if (parts == null) continue;
-                cut?.Add(w.face);
-                if (split != null) split[w.face] = parts;
+                Record(w.face, parts);
                 foreach (MapMesh.Face part in parts) BySquare(part);
                 wide.RemoveAt(i);
+            }
+
+            // Sloped faces of one picture that meet along an edge are one surface, such as the strips of a cliff's lip.
+            // Only strips under a square across count, so neighbouring trees of a row stay apart.
+            bool Narrow((MapMesh.Face face, float x0, float x1, float z0, float z1) w) => Math.Min(w.x1 - w.x0, w.z1 - w.z0) < TileWidth - Slack;
+            bool Meet(MapMesh.Face a, MapMesh.Face b)
+            {
+                int shared = 0;
+                foreach (int i in a.Corners)
+                {
+                    MapMesh.Vertex p = mesh.Vertices[i];
+                    if (b.Corners.Any(j => { MapMesh.Vertex q = mesh.Vertices[j]; return Math.Abs(p.X - q.X) < Slack && Math.Abs(p.Y - q.Y) < Slack && Math.Abs(p.Z - q.Z) < Slack; }))
+                        shared++;
+                }
+                return shared >= 2;
             }
 
             // Stacked faces over the same ground (a tree's tiers) are one object.
@@ -505,9 +592,16 @@ namespace DSPRE.Models
                 for (int j = i + 1; j < wide.Count; j++)
                 {
                     (MapMesh.Face face, float x0, float x1, float z0, float z1) a = wide[i]; (MapMesh.Face face, float x0, float x1, float z0, float z1) b = wide[j];
-                    // A flat patch that cannot be cut (a triangle, a slanted quad) is not part of an object beside it.
+                    // A flat patch that cannot be cut (a triangle, a slanted quad) is not part of an object beside it,
+                    // unless it wears the object's own picture, as the base of a tree row does.
                     bool fa = Flat(a.face), fb = Flat(b.face);
-                    if (fa != fb && !(fa ? Under(a, b) : Under(b, a))) continue;
+                    // Parts a strip was cut into are separate objects; they meet only because they were one face.
+                    bool sameStrip = partOf.TryGetValue(a.face, out MapMesh.Face wa) && partOf.TryGetValue(b.face, out MapMesh.Face wb)
+                                     && ReferenceEquals(wa, wb) && !Flat(wa);
+                    if (sameStrip) continue;
+                    if (!fa && !fb && Narrow(a) && Narrow(b) && a.face.Material == b.face.Material && Meet(a.face, b.face)) { root[Find(i)] = Find(j); continue; }
+                    if (fa != fb && a.face.Material != b.face.Material
+                        && !(fa ? Under(a, b) && objectFloor.Contains(a.face.Material) : Under(b, a) && objectFloor.Contains(b.face.Material))) continue;
                     float ox = Math.Min(a.x1, b.x1) - Math.Max(a.x0, b.x0) + Thin;
                     float oz = Math.Min(a.z1, b.z1) - Math.Max(a.z0, b.z0) + Thin;
                     if (ox <= 0 || oz <= 0) continue;
@@ -519,18 +613,19 @@ namespace DSPRE.Models
             {
                 List<(MapMesh.Face face, float x0, float x1, float z0, float z1)> faces = group.Select(i => wide[i]).ToList();
                 int Edge(float at) => (int)Math.Round((at + HalfMap) / TileWidth);
-                int left = Math.Clamp(Edge(faces.Min(f => f.x0)), 0, 31), top = Math.Clamp(Edge(faces.Min(f => f.z0)), 0, 31);
-                int across = Math.Max(1, Math.Min(32 - left, Edge(faces.Max(f => f.x1)) - left));
-                int down = Math.Max(1, Math.Min(32 - top, Edge(faces.Max(f => f.z1)) - top));
+                // The footprint is where the group stands; what leans or hangs past it, such as a canopy, overhangs.
+                List<(float x0, float x1, float z0, float z1)> stands = faces.Select(f => StandBox(mesh, f.face)).ToList();
+                int left = Math.Clamp(Edge(stands.Min(f => f.x0)), 0, 31), top = Math.Clamp(Edge(stands.Min(f => f.z0)), 0, 31);
+                int across = Math.Max(1, Math.Min(32 - left, Edge(stands.Max(f => f.x1)) - left));
+                int down = Math.Max(1, Math.Min(32 - top, Edge(stands.Max(f => f.z1)) - top));
                 if (across > MostSquares || down > MostSquares)
                 {
                     // Too big to be one tile: flat ground is cut into its squares, anything else stays whole.
                     foreach ((MapMesh.Face face, float x0, float x1, float z0, float z1) f in faces)
                     {
                         List<MapMesh.Face> parts = Cut(f.face);
-                        if (parts == null) { BySquare(f.face); continue; }
-                        cut?.Add(f.face);
-                        if (split != null) split[f.face] = parts;
+                        if (parts == null) { if (Steep(mesh, f.face)) Place(f.face); else BySquare(f.face); continue; }
+                        Record(f.face, parts);
                         foreach (MapMesh.Face part in parts) Place(part);
                     }
                     continue;
@@ -548,7 +643,77 @@ namespace DSPRE.Models
                 if (past) byFootprint[(left, top, across, down)] = made;
             }
 
-            return bySquare.Values.Concat(pieces).ToList();
+            float Low(IEnumerable<MapMesh.Face> fs) => fs.SelectMany(f => f.Corners).Min(c => mesh.Vertices[c].Y);
+            float High(IEnumerable<MapMesh.Face> fs) => fs.SelectMany(f => f.Corners).Max(c => mesh.Vertices[c].Y);
+
+            // Neighbouring objects whose footprints share an edge column or row, as an HGSS tree whose 4-wide canopy
+            // reaches over the trees beside it: the larger gives the shared squares up as overhang, as PDSMS's tree
+            // stands on its middle 2x2, so a forest fits on one layer.
+            List<Piece> objects = pieces.Where(p => p.Spans && p.Faces.Any(f => !Flat(f)) && High(p.Faces) - Low(p.Faces) > TileWidth * 1.5f).ToList();
+            for (bool moved = true; moved;)
+            {
+                moved = false;
+                for (int i = 0; i < objects.Count && !moved; i++)
+                    for (int j = 0; j < objects.Count && !moved; j++)
+                    {
+                        Piece a = objects[i], b = objects[j];
+                        if (i == j || a.Wide * a.Deep < b.Wide * b.Deep) continue;
+                        int ox0 = Math.Max(a.X, b.X), ox1 = Math.Min(a.X + a.Wide, b.X + b.Wide);
+                        int oz0 = Math.Max(a.Z, b.Z), oz1 = Math.Min(a.Z + a.Deep, b.Z + b.Deep);
+                        if (ox0 >= ox1 || oz0 >= oz1) continue;
+                        // Only a whole edge column or row of the larger one can become overhang.
+                        if (oz0 == a.Z && oz1 == a.Z + a.Deep && ox1 - ox0 < a.Wide)
+                        {
+                            if (ox0 == a.X) { a.X = ox1; a.Wide -= ox1 - ox0; moved = true; }
+                            else if (ox1 == a.X + a.Wide) { a.Wide -= ox1 - ox0; moved = true; }
+                        }
+                        else if (ox0 == a.X && ox1 == a.X + a.Wide && oz1 - oz0 < a.Deep)
+                        {
+                            if (oz0 == a.Z) { a.Z = oz1; a.Deep -= oz1 - oz0; moved = true; }
+                            else if (oz1 == a.Z + a.Deep) { a.Deep -= oz1 - oz0; moved = true; }
+                        }
+                    }
+            }
+
+            // An object's own floor, cut into squares with the ground, goes back into the object standing on it, as a
+            // PDSMS tree carries its shadow: erasing the tree then takes its shadow too.
+            foreach (Piece obj in pieces.Where(p => p.Spans && p.Faces.Any(f => !Flat(f)) && High(p.Faces) - Low(p.Faces) > TileWidth * 1.5f))
+            {
+                HashSet<int> own = new HashSet<int>(obj.Faces.Select(f => f.Material));
+                float foot = Low(obj.Faces);
+                for (int z = obj.Z; z < obj.Z + obj.Deep; z++)
+                    for (int x = obj.X; x < obj.X + obj.Wide; x++)
+                    {
+                        if (!bySquare.TryGetValue((x, z), out Piece here)) continue;
+                        List<MapMesh.Face> floor = here.Faces.Where(f => Flat(f) && (objectFloor.Contains(f.Material) || own.Contains(f.Material))
+                                                                    && Math.Abs(mesh.Vertices[f.Corners[0]].Y - foot) < TileWidth / 2f).ToList();
+                        if (floor.Count == 0) continue;
+                        obj.Faces.AddRange(floor);
+                        here.Faces.RemoveAll(floor.Contains);
+                        if (here.Faces.Count == 0) bySquare.Remove((x, z));
+                    }
+            }
+
+            // A lamp or post standing on a square leaves the plain ground under it as ground; a cliff step, rising no
+            // more than about a square, keeps its ground as PDSMS cliff tiles do.
+            List<Piece> grounds = new List<Piece>();
+            foreach (Piece here in bySquare.Values)
+            {
+                List<MapMesh.Face> standingHere = here.Faces.Where(f => Steep(mesh, f)).ToList();
+                if (standingHere.Count == 0) continue;
+                List<MapMesh.Face> flats = here.Faces.Where(Flat).ToList();
+                if (flats.Count == 0) continue;
+                float floorY = Low(flats);
+                if (High(standingHere) - floorY <= TileWidth * 1.5f) continue;
+                HashSet<int> own = new HashSet<int>(standingHere.Select(f => f.Material));
+                List<MapMesh.Face> plain = flats.Where(f => Math.Abs(mesh.Vertices[f.Corners[0]].Y - floorY) < Slack
+                                                            && !objectFloor.Contains(f.Material) && !own.Contains(f.Material)).ToList();
+                if (plain.Count == 0 || plain.Count == here.Faces.Count) continue;
+                here.Faces.RemoveAll(plain.Contains);
+                grounds.Add(new Piece { X = here.X, Z = here.Z, Faces = plain });
+            }
+
+            return bySquare.Values.Concat(grounds).Concat(pieces).ToList();
         }
 
         /// <summary>Whether a face's picture repeats both ways within two squares and its corners are lit the same.</summary>
@@ -576,9 +741,59 @@ namespace DSPRE.Models
             return periodS / Math.Max(1e-4f, perS) <= 2.2f && periodT / Math.Max(1e-4f, perT) <= 2.2f;
         }
 
-        /// <summary>Cuts a grid-aligned quad into one quad per square, adding the new corners to the mesh. Null when the face is not such a quad.</summary>
-        private static List<MapMesh.Face> CutIntoSquares(MapMesh mesh, MapMesh.Face face, int every = 1)
+        /// <summary>
+        /// How a face that is not a strip is cut, in squares along X and Z (0 = left whole). Ground whose picture
+        /// repeats within two squares goes square by square; anything longer than two squares is cut at its picture's
+        /// repeat, at most two squares.
+        /// </summary>
+        private static (int x, int z) StripCuts(MapMesh mesh, MapMesh.Face face)
         {
+            if (CutsIntoFewTiles(mesh, face)) return (1, 1);
+            MapMesh.Vertex[] v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
+            float acrossX = (v.Max(q => q.X) - v.Min(q => q.X)) / TileWidth, acrossZ = (v.Max(q => q.Z) - v.Min(q => q.Z)) / TileWidth;
+            int Along(bool alongX)
+            {
+                if ((alongX ? acrossX : acrossZ) <= 2f + 1e-3f) return 0;
+                int repeat = RepeatSquares(mesh, face, alongX);
+                return repeat > 0 ? Math.Clamp(repeat, 1, 2) : MostSquares;
+            }
+            return (Along(true), Along(false));
+        }
+
+        /// <summary>Squares one repeat of the face's picture spans along X or Z, or 0 when the picture does not repeat that way.</summary>
+        private static int RepeatSquares(MapMesh mesh, MapMesh.Face face, bool alongX)
+        {
+            const float Near = 1e-3f;
+            if (face.OnPicture == null || face.OnPicture.Length != face.Corners.Length) return 0;
+            MaterialLook look = face.Material >= 0 ? mesh.LookOf(face.Material) : null;
+            if (look == null) return 0;
+            int pw = BitConverter.ToUInt16(look.Record, 32), ph = BitConverter.ToUInt16(look.Record, 34);
+            int param = look.ImageParam;
+            // Two corners on the same line across the other axis give how the picture moves along this one.
+            for (int i = 0; i < face.Corners.Length; i++)
+                for (int j = 0; j < face.Corners.Length; j++)
+                {
+                    MapMesh.Vertex a = mesh.Vertices[face.Corners[i]], b = mesh.Vertices[face.Corners[j]];
+                    float along = alongX ? b.X - a.X : b.Z - a.Z, other = alongX ? b.Z - a.Z : b.X - a.X;
+                    if (along < Near || Math.Abs(other) > Near) continue;
+                    float ds = Math.Abs(face.OnPicture[j].s - face.OnPicture[i].s), dt = Math.Abs(face.OnPicture[j].t - face.OnPicture[i].t);
+                    bool onS = ds >= dt;
+                    bool repeats = (param & (1 << (onS ? 16 : 17))) != 0;
+                    float period = (onS ? pw : ph) * ((param & (1 << (onS ? 18 : 19))) != 0 ? 2 : 1);
+                    float perSquare = (onS ? ds : dt) / (along / TileWidth);
+                    if (!repeats || period <= 0 || perSquare <= 0) return 0;
+                    return Math.Max(1, (int)Math.Round(period / perSquare));
+                }
+            return 0;
+        }
+
+        /// <summary>
+        /// Cuts a grid-aligned quad on the grid lines every so many squares along X and Z (0 leaves that way whole),
+        /// adding the new corners to the mesh. Null when the face is not such a quad.
+        /// </summary>
+        private static List<MapMesh.Face> CutIntoSquares(MapMesh mesh, MapMesh.Face face, int every = 1, int everyZ = -1)
+        {
+            if (everyZ < 0) everyZ = every;
             const float Near = 1e-3f;
             if (face.Corners == null || face.Corners.Length != 4) return null;
             MapMesh.Vertex[] v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
@@ -624,8 +839,10 @@ namespace DSPRE.Models
             List<float> cutsX = new List<float> { x0 };
             List<float> cutsZ = new List<float> { z0 };
             int firstX = (int)Math.Floor((x0 + HalfMap) / TileWidth + Near), firstZ = (int)Math.Floor((z0 + HalfMap) / TileWidth + Near);
-            for (int k = firstX + every; -HalfMap + k * TileWidth < x1 - Near; k += every) cutsX.Add(-HalfMap + k * TileWidth);
-            for (int k = firstZ + every; -HalfMap + k * TileWidth < z1 - Near; k += every) cutsZ.Add(-HalfMap + k * TileWidth);
+            if (every > 0)
+                for (int k = firstX + every; -HalfMap + k * TileWidth < x1 - Near; k += every) cutsX.Add(-HalfMap + k * TileWidth);
+            if (everyZ > 0)
+                for (int k = firstZ + everyZ; -HalfMap + k * TileWidth < z1 - Near; k += everyZ) cutsZ.Add(-HalfMap + k * TileWidth);
             cutsX.Add(x1); cutsZ.Add(z1);
 
             List<MapMesh.Face> parts = new List<MapMesh.Face>();
@@ -658,6 +875,206 @@ namespace DSPRE.Models
                     });
                 }
             return parts;
+        }
+
+        /// <summary>
+        /// Cuts a strip such as a fence, a wall or a row of tree canopy on the grid lines across its level length, never
+        /// across its slope, into parts of its picture's repeat, at most two squares as a PDSMS tileable tree. The strip
+        /// may lie off the grid. Null when the face is no such strip or needs no cut.
+        /// </summary>
+        private static List<MapMesh.Face> CutStrip(MapMesh mesh, MapMesh.Face face)
+        {
+            const float Near = 1e-3f;
+            if (face.Corners == null || face.Corners.Length != 4) return null;
+            MapMesh.Vertex[] v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
+            bool longerX = v.Max(q => q.X) - v.Min(q => q.X) >= v.Max(q => q.Z) - v.Min(q => q.Z);
+            foreach (bool alongX in new[] { longerX, !longerX })
+            {
+                float A(MapMesh.Vertex q) => alongX ? q.X : q.Z;
+                float a0 = v.Min(A), a1 = v.Max(A);
+                if (a1 - a0 <= TileWidth + Near) continue;
+                int[] start = Enumerable.Range(0, 4).Where(i => Math.Abs(A(v[i]) - a0) < Near).ToArray();
+                int[] end = Enumerable.Range(0, 4).Where(i => Math.Abs(A(v[i]) - a1) < Near).ToArray();
+                if (start.Length != 2 || end.Length != 2) continue;
+                // Each start corner runs along an edge of the quad to the end corner beside it.
+                int EndOf(int s) => end.Contains((s + 1) % 4) ? (s + 1) % 4 : end.Contains((s + 3) % 4) ? (s + 3) % 4 : -1;
+                int[] to = { EndOf(start[0]), EndOf(start[1]) };
+                if (to[0] < 0 || to[1] < 0 || to[0] == to[1]) continue;
+                // The length runs level; a ramp climbing along it is no strip.
+                if (Math.Abs(v[start[0]].Y - v[to[0]].Y) > TileWidth / 4 || Math.Abs(v[start[1]].Y - v[to[1]].Y) > TileWidth / 4) continue;
+
+                int repeat = RepeatSquares(mesh, face, alongX);
+                float squares = (a1 - a0) / TileWidth;
+                // An upright picture one repeat long is one object, as an HGSS tree is; a leaning row such as a DP or
+                // Platinum forest holds two trees per repeat and is cut every two squares like PDSMS's tileable tree.
+                // A picture that does not repeat is stretched and is cut only when longer than any tile.
+                bool onePicture = repeat <= 0 || (Steep(mesh, face) && squares <= repeat + 0.1f);
+                if (onePicture && squares <= MostSquares + Near) continue;
+                int every = onePicture ? MostSquares : Math.Clamp(repeat, 1, 2);
+                if (squares <= every + 0.1f) continue;
+                List<float> cuts = new List<float> { a0 };
+                int first = (int)Math.Floor((a0 + HalfMap) / TileWidth + Near);
+                for (int k = first + every; -HalfMap + k * TileWidth < a1 - Near; k += every) cuts.Add(-HalfMap + k * TileWidth);
+                cuts.Add(a1);
+                if (cuts.Count < 3) continue;
+
+                // Each corner is the start or the end of one of the two long edges.
+                (int edge, bool atEnd)[] role = new (int edge, bool atEnd)[4];
+                for (int e = 0; e < 2; e++) { role[start[e]] = (e, false); role[to[e]] = (e, true); }
+                MaterialLook look = face.Material >= 0 ? mesh.LookOf(face.Material) : null;
+                int pw = look == null ? 0 : BitConverter.ToUInt16(look.Record, 32);
+                int ph = look == null ? 0 : BitConverter.ToUInt16(look.Record, 34);
+                int param = look?.ImageParam ?? 0;
+                float periodS = pw * ((param & (1 << 18)) != 0 ? 2 : 1), periodT = ph * ((param & (1 << 19)) != 0 ? 2 : 1);
+                bool repeatS = (param & (1 << 16)) != 0 && periodS > 0, repeatT = (param & (1 << 17)) != 0 && periodT > 0;
+                (float s, float t) Uv(int i) => face.OnPicture != null && i < face.OnPicture.Length ? face.OnPicture[i] : (0f, 0f);
+                int MixColour(int c0, int c1, float t)
+                {
+                    if (c0 < 0 || c1 < 0) return c0;
+                    int mixed = 0;
+                    foreach (int shift in new[] { 0, 5, 10 })
+                        mixed |= Math.Clamp((int)Math.Round(((c0 >> shift) & 31) * (1 - t) + ((c1 >> shift) & 31) * t), 0, 31) << shift;
+                    return mixed;
+                }
+
+                List<MapMesh.Face> parts = new List<MapMesh.Face>();
+                for (int n = 0; n + 1 < cuts.Count; n++)
+                {
+                    int[] corners = new int[4];
+                    (float s, float t)[] uv = new (float s, float t)[4];
+                    int[] colour = face.Colour == null || face.Colour.Length < 4 ? null : new int[4];
+                    for (int k = 0; k < 4; k++)
+                    {
+                        int s0 = start[role[k].edge], s1 = to[role[k].edge];
+                        float at = role[k].atEnd ? cuts[n + 1] : cuts[n];
+                        float t = (at - A(v[s0])) / (A(v[s1]) - A(v[s0]));
+                        corners[k] = mesh.Vertices.Count;
+                        mesh.Vertices.Add(new MapMesh.Vertex
+                        {
+                            X = v[s0].X + (v[s1].X - v[s0].X) * t,
+                            Y = v[s0].Y + (v[s1].Y - v[s0].Y) * t,
+                            Z = v[s0].Z + (v[s1].Z - v[s0].Z) * t,
+                        });
+                        uv[k] = (Uv(s0).s + (Uv(s1).s - Uv(s0).s) * t, Uv(s0).t + (Uv(s1).t - Uv(s0).t) * t);
+                        if (colour != null) colour[k] = MixColour(face.Colour[s0], face.Colour[s1], t);
+                    }
+                    float shiftS = repeatS ? (float)Math.Floor(uv.Min(q => q.s) / periodS) * periodS : 0f;
+                    float shiftT = repeatT ? (float)Math.Floor(uv.Min(q => q.t) / periodT) * periodT : 0f;
+                    parts.Add(new MapMesh.Face
+                    {
+                        Shape = face.Shape, Run = face.Run, Material = face.Material,
+                        Corners = corners,
+                        OnPicture = uv.Select(q => (q.s - shiftS, q.t - shiftT)).ToArray(),
+                        Colour = colour,
+                        Normal = face.Normal == null ? null : (int[])face.Normal.Clone(),
+                        ColourLast = face.ColourLast == null ? null : (bool[])face.ColourLast.Clone(),
+                    });
+                }
+                return parts;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Whether a face stands rather than lies: it rises at least as far as it leans, as a wall, fence or tree
+        /// canopy does, where a hill or a ramp rises gently over its length.
+        /// </summary>
+        private static bool Steep(MapMesh mesh, MapMesh.Face face)
+        {
+            const float Near = 1e-3f;
+            if (face.Corners == null || face.Corners.Length < 3) return false;
+            MapMesh.Vertex[] v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
+            float low = v.Min(q => q.Y), high = v.Max(q => q.Y);
+            if (high - low < Near) return false;
+            return high - low >= Run(v) * 0.9f;
+        }
+
+        // Standing or leaning at least half a square up, as any tree canopy does; flat ground never rises.
+        private static bool Rises(MapMesh mesh, MapMesh.Face face)
+        {
+            if (face.Corners == null || face.Corners.Length < 3) return false;
+            if (Steep(mesh, face)) return true;
+            IEnumerable<float> y = face.Corners.Select(c => mesh.Vertices[c].Y);
+            return y.Max() - y.Min() >= TileWidth / 2f;
+        }
+
+        // How far a face runs from its bottom to its top, seen from above.
+        private static float Run(MapMesh.Vertex[] v)
+        {
+            const float Near = 1e-3f;
+            float low = v.Min(q => q.Y), high = v.Max(q => q.Y);
+            float run = float.MaxValue;
+            foreach (MapMesh.Vertex a in v.Where(q => q.Y - low < Near))
+                foreach (MapMesh.Vertex b in v.Where(q => high - q.Y < Near))
+                    run = Math.Min(run, MathF.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Z - b.Z) * (a.Z - b.Z)));
+            return run;
+        }
+
+        /// <summary>
+        /// Where a face stands, seen from above: for something standing, the part of it below half its height. A canopy
+        /// leaning over the squares behind it stands only on its lower squares, as a PDSMS tree's footprint is its base,
+        /// not its overhang. Ground, flat or sloped, stands on all of itself.
+        /// </summary>
+        private static (float x0, float x1, float z0, float z1) StandBox(MapMesh mesh, MapMesh.Face face)
+        {
+            MapMesh.Vertex[] v = face.Corners.Select(c => mesh.Vertices[c]).ToArray();
+            float low = v.Min(q => q.Y), high = v.Max(q => q.Y);
+            // A rock or fence leans within its own two squares; only a lean reaching further, as a canopy's, overhangs.
+            if (!Steep(mesh, face) || Run(v) <= 2 * TileWidth + 1e-3f) return (v.Min(q => q.X), v.Max(q => q.X), v.Min(q => q.Z), v.Max(q => q.Z));
+            float mid = (low + high) / 2f;
+            List<(float x, float z)> below = new List<(float x, float z)>();
+            for (int i = 0; i < v.Length; i++)
+            {
+                MapMesh.Vertex a = v[i], b = v[(i + 1) % v.Length];
+                if (a.Y <= mid) below.Add((a.X, a.Z));
+                if ((a.Y - mid) * (b.Y - mid) < 0)
+                {
+                    float t = (mid - a.Y) / (b.Y - a.Y);
+                    below.Add((a.X + (b.X - a.X) * t, a.Z + (b.Z - a.Z) * t));
+                }
+            }
+            return (below.Min(p => p.x), below.Max(p => p.x), below.Min(p => p.z), below.Max(p => p.z));
+        }
+
+        /// <summary>
+        /// Materials laid flat only under standing things, such as a tree's shadow: nearly every square of them lies
+        /// under something standing, and nothing standing wears them. They belong to those things, not to the ground.
+        /// </summary>
+        private static HashSet<int> ObjectFloors(MapMesh mesh)
+        {
+            const float Slack = 1e-3f;
+            bool Flat(MapMesh.Face f) => f.Corners.All(c => Math.Abs(mesh.Vertices[c].Y - mesh.Vertices[f.Corners[0]].Y) < Slack);
+            List<MapMesh.Face> faces = mesh.Faces.Where(f => f.Corners != null && f.Corners.Length >= 3).ToList();
+            List<(float x0, float x1, float z0, float z1)> standing = faces.Where(f => Rises(mesh, f)).Select(f =>
+            {
+                MapMesh.Vertex[] v = f.Corners.Select(c => mesh.Vertices[c]).ToArray();
+                return (v.Min(q => q.X), v.Max(q => q.X), v.Min(q => q.Z), v.Max(q => q.Z));
+            }).Where(b => b.Item2 - b.Item1 > Slack && b.Item4 - b.Item3 > Slack).ToList();
+            HashSet<int> worn = new HashSet<int>(faces.Where(f => !Flat(f)).Select(f => f.Material));
+            Dictionary<int, (int under, int all)> count = new Dictionary<int, (int under, int all)>();
+            foreach (MapMesh.Face f in faces.Where(Flat))
+            {
+                if (worn.Contains(f.Material)) continue;
+                MapMesh.Vertex[] v = f.Corners.Select(c => mesh.Vertices[c]).ToArray();
+                float x0 = v.Min(q => q.X), x1 = v.Max(q => q.X), z0 = v.Min(q => q.Z), z1 = v.Max(q => q.Z);
+                (int under, int all) n = count.TryGetValue(f.Material, out (int, int) had) ? had : (0, 0);
+                // The middles of the squares the face covers, or its own middle when it covers none.
+                List<(float x, float z)> points = new List<(float x, float z)>();
+                for (int gz = Square(z0); gz <= Square(z1); gz++)
+                    for (int gx = Square(x0); gx <= Square(x1); gx++)
+                    {
+                        float cx = -HalfMap + (gx + 0.5f) * TileWidth, cz = -HalfMap + (gz + 0.5f) * TileWidth;
+                        if (cx > x0 && cx < x1 && cz > z0 && cz < z1) points.Add((cx, cz));
+                    }
+                if (points.Count == 0) points.Add(((x0 + x1) / 2, (z0 + z1) / 2));
+                foreach ((float x, float z) in points)
+                {
+                    n.all++;
+                    if (standing.Any(b => x > b.x0 - Slack && x < b.x1 + Slack && z > b.z0 - Slack && z < b.z1 + Slack)) n.under++;
+                }
+                count[f.Material] = n;
+            }
+            return new HashSet<int>(count.Where(kv => kv.Value.all > 0 && kv.Value.under >= kv.Value.all * 0.9f).Select(kv => kv.Key));
         }
 
         public static MapTileset FromObj(string path, out string whynot, float scale = 1f)

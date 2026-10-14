@@ -623,8 +623,9 @@ namespace DSPRE.Avalonia.ViewModels.World
             _painter.GroundSurface = (x, z, l) => SurfaceOf(_painter.Grid, x, z, l);
             List<MapMesh.Face> cut = new List<MapMesh.Face>();
             Dictionary<MapMesh.Face, List<MapMesh.Face>> split = new Dictionary<MapMesh.Face, List<MapMesh.Face>>();
-            MapTileset.PiecesOf(mesh, cut, split);
-            _wholeFaces = TileBake.WholeFaces(mesh, cut, pictureOf, paletteOf, split);
+            Dictionary<MapMesh.Face, MapTileset.Piece> placed = new Dictionary<MapMesh.Face, MapTileset.Piece>();
+            MapTileset.PiecesOf(mesh, cut, split, placed);
+            _wholeFaces = TileBake.WholeFaces(mesh, cut, pictureOf, paletteOf, split, placed);
             // Pieces with no free layer stay until painted over; cut faces come back whole, so only the map's own faces count.
             HashSet<MapMesh.Face> own = new HashSet<MapMesh.Face>(mesh.Faces);
             _leftFaces = TileBake.WholeFaces(mesh, left.Where(own.Contains), pictureOf, paletteOf);
@@ -1654,9 +1655,9 @@ namespace DSPRE.Avalonia.ViewModels.World
 
         public bool[] VisibleLayers() => Layers.Select(l => l.Visible).ToArray();
 
-        // A building model's extent across and down in map units, by model id.
-        private static readonly Dictionary<(string dir, uint id), (float x0, float x1, float z0, float z1)?> _modelExtent =
-            new Dictionary<(string, uint), (float, float, float, float)?>();
+        // A building model's extent across, down and up in map units, by model id.
+        private static readonly Dictionary<(string dir, uint id), (float x0, float x1, float z0, float z1, float y0, float y1)?> _modelExtent =
+            new Dictionary<(string, uint), (float, float, float, float, float, float)?>();
 
         // Indoor HGSS maps take their building models from the interior archive.
         private string BuildingModelsDir()
@@ -1699,7 +1700,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             foreach (Building b in _map.buildings)
             {
                 number++;
-                if (!_modelExtent.TryGetValue((dir, b.modelID), out (float x0, float x1, float z0, float z1)? extent))
+                if (!_modelExtent.TryGetValue((dir, b.modelID), out (float x0, float x1, float z0, float z1, float y0, float y1)? extent))
                 {
                     extent = null;
                     try
@@ -1710,16 +1711,22 @@ namespace DSPRE.Avalonia.ViewModels.World
                         {
                             float s = mesh.ModelScale == 0f ? 1f : mesh.ModelScale;
                             extent = (mesh.Vertices.Min(v => v.X) * s, mesh.Vertices.Max(v => v.X) * s,
-                                      mesh.Vertices.Min(v => v.Z) * s, mesh.Vertices.Max(v => v.Z) * s);
+                                      mesh.Vertices.Min(v => v.Z) * s, mesh.Vertices.Max(v => v.Z) * s,
+                                      mesh.Vertices.Min(v => v.Y) * s, mesh.Vertices.Max(v => v.Y) * s);
                         }
                     }
                     catch { }
                     _modelExtent[(dir, b.modelID)] = extent;
                 }
-                if (extent is not (float ex0, float ex1, float ez0, float ez1)) continue;
+                if (extent is not (float ex0, float ex1, float ez0, float ez1, float ey0, float ey1)) continue;
                 // Sizes are scale factors where 16 is one; a quarter turn about y swaps across and down.
-                double sx = Math.Max(1u, b.width) / 16.0, sz = Math.Max(1u, b.length) / 16.0;
+                double sx = Math.Max(1u, b.width) / 16.0, sz = Math.Max(1u, b.length) / 16.0, sy = Math.Max(1u, b.height) / 16.0;
                 double a0 = ex0 * sx / 16, a1 = ex1 * sx / 16, c0 = ez0 * sz / 16, c1 = ez1 * sz / 16;
+                // Scenery laid over the whole map, such as HGSS wind, map-wide shadows, lake surfaces and sky
+                // domes, is not something painted around, and its outline would cover the grid.
+                double across = a1 - a0, down = c1 - c0, tall = (ey1 - ey0) * sy / 16;
+                if ((tall < 1 && across >= TileGrid.Across / 2 && down >= TileGrid.Across / 2)
+                    || across > TileGrid.Across + 1 || down > TileGrid.Across + 1) continue;
                 int quarter = (int)Math.Round(Building.U16ToDeg(b.yRotation) / 90.0) & 3;
                 if (quarter == 1 || quarter == 3) (a0, a1, c0, c1) = (c0, c1, -a1, -a0);
                 if (quarter == 2) (a0, a1, c0, c1) = (-a1, -a0, -c1, -c0);

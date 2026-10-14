@@ -54,9 +54,12 @@ namespace DSPRE.Models
             }
         }
 
+        /// <param name="placed">The piece each face or part went into; a tile's faces may overhang its footprint, so a
+        /// face is touched when any tile holding a part of it changes, wherever the face itself lies.</param>
         public static List<WholeFace> WholeFaces(MapMesh mesh, IEnumerable<MapMesh.Face> faces,
                                                  Func<int, string> pictureOf, Func<int, string> paletteOf,
-                                                 Dictionary<MapMesh.Face, List<MapMesh.Face>> parts = null)
+                                                 Dictionary<MapMesh.Face, List<MapMesh.Face>> parts = null,
+                                                 IReadOnlyDictionary<MapMesh.Face, MapTileset.Piece> placed = null)
         {
             List<WholeFace> whole = new List<WholeFace>();
             float tw = MapTileset.TileWidth, half = MapTileset.HalfMap;
@@ -76,16 +79,34 @@ namespace DSPRE.Models
                         ? cutInto.Select(p => p.Corners.Select(c => (mesh.Vertices[c].X, mesh.Vertices[c].Y, mesh.Vertices[c].Z)).ToArray()).ToList()
                         : null,
                 };
-                for (int z = 0; z < TileGrid.Across; z++)
-                    for (int x = 0; x < TileGrid.Across; x++)
+                // Every square the face overlaps, not just those whose middle it covers: a strip narrower than a square
+                // was still cut along its length, and erasing any of those parts must keep the face from coming back.
+                // An upright side has no width and belongs to the square it stands in.
+                (int low, int high) Spans(float a0, float a1)
+                {
+                    const float Near = 1e-3f;
+                    float from = (a0 + half) / tw, to = (a1 + half) / tw;
+                    int low = to - from < Near ? (int)Math.Floor((from + to) / 2) : (int)Math.Floor(from + Near);
+                    int high = to - from < Near ? low : (int)Math.Ceiling(to - Near) - 1;
+                    return (Math.Clamp(low, 0, TileGrid.Across - 1), Math.Clamp(high, 0, TileGrid.Across - 1));
+                }
+                (int x0, int x1) = Spans(w.X0, w.X1);
+                (int z0, int z1) = Spans(w.Z0, w.Z1);
+                for (int z = z0; z <= z1; z++)
+                    for (int x = x0; x <= x1; x++)
+                        w.Squares.Add((x, z));
+                if (placed != null)
+                {
+                    IEnumerable<MapMesh.Face> held = parts != null && parts.TryGetValue(face, out List<MapMesh.Face> its) ? its : new[] { face };
+                    foreach (MapMesh.Face part in held)
                     {
-                        float cx = -half + (x + 0.5f) * tw, cz = -half + (z + 0.5f) * tw;
-                        if (cx > w.X0 && cx < w.X1 && cz > w.Z0 && cz < w.Z1) w.Squares.Add((x, z));
+                        if (!placed.TryGetValue(part, out MapTileset.Piece piece)) continue;
+                        for (int z = piece.Z; z < piece.Z + piece.Deep; z++)
+                            for (int x = piece.X; x < piece.X + piece.Wide; x++)
+                                if (x >= 0 && z >= 0 && x < TileGrid.Across && z < TileGrid.Across && !w.Squares.Contains((x, z)))
+                                    w.Squares.Add((x, z));
                     }
-                // An upright or sliver face covers no square's middle; it belongs to the square it stands in.
-                if (w.Squares.Count == 0)
-                    w.Squares.Add((Math.Clamp((int)Math.Floor(((w.X0 + w.X1) / 2 + half) / tw), 0, TileGrid.Across - 1),
-                                   Math.Clamp((int)Math.Floor(((w.Z0 + w.Z1) / 2 + half) / tw), 0, TileGrid.Across - 1)));
+                }
                 whole.Add(w);
             }
             return whole;
@@ -246,8 +267,14 @@ namespace DSPRE.Models
             return put;
         }
 
-        private static (long, long, long) Key((float x, float y, float z) p)
-            => ((long)Math.Round(p.x * 512), (long)Math.Round(p.y * 512), (long)Math.Round(p.z * 512));
+        // Same corners in any order, within Near; rounding to a grid instead splits values lying on its half steps.
+        private static bool SameCorners((float x, float y, float z)[] part, IList<(float x, float y, float z)> face, float near)
+        {
+            if (part.Length != face.Count) return false;
+            bool Close((float x, float y, float z) a, (float x, float y, float z) b)
+                => Math.Abs(a.x - b.x) < near && Math.Abs(a.y - b.y) < near && Math.Abs(a.z - b.z) < near;
+            return part.All(p => face.Any(f => Close(p, f))) && face.All(f => part.Any(p => Close(p, f)));
+        }
 
         /// <summary>Swaps the squares cut from each face back for the face itself.</summary>
         public static int PutBackWhole(Result r, IEnumerable<WholeFace> faces)
@@ -257,11 +284,12 @@ namespace DSPRE.Models
             foreach (WholeFace w in faces)
             {
                 // Each known part takes one baked face by corner position, so a map face on the same spot stays.
-                List<HashSet<(long, long, long)>> partsAt = w.Parts?.Select(p => new HashSet<(long, long, long)>(p.Select(Key))).ToList();
+                List<(float x, float y, float z)[]> partsAt = w.Parts?.ToList();
                 for (int i = r.Faces.Count - 1; i >= 0; i--)
                 {
                     if (r.Picture[i] != w.Picture) continue;
-                    int match = partsAt?.FindIndex(p => p.SetEquals(r.Faces[i].Select(k => Key(r.Corners[k])))) ?? -1;
+                    List<(float x, float y, float z)> at = partsAt != null ? r.Faces[i].Select(k => r.Corners[k]).ToList() : null;
+                    int match = partsAt?.FindIndex(p => SameCorners(p, at, Near)) ?? -1;
                     if (match >= 0) partsAt.RemoveAt(match);
                     bool part = partsAt != null
                         ? match >= 0

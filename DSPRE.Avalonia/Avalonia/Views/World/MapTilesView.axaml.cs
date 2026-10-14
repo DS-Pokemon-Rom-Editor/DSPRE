@@ -24,10 +24,12 @@ namespace DSPRE.Avalonia.Views.World
             _mapNav = new Gl3DPointerNavigation(GlHost, GlView);
             GlView.SetOrientation(30f, 30f);
 
+            // Alt+click fills like a middle click, since a middle drag pans.
             Painter.Pressed += (_, e) => VM?.Press(e.x, e.z, e.button switch
             {
                 MouseButton.Right => TilePainter.Button.Right,
                 MouseButton.Middle => TilePainter.Button.Middle,
+                _ when (e.keys & KeyModifiers.Alt) != 0 => TilePainter.Button.Middle,
                 _ => TilePainter.Button.Left,
             }, (e.keys & KeyModifiers.Shift) != 0, (e.keys & KeyModifiers.Control) != 0);
             Painter.Dragged += (_, e) => VM?.Drag(e.x, e.z);

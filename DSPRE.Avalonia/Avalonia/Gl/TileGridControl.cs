@@ -124,20 +124,95 @@ namespace DSPRE.Avalonia.Gl
 
         private double CellSize => Math.Max(1, Math.Min(Bounds.Width, Bounds.Height) / Size) * _zoom;
 
-        // Wheel zooms about the pointer; Space and a left drag move the view; Home puts it back.
+        // The wheel scrolls (Shift sideways) and Ctrl+wheel zooms about the pointer. A middle or Space drag moves the
+        // view; a middle click that does not move still fills, as in PDSMS. Home fits the map again.
         private double _zoom = 1;
         private Vector _pan;
         private bool _spaceHeld;
         private Point? _panFrom;
-        public const double MostZoom = 8;
+        public const double MostZoom = 8, LeastZoom = 0.25;
+        private const double ScrollStep = 48, ClickSlop = 4, Bar = 8;
+
+        // A middle press is a click until the pointer moves past ClickSlop, then it pans.
+        private Point? _middleFrom;
+        private bool _middleMoved;
+        private KeyModifiers _middleKeys;
 
         private Point Local(Point p) => p - _pan;
 
-        private void KeepInView()
+        // The map's edge may come this far into the view, and no further, as in an image editor.
+        private const double Gap = 32;
+
+        // The pan limits along one axis, keeping both map edges within Gap of the view.
+        private (double low, double high) PanRange(double room)
         {
             double full = CellSize * Size;
-            double Clamp(double v, double room) => room >= full ? 0 : Math.Clamp(v, room - full, 0);
+            return (Math.Min(room - full, 0) - Gap, Math.Max(room - full, 0) + Gap);
+        }
+
+        private void KeepInView()
+        {
+            double Clamp(double v, double room) { (double low, double high) = PanRange(room); return Math.Clamp(v, low, high); }
             _pan = new Vector(Clamp(_pan.X, Bounds.Width), Clamp(_pan.Y, Bounds.Height));
+        }
+
+        // ── Scroll bars, drawn over the grid ────────────────────────────────────────────────
+        private (double start, double length) Thumb(double pan, double room)
+        {
+            (double low, double high) = PanRange(room);
+            double length = Math.Max(24, room * Math.Min(1, room / (CellSize * Size + 2 * Gap)));
+            double at = Math.Clamp((high - pan) / (high - low), 0, 1) * (room - length);
+            return (at, length);
+        }
+
+        private Rect AcrossBar => new Rect(0, Bounds.Height - Bar, Bounds.Width - Bar, Bar);
+        private Rect DownBar => new Rect(Bounds.Width - Bar, 0, Bar, Bounds.Height - Bar);
+
+        // Which bar is being dragged and where on its thumb it was taken.
+        private (bool across, double grip)? _barDrag;
+
+        private bool PressBar(Point p)
+        {
+            foreach (bool across in new[] { true, false })
+            {
+                Rect bar = across ? AcrossBar : DownBar;
+                if (!bar.Contains(p)) continue;
+                double room = across ? bar.Width : bar.Height;
+                (double start, double length) = Thumb(across ? _pan.X : _pan.Y, room);
+                double at = across ? p.X : p.Y;
+                // A press off the thumb jumps it there first.
+                double grip = at >= start && at <= start + length ? at - start : length / 2;
+                _barDrag = (across, grip);
+                DragBar(p);
+                return true;
+            }
+            return false;
+        }
+
+        private void DragBar(Point p)
+        {
+            if (_barDrag is not (bool across, double grip)) return;
+            double room = across ? AcrossBar.Width : DownBar.Height;
+            (double low, double high) = PanRange(room);
+            (double _, double length) = Thumb(0, room);
+            double fraction = room - length <= 0 ? 0 : Math.Clamp(((across ? p.X : p.Y) - grip) / (room - length), 0, 1);
+            double pan = high - fraction * (high - low);
+            _pan = across ? new Vector(pan, _pan.Y) : new Vector(_pan.X, pan);
+            KeepInView();
+            InvalidateVisual();
+        }
+
+        private void DrawBars(DrawingContext ctx)
+        {
+            SolidColorBrush track = new SolidColorBrush(Color.FromArgb(50, 0, 0, 0));
+            SolidColorBrush thumb = new SolidColorBrush(Color.FromArgb(150, 220, 220, 220));
+            Rect across = AcrossBar, down = DownBar;
+            (double hs, double hl) = Thumb(_pan.X, across.Width);
+            (double vs, double vl) = Thumb(_pan.Y, down.Height);
+            ctx.FillRectangle(track, across);
+            ctx.FillRectangle(track, down);
+            ctx.FillRectangle(thumb, new Rect(across.X + hs, across.Y + 1, hl, Bar - 2), 3);
+            ctx.FillRectangle(thumb, new Rect(down.X + 1, down.Y + vs, Bar - 2, vl), 3);
         }
 
         public void ResetView()
@@ -150,10 +225,19 @@ namespace DSPRE.Avalonia.Gl
         protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
         {
             base.OnPointerWheelChanged(e);
-            double was = CellSize;
-            _zoom = Math.Clamp(_zoom * Math.Pow(1.25, e.Delta.Y), 1, MostZoom);
             Point at = e.GetPosition(this);
-            _pan = (Vector)at - ((Vector)at - _pan) * (CellSize / was);
+            if ((e.KeyModifiers & KeyModifiers.Control) != 0)
+            {
+                double was = CellSize;
+                _zoom = Math.Clamp(_zoom * Math.Pow(1.25, e.Delta.Y), LeastZoom, MostZoom);
+                _pan = (Vector)at - ((Vector)at - _pan) * (CellSize / was);
+            }
+            else
+            {
+                // Shift turns an up-down wheel sideways; a trackpad already reports both directions.
+                Vector delta = (e.KeyModifiers & KeyModifiers.Shift) != 0 && e.Delta.X == 0 ? new Vector(e.Delta.Y, 0) : e.Delta;
+                _pan += delta * ScrollStep;
+            }
             KeepInView();
             InvalidateVisual();
             Hovered?.Invoke(this, At(Local(at)));
@@ -210,10 +294,26 @@ namespace DSPRE.Avalonia.Gl
         {
             base.OnPointerPressed(e);
             PointerPoint point = e.GetCurrentPoint(this);
+            if (point.Properties.IsLeftButtonPressed && PressBar(point.Position))
+            {
+                e.Pointer.Capture(this);
+                e.Handled = true;
+                return;
+            }
             if (_spaceHeld && point.Properties.IsLeftButtonPressed)
             {
                 _panFrom = point.Position;
                 e.Pointer.Capture(this);
+                e.Handled = true;
+                return;
+            }
+            if (point.Properties.IsMiddleButtonPressed)
+            {
+                _middleFrom = point.Position;
+                _middleMoved = false;
+                _middleKeys = e.KeyModifiers;
+                e.Pointer.Capture(this);
+                Focus();
                 e.Handled = true;
                 return;
             }
@@ -244,6 +344,14 @@ namespace DSPRE.Avalonia.Gl
         {
             base.OnPointerMoved(e);
             Point screen = e.GetPosition(this);
+            if (_barDrag != null) { DragBar(screen); return; }
+            if (_middleFrom is Point middle && !_middleMoved
+                && Math.Abs(screen.X - middle.X) + Math.Abs(screen.Y - middle.Y) > ClickSlop)
+            {
+                _middleMoved = true;
+                _panFrom = middle;
+                Cursor = new Cursor(StandardCursorType.Hand);
+            }
             if (_panFrom is Point from0)
             {
                 _pan += screen - from0;
@@ -284,6 +392,20 @@ namespace DSPRE.Avalonia.Gl
         protected override void OnPointerReleased(PointerReleasedEventArgs e)
         {
             base.OnPointerReleased(e);
+            if (_barDrag != null) { _barDrag = null; e.Pointer.Capture(null); return; }
+            if (_middleFrom is Point middle && !_middleMoved)
+            {
+                // A middle click that never moved is a fill on its square.
+                _middleFrom = null;
+                e.Pointer.Capture(null);
+                if (At(Local(middle)) is (int mx, int mz))
+                {
+                    Pressed?.Invoke(this, (mx, mz, MouseButton.Middle, _middleKeys));
+                    Released?.Invoke(this, (mx, mz));
+                }
+                return;
+            }
+            _middleFrom = null;
             if (_panFrom != null)
             {
                 _panFrom = null;
@@ -309,6 +431,8 @@ namespace DSPRE.Avalonia.Gl
         {
             base.OnPointerCaptureLost(e);
             _panFrom = null;
+            _middleFrom = null;
+            _barDrag = null;
             if (_dragging is (int index, _, int dx, int dz))
             {
                 _dragging = null;
@@ -324,6 +448,7 @@ namespace DSPRE.Avalonia.Gl
         {
             using (ctx.PushTransform(Matrix.CreateTranslation(_pan.X, _pan.Y)))
                 RenderGrid(ctx);
+            DrawBars(ctx);
         }
 
         private void RenderGrid(DrawingContext ctx)
