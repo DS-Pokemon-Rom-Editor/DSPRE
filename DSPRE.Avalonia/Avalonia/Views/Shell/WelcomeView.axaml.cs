@@ -21,11 +21,16 @@ namespace DSPRE.Avalonia.Views.Shell
             ProjectDrop.Attach(this, () => _main, Close);
         }
 
-        /// <summary>Opens the Welcome window (over the main shell window when available).</summary>
+        private static WelcomeView _open;
+
+        /// <summary>Opens the Welcome window over the shell without blocking it; asking again brings the open one forward.</summary>
         public static void ShowWelcome(MainWindowView main)
         {
+            if (_open != null) { _open.Activate(); return; }
             WelcomeView w = new WelcomeView(main);
-            if (main != null) w.ShowDialog(main);
+            _open = w;
+            w.Closed += (_, _) => _open = null;
+            if (main != null) w.Show(main);
             else w.Show();
         }
 
