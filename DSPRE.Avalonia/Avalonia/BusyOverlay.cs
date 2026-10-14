@@ -81,13 +81,14 @@ namespace DSPRE.Avalonia
 
             Control content = owner.Content as Control;
             bool wasEnabled = content?.IsEnabled ?? true;
+            // Sized from the window: the overlay layer reports 0 by 0 until its first layout.
             Border cover = new Border
             {
                 Background = new SolidColorBrush(Color.FromArgb(0xA0, 0, 0, 0)),
-                Width = layer.Bounds.Width, Height = layer.Bounds.Height,
+                Width = owner.ClientSize.Width, Height = owner.ClientSize.Height,
                 Child = Card(owner, text, hint),
             };
-            void Resize(object s, SizeChangedEventArgs e) { cover.Width = layer.Bounds.Width; cover.Height = layer.Bounds.Height; }
+            void Resize(object s, SizeChangedEventArgs e) { cover.Width = owner.ClientSize.Width; cover.Height = owner.ClientSize.Height; }
             owner.SizeChanged += Resize;
             layer.Children.Add(cover);
             if (content != null) content.IsEnabled = false;
