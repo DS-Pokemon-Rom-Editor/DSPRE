@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 
 namespace DSPRE
@@ -30,7 +30,7 @@ namespace DSPRE
 
         // SetBoxMonDataInternal accepts item IDs 1..16 and 492..499, converting the latter
         // to HGSS ball numbers 17..24. Park Ball (500) is not accepted by that setter.
-        public static IReadOnlyList<int> BallItemIds { get; } = Array.AsReadOnly(new[]
+        public static ReadOnlyCollection<int> BallItemIds { get; } = Array.AsReadOnly(new[]
         {
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
             492, 493, 494, 495, 496, 497, 498, 499,

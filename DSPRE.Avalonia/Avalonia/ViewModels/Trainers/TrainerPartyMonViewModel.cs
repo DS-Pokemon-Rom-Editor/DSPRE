@@ -407,7 +407,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             {
                 if (!Set(ref _ballSeals, value)) return;
                 OnPropertyChanged(nameof(CapsuleIndex)); OnPropertyChanged(nameof(HasCapsule));
-                OnPropertyChanged(nameof(BallValueNote)); OnPropertyChanged(nameof(BallPreviewItemId));
+                OnPropertyChanged(nameof(BallValueNote));
                 OnPropertyChanged(nameof(HasUnsupportedBallValue));
                 ShowCapsule();
                 Touch();
@@ -439,7 +439,6 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 OnPropertyChanged(nameof(CustomPokeballsEnabled)); OnPropertyChanged(nameof(BallLabel));
                 OnPropertyChanged(nameof(HasCapsule)); OnPropertyChanged(nameof(BallValueNote));
                 OnPropertyChanged(nameof(HasUnsupportedBallValue));
-                OnPropertyChanged(nameof(BallPreviewItemId));
             }
             finally { _refreshingCapsulePicker = false; }
         }
@@ -458,7 +457,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public int CapsuleIndex
         {
             get => CustomPokeballsEnabled
-                ? TrainerCustomPokeballsPatch.BallItemIds.ToList().IndexOf((int)_ballSeals)
+                ? TrainerCustomPokeballsPatch.BallItemIds.IndexOf((int)_ballSeals)
                 : _ballSeals >= 0 && _ballSeals < _capsuleNames.Count ? (int)_ballSeals : -1;
             set
             {

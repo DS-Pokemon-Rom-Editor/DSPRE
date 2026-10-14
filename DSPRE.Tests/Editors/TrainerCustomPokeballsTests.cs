@@ -13,16 +13,18 @@ namespace DSPRE.Tests
     [Collection("rom")]
     public class TrainerCustomPokeballsTests
     {
-        [SkippableTheory]
-        [InlineData("IPKE", "DSPRE_TEST_HEARTGOLD")]
-        [InlineData("IPKE", "DSPRE_TEST_HEARTGOLD_EU")]
-        [InlineData("IPGE", "DSPRE_TEST_SOULSILVER")]
-        [InlineData("IPKI", "DSPRE_TEST_HEARTGOLD_ITALIAN")]
-        public void AppliesExactAssemblyAndRejectsEveryPartialOrConflictingWrite(string romId, string variable)
+        public static object[][] RomFixtures => new[]
         {
-            string root = Environment.GetEnvironmentVariable(variable);
-            if (variable == "DSPRE_TEST_HEARTGOLD" && string.IsNullOrEmpty(root)) root = TestRoms.HeartGold;
-            Skip.If(string.IsNullOrEmpty(root), $"Set {variable} to an unpacked vanilla project.");
+            new object[] { "IPKE", TestRoms.HeartGold },
+            new object[] { "IPKE", TestRoms.HeartGoldEu },
+            new object[] { "IPGE", TestRoms.SoulSilver },
+            new object[] { "IPKI", TestRoms.HeartGoldItalian },
+        };
+
+        [SkippableTheory]
+        [MemberData(nameof(RomFixtures))]
+        public void AppliesExactAssemblyAndRejectsEveryPartialOrConflictingWrite(string romId, string root)
+        {
             string path = Path.Combine(root, "arm9", "arm9.bin");
             if (!File.Exists(path)) path = Path.Combine(root, "arm9.bin");
             Skip.If(!File.Exists(path), "Vanilla ARM9 fixture unavailable.");

@@ -13,6 +13,8 @@ namespace DSPRE.Tests
     ///       { "heartGold": "D:\\roms\\HeartGold (USA)_DSPRE_contents", "platinum": "...", "diamond": "..." }
     ///   or environment variables, which win over the file:
     ///       DSPRE_TEST_HEARTGOLD, DSPRE_TEST_PLATINUM, DSPRE_TEST_DIAMOND
+    ///   Additional HGSS fixtures use heartGoldEu, heartGoldItalian and soulSilver in the JSON,
+    ///   or DSPRE_TEST_HEARTGOLD_EU, DSPRE_TEST_HEARTGOLD_ITALIAN and DSPRE_TEST_SOULSILVER.
     ///
     /// A path that is not set falls back to the layout under DSPRE_TEST_ROMS (default C:\Romhacking\ROMs\NDS),
     /// which is where they sat when these tests were written. Tests that need a project it cannot find skip
@@ -23,6 +25,18 @@ namespace DSPRE.Tests
         public static string HeartGold { get; } = Resolve(
             "DSPRE_TEST_HEARTGOLD", "heartGold",
             @"HGSS\HeartGold (USA)_DSPRE_contents");
+
+        public static string HeartGoldEu { get; } = Resolve(
+            "DSPRE_TEST_HEARTGOLD_EU", "heartGoldEu",
+            @"HGSS\HeartGold (Europe)_DSPRE_contents");
+
+        public static string HeartGoldItalian { get; } = Resolve(
+            "DSPRE_TEST_HEARTGOLD_ITALIAN", "heartGoldItalian",
+            @"HGSS\HeartGold (Italy)_DSPRE_contents");
+
+        public static string SoulSilver { get; } = Resolve(
+            "DSPRE_TEST_SOULSILVER", "soulSilver",
+            @"HGSS\SoulSilver (USA)_DSPRE_contents");
 
         public static string Platinum { get; } = Resolve(
             "DSPRE_TEST_PLATINUM", "platinum",

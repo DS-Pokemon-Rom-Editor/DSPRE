@@ -1649,17 +1649,6 @@ namespace DSPRE
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
 
-            list.Add(Status("trainerCustomPokeballs", "Trainer custom Pokéballs",
-                "Choose a Pokéball for each trainer party member instead of ball capsule seals (US HeartGold/SoulSilver, EU English HeartGold, Italian HeartGold). ARM9 only; no expansion required.",
-                () =>
-                {
-                    if (RomInfo.isHGE) return Unsupported("Not compatible with hg-engine");
-                    if (!TrainerCustomPokeballsPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
-                    if (TrainerCustomPokeballsPatch.DetectCurrentProject()) return PatchState.Applied;
-                    return TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) == null
-                        ? PatchState.Available : Unsupported("Capsule routine modified");
-                }));
-
             list.Add(Status("trainerShiny", "Shiny trainer Pokémon",
                 "Lets party members ticked Shiny in the Trainer editor battle shiny (US HeartGold/SoulSilver, Italian HeartGold). Requires the ARM9 expansion patch and a ds-rom-format project.",
                 () =>
@@ -1767,6 +1756,17 @@ namespace DSPRE
                     if (TrainerClassTableExpansion.MusicTableHasRoom) return PatchState.Applied;
                     if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum (English) only");
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("trainerCustomPokeballs", "Trainer custom Pokéballs",
+                "Choose a Pokéball for each trainer party member instead of ball capsule seals (US HeartGold/SoulSilver, EU English HeartGold, Italian HeartGold). ARM9 only; no expansion required.",
+                () =>
+                {
+                    if (RomInfo.isHGE) return Unsupported("Not compatible with hg-engine");
+                    if (!TrainerCustomPokeballsPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (TrainerCustomPokeballsPatch.DetectCurrentProject()) return PatchState.Applied;
+                    return TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) == null
+                        ? PatchState.Available : Unsupported("Capsule routine modified");
                 }));
 
             return list;
