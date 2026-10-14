@@ -245,7 +245,20 @@
                             <StackPanel Margin="0,2,12,0" Spacing="1">
                               <TextBlock Classes="subtle" Text="{Binding Label}"/>
                               <StackPanel Orientation="Horizontal" Spacing="2">
-                                <NumericUpDown Value="{Binding Value}" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Width="96"/>
+                                <!-- The theme draws the box's own border inside its template, so the warning goes on one around it. -->
+                                <Border Classes="slot" BorderThickness="2" CornerRadius="4"
+                                        Classes.mismatch="{Binding HasMismatch}" ToolTip.Tip="{Binding Mismatch}">
+                                  <Border.Styles>
+                                    <!-- Both brushes come from styles: a local brush would outrank the warning one. -->
+                                    <Style Selector="Border.slot">
+                                      <Setter Property="BorderBrush" Value="Transparent"/>
+                                    </Style>
+                                    <Style Selector="Border.slot.mismatch">
+                                      <Setter Property="BorderBrush" Value="{DynamicResource Editor.Warn}"/>
+                                    </Style>
+                                  </Border.Styles>
+                                  <NumericUpDown Value="{Binding Value}" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Width="96"/>
+                                </Border>
                                 <Button controls:Icon.Key="OpenLink" Tag="{Binding}" Click="ShowPart_Click" ToolTip.Tip="Show in the graphics browser"
                                         IsVisible="{Binding CanShow}"/>
                               </StackPanel>

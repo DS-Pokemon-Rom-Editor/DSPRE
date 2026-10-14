@@ -54,13 +54,45 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         internal Field Field { get; init; }
         internal Field? PaletteField { get; init; }
         internal Action<IntroArtFile, int> Changed;
+        /// <summary>The kind of file this box should name.</summary>
+        internal GraphicAssets.Kind Role { get; init; }
+        /// <summary>The kind of file an archive member holds.</summary>
+        internal Func<int, GraphicAssets.Kind> KindOf { get; init; }
         private int _value;
         public int Value
         {
             get => _value;
-            set { if (_value == value) return; _value = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value))); Changed?.Invoke(this, value); }
+            set { if (_value == value) return; _value = value; Raise(nameof(Value)); Check(); Changed?.Invoke(this, value); }
         }
-        internal void Show(int value) { _value = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value))); }
+        internal void Show(int value) { _value = value; Raise(nameof(Value)); Check(); }
+
+        /// <summary>Says when the member named holds another kind of file; saving still takes it.</summary>
+        public string Mismatch { get; private set; }
+        public bool HasMismatch => Mismatch != null;
+
+        private void Check()
+        {
+            GraphicAssets.Kind held = KindOf?.Invoke(_value) ?? GraphicAssets.Kind.Unknown;
+            bool known = held is GraphicAssets.Kind.Palette or GraphicAssets.Kind.TileGraphic or GraphicAssets.Kind.TileMap
+                             or GraphicAssets.Kind.CellLayout or GraphicAssets.Kind.CellAnimation;
+            string now = known && held != Role ? $"Member {_value} holds {KindName(held)}, not {KindName(Role)}." : null;
+            if (now == Mismatch) return;
+            Mismatch = now;
+            Raise(nameof(Mismatch));
+            Raise(nameof(HasMismatch));
+        }
+
+        private static string KindName(GraphicAssets.Kind kind) => kind switch
+        {
+            GraphicAssets.Kind.Palette => "a palette",
+            GraphicAssets.Kind.TileGraphic => "tiles",
+            GraphicAssets.Kind.TileMap => "a screen",
+            GraphicAssets.Kind.CellLayout => "cells",
+            GraphicAssets.Kind.CellAnimation => "an animation",
+            _ => "something else",
+        };
+
+        private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 
     /// <summary>
@@ -197,6 +229,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                         // Timing has no picture to show; the Animation button opens it where it is edited.
                         CanShow = roles[i] != Kind.CellAnimation,
                         PaletteField = pal >= 0 ? fields[pal] : null,
+                        Role = roles[i],
+                        KindOf = MemberKind,
                     };
                     part.Changed = OnPartChanged;
                     slot.Parts.Add(part);
@@ -204,6 +238,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 ArtSlots.Add(slot);
             }
         }
+
+        private Kind MemberKind(int member) => _kinds != null && member >= 0 && member < _kinds.Length ? _kinds[member] : Kind.Unknown;
 
         private static string PartName(Kind kind, int nth, int count)
         {
