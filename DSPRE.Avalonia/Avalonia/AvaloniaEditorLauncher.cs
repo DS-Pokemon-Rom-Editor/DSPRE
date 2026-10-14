@@ -292,7 +292,10 @@ namespace DSPRE.Avalonia
 
         public static void OpenTextEditor(int initialIndex = 0) => _ = OpenTextEditorAsync(initialIndex);
 
-        public static async System.Threading.Tasks.Task OpenTextEditorAsync(int initialIndex = 0)
+        /// <summary>Opens the Text editor on an archive with one of its lines picked and in sight.</summary>
+        public static void OpenTextEditorAt(int archive, int line) => _ = OpenTextEditorAsync(archive, line);
+
+        public static async System.Threading.Tasks.Task OpenTextEditorAsync(int initialIndex = 0, int initialLine = -1)
         {
             if (!IsRomLoaded) return;
 
@@ -301,7 +304,7 @@ namespace DSPRE.Avalonia
                 await OpenBehindCardAsync("Opening Text Editor…", "Reading every text archive.",
                     () => DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.textArchives }),
                     () => new EditorHostWindow("Text editor",
-                        new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex }), 980, 640));
+                        new TextEditorView(new TextEditorViewModel(true) { InitialIndex = initialIndex, InitialLine = initialLine }), 980, 640));
             }
             catch (System.Exception ex)
             {

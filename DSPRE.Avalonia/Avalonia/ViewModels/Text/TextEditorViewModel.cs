@@ -84,7 +84,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             {
                 if (!Set(ref _selectedArchiveIndex, value)) return;
                 if (_isLoading || value < 0) return;
-                _ = OnArchiveSelectedAsync(value);
+                _archiveLoad = OnArchiveSelectedAsync(value);
             }
         }
 
@@ -336,6 +336,28 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public int InitialIndex { get; set; }
 
+        /// <summary>A line of <see cref="InitialIndex"/> to show once it has loaded, or -1.</summary>
+        public int InitialLine { get; set; } = -1;
+
+        // The archive load the last selection started; a go-to waits for it before picking a line.
+        private Task _archiveLoad = Task.CompletedTask;
+
+        /// <summary>Raised when a line is picked for the user, so the view scrolls it into sight.</summary>
+        public event EventHandler LineRevealed;
+
+        /// <summary>
+        /// Set by a host that keeps this editor on one archive (the grouped view's Text tab): given a search result's
+        /// archive and line, it shows them somewhere else and returns true, or returns false to show them here.
+        /// </summary>
+        public Func<int, int, bool> OpenResultElsewhere { get; set; }
+
+        private void RevealLine(int line)
+        {
+            if (line < 0 || line >= Lines.Count) return;
+            SelectedLineIndex = line;
+            LineRevealed?.Invoke(this, EventArgs.Empty);
+        }
+
         // ── Setup ────────────────────────────────────────────────────────────────
         public async Task SetupAsync(Window owner)
         {
@@ -370,7 +392,11 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StatusText = $"Loaded {count} text archives.";
 
                 if (count > 0)
+                {
                     SelectedArchiveIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
+                    await _archiveLoad;
+                    if (InitialLine >= 0 && SelectedArchiveIndex == InitialIndex) RevealLine(InitialLine);
+                }
             }
             catch (Exception ex)
             {
@@ -919,14 +945,19 @@ namespace DSPRE.Avalonia.ViewModels.Text
                          + (skipped > 0 ? $", {skipped} hg-engine archive(s) skipped." : ".");
         }
 
-        /// <summary>Navigate to a search result (used on double-click).</summary>
-        public void GoToResult(TextSearchResultVM result)
+        /// <summary>Shows a search result's line, after its archive has loaded when it is another one.</summary>
+        public async Task GoToResultAsync(TextSearchResultVM result)
         {
             if (result == null) return;
             if (SelectedArchiveIndex != result.Archive)
+            {
+                if (OpenResultElsewhere?.Invoke(result.Archive, result.Line) == true) return;
                 SelectedArchiveIndex = result.Archive;
-            if (result.Line >= 0 && result.Line < Lines.Count)
-                SelectedLineIndex = result.Line;
+                await _archiveLoad;
+                // Cancelled at the unsaved changes prompt.
+                if (SelectedArchiveIndex != result.Archive) return;
+            }
+            RevealLine(result.Line);
         }
 
         // ── Header editor location list refresh (WinForms bridge; the host installs the hook) ─────

@@ -22,7 +22,22 @@ namespace DSPRE.Avalonia.Views.Text
             Loaded += OnLoadedSetup;
             // Tunnel, so Enter reaches the search before the text box can take it.
             SearchBox.AddHandler(KeyDownEvent, Search_KeyDown, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
+            DataContextChanged += (_, _) =>
+            {
+                if (_watched != null) _watched.LineRevealed -= ScrollToLine;
+                _watched = VM;
+                if (_watched != null) _watched.LineRevealed += ScrollToLine;
+            };
         }
+
+        private TextEditorViewModel _watched;
+
+        // The archive's rows may still be filling, so scroll once layout has caught up.
+        private void ScrollToLine(object sender, System.EventArgs e)
+            => global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (LinesGrid.SelectedItem != null) LinesGrid.ScrollIntoView(LinesGrid.SelectedItem, null);
+            }, global::Avalonia.Threading.DispatcherPriority.Background);
 
         /// <summary>
         /// Points the preview at the ROM's own font, so a line is shown with the letters the game would
@@ -131,12 +146,7 @@ namespace DSPRE.Avalonia.Views.Text
         private void SearchResult_DoubleTapped(object sender, TappedEventArgs e)
         {
             if (SearchResultsList.SelectedItem is not TextSearchResultVM r || VM == null) return;
-            VM.GoToResult(r);
-            // The archive's rows may still be filling, so scroll once layout has caught up.
-            global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                if (LinesGrid.SelectedItem != null) LinesGrid.ScrollIntoView(LinesGrid.SelectedItem, null);
-            }, global::Avalonia.Threading.DispatcherPriority.Background);
+            _ = RunSafe(() => VM.GoToResultAsync(r));
         }
 
         private static async Task RunSafe(System.Func<Task> action)

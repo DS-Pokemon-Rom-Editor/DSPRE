@@ -240,6 +240,13 @@ namespace DSPRE.Avalonia.Views.World
                        id => AvaloniaEditorLauncher.OpenLevelScriptEditor(id), RetargetLevelScripts);
                 Follow(TextVM, nameof(TextEditorViewModel.SelectedArchiveIndex), () => TextVM.SelectedArchiveIndex, () => (int)vm.TextArchiveId,
                        id => AvaloniaEditorLauncher.OpenTextEditor(id), RetargetText);
+                // A search hit in another archive opens there, on its line, and this tab stays on the header's archive.
+                TextVM.OpenResultElsewhere = (archive, line) =>
+                {
+                    if (archive == (int)vm.TextArchiveId) return false;
+                    AvaloniaEditorLauncher.OpenTextEditorAt(archive, line);
+                    return true;
+                };
             }
         }
 
