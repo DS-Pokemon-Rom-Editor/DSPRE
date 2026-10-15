@@ -427,17 +427,29 @@
                     <TextBlock Grid.Row="2" Grid.Column="2" Text="Matrix Y" VerticalAlignment="Center"/>
                     <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
-                  <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" HorizontalAlignment="Stretch"/>
-                  <TextBlock Text="This map's scripts have no script with this number."
-                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptGenericWarningVisible}"/>
-                  <TextBlock Text="{Binding SpScriptCommonInfo}"
-                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptHasCommonInfo}"/>
-                  <Grid ColumnDefinitions="*,Auto">
-                    <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
-                    <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToSpScript_Click"
-                            ToolTip.Tip="Open this script, following a common script to its own file."/>
-                  </Grid>
+                  <StackPanel Spacing="3" IsVisible="{Binding SpHiddenPickerVisible}" Margin="0,4,0,0">
+                    <TextBlock Text="Hidden item" FontWeight="Bold"/>
+                    <DockPanel>
+                      <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0"
+                             Source="{Binding SpHiddenItemId, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                      <controls:FusionAutoCompleteBox ItemsSource="{Binding HiddenItemEntries}" SelectedIndex="{Binding SpHiddenIndex}" HorizontalAlignment="Stretch"/>
+                    </DockPanel>
+                    <Button Content="Edit hidden items" controls:Icon.Key="pencil" Click="OpenHiddenItems_Click" HorizontalAlignment="Left"
+                            ToolTip.Tip="Change the item, amount and range in the hidden item table"/>
+                  </StackPanel>
+                  <StackPanel Spacing="3" IsVisible="{Binding SpScriptFieldsVisible}">
+                    <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
+                    <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" HorizontalAlignment="Stretch"/>
+                    <TextBlock Text="This map's scripts have no script with this number."
+                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptGenericWarningVisible}"/>
+                    <TextBlock Text="{Binding SpScriptCommonInfo}"
+                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptHasCommonInfo}"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
+                      <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToSpScript_Click"
+                              ToolTip.Tip="Open this script, following a common script to its own file."/>
+                    </Grid>
+                  </StackPanel>
                   <TextBlock Text="Type / direction" FontWeight="Bold" Margin="0,4,0,0"/>
                   <Grid ColumnDefinitions="72,*" RowDefinitions="Auto,Auto" RowSpacing="4">
                     <TextBlock Grid.Column="0" Text="Type" VerticalAlignment="Center"/>

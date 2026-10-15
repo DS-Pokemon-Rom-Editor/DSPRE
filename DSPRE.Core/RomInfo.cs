@@ -180,12 +180,23 @@ namespace DSPRE
         /// <summary>The loader's opening bytes as hex, ?? for the limit's own bytes. Checked before the limit is read.</summary>
         public static string itemLimitSignature { get; private set; }
 
-        /// <summary>HGSS hidden-item table in ARM9 (sHiddenItemParam). Zero when unknown.</summary>
+        /// <summary>The hidden-item table in ARM9 (gHiddenItems, HGSS sHiddenItemParam). Zero when unknown.</summary>
         public static uint hiddenItemTableOffset { get; private set; }
         /// <summary>Rows the ARM9 reserves for the hidden-item table (NUM_HIDDEN_ITEMS).</summary>
         public static int hiddenItemTableCapacity { get; private set; }
         /// <summary>The immediate byte of each <c>cmp rN, #count</c> that bounds a scan of the hidden-item table.</summary>
         public static uint[] hiddenItemCountSites { get; private set; } = System.Array.Empty<uint>();
+        /// <summary>Platinum: the literal-pool words holding the hidden-item count, which no <c>cmp</c> immediate can hold.</summary>
+        public static uint[] hiddenItemCountLiterals { get; private set; } = System.Array.Empty<uint>();
+        /// <summary>
+        /// The highest hidden-item script field with its own found flag: DP and Pt number those flags from 0x2DA up to the
+        /// trainer flags at 0x550. HGSS: 255.
+        /// </summary>
+        public static int hiddenItemScriptMax => gameFamily is GameFamilies.DP or GameFamilies.Plat ? 0x550 - 0x2DA - 1 : 255;
+        /// <summary>Platinum's hidden items that FieldSystem_ClearDailyHiddenItemFlags puts back each day (Iron Island,
+        /// Floaroma Meadow honey), by script field; the same in every Platinum dump.</summary>
+        public static int[] hiddenItemDailyScripts => gameFamily == GameFamilies.Plat
+            ? new[] { 52, 53, 54, 55, 58, 59, 219, 220, 221, 222 } : System.Array.Empty<int>();
 
         /// <summary>Pt overlay 9's Distortion World Griseous Orb item, which names its ground-item script directly. Zero when unknown.</summary>
         public static uint distortionWorldItemScriptOffset { get; private set; }
@@ -1960,6 +1971,7 @@ namespace DSPRE
             hiddenItemTableOffset = 0;
             hiddenItemTableCapacity = 0;
             hiddenItemCountSites = System.Array.Empty<uint>();
+            hiddenItemCountLiterals = System.Array.Empty<uint>();
             distortionWorldItemScriptOffset = 0;
 
             // HeartGold US: sub_02040578 and GetHiddenItemParams each loop to 231 and test the index after.
@@ -1975,11 +1987,13 @@ namespace DSPRE
                 distortionWorldItemScriptOffset = 0x8E2A;
 
             Measure m = MeasuredHere;
-            if (m?.HiddenItemTable is uint hidden && m.HiddenItemCountSites != null)
+            // The vanilla tables have no spare rows: DP 229, Pt 257, HGSS 231.
+            if (m?.HiddenItemTable is uint hidden && (m.HiddenItemCountSites != null || m.HiddenItemCountLiterals != null))
             {
                 hiddenItemTableOffset = hidden;
-                hiddenItemTableCapacity = 231;
-                hiddenItemCountSites = m.HiddenItemCountSites;
+                hiddenItemTableCapacity = gameFamily switch { GameFamilies.DP => 229, GameFamilies.Plat => 257, _ => 231 };
+                hiddenItemCountSites = m.HiddenItemCountSites ?? System.Array.Empty<uint>();
+                hiddenItemCountLiterals = m.HiddenItemCountLiterals ?? System.Array.Empty<uint>();
             }
             if (m?.DistortionWorldItemScript is uint script) distortionWorldItemScriptOffset = script;
         }

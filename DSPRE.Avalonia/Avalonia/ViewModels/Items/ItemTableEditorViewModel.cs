@@ -183,7 +183,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public string Display =>
             $"Script {ScriptID} (8{ScriptID:D3}): {(ItemID < _names.Length ? _names[ItemID] : "???")} x{Amount}";
 
-        public void Refresh() { OnPC(nameof(Display)); }
+        /// <summary>Where the item is placed, filled in by the editor from the event files.</summary>
+        public string Where { get; set; } = "";
+        public bool Daily { get; set; }
+        public string Detail => Daily ? $"{Where}, resets daily" : Where;
+
+        public void Refresh() { OnPC(nameof(ItemID)); OnPC(nameof(Display)); OnPC(nameof(Detail)); }
     }
 
     /// <summary>One Rock Smash NARC entry (data/a/2/5/3): a header's item-drop odds and which of the
@@ -326,10 +331,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         // ── Hidden Items ──────────────────────────────────────────────────────
         public bool ShowHiddenItemsTab { get; }
-        // Hidden-item bg events run script 8000 + the entry's index (_std_hidden_item).
-        private const int HIDDEN_SCRIPT_BASE = 8000;
         private int _hiddenMaxCapacity = 256;
-        // False when a count site isn't the expected cmp, so nothing is patched.
+        private Dictionary<int, List<HiddenItemTable.Placement>> _hiddenPlacements = new();
+        // False when a count site isn't the expected instruction or literal, so nothing is patched.
         private bool _hiddenSitesValid = true;
 
         public ObservableCollection<HiddenItemRowVM> HiddenItems { get; } = new();
@@ -347,6 +351,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 OnPropertyChanged(nameof(SelectedScriptID));
                 OnPropertyChanged(nameof(SelectedScriptLabel));
                 OnPropertyChanged(nameof(HiddenItemSelected));
+                OnPropertyChanged(nameof(CanGoToHiddenEvent));
             }
         }
 
@@ -356,7 +361,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void GoToHiddenItemScript()
         {
             if (_selectedHiddenItem == null) return;
-            string message = AvaloniaEditorLauncher.GoToScript(8000 + _selectedHiddenItem.ScriptID, null, out bool opened);
+            string message = AvaloniaEditorLauncher.GoToScript(HiddenItemTable.ScriptBase + _selectedHiddenItem.ScriptID, null, out bool opened);
             if (!opened) AppMessages.Info(message, "Hidden item script");
         }
 
@@ -393,8 +398,9 @@ namespace DSPRE.Avalonia.ViewModels.Items
             {
                 if (_selectedHiddenItem == null) return;
                 _selectedHiddenItem.ScriptID = (ushort)value;
-                _selectedHiddenItem.Refresh();
+                PlaceHiddenRow(_selectedHiddenItem);
                 OnPropertyChanged(nameof(SelectedScriptLabel));
+                OnPropertyChanged(nameof(CanGoToHiddenEvent));
                 SetHiddenDirty();
                 OnPropertyChanged();
             }
@@ -402,6 +408,50 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         public string SelectedScriptLabel =>
             _selectedHiddenItem != null ? $"Use in spawnable: 8{_selectedHiddenItem.ScriptID:D3}" : "";
+
+        public int HiddenScriptMax => HgEngineProject.IsActive ? 255 : RomInfo.hiddenItemScriptMax;
+
+        private List<HiddenItemTable.Placement> SelectedPlacements =>
+            _selectedHiddenItem != null && _hiddenPlacements.TryGetValue(_selectedHiddenItem.ScriptID, out List<HiddenItemTable.Placement> p)
+                ? p : new List<HiddenItemTable.Placement>();
+
+        public bool CanGoToHiddenEvent => SelectedPlacements.Count > 0;
+
+        public void SelectHiddenScript(int script)
+        {
+            HiddenItemRowVM row = HiddenItems.FirstOrDefault(h => h.ScriptID == script);
+            if (row != null) SelectedHiddenItem = row;
+        }
+
+        public void GoToHiddenEvent()
+        {
+            List<HiddenItemTable.Placement> placed = SelectedPlacements;
+            if (placed.Count > 0) AvaloniaEditorLauncher.OpenEventEditorWithSpawnable(placed[0].EventFile, placed[0].Spawnable);
+        }
+
+        // DP and Pt fill their tables, so Add reuses a removed entry's script, whose found flag a save may have set.
+        public bool ShowHiddenReuseNote => !HgEngineProject.IsActive && RomInfo.gameFamily is GameFamilies.DP or GameFamilies.Plat;
+
+        private void PlaceHiddenRows()
+        {
+            HashSet<int> daily = new HashSet<int>(RomInfo.hiddenItemDailyScripts);
+            foreach (HiddenItemRowVM row in HiddenItems) PlaceHiddenRow(row, daily);
+        }
+
+        private void PlaceHiddenRow(HiddenItemRowVM row, HashSet<int> daily = null)
+        {
+            daily ??= new HashSet<int>(RomInfo.hiddenItemDailyScripts);
+            row.Daily = daily.Contains(row.ScriptID);
+            row.Where = !_hiddenPlacements.TryGetValue(row.ScriptID, out List<HiddenItemTable.Placement> placed) ? "Not placed"
+                : PlacementText(placed[0]) + (placed.Count > 1 ? $" and {placed.Count - 1} more" : "");
+            row.Refresh();
+        }
+
+        private static string PlacementText(HiddenItemTable.Placement p)
+        {
+            string place = p.Header >= 0 ? HeaderLabels.LocationNameOf(MapHeader.GetMapHeader((ushort)p.Header)) : "";
+            return $"{(string.IsNullOrEmpty(place) ? $"Event file {p.EventFile}" : place)} ({p.X}, {p.Y})";
+        }
 
         // hg-engine's table is a plain C array with no fixed capacity, unlike vanilla's ARM9-reserved buffer.
         public string HiddenEntryCount => HgEngineProject.IsActive
@@ -530,6 +580,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 HiddenItems.Clear();
                 foreach (int[] h in s.Hidden)
                     HiddenItems.Add(new HiddenItemRowVM((ushort)h[0], (ushort)h[1], (ushort)h[2], _rawItemNames) { Range = (byte)h[3], Padding = (ushort)h[4] });
+                PlaceHiddenRows();
                 SelectedHiddenItem = HiddenItems.Count > 0 ? HiddenItems[Math.Clamp(keep, 0, HiddenItems.Count - 1)] : null;
                 OnPropertyChanged(nameof(HiddenEntryCount));
 
@@ -719,6 +770,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void LoadHiddenItems()
         {
             HiddenItems.Clear();
+            DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.eventFiles });
+            _hiddenPlacements = HiddenItemTable.Placements();
 
             if (HgEngineProject.IsActive)
             {
@@ -726,6 +779,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
                 {
                     foreach (HgEngineHiddenItems.Entry e in entries)
                         HiddenItems.Add(new HiddenItemRowVM((ushort)e.ItemId, (ushort)e.Quantity, (ushort)e.Index, _rawItemNames));
+                    PlaceHiddenRows();
                 }
                 else
                 {
@@ -749,6 +803,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
             foreach (HiddenItemTable.Entry e in HiddenItemTable.Read(tableLen))
                 HiddenItems.Add(new HiddenItemRowVM(e.Item, e.Quantity, e.Script, _rawItemNames) { Range = e.Range, Padding = e.Padding });
+            PlaceHiddenRows();
 
             if (HiddenItems.Count > 0) SelectedHiddenItem = HiddenItems[0];
             OnPropertyChanged(nameof(HiddenEntryCount));
@@ -760,7 +815,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.eventFiles });
             List<int> files = new List<int>();
-            int script = HIDDEN_SCRIPT_BASE + index;
+            int script = HiddenItemTable.ScriptBase + index;
             int fileCount = Filesystem.GetEventFileCount();
             for (int i = 0; i < fileCount; i++)
                 if (new EventFile(i).spawnables.Any(sp => sp.scriptNumber == script)) files.Add(i);
@@ -778,10 +833,12 @@ namespace DSPRE.Avalonia.ViewModels.Items
         {
             if (!HgEngineProject.IsActive && HiddenItems.Count >= _hiddenMaxCapacity) return;
             HashSet<ushort> used = new HashSet<ushort>(HiddenItems.Select(h => h.ScriptID));
-            ushort sid = 95;
-            while (used.Contains(sid) && sid < 256) sid++;
+            // DP and Pt take the lowest free script, whose flag is one the game already sets aside.
+            ushort sid = ShowHiddenReuseNote ? (ushort)0 : (ushort)95;
+            while (used.Contains(sid) && sid < HiddenScriptMax) sid++;
             HiddenItemRowVM entry = new HiddenItemRowVM(0, 1, sid, _rawItemNames);
             HiddenItems.Add(entry);
+            PlaceHiddenRow(entry);
             SelectedHiddenItem = entry;
             SetHiddenDirty();
             OnPropertyChanged(nameof(HiddenEntryCount));

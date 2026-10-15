@@ -190,10 +190,13 @@
       </TabItem>
 
       <!-- ── Hidden Items tab ──────────────────────────────────────────── -->
-      <TabItem Header="Hidden items" IsVisible="{Binding ShowHiddenItemsTab}">
-        <Grid ColumnDefinitions="220,8,*" Margin="4">
+      <TabItem x:Name="HiddenTab" Header="Hidden items" IsVisible="{Binding ShowHiddenItemsTab}">
+        <Grid ColumnDefinitions="300,8,*" Margin="4">
           <!-- Left: list -->
           <DockPanel Grid.Column="0">
+            <TextBlock DockPanel.Dock="Bottom" Text="Add reuses a removed entry's script and its found flag."
+                       IsVisible="{Binding ShowHiddenReuseNote}" TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0"
+                       Foreground="{DynamicResource Editor.Subtle}"/>
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0">
               <Button Content="Add" controls:Icon.Key="addIcon"    Click="HiddenAdd_Click"    MinWidth="70"/>
               <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="HiddenRemove_Click" MinWidth="70"
@@ -205,7 +208,14 @@
                      SelectedItem="{Binding SelectedHiddenItem}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:HiddenItemRowVM">
-                  <TextBlock Text="{Binding Display}" FontSize="12" TextWrapping="Wrap"/>
+                  <DockPanel>
+                    <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,6,0" VerticalAlignment="Center"
+                           Source="{Binding ItemID, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                    <StackPanel>
+                      <TextBlock Text="{Binding Display}" FontSize="12" TextWrapping="Wrap"/>
+                      <TextBlock Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+                    </StackPanel>
+                  </DockPanel>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
@@ -217,9 +227,13 @@
             <StackPanel Spacing="10">
               <StackPanel Spacing="4">
                 <TextBlock Text="Item" FontSize="12"/>
-                <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}"
-                          SelectedIndex="{Binding SelectedItemID}"
-                          HorizontalAlignment="Stretch"/>
+                <DockPanel>
+                  <Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,6,0"
+                         Source="{Binding SelectedItemID, Converter={x:Static controls:GameIconConverter.Item}}"/>
+                  <controls:FusionAutoCompleteBox controls:EditorLink.To="Item" ItemsSource="{Binding ItemNames}"
+                            SelectedIndex="{Binding SelectedItemID}"
+                            HorizontalAlignment="Stretch"/>
+                </DockPanel>
               </StackPanel>
               <Grid ColumnDefinitions="*,12,*">
                 <StackPanel Grid.Column="0" Spacing="4">
@@ -230,7 +244,7 @@
                 <StackPanel Grid.Column="2" Spacing="4">
                   <TextBlock Text="Script ID" FontSize="12"/>
                   <NumericUpDown Value="{Binding SelectedScriptID}"
-                                 Minimum="0" Maximum="255" FormatString="0"/>
+                                 Minimum="0" Maximum="{Binding HiddenScriptMax}" FormatString="0"/>
                 </StackPanel>
               </Grid>
               <StackPanel Orientation="Horizontal" Spacing="8">
@@ -238,6 +252,8 @@
                            FontStyle="Italic" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
                 <Button Content="Go to script" controls:Icon.Key="goto" Click="GoToHiddenScript_Click"
                         IsVisible="{Binding HiddenItemSelected}"/>
+                <Button Content="Go to event" controls:Icon.Key="goto" Click="GoToHiddenEvent_Click"
+                        IsVisible="{Binding CanGoToHiddenEvent}"/>
               </StackPanel>
             </StackPanel>
           </Border>
@@ -259,38 +275,38 @@
 
               <TextBlock Text="Default" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
               <UniformGrid Columns="4" DataContext="{Binding RockSmashDefaultTable}" x:DataType="vm:RockSmashItemSlotsRow">
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item3}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item4}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item5}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item6}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item7}" AllowsNone="False" FontSize="11" Margin="1"/>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item0, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item1, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item2, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item3, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item3}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item4, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item4}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item5, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item5}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item6, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item6}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item7, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item7}" AllowsNone="False" FontSize="11"/></DockPanel>
               </UniformGrid>
 
               <TextBlock Text="Ruins of Alph" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
               <UniformGrid Columns="4" DataContext="{Binding RockSmashRuinsOfAlphTable}" x:DataType="vm:RockSmashItemSlotsRow">
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item3}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item4}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item5}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item6}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item7}" AllowsNone="False" FontSize="11" Margin="1"/>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item0, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item1, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item2, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item3, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item3}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item4, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item4}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item5, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item5}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item6, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item6}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item7, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item7}" AllowsNone="False" FontSize="11"/></DockPanel>
               </UniformGrid>
 
               <TextBlock Text="Cliff cave" FontSize="11" FontWeight="SemiBold" Margin="0,4,0,0"/>
               <UniformGrid Columns="4" DataContext="{Binding RockSmashCliffCaveTable}" x:DataType="vm:RockSmashItemSlotsRow">
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item3}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item4}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item5}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item6}" AllowsNone="False" FontSize="11" Margin="1"/>
-                <controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item7}" AllowsNone="False" FontSize="11" Margin="1"/>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item0, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item0}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item1, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item1}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item2, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item2}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item3, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item3}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item4, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item4}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item5, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item5}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item6, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item6}" AllowsNone="False" FontSize="11"/></DockPanel>
+                <DockPanel Margin="1"><Image DockPanel.Dock="Left" Width="32" Height="32" Margin="0,0,4,0" Source="{Binding Item7, Converter={x:Static controls:GameIconConverter.Item}}"/><controls:FusionAutoCompleteBox ItemsSource="{Binding ItemNames}" SelectedIndex="{Binding Item7}" AllowsNone="False" FontSize="11"/></DockPanel>
               </UniformGrid>
             </StackPanel>
           </Border>

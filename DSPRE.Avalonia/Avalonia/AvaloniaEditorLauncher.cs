@@ -250,6 +250,26 @@ namespace DSPRE.Avalonia
             new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames(), HeaderLabels.Friendly())).ShowManaged();
         }
 
+        /// <summary>Opens the item tables on the hidden item a map event's script picks up.</summary>
+        public static void OpenItemTableEditorAtHiddenItem(int script)
+        {
+            if (Refused("ItemTableEditorView")) return;
+            ItemTableEditorView view = (global::Avalonia.Application.Current?.ApplicationLifetime
+                    as global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Windows
+                .OfType<ItemTableEditorView>().FirstOrDefault();
+            if (view == null)
+            {
+                view = new ItemTableEditorView(new ItemTableEditorViewModel(GetItemNames(), HeaderLabels.Friendly()));
+                view.ShowManaged();
+            }
+            else
+            {
+                if (view.WindowState == global::Avalonia.Controls.WindowState.Minimized) view.WindowState = global::Avalonia.Controls.WindowState.Normal;
+                view.Activate();
+            }
+            view.ShowHiddenItem(script);
+        }
+
         public static void OpenMartEditor()
         {
             if (Refused("MartEditorView")) return;
@@ -1087,6 +1107,16 @@ namespace DSPRE.Avalonia
             if (!IsRomLoaded) return;
             if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.GoToOverworld(eventFileId, owIndex))) return;
             EventEditorViewModel model = new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialOverworldIndex = owIndex };
+            EditorHostWindow window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
+            window.Closed += (_, _) => model.DetachSaves();
+            window.ShowManaged();
+        }
+
+        public static void OpenEventEditorWithSpawnable(int eventFileId, int spawnIndex)
+        {
+            if (!IsRomLoaded) return;
+            if (BringForward<EventEditorView, EventEditorViewModel>(vm => vm.GoToSpawnable(eventFileId, spawnIndex))) return;
+            EventEditorViewModel model = new EventEditorViewModel(true) { InitialIndex = eventFileId, InitialSpawnableIndex = spawnIndex };
             EditorHostWindow window = new EditorHostWindow("Event editor", new EventEditorView(model), 1200, 720);
             window.Closed += (_, _) => model.DetachSaves();
             window.ShowManaged();

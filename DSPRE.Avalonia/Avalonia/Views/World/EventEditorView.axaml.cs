@@ -422,6 +422,7 @@ namespace DSPRE.Avalonia.Views.World
         private void GoToOwScript_Click(object sender, RoutedEventArgs e) => VM?.GoToOverworldScript();
         private void GoToTrScript_Click(object sender, RoutedEventArgs e) => VM?.GoToTriggerScript();
         private void GoToSpScript_Click(object sender, RoutedEventArgs e) => VM?.GoToSpawnableScript();
+        private void OpenHiddenItems_Click(object sender, RoutedEventArgs e) => VM?.OpenHiddenItemTable();
 
         private void AddOw_Click(object sender, RoutedEventArgs e) => VM?.AddOverworld();
         private void RemoveOw_Click(object sender, RoutedEventArgs e) => VM?.RemoveOverworld();

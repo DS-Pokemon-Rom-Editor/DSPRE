@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia
                 S("tab:Pickup Table>name:CommonGrid", "Common items", "The nine common items for each level range. Pick an item in any cell."),
                 S("tab:Pickup Table>name:DivisorBox", "How often", "Pickup happens on roughly one battle in this many."),
                 S("tab:Rare Pickup Items>name:RareGrid", "Rare items", "The two rare items for each level range."),
-                S("tab:Hidden Items>list", "Hidden items", "Each hidden item with its amount and script number. Add or Remove below the list."),
+                S("tab:Hidden Items>list", "Hidden items", "Each hidden item with its amount, script number and where it is placed. Add or Remove below the list."),
                 S("tab:Hidden Items>name:HiddenEditPanel", "Setting one up", "Pick the item, amount and script number. A hidden item on the map uses the number shown underneath."),
                 S("tab:Rock Smash>name:RockSmashGrid", "Rock Smash odds", "For each header, the chance a smashed rock gives an item, and which drop table it uses."),
                 S("tab:Rock Smash>name:RockSmashTables", "Drop tables", "The eight items in each drop table, each slot with its own fixed chance."),

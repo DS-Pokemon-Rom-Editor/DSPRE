@@ -770,11 +770,11 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (Set(ref _spScript, value) && !_suppress && _spawn != null)
                 {
                     _spawn.scriptNumber = (ushort)value; Dirty();
-                    OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible));
+                    OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
                 }
             }
         }
-        public decimal SpType { get => _spType; set { if (Set(ref _spType, value) && !_suppress && _spawn != null) { _spawn.type = (ushort)value; Dirty(); } } }
+        public decimal SpType { get => _spType; set { if (Set(ref _spType, value) && !_suppress && _spawn != null) { _spawn.type = (ushort)value; Dirty(); RaiseSpHidden(); } } }
         public decimal SpDir { get => _spDir; set { if (Set(ref _spDir, value) && !_suppress && _spawn != null) { _spawn.dir = (ushort)value; Dirty(); } } }
         public IReadOnlyList<string> SpawnableTypeNames => DSPRE.Resources.PokeDatabase.EventEditor.Spawnables.typesArray;
         public IReadOnlyList<string> SpawnableDirectionNames => DSPRE.Resources.PokeDatabase.EventEditor.Spawnables.orientationsArray;
@@ -785,6 +785,56 @@ namespace DSPRE.Avalonia.ViewModels.World
             set { if (value >= 0 && value < _availableScriptIds.Count) SpScript = _availableScriptIds[value]; }
         }
         public bool SpScriptIndexOutOfRange => _spawn != null && SpScriptIndex < 0;
+
+        // A hidden-item spawnable runs 8000 plus an entry's script, so it picks the entry instead of a raw number.
+        private readonly List<int> _hiddenScripts = new List<int>(), _hiddenItemIds = new List<int>();
+        public ObservableCollection<string> HiddenItemEntries { get; } = new ObservableCollection<string>();
+
+        private void PopulateHiddenItemEntries()
+        {
+            HiddenItemEntries.Clear();
+            _hiddenScripts.Clear();
+            _hiddenItemIds.Clear();
+            if (IsHGE || !RomInfo.IsHiddenItemsEditorAvailable()) return;
+            try
+            {
+                int count = HiddenItemTable.Count();
+                if (count < 0) return;
+                string[] names = RomInfo.GetItemNames();
+                foreach (HiddenItemTable.Entry e in HiddenItemTable.Read(count).OrderBy(e => e.Script))
+                {
+                    _hiddenScripts.Add(e.Script);
+                    _hiddenItemIds.Add(e.Item);
+                    HiddenItemEntries.Add($"Script {e.Script}: {(e.Item < names.Length ? names[e.Item] : $"Item {e.Item}")} x{e.Quantity}");
+                }
+            }
+            catch (Exception ex) { AppLogger.Error("PopulateHiddenItemEntries: " + ex.Message); }
+        }
+
+        public bool SpIsHiddenItem => _spawn != null && (int)_spType == Spawnable.TYPE_HIDDENITEM && _hiddenScripts.Count > 0;
+
+        public int SpHiddenIndex
+        {
+            get => _hiddenScripts.IndexOf((int)_spScript - HiddenItemTable.ScriptBase);
+            set { if (value >= 0 && value < _hiddenScripts.Count) SpScript = HiddenItemTable.ScriptBase + _hiddenScripts[value]; }
+        }
+
+        public bool SpHiddenPickerVisible => SpIsHiddenItem && SpHiddenIndex >= 0;
+        public int SpHiddenItemId => SpHiddenIndex >= 0 ? _hiddenItemIds[SpHiddenIndex] : 0;
+        // The raw script stays reachable when the number matches no entry.
+        public bool SpScriptFieldsVisible => !SpHiddenPickerVisible;
+
+        private void RaiseSpHidden()
+        {
+            OnPropertyChanged(nameof(SpIsHiddenItem)); OnPropertyChanged(nameof(SpHiddenIndex));
+            OnPropertyChanged(nameof(SpHiddenPickerVisible)); OnPropertyChanged(nameof(SpScriptFieldsVisible));
+            OnPropertyChanged(nameof(SpHiddenItemId));
+        }
+
+        public void OpenHiddenItemTable()
+        {
+            if (SpHiddenIndex >= 0) AvaloniaEditorLauncher.OpenItemTableEditorAtHiddenItem(_hiddenScripts[SpHiddenIndex]);
+        }
 
         // ── Overworld fields ────────────────────────────────────────────────────────
         private decimal _owId, _owSprite, _owMove, _owType, _owFlag, _owScript, _owOrient, _owSight, _owXr, _owYr;
@@ -884,6 +934,13 @@ namespace DSPRE.Avalonia.ViewModels.World
             SelectedEventIndex = eventFile;
             // The switch waits on a prompt when this file has unsaved edits; only pick the overworld once it's loaded.
             if (_selectedIndex == eventFile && owIndex >= 0 && owIndex < (_file?.overworlds.Count ?? 0)) SelectedOverworldIndex = owIndex;
+        }
+
+        /// <summary>Shows one spawnable of one event file, asked for from another editor.</summary>
+        public void GoToSpawnable(int eventFile, int spawnIndex)
+        {
+            SelectedEventIndex = eventFile;
+            if (_selectedIndex == eventFile && spawnIndex >= 0 && spawnIndex < (_file?.spawnables.Count ?? 0)) SelectEvent(3, spawnIndex);
         }
 
         public void GoToOverworldScript() { if (_ow != null) GoToScript(_ow.scriptNumber); }
@@ -1136,6 +1193,7 @@ namespace DSPRE.Avalonia.ViewModels.World
         /// (e.g. Research Helper's Overworld/Trainer Watcher) jump straight to a specific overworld
         /// entry instead of just the containing event file.</summary>
         public int InitialOverworldIndex { get; set; } = -1;
+        public int InitialSpawnableIndex { get; set; } = -1;
 
         // ── 3D marker visibility toggles (per event type) ────────────────────────────────
         private bool _showOw = true, _showWarp = true, _showTrig = true, _showSpawn = true, _showGrid;
@@ -1243,6 +1301,8 @@ namespace DSPRE.Avalonia.ViewModels.World
                 if (count > 0) SelectedEventIndex = Math.Min(Math.Max(0, InitialIndex), count - 1);
                 if (InitialOverworldIndex >= 0 && InitialOverworldIndex < _file?.overworlds.Count)
                     SelectedOverworldIndex = InitialOverworldIndex;
+                if (InitialSpawnableIndex >= 0 && InitialSpawnableIndex < _file?.spawnables.Count)
+                    SelectEvent(3, InitialSpawnableIndex);
             }
             catch (Exception ex)
             {
@@ -1255,6 +1315,8 @@ namespace DSPRE.Avalonia.ViewModels.World
         {
             try
             {
+                // Read on every file load, so edits saved in the item tables show up here.
+                PopulateHiddenItemEntries();
                 _file = new EventFile(index);
                 ClearSelection();
                 RefreshLists();
@@ -1299,7 +1361,7 @@ namespace DSPRE.Avalonia.ViewModels.World
             LoadPosition(_spawn);
             SpScript = _spawn.scriptNumber; SpType = _spawn.type; SpDir = _spawn.dir;
             _suppress = false;
-            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible));
+            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
             RefreshMarkers();
         }
 
@@ -1614,7 +1676,7 @@ namespace DSPRE.Avalonia.ViewModels.World
                 catch (Exception ex) { AppLogger.Error("PopulateAvailableScripts: " + ex.Message); }
             }
             OnPropertyChanged(nameof(TrScriptIndex)); OnPropertyChanged(nameof(TrScriptIndexOutOfRange)); OnPropertyChanged(nameof(TrScriptCommonInfo)); OnPropertyChanged(nameof(TrScriptHasCommonInfo)); OnPropertyChanged(nameof(TrScriptGenericWarningVisible));
-            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible));
+            OnPropertyChanged(nameof(SpScriptIndex)); OnPropertyChanged(nameof(SpScriptIndexOutOfRange)); OnPropertyChanged(nameof(SpScriptCommonInfo)); OnPropertyChanged(nameof(SpScriptHasCommonInfo)); OnPropertyChanged(nameof(SpScriptGenericWarningVisible)); RaiseSpHidden();
             OnPropertyChanged(nameof(OwScriptIndex)); OnPropertyChanged(nameof(OwScriptIndexOutOfRange));
             OnPropertyChanged(nameof(OwScriptCommonInfo));
             OnPropertyChanged(nameof(OwScriptHasCommonInfo));

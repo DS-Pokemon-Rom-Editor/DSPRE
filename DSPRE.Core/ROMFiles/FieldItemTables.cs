@@ -48,9 +48,9 @@ namespace DSPRE.ROMFiles
     }
 
     /// <summary>
-    /// HeartGold's hidden item table in ARM9. A record is item (u16), quantity (u8), search range (u8), two padding
-    /// bytes and the script (u16). The table has no terminator: every loop over it compares against a count held in
-    /// a Thumb cmp, so the smallest of those counts is the real length.
+    /// The hidden item table in ARM9. A record is item (u16), quantity (u8), search range (u8), two padding bytes and
+    /// the script (u16). The table has no terminator: every loop over it compares against a count, held in a Thumb cmp
+    /// (DP, HGSS) or a literal-pool word (Platinum, 257), so the smallest of those counts is the real length.
     /// </summary>
     public static class HiddenItemTable
     {
@@ -68,14 +68,20 @@ namespace DSPRE.ROMFiles
         /// <summary>The count every loop agrees on, or -1 when a count site is not the expected instruction.</summary>
         public static int Count()
         {
-            uint[] sites = RomInfo.hiddenItemCountSites;
-            if (sites.Length == 0) return -1;
+            uint[] sites = RomInfo.hiddenItemCountSites, literals = RomInfo.hiddenItemCountLiterals;
+            if (sites.Length == 0 && literals.Length == 0) return -1;
             int count = int.MaxValue;
             foreach (uint site in sites)
             {
                 byte[] ins = ARM9.ReadBytes(site, 2);
                 if ((ins[1] & 0xF8) != 0x28) return -1;   // Thumb cmp rN, #imm8
                 count = Math.Min(count, ins[0]);
+            }
+            foreach (uint literal in literals)
+            {
+                uint value = BitConverter.ToUInt32(ARM9.ReadBytes(literal, 4), 0);
+                if (value > RomInfo.hiddenItemTableCapacity) return -1;
+                count = Math.Min(count, (int)value);
             }
             return count;
         }
@@ -116,6 +122,45 @@ namespace DSPRE.ROMFiles
             ARM9.WriteBytes(table, RomInfo.hiddenItemTableOffset);
             foreach (uint site in RomInfo.hiddenItemCountSites)
                 ARM9.WriteBytes(new[] { (byte)entries.Count }, site);
+            foreach (uint literal in RomInfo.hiddenItemCountLiterals)
+                ARM9.WriteBytes(BitConverter.GetBytes((uint)entries.Count), literal);
+        }
+
+        /// <summary>Hidden-item map events run script <see cref="ScriptBase"/> plus the entry's script field; the
+        /// window ends where the Safari Game scripts start (8800).</summary>
+        public const int ScriptBase = 8000, ScriptWindow = 800;
+
+        /// <summary>A map event that picks up a hidden item: its event file, spawnable, first header and tile.</summary>
+        public sealed record Placement(int EventFile, int Spawnable, int Header, int X, int Y);
+
+        /// <summary>Every hidden-item event in the project, by the entry script it runs.</summary>
+        public static Dictionary<int, List<Placement>> Placements()
+        {
+            Dictionary<int, int> headerOfEvents = new Dictionary<int, int>();
+            int headers = RomInfo.GetHeaderCount();
+            for (int h = 0; h < headers; h++)
+            {
+                MapHeader header;
+                try { header = MapHeader.GetMapHeader((ushort)h); } catch { continue; }
+                if (header != null) headerOfEvents.TryAdd(header.eventFileID, h);
+            }
+
+            Dictionary<int, List<Placement>> found = new Dictionary<int, List<Placement>>();
+            int files = Filesystem.GetEventFileCount();
+            for (int f = 0; f < files; f++)
+            {
+                EventFile events;
+                try { events = new EventFile(f); } catch { continue; }
+                for (int i = 0; i < events.spawnables.Count; i++)
+                {
+                    Spawnable sp = events.spawnables[i];
+                    int script = sp.scriptNumber - ScriptBase;
+                    if (script < 0 || script >= ScriptWindow) continue;
+                    if (!found.TryGetValue(script, out List<Placement> list)) found[script] = list = new List<Placement>();
+                    list.Add(new Placement(f, i, headerOfEvents.TryGetValue(f, out int hd) ? hd : -1, sp.xMapPosition, sp.yMapPosition));
+                }
+            }
+            return found;
         }
     }
 
