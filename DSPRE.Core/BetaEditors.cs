@@ -5,190 +5,116 @@ using System.Linq;
 namespace DSPRE
 {
     /// <summary>
-    /// Which editors are still being tried out. Anything listed here is switched off unless DSPRE is
-    /// started with <c>--beta</c>, so a normal run only offers what is settled.
-    ///
-    /// This is the same shape as the hg-engine gating: the window's own CanUse property asks here as
-    /// well as asking whatever else it depends on, and the menu leaves it out.
+    /// Editors still being tried out. They stay hidden unless DSPRE starts with <c>--beta</c>; a debug build
+    /// always shows them.
     /// </summary>
     public static class BetaEditors
     {
-        /// <summary>The switch that turns them on.</summary>
-        public const string Switch = "--beta";
+        private const string Switch = "--beta";
 
-        /// <summary>
-        /// Whether the editors being tried out are available in this run. A debug build always has
-        /// them, since that is a build made for working on DSPRE.
-        /// </summary>
         public static bool Enabled { get; private set; }
 #if DEBUG
             = true;
 #endif
 
-        /// <summary>
-        /// Every editor still in beta, by the name of its window class, with what to call it in a
-        /// message. The window class is the key because there is exactly one per editor and it is easy
-        /// to search for; adding or removing a line here is the whole job.
-        /// </summary>
-        private static readonly Dictionary<string, string> Testing =
-            new(StringComparer.OrdinalIgnoreCase)
-            {
-                // Only editors that are genuinely new in 3.0 belong here. Anything that shipped in
-                // 2.x is already in people's hands, so gating it takes working features away.
-                ["BattleScreenEditorView"] = "Battle Screen editor",
-                ["FontEditorView"] = "Font editor",
-                ["TilesetBuilderView"] = "Picture to Background",
-                ["BattleSceneBrowserView"] = "Battle scenes",
-                ["BattleScriptEditorView"] = "Battle script editor",
-                ["AudioEditorView"] = "Audio editor",
-                ["BannerEditorView"] = "Game icon and banner editor",
-                ["TitleScreenEditorView"] = "Title Screen editor",
-                ["DungeonCutinEditorView"] = "Dungeon Cut-in editor",
-                ["TrainerCardEditorView"] = "Trainer Card editor",
-                ["BottomScreenEditorView"] = "Bottom Screen editor",
-                ["CellAnimationEditorView"] = "Cell Animation editor",
-                ["BallCapsuleEditorView"] = "Ball Capsule editor",
-                ["ParticleEditorView"] = "Particle editor",
-                ["ParticleLibraryView"] = "Particle library",
-                ["ProjectChecksView"] = "Project checks",
-                ["HgEngineFormEditorView"] = "Form editor",
-                ["AbilityFlagsEditorView"] = "Ability Flags editor",
-                ["MoveBackgroundEditorView"] = "Move Backgrounds editor",
-                ["HgeRomReviewView"] = "hg-engine ROM review",
-                ["DistortionWorldView"] = "Distortion World editor",
-                ["MartEditorView"] = "Mart editor",
-                ["PokegearPhoneBookView"] = "Pokégear Phone Book",
-                ["WildHeldItemOddsView"] = "Wild held items",
-                ["GrowthCurveEditorView"] = "Growth curve editor",
-                ["BreedingItemsView"] = "Breeding items",
-                ["BerryDataEditorView"] = "Berry data editor",
-                ["TypeChartEditorView"] = "Type chart editor",
-                ["MoveTutorEditorView"] = "Move tutor editor",
-                ["UndergroundMiningView"] = "Underground mining",
-                ["BpShopEditorView"] = "Battle Point shop editor",
-                ["FriendshipChangesView"] = "Friendship changes",
-                ["EncounterSlotOddsView"] = "Encounter slot odds",
-                ["VsIntroEditorView"] = "VS Intro Editor",
-                ["WildIntroEditorView"] = "Wild Pokémon Intro Editor",
-                ["PokedexGraphicsEditorView"] = "Pokédex graphics editor",
-            };
+        /// <summary>A gated editor: its menu label and the menu it sits in.</summary>
+        private sealed record Editor(string Name, string Menu);
 
-        /// <summary>Reads the switch off the command line. Call this once, before any window opens.</summary>
+        // Keyed by window class. Only editors new in 3.0 belong here: gating one that shipped in 2.x takes a
+        // working feature away.
+        private static readonly Dictionary<string, Editor> Testing = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["AbilityFlagsEditorView"] = new("Ability flags (hg-engine)", "Pokémon"),
+            ["AudioEditorView"] = new("Audio editor", "Audio"),
+            ["BallCapsuleEditorView"] = new("Ball Capsules", "Graphics"),
+            ["BannerEditorView"] = new("Game icon & banner", "Graphics"),
+            ["BattleSceneBrowserView"] = new("Battle scenes", "Graphics"),
+            ["BattleScreenEditorView"] = new("Battle screen", "Graphics"),
+            ["BattleScriptEditorView"] = new("Move animations & battle scripts", "Pokémon"),
+            ["BerryDataEditorView"] = new("Berry data", "Items"),
+            ["BottomScreenEditorView"] = new("Bottom screen", "Graphics"),
+            ["BpShopEditorView"] = new("Battle Point shop", "Items"),
+            ["BreedingItemsView"] = new("Breeding items", "Pokémon"),
+            ["CellAnimationEditorView"] = new("Cell animations", "Graphics"),
+            ["DistortionWorldView"] = new("Distortion World", "World"),
+            ["DungeonCutinEditorView"] = new("Dungeon cutin editor", "Graphics"),
+            ["EncounterSlotOddsView"] = new("Encounter slot odds", "Pokémon"),
+            ["FontEditorView"] = new("Font editor", "Text"),
+            ["FriendshipChangesView"] = new("Friendship changes", "Pokémon"),
+            ["GrowthCurveEditorView"] = new("Growth curves", "Pokémon"),
+            ["HgEngineFormEditorView"] = new("Form editor (hg-engine)", "Pokémon"),
+            ["HgeRomReviewView"] = new("hg-engine ROM review", "File"),
+            ["MartEditorView"] = new("Mart editor", "Items"),
+            ["MoveBackgroundEditorView"] = new("Move backgrounds", "Pokémon"),
+            ["MoveTutorEditorView"] = new("Move tutors", "Pokémon"),
+            ["ParticleEditorView"] = new("Particle editor", "Graphics"),
+            ["ParticleLibraryView"] = new("Particles", "Graphics"),
+            ["PokedexGraphicsEditorView"] = new("Pokédex graphics", "Graphics"),
+            ["PokegearPhoneBookView"] = new("Pokégear phone book", "Trainers"),
+            ["ProjectChecksView"] = new("Validation & Where-Used", "Tools"),
+            ["TilesetBuilderView"] = new("Picture to background", "Graphics"),
+            ["TitleScreenEditorView"] = new("Title screen editor", "Graphics"),
+            ["TrainerCardEditorView"] = new("Trainer card editor", "Graphics"),
+            ["TypeChartEditorView"] = new("Type chart", "Pokémon"),
+            ["UndergroundMiningView"] = new("Underground mining", "Items"),
+            ["VsIntroEditorView"] = new("VS intro editor", "Trainers"),
+            ["WildHeldItemOddsView"] = new("Wild held items", "Pokémon"),
+            ["WildIntroEditorView"] = new("Wild Pokémon intro editor", "Pokémon"),
+        };
+
+        /// <summary>Reads the switch off the command line, before any window opens.</summary>
         public static void ReadFrom(IEnumerable<string> args)
         {
-#if DEBUG
-            Enabled = true;
-#else
-            Enabled = args != null && args.Any(
-                a => string.Equals(a, Switch, StringComparison.OrdinalIgnoreCase));
+#if !DEBUG
+            Enabled = args != null && args.Any(a => string.Equals(a, Switch, StringComparison.OrdinalIgnoreCase));
 #endif
         }
 
-        /// <summary>Turns them on or off from code. Only for tests and for the settings screen.</summary>
-        public static void Set(bool on) => Enabled = on;
-
-        /// <summary>
-        /// Editors let through because the ROM that is open needs them, whatever the switch says.
-        ///
-        /// An editor being tried out is still the only way to put something right, and DSPRE tells
-        /// people to go and use it. Naming a tool in a warning and then greying it out leaves somebody
-        /// with a broken ROM and nothing to do about it, so a fault that is actually there unlocks the
-        /// one editor that mends it and nothing else.
-        /// </summary>
+        // A warning that names a gated editor as the fix would otherwise point at a greyed-out menu, so a fault the
+        // open ROM really has lets that one editor through until another ROM is loaded.
         private static readonly HashSet<string> Needed = new(StringComparer.OrdinalIgnoreCase);
 
-        /// <summary>Lets one editor through for as long as this ROM is open, because it is needed.</summary>
         public static void AllowBecauseNeeded(string window)
         {
             if (!string.IsNullOrEmpty(window)) Needed.Add(window);
         }
 
-        /// <summary>Forgets what was let through, which a different ROM has to decide again.</summary>
         public static void ForgetWhatWasNeeded() => Needed.Clear();
 
-        /// <summary>Whether an editor was let through because the ROM that is open needs it.</summary>
-        public static bool IsNeeded(string window) =>
-            !string.IsNullOrEmpty(window) && Needed.Contains(window);
+        public static bool Allows(string window) =>
+            Enabled || string.IsNullOrEmpty(window) || !Testing.ContainsKey(window) || Needed.Contains(window);
 
-        /// <summary>Whether this editor is one of the ones still being tried out.</summary>
-        public static bool IsBeta(string window) =>
-            !string.IsNullOrEmpty(window) && Testing.ContainsKey(window);
+        /// <summary>The message for a greyed-out editor, or null when it is allowed.</summary>
+        public static string WhyNot(string window) => Allows(window) ? null : $"{Named(window)} is not available yet.";
 
-        /// <summary>Whether this editor may be opened at all in this run.</summary>
-        public static bool Allows(string window) => Enabled || !IsBeta(window) || IsNeeded(window);
+        public static string Named(string window) => Testing.TryGetValue(window ?? "", out Editor e) ? e.Name : window;
 
-        /// <summary>What to say when it is greyed out, or null when it is not.</summary>
-        public static string WhyNot(string window)
-        {
-            if (Allows(window)) return null;
-            return $"{Named(window)} is not available yet.";
-        }
-
-        /// <summary>What this editor is called in a message.</summary>
-        public static string Named(string window) =>
-            Testing.TryGetValue(window ?? "", out string name) ? name : window;
-
-        /// <summary>Every editor being tried out, for anything that wants to list them.</summary>
-        public static IReadOnlyCollection<string> All => Testing.Keys;
-
-        /// <summary>How many there are, for the line the main window shows when they are switched on.</summary>
         public static int Count => Testing.Count;
 
-        /// <summary>One unfinished thing inside an editor that is otherwise finished.</summary>
+        /// <summary>An unfinished part of an otherwise finished editor; its controls check <see cref="Enabled"/>.</summary>
         public sealed class BetaFeature
         {
             public string Name { get; init; }
             public string Where { get; init; }
         }
 
-        /// <summary>
-        /// The parts of a finished editor that are still being tried out. These cannot be gated by
-        /// window name, so their controls check <see cref="Enabled"/> instead. Listing them
-        /// here is what lets the welcome guide and the tour say what is switched on.
-        /// </summary>
+        /// <summary>Listed so the welcome window and the tour can say what the switch turns on.</summary>
         public static IReadOnlyList<BetaFeature> Features { get; } = new List<BetaFeature>
         {
-            new() { Name = "Walking the map", Where = "Event Editor" },
-            new() { Name = "The animated preview", Where = "Event Editor and Map Editor" },
-            new() { Name = "The tile boundary overlay", Where = "Event Editor and Map Editor" },
-            new() { Name = "Bug Contest opponents", Where = "Special Encounters Editor" },
-            new() { Name = "Pokéathlon stats", Where = "Pokémon Editor" },
-            new() { Name = "Swarms", Where = "Special Encounters Editor" },
-            new() { Name = "Roamers", Where = "Special Encounters Editor" },
+            new() { Name = "Walking the map", Where = "Event editor" },
+            new() { Name = "The animated preview", Where = "Event editor and Map editor" },
+            new() { Name = "The tile boundary overlay", Where = "Event editor and Map editor" },
+            new() { Name = "Bug Contest opponents", Where = "Special encounters editor" },
+            new() { Name = "Pokéathlon stats", Where = "Pokémon editor" },
+            new() { Name = "Swarms", Where = "Special encounters editor" },
+            new() { Name = "Roamers", Where = "Special encounters editor" },
         };
 
-        /// <summary>How the gated editors fall across the menus, for a short summary line.</summary>
-        public static IEnumerable<KeyValuePair<string, int>> CountByArea()
-        {
-            Dictionary<string, int> by = new Dictionary<string, int>();
-            foreach (string window in Testing.Keys)
-            {
-                string area = AreaOf(window);
-                by[area] = by.TryGetValue(area, out int n) ? n + 1 : 1;
-            }
-            List<KeyValuePair<string, int>> order = new List<KeyValuePair<string, int>>(by);
-            order.Sort((a, b) => b.Value != a.Value
-                ? b.Value.CompareTo(a.Value)
-                : string.Compare(a.Key, b.Key, StringComparison.Ordinal));
-            return order;
-        }
-
-        private static string AreaOf(string window)
-        {
-            if (window.StartsWith("Battle", StringComparison.Ordinal)) return "Battle";
-            if (window.StartsWith("HgEngine", StringComparison.Ordinal)) return "hg-engine";
-            if (window is "FontEditorView" or "TilesetBuilderView" or "BannerEditorView"
-                       or "TitleScreenEditorView" or "DungeonCutinEditorView"
-                       or "TrainerCardEditorView" or "TrainerSpriteEditorView"
-                       or "BottomScreenEditorView" or "CellAnimationEditorView"
-                       or "BallCapsuleEditorView" or "ParticleEditorView"
-                       or "ParticleLibraryView" or "PokedexGraphicsEditorView") return "Graphics";
-            if (window is "WildHeldItemOddsView" or "GrowthCurveEditorView" or "BreedingItemsView"
-                       or "TypeChartEditorView" or "MoveTutorEditorView" or "HgEngineFormEditorView"
-                       or "FriendshipChangesView" or "EncounterSlotOddsView" or "WildIntroEditorView") return "Pokémon";
-            if (window is "VsIntroEditorView") return "Trainers";
-            if (window is "BerryDataEditorView" or "UndergroundMiningView" or "BpShopEditorView" or "MartEditorView") return "Items";
-            return "Tools";
-        }
+        /// <summary>Gated editors per menu, most first, for the summary line.</summary>
+        public static IEnumerable<KeyValuePair<string, int>> CountByArea() =>
+            Testing.Values.GroupBy(e => e.Menu)
+                   .Select(g => new KeyValuePair<string, int>(g.Key, g.Count()))
+                   .OrderByDescending(p => p.Value)
+                   .ThenBy(p => p.Key, StringComparer.Ordinal);
     }
 }
