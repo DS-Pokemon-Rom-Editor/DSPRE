@@ -67,8 +67,8 @@ namespace DSPRE.Avalonia
                 S("tab:Trainers>list", "Tower trainers", "The trainers you can meet in the Battle Tower. Pick one, or add one with + New Trainer."),
                 S("tab:Trainers>name:TowerTrainerPanel", "Trainer details", "Their class, name and the three things they say."),
                 S("tab:Trainers>name:SetIdList", "Their Pokémon", "The sets this trainer draws a team from. Add one by number, remove one, or double-click one to open it."),
-                S("tab:Pokémon Sets>list", "Pokémon sets", "The shared pool of Pokémon the tower trainers use. Pick one, or add one with + New Set."),
-                S("tab:Pokémon Sets>name:SetPanel", "Set details", "Species, moves, nature, held item, form and which stats are maxed. Right-click a species, move or item to open it, or Ctrl+click."),
+                S("tab:Pokémon sets>list", "Pokémon sets", "The shared pool of Pokémon the tower trainers use. Pick one, or add one with + New Set."),
+                S("tab:Pokémon sets>name:SetPanel", "Set details", "Species, moves, nature, held item, form and which stats are maxed. Right-click a species, move or item to open it, or Ctrl+click."),
                 S("toolbar", "Files", "Export and Import move the open tab's data to and from a file, and Locate shows where it is kept."),
                 S("name:SaveButton", "Saving", "Save writes both tabs, and Discard drops your changes. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
         }
