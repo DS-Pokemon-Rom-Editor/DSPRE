@@ -19,6 +19,7 @@ namespace DSPRE.Avalonia.Views.Items
         }
 
         private void Export_Click(object sender, RoutedEventArgs e) => VM?.ExportToFile();
+        private async void Import_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.ImportFromFileAsync(this); }
 
         /// <summary>Hands this item's icon to the Graphics window. Items do not sit in the icon archive in
         /// item order; the game's own table says which drawing each one uses.</summary>

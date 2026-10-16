@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Platform.Storage;
 using DSPRE;
 using DSPRE.Avalonia;
 using DSPRE.Editors;
@@ -351,14 +352,25 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private int _naturalGiftPower;
         public int NaturalGiftPower { get => _naturalGiftPower; set { if (Set(ref _naturalGiftPower, value) && !_isLoading && _currentData != null) { _currentData.NaturalGiftPower = (byte)value; SetDataDirty(); } } }
 
+        public ObservableCollection<string> FlingEffectNames { get; } = new();
+        public ObservableCollection<string> PluckEffectNames { get; } = new();
+
+        /// <summary>"N: what it does", plus "N: does nothing" up to a value the game doesn't handle so it keeps a slot.</summary>
+        private static void CoverEffects(ObservableCollection<string> names, string[] known, int value)
+        {
+            int count = Math.Max(known.Length, value + 1);
+            while (names.Count > count) names.RemoveAt(names.Count - 1);
+            for (int i = names.Count; i < count; i++) names.Add($"{i}: {(i < known.Length ? known[i] : "does nothing")}");
+        }
+
         private int _flingEffect;
-        public int FlingEffect      { get => _flingEffect;      set { if (Set(ref _flingEffect,      value) && !_isLoading && _currentData != null) { _currentData.FlingEffect      = (byte)value; SetDataDirty(); } } }
+        public int FlingEffect      { get => _flingEffect;      set { if (value >= 0 && Set(ref _flingEffect, value) && !_isLoading && _currentData != null) { _currentData.FlingEffect = (byte)value; SetDataDirty(); } } }
 
         private int _flingPower;
         public int FlingPower       { get => _flingPower;       set { if (Set(ref _flingPower,       value) && !_isLoading && _currentData != null) { _currentData.FlingPower       = (byte)value; SetDataDirty(); } } }
 
         private int _pluckEffect;
-        public int PluckEffect      { get => _pluckEffect;      set { if (Set(ref _pluckEffect,      value) && !_isLoading && _currentData != null) { _currentData.PluckEffect      = (byte)value; SetDataDirty(); } } }
+        public int PluckEffect      { get => _pluckEffect;      set { if (value >= 0 && Set(ref _pluckEffect, value) && !_isLoading && _currentData != null) { _currentData.PluckEffect = (byte)value; SetDataDirty(); } } }
 
         // ── Functions ────────────────────────────────────────────────────────
         private int _fieldUseFuncIndex;
@@ -412,9 +424,56 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         // ── Party Params: Restore ───────────────────────────────────────────
         private bool _hpRestore;    public bool HpRestore    { get => _hpRestore;    set { if (Set(ref _hpRestore,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.HPRestore    = value; SetDataDirty(); } } }
-        private int  _hpRestoreParam; public int HpRestoreParam { get => _hpRestoreParam; set { if (Set(ref _hpRestoreParam, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.HPRestoreParam = (byte)value; SetDataDirty(); } } }
+        private int  _hpRestoreParam;
+        public int HpRestoreParam
+        {
+            get => _hpRestoreParam;
+            set
+            {
+                if (!Set(ref _hpRestoreParam, value)) return;
+                if (!_isLoading && _currentData != null) { _currentData.PartyUseParam.HPRestoreParam = (byte)value; SetDataDirty(); }
+                OnPropertyChanged(nameof(HpAmountMode)); OnPropertyChanged(nameof(HpAmountIsExact));
+            }
+        }
+
+        // The game reads HP amounts 255, 254 and 253 as full, half and a quarter, and PP 127 as full (item_use_pokemon.c).
+        private const int FullHp = 255, HalfHp = 254, QuarterHp = 253, FullPp = 127;
+        public string[] HpAmountModes { get; } = { "Full", "Half", "Quarter", "Exact" };
+        public string[] PpAmountModes { get; } = { "Full", "Exact" };
+
+        public int HpAmountMode
+        {
+            get => _hpRestoreParam switch { FullHp => 0, HalfHp => 1, QuarterHp => 2, _ => 3 };
+            set
+            {
+                if (value < 0 || value == HpAmountMode) return;
+                HpRestoreParam = value switch { 0 => FullHp, 1 => HalfHp, 2 => QuarterHp, _ => 20 };
+            }
+        }
+        public bool HpAmountIsExact => HpAmountMode == 3;
+
+        public int PpAmountMode
+        {
+            get => _ppRestoreParam == FullPp ? 0 : 1;
+            set
+            {
+                if (value < 0 || value == PpAmountMode) return;
+                PpRestoreParam = value == 0 ? FullPp : 10;
+            }
+        }
+        public bool PpAmountIsExact => PpAmountMode == 1;
         private bool _ppRestore;    public bool PpRestore    { get => _ppRestore;    set { if (Set(ref _ppRestore,    value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestore    = value; SetDataDirty(); } } }
-        private int  _ppRestoreParam; public int PpRestoreParam { get => _ppRestoreParam; set { if (Set(ref _ppRestoreParam, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestoreParam = (byte)value; SetDataDirty(); } } }
+        private int  _ppRestoreParam;
+        public int PpRestoreParam
+        {
+            get => _ppRestoreParam;
+            set
+            {
+                if (!Set(ref _ppRestoreParam, value)) return;
+                if (!_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestoreParam = (byte)value; SetDataDirty(); }
+                OnPropertyChanged(nameof(PpAmountMode)); OnPropertyChanged(nameof(PpAmountIsExact));
+            }
+        }
         private bool _ppUps;        public bool PpUps        { get => _ppUps;        set { if (Set(ref _ppUps,        value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPUps        = value; SetDataDirty(); } } }
         private bool _ppMax;        public bool PpMax        { get => _ppMax;        set { if (Set(ref _ppMax,        value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPMax        = value; SetDataDirty(); } } }
         private bool _ppRestoreAll; public bool PpRestoreAll { get => _ppRestoreAll; set { if (Set(ref _ppRestoreAll, value) && !_isLoading && _currentData != null) { _currentData.PartyUseParam.PPRestoreAll = value; SetDataDirty(); } } }
@@ -566,6 +625,41 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void ExportToFile()
         {
             _currentData?.SaveToFileExplorePath($"itemdata_{_itemDataId:D4}", showSuccessMessage: true);
+        }
+
+        /// <summary>Reads an exported item data file into the item on screen. Nothing is written until Save.</summary>
+        public async Task ImportFromFileAsync(Window owner)
+        {
+            if (_currentData == null) return;
+            string path = await DialogHelper.OpenFile(owner, "Import item data",
+                new[] { new FilePickerFileType("Gen IV item data") { Patterns = new[] { "*.bin" } } });
+            if (path == null) return;
+
+            byte[] bytes;
+            try { bytes = File.ReadAllBytes(path); }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                await DialogHelper.ShowError($"The file could not be read.\n{e.Message}", "Import item data", owner);
+                return;
+            }
+            // Retail members are 34 bytes and hg-engine's 36; either fits, at the length this item's member already has.
+            if (bytes.Length != ItemDataSize && bytes.Length != ItemData.RetailSize)
+            {
+                await DialogHelper.ShowError($"That file is {bytes.Length} bytes. Item data files are {ItemData.RetailSize} or {ItemDataSize} bytes.",
+                                             "Import item data", owner);
+                return;
+            }
+            Array.Resize(ref bytes, _currentData.ToByteArray().Length);
+
+            _isLoading = true;
+            try
+            {
+                _currentData = new ItemData(new MemoryStream(bytes), _itemDataId);
+                PopulateFromCurrentData();
+            }
+            finally { _isLoading = false; }
+            _lastCaptureUtc = DateTime.MinValue;   // its own undo step
+            SetDataDirty();
         }
 
         /// <summary>hg-engine-only: shapes a brand new item and opens it for editing. Nothing is written
@@ -821,6 +915,8 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _flingEffect         = _currentData.FlingEffect;
             _flingPower          = _currentData.FlingPower;
             _pluckEffect         = _currentData.PluckEffect;
+            CoverEffects(FlingEffectNames, ItemLabels.FlingEffects, _flingEffect);
+            CoverEffects(PluckEffectNames, ItemLabels.PluckEffects, _pluckEffect);
             OnPropertyChanged(nameof(NaturalGiftTypeIndex));
             OnPropertyChanged(nameof(NaturalGiftPower));
             OnPropertyChanged(nameof(FlingEffect));
@@ -866,6 +962,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
             nameof(AtkStages), nameof(DefStages),  nameof(SpAtkStages),  nameof(SpDefStages),
             nameof(SpeedStages), nameof(AccuracyStages), nameof(CritRateStages),
             nameof(HpRestore), nameof(HpRestoreParam), nameof(PpRestore), nameof(PpRestoreParam),
+            nameof(HpAmountMode), nameof(HpAmountIsExact), nameof(PpAmountMode), nameof(PpAmountIsExact),
             nameof(PpUps),     nameof(PpMax),      nameof(PpRestoreAll),
             nameof(EVHp),      nameof(EVAtk),      nameof(EVDef),     nameof(EVSpeed),
             nameof(EVSpAtk),   nameof(EVSpDef),

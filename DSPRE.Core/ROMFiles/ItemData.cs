@@ -341,6 +341,22 @@ namespace DSPRE.ROMFiles
             "GoodRod", "SuperRod", "BagMessage", "EvoStone", "EscapeRope", "AzureFlute", "VsRecorder", "Gracidea",
         };
 
+        // pokeplatinum FLING_EFFECT_* and PLUCK_EFFECT_* (pokeheartgold STEAL_EFFECT_*), handled by the battle code in
+        // every game; Pluck stops at 23. Retail DP reads both fields too (ov11, item parameters 8 and 9).
+        public static readonly string[] FlingEffects =
+        {
+            "None", "Cures paralysis", "Cures sleep", "Cures poison", "Cures burn", "Cures freeze", "Restores PP",
+            "Restores HP", "Cures confusion", "Cures every status", "Restores a percentage of HP",
+            "Restores HP, confuses if it dislikes spicy", "Restores HP, confuses if it dislikes dry",
+            "Restores HP, confuses if it dislikes sweet", "Restores HP, confuses if it dislikes bitter",
+            "Restores HP, confuses if it dislikes sour", "Raises Attack", "Raises Defense", "Raises Speed",
+            "Raises Sp. Atk", "Raises Sp. Def", "Raises critical hit rate", "Sharply raises a random stat",
+            "Raises the next move's accuracy", "Removes lowered stats", "Cures infatuation", "Makes the target flinch",
+            "Paralyzes the target", "Poisons the target", "Badly poisons the target", "Burns the target",
+        };
+
+        public static readonly string[] PluckEffects = FlingEffects.Take(24).ToArray();
+
         /// <summary>The field-use functions the loaded game's table holds, value-indexed.</summary>
         public static string[] FieldUse(GameFamilies family)
         {

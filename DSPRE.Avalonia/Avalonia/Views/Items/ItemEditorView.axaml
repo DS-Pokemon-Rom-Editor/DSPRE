@@ -28,6 +28,8 @@
                                Minimum="0" Maximum="{Binding MaxItemIndex}"
                                Width="100" FormatString="0"/>
                 <Button x:Name="ExportButton" Click="Export_Click" Content="Export…" controls:Icon.Key="export"/>
+                <Button x:Name="ImportButton" Click="Import_Click" Content="Import…" controls:Icon.Key="import"
+                        ToolTip.Tip="Read an exported item data file into this item"/>
                 <Button Content="Open icon in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
                         ToolTip.Tip="Open this item's icon in the Graphics window, where it can be painted by hand."/>
                 <Button x:Name="AddItemButton" Content="Add…" controls:Icon.Key="addIcon" IsVisible="{Binding ShowHgEngineBanner}"
@@ -48,8 +50,8 @@
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="6" Spacing="6">
 
-                <!-- Row 1: Icon + Table Entry | Hold + Pocket | Checks + Price -->
-                <Grid ColumnDefinitions="200,*,*" ColumnSpacing="6">
+                <!-- Row 1: Icon + Table Entry | Hold + Pocket | Price + Functions -->
+                <Grid ColumnDefinitions="200,*,230" ColumnSpacing="6">
 
                     <!-- Left: Icon preview + Table Entry -->
                     <StackPanel x:Name="TableEntryBox" Grid.Column="0" Spacing="4">
@@ -92,7 +94,6 @@
 
                     <!-- Middle: Hold Effect + Pocket -->
                     <StackPanel x:Name="HoldPocketColumn" Grid.Column="1" Spacing="4">
-                        <!-- Hold Effect -->
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
                             <StackPanel Spacing="4">
@@ -100,15 +101,14 @@
                                 <controls:FusionAutoCompleteBox ItemsSource="{Binding HoldEffectNames}"
                                           SelectedIndex="{Binding HoldEffectIndex}"
                                           HorizontalAlignment="Stretch" MaxDropDownHeight="200"/>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <TextBlock Grid.Column="0" VerticalAlignment="Center">Parameter:</TextBlock>
-                                    <NumericUpDown Grid.Column="1" Value="{Binding HoldEffectParam}"
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock VerticalAlignment="Center">Parameter:</TextBlock>
+                                    <NumericUpDown Value="{Binding HoldEffectParam}"
                                                    Minimum="0" Maximum="255" FormatString="0" Width="100"/>
-                                </Grid>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
-                        <!-- Pocket -->
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
                             <StackPanel Spacing="4">
@@ -129,33 +129,20 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- Right: Checks + Price + Functions -->
+                    <!-- Right: Price + Functions -->
                     <StackPanel x:Name="UsageColumn" Grid.Column="2" Spacing="4">
-                        <!-- Checks -->
-                        <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                                BorderThickness="1" CornerRadius="4" Padding="6">
-                            <StackPanel Spacing="4">
-                                <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Usage Checks</TextBlock>
-                                <CheckBox IsChecked="{Binding PreventToss}">Prevent Toss</CheckBox>
-                                <CheckBox IsChecked="{Binding Selectable}">Selectable (SELECT)</CheckBox>
-                                <CheckBox IsChecked="{Binding PartyUse}">Party Use (enables params below)</CheckBox>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Price -->
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
                             <StackPanel Spacing="4">
                                 <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Price</TextBlock>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
-                                    <TextBlock Grid.Column="0" VerticalAlignment="Center">Buy Price:</TextBlock>
-                                    <NumericUpDown Grid.Column="1" Value="{Binding Price}"
-                                                   Minimum="0" Maximum="{Binding PriceMaximum}" FormatString="0" Width="100"/>
-                                </Grid>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock VerticalAlignment="Center">Buy Price:</TextBlock>
+                                    <NumericUpDown Value="{Binding Price}"
+                                                   Minimum="0" Maximum="{Binding PriceMaximum}" FormatString="0" Width="110"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
-                        <!-- Functions -->
                         <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                                 BorderThickness="1" CornerRadius="4" Padding="6">
                             <StackPanel Spacing="4">
@@ -173,168 +160,185 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Row 2: Move Related (full width) -->
+                <!-- Row 2: Move Related -->
                 <Border x:Name="MoveRelatedBox" BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
                         BorderThickness="1" CornerRadius="4" Padding="6">
                     <StackPanel Spacing="4">
                         <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Move Related</TextBlock>
-                        <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6">
-                            <TextBlock Grid.Column="0" VerticalAlignment="Center">Natural Gift Type:</TextBlock>
-                            <ComboBox Grid.Column="1" ItemsSource="{Binding NaturalGiftTypeNames}"
+                        <Grid ColumnDefinitions="Auto,320,Auto,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="6" RowSpacing="4">
+                            <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">Natural Gift Type:</TextBlock>
+                            <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding NaturalGiftTypeNames}" Width="160" HorizontalAlignment="Left"
                                       SelectedIndex="{Binding NaturalGiftTypeIndex}" MaxDropDownHeight="200"/>
-                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">Power:</TextBlock>
-                            <NumericUpDown Grid.Column="3" Value="{Binding NaturalGiftPower}"
-                                           Minimum="0" Maximum="255" FormatString="0" Width="90"/>
-                            <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="12,0,4,0">Fling Effect:</TextBlock>
-                            <NumericUpDown Grid.Column="5" Value="{Binding FlingEffect}"
-                                           Minimum="0" Maximum="255" FormatString="0" Width="90"/>
-                            <TextBlock Grid.Column="6" VerticalAlignment="Center" Margin="8,0,4,0">Fling Power:</TextBlock>
-                            <NumericUpDown Grid.Column="7" Value="{Binding FlingPower}"
-                                           Minimum="0" Maximum="255" FormatString="0" Width="90"/>
-                        </Grid>
-                        <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="6">
-                            <TextBlock Grid.Column="0" VerticalAlignment="Center">Pluck Effect:</TextBlock>
-                            <NumericUpDown Grid.Column="1" Value="{Binding PluckEffect}"
-                                           Minimum="0" Maximum="255" FormatString="0" Width="90"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Natural Gift Power:</TextBlock>
+                            <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding NaturalGiftPower}"
+                                           Minimum="0" Maximum="255" FormatString="0" Width="100"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">Fling Effect:</TextBlock>
+                            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding FlingEffectNames}" HorizontalAlignment="Stretch"
+                                      SelectedIndex="{Binding FlingEffect}" MaxDropDownHeight="300"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Fling Power:</TextBlock>
+                            <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding FlingPower}"
+                                           Minimum="0" Maximum="255" FormatString="0" Width="100"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Pluck Effect:</TextBlock>
+                            <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding PluckEffectNames}" HorizontalAlignment="Stretch"
+                                      SelectedIndex="{Binding PluckEffect}" MaxDropDownHeight="300"/>
                         </Grid>
                     </StackPanel>
                 </Border>
 
-                <!-- Row 3: Party Params TabControl -->
-                <Border BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
-                        BorderThickness="1" CornerRadius="4" Padding="6"
-                        IsEnabled="{Binding PartyParamsEnabled}">
-                    <StackPanel Spacing="4">
-                        <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Party Use Parameters
-                            <Run Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
-                                 FontWeight="Normal"> (enabled when Party Use is checked)</Run>
-                        </TextBlock>
-                        <TabControl>
-                            <!-- Status Heals tab -->
-                            <TabItem Header="Status heals">
-                                <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
-                                      Margin="4" ColumnSpacing="16" RowSpacing="4">
-                                    <CheckBox Grid.Row="0" Grid.Column="0" IsChecked="{Binding SlpHeal}">Sleep Heal</CheckBox>
-                                    <CheckBox Grid.Row="1" Grid.Column="0" IsChecked="{Binding PsnHeal}">Poison Heal</CheckBox>
-                                    <CheckBox Grid.Row="2" Grid.Column="0" IsChecked="{Binding BrnHeal}">Burn Heal</CheckBox>
-                                    <CheckBox Grid.Row="3" Grid.Column="0" IsChecked="{Binding FrzHeal}">Freeze Heal</CheckBox>
+                <!-- Row 3: Usage Checks | Party Use -->
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                    <Border x:Name="UsageChecksBox" Grid.Column="0" VerticalAlignment="Top"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                            BorderThickness="1" CornerRadius="4" Padding="6">
+                        <StackPanel Spacing="4">
+                            <TextBlock FontWeight="SemiBold" Margin="0,0,0,2">Usage Checks</TextBlock>
+                            <CheckBox IsChecked="{Binding PreventToss}">Prevent Toss</CheckBox>
+                            <CheckBox IsChecked="{Binding Selectable}">Selectable (SELECT)</CheckBox>
+                        </StackPanel>
+                    </Border>
 
-                                    <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding PrzHeal}">Paralysis Heal</CheckBox>
-                                    <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding CfsHeal}">Confusion Heal</CheckBox>
-                                    <CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding InfHeal}">Infatuation Heal</CheckBox>
-                                    <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding GuardSpec}">Guard Spec (Mist)</CheckBox>
+                    <Border x:Name="PartyUseBox" Grid.Column="1"
+                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                            BorderThickness="1" CornerRadius="4" Padding="6">
+                        <StackPanel Spacing="4">
+                            <CheckBox IsChecked="{Binding PartyUse}" FontWeight="SemiBold">Party Use</CheckBox>
+                            <TabControl IsEnabled="{Binding PartyParamsEnabled}">
+                                <TabItem Header="Status heals">
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
+                                          Margin="4" ColumnSpacing="16" RowSpacing="4">
+                                        <CheckBox Grid.Row="0" Grid.Column="0" IsChecked="{Binding SlpHeal}">Sleep Heal</CheckBox>
+                                        <CheckBox Grid.Row="1" Grid.Column="0" IsChecked="{Binding PsnHeal}">Poison Heal</CheckBox>
+                                        <CheckBox Grid.Row="2" Grid.Column="0" IsChecked="{Binding BrnHeal}">Burn Heal</CheckBox>
+                                        <CheckBox Grid.Row="3" Grid.Column="0" IsChecked="{Binding FrzHeal}">Freeze Heal</CheckBox>
 
-                                    <CheckBox Grid.Row="0" Grid.Column="2" IsChecked="{Binding Revive}">Revive (50% HP)</CheckBox>
-                                    <CheckBox Grid.Row="1" Grid.Column="2" IsChecked="{Binding ReviveAll}">Revive All</CheckBox>
-                                    <CheckBox Grid.Row="2" Grid.Column="2" IsChecked="{Binding LevelUp}">Level Up</CheckBox>
-                                    <CheckBox Grid.Row="3" Grid.Column="2" IsChecked="{Binding Evolve}">Evolve</CheckBox>
-                                </Grid>
-                            </TabItem>
+                                        <CheckBox Grid.Row="0" Grid.Column="1" IsChecked="{Binding PrzHeal}">Paralysis Heal</CheckBox>
+                                        <CheckBox Grid.Row="1" Grid.Column="1" IsChecked="{Binding CfsHeal}">Confusion Heal</CheckBox>
+                                        <CheckBox Grid.Row="2" Grid.Column="1" IsChecked="{Binding InfHeal}">Infatuation Heal</CheckBox>
+                                        <CheckBox Grid.Row="3" Grid.Column="1" IsChecked="{Binding GuardSpec}">Guard Spec (Mist)</CheckBox>
 
-                            <!-- Stat Stages tab -->
-                            <TabItem Header="Stat stages">
-                                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
-                                      Margin="4" ColumnSpacing="8" RowSpacing="4">
-                                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">Attack:</TextBlock>
-                                    <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding AtkStages}" Minimum="0" Maximum="15" Width="90"/>
-                                    <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Defense:</TextBlock>
-                                    <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding DefStages}" Minimum="0" Maximum="15" Width="90"/>
+                                        <CheckBox Grid.Row="0" Grid.Column="2" IsChecked="{Binding Revive}">Revive (50% HP)</CheckBox>
+                                        <CheckBox Grid.Row="1" Grid.Column="2" IsChecked="{Binding ReviveAll}">Revive All</CheckBox>
+                                        <CheckBox Grid.Row="2" Grid.Column="2" IsChecked="{Binding LevelUp}">Level Up</CheckBox>
+                                        <CheckBox Grid.Row="3" Grid.Column="2" IsChecked="{Binding Evolve}">Evolve</CheckBox>
+                                    </Grid>
+                                </TabItem>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">Sp. Attack:</TextBlock>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding SpAtkStages}" Minimum="0" Maximum="15" Width="90"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Sp. Defense:</TextBlock>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding SpDefStages}" Minimum="0" Maximum="15" Width="90"/>
+                                <TabItem Header="Stat stages">
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
+                                          Margin="4" ColumnSpacing="8" RowSpacing="4">
+                                        <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">Attack:</TextBlock>
+                                        <NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding AtkStages}" Minimum="0" Maximum="15" Width="90"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Defense:</TextBlock>
+                                        <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding DefStages}" Minimum="0" Maximum="15" Width="90"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Speed:</TextBlock>
-                                    <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding SpeedStages}" Minimum="0" Maximum="15" Width="90"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Accuracy:</TextBlock>
-                                    <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding AccuracyStages}" Minimum="0" Maximum="15" Width="90"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">Sp. Attack:</TextBlock>
+                                        <NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding SpAtkStages}" Minimum="0" Maximum="15" Width="90"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Sp. Defense:</TextBlock>
+                                        <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding SpDefStages}" Minimum="0" Maximum="15" Width="90"/>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">Crit Rate:</TextBlock>
-                                    <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding CritRateStages}" Minimum="0" Maximum="3" Width="90"/>
-                                </Grid>
-                            </TabItem>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Speed:</TextBlock>
+                                        <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding SpeedStages}" Minimum="0" Maximum="15" Width="90"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">Accuracy:</TextBlock>
+                                        <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding AccuracyStages}" Minimum="0" Maximum="15" Width="90"/>
 
-                            <!-- Restore tab -->
-                            <TabItem Header="Restore">
-                                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
-                                      Margin="4" ColumnSpacing="8" RowSpacing="4">
-                                    <CheckBox Grid.Row="0" Grid.Column="0" IsChecked="{Binding HpRestore}">HP Restore</CheckBox>
-                                    <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center">Amount (0=%):</TextBlock>
-                                    <NumericUpDown Grid.Row="0" Grid.Column="3" Value="{Binding HpRestoreParam}" Minimum="0" Maximum="255" Width="90"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">Crit Rate:</TextBlock>
+                                        <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding CritRateStages}" Minimum="0" Maximum="3" Width="90"/>
+                                    </Grid>
+                                </TabItem>
 
-                                    <CheckBox Grid.Row="1" Grid.Column="0" IsChecked="{Binding PpRestore}">PP Restore</CheckBox>
-                                    <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center">Amount:</TextBlock>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding PpRestoreParam}" Minimum="0" Maximum="255" Width="90"/>
+                                <!-- One-move and every-move PP restores share one amount: the game tries one move first. -->
+                                <TabItem Header="Restore">
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                                          Margin="4" ColumnSpacing="8" RowSpacing="4">
+                                        <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" FontWeight="SemiBold">Enable</TextBlock>
+                                        <TextBlock Grid.Row="0" Grid.Column="2" FontWeight="SemiBold">Amount</TextBlock>
 
-                                    <CheckBox Grid.Row="2" Grid.Column="0" IsChecked="{Binding PpUps}">PP Ups</CheckBox>
-                                    <CheckBox Grid.Row="3" Grid.Column="0" IsChecked="{Binding PpMax}">PP Max</CheckBox>
-                                    <CheckBox Grid.Row="4" Grid.Column="0" IsChecked="{Binding PpRestoreAll}">PP Restore All Moves</CheckBox>
-                                </Grid>
-                            </TabItem>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">HP:</TextBlock>
+                                        <CheckBox  Grid.Row="1" Grid.Column="1" IsChecked="{Binding HpRestore}" HorizontalAlignment="Center"/>
+                                        <ComboBox  Grid.Row="1" Grid.Column="2" ItemsSource="{Binding HpAmountModes}" SelectedIndex="{Binding HpAmountMode}" Width="110"/>
+                                        <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding HpRestoreParam}" IsVisible="{Binding HpAmountIsExact}"
+                                                       Minimum="0" Maximum="252" FormatString="0" Width="90"/>
 
-                            <!-- EVs tab -->
-                            <TabItem Header="EVs">
-                                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
-                                      Margin="4" ColumnSpacing="6" RowSpacing="4">
-                                    <!-- Header row -->
-                                    <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" FontWeight="SemiBold">Enable</TextBlock>
-                                    <TextBlock Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" FontWeight="SemiBold">Value</TextBlock>
-                                    <TextBlock Grid.Row="0" Grid.Column="4" HorizontalAlignment="Center" FontWeight="SemiBold">Enable</TextBlock>
-                                    <TextBlock Grid.Row="0" Grid.Column="5" HorizontalAlignment="Center" FontWeight="SemiBold">Value</TextBlock>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">PP, one move:</TextBlock>
+                                        <CheckBox  Grid.Row="2" Grid.Column="1" IsChecked="{Binding PpRestore}" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">PP, every move:</TextBlock>
+                                        <CheckBox  Grid.Row="3" Grid.Column="1" IsChecked="{Binding PpRestoreAll}" HorizontalAlignment="Center"/>
+                                        <ComboBox  Grid.Row="2" Grid.RowSpan="2" Grid.Column="2" VerticalAlignment="Center"
+                                                   ItemsSource="{Binding PpAmountModes}" SelectedIndex="{Binding PpAmountMode}" Width="110"/>
+                                        <NumericUpDown Grid.Row="2" Grid.RowSpan="2" Grid.Column="3" VerticalAlignment="Center"
+                                                       Value="{Binding PpRestoreParam}" IsVisible="{Binding PpAmountIsExact}"
+                                                       Minimum="0" Maximum="255" FormatString="0" Width="90"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">HP:</TextBlock>
-                                    <CheckBox  Grid.Row="1" Grid.Column="1" IsChecked="{Binding EVHp}" HorizontalAlignment="Center"/>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding EVHpValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                        <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Margin="0,6,0,0">Max PP:</TextBlock>
+                                        <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                                            <CheckBox IsChecked="{Binding PpUps}">PP Up</CheckBox>
+                                            <CheckBox IsChecked="{Binding PpMax}">PP Max</CheckBox>
+                                        </StackPanel>
+                                    </Grid>
+                                </TabItem>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Attack:</TextBlock>
-                                    <CheckBox  Grid.Row="2" Grid.Column="1" IsChecked="{Binding EVAtk}" HorizontalAlignment="Center"/>
-                                    <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding EVAtkValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                <TabItem Header="EVs">
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
+                                          Margin="4" ColumnSpacing="6" RowSpacing="4">
+                                        <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" FontWeight="SemiBold">Enable</TextBlock>
+                                        <TextBlock Grid.Row="0" Grid.Column="2" HorizontalAlignment="Center" FontWeight="SemiBold">Value</TextBlock>
+                                        <TextBlock Grid.Row="0" Grid.Column="4" HorizontalAlignment="Center" FontWeight="SemiBold">Enable</TextBlock>
+                                        <TextBlock Grid.Row="0" Grid.Column="5" HorizontalAlignment="Center" FontWeight="SemiBold">Value</TextBlock>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">Defense:</TextBlock>
-                                    <CheckBox  Grid.Row="3" Grid.Column="1" IsChecked="{Binding EVDef}" HorizontalAlignment="Center"/>
-                                    <NumericUpDown Grid.Row="3" Grid.Column="2" Value="{Binding EVDefValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">HP:</TextBlock>
+                                        <CheckBox  Grid.Row="1" Grid.Column="1" IsChecked="{Binding EVHp}" HorizontalAlignment="Center"/>
+                                        <NumericUpDown Grid.Row="1" Grid.Column="2" Value="{Binding EVHpValue}" Minimum="-128" Maximum="127" Width="90"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Margin="12,0,0,0">Speed:</TextBlock>
-                                    <CheckBox  Grid.Row="1" Grid.Column="4" IsChecked="{Binding EVSpeed}" HorizontalAlignment="Center"/>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="5" Value="{Binding EVSpeedValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Attack:</TextBlock>
+                                        <CheckBox  Grid.Row="2" Grid.Column="1" IsChecked="{Binding EVAtk}" HorizontalAlignment="Center"/>
+                                        <NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding EVAtkValue}" Minimum="-128" Maximum="127" Width="90"/>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Margin="12,0,0,0">Sp. Attack:</TextBlock>
-                                    <CheckBox  Grid.Row="2" Grid.Column="4" IsChecked="{Binding EVSpAtk}" HorizontalAlignment="Center"/>
-                                    <NumericUpDown Grid.Row="2" Grid.Column="5" Value="{Binding EVSpAtkValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">Defense:</TextBlock>
+                                        <CheckBox  Grid.Row="3" Grid.Column="1" IsChecked="{Binding EVDef}" HorizontalAlignment="Center"/>
+                                        <NumericUpDown Grid.Row="3" Grid.Column="2" Value="{Binding EVDefValue}" Minimum="-128" Maximum="127" Width="90"/>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="3" VerticalAlignment="Center" Margin="12,0,0,0">Sp. Defense:</TextBlock>
-                                    <CheckBox  Grid.Row="3" Grid.Column="4" IsChecked="{Binding EVSpDef}" HorizontalAlignment="Center"/>
-                                    <NumericUpDown Grid.Row="3" Grid.Column="5" Value="{Binding EVSpDefValue}" Minimum="-128" Maximum="127" Width="90"/>
-                                </Grid>
-                            </TabItem>
+                                        <TextBlock Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Margin="12,0,0,0">Speed:</TextBlock>
+                                        <CheckBox  Grid.Row="1" Grid.Column="4" IsChecked="{Binding EVSpeed}" HorizontalAlignment="Center"/>
+                                        <NumericUpDown Grid.Row="1" Grid.Column="5" Value="{Binding EVSpeedValue}" Minimum="-128" Maximum="127" Width="90"/>
 
-                            <!-- Friendship tab -->
-                            <TabItem Header="Friendship">
-                                <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
-                                      Margin="4" ColumnSpacing="8" RowSpacing="4">
-                                    <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" FontWeight="SemiBold">Enable</TextBlock>
-                                    <TextBlock Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" FontWeight="SemiBold">Value</TextBlock>
+                                        <TextBlock Grid.Row="2" Grid.Column="3" VerticalAlignment="Center" Margin="12,0,0,0">Sp. Attack:</TextBlock>
+                                        <CheckBox  Grid.Row="2" Grid.Column="4" IsChecked="{Binding EVSpAtk}" HorizontalAlignment="Center"/>
+                                        <NumericUpDown Grid.Row="2" Grid.Column="5" Value="{Binding EVSpAtkValue}" Minimum="-128" Maximum="127" Width="90"/>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">Low Friendship:</TextBlock>
-                                    <CheckBox  Grid.Row="1" Grid.Column="1" IsChecked="{Binding FriendshipLow}" HorizontalAlignment="Center"/>
-                                    <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">Change:</TextBlock>
-                                    <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding FriendshipLowValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="3" VerticalAlignment="Center" Margin="12,0,0,0">Sp. Defense:</TextBlock>
+                                        <CheckBox  Grid.Row="3" Grid.Column="4" IsChecked="{Binding EVSpDef}" HorizontalAlignment="Center"/>
+                                        <NumericUpDown Grid.Row="3" Grid.Column="5" Value="{Binding EVSpDefValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                    </Grid>
+                                </TabItem>
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Mid Friendship:</TextBlock>
-                                    <CheckBox  Grid.Row="2" Grid.Column="1" IsChecked="{Binding FriendshipMid}" HorizontalAlignment="Center"/>
-                                    <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">Change:</TextBlock>
-                                    <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding FriendshipMidValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                <TabItem Header="Friendship">
+                                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
+                                          Margin="4" ColumnSpacing="8" RowSpacing="4">
+                                        <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" FontWeight="SemiBold">Enable</TextBlock>
+                                        <TextBlock Grid.Row="0" Grid.Column="3" HorizontalAlignment="Center" FontWeight="SemiBold">Value</TextBlock>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">High Friendship:</TextBlock>
-                                    <CheckBox  Grid.Row="3" Grid.Column="1" IsChecked="{Binding FriendshipHigh}" HorizontalAlignment="Center"/>
-                                    <TextBlock Grid.Row="3" Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">Change:</TextBlock>
-                                    <NumericUpDown Grid.Row="3" Grid.Column="3" Value="{Binding FriendshipHighValue}" Minimum="-128" Maximum="127" Width="90"/>
-                                </Grid>
-                            </TabItem>
-                        </TabControl>
-                    </StackPanel>
-                </Border>
+                                        <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center">Low Friendship:</TextBlock>
+                                        <CheckBox  Grid.Row="1" Grid.Column="1" IsChecked="{Binding FriendshipLow}" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">Change:</TextBlock>
+                                        <NumericUpDown Grid.Row="1" Grid.Column="3" Value="{Binding FriendshipLowValue}" Minimum="-128" Maximum="127" Width="90"/>
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center">Mid Friendship:</TextBlock>
+                                        <CheckBox  Grid.Row="2" Grid.Column="1" IsChecked="{Binding FriendshipMid}" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">Change:</TextBlock>
+                                        <NumericUpDown Grid.Row="2" Grid.Column="3" Value="{Binding FriendshipMidValue}" Minimum="-128" Maximum="127" Width="90"/>
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" VerticalAlignment="Center">High Friendship:</TextBlock>
+                                        <CheckBox  Grid.Row="3" Grid.Column="1" IsChecked="{Binding FriendshipHigh}" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Row="3" Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0">Change:</TextBlock>
+                                        <NumericUpDown Grid.Row="3" Grid.Column="3" Value="{Binding FriendshipHighValue}" Minimum="-128" Maximum="127" Width="90"/>
+                                    </Grid>
+                                </TabItem>
+                            </TabControl>
+                        </StackPanel>
+                    </Border>
+                </Grid>
 
             </StackPanel>
         </ScrollViewer>
