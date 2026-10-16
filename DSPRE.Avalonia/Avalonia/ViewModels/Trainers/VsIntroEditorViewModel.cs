@@ -100,7 +100,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             StartUndo();
             SelectedMugshot = MugshotRows.FirstOrDefault(r => r.IsItem);
             SelectedIntro = IntroRows.FirstOrDefault(r => r.IsItem);
-            SelectedClass = ClassRows.FirstOrDefault(r => r.Class == (_t.FirstSwitchClass > 0 ? _t.FirstSwitchClass : 1)) ?? ClassRows.FirstOrDefault();
+            SelectedClass = _classRowOf.GetValueOrDefault(_t.FirstSwitchClass > 0 ? _t.FirstSwitchClass : 1) ?? ClassRows.FirstOrDefault(r => r.IsItem);
             StatusText = _t.Family == GameFamilies.DP
                 ? "Diamond and Pearl cut the face out of the class's battle sprite, so there is no mugshot art to pick."
                 : "";
@@ -459,7 +459,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             IntroRow row = IntroRows.FirstOrDefault(r => r.Combo == combo);
             if (row == null) return;
             SelectedIntro = row;
-            SelectedTab = 1;
+            SelectedTab = IntrosTab;
         }
 
         // ── Preview ──────────────────────────────────────────────────────────────────────────────
@@ -469,7 +469,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public bool HasPreview => IsClassRecords ? ClassScene() != null : !IsDp && Rec != null && Scene() != null;
 
         private bool _girl;
-        public bool PlayerGirl { get => _girl; set { if (_girl == value) return; _girl = value; Raise(); RenderPreview(); } }
+        public bool PlayerGirl { get => _girl; set { if (_girl == value) return; _girl = value; Raise(); RenderPreview(); RenderClassPreview(); } }
         public bool ShowPlayerChoice => IsClassRecords ? Record?.VsStyle == 2 : Rec?.Kind == RecordKind.League && !IsDp;
 
         private ushort[] ClassColours(int trainerClass)
@@ -485,36 +485,40 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private VsIntroPreview.Scene Scene()
         {
             if (IsClassRecords) return ClassScene();
-            if (Rec == null || IsDp || _preview == null) return null;
+            return Rec == null || IsDp || _preview == null ? null : SceneFor(Rec);
+        }
+
+        private VsIntroPreview.Scene SceneFor(Record rec)
+        {
             VsIntroSites s = _t.Sites;
             int[] Four(int first) => first < 0 ? null : Order(first, 4);
-            string name = Rec.Kind == RecordKind.Rival || (IsHgss && Rec.Has(RecordField.Class) && Rec.Get(RecordField.Class) == HgssRivalClass)
-                ? "Rival" : Rec.Has(RecordField.TrainerId) ? _names.Trainer(Rec.Get(RecordField.TrainerId)) : "";
-            switch (Rec.Kind)
+            string name = rec.Kind == RecordKind.Rival || (IsHgss && rec.Has(RecordField.Class) && rec.Get(RecordField.Class) == HgssRivalClass)
+                ? "Rival" : rec.Has(RecordField.TrainerId) ? _names.Trainer(rec.Get(RecordField.TrainerId)) : "";
+            switch (rec.Kind)
             {
                 case RecordKind.Gym:
                 case RecordKind.Rival:
                     return new VsIntroPreview.Scene
                     {
-                        Kind = VsIntroPreview.Layout.Gym, Face = Rec.FaceMembers(), Banner = Rec.BannerMembers(), Vs = Four(s.VsMark),
-                        FaceColours = ClassColours(IsPlatinum ? Rec.Get(RecordField.Class) : -1),
-                        EndX = Rec.Get(RecordField.EndX), NamePalette = s.NamePalette, Name = name,
+                        Kind = VsIntroPreview.Layout.Gym, Face = rec.FaceMembers(), Banner = rec.BannerMembers(), Vs = Four(s.VsMark),
+                        FaceColours = ClassColours(IsPlatinum ? rec.Get(RecordField.Class) : -1),
+                        EndX = rec.Get(RecordField.EndX), NamePalette = s.NamePalette, Name = name,
                     };
                 case RecordKind.League:
                     int[] frame = Order(s.LeagueFrame, 3);
                     return new VsIntroPreview.Scene
                     {
-                        Kind = VsIntroPreview.Layout.League, Face = Rec.FaceMembers(), Vs = Four(s.VsMark),
-                        FaceColours = ClassColours(IsPlatinum ? Rec.Get(RecordField.Class) : -1),
+                        Kind = VsIntroPreview.Layout.League, Face = rec.FaceMembers(), Vs = Four(s.VsMark),
+                        FaceColours = ClassColours(IsPlatinum ? rec.Get(RecordField.Class) : -1),
                         PlayerFace = Four(_girl ? s.PlayerFaceGirl : s.PlayerFaceBoy), PlayerColours = ClassColours(IsPlatinum ? (_girl ? 1 : 0) : -1),
-                        Frame = new[] { frame[1], frame[2] }, FrameAnim = frame[3], FramePalette = Rec.Get(RecordField.FramePalette),
-                        ClashFrames = Rec.Get(RecordField.ClashFrames), NamePalette = s.NamePalette, Name = name,
+                        Frame = new[] { frame[1], frame[2] }, FrameAnim = frame[3], FramePalette = rec.Get(RecordField.FramePalette),
+                        ClashFrames = rec.Get(RecordField.ClashFrames), NamePalette = s.NamePalette, Name = name,
                         Particles = VsIntroMotionCodeSites?.LeagueParticles,
                     };
                 default:
                     return new VsIntroPreview.Scene
                     {
-                        Kind = VsIntroPreview.Layout.Executive, Face = Rec.FaceMembers(), NamePalette = s.NamePalette, Name = name,
+                        Kind = VsIntroPreview.Layout.Executive, Face = rec.FaceMembers(), NamePalette = s.NamePalette, Name = name,
                         // The filled R screen is the fifth after the tiles.
                         Backdrop = s.ExecutiveBackdrop >= 0 ? new[] { s.ExecutiveBackdrop, s.ExecutiveBackdrop + 1, s.ExecutiveBackdrop + 2, s.ExecutiveBackdrop + 3, s.ExecutiveBackdrop + 6 } : null,
                     };
@@ -647,7 +651,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
         }
         public bool HasIntroMugshot => HasIntro && MugshotRows.Any(r => r.Record != null && r.Record == _t.RecordFor(_t.EffectOf(Combo)));
-        public ObservableCollection<string> IntroClasses { get; } = new();
+        public ObservableCollection<IntroRow> IntroClasses { get; } = new();
         public string IntroClassesNote => !HasIntro ? "" : _t.RoleOf(Combo) switch
         {
             ComboRole.Ordinary => "Every class not given another intro.",
@@ -662,7 +666,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             try
             {
                 IntroClasses.Clear();
-                if (HasIntro) foreach (int c in _t.ClassesUsing(Combo)) IntroClasses.Add(_names.Class(c));
+                if (HasIntro) foreach (int c in _t.ClassesUsing(Combo)) IntroClasses.Add(new IntroRow { Class = c, Title = _names.Class(c) });
                 Raise(nameof(HasIntro), nameof(IntroTitle), nameof(IntroKindText), nameof(SequenceIndex), nameof(HasIntroMugshot), nameof(IntroClassesNote));
             }
             finally { _suppress = false; }
@@ -675,121 +679,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             IntroRow row = MugshotRows.FirstOrDefault(r => r.Record != null && r.Record == record);
             if (row == null) return;
             SelectedMugshot = row;
-            SelectedTab = 0;
-        }
-
-        /// <summary>Selects the class list's row for one of the classes the selected intro lists.</summary>
-        public void GoToClass(int index)
-        {
-            List<int> classes = HasIntro ? _t.ClassesUsing(Combo) : new List<int>();
-            if (index < 0 || index >= classes.Count) return;
-            SelectedClass = ClassRows.FirstOrDefault(r => r.Class == classes[index]);
-        }
-
-        // ── Classes ──────────────────────────────────────────────────────────────────────────────
-
-        public ObservableCollection<IntroRow> ClassRows { get; } = new();
-        public ObservableCollection<string> ClassIntroChoices { get; } = new();
-        private readonly List<int> _classIntroCombos = new();
-
-        private void BuildClassRows()
-        {
-            ClassRows.Clear();
-            for (int c = 0; c < _names.Classes.Length; c++) ClassRows.Add(new IntroRow { Class = c });
-            RenameClasses();
-        }
-
-        private void RenameClasses()
-        {
-            foreach (IntroRow row in ClassRows)
-            {
-                row.Title = _names.Class(row.Class);
-                int combo = _t.ComboForClass(row.Class);
-                row.Detail = combo < 0 ? "Unknown" : _names.Combo(_t, combo);
-            }
-        }
-
-        private IntroRow _class;
-        public IntroRow SelectedClass
-        {
-            get => _class;
-            set
-            {
-                if (_class == value) return;
-                _class = value;
-                RaiseClass();
-            }
-        }
-
-        private int ClassId => _class?.Class ?? -1;
-        public bool HasClass => ClassId >= 0;
-        public string ClassTitle => HasClass ? _names.Class(ClassId) : "";
-        public bool ClassEditable => HasClass && (IsHgss || _t.InSwitch(ClassId));
-        public string ClassNote
-        {
-            get
-            {
-                if (!HasClass) return "";
-                if (IsHgss) return $"{_t.FreeClassRows} of {_t.ClassRowCount} class rows free";
-                if (!_t.InSwitch(ClassId))
-                    return $"Only classes {_t.FirstSwitchClass} to {_t.FirstSwitchClass + _t.SwitchCount - 1} can change their intro.";
-                return "";
-            }
-        }
-        public bool CanMakeClassRoom => IsHgss && !_t.ClassTableMoved;
-
-        /// <summary>Gives the class table room for more rows. It writes at once, so it asks first.</summary>
-        public async System.Threading.Tasks.Task MakeClassRoomAsync()
-        {
-            string why = _t.WhyNoClassRoom();
-            if (why != null) { StatusText = why; return; }
-            if (!await DialogHelper.AskYesNo($"Move the class table to the expanded ARM9 area? It will hold up to {VsIntroTables.MostClassRows} classes instead of {_t.ClassRowCount}. This is written right away.", "Make room")) return;
-            try { _t.MakeClassRoom(); }
-            catch (Exception ex) { StatusText = ex.Message; return; }
-            StatusText = $"The class table now has room for {_t.ClassRowCount} classes.";
-            Raise(nameof(CanMakeClassRoom), nameof(ClassNote));
-        }
-
-        public int ClassIntroIndex
-        {
-            get => HasClass ? _classIntroCombos.IndexOf(_t.ComboForClass(ClassId)) : -1;
-            set
-            {
-                if (_suppress || !ClassEditable || value < 0 || value >= _classIntroCombos.Count || value == ClassIntroIndex) return;
-                int combo = _classIntroCombos[value];
-                bool ok = _t.RoleOf(combo) == ComboRole.Ordinary ? (_t.UnassignClass(ClassId) || true) : _t.AssignClass(ClassId, combo);
-                if (!ok)
-                {
-                    StatusText = _t.ClassTableMoved
-                        ? $"All {_t.ClassRowCount} class rows are in use. Set another class back to ordinary trainers first."
-                        : $"All {_t.ClassRowCount} class rows are in use. Make room for more, or set another class back to ordinary trainers.";
-                    RaiseClass();
-                    return;
-                }
-                Edited();
-            }
-        }
-
-        private void RaiseClass()
-        {
-            _suppress = true;
-            try
-            {
-                _classIntroCombos.Clear();
-                ClassIntroChoices.Clear();
-                if (HasClass)
-                {
-                    int now = _t.ComboForClass(ClassId);
-                    foreach (int c in _trainerCombos)
-                        if (c == now || (IsHgss ? c < 64 : _t.CanSwitchTo(c)))
-                        {
-                            _classIntroCombos.Add(c);
-                            ClassIntroChoices.Add($"{_names.Combo(_t, c)} ({VsIntroNames.Kind(_t, _t.EffectOf(c))})");
-                        }
-                }
-                Raise(nameof(HasClass), nameof(ClassTitle), nameof(ClassEditable), nameof(ClassNote), nameof(ClassIntroIndex));
-            }
-            finally { _suppress = false; }
+            SelectedTab = MugshotsTab;
         }
 
         // ── Editing, undo and saving ─────────────────────────────────────────────────────────────
@@ -830,6 +720,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             RenameMugshots();
             RenameIntros();
+            BuildBulkChoices();
             RenameClasses();
             RaiseMugshot();
             RaiseIntro();
@@ -892,7 +783,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
                 _ = DialogHelper.ShowError("The saved VS intros couldn't be read back:\n" + e.Message, Title);
                 return;
             }
-            int mug = MugshotRows.IndexOf(_mugshot), intro = IntroRows.IndexOf(_intro), cls = ClassRows.IndexOf(_class);
+            int mug = MugshotRows.IndexOf(_mugshot), intro = IntroRows.IndexOf(_intro), cls = ClassId;
             _mugshot = null; _intro = null; _class = null;
             BuildChoices();
             BuildMugshotRows();
@@ -901,7 +792,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             StartUndo();
             SelectedMugshot = mug >= 0 && mug < MugshotRows.Count ? MugshotRows[mug] : MugshotRows.FirstOrDefault(r => r.IsItem);
             SelectedIntro = intro >= 0 && intro < IntroRows.Count ? IntroRows[intro] : IntroRows.FirstOrDefault(r => r.IsItem);
-            SelectedClass = cls >= 0 && cls < ClassRows.Count ? ClassRows[cls] : ClassRows.FirstOrDefault();
+            SelectedClass = _classRowOf.GetValueOrDefault(cls) ?? ClassRows.FirstOrDefault(r => r.IsItem);
             Raise(nameof(HasUnsavedChanges), nameof(CanUndo), nameof(CanRedo));
         }
     }

@@ -191,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             // A reload refills the list on the same class; forget it so selecting it again shows the new record.
             _recordIndex = -1;
             SelectedRecordIndex = StartClass >= 0 && StartClass < _records.Count ? StartClass : 0;
-            SelectedTab = 2;
+            SelectedTab = ClassRecordsTab;
             StatusText = "";
         }
 
@@ -325,8 +325,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Shows one class's intro, for the editor opened again from the Trainer Classes window.</summary>
         public void ShowClassRecord(int trainerClass)
         {
-            if (!IsClassRecords) return;
-            SelectedTab = 2;
+            if (!IsClassRecords) { GoToClass(trainerClass); return; }
+            SelectedTab = ClassRecordsTab;
             SelectedRecordIndex = trainerClass;
         }
 

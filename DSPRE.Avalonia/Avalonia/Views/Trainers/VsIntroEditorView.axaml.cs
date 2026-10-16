@@ -14,7 +14,7 @@ namespace DSPRE.Avalonia.Views.Trainers
         {
             DataContext = vm;
             AttachedToVisualTree += (_, _) => vm.Attach();
-            DetachedFromVisualTree += (_, _) => { vm.StopAnimation(); vm.StopMotion(); vm.Detach(); };
+            DetachedFromVisualTree += (_, _) => { vm.StopAnimation(); vm.StopMotion(); vm.StopClassPreview(); vm.Detach(); };
         }
 
         private async void Save_Click(object sender, RoutedEventArgs e) { if (VM != null) await VM.SaveChangesAsync(); }
@@ -57,9 +57,14 @@ namespace DSPRE.Avalonia.Views.Trainers
             if (sender is Control { Tag: FixedArt f }) f.Open?.Invoke();
         }
 
-        private void IntroClass_Changed(object sender, SelectionChangedEventArgs e)
+        private void IntroClass_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is ListBox list && list.SelectedIndex >= 0) VM?.GoToClass(list.SelectedIndex);
+            if (sender is Control { Tag: IntroRow row }) VM?.GoToClass(row.Class);
         }
+
+        private void ShowClassMugshot_Click(object sender, RoutedEventArgs e) => VM?.ShowClassMugshot();
+        private void AnimateClass_Click(object sender, RoutedEventArgs e) => VM?.ToggleClassPreview();
+        private void ApplyBulk_Click(object sender, RoutedEventArgs e) => VM?.ApplyBulk();
+        private void ClearTicks_Click(object sender, RoutedEventArgs e) => VM?.ClearTicks();
     }
 }

@@ -47,8 +47,10 @@ namespace DSPRE.Avalonia
                 S("tab:Mugshots>name:MugshotList", "Mugshots", "Every intro with its own art. Pick one to edit it."),
                 S("tab:Mugshots>name:MugshotDetails", "Editing a mugshot", "Pick the name on the banner, the face and the banner art. Paint and Animation open the art in the graphics editors."),
                 S("tab:Mugshots>name:MugshotPreview", "Preview", "The intro put together from its art. Animate plays a close copy of it."),
-                S("tab:Trainer intros and music>name:IntroList", "Intros and music", "Every intro trainer battles use. Pick one to change its music or see its classes."),
-                S("tab:Trainer intros and music>name:ClassList", "Classes", "Every trainer class and the intro it gets. Pick one to change it."),
+                S("tab:Intros and music>name:IntroList", "Intros and music", "Every intro trainer battles use. Pick one to change its music; its classes open on the Classes tab."),
+                S("tab:Classes>name:ClassList", "Classes", "Every trainer class under the intro it has now. Search by class or intro name."),
+                S("tab:Classes>name:ClassDetails", "A class's intro", "Pick the intro and its music. The music belongs to the intro, so other classes on it hear the change too."),
+                S("tab:Classes>name:ClassList", "Several at once", "Tick classes to give them all one intro from the box under the list."),
                 S("toolbar", "Saving", "Save or Ctrl+S writes your changes, Ctrl+Z undoes. Save the ROM to keep them."));
 
             Add("TrainerFlagBulkEditorView", "Trainer Flag Bulk Editor",
