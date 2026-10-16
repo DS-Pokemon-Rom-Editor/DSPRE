@@ -398,6 +398,83 @@
         </Grid>
       </TabItem>
 
+      <!-- Class intros (class intros patch): each class's row -->
+      <TabItem Header="Class intros" AutomationProperties.Name="Trainer class intros" IsVisible="{Binding IsClassIntroPatch}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/><ColumnDefinition Width="*" MinWidth="380"/><ColumnDefinition Width="540"/>
+          </Grid.ColumnDefinitions>
+          <ListBox x:Name="CiClassList" Grid.Column="0" Margin="4" ItemsSource="{Binding CiClassNames}" SelectedIndex="{Binding CiSelectedIndex}"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+          <ScrollViewer Grid.Column="1" Margin="4">
+            <StackPanel x:Name="CiClassDetails" Spacing="6" IsVisible="{Binding CiHasRow}" Margin="4">
+              <TextBlock Text="VS style"/>
+              <ComboBox x:Name="CiStyleBox" ItemsSource="{Binding CiStyleChoices}" SelectedIndex="{Binding CiStyleIndex}" Width="320" HorizontalAlignment="Left"/>
+              <TextBlock Text="Music" Classes="section"/>
+              <ComboBox x:Name="CiMusicBox" ItemsSource="{Binding SequenceChoices}" SelectedIndex="{Binding CiMusicIndex}" Width="320" HorizontalAlignment="Left"/>
+
+              <StackPanel Spacing="6" IsVisible="{Binding CiPtRecord}">
+                <TextBlock Text="Name shown" Classes="section"/>
+                <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding CiNameIndex}" HorizontalAlignment="Stretch"/>
+                <TextBlock Text="Portrait" Classes="section"/>
+                <ComboBox x:Name="CiFaceBox" ItemsSource="{Binding FaceSetChoices}" SelectedIndex="{Binding CiFaceIndex}" HorizontalAlignment="Stretch"/>
+                <StackPanel Spacing="6" IsVisible="{Binding CiIsGym}">
+                  <TextBlock Text="Banner" Classes="section"/>
+                  <ComboBox x:Name="CiBannerBox" ItemsSource="{Binding BannerSetChoices}" SelectedIndex="{Binding CiBannerIndex}" HorizontalAlignment="Stretch"/>
+                  <TextBlock Text="Portrait stops at X" Classes="section"/>
+                  <NumericUpDown Value="{Binding CiEndX}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"
+                                 ToolTip.Tip="Where the portrait's slide in ends, in pixels from the left"/>
+                </StackPanel>
+                <StackPanel Spacing="6" IsVisible="{Binding CiIsLeague}">
+                  <TextBlock Text="Frame colours" Classes="section"/>
+                  <ComboBox x:Name="CiFrameBox" ItemsSource="{Binding FramePaletteChoices}" SelectedIndex="{Binding CiFrameIndex}" HorizontalAlignment="Stretch"/>
+                  <TextBlock Text="Clash shake" Classes="section"/>
+                  <NumericUpDown Value="{Binding CiClash}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"
+                                 ToolTip.Tip="Frames"/>
+                </StackPanel>
+              </StackPanel>
+              <StackPanel Spacing="6" IsVisible="{Binding CiHasRecord}">
+                <TextBlock Text="{Binding CiClassLabel}" Classes="section"/>
+                <controls:FusionAutoCompleteBox ItemsSource="{Binding ClassChoices}" SelectedIndex="{Binding CiColoursIndex}" HorizontalAlignment="Stretch"
+                          ToolTip.Tip="{Binding CiClassTip}"/>
+              </StackPanel>
+              <StackPanel Spacing="6" IsVisible="{Binding CiDpGym}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Cut from column" VerticalAlignment="Center"/>
+                  <NumericUpDown Value="{Binding CiFaceColumn}" Minimum="0" Maximum="8" Increment="1" FormatString="0" Width="110"
+                                 ToolTip.Tip="How many 8 pixel columns into the battle sprite the face starts"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Stops at X" VerticalAlignment="Center"/>
+                  <NumericUpDown Value="{Binding CiEndX}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110"
+                                 ToolTip.Tip="Where the face's slide in ends, in pixels from the left"/>
+                </StackPanel>
+              </StackPanel>
+              <StackPanel Spacing="6" IsVisible="{Binding CiDpLeague}">
+                <TextBlock Text="Banner colours" Classes="section"/>
+                <ComboBox x:Name="CiDpFrameBox" ItemsSource="{Binding FramePaletteChoices}" SelectedIndex="{Binding CiFrameIndex}" HorizontalAlignment="Stretch"/>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <TextBlock Text="Camera turn" VerticalAlignment="Center"/>
+                  <NumericUpDown Value="{Binding CiCameraTurn}" Minimum="0" Maximum="65535" Increment="100" FormatString="0" Width="120"/>
+                  <TextBlock Text="over" VerticalAlignment="Center"/>
+                  <NumericUpDown Value="{Binding CiPanFrames}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="100"
+                                 ToolTip.Tip="Frames"/>
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+          <StackPanel x:Name="CiClassPreview" Grid.Column="2" Margin="8" Spacing="6">
+            <Border Background="Black" Width="512" Height="384" HorizontalAlignment="Left" IsVisible="{Binding HasPreview}">
+              <Image Source="{Binding PreviewImage}" Width="512" Height="384" RenderOptions.BitmapInterpolationMode="None"/>
+            </Border>
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasPreview}">
+              <Button Content="{Binding AnimateLabel}" Click="Animate_Click" IsVisible="{Binding CiCanAnimate}"/>
+              <CheckBox Content="Girl player" IsChecked="{Binding PlayerGirl}" IsVisible="{Binding ShowPlayerChoice}"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
       <!-- Motion tables the intro code reads: grunt emblem flights and the block wipe order -->
       <TabItem Header="Motion" IsVisible="{Binding HasMotion}">
         <Grid ColumnDefinitions="*,540">

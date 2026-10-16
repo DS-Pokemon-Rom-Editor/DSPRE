@@ -1178,6 +1178,28 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyClassIntrosPatch()
+        {
+            if (AlreadyApplied(Probe(() => ClassIntroPatch.IsApplied))) return false;
+            if (ClassIntroPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { ClassIntroPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            int overlay = RomInfo.VsIntroCodeSites.RecordOverlay;
+            string look = RomInfo.gameFamily == RomInfo.GameFamilies.DP ? "its own face, cut from any class's battle sprite" : "its own portrait, name and colours";
+            if (!ConfirmYesNo("Each trainer class gets its own VS intro: a style, the battle music, and for gym leader and Elite Four " +
+                $"styles {look}, edited in the VS intro editor. Every class keeps the intro it has now until you " +
+                "change it." + placement + "\n\n" +
+                $"Backups ({BackupSuffix}) are made of the ARM9, overlay {overlay} and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it." +
+                "\n\nApply this patch?" + CreditNote("classIntros"), "Confirm to proceed"))
+                return false;
+            string overlayPath = OverlayUtils.GetPath(overlay);
+            File.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            File.Copy(RomInfo.arm9Path, RomInfo.arm9Path + BackupSuffix, overwrite: true);
+            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            ClassIntroPatch.Apply(offsets[0]);
+            ShowInfo("Every trainer class now has its own VS intro. Edit them in the VS intro editor.", "Operation successful.");
+            return true;
+        }
+
         public static bool ApplyDisableDynamicTexturesPatch()
         {
             if (!ConfirmYesNo("Applying this patch will set the Dynamic Textures field of all AreaData files to 0xFFFF.\n\n" +
@@ -1504,6 +1526,7 @@ namespace DSPRE
             ["trainerClassTablesExpanded"] = ("Mixone", "trainer class table expansion"),
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
             ["pickupSlots"] = ("Mixone", "independent pickup slots"),
+            ["classIntros"] = ("Mixone", "trainer class intros"),
             ["punchingMovesExpanded"] = ("Mixone", "punching move list expansion"),
             ["soundMovesExpanded"] = ("Mixone", "sound move list expansion"),
             ["regionalDexCount"] = ("Mixone", "regional Pokédex size"),
@@ -1801,6 +1824,17 @@ namespace DSPRE
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!PickupSlotsPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
                     if (PickupSlotsPatch.IsApplied) return PatchState.Applied;
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("classIntros", "Trainer class intros",
+                "Each trainer class gets its own VS intro: style, battle music, and for gym leader and Elite Four styles its own look, edited in the VS intro editor (Diamond, Pearl and Platinum). Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return Unsupported("Diamond, Pearl and Platinum only");
+                    if (!ClassIntroPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (ClassIntroPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
@@ -2226,7 +2260,7 @@ namespace DSPRE
             string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.ExpansionRefusal();
             if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint"
                 or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
-                or "pickupSlots")
+                or "pickupSlots" or "classIntros")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -2252,6 +2286,7 @@ namespace DSPRE
                 case "trainerClassTablesExpanded": return ApplyMoveTrainerClassTables();
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
                 case "pickupSlots": return ApplyPickupSlotsPatch();
+                case "classIntros": return ApplyClassIntrosPatch();
                 case "punchingMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Punching);
                 case "soundMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Sound);
                 case "regionalDexCount": return ApplyRegionalDexCount();

@@ -146,7 +146,10 @@ namespace DSPRE.Avalonia.Data
         private (byte[] Rgba, int Width, int Height)? WideScreen(int[] m, int row = -1)
         {
             if (m == null || m.Length < 3) return null;
-            byte[] tiles = DsBgScreen.ReadCharacters(_member(m[1]));
+            // Diamond and Pearl's gym banner is drawn in 256 colours.
+            byte[] chr = _member(m[1]);
+            (bool eightBit, int tilesAt) = NitroBgCodec.ReadTileHeader(chr);
+            byte[] tiles = eightBit && chr != null ? chr[Math.Min(tilesAt, chr.Length)..] : DsBgScreen.ReadCharacters(chr);
             ushort[] colours = DsBgScreen.ReadColours(_member(m[0]));
             (int w, ushort[] entries) = DsBgScreen.ReadMap(_member(m[2]));
             if (w <= 0 || entries == null || tiles.Length == 0) return null;
@@ -163,6 +166,13 @@ namespace DSPRE.Avalonia.Data
                     for (int px = 0; px < 8; px++)
                     {
                         int lx = (e & 0x400) != 0 ? 7 - px : px, ly = (e & 0x800) != 0 ? 7 - py : py;
+                        if (eightBit)
+                        {
+                            int at8 = tile * 64 + ly * 8 + lx;
+                            if (at8 >= tiles.Length || tiles[at8] == 0 || tiles[at8] >= colours.Length) continue;
+                            Put(rgba, ((ty + py) * width + tx + px) * 4, colours[tiles[at8]]);
+                            continue;
+                        }
                         int at = tile * 32 + (ly * 8 + lx) / 2;
                         if (at >= tiles.Length) continue;
                         int index = (lx & 1) != 0 ? tiles[at] >> 4 : tiles[at] & 0xF;

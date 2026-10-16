@@ -51,6 +51,9 @@ namespace DSPRE.Avalonia
                 S("tab:Classes>name:ClassList", "Classes", "Every trainer class under the intro it has now. Search by class or intro name."),
                 S("tab:Classes>name:ClassDetails", "A class's intro", "Pick the intro and its music. The music belongs to the intro, so other classes on it hear the change too."),
                 S("tab:Classes>name:ClassList", "Several at once", "Tick classes to give them all one intro from the box under the list."),
+                S("tab:Trainer class intros>name:CiClassList", "Class intros", "With the class intros patch every trainer class has its own intro. Pick a class to edit it."),
+                S("tab:Trainer class intros>name:CiClassDetails", "A class's intro", "The style and the battle music. Gym leader and Elite Four styles also take their own look."),
+                S("tab:Trainer class intros>name:CiClassPreview", "Preview", "How the class's intro looks."),
                 S("toolbar", "Saving", "Save or Ctrl+S writes your changes, Ctrl+Z undoes. Save the ROM to keep them."));
 
             Add("TrainerFlagBulkEditorView", "Trainer Flag Bulk Editor",

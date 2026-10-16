@@ -31,7 +31,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             ["trainerCustomPokeballs"] = "Trainers",
             ["arm9"] = "Foundation", ["matrix"] = "Foundation", ["dynamicHeaders"] = "Foundation", ["scrcmdRepoint"] = "Foundation",
-            ["trainerClassMetadata"] = "Trainers", ["vsIntroTimings"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
+            ["trainerClassMetadata"] = "Trainers", ["classIntros"] = "Trainers", ["vsIntroTimings"] = "Trainers", ["trainerClassTablesExpanded"] = "Trainers", ["trainerEncounterBgmRepointed"] = "Trainers", ["trainerShiny"] = "Trainers",
             // Grouped by what the patch is about, not what it edits: name patches sit with their subject.
             ["sentenceCase"] = "Items and Pokémon", ["itemSentenceCase"] = "Items and Pokémon", ["trainerNames"] = "Trainers",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
@@ -46,7 +46,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["trainerCustomPokeballs"] = "pokeball ball capsule seals trainer party apricorn net ultra",
             ["arm9"] = "synthetic overlay memory expansion expand required", ["matrix"] = "matrix 0 map size expand", ["dynamicHeaders"] = "header narc allocate headers",
             ["scrcmdRepoint"] = "script command table custom commands", ["trainerClassMetadata"] = "gender prize eye contact music vs intro class", ["vsIntroTimings"] = "vs intro timing flash slide hold class encounter effect",
-            ["trainerClassTablesExpanded"] = "class tables expand", ["trainerEncounterBgmRepointed"] = "encounter music bgm table", ["trainerShiny"] = "shiny trainer party",
+            ["trainerClassTablesExpanded"] = "class tables expand", ["classIntros"] = "vs intro mugshot class style music diamond pearl platinum", ["trainerEncounterBgmRepointed"] = "encounter music bgm table", ["trainerShiny"] = "shiny trainer party",
             ["sentenceCase"] = "names capital case pokemon", ["itemSentenceCase"] = "names capital case items", ["trainerNames"] = "trainer name length text",
             ["sameHeldItemOdds"] = "held item odds wild", ["itemStandardize"] = "item numbers scripts ground items order",
             ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai", ["regionalDexCount"] = "regional pokedex dex size count complete professor rating", ["evolutionSlots"] = "evolution evolutions evo slots methods more expand", ["typeChartExpanded"] = "type chart matchups effectiveness expand", ["swarmTableExpanded"] = "swarm swarms outbreak table expand rows", ["bpShopExpanded"] = "battle point bp shop counter tm exchange expand", ["martsExpanded"] = "mart marts shop poke mart items custom expand", ["pickupSlots"] = "pickup ability items level range slots rare independent",

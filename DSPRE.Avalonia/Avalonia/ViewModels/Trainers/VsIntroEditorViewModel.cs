@@ -75,8 +75,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             // With the class metadata patch the stock tables are retired, and no longer read as they were.
             if (!DetectClassRecords()) _t = VsIntroTables.Load(Part.Trainers);
+            IsClassIntroPatch = _t?.ClassesInPatch == true;
             List<DirNames> dirs = new List<DirNames> { Archive, DirNames.textArchives };
-            if (gameFamily == GameFamilies.Plat) dirs.Add(DirNames.trainerGraphics);
+            if (gameFamily == GameFamilies.Plat || IsClassIntroPatch) dirs.Add(DirNames.trainerGraphics);
             DSUtils.TryUnpackNarcs(dirs);
             _names = VsIntroNames.Read();
             _art = new ScriptNarc(Archive);
@@ -86,6 +87,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             _preview = new VsIntroPreview(i => _art.Get(i), _font);
             LoadMotion();
             if (IsClassRecords) { LoadClassRecords(); LoadTimings(); }
+            if (IsClassIntroPatch) LoadCiRows();
         }
 
         /// <summary>Fills the lists once loaded, on the UI thread.</summary>
@@ -94,6 +96,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             ReadyMotion();
             if (IsClassRecords) { ReadyClassRecords(); return; }
             BuildChoices();
+            if (IsClassIntroPatch) { ReadyCiRows(); return; }
             BuildMugshotRows();
             BuildIntroRows();
             BuildClassRows();
@@ -180,6 +183,12 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             VsIntroSites s = _t.Sites;
             if (who.Count == 0 && member == s.PlayerFaceBoy) who.Add("Player, boy");
             if (who.Count == 0 && member == s.PlayerFaceGirl) who.Add("Player, girl");
+            // Art no retail record uses is named after the classes whose patch rows show it.
+            if (who.Count == 0 && IsClassIntroPatch)
+                who.AddRange(Enumerable.Range(0, Math.Min(_ciRows.Count, CiClassCount))
+                    .Where(c => _ciRows[c].Style == ClassIntroPatch.Style.Gym && (_ciRows[c].GymPortrait[0] == member || _ciRows[c].GymBanner[0] == member)
+                             || _ciRows[c].Style == ClassIntroPatch.Style.League && _ciRows[c].LeaguePortrait == member)
+                    .Select(c => c < _ciClassNames.Length ? _ciClassNames[c] : c.ToString()).Distinct().Take(3));
             return (who.Count == 0 ? "Unused" : string.Join(", ", who)) + $" ({member})";
         }
 
@@ -466,11 +475,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         private global::Avalonia.Media.Imaging.Bitmap _image;
         public global::Avalonia.Media.Imaging.Bitmap PreviewImage { get => _image; private set { _image = value; Raise(); } }
-        public bool HasPreview => IsClassRecords ? ClassScene() != null : !IsDp && Rec != null && Scene() != null;
+        public bool HasPreview => IsClassRecords ? ClassScene() != null : IsClassIntroPatch ? CiScene() != null : !IsDp && Rec != null && Scene() != null;
 
         private bool _girl;
         public bool PlayerGirl { get => _girl; set { if (_girl == value) return; _girl = value; Raise(); RenderPreview(); RenderClassPreview(); } }
-        public bool ShowPlayerChoice => IsClassRecords ? Record?.VsStyle == 2 : Rec?.Kind == RecordKind.League && !IsDp;
+        public bool ShowPlayerChoice => IsClassRecords ? Record?.VsStyle == 2 : IsClassIntroPatch ? CiIsLeague : Rec?.Kind == RecordKind.League && !IsDp;
 
         private ushort[] ClassColours(int trainerClass)
         {
@@ -485,6 +494,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private VsIntroPreview.Scene Scene()
         {
             if (IsClassRecords) return ClassScene();
+            if (IsClassIntroPatch) return CiScene();
             return Rec == null || IsDp || _preview == null ? null : SceneFor(Rec);
         }
 
@@ -565,6 +575,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         private void OnNamesChanged(object sender, EventArgs e) => global::Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             if (IsClassRecords) { ReloadClasses(); return; }
+            if (IsClassIntroPatch) { ReloadCiNames(); return; }
             _names = VsIntroNames.Read();
             RefreshAll();
         });
@@ -688,8 +699,8 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // Each step holds the intro tables or class records together with the motion tables.
         private void StartUndo()
         {
-            Func<byte[]> take = IsClassRecords ? RecordsSnapshot : _t.Snapshot;
-            Action<byte[]> apply = IsClassRecords ? RestoreRecords : s => { _t.Restore(s); RefreshAll(); };
+            Func<byte[]> take = IsClassRecords ? RecordsSnapshot : IsClassIntroPatch ? CiSnapshot : _t.Snapshot;
+            Action<byte[]> apply = IsClassRecords ? RestoreRecords : IsClassIntroPatch ? CiRestore : s => { _t.Restore(s); RefreshAll(); };
             _undo = new ByteStateUndo(
                 () => ByteStateUndo.Pack(w =>
                 {
@@ -728,7 +739,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             Raise(nameof(HasUnsavedChanges));
         }
 
-        public bool HasUnsavedChanges => (IsClassRecords ? RecordsChanged : _t?.HasChanges == true) || _motion?.HasChanges == true
+        public bool HasUnsavedChanges => (IsClassRecords ? RecordsChanged : IsClassIntroPatch ? CiRowsChanged : _t?.HasChanges == true) || _motion?.HasChanges == true
                                          || _timing?.HasChanges == true;
         public string UnsavedChangesDescription => "VS intros";
 
@@ -740,6 +751,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (!await SaveMotionAsync()) return false;
             // A class's timings are saved with its intro record, so a class that fails keeps both unsaved.
             if (IsClassRecords) return await SaveRecordsAsync();
+            if (IsClassIntroPatch) return await SaveCiRowsAsync();
             if (!await SaveTimingsAsync()) return false;
             if (_t == null || !_t.HasChanges)
             {
@@ -776,6 +788,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             if (_motion?.HasChanges == true) ReloadMotion();
             if (_timing?.HasChanges == true) { LoadTimings(); ShowTimings(); }
             if (IsClassRecords) { DiscardRecords(); return; }
+            if (IsClassIntroPatch) { CiDiscard(); return; }
             if (_t == null) { Raise(nameof(HasUnsavedChanges)); return; }
             try { _t = VsIntroTables.Load(Part.Trainers); }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException)

@@ -325,7 +325,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                     if (CondMusicItems[i] != HeaderNameAt(_condMusicTable[i].header)) CondMusicItems[i] = HeaderNameAt(_condMusicTable[i].header);
                 for (int i = 0; _effectsComboTable != null && i < _effectsComboTable.Count && i < ComboItems.Count; i++)
                 {
-                    string label = $"Combo {i:D2} - Effect #{_effectsComboTable[i].vsGraph}, Music #{_effectsComboTable[i].battleSSEQ}";
+                    string label = ComboLabel(i);
                     if (ComboItems[i] != label) ComboItems[i] = label;
                 }
                 for (int i = 0; _vsTrainerList != null && i < _vsTrainerList.Count && i < VsTrainerItems.Count; i++)
@@ -482,13 +482,14 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 return;
             }
             _battleTables = tables;
+            _classIntrosPatched = DSPRE.ROMFiles.ClassIntroPatch.IsApplied;
             _effectsComboTable = tables.Combos.Rows;
             _effectsComboStartAddr = tables.Combos.Start;
             RomPatchState.flag_MainComboTableRepointed = tables.Combos.Repointed;
 
             ComboItems.Clear();
             for (int i = 0; i < _effectsComboTable.Count; i++)
-                ComboItems.Add($"Combo {i:D2} - Effect #{_effectsComboTable[i].vsGraph}, Music #{_effectsComboTable[i].battleSSEQ}");
+                ComboItems.Add(ComboLabel(i));
 
             if (gameFamily == GameFamilies.HGSS)
             {
@@ -622,16 +623,30 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             try
             {
                 foreach (int i in rows)
-                    ComboItems[i] = $"Combo {i:D2} - Effect #{_effectsComboTable[i].vsGraph}, Music #{_effectsComboTable[i].battleSSEQ}";
+                    ComboItems[i] = ComboLabel(i);
             }
             finally { _suppress = false; }
         }
+
+        // With the class intros patch each class's row sets these combos for the battle, so edits here would not last.
+        private bool _classIntrosPatched;
+        private bool OwnedByClassIntros(int combo) => _classIntrosPatched && DSPRE.ROMFiles.ClassIntroPatch.BorrowedPairs.Contains(combo);
+
+        private string ComboLabel(int i) =>
+            $"Combo {i:D2} - Effect #{_effectsComboTable[i].vsGraph}, Music #{_effectsComboTable[i].battleSSEQ}"
+            + (OwnedByClassIntros(i) ? " (set by each class's intro)" : "");
 
         // An edited combo goes straight into the table so switching rows keeps it.
         private void OnComboEdited()
         {
             int index = _comboSelectedIndex;
             if (_suppress || _effectsComboTable == null || index < 0 || index >= _effectsComboTable.Count) return;
+            if (OwnedByClassIntros(index))
+            {
+                StatusText = "Set by each class's intro in the VS intro editor.";
+                LoadComboEntry(index);
+                return;
+            }
             _effectsComboTable[index] = ((ushort)VsAnimation, (ushort)BattleSseq);
             _dirtyCombos.Add(index);
             MarkDirty(ref _effectsDirty);

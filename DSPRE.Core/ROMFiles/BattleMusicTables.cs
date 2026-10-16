@@ -161,6 +161,9 @@ namespace DSPRE.ROMFiles
         /// <summary>The theme for a battle against this trainer class, or -1.</summary>
         public int TrainerSequence(int trainerClass, bool kanto = false)
         {
+            // The class intros patch replaces the switch; each class's row holds its music.
+            if (gameFamily != GameFamilies.HGSS && ClassJumps == null && ClassIntroPatch.ReadRows() is List<ClassIntroPatch.Row> rows)
+                return trainerClass >= 0 && trainerClass < rows.Count ? rows[trainerClass].Music : -1;
             if (ClassJumps != null)
                 return ComboSequence(ClassJumps.ComboOf(trainerClass));
             if (gameFamily == GameFamilies.DP)

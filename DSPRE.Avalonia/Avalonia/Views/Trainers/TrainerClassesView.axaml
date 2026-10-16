@@ -114,6 +114,15 @@
             </StackPanel>
           </StackPanel>
 
+          <StackPanel Spacing="2" IsVisible="{Binding ShowPtIntro}">
+            <TextBlock Text="VS intro"/>
+            <TextBlock Text="{Binding CiIntroSummary}" TextWrapping="Wrap" Foreground="{DynamicResource Editor.Subtle}"/>
+            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+              <Button Content="Edit intro" Click="EditIntro_Click"/>
+              <Button Content="Patch notes" Click="CiPatchNotes_Click"/>
+            </StackPanel>
+          </StackPanel>
+
           <StackPanel Spacing="2" IsVisible="{Binding HasClassTrainers}">
             <TextBlock Text="Trainers in this class"/>
             <ListBox ItemsSource="{Binding ClassTrainers}" MaxHeight="240" DoubleTapped="ClassTrainer_DoubleTapped"

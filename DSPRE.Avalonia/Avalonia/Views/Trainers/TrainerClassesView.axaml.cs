@@ -64,6 +64,15 @@ namespace DSPRE.Avalonia.Views.Trainers
             await DialogHelper.ShowInfo(DSPRE.PatchNotes.For(patch), patch.Title);
         }
 
+        private async void CiPatchNotes_Click(object sender, RoutedEventArgs e)
+        {
+            DSPRE.PatchToolboxLogic.PatchInfo patch = new()
+            {
+                Key = "classIntros", Title = "Trainer class intros", State = DSPRE.PatchToolboxLogic.PatchState.Applied,
+            };
+            await DialogHelper.ShowInfo(DSPRE.PatchNotes.For(patch), patch.Title);
+        }
+
         private void EditIntro_Click(object sender, RoutedEventArgs e)
         {
             if (VM != null && VM.SelectedClassIndex >= 0) AvaloniaEditorLauncher.OpenVsIntroEditor(VM.SelectedClassIndex);

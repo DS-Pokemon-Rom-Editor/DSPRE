@@ -23,6 +23,19 @@ namespace DSPRE
                 "Requirements\n" +
                 "HeartGold or SoulSilver, any language. No ARM9 expansion or synthetic overlay required. " +
                 "Not compatible with hg-engine.",
+            ["classIntros"] =
+                "What it does\n" +
+                "Each trainer class gets its own VS intro and battle music. Without it only gym leaders, the Elite Four, Team Galactic " +
+                "and the Frontier Brains (the Tower Tycoon in Diamond and Pearl) have one. Gym leader and Elite Four intros take their " +
+                "own portrait, name and colours in Platinum, or a face cut from any class's battle sprite in Diamond and Pearl.\n" +
+                "Nothing changes in game until you edit a class.\n\n" +
+                "Where to edit\n" +
+                "The VS intro editor's Class intros tab.\n\n" +
+                "Good to know\n" +
+                "The Battle Frontier (the Battle Tower in Diamond and Pearl), link and double battles, and in Platinum the Fight Area " +
+                "tag battle with Volkner still pick their intro by the kind of battle.\n\n" +
+                "Requirements\n" +
+                "US or European English Diamond, Pearl or Platinum, with the ARM9 expansion. Not compatible with hg-engine.",
             ["trainerClassMetadata"] =
                 "What it does\n" +
                 "Each trainer class gets its own record in a/1/5/5 holding its gender, prize money, eye-contact music, " +
@@ -136,6 +149,9 @@ namespace DSPRE
             ["trainerClassMetadata"] = ("Hooks in the ARM9 and overlays 1, 12, 80, 115, 117, 118, 119 and 120 read each class's record, and a/1/5/5 holds a record per class.",
                 "About 8 KB in the synthetic overlay, plus a/1/5/5.",
                 "the ARM9, overlays 1, 12, 80, 115, 117, 118, 119 and 120 and the synthetic overlay, and of a/1/5/5 as unpacked/a155.narc"),
+            ["classIntros"] = ("The ARM9's class intro switch jumps to the patch's routine, and overlay 5's pointers to one gym leader's intro record (Volkner's in Platinum, Roark's in Diamond and Pearl) and Aaron's point at the class's record instead.",
+                "About 8.3 KB in the synthetic overlay: the routine and a 32-byte row for each of 256 classes.",
+                "the ARM9, overlay 5 and the synthetic overlay"),
             ["vsIntroTimings"] = ("22 places in overlays 115, 117, 118 and 119 call a helper that looks up the battle's class.",
                 "About 2.4 KB in the synthetic overlay: the helper and eight timings for each of 256 classes.",
                 "overlays 115, 117, 118 and 119 and the synthetic overlay"),

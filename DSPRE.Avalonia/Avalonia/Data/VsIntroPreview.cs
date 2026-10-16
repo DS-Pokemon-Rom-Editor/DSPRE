@@ -12,7 +12,7 @@ namespace DSPRE.Avalonia.Data
     /// </summary>
     public sealed partial class VsIntroPreview
     {
-        public enum Layout { Gym, League, Executive, Pieces, Balls, Special, Frontier }
+        public enum Layout { Gym, League, Executive, Pieces, Balls, Special, Frontier, DpGym, DpLeague }
 
         /// <summary>What to draw. Member arrays are palette, tiles, cells (and animation); null leaves a part out.</summary>
         public sealed class Scene
@@ -48,6 +48,8 @@ namespace DSPRE.Avalonia.Data
             /// <summary>The class's intro timings by VsIntroTimingAddon field, or null for the game's own.</summary>
             public int[] Timings;
             public string Name;
+            /// <summary>Diamond and Pearl: the opponent's and the player's faces as 64 by 64 RGBA cuts.</summary>
+            public byte[] Cut, PlayerCut;
 
             internal int Timing(DSPRE.ROMFiles.VsIntroTimingAddon.Field f) =>
                 Timings != null && (int)f < Timings.Length && Timings[(int)f] > 0 ? Timings[(int)f] : DSPRE.ROMFiles.VsIntroTimingAddon.GameValues[(int)f];
@@ -68,7 +70,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>How many frames the animation runs.</summary>
         public static int Length(Scene s) => s.Kind switch
         {
-            Layout.Pieces => 1,
+            Layout.Pieces or Layout.DpGym or Layout.DpLeague => 1,
             Layout.Balls => BallLength(s.Variant),
             Layout.Special => SpecialLength(s),
             Layout.Gym => GymTimes(s).End,
@@ -88,6 +90,8 @@ namespace DSPRE.Avalonia.Data
                 Layout.Balls => Balls(s, frame),
                 Layout.Special => Special(s, frame),
                 Layout.Frontier => Frontier(s, frame),
+                Layout.DpGym => DpGym(s),
+                Layout.DpLeague => DpLeague(s),
                 _ => Executive(s, frame),
             };
         }

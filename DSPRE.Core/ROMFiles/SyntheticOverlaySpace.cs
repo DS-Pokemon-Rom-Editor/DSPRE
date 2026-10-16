@@ -18,7 +18,7 @@ namespace DSPRE.ROMFiles
         public static readonly string[] BlockMarkers = { "MARTEXPANDV1", "BPSHOPEXPV1\0", "TYPECHARTXP1", "SWARMTABLEX1", VsIntroTables.ClassTableMarker, VsIntroTimingAddon.Marker,
                                                          MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Punching), MoveCategoryTable.MarkerOf(MoveCategoryTable.Kind.Sound),
                                                          TrainerClassTableExpansion.GenderMarker, TrainerClassTableExpansion.PrizeMarker, TrainerClassTableExpansion.MusicMarker,
-                                                         PickupSlotsPatch.Marker };
+                                                         PickupSlotsPatch.Marker, ClassIntroPatch.Marker };
 
         /// <summary>Whether the ARM9 expansion is applied and its overlay is large enough to hold tables.</summary>
         public static bool Available()

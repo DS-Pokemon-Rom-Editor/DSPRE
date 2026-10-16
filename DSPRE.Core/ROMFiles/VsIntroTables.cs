@@ -209,11 +209,12 @@ namespace DSPRE.ROMFiles
                 t._classRows = source ? t.AddSourceRegion(Packed(music.Classes.Rows)) : t.AddRegion(music.Classes.Path, (int)music.Classes.Start, 2 * music.Classes.Rows.Count);
                 t._speciesRows = source ? t.AddSourceRegion(Packed(music.Species.Rows)) : t.AddRegion(music.Species.Path, (int)music.Species.Start, 2 * music.Species.Rows.Count);
             }
-            else
+            else if (!ClassIntroPatch.IsApplied)
             {
                 BattleMusicTables.ClassJumpTable jumps = music.ClassJumps ?? throw Mismatch("the trainer class switch");
                 t._jumps = t.AddRegion(arm9Path, jumps.Start, 2 * jumps.Count);
             }
+            else t.ClassesInPatch = true;
 
             t.ReadRecords();
             t.BindEffects();
@@ -232,6 +233,13 @@ namespace DSPRE.ROMFiles
             for (int c = 0; c < ComboCount; c++)
                 if (IsTrainerCombo(c) == trainers) _combos.Owned[4 * c + 2] = _combos.Owned[4 * c + 3] = true;
         }
+
+        /// <summary>Diamond, Pearl or Platinum with the class intros patch: each class's intro is a row the patch owns, not the switch.</summary>
+        public bool ClassesInPatch { get; private set; }
+
+        // The ordinary trainer combo, the switch's default, which the patch's ordinary style still borrows.
+        private const int PtOrdinaryCombo = 33, DpOrdinaryCombo = 29;
+        private int DefaultClassCombo => Music.ClassJumps?.DefaultCombo ?? (Family == GameFamilies.DP ? DpOrdinaryCombo : PtOrdinaryCombo);
 
         /// <summary>Whether this copy edits the music of <paramref name="combo"/>.</summary>
         public bool OwnsMusic(int combo) => _combos.Owns(4 * combo + 2);
@@ -368,8 +376,15 @@ namespace DSPRE.ROMFiles
                 if (routine < 0 || routine >= code.Length) throw Mismatch("the intro routines");
 
                 Record found = null;
+                bool classBuffer = false;
                 for (long k = (routine + 3) & ~3L; k + 4 <= code.Length && k < routine + 0x40; k += 4)
-                    if (address.TryGetValue(BitConverter.ToUInt32(code, (int)k), out found)) break;
+                {
+                    uint literal = BitConverter.ToUInt32(code, (int)k);
+                    if (address.TryGetValue(literal, out found)) break;
+                    // The class intros patch points Volkner's and Aaron's routines at the battle's class record.
+                    if (ClassesInPatch && literal >= synthOverlayLoadAddress) { classBuffer = true; break; }
+                }
+                if (classBuffer) continue;
                 if (found == null) throw Mismatch("the intro records");
                 _byEffect[effect] = found;
             }
@@ -427,7 +442,7 @@ namespace DSPRE.ROMFiles
             if (Family == GameFamilies.HGSS)
                 return combo switch { 35 => ComboRole.Frontier, 36 => ComboRole.Link, 37 => ComboRole.Double, 38 => ComboRole.WildDouble,
                                       39 => ComboRole.FrontierBrain, 41 => ComboRole.Ordinary, 42 => ComboRole.OrdinaryWild, _ => ComboRole.None };
-            if (Music.ClassJumps != null && combo == Music.ClassJumps.DefaultCombo) return ComboRole.Ordinary;
+            if ((Music.ClassJumps != null || ClassesInPatch) && combo == DefaultClassCombo) return ComboRole.Ordinary;
             if (Family == GameFamilies.Plat)
                 return combo switch { 13 => ComboRole.Rival, 27 => ComboRole.Frontier, 28 => ComboRole.Link, 29 => ComboRole.Double,
                                       30 => ComboRole.WildDouble, 31 => ComboRole.FrontierBrain, 32 => ComboRole.DoubleLeader,
@@ -538,7 +553,7 @@ namespace DSPRE.ROMFiles
                 }
                 return 41;
             }
-            return InSwitch(trainerClass) ? SwitchCombo(trainerClass) : Music.ClassJumps.DefaultCombo;
+            return InSwitch(trainerClass) ? SwitchCombo(trainerClass) : DefaultClassCombo;
         }
 
         /// <summary>
@@ -563,7 +578,7 @@ namespace DSPRE.ROMFiles
         /// <summary>Takes a class off its intro: HGSS frees its rows, DP/Pt points it at the default stub.</summary>
         public bool UnassignClass(int trainerClass)
         {
-            if (_classRows == null) return SetSwitchCombo(trainerClass, Music.ClassJumps.DefaultCombo);
+            if (_classRows == null) return SetSwitchCombo(trainerClass, DefaultClassCombo);
             bool any = false;
             for (int i = 0; i < ClassRowCount; i++)
                 if (ClassRow(i).Class == trainerClass) { SetClassRow(i, FreeClass, ClassRow(i).Combo); any = true; }

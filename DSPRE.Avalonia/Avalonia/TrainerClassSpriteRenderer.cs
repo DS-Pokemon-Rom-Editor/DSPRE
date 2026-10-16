@@ -281,6 +281,33 @@ namespace DSPRE.Avalonia
             }
         }
 
+        /// <summary>
+        /// A square block of a Diamond and Pearl drawing as RGBA, taken from the top of the whole sheet starting
+        /// <paramref name="left"/> pixels in, the way the gym and Elite Four intros cut their faces. Null if there is no drawing.
+        /// </summary>
+        public byte[] FlatCut(int left, int size)
+        {
+            if (!_flat) return null;
+            try
+            {
+                RawImage sheet = _tile.Get_RawImage(_pal);
+                ClearColourZero(sheet);
+                byte[] rgba = new byte[size * size * 4];
+                for (int y = 0; y < size && y < sheet.Height; y++)
+                    for (int x = 0; x < size && left + x < sheet.Width; x++)
+                    {
+                        int from = y * sheet.Stride + (left + x) * 4, to = (y * size + x) * 4;
+                        rgba[to] = sheet.Bgra[from + 2]; rgba[to + 1] = sheet.Bgra[from + 1]; rgba[to + 2] = sheet.Bgra[from]; rgba[to + 3] = sheet.Bgra[from + 3];
+                    }
+                return rgba;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("TrainerClassSpriteRenderer.FlatCut failed: " + ex.Message);
+                return null;
+            }
+        }
+
         /// <summary>Renders the given frame to an Avalonia bitmap, or null if there is no animated sprite.</summary>
         public AvaBitmap Render(int frame, int width, int height)
         {

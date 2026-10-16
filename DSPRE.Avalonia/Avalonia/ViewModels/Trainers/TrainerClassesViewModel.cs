@@ -257,9 +257,36 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             OnPropertyChanged(nameof(ShowGender));
         }
 
+        // ── Class intro row (class intros patch) ────────────────────────────
+        // The row is edited in the VS intro editor; this window shows what it is and opens it there.
+
+        public bool ShowPtIntro { get; private set; }
+        private string _ciIntroSummary = "";
+        public string CiIntroSummary { get => _ciIntroSummary; private set => Set(ref _ciIntroSummary, value); }
+        private DSPRE.Avalonia.Data.VsIntroNames _introNames;
+
+        private void LoadPtIntro(int index)
+        {
+            List<ClassIntroPatch.Row> rows = ClassIntroPatch.ReadRows();
+            ShowPtIntro = rows != null && index >= 0 && index < rows.Count;
+            OnPropertyChanged(nameof(ShowPtIntro));
+            if (!ShowPtIntro) return;
+            _introNames ??= DSPRE.Avalonia.Data.VsIntroNames.Read();
+            ClassIntroPatch.Row row = rows[index];
+            string summary = ClassIntroPatch.StyleNames[(int)row.Style];
+            // Diamond and Pearl cut the face from a class's battle sprite and name no trainer.
+            bool dp = gameFamily == GameFamilies.DP;
+            if (row.Style == ClassIntroPatch.Style.Gym)
+                summary += dp ? ", face from " + _introNames.Class(row.DpGymClass) : ", showing " + _introNames.Trainer(row.GymTrainer);
+            else if (row.Style == ClassIntroPatch.Style.League)
+                summary += dp ? ", face from " + _introNames.Class(row.DpLeagueClass) : ", showing " + _introNames.Trainer(row.LeagueTrainer);
+            CiIntroSummary = summary + "\nMusic: " + _introNames.Sequence(row.Music);
+        }
+
         /// <summary>Shows a class's intro again after the VS intro editor saved it.</summary>
         public void RefreshIntroSummary()
         {
+            if (ShowPtIntro && _selectedIndex >= 0 && _selectedIndex != PendingIndex) LoadPtIntro(_selectedIndex);
             if (_selectedIndex >= 0 && _selectedIndex != PendingIndex && _metadataFields != null)
             {
                 bool was = _suppress;
@@ -595,6 +622,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             }
             MusicAltEnabled = MusicEnabled && gameFamily == GameFamilies.HGSS;
 
+            LoadPtIntro(index);
             if (_metadata != TrainerClassMetadataDetectionState.Stock)
             {
                 _metadataFields = null;

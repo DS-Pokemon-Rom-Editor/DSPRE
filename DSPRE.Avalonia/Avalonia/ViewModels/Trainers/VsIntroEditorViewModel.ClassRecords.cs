@@ -103,7 +103,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
     {
         /// <summary>The patch is installed: classes own their intros and the stock tables are retired.</summary>
         public bool IsClassRecords { get; private set; }
-        public bool ShowStockTabs => !IsClassRecords;
+        public bool ShowStockTabs => !IsClassRecords && !IsClassIntroPatch;
 
         private readonly List<TrainerClassMetadataRecord> _records = new();
         private readonly List<byte[]> _savedRecords = new();
@@ -325,6 +325,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         /// <summary>Shows one class's intro, for the editor opened again from the Trainer Classes window.</summary>
         public void ShowClassRecord(int trainerClass)
         {
+            if (IsClassIntroPatch) { StartClass = trainerClass; CiSelectedIndex = trainerClass; SelectedTab = ClassIntroPatchTab; return; }
             if (!IsClassRecords) { GoToClass(trainerClass); return; }
             SelectedTab = ClassRecordsTab;
             SelectedRecordIndex = trainerClass;
