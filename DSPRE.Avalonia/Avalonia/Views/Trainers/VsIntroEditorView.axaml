@@ -88,6 +88,8 @@
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowFace}">
                 <Button Content="Paint" controls:Icon.Key="brush" Click="PaintFace_Click"/>
                 <Button Content="Animation" Click="AnimateFace_Click"/>
+                <Button Content="New copy" Click="NewFaceCopy_Click" IsVisible="{Binding CanCopyArt}"
+                        ToolTip.Tip="Copy this art so painting it changes only this intro"/>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowEndX}">
                 <TextBlock Text="Stops at X" VerticalAlignment="Center"/>
@@ -105,6 +107,8 @@
               <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding ShowBanner}">
                 <Button Content="Paint" controls:Icon.Key="brush" Click="PaintBanner_Click"/>
                 <Button Content="In graphics" Click="BannerGraphics_Click"/>
+                <Button Content="New copy" Click="NewBannerCopy_Click" IsVisible="{Binding CanCopyArt}"
+                        ToolTip.Tip="Copy this art so painting it changes only this intro"/>
               </StackPanel>
 
               <TextBlock Text="{Binding FramePaletteLabel}" Classes="section" IsVisible="{Binding ShowFramePalette}"/>
@@ -320,6 +324,8 @@
                       <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
                         <Button Content="Paint" controls:Icon.Key="pencil" Tag="{Binding}" Click="PaintSlot_Click"/>
                         <Button Content="Animation" Tag="{Binding}" Click="AnimateSlot_Click" IsVisible="{Binding CanAnimate}"/>
+                        <Button Content="New copy" Tag="{Binding}" Click="NewSlotCopy_Click"
+                                ToolTip.Tip="Copy this art so painting it changes only this intro"/>
                       </StackPanel>
                       <ItemsControl ItemsSource="{Binding Parts}">
                         <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -418,9 +424,19 @@
                 <controls:FusionAutoCompleteBox ItemsSource="{Binding TrainerChoices}" SelectedIndex="{Binding CiNameIndex}" HorizontalAlignment="Stretch"/>
                 <TextBlock Text="Portrait" Classes="section"/>
                 <ComboBox x:Name="CiFaceBox" ItemsSource="{Binding FaceSetChoices}" SelectedIndex="{Binding CiFaceIndex}" HorizontalAlignment="Stretch"/>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                  <Button Content="Paint" controls:Icon.Key="brush" Click="CiPaintPortrait_Click"/>
+                  <Button Content="New copy" Click="CiNewPortraitCopy_Click" IsVisible="{Binding CanCopyArt}"
+                          ToolTip.Tip="Copy this art so painting it changes only this intro"/>
+                </StackPanel>
                 <StackPanel Spacing="6" IsVisible="{Binding CiIsGym}">
                   <TextBlock Text="Banner" Classes="section"/>
                   <ComboBox x:Name="CiBannerBox" ItemsSource="{Binding BannerSetChoices}" SelectedIndex="{Binding CiBannerIndex}" HorizontalAlignment="Stretch"/>
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Content="Paint" controls:Icon.Key="brush" Click="CiPaintBanner_Click"/>
+                    <Button Content="New copy" Click="CiNewBannerCopy_Click" IsVisible="{Binding CanCopyArt}"
+                            ToolTip.Tip="Copy this art so painting it changes only this intro"/>
+                  </StackPanel>
                   <TextBlock Text="Portrait stops at X" Classes="section"/>
                   <NumericUpDown Value="{Binding CiEndX}" Minimum="0" Maximum="255" Increment="1" FormatString="0" Width="110" HorizontalAlignment="Left"
                                  ToolTip.Tip="Where the portrait's slide in ends, in pixels from the left"/>

@@ -146,6 +146,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             get
             {
+                if (_hidePicks) return -1;
                 if (CiIsGym) return _faceSets.FindIndex(s => s.SequenceEqual(CiRow.GymPortrait));
                 if (CiIsLeague) return _faceSets.FindIndex(s => s.SequenceEqual(LeagueFace(CiRow.LeaguePortrait)));
                 return -1;
@@ -178,7 +179,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public int CiBannerIndex
         {
-            get => CiIsGym ? _bannerSets.FindIndex(s => s.SequenceEqual(CiRow.GymBanner)) : -1;
+            get => CiIsGym && !_hidePicks ? _bannerSets.FindIndex(s => s.SequenceEqual(CiRow.GymBanner)) : -1;
             set
             {
                 if (_suppress || !CiIsGym || value < 0 || value >= _bannerSets.Count || value == CiBannerIndex) return;
@@ -190,7 +191,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public int CiFrameIndex
         {
-            get => CiIsLeague ? _palettes.IndexOf(IsDp ? CiRow.DpBannerPalette : CiRow.LeagueFrame) : -1;
+            get => CiIsLeague && !_hidePicks ? _palettes.IndexOf(IsDp ? CiRow.DpBannerPalette : CiRow.LeagueFrame) : -1;
             set
             {
                 if (_suppress || !CiIsLeague || value < 0 || value >= _palettes.Count || value == CiFrameIndex) return;

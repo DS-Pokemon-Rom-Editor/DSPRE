@@ -81,10 +81,11 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             DSUtils.TryUnpackNarcs(dirs);
             _names = VsIntroNames.Read();
             _art = new ScriptNarc(Archive);
-            _kinds = Enumerable.Range(0, _art.Available ? _art.Count : 0)
+            _artCount = _art.Available ? _art.Count : 0;
+            _kinds = Enumerable.Range(0, _artCount)
                                .Select(i => { try { return GraphicAssets.Identify(_art.Get(i)); } catch { return Kind.Unknown; } }).ToArray();
             try { _font = FieldFont.LoadSystemFont(); } catch { _font = null; }
-            _preview = new VsIntroPreview(i => _art.Get(i), _font);
+            _preview = new VsIntroPreview(ArtBytes, _font);
             LoadMotion();
             if (IsClassRecords) { LoadClassRecords(); LoadTimings(); }
             if (IsClassIntroPatch) LoadCiRows();
@@ -142,16 +143,19 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             SequenceChoices.Clear();
             foreach (int id in _sequenceIds) SequenceChoices.Add(_names.Sequence(id));
 
+            RebuildArtChoices();
+        }
+
+        private void RebuildArtChoices()
+        {
             _palettes.Clear();
             for (int i = 0; i < _kinds.Length; i++) if (_kinds[i] == Kind.Palette) _palettes.Add(i);
             FindSets(_faceSets, _t.Records.Select(r => r.FaceMembers()), Kind.Palette, Kind.TileGraphic, Kind.CellLayout, Kind.CellAnimation);
             FindSets(_bannerSets, _t.Records.Select(r => r.BannerMembers()), Kind.Palette, Kind.TileGraphic, Kind.TileMap);
-            FaceSetChoices.Clear();
-            foreach (int[] set in _faceSets) FaceSetChoices.Add(ArtLabel(set[0], r => r.FaceMembers()?[0]));
-            BannerSetChoices.Clear();
-            foreach (int[] set in _bannerSets) BannerSetChoices.Add(ArtLabel(set[0], r => r.BannerMembers()?[0]));
-            FramePaletteChoices.Clear();
-            foreach (int p in _palettes) FramePaletteChoices.Add(ArtLabel(p, r => r.Has(RecordField.FramePalette) ? r.Get(RecordField.FramePalette) : null));
+            // In place, so the pickers keep their selection when a new copy joins the lists.
+            ListSync.Apply(FaceSetChoices, _faceSets.Select(set => ArtLabel(set[0], r => r.FaceMembers()?[0])).ToList());
+            ListSync.Apply(BannerSetChoices, _bannerSets.Select(set => ArtLabel(set[0], r => r.BannerMembers()?[0])).ToList());
+            ListSync.Apply(FramePaletteChoices, _palettes.Select(p => ArtLabel(p, r => r.Has(RecordField.FramePalette) ? r.Get(RecordField.FramePalette) : null)).ToList());
         }
 
         /// <summary>
@@ -179,6 +183,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         // A file is named after the records that use it, as the retail rows set them.
         private string ArtLabel(int member, Func<Record, int?> uses)
         {
+            if (_newArt.ContainsKey(member)) return $"New copy ({member})";
             List<string> who = _t.Records.Where(r => uses(r) == member).Select(r => _names.Record(_t, r)).Distinct().ToList();
             VsIntroSites s = _t.Sites;
             if (who.Count == 0 && member == s.PlayerFaceBoy) who.Add("Player, boy");
@@ -312,7 +317,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get
             {
                 int[] m = Rec?.FaceMembers();
-                return m == null ? -1 : _faceSets.FindIndex(s => s.SequenceEqual(m));
+                return m == null || _hidePicks ? -1 : _faceSets.FindIndex(s => s.SequenceEqual(m));
             }
             set
             {
@@ -328,7 +333,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             get
             {
                 int[] m = Rec?.BannerMembers();
-                return m == null ? -1 : _bannerSets.FindIndex(s => s.SequenceEqual(m));
+                return m == null || _hidePicks ? -1 : _bannerSets.FindIndex(s => s.SequenceEqual(m));
             }
             set
             {
@@ -342,7 +347,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public string FramePaletteLabel => IsDp ? "Banner colours" : "Frame colours";
         public int FramePaletteIndex
         {
-            get => ShowFramePalette ? _palettes.IndexOf(Rec.Get(RecordField.FramePalette)) : -1;
+            get => ShowFramePalette && !_hidePicks ? _palettes.IndexOf(Rec.Get(RecordField.FramePalette)) : -1;
             set
             {
                 if (_suppress || !ShowFramePalette || value < 0 || value >= _palettes.Count || value == FramePaletteIndex) return;
@@ -453,10 +458,10 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             AvaloniaEditorLauncher.OpenCellAnimationEditor(Archive, m[3], m[2], m[1], palette >= 0 ? palette : m[0], 0, what);
         }
 
-        public void PaintFace() { if (Rec?.FaceMembers() is int[] m) Paint(m[1], m[0]); }
-        public void AnimateFace() { if (Rec?.FaceMembers() is int[] m) OpenCells(m, -1, MugshotTitle + " face"); }
-        public void PaintBanner() { if (Rec?.BannerMembers() is int[] m) Paint(m[1], m[0]); }
-        public void ShowBannerInGraphics() { if (Rec?.BannerMembers() is int[] m) AvaloniaEditorLauncher.OpenGraphicAt(Archive, m[2], true, m[0]); }
+        public void PaintFace() { if (Rec?.FaceMembers() is int[] m && !RefuseUnsavedArt(m)) Paint(m[1], m[0]); }
+        public void AnimateFace() { if (Rec?.FaceMembers() is int[] m && !RefuseUnsavedArt(m)) OpenCells(m, -1, MugshotTitle + " face"); }
+        public void PaintBanner() { if (Rec?.BannerMembers() is int[] m && !RefuseUnsavedArt(m)) Paint(m[1], m[0]); }
+        public void ShowBannerInGraphics() { if (Rec?.BannerMembers() is int[] m && !RefuseUnsavedArt(m)) AvaloniaEditorLauncher.OpenGraphicAt(Archive, m[2], true, m[0]); }
         public void EditClassColours() { if (CanEditClassColours) AvaloniaEditorLauncher.OpenTrainerSpriteEditor(Rec.Get(RecordField.Class)); }
         public void OpenParticles(ParticleArt p) { if (p != null) AvaloniaEditorLauncher.OpenParticleEditor(Archive, p.File, $"{MugshotTitle}: {p.Label}", null); }
 
@@ -739,7 +744,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
             Raise(nameof(HasUnsavedChanges));
         }
 
-        public bool HasUnsavedChanges => (IsClassRecords ? RecordsChanged : IsClassIntroPatch ? CiRowsChanged : _t?.HasChanges == true) || _motion?.HasChanges == true
+        public bool HasUnsavedChanges => HasNewArt || (IsClassRecords ? RecordsChanged : IsClassIntroPatch ? CiRowsChanged : _t?.HasChanges == true) || _motion?.HasChanges == true
                                          || _timing?.HasChanges == true;
         public string UnsavedChangesDescription => "VS intros";
 
@@ -747,7 +752,9 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public async Task<bool> SaveChangesAsync()
         {
-            bool hadMotion = _motion?.HasChanges == true || _timing?.HasChanges == true;
+            bool hadMotion = _motion?.HasChanges == true || _timing?.HasChanges == true || HasNewArt;
+            // New art goes first: the records about to be saved point at it.
+            if (!await SaveNewArtAsync()) return false;
             if (!await SaveMotionAsync()) return false;
             // A class's timings are saved with its intro record, so a class that fails keeps both unsaved.
             if (IsClassRecords) return await SaveRecordsAsync();
@@ -785,6 +792,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
 
         public void DiscardChanges()
         {
+            DiscardNewArt();
             if (_motion?.HasChanges == true) ReloadMotion();
             if (_timing?.HasChanges == true) { LoadTimings(); ShowTimings(); }
             if (IsClassRecords) { DiscardRecords(); return; }

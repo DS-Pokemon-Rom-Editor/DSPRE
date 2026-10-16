@@ -26,6 +26,17 @@ namespace DSPRE.Avalonia.Views.Trainers
         private void PaintFace_Click(object sender, RoutedEventArgs e) => VM?.PaintFace();
         private void AnimateFace_Click(object sender, RoutedEventArgs e) => VM?.AnimateFace();
         private void PaintBanner_Click(object sender, RoutedEventArgs e) => VM?.PaintBanner();
+        private void NewFaceCopy_Click(object sender, RoutedEventArgs e) => VM?.NewFaceCopy();
+        private void NewBannerCopy_Click(object sender, RoutedEventArgs e) => VM?.NewBannerCopy();
+        private void CiNewPortraitCopy_Click(object sender, RoutedEventArgs e) => VM?.CiNewPortraitCopy();
+        private void CiNewBannerCopy_Click(object sender, RoutedEventArgs e) => VM?.CiNewBannerCopy();
+        private void CiPaintPortrait_Click(object sender, RoutedEventArgs e) => VM?.CiPaintPortrait();
+        private void CiPaintBanner_Click(object sender, RoutedEventArgs e) => VM?.CiPaintBanner();
+
+        private void NewSlotCopy_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Control { Tag: IntroArtSlot slot }) VM?.NewSlotCopy(slot);
+        }
         private void BannerGraphics_Click(object sender, RoutedEventArgs e) => VM?.ShowBannerInGraphics();
         private void Animate_Click(object sender, RoutedEventArgs e) => VM?.ToggleAnimation();
         private void PlayMotion_Click(object sender, RoutedEventArgs e) => VM?.ToggleMotion();

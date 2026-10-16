@@ -270,14 +270,15 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             List<int[]> used = _records.Where(r => slot.UsedBy(r.VsStyle)).Select(r => SetOf(r, slot)).ToList();
             FindSets(slot.Sets, used, slot.Roles);
-            slot.Choices.Clear();
+            List<string> labels = new();
             foreach (int[] set in slot.Sets)
             {
                 List<string> who = Enumerable.Range(0, _records.Count)
                     .Where(i => slot.UsedBy(_records[i].VsStyle) && SetOf(_records[i], slot).SequenceEqual(set))
                     .Select(ShownName).Distinct().Take(3).ToList();
-                slot.Choices.Add((who.Count == 0 ? "Unused" : string.Join(", ", who)) + $" ({set[0]})");
+                labels.Add(_newArt.ContainsKey(set[0]) ? $"New copy ({set[0]})" : (who.Count == 0 ? "Unused" : string.Join(", ", who)) + $" ({set[0]})");
             }
+            ListSync.Apply(slot.Choices, labels);
         }
 
         // A class is known by the name its intro shows where it has one (several are all "Leader").
@@ -526,6 +527,7 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         public void PaintSlot(IntroArtSlot slot)
         {
             if (Record == null || slot == null) return;
+            if (RefuseUnsavedArt(SetOf(Record, slot))) return;
             int at = Array.IndexOf(slot.Roles, Kind.TileGraphic);
             int pal = Array.IndexOf(slot.Roles, Kind.Palette);
             if (at >= 0) Paint(Record.GetAsset(slot.Fields[at]), pal >= 0 ? Record.GetAsset(slot.Fields[pal]) : -1);
@@ -535,13 +537,14 @@ namespace DSPRE.Avalonia.ViewModels.Trainers
         {
             if (Record == null || slot == null || !slot.CanAnimate) return;
             int[] m = SetOf(Record, slot);
+            if (RefuseUnsavedArt(m)) return;
             OpenCells(m, -1, $"{ClassRecordNames[_recordIndex]}: {slot.Label}");
         }
 
         /// <summary>Shows one file in the graphics browser, which edits every kind.</summary>
         public void ShowPart(IntroArtFile part)
         {
-            if (Record == null || part == null || !part.CanShow) return;
+            if (Record == null || part == null || !part.CanShow || RefuseUnsavedArt(new[] { (int)Record.GetAsset(part.Field) })) return;
             int palette = part.PaletteField is Field f ? Record.GetAsset(f) : -1;
             AvaloniaEditorLauncher.OpenGraphicAt(Archive, Record.GetAsset(part.Field), true, palette);
         }
