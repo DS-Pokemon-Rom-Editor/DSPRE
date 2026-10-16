@@ -105,6 +105,12 @@ namespace DSPRE.Resources.ROMToolboxDB {
             /// <summary>Whether DSPRE can apply the expansion to this ROM.</summary>
             internal static bool Supported => RomInfo.arm9ExpansionSites != null || HasLanguageEntry;
 
+            /// <summary>The dumps with measured sites or a per-language entry, the two ways <see cref="Supported"/> passes.</summary>
+            internal static List<(string id, int rev)> SupportedDumps =>
+                RomInfo.DumpsMeasured(m => m.Arm9Expansion?.Length == 3)
+                    .Concat(RomInfo.KnownDumps.Where(d => arm9ExpansionCodeDB.ContainsKey(nameof(branchString) + "_" + RomInfo.FamilyOfCode(d.id) + "_" + RomInfo.LanguageOfCode(d.id))))
+                    .Distinct().ToList();
+
             /// <summary>The expansion for this ROM: its measured sites where it has them, else the per-language entry.</summary>
             internal ARM9PatchData() : this(RomInfo.arm9ExpansionSites == null) { }
 

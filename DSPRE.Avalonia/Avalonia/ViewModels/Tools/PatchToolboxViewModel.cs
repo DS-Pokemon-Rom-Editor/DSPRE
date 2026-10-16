@@ -203,6 +203,10 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public string RequiresKey { get; private set; }
         public bool HasRequires => RequiresTab != null;
         public bool ShowStatusText => RequiresTab == null;
+        // An unsupported status can carry a second line naming the versions the patch works on, shown apart from it.
+        public string StatusHead => StatusText?.Split('\n')[0];
+        public string StatusNote => StatusText != null && StatusText.Contains('\n') ? StatusText[(StatusText.IndexOf('\n') + 1)..] : null;
+        public bool HasStatusNote => ShowStatusText && StatusNote != null;
         public string RequiresText => StatusText + ". See " + RequiresTab + ".";
         /// <summary>A link to the tab the row already sits on says nothing, so it becomes the plain status.</summary>
         internal void PlacedOn(string tab) { if (RequiresTab == tab) RequiresTab = null; }

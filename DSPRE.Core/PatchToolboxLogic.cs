@@ -1676,8 +1676,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!ARM9PatchData.Supported)
-                        return Unsupported("Unsupported language");
+                    if (!ARM9PatchData.Supported) return UnsupportedVersion(ARM9PatchData.SupportedDumps);
                     bool applied = RomPatchState.flag_arm9Expanded || CheckFilesArm9ExpansionApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
@@ -1687,7 +1686,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!ScrcmdLikeLangOk()) return Unsupported("Unsupported version/language");
+                    if (!ScrcmdLikeLangOk()) return UnsupportedVersion(ScrcmdLikeDumps());
                     if (RomInfo.gameFamily == GameFamilies.HGSS && !RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     bool applied = RomPatchState.flag_BDHCamPatchApplied || CheckFilesBDHCamPatchApplied();
@@ -1700,7 +1699,7 @@ namespace DSPRE
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
-                    if (!BuildingRotationPatchData.SupportsCurrentRom()) return Unsupported("Unsupported version");
+                    if (!BuildingRotationPatchData.SupportsCurrentRom()) return UnsupportedVersion(RomInfo.DumpsMeasured(m => m.BuildingRotation?.Length == 2));
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     bool applied = RomPatchState.flag_BuildingRotationPatchApplied || CheckFilesBuildingRotationPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
@@ -1711,7 +1710,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!TrainerShinyPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (!TrainerShinyPatch.SupportsCurrentRom) return UnsupportedVersion(RomInfo.DumpsMeasured(m => m.TrainerShiny?.Length == 8));
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     return TrainerShinyPatch.DetectCurrentProject() ? PatchState.Applied : PatchState.Available;
@@ -1722,7 +1721,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!TrainerClassMetadataPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (!TrainerClassMetadataPatch.SupportsCurrentRom) return UnsupportedVersion(RomInfo.WithTwins(new[] { ("IPKE", 0), ("IPGE", 0) }));
                     if (!RomInfo.IsDsRomProject) return Unsupported("Convert to ds-rom");
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     return TrainerClassMetadataStore.DetectCurrentRom(out _) switch
@@ -1741,9 +1740,9 @@ namespace DSPRE
                 "Move the ARM9 header table into a NARC so headers are dynamically allocated (Platinum / HGSS).",
                 () =>
                 {
-                    if (RomInfo.gameFamily == GameFamilies.DP) return Unsupported("Unsupported");
                     // Its offsets are known for the US, European and Japanese ARM9s only.
-                    if (RomInfo.gameLanguage == GameLanguages.Korean) return Unsupported("Unsupported language");
+                    if (RomInfo.gameFamily == GameFamilies.DP || RomInfo.gameLanguage == GameLanguages.Korean)
+                        return UnsupportedVersion(RomInfo.KnownDumps.Where(d => (d.id.StartsWith("CPU") || d.id.StartsWith("IP")) && d.id[3] != 'K'));
                     bool applied = RomPatchState.flag_DynamicHeadersPatchApplied || CheckFilesDynamicHeadersPatchApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
@@ -1754,7 +1753,7 @@ namespace DSPRE
                 {
                     if (RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("HGSS only");
                     if (RomInfo.gameLanguage != GameLanguages.English && RomInfo.gameLanguage != GameLanguages.Spanish)
-                        return Unsupported("Unsupported language");
+                        return UnsupportedVersion(RomInfo.KnownDumps.Where(d => d.id.StartsWith("IP") && (d.id[3] == 'E' || d.id[3] == 'S')));
                     bool applied = RomPatchState.flag_MatrixExpansionApplied || CheckFilesMatrixExpansionApplied();
                     return applied ? PatchState.Applied : PatchState.Available;
                 }));
@@ -1764,21 +1763,22 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!ScrcmdLikeLangOk() || RomInfo.gameFamily != GameFamilies.HGSS) return Unsupported("Unsupported version/language");
+                    if (!ScrcmdLikeLangOk() || RomInfo.gameFamily != GameFamilies.HGSS)
+                        return UnsupportedVersion(ScrcmdLikeDumps().Where(d => d.id.StartsWith("IP")));
                     if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
                     return IsScrcmdRepointApplied() ? PatchState.Applied : PatchState.Available;
                 }));
 
             list.Add(Status("disableTextures", "Disable dynamic textures",
                 "Set the Dynamic Textures field of every AreaData to 0xFFFF, disabling texture animations (HGSS).",
-                () => RomInfo.gameFamily == GameFamilies.HGSS ? PatchState.Available : Unsupported("Unsupported")));
+                () => RomInfo.gameFamily == GameFamilies.HGSS ? PatchState.Available : UnsupportedVersion(RomInfo.KnownDumps.Where(d => d.id.StartsWith("IP")))));
 
             list.Add(Status("trainerNames", "Expand trainer-name length",
                 $"Raise the trainer-name max length to {RomPatchState.expandedTrainerNameLength - 1} usable characters.",
                 () =>
                 {
                     if (RomPatchState.flag_TrainerNamesExpanded) return AppliedHere();
-                    if (RomInfo.trainerNameLenOffset < 0) return Unsupported("Unsupported");
+                    if (RomInfo.trainerNameLenOffset < 0) return UnsupportedVersion(RomInfo.TrainerNameLengthDumps);
                     if (RomInfo.trainerNameMaxLen > TrainerFile.defaultNameLen)
                     {
                         RomPatchState.flag_TrainerNamesExpanded = true;
@@ -1822,7 +1822,7 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-                    if (!PickupSlotsPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (!PickupSlotsPatch.SupportsCurrentRom) return UnsupportedVersion(RomInfo.DumpsMeasured(m => m.PickupSlots?.Length == 4));
                     if (PickupSlotsPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
@@ -1833,7 +1833,7 @@ namespace DSPRE
                 {
                     if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
                     if (RomInfo.gameFamily == RomInfo.GameFamilies.HGSS) return Unsupported("Diamond, Pearl and Platinum only");
-                    if (!ClassIntroPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (!ClassIntroPatch.SupportsCurrentRom) return UnsupportedVersion(ClassIntroPatch.SupportedDumps);
                     if (ClassIntroPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
@@ -1843,7 +1843,8 @@ namespace DSPRE
                 () =>
                 {
                     if (RomInfo.isHGE) return Unsupported("Not compatible with hg-engine");
-                    if (!TrainerCustomPokeballsPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (!TrainerCustomPokeballsPatch.SupportsCurrentRom)
+                        return UnsupportedVersion(RomInfo.DumpsMeasured(_ => true).Where(d => TrainerCustomPokeballsPatch.Supports(d.id)));
                     if (TrainerCustomPokeballsPatch.DetectCurrentProject()) return PatchState.Applied;
                     return TrainerCustomPokeballsPatch.WhyNotApplicable(RomInfo.romID, File.ReadAllBytes(RomInfo.arm9Path)) == null
                         ? PatchState.Available : Unsupported("Capsule routine modified");
@@ -1894,7 +1895,10 @@ namespace DSPRE
         private static PatchState MartExpansionProbe()
         {
             if (HgEngine.HgEngineMarts.Enabled) return Unsupported("hg-engine keeps the marts in its own source");
-            if (!RomInfo.IsMartEditorAvailable()) return Unsupported("Unsupported version");
+            // English dumps use the US layouts; the others need their own measured offsets.
+            if (!RomInfo.IsMartEditorAvailable())
+                return UnsupportedVersion(RomInfo.DumpsMeasured(m => m.MartCommonCount != null && m.MartCommonPointer != null && m.MartSpecialtyPointer != null)
+                    .Concat(RomInfo.DumpsMeasured(_ => true).Where(d => d.id[3] == 'E')));
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try { return MartData.LoadCurrent().HasRoom ? PatchState.Applied : PatchState.Available; }
             catch (Exception e) when (e is IOException || e is InvalidOperationException) { return Unsupported("The marts could not be read"); }
@@ -1928,7 +1932,7 @@ namespace DSPRE
         private static PatchState BpShopExpansionProbe()
         {
             if (RomInfo.isHGE || RomInfo.gameFamily != RomInfo.GameFamilies.Plat) return Unsupported("Platinum only");
-            if (BpShopData.WhyNot() != null) return Unsupported("Unsupported version");
+            if (BpShopData.WhyNot() is string bpWhy) return NotHere(RomInfo.BpShopDumps.Where(d => d.id.StartsWith("CPU")), bpWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try
             {
@@ -1969,7 +1973,7 @@ namespace DSPRE
         private static PatchState SwarmTableExpansionProbe()
         {
             if (RomInfo.isHGE) return Unsupported("hg-engine keeps the swarms in its own source");
-            if (SwarmTable.WhyNot() != null) return Unsupported("Unsupported version");
+            if (SwarmTable.WhyNot() is string swarmWhy) return NotHere(RomInfo.SwarmDumps, swarmWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try { return SwarmTable.Load().Expanded ? PatchState.Applied : PatchState.Available; }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return Unsupported("The table could not be read"); }
@@ -2003,7 +2007,7 @@ namespace DSPRE
         private static PatchState TypeChartExpansionProbe()
         {
             if (RomInfo.isHGE) return Unsupported("hg-engine keeps the chart in its own source");
-            if (TypeChart.WhyNot() != null) return Unsupported("Unsupported version");
+            if (TypeChart.WhyNot() is string chartWhy) return NotHere(RomInfo.TypeChartDumps, chartWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             try { return TypeChart.Load().InExpansion ? PatchState.Applied : PatchState.Available; }
             catch (Exception e) when (e is IOException || e is InvalidDataException || e is InvalidOperationException) { return Unsupported("The chart could not be read"); }
@@ -2039,7 +2043,7 @@ namespace DSPRE
         {
             if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
             if (RomInfo.gameLanguage != RomInfo.GameLanguages.English || (RomInfo.romID != "IPKE" && RomInfo.romID != "IPGE"))
-                return Unsupported("Unsupported version");
+                return UnsupportedVersion(RomInfo.WithTwins(new[] { ("IPKE", 0), ("IPGE", 0) }));
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             if (TrainerClassMetadataPatch.InstalledOffset() == null) return Unsupported("Requires trainer class metadata");
             if (VsIntroTimingAddon.WhyNot() is string why) return Unsupported(why.TrimEnd('.'));
@@ -2077,7 +2081,8 @@ namespace DSPRE
         private static PatchState RegionalDexCountProbe()
         {
             if (RomInfo.isHGE) return Unsupported("hg-engine sets these counts in its own source");
-            if (RegionalDexCount.WhyNot() != null) return Unsupported("Unsupported version");
+            if (RegionalDexCount.WhyNot() is string dexWhy)
+                return NotHere(RomInfo.TableSpotDumps(RomInfo.GameTable.RegionalDexCompletion, RomInfo.GameTable.RegionalDexRatingLast), dexWhy);
             List<ushort> order = RegionalDexCount.SavedOrder();
             if (order == null) return Unsupported("The regional order could not be read");
             if (RegionalDexCount.Problem(order) != null) return Unsupported($"More than {RegionalDexCount.Max} species");
@@ -2089,7 +2094,9 @@ namespace DSPRE
         private static PatchState EvolutionSlotsProbe()
         {
             if (RomInfo.isHGE) return Unsupported("hg-engine sets its evolution slots in its own source");
-            if (EvolutionSlots.WhyNot() != null) return Unsupported("Unsupported version");
+            if (EvolutionSlots.WhyNot() is string evoWhy)
+                return NotHere(RomInfo.TableSpotDumps(RomInfo.GameTable.EvolutionSlotBuffer, RomInfo.GameTable.EvolutionSlotLoopLevel,
+                    RomInfo.GameTable.EvolutionSlotLoopTrade, RomInfo.GameTable.EvolutionSlotLoopItem), evoWhy);
             return EvolutionSlots.Expanded ? PatchState.Applied : PatchState.Available;
         }
 
@@ -2136,7 +2143,7 @@ namespace DSPRE
         private static PatchState MoveListProbe(MoveCategoryTable.Kind kind)
         {
             if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
-            if (MoveCategoryTable.WhyNot(kind) != null) return Unsupported("Unsupported version");
+            if (MoveCategoryTable.WhyNot(kind) is string listWhy) return NotHere(RomInfo.MoveListDumps(MoveCategoryTable.TableOf(kind)), listWhy);
             if (!Arm9Expanded()) return Unsupported("Requires ARM9 expansion");
             return MoveCategoryTable.IsExpanded(kind) ? PatchState.Applied : PatchState.Available;
         }
@@ -2223,6 +2230,21 @@ namespace DSPRE
         // take down the whole catalogue (a status probe should never be fatal).
         [ThreadStatic] private static string _reason_text;
         private static PatchState Unsupported(string reason) { _reason_text = reason; return PatchState.Unsupported; }
+
+        // Names the dumps a patch works on, from the same tables its check reads.
+        private static PatchState UnsupportedVersion(IEnumerable<(string id, int rev)> works) =>
+            Unsupported("Unsupported version\nWorks on " + RomInfo.DescribeDumps(works));
+
+        // A known version can still fail for another reason, such as a missing file.
+        private static PatchState NotHere(IEnumerable<(string id, int rev)> works, string why)
+        {
+            List<(string id, int rev)> list = works.ToList();
+            return list.Contains((RomInfo.romID, RomInfo.romRevision)) ? Unsupported(why) : UnsupportedVersion(list);
+        }
+
+        // Platinum, HeartGold and SoulSilver in English or Spanish, as ScrcmdLikeLangOk checks.
+        private static IEnumerable<(string id, int rev)> ScrcmdLikeDumps() =>
+            RomInfo.DumpsMeasured(_ => true).Where(d => (d.id.StartsWith("CPU") || d.id.StartsWith("IP")) && (d.id[3] == 'E' || d.id[3] == 'S'));
 
         public const string AppliedByHgEngine = "Applied by hg-engine";
 

@@ -67,8 +67,10 @@
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock Text="{Binding StatusText}" FontSize="12" FontWeight="SemiBold" IsVisible="{Binding ShowStatusText}"
+                  <TextBlock Text="{Binding StatusHead}" FontSize="12" FontWeight="SemiBold" IsVisible="{Binding ShowStatusText}" TextWrapping="Wrap"
                              Foreground="{Binding StatusBrush}" Margin="0,2,0,0"/>
+                  <TextBlock Text="{Binding StatusNote}" FontSize="12" FontStyle="Italic" IsVisible="{Binding HasStatusNote}" TextWrapping="Wrap"
+                             Foreground="{Binding StatusBrush}"/>
                   <Button Content="{Binding RequiresText}" IsVisible="{Binding HasRequires}" Click="Requires_Click"
                           Background="Transparent" BorderThickness="0" Padding="0" Margin="0,2,0,0" FontSize="12" FontWeight="SemiBold"
                           Foreground="{Binding StatusBrush}" Cursor="Hand" ToolTip.Tip="Opens the tab with the patch this one needs"/>

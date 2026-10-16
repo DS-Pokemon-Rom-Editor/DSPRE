@@ -71,6 +71,8 @@ namespace DSPRE.ROMFiles
         // European English reads these through its code twins.
         private static readonly HashSet<(string, int)> Measured = new() { ("CPUE", 1), ("ADAE", 5), ("APAE", 5) };
 
+        /// <summary>The dumps the patch is mapped for, with the European English revisions that copy their code.</summary>
+        public static List<(string id, int rev)> SupportedDumps => WithTwins(Measured);
         public static bool SupportsCurrentRom => (gameFamily == GameFamilies.Plat || gameFamily == GameFamilies.DP) && romID != null
                                                  && Measured.Contains(CodeKey) && VsIntroCodeSites is VsIntroSites s
                                                  && s.ClassJumpTable >= 0 && s.GymTable >= 0 && s.LeagueTable >= 0;
