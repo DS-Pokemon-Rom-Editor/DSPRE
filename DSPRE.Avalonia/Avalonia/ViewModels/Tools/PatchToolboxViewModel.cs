@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             // Grouped by what the patch is about, not what it edits: name patches sit with their subject.
             ["sentenceCase"] = "Items and Pokémon", ["itemSentenceCase"] = "Items and Pokémon", ["trainerNames"] = "Trainers",
             ["sameHeldItemOdds"] = "Items and Pokémon", ["itemStandardize"] = "Items and Pokémon",
-            ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["regionalDexCount"] = "Items and Pokémon", ["evolutionSlots"] = "Items and Pokémon", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon",
+            ["punchingMovesExpanded"] = "Moves", ["soundMovesExpanded"] = "Moves", ["regionalDexCount"] = "Items and Pokémon", ["evolutionSlots"] = "Items and Pokémon", ["typeChartExpanded"] = "Moves", ["swarmTableExpanded"] = "Items and Pokémon", ["bpShopExpanded"] = "Items and Pokémon", ["martsExpanded"] = "Items and Pokémon", ["pickupSlots"] = "Items and Pokémon",
             ["bdhcam"] = "Maps and graphics", ["buildingRotation"] = "Maps and graphics", ["disableTextures"] = "Maps and graphics",
             ["platPatches"] = "External", ["g4Patcher"] = "External",
         };
@@ -49,7 +49,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             ["trainerClassTablesExpanded"] = "class tables expand", ["trainerEncounterBgmRepointed"] = "encounter music bgm table", ["trainerShiny"] = "shiny trainer party",
             ["sentenceCase"] = "names capital case pokemon", ["itemSentenceCase"] = "names capital case items", ["trainerNames"] = "trainer name length text",
             ["sameHeldItemOdds"] = "held item odds wild", ["itemStandardize"] = "item numbers scripts ground items order",
-            ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai", ["regionalDexCount"] = "regional pokedex dex size count complete professor rating", ["evolutionSlots"] = "evolution evolutions evo slots methods more expand", ["typeChartExpanded"] = "type chart matchups effectiveness expand", ["swarmTableExpanded"] = "swarm swarms outbreak table expand rows", ["bpShopExpanded"] = "battle point bp shop counter tm exchange expand", ["martsExpanded"] = "mart marts shop poke mart items custom expand",
+            ["punchingMovesExpanded"] = "punch punching iron fist move list table expand repoint", ["soundMovesExpanded"] = "sound soundproof move list table expand repoint ai", ["regionalDexCount"] = "regional pokedex dex size count complete professor rating", ["evolutionSlots"] = "evolution evolutions evo slots methods more expand", ["typeChartExpanded"] = "type chart matchups effectiveness expand", ["swarmTableExpanded"] = "swarm swarms outbreak table expand rows", ["bpShopExpanded"] = "battle point bp shop counter tm exchange expand", ["martsExpanded"] = "mart marts shop poke mart items custom expand", ["pickupSlots"] = "pickup ability items level range slots rare independent",
             ["bdhcam"] = "camera cameras dynamic", ["buildingRotation"] = "building rotation map editor", ["disableTextures"] = "textures dynamic disable",
             ["platPatches"] = "external platinum patches link", ["g4Patcher"] = "external asm code injection armips patches link kalaay",
         };

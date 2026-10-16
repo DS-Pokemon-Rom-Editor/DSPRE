@@ -1159,6 +1159,25 @@ namespace DSPRE
             return true;
         }
 
+        public static bool ApplyPickupSlotsPatch()
+        {
+            if (AlreadyApplied(Probe(() => PickupSlotsPatch.IsApplied))) return false;
+            if (PickupSlotsPatch.WhyNotApplicable() is string why) { ShowError(why, "Patch not applied"); return false; }
+            if (PlacementNote(new[] { PickupSlotsPatch.BlockLength }, out int[] offsets) is not string placement) return false;
+            int overlay = RomInfo.pickupTableOverlayNumber;
+            if (!ConfirmYesNo("Each Pickup level range gets its own nine items and two rare items. Pickup gives the same items as before " +
+                "until you change them in Item tables." + placement + "\n\n" +
+                $"Backups ({BackupSuffix}) are made of overlay {overlay} and the synthetic overlay first. It can't be removed by DSPRE; restore the backups to undo it." +
+                "\n\nApply this patch?" + CreditNote("pickupSlots"), "Confirm to proceed"))
+                return false;
+            string overlayPath = OverlayUtils.GetPath(overlay);
+            File.Copy(overlayPath, overlayPath + BackupSuffix, overwrite: true);
+            File.Copy(Filesystem.expArmPath, Filesystem.expArmPath + BackupSuffix, overwrite: true);
+            PickupSlotsPatch.Apply(offsets[0]);
+            ShowInfo("Every Pickup level range now has its own items.", "Operation successful.");
+            return true;
+        }
+
         public static bool ApplyDisableDynamicTexturesPatch()
         {
             if (!ConfirmYesNo("Applying this patch will set the Dynamic Textures field of all AreaData files to 0xFFFF.\n\n" +
@@ -1484,6 +1503,7 @@ namespace DSPRE
             ["platExtraTms"] = ("hzla", "extra TMs"),
             ["trainerClassTablesExpanded"] = ("Mixone", "trainer class table expansion"),
             ["trainerEncounterBgmRepointed"] = ("Mixone", "trainer encounter music repoint"),
+            ["pickupSlots"] = ("Mixone", "independent pickup slots"),
             ["punchingMovesExpanded"] = ("Mixone", "punching move list expansion"),
             ["soundMovesExpanded"] = ("Mixone", "sound move list expansion"),
             ["regionalDexCount"] = ("Mixone", "regional Pokédex size"),
@@ -1771,6 +1791,16 @@ namespace DSPRE
                 {
                     if (TrainerClassTableExpansion.MusicTableHasRoom) return PatchState.Applied;
                     if (!TrainerClassTableExpansion.IsSupportedForCurrentRom) return Unsupported("Platinum only");
+                    return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
+                }));
+
+            list.Add(Status("pickupSlots", "Independent pickup slots",
+                "Each Pickup level range gets its own nine items and two rare items. Requires the ARM9 expansion patch.",
+                () =>
+                {
+                    if (RomInfo.isHGE) return Unsupported(HgEngine.HgEngineSyntheticOverlay.ToolboxReason);
+                    if (!PickupSlotsPatch.SupportsCurrentRom) return Unsupported("Unsupported version");
+                    if (PickupSlotsPatch.IsApplied) return PatchState.Applied;
                     return Arm9Expanded() ? PatchState.Available : Unsupported("Requires ARM9 expansion");
                 }));
 
@@ -2195,7 +2225,8 @@ namespace DSPRE
         {
             string hgEngineRefusal = HgEngine.HgEngineSyntheticOverlay.ExpansionRefusal();
             if (hgEngineRefusal != null && key is "arm9" or "bdhcam" or "buildingRotation" or "scrcmdRepoint"
-                or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded")
+                or "trainerClassTablesExpanded" or "trainerEncounterBgmRepointed" or "punchingMovesExpanded" or "soundMovesExpanded"
+                or "pickupSlots")
             {
                 ShowError(hgEngineRefusal, "Not available on hg-engine");
                 return false;
@@ -2220,6 +2251,7 @@ namespace DSPRE
                 case "sameHeldItemOdds": return ApplySameHeldItemOddsPatch();
                 case "trainerClassTablesExpanded": return ApplyMoveTrainerClassTables();
                 case "trainerEncounterBgmRepointed": return ApplyMoveEncounterMusicTable();
+                case "pickupSlots": return ApplyPickupSlotsPatch();
                 case "punchingMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Punching);
                 case "soundMovesExpanded": return ApplyMoveListExpansion(MoveCategoryTable.Kind.Sound);
                 case "regionalDexCount": return ApplyRegionalDexCount();

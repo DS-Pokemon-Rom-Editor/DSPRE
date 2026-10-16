@@ -16,6 +16,25 @@ namespace DSPRE.Avalonia.Views.Items
             TabDefault.SelectFirstVisible(Tabs);
         }
 
+        // Pickup columns fold to their icons; a header click unfolds that one and folds the rest.
+        private void PickupColumn_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null || sender is not Button { Tag: string tag } || !int.TryParse(tag, out int open)) return;
+            VM.ExpandedPickupColumn = open;
+            for (int c = 0; c <= 10; c++)
+            {
+                DataGridColumn column = PickupGrid.Columns[c + 1];
+                bool unfolded = c == open;
+                column.MinWidth = unfolded ? 230 : 56;
+                column.Width = unfolded ? new DataGridLength(1, DataGridLengthUnitType.Star) : new DataGridLength(56);
+                if (column.Header is Button header)
+                {
+                    string name = c < 9 ? $"Slot {c + 1}" : $"Rare {c - 8}";
+                    header.Content = unfolded ? name : (c < 9 ? $"{c + 1}" : $"R{c - 8}");
+                }
+            }
+        }
+
         public void ShowHiddenItem(int script)
         {
             if (VM == null || !VM.ShowHiddenItemsTab) return;

@@ -13,153 +13,112 @@ using static DSPRE.RomInfo;
 namespace DSPRE.Avalonia.ViewModels.Items
 {
     // ─── Row VMs ──────────────────────────────────────────────────────────────
-    public class CommonPickupRow : INotifyPropertyChanged
+    /// <summary>
+    /// One row of the Pickup grid: the Chance row above the level ranges, or one level range with its nine slots and two
+    /// rare slots. Cells go through the editor, which knows how the table is laid out.
+    /// </summary>
+    public class PickupRangeRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPC([CallerMemberName] string n = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        internal void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        private readonly List<ushort> _ids;
-        private readonly int _b; // bracket index
-        private readonly Action _dirty;
-        private readonly Action<int> _adjacentRefresh; // pass absolute id index
+        private readonly ItemTableEditorViewModel _owner;
+        private readonly int _range;
 
-        // Exposed for AXAML ComboBox binding inside DataGrid template
-        public ObservableCollection<string> ItemNamesList { get; }
+        public PickupRangeRow(ItemTableEditorViewModel owner, int range) { _owner = owner; _range = range; }
 
-        public string LevelRange { get; }
+        public bool IsChanceRow => _range < 0;
+        public bool IsItemRow => _range >= 0;
+        public string LevelRange => IsChanceRow ? "Chance" : ItemTableEditorViewModel.RangeName(_range);
+        public ObservableCollection<string> ItemNamesList => _owner.ItemNames;
 
-        public CommonPickupRow(int bracket, List<ushort> ids,
-                               Action dirty, Action<int> adjacentRefresh,
-                               ObservableCollection<string> itemNamesList)
+        private int Item(int slot) => IsItemRow ? _owner.CommonAt(_range, slot) : 0;
+        private void SetItem(int slot, int id) { if (IsItemRow) _owner.SetCommon(_range, slot, id); }
+        private int Rare(int slot) => IsItemRow ? _owner.RareAt(_range, slot) : 0;
+        private void SetRare(int slot, int id) { if (IsItemRow) _owner.SetRare(_range, slot, id); }
+
+        private void SetChance(int slot, decimal value)
         {
-            _b = bracket; _ids = ids;
-            _dirty = dirty; _adjacentRefresh = adjacentRefresh;
-            ItemNamesList = itemNamesList;
-            LevelRange = $"Lv {bracket * 10 + 1}-{(bracket + 1) * 10}";
+            if (!IsChanceRow || _owner.SetSlotChance(slot, (int)value)) return;
+            // A refused value: show the stored one again once the box has taken the typed one.
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => Raise($"Chance{slot}"));
         }
 
-        private int Get(int slot) => _ids[_b + slot];
-
-        // The list's index is the item id. -1 is the box being cleared, which keeps the item.
-        private void Set(int slot, int id)
-        {
-            if (id < 0 || id > ushort.MaxValue || _ids[_b + slot] == id) return;
-            _ids[_b + slot] = (ushort)id;
-            _dirty();
-            _adjacentRefresh(_b + slot);
-        }
-
-        public void RefreshSlots(int absoluteId)
-        {
-            // If this row references absoluteId, refresh that slot
-            int rel = absoluteId - _b;
-            if (rel >= 0 && rel <= 8) OnPC($"Item{rel}");
-        }
-
-        public int Item0 { get => Get(0); set => Set(0, value); }
-        public int Item1 { get => Get(1); set => Set(1, value); }
-        public int Item2 { get => Get(2); set => Set(2, value); }
-        public int Item3 { get => Get(3); set => Set(3, value); }
-        public int Item4 { get => Get(4); set => Set(4, value); }
-        public int Item5 { get => Get(5); set => Set(5, value); }
-        public int Item6 { get => Get(6); set => Set(6, value); }
-        public int Item7 { get => Get(7); set => Set(7, value); }
-        public int Item8 { get => Get(8); set => Set(8, value); }
+        public int Item0 { get => Item(0); set => SetItem(0, value); }
+        public int Item1 { get => Item(1); set => SetItem(1, value); }
+        public int Item2 { get => Item(2); set => SetItem(2, value); }
+        public int Item3 { get => Item(3); set => SetItem(3, value); }
+        public int Item4 { get => Item(4); set => SetItem(4, value); }
+        public int Item5 { get => Item(5); set => SetItem(5, value); }
+        public int Item6 { get => Item(6); set => SetItem(6, value); }
+        public int Item7 { get => Item(7); set => SetItem(7, value); }
+        public int Item8 { get => Item(8); set => SetItem(8, value); }
+        public int Rare0 { get => Rare(0); set => SetRare(0, value); }
+        public int Rare1 { get => Rare(1); set => SetRare(1, value); }
+        public string Name0 => _owner.ItemName(Item(0));
+        public string Name1 => _owner.ItemName(Item(1));
+        public string Name2 => _owner.ItemName(Item(2));
+        public string Name3 => _owner.ItemName(Item(3));
+        public string Name4 => _owner.ItemName(Item(4));
+        public string Name5 => _owner.ItemName(Item(5));
+        public string Name6 => _owner.ItemName(Item(6));
+        public string Name7 => _owner.ItemName(Item(7));
+        public string Name8 => _owner.ItemName(Item(8));
+        public string RareName0 => _owner.ItemName(Rare(0));
+        public string RareName1 => _owner.ItemName(Rare(1));
+        public bool Open0 => _owner.ExpandedPickupColumn == 0;
+        public bool Open1 => _owner.ExpandedPickupColumn == 1;
+        public bool Open2 => _owner.ExpandedPickupColumn == 2;
+        public bool Open3 => _owner.ExpandedPickupColumn == 3;
+        public bool Open4 => _owner.ExpandedPickupColumn == 4;
+        public bool Open5 => _owner.ExpandedPickupColumn == 5;
+        public bool Open6 => _owner.ExpandedPickupColumn == 6;
+        public bool Open7 => _owner.ExpandedPickupColumn == 7;
+        public bool Open8 => _owner.ExpandedPickupColumn == 8;
+        public bool Open9 => _owner.ExpandedPickupColumn == 9;
+        public bool Open10 => _owner.ExpandedPickupColumn == 10;
+        public decimal Chance0 { get => _owner.SlotChance(0); set => SetChance(0, value); }
+        public decimal Chance1 { get => _owner.SlotChance(1); set => SetChance(1, value); }
+        public decimal Chance2 { get => _owner.SlotChance(2); set => SetChance(2, value); }
+        public decimal Chance3 { get => _owner.SlotChance(3); set => SetChance(3, value); }
+        public decimal Chance4 { get => _owner.SlotChance(4); set => SetChance(4, value); }
+        public decimal Chance5 { get => _owner.SlotChance(5); set => SetChance(5, value); }
+        public decimal Chance6 { get => _owner.SlotChance(6); set => SetChance(6, value); }
+        public decimal Chance7 { get => _owner.SlotChance(7); set => SetChance(7, value); }
+        public decimal Chance8 { get => _owner.SlotChance(8); set => SetChance(8, value); }
+        public string ChanceText0 => $"{_owner.SlotChance(0)}%";
+        public string ChanceText1 => $"{_owner.SlotChance(1)}%";
+        public string ChanceText2 => $"{_owner.SlotChance(2)}%";
+        public string ChanceText3 => $"{_owner.SlotChance(3)}%";
+        public string ChanceText4 => $"{_owner.SlotChance(4)}%";
+        public string ChanceText5 => $"{_owner.SlotChance(5)}%";
+        public string ChanceText6 => $"{_owner.SlotChance(6)}%";
+        public string ChanceText7 => $"{_owner.SlotChance(7)}%";
+        public string ChanceText8 => $"{_owner.SlotChance(8)}%";
     }
 
-    public class RarePickupRow : INotifyPropertyChanged
+    /// <summary>One level range's cell in an entry's row: the chance there, or nothing where the range doesn't read it.</summary>
+    public sealed class PickupStairCell
     {
-        public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPC([CallerMemberName] string n = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-
-        private readonly List<ushort> _ids;
-        private readonly int _b;
-        private readonly Action _dirty;
-        private readonly Action<int> _adjacentRefresh;
-
-        public ObservableCollection<string> ItemNamesList { get; }
-        public string LevelRange { get; }
-
-        public RarePickupRow(int bracket, List<ushort> ids,
-                             Action dirty, Action<int> adjacentRefresh,
-                             ObservableCollection<string> itemNamesList)
-        {
-            _b = bracket; _ids = ids;
-            _dirty = dirty; _adjacentRefresh = adjacentRefresh;
-            ItemNamesList = itemNamesList;
-            LevelRange = $"Lv {bracket * 10 + 1}-{(bracket + 1) * 10}";
-        }
-
-        private int Get(int slot) => _ids[_b + slot];
-
-        // The list's index is the item id. -1 is the box being cleared, which keeps the item.
-        private void Set(int slot, int id)
-        {
-            if (id < 0 || id > ushort.MaxValue || _ids[_b + slot] == id) return;
-            _ids[_b + slot] = (ushort)id;
-            _dirty();
-            _adjacentRefresh(_b + slot);
-        }
-
-        public void RefreshSlots(int absoluteId)
-        {
-            int rel = absoluteId - _b;
-            if (rel >= 0 && rel <= 1) OnPC($"Item{rel}");
-        }
-
-        public int Item0 { get => Get(0); set => Set(0, value); }
-        public int Item1 { get => Get(1); set => Set(1, value); }
+        public string Text { get; init; } = "";
+        public bool Used { get; init; }
     }
 
-    public class ActivationRowVM : INotifyPropertyChanged
+    /// <summary>One entry of the game's common or rare pickup list, with its chance at each level range.</summary>
+    public class PickupEntryRow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler PropertyChanged;
-        private void OnPC([CallerMemberName] string n = null) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        internal void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
-        public string Label { get; }
+        private readonly ItemTableEditorViewModel _owner;
+        private readonly bool _rare;
+        private readonly int _index;
 
-        private int _value;
-        public int Value
-        {
-            get => _value;
-            set { if (_value != value) { _value = value; OnPC(); OnPC(nameof(EditValue)); } }
-        }
+        public PickupEntryRow(ItemTableEditorViewModel owner, bool rare, int index) { _owner = owner; _rare = rare; _index = index; }
 
-        private string _probability = "";
-        public string Probability { get => _probability; set { _probability = value; OnPC(); } }
-
-        private string _description = "";
-        public string Description { get => _description; set { _description = value; OnPC(); } }
-
-        // Slot rows edit their threshold through the table, which refuses a value out of order; the divisor and
-        // rare rows only show what the table works out.
-        private readonly System.Func<int, bool> _edit;
-        public bool IsEditable => _edit != null;
-
-        // Set briefly to a refused value: the binding only sends a value back that differs from the last one it
-        // read, so the box is shown the refused number first and then the stored one.
-        private decimal? _refused;
-
-        public decimal EditValue
-        {
-            get => _refused ?? _value;
-            set
-            {
-                if ((int)value == _value || _edit == null) return;
-                if (_edit((int)value)) return;
-                _refused = value;
-                OnPC(nameof(EditValue));
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { _refused = null; OnPC(nameof(EditValue)); });
-            }
-        }
-
-        public ActivationRowVM(string label, int value, System.Func<int, bool> edit = null)
-        {
-            Label = label; _value = value; _edit = edit;
-        }
+        public ObservableCollection<string> ItemNamesList => _owner.ItemNames;
+        public int Item { get => _owner.EntryAt(_rare, _index); set => _owner.SetEntry(_rare, _index, value); }
+        public IReadOnlyList<PickupStairCell> Cells => _owner.StairCells(_rare, _index);
     }
 
     public class HiddenItemRowVM : INotifyPropertyChanged
@@ -294,40 +253,199 @@ namespace DSPRE.Avalonia.ViewModels.Items
         private void OnPropertyChanged([CallerMemberName] string n = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
-        private const int COMMON_COUNT = 18;
-        private const int RARE_COUNT   = 11;
-        private const int WEIGHT_SIZE  = 9;
-
         // ── Item names for combo boxes ────────────────────────────────────────
         public ObservableCollection<string> ItemNames { get; } = new();
         private string[] _rawItemNames = Array.Empty<string>();
         private string[] _headerNames = Array.Empty<string>();
 
-        // ── Pickup Table ──────────────────────────────────────────────────────
+        // ── Pickup ────────────────────────────────────────────────────────────
         public bool ShowPickupTab { get; }
-        private List<ushort> _commonIDs = new();
-        private List<ushort> _rareIDs   = new();
-        private int    _activationDivisor = 10;
-        private byte[] _weightTable = new byte[WEIGHT_SIZE];
+        private PickupTable _pickup = new PickupTable();
+        public ObservableCollection<PickupRangeRow> PickupRows { get; } = new();
 
-        public ObservableCollection<CommonPickupRow> CommonRows { get; } = new();
-        public ObservableCollection<RarePickupRow>   RareRows   { get; } = new();
-        public ObservableCollection<ActivationRowVM> ActivationRows { get; } = new();
+        public static string RangeName(int range) => $"Lv {range * 10 + 1}-{(range + 1) * 10}";
+        private static string ColumnName(int slot, bool rare) => rare ? $"Rare {slot + 1}" : $"Slot {slot + 1}";
 
-        private int _activDivisorEdit = 10;
-        public int ActivationDivisorEdit
+        internal int CommonAt(int range, int slot) => _pickup.Common[_pickup.CommonIndex(range, slot)];
+        internal int RareAt(int range, int slot) => _pickup.Rare[_pickup.RareIndex(range, slot)];
+        internal string ItemName(int id) => id >= 0 && id < _rawItemNames.Length ? _rawItemNames[id] : $"Item {id}";
+
+        private int _expandedPickupColumn;
+        /// <summary>The one unfolded column: slots 0-8, then the two rare slots as 9 and 10.</summary>
+        public int ExpandedPickupColumn
         {
-            get => _activDivisorEdit;
+            get => _expandedPickupColumn;
             set
             {
-                if (value < 1 || value > 255) return;
-                _activDivisorEdit = value;
-                _activationDivisor = value;
+                if (value < 0 || value > 10 || value == _expandedPickupColumn) return;
+                _expandedPickupColumn = value;
+                foreach (PickupRangeRow row in PickupRows)
+                    for (int c = 0; c <= 10; c++) row.Raise($"Open{c}");
+            }
+        }
+
+        private void RaisePickupCells()
+        {
+            foreach (PickupEntryRow entry in PickupCommonEntries.Concat(PickupRareEntries)) entry.Raise(nameof(PickupEntryRow.Item));
+            foreach (PickupRangeRow row in PickupRows)
+            {
+                for (int j = 0; j < PickupTable.CommonSlots; j++) { row.Raise($"Item{j}"); row.Raise($"Name{j}"); }
+                for (int k = 0; k < PickupTable.RareSlots; k++) { row.Raise($"Rare{k}"); row.Raise($"RareName{k}"); }
+            }
+            RaiseChances();
+        }
+
+        // The list's index is the item id. -1 is the box being cleared, which keeps the item.
+        internal void SetCommon(int range, int slot, int id)
+        {
+            int at = _pickup.CommonIndex(range, slot);
+            if (id < 0 || id > ushort.MaxValue || _pickup.Common[at] == id) return;
+            _pickup.Common[at] = (ushort)id;
+            AfterCellEdit(range, slot, false);
+        }
+
+        internal void SetRare(int range, int slot, int id)
+        {
+            int at = _pickup.RareIndex(range, slot);
+            if (id < 0 || id > ushort.MaxValue || _pickup.Rare[at] == id) return;
+            _pickup.Rare[at] = (ushort)id;
+            AfterCellEdit(range, slot, true);
+        }
+
+        // Without the independent slots patch each range reads one step further along the same list, so other cells can
+        // be this same entry; they are refreshed and named.
+        private void AfterCellEdit(int range, int slot, bool rare)
+        {
+            int at = rare ? _pickup.RareIndex(range, slot) : _pickup.CommonIndex(range, slot);
+            int slotCount = rare ? PickupTable.RareSlots : PickupTable.CommonSlots;
+            List<string> others = new List<string>();
+            for (int r = 0; r < PickupTable.Ranges; r++)
+                for (int j = 0; j < slotCount; j++)
+                {
+                    if ((rare ? _pickup.RareIndex(r, j) : _pickup.CommonIndex(r, j)) != at) continue;
+                    PickupRows[r + 1].Raise(rare ? $"Rare{j}" : $"Item{j}");
+                    PickupRows[r + 1].Raise(rare ? $"RareName{j}" : $"Name{j}");
+                    if (r != range || j != slot) others.Add($"{RangeName(r)} {ColumnName(j, rare)}");
+                }
+            PickupLinkNote = others.Count == 0 ? ""
+                : $"Also changed: {string.Join(", ", others)}.";
+            SetPickupDirty();
+        }
+
+        // ── Pickup as the game's two lists ───────────────────────────────────
+        public ObservableCollection<PickupEntryRow> PickupCommonEntries { get; } = new();
+        public ObservableCollection<PickupEntryRow> PickupRareEntries { get; } = new();
+
+        private bool _pickupListView;
+        /// <summary>Shows the 18 common and 11 rare entries as the game stores them, each with its chance per level range.</summary>
+        public bool PickupListView
+        {
+            get => _pickupListView;
+            set { if (_pickupListView == value) return; _pickupListView = value; PickupLinkNote = ""; OnPropertyChanged(); OnPropertyChanged(nameof(PickupViewLabel)); }
+        }
+        public string PickupViewLabel => _pickupListView ? "Show by slot" : "Show by item";
+        // With the patch every cell is its own entry, so the lists would only repeat the grid.
+        public bool ShowPickupViewToggle => !_pickup.Independent;
+
+        internal int EntryAt(bool rare, int index) => rare ? _pickup.Rare[index] : _pickup.Common[index];
+
+        internal void SetEntry(bool rare, int index, int id)
+        {
+            ushort[] list = rare ? _pickup.Rare : _pickup.Common;
+            if (id < 0 || id > ushort.MaxValue || list[index] == id) return;
+            list[index] = (ushort)id;
+            PickupLinkNote = "";
+            RaisePickupCells();
+            SetPickupDirty();
+        }
+
+        private void BuildPickupEntries()
+        {
+            PickupCommonEntries.Clear();
+            PickupRareEntries.Clear();
+            if (_pickup.Independent) { PickupListView = false; return; }
+            for (int i = 0; i < _pickup.Common.Length; i++) PickupCommonEntries.Add(new PickupEntryRow(this, false, i));
+            for (int i = 0; i < _pickup.Rare.Length; i++) PickupRareEntries.Add(new PickupEntryRow(this, true, i));
+        }
+
+        public IReadOnlyList<string> PickupRangeNames { get; } = Enumerable.Range(0, PickupTable.Ranges).Select(RangeName).ToList();
+
+        // Rare 1 is roll 99 and Rare 2 roll 98; a slot total that reaches a roll takes it from the rare item.
+        private int RareChance(int slot)
+        {
+            int total = _pickup.Weights[PickupTable.WeightSize - 1];
+            return slot == 0 ? (total <= 99 ? 1 : 0) : (total <= 98 ? 1 : 0);
+        }
+
+        /// <summary>An entry's chance at each level range. Each range reads the list one step further on, so the
+        /// used cells run down the table as a staircase.</summary>
+        internal IReadOnlyList<PickupStairCell> StairCells(bool rare, int index)
+        {
+            int slotCount = rare ? PickupTable.RareSlots : PickupTable.CommonSlots;
+            List<PickupStairCell> cells = new List<PickupStairCell>();
+            for (int r = 0; r < PickupTable.Ranges; r++)
+            {
+                int slot = Enumerable.Range(0, slotCount).FirstOrDefault(j => (rare ? _pickup.RareIndex(r, j) : _pickup.CommonIndex(r, j)) == index, -1);
+                cells.Add(slot < 0 ? new PickupStairCell()
+                                   : new PickupStairCell { Used = true, Text = $"{(rare ? RareChance(slot) : SlotChance(slot))}%" });
+            }
+            return cells;
+        }
+
+        private string _pickupLinkNote = "";
+        public string PickupLinkNote { get => _pickupLinkNote; private set { _pickupLinkNote = value; OnPropertyChanged(); OnPropertyChanged(nameof(ShowPickupLinkNote)); } }
+        public bool ShowPickupLinkNote => !string.IsNullOrEmpty(_pickupLinkNote);
+
+        // The weights are cut-offs on a 0-99 roll; a slot's chance is its cut-off minus the one before.
+        internal int SlotChance(int slot) => _pickup.Weights[slot] - (slot > 0 ? _pickup.Weights[slot - 1] : 0);
+
+        /// <summary>Changes one slot's chance and keeps the others', refusing a total past 98 (98 and 99 are the rare rolls).</summary>
+        internal bool SetSlotChance(int slot, int percent)
+        {
+            int delta = percent - SlotChance(slot);
+            if (delta == 0) return true;
+            if (percent < 0 || _pickup.Weights[PickupTable.WeightSize - 1] + delta > 98) return false;
+            for (int j = slot; j < PickupTable.WeightSize; j++) _pickup.Weights[j] = (byte)(_pickup.Weights[j] + delta);
+            PickupLinkNote = "";
+            RaiseChances();
+            SetPickupDirty();
+            return true;
+        }
+
+        private void RaiseChances()
+        {
+            if (PickupRows.Count > 0)
+                for (int j = 0; j < PickupTable.WeightSize; j++) { PickupRows[0].Raise($"Chance{j}"); PickupRows[0].Raise($"ChanceText{j}"); }
+            foreach (PickupEntryRow entry in PickupCommonEntries.Concat(PickupRareEntries)) entry.Raise(nameof(PickupEntryRow.Cells));
+            OnPropertyChanged(nameof(PickupChanceNote));
+        }
+
+        public string PickupChanceNote
+        {
+            get
+            {
+                int total = _pickup.Weights[PickupTable.WeightSize - 1];
+                if (total < 98) return $"Rolls {total} to 97 give nothing.";
+                if (total == 99) return "Rare 2 never drops.";
+                if (total > 99) return "The rare items never drop.";
+                return "";
+            }
+        }
+
+        public decimal ActivationDivisorEdit
+        {
+            get => _pickup.Divisor;
+            set
+            {
+                if (value < 1 || value > 255 || (byte)value == _pickup.Divisor) return;
+                _pickup.Divisor = (byte)value;
                 OnPropertyChanged();
-                RecalcActivation();
+                OnPropertyChanged(nameof(ActivationText));
                 SetPickupDirty();
             }
         }
+
+        public string ActivationText => $"battles ({100.0 / Math.Max((byte)1, _pickup.Divisor):0.#}%)";
 
         // ── Hidden Items ──────────────────────────────────────────────────────
         public bool ShowHiddenItemsTab { get; }
@@ -523,7 +641,7 @@ namespace DSPRE.Avalonia.ViewModels.Items
         public void Redo() => _undo?.Redo();
         private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
-        private PickupState CurrentPickup() => new(_commonIDs.ToArray(), _rareIDs.ToArray(), _activationDivisor, (byte[])_weightTable.Clone());
+        private PickupState CurrentPickup() => new((ushort[])_pickup.Common.Clone(), (ushort[])_pickup.Rare.Clone(), _pickup.Divisor, (byte[])_pickup.Weights.Clone());
 
         private int[][] CurrentHidden() => HiddenItems.Select(h => new int[] { h.ItemID, h.Amount, h.ScriptID, h.Range, h.Padding }).ToArray();
 
@@ -567,14 +685,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _applyingUndo = true;
             try
             {
-                for (int i = 0; i < s.Pickup.Common.Length && i < _commonIDs.Count; i++) _commonIDs[i] = s.Pickup.Common[i];
-                for (int i = 0; i < s.Pickup.Rare.Length && i < _rareIDs.Count; i++) _rareIDs[i] = s.Pickup.Rare[i];
-                for (int i = 0; i < _commonIDs.Count; i++) RefreshCommonAdjacent(i);
-                for (int i = 0; i < _rareIDs.Count; i++) RefreshRareAdjacent(i);
-                _activationDivisor = _activDivisorEdit = s.Pickup.Divisor;
-                Array.Copy(s.Pickup.Weights, _weightTable, Math.Min(WEIGHT_SIZE, s.Pickup.Weights.Length));
+                Array.Copy(s.Pickup.Common, _pickup.Common, Math.Min(s.Pickup.Common.Length, _pickup.Common.Length));
+                Array.Copy(s.Pickup.Rare, _pickup.Rare, Math.Min(s.Pickup.Rare.Length, _pickup.Rare.Length));
+                Array.Copy(s.Pickup.Weights, _pickup.Weights, Math.Min(s.Pickup.Weights.Length, _pickup.Weights.Length));
+                _pickup.Divisor = (byte)s.Pickup.Divisor;
+                RaisePickupCells();
+                PickupLinkNote = "";
                 OnPropertyChanged(nameof(ActivationDivisorEdit));
-                if (ActivationRows.Count > 0) RecalcActivation();
+                OnPropertyChanged(nameof(ActivationText));
 
                 int keep = _selectedHiddenItem != null ? HiddenItems.IndexOf(_selectedHiddenItem) : -1;
                 HiddenItems.Clear();
@@ -614,12 +732,14 @@ namespace DSPRE.Avalonia.ViewModels.Items
             _rawItemNames = Enumerable.Range(0, 30).Select(i => $"Item {i}").ToArray();
             for (int i = 0; i < 30; i++) ItemNames.Add(_rawItemNames[i]);
 
-            for (int i = 0; i < COMMON_COUNT; i++) _commonIDs.Add((ushort)(i % 10));
-            for (int i = 0; i < RARE_COUNT;   i++) _rareIDs.Add((ushort)(i % 10));
-            for (int i = 0; i < WEIGHT_SIZE;  i++) _weightTable[i] = (byte)((i + 1) * 10);
-
+            _pickup = new PickupTable
+            {
+                Common = Enumerable.Range(0, PickupTable.CommonCount).Select(i => (ushort)(i % 10)).ToArray(),
+                Rare = Enumerable.Range(0, PickupTable.RareCount).Select(i => (ushort)(i % 10)).ToArray(),
+                Weights = new byte[] { 30, 40, 50, 60, 70, 80, 90, 94, 98 },
+                Divisor = 10,
+            };
             BuildPickupRows();
-            BuildActivationRows();
             BuildHiddenDummyRows();
             BuildRockSmashDummyRows();
         }
@@ -658,109 +778,20 @@ namespace DSPRE.Avalonia.ViewModels.Items
         // ── Pickup load ───────────────────────────────────────────────────────
         private void LoadPickupTable()
         {
-            PickupTable table = PickupTable.Read();
-            _commonIDs.Clear();
-            _commonIDs.AddRange(table.Common);
-            _rareIDs.Clear();
-            _rareIDs.AddRange(table.Rare);
-            _activationDivisor = _activDivisorEdit = table.Divisor > 0 ? table.Divisor : 10;
-            Array.Copy(table.Weights, _weightTable, WEIGHT_SIZE);
-
+            _pickup = PickupTable.Read();
+            if (_pickup.Divisor == 0) _pickup.Divisor = 10;
             BuildPickupRows();
-            BuildActivationRows();
         }
 
         private void BuildPickupRows()
         {
-            CommonRows.Clear();
-            for (int b = 0; b < 10; b++)
-                CommonRows.Add(new CommonPickupRow(b, _commonIDs,
-                    SetPickupDirty, RefreshCommonAdjacent, ItemNames));
-
-            RareRows.Clear();
-            for (int b = 0; b < 10; b++)
-                RareRows.Add(new RarePickupRow(b, _rareIDs,
-                    SetPickupDirty, RefreshRareAdjacent, ItemNames));
-        }
-
-        private void RefreshCommonAdjacent(int absIdx)
-        {
-            foreach (CommonPickupRow row in CommonRows) row.RefreshSlots(absIdx);
-        }
-
-        private void RefreshRareAdjacent(int absIdx)
-        {
-            foreach (RarePickupRow row in RareRows) row.RefreshSlots(absIdx);
-        }
-
-        private void BuildActivationRows()
-        {
-            ActivationRows.Clear();
-            RecalcActivation();
-        }
-
-        private void RecalcActivation()
-        {
-            double chance = 100.0 / _activationDivisor;
-
-            if (ActivationRows.Count == 0)
-            {
-                // Build initial rows
-                ActivationRowVM divisorRow = new ActivationRowVM("Activation %", _activationDivisor);
-                divisorRow.Probability  = $"{chance:F2}%";
-                divisorRow.Description  = "";
-                ActivationRows.Add(divisorRow);
-
-                int prev = 0;
-                for (int i = 0; i < WEIGHT_SIZE; i++)
-                {
-                    int thresh = _weightTable[i];
-                    int range  = thresh - prev;
-                    double prob = chance / 100.0 * range;
-                    int slot = i;
-                    ActivationRowVM row = new ActivationRowVM($"Slot {i + 1}", thresh, v => UpdateWeightThreshold(slot, v));
-                    row.Probability  = $"{prob:F2}%";
-                    row.Description  = $"{prev}-{thresh - 1}";
-                    ActivationRows.Add(row);
-                    prev = thresh;
-                }
-
-                // Rare
-                double rareProb = chance / 100.0 * 2;
-                ActivationRowVM rareRow = new ActivationRowVM("Rare (98-99)", 0);
-                rareRow.Probability = $"{rareProb:F2}%";
-                rareRow.Description = "98-99";
-                ActivationRows.Add(rareRow);
-            }
-            else
-            {
-                // Update existing rows
-                ActivationRows[0].Probability = $"{chance:F2}%";
-                int prev = 0;
-                for (int i = 0; i < WEIGHT_SIZE; i++)
-                {
-                    int thresh = _weightTable[i];
-                    int range  = thresh - prev;
-                    double prob = chance / 100.0 * range;
-                    ActivationRowVM row = ActivationRows[i + 1];
-                    row.Value       = thresh;
-                    row.Probability = $"{prob:F2}%";
-                    row.Description = $"{prev}-{thresh - 1}";
-                    prev = thresh;
-                }
-            }
-        }
-
-        public bool UpdateWeightThreshold(int slotIndex, int newValue)
-        {
-            // slotIndex 0-8, newValue 0-100
-            int prev = slotIndex > 0 ? _weightTable[slotIndex - 1] : 0;
-            int next = slotIndex < WEIGHT_SIZE - 1 ? _weightTable[slotIndex + 1] : 100;
-            if (newValue <= prev || newValue >= next) return false;
-            _weightTable[slotIndex] = (byte)newValue;
-            RecalcActivation();
-            SetPickupDirty();
-            return true;
+            PickupRows.Clear();
+            PickupRows.Add(new PickupRangeRow(this, -1));
+            for (int r = 0; r < PickupTable.Ranges; r++) PickupRows.Add(new PickupRangeRow(this, r));
+            PickupLinkNote = "";
+            BuildPickupEntries();
+            OnPropertyChanged(nameof(ShowPickupViewToggle));
+            OnPropertyChanged(nameof(PickupChanceNote));
         }
 
         // ── Hidden items load ─────────────────────────────────────────────────
@@ -967,13 +998,10 @@ namespace DSPRE.Avalonia.ViewModels.Items
 
         private void SavePickupTable()
         {
-            new PickupTable
-            {
-                Common = _commonIDs.ToArray(), Rare = _rareIDs.ToArray(),
-                Divisor = (byte)_activationDivisor, Weights = (byte[])_weightTable.Clone(),
-            }.Write();
+            _pickup.Write();
 
             _pickupDirty = false;
+            PickupLinkNote = "";
             SavedTab();
             SaveNotice.Saved(UnsavedChangesDescription);
             OnPropertyChanged(nameof(HasUnsavedChanges));

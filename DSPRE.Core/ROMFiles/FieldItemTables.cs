@@ -3,15 +3,24 @@ using System.Collections.Generic;
 
 namespace DSPRE.ROMFiles
 {
-    /// <summary>The Pickup ability's tables in their overlay: item ids, the activation divisor and the level weights.</summary>
+    /// <summary>
+    /// The Pickup ability's tables: item ids, the activation divisor and the level weights. The game gives level range r
+    /// (levels 10r+1 to 10r+10) common slot j from <see cref="Common"/>[r + j] and rare slot k from <see cref="Rare"/>[r + k],
+    /// sliding lists of 18 and 11; with <see cref="PickupSlotsPatch"/> applied every range has its own row of 9.
+    /// </summary>
     public sealed class PickupTable
     {
-        public const int CommonCount = 18, RareCount = 11, WeightSize = 9;
+        public const int CommonCount = 18, RareCount = 11, WeightSize = 9, Ranges = 10, CommonSlots = 9, RareSlots = 2;
 
         public ushort[] Common = new ushort[CommonCount];
         public ushort[] Rare = new ushort[RareCount];
         public byte Divisor;
         public byte[] Weights = new byte[WeightSize];
+        /// <summary>Read from the patch's tables, where every range's slots are its own.</summary>
+        public bool Independent;
+
+        public int CommonIndex(int range, int slot) => Independent ? range * PickupSlotsPatch.Stride + slot : range + slot;
+        public int RareIndex(int range, int slot) => Independent ? range * PickupSlotsPatch.Stride + slot : range + slot;
 
         private static string Overlay => OverlayUtils.GetPath(RomInfo.pickupTableOverlayNumber);
 
@@ -23,20 +32,43 @@ namespace DSPRE.ROMFiles
                 Divisor = DSUtils.ReadFromFile(path, RomInfo.pickupActivationDivisorOffset, 1)[0],
                 Weights = DSUtils.ReadFromFile(path, RomInfo.pickupWeightTableOffset, WeightSize),
             };
-            byte[] common = DSUtils.ReadFromFile(path, RomInfo.pickupCommonItemsOffset, CommonCount * 2);
-            for (int i = 0; i < CommonCount; i++) t.Common[i] = BitConverter.ToUInt16(common, i * 2);
-            byte[] rare = DSUtils.ReadFromFile(path, RomInfo.pickupRareItemsOffset, RareCount * 2);
-            for (int i = 0; i < RareCount; i++) t.Rare[i] = BitConverter.ToUInt16(rare, i * 2);
+            int patched = PickupSlotsPatch.CommonTableOffset();
+            if (patched >= 0)
+            {
+                byte[] synth = DSUtils.ReadFromFile(Filesystem.expArmPath, (uint)patched, PickupSlotsPatch.TableLength * 2);
+                t.Independent = true;
+                t.Common = Ushorts(synth, 0, PickupSlotsPatch.TableLength / 2);
+                t.Rare = Ushorts(synth, PickupSlotsPatch.TableLength, PickupSlotsPatch.TableLength / 2);
+                return t;
+            }
+            t.Common = Ushorts(DSUtils.ReadFromFile(path, RomInfo.pickupCommonItemsOffset, CommonCount * 2), 0, CommonCount);
+            t.Rare = Ushorts(DSUtils.ReadFromFile(path, RomInfo.pickupRareItemsOffset, RareCount * 2), 0, RareCount);
             return t;
         }
 
         public void Write()
         {
             string path = Overlay;
-            DSUtils.WriteToFile(path, Words(Common, CommonCount), RomInfo.pickupCommonItemsOffset);
-            DSUtils.WriteToFile(path, Words(Rare, RareCount), RomInfo.pickupRareItemsOffset);
+            if (Independent)
+            {
+                uint at = (uint)PickupSlotsPatch.CommonTableOffset();
+                DSUtils.WriteToFile(Filesystem.expArmPath, Words(Common, Common.Length), at);
+                DSUtils.WriteToFile(Filesystem.expArmPath, Words(Rare, Rare.Length), at + PickupSlotsPatch.TableLength);
+            }
+            else
+            {
+                DSUtils.WriteToFile(path, Words(Common, CommonCount), RomInfo.pickupCommonItemsOffset);
+                DSUtils.WriteToFile(path, Words(Rare, RareCount), RomInfo.pickupRareItemsOffset);
+            }
             DSUtils.WriteToFile(path, new[] { Divisor }, RomInfo.pickupActivationDivisorOffset);
             DSUtils.WriteToFile(path, Weights, RomInfo.pickupWeightTableOffset);
+        }
+
+        private static ushort[] Ushorts(byte[] bytes, int start, int count)
+        {
+            ushort[] values = new ushort[count];
+            for (int i = 0; i < count; i++) values[i] = BitConverter.ToUInt16(bytes, start + i * 2);
+            return values;
         }
 
         internal static byte[] Words(IReadOnlyList<ushort> values, int count)

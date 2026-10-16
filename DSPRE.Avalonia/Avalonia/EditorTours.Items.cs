@@ -50,10 +50,8 @@ namespace DSPRE.Avalonia
 
             Add("ItemTableEditorView", "Item Tables",
                 S("tabs", "Item tables", "Where items come from besides shops: Pickup, hidden items and Rock Smash. Only the tables this game has are shown."),
-                S("tab:Pickup Table>name:ActivationGrid", "Which slot", "The chance of each slot being picked when Pickup finds something."),
-                S("tab:Pickup Table>name:CommonGrid", "Common items", "The nine common items for each level range. Pick an item in any cell."),
-                S("tab:Pickup Table>name:DivisorBox", "How often", "Pickup happens on roughly one battle in this many."),
-                S("tab:Rare Pickup Items>name:RareGrid", "Rare items", "The two rare items for each level range."),
+                S("tab:Pickup>name:PickupRate", "How often", "Pickup happens on one battle in this many, when the Pokémon holds nothing."),
+                S("tab:Pickup>name:PickupGrid", "Slots and items", "The Chance row is how often each slot is picked. Each level range then has nine slots and two rare ones."),
                 S("tab:Hidden Items>list", "Hidden items", "Each hidden item with its amount, script number and where it is placed. Add or Remove below the list."),
                 S("tab:Hidden Items>name:HiddenEditPanel", "Setting one up", "Pick the item, amount and script number. A hidden item on the map uses the number shown underneath."),
                 S("tab:Rock Smash>name:RockSmashGrid", "Rock Smash odds", "For each header, the chance a smashed rock gives an item, and which drop table it uses."),

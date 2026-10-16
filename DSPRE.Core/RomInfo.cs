@@ -685,6 +685,16 @@ namespace DSPRE
             _ => 0u,
         };
         /// <summary>
+        /// The Pickup routine's range clamp (cmp rN, #10; bcc; movs rN, #9, never reached for levels 1 to 100), the register
+        /// holding the range, and the literals pointing at the common and rare item lists, all in the pickup overlay.
+        /// </summary>
+        public sealed record PickupSlotSites(uint Clamp, int Register, uint CommonLiteral, uint RareLiteral);
+
+        /// <summary>Measured per dump.</summary>
+        public static PickupSlotSites pickupSlotSites =>
+            MeasuredHere?.PickupSlots is uint[] s && s.Length == 4 ? new PickupSlotSites(s[0], (int)s[1], s[2], s[3]) : null;
+
+        /// <summary>
         /// The Underground wall code in the mining table's overlay: the treasure count's random range and minimum
         /// (rand(range) + minimum, a 3-bit immediate), the first dig's count, the rock placement tries, and in Diamond and
         /// Pearl the orb bonus: two (row id compare, bonus add) pairs in the weight getter. Orb sites are 0 in Platinum.
