@@ -237,7 +237,7 @@
                    ToolTip.Tip="Edit TM/HM compatibility for many Pokémon at once"/>
           <Grid ColumnDefinitions="*,8,Auto,8,*">
             <DockPanel Grid.Column="0">
-              <TextBlock DockPanel.Dock="Top" Text="Can learn" FontWeight="SemiBold" Margin="0,0,0,4"/>
+              <TextBlock DockPanel.Dock="Top" Text="Cannot learn" FontWeight="SemiBold" Margin="0,0,0,4"/>
               <Grid DockPanel.Dock="Top" ColumnDefinitions="74,190,Auto" Margin="12,0,0,2" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource Editor.Subtle}">
                 <Grid Grid.Column="2" ColumnDefinitions="40,44,28" Margin="6,0,0,0">
                   <TextBlock Text="Power" HorizontalAlignment="Right"/>
@@ -246,7 +246,7 @@
                 </Grid>
               </Grid>
 
-              <ListBox ItemsSource="{Binding AddedMachines}" SelectedIndex="{Binding SelectedAddedMachineIndex}">
+              <ListBox ItemsSource="{Binding AddableMachines}" SelectedIndex="{Binding SelectedAddableMachineIndex}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:PersonalDataEditorViewModel+MachineRow">
                     <Grid ColumnDefinitions="74,190,Auto">
@@ -259,13 +259,13 @@
               </ListBox>
             </DockPanel>
             <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="6">
-              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveMachine_Click" MinWidth="90"/>
-              <Button Content="Remove all" controls:Icon.Key="deleteIcon" Click="RemoveAll_Click" MinWidth="90"/>
               <Button Content="Add" controls:Icon.Key="addIcon" Click="AddMachine_Click" MinWidth="90"/>
               <Button Content="Add all" controls:Icon.Key="addIcon" Click="AddAll_Click" MinWidth="90"/>
+              <Button Content="Remove" controls:Icon.Key="deleteIcon" Click="RemoveMachine_Click" MinWidth="90"/>
+              <Button Content="Remove all" controls:Icon.Key="deleteIcon" Click="RemoveAll_Click" MinWidth="90"/>
             </StackPanel>
             <DockPanel Grid.Column="4">
-              <TextBlock DockPanel.Dock="Top" Text="Cannot learn" FontWeight="SemiBold" Margin="0,0,0,4"/>
+              <TextBlock DockPanel.Dock="Top" Text="Can learn" FontWeight="SemiBold" Margin="0,0,0,4"/>
               <Grid DockPanel.Dock="Top" ColumnDefinitions="74,190,Auto" Margin="12,0,0,2" TextElement.FontSize="11" TextElement.Foreground="{DynamicResource Editor.Subtle}">
                 <Grid Grid.Column="2" ColumnDefinitions="40,44,28" Margin="6,0,0,0">
                   <TextBlock Text="Power" HorizontalAlignment="Right"/>
@@ -274,7 +274,7 @@
                 </Grid>
               </Grid>
 
-              <ListBox ItemsSource="{Binding AddableMachines}" SelectedIndex="{Binding SelectedAddableMachineIndex}">
+              <ListBox ItemsSource="{Binding AddedMachines}" SelectedIndex="{Binding SelectedAddedMachineIndex}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:PersonalDataEditorViewModel+MachineRow">
                     <Grid ColumnDefinitions="74,190,Auto">
