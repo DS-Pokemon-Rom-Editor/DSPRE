@@ -10,17 +10,48 @@
 
   <UserControl.Styles>
     <Style Selector="NumericUpDown.w">
-      <Setter Property="Width" Value="80"/>
+      <Setter Property="Width" Value="64"/>
       <Setter Property="FormatString" Value="0"/>
       <Setter Property="ShowButtonSpinner" Value="False"/>
       <Setter Property="Minimum" Value="0"/>
       <Setter Property="Maximum" Value="65535"/>
     </Style>
+    <Style Selector="NumericUpDown.n">
+      <Setter Property="Width" Value="110"/>
+      <Setter Property="FormatString" Value="0"/>
+    </Style>
     <Style Selector="TextBlock.p">
-      <Setter Property="Width" Value="56"/>
-      <Setter Property="Margin" Value="6,0,12,0"/>
+      <Setter Property="Width" Value="42"/>
+      <Setter Property="Margin" Value="6,0,8,0"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+    </Style>
+    <Style Selector="ToggleButton.cell">
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="Padding" Value="0"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <!-- Empty cells darken the picture; solid ones leave it clear with an accent edge. -->
+    <Style Selector="ToggleButton.cell /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#C8141418"/>
+      <Setter Property="BorderBrush" Value="#40FFFFFF"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="ToggleButton.cell:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#A0141418"/>
+      <Setter Property="BorderBrush" Value="#A0FFFFFF"/>
+    </Style>
+    <Style Selector="ToggleButton.cell:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#A0141418"/>
+    </Style>
+    <Style Selector="ToggleButton.cell:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+    </Style>
+    <Style Selector="ToggleButton.cell:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#30FFFFFF"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
     </Style>
   </UserControl.Styles>
 
@@ -31,40 +62,106 @@
         <controls:UndoRedoButtons/>
     </controls:EditorToolbar>
 
+    <Border x:Name="WallSettings" DockPanel.Dock="Top" Margin="8,8,8,0" Padding="8" IsVisible="{Binding HasCode}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4">
+      <StackPanel Spacing="6">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="Treasures per wall" VerticalAlignment="Center"/>
+          <NumericUpDown Classes="n" Value="{Binding TreasureMin}" Minimum="1" Maximum="{Binding MaxTreasures}" ToolTip.Tip="A wall holds 4 treasures at most"/>
+          <TextBlock Text="to" VerticalAlignment="Center"/>
+          <NumericUpDown Classes="n" Value="{Binding TreasureMax}" Minimum="1" Maximum="{Binding MaxTreasures}" ToolTip.Tip="A wall holds 4 treasures at most"/>
+          <TextBlock Text="First ever dig" VerticalAlignment="Center" Margin="16,0,0,0"/>
+          <NumericUpDown Classes="n" Value="{Binding FirstDig}" Minimum="1" Maximum="{Binding MaxTreasures}"/>
+          <TextBlock Text="Rock placement tries" VerticalAlignment="Center" Margin="16,0,0,0"/>
+          <NumericUpDown Classes="n" Value="{Binding Tries}" Minimum="1" Maximum="255" ToolTip.Tip="More tries fill more of the wall with rocks"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasOrbBonus}">
+          <TextBlock Text="Once the player has the Adamant or Lustrous Orb:" VerticalAlignment="Center"/>
+          <TextBlock Text="{Binding OrbNameB}" VerticalAlignment="Center"/>
+          <NumericUpDown Classes="n" Value="{Binding OrbBonusB}" Minimum="0" Maximum="255"/>
+          <TextBlock Text="{Binding OrbNameA}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+          <NumericUpDown Classes="n" Value="{Binding OrbBonusA}" Minimum="0" Maximum="255"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
     <StackPanel x:Name="MiningTotals" DockPanel.Dock="Bottom" Margin="8,4" Spacing="2">
       <TextBlock Text="{Binding Totals}" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
       <TextBlock Text="{Binding Problem}" IsVisible="{Binding HasProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap"/>
     </StackPanel>
 
+    <Border x:Name="MiningDetail" DockPanel.Dock="Right" Width="270" Margin="0,8,8,8" Padding="10" IsVisible="{Binding HasSelection}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="4">
+      <ScrollViewer>
+        <StackPanel Spacing="8">
+          <TextBlock Text="{Binding SelectedRow.Name}" FontWeight="SemiBold" FontSize="15"/>
+          <TextBlock Text="{Binding SelectedSize}" Foreground="{DynamicResource Editor.Subtle}" FontSize="12"/>
+          <TextBlock Text="Shape" FontWeight="SemiBold"/>
+          <Panel IsVisible="{Binding HasShape}" HorizontalAlignment="Left" Background="#202024"
+                 Width="{Binding ShapeWidth}" Height="{Binding ShapeHeight}">
+          <Image Source="{Binding ShapeArt}" Stretch="Fill" RenderOptions.BitmapInterpolationMode="None"/>
+          <ItemsControl ItemsSource="{Binding ShapeCells}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="{Binding ShapeColumns}"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:UndergroundMiningViewModel+ShapeCell">
+                <ToggleButton Classes="cell" IsChecked="{Binding Solid}" Width="{Binding Size}" Height="{Binding Size}"/>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          </Panel>
+          <TextBlock Text="{Binding ShapeNote}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource Editor.Subtle}"/>
+          <Border Background="#202024" CornerRadius="4" Padding="8" HorizontalAlignment="Left">
+            <Image Source="{Binding SelectedArt}" Stretch="Uniform" MaxWidth="96" MaxHeight="96"
+                   RenderOptions.BitmapInterpolationMode="None" Width="96" Height="96"/>
+          </Border>
+          <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" RowSpacing="4" ColumnSpacing="8">
+            <TextBlock Grid.Row="0" Text="Tiles member" VerticalAlignment="Center"/>
+            <NumericUpDown Grid.Row="0" Grid.Column="1" Classes="n" Value="{Binding SelectedSprite}" Minimum="0" Maximum="{Binding MaxMember}"/>
+            <TextBlock Grid.Row="1" Text="Palette member" VerticalAlignment="Center"/>
+            <NumericUpDown Grid.Row="1" Grid.Column="1" Classes="n" Value="{Binding SelectedPalette}" Minimum="0" Maximum="{Binding MaxMember}"/>
+          </Grid>
+          <TextBlock Text="{Binding ArtProblem}" Foreground="{DynamicResource Editor.Bad}" TextWrapping="Wrap" FontSize="12"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
     <DockPanel Margin="8">
-      <Grid x:Name="MiningColumns" DockPanel.Dock="Top" ColumnDefinitions="226,*,*,*,*" Margin="4,0,20,4">
-        <TextBlock Grid.Column="0" Text="Treasure" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="1" Text="{Binding Columns[0]}" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="2" Text="{Binding Columns[1]}" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="3" Text="{Binding Columns[2]}" FontWeight="SemiBold"/>
-        <TextBlock Grid.Column="4" Text="{Binding Columns[3]}" FontWeight="SemiBold"/>
+      <Grid x:Name="MiningColumns" DockPanel.Dock="Top" ColumnDefinitions="190,120,120,120,120" Margin="4,0,20,4">
+        <TextBlock Grid.Column="0" Text="Treasure" FontWeight="SemiBold" VerticalAlignment="Bottom"/>
+        <TextBlock Grid.Column="1" Text="{Binding Columns[0]}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,8,0" VerticalAlignment="Bottom"/>
+        <TextBlock Grid.Column="2" Text="{Binding Columns[1]}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,8,0" VerticalAlignment="Bottom"/>
+        <TextBlock Grid.Column="3" Text="{Binding Columns[2]}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,8,0" VerticalAlignment="Bottom"/>
+        <TextBlock Grid.Column="4" Text="{Binding Columns[3]}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,8,0" VerticalAlignment="Bottom"/>
       </Grid>
-      <ListBox ItemsSource="{Binding Rows}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
+      <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" KeyboardNavigation.TabNavigation="Continue" Background="Transparent">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:UndergroundMiningViewModel+TreasureRow">
-            <Grid ColumnDefinitions="226,*,*,*,*">
-              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
-                <Image Width="32" Height="32" Source="{Binding Item, Converter={x:Static controls:GameIconConverter.Item}}"/>
-                <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
-              </StackPanel>
-              <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <NumericUpDown Classes="w" Value="{Binding W0}"/><TextBlock Classes="p" Text="{Binding P0}"/>
-              </StackPanel>
-              <StackPanel Grid.Column="2" Orientation="Horizontal">
-                <NumericUpDown Classes="w" Value="{Binding W1}"/><TextBlock Classes="p" Text="{Binding P1}"/>
-              </StackPanel>
-              <StackPanel Grid.Column="3" Orientation="Horizontal">
-                <NumericUpDown Classes="w" Value="{Binding W2}"/><TextBlock Classes="p" Text="{Binding P2}"/>
-              </StackPanel>
-              <StackPanel Grid.Column="4" Orientation="Horizontal">
-                <NumericUpDown Classes="w" Value="{Binding W3}"/><TextBlock Classes="p" Text="{Binding P3}"/>
-              </StackPanel>
-            </Grid>
+            <StackPanel>
+              <TextBlock Text="Rocks, placed at random" IsVisible="{Binding IsFirstRock}"
+                         FontWeight="SemiBold" Margin="0,8,0,4" Foreground="{DynamicResource Editor.Subtle}"/>
+              <Grid ColumnDefinitions="190,120,120,120,120">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                  <Image Width="32" Height="32" Stretch="Uniform" Source="{Binding Art}" RenderOptions.BitmapInterpolationMode="None"/>
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" IsVisible="{Binding IsTreasure}">
+                  <NumericUpDown Classes="w" Value="{Binding W0}"/><TextBlock Classes="p" Text="{Binding P0}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" IsVisible="{Binding IsTreasure}">
+                  <NumericUpDown Classes="w" Value="{Binding W1}"/><TextBlock Classes="p" Text="{Binding P1}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="3" Orientation="Horizontal" IsVisible="{Binding IsTreasure}">
+                  <NumericUpDown Classes="w" Value="{Binding W2}"/><TextBlock Classes="p" Text="{Binding P2}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="4" Orientation="Horizontal" IsVisible="{Binding IsTreasure}">
+                  <NumericUpDown Classes="w" Value="{Binding W3}"/><TextBlock Classes="p" Text="{Binding P3}"/>
+                </StackPanel>
+              </Grid>
+            </StackPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>

@@ -684,6 +684,18 @@ namespace DSPRE
             (GameFamilies.HGSS, GameLanguages.Spanish) => 0xFFB78,
             _ => 0u,
         };
+        /// <summary>
+        /// The Underground wall code in the mining table's overlay: the treasure count's random range and minimum
+        /// (rand(range) + minimum, a 3-bit immediate), the first dig's count, the rock placement tries, and in Diamond and
+        /// Pearl the orb bonus: two (row id compare, bonus add) pairs in the weight getter. Orb sites are 0 in Platinum.
+        /// </summary>
+        public sealed record MiningCodeSites(uint Range, uint Minimum, uint FirstDig, uint Tries,
+            uint OrbRowA, uint OrbBonusA, uint OrbRowB, uint OrbBonusB);
+
+        /// <summary>Measured per DP and Pt dump.</summary>
+        public static MiningCodeSites miningCodeSites =>
+            MeasuredHere?.MiningCode is uint[] s && s.Length == 8 ? new MiningCodeSites(s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7]) : null;
+
         /// <summary>Platinum: the arm9 literal pointing at the trainer class gender table, or 0 where it is not measured.</summary>
         public static uint trainerClassGenderPointerOffset =>
             gameFamily == GameFamilies.Plat ? MeasuredHere?.ClassGenderPointer ?? 0u : 0u;
@@ -1040,6 +1052,7 @@ namespace DSPRE
             openingDemoGraphics,    // HGSS a/2/6/2 (demo/opening/gs_opening.narc): the opening movie
             pokewalkerSprites,      // HGSS a/2/5/6: the Pokéwalker's Pokemon pictures, 64x96 2bpp (PokewalkerImage)
             pokewalkerIcons,        // HGSS a/2/4/8: the Pokéwalker's small pictures, 32x48 2bpp
+            undergroundParts,       // DP/Pt data/ug_parts.narc: Underground treasure, rock and sphere art
         };
 
         public static Dictionary<DirNames, (string packedDir, string unpackedDir)> gameDirs { get; private set; }
@@ -3459,6 +3472,7 @@ namespace DSPRE
                         [DirNames.trainerGraphics] = $@"{dataFolderName}\poketool\trgra\trfgra.narc",
                         [DirNames.trainerBackGraphics] = $@"{dataFolderName}\poketool\trgra\trbgra.narc",
                         [DirNames.poketch] = Localized($@"{dataFolderName}\graphic\poketch.narc", "poketch", "poketch.narc"),
+                        [DirNames.undergroundParts] = $@"{dataFolderName}\data\ug_parts.narc",
                         [DirNames.trainerCardGraphics] = Localized($@"{dataFolderName}\graphic\trainer_case.narc", "trainer_case", "trainer_case.narc"),
                         [DirNames.encounterEffectGraphics] = $@"{dataFolderName}\graphic\field_encounteffect.narc",
                         [DirNames.nameInputGraphics] = Localized($@"{dataFolderName}\data\namein.narc", "nameinput", "namein.narc"),
@@ -3600,6 +3614,7 @@ namespace DSPRE
                         [DirNames.bagGraphics] = Localized($@"{dataFolderName}\graphic\pl_bag_gra.narc", "bag", "pl_bag_gra.narc"),
                         [DirNames.footprintGraphics] = $@"{dataFolderName}\poketool\pokefoot\pokefoot.narc",
                         [DirNames.poketch] = Localized($@"{dataFolderName}\graphic\poketch.narc", "poketch", "poketch.narc"),
+                        [DirNames.undergroundParts] = $@"{dataFolderName}\data\ug_parts.narc",
 
                         [DirNames.matrices] = $@"{dataFolderName}\fielddata\mapmatrix\map_matrix.narc",
 

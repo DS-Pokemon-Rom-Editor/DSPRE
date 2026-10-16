@@ -38,11 +38,13 @@ namespace DSPRE.Avalonia
                 S("name:SaveButton", "Saving", "Save writes both counters. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("UndergroundMiningView", "Underground Mining",
-                S("list", "Treasures", "Everything you can dig up in the Underground. A treasure with more than one shape has a row for each."),
-                S("name:MiningColumns", "Four columns", "Which column the game uses depends on whether your trainer ID is odd or even, and whether you have the National Dex."),
+                S("name:WallSettings", "Wall settings", "How many treasures a wall holds, the first dig, and how hard the game tries to fit rocks in."),
+                S("list", "Treasures and rocks", "Everything you can dig up, then the rocks. A treasure with more than one shape has a row for each."),
+                S("name:MiningColumns", "Four columns", "Diamond and Pearl each use their own column, Platinum picks by odd or even trainer ID; the later two count once you have the National Dex."),
                 S("list", "Weights", "Each number is a weight: the higher, the more often it appears. The percentage beside it is its chance."),
+                S("name:MiningDetail", "Art and shape", "The selected row's picture, the ug_parts files it is drawn from, and its shape: click cells to make them solid or empty."),
                 S("name:MiningTotals", "Totals", "Each column's total, and why the table can't be saved if something is wrong."),
-                S("name:SaveButton", "Saving", "Save writes the table. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
+                S("name:SaveButton", "Saving", "Save writes the table, the shapes and the wall settings. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("ItemTableEditorView", "Item Tables",
                 S("tabs", "Item tables", "Where items come from besides shops: Pickup, hidden items and Rock Smash. Only the tables this game has are shown."),
