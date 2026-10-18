@@ -523,7 +523,6 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 }
 
                 await UpgradeRotomProjectAsync();
-                await OfferDatabaseUpdateAsync();
 
                 IsReadOnly = ScriptNames.Count == 0;
 
@@ -1108,44 +1107,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
                     $"These scripts changed both in the game data and in their source since they were last compiled: {files}. Which should win?",
                     "Update Rotom project", "Game data", "Source");
             }
-            // Diamond/Pearl sources don't all decompile back to the game's bytes yet, so they are never regenerated wholesale.
-            bool regenerateAll = RomInfo.gameFamily != RomInfo.GameFamilies.DP && await DialogHelper.AskTwoWay(
-                $"This project was last built with rotom {assessment.RecordedVersion}; DSPRE now uses {assessment.CurrentVersion}. " +
-                "Regenerate every script source in the new style? All current sources are backed up under .rotom/backups first; " +
-                "names and comments you wrote by hand stay only in that backup.",
-                "Update Rotom project", "Regenerate all", "Keep sources");
-
             StatusText = "Updating the Rotom project...";
-            (string problem, List<int> kept) = await DSPRE.ROMFiles.RotomProjectUpgrade.ApplyAsync(assessment, keepBinaries, regenerateAll);
+            (string problem, List<int> kept) = await DSPRE.ROMFiles.RotomProjectUpgrade.ApplyAsync(assessment, keepBinaries);
             if (problem != null) await DialogHelper.ShowError(problem, "Update Rotom project");
-            else if (kept.Count > 0) AddNote(KeptBinariesNote(kept), KeptBinariesMessage(kept));
-            RefreshScriptList();
-        }
-
-        // The project's own database copy can fall behind DSPRE's; whether to take the newer one is the user's call.
-        private async Task OfferDatabaseUpdateAsync()
-        {
-            RotomDatabaseUpdate.Offer offer = await Task.Run(DSPRE.ROMFiles.RotomDatabaseUpdate.Check);
-            if (offer == null) return;
-
-            List<string> names = offer.ChangedCommands;
-            string what = names.Count == 0 ? "variable and movement names"
-                : string.Join(", ", names.Take(6)) + (names.Count > 6 ? $" and {names.Count - 6} more" : "")
-                  + (offer.OtherChanges ? ", plus variable and movement names" : "");
-            bool update = await DialogHelper.AskTwoWay(
-                $"DSPRE has a newer script command database than this project. It changes {what}. " +
-                "Updating fixes how these are read and written, and remakes the scripts you haven't edited from the game data. " +
-                "Keeping leaves the project exactly as it is.",
-                "Script command database", "Update", "Keep");
-            if (!update)
-            {
-                DSPRE.ROMFiles.RotomDatabaseUpdate.Decline(offer);
-                return;
-            }
-
-            StatusText = "Updating the script command database...";
-            (string problem, List<int> kept) = await DSPRE.ROMFiles.RotomDatabaseUpdate.ApplyAsync(offer);
-            if (problem != null) await DialogHelper.ShowError(problem, "Script command database");
             else if (kept.Count > 0) AddNote(KeptBinariesNote(kept), KeptBinariesMessage(kept));
             RefreshScriptList();
         }

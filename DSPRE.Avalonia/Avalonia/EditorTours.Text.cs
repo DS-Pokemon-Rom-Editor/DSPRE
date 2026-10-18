@@ -30,9 +30,9 @@ namespace DSPRE.Avalonia
 
             Add("CustomScrcmdManagerView", "Custom Script Command Manager",
                 S(null, "Script commands", "Each project can have its own list of script commands, for hacks that add new ones."),
-                S("list", "Projects", "Every project that has its own command list. Pick one to work on it."),
+                S("list", "This project", "The open project's command list. Pick it to work on it."),
                 S("name:DatabaseActions", "Refresh", "Refresh reads the list again after you change the files by hand."),
-                S("name:DatabaseActions", "Import and export", "Import replaces the picked project's list with yours and can reload every script right away. Export saves a copy, and Open Folder shows where they live."));
+                S("name:DatabaseActions", "Import and export", "Import replaces the picked project's list with yours (a Rotom project's old one is backed up first) and can reload every script right away. Export saves a copy, and Open Folder shows where it lives."));
 
             Add("FontEditorView", "Font Editor",
                 S(null, "Fonts", "Draw the letters the game writes text with, and see a sentence come out in the result."),

@@ -194,9 +194,9 @@ public static class ScriptDatabaseJsonLoader
         }
 
         /// <summary>
-        /// Swaps in the rotom command names from <c>&lt;game&gt;_v2.json</c>, if it is there. The app loads
-        /// the per-ROM copy in <c>edited_databases/&lt;rom&gt;/scrcmd_database.json</c>, which has no v2 file
-        /// beside it, so the shared one in <see cref="AppPaths.DatabasePath"/> is looked for by game.
+        /// Swaps in the rotom command names from a v2 database. A Rotom project's own database comes first, so the
+        /// app shows the names its sources use; otherwise <c>&lt;game&gt;_v2.json</c> beside the per-ROM copy in
+        /// <c>edited_databases/&lt;rom&gt;/scrcmd_database.json</c>, then the shared one in <see cref="AppPaths.DatabasePath"/>.
         /// </summary>
         internal static int ApplyRotomNames(string legacyJsonPath, Dictionary<ushort, ScriptCommandInfo> commands,
             GameVersions gameVersion)
@@ -205,11 +205,13 @@ public static class ScriptDatabaseJsonLoader
             string file = Path.GetFileNameWithoutExtension(legacyJsonPath) ?? "";
             string stem = file.Replace("_scrcmd_database", "");
             string byGame = V2FileName(gameVersion);
-        List<string> candidates = new List<string>
+        List<string> candidates = new List<string>();
+            if (RomInfo.hasRotomProject && DSPRE.RotomTool.ProjectDatabaseFile() is string project) candidates.Add(project);
+            candidates.AddRange(new[]
             {
                 Path.Combine(dir ?? "", stem + "_v2.json"),
                 Path.Combine(dir ?? "", file + "_v2.json"),
-            };
+            });
             if (byGame != null)
             {
                 candidates.Add(Path.Combine(dir ?? "", byGame));

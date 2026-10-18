@@ -90,11 +90,10 @@ namespace DSPRE.ROMFiles
         /// <summary>
         /// Regenerates the stale sources, then compiles, which rebuilds every binary on the new rotom from
         /// sources that now match them. Where both sides changed, <paramref name="keepBinaries"/> decides.
-        /// With <paramref name="regenerateAll"/>, every source is then regenerated once more so the whole
-        /// project reads in the new rotom's style; all of them are backed up first. Returns null, or why
-        /// it stopped, and the scripts whose previous binaries the compile kept.
+        /// Every other source is left exactly as written. Returns null, or why it stopped, and the scripts whose
+        /// previous binaries the compile kept.
         /// </summary>
-        public static async Task<(string Problem, List<int> Kept)> ApplyAsync(Assessment assessment, bool keepBinaries, bool regenerateAll)
+        public static async Task<(string Problem, List<int> Kept)> ApplyAsync(Assessment assessment, bool keepBinaries)
         {
             List<int> regenerate = assessment.BinaryChanged.Concat(keepBinaries ? assessment.BothChanged : Enumerable.Empty<int>()).ToList();
             if (regenerate.Count > 0)
@@ -105,21 +104,7 @@ namespace DSPRE.ROMFiles
 
             RotomTool.Result compiled = await RotomTool.CompileProjectAsync().ConfigureAwait(false);
             List<int> kept = compiled.KeptBinaries;
-            if (!compiled.Success) return ("The project did not compile on the new rotom: " + RotomTool.FormatResult(compiled), kept);
-
-            if (!regenerateAll) return (null, kept);
-            string root = RotomTool.ProjectRoot;
-            string sources = Path.Combine(root, "expanded", "scripts");
-            string backup = Path.Combine(root, ".rotom", "backups", "dspre-upgrade-" + DateTime.Now.ToString("yyyyMMddHHmmss"));
-            Directory.CreateDirectory(backup);
-            foreach (string file in Directory.GetFiles(sources, "*", SearchOption.AllDirectories))
-            {
-                string dest = Path.Combine(backup, Path.GetRelativePath(sources, file));
-                Directory.CreateDirectory(Path.GetDirectoryName(dest));
-                File.Copy(file, dest, overwrite: true);
-            }
-            RotomTool.Result decompiled = await RotomTool.RunAsync("decompile").ConfigureAwait(false);
-            return (decompiled.Success ? null : "Regenerating the sources failed, the originals are in " + backup + ": " + RotomTool.FormatResult(decompiled), kept);
+            return (compiled.Success ? null : "The project did not compile on the new rotom: " + RotomTool.FormatResult(compiled), kept);
         }
     }
 }

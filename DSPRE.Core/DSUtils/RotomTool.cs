@@ -28,6 +28,26 @@ namespace DSPRE
         public static bool IsAvailable => File.Exists(ExePath);
         public static bool IsLspAvailable => File.Exists(LspPath);
 
+        /// <summary>The command database rotom.toml names under [database], or null when there is none.</summary>
+        public static string ProjectDatabaseFile()
+        {
+            if (string.IsNullOrEmpty(ProjectRoot)) return null;
+            string toml = Path.Combine(ProjectRoot, "rotom.toml");
+            if (!File.Exists(toml)) return null;
+            bool inDatabase = false;
+            foreach (string raw in File.ReadLines(toml))
+            {
+                string line = raw.Trim();
+                if (line.StartsWith("[")) { inDatabase = line == "[database]"; continue; }
+                if (!inDatabase || !line.StartsWith("default_file")) continue;
+                int eq = line.IndexOf('=');
+                if (eq < 0) continue;
+                string value = line.Substring(eq + 1).Trim().Trim('"');
+                return Path.Combine(ProjectRoot, value.Replace('/', Path.DirectorySeparatorChar));
+            }
+            return null;
+        }
+
         // One rotom at a time: two project compiles both rewrite compile state and text archives.
         private static readonly System.Threading.SemaphoreSlim OneAtATime = new System.Threading.SemaphoreSlim(1, 1);
 

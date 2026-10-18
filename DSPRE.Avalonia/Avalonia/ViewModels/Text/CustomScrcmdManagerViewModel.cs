@@ -12,10 +12,11 @@ using System.Threading.Tasks;
 namespace DSPRE.Avalonia.ViewModels.Text
 {
     /// <summary>
-    /// Avalonia port of the WinForms <c>CustomScrcmdManager</c>: manages the per-ROM script-command
-    /// databases under <c>AppPaths.DatabasePath\edited_databases</c>: import (replace) a project's
-    /// scrcmd_database.json (with optional live reload + full script reparse), export it, and open
-    /// the folder in the system file manager.
+    /// The open project's script command database: a Rotom project's own (the file its rotom.toml names), or, for a
+    /// project whose scripts haven't been converted to Rotom yet, its legacy copy under
+    /// <c>AppPaths.DatabasePath\edited_databases</c>, which rotom carries over when it converts them. Import replaces
+    /// it (a Rotom project's is backed up under .rotom/backups first) and can reload the app's command list; Export
+    /// copies it out; Open folder shows where it lives.
     /// </summary>
     public class CustomScrcmdManagerViewModel : INotifyPropertyChanged
     {
@@ -28,12 +29,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
             f = v; OnPropertyChanged(n); return true;
         }
 
-        private static string CustomDBsPath => Path.Combine(AppPaths.DatabasePath, "edited_databases");
-
         private static readonly FilePickerFileType JsonFilter =
             new FilePickerFileType("JSON files") { Patterns = new[] { "*.json" } };
 
         public ObservableCollection<string> Folders { get; } = new();
+
+        // The database file each row stands for, and whether it is a Rotom project's own.
+        private readonly List<(string Path, bool Rotom)> _files = new();
 
         private int _selectedIndex = -1;
         public int SelectedIndex
@@ -64,29 +66,50 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public void Refresh()
         {
             Folders.Clear();
-            if (Directory.Exists(CustomDBsPath))
+            _files.Clear();
+            if (!AvaloniaEditorLauncher.IsRomLoaded)
             {
-                foreach (string dir in Directory.GetDirectories(CustomDBsPath))
-                    Folders.Add(Path.GetFileName(dir));
+                StatusText = "Open a project to manage its script commands.";
+                return;
             }
-            StatusText = Folders.Count == 0
-                ? "No per-ROM databases yet. They are created when a ROM is opened."
-                : $"{Folders.Count} per-ROM database folder(s).";
+            string rotom = RomInfo.hasRotomProject ? DSPRE.RotomTool.ProjectDatabaseFile() : null;
+            if (rotom != null && File.Exists(rotom))
+            {
+                Folders.Add($"{RomInfo.projectName} (Rotom project)");
+                _files.Add((rotom, true));
+                StatusText = "The project's scripts are read and written with this database.";
+                return;
+            }
+            Folders.Add($"{RomInfo.projectName} (scripts not converted to Rotom yet)");
+            _files.Add((Path.Combine(DSPRE.ROMFiles.ScriptFile.CurrentRomDatabaseFolder(), "scrcmd_database.json"), false));
+            StatusText = "Rotom carries this database's commands over when the project's scripts are first opened.";
         }
+
+        private (string Path, bool Rotom) Selected => HasSelection && SelectedIndex < _files.Count ? _files[SelectedIndex] : (null, false);
 
         public async Task Import(Window owner)
         {
             if (!HasSelection || IsBusy) return;
-            string folderName = Folders[SelectedIndex];
+            (string targetPath, bool rotom) = Selected;
 
             string picked = await DialogHelper.OpenFile(owner, "Select a script command database file",
                 new[] { JsonFilter, DialogHelper.AllFilter });
             if (string.IsNullOrEmpty(picked)) return;
 
-            string targetPath = Path.Combine(CustomDBsPath, folderName, "scrcmd_database.json");
+            if (rotom && WhyNotRotomDatabase(picked) is string why)
+            {
+                await DialogHelper.ShowError(why, "Import failed");
+                return;
+            }
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                if (rotom && File.Exists(targetPath))
+                {
+                    string backup = Path.Combine(DSPRE.RotomTool.ProjectRoot, ".rotom", "backups", "custom-database-" + DateTime.Now.ToString("yyyyMMddHHmmss"));
+                    Directory.CreateDirectory(backup);
+                    File.Copy(targetPath, Path.Combine(backup, Path.GetFileName(targetPath)), overwrite: true);
+                }
                 File.Copy(picked, targetPath, overwrite: true);
             }
             catch (Exception ex)
@@ -105,7 +128,26 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 "Reload Database?");
             if (reload)
             {
-                await ReloadAndReparseScripts(targetPath);
+                // The app's command list is built from the legacy copy with the Rotom project's names laid over it.
+                await ReloadAndReparseScripts(rotom ? Path.Combine(DSPRE.ROMFiles.ScriptFile.CurrentRomDatabaseFolder(), "scrcmd_database.json") : targetPath);
+            }
+        }
+
+        // A Rotom project needs a v2 database: an object with a "commands" object in it.
+        private static string WhyNotRotomDatabase(string path)
+        {
+            try
+            {
+                using System.Text.Json.JsonDocument doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+                return doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
+                       && doc.RootElement.TryGetProperty("commands", out System.Text.Json.JsonElement commands)
+                       && commands.ValueKind == System.Text.Json.JsonValueKind.Object
+                    ? null
+                    : "That isn't a Rotom command database (it has no \"commands\" list), so the project's database was left as it is.";
+            }
+            catch (Exception ex)
+            {
+                return "That file couldn't be read as JSON, so the project's database was left as it is.\n" + ex.Message;
             }
         }
 
@@ -171,8 +213,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public async Task Export(Window owner)
         {
             if (!HasSelection || IsBusy) return;
-            string folderName = Folders[SelectedIndex];
-            string sourcePath = Path.Combine(CustomDBsPath, folderName, "scrcmd_database.json");
+            (string sourcePath, bool rotom) = Selected;
 
             if (!File.Exists(sourcePath))
             {
@@ -182,7 +223,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
             string dest = await DialogHelper.SaveFile(owner, "Export Script Command Database",
                 new[] { JsonFilter, DialogHelper.AllFilter },
-                $"{folderName}_scrcmd_database.json");
+                rotom ? Path.GetFileName(sourcePath) : $"{RomInfo.projectName}_scrcmd_database.json");
             if (string.IsNullOrEmpty(dest)) return;
 
             try
@@ -198,12 +239,13 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
         public async Task OpenFolder()
         {
-            if (!Directory.Exists(CustomDBsPath))
+            string folder = Path.GetDirectoryName(Selected.Path ?? "");
+            if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
             {
-                await DialogHelper.ShowError($"Folder not found:\n{CustomDBsPath}", "Error");
+                await DialogHelper.ShowError($"Folder not found:\n{folder}", "Error");
                 return;
             }
-            SystemShell.OpenWithDefaultApp(CustomDBsPath);
+            SystemShell.OpenWithDefaultApp(folder);
         }
     }
 }

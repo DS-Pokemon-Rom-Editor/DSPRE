@@ -296,6 +296,17 @@ Keep timestamp comparison, cache invalidation, parsing, and rebuild decisions in
 need round-trip coverage for an unchanged binary, an externally edited plaintext file, and a database
 change. Search for existing script readers before adding another interpretation of the format.
 
+### Rotom owns its project
+
+Rotom keeps each project's command database in `.rotom/command_database/` and manages it itself. DSPRE does not
+compare it with the scrcmd-database copy in `%APPDATA%\DSPRE\databases`, replace it or offer to update it; that copy
+only matters when legacy `.script` files are converted. DSPRE never regenerates script sources wholesale either: a
+project last built with an older rotom is compiled as it is, and only sources whose game bytes changed outside rotom
+are made again. The one thing DSPRE adds is an hg-engine checkout's flag names, once, right after `rotom init`.
+`RotomTool.ProjectDatabaseFile()` is that database; DSPRE's own command names come from it on a Rotom project, and
+the Custom Script Command Manager imports into it (backing the old one up under `.rotom/backups/`) only when the user
+asks.
+
 ---
 
 ## Gotchas
