@@ -1,0 +1,11 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DSPRE.Avalonia.Views.Graphics"
+        xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+        x:Class="DSPRE.Avalonia.Views.Graphics.SummaryScreenEditorView"
+        x:DataType="vm:ScreenPagesEditorViewModel"
+        Title="Summary screen"
+        Width="1180" Height="900" MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterScreen">
+  <local:ScreenPagesView/>
+</Window>

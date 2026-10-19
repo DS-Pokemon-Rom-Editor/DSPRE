@@ -192,6 +192,10 @@
         <MenuItem Header="Battle scenes" Click="BattleSceneBrowser_Click" IsVisible="{Binding Shown[BattleSceneBrowserView]}" IsEnabled="{Binding CanUseBattleSceneBrowser}" ToolTip.Tip="{Binding BlockedNote[BattleSceneBrowserView]}"/>
         <MenuItem Header="Battle screen" Click="BattleScreen_Click" IsVisible="{Binding Shown[BattleScreenEditorView]}" IsEnabled="{Binding CanUseBattleScreen}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Both screens of a battle, drawn from this ROM, with every piece editable'}"/>
+        <MenuItem Header="HP bar layout" Click="HpBarLayout_Click" IsVisible="{Binding Shown[HpBarLayoutEditorView]}" IsEnabled="{Binding Usable[HpBarLayoutEditorView]}"
+                  ToolTip.Tip="{Binding BlockedNote[HpBarLayoutEditorView], TargetNullValue='Where the name, level, HP and gauges sit on each HP bar'}"/>
+        <MenuItem Header="Summary screen" Click="SummaryScreen_Click" IsVisible="{Binding Shown[SummaryScreenEditorView]}" IsEnabled="{Binding Usable[SummaryScreenEditorView]}"
+                  ToolTip.Tip="{Binding BlockedNote[SummaryScreenEditorView], TargetNullValue='The Pokémon summary pages, with their text boxes and bars'}"/>
         <MenuItem Header="Bottom screen" Click="BottomScreenEditor_Click" IsVisible="{Binding Shown[BottomScreenEditorView]}" IsEnabled="{Binding CanUseBottomScreenEditor}"
                   ToolTip.Tip="{Binding BottomScreenEditorNote}"/>
         <MenuItem Header="Title screen editor" Click="TitleScreenEditor_Click" IsVisible="{Binding Shown[TitleScreenEditorView]}" IsEnabled="{Binding CanUseTitleScreenEditor}" ToolTip.Tip="{Binding TitleScreenEditorNote}"/>
@@ -230,7 +234,7 @@
         <MenuItem Header="ROM patch toolbox" Click="PatchToolbox_Click" IsEnabled="{Binding Usable[PatchToolboxView]}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='ARM9 expansion, matrix/header/trainer-name expansion, dynamic cameras, script-command repoint, item standardization and other ROM patches'}"/>
         <MenuItem Header="Overlay editor" Click="OverlayEditor_Click" IsEnabled="{Binding Usable[OverlayEditorView]}" ToolTip.Tip="{Binding BlockedNote[OverlayEditorView]}"/>
-        <MenuItem Header="Music &amp; battle tables" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}"
+        <MenuItem Header="Music &amp; battle tables" Click="TableEditor_Click" IsEnabled="{Binding CanUseMiscTables}" IsVisible="{Binding ShowMiscTables}"
                   ToolTip.Tip="{Binding HgeUnlinkedNote, TargetNullValue='Misc game-wide tables: conditional map music (HGSS), battle-effect combos (Plat/HGSS) and the VS Trainer / VS Pokémon posters (HGSS)'}"/>
         <Separator/>
         <MenuItem Header="Address helper"  Click="AddressHelper_Click" IsEnabled="{Binding IsRomLoaded}"/>
@@ -271,7 +275,7 @@
       <DockPanel VerticalAlignment="Center" Margin="12,0,0,0">
         <Image x:Name="FavouritesStar" DockPanel.Dock="Left" Width="16" Height="16" Margin="0,0,6,0"
                ToolTip.Tip="Right-click a menu item to pin it here"/>
-        <TextBlock x:Name="NoFavouritesText" DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="12" Opacity="0.65"
+        <TextBlock Foreground="{DynamicResource Editor.Subtle}" x:Name="NoFavouritesText" DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="12"
                    TextTrimming="CharacterEllipsis"
                    Text="No favourites selected. Right-click an editor in the menus to mark it as a favourite."/>
         <controls:PinRow x:Name="FavouritesBar"/>
@@ -301,11 +305,11 @@
       <Border IsVisible="{Binding !IsRomLoaded}" Background="{DynamicResource Editor.PanelBg}">
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Width="440">
           <TextBlock Text="No ROM loaded" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-          <TextBlock Text="Open a game to start editing."
-                     TextWrapping="Wrap" TextAlignment="Center" Opacity="0.75"/>
+          <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="Open a game to start editing."
+                     TextWrapping="Wrap" TextAlignment="Center"/>
           <shell:StartPanel DataContext="{Binding Recents}" Width="320" MaxHeight="420"/>
-          <TextBlock Text="Hint: with a ROM loaded, press Ctrl+P to jump to any editor by name."
-                     FontSize="12" FontStyle="Italic" Opacity="0.6" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
+          <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="Hint: with a ROM loaded, press Ctrl+P to jump to any editor by name."
+                     FontSize="12" FontStyle="Italic" TextAlignment="Center" TextWrapping="Wrap" Margin="0,8,0,0"/>
         </StackPanel>
       </Border>
 
@@ -317,10 +321,10 @@
             <TextBlock Text="{Binding BusyText}" FontSize="18" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
             <Panel x:Name="WalkerHost" ClipToBounds="True"/>
             <ProgressBar IsIndeterminate="True"/>
-            <TextBlock Text="{Binding BusyHint}"
-                       FontSize="12" Opacity="0.8" TextWrapping="Wrap" TextAlignment="Center"/>
-            <TextBlock Text="{Binding BusyFact}" IsVisible="{Binding BusyFact, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                       FontSize="12" FontStyle="Italic" Opacity="0.7" TextWrapping="Wrap" TextAlignment="Center"
+            <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding BusyHint}"
+                       FontSize="12" TextWrapping="Wrap" TextAlignment="Center"/>
+            <TextBlock Foreground="{DynamicResource Editor.Subtle}" Text="{Binding BusyFact}" IsVisible="{Binding BusyFact, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       FontSize="12" FontStyle="Italic" TextWrapping="Wrap" TextAlignment="Center"
                        Margin="0,4,0,0"/>
           </StackPanel>
         </Border>
