@@ -4,13 +4,13 @@ using DSPRE.ROMFiles;
 
 namespace DSPRE.Avalonia.Data
 {
-    public enum DexLayerKind { Background, Sprite, Pokemon }
+    public enum ScreenLayerKind { Background, Sprite, Pokemon }
 
     /// <summary>One layer of a composed page on its own, transparent where it draws nothing.</summary>
-    public sealed class DexLayerImage
+    public sealed class ScreenLayerImage
     {
         public string Name;
-        public DexLayerKind Kind;
+        public ScreenLayerKind Kind;
         /// <summary>The background's number, or the sprite's or picture's position in its list.</summary>
         public int Index;
         public int Priority;
@@ -19,33 +19,33 @@ namespace DSPRE.Avalonia.Data
         public int Blend, BlendUnder;
     }
 
-    public sealed class DexComposed
+    public sealed class ComposedScreen
     {
         public byte[] Rgba;
         /// <summary>Back to front, the order they were drawn in.</summary>
-        public List<DexLayerImage> Layers = new();
+        public List<ScreenLayerImage> Layers = new();
     }
 
-    public sealed class DexPicture
+    public sealed class ScreenPicture
     {
         public byte[] Rgba;
         public int Width, Height;
     }
 
     /// <summary>
-    /// Puts a Pokédex page together the way the DS draws it: each background from its drawing, its pasted
+    /// Puts a page of a DS screen together the way the hardware draws it (the Pokédex pages, the summary screen): each background from its drawing, its pasted
     /// arrangements and the colours copied into palette memory; then sprites, the sample Pokémon and text.
     /// Higher priority numbers are further back, a sprite draws over a background of equal priority, and of
     /// two backgrounds with equal priority the lower-numbered one is in front.
     /// </summary>
-    public sealed class DexPageComposer
+    public sealed class ScreenPageComposer
     {
         public const int Width = 256, Height = 192;
 
         private readonly Func<int, byte[]> _member;
         private readonly Func<int, FieldFont> _font;
-        private readonly Func<DexText, string, string> _text;
-        private readonly Func<DexMon, DexPicture> _mon;
+        private readonly Func<ScreenText, string, string> _text;
+        private readonly Func<ScreenMon, ScreenPicture> _mon;
         private readonly Func<int, int> _type;
         private readonly Func<int, int> _bank;
 
@@ -54,6 +54,24 @@ namespace DSPRE.Avalonia.Data
 
         /// <summary>The sample's habitat for a page state, where the page has a habitat map.</summary>
         public Func<string, DexHabitatData> Habitat { get; set; }
+        /// <summary>A member of another archive, for a sprite whose files live there.</summary>
+        public Func<DSPRE.RomInfo.DirNames, int, byte[]> Other { get; set; }
+        private readonly Dictionary<(DSPRE.RomInfo.DirNames, int), byte[]> _others = new();
+
+        // A sprite's file, from the archive it names for that file.
+        private byte[] File(DSPRE.RomInfo.DirNames? from, int index)
+        {
+            if (from is not DSPRE.RomInfo.DirNames dir) return File(index);
+            if (index < 0) return null;
+            if (_others.TryGetValue((dir, index), out byte[] known)) return known;
+            byte[] data = null;
+            try { data = NitroBgCodec.Inflate(Other?.Invoke(dir, index)); } catch { }
+            if (data != null) _others[(dir, index)] = data;
+            return data;
+        }
+
+        /// <summary>A sprite's picture from another archive, for a sprite that names one.</summary>
+        public Func<ScreenSprite, ScreenPicture> Picture { get; set; }
         /// <summary>A digit sprite's animation and its offset from the sprite's position, or null when it is hidden.</summary>
         public Func<DexReadout, int, int, (int Seq, int Dx)?> Digit { get; set; }
         private readonly Dictionary<int, byte[]> _files = new();
@@ -61,8 +79,8 @@ namespace DSPRE.Avalonia.Data
         /// <param name="type">For a type slot (1 or 2), the type's place in the Pokédex's type order, or -1.</param>
         /// <param name="bank">For a drawing, the colours row the game shows it with (HGSS type icons).</param>
         /// <param name="text">A label's words in a page state.</param>
-        public DexPageComposer(Func<int, byte[]> member, Func<int, FieldFont> font, Func<DexText, string, string> text,
-                               Func<DexMon, DexPicture> mon, Func<int, int> type, Func<int, int> bank)
+        public ScreenPageComposer(Func<int, byte[]> member, Func<int, FieldFont> font, Func<ScreenText, string, string> text,
+                               Func<ScreenMon, ScreenPicture> mon, Func<int, int> type, Func<int, int> bank)
         {
             _member = member;
             _font = font;
@@ -75,7 +93,7 @@ namespace DSPRE.Avalonia.Data
         /// <summary>Forgets the archive files read so far, so an edited file is read again.</summary>
         public void Forget(int index = -1)
         {
-            if (index < 0) _files.Clear();
+            if (index < 0) { _files.Clear(); _others.Clear(); }
             else _files.Remove(index);
         }
 
@@ -93,58 +111,58 @@ namespace DSPRE.Avalonia.Data
 
         private string _variant = "";
 
-        public DexComposed Compose(DexPage page, string variant, DexSide side)
+        public ComposedScreen Compose(ScreenPage page, string variant, ScreenSide side)
         {
             _variant = variant ?? "";
-            DexScreen screen = page.Side(side);
+            ScreenLayout screen = page.Side(side);
             ushort[] palette = BgPalette(screen, variant);
-            List<(int Back, DexLayerImage Image)> drawn = new();
+            List<(int Back, ScreenLayerImage Image)> drawn = new();
 
-            foreach (DexBg bg in screen.Bgs)
+            foreach (ScreenBg bg in screen.Bgs)
             {
-                if (!DexPage.Shows(bg.When, variant)) continue;
+                if (!ScreenPage.Shows(bg.When, variant)) continue;
                 byte[] rgba = new byte[Width * Height * 4];
                 DrawBg(rgba, bg, palette, variant);
                 DexHabitatData habitat = screen.Habitat != null && screen.Habitat.Bg == bg.Bg ? Habitat?.Invoke(variant) : null;
                 if (habitat != null) DrawHabitat(rgba, screen.Habitat, habitat, palette);
                 // A text window takes the layer's squares under it: unless the game fills it with the
                 // layer's own pattern, what was there is gone.
-                foreach (DexText t in screen.Texts)
-                    if (t.Colours < 0 && t.Bg == bg.Bg && t.WinW > 0 && !t.KeepUnder && DexPage.Shows(t.When, variant))
+                foreach (ScreenText t in screen.Texts)
+                    if (t.Colours < 0 && t.Bg == bg.Bg && t.WinW > 0 && !t.KeepUnder && ScreenPage.Shows(t.When, variant))
                         Clear(rgba, t.WinX * 8, t.WinY * 8, t.WinW * 8, t.WinH * 8);
-                foreach (DexText t in screen.Texts)
-                    if (t.Colours < 0 && t.Bg == bg.Bg && DexPage.Shows(t.When, variant)) DrawText(rgba, t, palette);
-                foreach (DexRect r in screen.Rects)
-                    if (r.Bg == bg.Bg && DexPage.Shows(r.When, variant)) FillRect(rgba, r, palette);
-                DexLayerImage image = new() { Name = "Background " + bg.Bg, Kind = DexLayerKind.Background, Index = bg.Bg, Priority = bg.Priority, Rgba = rgba };
+                foreach (ScreenText t in screen.Texts)
+                    if (t.Colours < 0 && t.Bg == bg.Bg && ScreenPage.Shows(t.When, variant)) DrawText(rgba, t, palette);
+                foreach (ScreenRect r in screen.Rects)
+                    if (r.Bg == bg.Bg && ScreenPage.Shows(r.When, variant)) FillRect(rgba, r, palette);
+                ScreenLayerImage image = new() { Name = "Background " + bg.Bg, Kind = ScreenLayerKind.Background, Index = bg.Bg, Priority = bg.Priority, Rgba = rgba };
                 // Backgrounds of one priority sit behind its sprites; among them the lower number is in front.
                 drawn.Add((bg.Priority * 1000 + 900 + bg.Bg, image));
             }
 
             for (int i = 0; i < screen.Mons.Count; i++)
             {
-                DexMon m = screen.Mons[i];
-                if (!DexPage.Shows(m.When, variant)) continue;
-                DexPicture pic = _mon?.Invoke(m);
+                ScreenMon m = screen.Mons[i];
+                if (!ScreenPage.Shows(m.When, variant)) continue;
+                ScreenPicture pic = _mon?.Invoke(m);
                 if (pic?.Rgba == null) continue;
                 byte[] rgba = new byte[Width * Height * 4];
                 (int mx, int my, double scale, _) = Place(m.Size, m.X, m.Y);
                 if (Math.Abs(scale - 1) < 0.001) Paste(rgba, pic, mx - pic.Width / 2, my - pic.Height / 2);
                 else PasteScaled(rgba, pic, mx, my, scale);
                 if (m.Darken > 0) Darken(rgba, m.Darken);
-                DexLayerImage image = new() { Name = MonName(m.Kind), Kind = DexLayerKind.Pokemon, Index = i, Priority = m.Priority, Rgba = rgba };
+                ScreenLayerImage image = new() { Name = MonName(m.Kind), Kind = ScreenLayerKind.Pokemon, Index = i, Priority = m.Priority, Rgba = rgba };
                 // The battle-style picture is drawn on the 3D layer, background 0.
-                int back = m.Kind is DexMonKind.Front or DexMonKind.Back ? m.Priority * 1000 + 900 : m.Priority * 1000 + 50 + i;
+                int back = m.Kind is ScreenMonKind.Front or ScreenMonKind.Back ? m.Priority * 1000 + 900 : m.Priority * 1000 + 50 + i;
                 drawn.Add((back, image));
             }
 
             for (int i = 0; i < screen.Sprites.Count; i++)
             {
-                DexSprite s = screen.Sprites[i];
-                if (!DexPage.Shows(s.When, variant)) continue;
+                ScreenSprite s = screen.Sprites[i];
+                if (!ScreenPage.Shows(s.When, variant)) continue;
                 byte[] rgba = new byte[Width * Height * 4];
                 DrawSprite(rgba, s);
-                DexLayerImage image = new() { Name = s.Name ?? "Sprite " + i, Kind = DexLayerKind.Sprite, Index = i, Priority = s.Priority, Rgba = rgba };
+                ScreenLayerImage image = new() { Name = s.Name ?? "Sprite " + i, Kind = ScreenLayerKind.Sprite, Index = i, Priority = s.Priority, Rgba = rgba };
                 // Earlier sprites are in front of later ones.
                 drawn.Add((s.Priority * 1000 + 100 + Math.Min(399, i) * 2, image));
             }
@@ -156,37 +174,37 @@ namespace DSPRE.Avalonia.Data
                 {
                     byte[] rgba = new byte[Width * Height * 4];
                     foreach ((int x, int y, int seq) in places.Dungeons)
-                        DrawSprite(rgba, new DexSprite { Cells = h.Cells, Drawing = h.Drawing, Anim = h.Anim, Seq = seq, Colours = h.Colours,
+                        DrawSprite(rgba, new ScreenSprite { Cells = h.Cells, Drawing = h.Drawing, Anim = h.Anim, Seq = seq, Colours = h.Colours,
                                                          X = h.Absolute ? x : h.DungeonX + x * h.Cell,
                                                          Y = h.Absolute ? y : h.DungeonY + y * h.Cell });
-                    drawn.Add((h.Priority * 1000 + 99, new DexLayerImage { Name = h.Absolute ? "Places" : "Caves and buildings", Kind = DexLayerKind.Sprite,
+                    drawn.Add((h.Priority * 1000 + 99, new ScreenLayerImage { Name = h.Absolute ? "Places" : "Caves and buildings", Kind = ScreenLayerKind.Sprite,
                                                                          Index = -1000, Priority = h.Priority, Rgba = rgba,
                                                                          Blend = h.Blend, BlendUnder = h.BlendUnder }));
                 }
                 if (h.Face >= 0 && places.Player is (int px, int py))
                 {
                     byte[] rgba = new byte[Width * Height * 4];
-                    DrawSprite(rgba, new DexSprite { Cells = h.Face, Drawing = h.FaceDrawing, Anim = h.FaceAnim, Colours = h.FaceColours, X = px, Y = py });
-                    drawn.Add((h.Priority * 1000 + 98, new DexLayerImage { Name = "Player", Kind = DexLayerKind.Sprite, Index = -1001,
+                    DrawSprite(rgba, new ScreenSprite { Cells = h.Face, Drawing = h.FaceDrawing, Anim = h.FaceAnim, Colours = h.FaceColours, X = px, Y = py });
+                    drawn.Add((h.Priority * 1000 + 98, new ScreenLayerImage { Name = "Player", Kind = ScreenLayerKind.Sprite, Index = -1001,
                                                                          Priority = h.Priority, Rgba = rgba }));
                 }
             }
 
             for (int i = 0; i < screen.Texts.Count; i++)
             {
-                DexText t = screen.Texts[i];
-                if (t.Colours < 0 || !DexPage.Shows(t.When, variant)) continue;
+                ScreenText t = screen.Texts[i];
+                if (t.Colours < 0 || !ScreenPage.Shows(t.When, variant)) continue;
                 byte[] rgba = new byte[Width * Height * 4];
-                DrawText(rgba, t, DsBgScreen.ReadColours(File(t.Colours)));
-                DexLayerImage image = new() { Name = LabelName(t), Kind = DexLayerKind.Sprite, Index = -1 - i, Priority = t.Priority, Rgba = rgba };
+                DrawText(rgba, t, NitroBgCodec.ReadColours(File(t.Colours)));
+                ScreenLayerImage image = new() { Name = LabelName(t), Kind = ScreenLayerKind.Sprite, Index = -1 - i, Priority = t.Priority, Rgba = rgba };
                 // A label sits just in front of the sprite it belongs to, or in front of all of them.
                 drawn.Add((t.Above >= 0 ? t.Priority * 1000 + 100 + Math.Min(399, t.Above) * 2 - 1 : t.Priority * 1000 + 10, image));
             }
 
             drawn.Sort((a, b) => b.Back.CompareTo(a.Back));
-            DexComposed result = new() { Rgba = new byte[Width * Height * 4] };
+            ComposedScreen result = new() { Rgba = new byte[Width * Height * 4] };
             Fill(result.Rgba, palette.Length > 0 ? palette[0] : (ushort)0);
-            foreach ((int _, DexLayerImage image) in drawn)
+            foreach ((int _, ScreenLayerImage image) in drawn)
             {
                 if (image.Blend > 0) Blend(result.Rgba, image.Rgba, image.Blend, image.BlendUnder);
                 else Over(result.Rgba, image.Rgba);
@@ -197,7 +215,7 @@ namespace DSPRE.Avalonia.Data
         }
 
         // A label is named by what it says, on one line.
-        private string LabelName(DexText t)
+        private string LabelName(ScreenText t)
         {
             string text = null;
             try { text = _text?.Invoke(t, _variant); } catch { }
@@ -206,23 +224,23 @@ namespace DSPRE.Avalonia.Data
             return "Label: " + (text.Length > 24 ? text.Substring(0, 24) + "…" : text);
         }
 
-        private static string MonName(DexMonKind kind) => kind switch
+        private static string MonName(ScreenMonKind kind) => kind switch
         {
-            DexMonKind.Front => "Pokémon",
-            DexMonKind.Footprint => "Footprint",
-            DexMonKind.Back => "Pokémon, back",
+            ScreenMonKind.Front => "Pokémon",
+            ScreenMonKind.Footprint => "Footprint",
+            ScreenMonKind.Back => "Back of the Pokémon",
             _ => "Pokémon icon",
         };
 
         // ── backgrounds ──────────────────────────────────────────────────────────────────────────
 
-        private ushort[] BgPalette(DexScreen screen, string variant)
+        private ushort[] BgPalette(ScreenLayout screen, string variant)
         {
             ushort[] palette = new ushort[256];
-            foreach (DexPalette load in screen.Palettes)
+            foreach (ScreenPaletteLoad load in screen.Palettes)
             {
-                if (!DexPage.Shows(load.When, variant)) continue;
-                ushort[] colours = DsBgScreen.ReadColours(File(load.File));
+                if (!ScreenPage.Shows(load.When, variant)) continue;
+                ushort[] colours = NitroBgCodec.ReadColours(File(load.File));
                 for (int r = 0; r < load.Rows; r++)
                     for (int c = 0; c < 16; c++)
                     {
@@ -233,12 +251,12 @@ namespace DSPRE.Avalonia.Data
             return palette;
         }
 
-        private void DrawBg(byte[] rgba, DexBg bg, ushort[] palette, string variant)
+        private void DrawBg(byte[] rgba, ScreenBg bg, ushort[] palette, string variant)
         {
             int cols = Math.Max(32, bg.MapWidth), rows = Math.Max(32, bg.MapHeight);
             int[] map = new int[NitroBgCodec.SquareCount(cols, rows)];
-            foreach (DexPiece piece in bg.Pieces)
-                if (DexPage.Shows(piece.When, variant)) Paste(map, cols, rows, piece);
+            foreach (ScreenPaste piece in bg.Pieces)
+                if (ScreenPage.Shows(piece.When, variant)) Paste(map, cols, rows, piece);
 
             byte[] chr = File(bg.Drawing);
             if (chr == null) return;
@@ -275,14 +293,14 @@ namespace DSPRE.Avalonia.Data
                 }
         }
 
-        private void Paste(int[] map, int cols, int rows, DexPiece piece)
+        private void Paste(int[] map, int cols, int rows, ScreenPaste piece)
         {
             if (piece.Screen < 0)
             {
                 if (piece.Fill < 0) return;
                 for (int y = 0; y < Math.Max(0, piece.Height); y++)
                     for (int x = 0; x < Math.Max(0, piece.Width); x++)
-                        Set(map, cols, rows, piece.TileX + x, piece.TileY + y, piece.Fill);
+                        Set(map, cols, rows, piece.TileX + x, piece.TileY + y, piece.FillStride < 0 ? piece.Fill : piece.Fill + y * piece.FillStride + x);
                 return;
             }
             byte[] scr = File(piece.Screen);
@@ -312,8 +330,14 @@ namespace DSPRE.Avalonia.Data
 
         // ── sprites, pictures and text ───────────────────────────────────────────────────────────
 
-        private void DrawSprite(byte[] rgba, DexSprite s)
+        private void DrawSprite(byte[] rgba, ScreenSprite s)
         {
+            if (s.Picture != null)
+            {
+                ScreenPicture pic = Picture?.Invoke(s);
+                if (pic?.Rgba != null) Paste(rgba, pic, s.X - pic.Width / 2, s.Y - pic.Height / 2);
+                return;
+            }
             int seq = s.Seq, drawing = s.Drawing, row = s.Row, shift = 0;
             if (s.Readout != DexReadout.None)
             {
@@ -333,24 +357,25 @@ namespace DSPRE.Avalonia.Data
             }
             if (s.Cells < 0)
             {
-                DrawWhole(rgba, s, File(drawing), DsBgScreen.ReadColours(File(s.Colours)), row);
+                DrawWhole(rgba, s, File(s.DrawingArchive, drawing), NitroBgCodec.ReadColours(File(s.ColoursArchive, s.Colours)), row);
                 return;
             }
-            byte[] ncer = File(s.Cells);
-            byte[] chr = File(drawing);
+            byte[] ncer = File(s.Archive, s.Cells);
+            byte[] chr = File(s.DrawingArchive, drawing);
             if (ncer == null || chr == null) return;
             List<DsBgScreen.Oam[]> cells = DsBgScreen.ReadCells(ncer);
             int cell = seq;
             if (s.Anim >= 0)
             {
-                byte[] nanr = File(s.Anim);
+                byte[] nanr = File(s.Archive, s.Anim);
                 try { if (nanr != null) cell = NanrFile.Read(nanr).CellOf(seq, s.Frame); } catch { }
             }
             if (cell < 0 || cell >= cells.Count) return;
-            ushort[] colours = DsBgScreen.ReadColours(File(s.Colours));
-            byte[] characters = DsBgScreen.ReadCharacters(chr);
+            ushort[] colours = NitroBgCodec.ReadColours(File(s.ColoursArchive, s.Colours));
+            byte[] characters = NitroBgCodec.ReadCharacters(chr);
             (int x, int y, double scale, double degrees) = Place(s.Size, s.X + shift, s.Y);
-            DsBgScreen.DrawCellTurned(rgba, cells[cell], characters, p => DsBgScreen.Row(colours, p + row), x, y, degrees, scale, scale);
+            int fixedRow = s.Palette;
+            DsBgScreen.DrawCellTurned(rgba, cells[cell], characters, p => DsBgScreen.Row(colours, fixedRow >= 0 ? fixedRow : p + row), x, y, degrees, scale, scale);
         }
 
         // Each cell copies a 5 by 5 stamp out of a strip drawing, the piece's number times 5 along it.
@@ -363,9 +388,8 @@ namespace DSPRE.Avalonia.Data
         private static void Stamp(byte[] rgba, DexHabitat h, byte[] map, byte[] chr, ushort[] palette)
         {
             if (chr == null) return;
-            int rahc = NitroBgCodec.Find(chr, "RAHC", 0);
-            int tilesWide = rahc >= 0 ? NitroBgCodec.U16(chr, rahc + 0x0A) : 32;
-            byte[] pixels = DsBgScreen.ReadCharacters(chr);
+            int tilesWide = NitroBgCodec.ReadDrawingHeader(chr)?.TilesAcross ?? 32;
+            byte[] pixels = NitroBgCodec.ReadCharacters(chr);
             int stripWidth = Math.Max(8, tilesWide * 8);
             for (int x = 0; x < DexHabitatBuilder.MapSide; x++)
                 for (int y = 0; y < DexHabitatBuilder.MapSide; y++)
@@ -411,7 +435,7 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private static void PasteScaled(byte[] rgba, DexPicture pic, int cx, int cy, double scale)
+        private static void PasteScaled(byte[] rgba, ScreenPicture pic, int cx, int cy, double scale)
         {
             int w = (int)Math.Round(pic.Width * scale), h = (int)Math.Round(pic.Height * scale);
             for (int y = 0; y < h; y++)
@@ -432,15 +456,14 @@ namespace DSPRE.Avalonia.Data
         }
 
         /// <summary>A sixteen-colour drawing laid out in tiles, row after row, its top left at X, Y, turned about its middle on a weight check.</summary>
-        private void DrawWhole(byte[] rgba, DexSprite s, byte[] chr, ushort[] colours, int row)
+        private void DrawWhole(byte[] rgba, ScreenSprite s, byte[] chr, ushort[] colours, int row)
         {
             if (chr == null || s.Width <= 0 || s.Height <= 0) return;
-            byte[] pixels = DsBgScreen.ReadCharacters(chr);
+            byte[] pixels = NitroBgCodec.ReadCharacters(chr);
             ushort[] palette = DsBgScreen.Row(colours, row);
             int tilesWide = s.Width / 8;
             // Software sprites (the Platinum beam) are textures whose pixels are stored row by row, not in tiles.
-            int rahc = NitroBgCodec.Find(chr, "RAHC", 0);
-            bool linear = rahc >= 0 && rahc + 0x18 <= chr.Length && (NitroBgCodec.U32(chr, rahc + 0x14) & 0xFF) != 0;
+            bool linear = NitroBgCodec.ReadDrawingHeader(chr)?.Tiled == false;
             double degrees = Place(s.Size, s.X, s.Y).Degrees, turn = degrees * Math.PI / 180.0;
             double cos = Math.Cos(turn), sin = Math.Sin(turn);
             double midX = s.X + s.Width / 2.0, midY = s.Y + s.Height / 2.0;
@@ -462,7 +485,7 @@ namespace DSPRE.Avalonia.Data
                 }
         }
 
-        private void DrawText(byte[] rgba, DexText t, ushort[] palette)
+        private void DrawText(byte[] rgba, ScreenText t, ushort[] palette)
         {
             string text = _text?.Invoke(t, _variant);
             FieldFont font = _font?.Invoke(t.Font);
@@ -475,11 +498,25 @@ namespace DSPRE.Avalonia.Data
             for (int i = 0; i < lines.Length; i++)
             {
                 int width = font.Measure(lines[i], FieldFontCharacters.GlyphFor);
+                int slash = t.Align == ScreenTextAlign.Slash ? lines[i].IndexOf('/') : -1;
+                if (slash >= 0)
+                {
+                    // The slash sits centred on X; the first number ends where it starts, the second starts where it ends.
+                    string first = lines[i].Substring(0, slash), second = lines[i].Substring(slash + 1);
+                    int slashWidth = font.Measure("/", FieldFontCharacters.GlyphFor);
+                    int at = t.X - slashWidth / 2;
+                    DsBgScreen.DrawText(rgba, font, first, at - font.Measure(first, FieldFontCharacters.GlyphFor), top + i * 16, ink, shadow);
+                    DsBgScreen.DrawText(rgba, font, "/", at, top + i * 16, ink, shadow);
+                    DsBgScreen.DrawText(rgba, font, second, at + slashWidth, top + i * 16, ink, shadow);
+                    continue;
+                }
                 int x = t.Align switch
                 {
-                    DexAlign.Centre => t.X - width / 2,
-                    DexAlign.Right => t.X - width,
-                    DexAlign.Block => t.X - BlockWidth(font, lines) / 2,
+                    ScreenTextAlign.Centre => t.X - width / 2,
+                    ScreenTextAlign.Right => t.X - width,
+                    ScreenTextAlign.Block => t.X - BlockWidth(font, lines) / 2,
+                    ScreenTextAlign.BoxCentre => t.WinX * 8 + Math.Max(0, t.WinW * 8 - width) / 2,
+                    ScreenTextAlign.BoxRight => t.WinX * 8 + t.WinW * 8 - width,
                     _ => t.X,
                 };
                 DsBgScreen.DrawText(rgba, font, lines[i], x, top + i * 16, ink, shadow);
@@ -511,7 +548,7 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private static void Paste(byte[] rgba, DexPicture pic, int left, int top)
+        private static void Paste(byte[] rgba, ScreenPicture pic, int left, int top)
         {
             for (int y = 0; y < pic.Height; y++)
                 for (int x = 0; x < pic.Width; x++)
@@ -532,13 +569,9 @@ namespace DSPRE.Avalonia.Data
 
         private static int Mod(int a, int m) => ((a % m) + m) % m;
 
-        private static byte Expand(int five) => (byte)((five << 3) | (five >> 2));
-
         private static void Put(byte[] rgba, int at, ushort c)
         {
-            rgba[at] = Expand(c & 31);
-            rgba[at + 1] = Expand((c >> 5) & 31);
-            rgba[at + 2] = Expand((c >> 10) & 31);
+            (rgba[at], rgba[at + 1], rgba[at + 2]) = NitroBgCodec.Colour(c);
             rgba[at + 3] = 255;
         }
 
@@ -547,7 +580,7 @@ namespace DSPRE.Avalonia.Data
             for (int at = 0; at < rgba.Length; at += 4) Put(rgba, at, c);
         }
 
-        private static void FillRect(byte[] rgba, DexRect r, ushort[] palette)
+        private static void FillRect(byte[] rgba, ScreenRect r, ushort[] palette)
         {
             int colour = r.Row * 16 + r.Colour;
             if (colour <= 0 || colour >= palette.Length) return;

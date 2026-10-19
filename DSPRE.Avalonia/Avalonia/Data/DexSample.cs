@@ -24,29 +24,29 @@ namespace DSPRE.Avalonia.Data
         public DexSample(int species = 0) =>
             Species = species > 0 ? species : gameFamily == GameFamilies.DP ? DiamondPearlSpecies : DefaultSpecies;
 
-        public string Text(DexText t, string variant)
+        public string Text(ScreenText t, string variant)
         {
             int species = Species + t.Offset;
             switch (t.Kind)
             {
-                case DexTextKind.Message: return Fill(Line(pokedexMessagesTextNumber, t.Line), t.Args);
-                case DexTextKind.SpeciesName:
+                case ScreenTextKind.Message: return Fill(Line(pokedexMessagesTextNumber, t.Line), t.Args);
+                case ScreenTextKind.SpeciesName:
                     string[] names = null;
                     try { names = GetPokemonNames(); } catch { }
                     return names != null && species >= 0 && species < names.Length ? names[species] : null;
-                case DexTextKind.Number: return species.ToString("D3");
-                case DexTextKind.Category: return Line(pokedexCategoryTextNumber, species);
-                case DexTextKind.Height: return Line(pokedexHeightTextNumber, species);
-                case DexTextKind.Weight: return Line(pokedexWeightTextNumber, species);
-                case DexTextKind.Entry: return Line(pokedexEntryTextNumber, species);
-                case DexTextKind.Count: return t.Sample.ToString("D3");
-                case DexTextKind.ForeignEntry: return Line(Pick(pokedexForeignEntryTextNumbers, t.Line), ForeignLine(species, t.Line));
-                case DexTextKind.ForeignName: return Line(Pick(pokedexForeignNameTextNumbers, t.Line), ForeignLine(species, t.Line));
-                case DexTextKind.ForeignCategory: return Line(Pick(pokedexForeignCategoryTextNumbers, t.Line), ForeignLine(species, t.Line));
-                case DexTextKind.PlayerName: return Line(playerCharacterNamesTextNumber, Female(variant) ? 1 : 0);
-                case DexTextKind.SearchHeight: return SearchStepText(t.Sample, height: true);
-                case DexTextKind.SearchWeight: return SearchStepText(t.Sample, height: false);
-                case DexTextKind.Place:
+                case ScreenTextKind.Number: return species.ToString("D3");
+                case ScreenTextKind.Category: return Line(pokedexCategoryTextNumber, species);
+                case ScreenTextKind.Height: return Line(pokedexHeightTextNumber, species);
+                case ScreenTextKind.Weight: return Line(pokedexWeightTextNumber, species);
+                case ScreenTextKind.Entry: return Line(pokedexEntryTextNumber, species);
+                case ScreenTextKind.Count: return t.Sample.ToString("D3");
+                case ScreenTextKind.ForeignEntry: return Line(Pick(pokedexForeignEntryTextNumbers, t.Line), ForeignLine(species, t.Line));
+                case ScreenTextKind.ForeignName: return Line(Pick(pokedexForeignNameTextNumbers, t.Line), ForeignLine(species, t.Line));
+                case ScreenTextKind.ForeignCategory: return Line(Pick(pokedexForeignCategoryTextNumbers, t.Line), ForeignLine(species, t.Line));
+                case ScreenTextKind.PlayerName: return Line(playerCharacterNamesTextNumber, Female(variant) ? 1 : 0);
+                case ScreenTextKind.SearchHeight: return SearchStepText(t.Sample, height: true);
+                case ScreenTextKind.SearchWeight: return SearchStepText(t.Sample, height: false);
+                case ScreenTextKind.Place:
                 {
                     // The list's cursor sits on its first entry, "show all", which is the third row.
                     int entry = t.Line - 2;
@@ -109,7 +109,7 @@ namespace DSPRE.Avalonia.Data
             return lines[line].Replace("\\n", "\n").Replace("\\r", "\n").Replace("\\f", "\n");
         }
 
-        public DexPicture Picture(DexMon mon)
+        public ScreenPicture Picture(ScreenMon mon)
         {
             int species = Species + mon.Offset;
             if (species <= 0) return null;
@@ -117,33 +117,33 @@ namespace DSPRE.Avalonia.Data
             {
                 switch (mon.Kind)
                 {
-                    case DexMonKind.Front:
+                    case ScreenMonKind.Front:
                     {
                         GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.pokemonBattleSprites);
                         // Six files a species: back female, back male, front female, front male, colours, shiny.
                         GraphicAssets.Preview p = GraphicAssets.Render(sprites, species * 6 + 3);
                         return Frame(p, 80, 80);
                     }
-                    case DexMonKind.Back:
+                    case ScreenMonKind.Back:
                     {
                         GraphicAssets.Archive sprites = GraphicAssets.All.First(a => a.Dir == DirNames.pokemonBattleSprites);
                         GraphicAssets.Preview p = GraphicAssets.Render(sprites, species * 6 + 1);
                         return Frame(p, 80, 80);
                     }
-                    case DexMonKind.Icon:
+                    case ScreenMonKind.Icon:
                     {
                         // Party icons follow seven shared files, one per species, two frames tall.
                         GraphicAssets.Archive icons = GraphicAssets.All.First(a => a.Dir == DirNames.monIcons);
                         GraphicAssets.Preview p = GraphicAssets.Render(icons, species + 7);
                         return Frame(p, 32, 32);
                     }
-                    case DexMonKind.Footprint:
+                    case ScreenMonKind.Footprint:
                     {
                         int entry = GraphicAssets.FootprintEntry(species);
                         if (entry < 0) return null;
                         GraphicAssets.Archive feet = GraphicAssets.All.First(a => a.Dir == DirNames.footprintGraphics);
                         GraphicAssets.Preview p = GraphicAssets.Render(feet, entry);
-                        return p?.Rgba == null ? null : new DexPicture { Rgba = p.Rgba, Width = p.Width, Height = p.Height };
+                        return p?.Rgba == null ? null : new ScreenPicture { Rgba = p.Rgba, Width = p.Width, Height = p.Height };
                     }
                 }
             }
@@ -151,14 +151,14 @@ namespace DSPRE.Avalonia.Data
             return null;
         }
 
-        private static DexPicture Frame(GraphicAssets.Preview p, int w, int h)
+        private static ScreenPicture Frame(GraphicAssets.Preview p, int w, int h)
         {
             if (p?.Rgba == null) return null;
             w = Math.Min(w, p.Width);
             h = Math.Min(h, p.Height);
             byte[] rgba = new byte[w * h * 4];
             for (int y = 0; y < h; y++) Array.Copy(p.Rgba, y * p.Width * 4, rgba, y * w * 4, w * 4);
-            return new DexPicture { Rgba = rgba, Width = w, Height = h };
+            return new ScreenPicture { Rgba = rgba, Width = w, Height = h };
         }
 
         /// <summary>The habitat for an AREA page state, named after a time of day; none for "Area unknown".</summary>

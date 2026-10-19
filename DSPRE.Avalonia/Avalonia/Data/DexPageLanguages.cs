@@ -14,35 +14,35 @@ namespace DSPRE.Avalonia.Data
         private static readonly string[] EnglishTabs = { "French", "German", "Italian", "Spanish", "Japanese" };
         private static readonly string[] JapaneseTabs = { "English", "French", "German", "Italian", "Spanish" };
 
-        public static IReadOnlyList<DexPage> ForLoadedRom()
+        public static IReadOnlyList<ScreenPage> ForLoadedRom()
         {
-            IReadOnlyList<DexPage> pages = DexPageRecipes.For(gameFamily);
+            IReadOnlyList<ScreenPage> pages = DexPageRecipes.For(gameFamily);
             if (gameLanguage != GameLanguages.Japanese) return pages;
-            foreach (DexPage page in pages.Where(p => p.Id == "info_foreign")) ToJapanese(page);
+            foreach (ScreenPage page in pages.Where(p => p.Id == "info_foreign")) ToJapanese(page);
             return pages;
         }
 
-        private static void ToJapanese(DexPage page)
+        private static void ToJapanese(ScreenPage page)
         {
             page.Variants = (string[])JapaneseTabs.Clone();
-            foreach (DexScreen screen in new[] { page.Main, page.Sub })
+            foreach (ScreenLayout screen in new[] { page.Main, page.Sub })
             {
-                foreach (DexText text in screen.Texts)
+                foreach (ScreenText text in screen.Texts)
                 {
                     int tab = Array.IndexOf(EnglishTabs, text.When);
                     if (tab < 0) continue;
                     text.When = JapaneseTabs[tab];
                     // The tab's title names the language: lines 22 (English) to 26 (Spanish) of the Pokédex messages.
-                    if (text.Kind == DexTextKind.Message) text.Line = 22 + tab;
+                    if (text.Kind == ScreenTextKind.Message) text.Line = 22 + tab;
                 }
 
                 int first = screen.Sprites.FindIndex(s => s.Name == "Language");
                 if (first < 0) continue;
-                DexSprite model = screen.Sprites[first];
+                ScreenSprite model = screen.Sprites[first];
                 screen.Sprites.RemoveAll(s => s.Name == "Language");
                 // Six buttons 40 pixels apart. Each language has an off and an on sequence, Japanese 0 and 1, English 2
                 // and 3, and so on to Spanish 10 and 11; the first button is the game's own language and stays off.
-                List<DexSprite> buttons = new List<DexSprite>();
+                List<ScreenSprite> buttons = new List<ScreenSprite>();
                 for (int tab = 0; tab < JapaneseTabs.Length; tab++)
                     for (int slot = 0; slot < 6; slot++)
                         buttons.Add(Button(model, slot == 0 ? 0 : 2 * slot + (slot - 1 == tab ? 1 : 0), model.X + 40 * slot, JapaneseTabs[tab]));
@@ -50,7 +50,7 @@ namespace DSPRE.Avalonia.Data
             }
         }
 
-        private static DexSprite Button(DexSprite model, int seq, int x, string when) => new DexSprite
+        private static ScreenSprite Button(ScreenSprite model, int seq, int x, string when) => new ScreenSprite
         {
             Name = model.Name, Cells = model.Cells, Drawing = model.Drawing, Anim = model.Anim, Seq = seq, Frame = model.Frame,
             Colours = model.Colours, Width = model.Width, Height = model.Height, Row = model.Row, X = x, Y = model.Y,

@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // pokeheartgold zukan_data.json and hg-engine's DEX_SEARCH_BODYTYPE_* order.
         private static readonly string[] ShapeNames =
         {
-            "Quadruped", "Bipedal, tailless", "Bipedal, tailed", "Serpentine", "Two pairs of wings", "One pair of wings",
+            "Quadruped", "Bipedal without a tail", "Bipedal with a tail", "Serpentine", "Two pairs of wings", "One pair of wings",
             "Insectoid", "Head and body", "Head and arms", "Head and legs", "Tentacles", "Fins", "Head only", "Multiple bodies",
         };
 
@@ -97,7 +97,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // ─── Size comparison preview ──────────────────────────────────────────────
         // The game's own size page for this Pokémon, drawn with the values as they are being edited.
         private DexSample _previewSample;
-        private DexPageComposer _previewComposer;
+        private ScreenPageComposer _previewComposer;
         private readonly Dictionary<int, FieldFont> _previewFonts = new();
 
         private bool _previewFemale;
@@ -126,21 +126,21 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             if (_currentId <= 0 || _values == null || _values[_forme] == null) { SizePreview = null; return; }
             try
             {
-                DexPage page = ViewModels.Graphics.PokedexGraphicsEditorViewModel.SizePage(DexPageRecipes.For(RomInfo.gameFamily));
+                ScreenPage page = DSPRE.Avalonia.Data.PokedexBook.SizePage(DexPageRecipes.For(RomInfo.gameFamily));
                 if (page == null) { SizePreview = null; return; }
                 if (_previewSample == null || _previewSample.Species != _currentId)
                 {
                     _previewSample = new DexSample(_currentId) { MetricsOverride = () => _values?[_forme] };
-                    _previewComposer = ViewModels.Graphics.PokedexGraphicsEditorViewModel.ComposerFor(_previewSample, PreviewFont);
+                    _previewComposer = DSPRE.Avalonia.Data.PokedexBook.ComposerFor(_previewSample, PreviewFont);
                 }
                 string variant = page.Variants.Length > 1 && _previewFemale ? page.Variants[1] : page.Variants.FirstOrDefault();
                 // The screen with the height comparison, which the scales and offsets draw: HGSS keeps it on the other screen.
-                static bool Heights(DexScreen screen) =>
+                static bool Heights(ScreenLayout screen) =>
                     screen.Mons.Any(m => m.Size is DexSizeRole.PokemonHeight or DexSizeRole.TrainerHeight)
                     || screen.Sprites.Any(sp => sp.Size is DexSizeRole.PokemonHeight or DexSizeRole.TrainerHeight);
-                DexSide side = Heights(page.Main) || !Heights(page.Sub) ? DexSide.Main : DexSide.Sub;
-                DexComposed composed = _previewComposer.Compose(page, variant, side);
-                SizePreview = composed?.Rgba == null ? null : ImageConverter.FromRgba(composed.Rgba, DexPageComposer.Width, DexPageComposer.Height);
+                ScreenSide side = Heights(page.Main) || !Heights(page.Sub) ? ScreenSide.Main : ScreenSide.Sub;
+                ComposedScreen composed = _previewComposer.Compose(page, variant, side);
+                SizePreview = composed?.Rgba == null ? null : ImageConverter.FromRgba(composed.Rgba, ScreenPageComposer.Width, ScreenPageComposer.Height);
             }
             catch (Exception ex) when (ex is System.IO.IOException || ex is InvalidOperationException || ex is ArgumentException || ex is IndexOutOfRangeException)
             {
@@ -152,7 +152,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Opens the Pokédex graphics editor on this Pokémon's size page.</summary>
         public void OpenSizePage()
         {
-            DexPage page = ViewModels.Graphics.PokedexGraphicsEditorViewModel.SizePage(DexPageRecipes.For(RomInfo.gameFamily));
+            ScreenPage page = DSPRE.Avalonia.Data.PokedexBook.SizePage(DexPageRecipes.For(RomInfo.gameFamily));
             AvaloniaEditorLauncher.OpenPokedexGraphics(_currentId, page?.Id);
         }
 
@@ -334,7 +334,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         // ─── Dirty, undo ──────────────────────────────────────────────────────────
         public bool HasUnsavedChanges => Enumerable.Range(0, 2).Any(i => _values[i] != null && !_values[i].SameAs(_loaded[i])) || !SameAreas(_areas, _areasLoaded) || FootprintChanged;
-        public string UnsavedChangesDescription => $"Pokédex (Mon {_currentId})";
+        public string UnsavedChangesDescription => $"Pokédex data of {RomInfo.PokemonName(_currentId)}";
 
         private sealed class Snapshot { public PokedexMetrics[] Values; public int[][] Areas; public byte[] Footprint; }
         private readonly UndoHistory<Snapshot> _history = new();
@@ -438,7 +438,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             (bool saved, string error) = await HgEngineSave.RunAsync(() =>
                 HgEnginePokedexMetrics.TryRebuildSortLists(out listed, out string writeError) ? null : writeError);
             if (saved) SaveNotice.Saved($"Pokédex size sorts ({listed} Pokémon)");
-            else if (error != null) await DialogHelper.ShowError($"The size sorts were not rebuilt:\n{error}", "Pokédex");
+            else if (error != null) await DialogHelper.ShowError($"The size sorts were not rebuilt:\n{error}", "Pokédex error");
         }
 
         // ─── Save ─────────────────────────────────────────────────────────────────
@@ -468,14 +468,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 {
                     if (error == null) return;
                     AppLogger.Error($"hg-engine Pokédex data write failed for species {species}: {error}");
-                    await DialogHelper.ShowError($"Pokédex data was not saved:\n{error}", "Pokédex");
+                    await DialogHelper.ShowError($"Pokédex data was not saved:\n{error}", "Pokédex error");
                     return;
                 }
             }
             else
             {
                 string why = values.Where(v => v != null).Select(PokedexDataArchive.WhyNot).FirstOrDefault(w => w != null);
-                if (why != null) { await DialogHelper.ShowError($"Pokédex data was not saved: {why}", "Pokédex"); return; }
+                if (why != null) { await DialogHelper.ShowError($"Pokédex data was not saved: {why}", "Pokédex error"); return; }
                 for (int i = 0; i < 2; i++)
                     if (values[i] != null && !values[i].SameAs(_loaded[i])) _archive.Set(species, values[i], originGiratina: i == 1);
                 _archive.Save();

@@ -1,0 +1,115 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
+             xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Graphics"
+             xmlns:data="clr-namespace:DSPRE.Avalonia.Data"
+             x:Class="DSPRE.Avalonia.Views.Graphics.ScreenPagesView"
+             x:DataType="vm:ScreenPagesEditorViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.hint">
+      <Setter Property="FontSize" Value="12"/>
+      <Setter Property="Foreground" Value="{DynamicResource Editor.Subtle}"/>
+      <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Editor.StatusBg}"
+            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,1,0,0" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" Classes="hint" VerticalAlignment="Center"/>
+    </Border>
+
+    <controls:EditorToolbar>
+      <TextBlock Text="Page" VerticalAlignment="Center"/>
+      <ComboBox Width="220" ItemsSource="{Binding PageNames}" SelectedIndex="{Binding PageIndex}"/>
+      <TextBlock Text="State" VerticalAlignment="Center" IsVisible="{Binding HasVariants}"/>
+      <ComboBox Width="170" ItemsSource="{Binding VariantNames}" SelectedIndex="{Binding VariantIndex}"
+                IsVisible="{Binding HasVariants}"/>
+      <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+      <Button Content="Undo" controls:Icon.Key="undo" Click="Undo_Click" IsEnabled="{Binding CanUndo}"/>
+      <Button Content="Redo" controls:Icon.Key="redo" Click="Redo_Click" IsEnabled="{Binding CanRedo}"/>
+    </controls:EditorToolbar>
+
+    <!-- The layers, front first -->
+    <Border DockPanel.Dock="Left" Width="230" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,1,0">
+      <DockPanel>
+      <!-- Text boxes and bars the game places in its code -->
+      <StackPanel x:Name="BoxPanel" DockPanel.Dock="Bottom" Margin="6" Spacing="6" IsVisible="{Binding HasLayout}">
+        <TextBlock Text="Text boxes and bars" FontWeight="SemiBold"/>
+        <ListBox Height="200" ItemsSource="{Binding Boxes}" SelectedIndex="{Binding BoxIndex}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="data:ScreenLayoutItem">
+              <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" IsEnabled="{Binding HasBox}"
+              ToolTip.Tip="In tiles of 8 pixels">
+          <TextBlock Grid.Row="0" Text="Across" VerticalAlignment="Center" Margin="0,0,8,0"/>
+          <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="31" Increment="1" FormatString="0" Value="{Binding BoxX}"/>
+          <TextBlock Grid.Row="1" Text="Down" VerticalAlignment="Center" Margin="0,4,8,0"/>
+          <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,4,0,0" Minimum="0" Maximum="23" Increment="1" FormatString="0" Value="{Binding BoxY}"/>
+          <TextBlock Grid.Row="2" Text="Width" VerticalAlignment="Center" Margin="0,4,8,0"/>
+          <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,4,0,0" Minimum="1" Maximum="32" Increment="1" FormatString="0"
+                         Value="{Binding BoxWidth}" IsEnabled="{Binding CanResizeBox}"/>
+          <TextBlock Grid.Row="3" Text="Height" VerticalAlignment="Center" Margin="0,4,8,0"/>
+          <NumericUpDown Grid.Row="3" Grid.Column="1" Margin="0,4,0,0" Minimum="1" Maximum="24" Increment="1" FormatString="0"
+                         Value="{Binding BoxHeight}" IsEnabled="{Binding CanResizeBox}"/>
+        </Grid>
+      </StackPanel>
+      <ListBox x:Name="LayerList" Margin="6" ItemsSource="{Binding Layers}" SelectedIndex="{Binding LayerIndex}"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ScreenLayerRow">
+            <StackPanel>
+              <TextBlock Text="{Binding Name}" TextWrapping="Wrap"/>
+              <TextBlock Text="{Binding Where}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      </DockPanel>
+    </Border>
+
+    <!-- The files the picked layer is made from -->
+    <Border x:Name="PartPanel" DockPanel.Dock="Right" Width="270" BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1,0,0,0">
+      <DockPanel Margin="10">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding LayerName}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="0,8,0,0">
+          <Button Content="Paint" controls:Icon.Key="brush" Click="Paint_Click" IsEnabled="{Binding CanEditPart}"/>
+          <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding CanEditPart}" ToolTip.Tip="PNG image"/>
+          <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding CanEditPart}" ToolTip.Tip="PNG image"/>
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Parts}" SelectedIndex="{Binding PartIndex}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:ScreenPartRow">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}"/>
+                <TextBlock Text="{Binding Where}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}"/>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Border>
+
+    <!-- Both screens, the top one first; a click picks the layer in front at that point -->
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+      <StackPanel x:Name="Screens" Margin="12" Spacing="6" HorizontalAlignment="Center">
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <Image x:Name="TopScreen" Source="{Binding TopImage}" Width="512" Height="384" Stretch="Fill"
+                 RenderOptions.BitmapInterpolationMode="None" PointerPressed="Screen_Pressed" Cursor="Hand"/>
+        </Border>
+        <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+          <Image x:Name="BottomScreen" Source="{Binding BottomImage}" Width="512" Height="384" Stretch="Fill"
+                 RenderOptions.BitmapInterpolationMode="None" PointerPressed="Screen_Pressed" Cursor="Hand"/>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+  </DockPanel>
+</UserControl>
