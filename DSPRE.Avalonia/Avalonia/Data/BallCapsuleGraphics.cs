@@ -9,7 +9,6 @@ namespace DSPRE.Avalonia.Data
     /// <summary>Seal stickers and the Ball Capsule board picture.</summary>
     public static class BallCapsuleGraphics
     {
-        private const int BoardDrawing = 267, BoardColours = 287, BoardOverview = 283;
 
         /// <summary>Offset from a stored seal position, in case-screen coordinates, to the overview picture's ball.</summary>
         public const int PlacedToBoardX = -56, PlacedToBoardY = 16;
@@ -18,6 +17,9 @@ namespace DSPRE.Avalonia.Data
         private static int StickerLayout => Johto ? 38 : 93;
         private static int StickerAnimation => Johto ? 36 : 1;
         private static int StickerColours => Johto ? 6 : 293;
+        private static int BoardDrawing => Johto ? 7 : 267;
+        private static int BoardColours => Johto ? 1 : 287;
+        private static int BoardOverview => Johto ? 11 : 283;
 
         public static bool HasStickers => gameDirs != null && gameDirs.ContainsKey(DirNames.sealGraphics);
 
@@ -34,10 +36,10 @@ namespace DSPRE.Avalonia.Data
                 ? renderer : null;
         }
 
-        /// <summary>The capsule board at 256 by 192, or null. Its files are only known for Diamond, Pearl and Platinum.</summary>
+        /// <summary>The capsule board at 256 by 192, or null.</summary>
         public static AvaBitmap Board()
         {
-            if (!HasStickers || Johto) return null;
+            if (!HasStickers) return null;
             try
             {
                 ScriptNarc narc = new ScriptNarc(DirNames.sealGraphics);
