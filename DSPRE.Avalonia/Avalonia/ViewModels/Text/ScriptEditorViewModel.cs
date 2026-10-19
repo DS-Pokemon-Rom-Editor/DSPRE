@@ -630,6 +630,42 @@ namespace DSPRE.Avalonia.ViewModels.Text
             OnPropertyChanged(nameof(CanSearchProject));
         }
 
+        /// <summary>Lists a reference count's uses in the Search tab and returns them, so one use can be opened at once.</summary>
+        internal List<ScriptSearchResult> ShowReferences(int line, IReadOnlyList<RotomLspLocation> uses)
+        {
+            List<ScriptSearchResult> results = new List<ScriptSearchResult>();
+            Dictionary<string, string[]> files = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (RotomLspLocation use in uses)
+            {
+                if (!files.TryGetValue(use.Path, out string[] lines))
+                {
+                    if (SamePath(use.Path, _currentPath)) lines = (ScriptText ?? "").Replace("\r\n", "\n").Split('\n');
+                    else
+                    {
+                        try { lines = File.ReadAllLines(use.Path); }
+                        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException) { lines = Array.Empty<string>(); }
+                    }
+                    files[use.Path] = lines;
+                }
+                string preview = use.Line >= 1 && use.Line <= lines.Length ? lines[use.Line - 1].Trim() : "";
+                results.Add(new ScriptSearchResult(use.Path, use.Line, use.Column, use.SelectionLength,
+                    DisplayPath(use.Path) + ":" + use.Line + ":" + use.Column, preview.Length == 0 ? "(blank line)" : preview));
+            }
+
+            SearchResults.Clear();
+            foreach (ScriptSearchResult r in results) SearchResults.Add(r);
+            string what = LineText(line);
+            SearchStatusText = (results.Count == 1 ? "1 use" : results.Count + " uses") + (what.Length > 0 ? " of " + what : "") + ".";
+            SelectedSidebarTabIndex = 0;
+            return results;
+        }
+
+        private string LineText(int line)
+        {
+            string[] lines = (ScriptText ?? "").Replace("\r\n", "\n").Split('\n');
+            return line >= 1 && line <= lines.Length ? lines[line - 1].Trim().TrimEnd(':') : "";
+        }
+
         public async Task<bool> OpenSearchResultAsync(ScriptSearchResult result)
         {
             if (result == null) return false;

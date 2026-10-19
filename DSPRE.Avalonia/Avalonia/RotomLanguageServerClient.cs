@@ -266,7 +266,12 @@ namespace DSPRE.Avalonia
                 if (!lens.TryGetProperty("command", out JsonElement command) || !lens.TryGetProperty("range", out JsonElement range)) continue;
                 string title = command.ReadString("title");
                 if (string.IsNullOrWhiteSpace(title) || !range.TryGetProperty("start", out JsonElement start)) continue;
-                lenses.Add(new RotomLspInlineText(start.ReadInt("line") + 1, -1, title));
+                // A reference count's command carries the uses as its third argument.
+                List<RotomLspLocation> uses = null;
+                if (command.TryGetProperty("arguments", out JsonElement args) && args.ValueKind == JsonValueKind.Array
+                    && args.GetArrayLength() >= 3 && args[2].ValueKind == JsonValueKind.Array)
+                    uses = args[2].EnumerateArray().Select(ReadLocation).Where(l => l != null).ToList();
+                lenses.Add(new RotomLspInlineText(start.ReadInt("line") + 1, -1, title, uses));
             }
             return lenses;
         }
@@ -666,7 +671,7 @@ namespace DSPRE.Avalonia
     internal sealed record RotomLspSymbol(string Name, int Kind, string Detail, int Line, int Depth);
 
     /// <summary>Text drawn in the editor at a 1-based line and column, or at the end of the line when Column is -1.</summary>
-    internal sealed record RotomLspInlineText(int Line, int Column, string Text);
+    internal sealed record RotomLspInlineText(int Line, int Column, string Text, IReadOnlyList<RotomLspLocation> Locations = null);
 
     internal static class JsonElementExtensions
     {

@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia.Views.Text
 
         private void SetupLspFeatures()
         {
-            _inlineTexts = new InlineTextGenerator();
+            _inlineTexts = new InlineTextGenerator { Clicked = ShowReferences };
             RotomEditor.TextArea.TextView.ElementGenerators.Add(_inlineTexts);
             RotomEditor.TextArea.TextEntered += OnTextEntered;
             DataContextChanged += (_, _) => HookLspViewModel();
@@ -36,6 +36,24 @@ namespace DSPRE.Avalonia.Views.Text
             if (_lspVm != null) _lspVm.InlineTextsChanged -= OnInlineTextsChanged;
             _lspVm = VM;
             if (_lspVm != null) _lspVm.InlineTextsChanged += OnInlineTextsChanged;
+        }
+
+        // One use opens straight away; more are listed in the Search tab.
+        private async void ShowReferences(RotomLspInlineText lens)
+        {
+            ScriptEditorViewModel vm = VM;
+            if (vm == null || lens.Locations == null) return;
+            List<ScriptSearchResult> uses = vm.ShowReferences(lens.Line, lens.Locations);
+            if (uses.Count != 1) return;
+            try
+            {
+                if (await vm.OpenSearchResultAsync(uses[0])) SelectEditorRange(uses[0].Line, uses[0].Column, uses[0].SelectionLength);
+            }
+            catch (Exception ex)
+            {
+                CrashReporter.LogHandled(ex);
+                await DialogHelper.ShowErrorAsync("The use could not be opened:\n" + ex.Message);
+            }
         }
 
         private void OnInlineTextsChanged(object sender, EventArgs e)
@@ -200,11 +218,13 @@ namespace DSPRE.Avalonia.Views.Text
         /// <summary>Draws code lens titles at line ends and inlay hints inside lines, taking no document space.</summary>
         private sealed class InlineTextGenerator : VisualLineElementGenerator
         {
-            private List<(int Offset, string Text)> _items = new();
+            private List<(int Offset, string Text, RotomLspInlineText Source)> _items = new();
+
+            public Action<RotomLspInlineText> Clicked { get; set; }
 
             public void Set(TextDocument document, IReadOnlyList<RotomLspInlineText> texts)
             {
-                List<(int, string)> items = new List<(int, string)>();
+                List<(int, string, RotomLspInlineText)> items = new List<(int, string, RotomLspInlineText)>();
                 if (document != null && texts != null)
                 {
                     foreach (RotomLspInlineText t in texts)
@@ -212,7 +232,7 @@ namespace DSPRE.Avalonia.Views.Text
                         if (t.Line < 1 || t.Line > document.LineCount) continue;
                         DocumentLine line = document.GetLineByNumber(t.Line);
                         int offset = t.Column < 0 ? line.EndOffset : Math.Min(line.Offset + t.Column - 1, line.EndOffset);
-                        items.Add((offset, t.Column < 0 ? "   " + t.Text : t.Text));
+                        items.Add((offset, t.Column < 0 ? "   " + t.Text : t.Text, t));
                     }
                 }
                 _items = items.OrderBy(i => i.Item1).ToList();
@@ -221,16 +241,46 @@ namespace DSPRE.Avalonia.Views.Text
             public override int GetFirstInterestedOffset(int startOffset)
             {
                 int end = CurrentContext.VisualLine.LastDocumentLine.EndOffset;
-                foreach ((int offset, string _) in _items)
+                foreach ((int offset, string _, RotomLspInlineText _) in _items)
                     if (offset >= startOffset && offset <= end) return offset;
                 return -1;
             }
 
             public override VisualLineElement ConstructElement(int offset)
             {
-                string text = string.Concat(_items.Where(i => i.Offset == offset).Select(i => i.Text));
+                List<(int Offset, string Text, RotomLspInlineText Source)> here = _items.Where(i => i.Offset == offset).ToList();
+                string text = string.Concat(here.Select(i => i.Text));
                 if (text.Length == 0) return null;
-                return new HintElement(text);
+                RotomLspInlineText uses = here.Select(i => i.Source).FirstOrDefault(s => s.Locations?.Count > 0);
+                return uses != null ? new ReferencesElement(text, () => Clicked?.Invoke(uses)) : new HintElement(text);
+            }
+        }
+
+        // A reference count reads as a link and lists the uses when clicked.
+        private sealed class ReferencesElement : FormattedTextElement
+        {
+            private static readonly IBrush Hint = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+            private readonly Action _click;
+            public ReferencesElement(string text, Action click) : base(text, 0) { _click = click; }
+
+            public override global::Avalonia.Media.TextFormatting.TextRun CreateTextRun(int startVisualColumn, ITextRunConstructionContext context)
+            {
+                TextRunProperties?.SetForegroundBrush(Hint);
+                TextRunProperties?.SetTextDecorations(TextDecorations.Underline);
+                return base.CreateTextRun(startVisualColumn, context);
+            }
+
+            protected override void OnQueryCursor(global::Avalonia.Input.PointerEventArgs e)
+            {
+                if (e.Source is global::Avalonia.Input.InputElement element) element.Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Hand);
+                e.Handled = true;
+            }
+
+            protected override void OnPointerPressed(global::Avalonia.Input.PointerPressedEventArgs e)
+            {
+                if (e.Handled) return;
+                _click();
+                e.Handled = true;
             }
         }
 
