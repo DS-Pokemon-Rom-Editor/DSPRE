@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:DSPRE.Avalonia.Controls"
         xmlns:vm="clr-namespace:DSPRE.Avalonia.ViewModels.Tools"
+        xmlns:ae="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
         x:Class="DSPRE.Avalonia.Views.Tools.BattleTestsView"
         x:DataType="vm:BattleTestsViewModel"
         Title="Battle tests"
@@ -11,11 +12,34 @@
     <vm:BattleTestsViewModel/>
   </Design.DataContext>
 
+  <Window.Resources>
+    <DataTemplate x:Key="MonCard" x:DataType="vm:FormMon">
+      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="0,0,0,1" Padding="0,4">
+        <WrapPanel>
+          <TextBlock Text="{Binding Slot}" Width="50" VerticalAlignment="Center"/>
+          <AutoCompleteBox Width="210" Margin="0,0,4,2" FilterMode="Contains" PlaceholderText="Species" Text="{Binding Species}" ItemsSource="{Binding Lists.Species}"/>
+          <TextBox Width="60" Margin="0,0,4,2" PlaceholderText="Level" Text="{Binding Level}"/>
+          <AutoCompleteBox Width="200" Margin="0,0,4,2" FilterMode="Contains" PlaceholderText="Ability" Text="{Binding Ability}" ItemsSource="{Binding Lists.Abilities}"/>
+          <AutoCompleteBox Width="200" Margin="0,0,4,2" FilterMode="Contains" PlaceholderText="Item" Text="{Binding Item}" ItemsSource="{Binding Lists.Items}"/>
+          <AutoCompleteBox Width="190" Margin="0,0,4,2" FilterMode="Contains" PlaceholderText="Move 1" Text="{Binding Move1}" ItemsSource="{Binding Lists.MoveNames}"/>
+          <AutoCompleteBox Width="190" Margin="0,0,4,2" FilterMode="Contains" PlaceholderText="Move 2" Text="{Binding Move2}" ItemsSource="{Binding Lists.MoveNames}"/>
+          <AutoCompleteBox Width="190" Margin="0,0,4,2" FilterMode="Contains" PlaceholderText="Move 3" Text="{Binding Move3}" ItemsSource="{Binding Lists.MoveNames}"/>
+          <AutoCompleteBox Width="190" Margin="0,0,4,2" FilterMode="Contains" PlaceholderText="Move 4" Text="{Binding Move4}" ItemsSource="{Binding Lists.MoveNames}"/>
+          <TextBox Width="90" Margin="0,0,4,2" PlaceholderText="HP" Text="{Binding Hp}"/>
+          <AutoCompleteBox Width="180" Margin="0,0,4,2" FilterMode="Contains" PlaceholderText="Status" Text="{Binding Status}" ItemsSource="{Binding Lists.Statuses}"/>
+        </WrapPanel>
+      </Border>
+    </DataTemplate>
+  </Window.Resources>
+
   <DockPanel>
     <controls:EditorToolbar>
         <Button Content="Save" controls:Icon.Key="saveButton" Click="Save_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
         <Button Content="Discard" controls:Icon.Key="resetIcon" Click="Discard_Click" IsEnabled="{Binding HasUnsavedChanges}"/>
+        <controls:UndoRedoButtons/>
         <TextBox Text="{Binding NewName}" PlaceholderText="folder/new_test.c" Width="240" Margin="12,0,0,0"/>
+        <AutoCompleteBox controls:EditorToolbar.Slot="Extra" Width="260" FilterMode="Contains" PlaceholderText="Start from the open test" Text="{Binding Template}" ItemsSource="{Binding Templates}"
+                         ToolTip.Tip="The test the new one starts as a copy of"/>
         <Button Content="Add test" Click="Add_Click" ToolTip.Tip="A copy of the open test under the new name"/>
         <Button Content="Delete" Click="Delete_Click" Margin="12,0,0,0"/>
     </controls:EditorToolbar>
@@ -28,9 +52,84 @@
         <ListBox ItemsSource="{Binding Tests}" SelectedItem="{Binding Selected}"/>
       </DockPanel>
       <GridSplitter Grid.Column="1" ResizeDirection="Columns"/>
-      <TextBox Grid.Column="2" Margin="6" Text="{Binding Text}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
-               FontFamily="Cascadia Mono, Consolas, monospace" FontSize="13"
-               ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+      <TabControl x:Name="Tabs" Grid.Column="2" Margin="6,0,6,6" SelectionChanged="Tabs_SelectionChanged">
+        <TabItem Header="Code">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Bottom" Text="{Binding ProblemText}" IsVisible="{Binding ProblemText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                       Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+            <ae:TextEditor x:Name="Code" ShowLineNumbers="True" WordWrap="False"
+                           FontFamily="Cascadia Mono, Consolas, monospace" FontSize="13"
+                           BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1"/>
+          </DockPanel>
+        </TabItem>
+        <TabItem Header="Form">
+          <Panel DataContext="{Binding Form}" x:DataType="vm:BattleTestFormViewModel">
+            <TextBlock Text="{Binding Error}" IsVisible="{Binding !HasForm}" Margin="8" TextWrapping="Wrap"
+                       Foreground="{DynamicResource Editor.Warn}"/>
+            <ScrollViewer IsVisible="{Binding HasForm}" HorizontalScrollBarVisibility="Disabled">
+              <StackPanel Spacing="10" Margin="4">
+                <TextBlock Text="Battle" FontWeight="Bold"/>
+                <WrapPanel>
+                  <StackPanel Margin="0,0,10,6"><TextBlock Text="Battle type"/><AutoCompleteBox Width="230" FilterMode="Contains" Text="{Binding BattleType}" ItemsSource="{Binding BattleTypes}"/></StackPanel>
+                  <StackPanel Margin="0,0,10,6"><TextBlock Text="Weather"/><AutoCompleteBox Width="230" FilterMode="Contains" Text="{Binding Weather}" ItemsSource="{Binding Weathers}"/></StackPanel>
+                  <StackPanel Margin="0,0,10,6"><TextBlock Text="Field condition"/><AutoCompleteBox Width="230" FilterMode="Contains" Text="{Binding FieldCondition}" ItemsSource="{Binding Weathers}"/></StackPanel>
+                  <StackPanel Margin="0,0,10,6"><TextBlock Text="Terrain"/><AutoCompleteBox Width="200" FilterMode="Contains" Text="{Binding Terrain}" ItemsSource="{Binding Terrains}"/></StackPanel>
+                  <StackPanel Margin="0,0,10,6"><TextBlock Text="Passes needed"/><TextBox Width="90" Text="{Binding PassCount}"/></StackPanel>
+                  <CheckBox Content="Known failing" IsChecked="{Binding KnownFailing}" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+                </WrapPanel>
+
+                <TextBlock Text="Player party" FontWeight="Bold"/>
+                <ItemsControl ItemsSource="{Binding Player}" ItemTemplate="{StaticResource MonCard}"/>
+                <TextBlock Text="Enemy party" FontWeight="Bold"/>
+                <ItemsControl ItemsSource="{Binding Enemy}" ItemTemplate="{StaticResource MonCard}"/>
+
+                <TextBlock Text="Turns" FontWeight="Bold"/>
+                <ItemsControl ItemsSource="{Binding Scripts}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FormBattler">
+                      <Border BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" Padding="6" Margin="0,0,8,8">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                          <ItemsControl ItemsSource="{Binding Actions}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:FormAction">
+                                <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,1">
+                                  <TextBlock Text="{Binding Turn}" Width="50" VerticalAlignment="Center"/>
+                                  <AutoCompleteBox Width="200" FilterMode="Contains" Text="{Binding Do}" ItemsSource="{Binding Lists.ActionNames}"/>
+                                  <AutoCompleteBox Width="200" FilterMode="Contains" Text="{Binding Target}" ItemsSource="{Binding Lists.Battlers}"/>
+                                </StackPanel>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="Expected" FontWeight="Bold" VerticalAlignment="Center"/>
+                  <Button Content="Add" controls:Icon.Key="addIcon" Click="AddExpectation_Click"/>
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Expectations}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FormExpectation">
+                      <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,1">
+                        <AutoCompleteBox Width="290" FilterMode="Contains" Text="{Binding Type}" ItemsSource="{Binding Lists.ExpectationTypes}"/>
+                        <AutoCompleteBox Width="200" FilterMode="Contains" Text="{Binding Battler}" ItemsSource="{Binding Lists.Battlers}"/>
+                        <ComboBox Width="150" SelectedItem="{Binding ValueField}" ItemsSource="{Binding Lists.ValueFields}"/>
+                        <TextBox Width="420" Text="{Binding Value}"/>
+                        <Button Content="Remove" Click="RemoveExpectation_Click"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </ScrollViewer>
+          </Panel>
+        </TabItem>
+      </TabControl>
     </Grid>
   </DockPanel>
 </Window>

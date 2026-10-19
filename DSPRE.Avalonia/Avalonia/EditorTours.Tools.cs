@@ -72,8 +72,16 @@ namespace DSPRE.Avalonia
                 S(null, "Code patches", "Every patch your hg-engine checkout applies to the game's code on each build."),
                 S("toolbar", "Filter", "Show picks which part of the code to list. Reload reads the lists again."),
                 S("list", "The patches", "Where each one lands, what it does and which list it comes from. Runs into shows patches that overlap."),
+                S("toolbar", "Built only", "Lines your config's #ifdefs leave out are hidden. Untick it to see them greyed, with Built and When saying why."),
                 S("name:AddPatchPanel", "Adding a patch", "Pick a list, where it goes and what it does, then press Add."),
                 S("toolbar", "Saving", "Nothing is written until you Save (Ctrl+S). Discard puts everything back."));
+
+            Add("BattleTestsView", "Battle tests",
+                S(null, "Battle tests", "hg-engine's battle test scenarios, one file each under data/battle_tests."),
+                S("list", "The tests", "Pick a test to open it. Search narrows the list."),
+                S("tab:Code", "Code", "The test as written. Underlined names aren't defined in the headers the build uses; the line below says why."),
+                S("tab:Form", "Form", "The same test as fields: battle, both parties, turns and what to expect. Changes go straight into the code."),
+                S("toolbar", "New tests", "Type a name, pick a test to start from, then press Add test. Save (Ctrl+S) writes to the checkout."));
 
             Add("HgeRomReviewView", "hg-engine ROM Review",
                 S(null, "ROM review", "See what the game will actually show from this build, without the source."),

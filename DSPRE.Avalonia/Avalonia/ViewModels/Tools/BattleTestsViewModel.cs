@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 namespace DSPRE.Avalonia.ViewModels.Tools
 {
     /// <summary>hg-engine's battle test scenarios (data/battle_tests), listed and edited as the source they are.</summary>
-    public class BattleTestsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges
+    public class BattleTestsViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -41,8 +41,77 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public string Text
         {
             get => _text;
-            set { _text = value ?? ""; OnPropertyChanged(); OnPropertyChanged(nameof(HasUnsavedChanges)); }
+            set
+            {
+                if ((value ?? "") == _text) return;
+                _text = value ?? "";
+                if (!_restoring) Capture();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                Problems = _selected == null ? new List<HgEngineBattleTests.Problem>() : HgEngineBattleTests.Problems(_selected, _text);
+                OnPropertyChanged(nameof(Problems));
+                OnPropertyChanged(nameof(ProblemText));
+            }
         }
+
+        public List<HgEngineBattleTests.Problem> Problems { get; private set; } = new();
+
+        // ── Undo, shared by the Code and Form tabs ──────────────────────────
+        private readonly UndoHistory<string> _history = new();
+        private bool _restoring;
+        private DateTime _lastCapture;
+
+        // Typing, in either tab, lands one step per pause rather than one per key.
+        private void Capture()
+        {
+            DateTime now = DateTime.UtcNow;
+            _history.Capture(_text, coalesce: now - _lastCapture < TimeSpan.FromMilliseconds(800));
+            _lastCapture = now;
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+        }
+
+        private void Restore(string text)
+        {
+            _restoring = true;
+            Text = text;
+            _restoring = false;
+            _lastCapture = default;
+            ShowForm(_formShown);
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+        }
+
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Undo() => Restore(_history.Undo());
+        public void Redo() => Restore(_history.Redo());
+
+        // ── Form tab ────────────────────────────────────────────────────────
+        private bool _formShown;
+        public BattleTestFormViewModel Form { get; private set; }
+
+        /// <summary>Builds the form from the text as it is now; called when the Form tab opens or another test opens on it.</summary>
+        public void ShowForm(bool shown)
+        {
+            _formShown = shown;
+            if (!shown || _selected == null) return;
+            Form = new BattleTestFormViewModel(_selected, _text, t => Text = t);
+            OnPropertyChanged(nameof(Form));
+        }
+
+        // ── New test from a template ────────────────────────────────────────
+        public List<string> Templates => _all;
+        private string _template;
+        /// <summary>The test a new one starts as a copy of; the open one when none is picked.</summary>
+        public string Template { get => _template; set { _template = value; OnPropertyChanged(); } }
+
+        public string ProblemText => Problems.Count switch
+        {
+            0 => "",
+            1 => Problems[0].Message,
+            _ => $"{Problems.Count} problems. First: {Problems[0].Message}",
+        };
 
         public bool HasUnsavedChanges => _selected != null && _text != _loadedText;
         public string UnsavedChangesDescription => $"Battle test {_selected}";
@@ -76,7 +145,13 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         {
             try { _loadedText = HgEngineBattleTests.Read(rel).Replace("\r\n", "\n"); }
             catch (Exception ex) { _loadedText = ""; StatusText = ex.Message; }
+            _restoring = true;
             Text = _loadedText;
+            _restoring = false;
+            _history.Reset(_text);
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
+            ShowForm(_formShown);
         }
 
         public void SaveChanges()
@@ -85,6 +160,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             string error = HgEngineBattleTests.Write(_selected, _text);
             if (error != null) { StatusText = "Not saved: " + error; return; }
             _loadedText = _text;
+            _history.MarkSaved();
             OnPropertyChanged(nameof(HasUnsavedChanges));
             SaveNotice.Saved(UnsavedChangesDescription);
             StatusText = $"Saved {_selected}.";
@@ -96,16 +172,22 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public void AddTest()
         {
             if (HasUnsavedChanges) { StatusText = "Save or discard this test first."; return; }
-            if (_selected == null) { StatusText = "Open a test to start the new one from."; return; }
+            string from = _template ?? _selected;
+            if (from == null) { StatusText = "Pick a test to start the new one from."; return; }
             string rel = NewName.Trim().Replace('\\', '/');
             if (rel.Length > 0 && !rel.EndsWith(".c", StringComparison.OrdinalIgnoreCase)) rel += ".c";
-            string error = HgEngineBattleTests.Create(rel, _loadedText);
+            string start;
+            try { start = from == _selected ? _loadedText : HgEngineBattleTests.Read(from).Replace("\r\n", "\n"); }
+            catch (Exception ex) { StatusText = ex.Message; return; }
+            string error = HgEngineBattleTests.Create(rel, start);
             if (error != null) { StatusText = error; return; }
             _all = HgEngineBattleTests.List();
             NewName = "";
             Filter = "";
             Selected = rel;
-            StatusText = $"Added {rel}, a copy of the test it started from.";
+            StatusText = $"Added {rel}, a copy of {from}.";
+            Template = null;
+            OnPropertyChanged(nameof(Templates));
         }
 
         public string DeleteSelected()
@@ -117,6 +199,9 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _all = HgEngineBattleTests.List();
             _selected = null;
             _loadedText = _text = "";
+            _history.Reset(_text);
+            OnPropertyChanged(nameof(CanUndo));
+            OnPropertyChanged(nameof(CanRedo));
             OnPropertyChanged(nameof(Text));
             OnPropertyChanged(nameof(HasUnsavedChanges));
             Refill();
