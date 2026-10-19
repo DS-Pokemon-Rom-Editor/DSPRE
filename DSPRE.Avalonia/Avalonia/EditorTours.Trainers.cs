@@ -24,7 +24,7 @@ namespace DSPRE.Avalonia
 
             Add("VsSeekerRematchView", "Vs. Seeker Rematch Editor",
                 S("list", "Encounters", "Each row is a trainer you meet on your journey. Pick one to set who you face when you rematch them with the Vs. Seeker."),
-                S("toolbar", "Filter", "Type part of a trainer name to narrow the list."),
+                S("toolbar", "Search", "Type part of a trainer name to narrow the list."),
                 S("name:EncounterBox", "First battle", "The trainer you fight the first time. Right-click it and pick Open, or Ctrl+click, to open them in the Trainer Editor."),
                 S("name:RematchPanel", "Rematches", "Rematch A to E are the trainers you face on each later rematch, in order. Skip this level leaves one out, and Ends here stops there."),
                 S("name:SaveButton", "Saving", "Save writes every changed row, and Discard drops them. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
@@ -33,7 +33,7 @@ namespace DSPRE.Avalonia
                 S("list", "Rematch rows", "Each row is a trainer you can rematch after they call you. Pick one to choose who you face at each level."),
                 S("name:BaseTrainerBox", "Base trainer", "The trainer you first battle. Right-click and pick Open, or Ctrl+click, to open them; Open in Phone Book jumps to the contact who calls."),
                 S("name:RowPanel", "Rematch levels", "Rematches 1 to 5 are the trainers faced as the story moves on, and each label says what unlocks it. Warnings point out rows the game handles badly."),
-                S("toolbar", "Filter", "Type part of a trainer name to narrow the list."),
+                S("toolbar", "Search", "Type part of a trainer name to narrow the list."),
                 S("name:SaveButton", "Saving", "Save writes every changed row, and Discard drops them. Ctrl+S saves, Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("PokegearPhoneBookView", "Pokégear Phone Book",

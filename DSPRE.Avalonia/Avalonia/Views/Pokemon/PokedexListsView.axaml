@@ -32,7 +32,7 @@
       <TabControl IsVisible="{Binding !HasLoadError}" Margin="6">
         <TabItem Header="Regional dex">
           <DockPanel Margin="4">
-            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,6,Auto,4,Auto,4,Auto,4,Auto" Margin="0,6,0,0">
+            <Grid x:Name="RegionalButtons" DockPanel.Dock="Bottom" ColumnDefinitions="*,6,Auto,4,Auto,4,Auto,4,Auto" Margin="0,6,0,0">
               <controls:FusionAutoCompleteBox controls:EditorLink.To="Pokemon" AllowsNone="False"
                                               ItemsSource="{Binding SpeciesNames}" SelectedIndex="{Binding RegionalAdd}"/>
               <Button Grid.Column="2" Content="Add" controls:Icon.Key="addIcon" Click="AddRegional_Click"
@@ -42,7 +42,7 @@
               <Button Grid.Column="8" Content="Down" controls:Icon.Key="arrowdown" Click="LowerRegional_Click" IsEnabled="{Binding CanLowerRegional}"/>
             </Grid>
             <TextBlock DockPanel.Dock="Bottom" Text="{Binding RegionalCount}" Classes="subtle" Margin="0,4,0,0"/>
-            <ListBox ItemsSource="{Binding Regional}" SelectedIndex="{Binding RegionalIndex}">
+            <ListBox x:Name="RegionalList" ItemsSource="{Binding Regional}" SelectedIndex="{Binding RegionalIndex}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:PokedexListsViewModel+Row">
                   <StackPanel Orientation="Horizontal" Spacing="6">
@@ -57,7 +57,7 @@
 
         <TabItem Header="Sort lists">
           <Grid ColumnDefinitions="220,8,*" Margin="4">
-            <ListBox ItemsSource="{Binding ListChoices}" SelectedItem="{Binding SelectedList}">
+            <ListBox x:Name="SortListChoices" ItemsSource="{Binding ListChoices}" SelectedItem="{Binding SelectedList}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:PokedexListsViewModel+ListChoice">
                   <TextBlock Text="{Binding Text}"/>
@@ -80,7 +80,7 @@
                 <Button Grid.Column="8" Content="Down" controls:Icon.Key="arrowdown" Click="LowerEntry_Click" IsEnabled="{Binding CanLowerEntry}"/>
               </Grid>
               <TextBlock DockPanel.Dock="Bottom" Text="{Binding EntriesCount}" Classes="subtle" Margin="0,4,0,0"/>
-              <ListBox ItemsSource="{Binding Entries}" SelectedIndex="{Binding EntryIndex}">
+              <ListBox x:Name="SortEntries" ItemsSource="{Binding Entries}" SelectedIndex="{Binding EntryIndex}">
                 <ListBox.ItemTemplate>
                   <DataTemplate x:DataType="vm:PokedexListsViewModel+Row">
                     <StackPanel Orientation="Horizontal" Spacing="6">

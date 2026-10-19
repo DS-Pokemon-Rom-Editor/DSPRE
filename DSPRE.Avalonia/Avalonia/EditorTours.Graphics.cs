@@ -140,6 +140,36 @@ namespace DSPRE.Avalonia
                 S("name:ColourList", "Colours", "Click a colour to paint with it. Change this colour alters the colour itself, and every pixel using it changes too."),
                 S("name:ViewBar", "View", "Zoom in and out, turn on the pixel grid, and pick a frame when the file holds several pictures."),
                 S("name:PainterButtons", "Saving", "Save writes it back into the project; save the ROM afterwards to keep it. Ctrl+S saves and Ctrl+Z undoes."));
+
+            Add("PokedexGraphicsEditorView", "Pokédex graphics",
+                S(null, "Pokédex graphics", "Both screens of a Pokédex page, drawn from this ROM, with every piece editable."),
+                S("toolbar", "Page", "Pick the page to show, and its state where it has more than one."),
+                S("name:LayerList", "Layers", "Everything drawn on the page, front first. Pick one here, or click it on a screen."),
+                S("name:Screens", "The screens", "The top screen and the touch screen as the game draws them."),
+                S("pick:LayerList>name:PartPanel", "Its files", "The files the picked layer is made from. Paint opens one in the painter, and Export and Import swap it for a PNG."),
+                S(null, "Keeping changes", "Save writes your changes, Discard drops them, and Undo (Ctrl+Z) takes them back."));
+
+            Add("SummaryScreenEditorView", "Summary screen",
+                S(null, "Summary screen", "Both screens of a summary page, drawn from this ROM with a sample Pokémon."),
+                S("toolbar", "Page", "Pick the page to show, and its state where it has more than one."),
+                S("name:LayerList", "Layers", "Everything drawn on the page, front first. Pick one here, or click it on a screen."),
+                S("pick:LayerList>name:PartPanel", "Its files", "The files the picked layer is made from. Paint opens one in the painter, and Export and Import swap it for a PNG."),
+                S("name:BoxPanel", "Text boxes and bars", "Where the game puts each text box and the HP and EXP bars, in tiles. Pick one to outline it on the screen."),
+                S(null, "Keeping changes", "Save writes your changes, Discard drops them, and Undo (Ctrl+Z) takes them back."));
+
+            Add("HpBarLayoutEditorView", "HP bar layout",
+                S(null, "HP bar layout", "Where each part of a battle HP bar is drawn: the name, level, HP numbers and gauge, status and the rest."),
+                S("toolbar", "Which bar", "Pick the bar to lay out. Import PNG takes a picture of the bar as it should look in battle and makes it the bar's art."),
+                S("name:Board", "The bar", "Every part is a box on the bar. Drag a box to move that part."),
+                S("name:PartList", "Parts", "The same parts by name, with the column and row each one starts at."),
+                S("name:BattlePreview", "In battle", "The bar on the battle screen as it will look, and where the whole bar sits on the screen."),
+                S(null, "Keeping changes", "Save writes the layout, Discard drops it, and Ctrl+Z undoes."));
+
+            Add("MoveBackgroundEditorView", "Move backgrounds",
+                S("name:BackgroundList", "Backgrounds", "The backgrounds some moves put up during a battle. Pick one to see it."),
+                S("name:FileNumbers", "Its files", "The drawing, colours and the three screens it uses, by file number."),
+                S("name:PreviewPanel", "Preview", "Pick which of its screens to show."),
+                S("toolbar", "Saving", "Save writes your changes and Discard drops them. In an hg-engine project, Add and Remove last change how many backgrounds there are."));
         }
     }
 }

@@ -16,7 +16,8 @@ namespace DSPRE.Avalonia
 {
     /// <summary>
     /// One step of an editor's tour. <see cref="Target"/> is null (centred card), "toolbar", "tabs", "list",
-    /// "name:X", "type:X", or "tab:Name" optionally followed by "&gt;" and a target inside that tab.
+    /// "name:X", "type:X", or "tab:Name" optionally followed by "&gt;" and a target inside that tab. A leading
+    /// "pick:List&gt;" picks that list's first entry on reaching the step when nothing is picked yet.
     /// </summary>
     public sealed record TourStep(string Target, string Title, string Body);
 
@@ -60,6 +61,14 @@ namespace DSPRE.Avalonia
             foreach (TourStep step in tour.Steps)
             {
                 string target = step.Target;
+                string pickList = null;
+                if (target != null && target.StartsWith("pick:"))
+                {
+                    string rest = target.Substring(5);
+                    int split = rest.IndexOf('>');
+                    pickList = split < 0 ? rest : rest.Substring(0, split);
+                    target = split < 0 ? null : rest.Substring(split + 1);
+                }
                 TabItem tab = null;
                 if (target != null && target.StartsWith("tab:"))
                 {
@@ -83,11 +92,16 @@ namespace DSPRE.Avalonia
                     if (found == null) AppLogger.Info($"Tour {key}: nothing to point at for \"{title}\" ({inner})");
                     return found;
                 };
-                Action onEnter = capturedTab == null ? null : () =>
+                Action onEnter = capturedTab == null && pickList == null ? null : () =>
                 {
                     // A tab inside another tab needs its outer tabs picked too.
-                    foreach (global::Avalonia.Controls.TabItem t in capturedTab.GetLogicalAncestors().OfType<TabItem>().Reverse().Append(capturedTab))
-                        if (t.Parent is TabControl tc) tc.SelectedItem = t;
+                    if (capturedTab != null)
+                        foreach (global::Avalonia.Controls.TabItem t in capturedTab.GetLogicalAncestors().OfType<TabItem>().Reverse().Append(capturedTab))
+                            if (t.Parent is TabControl tc) tc.SelectedItem = t;
+                    // A step about the picked entry would otherwise point at an empty panel.
+                    if (pickList != null && Resolve(root, "name:" + pickList) is SelectingItemsControl list
+                        && list.SelectedIndex < 0 && list.ItemCount > 0)
+                        list.SelectedIndex = 0;
                 };
                 steps.Add((resolve, step.Title, step.Body, onEnter));
             }
@@ -261,7 +275,12 @@ namespace DSPRE.Avalonia
         private static Control Resolve(Control scope, string target)
         {
             if (target == "toolbar") return Toolbar(scope);
-            if (target == "tabs") return Descendants(scope).OfType<TabControl>().FirstOrDefault();
+            if (target == "tabs")
+            {
+                // The strip of tab headers, not the page under it.
+                TabControl tabs = Descendants(scope).OfType<TabControl>().FirstOrDefault();
+                return (Control)tabs?.GetVisualDescendants().OfType<global::Avalonia.Controls.Presenters.ItemsPresenter>().FirstOrDefault(p => p.TemplatedParent == tabs) ?? tabs;
+            }
             if (target == "list")
                 return Descendants(scope).FirstOrDefault(c => c is ListBox || c is TreeView || c is DataGrid);
             if (target.StartsWith("name:"))

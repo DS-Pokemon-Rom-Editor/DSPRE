@@ -22,8 +22,8 @@
     </Border>
     <Grid ColumnDefinitions="260,8,*" Margin="8">
       <DockPanel Grid.Column="0">
-        <TextBox DockPanel.Dock="Top" Text="{Binding Filter}" PlaceholderText="Search abilities" Margin="0,0,0,6"/>
-        <ListBox ItemsSource="{Binding Abilities}" SelectedItem="{Binding Selected}">
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Text="{Binding Filter}" PlaceholderText="Search abilities" Margin="0,0,0,6"/>
+        <ListBox x:Name="AbilityList" ItemsSource="{Binding Abilities}" SelectedItem="{Binding Selected}">
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:AbilityFlagsEditorViewModel+AbilityRow">
               <TextBlock Text="{Binding Display}"/>
@@ -31,7 +31,7 @@
           </ListBox.ItemTemplate>
         </ListBox>
       </DockPanel>
-      <ItemsControl Grid.Column="2" ItemsSource="{Binding Flags}" IsEnabled="{Binding HasSelection}">
+      <ItemsControl x:Name="FlagList" Grid.Column="2" ItemsSource="{Binding Flags}" IsEnabled="{Binding HasSelection}">
         <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:AbilityFlagsEditorViewModel+FlagItem">

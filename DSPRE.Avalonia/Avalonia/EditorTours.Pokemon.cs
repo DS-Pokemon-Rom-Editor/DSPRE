@@ -51,7 +51,7 @@ namespace DSPRE.Avalonia
                 S("name:SpeciesTree", "Pokémon", "Pokémon grouped by evolution family. Tick a family to tick all of its members."),
                 S("name:MachinePanel", "Machines", "Tick or untick a machine for every ticked Pokémon at once. A filled box means only some of them learn it."),
                 S("name:SyncUnionButton", "Families", "Sync Family gives every member what any of them learns, or keeps only what all share. Copy Compatibility To copies one Pokémon's machines to others."),
-                S("name:FilterBox", "Filter", "Type part of a name to narrow the list. The Select and Enable buttons tick or clear the list."),
+                S("name:FilterBox", "Search", "Type part of a name to narrow the list. The Select and Enable buttons tick or clear the list."),
                 S("toolbar", "Saving", "Save All writes every change; Ctrl+S does the same, Ctrl+Z undoes and Ctrl+Y redoes."));
 
             Add("MoveTutorEditorView", "Move Tutors",
@@ -168,6 +168,20 @@ namespace DSPRE.Avalonia
                 S("name:FormList", "Its forms", "Each row is one form and the species entry it uses. Tick Needs Reversion for forms that change back, like Mega Evolution."),
                 S("name:AddSlotButton", "Adding forms", "Add Form adds a row and the cross removes one. A form's own stats, types and abilities are edited in the Pokémon Editor."),
                 S("name:SaveButton", "Saving", "Save writes your changes and Discard drops them; Ctrl+S saves too."));
+
+            Add("AbilityFlagsEditorView", "Ability flags",
+                S("name:SearchBox", "Abilities", "Type part of a name to find an ability."),
+                S("name:AbilityList", "The list", "Pick an ability to see its flags."),
+                S("name:FlagList", "Flags", "Each box changes how other moves and abilities treat this one, such as whether Trace can copy it or Mold Breaker ignores it."),
+                S("toolbar", "Saving", "Save writes the flags and Discard drops your changes. Ctrl+Z undoes."));
+
+            Add("PokedexListsView", "Pokédex lists",
+                S("tabs", "Two kinds of list", "The regional Pokédex, and the lists the Pokédex sorts Pokémon by."),
+                S("tab:Regional dex>name:RegionalList", "Regional Pokédex", "The Pokémon in the regional Pokédex, in order."),
+                S("tab:Regional dex>name:RegionalButtons", "Changing it", "Pick a Pokémon and Add puts it after the selected entry. Remove, Up and Down change the list."),
+                S("tab:Sort lists>name:SortListChoices", "Sort lists", "Each list is one way the Pokédex can sort. Pick one to change its order."),
+                S("toolbar", "Rebuilding", "Rebuild sort lists makes every sort list again from the current names and data."),
+                S(null, "Saving", "Save writes every list and Discard drops your changes. When the regional Pokédex changes size, a note at the bottom offers the patch that counts it complete at the new size."));
         }
     }
 }
