@@ -78,6 +78,13 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             set => Set(ref _showWelcomeOnStartup, value);
         }
 
+        private bool _askBeforeSwitchingProject = true;
+        public bool AskBeforeSwitchingProject
+        {
+            get => _askBeforeSwitchingProject;
+            set => Set(ref _askBeforeSwitchingProject, value);
+        }
+
         // Inverse of DspreSettings.guidedTourShown: checked = tour runs after the next ROM load.
         private bool _showGuidedTourNextLoad;
         public bool ShowGuidedTourNextLoad
@@ -218,6 +225,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             AutoCheckUpdates = SettingsManager.Settings.AutomaticallyCheckForUpdates;
             AutoUpdateDBs    = SettingsManager.Settings.AutomaticallyUpdateDBs;
             ShowWelcomeOnStartup = SettingsManager.Settings.ShowWelcomeOnStartup;
+            AskBeforeSwitchingProject = SettingsManager.Settings.AskBeforeSwitchingProject;
             ShowGuidedTourNextLoad = !SettingsManager.Settings.GuidedTourShown;
             UiScale           = (decimal)SettingsManager.Settings.UiScale;
             _themeIndex       = ThemeManager.IsDark ? 0 : 1;
@@ -256,6 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             SettingsManager.Settings.AutomaticallyCheckForUpdates = AutoCheckUpdates;
             SettingsManager.Settings.AutomaticallyUpdateDBs = AutoUpdateDBs;
             SettingsManager.Settings.ShowWelcomeOnStartup   = ShowWelcomeOnStartup;
+            SettingsManager.Settings.AskBeforeSwitchingProject = AskBeforeSwitchingProject;
             SettingsManager.Settings.GuidedTourShown        = !ShowGuidedTourNextLoad;
             if (ShowGuidedTourNextLoad) SettingsManager.Settings.EditorToursShown?.Clear();
             SettingsManager.Settings.UiScale                = (double)UiScale;

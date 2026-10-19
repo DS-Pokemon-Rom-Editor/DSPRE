@@ -72,6 +72,9 @@ namespace DSPRE
         /// <summary>Show the Welcome &amp; Tutorial window when the Avalonia shell starts.</summary>
         public bool ShowWelcomeOnStartup { get; set; } = true;
 
+        /// <summary>Ask before opening another project closes the current one, when nothing is unsaved.</summary>
+        public bool AskBeforeSwitchingProject { get; set; } = true;
+
         /// <summary>Whether the first-time guided tour has already run (or been skipped). While false,
         /// the tour starts automatically after the next successful ROM load in the Avalonia shell.</summary>
         public bool GuidedTourShown { get; set; } = false;

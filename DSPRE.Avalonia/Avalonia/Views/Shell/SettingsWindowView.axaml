@@ -105,6 +105,7 @@
 	<!-- Onboarding -->
 	<StackPanel Orientation="Horizontal" Spacing="24">
 	  <CheckBox Content="Show welcome at startup"       IsChecked="{Binding ShowWelcomeOnStartup}"/>
+	  <CheckBox Content="Ask before switching project"  IsChecked="{Binding AskBeforeSwitchingProject}"/>
 	  <CheckBox Content="Show the guided tours again" IsChecked="{Binding ShowGuidedTourNextLoad}"
 	            ToolTip.Tip="The tour can also be replayed anytime from Tools > Guided tour"/>
 	  <Button Content="Open welcome &amp; tutorial" controls:Icon.Key="OpenLink" Click="ShowWelcome_Click"/>

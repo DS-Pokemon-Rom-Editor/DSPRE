@@ -173,12 +173,19 @@ namespace DSPRE.Avalonia.Views.Shell
             // in it. Without this the current project disappears the moment the menu item is clicked,
             // which reads as a crash rather than a choice.
             if (!openingAnother || !AvaloniaEditorLauncher.IsRomLoaded) return true;
+            if (SettingsManager.Settings?.AskBeforeSwitchingProject == false) return true;
 
-            return await DialogHelper.AskYesNoAsync(
+            (bool yes, bool dontAsk) = await DialogHelper.AskWithCheckAsync(
                 $"Opening another project closes the current one first.\n\n"
                 + $"{RomInfo.GetGameDisplayName()} will be closed, along with any editor windows it has "
                 + "open. There are no unsaved changes, so nothing is lost.\n\nContinue?",
-                "Close the current project?", this);
+                "Close the current project?", "Yes", "No", "Don't ask again", false, this);
+            if (yes && dontAsk && SettingsManager.Settings != null)
+            {
+                SettingsManager.Settings.AskBeforeSwitchingProject = false;
+                SettingsManager.Save();
+            }
+            return yes;
         }
 
         // Opening, saving, building and converting all rewrite the project, so only one runs at a time.
