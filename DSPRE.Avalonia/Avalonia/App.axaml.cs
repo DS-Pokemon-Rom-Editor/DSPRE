@@ -109,7 +109,7 @@ namespace DSPRE
                 // do them itself (ROM loads read Settings, and the logger needs its file path).
                 SettingsManager.Load();
                 DSPRE.Avalonia.ThemeManager.ApplySaved();
-                AppLogger.Initialize();
+                AppLogger.Initialize(DSPRE.Avalonia.ProjectWindows.LogFileName());
                 DatabaseSetup.CopyBundledDatabases();
 
                 // RomInfo warnings → an Avalonia dialog (marshalled to the UI thread; loads run off-thread).
@@ -154,7 +154,14 @@ namespace DSPRE
                         DSPRE.Avalonia.Views.Shell.WelcomeView.ShowWelcome(main);
                 }
 
-                if (haveDefaultRom)
+                desktop.Exit += (_, _) => DSPRE.Avalonia.ProjectWindows.Release();
+
+                // Started from "Open in new window", or with a ROM or folder on the command line.
+                if (DSPRE.Avalonia.ProjectWindows.StartupPath is string startup)
+                {
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(async () => await main.OpenRecentAsync(startup));
+                }
+                else if (haveDefaultRom)
                 {
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
                     {

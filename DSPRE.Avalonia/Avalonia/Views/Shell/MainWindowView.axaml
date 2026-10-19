@@ -30,6 +30,9 @@
         <MenuItem Header="Open _Recent" x:Name="RecentMenu">
           <MenuItem Header="(no recent projects)" IsEnabled="False"/>
         </MenuItem>
+        <MenuItem Header="Open in new window" x:Name="NewWindowMenu">
+          <MenuItem Header="ROM…"/>
+        </MenuItem>
         <Separator/>
         <MenuItem Header="Save ROM…" Click="SaveRom_Click" IsEnabled="{Binding IsRomLoaded}"/>
         <MenuItem Header="Build and run" Click="BuildAndRun_Click" IsEnabled="{Binding IsRomLoaded}" InputGesture="F5"

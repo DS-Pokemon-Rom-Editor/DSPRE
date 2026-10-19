@@ -116,6 +116,12 @@ namespace DSPRE
 
         private static readonly string SettingsFile = Path.Combine(AppPaths.DspreDataPath, "userSettings.json");
 
+        // The settings as last read or written by this window. A save writes only what changed since, so two
+        // DSPRE windows don't undo each other's changes.
+        private static Newtonsoft.Json.Linq.JObject _saved;
+
+        private static readonly JsonSerializerSettings Replace = new JsonSerializerSettings { ObjectCreationHandling = ObjectCreationHandling.Replace };
+
         public static void Load()
         {
             AppLogger.Info("Loading app settings");
@@ -123,6 +129,7 @@ namespace DSPRE
             {
                 string json = System.IO.File.ReadAllText(SettingsFile);
                 Settings = JsonConvert.DeserializeObject<DspreSettings>(json);
+                _saved = Newtonsoft.Json.Linq.JObject.FromObject(Settings);
             }
             else
             {
@@ -138,8 +145,30 @@ namespace DSPRE
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
 
-            string json = JsonConvert.SerializeObject(Settings, Formatting.Indented);
-            PlainFiles.WriteText(SettingsFile, json);
+            Newtonsoft.Json.Linq.JObject mine = Newtonsoft.Json.Linq.JObject.FromObject(Settings);
+            Newtonsoft.Json.Linq.JObject onDisk = ReadDisk();
+            Newtonsoft.Json.Linq.JObject merged = new Newtonsoft.Json.Linq.JObject();
+            foreach (Newtonsoft.Json.Linq.JProperty p in mine.Properties())
+            {
+                bool changedHere = _saved == null || !Newtonsoft.Json.Linq.JToken.DeepEquals(p.Value, _saved[p.Name]);
+                Newtonsoft.Json.Linq.JToken other = onDisk?.GetValue(p.Name, StringComparison.OrdinalIgnoreCase);
+                merged[p.Name] = changedHere || other == null ? p.Value : other;
+            }
+            PlainFiles.WriteText(SettingsFile, merged.ToString(Formatting.Indented));
+            _saved = merged;
+            // Take up what another window changed, so this one shows it too.
+            JsonConvert.PopulateObject(merged.ToString(), Settings, Replace);
+        }
+
+        private static Newtonsoft.Json.Linq.JObject ReadDisk()
+        {
+            if (!File.Exists(SettingsFile)) return null;
+            try { return Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(SettingsFile)); }
+            catch (Exception ex) when (ex is IOException || ex is JsonException)
+            {
+                AppLogger.WarnOnce("SettingsManager.ReadDisk", ex);
+                return null;
+            }
         }
 
         public const int MaxRecentProjects = 10;

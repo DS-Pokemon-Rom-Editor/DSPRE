@@ -48,6 +48,7 @@ namespace DSPRE.Avalonia.Views.Shell
             };
 
             RecentMenu.SubmenuOpened += (_, _) => RebuildRecentMenu();
+            NewWindowMenu.SubmenuOpened += (_, _) => RebuildNewWindowMenu();
             SetupFavourites();
             ProjectDrop.Attach(this, () => this);
             ProjectSourceWatcher.ScriptsCompiled += (result, paths) =>
@@ -155,6 +156,27 @@ namespace DSPRE.Avalonia.Views.Shell
             }
         }
 
+        private void RebuildNewWindowMenu()
+        {
+            NewWindowMenu.Items.Clear();
+            MenuItem rom = new MenuItem { Header = "ROM…" };
+            rom.Click += async (_, _) => { if (await PickRomAsync() is string p) ProjectWindows.OpenInNewWindow(p); };
+            MenuItem folder = new MenuItem { Header = "Extracted folder…" };
+            folder.Click += async (_, _) => { if (await PickFolderAsync() is string p) ProjectWindows.OpenInNewWindow(p); };
+            NewWindowMenu.Items.Add(rom);
+            NewWindowMenu.Items.Add(folder);
+            List<string> recents = SettingsManager.Settings?.RecentProjects;
+            if (recents == null || recents.Count == 0) return;
+            NewWindowMenu.Items.Add(new Separator());
+            foreach (string path in recents)
+            {
+                MenuItem item = new MenuItem { Header = CompactPath(path), Tag = path };
+                global::Avalonia.Controls.ToolTip.SetTip(item, path);
+                item.Click += (_, _) => ProjectWindows.OpenInNewWindow((string)item.Tag);
+                NewWindowMenu.Items.Add(item);
+            }
+        }
+
         /// <summary>Prompts the user about unsaved work across every open editor. Returns true if they
         /// saved/discarded (or there was nothing to lose). Does NOT close any editor windows: callers
         /// close them only once the new project is actually chosen, so cancelling the file picker or a
@@ -209,6 +231,11 @@ namespace DSPRE.Avalonia.Views.Shell
         /// <summary>Shows why a picked ROM or folder can't be opened, before anything of the open project closes.</summary>
         private async System.Threading.Tasks.Task<bool> RefuseUnsupportedAsync(string path)
         {
+            if (ProjectWindows.OpenElsewhere(path))
+            {
+                await DialogHelper.ShowInfoAsync("This project is already open in another DSPRE window.", "Open ROM");
+                return true;
+            }
             string why = AvaloniaRomLoader.WhyUnsupported(path);
             if (why == null) return false;
             await DialogHelper.ShowErrorAsync(why, "Open ROM", this);
@@ -268,7 +295,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         // The new project is picked and checked first, so a cancelled or refused open never costs the
         // current project its unsaved edits.
-        private async System.Threading.Tasks.Task OpenRomCoreAsync()
+        private async System.Threading.Tasks.Task<string> PickRomAsync()
         {
             IReadOnlyList<IStorageFile> files = await StorageProvider.OpenFilePickerAsync(new global::Avalonia.Platform.Storage.FilePickerOpenOptions
             {
@@ -276,7 +303,21 @@ namespace DSPRE.Avalonia.Views.Shell
                 AllowMultiple = false,
                 FileTypeFilter = new[] { new global::Avalonia.Platform.Storage.FilePickerFileType("NDS ROM") { Patterns = new[] { "*.nds" } } }
             });
-            string path = files != null && files.Count > 0 ? files[0].TryGetLocalPath() : null;
+            return files != null && files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        }
+
+        private async System.Threading.Tasks.Task<string> PickFolderAsync()
+        {
+            IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(new global::Avalonia.Platform.Storage.FolderPickerOpenOptions
+            {
+                Title = "Open extracted ROM folder", AllowMultiple = false
+            });
+            return folders != null && folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+        }
+
+        private async System.Threading.Tasks.Task OpenRomCoreAsync()
+        {
+            string path = await PickRomAsync();
             if (string.IsNullOrEmpty(path) || await RefuseUnsupportedAsync(path)) return;
 
             bool? reExtract = await CheckExtractedDataChoiceAsync(path);
@@ -317,11 +358,7 @@ namespace DSPRE.Avalonia.Views.Shell
 
         private async System.Threading.Tasks.Task OpenFolderCoreAsync()
         {
-            IReadOnlyList<IStorageFolder> folders = await StorageProvider.OpenFolderPickerAsync(new global::Avalonia.Platform.Storage.FolderPickerOpenOptions
-            {
-                Title = "Open extracted ROM folder", AllowMultiple = false
-            });
-            string path = folders != null && folders.Count > 0 ? folders[0].TryGetLocalPath() : null;
+            string path = await PickFolderAsync();
             if (string.IsNullOrEmpty(path)) return;
 
             // An hg-engine checkout, or its base/ tree, opens as an hg-engine folder project.
@@ -535,6 +572,11 @@ namespace DSPRE.Avalonia.Views.Shell
         private async System.Threading.Tasks.Task LoadRomAsync(System.Func<System.Action<string>, bool> load, string sourcePath = null)
         {
             MainWindowViewModel vm = DataContext as MainWindowViewModel;
+            if (!ProjectWindows.TryClaim(sourcePath))
+            {
+                await DialogHelper.ShowInfoAsync("This project is already open in another DSPRE window.", "Open ROM");
+                return;
+            }
             if (vm != null)
             {
                 vm.BusyText = "Opening ROM…";
@@ -556,6 +598,7 @@ namespace DSPRE.Avalonia.Views.Shell
             vm?.RefreshRomState();
             if (!ok)
             {
+                ProjectWindows.Release();
                 if (vm != null) vm.StatusText = "ROM load failed.";
                 await DialogHelper.ShowErrorAsync(error ?? "Failed to load the ROM.", "Open ROM");
                 return;
