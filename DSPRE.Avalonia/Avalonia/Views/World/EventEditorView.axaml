@@ -173,17 +173,18 @@
                   <Grid ColumnDefinitions="*,Auto">
                     <ComboBox Grid.Column="0" ItemsSource="{Binding OwSpriteEntries}" SelectedIndex="{Binding OwSpriteIndex}" HorizontalAlignment="Stretch"/>
                     <Border Grid.Column="1" Width="40" Height="40" Margin="6,0,0,0" Background="{DynamicResource Editor.PanelBg}"
-                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1">
+                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" ToolTip.Tip="{Binding DynamicSpriteTip}">
                       <Panel>
                         <Image Source="{Binding OwSpritePreview}" IsVisible="{Binding HasOwSpritePreview}" Stretch="Uniform" Margin="2"/>
                         <gl:NsbmdGlControl x:Name="OwModelView" IsVisible="{Binding HasOwModelPreview}" IsHitTestVisible="False"/>
+                        <Rectangle IsVisible="{Binding IsDynamicSprite}" Stroke="#FFC71A" StrokeThickness="2" StrokeDashArray="2,2"/>
                       </Panel>
                     </Border>
                   </Grid>
 
                   <TextBlock Text="Movement" FontWeight="Bold" Margin="0,4,0,0"/>
                   <ComboBox ItemsSource="{Binding OwMovementNames}" SelectedIndex="{Binding OwMovementIndex}" HorizontalAlignment="Stretch"/>
-                  <TextBlock Text="{Binding OwMovementUnknownNote}" FontSize="10" Foreground="Orange"
+                  <TextBlock Text="{Binding OwMovementUnknownNote}" FontSize="10" Foreground="{DynamicResource Editor.Warn}"
                              TextWrapping="Wrap" IsVisible="{Binding OwMovementUnknown}"/>
 
                   <TextBlock Text="Orientation" FontWeight="Bold" Margin="0,4,0,0"/>
@@ -195,7 +196,7 @@
                             ToolTip.Tip="Every type this game defines"/>
                   <TextBlock Text="{Binding OwTypeNote}" FontSize="10" Foreground="{DynamicResource Editor.Subtle}"
                              TextWrapping="Wrap" IsVisible="{Binding OwHasTypeNote}"/>
-                  <TextBlock Text="{Binding OwTypeUnknownNote}" FontSize="10" Foreground="Orange"
+                  <TextBlock Text="{Binding OwTypeUnknownNote}" FontSize="10" Foreground="{DynamicResource Editor.Warn}"
                              TextWrapping="Wrap" IsVisible="{Binding OwTypeUnknown}"/>
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwItemFieldsVisibleVanilla}" Margin="0,4,0,0">
@@ -218,9 +219,9 @@
                     <TextBlock Text="Trainer" FontWeight="Bold"/>
                     <controls:FusionAutoCompleteBox controls:EditorLink.To="Trainer" ItemsSource="{Binding OwTrainerEntries}" SelectedIndex="{Binding OwTrainerIndex}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="No trainer has this script number."
-                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
+                               FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIndexOutOfRange}"/>
                     <TextBlock Text="Trainer 0 is empty. Pick another."
-                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIsDummy}"/>
+                               FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding OwTrainerIsDummy}"/>
                     <CheckBox Content="Partner (double battle)" IsChecked="{Binding OwPartnerTrainer}"/>
                     <TextBlock Text="Sight range" FontWeight="Bold" Margin="0,4,0,0"
                                ToolTip.Tip="How many tiles ahead the trainer sees."/>
@@ -249,11 +250,20 @@
 
                   <StackPanel Spacing="3" IsVisible="{Binding OwScriptSectionVisible}">
                     <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0" ToolTip.Tip="Set by the item or trainer above unless Type is Standard"/>
-                    <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
+                    <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding OwScriptIndex}" IsVisible="{Binding !OwScriptHasCommonInfo}" IsEnabled="{Binding OwScriptEnabled}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="This map's scripts have no script with this number."
-                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptGenericWarningVisible}"/>
-                    <TextBlock Text="{Binding OwScriptCommonInfo}"
-                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding OwScriptHasCommonInfo}"/>
+                               FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding OwScriptGenericWarningVisible}"/>
+                    <Border IsVisible="{Binding OwScriptHasCommonInfo}" Background="{DynamicResource Editor.PanelBg}"
+                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6,4">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="1">
+                          <TextBlock Text="{Binding OwScriptCommonName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding OwScriptCommonInfo}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Rename" Tag="0" Click="RenameCommonScript_Click" VerticalAlignment="Center" Margin="6,0,0,0"
+                                ToolTip.Tip="Name this shared script for this project."/>
+                      </Grid>
+                    </Border>
                     <Grid ColumnDefinitions="*,Auto">
                       <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding OwScript}" IsEnabled="{Binding OwScriptEnabled}"/>
                       <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToOwScript_Click"
@@ -357,11 +367,20 @@
                     <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="0" Maximum="65535" Increment="1" FormatString="0" Value="{Binding YMatrix}"/>
                   </Grid>
                   <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
-                  <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding TrScriptIndex}" HorizontalAlignment="Stretch"/>
+                  <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding TrScriptIndex}" IsVisible="{Binding !TrScriptHasCommonInfo}" HorizontalAlignment="Stretch"/>
                   <TextBlock Text="This map's scripts have no script with this number."
-                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptGenericWarningVisible}"/>
-                  <TextBlock Text="{Binding TrScriptCommonInfo}"
-                             FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding TrScriptHasCommonInfo}"/>
+                             FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding TrScriptGenericWarningVisible}"/>
+                  <Border IsVisible="{Binding TrScriptHasCommonInfo}" Background="{DynamicResource Editor.PanelBg}"
+                          BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6,4">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" Spacing="1">
+                        <TextBlock Text="{Binding TrScriptCommonName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding TrScriptCommonInfo}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="Rename" Tag="1" Click="RenameCommonScript_Click" VerticalAlignment="Center" Margin="6,0,0,0"
+                              ToolTip.Tip="Name this shared script for this project."/>
+                    </Grid>
+                  </Border>
                   <Grid ColumnDefinitions="*,Auto">
                     <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding TrScript}"/>
                     <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToTrScript_Click"
@@ -439,11 +458,20 @@
                   </StackPanel>
                   <StackPanel Spacing="3" IsVisible="{Binding SpScriptFieldsVisible}">
                     <TextBlock Text="Script" FontWeight="Bold" Margin="0,4,0,0"/>
-                    <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" HorizontalAlignment="Stretch"/>
+                    <controls:FusionAutoCompleteBox ItemsSource="{Binding AvailableScripts}" SelectedIndex="{Binding SpScriptIndex}" IsVisible="{Binding !SpScriptHasCommonInfo}" HorizontalAlignment="Stretch"/>
                     <TextBlock Text="This map's scripts have no script with this number."
-                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptGenericWarningVisible}"/>
-                    <TextBlock Text="{Binding SpScriptCommonInfo}"
-                               FontSize="10" Foreground="Orange" TextWrapping="Wrap" IsVisible="{Binding SpScriptHasCommonInfo}"/>
+                               FontSize="10" Foreground="{DynamicResource Editor.Warn}" TextWrapping="Wrap" IsVisible="{Binding SpScriptGenericWarningVisible}"/>
+                    <Border IsVisible="{Binding SpScriptHasCommonInfo}" Background="{DynamicResource Editor.PanelBg}"
+                            BorderBrush="{DynamicResource Editor.Border}" BorderThickness="1" CornerRadius="3" Padding="6,4">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Spacing="1">
+                          <TextBlock Text="{Binding SpScriptCommonName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding SpScriptCommonInfo}" FontSize="11" Foreground="{DynamicResource Editor.Subtle}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <Button Grid.Column="1" Content="Rename" Tag="2" Click="RenameCommonScript_Click" VerticalAlignment="Center" Margin="6,0,0,0"
+                                ToolTip.Tip="Name this shared script for this project."/>
+                      </Grid>
+                    </Border>
                     <Grid ColumnDefinitions="*,Auto">
                       <NumericUpDown Grid.Column="0" Minimum="0" Maximum="65535" Value="{Binding SpScript}"/>
                       <Button Grid.Column="1" Content="Go to script" controls:Icon.Key="goto" Margin="4,0,0,0" Click="GoToSpScript_Click"

@@ -241,26 +241,11 @@ namespace DSPRE.Avalonia.Views.World
             {
                 OverworldSprites.SpritePixels pix = OverworldSprites.Get(AnimatedPreviewViewModel.PlayerSpriteEntry, 1);
                 if (pix == null || pix.Width <= 0 || pix.Height <= 0) return;
-                Bitmap bmp = ToBitmap(pix);
+                Bitmap bmp = ImageConverter.FromRgba(pix.Rgba, pix.Width, pix.Height);
                 PegmanIcon.Source = bmp;
                 DragGhost.Source = bmp;
             }
             catch { }
-        }
-
-        private static Bitmap ToBitmap(OverworldSprites.SpritePixels pix)
-        {
-            WriteableBitmap wb = new WriteableBitmap(new PixelSize(pix.Width, pix.Height), new Vector(96, 96),
-                                         global::Avalonia.Platform.PixelFormat.Rgba8888,
-                                         global::Avalonia.Platform.AlphaFormat.Unpremul);
-            using (ILockedFramebuffer fb = wb.Lock())
-            {
-                for (int y = 0; y < pix.Height; y++)
-                    System.Runtime.InteropServices.Marshal.Copy(
-                        pix.Rgba, y * pix.Width * 4,
-                        fb.Address + y * fb.RowBytes, pix.Width * 4);
-            }
-            return wb;
         }
 
         private void Pegman_PointerPressed(object sender, PointerPressedEventArgs e)
@@ -358,7 +343,7 @@ namespace DSPRE.Avalonia.Views.World
 
         private async void Screenshot_Click(object sender, RoutedEventArgs e) =>
             await GlScreenshot.SaveAsync(GlView, TopLevel.GetTopLevel(this) as Window, "dspre_events",
-                path => { if (VM != null) VM.StatusText = $"Screenshot saved to {path}"; });
+                SaveNotice.Exported);
 
         private void Save_Click(object sender, RoutedEventArgs e) => VM?.Save();
         private async void Import_Click(object sender, RoutedEventArgs e) =>
@@ -371,7 +356,7 @@ namespace DSPRE.Avalonia.Views.World
             // Saving the list renumbers item events on disk; an unsaved copy here would put the old numbers back.
             if (VM.HasUnsavedChanges)
             {
-                if (!await DialogHelper.AskYesNo("Save this event file first? The ground item list can renumber item events.", "Event Editor")) return;
+                if (!await DialogHelper.AskYesNo("Save this event file first? The ground item list can renumber item events.", "Event editor")) return;
                 VM.SaveChanges();
                 if (VM.HasUnsavedChanges) return;
             }
@@ -399,7 +384,7 @@ namespace DSPRE.Avalonia.Views.World
                 string txtPath = System.IO.Path.Combine(dir, $"dspre_event_debug_{stamp}.txt");
                 string pngPath = System.IO.Path.Combine(dir, $"dspre_event_render_{stamp}.png");
 
-                System.IO.File.WriteAllText(txtPath, VM.BuildDebugReport());
+                PlainFiles.WriteText(txtPath, VM.BuildDebugReport());
 
                 // Capture the live GL render (async, fires after the next frame).
                 GlView.CaptureFrame((rgba, w, h) =>
@@ -407,13 +392,11 @@ namespace DSPRE.Avalonia.Views.World
                     bool pngOk = false;
                     try { if (rgba != null && w > 0 && h > 0) { SaveRgbaToPng(rgba, w, h, pngPath); pngOk = true; } }
                     catch { pngOk = false; }
-                    _ = DialogHelper.ShowInfo(
-                        $"3D debug dump written:\n\n• {System.IO.Path.GetFileName(txtPath)}\n" +
-                        (pngOk ? $"• {System.IO.Path.GetFileName(pngPath)}" : "• (render capture failed)") +
-                        $"\n\nFolder:\n{dir}", "3D debug dump");
+                    SaveNotice.Exported(txtPath);
+                    if (!pngOk) _ = DialogHelper.ShowError("The report was written, but the render could not be captured.", "Event editor error");
                 });
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Debug dump failed:\n{ex.Message}", "3D debug dump"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Debug dump failed:\n{ex.Message}", "Event editor error"); }
         }
 
         // Builds a PNG from a raw RGBA framebuffer (origin bottom-left → flipped to top-left for the image).
@@ -422,6 +405,15 @@ namespace DSPRE.Avalonia.Views.World
         private void GoToOwScript_Click(object sender, RoutedEventArgs e) => VM?.GoToOverworldScript();
         private void GoToTrScript_Click(object sender, RoutedEventArgs e) => VM?.GoToTriggerScript();
         private void GoToSpScript_Click(object sender, RoutedEventArgs e) => VM?.GoToSpawnableScript();
+
+        private async void RenameCommonScript_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null || sender is not Button { Tag: string tag } || !int.TryParse(tag, out int kind)) return;
+            int number = VM.ShownScript(kind);
+            string name = await DialogHelper.PromptText($"Name for script {number}:", "Rename shared script",
+                DSPRE.Avalonia.Data.CommonScriptLabels.Of(number) ?? "", TopLevel.GetTopLevel(this) as Window);
+            if (name != null) VM.RenameCommonScript(kind, name);
+        }
         private void OpenHiddenItems_Click(object sender, RoutedEventArgs e) => VM?.OpenHiddenItemTable();
 
         private void AddOw_Click(object sender, RoutedEventArgs e) => VM?.AddOverworld();

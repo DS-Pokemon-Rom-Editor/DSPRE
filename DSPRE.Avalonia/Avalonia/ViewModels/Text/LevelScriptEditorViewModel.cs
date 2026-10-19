@@ -21,7 +21,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
     /// a script while a variable holds a value). Lets you pick a script file, list its triggers,
     /// add/remove them, and save / import / export. Files that aren't level scripts load empty.
     /// </summary>
-    public class LevelScriptEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo
+    public class LevelScriptEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -91,15 +91,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             get
             {
                 CommonScriptId.Result result = CommonScriptId.Resolve(RomInfo.gameFamily, (int)_newScriptId);
-                switch (result.Kind)
-                {
-                    case CommonScriptId.Kind.Resolved:
-                        return $"This is a Common Script: Script Archive {result.ScriptArchiveId}, Script {result.ManualUserId} (Text Archive {result.TextArchiveId}).";
-                    case CommonScriptId.Kind.Discrepancy:
-                        return $"A discrepancy exists in the assigned script file for this range ({result.RangeLower}-{result.RangeUpper}) of Common Scripts. It is one of the following files: {string.Join(", ", result.CandidateArchives)}.";
-                    default:
-                        return null;
-                }
+                return result.Kind == CommonScriptId.Kind.Resolved ? result.Where : null;
             }
         }
         public bool NewScriptHasCommonInfo => !string.IsNullOrEmpty(NewScriptCommonInfo);
@@ -208,14 +200,14 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (_dirty && !await RecordSwitchGuard.ConfirmLeaveAsync(this, _owner, "level script")) return;
             if (HgEngine.HgEngineProject.IsActive || !RotomTool.IsAvailable)
             {
-                await DialogHelper.ShowInfo("New level scripts are built with Rotom, which this project can't use.", "Level Script Editor");
+                await DialogHelper.ShowInfo("New level scripts are built with Rotom, which this project can't use.", "Level script editor");
                 return;
             }
             try
             {
                 (int id, string _) = NewProjectFiles.AddBlankLevelScript();
                 RotomTool.Result built = await RotomTool.CompileProjectAsync();
-                if (!built.Success) { await DialogHelper.ShowError("The script build failed:\n" + RotomTool.FormatDetails(built), "Level Script Editor"); return; }
+                if (!built.Success) { await DialogHelper.ShowError("The script build failed:\n" + RotomTool.FormatDetails(built), "Level script editor error"); return; }
                 SyncScriptNames();
                 SetClean();
                 SelectedScriptIndex = id;
@@ -223,7 +215,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Couldn't add a level script:\n" + ex.Message, "Level Script Editor");
+                await DialogHelper.ShowError("Couldn't add a level script:\n" + ex.Message, "Level script editor error");
             }
         }
 
@@ -233,8 +225,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             if (HgEngine.HgEngineProject.IsActive) return;
             int id = NewProjectFiles.NextScriptId() - 1;
             if (id <= 0) return;
-            if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfo(keep, "Level Script Editor"); return; }
-            if (!await DialogHelper.AskYesNo($"Delete script file {id}, its source and its compiled copy?", "Confirm deletion")) return;
+            if (NewProjectFiles.WhyKeepLastScriptFile(id) is string keep) { await DialogHelper.ShowInfo(keep, "Level script editor"); return; }
+            if (!await DialogHelper.AskYesNo($"Delete script file {id}, its source and its compiled copy?", "Delete script file?")) return;
             try
             {
                 if (_selScript == id) { SetClean(); SelectedScriptIndex = id - 1; }
@@ -244,7 +236,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                await DialogHelper.ShowError("Couldn't remove the file:\n" + ex.Message, "Level Script Editor");
+                await DialogHelper.ShowError("Couldn't remove the file:\n" + ex.Message, "Level script editor error");
             }
         }
 
@@ -272,7 +264,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
             catch (Exception ex)
             {
                 StatusText = "Error: " + ex.Message;
-                await DialogHelper.ShowError($"Failed to set up Level Script Editor:\n{ex.Message}", "Level Script Editor");
+                await DialogHelper.ShowError($"Failed to set up Level Script Editor:\n{ex.Message}", "Level script editor error");
             }
         }
 
@@ -295,7 +287,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StartUndo();
                 StatusText = $"Script {index} is not a level script (empty). Add a trigger to make it one.";
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load level script {index}:\n{ex.Message}", "Level Script Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Failed to load level script {index}:\n{ex.Message}", "Level script editor error"); }
         }
 
         private void RefreshTriggers()
@@ -348,12 +340,12 @@ namespace DSPRE.Avalonia.ViewModels.Text
         public void Save()
         {
             if (_file == null || _selScript < 0) return;
-            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Level Script Editor"); return; }
+            if (_file.Problem() is string problem) { _ = DialogHelper.ShowError(problem, "Level script editor error"); return; }
             // A file that failed to load as a level script may be an ordinary script; saving would replace it.
             ScriptFile onDisk = new ScriptFile(_selScript, readFunctions: false, readActions: false);
             if (!onDisk.isLevelScript && !onDisk.hasNoScripts)
             {
-                _ = DialogHelper.ShowError($"File {_selScript} holds ordinary scripts, so it was not saved as a level script.", "Level Script Editor");
+                _ = DialogHelper.ShowError($"File {_selScript} holds ordinary scripts, so it was not saved as a level script.", "Level script editor error");
                 return;
             }
             try
@@ -364,7 +356,7 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 StatusText = $"Saved level script {_selScript}.";
                 AppEvents.RaiseLevelScriptSaved(this, _selScript);
             }
-            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Level Script Editor"); }
+            catch (Exception ex) { _ = DialogHelper.ShowError($"Save failed:\n{ex.Message}", "Level script editor error"); }
         }
 
         public async Task ImportAsync()
@@ -381,9 +373,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
                 foreach (LevelScriptTrigger t in imported.bufferSet) _file.bufferSet.Add(t);
                 RefreshTriggers();
                 Dirty();
-                StatusText = "Imported (unsaved).";
+                SaveNotice.Imported($"level script {_selScript}", path);
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Import Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Import failed:\n{ex.Message}", "Level script editor error"); }
         }
 
         /// <summary>The level script's file in the file manager, as last saved.</summary>
@@ -400,8 +392,8 @@ namespace DSPRE.Avalonia.ViewModels.Text
             FilePickerFileType filter = new FilePickerFileType("Level script") { Patterns = new[] { "*.lscr" } };
             string path = await DialogHelper.SaveFile(_owner, "Export level script", new[] { filter }, $"levelscript_{_selScript:D4}.lscr");
             if (path == null) return;
-            try { _file.write_file(path, _padding); StatusText = "Exported."; }
-            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Export Error"); }
+            try { _file.write_file(path, _padding); SaveNotice.Exported(path); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Export failed:\n{ex.Message}", "Level script editor error"); }
         }
     }
 }

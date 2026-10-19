@@ -140,6 +140,15 @@ namespace DSPRE.Avalonia.Data
             RegField("field_weather_pt", "Weather (Pt)", "Weather", 256, DSPRE.Resources.PokeDatabase.Weather.PtWeatherDict);
             RegField("field_weather_hgss", "Weather (HGSS)", "Weather", 128, DSPRE.Resources.PokeDatabase.Weather.HGSSWeatherDict);
 
+            // Scripts outside a map's own file, by script number less 2000, per game. Projects rewrite these scripts,
+            // so none ship with a name; people name the ones they use.
+            void RegScripts(string key, string name) =>
+                Register(new LabelCategory { Key = key, DisplayName = name, Group = "Scripts", Singular = CommonScriptLabels.Unnamed,
+                                             Cap = 65536 - CommonScriptLabels.First, Defaults = Array.Empty<string>() });
+            RegScripts("common_scripts_dp", "Shared scripts (DP)");
+            RegScripts("common_scripts_pt", "Shared scripts (Pt)");
+            RegScripts("common_scripts_hgss", "Shared scripts (HGSS)");
+
             // Overworld sprite entries. The games hold no names for these, so they start as numbers
             // and are worth naming per project: which entry is the player, which is a shop keeper.
             Register(new LabelCategory
@@ -407,7 +416,7 @@ namespace DSPRE.Avalonia.Data
                     return;
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
+                PlainFiles.WriteText(path, JsonSerializer.Serialize(file, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch (Exception ex) { AppLogger.Error("LabelStore.Save: " + ex.Message); }
         }

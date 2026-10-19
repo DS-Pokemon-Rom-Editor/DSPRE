@@ -9,7 +9,7 @@ namespace DSPRE
     /// </summary>
     public static class CommonScriptId
     {
-        public enum Kind { NotCommon, Resolved, Discrepancy }
+        public enum Kind { NotCommon, Resolved }
 
         public sealed class Result
         {
@@ -17,127 +17,126 @@ namespace DSPRE
             public int ScriptArchiveId;
             public int TextArchiveId;
 
-            // 0-based, exactly as the table's own "ID - lowerBound" formula gives it. DSPRE's own script
-            // numbering (ScriptCommandContainer.manualUserID, what the Script Editor shows as "Script 1",
-            // "Script 2"...) is 1-based, so the first script in a resolved archive is LocalScriptId == 0
-            // but ManualUserId == 1. Use ManualUserId for anything shown to the user or matched against
-            // a real ScriptFile.
+            /// <summary>What the range holds, such as "Hidden items".</summary>
+            public string Name;
+
+            // 0-based, exactly as the game's "ID - lowerBound" gives it. DSPRE's own script numbering
+            // (ScriptCommandContainer.manualUserID, what the Script Editor shows as "Script 1") is 1-based,
+            // so use ManualUserId for anything shown to the user or matched against a real ScriptFile.
             public int LocalScriptId;
             public int ManualUserId => LocalScriptId + 1;
 
             public int RangeLower;
             public int RangeUpper;
-            public int[] CandidateArchives;
+
+            /// <summary>Where the script lives, as shown to people.</summary>
+            public string Where => $"{Name}: script file {ScriptArchiveId}, script {ManualUserId}";
         }
 
-        private struct Bracket
-        {
-            public int Lower;   // inclusive
-            public int Upper;   // exclusive
-            public int ScriptArchive;
-            public int TextArchive;
-            public int[] DiscrepancyCandidates; // non-null only for a Discrepancy bracket
-        }
+        private readonly record struct Bracket(int Lower, int Upper, int ScriptArchive, int TextArchive, string Name);
 
-        // Decoded from pokediamond LoadScriptsAndMessagesByMapId (arm9/asm/unk_02038C78.s): each branch
-        // compares against the range start, loads a script and a message archive, and subtracts that start.
+        // pokediamond LoadScriptsAndMessagesByMapId (arm9/asm/unk_02038C78.s): each branch compares against the
+        // range start, loads a script and a message archive, and subtracts that start. Names follow Platinum's.
         private static readonly Bracket[] DpBrackets =
         {
-            new Bracket { Lower = 10300, Upper = 65536, ScriptArchive = 977,  TextArchive = 496 },
-            new Bracket { Lower = 10200, Upper = 10300, ScriptArchive = 373,  TextArchive = 332 },
-            new Bracket { Lower = 10150, Upper = 10200, ScriptArchive = 1042, TextArchive = 562 },
-            new Bracket { Lower = 10100, Upper = 10150, ScriptArchive = 1041, TextArchive = 563 },
-            new Bracket { Lower = 10000, Upper = 10100, ScriptArchive = 375,  TextArchive = 334 }, // Field moves
-            new Bracket { Lower = 9950,  Upper = 10000, ScriptArchive = 376,  TextArchive = 335 },
-            new Bracket { Lower = 9900,  Upper = 9950,  ScriptArchive = 365,  TextArchive = 199 },
-            new Bracket { Lower = 9800,  Upper = 9900,  ScriptArchive = 206,  TextArchive = 203 },
-            new Bracket { Lower = 9700,  Upper = 9800,  ScriptArchive = 387,  TextArchive = 378 },
-            new Bracket { Lower = 9600,  Upper = 9700,  ScriptArchive = 377,  TextArchive = 199 },
-            new Bracket { Lower = 9500,  Upper = 9600,  ScriptArchive = 464,  TextArchive = 492 },
-            new Bracket { Lower = 9400,  Upper = 9500,  ScriptArchive = 391,  TextArchive = 381 },
-            new Bracket { Lower = 9300,  Upper = 9400,  ScriptArchive = 372,  TextArchive = 329 },
-            new Bracket { Lower = 9200,  Upper = 9300,  ScriptArchive = 388,  TextArchive = 379 },
-            new Bracket { Lower = 9100,  Upper = 9200,  ScriptArchive = 0,    TextArchive = 9   },
-            new Bracket { Lower = 9000,  Upper = 9100,  ScriptArchive = 207,  TextArchive = 207 }, // Communication Club
-            new Bracket { Lower = 8970,  Upper = 9000,  ScriptArchive = 390,  TextArchive = 7   },
-            new Bracket { Lower = 8950,  Upper = 8970,  ScriptArchive = 463,  TextArchive = 486 },
-            new Bracket { Lower = 8900,  Upper = 8950,  ScriptArchive = 389,  TextArchive = 380 },
-            new Bracket { Lower = 8800,  Upper = 8900,  ScriptArchive = 462,  TextArchive = 485 },
-            new Bracket { Lower = 8000,  Upper = 8800,  ScriptArchive = 374,  TextArchive = 333 }, // Hidden Items
-            new Bracket { Lower = 7000,  Upper = 8000,  ScriptArchive = 370,  TextArchive = 325 }, // Ground Items
-            new Bracket { Lower = 5000,  Upper = 7000,  ScriptArchive = 1040, TextArchive = 199 }, // Double Battles
-            new Bracket { Lower = 3000,  Upper = 5000,  ScriptArchive = 1040, TextArchive = 199 }, // Single Battles
-            new Bracket { Lower = 2800,  Upper = 3000,  ScriptArchive = 378,  TextArchive = 350 }, // Berry soil
-            new Bracket { Lower = 2500,  Upper = 2800,  ScriptArchive = 1,    TextArchive = 13  },
-            new Bracket { Lower = 2000,  Upper = 2500,  ScriptArchive = 205,  TextArchive = 199 }, // "Common" Scripts
+            new(10300, 65536, 977,  496, "Rival talk"),
+            new(10200, 10300, 373,  332, "Mystery Gift deliveryman"),
+            new(10150, 10200, 1042, 562, "TV interviews"),
+            new(10100, 10150, 1041, 563, "TV"),
+            new(10000, 10100, 375,  334, "Field moves"),
+            new(9950,  10000, 376,  335, "Pokédex rating"),
+            new(9900,  9950,  365,  199, "Unused"),
+            new(9800,  9900,  206,  203, "Contests"),
+            new(9700,  9800,  387,  378, "Partners"),
+            new(9600,  9700,  377,  199, "New game"),
+            new(9500,  9600,  464,  492, "Day Care"),
+            new(9400,  9500,  391,  381, "Poffins"),
+            new(9300,  9400,  372,  329, "Group"),
+            new(9200,  9300,  388,  379, "Pokémon Center B1F"),
+            new(9100,  9200,  0,    9,   "Communication club"),
+            new(9000,  9100,  207,  207, "Pokémon Center 2F"),
+            new(8970,  9000,  390,  7,   "Poké Radar"),
+            new(8950,  8970,  463,  486, "VS Seeker"),
+            new(8900,  8950,  389,  380, "Chatot"),
+            new(8800,  8900,  462,  485, "Safari Zone"),
+            new(8000,  8800,  374,  333, "Hidden items"),
+            new(7000,  8000,  370,  325, "Item balls"),
+            new(5000,  7000,  1040, 199, "Double battles"),
+            new(3000,  5000,  1040, 199, "Trainer battles"),
+            new(2800,  3000,  378,  350, "Berry soil"),
+            new(2500,  2800,  1,    13,  "Background events"),
+            new(2000,  2500,  205,  199, "Common scripts"),
         };
 
+        // pokeplatinum src/script_manager.c SCRIPT_RANGE_TABLE, with archive numbers from scripts.order and
+        // generated/text_banks.txt.
         private static readonly Bracket[] PlatBrackets =
         {
-            new Bracket { Lower = 10490, Upper = 65536, ScriptArchive = 499,  TextArchive = 541 },
-            new Bracket { Lower = 10450, Upper = 10490, ScriptArchive = 500,  TextArchive = 16   },
-            new Bracket { Lower = 10400, Upper = 10450, ScriptArchive = 400,  TextArchive = 203  },
-            new Bracket { Lower = 10200, Upper = 10400, ScriptArchive = 407,  TextArchive = 379  },
-            new Bracket { Lower = 10150, Upper = 10200, ScriptArchive = 1116, TextArchive = 621  },
-            new Bracket { Lower = 10100, Upper = 10150, ScriptArchive = 1115, TextArchive = 622  },
-            new Bracket { Lower = 10000, Upper = 10100, ScriptArchive = 409,  TextArchive = 381  },
-            new Bracket { Lower = 9950,  Upper = 10000, ScriptArchive = 411,  TextArchive = 383  },
-            new Bracket { Lower = 9900,  Upper = 9950,  ScriptArchive = 397,  TextArchive = 213  },
-            new Bracket { Lower = 9800,  Upper = 9900,  ScriptArchive = 212,  TextArchive = 217  },
-            new Bracket { Lower = 9700,  Upper = 9800,  ScriptArchive = 422,  TextArchive = 429  },
-            new Bracket { Lower = 9600,  Upper = 9700,  ScriptArchive = 412,  TextArchive = 213  },
-            new Bracket { Lower = 9500,  Upper = 9600,  ScriptArchive = 501,  TextArchive = 547  },
-            new Bracket { Lower = 9400,  Upper = 9500,  ScriptArchive = 426,  TextArchive = 432  },
-            new Bracket { Lower = 9300,  Upper = 9400,  ScriptArchive = 406,  TextArchive = 374  },
-            new Bracket { Lower = 9200,  Upper = 9300,  ScriptArchive = 423,  TextArchive = 430  },
-            new Bracket { Lower = 9100,  Upper = 9200,  ScriptArchive = 0,    TextArchive = 11   },
-            new Bracket { Lower = 9000,  Upper = 9100,  ScriptArchive = 213,  TextArchive = 221  }, // Communication Club
-            new Bracket { Lower = 8970,  Upper = 9000,  ScriptArchive = 425,  TextArchive = 7    },
-            new Bracket { Lower = 8950,  Upper = 8970,  ScriptArchive = 498,  TextArchive = 539  },
-            new Bracket { Lower = 8900,  Upper = 8950,  ScriptArchive = 424,  TextArchive = 431  },
-            new Bracket { Lower = 8800,  Upper = 8900,  ScriptArchive = 497,  TextArchive = 538  },
-            new Bracket { Lower = 8000,  Upper = 8800,  ScriptArchive = 408,  TextArchive = 380  }, // Hidden Items
-            new Bracket { Lower = 7000,  Upper = 8000,  ScriptArchive = 404,  TextArchive = 369  }, // Ground Items
-            new Bracket { Lower = 5000,  Upper = 7000,  ScriptArchive = 1114, TextArchive = 213  }, // Double Battles
-            new Bracket { Lower = 3000,  Upper = 5000,  ScriptArchive = 1114, TextArchive = 213  }, // Single Battles
-            new Bracket { Lower = 2800,  Upper = 3000,  ScriptArchive = 413,  TextArchive = 397  }, // Berry soil
-            new Bracket { Lower = 2500,  Upper = 2800,  ScriptArchive = 1,    TextArchive = 17   },
-            new Bracket { Lower = 2000,  Upper = 2500,  ScriptArchive = 211,  TextArchive = 213  }, // "Common" Scripts
+            new(10490, 65536, 499,  541, "Scratch-off cards"),
+            new(10450, 10490, 500,  16,  "Battle Frontier records"),
+            new(10400, 10450, 400,  203, "Pokémon Center daily trainers"),
+            new(10300, 10400, 1051, 552, "Rival talk"),
+            new(10200, 10300, 407,  379, "Mystery Gift deliveryman"),
+            new(10150, 10200, 1116, 621, "TV interviews"),
+            new(10100, 10150, 1115, 622, "TV"),
+            new(10000, 10100, 409,  381, "Field moves"),
+            new(9950,  10000, 411,  383, "Pokédex rating"),
+            new(9900,  9950,  397,  213, "Unused"),
+            new(9800,  9900,  212,  217, "Contests"),
+            new(9700,  9800,  422,  429, "Partners"),
+            new(9600,  9700,  412,  213, "New game"),
+            new(9500,  9600,  501,  547, "Day Care"),
+            new(9400,  9500,  426,  432, "Poffins"),
+            new(9300,  9400,  406,  374, "Group"),
+            new(9200,  9300,  423,  430, "Pokémon Center B1F"),
+            new(9100,  9200,  0,    11,  "Communication club"),
+            new(9000,  9100,  213,  221, "Pokémon Center 2F"),
+            new(8970,  9000,  425,  7,   "Poké Radar"),
+            new(8950,  8970,  498,  539, "VS Seeker"),
+            new(8900,  8950,  424,  431, "Chatot"),
+            new(8800,  8900,  497,  538, "Safari Zone"),
+            new(8000,  8800,  408,  380, "Hidden items"),
+            new(7000,  8000,  404,  369, "Item balls"),
+            new(5000,  7000,  1114, 213, "Double battles"),
+            new(3000,  5000,  1114, 213, "Trainer battles"),
+            new(2800,  3000,  413,  397, "Berry soil"),
+            new(2500,  2800,  1,    17,  "Background events"),
+            new(2000,  2500,  211,  213, "Common scripts"),
         };
 
+        // pokeheartgold src/script_manager.c sScriptBankMapping, with the starts from include/constants/std_script.h.
         private static readonly Bracket[] HgssBrackets =
         {
-            new Bracket { Lower = 10490, Upper = 65536, ScriptArchive = 263, TextArchive = 433 },
-            new Bracket { Lower = 10450, Upper = 10490, ScriptArchive = 264, TextArchive = 19  },
-            new Bracket { Lower = 10440, Upper = 10450, ScriptArchive = 2,   TextArchive = 748 },
-            new Bracket { Lower = 10400, Upper = 10440, ScriptArchive = 151, TextArchive = 246 },
-            new Bracket { Lower = 10350, Upper = 10400, ScriptArchive = 952, TextArchive = 726 },
-            new Bracket { Lower = 10300, Upper = 10350, ScriptArchive = 734, TextArchive = 444 },
-            new Bracket { Lower = 10200, Upper = 10300, ScriptArchive = 144, TextArchive = 209 },
-            new Bracket { Lower = 10150, Upper = 10200, ScriptArchive = 955, TextArchive = 732 },
-            new Bracket { Lower = 10100, Upper = 10150, ScriptArchive = 954, TextArchive = 733 },
-            new Bracket { Lower = 10000, Upper = 10100, ScriptArchive = 146, TextArchive = 211 },
-            new Bracket { Lower = 9950,  Upper = 10000, ScriptArchive = 148, TextArchive = 666 },
-            new Bracket { Lower = 9900,  Upper = 9950,  ScriptArchive = 136, TextArchive = 40  },
-            new Bracket { Lower = 9850,  Upper = 9900,  ScriptArchive = 167, TextArchive = 312 },
-            new Bracket { Lower = 9800,  Upper = 9850,  ScriptArchive = 166, TextArchive = 43  },
-            new Bracket { Lower = 9700,  Upper = 9800,  ScriptArchive = 163, TextArchive = 266 },
-            // Source table is self-contradictory here: a "9600 <= ID < 9500" row (lower > upper) plus two
-            // wide, overlapping rows (9500-9700 and 9300-9600) claiming different archives for the same
-            // IDs. Surface it instead of guessing which one is right.
-            new Bracket { Lower = 9300,  Upper = 9700,  DiscrepancyCandidates = new[] { 149, 265, 143 } },
-            new Bracket { Lower = 9200,  Upper = 9300,  ScriptArchive = 164, TextArchive = 267 },
-            new Bracket { Lower = 9100,  Upper = 9200,  ScriptArchive = 0,   TextArchive = 14  },
-            new Bracket { Lower = 9000,  Upper = 9100,  ScriptArchive = 4,   TextArchive = 748 },
-            new Bracket { Lower = 8900,  Upper = 9000,  ScriptArchive = 165, TextArchive = 268 },
-            new Bracket { Lower = 8800,  Upper = 8900,  ScriptArchive = 262, TextArchive = 427 },
-            new Bracket { Lower = 8000,  Upper = 8800,  ScriptArchive = 145, TextArchive = 210 }, // Hidden Items
-            new Bracket { Lower = 7000,  Upper = 8000,  ScriptArchive = 141, TextArchive = 199 }, // Ground Items
-            new Bracket { Lower = 5000,  Upper = 7000,  ScriptArchive = 953, TextArchive = 40  }, // Double Battles
-            new Bracket { Lower = 3000,  Upper = 5000,  ScriptArchive = 953, TextArchive = 40  }, // Single Battles
-            new Bracket { Lower = 2800,  Upper = 3000,  ScriptArchive = 150, TextArchive = 23  }, // Apricorn trees
-            new Bracket { Lower = 2500,  Upper = 2800,  ScriptArchive = 1,   TextArchive = 20  },
-            new Bracket { Lower = 2000,  Upper = 2500,  ScriptArchive = 3,   TextArchive = 40  }, // "Common" Scripts
+            new(10490, 65536, 263, 433, "Scratch-off cards"),
+            new(10450, 10490, 264, 19,  "Battle Frontier records"),
+            new(10440, 10450, 2,   748, "Frontier move tutor"),
+            new(10400, 10440, 151, 246, "Bug-Catching Contest"),
+            new(10350, 10400, 952, 726, "Trainer House"),
+            new(10300, 10350, 734, 444, "Friend"),
+            new(10200, 10300, 144, 209, "Mystery Gift deliveryman"),
+            new(10150, 10200, 955, 732, "TV interviews"),
+            new(10100, 10150, 954, 733, "TV"),
+            new(10000, 10100, 146, 211, "Field moves"),
+            new(9950,  10000, 148, 666, "Pokédex rating"),
+            new(9900,  9950,  136, 40,  "Unused"),
+            new(9850,  9900,  167, 312, "Pokéathlon"),
+            new(9800,  9850,  166, 43,  "Pokéathlon reception"),
+            new(9700,  9800,  163, 266, "Following Pokémon"),
+            new(9600,  9700,  149, 40,  "New game"),
+            new(9500,  9600,  265, 439, "Day Care"),
+            new(9300,  9500,  143, 204, "Group"),
+            new(9200,  9300,  164, 267, "Wi-Fi reception"),
+            new(9100,  9200,  0,   14,  "Colosseum"),
+            new(9000,  9100,  4,   46,  "Communication reception"),
+            new(8900,  9000,  165, 268, "Chatot"),
+            new(8800,  8900,  262, 427, "Safari Zone"),
+            new(8000,  8800,  145, 210, "Hidden items"),
+            new(7000,  8000,  141, 199, "Item balls"),
+            new(5000,  7000,  953, 40,  "Double battles"),
+            new(3000,  5000,  953, 40,  "Trainer battles"),
+            new(2800,  3000,  150, 23,  "Apricorn trees"),
+            new(2500,  2800,  1,   20,  "Background events"),
+            new(2000,  2500,  3,   40,  "Common scripts"),
         };
 
         /// <summary>Resolves a script number that fell outside the current event's own paired script
@@ -158,28 +157,16 @@ namespace DSPRE
 
             foreach (Bracket b in table)
             {
-                if (scriptNumber < b.Lower || scriptNumber >= b.Upper)
-                {
-                    continue;
-                }
-
-                if (b.DiscrepancyCandidates != null)
-                {
-                    return new Result
-                    {
-                        Kind = Kind.Discrepancy,
-                        RangeLower = b.Lower,
-                        RangeUpper = b.Upper,
-                        CandidateArchives = b.DiscrepancyCandidates
-                    };
-                }
-
+                if (scriptNumber < b.Lower || scriptNumber >= b.Upper) continue;
                 return new Result
                 {
                     Kind = Kind.Resolved,
                     ScriptArchiveId = b.ScriptArchive,
                     TextArchiveId = b.TextArchive,
-                    LocalScriptId = scriptNumber - b.Lower
+                    Name = b.Name,
+                    LocalScriptId = scriptNumber - b.Lower,
+                    RangeLower = b.Lower,
+                    RangeUpper = b.Upper,
                 };
             }
 
