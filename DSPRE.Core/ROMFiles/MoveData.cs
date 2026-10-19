@@ -102,6 +102,8 @@ namespace DSPRE {
 
         public byte contestAppeal;
         public ContestCondition contestConditionType;
+        // The record's last halfword, unused by the game; kept as found.
+        private ushort trailing;
 
         public MoveData(Stream stream) {
             using (BinaryReader reader = new BinaryReader(stream)) {
@@ -119,6 +121,7 @@ namespace DSPRE {
 
                 this.contestAppeal = reader.ReadByte();
                 this.contestConditionType = (ContestCondition)reader.ReadByte();
+                if (reader.BaseStream.Length - reader.BaseStream.Position >= 2) this.trailing = reader.ReadUInt16();
             }
         }
 
@@ -142,7 +145,7 @@ namespace DSPRE {
                     writer.Write(this.contestAppeal);
                     writer.Write((byte)this.contestConditionType);
 
-                    writer.Write((ushort)0); //Filler
+                    writer.Write(this.trailing);
                 }
 
                 return memoryStream.ToArray();
