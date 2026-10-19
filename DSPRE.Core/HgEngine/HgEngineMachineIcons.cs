@@ -68,13 +68,14 @@ namespace DSPRE.HgEngine
             if (!FindChunk(from, "PLTE", out int fromAt, out int fromLength)
                 || !FindChunk(to, "PLTE", out int toAt, out int toLength) || fromLength != toLength)
             {
-                File.WriteAllBytes(toPng, from);
+                PlainFiles.WriteBytes(toPng, from);
                 return;
             }
             Buffer.BlockCopy(from, fromAt, to, toAt, toLength);
-            byte[] crc = Ekona.Helper.CRC32.Calculate(to.AsSpan(toAt - 4, toLength + 4).ToArray());
-            Buffer.BlockCopy(crc, 0, to, toAt + toLength, 4);
-            File.WriteAllBytes(toPng, to);
+            // A PNG chunk's CRC covers its type and data and is stored big-endian.
+            uint crc = System.IO.Hashing.Crc32.HashToUInt32(to.AsSpan(toAt - 4, toLength + 4));
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(to.AsSpan(toAt + toLength, 4), crc);
+            PlainFiles.WriteBytes(toPng, to);
         }
 
         private static bool FindChunk(byte[] png, string type, out int dataAt, out int length)

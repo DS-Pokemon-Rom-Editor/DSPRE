@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Ekona.Images;
-using Images;
+using DSPRE.ROMFiles;
 using AvaBitmap = global::Avalonia.Media.Imaging.Bitmap;
 using static DSPRE.RomInfo;
 
@@ -10,10 +9,10 @@ namespace DSPRE.Avalonia
 {
     public sealed class WeCellAnimRenderer
     {
-        private NCGR _char;
-        private NCLR _pltt;
-        private NCER _cell;
-        private NANR _anm;
+        private byte[] _char;
+        private ushort[] _pltt;
+        private NcerFile _cell;
+        private NanrFile _anm;
 
         public readonly struct Frame
         {
@@ -28,7 +27,7 @@ namespace DSPRE.Avalonia
 
         public int ContentCx { get; private set; } = 128;
         public int ContentCy { get; private set; } = 96;
-        public int AnimationCount => _anm?.Struct.abnk.nBanks ?? 0;
+        public int AnimationCount => _anm?.Sequences.Count ?? 0;
 
         public bool Load(int charIdx, int plttIdx, int cellIdx, int anmIdx)
             => Load(DirNames.wazaEffectChar, charIdx, DirNames.wazaEffectPltt, plttIdx,
@@ -51,23 +50,16 @@ namespace DSPRE.Avalonia
                     return false;
                 }
 
-                List<string> temps = new List<string>();
-                try
-                {
-                    plttPath = Inflate(plttPath, temps);
-                    charPath = Inflate(charPath, temps);
-                    cellPath = Inflate(cellPath, temps);
-                    anmPath  = Inflate(anmPath, temps);
-
-                    _pltt = Try("NCLR", () => new NCLR(plttPath, plttIdx, Path.GetFileName(plttPath)));
-                    _char = Try("NCGR", () => new NCGR(charPath, charIdx, Path.GetFileName(charPath)));
-                    _cell = Try("NCER", () => new NCER(cellPath, cellIdx, Path.GetFileName(cellPath)));
-                    _anm  = Try("NANR", () => new NANR(null, anmPath, anmIdx));
-                }
-                finally
-                {
-                    foreach (string t in temps) { try { File.Delete(t); } catch { } }
-                }
+                byte[] pltt = NitroBgCodec.Inflate(File.ReadAllBytes(plttPath));
+                byte[] chr = NitroBgCodec.Inflate(File.ReadAllBytes(charPath));
+                _pltt = NitroBgCodec.ReadColours(pltt);
+                if (_pltt.Length == 0) _pltt = null;
+                _char = NitroBgCodec.ReadDrawingHeader(chr) != null ? chr : null;
+                _cell = NcerFile.Read(NitroBgCodec.Inflate(File.ReadAllBytes(cellPath)));
+                _anm = NanrFile.Read(NitroBgCodec.Inflate(File.ReadAllBytes(anmPath)));
+                if (!Loaded)
+                    AppLogger.Warn($"WeCellAnim: unreadable resource (char={_char != null} pltt={_pltt != null} " +
+                        $"cell={_cell != null} anm={_anm != null})");
                 return Loaded;
             }
             catch (Exception ex)
@@ -85,7 +77,7 @@ namespace DSPRE.Avalonia
             if (!Loaded || cellIdx < 0) return null;
             try
             {
-                RawImage raw = _cell.Get_RawImage(_char, _pltt, cellIdx, width, height, trans: true, currOAM: -1, draw_index: null);
+                RawImage raw = CellRenderer.Draw(_cell, cellIdx, _char, _pltt, width, height);
                 return ImageConverter.ToAvaloniaBitmap(raw);
             }
             catch (Exception ex) { AppLogger.Error("WeCellAnimRenderer.RenderCell failed: " + ex.Message); return null; }
@@ -108,7 +100,7 @@ namespace DSPRE.Avalonia
             {
                 try
                 {
-                    RawImage raw = _cell.Get_RawImage(_char, _pltt, cellIdx, S, S, trans: true, currOAM: -1, draw_index: null);
+                    RawImage raw = CellRenderer.Draw(_cell, cellIdx, _char, _pltt, S, S);
                     if (raw != null) rgba = ToRgba(raw, S);
                 }
                 catch (Exception ex) { AppLogger.Error("WeCellAnimRenderer.RenderCellRgba failed: " + ex.Message); }
@@ -141,13 +133,13 @@ namespace DSPRE.Avalonia
             if (!Loaded || animId < 0 || animId >= AnimationCount) return frames;
             try
             {
-                NANR.sNANR.Animation anis = _anm.Struct.abnk.anis[animId];
-                for (int i = 0; i < anis.nFrames; i++)
+                NanrFile.Sequence anis = _anm.Sequences[animId];
+                for (int i = 0; i < anis.Frames.Count; i++)
                 {
-                    int nCell = anis.frames[i].data.nCell;
-                    int duration = anis.frames[i].unknown1;
+                    int nCell = _anm.ResultFor(animId, i)?.Cell ?? 0;
+                    int duration = anis.Frames[i].Delay;
                     if (duration <= 0) duration = 1;
-                    RawImage raw = _cell.Get_RawImage(_char, _pltt, nCell, width, height, trans: true, currOAM: -1, draw_index: null);
+                    RawImage raw = CellRenderer.Draw(_cell, nCell, _char, _pltt, width, height);
                     if (i == 0) ComputeContentCenter(raw, width, height);
                     frames.Add(new Frame(ImageConverter.ToAvaloniaBitmap(raw), duration));
                 }
@@ -173,23 +165,6 @@ namespace DSPRE.Avalonia
                 }
             if (maxX >= minX && maxY >= minY) { ContentCx = (minX + maxX) / 2; ContentCy = (minY + maxY) / 2; }
             else { ContentCx = w / 2; ContentCy = h / 2; }
-        }
-
-        private static string Inflate(string path, List<string> temps)
-        {
-            byte[] bytes = File.ReadAllBytes(path);
-            if (bytes.Length < 4 || bytes[0] != 0x10) return path;
-            byte[] raw = NSMBe4.ROM.LZ77_Decompress(bytes);
-            string tmp = Path.Combine(Path.GetTempPath(), "dspre_we_" + Guid.NewGuid().ToString("N") + ".bin");
-            File.WriteAllBytes(tmp, raw);
-            temps.Add(tmp);
-            return tmp;
-        }
-
-        private static T Try<T>(string what, Func<T> make) where T : class
-        {
-            try { return make(); }
-            catch (Exception ex) { AppLogger.Error($"WeCellAnim {what} read failed: {ex.Message}"); return null; }
         }
 
         private static string EntryPath(DirNames dir, int index)

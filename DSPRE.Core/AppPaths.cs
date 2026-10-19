@@ -3,11 +3,7 @@ using System.IO;
 
 namespace DSPRE
 {
-    /// <summary>
-    /// Core application data locations — no UI dependencies, safe for the cross-platform core.
-    /// (Previously lived on the WinForms <c>Program</c> class, which keeps forwarding properties
-    /// so existing call sites compile until they migrate.)
-    /// </summary>
+    /// <summary>Where DSPRE keeps its own data, outside any project.</summary>
     public static class AppPaths
     {
         public static string DspreDataPath { get; } = Path.Combine(

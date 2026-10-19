@@ -27,8 +27,8 @@ namespace DSPRE {
             l.Insert(newIndex, item);
         }
         public static Dictionary<string, ushort> Reverse (this Dictionary<ushort, string> source) {
-            var dictionary = new Dictionary<string, ushort>(StringComparer.InvariantCultureIgnoreCase);
-            foreach (var entry in source) {
+            Dictionary<string, ushort> dictionary = new Dictionary<string, ushort>(StringComparer.InvariantCultureIgnoreCase);
+            foreach (KeyValuePair<ushort, string> entry in source) {
                 string newKey = entry.Value;
                 if (!dictionary.ContainsKey(newKey)) {
                     dictionary.Add(newKey, entry.Key);

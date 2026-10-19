@@ -3,8 +3,7 @@ using System.IO;
 using System.Linq;
 using DSPRE.Avalonia.Data;
 using DSPRE.HgEngine;
-using Ekona.Images;
-using Images;
+using DSPRE.ROMFiles;
 using AvaBitmap = global::Avalonia.Media.Imaging.Bitmap;
 using static DSPRE.RomInfo;
 using System.Collections.Generic;
@@ -14,19 +13,13 @@ namespace DSPRE.Avalonia
     /// <summary>Renders trainer class sprite frames for the Trainer Editor and the Table Editor.</summary>
     public sealed class TrainerClassSpriteRenderer
     {
-        private PaletteBase _pal;
-        private ImageBase _tile;
+        private ushort[][] _rows;
+        private DrawingFile _tile;
 
-        // Vanilla path: the compiled binary NCER, read via the shared Ekona SpriteBase pipeline.
-        private SpriteBase _sprite;
-
-        // hg-engine path: OAM/cell data read straight from *_cell.json/*_anim.json (see
-        // HgEngineTrainerGraphicsSource) instead of the compiled narc, bypassing a real nitrogfx
-        // compiler bug in this checkout that corrupts the OAM size/flip bits for any OAM with a negative
-        // X coordinate. Composited via Actions.Get_RawImage directly since there's no SpriteBase-derived
-        // class to hold externally-built banks.
-        private Bank[] _jsonBanks;
-        private uint _jsonBlockSize;
+        // The built archive's cell file, or on hg-engine the cells read straight from *_cell.json (see
+        // HgEngineTrainerGraphicsSource) instead of the compiled narc, bypassing a real nitrogfx compiler bug in
+        // this checkout that corrupts the OAM size/flip bits for any OAM with a negative X coordinate.
+        private NcerFile _cells;
 
         // The real animation frame order/repeats come from the NANR (###_anim.json's compiled form),
         // not from the NCER bank list directly: a bank can be a deliberate blank first frame (not
@@ -41,7 +34,7 @@ namespace DSPRE.Avalonia
         private int[] _flatSlots = Array.Empty<int>();
 
         public int FrameCount => _flat ? _flatSlots.Length : _frameBankIndices.Length;
-        public bool HasSprite => _sprite != null || _jsonBanks != null || _flat;
+        public bool HasSprite => _cells != null || _flat;
 
         // Every NANR sequence as (bank, duration) frames, for callers that play a particular one.
         private (int Bank, int Duration)[][] _sequences = Array.Empty<(int, int)[]>();
@@ -53,23 +46,16 @@ namespace DSPRE.Avalonia
         public (int Bank, int Duration)[] Sequence(int seq) =>
             seq >= 0 && seq < _sequences.Length ? _sequences[seq] : Array.Empty<(int, int)>();
 
+        private ushort[] Colours => _rows.SelectMany(r => r).ToArray();
+
         /// <summary>Renders one cell bank, the way <see cref="Render"/> renders a frame.</summary>
         public AvaBitmap RenderBank(int bankIndex, int width, int height)
         {
             if (_flat) return Render(bankIndex, width, height);
             int frame = Array.IndexOf(_frameBankIndices, bankIndex);
             if (frame >= 0) return Render(frame, width, height);
-            if (_sprite == null || bankIndex < 0 || bankIndex >= _sprite.Banks.Length) return null;
-            try
-            {
-                int[] oams = Enumerable.Range(0, _sprite.Banks[bankIndex].oams.Length).ToArray();
-                return ImageConverter.ToAvaloniaBitmap(_sprite.Get_RawImage(_tile, _pal, bankIndex, width, height, trans: true, currOAM: -1, draw_index: oams));
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("TrainerClassSpriteRenderer.RenderBank failed: " + ex.Message);
-                return null;
-            }
+            if (_cells == null || bankIndex < 0 || bankIndex >= _cells.Cells.Count) return null;
+            return ImageConverter.ToAvaloniaBitmap(CellRenderer.Draw(_cells, bankIndex, _tile.ToBytes(), Colours, width, height));
         }
 
         /// <summary>Duration of the given frame in 60fps game ticks (the NANR frame header's own delay
@@ -88,9 +74,7 @@ namespace DSPRE.Avalonia
         /// <summary>Same, from another archive laid out the same way, such as the back sprites.</summary>
         public int Load(int trClassID, DirNames archive)
         {
-            _pal = null; _tile = null; _sprite = null; _jsonBanks = null; _flat = false; _flatSlots = Array.Empty<int>();
-            _frameBankIndices = Array.Empty<int>(); _frameDurations = Array.Empty<int>(); DefaultFrame = 0;
-            _sequences = Array.Empty<(int, int)[]>();
+            Clear();
             try
             {
                 DSUtils.TryUnpackNarcs(new System.Collections.Generic.List<DirNames> { archive });
@@ -105,19 +89,15 @@ namespace DSPRE.Avalonia
                     && File.Exists(HgEngineTrainerGraphicsSource.Stem(back, trClassID) + "_cell.json"))
                     memberClass = 0;
 
-                int paletteFileID = TrainerGraphicsLayout.ColoursEntry(memberClass);
-                string paletteFilename = paletteFileID.ToString("D4");
-                _pal = new NCLR(Path.Combine(dir, paletteFilename), paletteFileID, paletteFilename);
+                _rows = NitroBgCodec.ReadColourRows(File.ReadAllBytes(Path.Combine(dir, TrainerGraphicsLayout.ColoursEntry(memberClass).ToString("D4"))));
+                _tile = DrawingFile.Read(File.ReadAllBytes(Path.Combine(dir, TrainerGraphicsLayout.DrawingEntry(memberClass).ToString("D4"))));
+                if (_tile == null) throw new InvalidDataException("The drawing has no pixel section.");
 
-                int tilesFileID = TrainerGraphicsLayout.DrawingEntry(memberClass);
-                string tilesFilename = tilesFileID.ToString("D4");
-                _tile = new NCGR(Path.Combine(dir, tilesFilename), tilesFileID, tilesFilename);
-
-                if (TrainerGraphicsLayout.PixelsAreScrambled && _tile.Tiles != null)
+                if (TrainerGraphicsLayout.PixelsAreScrambled)
                 {
                     byte[] pixels = (byte[])_tile.Tiles.Clone();
                     SpriteScrambling.Unscramble(pixels, 0, pixels.Length);
-                    _tile.Set_Tiles(pixels);
+                    _tile.SetTiles(pixels);
                 }
 
                 if (!TrainerGraphicsLayout.HasCells)
@@ -129,29 +109,53 @@ namespace DSPRE.Avalonia
 
                 if ((back || archive == DirNames.trainerGraphics) && HgEngineProject.IsActive && TryLoadFromSource(trClassID, back))
                     return FrameCount - 1;
-                if (memberClass != trClassID) { _pal = null; _tile = null; return 0; }
+                if (memberClass != trClassID) { _rows = null; _tile = null; return 0; }
 
-                int spriteFileID = TrainerGraphicsLayout.CellsEntry(trClassID);
-                string spriteFilename = spriteFileID.ToString("D4");
-                _sprite = new NCER(Path.Combine(dir, spriteFilename), spriteFileID, spriteFilename);
+                _cells = NcerFile.Read(File.ReadAllBytes(Path.Combine(dir, TrainerGraphicsLayout.CellsEntry(trClassID).ToString("D4"))));
+                if (_cells == null) throw new InvalidDataException("The cell file could not be read.");
 
-                _sequences = TryReadNanrSequences(dir, trClassID);
-                (int[] cells, int[] durations)? nanrSequence = TryReadNanrFrameSequence(dir, trClassID);
-                _frameBankIndices = nanrSequence?.cells ?? Enumerable.Range(0, _sprite.Banks.Length).ToArray();
-                _frameDurations = nanrSequence?.durations ?? Array.Empty<int>();
+                NanrFile anim = ReadNanr(dir, trClassID);
+                _sequences = anim == null ? Array.Empty<(int, int)[]>()
+                    : Enumerable.Range(0, anim.Sequences.Count)
+                        .Select(s => Enumerable.Range(0, anim.Sequences[s].Frames.Count)
+                            .Select(f => ((int)(anim.ResultFor(s, f)?.Cell ?? 0), (int)anim.Sequences[s].Frames[f].Delay)).ToArray()).ToArray();
 
-                int idleBank = Array.FindIndex(_sprite.Banks, b => b.name == "CellAnime0");
-                int idleFrame = idleBank >= 0 ? Array.IndexOf(_frameBankIndices, idleBank) : -1;
-                DefaultFrame = idleFrame >= 0 ? idleFrame : 0;
+                // The NCER cell sequence to play back is the NANR sequence with the most frames; the other
+                // sequences are single-frame idle/default poses, not the real animation.
+                (int Bank, int Duration)[] longest = _sequences.OrderByDescending(s => s.Length).FirstOrDefault();
+                _frameBankIndices = longest != null && longest.Length > 0 ? longest.Select(f => f.Bank).ToArray() : Enumerable.Range(0, _cells.Cells.Count).ToArray();
+                _frameDurations = longest != null && longest.Length > 0 ? longest.Select(f => f.Duration).ToArray() : Array.Empty<int>();
 
+                DefaultFrame = IdleFrame();
                 return FrameCount - 1;
             }
             catch (Exception ex)
             {
                 AppLogger.Error("TrainerClassSpriteRenderer.Load failed: " + ex.Message);
-                _pal = null; _tile = null; _sprite = null; _jsonBanks = null; _flat = false; _flatSlots = Array.Empty<int>(); _frameBankIndices = Array.Empty<int>();
+                Clear();
                 return 0;
             }
+        }
+
+        private void Clear()
+        {
+            _rows = null; _tile = null; _cells = null; _flat = false; _flatSlots = Array.Empty<int>();
+            _frameBankIndices = Array.Empty<int>(); _frameDurations = Array.Empty<int>(); DefaultFrame = 0;
+            _sequences = Array.Empty<(int, int)[]>();
+        }
+
+        private int IdleFrame()
+        {
+            int idleBank = _cells.Cells.FindIndex(c => c.Name == "CellAnime0");
+            int idleFrame = idleBank >= 0 ? Array.IndexOf(_frameBankIndices, idleBank) : -1;
+            return idleFrame >= 0 ? idleFrame : 0;
+        }
+
+        private static NanrFile ReadNanr(string dir, int trClassID)
+        {
+            string path = Path.Combine(dir, TrainerGraphicsLayout.AnimationEntry(trClassID).ToString("D4"));
+            try { return File.Exists(path) ? NanrFile.Read(File.ReadAllBytes(path)) : null; }
+            catch { return null; }
         }
 
         /// <summary>Reads the sprite from the linked checkout's PNG, cell.json and anim.json. False when the
@@ -162,69 +166,60 @@ namespace DSPRE.Avalonia
             string cellPath = stem + "_cell.json";
             string animPath = stem + "_anim.json";
             if (!File.Exists(cellPath)) return false;
-            TrainerSpriteSourcePng.TryApply(stem + ".png", _tile, _pal);
+            if (_rows.Length > 0)
+            {
+                System.Drawing.Color[] first = _rows[0].Select(c => { (byte r, byte g, byte b) = NitroBgCodec.Colour(c); return System.Drawing.Color.FromArgb(r, g, b); }).ToArray();
+                if (TrainerSpriteSourcePng.TryApply(stem + ".png", _tile, first))
+                    _rows[0] = first.Select(c => NitroBgCodec.ToBgr555(c.R, c.G, c.B)).ToArray();
+            }
 
-            if (!HgEngineTrainerGraphicsSource.TryReadCellBanks(cellPath, out Bank[] banks, out uint blockSize, out string cellError))
+            if (!HgEngineTrainerGraphicsSource.TryReadCells(cellPath, out NcerFile cells, out string cellError))
             {
                 AppLogger.Error($"TrainerClassSpriteRenderer: {cellError}");
                 return false;
             }
-
-            _jsonBanks = banks;
-            _jsonBlockSize = blockSize;
+            _cells = cells;
 
             (int[] cells, int[] durations)? anim = null;
             if (File.Exists(animPath) &&
-                HgEngineTrainerGraphicsSource.TryReadAnimSequence(animPath, out int[] cells, out int[] durations, out string animError))
+                HgEngineTrainerGraphicsSource.TryReadAnimSequence(animPath, out int[] frameCells, out int[] durations, out string animError))
             {
-                anim = (cells, durations);
+                anim = (frameCells, durations);
             }
 
-            _frameBankIndices = anim?.cells ?? Enumerable.Range(0, _jsonBanks.Length).ToArray();
+            _frameBankIndices = anim?.cells ?? Enumerable.Range(0, _cells.Cells.Count).ToArray();
             _frameDurations = anim?.durations ?? Array.Empty<int>();
             _sequences = File.Exists(animPath) ? HgEngineTrainerGraphicsSource.ReadAnimSequences(animPath) ?? Array.Empty<(int, int)[]>() : Array.Empty<(int, int)[]>();
-
-            int idleBank = Array.FindIndex(_jsonBanks, b => b.name == "CellAnime0");
-            int idleFrame = idleBank >= 0 ? Array.IndexOf(_frameBankIndices, idleBank) : -1;
-            DefaultFrame = idleFrame >= 0 ? idleFrame : 0;
+            DefaultFrame = IdleFrame();
             return true;
         }
 
-        // The NCER cell sequence to play back is the NANR sequence with the most frames; the other
-        // sequences are single-frame idle/default poses, not the real animation. Each frame's own
-        // "unknown1" field is its duration in 60fps ticks.
-        private static (int[] cells, int[] durations)? TryReadNanrFrameSequence(string dir, int trClassID)
+        /// <summary>The colour number at one pixel of the whole drawing, or -1 past its data.</summary>
+        private int IndexAt(int x, int y)
         {
-            try
-            {
-                int nanrFileID = TrainerGraphicsLayout.AnimationEntry(trClassID);
-                string path = Path.Combine(dir, nanrFileID.ToString("D4"));
-                if (!File.Exists(path)) return null;
-
-                NANR nanr = new NANR(null, path, nanrFileID);
-                NANR.sNANR.Animation[] anis = nanr.Struct.abnk.anis;
-                if (anis == null || anis.Length == 0) return null;
-
-                NANR.sNANR.Animation longest = anis.OrderByDescending(a => a.nFrames).First();
-                return (longest.frames.Select(f => (int)f.data.nCell).ToArray(),
-                        longest.frames.Select(f => (int)f.unknown1).ToArray());
-            }
-            catch { return null; }
+            int pixel = _tile.Tiled
+                ? ((y / 8) * (_tile.Width / 8) + x / 8) * 64 + (y % 8) * 8 + x % 8
+                : y * _tile.Width + x;
+            byte[] px = _tile.Tiles;
+            if (_tile.EightBit) return pixel < px.Length ? px[pixel] : -1;
+            if (pixel / 2 >= px.Length) return -1;
+            return (pixel & 1) == 0 ? px[pixel / 2] & 0x0F : px[pixel / 2] >> 4;
         }
 
-        private static (int Bank, int Duration)[][] TryReadNanrSequences(string dir, int trClassID)
+        /// <summary>The whole drawing in its first row of colours, colour zero see-through on a 16-colour sheet.</summary>
+        private RawImage Sheet()
         {
-            try
-            {
-                int nanrFileID = TrainerGraphicsLayout.AnimationEntry(trClassID);
-                string path = Path.Combine(dir, nanrFileID.ToString("D4"));
-                if (!File.Exists(path)) return Array.Empty<(int, int)[]>();
-                NANR.sNANR.Animation[] anis = new NANR(null, path, nanrFileID).Struct.abnk.anis;
-                if (anis == null) return Array.Empty<(int, int)[]>();
-                return anis.Select(a => a.frames == null ? Array.Empty<(int, int)>()
-                    : a.frames.Select(f => ((int)f.data.nCell, (int)f.unknown1)).ToArray()).ToArray();
-            }
-            catch { return Array.Empty<(int, int)[]>(); }
+            RawImage raw = new RawImage(_tile.Width, _tile.Height);
+            ushort[] row = _rows.Length > 0 ? _rows[0] : Array.Empty<ushort>();
+            for (int y = 0; y < _tile.Height; y++)
+                for (int x = 0; x < _tile.Width; x++)
+                {
+                    int index = IndexAt(x, y);
+                    if (index < 0 || index >= row.Length || index == 0 && !_tile.EightBit) continue;
+                    (byte r, byte g, byte b) = NitroBgCodec.Colour(row[index]);
+                    raw.SetPixel(x, y, r, g, b, 255);
+                }
+            return raw;
         }
 
         /// <summary>One square frame slot cut out of the sheet.</summary>
@@ -242,9 +237,8 @@ namespace DSPRE.Avalonia
         /// <summary>The slots with anything drawn in them.</summary>
         private int[] DrawnSlots()
         {
-            byte[] px = _tile?.Tiles;
-            int size = _tile?.Height ?? 0;
-            if (px == null || size <= 0 || _tile.BPP != 4) return new[] { 0 };
+            int size = _tile.Height;
+            if (size <= 0 || _tile.EightBit) return new[] { 0 };
 
             int w = _tile.Width, slots = Math.Max(1, w / size);
             List<int> drawn = new System.Collections.Generic.List<int>();
@@ -253,32 +247,10 @@ namespace DSPRE.Avalonia
                 bool any = false;
                 for (int y = 0; y < size && !any; y++)
                     for (int x = s * size; x < (s + 1) * size && !any; x++)
-                    {
-                        int i = x + y * w;
-                        if (i / 2 < px.Length && (i % 2 == 0 ? px[i / 2] & 0x0F : px[i / 2] >> 4) != 0) any = true;
-                    }
+                        if (IndexAt(x, y) > 0) any = true;
                 if (any) drawn.Add(s);
             }
             return drawn.Count > 0 ? drawn.ToArray() : new[] { 0 };
-        }
-
-        /// <summary>Makes colour zero transparent, since a flat drawing sets every pixel.</summary>
-        private void ClearColourZero(DSPRE.RawImage raw)
-        {
-            byte[] px = _tile?.Tiles;
-            if (raw == null || px == null || _tile.BPP != 4) return;
-
-            int w = _tile.Width, h = _tile.Height;
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    int i = x + y * w;
-                    if (i / 2 >= px.Length) return;
-                    int colour = i % 2 == 0 ? px[i / 2] & 0x0F : px[i / 2] >> 4;
-                    if (colour == 0) raw.SetPixel(x, y, 0, 0, 0, 0);
-                }
-            }
         }
 
         /// <summary>
@@ -288,24 +260,15 @@ namespace DSPRE.Avalonia
         public byte[] FlatCut(int left, int size)
         {
             if (!_flat) return null;
-            try
-            {
-                RawImage sheet = _tile.Get_RawImage(_pal);
-                ClearColourZero(sheet);
-                byte[] rgba = new byte[size * size * 4];
-                for (int y = 0; y < size && y < sheet.Height; y++)
-                    for (int x = 0; x < size && left + x < sheet.Width; x++)
-                    {
-                        int from = y * sheet.Stride + (left + x) * 4, to = (y * size + x) * 4;
-                        rgba[to] = sheet.Bgra[from + 2]; rgba[to + 1] = sheet.Bgra[from + 1]; rgba[to + 2] = sheet.Bgra[from]; rgba[to + 3] = sheet.Bgra[from + 3];
-                    }
-                return rgba;
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("TrainerClassSpriteRenderer.FlatCut failed: " + ex.Message);
-                return null;
-            }
+            RawImage sheet = Sheet();
+            byte[] rgba = new byte[size * size * 4];
+            for (int y = 0; y < size && y < sheet.Height; y++)
+                for (int x = 0; x < size && left + x < sheet.Width; x++)
+                {
+                    int from = y * sheet.Stride + (left + x) * 4, to = (y * size + x) * 4;
+                    rgba[to] = sheet.Bgra[from + 2]; rgba[to + 1] = sheet.Bgra[from + 1]; rgba[to + 2] = sheet.Bgra[from]; rgba[to + 3] = sheet.Bgra[from + 3];
+                }
+            return rgba;
         }
 
         /// <summary>Renders the given frame to an Avalonia bitmap, or null if there is no animated sprite.</summary>
@@ -313,45 +276,14 @@ namespace DSPRE.Avalonia
         {
             if (_flat)
             {
-                try
-                {
-                    RawImage flat = _tile.Get_RawImage(_pal);
-                    ClearColourZero(flat);
-                    int slot = _flatSlots.Length == 0 ? 0 : _flatSlots[Math.Clamp(frame, 0, _flatSlots.Length - 1)];
-                    return ImageConverter.ToAvaloniaBitmap(Slot(flat, slot));
-                }
-                catch (Exception ex)
-                {
-                    AppLogger.Error("TrainerClassSpriteRenderer.Render failed: " + ex.Message);
-                    return null;
-                }
+                int slot = _flatSlots.Length == 0 ? 0 : _flatSlots[Math.Clamp(frame, 0, _flatSlots.Length - 1)];
+                return ImageConverter.ToAvaloniaBitmap(Slot(Sheet(), slot));
             }
-            if (_frameBankIndices.Length == 0) return null;
-            try
-            {
-                frame = Math.Max(0, Math.Min(_frameBankIndices.Length - 1, frame));
-                int bankIndex = _frameBankIndices[frame];
-
-                if (_jsonBanks != null)
-                {
-                    if (bankIndex < 0 || bankIndex >= _jsonBanks.Length) return null;
-                    Bank bank = _jsonBanks[bankIndex];
-                    int[] oamEnabled = Enumerable.Range(0, bank.oams.Length).ToArray();
-                    RawImage raw = Actions.Get_RawImage(bank, _jsonBlockSize, _tile, _pal, width, height, true, -1, 1, oamEnabled);
-                    return ImageConverter.ToAvaloniaBitmap(raw);
-                }
-
-                if (_sprite == null) return null;
-                int oamCount = _sprite.Banks[bankIndex].oams.Length;
-                int[] oamEnabledVanilla = Enumerable.Range(0, oamCount).ToArray();
-                RawImage rawVanilla = _sprite.Get_RawImage(_tile, _pal, bankIndex, width, height, trans: true, currOAM: -1, draw_index: oamEnabledVanilla);
-                return ImageConverter.ToAvaloniaBitmap(rawVanilla);
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("TrainerClassSpriteRenderer.Render failed: " + ex.Message);
-                return null;
-            }
+            if (_frameBankIndices.Length == 0 || _cells == null) return null;
+            frame = Math.Max(0, Math.Min(_frameBankIndices.Length - 1, frame));
+            int bankIndex = _frameBankIndices[frame];
+            if (bankIndex < 0 || bankIndex >= _cells.Cells.Count) return null;
+            return ImageConverter.ToAvaloniaBitmap(CellRenderer.Draw(_cells, bankIndex, _tile.ToBytes(), Colours, width, height));
         }
     }
 }

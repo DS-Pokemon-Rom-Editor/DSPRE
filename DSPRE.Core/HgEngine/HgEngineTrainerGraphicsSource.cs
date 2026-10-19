@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using Ekona.Images;
+using DSPRE.ROMFiles;
 using System.Collections.Generic;
 
 namespace DSPRE.HgEngine
@@ -71,35 +71,29 @@ namespace DSPRE.HgEngine
             catch { return null; }
         }
 
-        public static bool TryReadCellBanks(string cellJsonPath, out Bank[] banks, out uint blockSize, out string error)
+        /// <summary>The cells of a cell.json, in file order, with the mapping it records.</summary>
+        public static bool TryReadCells(string cellJsonPath, out NcerFile cells, out string error)
         {
-            banks = null; blockSize = 0; error = null;
+            cells = null; error = null;
             CellJson doc;
             try { doc = JsonSerializer.Deserialize<CellJson>(File.ReadAllText(cellJsonPath)); }
             catch (Exception ex) { error = "Failed to parse " + cellJsonPath + ": " + ex.Message; return false; }
             if (doc?.Cells == null || doc.Cells.Length == 0) { error = "No cells in " + cellJsonPath; return false; }
 
-            blockSize = (uint)doc.MappingType;
-            banks = new Bank[doc.Cells.Length];
+            List<NcerFile.Cell> list = new List<NcerFile.Cell>();
             for (int i = 0; i < doc.Cells.Length; i++)
             {
-                CellEntry c = doc.Cells[i];
-                List<OAM> oams = (c.OAM ?? Array.Empty<OamJson>())
-                    .Select((o, idx) => BuildOam(o, (ushort)idx))
-                    .ToList();
-                oams.Sort(Actions.Comparision_OAM);
-
                 TransferEntry transfer = doc.TransferData != null && i < doc.TransferData.Length ? doc.TransferData[i] : null;
-                banks[i] = new Bank
+                list.Add(new NcerFile.Cell
                 {
-                    oams = oams.ToArray(),
-                    name = doc.Labels != null && i < doc.Labels.Length ? doc.Labels[i] : i.ToString(),
-                    width = 0,
-                    height = 0,
-                    data_offset = (uint)(transfer?.Offset ?? 0),
-                    data_size = (uint)(transfer?.Size ?? 0),
-                };
+                    Number = i,
+                    Name = doc.Labels != null && i < doc.Labels.Length ? doc.Labels[i] : i.ToString(),
+                    Pieces = (doc.Cells[i].OAM ?? Array.Empty<OamJson>()).Select(BuildPiece).ToList(),
+                    TransferOffset = (uint)(transfer?.Offset ?? 0),
+                    TransferSize = (uint)(transfer?.Size ?? 0),
+                });
             }
+            cells = NcerFile.FromCells((uint)doc.MappingType, list);
             return true;
         }
 
@@ -128,43 +122,19 @@ namespace DSPRE.HgEngine
             return true;
         }
 
-        private static OAM BuildOam(OamJson o, ushort numCell)
+        private static NcerFile.Piece BuildPiece(OamJson o)
         {
-            System.Drawing.Size size = Actions.Get_OAMSize((byte)o.Attr0.Shape, (byte)o.Attr1.Size);
-            return new OAM
-            {
-                num_cell = numCell,
-                width = (ushort)size.Width,
-                height = (ushort)size.Height,
-                obj0 = new Obj0
-                {
-                    yOffset = o.Attr0.YCoordinate,
-                    rs_flag = (byte)(o.Attr0.Rotation ? 1 : 0),
-                    objDisable = (byte)(!o.Attr0.Rotation && o.Attr0.SizeDisable ? 1 : 0),
-                    doubleSize = (byte)(o.Attr0.Rotation && o.Attr0.SizeDisable ? 1 : 0),
-                    objMode = (byte)o.Attr0.Mode,
-                    mosaic_flag = (byte)(o.Attr0.Mosaic ? 1 : 0),
-                    depth = (byte)(o.Attr0.Colours == 256 ? 1 : 0),
-                    shape = (byte)o.Attr0.Shape,
-                },
-                obj1 = new Obj1
-                {
-                    xOffset = o.Attr1.XCoordinate,
-                    unused = 0,
-                    // This JSON schema has no per-OAM flip, only a whole-cell hFlip/vFlip under cellAttrs
-                    // (not modeled here yet).
-                    flipX = 0,
-                    flipY = 0,
-                    select_param = (byte)o.Attr1.RotationScaling,
-                    size = (byte)o.Attr1.Size,
-                },
-                obj2 = new Obj2
-                {
-                    tileOffset = (uint)o.Attr2.CharName,
-                    priority = (byte)o.Attr2.Priority,
-                    index_palette = (byte)o.Attr2.Palette,
-                },
-            };
+            int a0 = (o.Attr0.YCoordinate & 0xFF) | (o.Attr0.Rotation ? 1 << 8 : 0) | (o.Attr0.SizeDisable ? 1 << 9 : 0)
+                     | ((o.Attr0.Mode & 3) << 10) | (o.Attr0.Mosaic ? 1 << 12 : 0) | (o.Attr0.Colours == 256 ? 1 << 13 : 0)
+                     | ((o.Attr0.Shape & 3) << 14);
+            int a1 = (o.Attr1.XCoordinate & 0x1FF) | (o.Attr0.Rotation ? (o.Attr1.RotationScaling & 0x1F) << 9 : 0)
+                     | ((o.Attr1.Size & 3) << 14);
+            int a2 = (o.Attr2.CharName & 0x3FF) | ((o.Attr2.Priority & 3) << 10) | ((o.Attr2.Palette & 0xF) << 12);
+            NcerFile.Piece piece = NcerFile.Decode(a0, a1, a2);
+            // This JSON schema has no per-OAM flip, only a whole-cell hFlip/vFlip under cellAttrs (not modeled here
+            // yet); a rotating piece's flip bits are its rotation number.
+            piece.FlipH = piece.FlipV = false;
+            return piece;
         }
 
         // ── JSON schema: nitrogfx's cell.json / anim.json, per documentation/wiki/Adding-New-Trainer-Classes.md ──

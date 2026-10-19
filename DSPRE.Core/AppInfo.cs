@@ -8,7 +8,7 @@ namespace DSPRE
         /// <summary>The running application's 4-part version (from the entry assembly).</summary>
         public static string GetDSPREVersion()
         {
-            var v = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version;
+            System.Version v =(Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly()).GetName().Version;
             return v == null ? "?" : $"{v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
         }
     }

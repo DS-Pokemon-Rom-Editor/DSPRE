@@ -73,8 +73,8 @@ namespace DSPRE
             string[] lines = File.ReadAllLines(_logFilePath);
             if (lines.Length > MaxLogFileLines)
             {
-                var trimmedLines = lines.Skip(lines.Length - MaxLogFileLines);
-                File.WriteAllLines(_logFilePath, trimmedLines);
+                System.Collections.Generic.IEnumerable<string> trimmedLines = lines.Skip(lines.Length - MaxLogFileLines);
+                PlainFiles.WriteLines(_logFilePath, trimmedLines);
             }
         }
 
