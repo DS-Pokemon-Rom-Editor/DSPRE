@@ -144,7 +144,9 @@
             <GroupBox Header="Follower" IsVisible="{Binding ShowRetailFollower}">
               <StackPanel Spacing="6" Margin="4">
                 <TextBlock Text="{Binding RetailFollowerNote}" IsVisible="{Binding HasRetailFollowerNote}" FontStyle="Italic" TextWrapping="Wrap"/>
-                <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,8,Auto,8,Auto" IsVisible="{Binding RetailFollowerEditable}">
+                <Grid ColumnDefinitions="Auto,*,Auto,*,Auto" RowDefinitions="Auto,8,Auto,8,Auto" IsVisible="{Binding RetailFollowerEditable}">
+                  <controls:OverworldSpriteView Grid.Row="0" Grid.RowSpan="5" Grid.Column="4" Entry="{Binding FollowerSpriteEntry}"
+                                                Margin="16,0,8,0" VerticalAlignment="Center"/>
                   <TextBlock Grid.Row="0" Grid.Column="0" Text="Model" Classes="label" IsVisible="{Binding HasFollowerModelChoice}"/>
                   <ComboBox  Grid.Row="0" Grid.Column="1" ItemsSource="{Binding FollowerModelNames}" SelectedIndex="{Binding FollowerModelIndex}"
                              IsVisible="{Binding HasFollowerModelChoice}"/>

@@ -31,7 +31,11 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+            if (n == nameof(SelectedVariantIndex) && _followerFollowsForms)
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FollowerSpriteEntry)));
+        }
         private bool Set<T>(ref T f, T v, [CallerMemberName] string n = null)
         {
             if (System.Collections.Generic.EqualityComparer<T>.Default.Equals(f, v)) return false;
@@ -41,12 +45,15 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         // --- IEditorWithUnsavedChanges -----------------------------------------------
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty;
-        public string UnsavedChangesDescription => $"Sprites (Mon {_currentId})";
+        public string UnsavedChangesDescription => $"Sprites of {RomInfo.PokemonName(_currentId)}";
         public void SaveChanges() => Save();
-        public void DiscardChanges() { _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
+        public void DiscardChanges() { _pending = new(); _dirty = false; OnPropertyChanged(nameof(HasUnsavedChanges)); }
 
         // ── Undo / redo: the four sprites and both palettes ──
-        private sealed record SpriteState(byte[][] Raw, uint[] Normal, uint[] Shiny, bool[] NormalUsed, bool[] ShinyUsed);
+        private sealed record SpriteState(byte[][] Raw, uint[] Normal, uint[] Shiny, bool[] NormalUsed, bool[] ShinyUsed, byte[] Pending);
+
+        // The opposite gender's copied sprites and heights wait here until Save; the undo states carry them.
+        private DSPRE.Avalonia.Data.PendingArchiveWrites _pending = new();
         private DSPRE.Avalonia.ByteStateUndo _undo;
         public bool CanUndo => _undo?.CanUndo == true;
         public bool CanRedo => _undo?.CanRedo == true;
@@ -54,7 +61,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public void Redo() => _undo?.Redo();
         private void RaiseUndo() { OnPropertyChanged(nameof(CanUndo)); OnPropertyChanged(nameof(CanRedo)); }
 
-        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(new SpriteState(_rawSprites, _normalPal, _shinyPal, _normalPalUsed, _shinyPalUsed));
+        private byte[] TakeState() => DSPRE.Avalonia.UndoJson.Take(new SpriteState(_rawSprites, _normalPal, _shinyPal, _normalPalUsed, _shinyPalUsed, _pending.Take()));
 
         private void ApplyState(byte[] state)
         {
@@ -64,6 +71,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _shinyPal = s.Shiny;
             _normalPalUsed = s.NormalUsed ?? AllUsed();
             _shinyPalUsed = s.ShinyUsed ?? AllUsed();
+            if (s.Pending != null) _pending.Restore(s.Pending);
+            ShowGenderGap();
             ApplyPalettesAndPublish();
             _dirty = _undo.IsDirty;
             OnPropertyChanged(nameof(HasUnsavedChanges));
@@ -71,9 +80,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
 
         private void ResetUndo() { _undo = new DSPRE.Avalonia.ByteStateUndo(TakeState, ApplyState, RaiseUndo); RaiseUndo(); }
 
-        private void Edited()
+        private void Edited(object group = null)
         {
-            _undo?.Record();
+            _undo?.Record(group);
             _dirty = _undo?.IsDirty ?? true;
         }
 
@@ -245,6 +254,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private int _selectedFormIndex = 0;
         /// <summary>Index into _currentFormData; only meaningful while IsAlternateForms is true (BattleDisplayEditorViewModel mirrors both).</summary>
         public int SelectedFormIndex { get => _selectedFormIndex; private set => Set(ref _selectedFormIndex, value); }
+
+        /// <summary>Where the Graphics window opens for the sprites shown: the picked form's back sprite, or the first of
+        /// the species' six files.</summary>
+        public (DirNames Dir, int Member) GraphicsTarget =>
+            IsAlternateForms && TryGetCurrentFormHeightIndices(out int back, out _)
+                ? (DirNames.otherPokemonBattleSprites, back)
+                : (DirNames.pokemonBattleSprites, _currentId * 6);
 
         /// <summary>The current form's back/front otherpoke sprite indices, which are also the correct height_o.narc record indices (same charDataID/fileId formula per species in the real game).</summary>
         public bool TryGetCurrentFormHeightIndices(out int backIndex, out int frontIndex)
@@ -587,11 +603,76 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _frameTimer.Start();
         }
 
+        /// <summary>HeartGold and SoulSilver: the walking Pokémon's models (normal, female, forms), shown beside the battle sprites.</summary>
+        public bool ShowFollower => gameFamily == GameFamilies.HGSS && !HgEngineProject.IsActive;
+
+        private (int index, string label)[] _followerModels = Array.Empty<(int, string)>();
+        public ObservableCollection<string> FollowerModelNames { get; } = new();
+        public bool HasFollowerModels => _followerModels.Length > 0;
+        public bool HasFollowerModelChoice => _followerModels.Length > 1 && !_followerFollowsForms;
+
+        // One follower model per battle form, in the same order: the follower shows the form picked above.
+        private bool _followerFollowsForms;
+
+        private string _followerNote = "";
+        public string FollowerNote
+        {
+            get => _followerNote;
+            private set { if (Set(ref _followerNote, value)) OnPropertyChanged(nameof(HasFollowerNote)); }
+        }
+        public bool HasFollowerNote => _followerNote.Length > 0;
+
+        private int _followerModelIndex;
+        public int FollowerModelIndex
+        {
+            get => _followerModelIndex;
+            set { if (value >= 0 && value < _followerModels.Length && Set(ref _followerModelIndex, value)) OnPropertyChanged(nameof(FollowerSpriteEntry)); }
+        }
+
+        /// <summary>The overworld table entry of the chosen model, or -1.</summary>
+        public int FollowerSpriteEntry
+        {
+            get
+            {
+                int model = _followerFollowsForms ? Math.Max(0, _selectedVariantIndex) : _followerModelIndex;
+                return model < _followerModels.Length ? HgssFollowers.FirstSprite + _followerModels[model].index : -1;
+            }
+        }
+
+        private void LoadFollower(int species)
+        {
+            _followerModels = Array.Empty<(int, string)>();
+            _followerModelIndex = 0;
+            FollowerModelNames.Clear();
+            string note = "";
+            if (ShowFollower)
+            {
+                try
+                {
+                    note = HgssFollowers.WhyNot();
+                    if (note == null)
+                    {
+                        DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites });
+                        _followerModels = HgssFollowers.ModelsOf(species).ToArray();
+                        note = _followerModels.Length == 0 ? "This Pokémon has no follower." : "";
+                    }
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { note = e.Message; }
+                foreach ((int _, string label) in _followerModels) FollowerModelNames.Add(label);
+            }
+            FollowerNote = note ?? "";
+            _followerFollowsForms = _followerModels.Length > 1 && _currentFormData != null && _currentFormData.Length == _followerModels.Length
+                                    && _followerModels.All(m => m.label != HgssFollowers.FemaleLabel);
+            foreach (string name in new[] { nameof(HasFollowerModels), nameof(HasFollowerModelChoice), nameof(FollowerModelIndex), nameof(FollowerSpriteEntry) })
+                OnPropertyChanged(name);
+        }
+
         // --- Load --------------------------------------------------------------------
         public void LoadMon(int id)
         {
             // The last Pokémon's history must never apply to this one.
             _undo = null;
+            _pending = new();
             RaiseUndo();
             ClearBitmaps();
             StatusText = "";
@@ -606,6 +687,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             // else, including form 0, still falls through to vanilla otherpoke.narc unchanged.
             HasAlternateForms = _currentId > 0 && GetAlternateFormsForCurrentSpecies().Length > 0;
             PopulateVariantList();
+            LoadFollower(_currentId);
 
             if (pseudo.HasValue)
             {
@@ -835,7 +917,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyPalettesAndPublish();
                 Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = $"Imported {SpriteLabels[slot]}. Save to write it to the ROM.";
+                SaveNotice.Imported(SpriteLabels[slot], path);
             }
             catch (Exception ex)
             {
@@ -901,7 +983,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyPalettesAndPublish();
                 Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = $"Got the {label} palette from {SpriteLabels[slot]}'s reference image. Save to write it to the ROM.";
+                SaveNotice.Imported($"the {label} palette from {SpriteLabels[slot]}'s reference", path);
             }
             catch (Exception ex)
             {
@@ -941,8 +1023,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 byte[] indices = _rawSprites[slot];
                 uint[] pal = shiny ? _shinyPal : _normalPal;
                 if (indices == null || pal == null) { StatusText = "Export failed: nothing to export."; return; }
-                File.WriteAllBytes(path, IndexedPng.Write(indices, pal, SpriteWidth, SpriteHeight));
-                StatusText = $"Exported {SpriteLabels[slot]}{(shiny ? " (Shiny)" : "")}.";
+                PlainFiles.WriteBytes(path, IndexedPng.Write(indices, pal, SpriteWidth, SpriteHeight));
+                SaveNotice.Exported(path);
             }
             catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
         }
@@ -997,8 +1079,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 byte[] indices = BuildGenderSheetIndices(female);
                 if (indices == null) { StatusText = "Export failed: nothing to export."; return; }
-                File.WriteAllBytes(path, IndexedPng.Write(indices, pal, SpriteWidth * 2, SpriteHeight));
-                StatusText = $"Exported {genderLabel}'s {colorLabel.ToLowerInvariant()} sprite sheet: Back and Front, both frames.";
+                PlainFiles.WriteBytes(path, IndexedPng.Write(indices, pal, SpriteWidth * 2, SpriteHeight));
+                SaveNotice.Exported(path);
             }
             catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
         }
@@ -1017,8 +1099,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             {
                 byte[] indices = BuildFullSheetIndices();
                 if (indices == null) { StatusText = "Export failed: nothing to export."; return; }
-                File.WriteAllBytes(path, IndexedPng.Write(indices, pal, SpriteWidth * 4, SpriteHeight));
-                StatusText = $"Exported both genders' {colorLabel.ToLowerInvariant()} sprite sheet: Back and Front, both frames.";
+                PlainFiles.WriteBytes(path, IndexedPng.Write(indices, pal, SpriteWidth * 4, SpriteHeight));
+                SaveNotice.Exported(path);
             }
             catch (Exception ex) { StatusText = $"Export failed: {ex.Message}"; }
         }
@@ -1112,7 +1194,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyPalettesAndPublish();
                 Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = $"Imported {genderLabel}'s Back and Front from the sheet. Save to write it to the ROM.";
+                SaveNotice.Imported($"{genderLabel}'s back and front", null);
             }
             catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
         }
@@ -1148,7 +1230,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyPalettesAndPublish();
                 Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = $"Got {genderLabel}'s shiny palette from the reference sheet. Save to write it to the ROM.";
+                SaveNotice.Imported($"{genderLabel}'s shiny palette from the reference sheet", null);
             }
             catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
         }
@@ -1218,7 +1300,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyPalettesAndPublish();
                 Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = "Imported both genders' Back and Front from the sheet. Save to write it to the ROM.";
+                SaveNotice.Imported("both genders' back and front", null);
             }
             catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
         }
@@ -1253,7 +1335,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 ApplyPalettesAndPublish();
                 Edited();
                 OnPropertyChanged(nameof(HasUnsavedChanges));
-                StatusText = "Got both genders' shiny palette from the reference sheet. Save to write it to the ROM.";
+                SaveNotice.Imported("both genders' shiny palette from the reference sheet", null);
             }
             catch (Exception ex) { StatusText = $"Import failed: {ex.Message}"; }
         }
@@ -1341,13 +1423,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         // Live palette edit from the swatch color picker; writes straight into the same array every import path already mutates, so Save persists it exactly like an imported palette.
-        public void SetPaletteColor(bool shiny, int index, uint argb)
+        public void SetPaletteColor(bool shiny, int index, uint argb, object group = null)
         {
             uint[] pal = shiny ? _shinyPal : _normalPal;
             if (pal == null || index < 0 || index >= pal.Length) return;
             pal[index] = argb;
             ApplyPalettesAndPublish();
-            Edited();
+            Edited(group);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
@@ -1512,14 +1594,14 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 CanAddOppositeGenderSprites = false;
                 AddOppositeGenderLabel = "";
             }
+            _genderGapAtLoad = CanAddOppositeGenderSprites;
         }
 
         /// <summary>
         /// Clones the existing gender's back+front sprites into the currently-missing gender's slots,
         /// so the species has graphics for both genders (needed before its gender ratio can be widened
         /// in the Personal Data editor). The clones are byte-identical to the source until the user
-        /// re-imports something different over them. Copies the members in the unpacked folder, the
-        /// copy every sprite edit writes, then repacks it so the packed file agrees.
+        /// re-imports something different over them. The copies, with their height data, wait until Save.
         /// </summary>
         public async Task AddOppositeGenderSprites(Window owner)
         {
@@ -1532,60 +1614,67 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 "back and front sprites into the missing slots, so a gender ratio change won't leave it " +
                 "with blank graphics. The duplicates look identical to the existing sprites until you " +
                 "import something different over them.\n\nContinue?",
-                "Add Opposite Gender Sprites", owner);
+                "Add opposite gender sprites", owner);
             if (!confirmed) return;
 
             if (HgEngineProject.IsActive) { AddOppositeGenderToHgEngineSource(missingGender, sourceGender); return; }
 
             try
             {
-                DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokemonBattleSprites });
-                string unpackedDir = RomInfo.gameDirs[DirNames.pokemonBattleSprites].unpackedDir;
-                string packedPath  = RomInfo.gameDirs[DirNames.pokemonBattleSprites].packedDir;
-
+                DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokemonBattleSprites, DirNames.pokeHeight });
+                (int srcBack, int srcFront, int dstBack, int dstFront) = GenderSlots();
                 int baseOffset = _currentId * 6;
-                int srcBack  = baseOffset + (_missingGenderIsFemale ? 1 : 0);
-                int srcFront = baseOffset + (_missingGenderIsFemale ? 3 : 2);
-                int dstBack  = baseOffset + (_missingGenderIsFemale ? 0 : 1);
-                int dstFront = baseOffset + (_missingGenderIsFemale ? 2 : 3);
-
-                CopyEntryFile(unpackedDir, srcBack, dstBack);
-                CopyEntryFile(unpackedDir, srcFront, dstFront);
-
-                // The placeholder is a different size, so the packed file can't be patched in place.
-                Narc.FromFolder(unpackedDir).Save(packedPath);
 
                 // Sprites alone aren't enough: without height data too, the new gender renders at the wrong Y.
-                try
+                const int FB = 0, MB = 1, FF = 2, MF = 3;
+                int heightBase = _currentId * 4;
+                int srcBackH = heightBase + (_missingGenderIsFemale ? MB : FB);
+                int srcFrontH = heightBase + (_missingGenderIsFemale ? MF : FF);
+                int dstBackH = heightBase + (_missingGenderIsFemale ? FB : MB);
+                int dstFrontH = heightBase + (_missingGenderIsFemale ? FF : MF);
+                byte[] heightBack = _pending.ReadMember(DirNames.pokeHeight, srcBackH);
+                byte[] heightFront = _pending.ReadMember(DirNames.pokeHeight, srcFrontH);
+
+                _pending.Change(step =>
                 {
-                    DSPRE.DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.pokeHeight });
-                    string heightDir = RomInfo.gameDirs[DirNames.pokeHeight].unpackedDir;
-                    string heightPackedPath = RomInfo.gameDirs[DirNames.pokeHeight].packedDir;
-
-                    const int FB = 0, MB = 1, FF = 2, MF = 3;
-                    int heightBase = _currentId * 4;
-                    int srcBackH = heightBase + (_missingGenderIsFemale ? MB : FB);
-                    int srcFrontH = heightBase + (_missingGenderIsFemale ? MF : FF);
-                    int dstBackH = heightBase + (_missingGenderIsFemale ? FB : MB);
-                    int dstFrontH = heightBase + (_missingGenderIsFemale ? FF : MF);
-
-                    CopyEntryFile(heightDir, srcBackH, dstBackH);
-                    CopyEntryFile(heightDir, srcFrontH, dstFrontH);
-                    Narc.FromFolder(heightDir).Save(heightPackedPath);
-                }
-                catch (Exception heightEx)
-                {
-                    AppLogger.Error($"Failed to copy battle-sprite height data for opposite gender: {heightEx.Message}");
-                }
-
+                    step.Put(DirNames.pokemonBattleSprites, dstBack, _pending.ReadMember(DirNames.pokemonBattleSprites, srcBack));
+                    step.Put(DirNames.pokemonBattleSprites, dstFront, _pending.ReadMember(DirNames.pokemonBattleSprites, srcFront));
+                    if (heightBack != null) step.Put(DirNames.pokeHeight, dstBackH, heightBack);
+                    if (heightFront != null) step.Put(DirNames.pokeHeight, dstFrontH, heightFront);
+                });
+                _rawSprites[dstBack - baseOffset] = (byte[])_rawSprites[srcBack - baseOffset]?.Clone();
+                _rawSprites[dstFront - baseOffset] = (byte[])_rawSprites[srcFront - baseOffset]?.Clone();
+                ShowGenderGap();
+                ApplyPalettesAndPublish();
+                Edited();
+                OnPropertyChanged(nameof(HasUnsavedChanges));
                 StatusText = $"Added {missingGender} sprites (duplicated from the existing {sourceGender} sprites). " +
-                    "Use Import to give them their own look.";
-                LoadMon(_currentId);
+                    "Use Import to give them their own look, and Save to keep them.";
             }
             catch (Exception ex)
             {
                 StatusText = $"Failed to add {missingGender} sprites: {ex.Message}";
             }
+        }
+
+        // The archive members the copy reads and fills: the existing gender's back and front, and the missing one's.
+        private (int srcBack, int srcFront, int dstBack, int dstFront) GenderSlots()
+        {
+            int baseOffset = _currentId * 6;
+            return (baseOffset + (_missingGenderIsFemale ? 1 : 0), baseOffset + (_missingGenderIsFemale ? 3 : 2),
+                    baseOffset + (_missingGenderIsFemale ? 0 : 1), baseOffset + (_missingGenderIsFemale ? 2 : 3));
+        }
+
+        // The species had a missing gender when it loaded; the button stays while no copy is pending.
+        private bool _genderGapAtLoad;
+
+        private void ShowGenderGap()
+        {
+            bool pending = _genderGapAtLoad && _pending.Changes(DirNames.pokemonBattleSprites, GenderSlots().dstBack);
+            CanAddOppositeGenderSprites = _genderGapAtLoad && !pending;
+            AddOppositeGenderLabel = !CanAddOppositeGenderSprites ? ""
+                : _missingGenderIsFemale ? "Add Female Sprites (copy from Male)" : "Add Male Sprites (copy from Female)";
+            OnPropertyChanged(nameof(CanUseFullSheet));
         }
 
         private const string NoHgEngineSpritesNote =
@@ -1604,8 +1693,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             int srcFront = _missingGenderIsFemale ? 3 : 2, dstFront = _missingGenderIsFemale ? 2 : 3;
             try
             {
-                File.WriteAllBytes(poses[dstBack], File.ReadAllBytes(poses[srcBack]));
-                File.WriteAllBytes(poses[dstFront], File.ReadAllBytes(poses[srcFront]));
+                ArchiveMembers.Write(poses[dstBack], File.ReadAllBytes(poses[srcBack]));
+                ArchiveMembers.Write(poses[dstFront], File.ReadAllBytes(poses[srcFront]));
                 EnsurePoseKey(poses, dstBack);
                 EnsurePoseKey(poses, dstFront);
             }
@@ -1634,12 +1723,9 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             string key = poses[slot] + ".key";
             if (File.Exists(key)) return;
             string other = poses[slot ^ 1] + ".key";
-            if (File.Exists(other)) File.WriteAllBytes(key, File.ReadAllBytes(other));
+            if (File.Exists(other)) ArchiveMembers.Write(key, File.ReadAllBytes(other));
         }
 
-        private static void CopyEntryFile(string unpackedDir, int srcIdx, int dstIdx)
-            => File.Copy(Path.Combine(unpackedDir, srcIdx.ToString("D4")),
-                          Path.Combine(unpackedDir, dstIdx.ToString("D4")), overwrite: true);
 
         // Writes every loaded pose plus both palettes back into the battle-sprite archive in place.
 
@@ -1656,6 +1742,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 return;
             }
 
+            // A copied gender's members first, so its poses have full-size members to be written into.
+            _pending.Save();
             PokemonBattleSpriteArchive narc = PokemonBattleSpriteArchive.Open(DirNames.pokemonBattleSprites);
             if (narc == null)
             {
@@ -1761,7 +1849,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                     uint[] pal = (i == 0 || i == 1) ? _shinyPal : _normalPal;
                     if (pal == null) continue;
                     byte[] png = IndexedPng.Write(_rawSprites[i], pal, SpriteWidth, SpriteHeight);
-                    File.WriteAllBytes(posePaths[i], png);
+                    PlainFiles.WriteBytes(posePaths[i], png);
                     EnsurePoseKey(posePaths, i);
                 }
                 _undo?.MarkSaved();

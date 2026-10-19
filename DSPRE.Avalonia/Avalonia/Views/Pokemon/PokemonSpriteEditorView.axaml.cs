@@ -17,12 +17,18 @@ namespace DSPRE.Avalonia.Views.Pokemon
 
         private Window OwnerWindow => TopLevel.GetTopLevel(this) as Window;
 
-        /// <summary>Hands this Pokemon's sprites to the Graphics window, which can paint them by hand.
-        /// Six files a Pokemon, so the one wanted is at the front of its run.</summary>
+        /// <summary>Hands the sprites shown to the Graphics window, which can paint them by hand.</summary>
         private void OpenInGraphics_Click(object sender, RoutedEventArgs e)
         {
             if (VM == null) return;
-            AvaloniaEditorLauncher.OpenGraphicAt(DSPRE.RomInfo.DirNames.pokemonBattleSprites, VM.CurrentId * 6);
+            (DSPRE.RomInfo.DirNames dir, int member) = VM.GraphicsTarget;
+            AvaloniaEditorLauncher.OpenGraphicAt(dir, member);
+        }
+
+        private void OpenFollowerInOverworldEditor_Click(object sender, RoutedEventArgs e)
+        {
+            if (VM == null || VM.FollowerSpriteEntry < 0) return;
+            AvaloniaEditorLauncher.OpenOverworldEditor((uint)VM.FollowerSpriteEntry);
         }
 
         // --- Import Wizard -------------------------------------------------------------

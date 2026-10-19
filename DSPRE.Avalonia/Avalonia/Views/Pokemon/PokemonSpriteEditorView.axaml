@@ -82,7 +82,7 @@
                     Padding="14,8" FontWeight="Bold" FontSize="14"/>
             <Button Content="Export wizard…" controls:Icon.Key="export" Click="OpenExportWizard_Click"
                     Padding="14,8" FontSize="14"/>
-            <Button Content="Open in graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
+            <Button Content="Open in Graphics" controls:Icon.Key="OpenLink" Click="OpenInGraphics_Click"
                     Padding="14,8" FontSize="14"
                     ToolTip.Tip="Open in the Graphics window"/>
           </StackPanel>
@@ -108,7 +108,7 @@
     </Border>
 
     <Border DockPanel.Dock="Bottom" Padding="4,4,4,0">
-      <TextBlock Text="{Binding StatusText}" FontStyle="Italic" Foreground="OrangeRed"
+      <TextBlock Text="{Binding StatusText}" FontStyle="Italic" Foreground="{DynamicResource Editor.Bad}"
                  TextWrapping="Wrap" IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
     </Border>
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
@@ -301,6 +301,43 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+            </StackPanel>
+          </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="Follower" IsVisible="{Binding ShowFollower}">
+          <StackPanel Spacing="10" Margin="4">
+            <TextBlock Text="{Binding FollowerNote}" IsVisible="{Binding HasFollowerNote}" FontStyle="Italic" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasFollowerModels}">
+              <ComboBox ItemsSource="{Binding FollowerModelNames}" SelectedIndex="{Binding FollowerModelIndex}"
+                        IsVisible="{Binding HasFollowerModelChoice}" MinWidth="120"/>
+              <Button Content="Open in Overworld editor" controls:Icon.Key="OpenLink" Click="OpenFollowerInOverworldEditor_Click"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasFollowerModels}">
+              <StackPanel Spacing="4">
+                <Border Classes="sprite-cell">
+                  <controls:OverworldSpriteView Entry="{Binding FollowerSpriteEntry}" Facing="1" Scale="0"/>
+                </Border>
+                <TextBlock Classes="header" Text="Down"/>
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <Border Classes="sprite-cell">
+                  <controls:OverworldSpriteView Entry="{Binding FollowerSpriteEntry}" Facing="0" Scale="0"/>
+                </Border>
+                <TextBlock Classes="header" Text="Up"/>
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <Border Classes="sprite-cell">
+                  <controls:OverworldSpriteView Entry="{Binding FollowerSpriteEntry}" Facing="2" Scale="0"/>
+                </Border>
+                <TextBlock Classes="header" Text="Left"/>
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <Border Classes="sprite-cell">
+                  <controls:OverworldSpriteView Entry="{Binding FollowerSpriteEntry}" Facing="3" Scale="0"/>
+                </Border>
+                <TextBlock Classes="header" Text="Right"/>
+              </StackPanel>
             </StackPanel>
           </StackPanel>
         </GroupBox>

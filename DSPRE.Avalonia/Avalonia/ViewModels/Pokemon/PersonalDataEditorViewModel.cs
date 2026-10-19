@@ -19,7 +19,7 @@ using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia.ViewModels.Pokemon
 {
-    public class PersonalDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class PersonalDataEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -35,7 +35,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             get
             {
                 int n = _pending.Count + (_heldRecord && _dirty ? 1 : 0);
-                return n == 0 ? "" : $"{n} imported Pokémon {(n == 1 ? "has" : "have")} unsaved changes. Press Save to write them to disk.";
+                return n == 0 ? "" : $"{n} imported Pokémon not saved yet";
             }
         }
         public bool HasImportNote => ImportNote.Length > 0;
@@ -46,8 +46,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         private bool _dirty;
         public bool HasUnsavedChanges => _dirty || _pending.Count > 0;
         public string UnsavedChangesDescription =>
-            _pending.Count > 0 ? $"Personal Data ({_pending.Count + (_dirty ? 1 : 0)} Pokémon)"
-            : _current != null ? $"Personal Data (Mon {_currentId} - {(_currentId < PokemonNames.Count ? PokemonNames[_currentId] : "")})" : "Personal Data Editor";
+            _pending.Count > 0 ? $"Personal data of {_pending.Count + (_dirty ? 1 : 0)} Pokémon"
+            : _current != null ? $"Personal data of {(_currentId < PokemonNames.Count ? PokemonNames[_currentId] : $"Pokémon {_currentId}")}" : "Personal data";
         void IEditorWithUnsavedChanges.SaveChanges() => _ = SaveCommand();
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
         {
@@ -637,6 +637,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             _owPendingShinyPath = shinyPngPath;
             RefreshOwPending();
             SetDirty();
+            SaveNotice.Imported("the follower sprites", pngSourcePath);
         }
 
         // ── Private state ─────────────────────────────────────────────────────
@@ -800,6 +801,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             AppEvents.LabelsChanged += OnLabelsChanged;
             AppEvents.PersonalDataSaved -= OnPersonalDataSaved;
             AppEvents.PersonalDataSaved += OnPersonalDataSaved;
+            _iconSaved = AppEvents.WhenSaved(() => { if (_current != null) ShowMonIcon(); }, DirNames.monIcons);
             DSPRE.ROMFiles.WildHeldItemOdds.Saved -= OnHeldItemOddsSaved;
             DSPRE.ROMFiles.WildHeldItemOdds.Saved += OnHeldItemOddsSaved;
         }
@@ -871,7 +873,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
 
         /// <summary>Unsubscribes from app-wide events; called when the host window closes.</summary>
-        public void Detach() { AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.PersonalDataSaved -= OnPersonalDataSaved; DSPRE.ROMFiles.WildHeldItemOdds.Saved -= OnHeldItemOddsSaved; _owFrameTimer.Stop(); }
+        private IDisposable _iconSaved;
+        public void Detach() { _iconSaved?.Dispose(); AppEvents.LabelsChanged -= OnLabelsChanged; AppEvents.PersonalDataSaved -= OnPersonalDataSaved; DSPRE.ROMFiles.WildHeldItemOdds.Saved -= OnHeldItemOddsSaved; _owFrameTimer.Stop(); }
 
         // The Wild Held Items editor saves on the UI thread, so the chances can be shown again straight away.
         private void OnHeldItemOddsSaved()
@@ -919,37 +922,37 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 // Operations that did finish are no longer pending.
                 if (partlySaved) _history.Capture(Snapshot(), coalesce: true);
                 string lead = partlySaved ? $"Species {_currentId} was only partly saved:" : $"Species {_currentId} was not saved:";
-                await DSPRE.Avalonia.DialogHelper.ShowError($"{lead}\n{sourceError}", "Personal Data");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"{lead}\n{sourceError}", "Personal data error");
                 return;
             }
             string athlonProblem = PokeathlonSaveProblem();
             if (athlonProblem != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"Species {_currentId} was not saved:\n{athlonProblem}", "Personal Data");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"Species {_currentId} was not saved:\n{athlonProblem}", "Personal data error");
                 return;
             }
             string followerError = SaveRetailFollower();
             if (followerError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"The follower of species {_currentId} was not saved:\n{followerError}", "Personal Data");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"The follower of species {_currentId} was not saved:\n{followerError}", "Personal data error");
                 return;
             }
             string athlonError = SavePokeathlon();
             if (athlonError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"The Pokéathlon stats of species {_currentId} were not saved:\n{athlonError}", "Personal Data");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"The Pokéathlon stats of species {_currentId} were not saved:\n{athlonError}", "Personal data error");
                 return;
             }
             string maskError = SaveExtraMaskTms();
             if (maskError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"The TM121+ compatibility of species {_currentId} was not saved:\n{maskError}", "Personal Data");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"The TM121+ compatibility of species {_currentId} was not saved:\n{maskError}", "Personal data error");
                 return;
             }
             string machineError = SaveSourceMachineMoves();
             if (machineError != null)
             {
-                await DSPRE.Avalonia.DialogHelper.ShowError($"The machine moves of species {_currentId} were not saved:\n{machineError}", "Personal Data");
+                await DSPRE.Avalonia.DialogHelper.ShowError($"The machine moves of species {_currentId} were not saved:\n{machineError}", "Personal data error");
                 return;
             }
             if (!HgEngineProject.IsActive) FinishPending();
@@ -1084,7 +1087,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         /// <summary>Every Pokémon's personal data as this editor holds it, unsaved edits included.</summary>
         public async Task ExportCommand(Window owner)
         {
-            string path = await DialogHelper.SaveFile(owner, "Export Personal Data to CSV",
+            string path = await DialogHelper.SaveFile(owner, "Export personal data to CSV",
                 new[] { DialogHelper.CsvFilter, DialogHelper.AllFilter }, "PersonalData.csv");
             if (path == null) return;
             try
@@ -1098,11 +1101,12 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 }
                 using (StreamWriter writer = new StreamWriter(path))
                     PersonalDataCsv.Write(writer, CsvLists(), rows);
-                string note = unread.Count == 0 ? ""
-                    : $"\n\n{unread.Count} Pokémon could not be read and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}";
-                await DialogHelper.ShowInfo($"Exported to:\n{path}{note}", "Export Complete");
+                SaveNotice.Exported(path);
+                if (unread.Count > 0)
+                    await DialogHelper.ShowInfo($"{unread.Count} Pokémon could not be read and were left out: {string.Join(", ", unread.Take(10))}{(unread.Count > 10 ? ", ..." : "")}",
+                        "Pokémon left out");
             }
-            catch (Exception ex) { await DialogHelper.ShowError($"Error: {ex.Message}", "Export Error"); }
+            catch (Exception ex) { await DialogHelper.ShowError($"Error: {ex.Message}", "Pokémon editor error"); }
         }
 
         /// <summary>Imports the Pokémon in the file. Changes stay unsaved until Save.</summary>
@@ -1122,7 +1126,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 _heldRecord = true;
             }
             OnPropertyChanged(nameof(HasUnsavedChanges));
-            SaveNotice.Show(accepted.Count == 1 ? "1 Pokémon imported." : $"{accepted.Count} Pokémon imported.");
+            SaveNotice.Imported($"{accepted.Count} Pokémon", session.FileName);
         }
 
         public void AddMachineCommand()
@@ -1259,9 +1263,13 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         public string RetailFollowerNote => !ShowRetailFollower ? "" : _followerWhyNot ?? (_followerModels.Length == 0 ? "This Pokémon has no follower." : "");
         public bool HasRetailFollowerNote => RetailFollowerNote.Length > 0;
 
+        /// <summary>The overworld table entry of the follower model being edited, or -1.</summary>
+        public int FollowerSpriteEntry => RetailFollowerEditable && _followerModelIndex < _followerModels.Length
+            ? HgssFollowers.FirstSprite + _followerModels[_followerModelIndex].Index : -1;
+
         public ObservableCollection<string> FollowerModelNames { get; } = new();
         public bool HasFollowerModelChoice => FollowerModelNames.Count > 1;
-        public string[] FollowerSizeOptions { get; } = { "Small", "Small, no shadow", "Large" };
+        public string[] FollowerSizeOptions { get; } = { "Small", "Small without a shadow", "Large" };
         public string[] FollowerMotionOptions { get; } = { "No", "Hovers", "Flies", "Unknown (01)" };
 
         // The game reads motion from the base or form model, never a female one, and too tall from the base model only.
@@ -1350,7 +1358,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                                          nameof(FollowerMotionIndex), nameof(FollowerArtWarning), nameof(HasFollowerArtWarning),
                                          nameof(RetailFollowerEditable), nameof(RetailFollowerNote), nameof(HasRetailFollowerNote),
                                          nameof(HasFollowerModelChoice), nameof(FollowerTooTallEditable), nameof(FollowerMotionEditable),
-                                         nameof(FollowerTooTallTip), nameof(FollowerMotionTip) })
+                                         nameof(FollowerTooTallTip), nameof(FollowerMotionTip), nameof(FollowerSpriteEntry) })
                 OnPropertyChanged(name);
         }
 
@@ -1365,6 +1373,8 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
                 try
                 {
                     _followerWhyNot = HgssFollowers.WhyNot();
+                    // The art's size and the preview are read from the unpacked overworld textures.
+                    if (_followerWhyNot == null) DSUtils.TryUnpackNarcs(new List<DirNames> { DirNames.OWSprites });
                     if (_followerWhyNot == null)
                         _followerModels = HgssFollowers.ModelsOf(_currentId)
                             .Select(m => HgssFollowers.Read(m.index, m.label)).Where(m => m != null).ToArray();
@@ -1626,6 +1636,16 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
         }
         public bool HasHgLoadError => _hgLoadError != null;
 
+        private void ShowMonIcon()
+        {
+            try
+            {
+                RawImage drawingImg = DSUtils.GetPokePicRaw(DSUtils.ResolveIconId(_currentId), 64, 64);
+                MonIconBitmap = ImageConverter.ToAvaloniaBitmap(drawingImg);
+            }
+            catch { MonIconBitmap = null; }
+        }
+
         internal void LoadMon(int id)
         {
             if (id < 0 || id >= GetPersonalFilesCount())
@@ -1652,13 +1672,7 @@ namespace DSPRE.Avalonia.ViewModels.Pokemon
             LoadPokeathlon();
             _hatchResultIndex = GetHatchResult(id); OnPropertyChanged(nameof(HatchResultIndex));
 
-            // Load sprite icon
-            try
-            {
-                RawImage drawingImg = DSUtils.GetPokePicRaw(DSUtils.ResolveIconId(id), 64, 64);
-                MonIconBitmap = ImageConverter.ToAvaloniaBitmap(drawingImg);
-            }
-            catch { MonIconBitmap = null; }
+            ShowMonIcon();
 
             SetClean();
             _loading = false;
