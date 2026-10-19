@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia
 
         public event EventHandler<RotomLspDiagnosticsEventArgs> DiagnosticsPublished;
 
-        public bool IsRunning => _process != null && !_process.HasExited && _initialized;
+        public bool IsRunning => !_disposed && _process != null && !_process.HasExited && _initialized;
 
         // The server runs inside the project folder, which keeps that folder from being deleted while it lives.
         private static readonly List<RotomLanguageServerClient> Running = new List<RotomLanguageServerClient>();
