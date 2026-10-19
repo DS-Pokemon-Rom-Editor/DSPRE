@@ -38,6 +38,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                 ? $"{Index,5}  {Archive.Title}"
                 : $"{Index,5}  {Name}";
             public string Search { get; init; }   // lowercased, for filtering
+            public string Tip { get; init; }
         }
 
         /// <summary>One file of the thing picked, offered underneath it.</summary>
@@ -144,18 +145,23 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
             List<CategoryTab> tabs = new List<CategoryTab>();
             GraphicAssets.Forget();
 
+            // Rows are built once per archive: building them for every tab took most of the open time.
+            List<(GraphicAssets.Archive Archive, List<GraphicAssets.Unit> Units)> archives = new();
+            foreach (GraphicAssets.Archive a in GraphicAssets.All)
+            {
+                int n;
+                try { n = GraphicAssets.Count(a); } catch { n = 0; }
+                if (n == 0) continue;      // this game does not have it
+                archives.Add((a, GraphicAssets.Units(a, n)));
+            }
+
             foreach (GraphicAssets.Group g in Enum.GetValues<GraphicAssets.Group>())
             {
                 int inGroup = 0;
                 // A row can name its own tab, so an archive holding several different things is read for
                 // every tab rather than only its own.
-                foreach (GraphicAssets.Archive a in GraphicAssets.All)
+                foreach ((GraphicAssets.Archive a, List<GraphicAssets.Unit> units) in archives)
                 {
-                    int n;
-                    try { n = GraphicAssets.Count(a); } catch { n = 0; }
-                    if (n == 0) continue;      // this game does not have it
-
-                    List<GraphicAssets.Unit> units = GraphicAssets.Units(a, n);
                     if (a.In != g && !units.Any(u => u.In == g)) continue;
 
                     foreach (GraphicAssets.Unit u in units)
@@ -166,7 +172,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
                         inGroup++;
                         found.Add(new Item
                         {
-                            Archive = a, In = g, Index = u.First, Name = u.Name, Unit = u,
+                            Archive = a, In = g, Index = u.First, Name = u.Name, Unit = u, Tip = u.Tip,
                             Search = SearchMatch.Fold(a.Title + " " + u.First + " " + a.What + " " + u.Name),
                         });
                     }
@@ -569,7 +575,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         public bool HasDeepEditor => !string.IsNullOrEmpty(DeepEditorName);
 
         private string _status = "";
-        public string Status { get => _status; set => Set(ref _status, value); }
+        public string StatusText { get => _status; set => Set(ref _status, value); }
 
         /// <summary>A sensible file name for saving what is picked.</summary>
         public string SuggestedFileName(string extension)
@@ -599,17 +605,39 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         /// <param name="note">Something worth telling somebody afterwards, or null. Painting a background
         /// changes every place drawn from the same piece, which is worth saying rather than leaving to be
         /// noticed.</param>
-        public string Replace(string path, out string note)
+        public string Replace(string path, out string note) =>
+            Replace(path, PngColourPrompt.Choice.AsItIs, null, out note);
+
+        /// <summary>Imports with the answer to the colour question; added colours and the picture are one undo step.</summary>
+        public string Replace(string path, PngColourPrompt.Choice choice, GraphicAssets.PngColourCheck check, out string note)
         {
             note = null;
             if (_selected == null) return "Pick something first.";
             GraphicAssets.Archive archive = ShowingArchive ?? _selected.Archive;
             int index = ShowingIndex;
             string said = null;
-            string err = _pending.Import(() => GraphicAssets.ImportPng(archive, index, path, out said));
+            string err = _pending.Import(() => PngColourPrompt.Import(archive, index, path, choice, check, out said));
             note = said;
             return err;
         }
+
+        /// <summary>Imports an HP bar with the battle fitted to it: colours, picture and bar pieces as one undo step.</summary>
+        public string ReplaceHpBar(string path, HpBarFit.Plan plan, out string note)
+        {
+            note = null;
+            if (_selected == null) return "Pick something first.";
+            GraphicAssets.Archive archive = ShowingArchive ?? _selected.Archive;
+            int index = ShowingIndex;
+            string said = null;
+            string err = _pending.Import(() => HpBarImport.Apply(archive, index, path, plan,
+                () => _pending.Read(HpBarImport.SheetTarget), s => _pending.Stage(HpBarImport.SheetTarget, s), out said));
+            note = said;
+            return err;
+        }
+
+        /// <summary>The graphic an import would go into, for asking about its colours first.</summary>
+        public (GraphicAssets.Archive Archive, int Index) ImportTarget =>
+            _selected == null ? (null, -1) : (ShowingArchive ?? _selected.Archive, ShowingIndex);
 
         // ── imports wait for Save ───────────────────────────────────────────────────────────────────
 
@@ -626,7 +654,7 @@ namespace DSPRE.Avalonia.ViewModels.Graphics
         {
             _pending.Save();
             SaveNotice.Saved(UnsavedChangesDescription);
-            Status = "Saved.";
+            StatusText = "Saved.";
         }
 
         public void DiscardChanges() => _pending.Discard();
