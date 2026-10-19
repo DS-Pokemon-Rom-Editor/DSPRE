@@ -195,6 +195,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
         /// <summary>The Headbutt editor needs an HGSS ROM, and it is still being tried out.</summary>
         // Diamond and Pearl only have the battle music table, where it is supported.
         public bool CanUseMiscTables => EditorAvailability.Allows("TableEditorView");
+        public bool ShowMiscTables => !IsRomLoaded || !TableEditorViewModel.OnlyIntroLinks;
 
         // ── Busy state while a ROM is being opened/unpacked/saved, or an editor is unpacking its own data ──
         private bool _isBusy;
@@ -258,8 +259,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         public string Title =>
             IsRomLoaded
-                ? $"DSPRE - {GetGameDisplayName()}{RomIdSuffix}{ProjectNameSuffix} (Avalonia preview)"
-                : "DSPRE (Avalonia preview)";
+                ? $"DSPRE - {GetGameDisplayName()}{RomIdSuffix}{ProjectNameSuffix}"
+                : "DSPRE";
 
         /// <summary>
         /// " [CPUE, America]": the ROM's game code and its region, since the language alone does not tell an American
@@ -330,6 +331,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(CanUseSpecialEncountersEditor));
             OnPropertyChanged(nameof(IsHgssRom));
             OnPropertyChanged(nameof(CanUseMiscTables));
+            OnPropertyChanged(nameof(ShowMiscTables));
             OnPropertyChanged(nameof(IsHgEngineLinked));
             OnPropertyChanged(nameof(CanCompileRom));
             OnPropertyChanged(nameof(HgEngineNote));
@@ -438,6 +440,7 @@ namespace DSPRE.Avalonia.ViewModels.Shell
             OnPropertyChanged(nameof(BottomScreenEditorNote));
             OnPropertyChanged(nameof(CanUseSpecialEncountersEditor));
             OnPropertyChanged(nameof(CanUseMiscTables));
+            OnPropertyChanged(nameof(ShowMiscTables));
         }
 
         // ── Recent projects for the pre-ROM empty state ────────────────────────

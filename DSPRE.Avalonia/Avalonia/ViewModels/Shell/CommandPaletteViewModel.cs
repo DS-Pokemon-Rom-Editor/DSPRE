@@ -15,6 +15,8 @@ namespace DSPRE.Avalonia.ViewModels.Shell
 
         // The BetaEditors key, or null.
         public string Beta { get; init; }
+        // Listed only while this says so, or always when null.
+        public Func<bool> Shown { get; init; }
         public Action Run { get; init; }
         public override string ToString() => Name;
     }

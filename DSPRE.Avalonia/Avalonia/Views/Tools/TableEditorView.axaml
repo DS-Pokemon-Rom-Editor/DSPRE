@@ -30,8 +30,8 @@
     <Border DockPanel.Dock="Top" Padding="8,6" IsVisible="{Binding ShowIntroLinks}">
       <StackPanel Orientation="Horizontal" Spacing="6">
         <TextBlock Text="Battle intros and their music" VerticalAlignment="Center" Margin="0,0,6,0"/>
-        <Button Content="Open VS intro editor" controls:Icon.Key="OpenLink" Click="OpenVsIntros_Click"/>
-        <Button Content="Open wild Pokémon intro editor" controls:Icon.Key="OpenLink" Click="OpenWildIntros_Click"/>
+        <Button Content="Open in VS intro editor" controls:Icon.Key="OpenLink" Click="OpenVsIntros_Click"/>
+        <Button Content="Open in wild Pokémon intro editor" controls:Icon.Key="OpenLink" Click="OpenWildIntros_Click"/>
       </StackPanel>
     </Border>
 
@@ -41,7 +41,7 @@
                TextWrapping="Wrap"
                Text="The Table Editor has no editable tables for this ROM version."/>
 
-    <TabControl x:Name="Tabs" Margin="4">
+    <TabControl x:Name="Tabs" Margin="4" IsVisible="{Binding AnyTableShown}">
 
       <!-- ── Conditional Music (HGSS) ───────────────────────────────────────── -->
       <TabItem Header="Conditional music" IsVisible="{Binding ShowConditionalMusic}">

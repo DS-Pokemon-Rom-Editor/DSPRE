@@ -26,7 +26,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
     ///   • Battle Effects Combo table      (HGSS + Plat)
     ///   • VS Trainer / VS Pokémon tables  (HGSS)
     /// </summary>
-    public class TableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo
+    public class TableEditorViewModel : INotifyPropertyChanged, IEditorWithUnsavedChanges, DSPRE.Avalonia.ISupportsUndo, IDetachable
     {
         public event PropertyChangedEventHandler PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string n = null)
@@ -71,6 +71,15 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         public bool ShowIntroLinks { get => _showIntroLinks; private set => Set(ref _showIntroLinks, value); }
 
         public bool NoTablesAvailable => !ShowConditionalMusic && !ShowEffectsCombos && !ShowVsTables && !ShowIntroLinks;
+
+        private static bool IntroEditorsOpen => !isHGE && DSPRE.ROMFiles.VsIntroTables.WhyNot() == null
+            && BetaEditors.Allows("VsIntroEditorView") && BetaEditors.Allows("WildIntroEditorView");
+
+        /// <summary>The intro editors hold every table this game has here, so the window would only link to them.</summary>
+        public static bool OnlyIntroLinks => gameFamily != GameFamilies.HGSS && IntroEditorsOpen;
+
+        // With every tab hidden the strip would still show the first tab's empty panel.
+        public bool AnyTableShown => ShowConditionalMusic || ShowEffectsCombos || ShowVsTables;
 
         // ── List/combo sources ────────────────────────────────────────────────────
         public ObservableCollection<string> HeaderNames { get; } = new ObservableCollection<string>();
@@ -209,7 +218,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
         private readonly HashSet<int> _dirtyVsTrainers = new HashSet<int>();
         private readonly HashSet<int> _dirtyVsPokemon = new HashSet<int>();
         public bool HasUnsavedChanges => _condDirty || _effectsDirty || _vsTrainerDirty || _vsPokemonDirty;
-        public string UnsavedChangesDescription => "Table Editor";
+        public string UnsavedChangesDescription => "Tables";
         public void SaveChanges() => _ = SaveAllAsync();
 
         async Task<bool> IEditorWithUnsavedChanges.SaveChangesAsync()
@@ -384,7 +393,11 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             IReadOnlyList<string> friendly = HeaderLabels.Friendly();
             string[] given = headerNames?.ToArray() ?? Array.Empty<string>();
             _headerNames = friendly.Count == given.Length ? friendly.ToArray() : given;
+            _spriteSaved = AppEvents.WhenSaved(UpdateTrainerSprite, DirNames.trainerGraphics);
         }
+
+        private readonly IDisposable _spriteSaved;
+        public void Detach() => _spriteSaved?.Dispose();
 
         // ── Setup ─────────────────────────────────────────────────────────────────
         public async Task SetupAsync()
@@ -409,6 +422,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
                 if (ShowEffectsCombos && ComboItems.Count > 0) ComboSelectedIndex = 0;
 
                 OnPropertyChanged(nameof(NoTablesAvailable));
+                OnPropertyChanged(nameof(AnyTableShown));
                 ResetUndo();
                 StatusText = _tablesNote ?? "";
             }
@@ -416,7 +430,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 _suppress = false;
                 StatusText = $"Error loading tables: {ex.Message}";
-                await DialogHelper.ShowError($"Failed to load tables:\n{ex.Message}", "Table Editor Error");
+                await DialogHelper.ShowError($"Failed to load tables:\n{ex.Message}", "Table editor error");
             }
         }
 
@@ -465,8 +479,7 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             // Writes go back to wherever the tables were read from.
             _fromSource = gameFamily == GameFamilies.HGSS && HgEngineMusicTables.TablesInSource;
             // Only hand the tables over where the intro editors are enabled and can open this ROM; elsewhere they stay editable here.
-            ShowIntroLinks = !_fromSource && !isHGE && DSPRE.ROMFiles.VsIntroTables.WhyNot() == null
-                && BetaEditors.Allows("VsIntroEditorView") && BetaEditors.Allows("WildIntroEditorView");
+            ShowIntroLinks = !_fromSource && IntroEditorsOpen;
             if (ShowIntroLinks)
             {
                 ShowEffectsCombos = false;
@@ -485,7 +498,6 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             _classIntrosPatched = DSPRE.ROMFiles.ClassIntroPatch.IsApplied;
             _effectsComboTable = tables.Combos.Rows;
             _effectsComboStartAddr = tables.Combos.Start;
-            RomPatchState.flag_MainComboTableRepointed = tables.Combos.Repointed;
 
             ComboItems.Clear();
             for (int i = 0; i < _effectsComboTable.Count; i++)
@@ -495,10 +507,8 @@ namespace DSPRE.Avalonia.ViewModels.Tools
             {
                 _vsTrainerList = tables.Classes.Rows;
                 _vsTrainerStartAddr = tables.Classes.Start;
-                RomPatchState.flag_TrainerClassBattleTableRepointed = tables.Classes.Repointed;
                 _vsPokemonList = tables.Species.Rows;
                 _vsPokemonStartAddr = tables.Species.Start;
-                RomPatchState.flag_PokemonBattleTableRepointed = tables.Species.Repointed;
 
                 _pokeNames = GetPokemonNames();
                 PokemonNames.Clear();
