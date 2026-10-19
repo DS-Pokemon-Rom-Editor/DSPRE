@@ -18,7 +18,6 @@ namespace DSPRE.AvaloniaShell
         public static void Main(string[] args)
         {
             PreferWslGpu();
-            UnsyncXWaylandSwaps();
             BetaEditors.ReadFrom(args);
             DSPRE.HgEngine.HgEngineDev.ReadFrom(args);
 
@@ -43,15 +42,6 @@ namespace DSPRE.AvaloniaShell
             if (!OperatingSystem.IsLinux() || !DSUtils.IsWsl() || !File.Exists("/dev/dxg")) return;
             if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GALLIUM_DRIVER"))) return;
             setenv("GALLIUM_DRIVER", "d3d12", 0);
-        }
-
-        // Under XWayland a hidden window's buffer swap can wait forever on vblank and freeze the app; vblank_mode=0 skips the wait.
-        private static void UnsyncXWaylandSwaps()
-        {
-            if (!OperatingSystem.IsLinux()) return;
-            if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"))
-                && Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") != "wayland") return;
-            setenv("vblank_mode", "0", 0);
         }
 
         [DllImport("libc")]
