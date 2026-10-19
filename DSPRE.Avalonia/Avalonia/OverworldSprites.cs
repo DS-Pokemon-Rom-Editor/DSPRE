@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using NSMBe4.NSBMD;
+using DSPRE.ROMFiles;
+using LibNDSFormats.NSBMD;
 using static DSPRE.RomInfo;
 
 namespace DSPRE.Avalonia
@@ -23,9 +24,11 @@ namespace DSPRE.Avalonia
         /// </summary>
         public const int PixelsPerTile = 16;
 
-        /// <summary>One picture out of a sprite bank. </summary>
-        public static SpritePixels Get(ushort eventEntryID, ushort orientation, int picture = 0)
+        /// <summary>One picture out of a sprite bank; with no picture given, the one standing facing <paramref name="orientation"/>.</summary>
+        public static SpritePixels Get(ushort eventEntryID, ushort orientation, int picture = -1)
         {
+            eventEntryID = (ushort)VariableOverworldStandIn(eventEntryID);
+            if (picture < 0) picture = FieldSpriteAnimation.PictureFor(FrameCount(eventEntryID), orientation, null);
             // The picture is part of what is being cached, so it gets its own room in the key.
             ushort cacheDir = (ushort)(orientation | ((picture & 0x1F) << 8));
             return GetCached(eventEntryID, cacheDir, orientation, picture);
@@ -34,6 +37,7 @@ namespace DSPRE.Avalonia
         /// <summary>How many pictures the bank has for each way of facing, so a caller can pace them.</summary>
         public static int FrameCount(ushort eventEntryID)
         {
+            eventEntryID = (ushort)VariableOverworldStandIn(eventEntryID);
             if (_frameCounts.TryGetValue(eventEntryID, out int n)) return n;
             n = 0;
             try
@@ -41,8 +45,7 @@ namespace DSPRE.Avalonia
                 if (OverworldTable == null) { SetOWtable(); ReadOWTable(); }
                 if (OverworldTable != null && OverworldTable.TryGetValue(eventEntryID, out (uint spriteID, ushort properties) r) && r.spriteID != 0x3D3D)
                 {
-                    using FileStream s = new FileStream(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, r.spriteID.ToString("D4")), FileMode.Open, FileAccess.Read);
-                    n = new NSBTX_File(s).texInfo.num_objs;
+                    n = Tex0Block.ReadBtx0(File.ReadAllBytes(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, r.spriteID.ToString("D4"))), out _)?.Textures.Count ?? 0;
                 }
             }
             catch { }
@@ -69,10 +72,45 @@ namespace DSPRE.Avalonia
             return result;
         }
 
-        public static void ClearCache() { _cache.Clear(); _frameCounts.Clear(); }
+        public static void ClearCache() { _cache.Clear(); _frameCounts.Clear(); _outlined.Clear(); }
 
-        // Mirrors EventEditor.GetOverworldImage. NSBTX (ROM) frames decode GDI-free via GetRawImage;
-        // the fixed fallback images come from the avares assets (see ResourceImages), no GDI anywhere.
+        private static readonly Dictionary<SpritePixels, SpritePixels> _outlined = new Dictionary<SpritePixels, SpritePixels>();
+
+        /// <summary>The picture one pixel bigger on each side, with an amber line around everything that shows.</summary>
+        public static SpritePixels Outlined(SpritePixels src)
+        {
+            if (_outlined.TryGetValue(src, out SpritePixels done)) return done;
+            int w = src.Width + 2, h = src.Height + 2;
+            byte[] rgba = new byte[w * h * 4];
+            bool Shows(int x, int y) => x >= 0 && y >= 0 && x < src.Width && y < src.Height && src.Rgba[(y * src.Width + x) * 4 + 3] != 0;
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    int at = (y * w + x) * 4;
+                    if (Shows(x - 1, y - 1))
+                    {
+                        Array.Copy(src.Rgba, ((y - 1) * src.Width + x - 1) * 4, rgba, at, 4);
+                        continue;
+                    }
+                    if (!Shows(x - 2, y - 1) && !Shows(x, y - 1) && !Shows(x - 1, y - 2) && !Shows(x - 1, y)) continue;
+                    rgba[at] = 0xFF; rgba[at + 1] = 0xC7; rgba[at + 2] = 0x1A; rgba[at + 3] = 0xFF;
+                }
+            done = new SpritePixels { Rgba = rgba, Width = w, Height = h };
+            _outlined[src] = done;
+            return done;
+        }
+
+        // A sprite saved in another editor is read again; this runs ahead of the editors' background redraws.
+        static OverworldSprites()
+        {
+            AppEvents.ArchiveMemberSaved += (_, dir) =>
+            {
+                if (dir == RomInfo.DirNames.OWSprites) global::Avalonia.Threading.Dispatcher.UIThread.Post(ClearCache);
+            };
+        }
+
+        // Mirrors EventEditor.GetOverworldImage. Sprite bank frames are drawn in the bank's first palette; the fixed
+        // fallback images come from the avares assets (see ResourceImages), no GDI anywhere.
         private static DSPRE.RawImage LoadRaw(ushort eventEntryID, ushort orientation, int picture)
         {
             // The lookup tables are populated during ROM/event setup; make sure they exist.
@@ -87,17 +125,18 @@ namespace DSPRE.Avalonia
 
             try
             {
-                using FileStream stream = new FileStream(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4")), FileMode.Open, FileAccess.Read);
-                NSBTX_File nsbtx = new NSBTX_File(stream);
-                int n = nsbtx.texInfo.num_objs;
-                if (n <= 1) return nsbtx.GetRawImage(0, 0).bmp;
-                if (n < 8) return nsbtx.GetRawImage(Math.Min(orientation, (ushort)(n - 1)), 0).bmp;
+                byte[] bank = File.ReadAllBytes(Path.Combine(gameDirs[DirNames.OWSprites].unpackedDir, result.spriteID.ToString("D4")));
+                Tex0Block block = Tex0Block.ReadBtx0(bank, out _);
+                if (block == null) return ResourceImages.GetRaw("overworldUnreadable");
+                int n = block.Textures.Count;
+                if (n <= 1) return Draw(bank, block, 0, 0);
+                if (n < 8) return Draw(bank, block, Math.Min(orientation, (ushort)(n - 1)), 0);
 
                 // The pictures are named "thing.1" upwards but the bank stores them sorted as text, so
                 // ".10" sits before ".2". Put them back in the artist's order before picking one.
                 int at = picture;
                 if (at < 0 || at >= n) at = 0;
-                return nsbtx.GetRawImage(NumericOrder(nsbtx)[at], 0).bmp;
+                return Draw(bank, block, NumericOrder(block)[at], 0);
             }
             catch
             {
@@ -110,27 +149,60 @@ namespace DSPRE.Avalonia
         {
             List<SpritePixels> pictures = new List<SpritePixels>();
             if (btx0 == null || btx0.Length <= 4) return pictures;
-            using MemoryStream stream = new MemoryStream(btx0, writable: false);
-            NSBTX_File nsbtx = new NSBTX_File(stream);
-            if (nsbtx.texInfo.names == null || nsbtx.texInfo.num_objs <= 0) return pictures;
-            int pal = palette > 0 && palette < nsbtx.palInfo.num_objs ? palette : 0;
-            foreach (int i in NumericOrder(nsbtx))
-                pictures.Add(ToRgba(nsbtx.GetRawImage(i, pal).bmp));
+            Tex0Block block = Tex0Block.ReadBtx0(btx0, out _);
+            if (block == null || block.Textures.Count <= 0) return pictures;
+            int pal = palette > 0 && palette < block.Palettes.Count ? palette : 0;
+            foreach (int i in NumericOrder(block))
+            {
+                RawImage picture = Draw(btx0, block, i, pal);
+                if (picture != null) pictures.Add(ToRgba(picture));
+            }
             return pictures;
+        }
+
+        /// <summary>One texture of a sprite bank in one of its palettes, or null when either is missing.</summary>
+        private static RawImage Draw(byte[] btx0, Tex0Block block, int texture, int palette)
+        {
+            if (texture < 0 || texture >= block.Textures.Count || palette < 0 || palette >= block.Palettes.Count) return null;
+            Tex0Block.Texture t = block.Textures[texture];
+            Tex0Block.Palette p = block.Palettes[palette];
+            // A palette colour's top bit isn't see-through; the DS ignores it.
+            RGBA[] colours = new RGBA[p.DataSize / 2];
+            for (int i = 0; i < colours.Length; i++)
+            {
+                (byte r, byte g, byte b) = NitroBgCodec.Colour(btx0[p.DataAt + i * 2] | btx0[p.DataAt + i * 2 + 1] << 8);
+                colours[i] = new RGBA { R = r, G = g, B = b, A = 0xFF };
+            }
+            NSBMDMaterial material = new NSBMDMaterial
+            {
+                format = t.Format, width = t.Width, height = t.Height, color0 = t.Color0 ? 1 : 0,
+                texdata = btx0.AsSpan(t.DataAt, t.DataSize).ToArray(),
+                spdata = t.Format == 5 ? btx0.AsSpan(t.IndexAt, t.IndexSize).ToArray() : null,
+                paldata = colours,
+            };
+            DSPRE.Avalonia.Gl.NsbmdTextureData decoded = DSPRE.Avalonia.Gl.NsbmdTextureDecoder.Decode(material);
+            if (decoded == null) return null;
+            RawImage image = new RawImage(decoded.Width, decoded.Height);
+            for (int i = 0; i + 3 < decoded.Rgba.Length; i += 4)
+            {
+                image.Bgra[i] = decoded.Rgba[i + 2]; image.Bgra[i + 1] = decoded.Rgba[i + 1];
+                image.Bgra[i + 2] = decoded.Rgba[i]; image.Bgra[i + 3] = decoded.Rgba[i + 3];
+            }
+            return image;
         }
 
         /// <summary>
         /// The bank's pictures in the order their names number them, since the file keeps them sorted as
         /// text and ".10" then lands before ".2".
         /// </summary>
-        private static int[] NumericOrder(NSBTX_File nsbtx)
+        private static int[] NumericOrder(Tex0Block block)
         {
-            int n = nsbtx.texInfo.num_objs;
+            int n = block.Textures.Count;
             int[] order = new int[n];
             int[] rank = new int[n];
             for (int i = 0; i < n; i++)
             {
-                string name = nsbtx.texInfo.names[i] ?? "";
+                string name = block.Textures[i].Name ?? "";
                 int dot = name.LastIndexOf('.');
                 rank[i] = dot >= 0 && int.TryParse(name.Substring(dot + 1), out int v) ? v : i;
                 order[i] = i;
