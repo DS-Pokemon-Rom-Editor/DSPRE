@@ -1393,6 +1393,29 @@ namespace DSPRE.Avalonia.ViewModels.Text
         internal IReadOnlyList<RotomLspInlineText> InlineTexts { get; private set; } = Array.Empty<RotomLspInlineText>();
         public event EventHandler InlineTextsChanged;
 
+        private List<RotomLspInlineText> _lenses = new List<RotomLspInlineText>();
+        private List<RotomLspInlineText> _hints = new List<RotomLspInlineText>();
+
+        /// <summary>Whether the parameter names rotom-lsp puts before each value are drawn.</summary>
+        public bool ShowInlineHints
+        {
+            get => SettingsManager.Settings?.ScriptEditorInlineHints ?? true;
+            set
+            {
+                if (SettingsManager.Settings == null || SettingsManager.Settings.ScriptEditorInlineHints == value) return;
+                SettingsManager.Settings.ScriptEditorInlineHints = value;
+                SettingsManager.Save();
+                OnPropertyChanged();
+                PublishInlineTexts();
+            }
+        }
+
+        private void PublishInlineTexts()
+        {
+            InlineTexts = ShowInlineHints ? _lenses.Concat(_hints).ToList() : _lenses.ToList();
+            InlineTextsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         private CancellationTokenSource _extrasCts;
 
         // Asked for half a second after typing settles, so the server is not queried on every key.
@@ -1420,8 +1443,9 @@ namespace DSPRE.Avalonia.ViewModels.Text
 
                 Outline.Clear();
                 foreach (RotomLspSymbol symbol in symbols) Outline.Add(new OutlineEntry(symbol.Name, symbol.Line, symbol.Depth));
-                InlineTexts = lenses.Concat(hints).ToList();
-                InlineTextsChanged?.Invoke(this, EventArgs.Empty);
+                _lenses = lenses;
+                _hints = hints;
+                PublishInlineTexts();
             }
             catch (Exception ex) when (ex is TimeoutException || ex is InvalidOperationException || ex is System.IO.IOException)
             {

@@ -23,6 +23,8 @@
         <Button Content="Import…" controls:Icon.Key="import" Click="Import_Click" IsEnabled="{Binding IsEditable}"/>
         <Button Content="Export…" controls:Icon.Key="export" Click="Export_Click" IsEnabled="{Binding IsEditable}"/>
         <Button Content="Find in file" controls:Icon.Key="lens" Click="Find_Click" IsEnabled="{Binding IsEditable}"/>
+        <CheckBox Content="Hints" IsChecked="{Binding ShowInlineHints}" VerticalAlignment="Center"
+                  ToolTip.Tip="Parameter names before each value"/>
         <TextBlock Text="Theme" VerticalAlignment="Center" Foreground="{DynamicResource Editor.Text}"/>
         <ComboBox Width="150" ItemsSource="{Binding EditorThemeNames}" SelectedIndex="{Binding SelectedEditorThemeIndex}"/>
     </controls:EditorToolbar>

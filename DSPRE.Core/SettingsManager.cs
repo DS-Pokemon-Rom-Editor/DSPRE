@@ -75,6 +75,9 @@ namespace DSPRE
         /// <summary>Ask before opening another project closes the current one, when nothing is unsaved.</summary>
         public bool AskBeforeSwitchingProject { get; set; } = true;
 
+        /// <summary>Script editor: draw rotom-lsp's parameter names before each value.</summary>
+        public bool ScriptEditorInlineHints { get; set; } = true;
+
         /// <summary>Whether the first-time guided tour has already run (or been skipped). While false,
         /// the tour starts automatically after the next successful ROM load in the Avalonia shell.</summary>
         public bool GuidedTourShown { get; set; } = false;
