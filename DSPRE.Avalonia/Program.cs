@@ -45,6 +45,7 @@ namespace DSPRE.AvaloniaShell
             setenv("GALLIUM_DRIVER", "d3d12", 0);
         }
 
+        // Under XWayland a hidden window's buffer swap can wait forever on vblank and freeze the app; vblank_mode=0 skips the wait.
         private static void UnsyncXWaylandSwaps()
         {
             if (!OperatingSystem.IsLinux()) return;
