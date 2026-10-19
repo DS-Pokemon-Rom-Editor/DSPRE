@@ -6,8 +6,7 @@ deeper implementation guide, [BUILDING.md](BUILDING.md) for build and packaging 
 [Research/ResearchNotes.md](Research/ResearchNotes.md) for the research index.
 
 DSPRE Reloaded is a .NET 8 editor for Nintendo DS Pokemon Diamond, Pearl, Platinum, HeartGold, and
-SoulSilver ROM projects. It has a cross-platform ROM core and Avalonia UI, with a legacy Windows-only
-WinForms shell retained during the transition.
+SoulSilver ROM projects. It has a cross-platform ROM core and an Avalonia UI.
 
 ## Scope and safety
 
@@ -64,12 +63,9 @@ files no longer exist.
 
 | Project | Target | Responsibility | Direct project references |
 |---|---|---|---|
-| `Ekona/` | `net8.0` | Image primitives and application data paths | none |
-| `Images/Images/` | `net8.0` | Nintendo DS image formats | `Ekona` |
-| `DSPRE.Core/` | `net8.0` | ROM formats, data model, scripts, databases, and non-UI logic | `Ekona`, `Images` |
-| `DSPRE.Avalonia/` | `net8.0` | Cross-platform Avalonia UI and entry point | `DSPRE.Core` |
-| `DS_Map/` | `net8.0-windows` | Windows host executable and legacy WinForms editors | all four projects above |
-| `DSPRE.Tests/` | `net8.0`; also `net8.0-windows` by default on Windows or when opted in elsewhere | xUnit tests | Core and Avalonia; Windows target also references `DS_Map` |
+| `DSPRE.Core/` | `net8.0` | ROM formats, data model, scripts, databases, and non-UI logic | none |
+| `DSPRE.Avalonia/` | `net8.0` | Avalonia UI and the application entry point | `DSPRE.Core` |
+| `DSPRE.Tests/` | `net8.0` | xUnit tests | Core and Avalonia |
 
 Place files according to their dependencies:
 
@@ -77,10 +73,8 @@ Place files according to their dependencies:
   `DSPRE.Core/`.
 - Avalonia views, view models, UI-only readers, dialogs, and OpenGL controls belong in
   `DSPRE.Avalonia/`.
-- WinForms-only editors and the Windows entry point belong in `DS_Map/`.
-- `DSPRE.Core` must not reference Avalonia or WinForms. `DSPRE.Avalonia` must not reference WinForms.
-- Avoid adding GDI dependencies to cross-platform paths. Existing compatibility code is not a model
-  for new cross-platform work.
+- `DSPRE.Core` must not reference Avalonia.
+- Do not add GDI (`System.Drawing.Common`) or WinForms dependencies; the app runs on Windows and Linux.
 
 Views and view models under `DSPRE.Avalonia/Avalonia/` are organized by menu area: `Shell`,
 `Pokemon`, `Trainers`, `Items`, `Text`, `World`, `Graphics`, `Battle`, `Audio`, `Tools`, and
@@ -89,20 +83,18 @@ Views and view models under `DSPRE.Avalonia/Avalonia/` are organized by menu are
 
 ## Build, run, and test
 
-Use .NET 8.
+Build with the .NET 10 SDK (9.0.300 or newer; `global.json` sets the floor) and run on the .NET 8 runtime.
+The projects target `net8.0`; Avalonia 12 needs the newer compiler.
 
 ```powershell
-dotnet build DS_Map.sln -c Release
+dotnet build DSPRE.sln -c Release
 dotnet build DSPRE.Avalonia/DSPRE.Avalonia.csproj -c Release-Linux
-dotnet run --project DS_Map/DSPRE.csproj -c Debug
 dotnet run --project DSPRE.Avalonia/DSPRE.Avalonia.csproj
-dotnet test DSPRE.Tests/DSPRE.Tests.csproj -f net8.0
+dotnet test DSPRE.Tests/DSPRE.Tests.csproj
 ```
 
-The Windows `DSPRE` executable starts the Avalonia shell by default. Set
-`DSPRE_WINFORMS_SHELL=1` or pass `--winforms` to select the legacy WinForms shell. The
-`DSPRE.Avalonia` executable always starts the pure Avalonia shell. `DSPRE_AVALONIA_SHELL` is not a
-current selector.
+The executable is `DSPRE.Avalonia`. Windows releases ship it renamed to `DSPRE.exe`, so installed copies
+keep updating through Velopack; the renamed launcher still loads `DSPRE.Avalonia.dll`.
 
 Before live verification, build the current source and launch the exact executable produced by that
 build. After any code change, rebuild before relaunching; a previously running process or older output
@@ -111,9 +103,8 @@ does not count as runtime verification.
 Pass `--beta` to enable beta-gated editors in Release builds. Debug builds enable them automatically.
 The gate and its reasons are defined in `DSPRE.Core/BetaEditors.cs`.
 
-On Windows, omitting `-f net8.0` from the test command also runs the `net8.0-windows` target. Use the
-single cross-platform target for routine checks unless the Windows-only surface is relevant. Do not
-run multiple full test processes concurrently: ROM fixtures and static application state are shared.
+Do not run multiple full test processes concurrently: ROM fixtures and static application state are
+shared.
 
 Bundled native helpers live in `Tools/` at the repository root and are copied into the output's
 `Tools/` directory. `DSPRE.Core/DSUtils/DSUtils.cs` resolves them from `AppContext.BaseDirectory`, so
@@ -140,10 +131,13 @@ callers must not depend on the process working directory.
 
 ## Implementation conventions
 
+- New code follows the Editors and Agreed rules sections of `DSPRE-Development.md`. The build rejects
+  the calls in `BannedSymbols.txt` and `var`; fix the code instead of adding a file to an exemption in
+  `.editorconfig`.
 - Prefer root-cause fixes in the owning layer over UI-only workarounds.
 - Check `RomInfo.gameFamily` or `RomInfo.gameVersion` before assuming layouts shared by DPPt and HGSS.
-- Put ROM offsets and version-specific layout facts in `RomInfo` or an existing centralized format
-  table. Do not scatter magic offsets through readers or views.
+- Put code offsets in `RomLocator`, and other version-specific layout facts in `RomInfo` or an existing
+  centralized format table. Do not scatter magic offsets through readers or views.
 - Preserve the established hg-engine parsing model. Never infer variable binary layouts from a single
   fixture when a count, table, or pointer is available.
 - When switching ROMs or projects, audit static caches and selection state for stale data.
@@ -159,8 +153,7 @@ callers must not depend on the process working directory.
 - Avalonia XAML resources and compiled bindings can fail outside the immediate edit site. Validate the
   owning project after XAML changes, not just the code-behind file.
 - Declare every variable with its explicit type. Do not write `var`; the only exception is a value whose
-  type cannot be named, such as an anonymous type. Existing `var` usage is scheduled for one cleanup
-  commit and is not a precedent for new code.
+  type cannot be named, such as an anonymous type. The build fails on `var` (IDE0008).
 - Comments should explain constraints or intent, not narrate the code. Keep user-facing text concise
   and avoid em dashes.
 
